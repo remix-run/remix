@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ApiTable } from '../api-table.tsx'
+import { ApiEntry, ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Tween',
@@ -129,136 +129,63 @@ export default function TweenPage(handle: Handle<PageProps>) {
           start time. Subsequent timestamps use the same clock and are measured in milliseconds.
           Completion returns <code>to</code> with <code>done: true</code>.
         </p>
-        <ApiTable
-          id="tween-options"
-          label="Option"
-          entries={[
-            {
-              name: 'from',
-              type: <code>{'number'}</code>,
-              description: <>Starting value.</>,
-              required: true,
-            },
-            {
-              name: 'to',
-              type: <code>{'number'}</code>,
-              description: <>Destination value.</>,
-              required: true,
-            },
-            {
-              name: 'duration',
-              type: <code>{'number'}</code>,
-              description: <>Playback time in milliseconds.</>,
-              required: true,
-            },
-            {
-              name: 'curve',
-              type: <code>{'BezierCurve'}</code>,
-              description: <>Cubic Bézier control points.</>,
-              required: true,
-            },
-          ]}
-        />
+        <ApiTable id="tween-options" label="Option">
+          <ApiEntry name="from" type="number" required>
+            Starting value.
+          </ApiEntry>
+          <ApiEntry name="to" type="number" required>
+            Destination value.
+          </ApiEntry>
+          <ApiEntry name="duration" type="number" required>
+            Playback time in milliseconds.
+          </ApiEntry>
+          <ApiEntry name="curve" type="BezierCurve" required>
+            Cubic Bézier control points.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="easings-reference">easings</h3>
         <p>Built-in curves matching the corresponding CSS easing functions.</p>
-        <ApiTable
-          id="easings-values"
-          label="Name"
-          typeLabel="Control points"
-          entries={[
-            {
-              name: 'linear',
-              type: <code>{'0, 0, 1, 1'}</code>,
-              description: (
-                <>
-                  Control points in <code>x1, y1, x2, y2</code> order.
-                </>
-              ),
-            },
-            {
-              name: 'ease',
-              type: <code>{'0.25, 0.1, 0.25, 1'}</code>,
-              description: (
-                <>
-                  Control points in <code>x1, y1, x2, y2</code> order.
-                </>
-              ),
-            },
-            {
-              name: 'easeIn',
-              type: <code>{'0.42, 0, 1, 1'}</code>,
-              description: (
-                <>
-                  Control points in <code>x1, y1, x2, y2</code> order.
-                </>
-              ),
-            },
-            {
-              name: 'easeOut',
-              type: <code>{'0, 0, 0.58, 1'}</code>,
-              description: (
-                <>
-                  Control points in <code>x1, y1, x2, y2</code> order.
-                </>
-              ),
-            },
-            {
-              name: 'easeInOut',
-              type: <code>{'0.42, 0, 0.58, 1'}</code>,
-              description: (
-                <>
-                  Control points in <code>x1, y1, x2, y2</code> order.
-                </>
-              ),
-            },
-          ]}
-        />
+        <ApiTable id="easings-values" label="Name" typeLabel="Control points">
+          <ApiEntry name="linear" type="0, 0, 1, 1">
+            Control points in <code>x1, y1, x2, y2</code> order.
+          </ApiEntry>
+          <ApiEntry name="ease" type="0.25, 0.1, 0.25, 1">
+            Control points in <code>x1, y1, x2, y2</code> order.
+          </ApiEntry>
+          <ApiEntry name="easeIn" type="0.42, 0, 1, 1">
+            Control points in <code>x1, y1, x2, y2</code> order.
+          </ApiEntry>
+          <ApiEntry name="easeOut" type="0, 0, 0.58, 1">
+            Control points in <code>x1, y1, x2, y2</code> order.
+          </ApiEntry>
+          <ApiEntry name="easeInOut" type="0.42, 0, 0.58, 1">
+            Control points in <code>x1, y1, x2, y2</code> order.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="curve-reference">BezierCurve</h3>
-        <ApiTable
-          id="curve-properties"
-          label="Property"
-          entries={[
-            {
-              name: 'x1, y1',
-              type: <code>{'number'}</code>,
-              description: <>First control point.</>,
-            },
-            {
-              name: 'x2, y2',
-              type: <code>{'number'}</code>,
-              description: <>Second control point.</>,
-            },
-          ]}
-        />
+        <ApiTable id="curve-properties" label="Property">
+          <ApiEntry name="x1, y1" type="number">
+            First control point.
+          </ApiEntry>
+          <ApiEntry name="x2, y2" type="number">
+            Second control point.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="types-reference">Exported types</h3>
-        <ApiTable
-          id="types-types"
-          detailsLabel="Definition"
-          entries={[
-            {
-              name: 'TweenOptions',
-              type: <code>{'interface'}</code>,
-              description: (
-                <>
-                  Options accepted by <code>tween()</code>.
-                </>
-              ),
-              id: 'type-TweenOptions',
-              details: <CodeBlock html={typeDefinitions.TweenOptions} />,
-            },
-            {
-              name: 'BezierCurve',
-              type: <code>{'interface'}</code>,
-              description: (
-                <>
-                  Control points accepted by <code>curve</code> and used by <code>easings</code>.
-                </>
-              ),
-              id: 'type-BezierCurve',
-              details: <CodeBlock html={typeDefinitions.BezierCurve} />,
-            },
-          ]}
-        />
+        <ApiTable id="types-types">
+          <ApiEntry id="type-TweenOptions" name="TweenOptions" type="interface">
+            <p>
+              Options accepted by <code>tween()</code>.
+            </p>
+            <CodeBlock html={typeDefinitions.TweenOptions} />
+          </ApiEntry>
+          <ApiEntry id="type-BezierCurve" name="BezierCurve" type="interface">
+            <p>
+              Control points accepted by <code>curve</code> and used by <code>easings</code>.
+            </p>
+            <CodeBlock html={typeDefinitions.BezierCurve} />
+          </ApiEntry>
+        </ApiTable>
       </Section>
     </PageLayout>
   )

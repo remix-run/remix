@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ApiTable } from '../api-table.tsx'
+import { ApiEntry, ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Select',
@@ -160,150 +160,86 @@ export default function SelectPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>
-        <ApiTable
-          id="context-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'defaultLabel',
-              type: <code>{'string'}</code>,
-              description: 'Initial trigger text and fallback label.',
-              required: true,
-            },
-            {
-              name: 'defaultValue',
-              type: <code>{'string | null'}</code>,
-              description: 'Initial selected value.',
-              defaultValue: <code>{'null'}</code>,
-            },
-            {
-              name: 'disabled',
-              type: <code>{'boolean'}</code>,
-              description: 'Disables trigger and hidden input.',
-              defaultValue: <code>{'false'}</code>,
-            },
-            {
-              name: 'name',
-              type: <code>{'string'}</code>,
-              description: 'Form field name used by hiddenInput().',
-            },
-            {
-              name: 'labelSwapDelayMs',
-              type: <code>{'number'}</code>,
-              description: 'Additional label delay in milliseconds.',
-              defaultValue: <code>{'75'}</code>,
-            },
-            {
-              name: 'children',
-              type: <code>{'RemixNode'}</code>,
-              description: 'Trigger, popup and optional hidden input.',
-            },
-          ]}
-        />
+        <ApiTable id="context-options" label="Option" defaults>
+          <ApiEntry name="defaultLabel" type="string" required>
+            Initial trigger text and fallback label.
+          </ApiEntry>
+          <ApiEntry name="defaultValue" type="string | null" defaultValue="null">
+            Initial selected value.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="boolean" defaultValue="false">
+            Disables trigger and hidden input.
+          </ApiEntry>
+          <ApiEntry name="name" type="string">
+            Form field name used by hiddenInput().
+          </ApiEntry>
+          <ApiEntry name="labelSwapDelayMs" type="number" defaultValue="75">
+            Additional label delay in milliseconds.
+          </ApiEntry>
+          <ApiEntry name="children" type="RemixNode">
+            Trigger, popup and optional hidden input.
+          </ApiEntry>
+        </ApiTable>
         <p>
           Read these members with <code>handle.context.get(select.Context)</code> in a descendant.
         </p>
-        <ApiTable
-          id="context-state"
-          label="Provided member"
-          entries={[
-            {
-              name: 'value',
-              type: <code>string | null</code>,
-              description:
-                'Selected value. Updates at the start of selection feedback, before the displayed label and change event.',
-            },
-            {
-              name: 'displayedLabel',
-              type: <code>string</code>,
-              description:
-                'Trigger text. Retains the previous label until the close transition and label delay finish.',
-            },
-            {
-              name: 'isOpen',
-              type: <code>boolean</code>,
-              description:
-                'Whether the surface is logically open. False during its close transition.',
-            },
-            {
-              name: 'isExpanded',
-              type: <code>boolean</code>,
-              description:
-                'True while open or selection is settling, including the close transition and label delay. Drives the trigger’s aria-expanded.',
-            },
-            {
-              name: 'activeId',
-              type: <code>string | undefined</code>,
-              description: 'Highlighted option ID.',
-            },
-            {
-              name: 'selectedId',
-              type: <code>string | undefined</code>,
-              description: 'Selected option ID, resolved after mounting for an initial value.',
-            },
-            {
-              name: 'listId',
-              type: <code>string</code>,
-              description: 'Generated list ID.',
-            },
-            {
-              name: 'disabled',
-              type: <code>boolean</code>,
-              description: 'Provider disabled state.',
-            },
-            {
-              name: 'name',
-              type: <code>string | undefined</code>,
-              description: 'Form field name.',
-            },
-            {
-              name: 'open',
-              type: <code>{'() => void'}</code>,
-              description:
-                'Opens from the selected value. Ignored when disabled, already open or selection is settling.',
-            },
-            {
-              name: 'close',
-              type: <code>{'() => void'}</code>,
-              description:
-                'Closes an open surface without changing selection. Ignored while selection is settling.',
-            },
-          ]}
-        />
+        <ApiTable id="context-state" label="Provided member">
+          <ApiEntry name="value" type="string | null">
+            Selected value. Updates at the start of selection feedback, before the displayed label
+            and change event.
+          </ApiEntry>
+          <ApiEntry name="displayedLabel" type="string">
+            Trigger text. Retains the previous label until the close transition and label delay
+            finish.
+          </ApiEntry>
+          <ApiEntry name="isOpen" type="boolean">
+            Whether the surface is logically open. False during its close transition.
+          </ApiEntry>
+          <ApiEntry name="isExpanded" type="boolean">
+            True while open or selection is settling, including the close transition and label
+            delay. Drives the trigger’s aria-expanded.
+          </ApiEntry>
+          <ApiEntry name="activeId" type="string | undefined">
+            Highlighted option ID.
+          </ApiEntry>
+          <ApiEntry name="selectedId" type="string | undefined">
+            Selected option ID, resolved after mounting for an initial value.
+          </ApiEntry>
+          <ApiEntry name="listId" type="string">
+            Generated list ID.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="boolean">
+            Provider disabled state.
+          </ApiEntry>
+          <ApiEntry name="name" type="string | undefined">
+            Form field name.
+          </ApiEntry>
+          <ApiEntry name="open" type="() => void">
+            Opens from the selected value. Ignored when disabled, already open or selection is
+            settling.
+          </ApiEntry>
+          <ApiEntry name="close" type="() => void">
+            Closes an open surface without changing selection. Ignored while selection is settling.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="trigger-reference">trigger()</h3>
-        <ApiTable
-          id="trigger-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            {
-              name: 'aria-haspopup',
-              type: <code>{'listbox'}</code>,
-              description: 'Popup semantics.',
-            },
-            {
-              name: 'aria-expanded',
-              type: <code>{'true | false'}</code>,
-              description: 'Popup expansion state.',
-            },
-            {
-              name: 'aria-controls',
-              type: <code>{'string'}</code>,
-              description: 'Generated list ID.',
-            },
-            {
-              name: 'aria-describedby',
-              type: <code>{'string | absent'}</code>,
-              description: 'Selected option ID.',
-            },
-            {
-              name: 'disabled',
-              type: <code>{'true | absent'}</code>,
-              description: 'Reflects Context disabled state or host disabled.',
-            },
-          ]}
-        />
+        <ApiTable id="trigger-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="aria-haspopup" type="listbox">
+            Popup semantics.
+          </ApiEntry>
+          <ApiEntry name="aria-expanded" type="true | false">
+            Popup expansion state.
+          </ApiEntry>
+          <ApiEntry name="aria-controls" type="string">
+            Generated list ID.
+          </ApiEntry>
+          <ApiEntry name="aria-describedby" type="string | absent">
+            Selected option ID.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="true | absent">
+            Reflects Context disabled state or host disabled.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="popover-reference">popover()</h3>
         <p>
           Requires <code>popover.Context</code> from the Popover module. Positions the selected
@@ -312,25 +248,20 @@ export default function SelectPage(handle: Handle<PageProps>) {
           surface mixin.
         </p>
         <h3 id="list-reference">list()</h3>
-        <ApiTable
-          id="list-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'role', type: <code>{'listbox'}</code>, description: 'Supplied by Listbox.' },
-            { name: 'id', type: <code>{'string'}</code>, description: 'Generated list ID.' },
-            {
-              name: 'tabIndex',
-              type: <code>{'-1'}</code>,
-              description: 'Programmatic focus target.',
-            },
-            {
-              name: 'aria-activedescendant',
-              type: <code>{'string | absent'}</code>,
-              description: 'Highlighted option ID.',
-            },
-          ]}
-        />
+        <ApiTable id="list-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="listbox">
+            Supplied by Listbox.
+          </ApiEntry>
+          <ApiEntry name="id" type="string">
+            Generated list ID.
+          </ApiEntry>
+          <ApiEntry name="tabIndex" type="-1">
+            Programmatic focus target.
+          </ApiEntry>
+          <ApiEntry name="aria-activedescendant" type="string | absent">
+            Highlighted option ID.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="option-reference">option(options)</h3>
         <p>
           Uses the Listbox option contract. <code>label</code> and <code>value</code> are required.{' '}
@@ -340,50 +271,38 @@ export default function SelectPage(handle: Handle<PageProps>) {
           <a href="/patterns/listbox/#option-reference">Listbox option reference</a>. Options with
           the native <code>hidden</code> attribute are skipped.
         </p>
-        <ApiTable
-          id="option-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'role', type: <code>{'option'}</code>, description: 'Option semantics.' },
-            { name: 'id', type: <code>{'string'}</code>, description: 'Generated option ID.' },
-            {
-              name: 'aria-selected, aria-disabled',
-              type: <code>{'true | false'}</code>,
-              description: 'Selected and disabled state.',
-            },
-            {
-              name: 'data-highlighted',
-              type: <code>{'true | false'}</code>,
-              description: 'Highlighted state.',
-            },
-            {
-              name: 'data-select-flash',
-              type: <code>{'true | absent'}</code>,
-              description: 'Temporary selection feedback.',
-            },
-          ]}
-        />
+        <ApiTable id="option-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="option">
+            Option semantics.
+          </ApiEntry>
+          <ApiEntry name="id" type="string">
+            Generated option ID.
+          </ApiEntry>
+          <ApiEntry name="aria-selected, aria-disabled" type="true | false">
+            Selected and disabled state.
+          </ApiEntry>
+          <ApiEntry name="data-highlighted" type="true | false">
+            Highlighted state.
+          </ApiEntry>
+          <ApiEntry name="data-select-flash" type="true | absent">
+            Temporary selection feedback.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="hidden-input-reference">hiddenInput()</h3>
-        <ApiTable
-          id="hidden-input-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'type', type: <code>{'hidden'}</code>, description: 'Native hidden input.' },
-            { name: 'name', type: <code>{'string | absent'}</code>, description: 'Context name.' },
-            {
-              name: 'value',
-              type: <code>{'string'}</code>,
-              description: 'Selected value or empty string.',
-            },
-            {
-              name: 'disabled',
-              type: <code>{'true | absent'}</code>,
-              description: 'Context disabled state.',
-            },
-          ]}
-        />
+        <ApiTable id="hidden-input-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="type" type="hidden">
+            Native hidden input.
+          </ApiEntry>
+          <ApiEntry name="name" type="string | absent">
+            Context name.
+          </ApiEntry>
+          <ApiEntry name="value" type="string">
+            Selected value or empty string.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="true | absent">
+            Context disabled state.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="change-listener-reference">onSelectChange(handler, captureBoolean?)</h3>
         <p>
           Listens for <code>rmx:select-change</code>. Receives the event and an abort signal.
@@ -391,44 +310,27 @@ export default function SelectPage(handle: Handle<PageProps>) {
           trigger is registered. They are not cancelable.
         </p>
         <h3 id="change-event-reference">SelectChangeEvent</h3>
-        <ApiTable
-          id="change-event-properties"
-          label="Property"
-          entries={[
-            {
-              name: 'value',
-              type: <code>{'string | null'}</code>,
-              description: 'Committed option value.',
-            },
-            {
-              name: 'label',
-              type: <code>{'string | null'}</code>,
-              description: 'Committed option label.',
-            },
-            {
-              name: 'optionId',
-              type: <code>{'string | null'}</code>,
-              description: 'Generated option ID.',
-            },
-          ]}
-        />
+        <ApiTable id="change-event-properties" label="Property">
+          <ApiEntry name="value" type="string | null">
+            Committed option value.
+          </ApiEntry>
+          <ApiEntry name="label" type="string | null">
+            Committed option label.
+          </ApiEntry>
+          <ApiEntry name="optionId" type="string | null">
+            Generated option ID.
+          </ApiEntry>
+        </ApiTable>
         <p>
           Construct with <code>{'new SelectChangeEvent({ value, label, optionId })'}</code>.
         </p>
         <h3 id="types-reference">Exported types</h3>
-        <ApiTable
-          id="types-types"
-          detailsLabel="Definition"
-          entries={[
-            {
-              name: 'SelectContextProps',
-              type: <code>{'interface'}</code>,
-              description: 'Initial selection, label, timing, disabled state and form name.',
-              id: 'type-SelectContextProps',
-              details: <CodeBlock html={typeDefinitions.SelectContextProps} />,
-            },
-          ]}
-        />
+        <ApiTable id="types-types">
+          <ApiEntry id="type-SelectContextProps" name="SelectContextProps" type="interface">
+            <p>Initial selection, label, timing, disabled state and form name.</p>
+            <CodeBlock html={typeDefinitions.SelectContextProps} />
+          </ApiEntry>
+        </ApiTable>
         <p>Option types belong to the Listbox module. Positioning types belong to Anchor.</p>
       </Section>
     </PageLayout>

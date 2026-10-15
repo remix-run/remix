@@ -46,7 +46,20 @@ export default function AccordionPage(handle: Handle<PageProps>) {
 
 `PageLayout` reads `Section`, titled `Example` and native `h3` elements with IDs to build the page outline. Use `h3` for individual API parts. Function argument lists are shortened to `()` in outline labels. Keep these elements in the page JSX, including inside fragments or arrays; headings hidden inside another component's render function are not collected. IDs must be unique within a page. Give an example a `title` and optional `description` when it needs its own heading. Use `compact` for a shorter preview.
 
-Use `ApiTable` for props, attributes, event fields and exported types. Give each table a stable, unique `id` such as `context-props` or `trigger-attributes`. Entry permalinks combine this prefix with the entry name. Set an entry's `id` explicitly when preserving an existing type link. Each entry has a name, type and description, with optional default, required status and expanded detail. The shared component renders native disclosures with borderless detail tables and a permalink in each expanded description. Keep full type definitions in expanded detail. Fragment targets live inside the disclosure so native navigation reveals collapsed entries. The browser startup also restores targeted entries on reload. Headings and entries leave space below sticky navigation. APIs with no options or fields can use concise prose.
+Use `ApiTable` with `ApiEntry` children for props, attributes, event fields and exported types. Give each table a stable, unique `id` such as `context-props` or `trigger-attributes`. Entry permalinks combine this prefix with the entry name. Set an entry's `id` explicitly when preserving an existing type link. Supply `type` and optional `defaultValue` as strings; the entry adds code formatting. Write descriptions, links and full type definitions as normal JSX children:
+
+```tsx
+<ApiTable id="entrance-options" label="Option" defaults>
+  <ApiEntry name="duration" type="number" required>
+    Playback time in milliseconds.
+  </ApiEntry>
+  <ApiEntry name="easing" type="string" defaultValue="'linear'">
+    CSS easing function.
+  </ApiEntry>
+</ApiTable>
+```
+
+The shared components render native disclosures with borderless detail tables and a permalink in each expanded description. Fragment targets live inside the disclosure so native navigation reveals collapsed entries. The browser startup also restores targeted entries on reload. Headings and entries leave space below sticky navigation. APIs with no options or fields can use concise prose.
 
 Load examples and highlight snippets once at module scope. Example names are relative to `app/examples/`, without the `.example.tsx` suffix. For example, use `accordion/basic` or `animation/spring/billing`:
 

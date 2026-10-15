@@ -247,7 +247,7 @@ describe('UI docs', () => {
       assert.doesNotMatch(reference, /class="ui-reference-table"/, page.slug)
       if (page.category === 'patterns' || page.slug === 'spring' || page.slug === 'tween') {
         assert.match(reference, /id="type-[^"]+" class="ui-api-entry-content"/, page.slug)
-        assert.match(reference, /<th scope="row">Definition<\/th>/, page.slug)
+        assert.match(reference, /<pre[^>]*class="shiki/, page.slug)
       }
     }
   })

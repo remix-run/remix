@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ApiTable } from '../api-table.tsx'
+import { ApiEntry, ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Listbox',
@@ -228,331 +228,207 @@ export default function ListboxPage(handle: Handle<PageProps>) {
           Requires controlled selection and highlight state. Provides <code>ListboxContext</code>{' '}
           and optionally a <code>ListboxRef</code>.
         </p>
-        <ApiTable
-          id="context-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'value',
-              type: <code>{'string | null'}</code>,
-              description: 'Selected value.',
-              required: true,
-            },
-            {
-              name: 'activeValue',
-              type: <code>{'string | null'}</code>,
-              description: 'Highlighted value.',
-              required: true,
-            },
-            {
-              name: 'onSelect',
-              type: (
-                <code>{'(value: ListboxValue, option?: ListboxRegisteredOption) => void'}</code>
-              ),
-              description: 'Receives the requested value and registered option.',
-              required: true,
-            },
-            {
-              name: 'onHighlight',
-              type: (
-                <code>{'(value: ListboxValue, option?: ListboxRegisteredOption) => void'}</code>
-              ),
-              description: 'Receives the requested highlight and registered option.',
-              required: true,
-            },
-            {
-              name: 'onSelectSettled',
-              type: (
-                <code>
-                  {
-                    '(value: ListboxValue, option?: ListboxRegisteredOption) => void | Promise<void>'
-                  }
-                </code>
-              ),
-              description: 'Runs after optional selection feedback.',
-            },
-            {
-              name: 'flashSelection',
-              type: <code>{'boolean'}</code>,
-              description: 'Adds a 60 millisecond selection flash.',
-              defaultValue: <code>{'false'}</code>,
-            },
-            {
-              name: 'selectionFlashAttribute',
-              type: <code>{'string'}</code>,
-              description: 'Attribute applied during selection feedback.',
-              defaultValue: <code>{"'data-listbox-flash'"}</code>,
-            },
-            {
-              name: 'ref',
-              type: <code>{'(ref: ListboxRef) => void'}</code>,
-              description: 'Receives live option metadata and operations.',
-            },
-            {
-              name: 'children',
-              type: <code>{'RemixNode'}</code>,
-              description: 'List and options.',
-            },
-          ]}
-        />
+        <ApiTable id="context-options" label="Option" defaults>
+          <ApiEntry name="value" type="string | null" required>
+            Selected value.
+          </ApiEntry>
+          <ApiEntry name="activeValue" type="string | null" required>
+            Highlighted value.
+          </ApiEntry>
+          <ApiEntry
+            name="onSelect"
+            type="(value: ListboxValue, option?: ListboxRegisteredOption) => void"
+            required
+          >
+            Receives the requested value and registered option.
+          </ApiEntry>
+          <ApiEntry
+            name="onHighlight"
+            type="(value: ListboxValue, option?: ListboxRegisteredOption) => void"
+            required
+          >
+            Receives the requested highlight and registered option.
+          </ApiEntry>
+          <ApiEntry
+            name="onSelectSettled"
+            type="(value: ListboxValue, option?: ListboxRegisteredOption) => void | Promise<void>"
+          >
+            Runs after optional selection feedback.
+          </ApiEntry>
+          <ApiEntry name="flashSelection" type="boolean" defaultValue="false">
+            Adds a 60 millisecond selection flash.
+          </ApiEntry>
+          <ApiEntry
+            name="selectionFlashAttribute"
+            type="string"
+            defaultValue="'data-listbox-flash'"
+          >
+            Attribute applied during selection feedback.
+          </ApiEntry>
+          <ApiEntry name="ref" type="(ref: ListboxRef) => void">
+            Receives live option metadata and operations.
+          </ApiEntry>
+          <ApiEntry name="children" type="RemixNode">
+            List and options.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="list-reference">list()</h3>
         <p>
           Handles keyboard navigation and typeahead. Supply an accessible name and{' '}
           <code>aria-activedescendant</code> from the highlighted option’s ID.
         </p>
-        <ApiTable
-          id="list-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            {
-              name: 'role',
-              type: <code>{'listbox'}</code>,
-              description: 'Can be overridden by the host role.',
-            },
-            {
-              name: 'tabIndex',
-              type: <code>{'-1'}</code>,
-              description: 'Default. Can be overridden on the host.',
-            },
-          ]}
-        />
+        <ApiTable id="list-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="listbox">
+            Can be overridden by the host role.
+          </ApiEntry>
+          <ApiEntry name="tabIndex" type="-1">
+            Default. Can be overridden on the host.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="option-reference">option(options)</h3>
-        <ApiTable
-          id="option-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'value',
-              type: <code>{'string'}</code>,
-              description: 'Stable identifier.',
-              required: true,
-            },
-            {
-              name: 'label',
-              type: <code>{'string'}</code>,
-              description: 'Label metadata.',
-              required: true,
-            },
-            {
-              name: 'textValue',
-              type: <code>{'string | string[]'}</code>,
-              description: 'Typeahead search text.',
-              defaultValue: <code>{'label'}</code>,
-            },
-            {
-              name: 'disabled',
-              type: <code>{'boolean'}</code>,
-              description: 'Prevents interactions.',
-              defaultValue: <code>{'false'}</code>,
-            },
-          ]}
-        />
-        <ApiTable
-          id="option-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'role', type: <code>{'option'}</code>, description: 'Option semantics.' },
-            { name: 'id', type: <code>{'string'}</code>, description: 'Generated option ID.' },
-            {
-              name: 'aria-selected',
-              type: <code>{'true | false'}</code>,
-              description: 'Matches Context value.',
-            },
-            {
-              name: 'aria-disabled',
-              type: <code>{'true | false'}</code>,
-              description: 'Reflects disabled.',
-            },
-            {
-              name: 'data-highlighted',
-              type: <code>{'true | false'}</code>,
-              description: 'Matches Context activeValue.',
-            },
-          ]}
-        />
+        <ApiTable id="option-options" label="Option" defaults>
+          <ApiEntry name="value" type="string" required>
+            Stable identifier.
+          </ApiEntry>
+          <ApiEntry name="label" type="string" required>
+            Label metadata.
+          </ApiEntry>
+          <ApiEntry name="textValue" type="string | string[]" defaultValue="label">
+            Typeahead search text.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="boolean" defaultValue="false">
+            Prevents interactions.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="option-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="option">
+            Option semantics.
+          </ApiEntry>
+          <ApiEntry name="id" type="string">
+            Generated option ID.
+          </ApiEntry>
+          <ApiEntry name="aria-selected" type="true | false">
+            Matches Context value.
+          </ApiEntry>
+          <ApiEntry name="aria-disabled" type="true | false">
+            Reflects disabled.
+          </ApiEntry>
+          <ApiEntry name="data-highlighted" type="true | false">
+            Matches Context activeValue.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="ref-reference">ListboxRef</h3>
-        <ApiTable
-          id="ref-members"
-          label="Member"
-          entries={[
-            {
-              name: 'options',
-              type: <code>{'readonly ListboxRegisteredOption[]'}</code>,
-              description: 'Registered options, including disabled and hidden options.',
-            },
-            {
-              name: 'active',
-              type: <code>{'ListboxRegisteredOption | undefined'}</code>,
-              description: 'Current highlighted option.',
-            },
-            {
-              name: 'selected',
-              type: <code>{'ListboxRegisteredOption | undefined'}</code>,
-              description: 'Current selected option.',
-            },
-            {
-              name: 'highlight',
-              type: <code>{'(value: ListboxValue) => void'}</code>,
-              description:
-                'Requests a highlight without checking availability. Null clears it. Unlike navigation, this does not scroll the option into view.',
-            },
-            {
-              name: 'highlightSearchMatch',
-              type: <code>{'(text: string) => void'}</code>,
-              description: 'Highlights and scrolls to the next enabled match.',
-            },
-            {
-              name: 'matchSearchText',
-              type: (
-                <code>
-                  {'(text: string, fromValue?: ListboxValue) => ListboxRegisteredOption | null'}
-                </code>
-              ),
-              description:
-                'Finds a match without changing state. Starts after activeValue by default.',
-            },
-            {
-              name: 'navigateFirst',
-              type: <code>{'() => void'}</code>,
-              description: 'Highlights and scrolls to the first enabled visible option.',
-            },
-            {
-              name: 'navigateLast',
-              type: <code>{'() => void'}</code>,
-              description: 'Highlights and scrolls to the last enabled visible option.',
-            },
-            {
-              name: 'navigateNext',
-              type: <code>{'() => void'}</code>,
-              description: 'Highlights the next enabled visible option, wrapping at the end.',
-            },
-            {
-              name: 'navigatePrevious',
-              type: <code>{'() => void'}</code>,
-              description:
-                'Highlights the previous enabled visible option. Stops at the first, or starts at the last when none is highlighted.',
-            },
-            {
-              name: 'scrollActiveOptionIntoView',
-              type: <code>{'() => void'}</code>,
-              description: 'Scrolls the highlighted option into view.',
-            },
-            {
-              name: 'select',
-              type: <code>{'(value: ListboxValue) => Promise<void>'}</code>,
-              description:
-                'Requests selection of an enabled visible option and waits for settling. Null and unknown values are ignored.',
-            },
-            {
-              name: 'selectActive',
-              type: <code>{'() => Promise<void>'}</code>,
-              description:
-                'Selects the current highlight and waits for settling. Disabled and hidden options are ignored.',
-            },
-          ]}
-        />
+        <ApiTable id="ref-members" label="Member">
+          <ApiEntry name="options" type="readonly ListboxRegisteredOption[]">
+            Registered options, including disabled and hidden options.
+          </ApiEntry>
+          <ApiEntry name="active" type="ListboxRegisteredOption | undefined">
+            Current highlighted option.
+          </ApiEntry>
+          <ApiEntry name="selected" type="ListboxRegisteredOption | undefined">
+            Current selected option.
+          </ApiEntry>
+          <ApiEntry name="highlight" type="(value: ListboxValue) => void">
+            Requests a highlight without checking availability. Null clears it. Unlike navigation,
+            this does not scroll the option into view.
+          </ApiEntry>
+          <ApiEntry name="highlightSearchMatch" type="(text: string) => void">
+            Highlights and scrolls to the next enabled match.
+          </ApiEntry>
+          <ApiEntry
+            name="matchSearchText"
+            type="(text: string, fromValue?: ListboxValue) => ListboxRegisteredOption | null"
+          >
+            Finds a match without changing state. Starts after activeValue by default.
+          </ApiEntry>
+          <ApiEntry name="navigateFirst" type="() => void">
+            Highlights and scrolls to the first enabled visible option.
+          </ApiEntry>
+          <ApiEntry name="navigateLast" type="() => void">
+            Highlights and scrolls to the last enabled visible option.
+          </ApiEntry>
+          <ApiEntry name="navigateNext" type="() => void">
+            Highlights the next enabled visible option, wrapping at the end.
+          </ApiEntry>
+          <ApiEntry name="navigatePrevious" type="() => void">
+            Highlights the previous enabled visible option. Stops at the first, or starts at the
+            last when none is highlighted.
+          </ApiEntry>
+          <ApiEntry name="scrollActiveOptionIntoView" type="() => void">
+            Scrolls the highlighted option into view.
+          </ApiEntry>
+          <ApiEntry name="select" type="(value: ListboxValue) => Promise<void>">
+            Requests selection of an enabled visible option and waits for settling. Null and unknown
+            values are ignored.
+          </ApiEntry>
+          <ApiEntry name="selectActive" type="() => Promise<void>">
+            Selects the current highlight and waits for settling. Disabled and hidden options are
+            ignored.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="provided-context-reference">Provided context</h3>
-        <ApiTable
-          id="provided-context-members"
-          label="Member"
-          entries={[
-            {
-              name: 'value',
-              type: <code>{'ListboxValue'}</code>,
-              description: 'Current selected value.',
-            },
-            {
-              name: 'activeValue',
-              type: <code>{'ListboxValue'}</code>,
-              description: 'Current highlighted value.',
-            },
-            {
-              name: 'select',
-              type: <code>{'(value: ListboxValue) => Promise<void>'}</code>,
-              description: 'Selection request and settling.',
-            },
-            {
-              name: 'highlight',
-              type: <code>{'(value: ListboxValue) => void'}</code>,
-              description:
-                'Requests a highlight without checking availability or scrolling. Null clears it.',
-            },
-            {
-              name: 'highlightSearchMatch',
-              type: <code>{'(text: string) => void'}</code>,
-              description: 'Typeahead highlight.',
-            },
-            {
-              name: 'navigate',
-              type: <code>{"(direction: 'next' | 'previous' | 'first' | 'last') => void"}</code>,
-              description: 'Accepts next, previous, first or last.',
-            },
-            {
-              name: 'scrollActiveOptionIntoView',
-              type: <code>{'() => void'}</code>,
-              description: 'Scrolls the current highlight.',
-            },
-            {
-              name: 'registerOption',
-              type: <code>{'(option: ListboxRegisteredOption) => void'}</code>,
-              description: 'Registration used by option().',
-            },
-          ]}
-        />
+        <ApiTable id="provided-context-members" label="Member">
+          <ApiEntry name="value" type="ListboxValue">
+            Current selected value.
+          </ApiEntry>
+          <ApiEntry name="activeValue" type="ListboxValue">
+            Current highlighted value.
+          </ApiEntry>
+          <ApiEntry name="select" type="(value: ListboxValue) => Promise<void>">
+            Selection request and settling.
+          </ApiEntry>
+          <ApiEntry name="highlight" type="(value: ListboxValue) => void">
+            Requests a highlight without checking availability or scrolling. Null clears it.
+          </ApiEntry>
+          <ApiEntry name="highlightSearchMatch" type="(text: string) => void">
+            Typeahead highlight.
+          </ApiEntry>
+          <ApiEntry
+            name="navigate"
+            type="(direction: 'next' | 'previous' | 'first' | 'last') => void"
+          >
+            Accepts next, previous, first or last.
+          </ApiEntry>
+          <ApiEntry name="scrollActiveOptionIntoView" type="() => void">
+            Scrolls the current highlight.
+          </ApiEntry>
+          <ApiEntry name="registerOption" type="(option: ListboxRegisteredOption) => void">
+            Registration used by option().
+          </ApiEntry>
+        </ApiTable>
         <h3 id="types-reference">Exported types</h3>
-        <ApiTable
-          id="types-types"
-          detailsLabel="Definition"
-          entries={[
-            {
-              name: 'ListboxValue',
-              type: <code>{'string | null'}</code>,
-              description: 'A selected or highlighted option value, or null.',
-              id: 'type-ListboxValue',
-              details: <CodeBlock html={typeDefinitions.ListboxValue} />,
-            },
-            {
-              name: 'ListboxProviderProps',
-              type: <code>{'interface'}</code>,
-              description: 'Provider state, callbacks and feedback options.',
-              id: 'type-ListboxProviderProps',
-              details: <CodeBlock html={typeDefinitions.ListboxProviderProps} />,
-            },
-            {
-              name: 'ListboxContext',
-              type: <code>{'interface'}</code>,
-              description: 'State and operations provided to descendants.',
-              id: 'type-ListboxContext',
-              details: <CodeBlock html={typeDefinitions.ListboxContext} />,
-            },
-            {
-              name: 'ListboxOption',
-              type: <code>{'interface'}</code>,
-              description:
-                'Id, value, label, disabled and textValue metadata. The option() mixin generates id.',
-              id: 'type-ListboxOption',
-              details: <CodeBlock html={typeDefinitions.ListboxOption} />,
-            },
-            {
-              name: 'ListboxRegisteredOption',
-              type: <code>{'interface'}</code>,
-              description: 'Option metadata with readonly hidden and node.',
-              id: 'type-ListboxRegisteredOption',
-              details: <CodeBlock html={typeDefinitions.ListboxRegisteredOption} />,
-            },
-            {
-              name: 'ListboxRef',
-              type: <code>{'interface'}</code>,
-              description: 'Live option access and imperative operations.',
-              id: 'type-ListboxRef',
-              details: <CodeBlock html={typeDefinitions.ListboxRef} />,
-            },
-          ]}
-        />
+        <ApiTable id="types-types">
+          <ApiEntry id="type-ListboxValue" name="ListboxValue" type="string | null">
+            <p>A selected or highlighted option value, or null.</p>
+            <CodeBlock html={typeDefinitions.ListboxValue} />
+          </ApiEntry>
+          <ApiEntry id="type-ListboxProviderProps" name="ListboxProviderProps" type="interface">
+            <p>Provider state, callbacks and feedback options.</p>
+            <CodeBlock html={typeDefinitions.ListboxProviderProps} />
+          </ApiEntry>
+          <ApiEntry id="type-ListboxContext" name="ListboxContext" type="interface">
+            <p>State and operations provided to descendants.</p>
+            <CodeBlock html={typeDefinitions.ListboxContext} />
+          </ApiEntry>
+          <ApiEntry id="type-ListboxOption" name="ListboxOption" type="interface">
+            <p>
+              Id, value, label, disabled and textValue metadata. The option() mixin generates id.
+            </p>
+            <CodeBlock html={typeDefinitions.ListboxOption} />
+          </ApiEntry>
+          <ApiEntry
+            id="type-ListboxRegisteredOption"
+            name="ListboxRegisteredOption"
+            type="interface"
+          >
+            <p>Option metadata with readonly hidden and node.</p>
+            <CodeBlock html={typeDefinitions.ListboxRegisteredOption} />
+          </ApiEntry>
+          <ApiEntry id="type-ListboxRef" name="ListboxRef" type="interface">
+            <p>Live option access and imperative operations.</p>
+            <CodeBlock html={typeDefinitions.ListboxRef} />
+          </ApiEntry>
+        </ApiTable>
       </Section>
     </PageLayout>
   )

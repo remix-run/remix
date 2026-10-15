@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ApiTable } from '../api-table.tsx'
+import { ApiEntry, ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Entrance and exit',
@@ -99,137 +99,64 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           Runs when the element is inserted, from the supplied style values to its normal styles.
           Returns an element mixin.
         </p>
-        <ApiTable
-          id="entrance-config"
-          label="Configuration"
-          typeLabel="Value"
-          entries={[
-            {
-              name: 'Omitted or true',
-              type: <code>{'undefined | true'}</code>,
-              description: <>150 ms opacity fade from zero with ease-out.</>,
-            },
-            {
-              name: 'Options object',
-              type: (
-                <code>
-                  {
-                    '{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }'
-                  }
-                </code>
-              ),
-              description: (
-                <>
-                  Uses the supplied keyframe and timing. Requires <code>duration</code>.
-                </>
-              ),
-            },
-            {
-              name: 'false or null',
-              type: <code>{'false | null'}</code>,
-              description: <>Disables entrance animation.</>,
-            },
-          ]}
-        />
-        <ApiTable
-          id="entrance-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'duration',
-              type: <code>{'number'}</code>,
-              description: <>Playback time in milliseconds.</>,
-              required: true,
-            },
-            {
-              name: 'easing',
-              type: <code>{'string'}</code>,
-              description: <>CSS easing function.</>,
-              defaultValue: <code>{"'linear'"}</code>,
-            },
-            {
-              name: 'delay',
-              type: <code>{'number'}</code>,
-              description: <>Delay before playback in milliseconds.</>,
-              defaultValue: <code>{'0'}</code>,
-            },
-            {
-              name: 'composite',
-              type: <code>{'CompositeOperation'}</code>,
-              description: (
-                <>
-                  How the keyframe combines with underlying styles. Accepts <code>'replace'</code>,{' '}
-                  <code>'add'</code> or <code>'accumulate'</code>.
-                </>
-              ),
-              defaultValue: <code>{"'replace'"}</code>,
-            },
-            {
-              name: 'Style properties',
-              type: <code>{'string | number'}</code>,
-              description: (
-                <>
-                  Starting values for entrance or destination values for exit. Other value types are
-                  ignored.
-                </>
-              ),
-            },
-          ]}
-        />
-        <ApiTable
-          id="entrance-entrance-options"
-          label="Entrance option"
-          defaults
-          entries={[
-            {
-              name: 'initial',
-              type: <code>{'boolean'}</code>,
-              description: (
-                <>False skips the first entrance for each key within its parent. Requires a key.</>
-              ),
-              defaultValue: <code>{'true'}</code>,
-            },
-          ]}
-        />
+        <ApiTable id="entrance-config" label="Configuration" typeLabel="Value">
+          <ApiEntry name="Omitted or true" type="undefined | true">
+            150 ms opacity fade from zero with ease-out.
+          </ApiEntry>
+          <ApiEntry
+            name="Options object"
+            type="{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }"
+          >
+            Uses the supplied keyframe and timing. Requires <code>duration</code>.
+          </ApiEntry>
+          <ApiEntry name="false or null" type="false | null">
+            Disables entrance animation.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="entrance-options" label="Option" defaults>
+          <ApiEntry name="duration" type="number" required>
+            Playback time in milliseconds.
+          </ApiEntry>
+          <ApiEntry name="easing" type="string" defaultValue="'linear'">
+            CSS easing function.
+          </ApiEntry>
+          <ApiEntry name="delay" type="number" defaultValue="0">
+            Delay before playback in milliseconds.
+          </ApiEntry>
+          <ApiEntry name="composite" type="CompositeOperation" defaultValue="'replace'">
+            How the keyframe combines with underlying styles. Accepts <code>'replace'</code>,{' '}
+            <code>'add'</code> or <code>'accumulate'</code>.
+          </ApiEntry>
+          <ApiEntry name="Style properties" type="string | number">
+            Starting values for entrance or destination values for exit. Other value types are
+            ignored.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="entrance-entrance-options" label="Entrance option" defaults>
+          <ApiEntry name="initial" type="boolean" defaultValue="true">
+            False skips the first entrance for each key within its parent. Requires a key.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="exit-reference">animateExit(config?)</h3>
         <p>
           Runs when the element is removed, from its current styles to the supplied values. Keeps
           the element in the DOM until playback finishes. Returns an element mixin.
         </p>
-        <ApiTable
-          id="exit-config"
-          label="Configuration"
-          typeLabel="Value"
-          entries={[
-            {
-              name: 'Omitted or true',
-              type: <code>{'undefined | true'}</code>,
-              description: <>150 ms opacity fade to zero with ease-in.</>,
-            },
-            {
-              name: 'Options object',
-              type: (
-                <code>
-                  {
-                    '{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }'
-                  }
-                </code>
-              ),
-              description: (
-                <>
-                  Accepts the same timing and style options as <code>animateEntrance()</code>. The
-                  style values are the destination keyframe. <code>initial</code> has no effect.
-                </>
-              ),
-            },
-            {
-              name: 'false or null',
-              type: <code>{'false | null'}</code>,
-              description: <>Removes the element without an exit animation.</>,
-            },
-          ]}
-        />
+        <ApiTable id="exit-config" label="Configuration" typeLabel="Value">
+          <ApiEntry name="Omitted or true" type="undefined | true">
+            150 ms opacity fade to zero with ease-in.
+          </ApiEntry>
+          <ApiEntry
+            name="Options object"
+            type="{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }"
+          >
+            Accepts the same timing and style options as <code>animateEntrance()</code>. The style
+            values are the destination keyframe. <code>initial</code> has no effect.
+          </ApiEntry>
+          <ApiEntry name="false or null" type="false | null">
+            Removes the element without an exit animation.
+          </ApiEntry>
+        </ApiTable>
         <p>
           Both mixins use the Web Animations API and do not automatically read reduced-motion
           preferences.

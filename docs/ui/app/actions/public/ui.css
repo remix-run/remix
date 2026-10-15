@@ -493,7 +493,8 @@
   padding-bottom: 0;
   border-bottom: 0;
 }
-.ui-api-details td > :first-child {
+.ui-api-details td > :first-child,
+.ui-api-permalink + * {
   margin-top: 0;
 }
 .ui-api-details td > :last-child {

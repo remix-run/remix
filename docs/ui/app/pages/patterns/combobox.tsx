@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ApiTable } from '../api-table.tsx'
+import { ApiEntry, ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Combobox',
@@ -202,40 +202,23 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>
-        <ApiTable
-          id="context-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'defaultValue',
-              type: <code>{'string | null'}</code>,
-              description: 'Initial committed value and initial draft text.',
-              defaultValue: <code>{'null'}</code>,
-            },
-            {
-              name: 'disabled',
-              type: <code>{'boolean'}</code>,
-              description: 'Disables input and hidden input.',
-              defaultValue: <code>{'false'}</code>,
-            },
-            {
-              name: 'name',
-              type: <code>{'string'}</code>,
-              description: 'Form field name for the committed value.',
-            },
-            {
-              name: 'ref',
-              type: <code>{'(handle: ComboboxHandle) => void'}</code>,
-              description: 'Receives a live imperative handle once after mounting.',
-            },
-            {
-              name: 'children',
-              type: <code>{'RemixNode'}</code>,
-              description: 'Input, surface, list, options and hidden input.',
-            },
-          ]}
-        />
+        <ApiTable id="context-options" label="Option" defaults>
+          <ApiEntry name="defaultValue" type="string | null" defaultValue="null">
+            Initial committed value and initial draft text.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="boolean" defaultValue="false">
+            Disables input and hidden input.
+          </ApiEntry>
+          <ApiEntry name="name" type="string">
+            Form field name for the committed value.
+          </ApiEntry>
+          <ApiEntry name="ref" type="(handle: ComboboxHandle) => void">
+            Receives a live imperative handle once after mounting.
+          </ApiEntry>
+          <ApiEntry name="children" type="RemixNode">
+            Input, surface, list, options and hidden input.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="input-reference">input()</h3>
         <p>
           On blur, an exact match against an enabled option’s search values selects that option.
@@ -247,244 +230,154 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           Escape closes the list and clears unmatched text and selection. Exact matches remain in
           the input, but Escape alone does not select them.
         </p>
-        <ApiTable
-          id="input-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            {
-              name: 'role',
-              type: <code>{'combobox'}</code>,
-              description: 'Editable value-picker semantics.',
-            },
-            {
-              name: 'aria-autocomplete',
-              type: <code>{'list'}</code>,
-              description: 'List suggestions for typed text.',
-            },
-            {
-              name: 'aria-haspopup',
-              type: <code>{'listbox'}</code>,
-              description: 'Popup semantics.',
-            },
-            {
-              name: 'aria-expanded',
-              type: <code>{'true | false'}</code>,
-              description: 'Logical open state.',
-            },
-            {
-              name: 'aria-controls',
-              type: <code>{'string'}</code>,
-              description: 'Generated list ID.',
-            },
-            {
-              name: 'aria-activedescendant',
-              type: <code>{'string | absent'}</code>,
-              description: 'Highlighted option ID.',
-            },
-            {
-              name: 'data-surface-visible',
-              type: <code>{'true | absent'}</code>,
-              description: 'Whether the result surface is visible.',
-            },
-            {
-              name: 'autocomplete',
-              type: <code>{'off'}</code>,
-              description: 'Default. Host autocomplete can override it.',
-            },
-            {
-              name: 'type',
-              type: <code>{'text'}</code>,
-              description: 'Default. Host type can override it.',
-            },
-            {
-              name: 'disabled',
-              type: <code>{'true | absent'}</code>,
-              description: 'Provider or host disabled state.',
-            },
-          ]}
-        />
+        <ApiTable id="input-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="combobox">
+            Editable value-picker semantics.
+          </ApiEntry>
+          <ApiEntry name="aria-autocomplete" type="list">
+            List suggestions for typed text.
+          </ApiEntry>
+          <ApiEntry name="aria-haspopup" type="listbox">
+            Popup semantics.
+          </ApiEntry>
+          <ApiEntry name="aria-expanded" type="true | false">
+            Logical open state.
+          </ApiEntry>
+          <ApiEntry name="aria-controls" type="string">
+            Generated list ID.
+          </ApiEntry>
+          <ApiEntry name="aria-activedescendant" type="string | absent">
+            Highlighted option ID.
+          </ApiEntry>
+          <ApiEntry name="data-surface-visible" type="true | absent">
+            Whether the result surface is visible.
+          </ApiEntry>
+          <ApiEntry name="autocomplete" type="off">
+            Default. Host autocomplete can override it.
+          </ApiEntry>
+          <ApiEntry name="type" type="text">
+            Default. Host type can override it.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="true | absent">
+            Provider or host disabled state.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="popover-reference">popover()</h3>
         <p>
           Synchronizes the popup minimum width to the input and anchors below it. Allows input
           clicks while open. Adds native <code>popover=&quot;manual&quot;</code> behavior.
         </p>
-        <ApiTable
-          id="popover-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            {
-              name: 'data-show-reason',
-              type: <code>{'hint | nav'}</code>,
-              description: 'Typing hint or navigation session.',
-            },
-          ]}
-        />
+        <ApiTable id="popover-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="data-show-reason" type="hint | nav">
+            Typing hint or navigation session.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="list-reference">list()</h3>
-        <ApiTable
-          id="list-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'role', type: <code>{'listbox'}</code>, description: 'Popup list semantics.' },
-            { name: 'id', type: <code>{'string'}</code>, description: 'Generated list ID.' },
-            {
-              name: 'tabIndex',
-              type: <code>{'-1'}</code>,
-              description: 'Listbox default. Focus remains on the input.',
-            },
-          ]}
-        />
+        <ApiTable id="list-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="listbox">
+            Popup list semantics.
+          </ApiEntry>
+          <ApiEntry name="id" type="string">
+            Generated list ID.
+          </ApiEntry>
+          <ApiEntry name="tabIndex" type="-1">
+            Listbox default. Focus remains on the input.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="option-reference">option(options)</h3>
-        <ApiTable
-          id="option-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'label',
-              type: <code>{'string'}</code>,
-              description:
-                'Label displayed after pointer or keyboard selection. Blur matching preserves typed text.',
-              required: true,
-            },
-            {
-              name: 'value',
-              type: <code>{'string'}</code>,
-              description: 'Stable submitted value.',
-              required: true,
-            },
-            {
-              name: 'searchValue',
-              type: <code>{'string | string[]'}</code>,
-              description:
-                'Search text or aliases. Filtering matches prefixes and blur matches the full string, ignoring case. Defaults to the label.',
-              defaultValue: <code>{'label'}</code>,
-            },
-            {
-              name: 'disabled',
-              type: <code>{'boolean'}</code>,
-              description: 'Prevents selection.',
-              defaultValue: <code>{'false'}</code>,
-            },
-          ]}
-        />
-        <ApiTable
-          id="option-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'role', type: <code>{'option'}</code>, description: 'Option semantics.' },
-            { name: 'id', type: <code>{'string'}</code>, description: 'Generated option ID.' },
-            {
-              name: 'aria-selected, aria-disabled',
-              type: <code>{'true | false'}</code>,
-              description: 'Selected and disabled state.',
-            },
-            {
-              name: 'data-highlighted',
-              type: <code>{'true | false'}</code>,
-              description: 'Highlighted state.',
-            },
-            {
-              name: 'hidden',
-              type: <code>{'true | absent'}</code>,
-              description: 'Non-matching filter results.',
-            },
-            {
-              name: 'data-combobox-flash',
-              type: <code>{'true | absent'}</code>,
-              description: 'Temporary selection feedback.',
-            },
-          ]}
-        />
+        <ApiTable id="option-options" label="Option" defaults>
+          <ApiEntry name="label" type="string" required>
+            Label displayed after pointer or keyboard selection. Blur matching preserves typed text.
+          </ApiEntry>
+          <ApiEntry name="value" type="string" required>
+            Stable submitted value.
+          </ApiEntry>
+          <ApiEntry name="searchValue" type="string | string[]" defaultValue="label">
+            Search text or aliases. Filtering matches prefixes and blur matches the full string,
+            ignoring case. Defaults to the label.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="boolean" defaultValue="false">
+            Prevents selection.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="option-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="option">
+            Option semantics.
+          </ApiEntry>
+          <ApiEntry name="id" type="string">
+            Generated option ID.
+          </ApiEntry>
+          <ApiEntry name="aria-selected, aria-disabled" type="true | false">
+            Selected and disabled state.
+          </ApiEntry>
+          <ApiEntry name="data-highlighted" type="true | false">
+            Highlighted state.
+          </ApiEntry>
+          <ApiEntry name="hidden" type="true | absent">
+            Non-matching filter results.
+          </ApiEntry>
+          <ApiEntry name="data-combobox-flash" type="true | absent">
+            Temporary selection feedback.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="hidden-input-reference">hiddenInput()</h3>
-        <ApiTable
-          id="hidden-input-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'type', type: <code>{'hidden'}</code>, description: 'Native hidden input.' },
-            { name: 'name', type: <code>{'string | absent'}</code>, description: 'Context name.' },
-            {
-              name: 'value',
-              type: <code>{'string'}</code>,
-              description: 'Committed value or empty string.',
-            },
-            {
-              name: 'disabled',
-              type: <code>{'true | absent'}</code>,
-              description: 'Context disabled state.',
-            },
-          ]}
-        />
+        <ApiTable id="hidden-input-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="type" type="hidden">
+            Native hidden input.
+          </ApiEntry>
+          <ApiEntry name="name" type="string | absent">
+            Context name.
+          </ApiEntry>
+          <ApiEntry name="value" type="string">
+            Committed value or empty string.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="true | absent">
+            Context disabled state.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="handle-reference">ComboboxHandle</h3>
-        <ApiTable
-          id="handle-members"
-          label="Member"
-          entries={[
-            {
-              name: 'value',
-              type: <code>{'string | null'}</code>,
-              description:
-                'Selected value. Updates before the selection flash finishes and the change event fires.',
-            },
-            {
-              name: 'label',
-              type: <code>{'string | null'}</code>,
-              description:
-                'Selected option label, which can differ from the typed text after alias matching.',
-            },
-            {
-              name: 'inputText',
-              type: <code>{'string'}</code>,
-              description:
-                'Logical input text. On selection, changes to the label before the visible input finishes closing.',
-            },
-            { name: 'isOpen', type: <code>{'boolean'}</code>, description: 'Logical open state.' },
-            { name: 'id', type: <code>{'string'}</code>, description: 'List ID.' },
-            {
-              name: 'activeOptionId',
-              type: <code>{'string | null'}</code>,
-              description: 'Highlighted option ID.',
-            },
-            {
-              name: 'open',
-              type: <code>{'(strategy?: ComboboxOpenStrategy) => Promise<void>'}</code>,
-              description:
-                'Opens filtered results, or the full list for exact or unmatched text. Defaults to selected. No-op when disabled or no options are registered.',
-            },
-            { name: 'close', type: <code>{'() => void'}</code>, description: 'Requests closure.' },
-          ]}
-        />
-        <ApiTable
-          id="handle-strategies"
-          label="Open strategy"
-          entries={[
-            {
-              name: 'selected',
-              type: <code>{'ComboboxOpenStrategy'}</code>,
-              description:
-                'Exact enabled draft match, then selected option, then first enabled result.',
-            },
-            {
-              name: 'selected-or-none',
-              type: <code>{'ComboboxOpenStrategy'}</code>,
-              description: 'Selected option when it matches the filter. Otherwise no highlight.',
-            },
-            {
-              name: 'first',
-              type: <code>{'ComboboxOpenStrategy'}</code>,
-              description: 'First enabled matching option.',
-            },
-            {
-              name: 'last',
-              type: <code>{'ComboboxOpenStrategy'}</code>,
-              description: 'Last enabled matching option.',
-            },
-          ]}
-        />
+        <ApiTable id="handle-members" label="Member">
+          <ApiEntry name="value" type="string | null">
+            Selected value. Updates before the selection flash finishes and the change event fires.
+          </ApiEntry>
+          <ApiEntry name="label" type="string | null">
+            Selected option label, which can differ from the typed text after alias matching.
+          </ApiEntry>
+          <ApiEntry name="inputText" type="string">
+            Logical input text. On selection, changes to the label before the visible input finishes
+            closing.
+          </ApiEntry>
+          <ApiEntry name="isOpen" type="boolean">
+            Logical open state.
+          </ApiEntry>
+          <ApiEntry name="id" type="string">
+            List ID.
+          </ApiEntry>
+          <ApiEntry name="activeOptionId" type="string | null">
+            Highlighted option ID.
+          </ApiEntry>
+          <ApiEntry name="open" type="(strategy?: ComboboxOpenStrategy) => Promise<void>">
+            Opens filtered results, or the full list for exact or unmatched text. Defaults to
+            selected. No-op when disabled or no options are registered.
+          </ApiEntry>
+          <ApiEntry name="close" type="() => void">
+            Requests closure.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="handle-strategies" label="Open strategy">
+          <ApiEntry name="selected" type="ComboboxOpenStrategy">
+            Exact enabled draft match, then selected option, then first enabled result.
+          </ApiEntry>
+          <ApiEntry name="selected-or-none" type="ComboboxOpenStrategy">
+            Selected option when it matches the filter. Otherwise no highlight.
+          </ApiEntry>
+          <ApiEntry name="first" type="ComboboxOpenStrategy">
+            First enabled matching option.
+          </ApiEntry>
+          <ApiEntry name="last" type="ComboboxOpenStrategy">
+            Last enabled matching option.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="change-listener-reference">onComboboxChange(handler, captureBoolean?)</h3>
         <p>
           Listens for <code>rmx:combobox-change</code>. Receives the event and an abort signal.
@@ -492,65 +385,43 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           registered. They are not cancelable.
         </p>
         <h3 id="change-event-reference">ComboboxChangeEvent</h3>
-        <ApiTable
-          id="change-event-properties"
-          label="Property"
-          entries={[
-            {
-              name: 'value',
-              type: <code>{'string | null'}</code>,
-              description: 'Committed value.',
-            },
-            {
-              name: 'label',
-              type: <code>{'string | null'}</code>,
-              description: 'Committed label.',
-            },
-            {
-              name: 'optionId',
-              type: <code>{'string | null'}</code>,
-              description: 'Generated option ID.',
-            },
-          ]}
-        />
+        <ApiTable id="change-event-properties" label="Property">
+          <ApiEntry name="value" type="string | null">
+            Committed value.
+          </ApiEntry>
+          <ApiEntry name="label" type="string | null">
+            Committed label.
+          </ApiEntry>
+          <ApiEntry name="optionId" type="string | null">
+            Generated option ID.
+          </ApiEntry>
+        </ApiTable>
         <p>
           Construct with <code>{'new ComboboxChangeEvent({ value, label, optionId })'}</code>.
         </p>
         <h3 id="types-reference">Exported types</h3>
-        <ApiTable
-          id="types-types"
-          detailsLabel="Definition"
-          entries={[
-            {
-              name: 'ComboboxContextProps',
-              type: <code>{'interface'}</code>,
-              description: 'Provider options.',
-              id: 'type-ComboboxContextProps',
-              details: <CodeBlock html={typeDefinitions.ComboboxContextProps} />,
-            },
-            {
-              name: 'ComboboxOptionOptions',
-              type: <code>{'interface'}</code>,
-              description: 'Option identity, label, aliases and disabled state.',
-              id: 'type-ComboboxOptionOptions',
-              details: <CodeBlock html={typeDefinitions.ComboboxOptionOptions} />,
-            },
-            {
-              name: 'ComboboxOpenStrategy',
-              type: <code>{"'selected' | 'selected-or-none' | 'first' | 'last'"}</code>,
-              description: 'Selected, selected-or-none, first or last.',
-              id: 'type-ComboboxOpenStrategy',
-              details: <CodeBlock html={typeDefinitions.ComboboxOpenStrategy} />,
-            },
-            {
-              name: 'ComboboxHandle',
-              type: <code>{'interface'}</code>,
-              description: 'Live state and popup operations.',
-              id: 'type-ComboboxHandle',
-              details: <CodeBlock html={typeDefinitions.ComboboxHandle} />,
-            },
-          ]}
-        />
+        <ApiTable id="types-types">
+          <ApiEntry id="type-ComboboxContextProps" name="ComboboxContextProps" type="interface">
+            <p>Provider options.</p>
+            <CodeBlock html={typeDefinitions.ComboboxContextProps} />
+          </ApiEntry>
+          <ApiEntry id="type-ComboboxOptionOptions" name="ComboboxOptionOptions" type="interface">
+            <p>Option identity, label, aliases and disabled state.</p>
+            <CodeBlock html={typeDefinitions.ComboboxOptionOptions} />
+          </ApiEntry>
+          <ApiEntry
+            id="type-ComboboxOpenStrategy"
+            name="ComboboxOpenStrategy"
+            type="'selected' | 'selected-or-none' | 'first' | 'last'"
+          >
+            <p>Selected, selected-or-none, first or last.</p>
+            <CodeBlock html={typeDefinitions.ComboboxOpenStrategy} />
+          </ApiEntry>
+          <ApiEntry id="type-ComboboxHandle" name="ComboboxHandle" type="interface">
+            <p>Live state and popup operations.</p>
+            <CodeBlock html={typeDefinitions.ComboboxHandle} />
+          </ApiEntry>
+        </ApiTable>
       </Section>
     </PageLayout>
   )

@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ApiTable } from '../api-table.tsx'
+import { ApiEntry, ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Menu',
@@ -193,53 +193,34 @@ export default function MenuPage(handle: Handle<PageProps>) {
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>
         <p>Manages open state, focus, highlighted items and nested menus.</p>
-        <ApiTable
-          id="context-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'label',
-              type: <code>{'string'}</code>,
-              description: 'Accessible menu name.',
-              defaultValue: <code>{'Trigger label'}</code>,
-            },
-            {
-              name: 'children',
-              type: <code>{'RemixNode'}</code>,
-              description: 'Trigger, surface and items.',
-            },
-          ]}
-        />
+        <ApiTable id="context-options" label="Option" defaults>
+          <ApiEntry name="label" type="string" defaultValue="Trigger label">
+            Accessible menu name.
+          </ApiEntry>
+          <ApiEntry name="children" type="RemixNode">
+            Trigger, surface and items.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="trigger-reference">trigger(options?)</h3>
         <p>
           Accepts <code>AnchorOptions</code>. Defaults to bottom-start placement. Click toggles the
           menu. ArrowDown opens at the first enabled item and ArrowUp at the last. Enter and Space
           focus the list.
         </p>
-        <ApiTable
-          id="trigger-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'id', type: <code>{'string'}</code>, description: 'Generated trigger ID.' },
-            {
-              name: 'aria-haspopup',
-              type: <code>{'menu'}</code>,
-              description: 'Menu popup semantics.',
-            },
-            {
-              name: 'aria-expanded',
-              type: <code>{'true | false'}</code>,
-              description: 'Open state.',
-            },
-            {
-              name: 'aria-controls',
-              type: <code>{'string'}</code>,
-              description: 'Generated list ID.',
-            },
-          ]}
-        />
+        <ApiTable id="trigger-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="id" type="string">
+            Generated trigger ID.
+          </ApiEntry>
+          <ApiEntry name="aria-haspopup" type="menu">
+            Menu popup semantics.
+          </ApiEntry>
+          <ApiEntry name="aria-expanded" type="true | false">
+            Open state.
+          </ApiEntry>
+          <ApiEntry name="aria-controls" type="string">
+            Generated list ID.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="context-trigger-reference">contextTrigger(options?)</h3>
         <p>
           Accepts <code>AnchorOptions</code>. Defaults to bottom-start placement. Opens from
@@ -250,213 +231,127 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           Creates a manual native popover. Root and submenu surfaces coordinate dismissal and focus.
         </p>
-        <ApiTable
-          id="popover-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            {
-              name: 'popover',
-              type: <code>{'manual'}</code>,
-              description: 'Native top-layer surface.',
-            },
-            {
-              name: 'data-menu-submenu',
-              type: <code>{'true | absent'}</code>,
-              description: 'Present on child surfaces.',
-            },
-            {
-              name: 'data-close-animation',
-              type: <code>{'none | absent'}</code>,
-              description: 'Skip close fading when none.',
-            },
-          ]}
-        />
+        <ApiTable id="popover-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="popover" type="manual">
+            Native top-layer surface.
+          </ApiEntry>
+          <ApiEntry name="data-menu-submenu" type="true | absent">
+            Present on child surfaces.
+          </ApiEntry>
+          <ApiEntry name="data-close-animation" type="none | absent">
+            Skip close fading when none.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="list-reference">list()</h3>
-        <ApiTable
-          id="list-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'role', type: <code>{'menu'}</code>, description: 'Menu semantics.' },
-            { name: 'id', type: <code>{'string'}</code>, description: 'Generated list ID.' },
-            {
-              name: 'tabIndex',
-              type: <code>{'-1'}</code>,
-              description: 'Programmatic focus target.',
-            },
-            {
-              name: 'aria-label',
-              type: <code>{'string | absent'}</code>,
-              description: 'Context label.',
-            },
-            {
-              name: 'aria-labelledby',
-              type: <code>{'string | absent'}</code>,
-              description: 'Trigger ID when Context has no label.',
-            },
-          ]}
-        />
+        <ApiTable id="list-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="menu">
+            Menu semantics.
+          </ApiEntry>
+          <ApiEntry name="id" type="string">
+            Generated list ID.
+          </ApiEntry>
+          <ApiEntry name="tabIndex" type="-1">
+            Programmatic focus target.
+          </ApiEntry>
+          <ApiEntry name="aria-label" type="string | absent">
+            Context label.
+          </ApiEntry>
+          <ApiEntry name="aria-labelledby" type="string | absent">
+            Trigger ID when Context has no label.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="item-reference">item(options)</h3>
-        <ApiTable
-          id="item-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'name',
-              type: <code>{'string'}</code>,
-              description: 'Action identifier.',
-              required: true,
-            },
-            {
-              name: 'value',
-              type: <code>{'string'}</code>,
-              description: 'Optional action payload.',
-            },
-            {
-              name: 'type',
-              type: <code>{"'checkbox' | 'radio'"}</code>,
-              description: 'Omit for a regular menu item.',
-            },
-            {
-              name: 'checked',
-              type: <code>{'boolean'}</code>,
-              description: 'Current checkbox or radio state.',
-              defaultValue: <code>{'false'}</code>,
-            },
-            {
-              name: 'disabled',
-              type: <code>{'boolean'}</code>,
-              description: 'Prevents activation.',
-              defaultValue: <code>{'false'}</code>,
-            },
-            {
-              name: 'label',
-              type: <code>{'string'}</code>,
-              description: 'Event and search label.',
-              defaultValue: <code>{'Rendered text'}</code>,
-            },
-            {
-              name: 'searchValue',
-              type: <code>{'string | string[]'}</code>,
-              description: 'Typeahead text.',
-              defaultValue: <code>{'label'}</code>,
-            },
-          ]}
-        />
-        <ApiTable
-          id="item-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            {
-              name: 'role',
-              type: <code>{'menuitem | menuitemcheckbox | menuitemradio'}</code>,
-              description: 'Depends on type.',
-            },
-            { name: 'id', type: <code>{'string'}</code>, description: 'Generated item ID.' },
-            {
-              name: 'tabIndex',
-              type: <code>{'-1'}</code>,
-              description: 'Focus managed by the menu.',
-            },
-            {
-              name: 'aria-checked',
-              type: <code>{'true | false | absent'}</code>,
-              description: 'Checkbox and radio state. During flash reflects requested state.',
-            },
-            {
-              name: 'aria-disabled',
-              type: <code>{'true | absent'}</code>,
-              description: 'Disabled state.',
-            },
-            {
-              name: 'data-highlighted',
-              type: <code>{'true | absent'}</code>,
-              description: 'Highlighted state.',
-            },
-            {
-              name: 'data-menu-flash',
-              type: <code>{'true | absent'}</code>,
-              description: 'Temporary selection feedback.',
-            },
-          ]}
-        />
+        <ApiTable id="item-options" label="Option" defaults>
+          <ApiEntry name="name" type="string" required>
+            Action identifier.
+          </ApiEntry>
+          <ApiEntry name="value" type="string">
+            Optional action payload.
+          </ApiEntry>
+          <ApiEntry name="type" type="'checkbox' | 'radio'">
+            Omit for a regular menu item.
+          </ApiEntry>
+          <ApiEntry name="checked" type="boolean" defaultValue="false">
+            Current checkbox or radio state.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="boolean" defaultValue="false">
+            Prevents activation.
+          </ApiEntry>
+          <ApiEntry name="label" type="string" defaultValue="Rendered text">
+            Event and search label.
+          </ApiEntry>
+          <ApiEntry name="searchValue" type="string | string[]" defaultValue="label">
+            Typeahead text.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="item-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="menuitem | menuitemcheckbox | menuitemradio">
+            Depends on type.
+          </ApiEntry>
+          <ApiEntry name="id" type="string">
+            Generated item ID.
+          </ApiEntry>
+          <ApiEntry name="tabIndex" type="-1">
+            Focus managed by the menu.
+          </ApiEntry>
+          <ApiEntry name="aria-checked" type="true | false | absent">
+            Checkbox and radio state. During flash reflects requested state.
+          </ApiEntry>
+          <ApiEntry name="aria-disabled" type="true | absent">
+            Disabled state.
+          </ApiEntry>
+          <ApiEntry name="data-highlighted" type="true | absent">
+            Highlighted state.
+          </ApiEntry>
+          <ApiEntry name="data-menu-flash" type="true | absent">
+            Temporary selection feedback.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="submenu-trigger-reference">submenuTrigger(options)</h3>
         <p>
           Must be inside the child menu provider. Accepts an options object. Defaults to right-start
           placement with inner menu-item alignment.
         </p>
-        <ApiTable
-          id="submenu-trigger-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'disabled',
-              type: <code>{'boolean'}</code>,
-              description: 'Disables this submenu entry.',
-              defaultValue: <code>{'false'}</code>,
-            },
-            {
-              name: 'label',
-              type: <code>{'string'}</code>,
-              description: 'Search label.',
-              defaultValue: <code>{'Rendered text'}</code>,
-            },
-            {
-              name: 'searchValue',
-              type: <code>{'string | string[]'}</code>,
-              description: 'Typeahead text.',
-              defaultValue: <code>{'label'}</code>,
-            },
-            {
-              name: 'value',
-              type: <code>{'string'}</code>,
-              description: 'Registered item metadata.',
-            },
-          ]}
-        />
-        <ApiTable
-          id="submenu-trigger-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            { name: 'role', type: <code>{'menuitem'}</code>, description: 'Parent menu entry.' },
-            {
-              name: 'id, aria-controls',
-              type: <code>{'string'}</code>,
-              description: 'Generated trigger and child list IDs.',
-            },
-            { name: 'tabIndex', type: <code>{'-1'}</code>, description: 'Managed focus.' },
-            {
-              name: 'aria-haspopup',
-              type: <code>{'menu'}</code>,
-              description: 'Child menu semantics.',
-            },
-            {
-              name: 'aria-expanded',
-              type: <code>{'true | false'}</code>,
-              description: 'Child open state.',
-            },
-            {
-              name: 'aria-disabled',
-              type: <code>{'true | absent'}</code>,
-              description: 'Disabled state.',
-            },
-            {
-              name: 'data-highlighted',
-              type: <code>{'true | absent'}</code>,
-              description: 'Parent highlight.',
-            },
-            {
-              name: 'data-submenu-state',
-              type: <code>{'dismissing | selecting | absent'}</code>,
-              description: 'Child state. Absent while idle.',
-            },
-          ]}
-        />
+        <ApiTable id="submenu-trigger-options" label="Option" defaults>
+          <ApiEntry name="disabled" type="boolean" defaultValue="false">
+            Disables this submenu entry.
+          </ApiEntry>
+          <ApiEntry name="label" type="string" defaultValue="Rendered text">
+            Search label.
+          </ApiEntry>
+          <ApiEntry name="searchValue" type="string | string[]" defaultValue="label">
+            Typeahead text.
+          </ApiEntry>
+          <ApiEntry name="value" type="string">
+            Registered item metadata.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="submenu-trigger-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="menuitem">
+            Parent menu entry.
+          </ApiEntry>
+          <ApiEntry name="id, aria-controls" type="string">
+            Generated trigger and child list IDs.
+          </ApiEntry>
+          <ApiEntry name="tabIndex" type="-1">
+            Managed focus.
+          </ApiEntry>
+          <ApiEntry name="aria-haspopup" type="menu">
+            Child menu semantics.
+          </ApiEntry>
+          <ApiEntry name="aria-expanded" type="true | false">
+            Child open state.
+          </ApiEntry>
+          <ApiEntry name="aria-disabled" type="true | absent">
+            Disabled state.
+          </ApiEntry>
+          <ApiEntry name="data-highlighted" type="true | absent">
+            Parent highlight.
+          </ApiEntry>
+          <ApiEntry name="data-submenu-state" type="dismissing | selecting | absent">
+            Child state. Absent while idle.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="select-listener-reference">onMenuSelect(handler, captureBoolean?)</h3>
         <p>
           Listens for <code>rmx:menu-select</code>. Receives the event and an abort signal. Capture
@@ -467,86 +362,60 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           <code>item</code> contains <code>MenuSelectItem</code> metadata.
         </p>
-        <ApiTable
-          id="select-event-properties"
-          label="Item property"
-          entries={[
-            { name: 'id', type: <code>{'string'}</code>, description: 'Selected item ID.' },
-            { name: 'name', type: <code>{'string'}</code>, description: 'Action identifier.' },
-            {
-              name: 'value',
-              type: <code>{'string | null'}</code>,
-              description: 'Optional payload.',
-            },
-            {
-              name: 'label',
-              type: <code>{'string'}</code>,
-              description: 'Explicit or rendered label.',
-            },
-            {
-              name: 'type',
-              type: <code>{"'item' | 'checkbox' | 'radio'"}</code>,
-              description: 'Item semantics.',
-            },
-            {
-              name: 'checked',
-              type: <code>{'boolean | undefined'}</code>,
-              description: 'Requested checked state for checkbox and radio items.',
-            },
-          ]}
-        />
+        <ApiTable id="select-event-properties" label="Item property">
+          <ApiEntry name="id" type="string">
+            Selected item ID.
+          </ApiEntry>
+          <ApiEntry name="name" type="string">
+            Action identifier.
+          </ApiEntry>
+          <ApiEntry name="value" type="string | null">
+            Optional payload.
+          </ApiEntry>
+          <ApiEntry name="label" type="string">
+            Explicit or rendered label.
+          </ApiEntry>
+          <ApiEntry name="type" type="'item' | 'checkbox' | 'radio'">
+            Item semantics.
+          </ApiEntry>
+          <ApiEntry name="checked" type="boolean | undefined">
+            Requested checked state for checkbox and radio items.
+          </ApiEntry>
+        </ApiTable>
         <p>
           Construct with <code>new MenuSelectEvent(item)</code>.
         </p>
         <h3 id="types-reference">Exported types</h3>
-        <ApiTable
-          id="types-types"
-          detailsLabel="Definition"
-          entries={[
-            {
-              name: 'MenuProviderProps',
-              type: <code>{'interface'}</code>,
-              description: 'Provider children and label.',
-              id: 'type-MenuProviderProps',
-              details: <CodeBlock html={typeDefinitions.MenuProviderProps} />,
-            },
-            {
-              name: 'MenuTriggerOptions',
-              type: <code>{'interface'}</code>,
-              description: 'Anchor options for button triggers.',
-              id: 'type-MenuTriggerOptions',
-              details: <CodeBlock html={typeDefinitions.MenuTriggerOptions} />,
-            },
-            {
-              name: 'MenuContextTriggerOptions',
-              type: <code>{'interface'}</code>,
-              description: 'Anchor options for context-menu triggers.',
-              id: 'type-MenuContextTriggerOptions',
-              details: <CodeBlock html={typeDefinitions.MenuContextTriggerOptions} />,
-            },
-            {
-              name: 'MenuItemOptions',
-              type: <code>{'interface'}</code>,
-              description: 'Item action, semantics and search metadata.',
-              id: 'type-MenuItemOptions',
-              details: <CodeBlock html={typeDefinitions.MenuItemOptions} />,
-            },
-            {
-              name: 'SubmenuTriggerOptions',
-              type: <code>{'interface'}</code>,
-              description: 'Child trigger availability and search metadata.',
-              id: 'type-SubmenuTriggerOptions',
-              details: <CodeBlock html={typeDefinitions.SubmenuTriggerOptions} />,
-            },
-            {
-              name: 'MenuSelectItem',
-              type: <code>{'interface'}</code>,
-              description: 'Selected item data supplied by MenuSelectEvent.',
-              id: 'type-MenuSelectItem',
-              details: <CodeBlock html={typeDefinitions.MenuSelectItem} />,
-            },
-          ]}
-        />
+        <ApiTable id="types-types">
+          <ApiEntry id="type-MenuProviderProps" name="MenuProviderProps" type="interface">
+            <p>Provider children and label.</p>
+            <CodeBlock html={typeDefinitions.MenuProviderProps} />
+          </ApiEntry>
+          <ApiEntry id="type-MenuTriggerOptions" name="MenuTriggerOptions" type="interface">
+            <p>Anchor options for button triggers.</p>
+            <CodeBlock html={typeDefinitions.MenuTriggerOptions} />
+          </ApiEntry>
+          <ApiEntry
+            id="type-MenuContextTriggerOptions"
+            name="MenuContextTriggerOptions"
+            type="interface"
+          >
+            <p>Anchor options for context-menu triggers.</p>
+            <CodeBlock html={typeDefinitions.MenuContextTriggerOptions} />
+          </ApiEntry>
+          <ApiEntry id="type-MenuItemOptions" name="MenuItemOptions" type="interface">
+            <p>Item action, semantics and search metadata.</p>
+            <CodeBlock html={typeDefinitions.MenuItemOptions} />
+          </ApiEntry>
+          <ApiEntry id="type-SubmenuTriggerOptions" name="SubmenuTriggerOptions" type="interface">
+            <p>Child trigger availability and search metadata.</p>
+            <CodeBlock html={typeDefinitions.SubmenuTriggerOptions} />
+          </ApiEntry>
+          <ApiEntry id="type-MenuSelectItem" name="MenuSelectItem" type="interface">
+            <p>Selected item data supplied by MenuSelectEvent.</p>
+            <CodeBlock html={typeDefinitions.MenuSelectItem} />
+          </ApiEntry>
+        </ApiTable>
       </Section>
     </PageLayout>
   )

@@ -3,7 +3,7 @@ import type { PageMeta, PageProps } from '../../data/pages.ts'
 import { highlightSource, loadExample } from '../../data/examples.tsx'
 import { Example } from '../example.tsx'
 import { CodeBlock, PageLayout, Section } from '../page.tsx'
-import { ApiTable } from '../api-table.tsx'
+import { ApiEntry, ApiTable } from '../api-table.tsx'
 
 export const meta = {
   title: 'Toggle',
@@ -134,134 +134,76 @@ export default function TogglePage(handle: Handle<PageProps>) {
           or the host. Host <code>defaultChecked</code> is also supported, with the mixin option
           taking precedence.
         </p>
-        <ApiTable
-          id="toggle-options"
-          label="Option"
-          defaults
-          entries={[
-            {
-              name: 'checked',
-              type: <code>{'boolean'}</code>,
-              description: 'Controlled state. Omit to let the mixin manage state.',
-            },
-            {
-              name: 'defaultChecked',
-              type: <code>{'boolean'}</code>,
-              description: 'Initial uncontrolled state.',
-              defaultValue: <code>{'false'}</code>,
-            },
-            {
-              name: 'onCheckedChange',
-              type: <code>{'(checked: boolean) => void'}</code>,
-              description: 'Called with the requested state before the bubbling event.',
-            },
-            {
-              name: 'disabled',
-              type: <code>{'boolean'}</code>,
-              description:
-                'Prevents changes. Native inputs receive disabled. Custom hosts receive aria-disabled.',
-            },
-            {
-              name: 'readOnly',
-              type: <code>{'boolean'}</code>,
-              description:
-                'Prevents changes. Native inputs receive readOnly. Custom hosts receive aria-readonly.',
-            },
-            {
-              name: 'name',
-              type: <code>{'string'}</code>,
-              description: 'Native input form field name.',
-            },
-            {
-              name: 'value',
-              type: <code>{'string'}</code>,
-              description: 'Native input submitted value. Without a value, the browser uses on.',
-            },
-            {
-              name: 'form',
-              type: <code>{'string'}</code>,
-              description: 'ID of the native input’s form owner.',
-            },
-            {
-              name: 'required',
-              type: <code>{'boolean'}</code>,
-              description: 'Native input validation or aria-required on custom hosts.',
-            },
-            {
-              name: 'tabIndex',
-              type: <code>{'number'}</code>,
-              description:
-                'Overrides the host tabIndex on either host type. Custom hosts default to 0 when enabled.',
-            },
-            {
-              name: 'inputRef',
-              type: <code>{'(input: HTMLInputElement, signal: AbortSignal) => void'}</code>,
-              description:
-                'Receives a native input and its lifetime signal. Not called for custom hosts.',
-            },
-          ]}
-        />
-        <ApiTable
-          id="toggle-attributes"
-          label="Attribute"
-          typeLabel="Value"
-          entries={[
-            {
-              name: 'role',
-              type: <code>{'switch'}</code>,
-              description: 'Applied to both host types.',
-            },
-            {
-              name: 'data-state',
-              type: <code>{'checked | unchecked'}</code>,
-              description: 'Reflects the current checked state.',
-            },
-            {
-              name: 'aria-checked',
-              type: <code>{'boolean'}</code>,
-              description: 'Custom hosts only. Native inputs use their checked property.',
-            },
-            {
-              name: 'aria-disabled, aria-readonly, aria-required',
-              type: <code>{'true | absent'}</code>,
-              description: 'Custom hosts only. Reflect the corresponding options.',
-            },
-          ]}
-        />
+        <ApiTable id="toggle-options" label="Option" defaults>
+          <ApiEntry name="checked" type="boolean">
+            Controlled state. Omit to let the mixin manage state.
+          </ApiEntry>
+          <ApiEntry name="defaultChecked" type="boolean" defaultValue="false">
+            Initial uncontrolled state.
+          </ApiEntry>
+          <ApiEntry name="onCheckedChange" type="(checked: boolean) => void">
+            Called with the requested state before the bubbling event.
+          </ApiEntry>
+          <ApiEntry name="disabled" type="boolean">
+            Prevents changes. Native inputs receive disabled. Custom hosts receive aria-disabled.
+          </ApiEntry>
+          <ApiEntry name="readOnly" type="boolean">
+            Prevents changes. Native inputs receive readOnly. Custom hosts receive aria-readonly.
+          </ApiEntry>
+          <ApiEntry name="name" type="string">
+            Native input form field name.
+          </ApiEntry>
+          <ApiEntry name="value" type="string">
+            Native input submitted value. Without a value, the browser uses on.
+          </ApiEntry>
+          <ApiEntry name="form" type="string">
+            ID of the native input’s form owner.
+          </ApiEntry>
+          <ApiEntry name="required" type="boolean">
+            Native input validation or aria-required on custom hosts.
+          </ApiEntry>
+          <ApiEntry name="tabIndex" type="number">
+            Overrides the host tabIndex on either host type. Custom hosts default to 0 when enabled.
+          </ApiEntry>
+          <ApiEntry name="inputRef" type="(input: HTMLInputElement, signal: AbortSignal) => void">
+            Receives a native input and its lifetime signal. Not called for custom hosts.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="toggle-attributes" label="Attribute" typeLabel="Value">
+          <ApiEntry name="role" type="switch">
+            Applied to both host types.
+          </ApiEntry>
+          <ApiEntry name="data-state" type="checked | unchecked">
+            Reflects the current checked state.
+          </ApiEntry>
+          <ApiEntry name="aria-checked" type="boolean">
+            Custom hosts only. Native inputs use their checked property.
+          </ApiEntry>
+          <ApiEntry name="aria-disabled, aria-readonly, aria-required" type="true | absent">
+            Custom hosts only. Reflect the corresponding options.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="change-listener-reference">onToggleChange(handler, captureBoolean?)</h3>
         <p>
           Listens for <code>rmx:toggle-change</code>. The handler receives the event and an abort
           signal. <code>captureBoolean</code> defaults to false.
         </p>
         <h3 id="change-event-reference">ToggleChangeEvent</h3>
-        <ApiTable
-          id="change-event-properties"
-          label="Property"
-          entries={[
-            {
-              name: 'checked',
-              type: <code>{'boolean'}</code>,
-              description: 'Requested state. The event bubbles from the switch host.',
-            },
-          ]}
-        />
+        <ApiTable id="change-event-properties" label="Property">
+          <ApiEntry name="checked" type="boolean">
+            Requested state. The event bubbles from the switch host.
+          </ApiEntry>
+        </ApiTable>
         <p>
           Construct with <code>new ToggleChangeEvent(checked)</code>. The event is not cancelable.
         </p>
         <h3 id="types-reference">Exported types</h3>
-        <ApiTable
-          id="types-types"
-          detailsLabel="Definition"
-          entries={[
-            {
-              name: 'ToggleOptions',
-              type: <code>{'interface'}</code>,
-              description: 'State, form and host options accepted by toggle().',
-              id: 'type-ToggleOptions',
-              details: <CodeBlock html={typeDefinitions.ToggleOptions} />,
-            },
-          ]}
-        />
+        <ApiTable id="types-types">
+          <ApiEntry id="type-ToggleOptions" name="ToggleOptions" type="interface">
+            <p>State, form and host options accepted by toggle().</p>
+            <CodeBlock html={typeDefinitions.ToggleOptions} />
+          </ApiEntry>
+        </ApiTable>
       </Section>
     </PageLayout>
   )
