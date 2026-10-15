@@ -186,6 +186,28 @@ describe('router type inference', () => {
     void factoryMiddleware
   })
 
+  it('applies fixed middleware around a conditional middleware entry', () => {
+    let includeFormData = false as boolean
+    let router = createRouter({
+      middleware: [
+        requireUser(),
+        setRole('viewer'),
+        ...(includeFormData ? [setFormData()] : []),
+        loadAdminRole(),
+      ],
+    })
+
+    function assertContext(context: RouterContext<typeof router>) {
+      let formData = context.get(FormData)
+
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+      expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+    }
+
+    void assertContext
+  })
+
   it('types stored actions with route params and explicit app context', () => {
     let accountAction = {
       handler(context) {

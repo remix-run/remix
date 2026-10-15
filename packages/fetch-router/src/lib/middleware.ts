@@ -42,17 +42,23 @@ type ContextWithTransform<
 
 /**
  * Resolves the request-context type produced by a middleware tuple.
+ *
+ * Conditional entries like `...(isDev ? [logger()] : [])` may not run, so their values are not
+ * added to the context. Plain arrays, which have no known order, resolve to the base context.
  */
 export type MiddlewareContext<
   middleware extends readonly AnyMiddleware[],
   context extends RequestContext<any, any> = RequestContext,
-> = number extends middleware['length']
-  ? context
+> = middleware extends readonly [
+  infer first extends AnyMiddleware,
+  ...infer rest extends readonly AnyMiddleware[],
+]
+  ? MiddlewareContext<rest, ContextWithTransform<context, TransformOf<first>>>
   : middleware extends readonly [
-        infer first extends AnyMiddleware,
-        ...infer rest extends readonly AnyMiddleware[],
+        ...infer init extends readonly AnyMiddleware[],
+        infer last extends AnyMiddleware,
       ]
-    ? MiddlewareContext<rest, ContextWithTransform<context, TransformOf<first>>>
+    ? ContextWithTransform<MiddlewareContext<init, context>, TransformOf<last>>
     : context
 
 /**
