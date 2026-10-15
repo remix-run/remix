@@ -6,4 +6,4 @@ Prefetch pages before a visitor opens them by adding `data-rmx-prefetch="intent"
 </a>
 ```
 
-By default Remix adds a `<link rel="prefetch">`, and the next navigation's `resolveFrame` request reuses the response from the browser's HTTP cache. That requires an HTTP-cacheable response, such as `Cache-Control: private, max-age=30`, that doesn't `Vary` on `X-Remix-Frame`. Apps whose pages can't be cached can pass `prefetch` to `run()` to load pages another way, such as holding responses in memory for their `resolveFrame` to reuse.
+By default Remix adds a `<link rel="prefetch">`, and the next navigation's `resolveFrame` request reuses the response from the browser's HTTP cache. That requires an HTTP-cacheable response, such as `Cache-Control: private, max-age=30`, that doesn't `Vary` on `X-Remix-Frame`. Apps whose pages can't be cached can pass `prefetch` to `run()` to load pages another way, such as holding responses in memory for their `resolveFrame` to reuse (see #12004).
