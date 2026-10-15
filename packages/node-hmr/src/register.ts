@@ -290,6 +290,7 @@ function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string)
     let original = transformConsumer.originalPositionFor({
       line: mapping.originalLine,
       column: mapping.originalColumn,
+      bias: SourceMapConsumer.LEAST_UPPER_BOUND,
     })
     if (original.line == null || original.column == null || original.source == null) return
 
