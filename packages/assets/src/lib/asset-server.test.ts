@@ -3107,6 +3107,44 @@ describe('asset-server', () => {
     }
   })
 
+  it('does not cache script entries computed while a browser HMR event is pending', async () => {
+    await write(dir, 'app/hmr-race-entry.ts', 'import "./hmr-race-dep.ts"')
+    let depPath = await write(dir, 'app/hmr-race-dep.ts', 'export const value = 1')
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    let assetServer = createWatchedTestServer(dir, {
+      hmr() {
+        return {
+          close() {},
+          onFileEvents(handler) {
+            handleFileEvents = handler
+            return () => {}
+          },
+          updateWatchedFiles() {},
+          url: 'http://127.0.0.1:1234/hmr',
+        }
+      },
+    })
+
+    try {
+      let otherPath = await write(dir, 'app/hmr-race-other.ts', 'export const other = 1')
+      await assetServer.getScriptEntry('app/hmr-race-other.ts')
+      await assetServer.getScriptEntry('app/hmr-race-entry.ts')
+      await write(dir, 'app/hmr-race-other.ts', 'export const other = 2')
+      await write(dir, 'app/hmr-race-dep.ts', 'export const value = 2')
+      assert.ok(handleFileEvents)
+      let pending = handleFileEvents([
+        { filePath: getWatchEventFilePath(otherPath), event: 'change' },
+        { filePath: getWatchEventFilePath(depPath), event: 'change' },
+      ])
+      await assetServer.getScriptEntry('app/hmr-race-entry.ts')
+      await pending
+      let entry = await assetServer.getScriptEntry('app/hmr-race-entry.ts')
+      assert.deepEqual(entry.preloads, await assetServer.getPreloads('app/hmr-race-entry.ts'))
+    } finally {
+      await assetServer.close()
+    }
+  })
+
   it('getImportMap rejects non-script files with a TypeError', async () => {
     let assetServer = createTestServer(dir)
 

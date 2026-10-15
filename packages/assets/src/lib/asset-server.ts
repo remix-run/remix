@@ -320,6 +320,8 @@ export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
   getHref(filePath: string, options?: AssetServerGetHrefOptions<transforms>): Promise<string>
   /**
    * Returns the href, preload URLs, and import map for a script entry module.
+   *
+   * Results are cached until a watched file changes. Each call returns a separate copy.
    */
   getScriptEntry(filePath: string): Promise<ScriptEntry>
   /**
@@ -584,7 +586,20 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   async function handleBrowserHmrFileEvents(
     events: readonly BrowserHmrFileEvent[],
   ): Promise<readonly BrowserHmrEvent[]> {
-    if (events.length > 0) scriptEntries.clear()
+    if (events.length === 0) return []
+    scriptEntries.clear()
+    try {
+      return await classifyBrowserHmrFileEvents(events)
+    } finally {
+      // Entries computed while events were processed may predate later invalidations or HMR
+      // timestamps, so drop them once every event has been handled.
+      scriptEntries.clear()
+    }
+  }
+
+  async function classifyBrowserHmrFileEvents(
+    events: readonly BrowserHmrFileEvent[],
+  ): Promise<readonly BrowserHmrEvent[]> {
     let browserHmrEvents: BrowserHmrEvent[] = []
 
     for (let event of events) {
