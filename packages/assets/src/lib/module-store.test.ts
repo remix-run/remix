@@ -361,6 +361,60 @@ describe('createModuleStore', () => {
     assert.equal(store.isResolvedFresh(store.get('/app/unrelated.ts')), true)
   })
 
+  it('keeps importer transforms fresh when a dependency changes', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+      invalidateImportersOnFileEvent: true,
+    })
+    store.setTransformed('/app/entry.ts', createTransformedModule(), [
+      { trackedFiles: ['/app/entry.ts'] },
+    ])
+    store.setResolved(
+      '/app/entry.ts',
+      createResolvedModule({ deps: ['/app/value.ts'], identityPath: '/app/entry.ts' }),
+      [{ trackedFiles: ['/app/entry.ts'] }],
+    )
+    store.setTransformed('/app/value.ts', createTransformedModule(), [
+      { trackedFiles: ['/app/value.ts'] },
+    ])
+    store.setResolved('/app/value.ts', createResolvedModule({ identityPath: '/app/value.ts' }), [
+      { trackedFiles: ['/app/value.ts'] },
+    ])
+
+    store.invalidateForFileEvent('/app/value.ts', 'change')
+
+    assert.equal(store.isTransformedFresh(store.get('/app/value.ts')), false)
+    assert.equal(store.isTransformedFresh(store.get('/app/entry.ts')), true)
+    assert.equal(store.isResolvedFresh(store.get('/app/entry.ts')), false)
+    assert.equal(store.isEmittedFresh(store.get('/app/entry.ts')), false)
+  })
+
+  it('invalidates importer transforms when one of their own tracked files changes', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+      invalidateImportersOnFileEvent: true,
+    })
+    store.setTransformed('/app/entry.ts', createTransformedModule(), [
+      { trackedFiles: ['/app/entry.ts', '/app/tsconfig.json'] },
+    ])
+    store.setResolved(
+      '/app/entry.ts',
+      createResolvedModule({ deps: ['/app/value.ts'], identityPath: '/app/entry.ts' }),
+      [{ trackedFiles: ['/app/entry.ts', '/app/tsconfig.json'] }],
+    )
+    store.setResolved('/app/value.ts', createResolvedModule({ identityPath: '/app/value.ts' }), [
+      { trackedFiles: ['/app/value.ts', '/app/tsconfig.json'] },
+    ])
+
+    store.invalidateForFileEvent('/app/tsconfig.json', 'change')
+
+    assert.equal(store.isTransformedFresh(store.get('/app/entry.ts')), false)
+  })
+
   it('does not invalidate importers after file events by default', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getDependencies(resolved) {

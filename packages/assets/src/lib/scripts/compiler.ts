@@ -621,17 +621,17 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   async function getOrCreateTransformedScript(record: ScriptRecord): Promise<TransformedModule> {
     if (record.transformed && scriptStore.isTransformedFresh(record)) return record.transformed
 
-    let startedVersion = record.invalidationVersion
+    let startedVersion = record.contentVersion
     let transformModuleResult = await transformModule(record, transformArgs)
 
     if (!transformModuleResult.ok) {
-      if (isFresh(record, startedVersion)) {
+      if (record.contentVersion === startedVersion) {
         scriptStore.clearTransformed(record.identityPath, [transformModuleResult.tracking])
       }
       throw transformModuleResult.error
     }
 
-    if (isFresh(record, startedVersion)) {
+    if (record.contentVersion === startedVersion) {
       scriptStore.setTransformed(record.identityPath, transformModuleResult.value, [
         transformModuleResult.tracking,
       ])
