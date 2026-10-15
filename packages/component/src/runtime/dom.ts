@@ -3669,6 +3669,8 @@ export interface VideoHTMLProps<
   disablePictureInPicture?: Trackable<boolean | undefined>
   /** The `height` HTML attribute. */
   height?: Trackable<number | string | undefined>
+  /** The `loading` HTML attribute. */
+  loading?: Trackable<'eager' | 'lazy' | undefined>
   /** The `playsinline` HTML attribute. */
   playsinline?: Trackable<boolean | undefined>
   /** The `playsInline` HTML attribute. */

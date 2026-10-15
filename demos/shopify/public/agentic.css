@@ -1,0 +1,493 @@
+.agentic-page {
+  --agentic-space: 80px;
+  --agentic-gap: 24px;
+  background: #000;
+  color: #fff;
+}
+
+.agentic-page .container {
+  width: min(1420px, calc(100% - 32px));
+}
+
+.agentic-page h1 {
+  font-size: 44px;
+  line-height: 1.08;
+  letter-spacing: -0.005em;
+}
+
+.agentic-page h2 {
+  font-size: 36px;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.agentic-page h3,
+.agentic-slide-title {
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+}
+
+.agentic-hero {
+  padding-top: var(--agentic-space);
+}
+
+.agentic-hero-grid {
+  display: grid;
+  gap: 40px var(--agentic-gap);
+  align-items: center;
+}
+
+.agentic-hero-copy {
+  padding-top: 64px;
+}
+
+.agentic-eyebrow {
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.agentic-intro {
+  max-width: 560px;
+  margin-top: 24px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.agentic-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.agentic-page .button {
+  min-height: 60px;
+  padding: 16px 24px;
+  border-width: 2px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.agentic-motion {
+  margin-top: 20px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.agentic-motion:focus-visible {
+  outline: 3px solid var(--focus-color);
+  outline-offset: 5px;
+}
+
+/* Reserve the control's space before the script reveals it. */
+.agentic-motion[hidden] {
+  display: inline-block !important;
+  visibility: hidden;
+}
+
+.agentic-hero-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.agentic-partners {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px 32px;
+  padding-block: 32px calc(var(--agentic-space) / 2);
+}
+
+.agentic-partners img {
+  width: auto;
+  max-width: calc(50% - 16px);
+  height: 64px;
+  object-fit: contain;
+}
+
+.agentic-features,
+.agentic-admin,
+.agentic-testimonials,
+.agentic-close {
+  padding-block: var(--agentic-space);
+}
+
+.agentic-features,
+.agentic-admin {
+  --focus-color: #38812e;
+  background: #fff;
+  color: #000;
+  color-scheme: light;
+}
+
+.agentic-features {
+  border-radius: 24px 24px 0 0;
+}
+
+.agentic-feature-grid {
+  display: grid;
+  gap: 40px var(--agentic-gap);
+  margin-top: 40px;
+}
+
+.agentic-feature-grid video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 700 / 395;
+  border-radius: 8px;
+  background: #f2f2f0;
+}
+
+.agentic-feature-grid h3 {
+  margin-top: 24px;
+}
+
+.agentic-feature-grid p {
+  margin-top: 8px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.agentic-admin {
+  padding-bottom: calc(var(--agentic-space) * 1.5);
+}
+
+.agentic-admin-picker,
+.agentic-testimonial-picker {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.agentic-testimonial-picker {
+  margin-inline: auto;
+}
+
+.agentic-admin-picker {
+  display: grid;
+  margin-top: 40px;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #f2f2f0;
+}
+
+.agentic-admin-labels {
+  display: grid;
+  gap: 28px;
+  padding: 28px;
+}
+
+.agentic-admin-labels label {
+  display: grid;
+  gap: 16px;
+  padding-left: 20px;
+  border-left: 3px solid #d2d2d0;
+  color: #666;
+  cursor: pointer;
+}
+
+.agentic-slide-description {
+  display: none;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.agentic-admin-image,
+.agentic-testimonial {
+  display: none;
+}
+
+#agentic-admin-1:checked ~ .agentic-admin-images .agentic-admin-image-1,
+#agentic-admin-2:checked ~ .agentic-admin-images .agentic-admin-image-2,
+#agentic-admin-3:checked ~ .agentic-admin-images .agentic-admin-image-3 {
+  display: block;
+  width: 100%;
+}
+
+#agentic-admin-1:checked ~ .agentic-admin-labels label[for='agentic-admin-1'],
+#agentic-admin-2:checked ~ .agentic-admin-labels label[for='agentic-admin-2'],
+#agentic-admin-3:checked ~ .agentic-admin-labels label[for='agentic-admin-3'] {
+  border-color: #000;
+  color: #000;
+}
+
+#agentic-admin-1:checked
+  ~ .agentic-admin-labels
+  label[for='agentic-admin-1']
+  .agentic-slide-description,
+#agentic-admin-2:checked
+  ~ .agentic-admin-labels
+  label[for='agentic-admin-2']
+  .agentic-slide-description,
+#agentic-admin-3:checked
+  ~ .agentic-admin-labels
+  label[for='agentic-admin-3']
+  .agentic-slide-description {
+  display: block;
+}
+
+#agentic-admin-1:focus-visible ~ .agentic-admin-labels label[for='agentic-admin-1'],
+#agentic-admin-2:focus-visible ~ .agentic-admin-labels label[for='agentic-admin-2'],
+#agentic-admin-3:focus-visible ~ .agentic-admin-labels label[for='agentic-admin-3'],
+#agentic-testimonial-1:focus-visible
+  ~ .agentic-testimonial-controls
+  label[for='agentic-testimonial-1'],
+#agentic-testimonial-2:focus-visible
+  ~ .agentic-testimonial-controls
+  label[for='agentic-testimonial-2'] {
+  outline: 3px solid var(--focus-color);
+  outline-offset: 5px;
+}
+
+.agentic-testimonials {
+  position: relative;
+  margin-top: -40px;
+  border-radius: 24px 24px 0 0;
+  background: #000;
+}
+
+#agentic-testimonial-1:checked ~ .agentic-testimonial-1,
+#agentic-testimonial-2:checked ~ .agentic-testimonial-2 {
+  display: grid;
+  gap: 40px;
+}
+
+.agentic-testimonial {
+  margin: 0;
+}
+
+.agentic-testimonial img {
+  grid-row: 1;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.agentic-quote {
+  margin: 0;
+}
+
+.agentic-quote blockquote {
+  margin: 0 0 32px;
+}
+
+.agentic-quote blockquote p {
+  max-width: 680px;
+  font-size: 30px;
+  font-weight: 330;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.agentic-quote figcaption {
+  display: grid;
+  gap: 8px;
+}
+
+.agentic-quote figcaption strong {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.agentic-quote figcaption span {
+  font-size: 16px;
+}
+
+.agentic-testimonial-controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 40px;
+}
+
+.agentic-testimonial-controls label {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #292929;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+#agentic-testimonial-1:checked ~ .agentic-testimonial-controls label[for='agentic-testimonial-1'],
+#agentic-testimonial-2:checked ~ .agentic-testimonial-controls label[for='agentic-testimonial-2'] {
+  color: #777;
+}
+
+.agentic-close {
+  text-align: center;
+}
+
+.agentic-close .agentic-buttons {
+  justify-content: center;
+}
+
+.agentic-close p {
+  max-width: 512px;
+  margin: 24px auto 0;
+  color: #aaa;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.agentic-close p a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (min-width: 640px) {
+  .agentic-page .container {
+    width: min(1420px, calc(100% - 60px));
+  }
+
+  .agentic-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agentic-partners {
+    flex-wrap: nowrap;
+    gap: 40px;
+  }
+
+  .agentic-partners img {
+    max-width: calc(25% - 30px);
+    height: 80px;
+  }
+}
+
+@media (min-width: 900px) {
+  .agentic-page {
+    --agentic-space: 128px;
+  }
+
+  .agentic-page .container {
+    width: min(1420px, calc(100% - 100px));
+  }
+
+  .agentic-page h1 {
+    font-size: 54px;
+    letter-spacing: -0.005em;
+  }
+
+  .agentic-page h2 {
+    font-size: 48px;
+    line-height: 1.1;
+    letter-spacing: -0.005em;
+  }
+
+  .agentic-page h3,
+  .agentic-slide-title {
+    font-size: 26px;
+    font-weight: 360;
+    letter-spacing: -0.01em;
+  }
+
+  .agentic-hero-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agentic-hero-copy {
+    padding-block: 80px;
+  }
+
+  .agentic-intro {
+    font-size: 20px;
+  }
+
+  .agentic-page .button {
+    font-size: 18px;
+  }
+
+  .agentic-partners {
+    gap: 80px;
+    padding-block: 40px 64px;
+  }
+
+  .agentic-partners img {
+    max-width: calc(25% - 60px);
+    height: 90px;
+  }
+
+  .agentic-features,
+  .agentic-testimonials {
+    border-radius: 32px 32px 0 0;
+  }
+
+  .agentic-feature-grid,
+  .agentic-admin-picker {
+    margin-top: 64px;
+  }
+
+  .agentic-feature-grid p,
+  .agentic-slide-description {
+    font-size: 18px;
+  }
+
+  .agentic-admin-picker {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+  }
+
+  .agentic-admin-labels {
+    gap: 40px;
+    padding: 40px;
+  }
+
+  #agentic-testimonial-1:checked ~ .agentic-testimonial-1,
+  #agentic-testimonial-2:checked ~ .agentic-testimonial-2 {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 4fr);
+    align-items: center;
+    gap: 8.33%;
+    padding-right: 8.33%;
+  }
+
+  .agentic-testimonial img {
+    grid-row: auto;
+  }
+
+  .agentic-quote blockquote p {
+    font-size: 36px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .agentic-page .container {
+    width: min(1420px, calc(100% - 180px));
+  }
+
+  .agentic-page h1 {
+    font-size: 64px;
+    letter-spacing: -0.02em;
+  }
+
+  .agentic-page h2 {
+    font-size: 56px;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+
+  .agentic-page h3,
+  .agentic-slide-title {
+    font-size: 28px;
+  }
+
+  .agentic-quote blockquote p {
+    font-size: 44px;
+  }
+}
