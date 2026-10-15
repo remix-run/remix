@@ -1457,6 +1457,179 @@ describe('navigate', () => {
       controller.abort()
     }
   })
+
+  it('replaces the URL without reloading frames when reload is false', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'replace')
+    let reloadFrame = mock.fn(stubFrames.reloadFrame)
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, { ...stubFrames, reloadFrame })
+
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    try {
+      await navigate(destination.href, {
+        history: 'replace',
+        reload: false,
+        src: '/partials/details',
+        target: 'details',
+      })
+
+      expect(window.location.href).toBe(destination.href)
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation)
+      expect(window.navigation.currentEntry?.getState()).toEqual({
+        target: undefined,
+        src: destination.href,
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+        $rmx: true,
+      })
+      expect(reloadFrame).not.toHaveBeenCalled()
+      expect(document.activeElement).toBe(input)
+    } finally {
+      window.history.replaceState(window.history.state, '', originalUrl)
+      controller.abort()
+    }
+  })
+
+  it('intercepts URL updates without scrolling or resetting focus', async (t) => {
+    let reloadFrame = mock.fn(stubFrames.reloadFrame)
+    let dispatchNavigation = startStubNavigationListener(t, { ...stubFrames, reloadFrame })
+    let intercept = mock.fn()
+    let scroll = mock.fn()
+
+    let transition = dispatchNavigation(
+      Object.assign(new Event('navigate'), {
+        canIntercept: true,
+        navigationType: 'replace',
+        signal: new AbortController().signal,
+        destination: {
+          url: new URL('/products/shirt?variant=2', window.location.origin).href,
+          key: 'next',
+          getState: () => undefined,
+        },
+        info: { type: 'url-update' },
+        intercept,
+        scroll,
+      }),
+    )
+    await transition.runHandler()
+    await transition.succeed()
+
+    let interceptOptions = intercept.mock.calls[0]?.arguments[0]
+    expect(interceptOptions?.scroll).toBe('manual')
+    expect(interceptOptions?.focusReset).toBe('manual')
+    expect(scroll).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('reloads the top frame when traversing to an entry pushed without reloading', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'push')
+    let topFrame = { src: '' } as FrameHandle
+    let reloadFrame = mock.fn(() =>
+      createReloadTransition({ signal: new AbortController().signal }),
+    )
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame,
+    })
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    try {
+      await navigate(destination.href, { reload: false })
+      expect(window.location.href).toBe(destination.href)
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation + 1)
+      expect(reloadFrame).not.toHaveBeenCalled()
+
+      await window.navigation.back().finished
+      expect(topFrame.src).toBe(originalUrl)
+
+      await window.navigation.forward().finished
+      expect(topFrame.src).toBe(destination.href)
+      expect(reloadFrame).toHaveBeenCalledTimes(2)
+    } finally {
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
+
+  it('reloads the top frame when a URL update interrupts a frame load', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'pending-url-update')
+    let updatedUrl = new URL(destination)
+    updatedUrl.searchParams.set('variant', 'interrupted')
+    let topFrame = { src: '' } as FrameHandle
+    let [started, resolveStarted] = withResolvers<void>()
+    let [pending, resolvePending] = withResolvers<StubFrameReloadResult>()
+    let reloads = 0
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame() {
+        reloads++
+        if (reloads === 1) {
+          resolveStarted()
+          return createReloadTransition(pending)
+        }
+        return createReloadTransition({ signal: new AbortController().signal })
+      },
+    })
+
+    try {
+      let interrupted = navigate(destination.href).catch(() => {})
+      await started
+
+      await navigate(updatedUrl.href, { history: 'replace', reload: false })
+      await interrupted
+
+      expect(reloads).toBe(2)
+      expect(window.location.href).toBe(updatedUrl.href)
+      expect(topFrame.src).toBe(updatedUrl.href)
+    } finally {
+      resolvePending({ signal: new AbortController().signal })
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
+
+  it('replaces the URL in place when reload is false and the Navigation API is unavailable', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'history-fallback')
+    let originalHistoryLength = window.history.length
+    stubGlobalField(t, 'navigation', undefined)
+
+    try {
+      await navigate(destination.href, { history: 'replace', reload: false })
+      expect(window.location.href).toBe(destination.href)
+      expect(window.history.length).toBe(originalHistoryLength)
+    } finally {
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('pushes the URL in place when reload is false and the Navigation API is unavailable', async (t) => {
+    stubGlobalField(t, 'navigation', undefined)
+    let pushState = t.mock.method(window.history, 'pushState', () => {})
+
+    await navigate('/products/shirt?variant=2', { reload: false })
+
+    expect(pushState).toHaveBeenCalledWith(null, '', '/products/shirt?variant=2')
+  })
 })
 
 describe('frame navigation sources', () => {

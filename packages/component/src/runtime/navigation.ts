@@ -35,8 +35,13 @@ interface FrameRedirectNavigationInfo {
   resetFocus: NonNullable<NavigationInterceptOptions['focusReset']>
 }
 
+interface UrlUpdateNavigationInfo {
+  type: typeof urlUpdateNavigationInfoType
+}
+
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const frameRedirectNavigationInfoType = 'frame-redirect'
+const urlUpdateNavigationInfoType = 'url-update'
 
 function resyncWebKitScrollAfterNavigation(
   event: NavigateEvent,
@@ -91,6 +96,13 @@ export type NavigationOptions = {
    * (default: `"after-transition"`)
    */
   resetFocus?: NavigationInterceptOptions['focusReset'] | boolean
+  /**
+   * Whether to reload frame content. Set to `false` to update the browser URL and history without
+   * fetching or rendering anything, leaving scroll position and focus untouched. `src`, `target`,
+   * `resetScroll`, and `resetFocus` are ignored. Back and forward traversal to the new entry
+   * reloads the top frame like any other entry. (default: `true`)
+   */
+  reload?: boolean
 }
 
 /**
@@ -102,6 +114,12 @@ export type NavigationOptions = {
  * @returns A promise that settles when the Navigation API transition finishes.
  */
 export async function navigate(href: string, options?: NavigationOptions) {
+  let navigation = getInterceptableNavigation()
+  if (options?.reload === false) {
+    await updateUrl(navigation, href, options.history)
+    return
+  }
+
   let state = {
     target: options?.target,
     src: options?.src ?? href,
@@ -109,18 +127,52 @@ export async function navigate(href: string, options?: NavigationOptions) {
     resetFocus: normalizeResetBehavior(options?.resetFocus),
     $rmx: true,
   } satisfies NavigationState
-  let navigation = getInterceptableNavigation()
   if (!navigation) {
-    if (options?.history === 'replace') {
-      window.location.replace(href)
-    } else {
-      window.location.assign(href)
-    }
+    navigateDocument(href, options?.history)
     return
   }
 
   let transition = navigation.navigate(href, { state, history: options?.history })
   await transition.finished
+}
+
+async function updateUrl(
+  navigation: Navigation | undefined,
+  href: string,
+  history: NavigationOptions['history'],
+): Promise<void> {
+  if (!navigation) {
+    if (!isSameOriginUrl(href)) {
+      navigateDocument(href, history)
+    } else if (history === 'replace') {
+      window.history.replaceState(window.history.state, '', href)
+    } else {
+      window.history.pushState(null, '', href)
+    }
+    return
+  }
+
+  let state = {
+    target: undefined,
+    src: href,
+    resetScroll: 'after-transition',
+    resetFocus: 'after-transition',
+    $rmx: true,
+  } satisfies NavigationState
+  let transition = navigation.navigate(href, {
+    state,
+    history,
+    info: { type: urlUpdateNavigationInfoType } satisfies UrlUpdateNavigationInfo,
+  })
+  await transition.finished
+}
+
+function navigateDocument(href: string, history: NavigationOptions['history']): void {
+  if (history === 'replace') {
+    window.location.replace(href)
+  } else {
+    window.location.assign(href)
+  }
 }
 
 /**
@@ -177,6 +229,17 @@ export function startNavigationListenerImpl(
         // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
         !isSameOriginUrl(event.destination.url)
       ) {
+        return
+      }
+
+      // Like hash changes, a URL update that interrupts frame work falls through to a top-frame
+      // reload so the page content still matches the URL.
+      if (isUrlUpdateNavigationInfo(event.info) && !needsFrameReload) {
+        interceptNavigation(navigation, event, false, {
+          async handler() {},
+          scroll: 'manual',
+          focusReset: 'manual',
+        })
         return
       }
 
@@ -356,6 +419,15 @@ function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNa
     (value.resetScroll === 'after-transition' || value.resetScroll === 'manual') &&
     'resetFocus' in value &&
     (value.resetFocus === 'after-transition' || value.resetFocus === 'manual')
+  )
+}
+
+function isUrlUpdateNavigationInfo(value: unknown): value is UrlUpdateNavigationInfo {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'type' in value &&
+    value.type === urlUpdateNavigationInfoType
   )
 }
 
