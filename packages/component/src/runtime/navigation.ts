@@ -397,13 +397,7 @@ function interceptNavigation(
     transitionBound = true
 
     resyncWebKitScrollAfterNavigation(event, resetScroll, transition)
-    if (scrollStyleWorkarounds) {
-      scheduleNavigationScrollCleanup(
-        transition,
-        scrollStyleWorkarounds.remove,
-        scrollStyleWorkarounds.cleanup,
-      )
-    }
+    if (scrollStyleWorkarounds) scheduleNavigationScrollCleanup(transition, scrollStyleWorkarounds)
   }
 
   let interceptOptions: NavigationInterceptOptions = {
@@ -431,8 +425,16 @@ function interceptNavigation(
 
 type NavigationScrollStyles = {
   cssText: string
-  cleanup: 'finished' | 'after-paint'
+  // Styles kept after a successful navigation until its first paint.
+  settledCssText: string
 }
+
+const disableScrollAnchoringCssText = `
+  html,
+  body {
+    overflow-anchor: none !important;
+  }
+`
 
 function getNavigationScrollStyles(
   event: NavigateEvent,
@@ -462,7 +464,9 @@ function getNavigationScrollStyles(
           overflow-anchor: none !important;
         }
       `,
-      cleanup: 'finished',
+      // Re-enabling scroll anchoring while the page shrinks back to its own height lets Chromium
+      // move the restored scroll position, so keep anchoring disabled until after the next paint.
+      settledCssText: disableScrollAnchoringCssText,
     }
   }
 
@@ -474,13 +478,8 @@ function getNavigationScrollStyles(
   // offset after NavigateEvent.scroll() resets the destination. Suppress anchoring before
   // interception and keep it disabled through the first post-navigation paint.
   return {
-    cssText: `
-      html,
-      body {
-        overflow-anchor: none !important;
-      }
-    `,
-    cleanup: 'after-paint',
+    cssText: disableScrollAnchoringCssText,
+    settledCssText: disableScrollAnchoringCssText,
   }
 }
 
@@ -490,7 +489,7 @@ function isChromiumUserAgent(userAgent: string): boolean {
 
 type NavigationScrollStylesheet = {
   remove(): void
-  cleanup: NavigationScrollStyles['cleanup']
+  settle(): void
 }
 
 function installNavigationScrollStyleWorkarounds(
@@ -514,24 +513,28 @@ function installNavigationScrollStyleWorkarounds(
     )
   }
 
+  let { settledCssText } = scrollStyles
+  function settle() {
+    if (!removed) stylesheet.replaceSync(settledCssText)
+  }
+
   if (event.signal.aborted) remove()
   else event.signal.addEventListener('abort', remove, { once: true })
-  return { remove, cleanup: scrollStyles.cleanup }
+  return { remove, settle }
 }
 
 function scheduleNavigationScrollCleanup(
   transition: NavigationTransition,
-  removeScrollStyles: () => void,
-  cleanup: NavigationScrollStylesheet['cleanup'],
+  scrollStyles: NavigationScrollStylesheet,
 ): void {
   function removeAfterSuccess() {
-    if (cleanup === 'finished') return removeScrollStyles()
+    scrollStyles.settle()
     // The first callback runs before the first post-navigation paint. The second removes the
     // stylesheet before the following frame.
-    requestAnimationFrame(() => requestAnimationFrame(removeScrollStyles))
+    requestAnimationFrame(() => requestAnimationFrame(scrollStyles.remove))
   }
 
-  void transition.finished.then(removeAfterSuccess, removeScrollStyles)
+  void transition.finished.then(removeAfterSuccess, scrollStyles.remove)
 }
 
 function getRuntimeNavigation(
