@@ -45,9 +45,11 @@ const eventsCode = await highlightSource(`
 `)
 
 const accessibilityCode = await highlightSource(`
-  <label for="state">State</label>
-  <input id="state" mix={combobox.input()} />
-  <div aria-label="US states" mix={combobox.list()} />
+  <>
+    <label for="state">State</label>
+    <input id="state" mix={combobox.input()} />
+    <div aria-label="US states" mix={combobox.list()} />
+  </>
 `)
 
 const typeDefinitions = {

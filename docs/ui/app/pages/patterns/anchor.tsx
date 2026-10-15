@@ -29,10 +29,10 @@ const anatomyCode = await highlightSource(`
 const placementCode = await highlightSource(`
   anchor(surface, target, { placement: 'right-start', offset: 8 })
 
-  <div mix={css({
+  css({
     '&[data-anchor-placement^="right"]': { transformOrigin: 'left center' },
     '&[data-anchor-placement^="left"]': { transformOrigin: 'right center' },
-  })} />
+  })
 `)
 
 const offsetsCode = await highlightSource(`

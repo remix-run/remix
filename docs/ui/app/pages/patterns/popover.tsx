@@ -57,11 +57,12 @@ const anchorInteractionCode = await highlightSource(`
 `)
 
 const focusCode = await highlightSource(`
-  <button mix={popover.focusOnHide()}>Open filters</button>
-
-  <div mix={popover.surface({ open, onHide, restoreFocusOnHide: false })}>
-    <input aria-label="Filter files" mix={popover.focusOnShow()} />
-  </div>
+  <>
+    <button mix={popover.focusOnHide()}>Open filters</button>
+    <div mix={popover.surface({ open, onHide, restoreFocusOnHide: false })}>
+      <input aria-label="Filter files" mix={popover.focusOnShow()} />
+    </div>
+  </>
 `)
 
 const motionCode = await highlightSource(`
@@ -77,8 +78,10 @@ const motionCode = await highlightSource(`
 `)
 
 const accessibilityCode = await highlightSource(`
-  <button aria-expanded={open} aria-controls="file-filters">Filters</button>
-  <div id="file-filters" role="dialog" aria-label="File filters" mix={popover.surface({ open, onHide })} />
+  <>
+    <button aria-expanded={open} aria-controls="file-filters">Filters</button>
+    <div id="file-filters" role="dialog" aria-label="File filters" mix={popover.surface({ open, onHide })} />
+  </>
 `)
 
 const typeDefinitions = {

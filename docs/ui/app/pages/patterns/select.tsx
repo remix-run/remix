@@ -55,10 +55,12 @@ const eventsCode = await highlightSource(`
 `)
 
 const accessibilityCode = await highlightSource(`
-  <button aria-label="Delivery method" type="button" mix={select.trigger()}>
-    <SelectedLabel />
-  </button>
-  <div aria-label="Delivery methods" mix={select.list()} />
+  <>
+    <button aria-label="Delivery method" type="button" mix={select.trigger()}>
+      <SelectedLabel />
+    </button>
+    <div aria-label="Delivery methods" mix={select.list()} />
+  </>
 `)
 
 const typeDefinitions = {

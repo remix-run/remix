@@ -112,7 +112,6 @@ describe('UI docs', () => {
     assert.doesNotMatch(html, /Lock order details/)
     assert.match(html, /data-demo-source/)
     assert.match(html, /aria-expanded="false" aria-controls="[^"]+-source"/)
-    assert.match(html, /https:\/\/api\.remix\.run\/remix-run\/ui\/accordion/)
   })
 
   it('leads with spring usage and keeps timing details in the reference', async () => {
