@@ -1795,6 +1795,8 @@ export interface PartialAnchorHTMLProps<
   'data-rmx-src'?: Trackable<string | undefined>
   /** Controls how activating this anchor updates the current history entry. */
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
+  /** Prefetches the destination when the visitor hovers, focuses, or presses this anchor. */
+  'data-rmx-prefetch'?: Trackable<'intent' | undefined>
   /** Scroll behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
   'data-rmx-reset-scroll'?: Trackable<NavigationInterceptOptions['scroll'] | 'true' | 'false'>
   /** Focus reset behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */

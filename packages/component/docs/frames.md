@@ -398,6 +398,42 @@ Custom resolvers receive the requested `src`, `method`, and `signal`. GET form v
 
 A newer reload cancels earlier client work for that frame, including pending requests and streamed content. Disposing the frame also cancels its active reload. Cancellation resolves with an aborted signal; other errors reject. Cancelling client work cannot undo a mutation the server has already performed.
 
+## Prefetching
+
+Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor shows intent to open it: resting the mouse or keyboard focus on the link for 100ms, or pressing it. Call `prefetch()` to do the same from a script, for example as the visitor types a search query:
+
+```tsx
+import { prefetch } from 'remix/component'
+
+;<a href="/products/shirt" data-rmx-prefetch="intent">
+  Shirt
+</a>
+
+prefetch(`/search?q=${encodeURIComponent(query)}`)
+```
+
+Prefetching is opt-in per link because it requests pages speculatively. Only mark links whose GET requests are safe to repeat. Only links that would reload the top frame from another same-origin URL are prefetched, so links with `data-rmx-target`, `data-rmx-document`, `download`, or a `target` other than `_self` are skipped, as is the current page.
+
+By default, Remix adds a `<link rel="prefetch">` for the page, and the browser keeps the response in its HTTP cache for the next navigation's `resolveFrame` request. The browser only reuses that response when the page is HTTP-cacheable, for example with `Cache-Control: private, max-age=30`, and the response does not `Vary` on `X-Remix-Frame`. Pages sent with `no-store` are requested twice. Browsers without `<link rel="prefetch">` support, such as Safari, skip the prefetch.
+
+When pages can't be HTTP-cached, pass `prefetch` to `run()` to load them another way, and pair it with a `resolveFrame` that reuses the result. Remix still decides when and which links to prefetch. This example holds each prefetched response in memory for the next untargeted GET request, where `fetchFrame()` is the app's own frame request:
+
+```ts
+let prefetched = new Map<string, Promise<Response>>()
+
+run({
+  loadModule,
+  prefetch(src) {
+    prefetched.set(src, fetchFrame(src))
+  },
+  resolveFrame(src, options) {
+    let response = !options?.target && !options?.formData && prefetched.get(src)
+    prefetched.clear()
+    return response || fetchFrame(src, options)
+  },
+})
+```
+
 ## Frame lifecycle
 
 1. **Server render** - Frame content is resolved via `resolveFrame` and serialized into the HTML stream. Frame metadata is stored in the `rmx-data` script.
