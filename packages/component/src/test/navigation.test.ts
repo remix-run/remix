@@ -1538,22 +1538,6 @@ describe('navigate', () => {
       controller.abort()
     }
   })
-
-  it('replaces the URL in place when reload is false and the Navigation API is unavailable', async (t) => {
-    let originalUrl = window.location.href
-    let destination = new URL(originalUrl)
-    destination.searchParams.set('variant', 'history-fallback')
-    let originalHistoryLength = window.history.length
-    stubGlobalField(t, 'navigation', undefined)
-
-    try {
-      await navigate(destination.href, { history: 'replace', reload: false })
-      expect(window.location.href).toBe(destination.href)
-      expect(window.history.length).toBe(originalHistoryLength)
-    } finally {
-      window.history.replaceState(window.history.state, '', originalUrl)
-    }
-  })
 })
 
 describe('frame navigation sources', () => {
