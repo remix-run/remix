@@ -66,10 +66,10 @@ Page components and their helpers stay on the server. Only example modules and t
 
 ## Site ownership
 
-- `app/pages/` owns page content, metadata and shared page helpers.
+- `app/pages/` owns page content, metadata and shared page helpers. `getting-started.tsx` owns the landing page, including its snippets, previews and table of contents.
 - `app/examples/` owns the runnable examples and their copyable source.
 - `app/data/` lists pages and loads examples.
-- `app/actions/docs/` owns the docs controller and Getting Started.
+- `app/actions/docs/` owns the docs controller.
 - `app/actions/public/` owns browser startup and site-specific styles.
 - `app/ui/document.tsx` composes the shared docs header, sidebar, table of contents and footer.
 - `scripts/prerender.ts` generates static output with the shared crawler, including the example modules linked from rendered pages.

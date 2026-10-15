@@ -1,36 +1,13 @@
 import { createController } from 'remix/router'
 import { pages } from '../../data/pages.ts'
-import { highlightSource } from '../../data/examples.tsx'
+import GettingStarted from '../../pages/getting-started.tsx'
 import { routes } from '../../routes.ts'
 import { UiDocument } from '../../ui/document.tsx'
-import { GettingStarted } from './getting-started.tsx'
 
 export default createController(routes.docs, {
   actions: {
-    async index({ render }) {
-      let previews = pages
-        .filter((page) => page.preview)
-        .map((page) => ({ page, example: page.preview }))
-      return render(
-        <UiDocument
-          title="Remix UI"
-          description="Unstyled UI primitives and animation utilities for Remix."
-          pages={pages}
-        >
-          <GettingStarted
-            previews={previews}
-            installHtml={await highlightSource('npm i remix @remix-run/ui', 'sh')}
-            configHtml={await highlightSource(
-              JSON.stringify(
-                { compilerOptions: { jsx: 'react-jsx', jsxImportSource: 'remix/component' } },
-                null,
-                2,
-              ),
-              'json',
-            )}
-          />
-        </UiDocument>,
-      )
+    index({ render }) {
+      return render(<GettingStarted />)
     },
     page({ params, render }) {
       let page = pages.find(

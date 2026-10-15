@@ -15,6 +15,12 @@ describe('UI docs', () => {
     assert.match(html, /href="\/primitives\/accordion\/"/)
     assert.match(html, /href="\/animation\/spring\/"/)
     assert.match(html, /data-code-block-copy/)
+    assert.match(html, /<section id="installation"[^>]*><h2>Installation<\/h2>/)
+    assert.match(html, /<section id="using-ui"[^>]*><h2>Using the library<\/h2>/)
+    assert.match(html, /<section id="explore"[^>]*><h2>Explore the library<\/h2>/)
+    assert.match(html, /href="#installation" aria-current="location"/)
+    assert.match(html, /href="#using-ui"/)
+    assert.match(html, /href="#explore"/)
   })
 
   it('makes landing previews decorative and does not hydrate their examples', async () => {
@@ -147,7 +153,9 @@ describe('UI docs', () => {
     ])
     assert.equal(missing.status, 404)
     assert.equal(wrongCategory.status, 404)
-    assert.match(await missing.text(), /Get started with Remix UI/)
+    let html = await missing.text()
+    assert.match(html, /Get started with Remix UI/)
+    assert.doesNotMatch(html, /On this page|href="#installation"|href="#using-ui"|href="#explore"/)
   })
 
   it('renders every primitive with a hero, visible source and a complete reference', async () => {

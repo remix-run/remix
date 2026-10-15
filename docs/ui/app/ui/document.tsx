@@ -29,18 +29,11 @@ const pagefindModulePath = path.resolve(
 
 export function UiDocument(handle: Handle<UiDocumentProps>) {
   return () => {
-    let { title, description, pages, currentPage, children } = handle.props
+    let { title, description, pages, currentPage, children, headings = [] } = handle.props
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let links = createDocsNavigationLinks()
     links.set('ui', { href: routes.docs.index.href(), label: 'UI', current: 'location' })
     let contentId = `${handle.id}-content`
-    let headings =
-      handle.props.headings ??
-      ([
-        { id: 'installation', title: 'Installation', titleHtml: 'Installation', depth: 2 },
-        { id: 'using-ui', title: 'Using the library', titleHtml: 'Using the library', depth: 2 },
-        { id: 'explore', title: 'Explore the library', titleHtml: 'Explore the library', depth: 2 },
-      ] satisfies DocsHeadingLink[])
     return (
       <html lang="en">
         <head>
@@ -78,7 +71,7 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
             navigationLabel="UI documentation"
             mobileNavigationLabel={currentPage?.title ?? 'Getting Started'}
             navigationName="UI navigation"
-            hasSecondaryNavigation
+            hasSecondaryNavigation={headings.length > 0}
             footer={<DocsFooter />}
           >
             <div class="docs-layout ui-docs-layout">
@@ -86,10 +79,12 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
                 {children}
                 <CodeBlockCopyButtons rootId={contentId} />
               </article>
-              <DocsSecondaryNavigation pagefindIgnore>
-                <h2 class="docs-toc__heading">On this page</h2>
-                <DocsTableOfContents headings={headings} />
-              </DocsSecondaryNavigation>
+              {headings.length > 0 ? (
+                <DocsSecondaryNavigation pagefindIgnore>
+                  <h2 class="docs-toc__heading">On this page</h2>
+                  <DocsTableOfContents headings={headings} />
+                </DocsSecondaryNavigation>
+              ) : null}
             </div>
           </DocsShell>
           {searchEnabled ? <PagefindElements baseUrl="/" bundlePath="/assets/pagefind/" /> : null}
