@@ -1,6 +1,6 @@
 import { css, on, ref } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { spring } from '@remix-run/ui/animation'
+import { prefersReducedMotion, spring } from '@remix-run/ui/animation'
 
 export default function Example(handle: Handle) {
   let enabled = false
@@ -21,7 +21,7 @@ export default function Example(handle: Handle) {
           let to = enabled ? 'translateX(24px)' : 'translateX(0)'
           await handle.update()
           if (!thumb) return
-          if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          if (!prefersReducedMotion()) {
             animation = thumb.animate([{ transform: from }, { transform: to }], {
               ...spring('bouncy'),
             })

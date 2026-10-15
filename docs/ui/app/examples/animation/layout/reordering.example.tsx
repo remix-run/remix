@@ -1,14 +1,9 @@
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { animateLayout, spring } from '@remix-run/ui/animation'
+import { animateLayout, prefersReducedMotion, spring } from '@remix-run/ui/animation'
 
 export default function Example(handle: Handle) {
   let sort: 'due' | 'priority' = 'due'
-  let reducedMotion = true
-  handle.queueTask(() => {
-    reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    handle.update()
-  })
   return () => (
     <div mix={panelCss}>
       <div
@@ -32,7 +27,6 @@ export default function Example(handle: Handle) {
                 name="task-sort"
                 checked={sort === option.value}
                 mix={on('change', () => {
-                  reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
                   sort = option.value
                   handle.update()
                 })}
@@ -51,7 +45,7 @@ export default function Example(handle: Handle) {
               mix={[
                 surfaceCss,
                 css({ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }),
-                animateLayout(reducedMotion ? false : { ...spring('snappy') }),
+                animateLayout(prefersReducedMotion() ? false : { ...spring('snappy') }),
               ]}
             >
               <div mix={css({ flex: 1, minWidth: 0 })}>

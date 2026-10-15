@@ -1,14 +1,9 @@
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { animateLayout, spring } from '@remix-run/ui/animation'
+import { animateLayout, prefersReducedMotion, spring } from '@remix-run/ui/animation'
 
 export default function Example(handle: Handle) {
   let activity = false
-  let reducedMotion = true
-  handle.queueTask(() => {
-    reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    handle.update()
-  })
   return () => (
     <div role="group" aria-label="Project view" mix={toolbarCss}>
       <div
@@ -25,7 +20,7 @@ export default function Example(handle: Handle) {
             background: 'light-dark(#fff, #393940)',
             boxShadow: '0 1px 3px #00000018',
           }),
-          animateLayout(reducedMotion ? false : { ...spring('snappy') }),
+          animateLayout(prefersReducedMotion() ? false : { ...spring('snappy') }),
         ]}
       />
       {['Overview', 'Activity log'].map((label, index) => (
@@ -36,7 +31,6 @@ export default function Example(handle: Handle) {
           mix={[
             buttonCss,
             on('click', () => {
-              reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
               activity = index === 1
               handle.update()
             }),

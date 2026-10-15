@@ -36,9 +36,9 @@ const transformsCode = await highlightSource(`
 
 const reducedMotionCode = await highlightSource(
   `
-    let reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    import { animateLayout, prefersReducedMotion, spring } from '@remix-run/ui/animation'
 
-    animateLayout(reducedMotion ? false : { ...spring('smooth') })
+    animateLayout(prefersReducedMotion() ? false : { ...spring('smooth') })
   `,
   'ts',
 )
@@ -78,8 +78,9 @@ export default function LayoutPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="reduced-motion" title="Reduced motion">
         <p>
-          Disable the mixin when the user prefers reduced motion. Layout changes then take effect
-          immediately.
+          Use <code>prefersReducedMotion()</code> during render to disable the mixin when the user
+          prefers reduced motion. Layout changes then take effect immediately. The helper is safe to
+          call during server rendering.
         </p>
 
         <CodeBlock html={reducedMotionCode} />

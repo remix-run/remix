@@ -65,8 +65,10 @@ const retargetingCode = await highlightSource(
 
 const reducedMotionCode = await highlightSource(
   `
+    import { prefersReducedMotion } from '@remix-run/ui/animation'
+
     cancelAnimationFrame(frame)
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (prefersReducedMotion()) {
       position = target
       handle.update()
     } else {
@@ -112,7 +114,10 @@ export default function TweenPage(handle: Handle<PageProps>) {
         <CodeBlock html={retargetingCode} />
       </Section>
       <Section id="reduced-motion" title="Reduced motion">
-        <p>Skip playback and apply the destination immediately when motion is reduced.</p>
+        <p>
+          Check <code>prefersReducedMotion()</code> before starting playback and apply the
+          destination immediately when motion is reduced.
+        </p>
 
         <CodeBlock html={reducedMotionCode} />
       </Section>

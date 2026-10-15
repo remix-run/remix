@@ -1,6 +1,6 @@
 import { css, on, ref } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { easings, tween } from '@remix-run/ui/animation'
+import { easings, prefersReducedMotion, tween } from '@remix-run/ui/animation'
 
 export default function Example(handle: Handle) {
   let amount = 12480
@@ -36,7 +36,7 @@ export default function Example(handle: Handle) {
                 mix={on('change', () => {
                   period = item.value
                   cancelAnimationFrame(frame)
-                  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                  if (prefersReducedMotion()) {
                     amount = item.amount
                     handle.update()
                     return

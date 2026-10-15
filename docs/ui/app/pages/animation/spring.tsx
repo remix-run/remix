@@ -120,8 +120,8 @@ export default function SpringPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="accessibility" title="Reduced motion">
         <p>
-          Remove CSS transitions with a media query. For JavaScript playback, check the preference
-          before starting and apply the final value immediately.
+          Remove CSS transitions with a media query. For JavaScript playback, check{' '}
+          <code>prefersReducedMotion()</code> before starting and apply the final value immediately.
         </p>
 
         <CodeBlock html={accessibilityCode} />
@@ -353,6 +353,12 @@ export default function SpringPage(handle: Handle<PageProps>) {
             </tr>
           </tbody>
         </ReferenceTable>
+        <h3 id="reduced-motion-reference">prefersReducedMotion()</h3>
+        <p>
+          Returns whether the browser currently matches <code>prefers-reduced-motion: reduce</code>.
+          Returns false during server rendering or when <code>matchMedia</code> is unavailable. Each
+          call reads the current preference; it does not subscribe to changes or trigger renders.
+        </p>
         <h3 id="types-reference">Exported types</h3>
         <ReferenceTable>
           <thead>

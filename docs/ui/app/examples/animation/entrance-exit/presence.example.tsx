@@ -1,62 +1,61 @@
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit, spring } from '@remix-run/ui/animation'
+import { animateEntrance, animateExit, prefersReducedMotion, spring } from '@remix-run/ui/animation'
 
 export default function Example(handle: Handle) {
   let visible = true
-  let reducedMotion = true
-  handle.queueTask(() => {
-    reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    handle.update()
-  })
-  return () => (
-    <div mix={stackCss}>
-      <button
-        type="button"
-        aria-expanded={visible}
-        aria-controls="notification-preview"
-        mix={[
-          buttonCss,
-          on('click', () => {
-            reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-            visible = !visible
-            handle.update()
-          }),
-        ]}
-      >
-        <PlusIcon expanded={visible} />
-        {visible ? 'Hide notification' : 'Show notification'}
-      </button>
-      <div id="notification-preview" mix={css({ minHeight: '120px' })}>
-        {visible && (
-          <div
-            key="notification"
-            mix={[
-              notificationCss,
-              animateEntrance({
-                opacity: 0,
-                transform: 'translateY(8px) scale(0.98)',
-                ...(reducedMotion ? { duration: 0 } : { ...spring('snappy') }),
-              }),
-              animateExit({
-                opacity: 0,
-                transform: 'translateY(-8px) scale(0.98)',
-                ...(reducedMotion ? { duration: 0 } : { ...spring('snappy') }),
-              }),
-            ]}
-          >
-            <SuccessIcon />
-            <div role="status">
-              <strong>Changes saved</strong>
-              <p mix={css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })}>
-                Your preferences are up to date.
-              </p>
+  return () => {
+    let timing = prefersReducedMotion() ? { duration: 0 } : { ...spring('snappy') }
+    return (
+      <div mix={stackCss}>
+        <button
+          type="button"
+          aria-expanded={visible}
+          aria-controls="notification-preview"
+          mix={[
+            buttonCss,
+            on('click', () => {
+              visible = !visible
+              handle.update()
+            }),
+          ]}
+        >
+          <PlusIcon expanded={visible} />
+          {visible ? 'Hide notification' : 'Show notification'}
+        </button>
+        <div id="notification-preview" mix={css({ minHeight: '120px' })}>
+          {visible && (
+            <div
+              key="notification"
+              mix={[
+                notificationCss,
+                animateEntrance({
+                  opacity: 0,
+                  transform: 'translateY(8px) scale(0.98)',
+                  ...timing,
+                }),
+                animateExit({
+                  opacity: 0,
+                  transform: 'translateY(-8px) scale(0.98)',
+                  ...timing,
+                }),
+              ]}
+            >
+              <SuccessIcon />
+              <div role="status">
+                <strong>Changes saved</strong>
+                <p
+                  mix={css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })}
+                >
+                  Your preferences are up to date.
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 }
 const stackCss = css({
   colorScheme: 'light dark',

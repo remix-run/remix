@@ -1,6 +1,6 @@
 import { css, on, ref } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { spring } from '@remix-run/ui/animation'
+import { prefersReducedMotion, spring } from '@remix-run/ui/animation'
 
 export default function Example(handle: Handle) {
   let active = 0
@@ -12,7 +12,7 @@ export default function Example(handle: Handle) {
     active = index
     let from = position
     let to = active * 100
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (prefersReducedMotion()) {
       position = to
       handle.update()
       return
