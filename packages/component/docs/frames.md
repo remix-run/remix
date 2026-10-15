@@ -316,7 +316,7 @@ import { navigate } from 'remix/component'
 await navigate(`/products/shirt?variant=${variantId}`, { history: 'replace', reload: false })
 ```
 
-Remix updates the URL and history entry without fetching or rendering, and leaves scroll position and focus where they are. `src`, `target`, `resetScroll`, and `resetFocus` are ignored. Back and forward traversal to the entry reloads the top frame from its URL, so that URL must render the same page. If the update interrupts an unfinished frame navigation, Remix reloads the top frame instead so the content matches the URL. Browsers without frame navigation update the URL with `history.replaceState()` or `history.pushState()`.
+Scroll position and focus stay where they are. Back and forward traversal to the entry reloads the top frame from its URL, so that URL must render the same page. If the update interrupts an unfinished frame navigation, Remix reloads the top frame instead so the content matches the URL.
 
 Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 
