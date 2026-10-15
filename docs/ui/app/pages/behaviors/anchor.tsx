@@ -8,7 +8,7 @@ import { referenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Anchor',
   slug: 'anchor',
-  category: 'primitives',
+  category: 'behaviors',
   description: 'Position floating elements against elements or viewport coordinates.',
   importPath: '@remix-run/ui/anchor',
 } satisfies PageMeta
@@ -124,10 +124,9 @@ export default function AnchorPage(handle: Handle<PageProps>) {
       <Section id="accessibility" title="Interaction and accessibility">
         <p>
           Anchor only positions elements. It does not open or dismiss them, move focus, lock
-          scrolling or add accessibility semantics. Use native popovers or the Popover primitive
-          when those behaviors are needed. Use a native button for keyboard activation. For
-          coordinate targets, derive a point from its bounds when activation has no pointer
-          coordinates.
+          scrolling or add accessibility semantics. Use native popovers or Popover when those
+          behaviors are needed. Use a native button for keyboard activation. For coordinate targets,
+          derive a point from its bounds when activation has no pointer coordinates.
         </p>
         <CodeBlock html={accessibilityCode} />
       </Section>

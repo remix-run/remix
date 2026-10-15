@@ -7,7 +7,7 @@ import { CodeBlock, PageLayout, Section } from '../page.tsx'
 export const meta = {
   title: 'Accordion',
   slug: 'accordion',
-  category: 'primitives',
+  category: 'behaviors',
   description: 'Expandable sections with keyboard navigation.',
   importPath: '@remix-run/ui/accordion',
 } satisfies PageMeta
@@ -111,7 +111,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="accessibility" title="Accessibility and keyboard navigation">
         <p>
-          The primitive generates the trigger and panel IDs and connects them with{' '}
+          Accordion generates the trigger and panel IDs and connects them with{' '}
           <code>aria-controls</code> and <code>aria-labelledby</code>. It updates{' '}
           <code>aria-expanded</code> on the trigger and hides closed panels from assistive
           technology.

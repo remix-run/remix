@@ -33,8 +33,8 @@ export default function GettingStarted() {
             Your styles.
           </h1>
           <p class="ui-description">
-            Unstyled UI primitives and animation utilities for Remix. Build with accessible
-            behavior, flexible markup and motion you can make your own.
+            Accessible UI behaviors and animation utilities for Remix. Bring your own markup and
+            styles.
           </p>
           <div class="ui-landing-actions">
             <a class="ui-primary-link" href="#installation">
@@ -62,9 +62,9 @@ export default function GettingStarted() {
         </Section>
         <Section id="using-ui" title="Using the library">
           <p>
-            Primitives provide interaction and accessibility behavior. You supply the elements and
-            styles with the <code>css()</code> mixin, and compose styling and behavior with the{' '}
-            <code>mix</code> prop.
+            Add interaction and accessibility behavior to your own elements. Apply styles with the{' '}
+            <code>css()</code> mixin, and compose styles and behaviors with the <code>mix</code>{' '}
+            prop.
           </p>
           <p>
             Remix UI is designed for the Remix component runtime. In a TypeScript project, configure
@@ -85,8 +85,8 @@ export default function GettingStarted() {
         </Section>
         <Section id="explore" title="Explore the library">
           <p>
-            Browse the primitives for common interaction patterns or explore the animation
-            utilities.
+            Explore behaviors for accordions, menus, tabs and other controls, or browse the
+            animation utilities.
           </p>
           <div class="ui-preview-grid">
             {previews.map(({ page, Preview }) => (
@@ -96,7 +96,7 @@ export default function GettingStarted() {
                 </div>
                 <div class="ui-preview-card-content">
                   <p class="ui-eyebrow">
-                    {page.category === 'primitives' ? 'Primitives' : 'Animation'}
+                    {page.category === 'behaviors' ? 'Behaviors' : 'Animation'}
                   </p>
                   <h3>
                     <a href={routes.docs.page.href({ category: page.category, slug: page.slug })}>
@@ -114,7 +114,7 @@ export default function GettingStarted() {
     return (
       <UiDocument
         title="Remix UI"
-        description="Unstyled UI primitives and animation utilities for Remix."
+        description="Accessible UI behaviors and animation utilities for Remix."
         pages={pages}
         headings={readPageHeadings(content)}
       >

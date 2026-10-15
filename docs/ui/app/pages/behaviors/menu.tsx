@@ -8,7 +8,7 @@ import { referenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Menu',
   slug: 'menu',
-  category: 'primitives',
+  category: 'behaviors',
   description: 'Action menus with checked items, context menus and submenus.',
   importPath: '@remix-run/ui/menu',
 } satisfies PageMeta

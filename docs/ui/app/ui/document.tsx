@@ -104,9 +104,9 @@ function Sidebar(handle: Handle<{ pages: UiPage[]; currentPage?: PageMeta }>) {
       >
         Getting Started
       </a>
-      {(['primitives', 'animation'] as const).map((category) => (
+      {(['behaviors', 'animation'] as const).map((category) => (
         <section key={category} class="ui-nav-group">
-          <h2>{category === 'primitives' ? 'Primitives' : 'Animation'}</h2>
+          <h2>{category === 'behaviors' ? 'Behaviors' : 'Animation'}</h2>
           <ul>
             {handle.props.pages
               .filter((page) => page.category === category)

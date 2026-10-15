@@ -8,7 +8,7 @@ import { referenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Combobox',
   slug: 'combobox',
-  category: 'primitives',
+  category: 'behaviors',
   description: 'Filter options with editable text and commit a single value.',
   importPath: '@remix-run/ui/combobox',
 } satisfies PageMeta

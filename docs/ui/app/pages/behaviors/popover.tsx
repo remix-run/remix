@@ -8,7 +8,7 @@ import { referenceTable } from '../reference-table.tsx'
 export const meta = {
   title: 'Popover',
   slug: 'popover',
-  category: 'primitives',
+  category: 'behaviors',
   description: 'Anchored floating panels with dismissal and focus restoration.',
   importPath: '@remix-run/ui/popover',
 } satisfies PageMeta

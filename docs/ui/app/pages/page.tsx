@@ -19,7 +19,7 @@ export function PageLayout(
         headings={readPageHeadings(children)}
       >
         <header class="ui-page-header">
-          <p class="ui-eyebrow">{page.category === 'primitives' ? 'Primitives' : 'Animation'}</p>
+          <p class="ui-eyebrow">{page.category === 'behaviors' ? 'Behaviors' : 'Animation'}</p>
           <h1 class="rmx-page-title">{page.title}</h1>
           <p class="ui-description">{page.description}</p>
           <code class="ui-import">{page.importPath}</code>
