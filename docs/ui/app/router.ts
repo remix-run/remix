@@ -19,18 +19,14 @@ declare module 'remix' {
   }
 }
 
-export function createUiRouter() {
-  let router = createRouter<AppContext>({
-    middleware: [
-      compression(),
-      staticFiles(path.resolve(import.meta.dirname, '../../shared/assets'), { index: false }),
-      asyncContext(),
-      render({ assets: assetServer }),
-    ],
-  })
-  router.map(routes, rootController)
-  router.map(routes.docs, docsController)
-  return router
-}
+export const router = createRouter<AppContext>({
+  middleware: [
+    compression(),
+    staticFiles(path.resolve(import.meta.dirname, '../../shared/assets'), { index: false }),
+    asyncContext(),
+    render({ assets: assetServer }),
+  ],
+})
 
-export const router = createUiRouter()
+router.map(routes, rootController)
+router.map(routes.docs, docsController)

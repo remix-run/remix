@@ -1,11 +1,11 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import { createUiRouter } from '../../router.ts'
+import { router } from '../../router.ts'
 import { pages } from '../../data/pages.ts'
 
 describe('UI docs', () => {
   it('introduces the standalone package and links to both sections', async () => {
-    let response = await createUiRouter().fetch(new Request('http://localhost/'))
+    let response = await router.fetch(new Request('http://localhost/'))
     let html = await response.text()
     assert.equal(response.status, 200)
     assert.match(html, /Accessible UI behaviors and animation utilities/)
@@ -25,7 +25,7 @@ describe('UI docs', () => {
   })
 
   it('makes landing previews decorative and does not hydrate their examples', async () => {
-    let response = await createUiRouter().fetch(new Request('http://localhost/'))
+    let response = await router.fetch(new Request('http://localhost/'))
     let html = await response.text()
     let previews = html.match(/<div\b[^>]*\bclass="ui-preview-card-demo"[^>]*>/g)
     assert.equal(previews?.length, 2)
@@ -37,9 +37,7 @@ describe('UI docs', () => {
   })
 
   it('renders live examples and sections on the behavior page', async () => {
-    let response = await createUiRouter().fetch(
-      new Request('http://localhost/behaviors/accordion/'),
-    )
+    let response = await router.fetch(new Request('http://localhost/behaviors/accordion/'))
     let html = await response.text()
     assert.equal(response.status, 200)
     assert.match(html, /<h1[^>]*>Accordion<\/h1>/)
@@ -89,7 +87,7 @@ describe('UI docs', () => {
   })
 
   it('leads with spring usage and keeps timing details in the reference', async () => {
-    let response = await createUiRouter().fetch(new Request('http://localhost/animation/spring/'))
+    let response = await router.fetch(new Request('http://localhost/animation/spring/'))
     let html = await response.text()
     assert.equal(response.status, 200)
     assert.doesNotMatch(html, /<h[23]>Compare the presets<\/h[23]>/)
@@ -110,9 +108,7 @@ describe('UI docs', () => {
   })
 
   it('leads with a notification example before explaining entrance and exit', async () => {
-    let response = await createUiRouter().fetch(
-      new Request('http://localhost/animation/entrance-exit/'),
-    )
+    let response = await router.fetch(new Request('http://localhost/animation/entrance-exit/'))
     let html = await response.text()
     assert.equal(response.status, 200)
     assert.ok(html.indexOf('id="presence"') < html.indexOf('id="anatomy"'))
@@ -123,7 +119,7 @@ describe('UI docs', () => {
   })
 
   it('demonstrates layout changes and documents position-only configuration', async () => {
-    let response = await createUiRouter().fetch(new Request('http://localhost/animation/layout/'))
+    let response = await router.fetch(new Request('http://localhost/animation/layout/'))
     let html = await response.text()
     assert.equal(response.status, 200)
     assert.ok(html.indexOf('id="reordering"') < html.indexOf('id="anatomy"'))
@@ -136,7 +132,7 @@ describe('UI docs', () => {
   })
 
   it('demonstrates tween timing and explains applying its final returned value', async () => {
-    let response = await createUiRouter().fetch(new Request('http://localhost/animation/tween/'))
+    let response = await router.fetch(new Request('http://localhost/animation/tween/'))
     let html = await response.text()
     assert.equal(response.status, 200)
     assert.ok(html.indexOf('id="timing"') < html.indexOf('id="anatomy"'))
@@ -147,7 +143,6 @@ describe('UI docs', () => {
   })
 
   it('returns a useful 404 for an unknown page or category', async () => {
-    let router = createUiRouter()
     let [missing, wrongCategory] = await Promise.all([
       router.fetch(new Request('http://localhost/behaviors/missing/')),
       router.fetch(new Request('http://localhost/system/accordion/')),
@@ -160,7 +155,6 @@ describe('UI docs', () => {
   })
 
   it('renders every behavior with a hero, visible source and a complete reference', async () => {
-    let router = createUiRouter()
     for (let page of pages.filter((page) => page.category === 'behaviors')) {
       let response = await router.fetch(new Request(`http://localhost/behaviors/${page.slug}/`))
       let html = await response.text()
@@ -175,7 +169,6 @@ describe('UI docs', () => {
   })
 
   it('serves example modules but keeps page components and controllers private', async () => {
-    let router = createUiRouter()
     let [example, page, controller] = await Promise.all([
       router.fetch(new Request('http://localhost/assets/app/examples/accordion/basic.example.tsx')),
       router.fetch(new Request('http://localhost/assets/app/pages/behaviors/accordion.tsx')),
