@@ -58,6 +58,8 @@ Schedules a task to run after the next update. The task receives an `AbortSignal
 - The component re-renders (new render cycle starts)
 - The component is removed from the tree
 
+Tasks queued by components that render during a frame navigation run after the navigation finishes, once scroll and focus are reset or restored. If another navigation interrupts it, the tasks wait for that navigation to finish too, and components it removed see an aborted signal. Tasks keep waiting while navigations continue back to back, such as a search field that replaces the URL on every keystroke, and while the browser loads a new document. Updates and tasks from event handlers are never held. This holds whether or not the component's module was already loaded, so a task can safely read layout, move focus, or call `navigate()`.
+
 **Use `queueTask` in event handlers when work needs to happen after DOM changes:**
 
 ```tsx

@@ -144,10 +144,20 @@ type FrameReloadResult = {
   redirectedTo?: string
 }
 
-type FrameReloadTransition = {
+export type FrameReloadTransition = {
   signal: AbortSignal
   committed: Promise<void>
   finished: Promise<FrameReloadResult>
+  releaseTasks: () => void
+}
+
+/**
+ * Component tasks queued while a navigation renders. The navigation releases them once it settles,
+ * so mount tasks run after its scroll and focus handling.
+ */
+export type HeldTasks = {
+  hold(scheduler: Scheduler, tasks: Array<() => void>): boolean
+  release(): void
 }
 
 type FrameTemplateListener = (fragment: DocumentFragment) => void
@@ -224,6 +234,7 @@ export type FrameRuntime = {
         blockingFrameTracker?: ReconciliationTracker
       }
     | undefined
+  heldTasks: HeldTasks | undefined
   reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
 }
 
@@ -272,6 +283,7 @@ export type FrameContext = {
   shouldPreserveHeadNode?: (node: Node) => boolean
   reconciliationTracker?: ReconciliationTracker
   blockingFrameTracker?: ReconciliationTracker
+  heldTasks?: HeldTasks
 }
 
 type FrameInit = {
@@ -292,6 +304,7 @@ type FrameInit = {
   frameInstances: WeakMap<Comment, Frame>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
+  heldTasks?: HeldTasks
 }
 
 export type Frame = {
@@ -322,6 +335,7 @@ type RenderOptions = {
   flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
   blockingFrameTracker?: ReconciliationTracker
+  heldTasks?: HeldTasks
   onCommit?: () => void
   signal?: AbortSignal
   contentStatus?: 'pending' | 'resolved'
@@ -353,6 +367,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
   let disposed = false
   let lifecycleController = new AbortController()
+  let unreleasedTasks = new Set<HeldTasks>()
 
   async function consumeClientEntryResources(
     source: ParentNode,
@@ -388,7 +403,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let runtime = createFrameRuntime({
     ...init,
     styleManager,
-    reloadForNavigation: startReloadTransition,
+    reloadForNavigation: (options) => startReloadTransition(options, createHeldTasks()),
   })
 
   let frame = createFrameHandle({
@@ -486,7 +501,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       }
 
       try {
-        contentRoot.render(content)
+        let previousHeldTasks = runtime.heldTasks
+        if (options.heldTasks) runtime.heldTasks = options.heldTasks
+        try {
+          contentRoot.render(content)
+        } finally {
+          runtime.heldTasks = previousHeldTasks
+        }
         await new Promise<void>((resolve) => context.scheduler.enqueueCommitPhase([resolve]))
         options.onCommit?.()
       } finally {
@@ -534,6 +555,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         data: responseData,
         reconciliationTracker: options.reconciliationTracker,
         blockingFrameTracker: options.blockingFrameTracker,
+        heldTasks: options.heldTasks,
       }
       context.styleManager.adoptServerStyles(
         collectFrameServerStyleTags(createElementContainer(parsed)),
@@ -580,6 +602,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       data: responseData,
       reconciliationTracker: options.reconciliationTracker,
       blockingFrameTracker: options.blockingFrameTracker,
+      heldTasks: options.heldTasks,
     }
 
     let nextContainer = createContainer(fragment)
@@ -649,7 +672,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if ((await initialClientEntryResources) === false) return
     if (disposed || context.lifecycleSignal.aborted) return
     context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
-    let subFramesReady = hydrateContainer(container, context, { reconciliationTracker })
+    let hydrationContext = init.heldTasks ? { ...context, heldTasks: init.heldTasks } : context
+    let subFramesReady = hydrateContainer(container, hydrationContext, {
+      reconciliationTracker,
+      heldTasks: init.heldTasks,
+    })
 
     try {
       await subFramesReady
@@ -657,7 +684,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (disposed || context.lifecycleSignal.aborted) return
 
       if (currentMarker?.status === 'pending') {
-        await watchPendingFrameTemplate(currentMarker, reconciliationTracker)
+        await watchPendingFrameTemplate(
+          currentMarker,
+          reconciliationTracker,
+          undefined,
+          undefined,
+          init.heldTasks,
+        )
       }
 
       reconciliationTracker.finalize()
@@ -671,6 +704,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (disposed) return
     disposed = true
     lifecycleController.abort()
+    // Components removed below see aborted signals when their held tasks run.
+    let heldTasks = Array.from(unreleasedTasks)
+    unreleasedTasks.clear()
     clearRmxData(context.data)
     reloadController?.abort()
     reloadController = undefined
@@ -693,6 +729,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (frameName) {
       init.namedFrames.unregister(frameName, frame)
     }
+
+    for (let tasks of heldTasks) tasks.release()
   }
 
   let readyPromise = hydrateInitial()
@@ -733,6 +771,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
               completeInheritedReload()
             }
           : undefined,
+        options?.heldTasks,
       )
     } else {
       clearPendingFrameTemplateWatch()
@@ -805,11 +844,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     return await transition.finished
   }
 
-  function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
+  function startReloadTransition(
+    options?: FrameNavigationOptions,
+    heldTasks?: HeldTasks,
+  ): FrameReloadTransition {
     let controller = startReload(options?.signal)
+    if (heldTasks) unreleasedTasks.add(heldTasks)
     let committed = Promise.withResolvers<void>()
     let commitStarted = false
-    let finished = resolveAndRenderReload(controller, options, (ready) => {
+    let finished = resolveAndRenderReload(controller, options, heldTasks, (ready) => {
       if (commitStarted) return
       commitStarted = true
       void ready.then(committed.resolve, committed.reject)
@@ -818,7 +861,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     // Settle committed when a reload is aborted or fails before rendering any content.
     void finished.then(() => committed.resolve(), committed.reject)
 
-    return { signal: controller.signal, committed: committed.promise, finished }
+    return {
+      signal: controller.signal,
+      committed: committed.promise,
+      finished,
+      releaseTasks() {
+        if (!heldTasks) return
+        unreleasedTasks.delete(heldTasks)
+        heldTasks.release()
+      },
+    }
   }
 
   function startReload(signal?: AbortSignal): AbortController {
@@ -880,6 +932,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function resolveAndRenderReload(
     controller: AbortController,
     options?: FrameNavigationOptions,
+    heldTasks?: HeldTasks,
     resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     try {
@@ -903,6 +956,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         signal: controller.signal,
         reconciliationTracker,
         blockingFrameTracker,
+        heldTasks,
         onCommit() {
           if (commitStarted) return
           commitStarted = true
@@ -1003,6 +1057,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     reconciliationTracker?: ReconciliationTracker,
     signal?: AbortSignal,
     onResolved?: () => void,
+    heldTasks?: HeldTasks,
   ): Promise<void> {
     if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
     if (pendingTemplateMarkerId === marker.id) return
@@ -1013,7 +1068,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let early = consumeFrameTemplate(marker.id) ?? getEarlyFrameContent(marker.id)
     if (early) {
       clearPendingFrameTemplateWatch()
-      await render(early, { reconciliationTracker, signal, contentStatus: 'resolved' })
+      await render(early, { reconciliationTracker, signal, heldTasks, contentStatus: 'resolved' })
       if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
       return
     }
@@ -1028,7 +1083,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
       clearPendingFrameTemplateWatch()
-      await render(fragment, { signal, contentStatus: 'resolved' })
+      await render(fragment, { signal, heldTasks, contentStatus: 'resolved' })
       if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     })
     pendingTemplateUnsubscribe = unsubscribe
@@ -1046,7 +1101,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let buffered = consumeFrameTemplate(marker.id)
     if (buffered) {
       clearPendingFrameTemplateWatch()
-      await render(buffered, { reconciliationTracker, signal, contentStatus: 'resolved' })
+      await render(buffered, {
+        reconciliationTracker,
+        signal,
+        heldTasks,
+        contentStatus: 'resolved',
+      })
       if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     }
   }
@@ -1084,6 +1144,7 @@ export function createFrameRuntime(init: {
     namedFrames: init.namedFrames,
     processClientEntryPreloads: init.processClientEntryPreloads,
     serverFrameReload: undefined,
+    heldTasks: undefined,
     reloadForNavigation: init.reloadForNavigation,
   }
 }
@@ -1145,6 +1206,25 @@ function createReconciliationTracker(): ReconciliationTracker {
     },
     ready() {
       return readyPromise
+    },
+  }
+}
+
+function createHeldTasks(): HeldTasks {
+  let held: Array<[Scheduler, Array<() => void>]> | undefined = []
+  return {
+    hold(scheduler, tasks) {
+      if (!held) return false
+      held.push([scheduler, tasks])
+      return true
+    },
+    release() {
+      if (!held) return
+      let released = held
+      held = undefined
+      for (let [scheduler, tasks] of released) scheduler.enqueueTasks(tasks)
+      // Run the tasks now, before another navigation can start.
+      for (let scheduler of new Set(released.map(([scheduler]) => scheduler))) scheduler.dequeue()
     },
   }
 }
@@ -1454,7 +1534,7 @@ function hydrateRegion(
   // tracker to client frames created while this entry renders so blocking
   // frames keep the reload pending until their content arrives.
   let renderEntry = (root: Pick<VirtualRoot, 'render'>) => {
-    if (!signal) {
+    if (!signal && !context.heldTasks) {
       root.render(vElement)
       return
     }
@@ -1466,16 +1546,21 @@ function hydrateRegion(
     )
 
     let previousServerFrameReload = frameRuntime.serverFrameReload
+    let previousHeldTasks = frameRuntime.heldTasks
 
-    frameRuntime.serverFrameReload = {
-      signal,
-      reconciliationTracker: context.reconciliationTracker,
-      blockingFrameTracker: context.blockingFrameTracker,
+    if (signal) {
+      frameRuntime.serverFrameReload = {
+        signal,
+        reconciliationTracker: context.reconciliationTracker,
+        blockingFrameTracker: context.blockingFrameTracker,
+      }
     }
+    if (context.heldTasks) frameRuntime.heldTasks = context.heldTasks
     try {
       root.render(vElement)
     } finally {
       frameRuntime.serverFrameReload = previousServerFrameReload
+      frameRuntime.heldTasks = previousHeldTasks
     }
   }
 
@@ -1548,6 +1633,7 @@ async function createSubFrames(
             frameInstances: context.frameInstances,
             namedFrames: context.namedFrames,
             processClientEntryPreloads: context.processClientEntryPreloads,
+            heldTasks: options?.heldTasks,
           })
           context.frameInstances.set(node, subFrame)
           if (frameMarker.status === 'resolved') {

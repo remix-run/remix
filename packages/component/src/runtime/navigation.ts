@@ -36,6 +36,7 @@ interface FrameRedirectNavigationInfo {
 }
 
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
+const interceptedEvents = new WeakSet<NavigateEvent>()
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
 // Lets the navigation handler tell the WebKit workaround once it has reset scroll.
@@ -231,6 +232,26 @@ export function startNavigationListenerImpl(
   // Hash changes abort the previous navigation before this listener runs. Keep unfinished frame
   // work pending across aborts so the next navigation can finish loading the destination.
   let needsFrameReload = false
+  // Navigations left to the browser load a new document without a transition.
+  let documentNavigation: NavigateEvent | undefined
+  let navigationWaiters: Array<() => void> = []
+
+  function releaseWhenNavigationIdle(
+    navigation: Navigation,
+    release: () => void,
+    settled: NavigationTransition | null,
+  ) {
+    let transition = navigation.transition
+    let retry = () => releaseWhenNavigationIdle(navigation, release, transition)
+    if (transition && transition !== settled) {
+      void transition.finished.then(retry, retry)
+    } else if (isPendingDocumentNavigation(documentNavigation)) {
+      // A canceled document navigation leaves the tasks held until the next navigation.
+      navigationWaiters.push(retry)
+    } else {
+      release()
+    }
+  }
 
   navigation.updateCurrentEntry({
     state: {
@@ -245,6 +266,10 @@ export function startNavigationListenerImpl(
   navigation.addEventListener(
     'navigate',
     (event) => {
+      documentNavigation =
+        event.destination.sameDocument || event.downloadRequest != null ? undefined : event
+      for (let waiter of navigationWaiters.splice(0)) queueMicrotask(waiter)
+
       if (
         isDocumentReload(event.info) ||
         (event.hashChange && !needsFrameReload) ||
@@ -302,6 +327,7 @@ export function startNavigationListenerImpl(
       needsFrameReload = true
       let handler = async () => {
         if (event.signal.aborted) return
+        let transition = navigation.transition
 
         let submission = await runtimeNavigation.getSubmission?.()
         if (event.signal.aborted) return
@@ -316,6 +342,12 @@ export function startNavigationListenerImpl(
           ...submission,
           signal: event.signal,
         })
+        // Components rendered by this navigation run their tasks once navigation is idle, so their
+        // navigations can't interrupt this one, or a navigation that replaced it, before it resets
+        // scroll and focus.
+        let releaseTasks = () =>
+          releaseWhenNavigationIdle(navigation, reload.releaseTasks, transition)
+        void (transition?.finished ?? reload.finished).then(releaseTasks, releaseTasks)
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
         if (scroll !== 'manual') {
@@ -396,6 +428,10 @@ export function startNavigationListenerImpl(
     },
     { signal },
   )
+}
+
+function isPendingDocumentNavigation(event: NavigateEvent | undefined): boolean {
+  return event !== undefined && !event.defaultPrevented && !interceptedEvents.has(event)
 }
 
 function getInterceptableNavigation(): Navigation | undefined {
@@ -499,6 +535,7 @@ function interceptNavigation(
 
   try {
     event.intercept(interceptOptions)
+    interceptedEvents.add(event)
   } catch (error) {
     scrollStyleWorkarounds?.remove()
     throw error
