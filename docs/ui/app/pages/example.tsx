@@ -1,6 +1,7 @@
 import { unsafeHTML } from 'remix/component'
 import type { Handle } from 'remix/component'
 import type { LoadedExample } from '../data/examples.tsx'
+import { ExampleSourceBehavior } from '../ui/public/example-source.tsx'
 
 interface ExampleProps {
   id: string
@@ -27,7 +28,15 @@ export function Example(handle: Handle<ExampleProps>) {
             <Component />
           </div>
           <div class="ui-demo-source" data-pagefind-ignore>
-            <div data-code-block data-demo-source innerHTML={unsafeHTML(sourceHtml)} />
+            <div id={`${id}-source`} class="ui-demo-source-code" inert aria-hidden="true">
+              <div data-code-block data-demo-source innerHTML={unsafeHTML(sourceHtml)} />
+            </div>
+            <div class="ui-demo-source-actions">
+              <button type="button" aria-expanded="false" aria-controls={`${id}-source`}>
+                Show code
+              </button>
+            </div>
+            <ExampleSourceBehavior sourceId={`${id}-source`} />
           </div>
         </div>
       </div>

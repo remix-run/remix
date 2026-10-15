@@ -9,7 +9,7 @@ describe('UI docs', () => {
     let response = await router.fetch(new Request('http://localhost/'))
     let html = await response.text()
     assert.equal(response.status, 200)
-    assert.match(html, /Accessible UI patterns and animation utilities/)
+    assert.match(html, /Unstyled, accessible UI patterns and animation for Remix/)
     assert.match(html, /<h2>Patterns<\/h2>/)
     assert.match(html, /is currently unstable and versioned in the v0\.x range/)
     assert.match(html, /npm/)
@@ -111,7 +111,7 @@ describe('UI docs', () => {
     assert.match(html, /<h3>Disabling one item<\/h3>/)
     assert.doesNotMatch(html, /Lock order details/)
     assert.match(html, /data-demo-source/)
-    assert.doesNotMatch(html, /<details/)
+    assert.match(html, /aria-expanded="false" aria-controls="[^"]+-source"/)
     assert.match(html, /https:\/\/api\.remix\.run\/remix-run\/ui\/accordion/)
   })
 
@@ -134,7 +134,7 @@ describe('UI docs', () => {
     assert.match(html, /prefers-reduced-motion/)
     assert.match(html, /presets\.example[^"<]*\.tsx/)
     assert.match(html, /data-demo-source/)
-    assert.doesNotMatch(html, /<details/)
+    assert.match(html, /aria-expanded="false" aria-controls="[^"]+-source"/)
   })
 
   it('leads with a notification example before explaining entrance and exit', async () => {
@@ -200,7 +200,7 @@ describe('UI docs', () => {
     assert.doesNotMatch(html, /On this page|href="#installation"|href="#using-ui"|href="#explore"/)
   })
 
-  it('renders every pattern with a hero, visible source and a complete reference', async () => {
+  it('renders every pattern with a hero, expandable source and a complete reference', async () => {
     for (let page of pages.filter((page) => page.category === 'patterns')) {
       let response = await router.fetch(new Request(`http://localhost/patterns/${page.slug}/`))
       let html = await response.text()
