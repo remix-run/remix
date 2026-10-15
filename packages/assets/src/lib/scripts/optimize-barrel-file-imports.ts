@@ -1,6 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parseSync } from 'oxc-parser'
+import type { Statement } from 'oxc-parser'
 import picomatch from 'picomatch'
 
 import type { ImportRewrite, ResolvedImport, ResolvedModule } from './resolve.ts'
@@ -45,10 +46,32 @@ type ExportResolution = {
 
 type SideEffects = boolean | readonly string[] | null
 
+type ExportAnalysisCache = {
+  analyses: WeakMap<ResolvedModule, ExportAnalysis>
+  statements: Map<string, ModuleStatements>
+}
+
+type ModuleStatements = {
+  body: Statement[]
+  hasErrors: boolean
+  rawCode: string
+}
+
+const emptyExportAnalysis: ExportAnalysis = {
+  explicit: new Map(),
+  importDeclarations: [],
+  isBarrelFile: false,
+  stars: [],
+}
+
+// Analysis only reads module-level import and export statements, so other statements are kept as
+// lightweight placeholders instead of retaining their full AST.
+const otherStatement = { type: 'ExpressionStatement' } as Statement
+
 export function createBarrelFileImportOptimizer(): (
   graph: ReadonlyMap<string, ResolvedModule>,
 ) => Map<string, ResolvedModule> {
-  let analysisCache = new WeakMap<ResolvedModule, ExportAnalysis>()
+  let analysisCache: ExportAnalysisCache = { analyses: new WeakMap(), statements: new Map() }
 
   return function optimizeBarrelFileImports(
     graph: ReadonlyMap<string, ResolvedModule>,
@@ -387,25 +410,25 @@ function readSideEffects(packageJsonPath: string): SideEffects {
   return null
 }
 
-function getExportAnalysis(
-  module: ResolvedModule,
-  cache: WeakMap<ResolvedModule, ExportAnalysis>,
-): ExportAnalysis {
-  let cached = cache.get(module)
+function getExportAnalysis(module: ResolvedModule, cache: ExportAnalysisCache): ExportAnalysis {
+  let cached = cache.analyses.get(module)
   if (cached) return cached
 
-  let parseResult = parseSync(module.resolvedPath, module.rawCode, {
-    lang: 'js',
-    sourceType: 'module',
-  })
+  // Without static imports a module has no import declarations to rewrite and cannot re-export.
+  if (!module.imports.some((imported) => !imported.dynamic)) {
+    cache.analyses.set(module, emptyExportAnalysis)
+    return emptyExportAnalysis
+  }
+
+  let statements = getModuleStatements(module, cache.statements)
   let explicit = new Map<string, Reexport>()
   let importDeclarations: ImportDeclaration[] = []
   let importedLocals = new Map<string, Reexport>()
   let reexportedLocals = new Set<string>()
   let stars: string[] = []
-  let isBarrelFile = parseResult.errors.length === 0 && parseResult.program.body.length > 0
+  let isBarrelFile = !statements.hasErrors && statements.body.length > 0
 
-  for (let statement of parseResult.program.body) {
+  for (let statement of statements.body) {
     if (statement.type === 'ImportDeclaration') {
       let imported = findResolvedImport(
         module.imports,
@@ -536,8 +559,36 @@ function getExportAnalysis(
   }
 
   let analysis = { explicit, importDeclarations, isBarrelFile, stars }
-  cache.set(module, analysis)
+  cache.analyses.set(module, analysis)
   return analysis
+}
+
+// Re-resolving a module creates a new ResolvedModule, so statements are cached by file and code to
+// avoid parsing unchanged modules again.
+function getModuleStatements(
+  module: ResolvedModule,
+  cache: Map<string, ModuleStatements>,
+): ModuleStatements {
+  let cached = cache.get(module.identityPath)
+  if (cached && cached.rawCode === module.rawCode) return cached
+
+  let parseResult = parseSync(module.resolvedPath, module.rawCode, {
+    lang: 'js',
+    sourceType: 'module',
+  })
+  let statements = {
+    body: parseResult.program.body.map((statement) =>
+      statement.type === 'ImportDeclaration' ||
+      (statement.type === 'ExportNamedDeclaration' && statement.declaration === null) ||
+      statement.type === 'ExportAllDeclaration'
+        ? statement
+        : otherStatement,
+    ),
+    hasErrors: parseResult.errors.length > 0,
+    rawCode: module.rawCode,
+  }
+  cache.set(module.identityPath, statements)
+  return statements
 }
 
 function findResolvedImport(
@@ -554,7 +605,7 @@ function resolveExport(
   identityPath: string,
   exportedName: string,
   graph: ReadonlyMap<string, ResolvedModule>,
-  cache: WeakMap<ResolvedModule, ExportAnalysis>,
+  cache: ExportAnalysisCache,
   seen: Set<string>,
 ): ExportResolution | null {
   let key = `${identityPath}\0${exportedName}`
