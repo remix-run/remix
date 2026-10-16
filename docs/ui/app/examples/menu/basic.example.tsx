@@ -8,32 +8,32 @@ export default function ExampleMenu() {
         <button
           type="button"
           mix={[
-            styles.button,
             menu.trigger({
               offset: 8,
             }),
+            styles.button,
           ]}
         >
           Edit <ChevronDownIcon />
         </button>
-        <div mix={[styles.surface, menu.popover()]}>
-          <div mix={[styles.list, menu.list()]}>
+        <div mix={[menu.popover(), styles.surface]}>
+          <div mix={[menu.list(), styles.list]}>
             <div
               mix={[
-                styles.item,
                 menu.item({
                   name: 'undo',
                 }),
+                styles.item,
               ]}
             >
               Undo
             </div>
             <div
               mix={[
-                styles.item,
                 menu.item({
                   name: 'redo',
                 }),
+                styles.item,
               ]}
             >
               Redo
@@ -41,30 +41,30 @@ export default function ExampleMenu() {
             <div role="separator" mix={styles.separator} />
             <div
               mix={[
-                styles.item,
                 menu.item({
                   name: 'cut',
                 }),
+                styles.item,
               ]}
             >
               Cut
             </div>
             <div
               mix={[
-                styles.item,
                 menu.item({
                   name: 'copy',
                 }),
+                styles.item,
               ]}
             >
               Copy
             </div>
             <div
               mix={[
-                styles.item,
                 menu.item({
                   name: 'paste',
                 }),
+                styles.item,
               ]}
             >
               Paste

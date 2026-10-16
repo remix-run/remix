@@ -26,11 +26,11 @@ export default function ExampleSpring(handle: Handle) {
         <button
           type="button"
           mix={[
-            styles.button,
             on('click', () => {
               moved = !moved
               handle.update()
             }),
+            styles.button,
           ]}
         >
           Animate

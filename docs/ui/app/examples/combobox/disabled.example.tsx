@@ -11,12 +11,12 @@ export default function ExampleCombobox(handle: Handle) {
           id={`${handle.id}-state`}
           placeholder="Search states"
           aria-describedby={`${handle.id}-reason`}
-          mix={[styles.input, combobox.input()]}
+          mix={[combobox.input(), styles.input]}
         />
-        <div mix={[styles.surface, combobox.popover()]}>
-          <div aria-label="US states" mix={[styles.list, combobox.list()]}>
+        <div mix={[combobox.popover(), styles.surface]}>
+          <div aria-label="US states" mix={[combobox.list(), styles.list]}>
             {options.map((option) => (
-              <div key={option.value} mix={[styles.option, combobox.option(option)]}>
+              <div key={option.value} mix={[combobox.option(option), styles.option]}>
                 {option.label}
               </div>
             ))}

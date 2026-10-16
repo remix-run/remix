@@ -13,7 +13,7 @@ export default function ExampleLayout(handle: Handle) {
         }}
         aria-hidden="true"
         inert
-        mix={[styles.highlight, animateLayout(prefersReducedMotion() ? false : spring('snappy'))]}
+        mix={[animateLayout(prefersReducedMotion() ? false : spring('snappy')), styles.highlight]}
       />
       {['Overview', 'Activity log'].map((label, index) => (
         <button
@@ -21,11 +21,11 @@ export default function ExampleLayout(handle: Handle) {
           type="button"
           aria-pressed={activity === (index === 1)}
           mix={[
-            styles.button,
             on('click', () => {
               activity = index === 1
               handle.update()
             }),
+            styles.button,
           ]}
         >
           {label}

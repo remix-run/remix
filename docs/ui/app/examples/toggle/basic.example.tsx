@@ -12,10 +12,10 @@ export default function ExampleToggle() {
         <input
           type="checkbox"
           mix={[
-            styles.switch,
             toggle.toggle({
               defaultChecked: true,
             }),
+            styles.switch,
           ]}
         />
       </label>

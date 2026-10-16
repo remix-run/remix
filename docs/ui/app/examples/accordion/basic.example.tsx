@@ -4,16 +4,16 @@ import { css } from 'remix/component'
 export default function ExampleAccordion() {
   return () => (
     <accordion.Context defaultValue="shipping">
-      <div mix={[styles.root, accordion.root()]}>
+      <div mix={[accordion.root(), styles.root]}>
         <accordion.ItemContext value="shipping">
-          <div mix={[styles.item, accordion.item()]}>
+          <div mix={[accordion.item(), styles.item]}>
             <h3 mix={styles.heading}>
-              <button mix={[styles.trigger, accordion.trigger()]} type="button">
+              <button mix={[accordion.trigger(), styles.trigger]} type="button">
                 Shipping
                 <ChevronDownIcon />
               </button>
             </h3>
-            <div mix={[styles.content, accordion.content()]}>
+            <div mix={[accordion.content(), styles.content]}>
               <div mix={styles.contentInner}>
                 <p mix={styles.description}>
                   Choose a delivery window and track your order. We’ll send you a tracking link as
@@ -25,14 +25,14 @@ export default function ExampleAccordion() {
         </accordion.ItemContext>
 
         <accordion.ItemContext value="billing">
-          <div mix={[styles.item, accordion.item()]}>
+          <div mix={[accordion.item(), styles.item]}>
             <h3 mix={styles.heading}>
-              <button mix={[styles.trigger, accordion.trigger()]} type="button">
+              <button mix={[accordion.trigger(), styles.trigger]} type="button">
                 Billing
                 <ChevronDownIcon />
               </button>
             </h3>
-            <div mix={[styles.content, accordion.content()]}>
+            <div mix={[accordion.content(), styles.content]}>
               <div mix={styles.contentInner}>
                 <p mix={styles.description}>
                   Review invoices and update your billing details. Changes apply to your next
@@ -44,14 +44,14 @@ export default function ExampleAccordion() {
         </accordion.ItemContext>
 
         <accordion.ItemContext value="returns">
-          <div mix={[styles.item, accordion.item()]}>
+          <div mix={[accordion.item(), styles.item]}>
             <h3 mix={styles.heading}>
-              <button mix={[styles.trigger, accordion.trigger()]} type="button">
+              <button mix={[accordion.trigger(), styles.trigger]} type="button">
                 Returns
                 <ChevronDownIcon />
               </button>
             </h3>
-            <div mix={[styles.content, accordion.content()]}>
+            <div mix={[accordion.content(), styles.content]}>
               <div mix={styles.contentInner}>
                 <p mix={styles.description}>
                   Return unused items within 30 days. Arrange a return and track your refund from

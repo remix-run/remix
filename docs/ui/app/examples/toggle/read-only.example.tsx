@@ -13,11 +13,11 @@ export default function ExampleToggle() {
           <input
             type="checkbox"
             mix={[
-              styles.switch,
               toggle.toggle({
                 readOnly: true,
                 defaultChecked: true,
               }),
+              styles.switch,
             ]}
           />
         </label>

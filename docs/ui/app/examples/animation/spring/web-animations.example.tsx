@@ -12,7 +12,6 @@ export default function ExampleSpring(handle: Handle) {
       role="switch"
       aria-checked={enabled}
       mix={[
-        styles.button,
         on('click', async () => {
           if (!thumb) return
           let from = getComputedStyle(thumb).transform
@@ -35,6 +34,7 @@ export default function ExampleSpring(handle: Handle) {
             )
           }
         }),
+        styles.button,
       ]}
     >
       Notifications
@@ -42,7 +42,6 @@ export default function ExampleSpring(handle: Handle) {
         <span
           data-enabled={enabled}
           mix={[
-            styles.thumb,
             ref((node: HTMLSpanElement, signal) => {
               thumb = node
               signal.addEventListener(
@@ -56,6 +55,7 @@ export default function ExampleSpring(handle: Handle) {
                 },
               )
             }),
+            styles.thumb,
           ]}
         />
       </span>

@@ -9,7 +9,6 @@ export default function ExampleSelect(handle: Handle) {
     <form
       autocomplete="off"
       mix={[
-        styles.root,
         on('submit', (event) => {
           event.preventDefault()
           let data = new FormData(event.currentTarget)
@@ -17,6 +16,7 @@ export default function ExampleSelect(handle: Handle) {
           confirmation = method ? `${method.label} confirmed` : 'Choose a delivery method'
           handle.update()
         }),
+        styles.root,
       ]}
     >
       <div mix={styles.card}>
@@ -25,16 +25,16 @@ export default function ExampleSelect(handle: Handle) {
           <button
             type="button"
             aria-label="Delivery method"
-            mix={[styles.button, styles.triggerLayout, select.trigger()]}
+            mix={[select.trigger(), styles.button, styles.triggerLayout]}
           >
             <SelectedLabel />
             <ChevronDownIcon />
           </button>
           <popover.Context>
-            <div mix={[styles.surface, select.popover()]}>
-              <div aria-label="Delivery methods" mix={[styles.list, select.list()]}>
+            <div mix={[select.popover(), styles.surface]}>
+              <div aria-label="Delivery methods" mix={[select.list(), styles.list]}>
                 {options.map((option) => (
-                  <div key={option.value} mix={[styles.option, select.option(option)]}>
+                  <div key={option.value} mix={[select.option(option), styles.option]}>
                     {option.label}
                   </div>
                 ))}

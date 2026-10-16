@@ -7,38 +7,38 @@ export default function ExampleMenu(handle: Handle) {
   return () => (
     <div
       mix={[
-        styles.root,
         menu.onMenuSelect((event) => {
           if (event.item.checked) enabled.add(event.item.name)
           else enabled.delete(event.item.name)
           handle.update()
         }),
+        styles.root,
       ]}
     >
       <menu.Context label="View">
         <button
           type="button"
           mix={[
-            styles.button,
             menu.trigger({
               offset: 8,
             }),
+            styles.button,
           ]}
         >
           View <ChevronDownIcon />
         </button>
-        <div mix={[styles.surface, menu.popover()]}>
-          <div mix={[styles.list, menu.list()]}>
+        <div mix={[menu.popover(), styles.surface]}>
+          <div mix={[menu.list(), styles.list]}>
             {options.map((option) => (
               <div
                 key={option.name}
                 mix={[
-                  styles.item,
                   menu.item({
                     name: option.name,
                     type: 'checkbox',
                     checked: enabled.has(option.name),
                   }),
+                  styles.item,
                 ]}
               >
                 {option.label}

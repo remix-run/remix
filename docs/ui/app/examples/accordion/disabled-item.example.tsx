@@ -6,7 +6,7 @@ export default function ExampleAccordion() {
   return () => (
     <div mix={styles.root}>
       <accordion.Context defaultValue="shipping">
-        <div mix={[styles.accordion, accordion.root()]}>
+        <div mix={[accordion.root(), styles.accordion]}>
           <Item value="shipping" title="Shipping" />
           <Item value="gift-wrapping" title="Gift wrapping" disabled />
           <Item value="billing" title="Billing" />
@@ -115,7 +115,7 @@ const styles = {
 function Item(handle: Handle<{ value: string; title: string; disabled?: boolean }>) {
   return () => (
     <accordion.ItemContext value={handle.props.value} disabled={handle.props.disabled}>
-      <div mix={[styles.item, accordion.item()]}>
+      <div mix={[accordion.item(), styles.item]}>
         <h3>
           <button type="button" mix={accordion.trigger()}>
             <span>
@@ -127,7 +127,7 @@ function Item(handle: Handle<{ value: string; title: string; disabled?: boolean 
             {!handle.props.disabled && <ChevronDownIcon />}
           </button>
         </h3>
-        <div mix={[styles.content, accordion.content()]}>
+        <div mix={[accordion.content(), styles.content]}>
           <div
             mix={css({
               minHeight: 0,

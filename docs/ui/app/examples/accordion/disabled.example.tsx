@@ -9,7 +9,7 @@ export default function ExampleAccordion(handle: Handle) {
         Sign in to use saved addresses and cards.
       </p>
       <accordion.Context disabled>
-        <div mix={[styles.accordion, accordion.root()]}>
+        <div mix={[accordion.root(), styles.accordion]}>
           <Item value="addresses" title="Saved addresses" reasonId={`${handle.id}-reason`} />
           <Item value="cards" title="Saved cards" reasonId={`${handle.id}-reason`} />
         </div>
@@ -106,13 +106,13 @@ const styles = {
 function Item(handle: Handle<{ value: string; title: string; reasonId: string }>) {
   return () => (
     <accordion.ItemContext value={handle.props.value}>
-      <div mix={[styles.item, accordion.item()]}>
+      <div mix={[accordion.item(), styles.item]}>
         <h3>
           <button type="button" aria-describedby={handle.props.reasonId} mix={accordion.trigger()}>
             {handle.props.title}
           </button>
         </h3>
-        <div mix={[styles.content, accordion.content()]}>
+        <div mix={[accordion.content(), styles.content]}>
           <div
             mix={css({
               minHeight: 0,

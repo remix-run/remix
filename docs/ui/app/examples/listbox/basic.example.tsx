@@ -28,10 +28,10 @@ export default function ExampleListbox(handle: Handle) {
             tabIndex={0}
             aria-label="Team"
             aria-activedescendant={activeId}
-            mix={[styles.list, listbox.list()]}
+            mix={[listbox.list(), styles.list]}
           >
             {options.map((option) => (
-              <div key={option.value} mix={[styles.option, listbox.option(option)]}>
+              <div key={option.value} mix={[listbox.option(option), styles.option]}>
                 <span>{option.label}</span>
                 <span aria-hidden="true" mix={styles.iconSlot}>
                   {value === option.value && <CheckIcon />}

@@ -13,7 +13,6 @@ export default function ExamplePopover(handle: Handle) {
           aria-controls={`${handle.id}-surface`}
           aria-expanded={open}
           mix={[
-            styles.button,
             popover.anchor({
               placement: 'bottom',
               offset: 8,
@@ -23,6 +22,7 @@ export default function ExamplePopover(handle: Handle) {
               open = !open
               handle.update()
             }),
+            styles.button,
           ]}
         >
           <FilterIcon />
@@ -32,7 +32,6 @@ export default function ExamplePopover(handle: Handle) {
           role="dialog"
           aria-label="Filter pull requests"
           mix={[
-            styles.surface,
             popover.surface({
               open,
               onHide() {
@@ -40,6 +39,7 @@ export default function ExamplePopover(handle: Handle) {
                 handle.update()
               },
             }),
+            styles.surface,
           ]}
         >
           <fieldset mix={styles.filters}>

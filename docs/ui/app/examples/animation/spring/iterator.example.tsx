@@ -43,7 +43,7 @@ export default function ExampleSpring(handle: Handle) {
             type="button"
             aria-label="Previous slide"
             disabled={active === 0}
-            mix={[styles.button, on('click', () => goTo(active - 1))]}
+            mix={[on('click', () => goTo(active - 1)), styles.button]}
           >
             <Arrow back />
           </button>
@@ -51,7 +51,7 @@ export default function ExampleSpring(handle: Handle) {
             type="button"
             aria-label="Next slide"
             disabled={active === slides.length - 1}
-            mix={[styles.button, on('click', () => goTo(active + 1))]}
+            mix={[on('click', () => goTo(active + 1)), styles.button]}
           >
             <Arrow />
           </button>

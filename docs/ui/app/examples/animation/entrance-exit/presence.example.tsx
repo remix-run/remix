@@ -13,11 +13,11 @@ export default function ExampleEntranceExit(handle: Handle) {
           aria-expanded={visible}
           aria-controls={`${handle.id}-notification`}
           mix={[
-            styles.button,
             on('click', () => {
               visible = !visible
               handle.update()
             }),
+            styles.button,
           ]}
         >
           <PlusIcon expanded={visible} />
@@ -35,7 +35,6 @@ export default function ExampleEntranceExit(handle: Handle) {
             <div
               key="notification"
               mix={[
-                styles.notification,
                 animateEntrance({
                   opacity: 0,
                   transform: 'translateY(8px) scale(0.98)',
@@ -46,6 +45,7 @@ export default function ExampleEntranceExit(handle: Handle) {
                   transform: 'translateY(-8px) scale(0.98)',
                   ...timing,
                 }),
+                styles.notification,
               ]}
             >
               <SuccessIcon />

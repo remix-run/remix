@@ -7,41 +7,41 @@ export default function ExampleMenu(handle: Handle) {
   return () => (
     <div
       mix={[
-        styles.root,
         menu.onMenuSelect((event) => {
           if (event.item.name === 'sort' && event.item.value) {
             sort = event.item.value
             handle.update()
           }
         }),
+        styles.root,
       ]}
     >
       <menu.Context label="Sort by">
         <button
           type="button"
           mix={[
-            styles.button,
             menu.trigger({
               offset: 8,
             }),
+            styles.button,
           ]}
         >
           Sort by <ChevronDownIcon />
         </button>
-        <div mix={[styles.surface, menu.popover()]}>
-          <div mix={[styles.list, menu.list()]}>
+        <div mix={[menu.popover(), styles.surface]}>
+          <div mix={[menu.list(), styles.list]}>
             <div role="group" aria-label="Sort by">
               {options.map((option) => (
                 <div
                   key={option.value}
                   mix={[
-                    styles.item,
                     menu.item({
                       name: 'sort',
                       value: option.value,
                       type: 'radio',
                       checked: sort === option.value,
                     }),
+                    styles.item,
                   ]}
                 >
                   {option.label}

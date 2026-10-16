@@ -9,6 +9,10 @@ export default function ExampleSpring(handle: Handle) {
       type="button"
       aria-pressed={saved}
       mix={[
+        on('click', () => {
+          saved = !saved
+          handle.update()
+        }),
         styles.button,
         css({
           '& svg': {
@@ -22,10 +26,6 @@ export default function ExampleSpring(handle: Handle) {
               transition: 'none',
             },
           },
-        }),
-        on('click', () => {
-          saved = !saved
-          handle.update()
         }),
       ]}
     >

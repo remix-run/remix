@@ -6,7 +6,7 @@ export default function ExampleToggle() {
     <div mix={styles.root}>
       <label mix={styles.card}>
         <strong>Do not disturb</strong>
-        <button type="button" mix={[styles.switch, toggle.toggle({})]} />
+        <button type="button" mix={[toggle.toggle({}), styles.switch]} />
       </label>
     </div>
   )

@@ -9,7 +9,6 @@ export default function ExampleToggle(handle: Handle) {
     <form
       autocomplete="off"
       mix={[
-        styles.root,
         on('submit', (event) => {
           event.preventDefault()
           let data = new FormData(event.currentTarget)
@@ -17,6 +16,7 @@ export default function ExampleToggle(handle: Handle) {
           saved = true
           handle.update()
         }),
+        styles.root,
       ]}
     >
       <div mix={styles.card}>
@@ -25,12 +25,12 @@ export default function ExampleToggle(handle: Handle) {
           <input
             type="checkbox"
             mix={[
-              styles.switch,
               toggle.toggle({
                 name: 'newsletter',
                 value: 'yes',
                 defaultChecked: true,
               }),
+              styles.switch,
             ]}
           />
         </label>

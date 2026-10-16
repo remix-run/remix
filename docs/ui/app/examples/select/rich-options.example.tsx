@@ -7,15 +7,15 @@ export default function ExampleSelect() {
   return () => (
     <div mix={styles.root}>
       <select.Context defaultLabel="Standard delivery" defaultValue="standard">
-        <button type="button" aria-label="Delivery method" mix={[styles.trigger, select.trigger()]}>
+        <button type="button" aria-label="Delivery method" mix={[select.trigger(), styles.trigger]}>
           <SelectedLabel />
           <ChevronDownIcon />
         </button>
         <popover.Context>
-          <div mix={[styles.surface, select.popover()]}>
-            <div aria-label="Delivery methods" mix={[styles.list, select.list()]}>
+          <div mix={[select.popover(), styles.surface]}>
+            <div aria-label="Delivery methods" mix={[select.list(), styles.list]}>
               {options.map((option) => (
-                <div key={option.value} mix={[styles.option, select.option(option)]}>
+                <div key={option.value} mix={[select.option(option), styles.option]}>
                   <span>
                     <strong>{option.label}</strong>
                     <span mix={styles.muted}>{option.detail}</span>

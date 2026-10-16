@@ -5,15 +5,15 @@ export default function ExampleTabs() {
   return () => (
     <div mix={styles.root}>
       <tabs.Context defaultActiveTab="details">
-        <div mix={[styles.card, tabs.root()]}>
-          <div aria-label="File information" mix={[styles.tabList, tabs.list()]}>
+        <div mix={[tabs.root(), styles.card]}>
+          <div aria-label="File information" mix={[tabs.list(), styles.tabList]}>
             <button
               type="button"
               mix={[
-                styles.tab,
                 tabs.tab({
                   name: 'details',
                 }),
+                styles.tab,
               ]}
             >
               Details
@@ -21,10 +21,10 @@ export default function ExampleTabs() {
             <button
               type="button"
               mix={[
-                styles.tab,
                 tabs.tab({
                   name: 'version',
                 }),
+                styles.tab,
               ]}
             >
               Version
@@ -32,10 +32,10 @@ export default function ExampleTabs() {
           </div>
           <div
             mix={[
-              styles.panel,
               tabs.panel({
                 name: 'details',
               }),
+              styles.panel,
             ]}
           >
             <dl mix={styles.details}>
@@ -47,10 +47,10 @@ export default function ExampleTabs() {
           </div>
           <div
             mix={[
-              styles.panel,
               tabs.panel({
                 name: 'version',
               }),
+              styles.panel,
             ]}
           >
             <dl mix={styles.details}>

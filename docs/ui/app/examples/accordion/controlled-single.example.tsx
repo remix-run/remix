@@ -13,11 +13,11 @@ export default function ExampleAccordion(handle: Handle) {
             type="button"
             aria-pressed={value === section.value}
             mix={[
-              styles.toggle,
               on('click', () => {
                 value = value === section.value ? null : section.value
                 handle.update()
               }),
+              styles.toggle,
             ]}
           >
             <PlusIcon selected={value === section.value} />
@@ -32,7 +32,7 @@ export default function ExampleAccordion(handle: Handle) {
           handle.update()
         }}
       >
-        <div mix={[styles.accordion, accordion.root()]}>
+        <div mix={[accordion.root(), styles.accordion]}>
           <Item value="shipping" title="Shipping">
             Standard delivery in 2–4 business days. Tracking is sent when your order ships.
           </Item>
@@ -201,14 +201,14 @@ const styles = {
 function Item(handle: Handle<{ value: string; title: string; children: RemixNode }>) {
   return () => (
     <accordion.ItemContext value={handle.props.value}>
-      <div mix={[styles.item, accordion.item()]}>
+      <div mix={[accordion.item(), styles.item]}>
         <h3 mix={styles.heading}>
-          <button type="button" mix={[styles.trigger, accordion.trigger()]}>
+          <button type="button" mix={[accordion.trigger(), styles.trigger]}>
             {handle.props.title}
             <ChevronDownIcon />
           </button>
         </h3>
-        <div mix={[styles.content, accordion.content()]}>
+        <div mix={[accordion.content(), styles.content]}>
           <div mix={styles.contentInner}>
             <p mix={styles.description}>{handle.props.children}</p>
           </div>

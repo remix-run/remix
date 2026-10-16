@@ -99,6 +99,10 @@ const focusCode = await highlightSource(`
 const motionCode = await highlightSource(`
   <div
     mix={[
+      popover.surface({
+        open,
+        onHide,
+      }),
       css({
         opacity: 0,
         transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
@@ -111,10 +115,6 @@ const motionCode = await highlightSource(`
         '@media (prefers-reduced-motion: reduce)': {
           transition: 'none',
         },
-      }),
-      popover.surface({
-        open,
-        onHide,
       }),
     ]}
   />

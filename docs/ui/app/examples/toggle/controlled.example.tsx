@@ -15,11 +15,11 @@ export default function ExampleToggle(handle: Handle) {
             autocomplete="off"
             value={password}
             mix={[
-              styles.input,
               on('input', (event) => {
                 password = event.currentTarget.value
                 handle.update()
               }),
+              styles.input,
             ]}
           />
         </label>
@@ -28,7 +28,6 @@ export default function ExampleToggle(handle: Handle) {
           <input
             type="checkbox"
             mix={[
-              styles.switch,
               toggle.toggle({
                 checked: showPassword,
                 onCheckedChange(next) {
@@ -36,6 +35,7 @@ export default function ExampleToggle(handle: Handle) {
                   handle.update()
                 },
               }),
+              styles.switch,
             ]}
           />
         </label>

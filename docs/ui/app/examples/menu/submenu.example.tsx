@@ -8,32 +8,32 @@ export default function ExampleMenu() {
         <button
           type="button"
           mix={[
-            styles.button,
             menu.trigger({
               offset: 8,
             }),
+            styles.button,
           ]}
         >
           File <ChevronDownIcon />
         </button>
-        <div mix={[styles.surface, menu.popover()]}>
-          <div mix={[styles.list, menu.list()]}>
+        <div mix={[menu.popover(), styles.surface]}>
+          <div mix={[menu.list(), styles.list]}>
             <div
               mix={[
-                styles.item,
                 menu.item({
                   name: 'new',
                 }),
+                styles.item,
               ]}
             >
               New file
             </div>
             <div
               mix={[
-                styles.item,
                 menu.item({
                   name: 'open',
                 }),
+                styles.item,
               ]}
             >
               Open file
@@ -41,45 +41,45 @@ export default function ExampleMenu() {
             <menu.Context label="Export as">
               <div
                 mix={[
-                  styles.item,
                   menu.submenuTrigger({
                     label: 'Export as',
                   }),
+                  styles.item,
                 ]}
               >
                 Export as <ChevronRightIcon />
               </div>
-              <div mix={[styles.surface, menu.popover()]}>
-                <div mix={[styles.list, menu.list()]}>
+              <div mix={[menu.popover(), styles.surface]}>
+                <div mix={[menu.list(), styles.list]}>
                   <div
                     mix={[
-                      styles.item,
                       menu.item({
                         name: 'export',
                         value: 'pdf',
                       }),
+                      styles.item,
                     ]}
                   >
                     PDF
                   </div>
                   <div
                     mix={[
-                      styles.item,
                       menu.item({
                         name: 'export',
                         value: 'png',
                       }),
+                      styles.item,
                     ]}
                   >
                     PNG
                   </div>
                   <div
                     mix={[
-                      styles.item,
                       menu.item({
                         name: 'export',
                         value: 'svg',
                       }),
+                      styles.item,
                     ]}
                   >
                     SVG
@@ -89,10 +89,10 @@ export default function ExampleMenu() {
             </menu.Context>
             <div
               mix={[
-                styles.item,
                 menu.item({
                   name: 'print',
                 }),
+                styles.item,
               ]}
             >
               Print

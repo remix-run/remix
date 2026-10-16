@@ -27,10 +27,10 @@ export default function ExampleListbox(handle: Handle) {
             tabIndex={0}
             aria-label="Delivery method"
             aria-activedescendant={activeId}
-            mix={[styles.list, listbox.list()]}
+            mix={[listbox.list(), styles.list]}
           >
             {options.map((option) => (
-              <div key={option.value} mix={[styles.option, listbox.option(option)]}>
+              <div key={option.value} mix={[listbox.option(option), styles.option]}>
                 <span>
                   <strong>{option.label}</strong>
                   <span mix={styles.muted}>{option.detail}</span>

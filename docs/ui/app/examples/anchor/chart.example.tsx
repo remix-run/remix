@@ -22,7 +22,6 @@ export default function ExampleAnchor(handle: Handle) {
   return () => (
     <div
       mix={[
-        styles.root,
         ref((node, signal) => {
           let observer = new IntersectionObserver(
             ([entry]) => {
@@ -38,6 +37,7 @@ export default function ExampleAnchor(handle: Handle) {
             once: true,
           })
         }),
+        styles.root,
       ]}
     >
       <div mix={styles.heading}>Visits</div>
@@ -52,7 +52,6 @@ export default function ExampleAnchor(handle: Handle) {
             tabIndex={selected === index ? 0 : -1}
             data-day={index}
             mix={[
-              styles.day,
               ref((node: HTMLButtonElement) => {
                 buttons[index] = node
               }),
@@ -69,6 +68,7 @@ export default function ExampleAnchor(handle: Handle) {
                 event.preventDefault()
                 buttons[next]?.focus()
               }),
+              styles.day,
             ]}
           >
             <span
@@ -78,10 +78,10 @@ export default function ExampleAnchor(handle: Handle) {
                 top: `${100 - (day.visits / 2000) * 100}%`,
               }}
               mix={[
-                styles.point,
                 ref((node) => {
                   points[index] = node
                 }),
+                styles.point,
               ]}
             />
           </button>
@@ -97,7 +97,6 @@ export default function ExampleAnchor(handle: Handle) {
         aria-hidden="true"
         inert
         mix={[
-          styles.bubble,
           ref((node, signal) => {
             surface = node
             let point = points[selected]
@@ -117,6 +116,7 @@ export default function ExampleAnchor(handle: Handle) {
               },
             )
           }),
+          styles.bubble,
         ]}
       >
         <span>{days[selected].label}</span>

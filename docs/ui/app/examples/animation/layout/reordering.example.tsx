@@ -35,8 +35,8 @@ export default function ExampleLayout(handle: Handle) {
             <li
               key={task.id}
               mix={[
-                styles.surface,
                 animateLayout(prefersReducedMotion() ? false : spring('snappy')),
+                styles.surface,
               ]}
             >
               <div mix={styles.taskTitle}>
