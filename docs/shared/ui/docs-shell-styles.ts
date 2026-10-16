@@ -149,7 +149,6 @@ export const mobileNavigationButtonCss = css({
     flex: '0 0 auto',
     width: '16px',
     height: '16px',
-    transition: 'transform 150ms ease-in-out',
   },
   '& > span': {
     minWidth: 0,
@@ -159,11 +158,6 @@ export const mobileNavigationButtonCss = css({
   },
   '&[aria-expanded="true"] svg': {
     transform: 'rotate(180deg)',
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    '& svg': {
-      transition: 'none',
-    },
   },
 })
 
