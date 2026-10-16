@@ -164,6 +164,17 @@ export default function TabsPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>Wrap the tab list and panels in a provider and match each tab to its panel by name.</p>
+        <p>
+          The examples use{' '}
+          <a href="/animation/layout/">
+            <code>animateLayout()</code>
+          </a>{' '}
+          to move the selection indicator and{' '}
+          <a href="/animation/reduced-motion/">
+            <code>prefersReducedMotion()</code>
+          </a>{' '}
+          to skip that motion when requested.
+        </p>
         <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>

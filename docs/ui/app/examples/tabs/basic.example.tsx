@@ -1,5 +1,7 @@
 import * as tabs from '@remix-run/ui/tabs'
+import { animateLayout, prefersReducedMotion } from '@remix-run/ui/animation'
 import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 export default function ExampleTabs() {
   return () => (
@@ -29,6 +31,7 @@ export default function ExampleTabs() {
             >
               Version
             </button>
+            <TabIndicator />
           </div>
           <div
             mix={[
@@ -91,9 +94,20 @@ const styles = {
   }),
 
   tabList: css({
+    '--tab-width': '50%',
+
+    position: 'relative',
     display: 'flex',
     borderBottom: '1px solid var(--border)',
-    background: 'light-dark(#f6f6f9, #25252b)',
+  }),
+
+  indicator: css({
+    position: 'absolute',
+    bottom: 0,
+    width: 'var(--tab-width)',
+    height: '1px',
+    background: 'light-dark(#9999a3, #777782)',
+    pointerEvents: 'none',
   }),
 
   tab: css({
@@ -102,29 +116,27 @@ const styles = {
     padding: '14px 12px',
     border: 0,
     background: 'transparent',
-    color: 'var(--text)',
+    color: 'light-dark(#50505b, #c3c3cd)',
     font: 'inherit',
     fontWeight: 600,
     cursor: 'pointer',
     '@media (hover: hover)': {
       '&:not(:disabled):not([data-state="active"]):hover': {
-        background: 'light-dark(#eeeef3, #303038)',
+        background: 'light-dark(#f7f7f9, #24242a)',
       },
     },
     '&:not(:disabled):active': {
-      background: 'light-dark(#e6e6ed, #393940)',
+      background: 'light-dark(#eeeef2, #2d2d35)',
     },
     '&[data-state="active"]': {
-      background: 'var(--surface)',
       color: 'var(--text)',
-      boxShadow: 'inset 0 -1px var(--muted)',
     },
     '&:focus-visible': {
       outline: '2px solid #5bb8ef',
       outlineOffset: '-4px',
     },
     '&:disabled': {
-      color: 'light-dark(#94949f, #72727e)',
+      color: 'light-dark(#70707c, #a0a0ac)',
       cursor: 'not-allowed',
     },
   }),
@@ -148,4 +160,29 @@ const styles = {
       margin: 0,
     },
   }),
+}
+
+function TabIndicator(handle: Handle) {
+  let context = handle.context.get(tabs.Context)
+
+  return () => (
+    <span
+      aria-hidden="true"
+      inert
+      style={{
+        left: context.isActiveTab('version') ? 'var(--tab-width)' : '0',
+      }}
+      mix={[
+        animateLayout(
+          prefersReducedMotion()
+            ? false
+            : {
+                duration: 180,
+                easing: 'cubic-bezier(0.2, 0, 0, 1)',
+              },
+        ),
+        styles.indicator,
+      ]}
+    />
+  )
 }

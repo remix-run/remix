@@ -74,7 +74,11 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
       <Section id="timing" title="Customizing motion">
         <p>
           Style values define the entrance's starting keyframe and the exit's destination. The
-          element's normal styles define the other end. Spread a spring to use spring timing.
+          element's normal styles define the other end. The example spreads{' '}
+          <a href="/animation/spring/">
+            <code>spring('snappy')</code>
+          </a>{' '}
+          into the options for spring timing.
         </p>
 
         <CodeBlock html={timingCode} />

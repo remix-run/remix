@@ -49,6 +49,13 @@ export default function LayoutPage(handle: Handle<PageProps>) {
       <Example id="reordering" example={reordering} hero />
       <Section id="anatomy" title="Anatomy">
         <p>Apply the mixin to each element and use stable keys for collections.</p>
+        <p>
+          The examples use{' '}
+          <a href="/animation/spring/">
+            <code>spring('snappy')</code>
+          </a>{' '}
+          for timing.
+        </p>
 
         <CodeBlock html={anatomyCode} />
       </Section>

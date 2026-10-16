@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import Example from './basic.example.tsx'
-import { button, element, input, key, mount, waitFor } from '../test-helpers.ts'
+import { button, element, expectAnimation, input, key, mount, waitFor } from '../test-helpers.ts'
 
 describe('Popover example', () => {
   it('focuses the first filter and restores focus after dismissal', async (t) => {
@@ -12,6 +12,7 @@ describe('Popover example', () => {
     let merged = input(result.container, 'input[value="merged"]')
     assert.equal(surface.matches(':popover-open'), false)
     await result.act(() => trigger.click())
+    await expectAnimation(surface)
     await waitFor(() => assert.equal(document.activeElement, open))
     assert.equal(trigger.getAttribute('aria-expanded'), 'true')
     await result.act(() => merged.click())

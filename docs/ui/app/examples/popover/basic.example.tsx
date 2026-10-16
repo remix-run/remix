@@ -120,11 +120,19 @@ const styles = {
     boxShadow: '0 12px 32px #00000024',
     font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
     opacity: 0,
-    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+    transform: 'scale(0.98)',
+    transformOrigin: 'top center',
+    transition:
+      'opacity 140ms ease, transform 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+    '&[data-anchor-placement^="top"]': {
+      transformOrigin: 'bottom center',
+    },
     '&:popover-open': {
       opacity: 1,
+      transform: 'scale(1)',
       '@starting-style': {
         opacity: 0,
+        transform: 'scale(0.98)',
       },
     },
     '@media (prefers-reduced-motion: reduce)': {

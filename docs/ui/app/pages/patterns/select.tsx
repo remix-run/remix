@@ -124,7 +124,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
       <Section id="anatomy" title="Anatomy">
         <p>
           Keep the trigger, popover, list and options inside the select provider. The surface also
-          needs a Popover provider.
+          needs a <a href="/patterns/popover/">Popover provider</a>.
         </p>
         <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
