@@ -1,1 +1,0 @@
-Reduce rebuild work in watch mode. When a watched script changes, modules that import it are no longer transformed again because their own source did not change, and barrel file import analysis reuses its results for unchanged modules instead of parsing them again.

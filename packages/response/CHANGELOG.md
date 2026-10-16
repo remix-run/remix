@@ -2,6 +2,12 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Reduce memory use when streaming HTML by checking a short prefix for a doctype instead of decoding the whole first chunk. Leading whitespace and declarations that cross the prefix boundary continue to work.
+
 ## v1.0.0
 
 ### Major Changes
