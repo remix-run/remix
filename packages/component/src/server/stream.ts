@@ -185,7 +185,7 @@ interface RenderContext {
   managedImportMaps: ManagedImportMap[]
   frameData: Map<string, FrameData>
   clientEntryHeadResources: ClientEntryHeadResources
-  authoredModulePreloads?: string[]
+  authoredModulePreloads?: Set<string>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   signal: AbortSignal
   flushKind: FlushKind
@@ -1454,14 +1454,17 @@ function collectAuthoredModulePreload(
     if ((key === 'crossOrigin' || key === 'crossorigin') && value === 'anonymous') continue
     return
   }
-  let preloads = (context.authoredModulePreloads ??= [])
-  preloads.push(createModulePreloadTag(props.href))
+  let preloads = (context.authoredModulePreloads ??= new Set())
+  preloads.add(escapeHtml(props.href))
 }
 
 function collectModulePreloadTags(context: RenderContext): string {
   let tags = context.clientEntryHeadResources.modulePreloadTags
   if (context.authoredModulePreloads) {
-    for (let tag of context.authoredModulePreloads) tags.delete(tag)
+    for (let tag of tags) {
+      let href = tag.slice(MARKED_MODULE_PRELOAD_START.length, -MODULE_PRELOAD_END.length)
+      if (context.authoredModulePreloads.has(href)) tags.delete(tag)
+    }
   }
   return Array.from(tags).join('')
 }
