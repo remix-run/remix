@@ -139,13 +139,46 @@ async function uploadHandler(fileUpload: FileUpload) {
   if (fileUpload.fieldName === 'user-avatar') {
     let storageKey = `user-${user.id}-avatar`
 
-    // Put the file in storage and return the stored LazyFile
-    return fileStorage.put(storageKey, fileUpload)
+    // Store the file and return its key to use in the FormData object
+    await fileStorage.set(storageKey, fileUpload)
+    return storageKey
   }
 
   // Ignore unrecognized fields
 }
 ```
+
+### Streaming File Uploads
+
+By default, each file is read into memory before it is passed to your `uploadHandler`, up to `maxFileSize`. To stream large files directly to storage instead, use the `streamFiles` option. Your `uploadHandler` is called as soon as a file's headers arrive, and its contents are read from the request as your handler reads them.
+
+```ts
+import { createFsFileStorage } from 'remix/file-storage/fs'
+import { parseFormData } from 'remix/form-data-parser'
+
+const fileStorage = createFsFileStorage('/uploads/videos')
+
+let formData = await parseFormData(
+  request,
+  { streamFiles: true, maxFileSize: 500 * 1024 * 1024 },
+  async (fileUpload) => {
+    if (fileUpload.fieldName === 'video') {
+      let storageKey = crypto.randomUUID()
+      await fileStorage.set(storageKey, fileUpload)
+      return storageKey
+    }
+  },
+)
+```
+
+Streamed uploads have the same properties and methods as `FileUpload`, with a few differences:
+
+- Their contents can only be read once, with `stream()`, `bytes()`, `arrayBuffer()`, or `text()`
+- `size` throws until the contents have been read, so enforce size limits with `maxFileSize`
+- `slice()` is not supported
+- They are not instances of `FileUpload` or `File`, so don't pass them to APIs that read `File` contents natively, like `new Response(fileUpload)`; pass `fileUpload.stream()` instead
+
+Parts are read in order, so the parser waits for your handler, and for any read of the upload it started, to finish before moving on to the next part. Contents your handler doesn't read are discarded. If your handler returns the upload itself, it is read into memory and stored in the `FormData` like an ordinary `FileUpload`.
 
 ## Demos
 

@@ -87,6 +87,30 @@ let router = createRouter({
 })
 ```
 
+### Stream File Uploads
+
+By default, each file is read into memory before it is passed to your `uploadHandler`. Set `streamFiles` to `true` to stream files directly to storage instead. See [Streaming File Uploads](../form-data-parser/README.md#streaming-file-uploads) for how streamed uploads differ from buffered ones.
+
+```ts
+import { createFsFileStorage } from 'remix/file-storage/fs'
+
+let fileStorage = createFsFileStorage('./uploads')
+
+let router = createRouter({
+  middleware: [
+    formData({
+      streamFiles: true,
+      maxFileSize: 500 * 1024 * 1024,
+      async uploadHandler(upload) {
+        let key = crypto.randomUUID()
+        await fileStorage.set(key, upload)
+        return key
+      },
+    }),
+  ],
+})
+```
+
 ### Suppress Parse Errors
 
 Some requests may contain invalid form data that cannot be parsed. You can suppress those malformed-body parse errors by setting `suppressErrors` to `true`. In these cases, `context.formData` will be an empty `FormData` object. Multipart limit violations from `maxHeaderSize`, `maxFiles`, `maxFileSize`, `maxParts`, or `maxTotalSize` are never suppressed.
