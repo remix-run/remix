@@ -3,7 +3,7 @@ import { describe, it } from '@remix-run/test'
 
 import {
   type FileUploadHandler,
-  FileUpload,
+  type FileUpload,
   FormDataParseError,
   MaxFilesExceededError,
   parseFormData,
