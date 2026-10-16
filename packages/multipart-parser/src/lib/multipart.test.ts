@@ -4,15 +4,18 @@ import { promisify } from 'node:util'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { concat, createMultipartMessage } from '../../test/utils.ts'
+import { concat, createMultipartMessage, getRandomBytes } from '../../test/utils.ts'
 
 import {
+  MaxFileSizeExceededError,
   MultipartParseError,
   MultipartParser,
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
   parseMultipart,
   parseMultipartStream,
+  parseStreamingMultipart,
+  type StreamingMultipartPart,
 } from './multipart.ts'
 
 const boundary = '----WebKitFormBoundaryPMcT9NSv6M3P8D4Q'
@@ -535,5 +538,260 @@ describe('parseMultipartStream', async () => {
         // ...
       }
     }, MaxTotalSizeExceededError)
+  })
+})
+
+describe('parseStreamingMultipart', () => {
+  // A source stream that hands out one chunk per pull, so tests can see how far the parser read.
+  function createPulledStream(chunks: Uint8Array[]): {
+    stream: ReadableStream<Uint8Array>
+    pulls: () => number
+    canceled: () => unknown
+  } {
+    let index = 0
+    let cancelReason: unknown = undefined
+    let stream = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          if (index < chunks.length) {
+            controller.enqueue(chunks[index++])
+          } else {
+            controller.close()
+          }
+        },
+        cancel(reason) {
+          cancelReason = reason ?? 'canceled'
+        },
+      },
+      { highWaterMark: 0 },
+    )
+
+    return { stream, pulls: () => index, canceled: () => cancelReason }
+  }
+
+  async function readAll(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
+    let chunks: Uint8Array<ArrayBuffer>[] = []
+    let reader = stream.getReader()
+    while (true) {
+      let result = await reader.read()
+      if (result.done) break
+      chunks.push(result.value as Uint8Array<ArrayBuffer>)
+    }
+    return concat(chunks)
+  }
+
+  it('produces the same parts and content as parseMultipart at any chunk size', async () => {
+    let message = createMultipartMessage(boundary, {
+      field1: 'value1',
+      file1: {
+        filename: 'a.bin',
+        mediaType: 'application/octet-stream',
+        content: getRandomBytes(200_000),
+      },
+      empty: { filename: 'empty.txt', mediaType: 'text/plain', content: '' },
+      field2: `has a near-boundary\r\n--${boundary.slice(0, -1)} in it`,
+      file2: { filename: 'b.txt', mediaType: 'text/plain', content: 'hello world' },
+    })
+    let expected = Array.from(parseMultipart(message, { boundary, maxFileSize: 1_000_000 })).map(
+      (part) => ({ name: part.name, filename: part.filename, content: part.bytes }),
+    )
+
+    for (let chunkSize of [1, 7, 4096, 65536, message.length]) {
+      let actual = []
+      for await (let part of parseStreamingMultipart(createChunkedStream(message, chunkSize), {
+        boundary,
+        maxFileSize: 1_000_000,
+      })) {
+        actual.push({ name: part.name, filename: part.filename, content: await part.bytes() })
+      }
+      assert.deepEqual(actual, expected, `chunk size ${chunkSize}`)
+    }
+  })
+
+  it('yields a part when its headers arrive, before the rest of its content', async () => {
+    let encoder = new TextEncoder()
+    // Longer than the boundary, so the parser can't be holding any of it back as a partial boundary
+    let first = 'first '.repeat(20)
+    let second = 'second '.repeat(20)
+    let source = createPulledStream([
+      encoder.encode(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="a.txt"\r\n\r\n${first}`,
+      ),
+      encoder.encode(second),
+      encoder.encode(`\r\n--${boundary}--`),
+    ])
+
+    let parts = parseStreamingMultipart(source.stream, { boundary })
+    let { value: part } = await parts.next()
+    assert.ok(part)
+    assert.equal(part.filename, 'a.txt')
+    assert.equal(source.pulls(), 1)
+
+    let reader = part.body.getReader()
+    assert.deepEqual(await reader.read(), { done: false, value: encoder.encode(first) })
+    assert.equal(source.pulls(), 1)
+    assert.deepEqual(await reader.read(), { done: false, value: encoder.encode(second) })
+    assert.equal(source.pulls(), 2)
+    assert.equal((await reader.read()).done, true)
+    assert.equal((await parts.next()).done, true)
+  })
+
+  it('discards the content of parts whose body is not read', async () => {
+    let message = createMultipartMessage(boundary, {
+      skipped: { filename: 'skipped.bin', content: getRandomBytes(100_000) },
+      kept: 'kept value',
+    })
+
+    let parts: StreamingMultipartPart[] = []
+    let texts: string[] = []
+    for await (let part of parseStreamingMultipart(createChunkedStream(message, 1000), {
+      boundary,
+    })) {
+      parts.push(part)
+      if (part.name === 'kept') texts.push(await part.text())
+    }
+
+    assert.deepEqual(
+      parts.map((part) => part.name),
+      ['skipped', 'kept'],
+    )
+    assert.deepEqual(texts, ['kept value'])
+    await assert.rejects(readAll(parts[0].body), TypeError)
+  })
+
+  it('continues with the next part after a body is canceled', async () => {
+    let message = createMultipartMessage(boundary, {
+      canceled: { filename: 'a.bin', content: getRandomBytes(100_000) },
+      next: 'next value',
+    })
+
+    let texts: string[] = []
+    for await (let part of parseStreamingMultipart(createChunkedStream(message, 1000), {
+      boundary,
+    })) {
+      if (part.name === 'canceled') {
+        let reader = part.body.getReader()
+        await reader.read()
+        await reader.cancel()
+      } else {
+        texts.push(await part.text())
+      }
+    }
+
+    assert.deepEqual(texts, ['next value'])
+  })
+
+  it('waits for a body that is being read before moving to the next part', async () => {
+    let content = getRandomBytes(100_000)
+    let message = createMultipartMessage(boundary, {
+      file: { filename: 'a.bin', content },
+      next: 'next value',
+    })
+
+    let read: Promise<Uint8Array> | undefined
+    let names: string[] = []
+    for await (let part of parseStreamingMultipart(createChunkedStream(message, 1000), {
+      boundary,
+    })) {
+      names.push(part.name!)
+      if (part.name === 'file') {
+        // Start reading without waiting for it, like a storage write running in the background.
+        read = readAll(part.body)
+      } else {
+        await part.text()
+      }
+    }
+
+    assert.deepEqual(names, ['file', 'next'])
+    assert.deepEqual(await read, content)
+  })
+
+  it('errors the body and the parts iterator when a file exceeds maxFileSize', async () => {
+    let message = createMultipartMessage(boundary, {
+      file: { filename: 'a.bin', content: getRandomBytes(10_000) },
+    })
+
+    let bodyError: unknown
+    await assert.rejects(async () => {
+      for await (let part of parseStreamingMultipart(createChunkedStream(message, 1000), {
+        boundary,
+        maxFileSize: 5000,
+      })) {
+        bodyError = await readAll(part.body).catch((error: unknown) => error)
+      }
+    }, MaxFileSizeExceededError)
+    assert.ok(bodyError instanceof MaxFileSizeExceededError)
+  })
+
+  it('throws when the number of parts exceeds maxParts as soon as the extra part begins', async () => {
+    let message = createMultipartMessage(boundary, { a: 'a', b: 'b', c: 'c' })
+
+    let names: string[] = []
+    await assert.rejects(async () => {
+      for await (let part of parseStreamingMultipart(createChunkedStream(message, 1000), {
+        boundary,
+        maxParts: 2,
+      })) {
+        names.push(part.name!)
+      }
+    }, MaxPartsExceededError)
+    assert.deepEqual(names, ['a', 'b'])
+  })
+
+  it('errors the body when the message ends inside a part', async () => {
+    let message = createMultipartMessage(boundary, { file: { filename: 'a.txt', content: 'abc' } })
+    let truncated = message.subarray(0, message.length - boundary.length - 6)
+
+    let bodyError: unknown
+    await assert.rejects(
+      async () => {
+        for await (let part of parseStreamingMultipart(createChunkedStream(truncated, 10), {
+          boundary,
+        })) {
+          bodyError = await readAll(part.body).catch((error: unknown) => error)
+        }
+      },
+      { name: 'MultipartParseError', message: 'Multipart stream not finished' },
+    )
+    assert.ok(bodyError instanceof MultipartParseError)
+  })
+
+  it('cancels the source stream when iteration stops early', async () => {
+    let message = createMultipartMessage(boundary, { a: 'a', b: 'b' })
+    let source = createPulledStream(createChunkedIterable(message, 10))
+
+    for await (let part of parseStreamingMultipart(source.stream, { boundary })) {
+      assert.equal(part.name, 'a')
+      break
+    }
+
+    assert.ok(source.canceled() instanceof MultipartParseError)
+  })
+
+  it('reads a part body only once', async () => {
+    let message = createMultipartMessage(boundary, { field: 'value' })
+
+    for await (let part of parseStreamingMultipart(createChunkedStream(message, 1000), {
+      boundary,
+    })) {
+      assert.equal(part.bodyUsed, false)
+      assert.equal(await part.text(), 'value')
+      assert.equal(part.bodyUsed, true)
+      await assert.rejects(part.bytes(), {
+        name: 'TypeError',
+        message: 'Multipart part body has already been used',
+      })
+    }
+  })
+
+  it('yields no parts for an empty multipart message', async () => {
+    let message = createMultipartMessage(boundary)
+    let parts = []
+    for await (let part of parseStreamingMultipart(createChunkedStream(message, 1000), {
+      boundary,
+    })) {
+      parts.push(part)
+    }
+    assert.deepEqual(parts, [])
   })
 })

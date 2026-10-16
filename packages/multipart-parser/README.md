@@ -110,6 +110,27 @@ async function handleRequest(request: Request): Promise<Response> {
 }
 ```
 
+## Streaming Parts
+
+`parseMultipartRequest` buffers the content of each part before yielding it, up to `maxFileSize`. To handle large uploads without buffering them, use `parseStreamingMultipartRequest` instead. It yields each part as a `StreamingMultipartPart` as soon as its headers arrive, with its content available as a `ReadableStream` in `part.body`. It accepts the same size limits.
+
+```ts
+import { parseStreamingMultipartRequest } from 'remix/multipart-parser'
+
+for await (let part of parseStreamingMultipartRequest(request)) {
+  if (part.isFile) {
+    await saveFileStream(crypto.randomUUID(), part.body)
+  } else {
+    let text = await part.text()
+    console.log(`Field received: ${part.name} = ${JSON.stringify(text)}`)
+  }
+}
+```
+
+Parts arrive in order, so each part's content must be read before the parser can move on to the next one. A part's content can be read once, with `part.body`, `part.bytes()`, or `part.text()`. When you move on to the next part, the parser waits for a read you started to finish and discards any content you didn't read. A part's body can't be read after that, so read it before continuing the loop.
+
+The `parseStreamingMultipart` function provides the same interface for multipart data in a `ReadableStream`.
+
 ## Node.js Bindings
 
 The main module (`import {} from 'remix/multipart-parser'`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to Node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).

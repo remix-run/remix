@@ -3,12 +3,14 @@ import { ContentType } from '@remix-run/headers/content-type'
 import {
   type MultipartParserOptions,
   type MultipartPart,
+  type StreamingMultipartPart,
   MaxFileSizeExceededError,
   MaxHeaderSizeExceededError,
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
   isMultipartRequest,
   parseMultipartRequest,
+  parseStreamingMultipartRequest,
 } from '@remix-run/multipart-parser'
 
 /**
@@ -39,6 +41,10 @@ export class MaxFilesExceededError extends FormDataParseError {
  * not be used directly as a filesystem path, including on files returned in `FormData`. Generate
  * storage names and validate file contents in your upload handler before using files in
  * application-specific contexts.
+ *
+ * When parsing with the `streamFiles` option, upload handlers receive a streaming file upload
+ * instead. It has the same properties and methods but is not an instance of `FileUpload`. See
+ * {@link ParseFormDataOptions.streamFiles}.
  */
 export class FileUpload extends File {
   /**
@@ -46,7 +52,11 @@ export class FileUpload extends File {
    */
   readonly fieldName: string
 
-  constructor(part: MultipartPart, fieldName: string) {
+  /**
+   * @param part The multipart part containing the file
+   * @param fieldName The name of the `<input>` field used to upload the file
+   */
+  constructor(part: Pick<MultipartPart, 'content' | 'filename' | 'mediaType'>, fieldName: string) {
     super(part.content as BlobPart[], part.filename ?? 'file-upload', {
       type: part.mediaType ?? 'application/octet-stream',
     })
@@ -82,6 +92,130 @@ export class FileUpload extends File {
 
 const streamChunkSize = 64 * 1024
 
+// The file upload handlers receive when parsing with `streamFiles`. Its contents are read directly
+// from the request as they arrive, so they can only be read once and its size is not known until
+// they have been read.
+// Bun's types give `File` instances a construct signature, so implement the members of `FileUpload`
+// rather than `FileUpload` itself.
+class StreamingFileUpload implements Pick<FileUpload, keyof FileUpload> {
+  readonly fieldName: string
+  readonly lastModified = Date.now()
+  readonly name: string
+  readonly type: string
+  readonly webkitRelativePath = ''
+
+  #part: StreamingMultipartPart
+  #size: number | null = null
+  #used = false
+
+  constructor(part: StreamingMultipartPart, fieldName: string) {
+    this.#part = part
+    this.fieldName = fieldName
+    this.name = part.filename ?? 'file-upload'
+    this.type = normalizeMediaType(part.mediaType ?? 'application/octet-stream')
+  }
+
+  get [Symbol.toStringTag](): string {
+    return 'StreamingFileUpload'
+  }
+
+  get size(): number {
+    if (this.#size === null) {
+      throw new TypeError(
+        'The size of a streamed file upload is not known until its contents have been read',
+      )
+    }
+
+    return this.#size
+  }
+
+  async arrayBuffer(): Promise<ArrayBuffer> {
+    return (await this.bytes()).buffer
+  }
+
+  async bytes(): Promise<Uint8Array<ArrayBuffer>> {
+    let chunks: Uint8Array[] = []
+    let size = 0
+    let reader = this.stream().getReader()
+    while (true) {
+      let result = await reader.read()
+      if (result.done) break
+      chunks.push(result.value)
+      size += result.value.length
+    }
+
+    let buffer = new Uint8Array(size)
+    let offset = 0
+    for (let chunk of chunks) {
+      buffer.set(chunk, offset)
+      offset += chunk.length
+    }
+
+    return buffer
+  }
+
+  async formData(): Promise<FormData> {
+    return new Response(await this.bytes(), { headers: { 'Content-Type': this.type } }).formData()
+  }
+
+  async json(): Promise<any> {
+    return JSON.parse(await this.text())
+  }
+
+  slice(): never {
+    throw new TypeError('A streamed file upload cannot be sliced')
+  }
+
+  stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
+    if (this.#used) {
+      throw new TypeError('The contents of a streamed file upload can only be read once')
+    }
+    this.#used = true
+
+    let part = this.#part
+    let reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>> | undefined
+    let size = 0
+
+    // Don't get a reader until the first read, so a stream that is never read doesn't hold up the
+    // parser.
+    return new ReadableStream(
+      {
+        pull: async (controller) => {
+          reader ??= part.body.getReader()
+
+          let result = await reader.read().catch((error) => {
+            throw toFormDataError(error)
+          })
+
+          if (result.done) {
+            this.#size = size
+            controller.close()
+          } else {
+            size += result.value.length
+            controller.enqueue(result.value)
+          }
+        },
+        cancel(reason) {
+          return reader === undefined ? part.body.cancel(reason) : reader.cancel(reason)
+        },
+      },
+      { highWaterMark: 0 },
+    )
+  }
+
+  async text(): Promise<string> {
+    textDecoder ??= new TextDecoder()
+    return textDecoder.decode(await this.bytes())
+  }
+}
+
+let textDecoder: TextDecoder | undefined
+
+// Matches how `File` normalizes its `type` option.
+function normalizeMediaType(type: string): string {
+  return /^[\x20-\x7e]*$/.test(type) ? type.toLowerCase() : ''
+}
+
 /**
  * A function used for handling file uploads.
  *
@@ -115,6 +249,14 @@ function isParserLimitError(error: unknown): boolean {
   )
 }
 
+function toFormDataError(error: unknown): unknown {
+  if (error instanceof FormDataParseError || isParserLimitError(error)) {
+    return error
+  }
+
+  return new FormDataParseError('Cannot parse form data', { cause: error })
+}
+
 async function* parseFormDataParts(
   request: Request,
   parserOptions: MultipartParserOptions,
@@ -122,11 +264,18 @@ async function* parseFormDataParts(
   try {
     yield* parseMultipartRequest(request, parserOptions)
   } catch (error) {
-    if (error instanceof FormDataParseError || isParserLimitError(error)) {
-      throw error
-    }
+    throw toFormDataError(error)
+  }
+}
 
-    throw new FormDataParseError('Cannot parse form data', { cause: error })
+async function* parseStreamingFormDataParts(
+  request: Request,
+  parserOptions: MultipartParserOptions,
+): AsyncGenerator<StreamingMultipartPart, void, unknown> {
+  try {
+    yield* parseStreamingMultipartRequest(request, parserOptions)
+  } catch (error) {
+    throw toFormDataError(error)
   }
 }
 
@@ -229,6 +378,35 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
    * @default 20
    */
   maxFiles?: number
+  /**
+   * Set `true` to pass each file to the `uploadHandler` as soon as its headers arrive, with its
+   * contents read directly from the request, instead of buffering the whole file in memory first.
+   * This lets you stream large uploads straight to storage:
+   *
+   * ```ts
+   * let formData = await parseFormData(request, { streamFiles: true }, async (upload) => {
+   *   let key = `uploads/${crypto.randomUUID()}`
+   *   await storage.set(key, upload)
+   *   return key
+   * })
+   * ```
+   *
+   * Streamed uploads have the same properties and methods as {@link FileUpload}, with these
+   * differences:
+   *
+   * - Their contents can only be read once, with `stream()`, `bytes()`, `arrayBuffer()`, or `text()`
+   * - `size` throws until the contents have been read; enforce size limits with `maxFileSize`
+   * - `slice()` is not supported
+   * - They are not instances of `FileUpload` or `File`
+   *
+   * Parts are read in order, so the parser waits for the handler, and for any read of the upload
+   * it started, to finish before moving on. Contents the handler doesn't read are discarded. If
+   * the handler returns the upload itself, its contents are read into memory and stored in the
+   * `FormData` like an ordinary `FileUpload`.
+   *
+   * @default false
+   */
+  streamFiles?: boolean
 }
 
 /**
@@ -283,6 +461,7 @@ export async function parseFormData(
     maxFileSize = defaultMaxFileSize,
     maxParts = defaultMaxParts,
     maxTotalSize = maxFiles * maxFileSize + oneMb,
+    streamFiles = false,
   } = optionsOrUploadHandler
 
   if (isUrlEncodedRequest(request)) {
@@ -308,6 +487,10 @@ export async function parseFormData(
     maxTotalSize,
   }
 
+  if (streamFiles) {
+    return parseStreamingMultipartFormData(request, parserOptions, maxFiles, uploadHandler)
+  }
+
   let formData = new FormData()
   let fileCount = 0
 
@@ -330,4 +513,71 @@ export async function parseFormData(
   }
 
   return formData
+}
+
+async function parseStreamingMultipartFormData(
+  request: Request,
+  parserOptions: MultipartParserOptions,
+  maxFiles: number,
+  uploadHandler: FileUploadHandler,
+): Promise<FormData> {
+  let formData = new FormData()
+  let fileCount = 0
+
+  for await (let part of parseStreamingFormDataParts(request, parserOptions)) {
+    let fieldName = part.name
+    if (!fieldName) continue
+
+    if (part.isFile) {
+      if (++fileCount > maxFiles) {
+        throw new MaxFilesExceededError(maxFiles)
+      }
+
+      let upload = new StreamingFileUpload(part, fieldName) as unknown as FileUpload
+      let value = await uploadHandler(upload)
+
+      if (value === upload) {
+        value = await bufferStreamingUpload(part, fieldName)
+      }
+      if (value != null) {
+        formData.append(fieldName, value)
+      }
+    } else {
+      formData.append(fieldName, await readStreamingPartText(part))
+    }
+  }
+
+  return formData
+}
+
+async function bufferStreamingUpload(
+  part: StreamingMultipartPart,
+  fieldName: string,
+): Promise<FileUpload> {
+  if (part.bodyUsed) {
+    throw new TypeError(
+      'An upload handler cannot return a streamed file upload after reading its contents. ' +
+        'Return the stored file or a reference to it instead.',
+    )
+  }
+
+  let content: Uint8Array
+  try {
+    content = await part.bytes()
+  } catch (error) {
+    throw toFormDataError(error)
+  }
+
+  return new FileUpload(
+    { content: [content], filename: part.filename, mediaType: part.mediaType },
+    fieldName,
+  )
+}
+
+async function readStreamingPartText(part: StreamingMultipartPart): Promise<string> {
+  try {
+    return await part.text()
+  } catch (error) {
+    throw toFormDataError(error)
+  }
 }
