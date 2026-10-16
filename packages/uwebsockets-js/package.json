@@ -1,0 +1,52 @@
+{
+  "name": "@remix-run/uwebsockets-js",
+  "version": "0.0.0",
+  "description": "Remix-owned npm distribution of uWebSockets.js",
+  "license": "Apache-2.0",
+  "sideEffects": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/uwebsockets-js"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/uwebsockets-js#readme",
+  "remix": {
+    "internal": true
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "upstream.json",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "main": "./src/index.cjs",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.mjs",
+      "require": "./src/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "optionalDependencies": {
+    "@remix-run/uwebsockets-js-darwin-arm64": "workspace:*",
+    "@remix-run/uwebsockets-js-darwin-x64": "workspace:*",
+    "@remix-run/uwebsockets-js-linux-arm64-gnu": "workspace:*",
+    "@remix-run/uwebsockets-js-linux-x64-gnu": "workspace:*",
+    "@remix-run/uwebsockets-js-win32-x64": "workspace:*"
+  },
+  "scripts": {
+    "build": "node ../../scripts/sync-uwebsockets.ts --facade",
+    "test": "remix test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "devDependencies": {
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/test": "workspace:^",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "type": "module"
+}

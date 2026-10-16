@@ -108,6 +108,7 @@
     "./node-hmr/types": {
       "types": "./src/node-hmr/types.d.ts"
     },
+    "./node-serve": "./src/node-serve.ts",
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
     "./response/compress": "./src/response/compress.ts",
@@ -445,6 +446,10 @@
       "./node-hmr/types": {
         "types": "./dist/node-hmr/types.d.ts"
       },
+      "./node-serve": {
+        "types": "./dist/node-serve.d.ts",
+        "default": "./dist/node-serve.js"
+      },
       "./node-tsx": {
         "types": "./dist/node-tsx.d.ts",
         "default": "./dist/node-tsx.js"
@@ -600,7 +605,8 @@
     "@remix-run/node-hmr": "workspace:^",
     "@remix-run/spa": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
-    "@remix-run/multiple-import-maps-polyfill": "workspace:^"
+    "@remix-run/multiple-import-maps-polyfill": "workspace:^",
+    "@remix-run/node-serve": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
@@ -638,10 +644,12 @@
     "./src/cli-entry.ts",
     "./src/component-hmr/node.ts",
     "./src/node-hmr/runtime.ts",
+    "./src/node-serve.ts",
     "./src/node-tsx.ts",
     "./dist/cli-entry.js",
     "./dist/component-hmr/node.js",
     "./dist/node-hmr/runtime.js",
+    "./dist/node-serve.js",
     "./dist/node-tsx.js"
   ]
 }

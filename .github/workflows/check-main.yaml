@@ -121,7 +121,7 @@ jobs:
       - name: Get Playwright Version
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: node -p "'version=' + require('./packages/component/node_modules/playwright/package.json').version" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright Browsers
         id: cache-browsers
@@ -161,7 +161,7 @@ jobs:
       - name: Get Playwright Version
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: node -p "'version=' + require('./packages/component/node_modules/playwright/package.json').version" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright Browsers
         id: cache-browsers
@@ -198,7 +198,7 @@ jobs:
       - name: Get Playwright Version
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: node -p "'version=' + require('./packages/component/node_modules/playwright/package.json').version" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright Browsers
         id: cache-browsers
