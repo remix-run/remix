@@ -10,18 +10,17 @@ The hand-authored guides live in [`../guides`](../guides). Shared docs UI, style
 - `app/actions/api/controller.tsx` — generated document and Markdown response actions.
 - `app/actions/public/` — root-owned browser entrypoint and stylesheet sources.
 - `app/assets.ts` — source asset server configured around colocated `public/` directories.
-- `app/data/` — generated-document discovery, Markdown rendering, demos, and navigation registry data.
+- `app/data/` — generated-document discovery, Markdown rendering, and navigation registry data.
 - `app/middleware/asset-entry.ts` and `render.ts` — request-scoped versioned asset hrefs and HTML rendering.
 - `app/ui/document.tsx` — API-specific document metadata and content rendered with the shared docs shell.
 - `app/routes.ts` and `app/router.ts` — typed route contract, middleware stack, controller wiring, and versioned route mounts.
 - `app/utils/` — focused helpers shared with generation scripts.
 - `scripts/generate/` — TypeDoc loading, API filtering, package overview discovery, and Markdown generation.
-- `scripts/build-demos.ts` — discovers API examples and copies them into `build/demos/`.
 - `scripts/prerender.ts` — static-site entrypoint and version-picker integration.
 - `server.ts` — local API docs server entrypoint.
 - `public/` — API-only static files. Shared docs assets live in `../shared/assets/`.
 
-Generated Markdown and demo files are written beneath `build/` and are not committed.
+Generated Markdown is written beneath `build/` and is not committed.
 
 ## Generating the reference
 
@@ -41,18 +40,12 @@ pnpm --filter remix-api run docs --tag remix@3.0.0
 
 Unsupported JSDoc `@link` targets emit warnings and render as plain text so reference generation can continue.
 
-Build the discovered demos separately:
-
-```sh
-pnpm --filter remix-api run build
-```
-
 ## Commands
 
 Run from the repository root or from `docs/api/`:
 
 ```sh
-pnpm --filter remix-api run dev             # build demos, then watch and serve
+pnpm --filter remix-api run dev             # watch and serve
 pnpm --filter remix-api run start           # serve once
 pnpm --filter remix-api run prerender       # write build/site and build its Pagefind index
 pnpm --filter remix-api run prerender:serve # serve the static output
@@ -64,11 +57,10 @@ The development server listens on http://localhost:44100 by default. Set `PORT` 
 
 ## Static site
 
-Generate Markdown and demos before prerendering a fresh checkout:
+Generate Markdown before prerendering a fresh checkout:
 
 ```sh
 pnpm --filter remix-api run docs
-pnpm --filter remix-api run build
 pnpm --filter remix-api run prerender
 ```
 

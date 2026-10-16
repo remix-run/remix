@@ -1,10 +1,9 @@
 import { css } from 'remix/component'
 import { theme } from './design.ts'
-import type { DemoDocFile } from './demos.tsx'
 import type { ApiDocFile, ApiTypeKind, PackageDocFile } from './markdown.ts'
 import { routes, withVersion } from '../routes.ts'
 
-export type DocFile = ApiDocFile | PackageDocFile | DemoDocFile
+export type DocFile = ApiDocFile | PackageDocFile
 
 const TYPE_LABEL: Record<ApiTypeKind, string> = {
   type: 'Types',
@@ -76,15 +75,9 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
 
   let packageGroups = new Map<string, Map<ApiTypeKind, ApiDocFile[]>>()
   let packageOverviews = new Map<string, PackageDocFile>()
-  let packageDemos = new Map<string, DemoDocFile[]>()
   for (let file of docFiles) {
     if (file.kind === 'package') {
       packageOverviews.set(file.package, file)
-      continue
-    }
-
-    if (file.kind === 'demo') {
-      getOrSet(packageDemos, file.package, () => []).push(file)
       continue
     }
 
@@ -93,7 +86,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
   }
 
   let sortedPackages = Array.from(
-    new Set([...packageGroups.keys(), ...packageOverviews.keys(), ...packageDemos.keys()]),
+    new Set([...packageGroups.keys(), ...packageOverviews.keys()]),
   ).sort(comparePackages)
 
   for (let pkg of sortedPackages) {
@@ -113,28 +106,6 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
       }
       pages[overview.urlPath] = page
       groups.push({ id: `${pkg}::overview`, pageIds: [overview.urlPath] })
-    }
-
-    let demos = packageDemos.get(pkg)
-    if (demos && demos.length > 0) {
-      let groupId = `${pkg}::demos`
-      let sortedDemos = [...demos].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
-      let pageIds: string[] = []
-      for (let file of sortedDemos) {
-        let page: PageDefinition = {
-          id: file.urlPath,
-          description: '',
-          eyebrow: `${pkg} · Demo`,
-          navLabel: file.name,
-          path: withVersion(routes.api.document.href({ slug: file.urlPath }), version),
-          sectionId: pkg,
-          title: file.name,
-          docFile: file,
-        }
-        pages[file.urlPath] = page
-        pageIds.push(file.urlPath)
-      }
-      groups.push({ id: groupId, label: 'Examples', pageIds })
     }
 
     for (let kind of TYPE_ORDER) {

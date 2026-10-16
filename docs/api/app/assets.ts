@@ -15,16 +15,14 @@ export function createAssetServer(version?: string): DocsAssetServer {
     basePath: version ? `${getVersionPathname(version)}/assets` : '/assets',
     rootDir: path.resolve(import.meta.dirname, '../../..'),
     allowFiles: [
-      'docs/api/build/demos/**',
       'docs/api/app/routes.ts',
       'docs/api/app/**/public/**',
       'docs/shared/**/public/**',
     ],
-    allowPackages: ['@remix-run/ui', 'remix'],
+    allowPackages: ['remix'],
     denyFiles: ['**/*.test.*'],
     mounts: {
       app: 'docs/api/app',
-      demos: 'docs/api/build/demos',
       'docs-shared': 'docs/shared',
       npm: 'node_modules',
       packages: 'packages',
