@@ -394,7 +394,7 @@
   display: none;
 }
 .ui-api-entry > summary:hover {
-  background: var(--docs-nav-hover-background);
+  background: color-mix(in srgb, var(--rmx-color-text-primary) 6%, transparent);
 }
 .ui-api-entry > summary:active {
   background: var(--docs-nav-selected-background);
