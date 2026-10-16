@@ -46,7 +46,6 @@
 }
 
 .docs-demo-source-actions button {
-  scroll-margin-top: calc(var(--site-header-height) + 16px);
   display: flex;
   min-height: 36px;
   align-items: center;
@@ -78,23 +77,21 @@
 }
 
 .docs-demo-source-actions button:hover {
-  background: var(--docs-nav-hover-background);
+  background: var(--rmx-color-code-background);
   color: var(--rmx-color-text-primary);
 }
 
 .docs-demo-source-actions button:active {
-  background: var(--docs-nav-selected-background);
+  background: color-mix(
+    in srgb,
+    var(--rmx-color-code-background) 92%,
+    var(--rmx-color-text-primary)
+  );
 }
 
 .docs-demo-source-actions button:focus-visible {
   outline: 2px solid var(--rmx-color-text-primary);
   outline-offset: 3px;
-}
-
-@media (width < 900px) {
-  .docs-demo-source-actions button {
-    scroll-margin-top: 64px;
-  }
 }
 
 @media (width < 640px) {
