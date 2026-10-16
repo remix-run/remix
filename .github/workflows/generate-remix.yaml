@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'v4'
     paths:
       - '.github/workflows/generate-remix.yaml'
       - 'docs/guides/app/actions/docs/chapters/**'
