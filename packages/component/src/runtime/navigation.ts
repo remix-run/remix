@@ -38,6 +38,9 @@ interface FrameRedirectNavigationInfo {
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
+// Lets the navigation handler tell the WebKit workaround once it has reset scroll.
+const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
+
 // WebKit can lose the scroll reset after a navigation. It can reset its internal scroll position
 // without synchronizing the visual viewport (https://bugs.webkit.org/show_bug.cgi?id=309542), and
 // iOS Safari can restore the previous position, or the new page's bottom, for several frames after
@@ -66,15 +69,21 @@ function resyncWebKitScrollAfterNavigation(
 
   // iOS restores the previous position clamped to the new page's height at that moment, and the
   // page can grow before the reset is checked, so remember each restored position as it happens.
+  // Once the new page has reset scroll, undo a restoration right away: scroll events run before
+  // the frame paints, so the restored position may never be drawn.
   let restoredPositions = [startY]
+  let resetApplied = false
   window.addEventListener(
     'scroll',
     () => {
       let y = window.scrollY
-      if (!interacted && isRestoredScrollPosition(y, startY)) restoredPositions.push(y)
+      if (interacted || !isRestoredScrollPosition(y, startY)) return
+      restoredPositions.push(y)
+      if (resetApplied) window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
     },
     { passive: true, signal: input.signal },
   )
+  webKitScrollResets.set(event, () => (resetApplied = true))
   let isRestored = (y: number) =>
     isRestoredScrollPosition(y, startY) ||
     restoredPositions.some((position) => Math.abs(y - position) < 1)
@@ -309,7 +318,10 @@ export function startNavigationListenerImpl(
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
-        if (scroll !== 'manual') event.scroll()
+        if (scroll !== 'manual') {
+          event.scroll()
+          webKitScrollResets.get(event)?.()
+        }
 
         let { redirectedTo } = await reload.finished
         if (event.signal.aborted || reload.signal.aborted) return

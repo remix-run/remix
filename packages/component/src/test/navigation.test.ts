@@ -639,7 +639,39 @@ describe('navigate', () => {
       document.body.innerHTML = '<div style="height: 3100px"></div>'
     })
 
-    expect(scrollTops()).toEqual([0])
+    // Undone when it happens, and again when the navigation finishes if it's still there.
+    expect(scrollTops()).toEqual([0, 0])
+  })
+
+  it('undoes an iOS restoration as soon as it happens after the reset', async (t) => {
+    let { setScrollPosition, scrollTops, navigate } = setupWebKitScrollReset(t)
+    setScrollPosition(0, 2400)
+    let beforeFinish: Array<number | undefined> = []
+
+    await navigate(() => {
+      setScrollPosition(0, 2400)
+      window.dispatchEvent(new Event('scroll'))
+      beforeFinish = scrollTops()
+    })
+
+    expect(beforeFinish).toEqual([0])
+  })
+
+  it('leaves the previous page in place until the new page resets scroll', async (t) => {
+    let [reloaded, finishReload] = withResolvers<StubFrameReloadResult>()
+    let { setScrollPosition, scrollTops, navigate } = setupWebKitScrollReset(t, {
+      ...stubFrames,
+      reloadFrame: () => createReloadTransition(reloaded),
+    })
+    setScrollPosition(0, 2400)
+
+    let navigation = navigate(() => {})
+    await Promise.resolve()
+    window.dispatchEvent(new Event('scroll'))
+    expect(scrollTops()).toEqual([])
+
+    finishReload({ signal: new AbortController().signal })
+    await navigation
   })
 
   it('leaves positions scrolled to during navigation by other code', async (t) => {
@@ -2436,12 +2468,14 @@ describe('form navigation', () => {
   })
 })
 
-function setupWebKitScrollReset(t: TestContext) {
+function setupWebKitScrollReset(t: TestContext, frames = stubFrames) {
   stubNavigatorUserAgent(
     t,
     'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1',
   )
-  let dispatchNavigation = startStubNavigationListener(t)
+  let dispatchNavigation = startStubNavigationListener(t, frames)
+  // Tests don't run every frame the reset waits for, so end it as user input would.
+  t.after(() => window.dispatchEvent(new Event('touchstart')))
   let setScrollPosition = stubWindowScrollPosition(t)
   let scrollTo = t.mock.method(window, 'scrollTo', () => {})
   let animationFrameCallbacks: FrameRequestCallback[] = []
