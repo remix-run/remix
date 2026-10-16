@@ -3,6 +3,7 @@ import { describe, it } from '@remix-run/test'
 
 import {
   type FileUploadHandler,
+  FileUpload,
   FormDataParseError,
   MaxFilesExceededError,
   parseFormData,
@@ -649,6 +650,16 @@ describe('FileUpload', () => {
     })
   }
 
+  // Some runtimes (Bun) store a plain File in FormData, so use the upload the handler receives.
+  async function parseUpload(content: Uint8Array): Promise<FileUpload> {
+    let upload: FileUpload | undefined
+    await parseFormData(createUploadRequest(content), { maxFileSize: 1024 * 1024 }, (file) => {
+      upload = file
+    })
+    assert.ok(upload)
+    return upload
+  }
+
   function createContent(size: number): Uint8Array {
     let content = new Uint8Array(size)
     for (let index = 0; index < size; index++) content[index] = index % 251
@@ -657,8 +668,7 @@ describe('FileUpload', () => {
 
   it('streams the full contents of a file larger than one chunk', async () => {
     let content = createContent(200 * 1024 + 7)
-    let formData = await parseFormData(createUploadRequest(content), { maxFileSize: 1024 * 1024 })
-    let file = formData.get('file') as File
+    let file = await parseUpload(content)
 
     let chunks: Uint8Array[] = []
     for await (let chunk of file.stream()) chunks.push(chunk)
@@ -668,8 +678,7 @@ describe('FileUpload', () => {
   })
 
   it('streams an empty file', async () => {
-    let formData = await parseFormData(createUploadRequest(new Uint8Array(0)))
-    let file = formData.get('file') as File
+    let file = await parseUpload(new Uint8Array(0))
 
     let chunks: Uint8Array[] = []
     for await (let chunk of file.stream()) chunks.push(chunk)
@@ -680,8 +689,7 @@ describe('FileUpload', () => {
 
   it('supports reading the stream into a caller-provided buffer', async () => {
     let content = createContent(100 * 1024)
-    let formData = await parseFormData(createUploadRequest(content), { maxFileSize: 1024 * 1024 })
-    let file = formData.get('file') as File
+    let file = await parseUpload(content)
 
     let reader = file.stream().getReader({ mode: 'byob' })
     let received = new Uint8Array(content.length)

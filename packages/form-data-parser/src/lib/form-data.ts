@@ -72,7 +72,7 @@ export class FileUpload extends File {
           controller.byobRequest?.respond(0)
           return
         }
-        let chunk = await this.slice(offset, offset + streamChunkSize).bytes()
+        let chunk = new Uint8Array(await this.slice(offset, offset + streamChunkSize).arrayBuffer())
         offset += chunk.byteLength
         controller.enqueue(chunk)
       },
