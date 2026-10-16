@@ -1,1 +1,0 @@
-`remix/form-data-parser` and `remix/middleware/form-data` can stream file uploads straight to storage with the new `streamFiles` option instead of buffering each file in memory first, and `remix/multipart-parser` adds `parseStreamingMultipartRequest()` and `parseStreamingMultipart()` for reading multipart parts as streams.

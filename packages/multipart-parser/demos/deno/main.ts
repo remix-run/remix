@@ -38,17 +38,18 @@ async function requestHandler(request: Request): Promise<Response> {
       for await (let part of parseMultipartRequest(request)) {
         if (part.isFile) {
           let tmpfile = tmp.fileSync()
-          await Deno.writeFile(tmpfile.name, part.bytes)
+          await Deno.writeFile(tmpfile.name, part.body)
+          let { size } = await Deno.stat(tmpfile.name)
 
           parts.push({
             name: part.name,
             filename: part.filename,
             mediaType: part.mediaType,
-            size: part.size,
+            size,
             file: tmpfile.name,
           })
         } else {
-          parts.push({ name: part.name, value: part.text })
+          parts.push({ name: part.name, value: await part.text() })
         }
       }
 

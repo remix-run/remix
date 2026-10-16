@@ -3,14 +3,12 @@ import { ContentType } from '@remix-run/headers/content-type'
 import {
   type MultipartParserOptions,
   type MultipartPart,
-  type StreamingMultipartPart,
   MaxFileSizeExceededError,
   MaxHeaderSizeExceededError,
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
   isMultipartRequest,
   parseMultipartRequest,
-  parseStreamingMultipartRequest,
 } from '@remix-run/multipart-parser'
 
 /**
@@ -34,41 +32,228 @@ export class MaxFilesExceededError extends FormDataParseError {
 }
 
 /**
- * A file that was uploaded as part of a `multipart/form-data` request.
+ * A file that was uploaded as part of a `multipart/form-data` request, passed to a
+ * {@link FileUploadHandler} as soon as its headers arrive.
+ *
+ * Its contents are streamed from the request as you read them, so you can store large uploads
+ * without holding them in memory. It has the properties and methods of a
+ * [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), with these differences:
+ *
+ * - Its contents can only be read once, with `stream()`, `bytes()`, `arrayBuffer()`, or `text()`
+ * - `size` throws until its contents have been read; limit upload size with `maxFileSize`
+ * - `slice()` is not supported
+ * - It is not a `File` instance, so pass `stream()` to APIs that read a `File` natively, like
+ *   `new Response()`
  *
  * The `name` and `type` properties are untrusted client input from the submitted multipart metadata;
  * they do not validate the file contents. The `name` is not sanitized for filesystem use and must
  * not be used directly as a filesystem path, including on files returned in `FormData`. Generate
  * storage names and validate file contents in your upload handler before using files in
  * application-specific contexts.
- *
- * When parsing with the `streamFiles` option, upload handlers receive a streaming file upload
- * instead. It has the same properties and methods but is not an instance of `FileUpload`. See
- * {@link ParseFormDataOptions.streamFiles}.
  */
-export class FileUpload extends File {
+// Bun's types give `File` instances a construct signature, so implement the members of `File`
+// rather than `File` itself.
+export class FileUpload implements Pick<File, keyof File> {
   /**
    * The name of the `<input>` field used to upload the file.
    */
   readonly fieldName: string
+  /**
+   * The time the upload was received, in milliseconds since the Unix epoch.
+   */
+  readonly lastModified = Date.now()
+  /**
+   * The name of the file, from the multipart `Content-Disposition` header.
+   */
+  readonly name: string
+  /**
+   * The media type of the file, from the multipart `Content-Type` header.
+   */
+  readonly type: string
+  /**
+   * Always an empty string.
+   */
+  readonly webkitRelativePath = ''
+
+  #part: MultipartPart
+  #size: number | null = null
+  #used = false
 
   /**
    * @param part The multipart part containing the file
    * @param fieldName The name of the `<input>` field used to upload the file
    */
-  constructor(part: Pick<MultipartPart, 'content' | 'filename' | 'mediaType'>, fieldName: string) {
-    super(part.content as BlobPart[], part.filename ?? 'file-upload', {
-      type: part.mediaType ?? 'application/octet-stream',
-    })
-
+  constructor(part: MultipartPart, fieldName: string) {
+    this.#part = part
     this.fieldName = fieldName
+    this.name = part.filename ?? 'file-upload'
+    // Normalize the type the same way `File` does on this runtime.
+    this.type = new File([], '', { type: part.mediaType ?? 'application/octet-stream' }).type
+  }
+
+  get [Symbol.toStringTag](): string {
+    return 'FileUpload'
+  }
+
+  /**
+   * The size of the file in bytes. Throws until the file's contents have been read.
+   */
+  get size(): number {
+    if (this.#size === null) {
+      throw new TypeError(
+        'The size of a file upload is not known until its contents have been read. ' +
+          'Use the maxFileSize option to limit the size of uploads.',
+      )
+    }
+
+    return this.#size
+  }
+
+  /**
+   * Reads the file's contents into an `ArrayBuffer`.
+   *
+   * @returns A promise that resolves to the file's contents
+   */
+  async arrayBuffer(): Promise<ArrayBuffer> {
+    return (await this.bytes()).buffer
+  }
+
+  /**
+   * Reads the file's contents into a `Uint8Array`.
+   *
+   * @returns A promise that resolves to the file's contents
+   */
+  async bytes(): Promise<Uint8Array<ArrayBuffer>> {
+    let chunks = await this.#readChunks()
+    let buffer = new Uint8Array(this.#size!)
+    let offset = 0
+    for (let chunk of chunks) {
+      buffer.set(chunk, offset)
+      offset += chunk.length
+    }
+
+    return buffer
+  }
+
+  /**
+   * Parses the file's contents as form data, using its `type` as the content type.
+   *
+   * @returns A promise that resolves to the parsed `FormData`
+   */
+  async formData(): Promise<FormData> {
+    return new Response(await this.bytes(), { headers: { 'Content-Type': this.type } }).formData()
+  }
+
+  /**
+   * Parses the file's contents as JSON.
+   *
+   * @returns A promise that resolves to the parsed value
+   */
+  async json(): Promise<any> {
+    return JSON.parse(await this.text())
+  }
+
+  /**
+   * Not supported, because the file's contents are streamed from the request.
+   */
+  slice(): never {
+    throw new TypeError('A file upload cannot be sliced')
   }
 
   /**
    * Returns a stream of the file's contents.
    *
-   * @returns A byte stream of the file's contents
+   * @returns A stream of the file's contents
    */
+  stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
+    let chunks = this.#chunks()
+    return new ReadableStream(
+      {
+        async pull(controller) {
+          let result = await chunks.next()
+          if (result.done) {
+            controller.close()
+          } else {
+            controller.enqueue(result.value)
+          }
+        },
+        async cancel() {
+          await chunks.return()
+        },
+      },
+      { highWaterMark: 0 },
+    )
+  }
+
+  /**
+   * Reads the file's contents as a UTF-8 string.
+   *
+   * @returns A promise that resolves to the file's contents
+   */
+  async text(): Promise<string> {
+    textDecoder ??= new TextDecoder()
+    return textDecoder.decode(await this.bytes())
+  }
+
+  /**
+   * Throws, so a file upload isn't silently converted to a string by APIs that expect a `File`,
+   * like `FormData#append()` or `new Response()`.
+   */
+  toString(): never {
+    throw new TypeError(
+      'Cannot convert a FileUpload to a string. Use .stream() for Response and other streaming APIs.',
+    )
+  }
+
+  // Marks the upload used and reads its chunks, counting its size and wrapping parse errors.
+  #chunks(): AsyncGenerator<Uint8Array<ArrayBuffer>, void, unknown> {
+    if (this.#used) {
+      throw new TypeError('The contents of a file upload can only be read once')
+    }
+    if (closedUploads.has(this)) {
+      throw new TypeError(
+        'The contents of a file upload are not available after the upload handler returns. ' +
+          'Read them in the upload handler instead.',
+      )
+    }
+    this.#used = true
+
+    return countChunks(this.#part, (size) => {
+      this.#size = size
+    })
+  }
+
+  async #readChunks(): Promise<Uint8Array<ArrayBuffer>[]> {
+    let chunks: Uint8Array<ArrayBuffer>[] = []
+    for await (let chunk of this.#chunks()) chunks.push(chunk)
+    return chunks
+  }
+}
+
+async function* countChunks(
+  part: MultipartPart,
+  onDone: (size: number) => void,
+): AsyncGenerator<Uint8Array<ArrayBuffer>, void, unknown> {
+  let size = 0
+  try {
+    for await (let chunk of part) {
+      size += chunk.length
+      yield chunk
+    }
+  } catch (error) {
+    throw toFormDataError(error)
+  }
+  onDone(size)
+}
+
+let textDecoder: TextDecoder | undefined
+
+// Uploads whose upload handler has returned. Reads that started before then may continue, but new
+// reads would find that the parser has discarded the contents.
+const closedUploads = new WeakSet<FileUpload>()
+
+// A file upload that was read into memory, for when an upload handler returns the upload itself.
+export class BufferedFile extends File {
   stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
     // Node.js before 24.20.0 and 26.6.0 never frees the contents of a Blob read through
     // `stream()`, so read the file in slices instead (https://github.com/nodejs/node/issues/63574).
@@ -92,144 +277,23 @@ export class FileUpload extends File {
 
 const streamChunkSize = 64 * 1024
 
-// The file upload handlers receive when parsing with `streamFiles`. Its contents are read directly
-// from the request as they arrive, so they can only be read once and its size is not known until
-// they have been read.
-// Bun's types give `File` instances a construct signature, so implement the members of `FileUpload`
-// rather than `FileUpload` itself.
-class StreamingFileUpload implements Pick<FileUpload, keyof FileUpload> {
-  readonly fieldName: string
-  readonly lastModified = Date.now()
-  readonly name: string
-  readonly type: string
-  readonly webkitRelativePath = ''
-
-  #part: StreamingMultipartPart
-  #size: number | null = null
-  #used = false
-
-  constructor(part: StreamingMultipartPart, fieldName: string) {
-    this.#part = part
-    this.fieldName = fieldName
-    this.name = part.filename ?? 'file-upload'
-    this.type = normalizeMediaType(part.mediaType ?? 'application/octet-stream')
-  }
-
-  get [Symbol.toStringTag](): string {
-    return 'StreamingFileUpload'
-  }
-
-  get size(): number {
-    if (this.#size === null) {
-      throw new TypeError(
-        'The size of a streamed file upload is not known until its contents have been read',
-      )
-    }
-
-    return this.#size
-  }
-
-  async arrayBuffer(): Promise<ArrayBuffer> {
-    return (await this.bytes()).buffer
-  }
-
-  async bytes(): Promise<Uint8Array<ArrayBuffer>> {
-    let chunks: Uint8Array[] = []
-    let size = 0
-    let reader = this.stream().getReader()
-    while (true) {
-      let result = await reader.read()
-      if (result.done) break
-      chunks.push(result.value)
-      size += result.value.length
-    }
-
-    let buffer = new Uint8Array(size)
-    let offset = 0
-    for (let chunk of chunks) {
-      buffer.set(chunk, offset)
-      offset += chunk.length
-    }
-
-    return buffer
-  }
-
-  async formData(): Promise<FormData> {
-    return new Response(await this.bytes(), { headers: { 'Content-Type': this.type } }).formData()
-  }
-
-  async json(): Promise<any> {
-    return JSON.parse(await this.text())
-  }
-
-  slice(): never {
-    throw new TypeError('A streamed file upload cannot be sliced')
-  }
-
-  stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
-    if (this.#used) {
-      throw new TypeError('The contents of a streamed file upload can only be read once')
-    }
-    this.#used = true
-
-    let part = this.#part
-    let reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>> | undefined
-    let size = 0
-
-    // Don't get a reader until the first read, so a stream that is never read doesn't hold up the
-    // parser.
-    return new ReadableStream(
-      {
-        pull: async (controller) => {
-          reader ??= part.body.getReader()
-
-          let result = await reader.read().catch((error) => {
-            throw toFormDataError(error)
-          })
-
-          if (result.done) {
-            this.#size = size
-            controller.close()
-          } else {
-            size += result.value.length
-            controller.enqueue(result.value)
-          }
-        },
-        cancel(reason) {
-          return reader === undefined ? part.body.cancel(reason) : reader.cancel(reason)
-        },
-      },
-      { highWaterMark: 0 },
-    )
-  }
-
-  async text(): Promise<string> {
-    textDecoder ??= new TextDecoder()
-    return textDecoder.decode(await this.bytes())
-  }
-}
-
-let textDecoder: TextDecoder | undefined
-
-// Matches how `File` normalizes its `type` option.
-function normalizeMediaType(type: string): string {
-  return /^[\x20-\x7e]*$/.test(type) ? type.toLowerCase() : ''
-}
-
 /**
  * A function used for handling file uploads.
  *
  * @param file The uploaded file
- * @returns A value to store in `FormData`, or `void`/`null` to skip
+ * @returns A value to store in `FormData`, or `void`/`null` to skip. Return the upload itself to
+ * read it into memory and store it as a `File`.
  */
 export interface FileUploadHandler {
   /**
    * Transforms an uploaded file into the value stored in the parsed {@link FormData}.
    */
-  (file: FileUpload): void | null | string | Blob | Promise<void | null | string | Blob>
+  (
+    file: FileUpload,
+  ): void | null | string | Blob | FileUpload | Promise<void | null | string | Blob | FileUpload>
 }
 
-function defaultFileUploadHandler(file: FileUpload): File {
+function defaultFileUploadHandler(file: FileUpload): FileUpload {
   // By default just keep the file around in memory.
   return file
 }
@@ -255,28 +319,6 @@ function toFormDataError(error: unknown): unknown {
   }
 
   return new FormDataParseError('Cannot parse form data', { cause: error })
-}
-
-async function* parseFormDataParts(
-  request: Request,
-  parserOptions: MultipartParserOptions,
-): AsyncGenerator<MultipartPart, void, unknown> {
-  try {
-    yield* parseMultipartRequest(request, parserOptions)
-  } catch (error) {
-    throw toFormDataError(error)
-  }
-}
-
-async function* parseStreamingFormDataParts(
-  request: Request,
-  parserOptions: MultipartParserOptions,
-): AsyncGenerator<StreamingMultipartPart, void, unknown> {
-  try {
-    yield* parseStreamingMultipartRequest(request, parserOptions)
-  } catch (error) {
-    throw toFormDataError(error)
-  }
 }
 
 function isUrlEncodedRequest(request: Request): boolean {
@@ -378,35 +420,6 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
    * @default 20
    */
   maxFiles?: number
-  /**
-   * Set `true` to pass each file to the `uploadHandler` as soon as its headers arrive, with its
-   * contents read directly from the request, instead of buffering the whole file in memory first.
-   * This lets you stream large uploads straight to storage:
-   *
-   * ```ts
-   * let formData = await parseFormData(request, { streamFiles: true }, async (upload) => {
-   *   let key = `uploads/${crypto.randomUUID()}`
-   *   await storage.set(key, upload)
-   *   return key
-   * })
-   * ```
-   *
-   * Streamed uploads have the same properties and methods as {@link FileUpload}, with these
-   * differences:
-   *
-   * - Their contents can only be read once, with `stream()`, `bytes()`, `arrayBuffer()`, or `text()`
-   * - `size` throws until the contents have been read; enforce size limits with `maxFileSize`
-   * - `slice()` is not supported
-   * - They are not instances of `FileUpload` or `File`
-   *
-   * Parts are read in order, so the parser waits for the handler, and for any read of the upload
-   * it started, to finish before moving on. Contents the handler doesn't read are discarded. If
-   * the handler returns the upload itself, its contents are read into memory and stored in the
-   * `FormData` like an ordinary `FileUpload`.
-   *
-   * @default false
-   */
-  streamFiles?: boolean
 }
 
 /**
@@ -416,14 +429,18 @@ export interface ParseFormDataOptions extends MultipartParserOptions {
  *
  * This is a drop-in replacement for [the built-in `request.formData()` API](https://developer.mozilla.org/en-US/docs/Web/API/Request/formData)
  * with the main difference being the ability to customize the handling of file uploads. Instead of
- * keeping all files in memory, the `uploadHandler` allows you to store the file on disk or a
- * cloud storage service.
+ * keeping all files in memory, the `uploadHandler` receives each file as soon as its headers
+ * arrive and can stream it to disk or a cloud storage service.
+ *
+ * Parts are read in order, so the parser waits for the `uploadHandler`, and for any read of the
+ * upload it started, to finish before moving on. Contents the handler doesn't read are discarded.
+ * If the handler returns the upload itself, it is read into memory and stored as a `File`.
  *
  * Accepts `multipart/*` and `application/x-www-form-urlencoded` media types.
  * Unsupported media types throw {@link FormDataParseError} before the body is read.
  *
  * @param request The `Request` object to parse
- * @param uploadHandler A function that handles file uploads. It receives a `File` object and may return any value that is valid in a `FormData` object
+ * @param uploadHandler A function that handles file uploads. It receives a {@link FileUpload} and may return any value that is valid in a `FormData` object
  * @returns A `Promise` that resolves to a `FormData` object containing the parsed data
  */
 export async function parseFormData(
@@ -433,7 +450,7 @@ export async function parseFormData(
 /**
  * @param request The `Request` object to parse
  * @param options Options for the parser
- * @param uploadHandler A function that handles file uploads. It receives a `File` object and may return any value that is valid in a `FormData` object
+ * @param uploadHandler A function that handles file uploads. It receives a {@link FileUpload} and may return any value that is valid in a `FormData` object
  */
 export async function parseFormData(
   request: Request,
@@ -461,18 +478,13 @@ export async function parseFormData(
     maxFileSize = defaultMaxFileSize,
     maxParts = defaultMaxParts,
     maxTotalSize = maxFiles * maxFileSize + oneMb,
-    streamFiles = false,
   } = optionsOrUploadHandler
 
   if (isUrlEncodedRequest(request)) {
     try {
       return await parseUrlEncodedFormData(request, maxParts, maxTotalSize)
     } catch (error) {
-      if (error instanceof FormDataParseError || isParserLimitError(error)) {
-        throw error
-      }
-
-      throw new FormDataParseError('Cannot parse form data', { cause: error })
+      throw toFormDataError(error)
     }
   }
 
@@ -487,10 +499,6 @@ export async function parseFormData(
     maxTotalSize,
   }
 
-  if (streamFiles) {
-    return parseStreamingMultipartFormData(request, parserOptions, maxFiles, uploadHandler)
-  }
-
   let formData = new FormData()
   let fileCount = 0
 
@@ -503,78 +511,56 @@ export async function parseFormData(
         throw new MaxFilesExceededError(maxFiles)
       }
 
-      let value = await uploadHandler(new FileUpload(part, fieldName))
+      let upload = new FileUpload(part, fieldName)
+      let value = await uploadHandler(upload)
+      closedUploads.add(upload)
+      if (value === upload) {
+        value = await bufferUpload(part, upload)
+      }
       if (value != null) {
-        formData.append(fieldName, value)
+        formData.append(fieldName, value as string | Blob)
       }
     } else {
-      formData.append(fieldName, part.text)
+      formData.append(fieldName, await readText(part))
     }
   }
 
   return formData
 }
 
-async function parseStreamingMultipartFormData(
+async function* parseFormDataParts(
   request: Request,
   parserOptions: MultipartParserOptions,
-  maxFiles: number,
-  uploadHandler: FileUploadHandler,
-): Promise<FormData> {
-  let formData = new FormData()
-  let fileCount = 0
-
-  for await (let part of parseStreamingFormDataParts(request, parserOptions)) {
-    let fieldName = part.name
-    if (!fieldName) continue
-
-    if (part.isFile) {
-      if (++fileCount > maxFiles) {
-        throw new MaxFilesExceededError(maxFiles)
-      }
-
-      let upload = new StreamingFileUpload(part, fieldName) as unknown as FileUpload
-      let value = await uploadHandler(upload)
-
-      if (value === upload) {
-        value = await bufferStreamingUpload(part, fieldName)
-      }
-      if (value != null) {
-        formData.append(fieldName, value)
-      }
-    } else {
-      formData.append(fieldName, await readStreamingPartText(part))
-    }
+): AsyncGenerator<MultipartPart, void, unknown> {
+  try {
+    yield* parseMultipartRequest(request, parserOptions)
+  } catch (error) {
+    throw toFormDataError(error)
   }
-
-  return formData
 }
 
-async function bufferStreamingUpload(
-  part: StreamingMultipartPart,
-  fieldName: string,
-): Promise<FileUpload> {
+async function bufferUpload(part: MultipartPart, upload: FileUpload): Promise<File> {
   if (part.bodyUsed) {
     throw new TypeError(
-      'An upload handler cannot return a streamed file upload after reading its contents. ' +
+      'An upload handler cannot return a file upload after reading its contents. ' +
         'Return the stored file or a reference to it instead.',
     )
   }
 
-  let content: Uint8Array
+  let chunks: Uint8Array<ArrayBuffer>[] = []
   try {
-    content = await part.bytes()
+    for await (let chunk of part) chunks.push(chunk)
   } catch (error) {
     throw toFormDataError(error)
   }
 
-  return new FileUpload(
-    { content: [content], filename: part.filename, mediaType: part.mediaType },
-    fieldName,
-  )
+  return new BufferedFile(chunks, upload.name, {
+    type: part.mediaType ?? 'application/octet-stream',
+    lastModified: upload.lastModified,
+  })
 }
 
-async function readStreamingPartText(part: StreamingMultipartPart): Promise<string> {
+async function readText(part: MultipartPart): Promise<string> {
   try {
     return await part.text()
   } catch (error) {

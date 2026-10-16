@@ -6,9 +6,9 @@ Fast streaming multipart parsing for JavaScript. `multipart-parser` processes mu
 
 - **File Upload Parsing** - Parse file uploads (`multipart/form-data`) with automatic field and file detection
 - **Full Multipart Support** - Support for all `multipart/*` content types (mixed, alternative, related, etc.)
-- **Convenient API** - `MultipartPart` API with `arrayBuffer`, `bytes`, `text`, `size`, and metadata access
+- **Streaming Parts** - Each part is yielded as soon as its headers arrive, with its content streamed as you read it
+- **Convenient API** - `MultipartPart` API with `body`, `bytes()`, `text()`, `for await...of`, and metadata access
 - **Built-in Limits** - Header, per-part, part-count, and aggregate-size limits to prevent abuse
-- **Node.js Support** - First-class Node.js support with native `http.IncomingMessage` compatibility
 - **Runtime Demos** - [Demos for every major runtime](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos)
 
 ## Installation
@@ -21,6 +21,8 @@ npm i remix
 
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It automatically validates the request is `multipart/form-data`, extracts the multipart boundary from the `Content-Type` header, parses all fields and files in the `request.body` stream, and gives each one to you as a `MultipartPart` object with a rich API for accessing its metadata and content.
 
+Each part is yielded as soon as its headers arrive, and its content is streamed from the request as you read it, so large uploads never need to be held in memory. A part's content can be read once, with `part.body` (a `ReadableStream`), `part.bytes()`, `part.text()`, or `for await (let chunk of part)`.
+
 `MultipartPart.filename` is untrusted client input from `Content-Disposition`, including decoded `filename*` values when supplied. The parser does not sanitize filenames for filesystem use. Do not use `part.filename`, or a `File.name` derived from it, directly as a filesystem path. Generate a storage name in your application; see [Filename Safety](https://github.com/remix-run/remix/tree/main/packages/headers#filename-safety).
 
 ```ts
@@ -30,18 +32,16 @@ async function handleRequest(request: Request): Promise<void> {
   try {
     for await (let part of parseMultipartRequest(request)) {
       if (part.isFile) {
-        // Access file data in multiple formats
-        let buffer = part.arrayBuffer // ArrayBuffer
-        console.log(`File received: ${part.filename} (${buffer.byteLength} bytes)`)
+        console.log(`File received: ${part.filename}`)
         console.log(`Content type: ${part.mediaType}`)
         console.log(`Field name: ${part.name}`)
         console.log(`Content-Type header: ${part.headers['content-type']}`)
 
-        // Save under an application-generated name, independent of part.filename
-        let storageName = crypto.randomUUID()
-        await saveFile(storageName, part.bytes)
+        // Stream the file to storage under an application-generated name,
+        // independent of part.filename
+        await saveFile(crypto.randomUUID(), part.body)
       } else {
-        let text = part.text // string
+        let text = await part.text()
         console.log(`Field received: ${part.name} = ${JSON.stringify(text)}`)
       }
     }
@@ -54,6 +54,8 @@ async function handleRequest(request: Request): Promise<void> {
   }
 }
 ```
+
+Parts arrive in order, so read each part's content before continuing the loop. When you continue to the next part, the parser waits for a read you started to finish and discards any content you didn't read. A part's content can't be read after that.
 
 ## Part Headers
 
@@ -79,7 +81,7 @@ import {
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
   parseMultipartRequest,
-} from 'remix/multipart-parser/node'
+} from 'remix/multipart-parser'
 
 const oneMb = Math.pow(2, 20)
 const limits = {
@@ -110,70 +112,13 @@ async function handleRequest(request: Request): Promise<Response> {
 }
 ```
 
-## Streaming Parts
+## Node.js
 
-`parseMultipartRequest` buffers the content of each part before yielding it, up to `maxFileSize`. To handle large uploads without buffering them, use `parseStreamingMultipartRequest` instead. It yields each part as a `StreamingMultipartPart` as soon as its headers arrive, with its content available as a `ReadableStream` in `part.body`. It accepts the same size limits.
-
-```ts
-import { parseStreamingMultipartRequest } from 'remix/multipart-parser'
-
-for await (let part of parseStreamingMultipartRequest(request)) {
-  if (part.isFile) {
-    await saveFileStream(crypto.randomUUID(), part.body)
-  } else {
-    let text = await part.text()
-    console.log(`Field received: ${part.name} = ${JSON.stringify(text)}`)
-  }
-}
-```
-
-Parts arrive in order, so each part's content must be read before the parser can move on to the next one. A part's content can be read once, with `part.body`, `part.bytes()`, or `part.text()`. When you move on to the next part, the parser waits for a read you started to finish and discards any content you didn't read. A part's body can't be read after that, so read it before continuing the loop.
-
-The `parseStreamingMultipart` function provides the same interface for multipart data in a `ReadableStream`.
-
-## Node.js Bindings
-
-The main module (`import {} from 'remix/multipart-parser'`) assumes you're working with [the fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) (`Request`, `ReadableStream`, etc). Support for these interfaces was added to Node.js by the [undici](https://github.com/nodejs/undici) project in [version 16.5.0](https://nodejs.org/en/blog/release/v16.5.0).
-
-If however you're building a server for Node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
-
-```ts
-import * as http from 'node:http'
-import { MultipartParseError, parseMultipartRequest } from 'remix/multipart-parser/node'
-
-let server = http.createServer(async (req, res) => {
-  try {
-    for await (let part of parseMultipartRequest(req)) {
-      // ...
-    }
-  } catch (error) {
-    if (error instanceof MultipartParseError) {
-      console.error('Failed to parse multipart request:', error.message)
-    } else {
-      console.error('An unexpected error occurred:', error)
-    }
-  }
-})
-
-server.listen(8080)
-```
+`parseMultipartRequest` works with the fetch API's `Request`. If you're using Node.js's `http` module, use [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) to handle requests as `Request` objects.
 
 ## Low-level API
 
-If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a low-level `parseMultipart()` API that you can use directly:
-
-```ts
-import { parseMultipart } from 'remix/multipart-parser'
-
-let message = new Uint8Array(/* ... */)
-let boundary = '----WebKitFormBoundary56eac3x'
-
-for (let part of parseMultipart(message, { boundary })) {
-  // ...
-}
-```
-
-In addition, the `parseMultipartStream` function provides an `async` generator interface for multipart data in a `ReadableStream`:
+If you're working directly with multipart boundaries and streams of multipart data that are not necessarily part of a request, use `parseMultipartStream`:
 
 ```ts
 import { parseMultipartStream } from 'remix/multipart-parser'
@@ -186,23 +131,7 @@ for await (let part of parseMultipartStream(message, { boundary })) {
 }
 ```
 
-For direct control over chunk delivery, use `MultipartParser`. Consume all parts yielded by `write()` for every chunk, then call `finish()` at EOF to validate completion.
-
-```ts
-import { MultipartParser } from 'remix/multipart-parser'
-
-let parser = new MultipartParser(boundary)
-
-for await (let chunk of chunks) {
-  for (let part of parser.write(chunk)) {
-    await handlePart(part)
-  }
-}
-
-parser.finish()
-```
-
-`write()` yields the final part when both closing hyphens arrive. A malformed closing suffix can cause a subsequent `write()` or `finish()` to throw after that part was delivered. Processing a part does not guarantee that the entire message is valid. Empty multipart messages yield no parts.
+The final part is yielded when its closing boundary arrives. A malformed closing suffix causes the parser to throw after that part was delivered, so processing a part does not guarantee that the entire message is valid. Empty multipart messages yield no parts.
 
 ## Demos
 
@@ -215,58 +144,42 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/mu
 
 ## Benchmark
 
-`multipart-parser` is designed to be as efficient as possible, operating on streams of data and rarely buffering in common usage. This design yields exceptional performance when handling multipart payloads of any size. In benchmarks, `multipart-parser` is as fast or faster than `busboy`.
+`multipart-parser` is designed to be as efficient as possible, streaming part content as it is read instead of buffering it. This design yields excellent performance when handling multipart payloads of any size. In benchmarks, `multipart-parser` is as fast or faster than `busboy`, and it is the fastest of the parsers tested on messages with many parts or with boundary-like content.
 
 The results of running the benchmarks on my laptop:
 
 ```
-> @remix-run/multipart-parser@0.10.1 bench:node /Users/michael/Projects/remix-the-web/packages/multipart-parser
+> @remix-run/multipart-parser@1.0.0 bench:node
 > node ./bench/runner.ts
 
-Platform: Darwin (24.5.0)
-CPU: Apple M1 Pro
-Date: 6/13/2025, 12:27:09 PM
-Node.js v24.0.2
-┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┐
-│ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │
-├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┤
-│ multipart-parser │ '0.01 ms ± 0.03' │ '1.08 ms ± 0.08' │ '0.04 ms ± 0.01' │ '10.50 ms ± 0.38' │
-│ multipasta       │ '0.02 ms ± 0.06' │ '1.07 ms ± 0.02' │ '0.15 ms ± 0.02' │ '10.46 ms ± 0.11' │
-│ busboy           │ '0.06 ms ± 0.17' │ '3.07 ms ± 0.24' │ '0.24 ms ± 0.05' │ '29.85 ms ± 0.18' │
-│ @fastify/busboy  │ '0.05 ms ± 0.13' │ '1.23 ms ± 0.09' │ '0.45 ms ± 0.22' │ '11.81 ms ± 0.11' │
-└──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┘
+Platform: Darwin (25.6.0)
+CPU: Apple M5 Pro
+Date: 10/16/2026, 11:12:36 AM
+Node.js v24.18.0
+┌──────────────────┬──────────────────┬──────────────────┬──────────────────┬───────────────────┬────────────────────────────┬─────────────────────────────┐
+│ (index)          │ 1 small file     │ 1 large file     │ 100 small files  │ 5 large files     │ 1 large file (adversarial) │ 5 large files (adversarial) │
+├──────────────────┼──────────────────┼──────────────────┼──────────────────┼───────────────────┼────────────────────────────┼─────────────────────────────┤
+│ multipart-parser │ '0.02 ms ± 0.09' │ '0.76 ms ± 0.05' │ '0.07 ms ± 0.02' │ '7.58 ms ± 0.06'  │ '0.31 ms ± 0.05'           │ '3.63 ms ± 0.23'            │
+│ multipasta       │ '0.01 ms ± 0.04' │ '0.70 ms ± 0.02' │ '0.10 ms ± 0.01' │ '7.24 ms ± 0.34'  │ '0.64 ms ± 0.28'           │ '6.51 ms ± 0.59'            │
+│ busboy           │ '0.04 ms ± 0.15' │ '1.99 ms ± 0.14' │ '0.15 ms ± 0.03' │ '19.42 ms ± 0.16' │ '0.42 ms ± 0.02'           │ '4.16 ms ± 0.08'            │
+│ @fastify/busboy  │ '0.03 ms ± 0.08' │ '0.81 ms ± 0.07' │ '0.29 ms ± 0.15' │ '7.91 ms ± 0.06'  │ '0.51 ms ± 0.04'           │ '5.15 ms ± 0.15'            │
+└──────────────────┴──────────────────┴──────────────────┴──────────────────┴───────────────────┴────────────────────────────┴─────────────────────────────┘
 
-> @remix-run/multipart-parser@0.10.1 bench:bun /Users/michael/Projects/remix-the-web/packages/multipart-parser
+> @remix-run/multipart-parser@1.0.0 bench:bun
 > bun run ./bench/runner.ts
 
-Platform: Darwin (24.5.0)
-CPU: Apple M1 Pro
-Date: 6/13/2025, 12:27:31 PM
-Bun 1.2.13
-┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┐
-│                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │
-├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┤
-│ multipart-parser │ 0.01 ms ± 0.04 │ 0.86 ms ± 0.09 │ 0.04 ms ± 0.01  │ 8.32 ms ± 0.26  │
-│       multipasta │ 0.02 ms ± 0.07 │ 0.87 ms ± 0.03 │ 0.25 ms ± 0.21  │ 8.27 ms ± 0.09  │
-│           busboy │ 0.05 ms ± 0.17 │ 3.54 ms ± 0.10 │ 0.30 ms ± 0.03  │ 34.79 ms ± 0.38 │
-│  @fastify/busboy │ 0.06 ms ± 0.18 │ 4.04 ms ± 0.08 │ 0.48 ms ± 0.06  │ 39.91 ms ± 0.37 │
-└──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┘
-
-> @remix-run/multipart-parser@0.10.1 bench:deno /Users/michael/Projects/remix-the-web/packages/multipart-parser
-> deno run --allow-sys ./bench/runner.ts
-
-Platform: Darwin (24.5.0)
-CPU: Apple M1 Pro
-Date: 6/13/2025, 12:28:12 PM
-Deno 2.3.6
-┌──────────────────┬──────────────────┬────────────────────┬──────────────────┬─────────────────────┐
-│ (idx)            │ 1 small file     │ 1 large file       │ 100 small files  │ 5 large files       │
-├──────────────────┼──────────────────┼────────────────────┼──────────────────┼─────────────────────┤
-│ multipart-parser │ "0.01 ms ± 0.03" │ "1.03 ms ± 0.04"   │ "0.05 ms ± 0.01" │ "10.05 ms ± 0.20"   │
-│ multipasta       │ "0.02 ms ± 0.07" │ "1.04 ms ± 0.03"   │ "0.16 ms ± 0.02" │ "10.10 ms ± 0.08"   │
-│ busboy           │ "0.05 ms ± 0.19" │ "3.06 ms ± 0.15"   │ "0.32 ms ± 0.05" │ "29.92 ms ± 0.24"   │
-│ @fastify/busboy  │ "0.06 ms ± 0.14" │ "14.72 ms ± 11.42" │ "0.81 ms ± 0.20" │ "127.63 ms ± 35.77" │
-└──────────────────┴──────────────────┴────────────────────┴──────────────────┴─────────────────────┘
+Platform: Darwin (25.6.0)
+CPU: Apple M5 Pro
+Date: 10/16/2026, 11:12:55 AM
+Bun 1.3.14
+┌──────────────────┬────────────────┬────────────────┬─────────────────┬─────────────────┬────────────────────────────┬─────────────────────────────┐
+│                  │ 1 small file   │ 1 large file   │ 100 small files │ 5 large files   │ 1 large file (adversarial) │ 5 large files (adversarial) │
+├──────────────────┼────────────────┼────────────────┼─────────────────┼─────────────────┼────────────────────────────┼─────────────────────────────┤
+│ multipart-parser │ 0.02 ms ± 0.06 │ 0.71 ms ± 0.03 │ 0.05 ms ± 0.01  │ 6.86 ms ± 0.44  │ 0.25 ms ± 0.01             │ 2.46 ms ± 0.14              │
+│       multipasta │ 0.01 ms ± 0.05 │ 0.66 ms ± 0.02 │ 0.15 ms ± 0.01  │ 6.50 ms ± 0.20  │ 0.48 ms ± 0.16             │ 4.86 ms ± 0.44              │
+│           busboy │ 0.03 ms ± 0.11 │ 2.30 ms ± 0.10 │ 0.18 ms ± 0.02  │ 22.40 ms ± 0.28 │ 0.84 ms ± 0.01             │ 8.45 ms ± 0.12              │
+│  @fastify/busboy │ 0.03 ms ± 0.11 │ 0.70 ms ± 0.04 │ 0.26 ms ± 0.04  │ 6.69 ms ± 0.28  │ 0.85 ms ± 0.04             │ 8.50 ms ± 0.65              │
+└──────────────────┴────────────────┴────────────────┴─────────────────┴─────────────────┴────────────────────────────┴─────────────────────────────┘
 ```
 
 ## Related Packages

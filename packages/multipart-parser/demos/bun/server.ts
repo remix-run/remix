@@ -35,17 +35,23 @@ const server = Bun.serve({
         for await (let part of parseMultipartRequest(request)) {
           if (part.isFile) {
             let tmpfile = tmp.fileSync()
-            Bun.write(tmpfile.name, part.bytes)
+            let writer = Bun.file(tmpfile.name).writer()
+            let size = 0
+            for await (let chunk of part) {
+              writer.write(chunk)
+              size += chunk.length
+            }
+            await writer.end()
 
             parts.push({
               name: part.name,
               filename: part.filename,
               mediaType: part.mediaType,
-              size: part.size,
+              size,
               file: tmpfile.name,
             })
           } else {
-            parts.push({ name: part.name, value: part.text })
+            parts.push({ name: part.name, value: await part.text() })
           }
         }
 
