@@ -1,3 +1,1 @@
-Reduce server rendering memory use by assembling HTML and attributes with fewer temporary strings, encoding HTML in batches, and keeping hydration props serialized until they are sent. Request abort listeners are removed when rendering finishes, fails, or is canceled.
-
-Skip generated module preloads when the document head already includes an authored preload for the same URL with matching fetch settings. Authored links and their attributes are preserved.
+Reduce server rendering memory use by keeping client entry hydration props serialized instead of parsing them back into objects, and remove the request abort listener when rendering finishes, fails, or is canceled so long-lived request signals no longer keep finished renders reachable.

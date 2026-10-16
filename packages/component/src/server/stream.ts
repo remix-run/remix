@@ -185,19 +185,11 @@ interface RenderContext {
   managedImportMaps: ManagedImportMap[]
   frameData: Map<string, FrameData>
   clientEntryHeadResources: ClientEntryHeadResources
-  authoredModulePreloads?: Set<string>
   blockingFrameTails: ReadableStream<Uint8Array>[]
   signal: AbortSignal
   flushKind: FlushKind
   serverIdScope: string
   serverIdCounter: number
-  documentSlots: {
-    htmlOpen?: StaticSegment
-    headClose?: StaticSegment
-    bodyClose?: StaticSegment
-    htmlClose?: StaticSegment
-  }
-  hasRawHtml: boolean
 }
 
 interface ResolvedFrameHtml {
@@ -219,17 +211,6 @@ const htmlEncodingBuffer = new Uint8Array(MAX_BUFFERED_HTML_LENGTH * 3)
 
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
-
-const MODULE_PRELOAD_FETCH_PROPS = [
-  'as',
-  'crossOrigin',
-  'crossorigin',
-  'integrity',
-  'media',
-  'type',
-  'referrerPolicy',
-  'referrerpolicy',
-]
 
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 function stripDoctypeMarkup(html: string): string {
@@ -320,8 +301,6 @@ export function renderToStream(
     flushKind: 'fragment',
     serverIdScope: crypto.randomUUID().slice(0, 8),
     serverIdCounter: 0,
-    documentSlots: {},
-    hasRawHtml: false,
   }
 
   function cancel(reason: unknown): void {
@@ -352,7 +331,9 @@ export function renderToStream(
         if (closeIfCancelled(controller, context)) return
         validateClientEntriesForHydration(context)
         finalizeManagedImportMap(context)
-        let bytes = encodeSegments(finalizeSegments(root, context), encoder)
+        let html = serializeSegment(root)
+        let finalHtml = finalizeHtml(html, context)
+        let bytes = encodeHtml(appendFlushMarker(finalHtml, context.flushKind), encoder)
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
 
@@ -386,32 +367,11 @@ export function renderToStream(
   })
 }
 
-function encodeSegments(segments: Segment[], encoder: TextEncoder): Uint8Array {
-  normalizeSegments(segments)
-  let length = 0
-  for (let segment of segments) {
-    if (typeof segment === 'string') length += segment.length
-  }
-  if (length > MAX_BUFFERED_HTML_LENGTH) return encoder.encode(segments.join(''))
+function encodeHtml(html: string, encoder: TextEncoder): Uint8Array {
+  if (html.length > MAX_BUFFERED_HTML_LENGTH) return encoder.encode(html)
 
-  let start = 0
-  let chunkLength = 0
-  let written = 0
-  for (let index = 0; index < segments.length; index++) {
-    let segment = segments[index]
-    if (typeof segment !== 'string') continue
-    chunkLength += segment.length
-    if (index < segments.length - 1) {
-      if (chunkLength < 8192 || segment.length === 0) continue
-      let last = segment.charCodeAt(segment.length - 1)
-      // A surrogate pair may span segments, so keep a trailing high surrogate in this batch.
-      if (last >= 0xd800 && last <= 0xdbff) continue
-    }
-    let html = segments.slice(start, index + 1).join('')
-    written += encoder.encodeInto(html, htmlEncodingBuffer.subarray(written)).written
-    start = index + 1
-    chunkLength = 0
-  }
+  // Encoding is synchronous. Copy the written bytes so streams never share the scratch buffer.
+  let { written } = encoder.encodeInto(html, htmlEncodingBuffer)
   return htmlEncodingBuffer.slice(0, written)
 }
 
@@ -606,7 +566,6 @@ function buildFrameSegment(
   context: RenderContext,
   frameState: SsrFrameState,
 ): FrameSegment {
-  context.hasRawHtml = true
   let props = node.props
   let frameId = randomId('f')
 
@@ -667,69 +626,47 @@ function buildElementSegment(
   // Determine namespace context for the current element and its children
   let currentIsSvg = context.insideSvg || tag === 'svg'
 
-  if (!currentIsSvg && tag === 'link' && context.insideHead) {
-    collectAuthoredModulePreload(context, processedProps)
-  }
-
   if (!currentIsSvg && tag === 'textarea') {
     output.push(buildTextareaElementSegment(tag, processedProps))
     return
   }
 
-  output.push(`<${tag}`)
-  if (!currentIsSvg && tag === 'input') {
-    output.push(renderInputAttributes(processedProps))
-  } else {
-    appendAttributes(tag, processedProps, currentIsSvg, output)
-  }
+  let attrs =
+    !currentIsSvg && tag === 'input'
+      ? renderInputAttributes(processedProps)
+      : renderAttributes(tag, processedProps, currentIsSvg)
 
   if (SELF_CLOSING_TAGS.has(tag)) {
-    output.push(' />')
+    output.push(`<${tag}${attrs} />`)
     return
   }
 
   if (innerHTML !== undefined) {
-    context.hasRawHtml = true
-    output.push('>', innerHTML, `</${tag}>`)
+    output.push(`<${tag}${attrs}>${innerHTML}</${tag}>`)
     return
   }
 
   if (tag === 'script') {
     if (typeof props.children === 'string') {
-      context.hasRawHtml = true
       if (context.insideHead) {
         collectAuthoredImportMap(context, tag, processedProps, props.children)
       }
-      output.push('>', escapeScriptTextContent(props.children), `</${tag}>`)
+      output.push(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
       return
     }
     if (props.children != null) {
       console.error(new Error('script elements with children must have a single string child'))
     }
-    output.push(`></${tag}>`)
+    output.push(`<${tag}${attrs}></${tag}>`)
     return
   }
 
-  output.push('>')
-  if (tag === 'html' && !context.documentSlots.htmlOpen) {
-    let slot: StaticSegment = { kind: 'static', html: '' }
-    context.documentSlots.htmlOpen = slot
-    output.push(slot)
-  }
+  output.push(`<${tag}${attrs}>`)
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
   if (props.children != null) buildSegment(props.children, context, frameState, output)
   context.insideSvg = previousInsideSvg
-  if (tag === 'body' && !context.documentSlots.bodyClose) {
-    let slot: StaticSegment = { kind: 'static', html: '' }
-    context.documentSlots.bodyClose = slot
-    output.push(slot)
-  } else if (tag === 'html' && !context.documentSlots.htmlClose) {
-    let slot: StaticSegment = { kind: 'static', html: '' }
-    context.documentSlots.htmlClose = slot
-    output.push(slot)
-  }
   output.push(`</${tag}>`)
 }
 
@@ -831,19 +768,13 @@ function buildHeadElementSegment(
   output: Segment[],
 ): void {
   let processedProps = processStyleProps(props)
+  let attrs = renderAttributes(tag, processedProps, false)
 
-  output.push(`<${tag}`)
-  appendAttributes(tag, processedProps, false, output)
-  output.push('>')
+  output.push(`<${tag}${attrs}>`)
   let previousInsideHead = context.insideHead
   context.insideHead = true
   if (props.children != null) buildSegment(props.children, context, frameState, output)
   context.insideHead = previousInsideHead
-  if (!context.documentSlots.headClose) {
-    let slot: StaticSegment = { kind: 'static', html: '' }
-    context.documentSlots.headClose = slot
-    output.push(slot)
-  }
   output.push(`</${tag}>`)
 }
 
@@ -853,18 +784,8 @@ function renderAttributes(
   isSvg: boolean,
   excludedProps?: Set<string>,
 ): string {
-  let attrs: string[] = []
-  appendAttributes(tag, props, isSvg, attrs, excludedProps)
-  return attrs.join('')
-}
+  let attrs = ''
 
-function appendAttributes(
-  tag: string,
-  props: ElementProps,
-  isSvg: boolean,
-  output: Segment[],
-  excludedProps?: Set<string>,
-): void {
   for (let key in props) {
     if (SSR_OMITTED_PROPS.has(key)) continue
     if (excludedProps?.has(key)) continue
@@ -875,15 +796,17 @@ function appendAttributes(
     let attrName = transformAttributeName(key, isSvg)
     if (typeof value === 'boolean') {
       if (shouldStringifyBooleanAttribute(attrName)) {
-        output.push(` ${attrName}="${value}"`)
+        attrs += ` ${attrName}="${value}"`
       } else if (value) {
-        output.push(` ${attrName}`)
+        attrs += ` ${attrName}`
       }
     } else {
       value = sanitizeUrlAttribute(tag, attrName, value)
-      output.push(` ${attrName}="${escapeHtml(String(value))}"`)
+      attrs += ` ${attrName}="${escapeHtml(String(value))}"`
     }
   }
+
+  return attrs
 }
 
 function resolveSsrMixedProps(
@@ -1304,25 +1227,22 @@ function validateClientEntriesForHydration(context: RenderContext): void {
   }
 }
 
+// Joining once avoids building a deep rope of thousands of small strings, which raises RSS.
 function serializeSegment(segments: Segment[]): string {
-  normalizeSegments(segments)
-  return segments.join('')
-}
-
-function normalizeSegments(segments: Segment[]): void {
-  for (let index = 0; index < segments.length; index++) {
-    let seg = segments[index]
-    if (typeof seg === 'string') continue
-    if (seg.kind === 'static') {
-      segments[index] = seg.html
+  let parts: string[] = []
+  for (let seg of segments) {
+    if (typeof seg === 'string') {
+      parts.push(seg)
+    } else if (seg.kind === 'static') {
+      parts.push(seg.html)
     } else {
-      let html = `<!-- rmx:f:${seg.frameId} -->`
-      if (typeof seg.content === 'string') html += seg.content
-      else if (seg.content) html += serializeSegment(seg.content)
-      html += '<!-- /rmx:f -->'
-      segments[index] = html
+      parts.push(`<!-- rmx:f:${seg.frameId} -->`)
+      if (typeof seg.content === 'string') parts.push(seg.content)
+      else if (seg.content) parts.push(serializeSegment(seg.content))
+      parts.push('<!-- /rmx:f -->')
     }
   }
+  return parts.join('')
 }
 
 function escapeHtml(str: string): string {
@@ -1358,39 +1278,15 @@ function transformAttributeName(name: string, isSvg: boolean): string {
   return normalizeAttributeName(name, isSvg).attr
 }
 
-function finalizeSegments(segments: Segment[], context: RenderContext): Segment[] {
-  let preloads = collectModulePreloadTags(context)
+function finalizeHtml(html: string, context: RenderContext): string {
+  let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
   let headContent = importMapScript + preloads + styles
   let rmxData = buildRmxDataScript(context)
-  let flushMarker = appendFlushMarker('', context.flushKind)
   if (context.flushKind !== 'document') {
-    if (headContent) segments.unshift(`<head>${headContent}</head>`)
-    segments.push(rmxData, flushMarker)
-    return segments
+    return (headContent ? `<head>${headContent}</head>` : '') + html + rmxData
   }
-  if (!context.hasRawHtml) {
-    let slots = context.documentSlots
-    if (headContent) {
-      if (slots.headClose) slots.headClose.html = headContent
-      else if (slots.htmlOpen) slots.htmlOpen.html = `<head>${headContent}</head>`
-    }
-    let dataSlot = slots.bodyClose ?? slots.htmlClose
-    if (dataSlot) dataSlot.html = rmxData
-    else segments.push(rmxData)
-    segments.push(flushMarker)
-    return segments
-  }
-  return [
-    appendFlushMarker(
-      finalizeHtml(serializeSegment(segments), headContent, rmxData),
-      context.flushKind,
-    ),
-  ]
-}
-
-function finalizeHtml(html: string, headContent: string, rmxData: string): string {
   if (!headContent && !rmxData) return html
 
   // Both insertion points are found in the rendered document before either insertion.
@@ -1436,37 +1332,8 @@ function createModulePreloadTag(href: string): string {
   return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
 }
 
-function collectAuthoredModulePreload(
-  context: RenderContext,
-  props: Record<string, unknown>,
-): void {
-  if (
-    typeof props.rel !== 'string' ||
-    !/(?:^|\s)modulepreload(?:\s|$)/i.test(props.rel) ||
-    typeof props.href !== 'string'
-  ) {
-    return
-  }
-  for (let key of MODULE_PRELOAD_FETCH_PROPS) {
-    let value = props[key]
-    if (value == null || value === '' || value === false) continue
-    if (key === 'as' && value === 'script') continue
-    if ((key === 'crossOrigin' || key === 'crossorigin') && value === 'anonymous') continue
-    return
-  }
-  let preloads = (context.authoredModulePreloads ??= new Set())
-  preloads.add(escapeHtml(props.href))
-}
-
-function collectModulePreloadTags(context: RenderContext): string {
-  let tags = context.clientEntryHeadResources.modulePreloadTags
-  if (context.authoredModulePreloads) {
-    for (let tag of tags) {
-      let href = tag.slice(MARKED_MODULE_PRELOAD_START.length, -MODULE_PRELOAD_END.length)
-      if (context.authoredModulePreloads.has(href)) tags.delete(tag)
-    }
-  }
-  return Array.from(tags).join('')
+function collectModulePreloadTags(resources: ClientEntryHeadResources): string {
+  return Array.from(resources.modulePreloadTags).join('')
 }
 
 function hoistClientEntryResourcesFromFrameHead(
@@ -1590,9 +1457,10 @@ function buildRmxDataScript(context: RenderContext): string {
   let fields: string[] = []
   if (context.hydrationData.size > 0) {
     let entries: string[] = []
-    for (let [id, entry] of context.hydrationData) {
-      let metadata = JSON.stringify({ exportName: entry.exportName, moduleUrl: entry.moduleUrl })
-      entries.push(`${JSON.stringify(id)}:${metadata.slice(0, -1)},"props":${entry.propsJson}}`)
+    for (let [id, { exportName, moduleUrl, propsJson }] of context.hydrationData) {
+      entries.push(
+        `${JSON.stringify(id)}:{"exportName":${JSON.stringify(exportName)},"moduleUrl":${JSON.stringify(moduleUrl)},"props":${propsJson}}`,
+      )
     }
     fields.push(`"h":{${entries.join(',')}}`)
   }
