@@ -591,6 +591,127 @@ describe('navigate', () => {
     expect(scrollTo).toHaveBeenCalledTimes(1)
   })
 
+  it('reapplies the WebKit scroll reset while iOS restores the previous position', async (t) => {
+    let { setScrollPosition, scrollTops, nextFrame, pendingFrames, navigate } =
+      setupWebKitScrollReset(t)
+    setScrollPosition(0, 2400)
+
+    await navigate(() => setScrollPosition(0, 2400))
+    expect(scrollTops()).toEqual([0])
+
+    setScrollPosition(0, 2400)
+    nextFrame()
+    expect(scrollTops()).toEqual([0, 0])
+
+    setScrollPosition(0, 0)
+    nextFrame()
+    setScrollPosition(0, 1)
+    nextFrame()
+    setScrollPosition(0, 0)
+    nextFrame()
+    nextFrame()
+
+    expect(scrollTops()).toEqual([0, 0, 1, 0])
+    expect(pendingFrames()).toBe(0)
+  })
+
+  it('reapplies the WebKit scroll reset when iOS restores the bottom of a shorter page', async (t) => {
+    let { setScrollPosition, scrollTops, navigate } = setupWebKitScrollReset(t)
+    document.body.innerHTML = '<div style="height: 3000px"></div>'
+    let maxY = document.documentElement.scrollHeight - window.innerHeight
+    setScrollPosition(0, maxY + 1000)
+
+    await navigate(() => setScrollPosition(0, maxY))
+
+    expect(scrollTops()).toEqual([0])
+  })
+
+  it('reapplies the WebKit scroll reset when the page grows after iOS restores its bottom', async (t) => {
+    let { setScrollPosition, scrollTops, navigate } = setupWebKitScrollReset(t)
+    document.body.innerHTML = '<div style="height: 3000px"></div>'
+    let maxY = document.documentElement.scrollHeight - window.innerHeight
+    setScrollPosition(0, maxY + 1000)
+
+    await navigate(() => {
+      // iOS clamps the previous position to the new page's height, then images load.
+      setScrollPosition(0, maxY)
+      window.dispatchEvent(new Event('scroll'))
+      document.body.innerHTML = '<div style="height: 3100px"></div>'
+    })
+
+    // Undone when it happens, and again when the navigation finishes if it's still there.
+    expect(scrollTops()).toEqual([0, 0])
+  })
+
+  it('undoes an iOS restoration as soon as it happens after the reset', async (t) => {
+    let { setScrollPosition, scrollTops, navigate } = setupWebKitScrollReset(t)
+    setScrollPosition(0, 2400)
+    let beforeFinish: Array<number | undefined> = []
+
+    await navigate(() => {
+      setScrollPosition(0, 2400)
+      window.dispatchEvent(new Event('scroll'))
+      beforeFinish = scrollTops()
+    })
+
+    expect(beforeFinish).toEqual([0])
+  })
+
+  it('leaves the previous page in place until the new page resets scroll', async (t) => {
+    let [reloaded, finishReload] = withResolvers<StubFrameReloadResult>()
+    let { setScrollPosition, scrollTops, navigate } = setupWebKitScrollReset(t, {
+      ...stubFrames,
+      reloadFrame: () => createReloadTransition(reloaded),
+    })
+    setScrollPosition(0, 2400)
+
+    let navigation = navigate(() => {})
+    await Promise.resolve()
+    window.dispatchEvent(new Event('scroll'))
+    expect(scrollTops()).toEqual([])
+
+    finishReload({ signal: new AbortController().signal })
+    await navigation
+  })
+
+  it('leaves positions scrolled to during navigation by other code', async (t) => {
+    let { setScrollPosition, scrollTops, pendingFrames, navigate } = setupWebKitScrollReset(t)
+    document.body.innerHTML = '<div style="height: 3000px"></div>'
+    setScrollPosition(0, 2400)
+
+    await navigate(() => {
+      setScrollPosition(0, 500)
+      window.dispatchEvent(new Event('scroll'))
+    })
+
+    expect(scrollTops()).toEqual([])
+    expect(pendingFrames()).toBe(0)
+  })
+
+  it('stops reapplying the WebKit scroll reset once the user scrolls', async (t) => {
+    let { setScrollPosition, scrollTops, nextFrame, pendingFrames, navigate } =
+      setupWebKitScrollReset(t)
+    setScrollPosition(0, 2400)
+
+    await navigate(() => setScrollPosition(0, 2400))
+    setScrollPosition(0, 2400)
+    window.dispatchEvent(new Event('touchstart'))
+    nextFrame()
+
+    expect(scrollTops()).toEqual([0])
+    expect(pendingFrames()).toBe(0)
+  })
+
+  it('leaves WebKit scroll positions set after the reset by other code', async (t) => {
+    let { setScrollPosition, scrollTops, pendingFrames, navigate } = setupWebKitScrollReset(t)
+    setScrollPosition(0, 2400)
+
+    await navigate(() => setScrollPosition(0, 500))
+
+    expect(scrollTops()).toEqual([])
+    expect(pendingFrames()).toBe(0)
+  })
+
   it('does not resynchronize WebKit scroll state for fragment navigations', async (t) => {
     stubNavigatorUserAgent(
       t,
@@ -2346,6 +2467,49 @@ describe('form navigation', () => {
     controller.abort()
   })
 })
+
+function setupWebKitScrollReset(t: TestContext, frames = stubFrames) {
+  stubNavigatorUserAgent(
+    t,
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1',
+  )
+  let dispatchNavigation = startStubNavigationListener(t, frames)
+  // Tests don't run every frame the reset waits for, so end it as user input would.
+  t.after(() => window.dispatchEvent(new Event('touchstart')))
+  let setScrollPosition = stubWindowScrollPosition(t)
+  let scrollTo = t.mock.method(window, 'scrollTo', () => {})
+  let animationFrameCallbacks: FrameRequestCallback[] = []
+  t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+    animationFrameCallbacks.push(callback)
+    return animationFrameCallbacks.length
+  })
+
+  return {
+    setScrollPosition,
+    scrollTops: () =>
+      scrollTo.mock.calls.map((call) => (call.arguments[0] as ScrollToOptions | undefined)?.top),
+    nextFrame() {
+      let callback = animationFrameCallbacks.shift()
+      if (!callback) throw new Error('Expected an animation frame callback')
+      callback(0)
+    },
+    pendingFrames: () => animationFrameCallbacks.length,
+    // Starts a push navigation and finishes it after `beforeFinish` sets the restored position.
+    async navigate(beforeFinish: () => void) {
+      let anchor = document.createElement('a')
+      anchor.href = '/products/tee'
+      let transition = dispatchNavigation(
+        createAnchorNavigateEvent(anchor, {
+          intercept: mock.fn(),
+          destinationUrl: new URL('/products/tee', window.location.origin).href,
+        }),
+      )
+      await transition.runHandler()
+      beforeFinish()
+      await transition.succeed()
+    },
+  }
+}
 
 function getCurrentNavigationEntry(): NavigationHistoryEntry {
   let entry = window.navigation.currentEntry
