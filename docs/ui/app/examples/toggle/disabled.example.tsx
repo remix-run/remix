@@ -52,7 +52,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: '16px',
-    '&:has(:disabled), &:has([aria-disabled])': {
+    '&:has(:disabled)': {
       cursor: 'not-allowed',
     },
   }),
@@ -96,7 +96,7 @@ const styles = {
       outline: '2px solid #5bb8ef',
       outlineOffset: '3px',
     },
-    '&[aria-disabled], &:disabled': {
+    '&:disabled': {
       opacity: 0.4,
       cursor: 'not-allowed',
     },

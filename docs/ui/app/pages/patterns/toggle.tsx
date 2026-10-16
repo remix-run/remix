@@ -34,7 +34,6 @@ const anatomyCode = await highlightSource(`
         '&:focus-visible': {},
         '&:disabled': {},
         '&[readonly]': {},
-        '&:checked': {},
         '&:required': {},
       }),
     ]} />
@@ -49,13 +48,10 @@ const customHostAnatomyCode = await highlightSource(`
       css({
         '&[data-state="checked"]': {},
         '&[data-state="unchecked"]': {},
-        '&[aria-checked="true"]': {},
-        '&[aria-checked="false"]': {},
         '&[aria-disabled]': {},
         '&[aria-readonly]': {},
         '&[aria-required]': {},
         '&:focus-visible': {},
-        '&:disabled': {},
       }),
     ]}
   >

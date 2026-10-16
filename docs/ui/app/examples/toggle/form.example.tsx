@@ -128,11 +128,11 @@ const styles = {
       outline: '2px solid var(--focus-ring)',
       outlineOffset: '3px',
     },
-    '&[aria-disabled], &:disabled': {
+    '&:disabled': {
       opacity: 0.4,
       cursor: 'not-allowed',
     },
-    '&[aria-readonly], &[readonly]': {
+    '&[readonly]': {
       cursor: 'default',
     },
     '@media (prefers-reduced-motion: reduce)': {

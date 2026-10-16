@@ -49,8 +49,6 @@ const anatomyCode = await highlightSource(`
               css({
                 '&[data-state="open"]': {},
                 '&[data-state="closed"]': {},
-                '&[aria-expanded="true"]': {},
-                '&[aria-expanded="false"]': {},
                 '&:focus-visible': {},
                 '&:disabled': {},
                 '&[aria-disabled]': {},
@@ -64,8 +62,6 @@ const anatomyCode = await highlightSource(`
             css({
               '&[data-state="open"]': {},
               '&[data-state="closed"]': {},
-              '&[aria-hidden]': {},
-              '&[inert]': {},
             }),
           ]}>
             Panel content

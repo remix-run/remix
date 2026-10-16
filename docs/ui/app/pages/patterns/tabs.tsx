@@ -48,8 +48,6 @@ const anatomyCode = await highlightSource(`
             css({
               '&[data-state="active"]': {},
               '&[data-state="inactive"]': {},
-              '&[aria-selected="true"]': {},
-              '&[aria-selected="false"]': {},
               '&:focus-visible': {},
               '&:disabled': {},
             }),
@@ -66,7 +64,6 @@ const anatomyCode = await highlightSource(`
           css({
             '&[data-state="active"]': {},
             '&[data-state="inactive"]': {},
-            '&[hidden]': {},
           }),
         ]}
       >

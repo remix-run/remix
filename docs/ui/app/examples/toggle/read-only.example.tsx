@@ -93,11 +93,11 @@ const styles = {
       outline: '2px solid #5bb8ef',
       outlineOffset: '3px',
     },
-    '&[aria-disabled], &:disabled': {
+    '&:disabled': {
       opacity: 0.4,
       cursor: 'not-allowed',
     },
-    '&[aria-readonly], &[readonly]': {
+    '&[readonly]': {
       cursor: 'default',
     },
     '@media (prefers-reduced-motion: reduce)': {
