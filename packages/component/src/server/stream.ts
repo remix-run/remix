@@ -25,8 +25,7 @@ import {
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps } from '../runtime/core/mix.ts'
-import { isOnMixinDescriptor } from '../runtime/mixins/on-mixin.ts'
+import { composeMixedProps, isBrowserOnlyMixinDescriptor } from '../runtime/core/mix.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
@@ -815,18 +814,18 @@ function resolveSsrMixedProps(
   if (Array.isArray(mix)) {
     let hasServerMixin = false
     for (let descriptor of mix) {
-      if (descriptor && !isOnMixinDescriptor(descriptor)) {
+      if (descriptor && !isBrowserOnlyMixinDescriptor(descriptor)) {
         hasServerMixin = true
         break
       }
     }
     if (!hasServerMixin) return initialProps
-  } else if (isOnMixinDescriptor(mix)) {
+  } else if (isBrowserOnlyMixinDescriptor(mix)) {
     return initialProps
   }
 
   return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
-    if (isOnMixinDescriptor(descriptor)) return undefined
+    if (isBrowserOnlyMixinDescriptor(descriptor)) return undefined
     let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState)
     if (!runner) return undefined
     // Unlike the client runtime, a throwing mixin is isolated here so a

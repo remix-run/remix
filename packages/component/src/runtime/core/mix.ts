@@ -129,6 +129,12 @@ export function isMixinDescriptor(value: unknown): value is MixDescriptor {
   return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
 }
 
+export function isBrowserOnlyMixinDescriptor(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || !('type' in value)) return false
+  let type = value.type
+  return typeof type === 'function' && '__rmxMixinSsr' in type && type.__rmxMixinSsr === false
+}
+
 export function isMixinElementFunction(
   value: unknown,
 ): value is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
