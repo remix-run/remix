@@ -334,36 +334,22 @@ const brandImageCss = css({
   height: '16px',
   maxHeight: 'none',
   pointerEvents: 'none',
-  transition: 'opacity var(--docs-nav-duration) var(--docs-nav-easing)',
   '@media (prefers-color-scheme: dark)': {
     filter: 'invert(1)',
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
   },
 })
 
 const logoMarkCss = css({
-  opacity: 0,
-  ':root[data-docs-nav-collapsed] &': {
-    opacity: 1,
-  },
+  opacity: 'var(--docs-nav-collapse)',
   '@media (width < 900px)': {
-    '&, :root[data-docs-nav-collapsed] &': {
-      opacity: 0,
-    },
+    opacity: 0,
   },
 })
 
 const wordmarkCss = css({
-  opacity: 1,
-  ':root[data-docs-nav-collapsed] &': {
-    opacity: 0,
-  },
+  opacity: 'calc(1 - var(--docs-nav-collapse))',
   '@media (width < 900px)': {
-    '&, :root[data-docs-nav-collapsed] &': {
-      opacity: 1,
-    },
+    opacity: 1,
   },
 })
 
@@ -472,39 +458,11 @@ const mobileNavigationCss = css({
     display: 'none',
   },
   '@media (width < 640px)': {
-    clipPath: 'inset(0 0 100% 0)',
-    transition:
-      'clip-path var(--docs-nav-duration) var(--docs-nav-easing), overlay var(--docs-nav-duration) var(--docs-nav-easing), display var(--docs-nav-duration) var(--docs-nav-easing)',
-    transitionBehavior: 'allow-discrete',
-    '& > *': {
-      transform: 'translateY(calc(-1 * var(--rmx-space-md)))',
-      transition: 'transform var(--docs-nav-duration) var(--docs-nav-easing)',
-    },
+    display: 'none',
     '@supports selector(:popover-open)': {
-      '&:not(:popover-open)': {
-        display: 'none',
-        pointerEvents: 'none',
-      },
       '&:popover-open': {
-        clipPath: 'inset(0)',
-        '& > *': {
-          transform: 'none',
-        },
+        display: 'flex',
       },
-      '@starting-style': {
-        '&:popover-open': {
-          clipPath: 'inset(0 0 100% 0)',
-          '& > *': {
-            transform: 'translateY(calc(-1 * var(--rmx-space-md)))',
-          },
-        },
-      },
-    },
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
-    '& > *': {
-      transition: 'none',
     },
   },
 })

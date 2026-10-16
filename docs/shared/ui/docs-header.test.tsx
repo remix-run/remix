@@ -60,14 +60,14 @@ describe('DocsHeader', () => {
     assert.doesNotMatch(html, /\[object Object\]/)
   })
 
-  it('renders the mobile menu reveal animation', async () => {
+  it('shows the mobile menu only while its popover is open, without animating', async () => {
     let html = await renderToString(
       <DocsHeader brandLabel="Remix Docs" navigationLinks={navigationLinks} />,
     )
 
-    assert.match(html, /clip-path: inset\(0 0 100% 0\)/)
-    assert.match(html, /transition-behavior: allow-discrete/)
-    assert.match(html, /@starting-style/)
+    assert.match(html, /&:popover-open \{\s*display: flex;/)
+    assert.doesNotMatch(html, /@starting-style/)
+    assert.doesNotMatch(html, /transition-behavior: allow-discrete/)
   })
 
   it('renders one responsive search trigger for Pagefind focus ownership', async () => {
