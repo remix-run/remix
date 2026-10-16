@@ -4,4 +4,5 @@
 @import '../../../../shared/styles/public/search.css';
 @import '../../../../shared/styles/public/article.css';
 @import '../../../../shared/styles/public/markdown.css';
+@import '../../../../shared/styles/public/demo.css';
 @import './api.css';

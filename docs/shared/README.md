@@ -23,6 +23,16 @@ Both sites use the shared unified/remark/rehype pipeline under `markdown/`. It p
 
 Site-specific transforms remain with their owners. Guides handles frame directives and chapter metadata; API handles versioned links, source metadata, and symbol links inside highlighted code.
 
+## Page layout
+
+Every site shares the same vertical rhythm, defined in `styles/public/article.css` and `styles/public/demo.css`:
+
+- **Page header** — `.docs-page-header` wraps a `.docs-page-eyebrow`, the `.rmx-page-title` heading and an optional `.docs-page-description`, followed by 40px of space.
+- **Sections** — each `h2` and the content under it sit in a `.docs-section`, which owns the 48px gap above it. Spacing lives on the wrapper rather than the heading, so the gap stays consistent whether a section follows prose, a demo or a table. Pass `sections: true` to `renderMarkdownHtml` to wrap rendered Markdown. Guides groups sections itself so a section can span frame boundaries.
+- **Demos** — `DocsDemo` from `remix-docs-shared/ui/demo` renders a live preview above its highlighted source, which starts collapsed behind a "Show code" button.
+
+`docsMarkdownContentCss` matches this rhythm for prose: semibold `h2`s and secondary-color paragraphs and lists.
+
 ## Asset contract
 
 `Icon`, `DocsHeader`, and `DocsFooter` load the following root-relative URLs:

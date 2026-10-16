@@ -128,6 +128,7 @@ export async function renderMarkdownFile(
 
     return {
       html: await renderMarkdownHtml(root, {
+        sections: true,
         highlightCode: {
           includeExplanation: addCodeLinks,
           transformers,

@@ -124,9 +124,12 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
               <span aria-current="page">{handle.props.title}</span>
             </nav>
 
-            <header class="docs-chapter-header">
-              <p class="docs-chapter-eyebrow">{handle.props.chapter}</p>
+            <header class="docs-page-header">
+              <p class="docs-page-eyebrow">{handle.props.chapter}</p>
               <h1 class="rmx-page-title">{handle.props.title}</h1>
+              {handle.props.description ? (
+                <p class="docs-page-description">{handle.props.description}</p>
+              ) : null}
             </header>
 
             <div id={sectionsId} class="docs-sections">

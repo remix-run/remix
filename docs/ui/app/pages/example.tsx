@@ -1,7 +1,6 @@
-import { unsafeHTML } from 'remix/component'
 import type { Handle } from 'remix/component'
+import { DocsDemo } from 'remix-docs-shared/ui/demo'
 import type { LoadedExample } from '../data/examples.tsx'
-import { ExampleSourceBehavior } from '../ui/public/example-source.tsx'
 
 interface ExampleProps {
   id: string
@@ -19,22 +18,9 @@ export function Example(handle: Handle<ExampleProps>) {
       <div id={id} class={hero ? 'ui-example ui-example-hero' : 'ui-example'}>
         {title ? <h3>{title}</h3> : null}
         {description ? <p>{description}</p> : null}
-        <div class="ui-demo">
-          <div class="ui-demo-preview" data-pagefind-ignore>
-            <Component />
-          </div>
-          <div class="ui-demo-source" data-pagefind-ignore>
-            <div id={`${id}-source`} class="ui-demo-source-code" inert aria-hidden="true">
-              <div data-code-block data-demo-source innerHTML={unsafeHTML(sourceHtml)} />
-            </div>
-            <div class="ui-demo-source-actions">
-              <button type="button" aria-expanded="false" aria-controls={`${id}-source`}>
-                Show code
-              </button>
-            </div>
-            <ExampleSourceBehavior sourceId={`${id}-source`} />
-          </div>
-        </div>
+        <DocsDemo sourceHtml={sourceHtml}>
+          <Component />
+        </DocsDemo>
       </div>
     )
   }

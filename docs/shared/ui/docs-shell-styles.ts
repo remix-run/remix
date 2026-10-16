@@ -19,7 +19,7 @@ export const skipLinkCss = css({
 export const navigationToggleCss = css({
   position: 'fixed',
   top: '16px',
-  left: '232px',
+  left: 'calc(var(--docs-sidebar-inline-start) + var(--docs-sidebar-content-width) - 32px)',
   zIndex: 51,
   display: 'grid',
   width: '32px',
@@ -52,7 +52,7 @@ export const navigationCss = css({
   transition:
     'transform var(--docs-nav-duration) var(--docs-nav-easing), opacity var(--docs-nav-duration) var(--docs-nav-easing), visibility 0s',
   '&[data-scrollable]': {
-    width: '248px',
+    width: 'calc(var(--docs-sidebar-content-width) + 8px)',
     marginLeft: '-4px',
     paddingBlockEnd: 'var(--rmx-space-lg)',
     paddingInline: '4px',

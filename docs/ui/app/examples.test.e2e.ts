@@ -22,8 +22,8 @@ describe('Live examples in the docs site', () => {
 
     await page.setViewportSize({ width: 390, height: 720 })
     await page.goto('/patterns/accordion/')
-    let source = page.locator('#basic .ui-demo-source')
-    let code = source.locator('.ui-demo-source-code')
+    let source = page.locator('#basic .docs-demo-source')
+    let code = source.locator('.docs-demo-source-code')
     let disclosure = source.getByRole('button', { name: 'Show code', exact: true })
     assert.equal(await disclosure.getAttribute('aria-expanded'), 'false')
     assert.equal(await code.getAttribute('inert'), '')
@@ -61,7 +61,7 @@ describe('Live examples in the docs site', () => {
     assert.equal(await page.locator('#anatomy pre').first().isVisible(), true)
     await page.setViewportSize({ width: 1280, height: 720 })
 
-    let hero = page.locator('#basic .ui-demo-preview')
+    let hero = page.locator('#basic .docs-demo-preview')
     let billing = hero.getByRole('button', { name: 'Billing', exact: true })
     await billing.click()
     await hero.locator('button[aria-expanded="true"]').filter({ hasText: 'Billing' }).waitFor()
@@ -73,7 +73,7 @@ describe('Live examples in the docs site', () => {
     )
 
     await page.goto('/patterns/popover/')
-    let popover = page.locator('#basic .ui-demo-preview')
+    let popover = page.locator('#basic .docs-demo-preview')
     let trigger = popover.getByRole('button', { name: 'Filter pull requests' })
     await trigger.click()
     let dialog = popover.getByRole('dialog', { name: 'Filter pull requests' })

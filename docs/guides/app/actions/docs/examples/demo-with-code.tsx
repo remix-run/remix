@@ -1,9 +1,10 @@
 import { readFile } from "node:fs/promises";
 
 import { codeToHtml } from "shiki";
-import { clientEntry, css, unsafeHTML } from "remix/component";
+import { clientEntry, css } from "remix/component";
 import type { Handle, RemixNode } from "remix/component";
 import { shikiThemes } from "remix-docs-shared/markdown/code-blocks";
+import { DocsDemo } from "remix-docs-shared/ui/demo";
 
 import type { AppContext } from "../../../router.ts";
 import { setMarkdownFallback } from "./markdown-fallback.ts";
@@ -27,21 +28,12 @@ export async function loadDemoSource(moduleUrl: URL): Promise<string> {
 }
 
 // Renders a demo: the live, hydrated component in a preview pane above its own
-// highlighted source code.
+// highlighted source code, which starts collapsed.
 export function Demo(handle: Handle<DemoProps>) {
   return () => (
-    <section data-demo-frame mix={frameStyles}>
-      <div data-demo-preview mix={previewStyles}>
-        {handle.props.children}
-      </div>
-      {handle.props.sourceHtml ? (
-        <div
-          data-demo-source
-          mix={sourceCodeStyles}
-          innerHTML={unsafeHTML(handle.props.sourceHtml)}
-        />
-      ) : null}
-    </section>
+    <div data-demo-frame mix={frameStyles}>
+      <DocsDemo sourceHtml={handle.props.sourceHtml}>{handle.props.children}</DocsDemo>
+    </div>
   );
 }
 
@@ -91,38 +83,14 @@ export function demoPreview(
 }
 
 const frameStyles = css({
-  overflow: "hidden",
   margin: "var(--rmx-space-xl) 0",
-  border: "var(--rmx-space-px) solid var(--rmx-color-border-subtle)",
-  borderRadius: "var(--rmx-radius-lg)",
-  background: "var(--rmx-surface-lvl0)",
-});
-
-const previewStyles = css({
-  position: "relative",
-  isolation: "isolate",
-  contain: "layout paint",
-  transform: "translateZ(0)",
-  display: "grid",
-  maxHeight: "36rem",
-  minHeight: "12rem",
-  overflow: "auto",
-  overscrollBehavior: "contain",
-  padding: "calc(var(--rmx-space-xl) * 2) var(--rmx-space-xl)",
-  placeItems: "center",
-  background: "var(--rmx-surface-lvl0)",
-});
-
-const sourceCodeStyles = css({
-  maxHeight: "32rem",
-  overflow: "auto",
-  overscrollBehavior: "contain",
-  borderTop: "var(--rmx-space-px) solid var(--rmx-color-border-subtle)",
-  background: "var(--rmx-surface-lvl2)",
-  "& pre": {
-    margin: "0",
-    padding: "var(--rmx-space-xl)",
-    border: "0",
-    borderRadius: "0",
+  // Some guide demos are full mini apps, so keep them scrollable instead of
+  // stretching the chapter.
+  "& .docs-demo-preview": {
+    contain: "layout paint",
+    transform: "translateZ(0)",
+    maxHeight: "36rem",
+    overflow: "auto",
+    overscrollBehavior: "contain",
   },
 });
