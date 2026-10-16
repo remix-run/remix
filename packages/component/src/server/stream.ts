@@ -185,6 +185,7 @@ interface RenderContext {
   managedImportMaps: ManagedImportMap[]
   frameData: Map<string, FrameData>
   clientEntryHeadResources: ClientEntryHeadResources
+  authoredModulePreloads?: string[]
   blockingFrameTails: ReadableStream<Uint8Array>[]
   signal: AbortSignal
   flushKind: FlushKind
@@ -218,6 +219,17 @@ const htmlEncodingBuffer = new Uint8Array(MAX_BUFFERED_HTML_LENGTH * 3)
 
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
+
+const MODULE_PRELOAD_FETCH_PROPS = [
+  'as',
+  'crossOrigin',
+  'crossorigin',
+  'integrity',
+  'media',
+  'type',
+  'referrerPolicy',
+  'referrerpolicy',
+]
 
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 function stripDoctypeMarkup(html: string): string {
@@ -654,6 +666,10 @@ function buildElementSegment(
   let processedProps = processStyleProps(mixedProps)
   // Determine namespace context for the current element and its children
   let currentIsSvg = context.insideSvg || tag === 'svg'
+
+  if (!currentIsSvg && tag === 'link' && context.insideHead) {
+    collectAuthoredModulePreload(context, processedProps)
+  }
 
   if (!currentIsSvg && tag === 'textarea') {
     output.push(buildTextareaElementSegment(tag, processedProps))
@@ -1343,7 +1359,7 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 }
 
 function finalizeSegments(segments: Segment[], context: RenderContext): Segment[] {
-  let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
+  let preloads = collectModulePreloadTags(context)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
   let headContent = importMapScript + preloads + styles
@@ -1420,8 +1436,34 @@ function createModulePreloadTag(href: string): string {
   return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
 }
 
-function collectModulePreloadTags(resources: ClientEntryHeadResources): string {
-  return Array.from(resources.modulePreloadTags).join('')
+function collectAuthoredModulePreload(
+  context: RenderContext,
+  props: Record<string, unknown>,
+): void {
+  if (
+    typeof props.rel !== 'string' ||
+    !/(?:^|\s)modulepreload(?:\s|$)/i.test(props.rel) ||
+    typeof props.href !== 'string'
+  ) {
+    return
+  }
+  for (let key of MODULE_PRELOAD_FETCH_PROPS) {
+    let value = props[key]
+    if (value == null || value === '' || value === false) continue
+    if (key === 'as' && value === 'script') continue
+    if ((key === 'crossOrigin' || key === 'crossorigin') && value === 'anonymous') continue
+    return
+  }
+  let preloads = (context.authoredModulePreloads ??= [])
+  preloads.push(createModulePreloadTag(props.href))
+}
+
+function collectModulePreloadTags(context: RenderContext): string {
+  let tags = context.clientEntryHeadResources.modulePreloadTags
+  if (context.authoredModulePreloads) {
+    for (let tag of context.authoredModulePreloads) tags.delete(tag)
+  }
+  return Array.from(tags).join('')
 }
 
 function hoistClientEntryResourcesFromFrameHead(
