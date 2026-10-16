@@ -308,6 +308,16 @@ Disabling the reset does not retain focus if navigation removes the focused elem
 
 During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted, an intercepted navigation reloads the top frame from `href`. If a specified target does not match a mounted frame, Remix leaves fresh link, form, and `navigate()` navigations to the browser. Back and forward traversal reloads the destination document instead of reconciling stale frame content. Native form navigation preserves the selected method, body, files, and submitter overrides.
 
+To change the URL without reloading anything, for example to reflect a product variant the page already shows, pass `reload: false` to `navigate()`:
+
+```ts
+import { navigate } from 'remix/component'
+
+await navigate(`/products/shirt?variant=${variantId}`, { history: 'replace', reload: false })
+```
+
+Scroll position and focus stay where they are. Back and forward traversal to the entry reloads the top frame from its URL, so that URL must render the same page. If the update interrupts an unfinished frame navigation, Remix reloads the top frame instead so the content matches the URL.
+
 Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 
 To keep links/forms as a document navigations while still hydrating client entries and using explicit

@@ -5,6 +5,8 @@ import type { ElementProps } from '../jsx.ts'
 
 import type { NavigationOptions } from '../navigation.ts'
 
+type LinkOptions = Omit<NavigationOptions, 'reload'>
+
 type LinkCurrentProps = ElementProps & {
   disabled?: boolean
   role?: string
@@ -23,9 +25,9 @@ const nativeLinkHostTypes = new Set(['a', 'area'])
  */
 export const link: MixinFactory<
   HTMLElement,
-  [href: string, options?: NavigationOptions],
+  [href: string, options?: LinkOptions],
   LinkCurrentProps
-> = createMixin<HTMLElement, [href: string, options?: NavigationOptions], LinkCurrentProps>(
+> = createMixin<HTMLElement, [href: string, options?: LinkOptions], LinkCurrentProps>(
   (handle, hostType) => {
     let suppressKeyboardClick = false
 

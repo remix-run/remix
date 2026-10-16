@@ -91,6 +91,14 @@ export type NavigationOptions = {
    * (default: `"after-transition"`)
    */
   resetFocus?: NavigationInterceptOptions['focusReset'] | boolean
+  /**
+   * Whether to reload frame content. Set to `false` to update the browser URL and history without
+   * fetching or rendering anything, leaving scroll position and focus untouched. `src`, `target`,
+   * `resetScroll`, and `resetFocus` are ignored. Back and forward traversal to the new entry
+   * reloads the top frame like any other entry. Without frame navigation, this falls back to
+   * document navigation like other `navigate()` calls. (default: `true`)
+   */
+  reload?: boolean
 }
 
 /**
@@ -116,6 +124,20 @@ export async function navigate(href: string, options?: NavigationOptions) {
     } else {
       window.location.assign(href)
     }
+    return
+  }
+
+  if (options?.reload === false) {
+    let transition = navigation.navigate(href, {
+      state: { ...state, target: undefined, src: href },
+      history: options.history,
+      info: {
+        type: frameRedirectNavigationInfoType,
+        resetScroll: 'manual',
+        resetFocus: 'manual',
+      } satisfies FrameRedirectNavigationInfo,
+    })
+    await transition.finished
     return
   }
 
@@ -180,7 +202,9 @@ export function startNavigationListenerImpl(
         return
       }
 
-      if (isFrameRedirectNavigationInfo(event.info)) {
+      // Like hash changes, a URL-only navigate() that interrupts frame work falls through to a
+      // top-frame reload so the page content still matches the URL.
+      if (isFrameRedirectNavigationInfo(event.info) && !needsFrameReload) {
         interceptNavigation(navigation, event, event.info.resetScroll !== 'manual', {
           async handler() {},
           scroll: 'manual',
