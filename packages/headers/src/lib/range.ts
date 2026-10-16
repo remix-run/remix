@@ -1,5 +1,13 @@
 import { type HeaderValue } from './header-value.ts'
 
+function isValidRangeBound(value: number | undefined): boolean {
+  return value === undefined || value === Infinity || (Number.isInteger(value) && value >= 0)
+}
+
+function isValidResourceSize(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0
+}
+
 /**
  * Initializer for a {@link Range} header value.
  */
@@ -47,10 +55,13 @@ export class Range implements HeaderValue, RangeInit {
    */
   canSatisfy(resourceSize: number): boolean {
     // No unit or no ranges means header was malformed or empty
-    if (!this.unit || this.ranges.length === 0) return false
+    if (!this.unit || this.ranges.length === 0 || !isValidResourceSize(resourceSize)) return false
 
     // Validate all ranges first
     for (let range of this.ranges) {
+      if (!isValidRangeBound(range.start) || !isValidRangeBound(range.end)) {
+        return false
+      }
       // At least one bound must be specified
       if (range.start === undefined && range.end === undefined) {
         return false
@@ -64,8 +75,9 @@ export class Range implements HeaderValue, RangeInit {
     // Check if at least one range is within the resource
     for (let range of this.ranges) {
       if (range.start === undefined) {
-        // Suffix range (e.g., "-500") is always satisfiable
-        return true
+        // Suffix range (e.g., "-500") is satisfiable when its length is non-zero
+        if (range.end !== undefined && range.end > 0) return true
+        continue
       }
       if (range.start < resourceSize) {
         // At least one range starts within the resource
@@ -79,36 +91,56 @@ export class Range implements HeaderValue, RangeInit {
   /**
    * Normalizes the ranges for a resource of the given size.
    * Returns an array of ranges with resolved start and end values.
-   * Returns an empty array if the range cannot be satisfied.
+   * Returns an empty array if no concrete byte positions can be normalized, including for a
+   * zero-length resource.
    *
    * @param resourceSize The size of the resource in bytes
    * @returns An array of ranges with resolved start and end values
    */
   normalize(resourceSize: number): Array<{ start: number; end: number }> {
-    if (!this.canSatisfy(resourceSize)) {
+    if (
+      !isValidResourceSize(resourceSize) ||
+      resourceSize === 0 ||
+      !this.canSatisfy(resourceSize)
+    ) {
       return []
     }
 
-    return this.ranges.map((range) => {
-      if (range.start !== undefined && range.end !== undefined) {
+    return this.ranges.flatMap(({ start, end }) => {
+      if (!isValidRangeBound(start) || !isValidRangeBound(end)) {
+        return []
+      }
+
+      if (start !== undefined && end !== undefined) {
+        if (start >= resourceSize) return []
+
         // Both bounds specified (e.g., "0-99")
-        return {
-          start: range.start,
-          end: Math.min(range.end, resourceSize - 1),
-        }
-      } else if (range.start !== undefined) {
+        return [
+          {
+            start,
+            end: Math.min(end, resourceSize - 1),
+          },
+        ]
+      } else if (start !== undefined) {
+        if (start >= resourceSize) return []
+
         // Only start specified (e.g., "100-")
-        return {
-          start: range.start,
-          end: resourceSize - 1,
-        }
+        return [
+          {
+            start,
+            end: resourceSize - 1,
+          },
+        ]
       } else {
         // Only end specified (e.g., "-500" means last 500 bytes)
-        let suffix = range.end!
-        return {
-          start: Math.max(0, resourceSize - suffix),
-          end: resourceSize - 1,
-        }
+        if (end === undefined || end === 0) return []
+
+        return [
+          {
+            start: Math.max(0, resourceSize - end),
+            end: resourceSize - 1,
+          },
+        ]
       }
     })
   }
