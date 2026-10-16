@@ -399,7 +399,6 @@ const menuIconCss = css({
       borderRadius: 'var(--rmx-radius-full)',
       background: 'currentColor',
       transformOrigin: 'center',
-      transition: 'transform 150ms ease, opacity 150ms ease',
     },
     ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(1)': {
       transform: 'translateY(4.5px) rotate(45deg)',
@@ -409,11 +408,6 @@ const menuIconCss = css({
     },
     ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(3)': {
       transform: 'translateY(-4.5px) rotate(-45deg)',
-    },
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    '& span': {
-      transition: 'none',
     },
   },
 })

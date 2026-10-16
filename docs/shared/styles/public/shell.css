@@ -37,7 +37,8 @@
   transition: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
+/* Mobile drawers open and close instantly; sliding panels felt sluggish on touch. */
+@media (prefers-reduced-motion: reduce), (width < 900px) {
   :root {
     --docs-nav-duration: 0s;
   }
