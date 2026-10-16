@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@remix-run/multipart-parser": "workspace:^",
+    "@remix-run/node-fetch-server": "workspace:^",
     "tmp": "^0.2.5"
   },
   "devDependencies": {

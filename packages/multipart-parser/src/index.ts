@@ -9,9 +9,7 @@ export {
   MaxFileSizeExceededError,
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
-  parseMultipart,
   parseMultipartStream,
-  MultipartParser,
   MultipartPart,
 } from './lib/multipart.ts'
 

@@ -62,7 +62,7 @@ Exports covered by the same README are grouped together.
 | `remix/middleware/session` | Middleware for managing sessions with cookie-based storage | [README](src/session-middleware/README.md) |
 | `remix/middleware/static` | Middleware for serving static files from the filesystem | [README](src/static-middleware/README.md) |
 | `remix/mime` | Utilities for working with MIME types | [README](src/mime/README.md) |
-| `remix/multipart-parser`<br>`remix/multipart-parser/node` | A fast, efficient parser for multipart streams in any JavaScript environment | [README](src/multipart-parser/README.md) |
+| `remix/multipart-parser` | A fast, efficient parser for multipart streams in any JavaScript environment | [README](src/multipart-parser/README.md) |
 | `remix/multiple-import-maps-polyfill` | Polyfill for dynamic JavaScript imports that depend on import maps added at runtime | [README](src/multiple-import-maps-polyfill/README.md) |
 | `remix/node-fetch-server`<br>`remix/node-fetch-server/test` | Build servers for Node.js using the web fetch API | [README](src/node-fetch-server/README.md) |
 | `remix/node-hmr`<br>`remix/node-hmr/runtime`<br>`remix/node-hmr/types` | Run Node.js applications with Hot Module Reloading | [README](src/node-hmr/README.md) |

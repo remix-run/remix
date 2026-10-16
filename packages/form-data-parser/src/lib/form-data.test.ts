@@ -4,6 +4,7 @@ import { describe, it } from '@remix-run/test'
 import {
   type FileUploadHandler,
   type FileUpload,
+  BufferedFile,
   FormDataParseError,
   MaxFilesExceededError,
   parseFormData,
@@ -628,39 +629,8 @@ describe('parseFormData', () => {
   })
 })
 
-describe('FileUpload', () => {
-  function createUploadRequest(content: Uint8Array): Request {
-    let encoder = new TextEncoder()
-    return new Request('https://remix.run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'multipart/form-data; boundary=----BOUNDARY' },
-      body: new Blob([
-        encoder.encode(
-          [
-            '------BOUNDARY',
-            'Content-Disposition: form-data; name="file"; filename="example.bin"',
-            'Content-Type: application/octet-stream',
-            '',
-            '',
-          ].join('\r\n'),
-        ),
-        content as Uint8Array<ArrayBuffer>,
-        encoder.encode('\r\n------BOUNDARY--\r\n'),
-      ]),
-    })
-  }
-
-  // Some runtimes (Bun) store a plain File in FormData, so use the upload the handler receives.
-  async function parseUpload(content: Uint8Array): Promise<FileUpload> {
-    let upload: FileUpload | undefined
-    await parseFormData(createUploadRequest(content), { maxFileSize: 1024 * 1024 }, (file) => {
-      upload = file
-    })
-    assert.ok(upload)
-    return upload
-  }
-
-  function createContent(size: number): Uint8Array {
+describe('BufferedFile', () => {
+  function createContent(size: number): Uint8Array<ArrayBuffer> {
     let content = new Uint8Array(size)
     for (let index = 0; index < size; index++) content[index] = index % 251
     return content
@@ -668,7 +638,7 @@ describe('FileUpload', () => {
 
   it('streams the full contents of a file larger than one chunk', async () => {
     let content = createContent(200 * 1024 + 7)
-    let file = await parseUpload(content)
+    let file = new BufferedFile([content], 'example.bin')
 
     let chunks: Uint8Array[] = []
     for await (let chunk of file.stream()) chunks.push(chunk)
@@ -678,18 +648,17 @@ describe('FileUpload', () => {
   })
 
   it('streams an empty file', async () => {
-    let file = await parseUpload(new Uint8Array(0))
+    let file = new BufferedFile([], 'example.bin')
 
     let chunks: Uint8Array[] = []
     for await (let chunk of file.stream()) chunks.push(chunk)
 
-    assert.equal(file.size, 0)
     assert.deepEqual(chunks, [])
   })
 
   it('supports reading the stream into a caller-provided buffer', async () => {
     let content = createContent(100 * 1024)
-    let file = await parseUpload(content)
+    let file = new BufferedFile([content], 'example.bin')
 
     let reader = file.stream().getReader({ mode: 'byob' })
     let received = new Uint8Array(content.length)
@@ -703,5 +672,307 @@ describe('FileUpload', () => {
 
     assert.equal(offset, content.length)
     assert.deepEqual(received, content)
+  })
+})
+
+describe('FileUpload', () => {
+  function createRequest(...parts: string[][]): Request {
+    return new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data; boundary=----BOUNDARY' },
+      body: [...parts.flatMap((part) => ['------BOUNDARY', ...part]), '------BOUNDARY--'].join(
+        '\r\n',
+      ),
+    })
+  }
+
+  function textPart(name: string, value: string): string[] {
+    return [`Content-Disposition: form-data; name="${name}"`, '', value]
+  }
+
+  function filePart(name: string, filename: string, content: string, type = 'text/plain') {
+    return [
+      `Content-Disposition: form-data; name="${name}"; filename="${filename}"`,
+      `Content-Type: ${type}`,
+      '',
+      content,
+    ]
+  }
+
+  it('streams file contents to the upload handler', async () => {
+    let request = createRequest(
+      textPart('title', 'Hello'),
+      filePart('file', 'example.txt', 'This is an example file.'),
+      textPart('after', 'World'),
+    )
+
+    let formData = await parseFormData(request, async (upload) => {
+      assert.equal(upload.fieldName, 'file')
+      assert.equal(upload.name, 'example.txt')
+      assert.equal(upload.type, normalizeFileType('text/plain'))
+      assert.throws(() => upload.size, TypeError)
+
+      let text = await new Response(upload.stream()).text()
+      assert.equal(upload.size, text.length)
+      return text
+    })
+
+    assert.equal(formData.get('title'), 'Hello')
+    assert.equal(formData.get('file'), 'This is an example file.')
+    assert.equal(formData.get('after'), 'World')
+  })
+
+  it('calls the upload handler before the file contents arrive', async () => {
+    let encoder = new TextEncoder()
+    let { promise: handlerCalled, resolve: onHandlerCalled } = Promise.withResolvers<void>()
+    let body = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            [
+              '------BOUNDARY',
+              'Content-Disposition: form-data; name="file"; filename="example.txt"',
+              '',
+              '',
+            ].join('\r\n'),
+          ),
+        )
+        await handlerCalled
+        controller.enqueue(encoder.encode('Late contents\r\n------BOUNDARY--'))
+        controller.close()
+      },
+    })
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data; boundary=----BOUNDARY' },
+      body,
+      duplex: 'half',
+    } as RequestInit)
+
+    let formData = await parseFormData(request, async (upload) => {
+      onHandlerCalled()
+      return upload.text()
+    })
+
+    assert.equal(formData.get('file'), 'Late contents')
+  })
+
+  it('reads contents with bytes, arrayBuffer, and text', async () => {
+    let request = createRequest(
+      filePart('a', 'a.txt', 'aaa'),
+      filePart('b', 'b.txt', 'bbbb'),
+      filePart('c', 'c.txt', 'ccccc'),
+    )
+
+    let formData = await parseFormData(request, async (upload) => {
+      if (upload.fieldName === 'a') return String((await upload.bytes()).length)
+      if (upload.fieldName === 'b') return String((await upload.arrayBuffer()).byteLength)
+      return upload.text()
+    })
+
+    assert.equal(formData.get('a'), '3')
+    assert.equal(formData.get('b'), '4')
+    assert.equal(formData.get('c'), 'ccccc')
+  })
+
+  it('only allows the contents to be read once', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'contents'))
+
+    await parseFormData(request, async (upload) => {
+      await upload.text()
+      await assert.rejects(() => upload.text(), TypeError)
+      assert.throws(() => upload.stream(), TypeError)
+      assert.throws(() => upload.slice(), TypeError)
+    })
+  })
+
+  it('discards contents the upload handler does not read', async () => {
+    let request = createRequest(
+      filePart('skipped', 'skipped.txt', 'Skipped contents'),
+      filePart('file', 'example.txt', 'Read contents'),
+    )
+
+    let formData = await parseFormData(request, async (upload) =>
+      upload.fieldName === 'skipped' ? null : upload.text(),
+    )
+
+    assert.equal(formData.get('skipped'), null)
+    assert.equal(formData.get('file'), 'Read contents')
+  })
+
+  it('stores the upload as a File when the handler returns it unread', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'contents'))
+
+    let formData = await parseFormData(request, (upload) => upload)
+
+    let file = formData.get('file')
+    assert.ok(file instanceof File)
+    assert.equal(file.name, 'example.txt')
+    assert.equal(file.type, normalizeFileType('text/plain'))
+    assert.equal(await file.text(), 'contents')
+  })
+
+  it('stores the upload in memory when using the default upload handler', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'contents'))
+
+    let formData = await parseFormData(request)
+
+    let file = formData.get('file')
+    assert.ok(file instanceof File)
+    assert.equal(await file.text(), 'contents')
+  })
+
+  it('throws when the handler returns the upload after reading it', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'contents'))
+
+    await assert.rejects(
+      parseFormData(request, async (upload) => {
+        await upload.text()
+        return upload
+      }),
+      TypeError,
+    )
+  })
+
+  it('normalizes the media type like File', async () => {
+    let request = createRequest(filePart('upper', 'a.txt', 'a', 'Text/PLAIN'), [
+      'Content-Disposition: form-data; name="missing"; filename="b.bin"',
+      '',
+      'b',
+    ])
+    let types: string[] = []
+
+    await parseFormData(request, (upload) => {
+      types.push(upload.type)
+    })
+
+    assert.deepEqual(types, [normalizeFileType('Text/PLAIN'), 'application/octet-stream'])
+  })
+
+  it('throws MaxFileSizeExceededError from the upload stream and the parser', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'x'.repeat(100)))
+    let streamError: unknown
+
+    await assert.rejects(
+      parseFormData(request, { maxFileSize: 10 }, async (upload) => {
+        try {
+          await upload.text()
+        } catch (error) {
+          streamError = error
+          throw error
+        }
+      }),
+      MaxFileSizeExceededError,
+    )
+    assert.ok(streamError instanceof MaxFileSizeExceededError)
+  })
+
+  it('throws MaxFileSizeExceededError for files the handler does not read', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'x'.repeat(100)))
+
+    await assert.rejects(
+      parseFormData(request, { maxFileSize: 10 }, () => null),
+      MaxFileSizeExceededError,
+    )
+  })
+
+  it('throws MaxFilesExceededError before calling the upload handler', async () => {
+    let request = createRequest(
+      filePart('file1', 'a.txt', 'a'),
+      filePart('file2', 'b.txt', 'b'),
+      filePart('file3', 'c.txt', 'c'),
+    )
+    let calls = 0
+
+    await assert.rejects(
+      parseFormData(request, { maxFiles: 2 }, () => {
+        calls++
+      }),
+      MaxFilesExceededError,
+    )
+    assert.equal(calls, 2)
+  })
+
+  it('throws FormDataParseError for malformed multipart data', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data; boundary=----BOUNDARY' },
+      body: [
+        '------BOUNDARY',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        '',
+        'Truncated contents',
+      ].join('\r\n'),
+    })
+    let streamError: unknown
+
+    await assert.rejects(
+      parseFormData(request, async (upload) => {
+        try {
+          await upload.text()
+        } catch (error) {
+          streamError = error
+          throw error
+        }
+      }),
+      FormDataParseError,
+    )
+    assert.ok(streamError instanceof FormDataParseError)
+    assert.ok(streamError.cause instanceof MultipartParseError)
+  })
+
+  it('allows errors thrown by the upload handler to propagate directly', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'contents'))
+    let error = new Error('Upload failed')
+
+    await assert.rejects(
+      parseFormData(request, () => {
+        throw error
+      }),
+      (thrown: unknown) => thrown === error,
+    )
+  })
+
+  it('parses urlencoded requests', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'a=1&b=2',
+    })
+
+    let formData = await parseFormData(request)
+
+    assert.equal(formData.get('a'), '1')
+    assert.equal(formData.get('b'), '2')
+  })
+
+  it('throws when its contents are read after the upload handler returns', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'contents'))
+    let upload: FileUpload | undefined
+
+    await parseFormData(request, (file) => {
+      upload = file
+    })
+
+    assert.ok(upload)
+    assert.throws(() => upload!.stream(), TypeError)
+    await assert.rejects(() => upload!.text(), TypeError)
+  })
+
+  it('throws instead of converting to a string', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'contents'))
+
+    await parseFormData(request, (upload) => {
+      assert.throws(() => String(upload), TypeError)
+      assert.throws(() => new FormData().append('file', upload as unknown as Blob), TypeError)
+    })
+  })
+
+  it('parses JSON contents', async () => {
+    let request = createRequest(filePart('file', 'data.json', '{"a":1}', 'application/json'))
+
+    let formData = await parseFormData(request, async (upload) => String((await upload.json()).a))
+
+    assert.equal(formData.get('file'), '1')
   })
 })

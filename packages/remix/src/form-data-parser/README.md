@@ -32,7 +32,7 @@ npm i remix
 
 ## Usage
 
-The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads.
+The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads. The upload handler receives each file as a `FileUpload` as soon as its headers arrive, and the file's contents are streamed from the request as you read them, so you can store large uploads without holding them in memory.
 
 `parseFormData()` accepts `multipart/*` and `application/x-www-form-urlencoded` media types, matched case-insensitively. Other media types throw `FormDataParseError` before the request body is read.
 
@@ -51,8 +51,8 @@ async function uploadHandler(fileUpload: FileUpload) {
   if (fileUpload.fieldName === 'user-avatar') {
     let filename = `/uploads/${crypto.randomUUID()}`
 
-    // Store under an application-generated name in an existing upload directory
-    await fsp.writeFile(filename, new Uint8Array(await fileUpload.arrayBuffer()), { flag: 'wx' })
+    // Stream the file to disk under an application-generated name in an existing upload directory
+    await fsp.writeFile(filename, fileUpload.stream(), { flag: 'wx' })
 
     // Return the file name to use in the FormData object so we don't
     // keep the file contents around in memory.
@@ -139,13 +139,27 @@ async function uploadHandler(fileUpload: FileUpload) {
   if (fileUpload.fieldName === 'user-avatar') {
     let storageKey = `user-${user.id}-avatar`
 
-    // Put the file in storage and return the stored LazyFile
-    return fileStorage.put(storageKey, fileUpload)
+    // Store the file and return its key to use in the FormData object
+    await fileStorage.set(storageKey, fileUpload)
+    return storageKey
   }
 
   // Ignore unrecognized fields
 }
 ```
+
+### File Uploads
+
+A `FileUpload` has the properties and methods of a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), but because its contents are streamed from the request, there are a few differences:
+
+- Its contents can only be read once, with `stream()`, `bytes()`, `arrayBuffer()`, `text()`, or `json()`, and only in the upload handler
+- `size` throws until its contents have been read, so limit upload sizes with `maxFileSize`
+- `slice()` is not supported
+- It is not a `File` instance, so don't pass it to APIs that read a `File` natively, like `new Response(fileUpload)`; pass `fileUpload.stream()` instead
+
+Parts are read in order, so the parser waits for your upload handler, and for any read of the upload it started, to finish before moving on to the next part. Contents your handler doesn't read are discarded.
+
+If your upload handler returns the upload itself, it is read into memory and stored in the `FormData` as a `File`. This is what the default upload handler does, so `parseFormData(request)` works like `request.formData()`, within the configured limits.
 
 ## Demos
 

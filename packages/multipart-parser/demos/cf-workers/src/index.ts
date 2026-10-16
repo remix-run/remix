@@ -37,7 +37,9 @@ export default {
               .toString(36)
               .slice(2, 8)}`
 
-            await bucket.put(uniqueKey, part.bytes, {
+            let bytes = await part.bytes()
+
+            await bucket.put(uniqueKey, bytes, {
               httpMetadata: {
                 contentType: part.headers['content-type']!,
               },
@@ -47,10 +49,10 @@ export default {
               name: part.name,
               filename: part.filename,
               mediaType: part.mediaType,
-              size: part.size,
+              size: bytes.length,
             })
           } else {
-            parts.push({ name: part.name, value: part.text })
+            parts.push({ name: part.name, value: await part.text() })
           }
         }
 

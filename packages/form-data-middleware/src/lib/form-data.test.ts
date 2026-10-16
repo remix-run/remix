@@ -517,7 +517,10 @@ describe('formData middleware', () => {
   })
 
   it('invokes a custom `uploadHandler` for file uploads', async (t) => {
-    let uploadHandler = t.mock.fn<FileUploadHandler>()
+    let contents: string[] = []
+    let uploadHandler = t.mock.fn<FileUploadHandler>(async (upload) => {
+      contents.push(await upload.text())
+    })
 
     let router = createRouter({
       middleware: [formData({ uploadHandler })],
@@ -557,14 +560,14 @@ describe('formData middleware', () => {
     assert.equal(upload1.fieldName, 'file1')
     assert.equal(upload1.name, 'test1.txt')
     assert.equal(upload1.type, fileType)
-    assert.equal(await upload1.text(), 'test 1')
 
     let call1 = uploadHandler.mock.calls[1]
     let upload2 = call1.arguments[0]
     assert.equal(upload2.fieldName, 'file2')
     assert.equal(upload2.name, 'test2.txt')
     assert.equal(upload2.type, fileType)
-    assert.equal(await upload2.text(), 'test 2')
+
+    assert.deepEqual(contents, ['test 1', 'test 2'])
   })
 
   it('is a no-op when FormData has already been parsed by an earlier middleware', async (t) => {

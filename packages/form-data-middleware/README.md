@@ -62,7 +62,7 @@ let router = createRouter({
       async uploadHandler(upload) {
         // Save under an application-generated name in an existing upload directory
         let path = `./uploads/${crypto.randomUUID()}`
-        await writeFile(path, new Uint8Array(await upload.arrayBuffer()), { flag: 'wx' })
+        await writeFile(path, upload.stream(), { flag: 'wx' })
         return path
       },
     }),
