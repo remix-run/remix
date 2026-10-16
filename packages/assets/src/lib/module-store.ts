@@ -27,6 +27,7 @@ type MutableModuleLinks = {
 type ModuleRecordState<transformed, resolved, emitted> = {
   emittedVersion?: number
   hmrUpdateTimestamp?: number
+  contentVersion: number
   identityPath: string
   invalidationVersion: number
   transformed?: transformed
@@ -50,6 +51,7 @@ export type ModuleRecord<transformed, resolved, emitted> = Readonly<
 type MutableModuleRecord<transformed, resolved, emitted> = {
   emittedVersion?: number
   hmrUpdateTimestamp?: number
+  contentVersion: number
   identityPath: string
   invalidationVersion: number
   transformed?: transformed
@@ -112,6 +114,7 @@ export function createModuleStore<transformed, resolved, emitted>(
       if (existing) return existing
 
       let record: MutableModuleRecord<transformed, resolved, emitted> = {
+        contentVersion: 0,
         identityPath,
         invalidationVersion: 0,
         links: createEmptyLinks(),
@@ -147,7 +150,7 @@ export function createModuleStore<transformed, resolved, emitted>(
     },
 
     isTransformedFresh(record) {
-      return record.transformedVersion === record.invalidationVersion
+      return record.transformedVersion === record.contentVersion
     },
 
     setHmrUpdateTimestamp(identityPath, timestamp) {
@@ -172,7 +175,7 @@ export function createModuleStore<transformed, resolved, emitted>(
     setTransformed(identityPath, transformed, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
       record.transformed = transformed
-      record.transformedVersion = record.invalidationVersion
+      record.transformedVersion = record.contentVersion
       record.resolved = undefined
       record.resolvedVersion = undefined
       record.emitted = undefined
@@ -271,6 +274,7 @@ export function createModuleStore<transformed, resolved, emitted>(
     if (existing) return existing
 
     let record: MutableModuleRecord<transformed, resolved, emitted> = {
+      contentVersion: 0,
       identityPath,
       invalidationVersion: 0,
       links: createEmptyLinks(),
@@ -296,12 +300,20 @@ export function createModuleStore<transformed, resolved, emitted>(
       record.staleEmittedSnapshot = undefined
     }
 
+    record.contentVersion += 1
     record.invalidationVersion += 1
   }
 
   function invalidateGraph(record: MutableModuleRecord<transformed, resolved, emitted>) {
-    record.hmrUpdateTimestamp = undefined
     invalidateContent(record, { retainStale: false })
+  }
+
+  // Importers keep their transformed source, which depends only on their own tracked files, but
+  // must resolve and emit again so they pick up the changed dependency.
+  function invalidateDependent(record: MutableModuleRecord<transformed, resolved, emitted>) {
+    record.staleEmitted = undefined
+    record.staleEmittedSnapshot = undefined
+    record.invalidationVersion += 1
   }
 
   function invalidateImporters(identityPaths: ReadonlySet<string>): void {
@@ -315,7 +327,7 @@ export function createModuleStore<transformed, resolved, emitted>(
         visited.add(importerPath)
         queue.push(importerPath)
         let importer = recordsByIdentityPath.get(importerPath)
-        if (importer) invalidateGraph(importer)
+        if (importer) invalidateDependent(importer)
       }
     }
   }

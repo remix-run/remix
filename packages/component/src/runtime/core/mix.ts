@@ -29,9 +29,10 @@ export function composeMixedProps(
 ): ElementProps {
   let descriptors = resolveMixDescriptors(props)
   let composedProps = withoutMix(props)
-  let mixinProps = withoutMixinContentProps(composedProps)
+  let mixinProps: ElementProps | undefined
 
   for (let index = 0; index < descriptors.length && index < MAX_MIX_DESCRIPTORS; index++) {
+    mixinProps ??= withoutMixinContentProps(composedProps)
     let result = runDescriptor(descriptors[index], index, mixinProps)
     if (!result) continue
     if (isMixinElementFunction(result)) continue
@@ -61,14 +62,16 @@ export function composeMixedProps(
     let nextProps = sanitizeReturnedMixinProps(result.props)
     for (let nested of resolveMixDescriptors(nextProps)) descriptors.push(nested)
     composedProps = { ...composedProps, ...withoutMix(nextProps) }
-    mixinProps = withoutMixinContentProps(composedProps)
+    mixinProps = undefined
   }
 
   let nextMix = props.mix
-  return {
-    ...composedProps,
-    ...(nextMix === undefined ? {} : { mix: nextMix }),
+  // A mixin can retain its input props. Do not add `mix` to that same object.
+  if (nextMix !== undefined && composedProps === mixinProps) {
+    return { ...composedProps, mix: nextMix }
   }
+  if (nextMix !== undefined) composedProps.mix = nextMix
+  return composedProps
 }
 
 // JSX creation flattens nested mix arrays before composition.
@@ -84,19 +87,20 @@ export function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
 
 function withoutMix(props: ElementProps): ElementProps {
   if (!('mix' in props)) return props
-  let output = { ...props }
-  delete output.mix
+  let { mix: _mix, ...output } = props
   return output
 }
 
 function withoutMixinContentProps(props: ElementProps): ElementProps {
   if (!hasMixinContentProps(props)) return props
-  let output = { ...props }
-  delete output.children
-  delete output.innerHTML
-  delete output.srcDoc
-  delete output.srcdoc
-  delete output.outerHTML
+  let {
+    children: _children,
+    innerHTML: _innerHTML,
+    srcDoc: _srcDoc,
+    srcdoc: _srcdoc,
+    outerHTML: _outerHTML,
+    ...output
+  } = props
   return output
 }
 

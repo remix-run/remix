@@ -79,7 +79,7 @@ Listen for committed-value changes on the select root or an ancestor:
 - `hiddenInput()`: mirrors the selected value into a hidden input for form participation.
 - `onSelectChange(...)`: event mixin for the bubbling `SelectChangeEvent`.
 - `SelectChangeEvent`: event with `value`, `label`, and `optionId`.
-- `SelectContextProps`, `SelectProps`, and `SelectOptionProps`: context prop and option types for custom composition.
+- `SelectContextProps`: provider props for select composition.
 
 ## Behavior Notes
 
@@ -89,7 +89,7 @@ Listen for committed-value changes on the select root or an ancestor:
 - Reopening highlights the current selected value.
 - The popup minimum width syncs to the trigger width before opening.
 - Closed-trigger typeahead selects a matching option immediately and supports option `textValue`.
-- Selecting an option flashes it with `data-select-flash`, waits for the close transition and label delay, updates the displayed label, and dispatches `SelectChangeEvent`.
+- Selecting an option sets `data-select-flash` for app-owned flash styling, waits for the close transition and label delay, updates the displayed label, and dispatches `SelectChangeEvent`.
 - Selecting the already-selected value updates state but does not dispatch a change event.
 - `SelectChangeEvent` bubbles from the trigger when a trigger exists. It includes `value`, `label`, and `optionId`.
 - Passing `name` to `Context` and applying `hiddenInput()` to an input lets the selected value participate in `FormData`. Disabled selects disable the trigger and hidden input.

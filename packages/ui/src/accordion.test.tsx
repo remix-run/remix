@@ -1,17 +1,16 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
-import { createElement, createRoot, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
 
 import * as accordion from './accordion.tsx'
-import { AccordionChangeEvent, onAccordionChange, type AccordionProps } from './accordion.tsx'
+import { AccordionChangeEvent, onAccordionChange } from './accordion.tsx'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
-function TestAccordion(handle: Handle<AccordionProps>) {
+function TestAccordion(handle: Handle<accordion.AccordionContextProps>) {
   return () => {
-    let { children, mix, ...contextProps } = handle.props
-    void mix
+    let { children, ...contextProps } = handle.props
 
     return (
       <accordion.Context {...contextProps}>
@@ -21,52 +20,45 @@ function TestAccordion(handle: Handle<AccordionProps>) {
   }
 }
 
-function TestAccordionItem(handle: Handle<accordion.AccordionItemProps>) {
+function TestAccordionItem(
+  handle: Handle<accordion.AccordionItemOptions & { children?: RemixNode }>,
+) {
   return () => {
-    let { children, disabled, mix, value, ...divProps } = handle.props
-    void mix
+    let { children, disabled, value } = handle.props
 
     return (
       <accordion.ItemContext disabled={disabled} value={value}>
-        <div {...divProps} mix={accordion.item()}>
-          {children}
-        </div>
+        <div mix={accordion.item()}>{children}</div>
       </accordion.ItemContext>
     )
   }
 }
 
-function TestAccordionTrigger(handle: Handle<accordion.AccordionTriggerProps>) {
+function TestAccordionTrigger(
+  handle: Handle<accordion.AccordionTriggerOptions & { children?: RemixNode }>,
+) {
   return () => {
-    let item = handle.context.get(accordion.ItemContext)
-    let headingTag = `h${item.headingLevel}` as keyof JSX.IntrinsicElements
-    let { children, disabled, mix, type, ...buttonProps } = handle.props
-    void mix
+    let { children, disabled } = handle.props
 
     let button = (
-      <button {...buttonProps} mix={accordion.trigger({ disabled })} type={type ?? 'button'}>
+      <button mix={accordion.trigger({ disabled })} type="button">
         {children}
       </button>
     )
 
-    return createElement(headingTag, {}, button)
+    return <h2>{button}</h2>
   }
 }
 
-function TestAccordionContent(handle: Handle<accordion.AccordionContentProps>) {
+function TestAccordionContent(handle: Handle<{ children?: RemixNode }>) {
   return () => {
-    let { children, mix, ...divProps } = handle.props
-    void mix
+    let { children } = handle.props
 
-    return (
-      <div {...divProps} mix={accordion.content()}>
-        {children}
-      </div>
-    )
+    return <div mix={accordion.content()}>{children}</div>
   }
 }
 
-function renderExampleAccordion(props: AccordionProps = {}) {
+function renderExampleAccordion(props: accordion.AccordionContextProps = {}) {
   return (
     <TestAccordion {...props}>
       <TestAccordionItem value="account">
@@ -298,14 +290,13 @@ describe('accordion', () => {
     expect(buttons[2].disabled).toBe(true)
   })
 
-  it('wires trigger and panel aria relationships and heading structure', () => {
-    let { container } = renderApp(renderExampleAccordion({ headingLevel: 2 }))
-    let headingButtons = [...container.querySelectorAll('h2 > button')] as HTMLButtonElement[]
+  it('links triggers and panels with aria attributes', () => {
+    let { container } = renderApp(renderExampleAccordion())
+    let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
     let panel = container.querySelector('[id$="-panel"]') as HTMLDivElement
 
-    expect(headingButtons).toHaveLength(3)
-    expect(headingButtons[0].getAttribute('aria-controls')).toBe(panel.id)
-    expect(panel.getAttribute('aria-labelledby')).toBe(headingButtons[0].id)
+    expect(buttons[0].getAttribute('aria-controls')).toBe(panel.id)
+    expect(panel.getAttribute('aria-labelledby')).toBe(buttons[0].id)
   })
 
   it('supports arrow, home, and end keyboard navigation', () => {
