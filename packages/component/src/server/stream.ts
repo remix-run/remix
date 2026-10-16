@@ -327,7 +327,7 @@ export function renderToStream(
     async start(controller) {
       try {
         let root = buildSegment(node, context, rootFrameState)
-        await resolveBlocking(root)
+        if (context.frameData.size > 0) await resolveBlocking(root)
         if (closeIfCancelled(controller, context)) return
         await resolveClientEntries(context, options?.resolveClientEntry)
         if (closeIfCancelled(controller, context)) return
@@ -498,17 +498,24 @@ function isRemixElement(node: unknown): node is RemixElement {
   return typeof node === 'object' && node !== null && '$rmx' in node
 }
 
-function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFrameState): Segment {
+function buildSegment(
+  node: RemixNode,
+  context: RenderContext,
+  frameState: SsrFrameState,
+  output: Segment[] = [],
+): Segment[] {
   if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
-    return escapeTextContent(String(node))
+    output.push(escapeTextContent(String(node)))
+    return output
   }
 
   if (node === null || node === undefined || typeof node === 'boolean') {
-    return ''
+    return output
   }
 
   if (Array.isArray(node)) {
-    return node.map((child) => buildSegment(child, context, frameState))
+    for (let child of node) buildSegment(child, context, frameState, output)
+    return output
   }
 
   if (isRemixElement(node)) {
@@ -517,7 +524,8 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
 
     if (type === Fragment) {
       let children = props.children
-      return children != null ? buildSegment(children, context, frameState) : ''
+      if (children != null) buildSegment(children, context, frameState, output)
+      return output
     }
 
     if (typeof type === 'string') {
@@ -525,37 +533,37 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
 
       if (tag === 'html') {
         context.flushKind = 'document'
-        return buildElementSegment(tag, props, context, frameState)
       }
 
       if (tag === 'head') {
-        return buildHeadElementSegment(tag, props, context, frameState)
+        buildHeadElementSegment(tag, props, context, frameState, output)
+      } else {
+        buildElementSegment(tag, props, context, frameState, output)
       }
-
-      return buildElementSegment(tag, props, context, frameState)
+      return output
     }
 
     if (isElementFunction(type)) {
       if (type === ImportMap) {
-        return buildImportMapSegment(props, context)
+        output.push(buildImportMapSegment(props, context))
+      } else if (type === Frame) {
+        output.push(buildFrameSegment(node, context, frameState))
+      } else if (isEntry(type)) {
+        buildEntrySegment(type, props, context, frameState, output)
+      } else {
+        buildComponentSegment(
+          type,
+          props,
+          context,
+          createServerComponentId(context),
+          frameState,
+          output,
+        )
       }
-      if (type === Frame) {
-        return buildFrameSegment(node, context, frameState)
-      }
-      if (isEntry(type)) {
-        return buildEntrySegment(type, props, context, frameState)
-      }
-      return buildComponentSegment(
-        type,
-        props,
-        context,
-        createServerComponentId(context),
-        frameState,
-      )
     }
   }
 
-  return ''
+  return output
 }
 
 function buildFrameSegment(
@@ -614,7 +622,8 @@ function buildElementSegment(
   props: any,
   context: RenderContext,
   frameState: SsrFrameState,
-): Segment {
+  output: Segment[],
+): void {
   let normalizedProps = normalizeUnsafeHTMLProps(props)
   let innerHTML = normalizedProps.innerHTML
   let mixedProps = resolveSsrMixedProps(tag, normalizedProps, context, frameState)
@@ -623,7 +632,8 @@ function buildElementSegment(
   let currentIsSvg = context.insideSvg || tag === 'svg'
 
   if (!currentIsSvg && tag === 'textarea') {
-    return buildTextareaElementSegment(tag, processedProps)
+    output.push(buildTextareaElementSegment(tag, processedProps))
+    return
   }
 
   let attrs =
@@ -632,11 +642,13 @@ function buildElementSegment(
       : renderAttributes(tag, processedProps, currentIsSvg)
 
   if (SELF_CLOSING_TAGS.has(tag)) {
-    return `<${tag}${attrs} />`
+    output.push(`<${tag}${attrs} />`)
+    return
   }
 
   if (innerHTML !== undefined) {
-    return `<${tag}${attrs}>${innerHTML}</${tag}>`
+    output.push(`<${tag}${attrs}>${innerHTML}</${tag}>`)
+    return
   }
 
   if (tag === 'script') {
@@ -644,22 +656,23 @@ function buildElementSegment(
       if (context.insideHead) {
         collectAuthoredImportMap(context, tag, processedProps, props.children)
       }
-      return `<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`
+      output.push(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
+      return
     }
     if (props.children != null) {
       console.error(new Error('script elements with children must have a single string child'))
     }
-    return `<${tag}${attrs}></${tag}>`
+    output.push(`<${tag}${attrs}></${tag}>`)
+    return
   }
 
-  let open = `<${tag}${attrs}>`
+  output.push(`<${tag}${attrs}>`)
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
-  let children = props.children != null ? buildSegment(props.children, context, frameState) : ''
+  if (props.children != null) buildSegment(props.children, context, frameState, output)
   context.insideSvg = previousInsideSvg
-  let close = `</${tag}>`
-  return [open, children, close]
+  output.push(`</${tag}>`)
 }
 
 function buildTextareaElementSegment(tag: string, props: any): Segment {
@@ -757,18 +770,17 @@ function buildHeadElementSegment(
   props: any,
   context: RenderContext,
   frameState: SsrFrameState,
-): Segment {
+  output: Segment[],
+): void {
   let processedProps = processStyleProps(props)
   let attrs = renderAttributes(tag, processedProps, false)
 
-  let open = `<${tag}${attrs}>`
+  output.push(`<${tag}${attrs}>`)
   let previousInsideHead = context.insideHead
   context.insideHead = true
-  let children = props.children != null ? buildSegment(props.children, context, frameState) : ''
+  if (props.children != null) buildSegment(props.children, context, frameState, output)
   context.insideHead = previousInsideHead
-  let close = `</${tag}>`
-
-  return [open, children, close]
+  output.push(`</${tag}>`)
 }
 
 function renderAttributes(
@@ -915,7 +927,8 @@ function buildComponentSegment(
   context: RenderContext,
   componentId: string,
   frameState: SsrFrameState,
-): Segment {
+  output: Segment[],
+): void {
   let vnode = createVNode(type, props)
   if (context.parentVNode) {
     vnode._parent = context.parentVNode
@@ -952,11 +965,10 @@ function buildComponentSegment(
   let [renderedNode] = handle.render(props)
   let childContext = { ...context, parentVNode: vnode }
 
-  let rendered = buildSegment(renderedNode, childContext, frameState)
+  buildSegment(renderedNode, childContext, frameState, output)
   if (childContext.flushKind === 'document') {
     context.flushKind = 'document'
   }
-  return rendered
 }
 
 function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
@@ -1069,9 +1081,11 @@ function buildEntrySegment(
   props: any,
   context: RenderContext,
   frameState: SsrFrameState,
-): Segment {
+  output: Segment[],
+): void {
   let instanceId = randomId('h')
-  let rendered = buildComponentSegment(type, props, context, instanceId, frameState)
+  output.push(`<!-- rmx:h:${instanceId} -->`)
+  buildComponentSegment(type, props, context, instanceId, frameState, output)
 
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, frameState)
@@ -1081,9 +1095,7 @@ function buildEntrySegment(
     props: JSON.parse(JSON.stringify(props, replacer)),
   })
 
-  let start = `<!-- rmx:h:${instanceId} -->`
-  let end = '<!-- /rmx:h -->'
-  return [start, rendered, end]
+  output.push('<!-- /rmx:h -->')
 }
 
 function resolveDefaultClientEntry(

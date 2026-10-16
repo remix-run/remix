@@ -1,1 +1,1 @@
-Reduce server rendering allocations by skipping DOM event mixin setup and combining head-resource and hydration-data insertion before assembling the final document.
+Reduce server rendering work by writing ordinary HTML into a shared chunk list, skipping frame scans when there are no frames, skipping DOM event mixin setup, and combining head-resource and hydration-data insertion before assembling the final document.
