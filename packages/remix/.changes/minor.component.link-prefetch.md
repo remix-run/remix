@@ -1,0 +1,1 @@
+Add `data-rmx-prefetch="intent"` to links, or call `prefetch(href)` from `remix/component`, to start loading pages before a visitor opens them. Remix uses `<link rel="prefetch">` by default, which needs HTTP-cacheable pages, and `run({ prefetch })` lets apps load pages another way (see #12004).

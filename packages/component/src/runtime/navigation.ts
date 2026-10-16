@@ -316,7 +316,7 @@ export function startNavigationListenerImpl(
   )
 }
 
-function getInterceptableNavigation(): Navigation | undefined {
+export function getInterceptableNavigation(): Navigation | undefined {
   let navigation = window.navigation
   if (
     !navigation ||
