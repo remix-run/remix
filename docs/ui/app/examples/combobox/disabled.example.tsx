@@ -35,7 +35,6 @@ const styles = {
   root: css({
     '--text': 'light-dark(#202027, #eeeef2)',
     '--surface': 'light-dark(#fff, #1b1b20)',
-    '--accent': 'light-dark(#0578be, #80caff)',
 
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {
@@ -58,7 +57,7 @@ const styles = {
     color: 'inherit',
     font: 'inherit',
     '&:focus-visible': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '2px',
     },
     '&:disabled': {
@@ -118,16 +117,14 @@ const styles = {
       background: 'light-dark(#eeeef3, #303038)',
     },
     '&[aria-selected="true"]': {
-      color: 'var(--accent)',
-      background: 'light-dark(#eaf5fc, #173348)',
+      background: 'light-dark(#e4e4eb, #3b3b44)',
     },
     '&[aria-disabled="true"]': {
       opacity: 0.4,
       cursor: 'not-allowed',
     },
     '&[data-combobox-flash]': {
-      background: 'light-dark(#d6eaf8, #254c66)',
-      color: 'var(--accent)',
+      background: 'light-dark(#d6d6e0, #4b4b56)',
     },
   }),
 

@@ -127,7 +127,7 @@ const styles = {
       boxShadow: '0 1px 3px #00000018',
     },
     '& input:focus-visible + span': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '2px',
     },
     '@media (prefers-reduced-motion: reduce)': {

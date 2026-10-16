@@ -104,21 +104,14 @@ export default function TogglePage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>
-          Apply <code>toggle()</code> to a checkbox input or a custom switch element.
-        </p>
-        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
-        <p>
-          Custom hosts expose checked, disabled, read-only and required state through ARIA
-          attributes. A button can also use its native <code>disabled</code> attribute.
-        </p>
         <CodeBlock html={customHostAnatomyCode} />
       </Section>
       <Section id="hosts" title="Button switches">
         <p>
           A button host receives switch semantics and keyboard handling. Native checkbox inputs also
-          participate in forms. Custom hosts do not submit a value.
+          participate in forms. Custom hosts do not submit a value. A button can also use its native{' '}
+          <code>disabled</code> attribute.
         </p>
         <Example id="button-example" example={buttonExample} />
       </Section>

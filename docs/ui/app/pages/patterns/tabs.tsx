@@ -57,6 +57,7 @@ const anatomyCode = await highlightSource(`
         </button>
       </div>
       <div
+        tabIndex={0}
         mix={[
           tabs.panel({
             name: 'tab-name',
@@ -64,6 +65,7 @@ const anatomyCode = await highlightSource(`
           css({
             '&[data-state="active"]': {},
             '&[data-state="inactive"]': {},
+            '&:focus-visible': {},
           }),
         ]}
       >
@@ -160,10 +162,10 @@ const typeDefinitions = {
 
 export default function TabsPage(handle: Handle<PageProps>) {
   return () => (
-    <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="basic" example={basic} hero />
-      <Section id="anatomy" title="Anatomy">
-        <p>Wrap the tab list and panels in a provider and match each tab to its panel by name.</p>
+    <PageLayout
+      page={meta}
+      pages={handle.props.pages}
+      intro={
         <p>
           The examples use{' '}
           <a href="/animation/layout/">
@@ -175,7 +177,10 @@ export default function TabsPage(handle: Handle<PageProps>) {
           </a>{' '}
           to skip that motion when requested.
         </p>
-        <p>Empty CSS rules mark the styling hooks on each element.</p>
+      }
+    >
+      <Example id="basic" example={basic} hero />
+      <Section id="anatomy" title="Anatomy">
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="state" title="Controlled state">
@@ -220,6 +225,12 @@ export default function TabsPage(handle: Handle<PageProps>) {
           <li>Home and End select the first and last enabled tabs.</li>
         </ul>
         <p>Both horizontal and vertical arrow keys are handled.</p>
+        <p>
+          Give a panel <code>tabIndex=0</code> when its content begins with text or another
+          non-focusable element, so keyboard users can Tab from the selected tab into the panel.
+          Keep its focus indicator visible. When the first meaningful element is already focusable,
+          it can provide that entry point instead.
+        </p>
         <CodeBlock html={accessibilityCode} />
       </Section>
       <Section id="api-reference" title="API reference">

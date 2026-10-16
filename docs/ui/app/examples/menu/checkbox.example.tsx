@@ -90,7 +90,7 @@ const styles = {
       background: 'light-dark(#f0f0f5, #303038)',
     },
     '&:focus-visible': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '3px',
     },
     '&:disabled': {
@@ -153,7 +153,6 @@ const styles = {
     },
     '&[aria-disabled]': {
       opacity: 0.4,
-      cursor: 'not-allowed',
     },
   }),
 }

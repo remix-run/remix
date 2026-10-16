@@ -1,17 +1,22 @@
 import * as toggle from '@remix-run/ui/toggle'
 import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
-export default function ExampleToggle() {
+export default function ExampleToggle(handle: Handle) {
   return () => (
     <div mix={styles.root}>
       <div mix={styles.card}>
         <label mix={styles.row}>
           <span>
-            <strong>Audit logging</strong>
-            <span mix={styles.muted}>Managed by your organization</span>
+            <strong id={`${handle.id}-label`}>Audit logging</strong>
+            <span id={`${handle.id}-description`} mix={styles.muted}>
+              Managed by your organization
+            </span>
           </span>
           <input
             type="checkbox"
+            aria-labelledby={`${handle.id}-label`}
+            aria-describedby={`${handle.id}-description`}
             mix={[
               toggle.toggle({
                 readOnly: true,
@@ -83,14 +88,14 @@ const styles = {
       transition: 'transform 160ms ease',
     },
     '&[data-state="checked"]': {
-      background: 'light-dark(#0578be, #318ece)',
+      background: 'light-dark(#62626c, #777782)',
       borderColor: 'transparent',
     },
     '&[data-state="checked"]::after': {
       transform: 'translateX(18px)',
     },
     '&:focus-visible': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '3px',
     },
     '&:disabled': {

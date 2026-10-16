@@ -122,10 +122,6 @@ export default function AnchorPage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="basic" example={example0} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>
-          Pass the floating element and its target to <code>anchor()</code> and clean up when
-          positioning is no longer needed.
-        </p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="placement" title="Placement and viewport fit">

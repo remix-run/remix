@@ -16,7 +16,10 @@ export const meta = {
 const basic = await loadExample('menu/basic')
 const checkboxExample = await loadExample('menu/checkbox')
 const radioExample = await loadExample('menu/radio')
+const groupedExample = await loadExample('menu/grouped')
+const contextMenuExample = await loadExample('menu/context-menu')
 const submenuExample = await loadExample('menu/submenu')
+const disabledExample = await loadExample('menu/disabled')
 
 const anatomyCode = await highlightSource(`
   import * as menu from '@remix-run/ui/menu'
@@ -135,25 +138,6 @@ const actionsCode = await highlightSource(`
   </div>
 `)
 
-const contextMenuCode = await highlightSource(`
-  <menu.Context label="File actions">
-    <div
-      tabIndex={0}
-      mix={[
-        menu.contextTrigger(),
-        css({
-          '&[aria-expanded="true"]': {},
-          '&[aria-expanded="false"]': {},
-          '&:focus-visible': {},
-        }),
-      ]}
-    >
-      File name
-    </div>
-    {/* Surface and menu items */}
-  </menu.Context>
-`)
-
 const labelsCode = await highlightSource(`
   <div mix={menu.item({
     name: 'export',
@@ -214,18 +198,8 @@ export default function MenuPage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>Wrap the trigger, floating surface and menu items in a provider.</p>
-        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
-        <p>
-          Checkbox and radio items also expose checked state. Both use the same styling hooks; set{' '}
-          <code>type</code> to <code>'checkbox'</code> or <code>'radio'</code>.
-        </p>
         <CodeBlock html={checkedItemAnatomyCode} />
-        <p>
-          Place a child provider inside the parent menu’s list. Its trigger exposes the child’s open
-          and closing states. Child items use the same hooks as root items.
-        </p>
         <CodeBlock html={submenuAnatomyCode} />
       </Section>
       <Section id="actions" title="Handling actions">
@@ -254,13 +228,21 @@ export default function MenuPage(handle: Handle<PageProps>) {
         </p>
         <Example id="radio-example" example={radioExample} />
       </Section>
+      <Section id="grouped" title="Grouped items">
+        <p>
+          Organize related actions with <code>role="group"</code>. Connect each group to its visible
+          heading with <code>aria-labelledby</code>, and use <code>role="separator"</code> for
+          dividers. Headings and separators are not menu items. Keyboard navigation and typeahead
+          move directly between the actions across groups.
+        </p>
+        <Example id="grouped-example" example={groupedExample} />
+      </Section>
       <Section id="context-menu" title="Context menus">
         <p>
-          <code>contextTrigger()</code> opens at the pointer’s viewport coordinates. It also handles
-          the Context Menu key and Shift+F10. Give non-button hosts a tab stop for keyboard access.
-          Provide a visible button trigger for touch access.
+          Right-click the file to open its actions at the pointer. With the file focused, press
+          Shift+F10 or the Context Menu key.
         </p>
-        <CodeBlock html={contextMenuCode} />
+        <Example id="context-menu-example" example={contextMenuExample} />
       </Section>
       <Section id="submenus" title="Submenus">
         <p>
@@ -274,10 +256,10 @@ export default function MenuPage(handle: Handle<PageProps>) {
       <Section id="labels" title="Labels and typeahead">
         <p>
           Items use their rendered text as the label unless <code>label</code> is provided.{' '}
-          <code>searchValue</code> supplies a string or aliases for typeahead. Disabled items stay
-          visible but are excluded from navigation, typeahead and selection. Items with the native{' '}
-          <code>hidden</code> attribute are also excluded. Matching ignores case and uses prefixes
-          from <code>searchValue</code> in place of the label.
+          <code>searchValue</code> supplies a string or aliases for typeahead. Items with the native{' '}
+          <code>hidden</code> attribute are excluded from navigation, typeahead and selection.
+          Matching ignores case and uses prefixes from <code>searchValue</code> in place of the
+          label.
         </p>
         <CodeBlock html={labelsCode} />
       </Section>
@@ -291,6 +273,13 @@ export default function MenuPage(handle: Handle<PageProps>) {
           Style the flash on items and the closing transition on the surface.{' '}
           <code>data-close-animation="none"</code> marks closures that should skip fading.
         </p>
+      </Section>
+      <Section id="disabled" title="Disabled items">
+        <p>
+          Set <code>disabled</code> on <code>item()</code> to keep an action visible while excluding
+          it from navigation, typeahead and selection.
+        </p>
+        <Example id="disabled-example" example={disabledExample} />
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>

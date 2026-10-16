@@ -8,10 +8,10 @@ import { Example } from './example.tsx'
 import { routes } from '../routes.ts'
 
 export function PageLayout(
-  handle: Handle<{ page: PageMeta; pages: UiPage[]; children: RemixNode }>,
+  handle: Handle<{ page: PageMeta; pages: UiPage[]; intro?: RemixNode; children: RemixNode }>,
 ) {
   return () => {
-    let { page, pages, children } = handle.props
+    let { page, pages, intro, children } = handle.props
     let index = pages.findIndex(
       (entry) => entry.category === page.category && entry.slug === page.slug,
     )
@@ -31,6 +31,7 @@ export function PageLayout(
           </p>
           <h1 class="rmx-page-title">{page.title}</h1>
           <p class="ui-description">{page.description}</p>
+          {intro}
         </header>
         {children}
         {index >= 0 ? (

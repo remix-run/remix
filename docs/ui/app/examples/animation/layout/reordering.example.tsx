@@ -120,7 +120,7 @@ const styles = {
       boxShadow: '0 1px 3px #00000018',
     },
     '& input:focus-visible + span': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '2px',
     },
     '@media (prefers-reduced-motion: reduce)': {
@@ -160,8 +160,8 @@ const styles = {
     background: 'light-dark(#f0f0f5, #292930)',
     color: 'var(--muted)',
     '&[data-high="true"]': {
-      background: 'light-dark(#fdf0e4, #39291f)',
-      color: 'light-dark(#a75512, #e9ac77)',
+      background: 'light-dark(#e4e4eb, #3b3b44)',
+      color: 'light-dark(#50505b, #c3c3cd)',
     },
   }),
 }

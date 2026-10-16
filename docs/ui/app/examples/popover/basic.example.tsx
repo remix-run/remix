@@ -73,7 +73,7 @@ const styles = {
   root: css({
     '--text': 'light-dark(#202027, #eeeef2)',
     '--hover-control': 'light-dark(#f0f0f5, #303038)',
-    '--accent': 'light-dark(#0578be, #2dacf9)',
+    '--accent': 'light-dark(#40404a, #d8d8df)',
 
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {
@@ -102,7 +102,7 @@ const styles = {
       background: 'var(--hover-control)',
     },
     '&:focus-visible': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '3px',
     },
   }),

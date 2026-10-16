@@ -123,8 +123,6 @@ export default function AccordionPage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>Wrap relevant markup in providers and apply mixins to your own elements.</p>
-        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="multiple-state" title="Multiple open panels">
@@ -178,6 +176,13 @@ export default function AccordionPage(handle: Handle<PageProps>) {
         <Example id="disabled-item" example={disabledItem} title="Disabling one item" />
       </Section>
       <Section id="accessibility" title="Accessibility and keyboard navigation">
+        <p>
+          Put each trigger button inside a heading whose level fits the surrounding document. For
+          substantial panel content, add <code>role="region"</code> to the element using{' '}
+          <code>content()</code>. Its generated <code>aria-labelledby</code> names the region from
+          the trigger. Reserve regions for panels that benefit from landmark navigation rather than
+          adding one to every short answer.
+        </p>
         <p>
           The primitive generates the trigger and panel IDs and connects them with{' '}
           <code>aria-controls</code> and <code>aria-labelledby</code>. It updates{' '}

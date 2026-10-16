@@ -6,7 +6,14 @@ import { button, element, input, mount, waitFor } from '../test-helpers.ts'
 describe('Select example', () => {
   it('updates the displayed label and value after selecting a delivery method', async (t) => {
     let result = await mount(t, <Example />)
-    let trigger = button(result.container, 'Delivery method')
+    let trigger = button(result.container, 'Standard delivery')
+    assert.equal(
+      element(
+        result.container,
+        `[id="${trigger.getAttribute('aria-labelledby')}"]`,
+      ).textContent?.trim(),
+      'Delivery method',
+    )
     assert.equal(trigger.textContent?.trim(), 'Standard delivery')
     await result.act(() => trigger.click())
     assert.equal(element(result.container, '[popover]').matches(':popover-open'), true)

@@ -3,7 +3,10 @@ import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
 export default function ExampleCombobox(handle: Handle) {
+  let searchText = ''
+
   let control: combobox.ComboboxHandle | undefined
+
   return () => (
     <div mix={styles.root}>
       <combobox.Context
@@ -15,7 +18,14 @@ export default function ExampleCombobox(handle: Handle) {
         <input
           id={`${handle.id}-state`}
           placeholder="Search states"
-          mix={[combobox.input(), styles.input]}
+          mix={[
+            combobox.input(),
+            on('input', (event) => {
+              searchText = event.currentTarget.value
+              handle.update()
+            }),
+            styles.input,
+          ]}
         />
         <button
           type="button"
@@ -28,11 +38,26 @@ export default function ExampleCombobox(handle: Handle) {
         >
           Browse states
         </button>
-        <div mix={[combobox.popover(), styles.surface]}>
+        <div
+          mix={[
+            combobox.popover(),
+            on('beforetoggle', (event) => {
+              if (event.newState === 'closed') {
+                searchText = ''
+              }
+            }),
+            on('toggle', (event) => {
+              if (event.newState === 'open') {
+                handle.update()
+              }
+            }),
+            styles.surface,
+          ]}
+        >
           <div aria-label="US states" mix={[combobox.list(), styles.list]}>
             {options.map((option) => (
               <div key={option.value} mix={[combobox.option(option), styles.option]}>
-                {option.label}
+                <span>{highlightMatch(option.label, searchText)}</span>
               </div>
             ))}
           </div>
@@ -48,8 +73,7 @@ const styles = {
     '--text': 'light-dark(#202027, #eeeef2)',
     '--surface': 'light-dark(#fff, #1b1b20)',
     '--control-border': 'light-dark(#d8d8df, #44444c)',
-    '--accent': 'light-dark(#0578be, #80caff)',
-    '--focus-ring': '#5bb8ef',
+    '--focus-ring': 'light-dark(#70707c, #a0a0ac)',
 
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {
@@ -143,6 +167,12 @@ const styles = {
     outline: 0,
   }),
 
+  match: css({
+    background: 'none',
+    color: 'inherit',
+    fontWeight: 650,
+  }),
+
   option: css({
     display: 'flex',
     alignItems: 'center',
@@ -158,18 +188,33 @@ const styles = {
       background: 'light-dark(#eeeef3, #303038)',
     },
     '&[aria-selected="true"]': {
-      color: 'var(--accent)',
-      background: 'light-dark(#eaf5fc, #173348)',
+      background: 'light-dark(#e4e4eb, #3b3b44)',
     },
     '&[aria-disabled="true"]': {
       opacity: 0.4,
       cursor: 'not-allowed',
     },
     '&[data-combobox-flash]': {
-      background: 'light-dark(#d6eaf8, #254c66)',
-      color: 'var(--accent)',
+      background: 'light-dark(#d6d6e0, #4b4b56)',
     },
   }),
+}
+
+function highlightMatch(text: string, searchText: string) {
+  let start = text.toLowerCase().indexOf(searchText.toLowerCase())
+  if (!searchText || start === -1) {
+    return text
+  }
+
+  let end = start + searchText.length
+
+  return (
+    <>
+      {text.slice(0, start)}
+      <mark mix={styles.match}>{text.slice(start, end)}</mark>
+      {text.slice(end)}
+    </>
+  )
 }
 
 const options = [

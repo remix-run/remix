@@ -45,10 +45,10 @@ const transformsCode = await highlightSource(`
 
 export default function LayoutPage(handle: Handle<PageProps>) {
   return () => (
-    <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="reordering" example={reordering} hero />
-      <Section id="anatomy" title="Anatomy">
-        <p>Apply the mixin to each element and use stable keys for collections.</p>
+    <PageLayout
+      page={meta}
+      pages={handle.props.pages}
+      intro={
         <p>
           The examples use{' '}
           <a href="/animation/spring/">
@@ -56,7 +56,10 @@ export default function LayoutPage(handle: Handle<PageProps>) {
           </a>{' '}
           for timing.
         </p>
-
+      }
+    >
+      <Example id="reordering" example={reordering} hero />
+      <Section id="anatomy" title="Anatomy">
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="options" title="Position-only animation">

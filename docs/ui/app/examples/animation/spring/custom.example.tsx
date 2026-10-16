@@ -16,7 +16,7 @@ export default function ExampleSpring(handle: Handle) {
         styles.button,
         css({
           '& svg': {
-            color: saved ? 'light-dark(#0578be, #5bb8ef)' : 'inherit',
+            color: saved ? 'light-dark(#62626c, #b0b0bb)' : 'inherit',
             transform: saved ? 'scale(1.25)' : 'scale(1)',
             transition: spring.transition('transform', {
               duration: 350,
@@ -58,7 +58,7 @@ const styles = {
       background: 'light-dark(#f0f0f5, #303038)',
     },
     '&:focus-visible': {
-      outline: `2px solid #5bb8ef`,
+      outline: `2px solid light-dark(#70707c, #a0a0ac)`,
       outlineOffset: '3px',
     },
   }),

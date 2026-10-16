@@ -70,7 +70,7 @@ const styles = {
         background: 'light-dark(#f7f7fa, #24242b)',
       },
       '&:focus-visible': {
-        outline: '2px solid #5bb8ef',
+        outline: '2px solid light-dark(#70707c, #a0a0ac)',
         outlineOffset: '-3px',
       },
     },

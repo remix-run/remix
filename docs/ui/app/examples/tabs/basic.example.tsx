@@ -34,6 +34,7 @@ export default function ExampleTabs() {
             <TabIndicator />
           </div>
           <div
+            tabIndex={0}
             mix={[
               tabs.panel({
                 name: 'details',
@@ -49,6 +50,7 @@ export default function ExampleTabs() {
             </dl>
           </div>
           <div
+            tabIndex={0}
             mix={[
               tabs.panel({
                 name: 'version',
@@ -132,7 +134,7 @@ const styles = {
       color: 'var(--text)',
     },
     '&:focus-visible': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '-4px',
     },
     '&:disabled': {
@@ -143,6 +145,10 @@ const styles = {
 
   panel: css({
     padding: '24px',
+    '&:focus-visible': {
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
+      outlineOffset: '-4px',
+    },
     '&[hidden]': {
       display: 'none',
     },

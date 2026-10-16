@@ -158,6 +158,7 @@ const styles = {
       position: 'absolute',
       inset: 0,
       pointerEvents: 'none',
+      color: 'light-dark(#62626c, #b0b0bb)',
     },
   }),
 
@@ -169,10 +170,10 @@ const styles = {
     cursor: 'crosshair',
     outline: 'none',
     '&[aria-pressed="true"] [data-point]': {
-      boxShadow: '0 0 0 3px #8a78ed33',
+      boxShadow: '0 0 0 3px light-dark(#62626c33, #b0b0bb33)',
     },
     '&:focus-visible [data-point]': {
-      outline: '2px solid #8a78ed',
+      outline: '2px solid light-dark(#62626c, #b0b0bb)',
       outlineOffset: '4px',
     },
   }),
@@ -185,7 +186,7 @@ const styles = {
     height: '9px',
     border: '2px solid light-dark(#f9f9fb, #1b1b20)',
     borderRadius: '50%',
-    background: '#8a78ed',
+    background: 'light-dark(#62626c, #b0b0bb)',
     pointerEvents: 'none',
   }),
 
@@ -237,7 +238,7 @@ function ChartLine() {
           .map((day, index) => `${index * 100 + 50},${100 - (day.visits / 2000) * 100}`)
           .join(' ')}
         fill="none"
-        stroke="#8a78ed"
+        stroke="currentColor"
         stroke-width="2"
         vector-effect="non-scaling-stroke"
         stroke-linecap="round"

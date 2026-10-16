@@ -15,6 +15,7 @@ export const meta = {
 
 const basic = await loadExample('select/basic')
 const richOptionsExample = await loadExample('select/rich-options')
+const groupedExample = await loadExample('select/grouped')
 const disabledExample = await loadExample('select/disabled')
 const formExample = await loadExample('select/form')
 
@@ -25,9 +26,10 @@ const anatomyCode = await highlightSource(`
   import type { Handle } from 'remix/component'
 
   <select.Context name="field-name" defaultLabel="Trigger text">
+    <span id="select-label">Select label</span>
     <button
       type="button"
-      aria-label="Select label"
+      aria-labelledby="select-label"
       mix={[
         select.trigger(),
         css({
@@ -97,7 +99,8 @@ const eventsCode = await highlightSource(`
 
 const accessibilityCode = await highlightSource(`
   <>
-    <button aria-label="Delivery method" type="button" mix={select.trigger()}>
+    <span id="delivery-method-label">Delivery method</span>
+    <button aria-labelledby="delivery-method-label" type="button" mix={select.trigger()}>
       <SelectedLabel />
     </button>
     <div aria-label="Delivery methods" mix={select.list()} />
@@ -122,11 +125,6 @@ export default function SelectPage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>
-          Keep the trigger, popover, list and options inside the select provider. The surface also
-          needs a <a href="/patterns/popover/">Popover provider</a>.
-        </p>
-        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="initial" title="Initial selection">
@@ -145,7 +143,19 @@ export default function SelectPage(handle: Handle<PageProps>) {
           Typeahead works in the popup and on the closed trigger. Closed-trigger matches select
           immediately.
         </p>
+        <p>
+          Keep option content noninteractive. Text, descriptions and decorative icons belong inside
+          an option. Buttons, links and inputs need their own controls outside the list.
+        </p>
         <Example id="rich-options-example" example={richOptionsExample} />
+      </Section>
+      <Section id="grouped" title="Grouped options">
+        <p>
+          Wrap related options in an element with <code>role="group"</code> and name it with{' '}
+          <code>aria-labelledby</code> pointing to a visible group label. Keep group labels outside
+          the selectable options. Navigation and typeahead continue across group boundaries.
+        </p>
+        <Example id="grouped-example" example={groupedExample} />
       </Section>
       <Section id="forms" title="Forms">
         <p>
@@ -186,8 +196,9 @@ export default function SelectPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
-          Give the trigger and list accessible names. Focus moves to the list while{' '}
-          <code>aria-activedescendant</code> identifies the highlighted option.
+          Give the field a visible label and connect it to the trigger with{' '}
+          <code>aria-labelledby</code>. Give the list an accessible name too. Focus moves to the
+          list while <code>aria-activedescendant</code> identifies the highlighted option.
         </p>
         <CodeBlock html={accessibilityCode} />
         <ul>

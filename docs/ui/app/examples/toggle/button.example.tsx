@@ -72,14 +72,14 @@ const styles = {
       transition: 'transform 160ms ease',
     },
     '&[data-state="checked"]': {
-      background: 'light-dark(#0578be, #318ece)',
+      background: 'light-dark(#62626c, #777782)',
       borderColor: 'transparent',
     },
     '&[data-state="checked"]::after': {
       transform: 'translateX(18px)',
     },
     '&:focus-visible': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '3px',
     },
     '@media (prefers-reduced-motion: reduce)': {

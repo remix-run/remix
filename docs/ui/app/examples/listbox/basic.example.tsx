@@ -6,10 +6,11 @@ export default function ExampleListbox(handle: Handle) {
   let value: string | null = 'design'
   let activeValue: string | null = null
   let activeId: string | undefined
+
   return () => (
     <div mix={styles.root}>
       <div mix={styles.card}>
-        <strong>Assign to team</strong>
+        <strong mix={styles.title}>Assign to team</strong>
         <listbox.Context
           flashSelection
           value={value}
@@ -47,8 +48,6 @@ export default function ExampleListbox(handle: Handle) {
 
 const styles = {
   root: css({
-    '--accent': 'light-dark(#0578be, #80caff)',
-
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {
       boxSizing: 'border-box',
@@ -60,22 +59,28 @@ const styles = {
   }),
 
   card: css({
-    padding: '20px',
+    padding: '20px 8px 8px',
     border: '1px solid light-dark(#e0e0e6, #393940)',
     borderRadius: '12px',
     background: 'light-dark(#fff, #1b1b20)',
     display: 'grid',
-    gap: '16px',
+    gap: '12px',
+  }),
+
+  title: css({
+    paddingInline: '12px',
+    fontWeight: 600,
   }),
 
   list: css({
+    borderRadius: '6px',
     display: 'grid',
     gap: '2px',
     maxHeight: '240px',
     overflow: 'auto',
     outline: 0,
     '&:focus-visible': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '3px',
     },
   }),
@@ -95,16 +100,17 @@ const styles = {
       background: 'light-dark(#eeeef3, #303038)',
     },
     '&[aria-selected="true"]': {
-      color: 'var(--accent)',
-      background: 'light-dark(#eaf5fc, #173348)',
+      background: 'light-dark(#e4e4eb, #3b3b44)',
     },
     '&[aria-disabled="true"]': {
       opacity: 0.4,
       cursor: 'not-allowed',
     },
+    '&[aria-selected="true"][data-highlighted="true"]': {
+      boxShadow: 'inset 0 0 0 1px light-dark(#a5a5af, #777782)',
+    },
     '&[data-listbox-flash]': {
-      background: 'light-dark(#d6eaf8, #254c66)',
-      color: 'var(--accent)',
+      background: 'light-dark(#d6d6e0, #4b4b56)',
     },
   }),
 

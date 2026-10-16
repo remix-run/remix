@@ -11,6 +11,8 @@ describe('Tabs example', () => {
     let indicator = element(result.container, '[inert]')
     let detailsPanel = element(result.container, `[id="${details.getAttribute('aria-controls')}"]`)
     let versionPanel = element(result.container, `[id="${version.getAttribute('aria-controls')}"]`)
+    assert.equal(detailsPanel.tabIndex, 0)
+    assert.equal(versionPanel.tabIndex, 0)
     assert.equal(details.getAttribute('aria-selected'), 'true')
     assert.equal(versionPanel.hidden, true)
     await result.act(() => version.click())

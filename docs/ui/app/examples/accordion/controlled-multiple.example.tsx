@@ -53,7 +53,7 @@ const styles = {
     '--text': 'light-dark(#202027, #eeeef2)',
     '--muted': 'light-dark(#62626c, #b0b0bb)',
     '--border': 'light-dark(#e0e0e6, #393940)',
-    '--focus-ring': '#5bb8ef',
+    '--focus-ring': 'light-dark(#70707c, #a0a0ac)',
 
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {

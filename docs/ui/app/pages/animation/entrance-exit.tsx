@@ -67,8 +67,6 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="presence" example={presence} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>Apply entrance and exit mixins to the element being inserted or removed.</p>
-
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="timing" title="Customizing motion">

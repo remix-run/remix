@@ -15,6 +15,7 @@ export const meta = {
 } satisfies PageMeta
 
 const basic = await loadExample('listbox/basic')
+const groupedExample = await loadExample('listbox/grouped')
 const richOptionsExample = await loadExample('listbox/rich-options')
 
 const anatomyCode = await highlightSource(`
@@ -193,8 +194,6 @@ export default function ListboxPage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>Provide selection and highlight state, then apply list and option mixins.</p>
-        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="state" title="Selection and highlighting">
@@ -213,7 +212,23 @@ export default function ListboxPage(handle: Handle<PageProps>) {
           options are excluded from navigation, typeahead and selection. Hide an option with its
           native <code>hidden</code> attribute so the library can detect it.
         </p>
+        <p>
+          Keep option content noninteractive. Text, descriptions and decorative icons can share an
+          option, but buttons, links and inputs need their own controls outside the list.
+        </p>
         <Example id="rich-options-example" example={richOptionsExample} />
+      </Section>
+      <Section id="grouped" title="Grouped options">
+        <p>
+          Wrap related options in an element with <code>role="group"</code> and name it with{' '}
+          <code>aria-labelledby</code> pointing to a visible group label. Keep labels outside the
+          options so they name the group rather than becoming selectable items.
+        </p>
+        <p>
+          Listbox handles navigation and typeahead across groups. Focus stays on the list, and
+          moving the highlight leaves selection unchanged until an option is chosen.
+        </p>
+        <Example id="grouped-example" example={groupedExample} />
       </Section>
       <Section id="settling" title="Selection feedback">
         <p>

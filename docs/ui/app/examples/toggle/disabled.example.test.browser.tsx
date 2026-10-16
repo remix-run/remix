@@ -7,6 +7,14 @@ describe('Disabled toggle example', () => {
   it('preserves required security alerts when clicked', async (t) => {
     let result = await mount(t, <Example />)
     let checkbox = input(result.container)
+    assert.equal(
+      element(result.container, `[id="${checkbox.getAttribute('aria-labelledby')}"]`).textContent,
+      'Security alerts',
+    )
+    assert.equal(
+      element(result.container, `[id="${checkbox.getAttribute('aria-describedby')}"]`).textContent,
+      'Required by your workspace',
+    )
     assert.equal(checkbox.disabled, true)
     assert.equal(checkbox.checked, true)
     await result.act(() => element(result.container, 'label').click())

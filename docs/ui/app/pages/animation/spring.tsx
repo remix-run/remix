@@ -77,11 +77,6 @@ export default function SpringPage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="billing" example={billing} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>
-          Use <code>spring.transition()</code> in the <code>css()</code> mixin to animate between
-          style values.
-        </p>
-
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="presets-reference" title="Presets">

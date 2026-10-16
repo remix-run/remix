@@ -79,8 +79,8 @@ const styles = {
     width: 'var(--thumb-size)',
     height: 'var(--thumb-size)',
     borderRadius: '50%',
-    background: 'light-dark(#0578be, #5bb8ef)',
-    boxShadow: '0 2px 6px light-dark(#0578be30, #00000040)',
+    background: 'light-dark(#62626c, #b0b0bb)',
+    boxShadow: '0 2px 6px light-dark(#20202730, #00000040)',
     transform: 'translateX(0)',
     '&[data-moved="true"]': {
       transform: 'translateX(calc(100cqw - var(--thumb-size)))',
@@ -111,7 +111,7 @@ const styles = {
       borderColor: 'light-dark(#b0b0bb, #62626c)',
     },
     '&:focus-visible': {
-      outline: '2px solid #0578be',
+      outline: '2px solid light-dark(#62626c, #b0b0bb)',
       outlineOffset: '3px',
     },
     '@media (prefers-reduced-motion: reduce)': {

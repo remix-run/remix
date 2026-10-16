@@ -89,14 +89,13 @@ export default function TweenPage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="timing" example={timing} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>Create a generator, prime it, then supply timestamps to advance playback.</p>
-
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="frames" title="Scheduling animation frames">
         <p>
-          Pass <code>requestAnimationFrame</code> timestamps to <code>next()</code>. Apply each
-          returned value, including the final value when <code>done</code> is true.
+          Call <code>next()</code> once to prime the generator, then pass{' '}
+          <code>requestAnimationFrame</code> timestamps to subsequent calls. Apply each returned
+          value, including the final value when <code>done</code> is true.
         </p>
 
         <CodeBlock html={framesCode} />

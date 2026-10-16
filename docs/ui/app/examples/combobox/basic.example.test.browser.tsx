@@ -35,6 +35,7 @@ describe('Combobox example', () => {
     })
     let california = element(result.container, '[role="option"]:not([hidden])')
     assert.equal(california.textContent, 'California')
+    assert.equal(element(california, 'mark').textContent, 'Cali')
     assert.equal(value.value, '')
     assert.equal(search.getAttribute('aria-expanded'), 'true')
     await waitFor(() => assert.ok(california.checkVisibility()))

@@ -65,6 +65,7 @@
   font-weight: 600;
   letter-spacing: -0.025em;
 }
+.ui-page-header > p,
 .ui-doc-section > p,
 .ui-doc-section > ul,
 .ui-doc-section > ol,

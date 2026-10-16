@@ -80,7 +80,7 @@ const styles = {
       fontWeight: 600,
     },
     '& input:focus-visible + span': {
-      outline: '2px solid #5bb8ef',
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
       outlineOffset: '2px',
     },
   }),

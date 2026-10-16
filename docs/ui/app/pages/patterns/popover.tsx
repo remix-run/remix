@@ -173,8 +173,6 @@ export default function PopoverPage(handle: Handle<PageProps>) {
     <PageLayout page={meta} pages={handle.props.pages}>
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>Wrap the anchor, surface and focus targets in the same provider.</p>
-        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="state" title="Opening and dismissal">

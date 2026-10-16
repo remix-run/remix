@@ -121,7 +121,7 @@ const styles = {
       cursor: 'not-allowed',
     },
     '&:focus-visible': {
-      outline: '2px solid light-dark(#0578be, #5bb8ef)',
+      outline: '2px solid light-dark(#62626c, #b0b0bb)',
       outlineOffset: '-3px',
       borderRadius: '8px',
     },

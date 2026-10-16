@@ -51,7 +51,7 @@ export default function ExampleToggle(handle: Handle) {
 
 const styles = {
   root: css({
-    '--focus-ring': '#5bb8ef',
+    '--focus-ring': 'light-dark(#70707c, #a0a0ac)',
 
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {
@@ -118,7 +118,7 @@ const styles = {
       transition: 'transform 160ms ease',
     },
     '&[data-state="checked"]': {
-      background: 'light-dark(#0578be, #318ece)',
+      background: 'light-dark(#62626c, #777782)',
       borderColor: 'transparent',
     },
     '&[data-state="checked"]::after': {

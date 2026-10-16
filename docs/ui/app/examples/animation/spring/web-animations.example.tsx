@@ -87,7 +87,7 @@ const styles = {
       background: 'light-dark(#f7f7fa, #24242b)',
     },
     '&:focus-visible': {
-      outline: `2px solid #5bb8ef`,
+      outline: `2px solid light-dark(#70707c, #a0a0ac)`,
       outlineOffset: '3px',
     },
   }),
@@ -101,7 +101,7 @@ const styles = {
     borderRadius: '999px',
     background: 'light-dark(#d8d8df, #44444c)',
     '&[data-enabled="true"]': {
-      background: 'light-dark(#0578be, #5bb8ef)',
+      background: 'light-dark(#62626c, #b0b0bb)',
     },
   }),
 

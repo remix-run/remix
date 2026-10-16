@@ -14,8 +14,8 @@ export const meta = {
 } satisfies PageMeta
 
 const basic = await loadExample('combobox/basic')
-const initialExample = await loadExample('combobox/initial')
 const richOptionsExample = await loadExample('combobox/rich-options')
+const groupedExample = await loadExample('combobox/grouped')
 const disabledExample = await loadExample('combobox/disabled')
 const formExample = await loadExample('combobox/form')
 const imperativeExample = await loadExample('combobox/imperative')
@@ -130,33 +130,20 @@ const typeDefinitions = {
 
 export default function ComboboxPage(handle: Handle<PageProps>) {
   return () => (
-    <PageLayout page={meta} pages={handle.props.pages}>
-      <Example id="basic" example={basic} hero />
-      <Section id="anatomy" title="Anatomy">
-        <p>
-          Wrap the input, popover and options in one provider. Combobox supplies its Popover and
-          Listbox providers.
-        </p>
-        <p>Empty CSS rules mark the styling hooks on each element.</p>
-        <CodeBlock html={anatomyCode} />
-      </Section>
-      <Section id="initial" title="Selection">
+    <PageLayout
+      page={meta}
+      pages={handle.props.pages}
+      intro={
         <p>
           Combobox tracks the input text separately from the selected option’s value. The input text
           can contain an unfinished search. The selected value always identifies an accepted option.
           Editing clears the selected value, and choosing an option sets it again.
         </p>
-        <p>
-          Combobox manages selection and input text internally. <code>defaultValue</code> sets the
-          initial committed value and input text to a registered option’s value string. Selecting an
-          option later replaces the text with its label.
-        </p>
-
-        <p>
-          On blur, an exact enabled label or alias match commits the option and preserves the typed
-          text. Partial or unmatched text is cleared.
-        </p>
-        <Example id="initial-example" example={initialExample} />
+      }
+    >
+      <Example id="basic" example={basic} hero />
+      <Section id="anatomy" title="Anatomy">
+        <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="options" title="Filtering and aliases">
         <p>
@@ -167,11 +154,32 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           selected.
         </p>
         <p>
+          On blur, an exact enabled label or alias match commits the option and preserves the typed
+          text. Partial or unmatched text is cleared.
+        </p>
+        <p>
           An empty search or a search with no matches closes the popup. Unmatched text stays in the
           input while editing. Clicking the closed input or pressing an arrow key reopens the full
           list when the text is an exact match or has no matches.
         </p>
+        <p>
+          The examples emphasize matching text in the option markup. The plain-text{' '}
+          <code>label</code> still determines the selected label.
+        </p>
+        <p>
+          Keep option content noninteractive. Use text and decorative icons for richer labels. Put
+          buttons, links and other controls outside the options.
+        </p>
         <Example id="rich-options-example" example={richOptionsExample} />
+      </Section>
+      <Section id="grouped" title="Grouped options">
+        <p>
+          Wrap related options in an element with <code>role="group"</code> and use{' '}
+          <code>aria-labelledby</code> to associate it with a visible group label. Arrow keys move
+          between options across groups.
+        </p>
+        <p>This example uses CSS to hide a group when all its options are hidden by filtering.</p>
+        <Example id="grouped-example" example={groupedExample} />
       </Section>
       <Section id="forms" title="Forms">
         <p>
