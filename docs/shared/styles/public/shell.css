@@ -1,3 +1,33 @@
+/*
+ * Desktop sidebar collapse is driven by one animatable number: 0 when the
+ * sidebar is open and 1 when it is collapsed. Only this property transitions.
+ * Layout values are derived from it, so toggling the sidebar animates while
+ * crossing the mobile breakpoint just switches layouts instantly.
+ */
+@property --docs-nav-collapse {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+:root {
+  --docs-nav-collapse: 0;
+  --docs-content-offset: calc(
+    var(--docs-sidebar-offset) + (var(--docs-collapsed-offset) - var(--docs-sidebar-offset)) *
+      var(--docs-nav-collapse)
+  );
+  --docs-content-padding-start: calc(
+    var(--docs-main-padding) + (var(--docs-collapsed-content-padding) - var(--docs-main-padding)) *
+      var(--docs-nav-collapse)
+  );
+
+  transition: --docs-nav-collapse var(--docs-nav-duration) var(--docs-nav-easing);
+}
+
+:root[data-docs-nav-collapsed] {
+  --docs-nav-collapse: 1;
+}
+
 .docs-selection-list {
   --docs-selection-indicator-y: 0px;
   --docs-selection-indicator-height: 32px;
@@ -41,7 +71,10 @@
   :root {
     --docs-nav-duration: 0s;
   }
+}
 
+/* Mobile drawers open and close instantly; sliding panels felt sluggish on touch. */
+@media (prefers-reduced-motion: reduce), (width < 900px) {
   .docs-selection-list::before {
     transition: none;
   }

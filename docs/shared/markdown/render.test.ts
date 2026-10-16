@@ -34,6 +34,33 @@ describe('renderMarkdownHtml', () => {
     assert.match(html, /<a href="\/v1\/api\/example\/">API<\/a>/)
   })
 
+  it('wraps each h2 and its content in a section when enabled', async () => {
+    let { root } = parseMarkdownDocument(
+      '# Title\n\nIntro.\n\n## First\n\nOne.\n\n### Detail\n\nTwo.\n\n## Second\n\nThree.\n',
+    )
+    addHeadingIds(root)
+
+    let html = await renderMarkdownHtml(root, { sections: true })
+
+    assert.match(html, /^<h1 id="title">.*<\/h1>\n<p>Intro\.<\/p>\n<section class="docs-section">/s)
+    assert.match(
+      html,
+      /<section class="docs-section"><h2 id="first">.*<\/h2>\n<p>One\.<\/p>\n<h3 id="detail">.*<\/h3>\n<p>Two\.<\/p>\n<\/section>/s,
+    )
+    assert.match(
+      html,
+      /<section class="docs-section"><h2 id="second">.*<p>Three\.<\/p><\/section>$/s,
+    )
+  })
+
+  it('does not wrap sections by default', async () => {
+    let { root } = parseMarkdownDocument('## First\n\nOne.\n')
+
+    let html = await renderMarkdownHtml(root)
+
+    assert.doesNotMatch(html, /<section/)
+  })
+
   it('renders disabled links as text', async () => {
     let { root } = parseMarkdownDocument('[Published](/published/) [Draft](/draft/)\n')
 

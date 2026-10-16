@@ -37,16 +37,15 @@ const docsFooterCss = css({
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'space-between',
-  width: 'calc(100% - var(--docs-sidebar-offset))',
+  width: 'calc(100% - var(--docs-content-offset))',
   gap: '48px',
-  marginLeft: 'var(--docs-sidebar-offset)',
-  padding: '48px 52px',
+  marginLeft: 'var(--docs-content-offset)',
+  padding: '48px var(--docs-main-padding)',
+  paddingLeft: 'var(--docs-content-padding-start)',
   color: 'var(--docs-footer-foreground)',
   fontSize: '16px',
   lineHeight: '24px',
   textAlign: 'left',
-  transition:
-    'width var(--docs-nav-duration) var(--docs-nav-easing), margin-left var(--docs-nav-duration) var(--docs-nav-easing), padding-left var(--docs-nav-duration) var(--docs-nav-easing)',
   '& a': {
     color: 'inherit',
     textDecoration: 'none',
@@ -54,24 +53,14 @@ const docsFooterCss = css({
   '& a:hover': {
     color: 'var(--rmx-color-text-primary)',
   },
-  ':root[data-docs-nav-collapsed] &': {
-    width: 'calc(100% - var(--docs-collapsed-offset))',
-    marginLeft: 'var(--docs-collapsed-offset)',
-    paddingLeft: 'var(--docs-collapsed-content-padding)',
-  },
   '@media (width < 900px)': {
-    '&, :root[data-docs-nav-collapsed] &': {
-      flexDirection: 'column',
-      alignItems: 'center',
-      width: '100%',
-      gap: '16px',
-      marginLeft: 0,
-      padding: '48px 24px',
-      textAlign: 'center',
-    },
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: '100%',
+    gap: '16px',
+    marginLeft: 0,
+    padding: '48px 24px',
+    textAlign: 'center',
   },
 })
 

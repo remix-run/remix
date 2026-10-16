@@ -26,11 +26,14 @@ export const docsMarkdownContentCss = css({
       color: 'inherit',
       textDecoration: 'none',
     },
+  '& :is(p, ul, ol, dl)': {
+    color: 'var(--rmx-color-text-secondary)',
+  },
   '& h2': {
     margin: '40px 0 var(--rmx-space-lg)',
     fontSize: 'var(--rmx-font-size-xl)',
-    fontWeight: 'var(--rmx-font-weight-bold)',
-    letterSpacing: 'var(--rmx-letter-spacing-tight)',
+    fontWeight: 'var(--rmx-font-weight-semibold)',
+    letterSpacing: '-0.025em',
     lineHeight: 'var(--rmx-line-height-tight)',
   },
   '& h2:first-child': {
