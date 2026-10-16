@@ -2,6 +2,32 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.1.0
+
+### Minor Changes
+
+- Mixins created through `remix/component` can use `createMixin(setup, { ssr: false })` to skip setup and render on the server while keeping browser behavior and hydration. Server rendering remains enabled by default. The option is intended for behavior that does not contribute to the server HTML.
+
+- Use `frame.reload({ src, method, encType, body })` from `remix/component` to reload another source or submit data and render the response without changing browser history. `FormData` follows GET query and POST encoding defaults, with multipart and plain-text encodings available (see #11938).
+
+- `remix/component` supports disabling automatic focus resets during intercepted navigation. Scroll and focus controls accept `"after-transition"` and `"manual"` in `navigate()` / `link()` options and HTML attributes, while existing boolean values remain supported (see #11939).
+
+### Patch Changes
+
+- Ensure client entries requested after an HMR update use current cache-busting URLs.
+
+- Include `unsafeHTML()` guidance in `remix/component` raw HTML prop errors (`innerHTML`, `srcDoc`, and `srcdoc`) and clarify that `outerHTML` is not supported on host elements.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.1`](https://github.com/remix-run/remix/releases/tag/assets@1.0.1)
+  - [`cli@1.0.1`](https://github.com/remix-run/remix/releases/tag/cli@1.0.1)
+  - [`component@1.1.0`](https://github.com/remix-run/remix/releases/tag/component@1.1.0)
+  - [`compression-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/compression-middleware@1.0.1)
+  - [`render-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/render-middleware@1.0.1)
+  - [`response@1.0.1`](https://github.com/remix-run/remix/releases/tag/response@1.0.1)
+  - [`spa@1.0.1`](https://github.com/remix-run/remix/releases/tag/spa@1.0.1)
+  - [`static-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/static-middleware@1.0.1)
+
 ## v3.0.0
 
 ### Major Changes

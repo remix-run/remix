@@ -1,1 +1,0 @@
-Mixins created through `remix/component` can use `createMixin(setup, { ssr: false })` to skip setup and render on the server while keeping browser behavior and hydration. Server rendering remains enabled by default. The option is intended for behavior that does not contribute to the server HTML.

@@ -2,6 +2,18 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Reduce server rendering work by caching `getScriptEntry()` metadata between calls. Watched file changes and browser HMR events clear the cache, failed requests can be retried, and each caller receives a separate copy of the metadata.
+
+- Ensure script entries requested after an HMR update use current cache-busting URLs.
+
+- Avoid competing frame refreshes when a browser HMR update requires a full page reload. Server updates now wait for pending browser updates before refreshing server-rendered content.
+
+- Reduce rebuild work in watch mode. When a watched script changes, modules that import it are no longer transformed again because their own source did not change, and barrel file import analysis reuses its results for unchanged modules instead of parsing them again.
+
 ## v1.0.0
 
 ### Major Changes

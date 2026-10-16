@@ -1,1 +1,0 @@
-Fix frame navigation for forms whose submit button is removed immediately after submission, including buttons reused across forms while an earlier submission is still pending (see #11987). Preserve the original POST data across additional `FormData` snapshots and keep later canceled submissions on the same or another form from replacing the pending navigation.

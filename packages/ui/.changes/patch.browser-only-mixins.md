@@ -1,1 +1,0 @@
-Server rendering skips setup and render for animation mixins, keyboard and outside-click helpers, typeahead behavior, and popover anchor and focus helpers. Mixins that provide initial attributes, styles, or ARIA props still run on the server.
