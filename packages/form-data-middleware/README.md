@@ -62,7 +62,7 @@ let router = createRouter({
       async uploadHandler(upload) {
         // Save under an application-generated name in an existing upload directory
         let path = `./uploads/${crypto.randomUUID()}`
-        await writeFile(path, new Uint8Array(await upload.arrayBuffer()), { flag: 'wx' })
+        await writeFile(path, upload.stream(), { flag: 'wx' })
         return path
       },
     }),
@@ -82,30 +82,6 @@ let router = createRouter({
       maxFileSize: 10 * 1024 * 1024,
       maxParts: 25,
       maxTotalSize: 12 * 1024 * 1024,
-    }),
-  ],
-})
-```
-
-### Stream File Uploads
-
-By default, each file is read into memory before it is passed to your `uploadHandler`. Set `streamFiles` to `true` to stream files directly to storage instead. See [Streaming File Uploads](https://github.com/remix-run/remix/tree/main/packages/form-data-parser#streaming-file-uploads) for how streamed uploads differ from buffered ones.
-
-```ts
-import { createFsFileStorage } from 'remix/file-storage/fs'
-
-let fileStorage = createFsFileStorage('./uploads')
-
-let router = createRouter({
-  middleware: [
-    formData({
-      streamFiles: true,
-      maxFileSize: 500 * 1024 * 1024,
-      async uploadHandler(upload) {
-        let key = crypto.randomUUID()
-        await fileStorage.set(key, upload)
-        return key
-      },
     }),
   ],
 })

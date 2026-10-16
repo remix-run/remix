@@ -32,7 +32,7 @@ npm i remix
 
 ## Usage
 
-The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads.
+The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads. The upload handler receives each file as a `FileUpload` as soon as its headers arrive, and the file's contents are streamed from the request as you read them, so you can store large uploads without holding them in memory.
 
 `parseFormData()` accepts `multipart/*` and `application/x-www-form-urlencoded` media types, matched case-insensitively. Other media types throw `FormDataParseError` before the request body is read.
 
@@ -51,8 +51,8 @@ async function uploadHandler(fileUpload: FileUpload) {
   if (fileUpload.fieldName === 'user-avatar') {
     let filename = `/uploads/${crypto.randomUUID()}`
 
-    // Store under an application-generated name in an existing upload directory
-    await fsp.writeFile(filename, new Uint8Array(await fileUpload.arrayBuffer()), { flag: 'wx' })
+    // Stream the file to disk under an application-generated name in an existing upload directory
+    await fsp.writeFile(filename, fileUpload.stream(), { flag: 'wx' })
 
     // Return the file name to use in the FormData object so we don't
     // keep the file contents around in memory.
@@ -148,37 +148,18 @@ async function uploadHandler(fileUpload: FileUpload) {
 }
 ```
 
-### Streaming File Uploads
+### File Uploads
 
-By default, each file is read into memory before it is passed to your `uploadHandler`, up to `maxFileSize`. To stream large files directly to storage instead, use the `streamFiles` option. Your `uploadHandler` is called as soon as a file's headers arrive, and its contents are read from the request as your handler reads them.
+A `FileUpload` has the properties and methods of a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), but because its contents are streamed from the request, there are a few differences:
 
-```ts
-import { createFsFileStorage } from 'remix/file-storage/fs'
-import { parseFormData } from 'remix/form-data-parser'
-
-const fileStorage = createFsFileStorage('/uploads/videos')
-
-let formData = await parseFormData(
-  request,
-  { streamFiles: true, maxFileSize: 500 * 1024 * 1024 },
-  async (fileUpload) => {
-    if (fileUpload.fieldName === 'video') {
-      let storageKey = crypto.randomUUID()
-      await fileStorage.set(storageKey, fileUpload)
-      return storageKey
-    }
-  },
-)
-```
-
-Streamed uploads have the same properties and methods as `FileUpload`, with a few differences:
-
-- Their contents can only be read once, with `stream()`, `bytes()`, `arrayBuffer()`, or `text()`
-- `size` throws until the contents have been read, so enforce size limits with `maxFileSize`
+- Its contents can only be read once, with `stream()`, `bytes()`, `arrayBuffer()`, `text()`, or `json()`, and only in the upload handler
+- `size` throws until its contents have been read, so limit upload sizes with `maxFileSize`
 - `slice()` is not supported
-- They are not instances of `FileUpload` or `File`, so don't pass them to APIs that read `File` contents natively, like `new Response(fileUpload)`; pass `fileUpload.stream()` instead
+- It is not a `File` instance, so don't pass it to APIs that read a `File` natively, like `new Response(fileUpload)`; pass `fileUpload.stream()` instead
 
-Parts are read in order, so the parser waits for your handler, and for any read of the upload it started, to finish before moving on to the next part. Contents your handler doesn't read are discarded. If your handler returns the upload itself, it is read into memory and stored in the `FormData` like an ordinary `FileUpload`.
+Parts are read in order, so the parser waits for your upload handler, and for any read of the upload it started, to finish before moving on to the next part. Contents your handler doesn't read are discarded.
+
+If your upload handler returns the upload itself, it is read into memory and stored in the `FormData` as a `File`. This is what the default upload handler does, so `parseFormData(request)` works like `request.formData()`, within the configured limits.
 
 ## Demos
 

@@ -4,6 +4,7 @@ import { describe, it } from '@remix-run/test'
 import {
   type FileUploadHandler,
   type FileUpload,
+  BufferedFile,
   FormDataParseError,
   MaxFilesExceededError,
   parseFormData,
@@ -628,39 +629,8 @@ describe('parseFormData', () => {
   })
 })
 
-describe('FileUpload', () => {
-  function createUploadRequest(content: Uint8Array): Request {
-    let encoder = new TextEncoder()
-    return new Request('https://remix.run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'multipart/form-data; boundary=----BOUNDARY' },
-      body: new Blob([
-        encoder.encode(
-          [
-            '------BOUNDARY',
-            'Content-Disposition: form-data; name="file"; filename="example.bin"',
-            'Content-Type: application/octet-stream',
-            '',
-            '',
-          ].join('\r\n'),
-        ),
-        content as Uint8Array<ArrayBuffer>,
-        encoder.encode('\r\n------BOUNDARY--\r\n'),
-      ]),
-    })
-  }
-
-  // Some runtimes (Bun) store a plain File in FormData, so use the upload the handler receives.
-  async function parseUpload(content: Uint8Array): Promise<FileUpload> {
-    let upload: FileUpload | undefined
-    await parseFormData(createUploadRequest(content), { maxFileSize: 1024 * 1024 }, (file) => {
-      upload = file
-    })
-    assert.ok(upload)
-    return upload
-  }
-
-  function createContent(size: number): Uint8Array {
+describe('BufferedFile', () => {
+  function createContent(size: number): Uint8Array<ArrayBuffer> {
     let content = new Uint8Array(size)
     for (let index = 0; index < size; index++) content[index] = index % 251
     return content
@@ -668,7 +638,7 @@ describe('FileUpload', () => {
 
   it('streams the full contents of a file larger than one chunk', async () => {
     let content = createContent(200 * 1024 + 7)
-    let file = await parseUpload(content)
+    let file = new BufferedFile([content], 'example.bin')
 
     let chunks: Uint8Array[] = []
     for await (let chunk of file.stream()) chunks.push(chunk)
@@ -678,18 +648,17 @@ describe('FileUpload', () => {
   })
 
   it('streams an empty file', async () => {
-    let file = await parseUpload(new Uint8Array(0))
+    let file = new BufferedFile([], 'example.bin')
 
     let chunks: Uint8Array[] = []
     for await (let chunk of file.stream()) chunks.push(chunk)
 
-    assert.equal(file.size, 0)
     assert.deepEqual(chunks, [])
   })
 
   it('supports reading the stream into a caller-provided buffer', async () => {
     let content = createContent(100 * 1024)
-    let file = await parseUpload(content)
+    let file = new BufferedFile([content], 'example.bin')
 
     let reader = file.stream().getReader({ mode: 'byob' })
     let received = new Uint8Array(content.length)
@@ -706,7 +675,7 @@ describe('FileUpload', () => {
   })
 })
 
-describe('parseFormData with streamFiles', () => {
+describe('FileUpload', () => {
   function createRequest(...parts: string[][]): Request {
     return new Request('https://remix.run', {
       method: 'POST',
@@ -737,10 +706,10 @@ describe('parseFormData with streamFiles', () => {
       textPart('after', 'World'),
     )
 
-    let formData = await parseFormData(request, { streamFiles: true }, async (upload) => {
+    let formData = await parseFormData(request, async (upload) => {
       assert.equal(upload.fieldName, 'file')
       assert.equal(upload.name, 'example.txt')
-      assert.equal(upload.type, 'text/plain')
+      assert.equal(upload.type, normalizeFileType('text/plain'))
       assert.throws(() => upload.size, TypeError)
 
       let text = await new Response(upload.stream()).text()
@@ -780,7 +749,7 @@ describe('parseFormData with streamFiles', () => {
       duplex: 'half',
     } as RequestInit)
 
-    let formData = await parseFormData(request, { streamFiles: true }, async (upload) => {
+    let formData = await parseFormData(request, async (upload) => {
       onHandlerCalled()
       return upload.text()
     })
@@ -795,7 +764,7 @@ describe('parseFormData with streamFiles', () => {
       filePart('c', 'c.txt', 'ccccc'),
     )
 
-    let formData = await parseFormData(request, { streamFiles: true }, async (upload) => {
+    let formData = await parseFormData(request, async (upload) => {
       if (upload.fieldName === 'a') return String((await upload.bytes()).length)
       if (upload.fieldName === 'b') return String((await upload.arrayBuffer()).byteLength)
       return upload.text()
@@ -809,7 +778,7 @@ describe('parseFormData with streamFiles', () => {
   it('only allows the contents to be read once', async () => {
     let request = createRequest(filePart('file', 'example.txt', 'contents'))
 
-    await parseFormData(request, { streamFiles: true }, async (upload) => {
+    await parseFormData(request, async (upload) => {
       await upload.text()
       await assert.rejects(() => upload.text(), TypeError)
       assert.throws(() => upload.stream(), TypeError)
@@ -823,7 +792,7 @@ describe('parseFormData with streamFiles', () => {
       filePart('file', 'example.txt', 'Read contents'),
     )
 
-    let formData = await parseFormData(request, { streamFiles: true }, async (upload) =>
+    let formData = await parseFormData(request, async (upload) =>
       upload.fieldName === 'skipped' ? null : upload.text(),
     )
 
@@ -831,10 +800,10 @@ describe('parseFormData with streamFiles', () => {
     assert.equal(formData.get('file'), 'Read contents')
   })
 
-  it('stores the upload in memory when the handler returns it unread', async () => {
+  it('stores the upload as a File when the handler returns it unread', async () => {
     let request = createRequest(filePart('file', 'example.txt', 'contents'))
 
-    let formData = await parseFormData(request, { streamFiles: true }, (upload) => upload)
+    let formData = await parseFormData(request, (upload) => upload)
 
     let file = formData.get('file')
     assert.ok(file instanceof File)
@@ -846,7 +815,7 @@ describe('parseFormData with streamFiles', () => {
   it('stores the upload in memory when using the default upload handler', async () => {
     let request = createRequest(filePart('file', 'example.txt', 'contents'))
 
-    let formData = await parseFormData(request, { streamFiles: true })
+    let formData = await parseFormData(request)
 
     let file = formData.get('file')
     assert.ok(file instanceof File)
@@ -857,7 +826,7 @@ describe('parseFormData with streamFiles', () => {
     let request = createRequest(filePart('file', 'example.txt', 'contents'))
 
     await assert.rejects(
-      parseFormData(request, { streamFiles: true }, async (upload) => {
+      parseFormData(request, async (upload) => {
         await upload.text()
         return upload
       }),
@@ -873,11 +842,11 @@ describe('parseFormData with streamFiles', () => {
     ])
     let types: string[] = []
 
-    await parseFormData(request, { streamFiles: true }, (upload) => {
+    await parseFormData(request, (upload) => {
       types.push(upload.type)
     })
 
-    assert.deepEqual(types, ['text/plain', 'application/octet-stream'])
+    assert.deepEqual(types, [normalizeFileType('Text/PLAIN'), 'application/octet-stream'])
   })
 
   it('throws MaxFileSizeExceededError from the upload stream and the parser', async () => {
@@ -885,7 +854,7 @@ describe('parseFormData with streamFiles', () => {
     let streamError: unknown
 
     await assert.rejects(
-      parseFormData(request, { streamFiles: true, maxFileSize: 10 }, async (upload) => {
+      parseFormData(request, { maxFileSize: 10 }, async (upload) => {
         try {
           await upload.text()
         } catch (error) {
@@ -902,7 +871,7 @@ describe('parseFormData with streamFiles', () => {
     let request = createRequest(filePart('file', 'example.txt', 'x'.repeat(100)))
 
     await assert.rejects(
-      parseFormData(request, { streamFiles: true, maxFileSize: 10 }, () => null),
+      parseFormData(request, { maxFileSize: 10 }, () => null),
       MaxFileSizeExceededError,
     )
   })
@@ -916,7 +885,7 @@ describe('parseFormData with streamFiles', () => {
     let calls = 0
 
     await assert.rejects(
-      parseFormData(request, { streamFiles: true, maxFiles: 2 }, () => {
+      parseFormData(request, { maxFiles: 2 }, () => {
         calls++
       }),
       MaxFilesExceededError,
@@ -938,7 +907,7 @@ describe('parseFormData with streamFiles', () => {
     let streamError: unknown
 
     await assert.rejects(
-      parseFormData(request, { streamFiles: true }, async (upload) => {
+      parseFormData(request, async (upload) => {
         try {
           await upload.text()
         } catch (error) {
@@ -957,7 +926,7 @@ describe('parseFormData with streamFiles', () => {
     let error = new Error('Upload failed')
 
     await assert.rejects(
-      parseFormData(request, { streamFiles: true }, () => {
+      parseFormData(request, () => {
         throw error
       }),
       (thrown: unknown) => thrown === error,
@@ -971,9 +940,39 @@ describe('parseFormData with streamFiles', () => {
       body: 'a=1&b=2',
     })
 
-    let formData = await parseFormData(request, { streamFiles: true })
+    let formData = await parseFormData(request)
 
     assert.equal(formData.get('a'), '1')
     assert.equal(formData.get('b'), '2')
+  })
+
+  it('throws when its contents are read after the upload handler returns', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'contents'))
+    let upload: FileUpload | undefined
+
+    await parseFormData(request, (file) => {
+      upload = file
+    })
+
+    assert.ok(upload)
+    assert.throws(() => upload!.stream(), TypeError)
+    await assert.rejects(() => upload!.text(), TypeError)
+  })
+
+  it('throws instead of converting to a string', async () => {
+    let request = createRequest(filePart('file', 'example.txt', 'contents'))
+
+    await parseFormData(request, (upload) => {
+      assert.throws(() => String(upload), TypeError)
+      assert.throws(() => new FormData().append('file', upload as unknown as Blob), TypeError)
+    })
+  })
+
+  it('parses JSON contents', async () => {
+    let request = createRequest(filePart('file', 'data.json', '{"a":1}', 'application/json'))
+
+    let formData = await parseFormData(request, async (upload) => String((await upload.json()).a))
+
+    assert.equal(formData.get('file'), '1')
   })
 })

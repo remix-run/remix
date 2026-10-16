@@ -1,15 +1,20 @@
-import * as fs from 'node:fs'
+import * as fsp from 'node:fs/promises'
 import * as http from 'node:http'
+import { createRequestListener } from '@remix-run/node-fetch-server'
 import tmp from 'tmp'
 
-import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser/node'
+import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart-parser'
 
 const PORT = 44100
 
-const server = http.createServer(async (req, res) => {
-  if (req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'text/html' })
-    res.end(`
+/**
+ * @param {Request} request
+ * @returns {Promise<Response>}
+ */
+async function handler(request) {
+  if (request.method === 'GET') {
+    return new Response(
+      `
 <!DOCTYPE html>
 <html>
   <head>
@@ -24,53 +29,57 @@ const server = http.createServer(async (req, res) => {
     </form>
   </body>
 </html>
-`)
-    return
+`,
+      {
+        headers: { 'Content-Type': 'text/html' },
+      },
+    )
   }
 
-  if (req.method === 'POST') {
+  if (request.method === 'POST') {
     try {
       /** @type any[] */
       let parts = []
 
-      for await (let part of parseMultipartRequest(req)) {
+      for await (let part of parseMultipartRequest(request)) {
         if (part.isFile) {
           let tmpfile = tmp.fileSync()
-          fs.writeFileSync(tmpfile.name, part.bytes, 'binary')
+          await fsp.writeFile(tmpfile.name, part.body)
+          let { size } = await fsp.stat(tmpfile.name)
 
           parts.push({
             name: part.name,
             filename: part.filename,
             mediaType: part.mediaType,
-            size: part.size,
+            size,
             file: tmpfile.name,
           })
         } else {
-          parts.push({ name: part.name, value: part.text })
+          parts.push({ name: part.name, value: await part.text() })
         }
       }
 
-      res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ parts }, null, 2))
-      return
+      return new Response(JSON.stringify({ parts }, null, 2), {
+        headers: { 'Content-Type': 'application/json' },
+      })
     } catch (error) {
       if (error instanceof MultipartParseError) {
-        res.writeHead(400, { 'Content-Type': 'text/plain', Connection: 'close' })
-        res.end(`Error: ${error.message}`)
-        return
+        return new Response(`Error: ${error.message}`, {
+          status: 400,
+          headers: { Connection: 'close' },
+        })
       }
 
       console.error(error)
 
-      res.writeHead(500, { 'Content-Type': 'text/plain' })
-      res.end('Internal Server Error')
-      return
+      return new Response('Internal Server Error', { status: 500 })
     }
   }
 
-  res.writeHead(405)
-  res.end('Method Not Allowed')
-})
+  return new Response('Method Not Allowed', { status: 405 })
+}
+
+const server = http.createServer(createRequestListener(handler))
 
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT} ...`)

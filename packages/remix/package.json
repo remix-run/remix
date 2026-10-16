@@ -99,7 +99,6 @@
     "./middleware/static": "./src/static-middleware.ts",
     "./mime": "./src/mime.ts",
     "./multipart-parser": "./src/multipart-parser.ts",
-    "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./multiple-import-maps-polyfill": "./src/multiple-import-maps-polyfill.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
@@ -417,10 +416,6 @@
       "./multipart-parser": {
         "types": "./dist/multipart-parser.d.ts",
         "default": "./dist/multipart-parser.js"
-      },
-      "./multipart-parser/node": {
-        "types": "./dist/multipart-parser/node.d.ts",
-        "default": "./dist/multipart-parser/node.js"
       },
       "./multiple-import-maps-polyfill": {
         "types": "./dist/multiple-import-maps-polyfill.d.ts",
