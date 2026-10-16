@@ -236,6 +236,15 @@ function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYE
 
 const SSR_OMITTED_PROPS = RUNTIME_FRAMEWORK_PROPS
 
+interface SsrAttribute {
+  name: string
+  stringifyBoolean: boolean
+}
+
+const ATTRIBUTE_CACHE_LIMIT = 256
+const htmlAttributeCache = new Map<string, SsrAttribute | null>()
+const svgAttributeCache = new Map<string, SsrAttribute | null>()
+
 const ssrSignal = Object.freeze({
   get aborted() {
     return false
@@ -789,11 +798,12 @@ function renderAttributes(
   for (let key in props) {
     if (SSR_OMITTED_PROPS.has(key)) continue
     if (excludedProps?.has(key)) continue
-    if (!isAllowedHostPropName(key)) continue
+    let attribute = getSsrAttribute(key, isSvg)
+    if (attribute === null) continue
 
     let value = props[key]
-    let attrName = transformAttributeName(key, isSvg)
-    let shouldStringifyBoolean = shouldStringifyBooleanAttribute(attrName)
+    let attrName = attribute.name
+    let shouldStringifyBoolean = attribute.stringifyBoolean
     if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
       continue
     }
@@ -1260,8 +1270,26 @@ function escapeScriptTextContent(value: string): string {
   )
 }
 
-function transformAttributeName(name: string, isSvg: boolean): string {
-  return normalizeAttributeName(name, isSvg).attr
+function getSsrAttribute(name: string, isSvg: boolean): SsrAttribute | null {
+  let cache = isSvg ? svgAttributeCache : htmlAttributeCache
+  let attribute = cache.get(name)
+  if (attribute === undefined) {
+    if (isAllowedHostPropName(name)) {
+      let normalized = normalizeAttributeName(name, isSvg).attr
+      attribute = {
+        name: normalized,
+        stringifyBoolean: shouldStringifyBooleanAttribute(normalized),
+      }
+    } else {
+      attribute = null
+    }
+    if (cache.size >= ATTRIBUTE_CACHE_LIMIT) {
+      let oldest = cache.keys().next()
+      if (!oldest.done) cache.delete(oldest.value)
+    }
+    cache.set(name, attribute)
+  }
+  return attribute
 }
 
 function finalizeHtml(html: string, context: RenderContext): string {

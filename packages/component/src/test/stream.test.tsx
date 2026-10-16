@@ -683,6 +683,27 @@ describe('stream', () => {
       )
     })
 
+    it('checks each URL value and host tag across renders', async () => {
+      await drain(renderToStream(<a href="/safe" />))
+      await drain(renderToStream(createElement('div', { data: 'javascript:alert(1)' })))
+
+      let html = await drain(
+        renderToStream(
+          <>
+            <a href="javascript:alert(1)" />
+            <object data="javascript:alert(1)" />
+          </>,
+        ),
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      expect(shelf.content.querySelector('a')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
+      expect(shelf.content.querySelector('object')?.getAttribute('data')).toBe(blockedJavaScriptUrl)
+      expect(await drain(renderToStream(<a href="/still-safe" />))).toBe(
+        '<a href="/still-safe"></a>',
+      )
+    })
+
     it('preserves allowed URLs and non-executable URL attributes', async () => {
       let html = await drain(
         renderToStream(
@@ -1127,6 +1148,17 @@ describe('stream', () => {
   })
 
   describe('svg', () => {
+    it('keeps HTML and SVG attribute rules separate across renders', async () => {
+      let props = { viewBox: '0 0 24 24', preserveAlpha: false }
+      let html = await drain(renderToStream(createElement('div', props)))
+      let svg = await drain(renderToStream(<svg {...props} />))
+      let laterHtml = await drain(renderToStream(createElement('div', props)))
+
+      expect(html).toBe('<div viewbox="0 0 24 24"></div>')
+      expect(svg).toBe('<svg viewBox="0 0 24 24" preserveAlpha="false"></svg>')
+      expect(laterHtml).toBe(html)
+    })
+
     it('renders SVG with preserved viewBox and kebab-cased attributes', async () => {
       let stream = renderToStream(
         <svg viewBox="0 0 24 24" fill="none" className="icon">
