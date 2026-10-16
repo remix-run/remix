@@ -26,6 +26,7 @@ describe('social-auth database seed', () => {
     let admin = await db.findOne(users, { where: { email: 'admin@example.com' } })
 
     assert.ok(admin)
+    assert.ok(admin.password_hash)
     assert.equal(await verifyPassword('password123', admin.password_hash), true)
     assert.equal(await verifyPassword('wrong-password', admin.password_hash), false)
   })
