@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { RemixNode } from '../runtime/component.ts'
-import { createMixin, unsafeHTML } from '../index.ts'
+import { createMixin, on, unsafeHTML } from '../index.ts'
 import type { MixinDescriptor } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
@@ -44,6 +44,40 @@ async function expectParity(element: RemixNode, expected: Record<string, string>
 }
 
 describe('mixin composition ssr/client parity', () => {
+  it('preserves host props when every mixin is a DOM event listener', async () => {
+    await expectParity(
+      <div id="host" title="unchanged" mix={[on('click', () => {}), on('keydown', () => {})]}>
+        Child content
+      </div>,
+      { id: 'host', title: 'unchanged' },
+    )
+    expect(await renderToString(<div mix={on('click', () => {})}>Child content</div>)).toBe(
+      '<div>Child content</div>',
+    )
+  })
+
+  it('composes prop mixins around DOM event listeners', async () => {
+    let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
+      <handle.element {...props} title={title} />
+    ))
+    let appendTitle = createMixin((handle) => (suffix: string, props: { title?: string }) => (
+      <handle.element {...props} title={`${props.title ?? ''}${suffix}`} />
+    ))
+
+    await expectParity(
+      <div mix={[withTitle('hello'), on('click', () => {}), appendTitle('-world')]} />,
+      { title: 'hello-world' },
+    )
+  })
+
+  it('preserves props when a mixin returns DOM event listeners', async () => {
+    let withEvent = createMixin<HTMLDivElement, []>(() => () => [
+      on<HTMLDivElement>('click', () => {}),
+    ])
+
+    await expectParity(<div id="host" mix={withEvent()} />, { id: 'host' })
+  })
+
   it('composes mixins in order with the same result on both sides', async () => {
     let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
       <handle.element {...props} title={title} />

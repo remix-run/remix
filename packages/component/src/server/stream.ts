@@ -26,6 +26,7 @@ import {
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
 import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
+import { isOnMixinDescriptor } from '../runtime/mixins/on-mixin.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
@@ -809,9 +810,10 @@ function resolveSsrMixedProps(
   context: RenderContext,
   frameState: SsrFrameState,
 ): ElementProps {
-  if (resolveMixDescriptors(initialProps).length === 0) return initialProps
+  if (resolveMixDescriptors(initialProps).every(isOnMixinDescriptor)) return initialProps
 
   return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
+    if (isOnMixinDescriptor(descriptor)) return undefined
     let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState)
     if (!runner) return undefined
     // Unlike the client runtime, a throwing mixin is isolated here so a
@@ -1290,6 +1292,25 @@ function finalizeHtml(html: string, context: RenderContext): string {
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
   let headContent = importMapScript + preloads + styles
+  let rmxData = buildRmxDataScript(context)
+  if (hasHtmlRoot && headContent && rmxData) {
+    let headCloseIndex = html.indexOf('</head>')
+    let bodyCloseIndex = html.indexOf('</body>')
+    if (
+      headCloseIndex !== -1 &&
+      bodyCloseIndex >= headCloseIndex &&
+      !headContent.includes('</body>')
+    ) {
+      // Find both insertions before joining so the expanded document is not flattened twice.
+      return (
+        html.slice(0, headCloseIndex) +
+        headContent +
+        html.slice(headCloseIndex, bodyCloseIndex) +
+        rmxData +
+        html.slice(bodyCloseIndex)
+      )
+    }
+  }
   if (hasHtmlRoot && headContent) {
     let headCloseIndex = html.indexOf('</head>')
     if (headCloseIndex !== -1) {
@@ -1310,7 +1331,6 @@ function finalizeHtml(html: string, context: RenderContext): string {
   }
 
   // Append aggregated hydration/frame data script at the end
-  let rmxData = buildRmxDataScript(context)
   if (rmxData) {
     if (hasHtmlRoot) {
       // Insert before </body> if present, otherwise before </html>

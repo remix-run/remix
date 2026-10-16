@@ -90,6 +90,42 @@ describe('stream', () => {
       expect(html).toBe('<p>😀�Å</p>')
     })
 
+    it('inserts head resources and hydration data around a large Unicode body', async () => {
+      let content = '日本語🙂'.repeat(3000)
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>{content}</p>
+      })
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>日本語</title>
+            </head>
+            <body>
+              <Entry />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/entry.js',
+                exportName: 'Entry',
+                preloads: ['/entry.js'],
+                importMap: { imports: { entry: '/entry.js' } },
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html).toContain('<title>日本語</title>')
+      expect(html).toContain('href="/entry.js" /></head><body>')
+      expect(html).toContain(`<p>${content}</p><!-- /rmx:h --><script type="application/json"`)
+      expect(html).toContain('</script></body></html>')
+      let [, data] = getSingleEntry(parseRmxDataFromHtml(html).h)
+      expect(data).toEqual({ moduleUrl: '/entry.js', exportName: 'Entry', props: {} })
+    })
+
     it('streams a large synchronous tree without yielding for every node', async () => {
       let children = Array.from({ length: 1000 }, (_, index) => <span>{index}</span>)
       let reader = renderToStream(<div>{children}</div>).getReader()
