@@ -829,6 +829,26 @@ describe('stream', () => {
       )
     })
 
+    it('preserves boolean and escaped values in HTML and SVG attributes', async () => {
+      let html = await drain(
+        renderToStream(
+          <>
+            <input disabled required={false} value={0} title={'A & "B"'} />
+            <div contentEditable draggable={false} title={undefined} />
+            <svg preserveAlpha={false} focusable>
+              <use xlinkHref="#safe" />
+            </svg>
+          </>,
+        ),
+      )
+
+      expect(html).toBe(
+        '<input disabled value="0" title="A &amp; &quot;B&quot;" />' +
+          '<div contenteditable="true" draggable="false"></div>' +
+          '<svg preserveAlpha="false" focusable="true"><use xlink:href="#safe"></use></svg>',
+      )
+    })
+
     it('renders translate with yes/no attribute values', async () => {
       let stream = renderToStream(<div translate="no" />)
       let html = await drain(stream)

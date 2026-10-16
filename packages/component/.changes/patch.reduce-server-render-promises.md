@@ -1,1 +1,1 @@
-Improve rendering throughput and reduce allocations when composing props and producing HTML. Blocking frames still resolve before the first HTML chunk.
+Improve server rendering throughput and reduce temporary allocations by skipping unused mixin and attribute work, and closing responses directly when no frame content remains. Blocking frames still resolve before the first HTML chunk.
