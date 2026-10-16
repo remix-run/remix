@@ -11,14 +11,13 @@ const navigationLinks = [
 ] satisfies readonly DocsNavigationLink[]
 
 describe('createDocsNavigationLinks', () => {
-  it('returns the eight absolute links in navigation order', () => {
+  it('returns the seven absolute links in navigation order', () => {
     let links = createDocsNavigationLinks()
 
     assert.deepEqual(
       [...links],
       [
         ['guides', { href: 'https://guides.remix.run/', label: 'Guides' }],
-        ['ui', { href: 'https://ui.remix.run/', label: 'UI' }],
         ['api', { href: 'https://api.remix.run', label: 'API' }],
         ['github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' }],
         ['blog', { href: 'https://remix.run/blog', label: 'Blog' }],
@@ -35,7 +34,7 @@ describe('createDocsNavigationLinks', () => {
 
     assert.deepEqual(
       [...links.values()].map((link) => link.label),
-      ['Guides', 'UI', 'API', 'GitHub', 'Blog', 'Newsletter', 'Jam', 'Store'],
+      ['Guides', 'API', 'GitHub', 'Blog', 'Newsletter', 'Jam', 'Store'],
     )
     assert.deepEqual(links.get('api'), { href: '/v3', label: 'API', current: 'page' })
   })

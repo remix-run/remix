@@ -34,7 +34,6 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
     let { title, description, pages, currentPage, children, headings = [] } = handle.props
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let links = createDocsNavigationLinks()
-    links.set('ui', { href: routes.docs.index.href(), label: 'UI', current: 'location' })
     let contentId = `${handle.id}-content`
     return (
       <html lang="en">
