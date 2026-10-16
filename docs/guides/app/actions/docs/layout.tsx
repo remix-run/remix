@@ -116,14 +116,6 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
       >
         <div class="docs-layout" data-rmx-key={`docs-chapter-${handle.props.slug}`}>
           <article class="docs-article">
-            <nav class="docs-breadcrumb" aria-label="Breadcrumb" data-pagefind-ignore>
-              <a href={routes.docs.index.href()}>Docs</a>
-              <span class="docs-breadcrumb__sep" aria-hidden="true">
-                /
-              </span>
-              <span aria-current="page">{handle.props.title}</span>
-            </nav>
-
             <header class="docs-page-header">
               <p class="docs-page-eyebrow">{handle.props.chapter}</p>
               <h1 class="rmx-page-title">{handle.props.title}</h1>
