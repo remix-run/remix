@@ -18,7 +18,7 @@ export type OnMixinDescriptor = {
   args: [type: string, handler: SignaledListener<Event>, captureBoolean?: boolean]
 }
 
-const onMixinType: MixinType<
+const onMixinSetup: MixinType<
   Element,
   [type: string, handler: SignaledListener<Event>, captureBoolean?: boolean],
   ElementProps
@@ -63,7 +63,9 @@ const onMixinType: MixinType<
   }
 }
 
-const onMixin = createMixin(onMixinType)
+const onMixin = createMixin(onMixinSetup, { ssr: false })
+// Keep the browser's direct event path tied to the factory's setup identity.
+const onMixinType = onMixin('', () => {}).type
 
 export function isOnMixinDescriptor(descriptor: unknown): descriptor is OnMixinDescriptor {
   if (!descriptor || typeof descriptor !== 'object') return false

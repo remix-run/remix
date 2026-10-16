@@ -57,6 +57,7 @@ export type {
   MixinDescriptor,
   MixinFactory,
   MixinHandle,
+  MixinOptions,
   MixinType,
   MixInput,
   MixValue,
