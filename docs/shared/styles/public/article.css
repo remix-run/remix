@@ -13,16 +13,6 @@
   min-width: 0;
 }
 
-.docs-breadcrumb {
-  margin-bottom: var(--rmx-space-xxl);
-  font-size: var(--rmx-font-size-sm);
-}
-
-.docs-breadcrumb__sep {
-  margin: 0 var(--rmx-space-sm);
-  color: var(--rmx-color-text-muted);
-}
-
 .docs-page-header {
   margin-bottom: 40px;
 }
