@@ -16,10 +16,13 @@ export const skipLinkCss = css({
   '&:focus': { transform: 'none' },
 })
 
+const navigationToggleExpandedLeft =
+  'calc(var(--docs-sidebar-inline-start) + var(--docs-sidebar-content-width) - 32px)'
+
 export const navigationToggleCss = css({
   position: 'fixed',
   top: '16px',
-  left: 'calc(var(--docs-sidebar-inline-start) + var(--docs-sidebar-content-width) - 32px)',
+  left: `calc(${navigationToggleExpandedLeft} + (85px - ${navigationToggleExpandedLeft}) * var(--docs-nav-collapse))`,
   zIndex: 51,
   display: 'grid',
   width: '32px',
@@ -31,13 +34,10 @@ export const navigationToggleCss = css({
   color: 'var(--rmx-color-text-secondary)',
   background: 'transparent',
   cursor: 'pointer',
-  transition:
-    'left var(--docs-nav-duration) var(--docs-nav-easing), background-color 150ms ease-in-out',
+  transition: 'background-color 150ms ease-in-out',
   '&:hover, &:focus-visible': { background: 'var(--docs-nav-hover-background)' },
   '& svg': { display: 'block', width: '16px', height: '16px' },
-  ':root[data-docs-nav-collapsed] &': { left: '85px' },
   '@media (width < 900px)': { display: 'none' },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
 
 export const navigationCss = css({
@@ -49,8 +49,8 @@ export const navigationCss = css({
   maxHeight: 'calc(100dvh - 108px)',
   padding: 0,
   overflow: 'visible',
-  transition:
-    'transform var(--docs-nav-duration) var(--docs-nav-easing), opacity var(--docs-nav-duration) var(--docs-nav-easing), visibility 0s',
+  opacity: 'calc(1 - var(--docs-nav-collapse))',
+  transform: 'translateX(calc(-1 * var(--docs-sidebar-offset) * var(--docs-nav-collapse)))',
   '&[data-scrollable]': {
     width: 'calc(var(--docs-sidebar-content-width) + 8px)',
     marginLeft: '-4px',
@@ -61,8 +61,6 @@ export const navigationCss = css({
   },
   ':root[data-docs-nav-collapsed] &': {
     visibility: 'hidden',
-    opacity: 0,
-    transform: 'translateX(calc(-1 * var(--docs-sidebar-offset)))',
     pointerEvents: 'none',
   },
   '@media (max-height: 715px) and (width >= 900px)': {
@@ -89,31 +87,18 @@ export const navigationCss = css({
     background: 'var(--docs-shell-background)',
     boxShadow: '0 12px 32px rgb(0 0 0 / 18%)',
     opacity: 1,
-    clipPath: 'inset(0 0 100% 0)',
+    transform: 'none',
     pointerEvents: 'none',
-    transition:
-      'clip-path var(--docs-nav-duration) var(--docs-nav-easing), visibility 0s linear var(--docs-nav-duration)',
     '&[data-scrollable]': {
       width: 'auto',
       maxWidth: 'none',
       marginLeft: 0,
       padding: 'var(--rmx-space-lg)',
     },
-    '& > *': {
-      transform: 'translateY(calc(-1 * var(--rmx-space-md)))',
-      transition: 'transform var(--docs-nav-duration) var(--docs-nav-easing)',
-    },
     ':root[data-docs-mobile-panel="navigation"] &': {
       visibility: 'visible',
-      clipPath: 'inset(0)',
       pointerEvents: 'auto',
-      transition: 'clip-path var(--docs-nav-duration) var(--docs-nav-easing), visibility 0s',
-      '& > *': { transform: 'none' },
     },
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
-    '& > *': { transition: 'none' },
   },
 })
 
@@ -172,36 +157,29 @@ export const mobileNavigationBackdropCss = css({
     visibility: 'hidden',
     border: 0,
     background: 'rgb(0 0 0 / 32%)',
-    opacity: 0,
     pointerEvents: 'none',
-    transition:
-      'opacity var(--docs-nav-duration) var(--docs-nav-easing), visibility 0s linear var(--docs-nav-duration)',
     ':root[data-docs-mobile-panel] &': {
       visibility: 'visible',
-      opacity: 1,
       pointerEvents: 'auto',
-      transition: 'opacity var(--docs-nav-duration) var(--docs-nav-easing), visibility 0s',
     },
   },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
 
 export const mainCss = css({
   containerName: 'docs-main',
   containerType: 'inline-size',
-  width: 'calc(100% - var(--docs-sidebar-offset))',
+  width: 'calc(100% - var(--docs-content-offset))',
   minHeight: 'calc(100vh - var(--site-header-height))',
-  margin: 'var(--site-header-height) 0 0 var(--docs-sidebar-offset)',
+  margin: 'var(--site-header-height) 0 0 var(--docs-content-offset)',
   padding: 'var(--docs-main-padding)',
+  paddingLeft: 'var(--docs-content-padding-start)',
   borderRadius: '16px 0 0 16px',
   outline: 'none',
   background: 'var(--rmx-surface-lvl0)',
-  transition:
-    'width var(--docs-nav-duration) var(--docs-nav-easing), margin-left var(--docs-nav-duration) var(--docs-nav-easing), padding-left var(--docs-nav-duration) var(--docs-nav-easing)',
   '&::before': {
     position: 'fixed',
     top: 'var(--site-header-height)',
-    left: 'var(--docs-sidebar-offset)',
+    left: 'var(--docs-content-offset)',
     zIndex: 49,
     width: '16px',
     height: '16px',
@@ -209,26 +187,13 @@ export const mainCss = css({
       'radial-gradient(circle at 100% 100%, transparent 15.5px, var(--docs-shell-background) 16px)',
     content: "''",
     pointerEvents: 'none',
-    transition: 'left var(--docs-nav-duration) var(--docs-nav-easing)',
-  },
-  ':root[data-docs-nav-collapsed] &': {
-    width: 'calc(100% - var(--docs-collapsed-offset))',
-    marginLeft: 'var(--docs-collapsed-offset)',
-    paddingLeft: 'var(--docs-collapsed-content-padding)',
-    '&::before': { left: 'var(--docs-collapsed-offset)' },
   },
   '@media (width < 900px)': {
-    '&, :root[data-docs-nav-collapsed] &': {
-      width: '100%',
-      margin: 0,
-      padding: '24px',
-      borderRadius: 0,
-    },
+    width: '100%',
+    margin: 0,
+    padding: '24px',
+    borderRadius: 0,
     '&::before': { display: 'none' },
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
-    '&::before': { transition: 'none' },
   },
 })
 
@@ -239,13 +204,10 @@ export const sidebarRailCss = css({
     inset: 'var(--site-header-height) auto 0 0',
     zIndex: 30,
     display: 'block',
-    width: 'var(--docs-sidebar-offset)',
+    width: 'var(--docs-content-offset)',
     background: 'var(--docs-shell-background)',
     pointerEvents: 'none',
-    transition: 'width var(--docs-nav-duration) var(--docs-nav-easing)',
-    ':root[data-docs-nav-collapsed] &': { width: 'var(--docs-collapsed-offset)' },
   },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
 })
 
 export const secondaryNavigationCss = css({
@@ -275,24 +237,10 @@ export const secondaryNavigationCss = css({
     visibility: 'hidden',
     background: 'var(--docs-shell-background)',
     boxShadow: '0 12px 32px rgb(0 0 0 / 18%)',
-    clipPath: 'inset(0 0 100% 0)',
     pointerEvents: 'none',
-    transition:
-      'clip-path var(--docs-nav-duration) var(--docs-nav-easing), visibility 0s linear var(--docs-nav-duration)',
-    '& > *': {
-      transform: 'translateY(calc(-1 * var(--rmx-space-md)))',
-      transition: 'transform var(--docs-nav-duration) var(--docs-nav-easing)',
-    },
     ':root[data-docs-mobile-panel="secondary"] &': {
       visibility: 'visible',
-      clipPath: 'inset(0)',
       pointerEvents: 'auto',
-      transition: 'clip-path var(--docs-nav-duration) var(--docs-nav-easing), visibility 0s',
-      '& > *': { transform: 'none' },
     },
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
-    '& > *': { transition: 'none' },
   },
 })
