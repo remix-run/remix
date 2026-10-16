@@ -25,7 +25,7 @@ import {
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
+import { composeMixedProps } from '../runtime/core/mix.ts'
 import { isOnMixinDescriptor } from '../runtime/mixins/on-mixin.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -334,21 +334,16 @@ export function renderToStream(
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
 
-        // If we have any tails from blocking frame streams, stream them now.
-        // These contain nested non-blocking frame templates (or other follow-up chunks)
-        // that must come after the initial document chunk.
-        let tailPromise =
-          context.blockingFrameTails.length > 0
-            ? streamByteStreams(context.blockingFrameTails, controller, context)
-            : Promise.resolve()
-
-        // If we have pending non-blocking frames, stream them as they resolve
-        let pendingPromise =
-          context.pendingFrames.length > 0
-            ? streamPendingFrames(context, controller, encoder)
-            : Promise.resolve()
-
-        await Promise.all([tailPromise, pendingPromise])
+        if (context.blockingFrameTails.length > 0) {
+          let tails = streamByteStreams(context.blockingFrameTails, controller, context)
+          if (context.pendingFrames.length > 0) {
+            await Promise.all([tails, streamPendingFrames(context, controller, encoder)])
+          } else {
+            await tails
+          }
+        } else if (context.pendingFrames.length > 0) {
+          await streamPendingFrames(context, controller, encoder)
+        }
 
         if (closeIfCancelled(controller, context)) return
         controller.close()
@@ -792,18 +787,16 @@ function renderAttributes(
     if (!isAllowedHostPropName(key)) continue
 
     let value = props[key]
+    if (value === undefined || value === null) continue
     let attrName = transformAttributeName(key, isSvg)
-    let shouldStringifyBoolean = shouldStringifyBooleanAttribute(attrName)
-    if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
-      continue
-    }
-    value = sanitizeUrlAttribute(tag, attrName, value)
-
-    if (typeof value === 'boolean' && shouldStringifyBoolean) {
-      attrs += ` ${attrName}="${escapeHtml(String(value))}"`
-    } else if (value === true) {
-      attrs += ` ${attrName}`
+    if (typeof value === 'boolean') {
+      if (shouldStringifyBooleanAttribute(attrName)) {
+        attrs += ` ${attrName}="${value}"`
+      } else if (value) {
+        attrs += ` ${attrName}`
+      }
     } else {
+      value = sanitizeUrlAttribute(tag, attrName, value)
       attrs += ` ${attrName}="${escapeHtml(String(value))}"`
     }
   }
@@ -817,7 +810,20 @@ function resolveSsrMixedProps(
   context: RenderContext,
   frameState: SsrFrameState,
 ): ElementProps {
-  if (resolveMixDescriptors(initialProps).every(isOnMixinDescriptor)) return initialProps
+  let mix = initialProps.mix
+  if (!mix) return initialProps
+  if (Array.isArray(mix)) {
+    let hasServerMixin = false
+    for (let descriptor of mix) {
+      if (descriptor && !isOnMixinDescriptor(descriptor)) {
+        hasServerMixin = true
+        break
+      }
+    }
+    if (!hasServerMixin) return initialProps
+  } else if (isOnMixinDescriptor(mix)) {
+    return initialProps
+  }
 
   return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
     if (isOnMixinDescriptor(descriptor)) return undefined
