@@ -626,6 +626,36 @@ describe('navigate', () => {
     expect(scrollTops()).toEqual([0])
   })
 
+  it('reapplies the WebKit scroll reset when the page grows after iOS restores its bottom', async (t) => {
+    let { setScrollPosition, scrollTops, navigate } = setupWebKitScrollReset(t)
+    document.body.innerHTML = '<div style="height: 3000px"></div>'
+    let maxY = document.documentElement.scrollHeight - window.innerHeight
+    setScrollPosition(0, maxY + 1000)
+
+    await navigate(() => {
+      // iOS clamps the previous position to the new page's height, then images load.
+      setScrollPosition(0, maxY)
+      window.dispatchEvent(new Event('scroll'))
+      document.body.innerHTML = '<div style="height: 3100px"></div>'
+    })
+
+    expect(scrollTops()).toEqual([0])
+  })
+
+  it('leaves positions scrolled to during navigation by other code', async (t) => {
+    let { setScrollPosition, scrollTops, pendingFrames, navigate } = setupWebKitScrollReset(t)
+    document.body.innerHTML = '<div style="height: 3000px"></div>'
+    setScrollPosition(0, 2400)
+
+    await navigate(() => {
+      setScrollPosition(0, 500)
+      window.dispatchEvent(new Event('scroll'))
+    })
+
+    expect(scrollTops()).toEqual([])
+    expect(pendingFrames()).toBe(0)
+  })
+
   it('stops reapplying the WebKit scroll reset once the user scrolls', async (t) => {
     let { setScrollPosition, scrollTops, nextFrame, pendingFrames, navigate } =
       setupWebKitScrollReset(t)
