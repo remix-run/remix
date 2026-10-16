@@ -92,13 +92,13 @@ export interface ResolveFrameContext {
 interface HydrationData {
   moduleUrl: string
   exportName: string
-  props: Record<string, unknown>
+  propsJson: string
 }
 
 interface UnresolvedHydrationData {
   entryId: string
   component: EntryComponent
-  props: Record<string, unknown>
+  propsJson: string
 }
 
 interface ResolvedClientEntry {
@@ -304,16 +304,20 @@ export function renderToStream(
   }
 
   function cancel(reason: unknown): void {
+    signal?.removeEventListener('abort', onAbort)
     if (!renderAbortController.signal.aborted) {
       renderAbortController.abort(reason)
     }
   }
 
   let signal = options?.signal
+  function onAbort(): void {
+    cancel(signal?.reason)
+  }
   if (signal?.aborted) {
     cancel(signal.reason)
   } else {
-    signal?.addEventListener('abort', () => cancel(signal.reason), { once: true })
+    signal?.addEventListener('abort', onAbort, { once: true })
   }
 
   return new ReadableStream({
@@ -353,6 +357,8 @@ export function renderToStream(
         }
         onError(error)
         controller.error(error)
+      } finally {
+        signal?.removeEventListener('abort', onAbort)
       }
     },
     cancel(reason) {
@@ -1089,10 +1095,12 @@ function buildEntrySegment(
 
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, frameState)
+  let propsJson = JSON.stringify(props, replacer)
+  if (propsJson === undefined) throw new TypeError('Client entry props must serialize to JSON')
   context.unresolvedHydrationData.set(instanceId, {
     entryId: type.$entryId,
     component: type,
-    props: JSON.parse(JSON.stringify(props, replacer)),
+    propsJson,
   })
 
   output.push('<!-- /rmx:h -->')
@@ -1138,7 +1146,7 @@ async function resolveClientEntries(
   let resolvedEntries = new Map<EntryComponent, ResolvedClientEntry>()
 
   for (let [hydrationId, unresolvedHydrationData] of context.unresolvedHydrationData) {
-    let { entryId, component, props } = unresolvedHydrationData
+    let { entryId, component, propsJson } = unresolvedHydrationData
     let resolvedEntry = resolvedEntries.get(component)
     if (!resolvedEntry) {
       resolvedEntry = resolveClientEntry
@@ -1152,7 +1160,7 @@ async function resolveClientEntries(
     context.hydrationData.set(hydrationId, {
       exportName: resolvedEntry.exportName,
       moduleUrl: resolvedEntry.href,
-      props,
+      propsJson,
     })
   }
 
@@ -1219,21 +1227,22 @@ function validateClientEntriesForHydration(context: RenderContext): void {
   }
 }
 
+// Joining once avoids building a deep rope of thousands of small strings, which raises RSS.
 function serializeSegment(segments: Segment[]): string {
-  let html = ''
+  let parts: string[] = []
   for (let seg of segments) {
     if (typeof seg === 'string') {
-      html += seg
+      parts.push(seg)
     } else if (seg.kind === 'static') {
-      html += seg.html
+      parts.push(seg.html)
     } else {
-      html += `<!-- rmx:f:${seg.frameId} -->`
-      if (typeof seg.content === 'string') html += seg.content
-      else if (seg.content) html += serializeSegment(seg.content)
-      html += '<!-- /rmx:f -->'
+      parts.push(`<!-- rmx:f:${seg.frameId} -->`)
+      if (typeof seg.content === 'string') parts.push(seg.content)
+      else if (seg.content) parts.push(serializeSegment(seg.content))
+      parts.push('<!-- /rmx:f -->')
     }
   }
-  return html
+  return parts.join('')
 }
 
 function escapeHtml(str: string): string {
@@ -1445,20 +1454,22 @@ function buildRmxDataScript(context: RenderContext): string {
     return ''
   }
 
-  let data: {
-    h?: Record<string, HydrationData>
-    f?: Record<string, FrameData>
-  } = {}
-
+  let fields: string[] = []
   if (context.hydrationData.size > 0) {
-    data.h = Object.fromEntries(context.hydrationData)
+    let entries: string[] = []
+    for (let [id, { exportName, moduleUrl, propsJson }] of context.hydrationData) {
+      entries.push(
+        `${JSON.stringify(id)}:{"exportName":${JSON.stringify(exportName)},"moduleUrl":${JSON.stringify(moduleUrl)},"props":${propsJson}}`,
+      )
+    }
+    fields.push(`"h":{${entries.join(',')}}`)
   }
 
   if (context.frameData.size > 0) {
-    data.f = Object.fromEntries(context.frameData)
+    fields.push(`"f":${JSON.stringify(Object.fromEntries(context.frameData))}`)
   }
 
-  let serializedData = escapeScriptJson(JSON.stringify(data))
+  let serializedData = escapeScriptJson(`{${fields.join(',')}}`)
   return `<script type="application/json" id="rmx-data">${serializedData}</script>`
 }
 

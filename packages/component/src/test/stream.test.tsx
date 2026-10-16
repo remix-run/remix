@@ -56,6 +56,52 @@ describe('stream', () => {
       expect(html).toBe('<div>Hello, world!</div>')
     })
 
+    it('removes the request abort listener after rendering finishes', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+
+      await drain(renderToStream(<p>Finished</p>, { signal: controller.signal }))
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+    })
+
+    it('removes the request abort listener when rendering fails', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+      function Broken(): never {
+        throw new Error('Render failed')
+      }
+
+      await expect(
+        drain(renderToStream(<Broken />, { signal: controller.signal, onError() {} })),
+      ).rejects.toThrow('Render failed')
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+    })
+
+    it('removes the request abort listener when the consumer cancels pending rendering', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+      let [frame, resolve] = withResolvers<string>()
+      let stream = renderToStream(<Frame src="/pending" fallback={<p>Loading</p>} />, {
+        signal: controller.signal,
+        resolveFrame() {
+          return frame
+        },
+      })
+      let reader = stream.getReader()
+      await reader.read()
+
+      expect(remove).toHaveBeenCalledTimes(0)
+      await reader.cancel()
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+      resolve('<p>Done</p>')
+    })
+
     it('keeps earlier stream chunks intact while other renders finish', async () => {
       let content = '日本語🙂'.repeat(1000)
       let reader = renderToStream(<p>{content}</p>).getReader()
@@ -2167,6 +2213,41 @@ describe('stream', () => {
         expect(entry.moduleUrl).toBe('/js/button.js')
         expect(entry.exportName).toBe('Button')
       }
+    })
+
+    it('snapshots hydration props before resolving client entries and calls toJSON once', async () => {
+      let calls = 0
+      let value = {
+        count: 1,
+        toJSON() {
+          calls++
+          return { count: this.count, label: '</script>日本語🙂' }
+        },
+      }
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let html = await drain(
+        renderToStream(createElement(Entry, { value }), {
+          async resolveClientEntry() {
+            value.count = 2
+            return { href: '/entry.js', exportName: 'Entry' }
+          },
+        }),
+      )
+
+      let [, data] = getSingleEntry(parseRmxDataFromHtml(html).h)
+      expect(data.props.value).toEqual({ count: 1, label: '</script>日本語🙂' })
+      expect(calls).toBe(1)
+    })
+
+    it('rejects client entry props whose toJSON returns undefined', async () => {
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let stream = renderToStream(createElement(Entry, { toJSON() {} }), { onError() {} })
+
+      await expect(drain(stream)).rejects.toThrow('Client entry props must serialize to JSON')
     })
 
     it('renders hydrated component with complex props', async () => {
