@@ -61,7 +61,8 @@ export class FileUpload extends File {
    */
   stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
     // Node.js before 24.20.0 and 26.6.0 never frees the contents of a Blob read through
-    // `stream()`, so read the file in slices instead (https://github.com/nodejs/node/issues/63574)
+    // `stream()`, so read the file in slices instead (https://github.com/nodejs/node/issues/63574).
+    // Remove this override once our minimum supported Node.js version is >=24.20.0.
     let offset = 0
     return new ReadableStream({
       type: 'bytes',
