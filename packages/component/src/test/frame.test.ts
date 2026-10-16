@@ -450,6 +450,175 @@ describe('frames', () => {
     }
   })
 
+  it('holds component tasks from a navigation reload until they are released', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let tasks: string[] = []
+
+    function TaskEntry(handle: Handle<{ label: string }>) {
+      handle.queueTask(() => tasks.push(handle.props.label))
+      return () => jsx('p', { children: handle.props.label })
+    }
+
+    let frame = createTestFrame(root, {
+      loadModule: () => TaskEntry,
+      resolveFrame: () =>
+        [
+          '<!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h -->',
+          rmxDataScript('Navigation', '/task-entry.js', 'TaskEntry'),
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      let reload = reloadFrameForNavigation(frame.handle)
+      await reload.finished
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(root.textContent).toBe('Navigation')
+      expect(tasks).toEqual([])
+
+      reload.releaseTasks()
+      expect(tasks).toEqual(['Navigation'])
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps held component tasks after a newer reload replaces a navigation reload', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let tasks: string[] = []
+    let requests = 0
+
+    function TaskEntry(handle: Handle<{ label: string }>) {
+      handle.queueTask((signal) => tasks.push(`${handle.props.label} ${signal.aborted}`))
+      return () => jsx('p', { children: handle.props.label })
+    }
+
+    let frame = createTestFrame(root, {
+      loadModule: () => TaskEntry,
+      resolveFrame: () => {
+        requests++
+        if (requests > 1) return '<p>Replacement</p>'
+        return [
+          '<!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h -->',
+          rmxDataScript('Navigation', '/task-entry.js', 'TaskEntry'),
+        ].join('')
+      },
+    })
+
+    try {
+      await frame.ready()
+      let navigationReload = reloadFrameForNavigation(frame.handle)
+      await navigationReload.finished
+      await frame.handle.reload()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(root.textContent).toBe('Replacement')
+      expect(tasks).toEqual([])
+
+      navigationReload.releaseTasks()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(tasks).toEqual(['Navigation true'])
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('stops holding component tasks after a navigation reload overlaps another render', async () => {
+    let [replaced, markReplaced] = withResolvers<void>()
+    let replacementHandle: Handle | undefined
+
+    function Replacement(handle: Handle) {
+      replacementHandle = handle
+      return () => jsx('p', { children: 'Replacement' })
+    }
+
+    function ReentrantEntry(handle: Handle) {
+      queueMicrotask(() => {
+        void handle.frame.replace(jsx(Replacement, {})).then(markReplaced)
+      })
+      return () => jsx('p', { children: 'Navigation' })
+    }
+
+    let frame = createTestFrame(document, {
+      resolveFrame: () => jsx(ReentrantEntry, {}),
+    })
+
+    try {
+      await frame.ready()
+      await Promise.all([reloadFrameForNavigation(frame.handle).finished, replaced])
+      let update = replacementHandle?.update().then(() => 'updated')
+      let result = await Promise.race([
+        update,
+        new Promise((resolve) => setTimeout(() => resolve('held'), 50)),
+      ])
+
+      expect(result).toBe('updated')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('runs held component tasks with aborted signals when the frame is disposed', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let tasks: boolean[] = []
+
+    function TaskEntry(handle: Handle<{ label: string }>) {
+      handle.queueTask((signal) => tasks.push(signal.aborted))
+      return () => jsx('p', { children: handle.props.label })
+    }
+
+    let frame = createTestFrame(root, {
+      loadModule: () => TaskEntry,
+      resolveFrame: () =>
+        [
+          '<!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h -->',
+          rmxDataScript('Navigation', '/task-entry.js', 'TaskEntry'),
+        ].join(''),
+    })
+
+    await frame.ready()
+    await reloadFrameForNavigation(frame.handle).finished
+    frame.dispose()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(tasks).toEqual([true])
+  })
+
+  it('runs component tasks from a frame reload without holding them', async () => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p id="initial">Initial</p>'
+    document.body.append(root)
+    let tasks: string[] = []
+
+    function TaskEntry(handle: Handle<{ label: string }>) {
+      handle.queueTask(() => tasks.push(handle.props.label))
+      return () => jsx('p', { children: handle.props.label })
+    }
+
+    let frame = createTestFrame(root, {
+      loadModule: () => TaskEntry,
+      resolveFrame: () =>
+        [
+          '<!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h -->',
+          rmxDataScript('Reload', '/task-entry.js', 'TaskEntry'),
+        ].join(''),
+    })
+
+    try {
+      await frame.ready()
+      await frame.handle.reload()
+
+      expect(tasks).toEqual(['Reload'])
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('waits for client entry reconciliation before a reload resolves', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'

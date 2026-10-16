@@ -1241,6 +1241,7 @@ function resolveClientFrame(
   let frameSrc = getFrameSrc(node)
   let state = node._state
   let instance = state.instance
+  let heldTasks = runtime.heldTasks
 
   let token = state.resolveToken + 1
   state.resolveToken = token
@@ -1273,6 +1274,7 @@ function resolveClientFrame(
         signal: resolveController.signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
+        heldTasks,
         onCommit: frameCommitted.resolve,
       })
       if (state.resolveToken !== token || resolveController.signal.aborted) return
@@ -1462,7 +1464,8 @@ export function renderComponent(
   let committed = commitComponentNode(next, content)
   handle.setScheduleUpdate(scheduler, committed, domParent)
 
-  scheduler.enqueueTasks(tasks)
+  let heldTasks = tasks.length > 0 ? getFrameRuntime(context.frame)?.heldTasks : undefined
+  if (!heldTasks?.hold(scheduler, tasks)) scheduler.enqueueTasks(tasks)
 
   return committed
 }

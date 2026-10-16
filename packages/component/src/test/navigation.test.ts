@@ -5,7 +5,8 @@ import {
   startNavigationListener,
   startNavigationListenerImpl,
 } from '../runtime/navigation.ts'
-import type { FrameHandle } from '../runtime/component.ts'
+import { Frame, type FrameHandle, type Handle } from '../runtime/component.ts'
+import { jsx } from '../runtime/jsx.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
 import { withResolvers } from './utils.ts'
 import { reloadDocument } from '../runtime/document-reload.ts'
@@ -16,7 +17,13 @@ type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
 function createReloadTransition(result: StubFrameReloadResult | Promise<StubFrameReloadResult>) {
   let signal = new AbortController().signal
   let finished = Promise.resolve(result).then((result) => ({ ...result, signal }))
-  return { signal, committed: finished.then(() => {}), finished }
+  return {
+    signal,
+    committed: finished.then(() => {}),
+    finished,
+    releaseTasks: () => {},
+    abandonTasks: () => {},
+  }
 }
 
 // Stand-in frame the navigation handler can call without dragging in the
@@ -292,7 +299,13 @@ describe('navigate', () => {
     let [committed, resolveCommitted] = withResolvers<void>()
     startNavigationListenerImpl(controller.signal, {
       ...stubFrames,
-      reloadFrame: () => ({ signal: controller.signal, committed, finished }),
+      reloadFrame: () => ({
+        signal: controller.signal,
+        committed,
+        finished,
+        releaseTasks: () => {},
+        abandonTasks: () => {},
+      }),
     })
     let input = document.createElement('input')
     document.body.append(input)
@@ -489,7 +502,13 @@ describe('navigate', () => {
       getTopFrame: () => frame,
       getNamedFrame: () => frame,
       reloadFrame() {
-        return { signal: reloadController.signal, committed, finished }
+        return {
+          signal: reloadController.signal,
+          committed,
+          finished,
+          releaseTasks: () => {},
+          abandonTasks: () => {},
+        }
       },
     })
     let anchor = document.createElement('a')
@@ -1091,7 +1110,13 @@ describe('navigate', () => {
       getTopFrame: () => topFrame,
       getNamedFrame: () => topFrame,
       reloadFrame() {
-        return { signal: eventController.signal, committed, finished }
+        return {
+          signal: eventController.signal,
+          committed,
+          finished,
+          releaseTasks: () => {},
+          abandonTasks: () => {},
+        }
       },
     })
 
@@ -1324,6 +1349,403 @@ describe('navigate', () => {
       expect(requests).toBe(2)
     } finally {
       resolvePending()
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('resets scroll when a cached client entry replaces the URL while mounting', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'canonical-url')
+    let canonical = new URL(destination)
+    canonical.searchParams.set('variant', 'small')
+    let scrolledUrls: string[] = []
+    let scrollErrors = spyOnNavigateEventScroll(t, (event) =>
+      scrolledUrls.push(event.destination.url),
+    )
+
+    function CanonicalUrl(handle: Handle<{ href: string }>) {
+      handle.queueTask(() => {
+        if (window.location.href === handle.props.href) return
+        void navigate(handle.props.href, { history: 'replace', resetScroll: false }).catch(() => {})
+      })
+      return () => jsx('span', { children: 'Entry' })
+    }
+
+    // The initial document hydrates the entry, so the destination finds its module cached.
+    document.body.innerHTML = clientEntryPage('section', { href: originalUrl })
+    let app = run({
+      loadModule: () => CanonicalUrl,
+      resolveFrame: () => clientEntryDocument({ href: canonical.href }),
+    })
+
+    try {
+      await app.ready()
+      let canonicalized = waitForNavigationUrl(canonical.href)
+      let pushed = navigate(destination.href).then(
+        () => 'finished',
+        () => 'aborted',
+      )
+      await canonicalized
+
+      expect(await pushed).toBe('finished')
+      expect(document.querySelector('main span')?.textContent).toBe('Entry')
+      expect(scrolledUrls).toEqual([destination.href])
+      expect(scrollErrors).toEqual([])
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('keeps mount tasks held while a document navigation is pending', async (t) => {
+    let releaseTasks = mock.fn()
+    let dispatchNavigation = startStubNavigationListener(t, {
+      ...stubFrames,
+      reloadFrame: () => ({
+        ...createReloadTransition({ signal: new AbortController().signal }),
+        releaseTasks,
+      }),
+    })
+    let anchor = document.createElement('a')
+    anchor.href = '/destination'
+    let documentAnchor = document.createElement('a')
+    documentAnchor.href = '/document'
+    documentAnchor.setAttribute('data-rmx-document', '')
+
+    let transition = dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/destination', window.location.origin).href,
+      }),
+    )
+    await transition.runHandler()
+    dispatchNavigation(
+      createAnchorNavigateEvent(documentAnchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/document', window.location.origin).href,
+      }),
+    )
+    await transition.succeed()
+
+    expect(releaseTasks).not.toHaveBeenCalled()
+  })
+
+  it('releases mount tasks once a navigation finishes', async (t) => {
+    let releaseTasks = mock.fn()
+    let dispatchNavigation = startStubNavigationListener(t, {
+      ...stubFrames,
+      reloadFrame: () => ({
+        ...createReloadTransition({ signal: new AbortController().signal }),
+        releaseTasks,
+      }),
+    })
+    let anchor = document.createElement('a')
+    anchor.href = '/destination'
+
+    let transition = dispatchNavigation(
+      createAnchorNavigateEvent(anchor, {
+        intercept: mock.fn(),
+        destinationUrl: new URL('/destination', window.location.origin).href,
+      }),
+    )
+    await transition.runHandler()
+    expect(releaseTasks).not.toHaveBeenCalled()
+    await transition.succeed()
+
+    expect(releaseTasks).toHaveBeenCalledTimes(1)
+  })
+
+  it('runs mount tasks of cached client entries after the navigation finishes', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'cached-mount-task')
+    let events: string[] = []
+    spyOnNavigateEventScroll(t, () => events.push('scroll'))
+
+    function Entry(handle: Handle<{ page: string }>) {
+      handle.queueTask(() => {
+        if (handle.props.page !== 'destination') return
+        events.push(window.navigation.transition ? 'task during navigation' : 'task')
+      })
+      return () => jsx('span', { children: 'Entry' })
+    }
+
+    // The initial document hydrates the entry, so the destination finds its module cached.
+    document.body.innerHTML = clientEntryPage('section', { page: 'initial' })
+    let app = run({
+      loadModule: () => Entry,
+      resolveFrame: () => clientEntryDocument({ page: 'destination' }),
+    })
+
+    try {
+      await app.ready()
+      await navigate(destination.href)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(events).toEqual(['scroll', 'task'])
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('runs mount tasks of client entries loaded during the navigation after it finishes', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'uncached-mount-task')
+    let [moduleLoaded, resolveModule] = withResolvers<Function>()
+    let events: string[] = []
+    spyOnNavigateEventScroll(t, () => {
+      events.push('scroll')
+      resolveModule(Entry)
+    })
+
+    function Entry(handle: Handle) {
+      handle.queueTask(() => {
+        events.push(window.navigation.transition ? 'task during navigation' : 'task')
+      })
+      return () => jsx('span', { children: 'Entry' })
+    }
+
+    document.body.innerHTML = '<h1>Initial page</h1>'
+    let app = run({
+      loadModule: () => moduleLoaded,
+      resolveFrame: () => clientEntryDocument({}),
+    })
+
+    try {
+      await app.ready()
+      await navigate(destination.href)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(events).toEqual(['scroll', 'task'])
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('runs mount tasks of client entries in nested frames after the navigation finishes', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'nested-mount-task')
+    let events: string[] = []
+    spyOnNavigateEventScroll(t, () => events.push('scroll'))
+
+    function Entry(handle: Handle<{ page: string }>) {
+      handle.queueTask(() => {
+        if (handle.props.page !== 'destination') return
+        events.push(window.navigation.transition ? 'task during navigation' : 'task')
+      })
+      return () => jsx('span', { children: 'Entry' })
+    }
+
+    let data = {
+      h: { h1: { moduleUrl: '/entry.js', exportName: 'Entry', props: { page: 'destination' } } },
+      f: {
+        f1: { status: 'resolved', src: '/child', name: 'child' },
+        f2: { status: 'resolved', src: '/grandchild', name: 'grandchild' },
+      },
+    }
+    // The initial document hydrates the entry, so the destination finds its module cached.
+    document.body.innerHTML = clientEntryPage('section', { page: 'initial' })
+    let app = run({
+      loadModule: () => Entry,
+      resolveFrame: () =>
+        [
+          '<html><head></head><body><main>',
+          '<!-- rmx:f:f1 --><!-- rmx:f:f2 -->',
+          '<!-- rmx:h:h1 --><span>Entry</span><!-- /rmx:h -->',
+          '<!-- /rmx:f --><!-- /rmx:f -->',
+          `</main><script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
+          '</body></html><!-- rmx:flush document -->',
+        ].join(''),
+    })
+
+    try {
+      await app.ready()
+      await navigate(destination.href)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(events).toEqual(['scroll', 'task'])
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('runs mount tasks of a redirected navigation after the redirect finishes', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'redirect-mount-task')
+    let redirected = new URL(originalUrl)
+    redirected.searchParams.set('frame-navigation', 'redirected-mount-task')
+    let [taskRan, markTaskRan] = withResolvers<void>()
+    let events: string[] = []
+    let listenerController = new AbortController()
+    window.navigation.addEventListener(
+      'navigatesuccess',
+      () =>
+        events.push(
+          `success ${new URL(window.location.href).searchParams.get('frame-navigation')}`,
+        ),
+      { signal: listenerController.signal },
+    )
+
+    function Entry(handle: Handle<{ page: string }>) {
+      handle.queueTask(() => {
+        if (handle.props.page !== 'destination') return
+        events.push(window.navigation.transition ? 'task during navigation' : 'task')
+        markTaskRan()
+      })
+      return () => jsx('span', { children: 'Entry' })
+    }
+
+    // The initial document hydrates the entry, so the destination finds its module cached.
+    document.body.innerHTML = clientEntryPage('section', { page: 'initial' })
+    let app = run({
+      loadModule: () => Entry,
+      resolveFrame() {
+        let response = new Response(clientEntryDocument({ page: 'destination' }))
+        Object.defineProperties(response, {
+          redirected: { value: true },
+          url: { value: redirected.href },
+        })
+        return response
+      },
+    })
+
+    try {
+      await app.ready()
+      void navigate(destination.href).catch(() => {})
+      await taskRan
+
+      expect(window.location.href).toBe(redirected.href)
+      expect(events.slice(-2)).toEqual(['success redirected-mount-task', 'task'])
+    } finally {
+      listenerController.abort()
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('runs mount tasks of an interrupted navigation after the next navigation finishes', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'interrupted-mount-task')
+    let canonical = new URL(destination)
+    canonical.searchParams.set('variant', 'small')
+    let next = new URL(originalUrl)
+    next.searchParams.set('frame-navigation', 'after-interrupted-mount-task')
+    let [blockingRequested, markBlockingRequested] = withResolvers<void>()
+    let [blockingContent, resolveBlockingContent] = withResolvers<string>()
+    let tasks: boolean[] = []
+
+    function CanonicalBlockingEntry(handle: Handle<{ src?: string }>) {
+      handle.queueTask((signal) => {
+        if (!handle.props.src) return
+        tasks.push(signal.aborted)
+        if (signal.aborted) return
+        void navigate(canonical.href, { history: 'replace', resetScroll: false }).catch(() => {})
+      })
+      return () =>
+        handle.props.src
+          ? jsx(Frame, { src: handle.props.src })
+          : jsx('span', { children: 'Entry' })
+    }
+
+    // The initial document hydrates the entry, so the destination finds its module cached.
+    document.body.innerHTML = clientEntryPage('section', {})
+    let app = run({
+      loadModule: () => CanonicalBlockingEntry,
+      resolveFrame(src) {
+        if (src === '/blocking') {
+          markBlockingRequested()
+          return blockingContent
+        }
+        if (src === destination.href) return clientEntryDocument({ src: '/blocking' })
+        return '<html><head></head><body><h1>Next page</h1></body></html><!-- rmx:flush document -->'
+      },
+    })
+
+    try {
+      await app.ready()
+      let interrupted = navigate(destination.href).catch(() => {})
+      await blockingRequested
+      await navigate(next.href)
+      await interrupted
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(window.location.href).toBe(next.href)
+      expect(document.querySelector('h1')?.textContent).toBe('Next page')
+      expect(tasks).toEqual([true])
+    } finally {
+      resolveBlockingContent('')
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('runs mount tasks of a failed navigation once it fails', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'failed-mount-task')
+    let [blockingRequested, markBlockingRequested] = withResolvers<void>()
+    let [blockingContent, resolveBlockingContent] = withResolvers<string>()
+    let failure = new TypeError('Navigation failed')
+    let listenerController = new AbortController()
+    let tasks: string[] = []
+
+    function BlockingEntry(handle: Handle<{ src?: string }>) {
+      handle.queueTask((signal) => {
+        if (!handle.props.src) return
+        tasks.push(
+          window.navigation.transition ? 'task during navigation' : `task ${signal.aborted}`,
+        )
+      })
+      return () =>
+        handle.props.src
+          ? jsx(Frame, { src: handle.props.src })
+          : jsx('span', { children: 'Entry' })
+    }
+
+    // The initial document hydrates the entry, so the destination finds its module cached.
+    document.body.innerHTML = clientEntryPage('section', {})
+    let app = run({
+      loadModule: () => BlockingEntry,
+      resolveFrame(src) {
+        if (src === '/blocking') {
+          markBlockingRequested()
+          return blockingContent
+        }
+        return clientEntryDocument({ src: '/blocking' })
+      },
+    })
+
+    try {
+      await app.ready()
+      window.navigation.addEventListener(
+        'navigate',
+        (event) => {
+          event.intercept({
+            async handler() {
+              await blockingRequested
+              throw failure
+            },
+          })
+        },
+        { once: true, signal: listenerController.signal },
+      )
+      let error = await navigate(destination.href).catch((error: unknown) => error)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(error).toBe(failure)
+      expect(tasks).toEqual(['task false'])
+    } finally {
+      listenerController.abort()
+      resolveBlockingContent('')
       app.dispose()
       window.history.replaceState(window.history.state, '', originalUrl)
     }
@@ -2515,6 +2937,39 @@ function getCurrentNavigationEntry(): NavigationHistoryEntry {
   let entry = window.navigation.currentEntry
   if (!entry) throw new Error('Expected a current navigation entry')
   return entry
+}
+
+function clientEntryPage(tagName: string, props: Record<string, unknown>): string {
+  let data = { h: { h1: { moduleUrl: '/entry.js', exportName: 'Entry', props } } }
+  return [
+    `<${tagName}>`,
+    '<!-- rmx:h:h1 --><span>Entry</span><!-- /rmx:h -->',
+    `</${tagName}>`,
+    `<script type="application/json" id="rmx-data">${JSON.stringify(data)}</script>`,
+  ].join('')
+}
+
+function clientEntryDocument(props: Record<string, unknown>): string {
+  return `<html><head></head><body>${clientEntryPage('main', props)}</body></html><!-- rmx:flush document -->`
+}
+
+// Returns errors thrown by the native scroll(), since errors in abort listeners don't propagate.
+function spyOnNavigateEventScroll(
+  t: TestContext,
+  onScroll: (event: NavigateEvent) => void,
+): unknown[] {
+  let errors: unknown[] = []
+  let scroll = NavigateEvent.prototype.scroll
+  t.mock.method(NavigateEvent.prototype, 'scroll', function (this: NavigateEvent) {
+    onScroll(this)
+    try {
+      scroll.call(this)
+    } catch (error) {
+      errors.push(error)
+      throw error
+    }
+  })
+  return errors
 }
 
 function waitForNavigationSuccess(): Promise<void> {
