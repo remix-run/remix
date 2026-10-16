@@ -104,6 +104,20 @@
 .ui-doc-section td:first-child code {
   white-space: nowrap;
 }
+.ui-nav-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.ui-nav-version {
+  color: var(--rmx-color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
 .ui-nav-start {
   margin-bottom: 24px;
 }

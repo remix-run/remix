@@ -8,6 +8,7 @@ import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs
 import { DocsShell, DocsSecondaryNavigation } from 'remix-docs-shared/ui/docs-shell'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
+import uiPackage from '../../../../packages/ui/package.json' with { type: 'json' }
 import type { PageMeta, UiPage } from '../data/pages.ts'
 import { categories } from '../data/categories.ts'
 
@@ -98,6 +99,9 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
 function Sidebar(handle: Handle<{ pages: UiPage[]; currentPage?: PageMeta }>) {
   return () => (
     <>
+      <p class="ui-nav-heading">
+        Remix UI <span class="ui-nav-version">v{uiPackage.version}</span>
+      </p>
       <a
         class="ui-nav-link ui-nav-start"
         href={routes.docs.index.href()}

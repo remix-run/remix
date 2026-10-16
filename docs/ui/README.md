@@ -18,6 +18,8 @@ The development server uses port 44100 by default. Set `PORT` to choose another 
 
 Prerender writes the documentation pages, example modules, shared assets and Pagefind search index into `docs/ui/build/site/`. Pass `--dir` to choose another output directory. Search becomes available in development after prerendering. Hosting and deployment are not configured yet.
 
+The sidebar displays the version from `packages/ui/package.json`. Build published docs from the corresponding Remix UI release checkout so the version, documentation and live examples match.
+
 ## Authoring
 
 Pages are normal Remix components in `app/pages/patterns/` and `app/pages/animation/`. Each exports a small `meta` object with its title, category, slug, description and package import path. Add the component and its metadata to [the page list](https://github.com/remix-run/remix/blob/main/docs/ui/app/data/pages.ts) to include it in routing, navigation and prerendering.

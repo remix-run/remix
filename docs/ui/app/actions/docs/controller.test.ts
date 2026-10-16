@@ -1,5 +1,6 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
+import uiPackage from '../../../../../packages/ui/package.json' with { type: 'json' }
 import { router } from '../../router.ts'
 import { pages } from '../../data/pages.ts'
 import { routes } from '../../routes.ts'
@@ -9,6 +10,7 @@ describe('UI docs', () => {
     let response = await router.fetch(new Request('http://localhost/'))
     let html = await response.text()
     assert.equal(response.status, 200)
+    assert.equal(html.match(/class="ui-nav-version">([^<]+)<\/span>/)?.[1], `v${uiPackage.version}`)
     assert.match(html, /Unstyled, accessible UI patterns and animation for Remix/)
     assert.match(html, /<h2>Patterns<\/h2>/)
     assert.match(html, /is currently unstable and versioned in the v0\.x range/)
