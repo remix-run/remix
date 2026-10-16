@@ -12,7 +12,7 @@ pre {
   overflow-x: auto;
   border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
   border-radius: var(--rmx-radius-md);
-  background: var(--rmx-surface-lvl2);
+  background: var(--rmx-color-code-background);
 }
 
 pre code {
@@ -139,7 +139,7 @@ pre code {
 }
 
 .shiki {
-  background-color: var(--rmx-surface-lvl2) !important;
+  background-color: var(--rmx-color-code-background) !important;
 }
 
 @media (hover: none) {
@@ -150,7 +150,6 @@ pre code {
 
 @media (prefers-color-scheme: dark) {
   .shiki {
-    background-color: var(--shiki-dark-bg) !important;
     color: var(--shiki-dark) !important;
   }
 

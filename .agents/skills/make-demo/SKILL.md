@@ -18,6 +18,8 @@ A good demo should:
 
 ## Workflow
 
+For UI library documentation and component examples, also use [write-ui-examples](../write-ui-examples/SKILL.md). It covers scenario selection, visual versus API-only coverage and the required product UX review.
+
 1. Read the target APIs and at least one or two existing demos before writing new code.
 2. Choose a focused scenario that exists to demonstrate Remix behavior, not a generic app shell.
 3. Build the demo under `demos/<name>/` using the same conventions as the existing demos.
