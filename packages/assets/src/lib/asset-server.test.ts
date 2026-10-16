@@ -3851,6 +3851,49 @@ describe('asset-server', () => {
     }
   })
 
+  it('keeps rewritten barrel file imports when a module behind the barrel changes', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        ['import { first } from "./barrel.ts"', 'console.log(first)'].join('\n'),
+      )
+      await write(
+        caseDir,
+        'app/barrel.ts',
+        ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+      )
+      let firstPath = await write(caseDir, 'app/first.ts', 'export const first = 1')
+      await write(caseDir, 'app/second.ts', 'export const second = 2')
+      let assetServer = createWatchedTestServer(caseDir)
+
+      try {
+        let firstResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /from "\/assets\/app\/first\.ts"/)
+
+        await write(caseDir, 'app/first.ts', 'export const first = 10')
+        await emitWatchEvent(assetServer, firstPath, 'change')
+
+        let secondResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(secondResponse)
+        let secondBody = await secondResponse.text()
+        assert.match(secondBody, /from "\/assets\/app\/first\.ts"/)
+        assert.doesNotMatch(secondBody, /from "\/assets\/app\/barrel\.ts"/)
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/first.ts',
+        ])
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('retains cached scripts outside an invalidated barrel file import graph', async () => {
     let caseDir = await makeTmpDir()
     let loadCounts = new Map<string, number>()
