@@ -1,5 +1,38 @@
 import { type HeaderValue } from './header-value.ts'
 
+const maxRangeBound = String(Number.MAX_SAFE_INTEGER)
+
+function normalizeRangeBound(value: string): string {
+  return value.replace(/^0+/, '') || '0'
+}
+
+function compareRangeBounds(left: string, right: string): number {
+  left = normalizeRangeBound(left)
+  right = normalizeRangeBound(right)
+
+  if (left.length !== right.length) return left.length - right.length
+  if (left === right) return 0
+  return left < right ? -1 : 1
+}
+
+function parseRangeBound(value: string): number | undefined {
+  if (value === '') return undefined
+
+  let significantValue = normalizeRangeBound(value)
+  if (
+    significantValue.length > maxRangeBound.length ||
+    (significantValue.length === maxRangeBound.length && significantValue > maxRangeBound)
+  ) {
+    return Number.MAX_SAFE_INTEGER
+  }
+
+  return Number(significantValue)
+}
+
+function isValidResourceSize(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0
+}
+
 /**
  * Initializer for a {@link Range} header value.
  */
@@ -42,12 +75,12 @@ export class Range implements HeaderValue, RangeInit {
   /**
    * Checks if this range can be satisfied for a resource of the given size.
    *
-   * @param resourceSize The size of the resource in bytes
+   * @param resourceSize The size of the resource in bytes as a non-negative safe integer
    * @returns `false` if the range is malformed or all ranges are beyond the resource size
    */
   canSatisfy(resourceSize: number): boolean {
     // No unit or no ranges means header was malformed or empty
-    if (!this.unit || this.ranges.length === 0) return false
+    if (!this.unit || this.ranges.length === 0 || !isValidResourceSize(resourceSize)) return false
 
     // Validate all ranges first
     for (let range of this.ranges) {
@@ -81,11 +114,11 @@ export class Range implements HeaderValue, RangeInit {
    * Returns an array of ranges with resolved start and end values.
    * Returns an empty array if the range cannot be satisfied.
    *
-   * @param resourceSize The size of the resource in bytes
+   * @param resourceSize The size of the resource in bytes as a non-negative safe integer
    * @returns An array of ranges with resolved start and end values
    */
   normalize(resourceSize: number): Array<{ start: number; end: number }> {
-    if (!this.canSatisfy(resourceSize)) {
+    if (!isValidResourceSize(resourceSize) || !this.canSatisfy(resourceSize)) {
       return []
     }
 
@@ -170,8 +203,14 @@ export class Range implements HeaderValue, RangeInit {
               continue
             }
 
-            let start = startStr ? parseInt(startStr, 10) : undefined
-            let end = endStr ? parseInt(endStr, 10) : undefined
+            // Compare decimal strings before capping oversized bounds.
+            if (startStr && endStr && compareRangeBounds(startStr, endStr) > 0) {
+              hasInvalidPart = true
+              continue
+            }
+
+            let start = parseRangeBound(startStr)
+            let end = parseRangeBound(endStr)
 
             // If both bounds are specified, start must be <= end
             if (start !== undefined && end !== undefined && start > end) {
