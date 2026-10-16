@@ -487,6 +487,27 @@ describe('stream', () => {
       expect(html).toBe('<div><span>Count: 42</span><br /><span>Double: 84</span></div>')
     })
 
+    it('gives sibling components unique ids after nested components', async () => {
+      function Leaf(handle: Handle) {
+        return () => <i id={handle.id} />
+      }
+      function Mid() {
+        return () => <Leaf />
+      }
+
+      let html = await renderToString(
+        <div>
+          <Mid />
+          <Mid />
+          <Leaf />
+        </div>,
+      )
+
+      let ids = Array.from(html.matchAll(/id="([^"]+)"/g), (match) => match[1])
+      expect(ids.length).toBe(3)
+      expect(new Set(ids).size).toBe(3)
+    })
+
     it('exposes the current and top frame src during SSR', async () => {
       let seen:
         | {

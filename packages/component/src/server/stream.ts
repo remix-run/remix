@@ -177,6 +177,7 @@ interface RenderContext {
     context?: ResolveFrameContext,
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
+  blockingFrames: Promise<void>[]
   hydrationData: Map<string, HydrationData>
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   authoredImportMapImports: AuthoredImportMapEntries
@@ -202,16 +203,8 @@ interface SsrFrameState {
   topFrame: FrameHandle
 }
 
-type Segment =
-  | string
-  | StaticSegment
-  | Segment[]
-  | {
-      kind: 'frame'
-      frameId: string
-      content: Segment | null
-      pending?: Promise<void>
-    }
+type FrameSegment = { kind: 'frame'; frameId: string; content: Segment[] | string | null }
+type Segment = string | StaticSegment | FrameSegment
 
 const MAX_BUFFERED_HTML_LENGTH = 64 * 1024
 // UTF-8 needs at most three bytes per UTF-16 code unit.
@@ -295,6 +288,7 @@ export function renderToStream(
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
     pendingFrames: [],
+    blockingFrames: [],
     hydrationData: new Map(),
     unresolvedHydrationData: new Map(),
     authoredImportMapImports: new Map(),
@@ -327,7 +321,8 @@ export function renderToStream(
     async start(controller) {
       try {
         let root = buildSegment(node, context, rootFrameState)
-        if (context.frameData.size > 0) await resolveBlocking(root)
+        // Await in document order so the first rejecting frame determines the error.
+        for (let frame of context.blockingFrames) await frame
         if (closeIfCancelled(controller, context)) return
         await resolveClientEntries(context, options?.resolveClientEntry)
         if (closeIfCancelled(controller, context)) return
@@ -570,7 +565,7 @@ function buildFrameSegment(
   node: RemixElement,
   context: RenderContext,
   frameState: SsrFrameState,
-): Segment {
+): FrameSegment {
   let props = node.props
   let frameId = randomId('f')
 
@@ -581,7 +576,7 @@ function buildFrameSegment(
     src: props.src,
   })
 
-  let seg: Segment = {
+  let seg: FrameSegment = {
     kind: 'frame',
     frameId,
     content: null,
@@ -611,7 +606,7 @@ function buildFrameSegment(
     })
     // An earlier blocking frame may reject before this promise is awaited.
     framePromise.catch(() => {})
-    seg.pending = framePromise
+    context.blockingFrames.push(framePromise)
   }
 
   return seg
@@ -863,6 +858,8 @@ function createSsrMixinHandle(
   context: RenderContext,
   frameState: SsrFrameState,
 ) {
+  // Context lookups read the shared render context, so capture the parent before it moves on.
+  let parentVNode = context.parentVNode
   let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () => ({
     $rmx: true as const,
     type: hostType,
@@ -884,7 +881,7 @@ function createSsrMixinHandle(
           return undefined
         }
 
-        let current = context.parentVNode
+        let current = parentVNode
         while (current) {
           if (current.type === providerType) {
             let providerHandle = current._handle
@@ -963,12 +960,10 @@ function buildComponentSegment(
 
   vnode._handle = handle
   let [renderedNode] = handle.render(props)
-  let childContext = { ...context, parentVNode: vnode }
-
-  buildSegment(renderedNode, childContext, frameState, output)
-  if (childContext.flushKind === 'document') {
-    context.flushKind = 'document'
-  }
+  let previousParentVNode = context.parentVNode
+  context.parentVNode = vnode
+  buildSegment(renderedNode, context, frameState, output)
+  context.parentVNode = previousParentVNode
 }
 
 function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
@@ -1219,49 +1214,21 @@ function validateClientEntriesForHydration(context: RenderContext): void {
   }
 }
 
-// Resolve all blocking frame content once
-async function resolveBlocking(segment: Segment): Promise<void> {
-  let stack = [segment]
-  while (stack.length > 0) {
-    let next = stack.pop()
-    if (next === undefined || typeof next === 'string') continue
-    if (Array.isArray(next)) {
-      for (let index = next.length - 1; index >= 0; index--) {
-        stack.push(next[index])
-      }
-    } else if (next.kind === 'frame') {
-      if (next.pending) {
-        await next.pending
-        next.pending = undefined
-      }
-      if (next.content) stack.push(next.content)
+function serializeSegment(segments: Segment[]): string {
+  let html = ''
+  for (let seg of segments) {
+    if (typeof seg === 'string') {
+      html += seg
+    } else if (seg.kind === 'static') {
+      html += seg.html
+    } else {
+      html += `<!-- rmx:f:${seg.frameId} -->`
+      if (typeof seg.content === 'string') html += seg.content
+      else if (seg.content) html += serializeSegment(seg.content)
+      html += '<!-- /rmx:f -->'
     }
   }
-}
-
-// Serialize the segment tree to HTML
-function serializeSegment(seg: Segment): string {
-  if (typeof seg === 'string') return seg
-  if (!Array.isArray(seg) && seg.kind === 'static') return seg.html
-  let output = { html: '' }
-  appendSegment(seg, output)
-  return output.html
-}
-
-function appendSegment(seg: Segment, output: { html: string }): void {
-  if (typeof seg === 'string') {
-    output.html += seg
-  } else if (Array.isArray(seg)) {
-    for (let part of seg) {
-      if (part !== undefined) appendSegment(part, output)
-    }
-  } else if (seg.kind === 'static') {
-    output.html += seg.html
-  } else {
-    output.html += `<!-- rmx:f:${seg.frameId} -->`
-    if (seg.content) appendSegment(seg.content, output)
-    output.html += '<!-- /rmx:f -->'
-  }
+  return html
 }
 
 function escapeHtml(str: string): string {
@@ -1298,71 +1265,46 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 }
 
 function finalizeHtml(html: string, context: RenderContext): string {
-  let hasHtmlRoot = context.flushKind === 'document'
-
   let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
   let headContent = importMapScript + preloads + styles
   let rmxData = buildRmxDataScript(context)
-  if (hasHtmlRoot && headContent && rmxData) {
-    let headCloseIndex = html.indexOf('</head>')
-    let bodyCloseIndex = html.indexOf('</body>')
-    if (
-      headCloseIndex !== -1 &&
-      bodyCloseIndex >= headCloseIndex &&
-      !headContent.includes('</body>')
-    ) {
-      // Find both insertions before joining so the expanded document is not flattened twice.
-      return (
-        html.slice(0, headCloseIndex) +
-        headContent +
-        html.slice(headCloseIndex, bodyCloseIndex) +
-        rmxData +
-        html.slice(bodyCloseIndex)
-      )
-    }
+  if (context.flushKind !== 'document') {
+    return (headContent ? `<head>${headContent}</head>` : '') + html + rmxData
   }
-  if (hasHtmlRoot && headContent) {
-    let headCloseIndex = html.indexOf('</head>')
-    if (headCloseIndex !== -1) {
-      html = html.slice(0, headCloseIndex) + headContent + html.slice(headCloseIndex)
-    } else {
-      let htmlOpenMatch = html.match(/<html[^>]*>/)
-      if (htmlOpenMatch) {
-        let insertIndex = htmlOpenMatch.index! + htmlOpenMatch[0].length
-        html = html.slice(0, insertIndex) + `<head>${headContent}</head>` + html.slice(insertIndex)
-      } else {
-        html = headContent + html
-      }
-    }
-  }
+  if (!headContent && !rmxData) return html
 
-  if (!hasHtmlRoot && headContent) {
-    html = `<head>${headContent}</head>${html}`
+  // Both insertion points are found in the rendered document before either insertion.
+  let headIndex = headContent ? html.indexOf('</head>') : -1
+  if (headContent && headIndex === -1) {
+    let htmlOpenMatch = html.match(/<html[^>]*>/)
+    headIndex = htmlOpenMatch ? htmlOpenMatch.index! + htmlOpenMatch[0].length : 0
+    if (htmlOpenMatch) headContent = `<head>${headContent}</head>`
   }
-
-  // Append aggregated hydration/frame data script at the end
+  let dataIndex = html.length
   if (rmxData) {
-    if (hasHtmlRoot) {
-      // Insert before </body> if present, otherwise before </html>
-      let bodyCloseIndex = html.indexOf('</body>')
-      if (bodyCloseIndex !== -1) {
-        html = html.slice(0, bodyCloseIndex) + rmxData + html.slice(bodyCloseIndex)
-      } else {
-        let htmlCloseIndex = html.indexOf('</html>')
-        if (htmlCloseIndex !== -1) {
-          html = html.slice(0, htmlCloseIndex) + rmxData + html.slice(htmlCloseIndex)
-        } else {
-          html += rmxData
-        }
-      }
-    } else {
-      html += rmxData
-    }
+    dataIndex = html.indexOf('</body>')
+    if (dataIndex === -1) dataIndex = html.indexOf('</html>')
+    if (dataIndex === -1) dataIndex = html.length
   }
-
-  return html
+  if (!headContent) return html.slice(0, dataIndex) + rmxData + html.slice(dataIndex)
+  if (dataIndex < headIndex) {
+    return (
+      html.slice(0, dataIndex) +
+      rmxData +
+      html.slice(dataIndex, headIndex) +
+      headContent +
+      html.slice(headIndex)
+    )
+  }
+  return (
+    html.slice(0, headIndex) +
+    headContent +
+    html.slice(headIndex, dataIndex) +
+    rmxData +
+    html.slice(dataIndex)
+  )
 }
 
 const FRAME_HEAD_OPEN_TAG = '<head>'
@@ -1438,10 +1380,16 @@ function processStyleProps(props: ElementProps): ElementProps {
   let mergedClassName = classAttr
   if (className) mergedClassName = classAttr ? `${classAttr} ${className}` : className
 
-  let processedProps = { ...props }
+  let processedProps: ElementProps
   if (mergedClassName) {
+    // Copy without `delete`, which would leave the props object in slow dictionary mode.
+    processedProps = {}
+    for (let key of Object.keys(props)) {
+      if (key !== 'class') processedProps[key] = props[key]
+    }
     processedProps.className = mergedClassName
-    delete processedProps.class
+  } else {
+    processedProps = { ...props }
   }
 
   if (typeof props.style === 'object') {
