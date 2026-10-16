@@ -64,10 +64,25 @@ function resyncWebKitScrollAfterNavigation(
     })
   }
 
+  // iOS restores the previous position clamped to the new page's height at that moment, and the
+  // page can grow before the reset is checked, so remember each restored position as it happens.
+  let restoredPositions = [startY]
+  window.addEventListener(
+    'scroll',
+    () => {
+      let y = window.scrollY
+      if (!interacted && isRestoredScrollPosition(y, startY)) restoredPositions.push(y)
+    },
+    { passive: true, signal: input.signal },
+  )
+  let isRestored = (y: number) =>
+    isRestoredScrollPosition(y, startY) ||
+    restoredPositions.some((position) => Math.abs(y - position) < 1)
+
   void transition.finished.then(
     () =>
       keepWebKitScrollReset(
-        startY,
+        isRestored,
         () => interacted,
         () => input.abort(),
       ),
@@ -77,7 +92,11 @@ function resyncWebKitScrollAfterNavigation(
 
 const maxWebKitScrollResetFrames = 30
 
-function keepWebKitScrollReset(startY: number, interacted: () => boolean, done: () => void) {
+function keepWebKitScrollReset(
+  isRestored: (y: number) => boolean,
+  interacted: () => boolean,
+  done: () => void,
+) {
   let frames = 0
   let framesAtTop = 0
   let nudged = false
@@ -95,7 +114,7 @@ function keepWebKitScrollReset(startY: number, interacted: () => boolean, done: 
       }
     } else if (nudged && window.scrollX === 0 && y === 1) {
       window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
-    } else if (isRestoredScrollPosition(y, startY)) {
+    } else if (isRestored(y)) {
       framesAtTop = 0
       window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
     } else {
