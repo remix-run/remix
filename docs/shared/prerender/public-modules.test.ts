@@ -31,6 +31,21 @@ describe('discoverPublicModuleHrefs()', () => {
             let filePaths = typeof filePath === 'string' ? [filePath] : filePath
             return filePaths.map((filePath) => `/preloads/${path.basename(filePath)}.js`)
           },
+          async getImportMap(filePath) {
+            let filePaths = typeof filePath === 'string' ? [filePath] : filePath
+            let basename = path.basename(filePaths[0] ?? '')
+            return {
+              imports: {
+                [`/assets/${basename}`]: `/imports/${basename}.js`,
+                external: 'https://cdn.example.com/external.js',
+              },
+              scopes: {
+                '/assets/': {
+                  dependency: `/scopes/${basename}.js`,
+                },
+              },
+            }
+          },
         },
         [appDir, sharedDir],
       )
@@ -38,8 +53,12 @@ describe('discoverPublicModuleHrefs()', () => {
       assert.deepEqual(hrefs, [
         '/assets/entry.ts',
         '/assets/shell.tsx',
+        '/imports/entry.ts.js',
+        '/imports/shell.tsx.js',
         '/preloads/entry.ts.js',
         '/preloads/shell.tsx.js',
+        '/scopes/entry.ts.js',
+        '/scopes/shell.tsx.js',
       ])
     } finally {
       await fs.rm(tempDir, { recursive: true, force: true })
