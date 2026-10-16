@@ -15,6 +15,7 @@ import {
   getMultipartBoundary,
   isMultipartRequest,
   parseMultipartRequest,
+  parseStreamingMultipartRequest,
 } from './multipart-request.ts'
 
 const CRLF = '\r\n'
@@ -732,5 +733,50 @@ describe('parseMultipartRequest', async () => {
         // ...
       }
     }, MultipartParseError)
+  })
+})
+
+describe('parseStreamingMultipartRequest', () => {
+  let boundary = 'boundary123'
+
+  it('streams the parts of a multipart request', async () => {
+    let content = getRandomBytes(LARGE_FILE_SIZE)
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+      body: createMultipartMessage(boundary, {
+        field: 'value',
+        file: { filename: 'a.bin', mediaType: 'application/octet-stream', content },
+      }),
+    })
+
+    let parts: { name?: string; filename?: string; content: Uint8Array }[] = []
+    for await (let part of parseStreamingMultipartRequest(request, {
+      maxFileSize: LARGE_FILE_SIZE,
+    })) {
+      parts.push({ name: part.name, filename: part.filename, content: await part.bytes() })
+    }
+
+    assert.deepEqual(parts, [
+      { name: 'field', filename: undefined, content: new TextEncoder().encode('value') },
+      { name: 'file', filename: 'a.bin', content },
+    ])
+  })
+
+  it('throws when the request is not a multipart request', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: 'hello',
+    })
+
+    await assert.rejects(
+      async () => {
+        for await (let _ of parseStreamingMultipartRequest(request)) {
+          // Not reached
+        }
+      },
+      { name: 'MultipartParseError', message: 'Request is not a multipart request' },
+    )
   })
 })
