@@ -43,6 +43,9 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
           <meta name="description" content={description} />
           <title>{title === 'Remix UI' ? title : `${title} | Remix UI`}</title>
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+          {searchEnabled ? (
+            <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
+          ) : null}
           <link rel="stylesheet" href={stylesheetHref} />
           <ImportMap value={scriptEntry.importMap} />
           {scriptEntry.preloads.map((href) => (
@@ -52,10 +55,7 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
             <link key={href} rel="preload" href={href} as="style" />
           ))}
           {searchEnabled ? (
-            <>
-              <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
-              <script type="module" src="/assets/pagefind/pagefind-component-ui.js" />
-            </>
+            <script type="module" src="/assets/pagefind/pagefind-component-ui.js" />
           ) : null}
           <script type="module" src={scriptEntry.href} />
         </head>
