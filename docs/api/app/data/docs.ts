@@ -1,7 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
-import { discoverDemoFiles } from './demos.tsx'
 import { discoverMarkdownFiles, type DocFile as MarkdownDocFile } from './markdown.ts'
 import { buildRegistry, type DocFile, type DocsRegistry } from './registry.ts'
 
@@ -34,8 +33,7 @@ export function createDocsContextLoader(docsContext?: DocsContext): () => Promis
 
 async function loadDocsContext(): Promise<DocsContext> {
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(markdownDir)
-  let demoFiles = await discoverDemoFiles()
-  let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
+  let docFiles = [...markdownFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
   let registryByVersion = new Map<string | undefined, DocsRegistry>()
   registryByVersion.set(undefined, buildRegistry(docFiles))
 

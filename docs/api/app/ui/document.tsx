@@ -116,7 +116,7 @@ function Head(
     let { page, activeVersion, scriptEntry, stylesheetHref, stylesheetPreloads, searchEnabled } =
       handle.props
     let { href, importMap, preloads } = scriptEntry
-    let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
+    let shouldNofollow = page.docFile?.kind === 'package'
 
     return (
       <head>
@@ -134,8 +134,7 @@ function Head(
             <meta name="googlebot" content="noindex,nofollow" />
           </>
         ) : shouldNofollow ? (
-          // Overview pages already link densely to pages in the sidebar, while
-          // demo links are examples rather than docs routes.
+          // Overview pages already link densely to pages in the sidebar.
           <meta name="robots" content="nofollow" />
         ) : null}
         <title>{`${page.title || 'Remix'} | Remix API Documentation`}</title>

@@ -284,9 +284,6 @@ importers:
 
   docs/api:
     dependencies:
-      '@remix-run/ui':
-        specifier: workspace:^
-        version: link:../../packages/ui
       oxfmt:
         specifier: 'catalog:'
         version: 0.51.0
