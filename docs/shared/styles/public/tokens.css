@@ -115,6 +115,8 @@
   --docs-nav-hover-background: rgb(0 0 0 / 5%);
   --docs-nav-selected-background: rgb(0 0 0 / 10%);
   --docs-nav-control-border: rgb(0 0 0 / 10%);
+  --docs-nav-item-height: 32px;
+  --docs-nav-item-gap: 4px;
   --docs-sidebar-offset: 288px;
   --docs-sidebar-inline-start: 24px;
   --docs-sidebar-content-width: 240px;

@@ -240,7 +240,9 @@ function SidebarContent(
             class="api-nav-section"
             open={openSections.includes(section.id) || undefined}
           >
-            <summary>{section.label}</summary>
+            <summary>
+              <PathLabel label={section.label} />
+            </summary>
             <div class="api-nav-content">
               {section.groups.map((group) => (
                 <SidebarGroup
@@ -255,6 +257,33 @@ function SidebarContent(
           </details>
         ))}
       </div>
+    )
+  }
+}
+
+// Long package paths wrap after a slash instead of at hyphens or mid-segment.
+function PathLabel(handle: Handle<{ label: string }>) {
+  return () => {
+    let segments = handle.props.label.split('/')
+    let last = segments.length - 1
+
+    return (
+      <span>
+        {segments.flatMap((segment, index) =>
+          index === last
+            ? [
+                <span key={`segment-${index}`} class="api-nav-path-segment">
+                  {segment}
+                </span>,
+              ]
+            : [
+                <span key={`segment-${index}`} class="api-nav-path-segment">
+                  {segment}/
+                </span>,
+                <wbr key={`break-${index}`} />,
+              ],
+        )}
+      </span>
     )
   }
 }
@@ -345,10 +374,10 @@ function PageHeader(handle: Handle<{ page: PageDefinition; sourceUrl?: string }>
     if (!page.eyebrow && !showTitle && !page.description) return null
 
     return (
-      <header class="api-page-header">
+      <header class="docs-page-header api-page-header">
         {page.eyebrow || sourceUrl ? (
           <div class="api-page-meta">
-            {page.eyebrow ? <p class="docs-chapter-eyebrow">{page.eyebrow}</p> : <span />}
+            {page.eyebrow ? <p class="docs-page-eyebrow">{page.eyebrow}</p> : <span />}
             {sourceUrl ? (
               <a class="api-page-source" href={sourceUrl} target="_blank" rel="noopener">
                 View Source
@@ -357,7 +386,7 @@ function PageHeader(handle: Handle<{ page: PageDefinition; sourceUrl?: string }>
           </div>
         ) : null}
         {showTitle ? <h1 class="rmx-page-title">{page.title}</h1> : null}
-        {page.description ? <p class="api-page-description">{page.description}</p> : null}
+        {page.description ? <p class="docs-page-description">{page.description}</p> : null}
       </header>
     )
   }

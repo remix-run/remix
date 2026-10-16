@@ -2,6 +2,12 @@ html {
   color-scheme: light dark;
 }
 
+/* Package paths are long, so the API sidebar is wider than the other docs sites. */
+:root {
+  --docs-sidebar-content-width: 288px;
+  --docs-sidebar-offset: 336px;
+}
+
 .api-nav-sections,
 .api-nav-content,
 .api-nav-group,
@@ -23,17 +29,19 @@ html {
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 32px;
-  padding: 8px 28px 8px 8px;
+  min-height: var(--docs-nav-item-height);
+  padding: 8px 28px 8px 12px;
   border-radius: var(--rmx-radius-md);
   color: var(--rmx-color-text-primary);
-  font-size: 12px;
-  font-weight: var(--rmx-font-weight-bold);
+  font-size: 14px;
+  font-weight: var(--rmx-font-weight-semibold);
   line-height: normal;
-  letter-spacing: 0.6px;
   list-style: none;
-  text-transform: uppercase;
   cursor: pointer;
+}
+
+.api-nav-path-segment {
+  white-space: nowrap;
 }
 
 .api-nav-section > summary::-webkit-details-marker {
@@ -71,28 +79,28 @@ html {
 }
 
 .api-nav-group__heading {
-  height: 24px;
+  display: flex;
+  align-items: center;
+  height: var(--docs-nav-item-height);
   margin: 0;
-  padding: 6px 8px;
-  color: var(--rmx-color-text-secondary);
-  font-size: 10px;
-  font-weight: var(--rmx-font-weight-bold);
-  line-height: normal;
-  letter-spacing: var(--rmx-letter-spacing-meta);
-  text-transform: uppercase;
+  padding: 0 12px;
+  color: var(--rmx-color-text-primary);
+  font-size: 12px;
+  font-weight: var(--rmx-font-weight-semibold);
 }
 
 .api-nav-links {
-  gap: 4px;
+  gap: var(--docs-nav-item-gap);
 }
 
 .api-nav-links a {
   position: relative;
   display: flex;
+  flex: none;
   align-items: center;
   width: 100%;
-  min-height: 32px;
-  padding: 7px 12px;
+  height: var(--docs-nav-item-height);
+  padding: 0 12px;
   overflow: hidden;
   border-radius: var(--rmx-radius-md);
   color: var(--docs-nav-link);
@@ -112,18 +120,7 @@ html {
 }
 
 .api-page-header {
-  margin-bottom: var(--rmx-space-lg);
-}
-
-.docs-chapter-eyebrow {
-  margin: 0;
-  color: var(--rmx-color-eyebrow);
-  font-family: var(--rmx-font-family-sans);
-  font-size: 12px;
-  font-weight: var(--rmx-font-weight-bold);
-  line-height: normal;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  margin-bottom: 12px;
 }
 
 .api-page-meta {
@@ -131,6 +128,10 @@ html {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--rmx-space-md);
+}
+
+.api-page-meta .docs-page-eyebrow {
+  margin: 0;
 }
 
 .api-page-source {
@@ -144,12 +145,6 @@ html {
 
 .api-page-source:hover {
   color: var(--rmx-color-text-primary);
-}
-
-.api-page-description {
-  max-width: 64ch;
-  margin: var(--rmx-space-lg) 0 0;
-  color: var(--rmx-color-text-secondary);
 }
 
 .api-page-content > h1:first-child,
@@ -177,35 +172,6 @@ html {
 .api-demo__header h1,
 .api-demo__header p {
   margin: 0;
-}
-
-.api-demo__frame {
-  overflow: hidden;
-  border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
-  border-radius: var(--rmx-radius-lg);
-}
-
-.api-demo__preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 120px;
-  padding: var(--rmx-space-xxl);
-  border-bottom: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
-  background: var(--rmx-surface-lvl0);
-}
-
-.api-demo__source > pre.shiki {
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-}
-
-.api-demo__source .line {
-  position: relative;
-  display: block;
-  min-height: 1lh;
-  white-space: pre;
 }
 
 @media (width < 900px) {

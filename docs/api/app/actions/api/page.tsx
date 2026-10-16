@@ -1,5 +1,6 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { unsafeHTML } from 'remix/component'
+import { DocsDemo } from 'remix-docs-shared/ui/demo'
 
 import type { DemoDocFile } from '../../data/demos.tsx'
 
@@ -24,10 +25,7 @@ export function DemoContent(
           <p>{demo.description}</p>
         </header>
 
-        <div class="api-demo__frame">
-          <div class="api-demo__preview">{children}</div>
-          <div class="api-demo__source" innerHTML={unsafeHTML(sourceHtml)} />
-        </div>
+        <DocsDemo sourceHtml={sourceHtml}>{children}</DocsDemo>
       </div>
     )
   }

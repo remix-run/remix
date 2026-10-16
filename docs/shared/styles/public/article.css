@@ -23,15 +23,37 @@
   color: var(--rmx-color-text-muted);
 }
 
-.docs-chapter-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--rmx-space-lg);
+.docs-page-header {
   margin-bottom: 40px;
+}
+
+.docs-page-eyebrow {
+  margin: 0 0 12px;
+  color: var(--rmx-color-text-secondary);
+  font: var(--rmx-font-weight-semibold) 12px var(--rmx-font-family-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.docs-page-description {
+  max-width: 620px;
+  margin: 20px 0;
+  color: var(--rmx-color-text-secondary);
+  font-size: var(--rmx-font-size-lg);
+  line-height: var(--rmx-line-height-relaxed);
 }
 
 .docs-sections {
   min-width: 0;
+}
+
+.docs-section {
+  margin-top: 48px;
+  scroll-margin-top: calc(var(--site-header-height) + var(--rmx-space-xl));
+}
+
+.docs-section:first-child {
+  margin-top: 0;
 }
 
 .docs-pagination {

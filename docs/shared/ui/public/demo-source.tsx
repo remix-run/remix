@@ -1,13 +1,13 @@
 import { clientEntry } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-export const ExampleSourceBehavior = clientEntry(
+export const DemoSourceBehavior = clientEntry(
   import.meta.url,
-  function ExampleSourceBehavior(handle: Handle<{ sourceId: string }>) {
+  function DemoSourceBehavior(handle: Handle<{ sourceId: string }>) {
     return () => {
       handle.queueTask((signal) => {
         let code = document.getElementById(handle.props.sourceId)
-        let source = code?.closest<HTMLElement>('.ui-demo-source')
+        let source = code?.closest<HTMLElement>('.docs-demo-source')
         let button = source?.querySelector('button[aria-controls]')
         if (!code || !source || !button) return
 

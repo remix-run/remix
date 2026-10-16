@@ -25,12 +25,12 @@ export function PageLayout(
         currentPage={page}
         headings={readPageHeadings(children)}
       >
-        <header class="ui-page-header">
-          <p class="ui-eyebrow">
+        <header class="docs-page-header">
+          <p class="docs-page-eyebrow">
             {categories.find((category) => category.id === page.category)?.title}
           </p>
           <h1 class="rmx-page-title">{page.title}</h1>
-          <p class="ui-description">{page.description}</p>
+          <p class="docs-page-description">{page.description}</p>
           {intro}
         </header>
         {children}
@@ -69,7 +69,7 @@ export function PageLayout(
 
 export function Section(handle: Handle<{ id: string; title: string; children: RemixNode }>) {
   return () => (
-    <section id={handle.props.id} class="ui-doc-section">
+    <section id={handle.props.id} class="docs-section ui-doc-section">
       <h2>{handle.props.title}</h2>
       {handle.props.children}
     </section>

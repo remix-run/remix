@@ -27,10 +27,10 @@ export default function GettingStarted() {
   return () => {
     let content = (
       <>
-        <header class="ui-page-header ui-landing-header">
-          <p class="ui-eyebrow">Remix UI</p>
+        <header class="docs-page-header ui-landing-header">
+          <p class="docs-page-eyebrow">Remix UI</p>
           <h1 class="rmx-page-title">Unstyled, accessible UI patterns and animation for Remix</h1>
-          <p class="ui-description">
+          <p class="docs-page-description">
             Compose accessible behavior directly onto your own elements with Remix's mixins feature,
             without the need for extra wrapper components. Keep semantic markup explicit and provide
             your own styles and motion.

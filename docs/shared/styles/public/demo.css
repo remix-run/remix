@@ -1,0 +1,104 @@
+.docs-demo {
+  overflow: clip;
+  border: 1px solid var(--rmx-color-border-subtle);
+  border-radius: 12px;
+}
+
+.docs-demo-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  isolation: isolate;
+  padding: 64px 32px;
+  background: var(--rmx-surface-lvl2);
+}
+
+.docs-demo-source {
+  border-top: 1px solid var(--rmx-color-border-subtle);
+  background: var(--rmx-color-code-background);
+}
+
+.docs-demo-source-code {
+  max-height: 160px;
+  overflow: hidden;
+  mask-image: linear-gradient(#000 55%, transparent);
+}
+
+.docs-demo-source[data-expanded='true'] .docs-demo-source-code {
+  max-height: none;
+  overflow: visible;
+  mask-image: none;
+}
+
+.docs-demo-source [data-code-block] {
+  margin: 0;
+}
+
+.docs-demo-source-actions {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.docs-demo-source[data-expanded='true'] .docs-demo-source-actions {
+  position: sticky;
+  bottom: 0;
+}
+
+.docs-demo-source-actions button {
+  scroll-margin-top: calc(var(--site-header-height) + 16px);
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--rmx-color-border-subtle);
+  border-radius: 999px;
+  background: var(--rmx-surface-lvl1);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 8%);
+  color: var(--rmx-color-text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.docs-demo-source-actions button::after {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  content: '';
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.docs-demo-source-actions button[aria-expanded='true']::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.docs-demo-source-actions button:hover {
+  background: var(--docs-nav-hover-background);
+  color: var(--rmx-color-text-primary);
+}
+
+.docs-demo-source-actions button:active {
+  background: var(--docs-nav-selected-background);
+}
+
+.docs-demo-source-actions button:focus-visible {
+  outline: 2px solid var(--rmx-color-text-primary);
+  outline-offset: 3px;
+}
+
+@media (width < 900px) {
+  .docs-demo-source-actions button {
+    scroll-margin-top: 64px;
+  }
+}
+
+@media (width < 640px) {
+  .docs-demo-preview {
+    padding: 48px 20px;
+  }
+}
