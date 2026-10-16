@@ -21,17 +21,30 @@ const anatomyCode = await highlightSource(`
   import { animateEntrance, animateExit } from '@remix-run/ui/animation'
 
   {visible && (
-    <div key="notification" mix={[animateEntrance(), animateExit()]}>
-      Changes saved
+    <div key="content" mix={[animateEntrance(), animateExit()]}>
+      Animated content
     </div>
   )}
 `)
 
 const timingCode = await highlightSource(`
-  <div mix={[
-    animateEntrance({ opacity: 0, transform: 'translateY(12px)', ...spring('snappy') }),
-    animateExit({ opacity: 0, transform: 'translateY(-12px)', duration: 200, easing: 'ease-in' }),
-  ]}>Changes saved</div>
+  <div
+    mix={[
+      animateEntrance({
+        opacity: 0,
+        transform: 'translateY(12px)',
+        ...spring('snappy'),
+      }),
+      animateExit({
+        opacity: 0,
+        transform: 'translateY(-12px)',
+        duration: 200,
+        easing: 'ease-in',
+      }),
+    ]}
+  >
+    Changes saved
+  </div>
 `)
 
 const identityCode = await highlightSource(`

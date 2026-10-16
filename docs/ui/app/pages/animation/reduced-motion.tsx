@@ -12,13 +12,15 @@ export const meta = {
 } satisfies PageMeta
 
 const cssCode = await highlightSource(`
-  import { css } from 'remix/component'
   import { spring } from '@remix-run/ui/animation'
+  import { css } from 'remix/component'
 
   <div mix={css({
     transform: moved ? 'translateX(200px)' : 'translateX(0)',
     transition: spring.transition('transform', 'snappy'),
-    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
   })} />
 `)
 
@@ -32,7 +34,7 @@ const playbackCode = await highlightSource(
 
       element.animate(
         [{ opacity: 0, transform: 'translateY(8px)' }, {}],
-        { ...spring('snappy') },
+        spring('snappy'),
       )
     }
   `,
@@ -44,13 +46,26 @@ const entranceExitCode = await highlightSource(`
 
   function Notification() {
     return () => {
-      let timing = prefersReducedMotion() ? { duration: 0 } : { ...spring('snappy') }
+      let timing = prefersReducedMotion() ? { duration: 0 } : spring('snappy')
 
       return (
-        <div key="notification" mix={[
-          animateEntrance({ opacity: 0, transform: 'translateY(8px)', ...timing }),
-          animateExit({ opacity: 0, transform: 'translateY(-8px)', ...timing }),
-        ]}>Changes saved</div>
+        <div
+          key="notification"
+          mix={[
+            animateEntrance({
+              opacity: 0,
+              transform: 'translateY(8px)',
+              ...timing,
+            }),
+            animateExit({
+              opacity: 0,
+              transform: 'translateY(-8px)',
+              ...timing,
+            }),
+          ]}
+        >
+          Changes saved
+        </div>
       )
     }
   }
@@ -59,7 +74,13 @@ const entranceExitCode = await highlightSource(`
 const layoutCode = await highlightSource(`
   import { animateLayout, prefersReducedMotion, spring } from '@remix-run/ui/animation'
 
-  <div mix={animateLayout(prefersReducedMotion() ? false : { ...spring('smooth') })}>
+  <div
+    mix={animateLayout(
+      prefersReducedMotion()
+        ? false
+        : spring('smooth'),
+    )}
+  >
     Details
   </div>
 `)

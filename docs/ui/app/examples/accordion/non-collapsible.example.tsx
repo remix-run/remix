@@ -1,62 +1,56 @@
-import { css } from 'remix/component'
-import type { Handle } from 'remix/component'
 import * as accordion from '@remix-run/ui/accordion'
+import { css } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 
-export default function Example() {
+export default function ExampleAccordion() {
   return () => (
-    <div mix={stackCss}>
+    <div mix={styles.root}>
       <accordion.Context defaultValue="shipping" collapsible={false}>
-        <div mix={[rootCss, accordion.root()]}>
-          <Item value="shipping" title="Shipping" />
-          <Item value="billing" title="Billing" />
+        <div mix={[styles.accordion, accordion.root()]}>
+          <Item value="shipping" title="Shipping">
+            Standard delivery in 2–4 business days. Tracking is sent when your order ships.
+          </Item>
+          <Item value="billing" title="Billing">
+            Card ending in 4242. Your receipt will be sent to the email on your account.
+          </Item>
         </div>
       </accordion.Context>
     </div>
   )
 }
 
-function Item(handle: Handle<{ value: string; title: string; disabled?: boolean }>) {
-  return () => (
-    <accordion.ItemContext value={handle.props.value} disabled={handle.props.disabled}>
-      <div mix={[itemCss, accordion.item()]}>
-        <h3>
-          <button type="button" mix={accordion.trigger()}>
-            {handle.props.title}
-            <ChevronDownIcon />
-          </button>
-        </h3>
-        <div mix={[contentCss, accordion.content()]}>
-          <div mix={css({ minHeight: 0, overflow: 'hidden' })}>
-            <p>
-              {handle.props.value === 'shipping'
-                ? 'Standard delivery in 2–4 business days. Tracking is sent when your order ships.'
-                : handle.props.value === 'billing'
-                  ? 'Card ending in 4242. Your receipt will be sent to the email on your account.'
-                  : 'Past orders and receipts are saved here for your records.'}
-            </p>
-          </div>
-        </div>
-      </div>
-    </accordion.ItemContext>
-  )
-}
+const styles = {
+  root: css({
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    width: '28rem',
+    maxWidth: '100%',
+    color: 'light-dark(#202027, #eeeef2)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
 
-const stackCss = css({
-  colorScheme: 'light dark',
-  display: 'grid',
-  gap: '16px',
-  width: '28rem',
-  maxWidth: '100%',
-  color: 'light-dark(#202027, #eeeef2)',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
-const rootCss = css({
-  overflow: 'hidden',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '12px',
-  background: 'light-dark(#ffffff, #1b1b20)',
-  '& h3': { margin: 0 },
-  '& button': {
+  accordion: css({
+    overflow: 'hidden',
+    border: '1px solid light-dark(#e0e0e6, #393940)',
+    borderRadius: '12px',
+    background: 'light-dark(#fff, #1b1b20)',
+  }),
+
+  item: css({
+    borderTop: '1px solid light-dark(#ebebef, #303037)',
+    '&:first-child': {
+      borderTop: 0,
+    },
+  }),
+
+  heading: css({
+    margin: 0,
+    font: 'inherit',
+  }),
+
+  trigger: css({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -69,30 +63,75 @@ const rootCss = css({
     fontWeight: 600,
     textAlign: 'left',
     cursor: 'pointer',
-    '&:disabled, &[aria-disabled="true"]': { cursor: 'not-allowed' },
-    '&:hover:not(:disabled):not([aria-disabled="true"])': {
+    '&:disabled, &[aria-disabled]': {
+      cursor: 'not-allowed',
+    },
+    '&:hover:not(:disabled):not([aria-disabled])': {
       background: 'light-dark(#f7f7fa, #24242b)',
     },
-    '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '-3px' },
-    '& svg': { opacity: 1, transition: 'opacity 120ms ease' },
-    '&[aria-disabled="true"] svg': { opacity: 0 },
-  },
-  '& p': { margin: 0, padding: '0 20px 20px', color: 'light-dark(#62626c, #b0b0bb)' },
-  '@media (prefers-reduced-motion: reduce)': { '& button svg': { transition: 'none' } },
-})
-const itemCss = css({
-  borderTop: '1px solid light-dark(#ebebef, #303037)',
-  '&:first-child': { borderTop: 0 },
-  '&[data-disabled]': { opacity: 0.4 },
-})
-const contentCss = css({
-  display: 'grid',
-  gridTemplateRows: '0fr',
-  opacity: 0,
-  transition: 'grid-template-rows 280ms ease, opacity 200ms ease',
-  '&[data-state="open"]': { gridTemplateRows: '1fr', opacity: 1 },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-})
+    '&:focus-visible': {
+      outline: '2px solid #5bb8ef',
+      outlineOffset: '-3px',
+    },
+    '& svg': {
+      opacity: 1,
+      transition: 'opacity 120ms ease',
+    },
+    '&[aria-disabled] svg': {
+      opacity: 0,
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      '& svg': {
+        transition: 'none',
+      },
+    },
+  }),
+
+  content: css({
+    display: 'grid',
+    gridTemplateRows: '0fr',
+    opacity: 0,
+    transition: 'grid-template-rows 280ms ease, opacity 200ms ease',
+    '&[data-state="open"]': {
+      gridTemplateRows: '1fr',
+      opacity: 1,
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
+
+  contentInner: css({
+    minHeight: 0,
+    overflow: 'hidden',
+  }),
+
+  description: css({
+    margin: 0,
+    padding: '0 20px 20px',
+    color: 'light-dark(#62626c, #b0b0bb)',
+  }),
+}
+
+function Item(handle: Handle<{ value: string; title: string; children: RemixNode }>) {
+  return () => (
+    <accordion.ItemContext value={handle.props.value}>
+      <div mix={[styles.item, accordion.item()]}>
+        <h3 mix={styles.heading}>
+          <button type="button" mix={[styles.trigger, accordion.trigger()]}>
+            {handle.props.title}
+            <ChevronDownIcon />
+          </button>
+        </h3>
+        <div mix={[styles.content, accordion.content()]}>
+          <div mix={styles.contentInner}>
+            <p mix={styles.description}>{handle.props.children}</p>
+          </div>
+        </div>
+      </div>
+    </accordion.ItemContext>
+  )
+}
 
 function ChevronDownIcon() {
   return () => (

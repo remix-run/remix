@@ -1,14 +1,15 @@
-import { css, on } from 'remix/component'
-import type { Handle } from 'remix/component'
 import * as select from '@remix-run/ui/select'
 import * as popover from '@remix-run/ui/popover'
-export default function Example(handle: Handle) {
+import { css, on } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+export default function ExampleSelect(handle: Handle) {
   let confirmation = ''
   return () => (
     <form
       autocomplete="off"
       mix={[
-        stackCss,
+        styles.root,
         on('submit', (event) => {
           event.preventDefault()
           let data = new FormData(event.currentTarget)
@@ -18,22 +19,22 @@ export default function Example(handle: Handle) {
         }),
       ]}
     >
-      <div mix={cardCss}>
+      <div mix={styles.card}>
         <strong>Delivery preferences</strong>
         <select.Context defaultLabel="Standard delivery" defaultValue="standard" name="delivery">
           <button
             type="button"
             aria-label="Delivery method"
-            mix={[buttonCss, triggerLayoutCss, select.trigger()]}
+            mix={[styles.button, styles.triggerLayout, select.trigger()]}
           >
             <SelectedLabel />
             <ChevronDownIcon />
           </button>
           <popover.Context>
-            <div mix={[surfaceCss, select.popover()]}>
-              <div aria-label="Delivery methods" mix={[listCss, select.list()]}>
+            <div mix={[styles.surface, select.popover()]}>
+              <div aria-label="Delivery methods" mix={[styles.list, select.list()]}>
                 {options.map((option) => (
-                  <div key={option.value} mix={[optionCss, select.option(option)]}>
+                  <div key={option.value} mix={[styles.option, select.option(option)]}>
                     {option.label}
                   </div>
                 ))}
@@ -42,115 +43,147 @@ export default function Example(handle: Handle) {
           </popover.Context>
           <input mix={select.hiddenInput()} />
         </select.Context>
-        <button type="submit" mix={buttonCss}>
+        <button type="submit" mix={styles.button}>
           Save delivery preference
         </button>
-        <p role="status" mix={mutedCss}>
+        <p role="status" mix={styles.muted}>
           {confirmation || 'Your choice applies to future orders'}
         </p>
       </div>
     </form>
   )
 }
-const options = [
-  { label: 'Standard delivery', value: 'standard' },
-  { label: 'Express delivery', value: 'express' },
-  { label: 'Collect in store', value: 'collect' },
-]
 
-const stackCss = css({
-  colorScheme: 'light dark',
-  width: '320px',
-  maxWidth: '100%',
-  display: 'grid',
-  gap: '16px',
-  color: 'light-dark(#202027, #eeeef2)',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
+const styles = {
+  root: css({
+    '--text': 'light-dark(#202027, #eeeef2)',
+    '--surface': 'light-dark(#fff, #1b1b20)',
+    '--border': 'light-dark(#e0e0e6, #393940)',
+    '--accent': 'light-dark(#0578be, #80caff)',
 
-const cardCss = css({
-  padding: '20px',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '12px',
-  background: 'light-dark(#fff, #1b1b20)',
-  display: 'grid',
-  gap: '16px',
-})
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    width: '320px',
+    maxWidth: '100%',
+    color: 'var(--text)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
 
-const mutedCss = css({ margin: 0, fontSize: '12px', color: 'light-dark(#62626c, #b0b0bb)' })
+  card: css({
+    padding: '20px',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    background: 'var(--surface)',
+    display: 'grid',
+    gap: '16px',
+  }),
 
-const buttonCss = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  padding: '9px 14px',
-  border: '1px solid light-dark(#d8d8df, #44444c)',
-  borderRadius: '8px',
-  background: 'light-dark(#fff, #25252b)',
-  color: 'inherit',
-  font: 'inherit',
-  fontWeight: 600,
-  cursor: 'pointer',
-  '&:hover:not(:disabled)': { background: 'light-dark(#f0f0f5, #303038)' },
-  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&:disabled': { opacity: 0.45, cursor: 'not-allowed' },
-})
+  button: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '9px 14px',
+    border: '1px solid light-dark(#d8d8df, #44444c)',
+    borderRadius: '8px',
+    background: 'light-dark(#fff, #25252b)',
+    color: 'inherit',
+    font: 'inherit',
+    fontWeight: 600,
+    cursor: 'pointer',
+    '&:hover:not(:disabled)': {
+      background: 'light-dark(#f0f0f5, #303038)',
+    },
+    '&:focus-visible': {
+      outline: '2px solid #5bb8ef',
+      outlineOffset: '3px',
+    },
+    '&:disabled': {
+      opacity: 0.45,
+      cursor: 'not-allowed',
+    },
+  }),
 
-const surfaceCss = css({
-  colorScheme: 'light dark',
-  boxSizing: 'border-box',
-  margin: 0,
-  padding: '6px',
-  minWidth: '220px',
-  maxWidth: 'calc(100vw - 32px)',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '10px',
-  background: 'light-dark(#fff, #1b1b20)',
-  color: 'light-dark(#202027, #eeeef2)',
-  boxShadow: '0 12px 32px #00000024',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  opacity: 0,
-  transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-  '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-})
+  triggerLayout: css({
+    justifyContent: 'space-between',
+    width: '100%',
+  }),
 
-const listCss = css({
-  display: 'grid',
-  gap: '2px',
-  maxHeight: '240px',
-  overflow: 'auto',
-  outline: 0,
-})
+  surface: css({
+    colorScheme: 'light dark',
+    margin: 0,
+    padding: '6px',
+    minWidth: '220px',
+    maxWidth: 'calc(100vw - 32px)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    boxShadow: '0 12px 32px #00000024',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+    opacity: 0,
+    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+    '&:popover-open': {
+      opacity: 1,
+      '@starting-style': {
+        opacity: 0,
+      },
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
 
-const optionCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '12px',
-  padding: '10px 12px',
-  borderRadius: '6px',
-  cursor: 'default',
-  '&[hidden]': { display: 'none' },
-  '&[data-highlighted="true"]': { background: 'light-dark(#eeeef3, #303038)' },
-  '&[aria-selected="true"]': {
-    color: 'light-dark(#0578be, #80caff)',
-    background: 'light-dark(#eaf5fc, #173348)',
-  },
-  '&[aria-disabled="true"]': { opacity: 0.4, cursor: 'not-allowed' },
-  '&[data-select-flash]': {
-    background: 'light-dark(#0578be, #80caff)',
-    color: 'light-dark(#fff, #102332)',
-  },
-})
+  list: css({
+    display: 'grid',
+    gap: '2px',
+    maxHeight: '240px',
+    overflow: 'auto',
+    outline: 0,
+  }),
 
-const triggerLayoutCss = css({ justifyContent: 'space-between', width: '100%' })
+  option: css({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    padding: '10px 12px',
+    borderRadius: '6px',
+    cursor: 'default',
+    '&[hidden]': {
+      display: 'none',
+    },
+    '&[data-highlighted="true"]': {
+      background: 'light-dark(#eeeef3, #303038)',
+    },
+    '&[aria-selected="true"]': {
+      color: 'var(--accent)',
+      background: 'light-dark(#eaf5fc, #173348)',
+    },
+    '&[aria-disabled="true"]': {
+      opacity: 0.4,
+      cursor: 'not-allowed',
+    },
+    '&[data-select-flash]': {
+      background: 'light-dark(#d6eaf8, #254c66)',
+      color: 'var(--accent)',
+    },
+  }),
+
+  muted: css({
+    margin: 0,
+    fontSize: '12px',
+    color: 'light-dark(#62626c, #b0b0bb)',
+  }),
+}
 
 function SelectedLabel(handle: Handle) {
   let context = handle.context.get(select.Context)
   return () => <span>{context.displayedLabel}</span>
 }
+
 function ChevronDownIcon() {
   return () => (
     <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24">
@@ -158,3 +191,9 @@ function ChevronDownIcon() {
     </svg>
   )
 }
+
+const options = [
+  { label: 'Standard delivery', value: 'standard' },
+  { label: 'Express delivery', value: 'express' },
+  { label: 'Collect in store', value: 'collect' },
+]

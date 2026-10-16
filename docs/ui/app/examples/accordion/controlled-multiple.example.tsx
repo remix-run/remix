@@ -1,19 +1,19 @@
-import { css, on } from 'remix/component'
-import type { Handle } from 'remix/component'
 import * as accordion from '@remix-run/ui/accordion'
+import { css, on } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 
-export default function Example(handle: Handle) {
+export default function ExampleAccordion(handle: Handle) {
   let value: string[] = ['shipping']
   return () => (
-    <div mix={stackCss}>
-      <div role="group" aria-label="Open order sections" mix={toolbarCss}>
+    <div mix={styles.root}>
+      <div role="group" aria-label="Open order sections" mix={styles.toolbar}>
         {sections.map((section) => (
           <button
             key={section.value}
             type="button"
             aria-pressed={value.includes(section.value)}
             mix={[
-              toggleCss,
+              styles.toggle,
               on('click', () => {
                 value = value.includes(section.value)
                   ? value.filter((item) => item !== section.value)
@@ -35,57 +35,100 @@ export default function Example(handle: Handle) {
           handle.update()
         }}
       >
-        <div mix={[rootCss, accordion.root()]}>
-          <Item value="shipping" title="Shipping" />
-          <Item value="billing" title="Billing" />
+        <div mix={[styles.accordion, accordion.root()]}>
+          <Item value="shipping" title="Shipping">
+            Standard delivery in 2–4 business days. Tracking is sent when your order ships.
+          </Item>
+          <Item value="billing" title="Billing">
+            Card ending in 4242. Your receipt will be sent to the email on your account.
+          </Item>
         </div>
       </accordion.Context>
     </div>
   )
 }
 
-function Item(handle: Handle<{ value: string; title: string; disabled?: boolean }>) {
-  return () => (
-    <accordion.ItemContext value={handle.props.value} disabled={handle.props.disabled}>
-      <div mix={[itemCss, accordion.item()]}>
-        <h3>
-          <button type="button" mix={accordion.trigger()}>
-            {handle.props.title}
-            <ChevronDownIcon />
-          </button>
-        </h3>
-        <div mix={[contentCss, accordion.content()]}>
-          <div mix={css({ minHeight: 0, overflow: 'hidden' })}>
-            <p>
-              {handle.props.value === 'shipping'
-                ? 'Standard delivery in 2–4 business days. Tracking is sent when your order ships.'
-                : handle.props.value === 'billing'
-                  ? 'Card ending in 4242. Your receipt will be sent to the email on your account.'
-                  : 'Past orders and receipts are saved here for your records.'}
-            </p>
-          </div>
-        </div>
-      </div>
-    </accordion.ItemContext>
-  )
-}
+const styles = {
+  root: css({
+    '--text': 'light-dark(#202027, #eeeef2)',
+    '--muted': 'light-dark(#62626c, #b0b0bb)',
+    '--border': 'light-dark(#e0e0e6, #393940)',
+    '--focus-ring': '#5bb8ef',
 
-const stackCss = css({
-  colorScheme: 'light dark',
-  display: 'grid',
-  gap: '16px',
-  width: '28rem',
-  maxWidth: '100%',
-  color: 'light-dark(#202027, #eeeef2)',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
-const rootCss = css({
-  overflow: 'hidden',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '12px',
-  background: 'light-dark(#ffffff, #1b1b20)',
-  '& h3': { margin: 0 },
-  '& button': {
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    display: 'grid',
+    gap: '16px',
+    width: '28rem',
+    maxWidth: '100%',
+    color: 'var(--text)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+
+  toolbar: css({
+    display: 'flex',
+    gap: '6px',
+    padding: '5px',
+    borderRadius: '10px',
+    background: 'light-dark(#ececf0, #25252b)',
+    border: '1px solid var(--border)',
+  }),
+
+  toggle: css({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    flex: 1,
+    minWidth: 0,
+    padding: '9px 10px',
+    borderRadius: '6px',
+    color: 'var(--muted)',
+    font: 'inherit',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'background-color 160ms ease, color 160ms ease',
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+    border: 0,
+    background: 'transparent',
+    '&:hover': {
+      color: 'var(--text)',
+    },
+    '&[aria-pressed="true"]': {
+      background: 'light-dark(#ffffff, #393940)',
+      color: 'var(--text)',
+      boxShadow: '0 1px 3px #00000018',
+    },
+    '&:focus-visible': {
+      outline: '2px solid var(--focus-ring)',
+      outlineOffset: '2px',
+    },
+  }),
+
+  accordion: css({
+    overflow: 'hidden',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    background: 'light-dark(#fff, #1b1b20)',
+  }),
+
+  item: css({
+    borderTop: '1px solid light-dark(#ebebef, #303037)',
+    '&:first-child': {
+      borderTop: 0,
+    },
+  }),
+
+  heading: css({
+    margin: 0,
+    font: 'inherit',
+  }),
+
+  trigger: css({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -98,73 +141,85 @@ const rootCss = css({
     fontWeight: 600,
     textAlign: 'left',
     cursor: 'pointer',
-    '&:disabled': { cursor: 'not-allowed' },
-    '&:hover:not(:disabled)': { background: 'light-dark(#f7f7fa, #24242b)' },
-    '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '-3px' },
-    '& svg': { transition: 'transform 280ms ease' },
-    '&[data-state="open"] svg': { transform: 'rotate(180deg)' },
-  },
-  '& p': { margin: 0, padding: '0 20px 20px', color: 'light-dark(#62626c, #b0b0bb)' },
-  '@media (prefers-reduced-motion: reduce)': { '& button svg': { transition: 'none' } },
-})
-const itemCss = css({
-  borderTop: '1px solid light-dark(#ebebef, #303037)',
-  '&:first-child': { borderTop: 0 },
-  '&[data-disabled]': { opacity: 0.4 },
-})
-const contentCss = css({
-  display: 'grid',
-  gridTemplateRows: '0fr',
-  opacity: 0,
-  transition: 'grid-template-rows 280ms ease, opacity 200ms ease',
-  '&[data-state="open"]': { gridTemplateRows: '1fr', opacity: 1 },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-})
+    '&:disabled': {
+      cursor: 'not-allowed',
+    },
+    '&:hover:not(:disabled)': {
+      background: 'light-dark(#f7f7fa, #24242b)',
+    },
+    '&:focus-visible': {
+      outline: '2px solid var(--focus-ring)',
+      outlineOffset: '-3px',
+    },
+    '& svg': {
+      transition: 'transform 280ms ease',
+    },
+    '&[data-state="open"] svg': {
+      transform: 'rotate(180deg)',
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      '& svg': {
+        transition: 'none',
+      },
+    },
+  }),
 
-const sections = [
-  { value: 'shipping', title: 'Shipping' },
-  { value: 'billing', title: 'Billing' },
-]
-const toolbarCss = css({
-  display: 'flex',
-  gap: '6px',
-  padding: '5px',
-  borderRadius: '10px',
-  background: 'light-dark(#ececf0, #25252b)',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-})
-const toggleCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  flex: 1,
-  minWidth: 0,
-  padding: '9px 10px',
-  borderRadius: '6px',
-  color: 'light-dark(#62626c, #b0b0bb)',
-  font: 'inherit',
-  fontWeight: 600,
-  cursor: 'pointer',
-  transition: 'background-color 160ms ease, color 160ms ease',
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  border: 0,
-  background: 'transparent',
-  '&:hover': { color: 'light-dark(#202027, #eeeef2)' },
-  '&[aria-pressed="true"]': {
-    background: 'light-dark(#ffffff, #393940)',
-    color: 'light-dark(#202027, #eeeef2)',
-    boxShadow: '0 1px 3px #00000018',
-  },
-  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '2px' },
-})
+  content: css({
+    display: 'grid',
+    gridTemplateRows: '0fr',
+    opacity: 0,
+    transition: 'grid-template-rows 280ms ease, opacity 200ms ease',
+    '&[data-state="open"]': {
+      gridTemplateRows: '1fr',
+      opacity: 1,
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
 
-const indicatorCss = css({
-  flexShrink: 0,
-  transition: 'transform 160ms ease',
-  '&[data-selected]': { transform: 'rotate(45deg)' },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-})
+  contentInner: css({
+    minHeight: 0,
+    overflow: 'hidden',
+  }),
+
+  description: css({
+    margin: 0,
+    padding: '0 20px 20px',
+    color: 'var(--muted)',
+  }),
+
+  indicator: css({
+    flexShrink: 0,
+    transition: 'transform 160ms ease',
+    '&[data-selected]': {
+      transform: 'rotate(45deg)',
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
+}
+
+function Item(handle: Handle<{ value: string; title: string; children: RemixNode }>) {
+  return () => (
+    <accordion.ItemContext value={handle.props.value}>
+      <div mix={[styles.item, accordion.item()]}>
+        <h3 mix={styles.heading}>
+          <button type="button" mix={[styles.trigger, accordion.trigger()]}>
+            {handle.props.title}
+            <ChevronDownIcon />
+          </button>
+        </h3>
+        <div mix={[styles.content, accordion.content()]}>
+          <div mix={styles.contentInner}>
+            <p mix={styles.description}>{handle.props.children}</p>
+          </div>
+        </div>
+      </div>
+    </accordion.ItemContext>
+  )
+}
 
 function ChevronDownIcon() {
   return () => (
@@ -182,7 +237,7 @@ function PlusIcon(handle: Handle<{ selected: boolean }>) {
       height="16"
       viewBox="0 0 24 24"
       data-selected={handle.props.selected ? '' : undefined}
-      mix={indicatorCss}
+      mix={styles.indicator}
     >
       <path
         d="M12 5v14M5 12h14"
@@ -195,3 +250,8 @@ function PlusIcon(handle: Handle<{ selected: boolean }>) {
     </svg>
   )
 }
+
+const sections = [
+  { value: 'shipping', title: 'Shipping' },
+  { value: 'billing', title: 'Billing' },
+]

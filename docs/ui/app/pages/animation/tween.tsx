@@ -38,7 +38,9 @@ const framesCode = await highlightSource(`
     if (!next.done) frame = requestAnimationFrame(tick)
   }
 
-  <div mix={css({ transform: \`translateX(\${position}px)\` })} />
+  <div mix={css({
+    transform: \`translateX(\${position}px)\`,
+  })} />
 `)
 
 const curvesCode = await highlightSource(

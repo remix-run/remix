@@ -20,17 +20,26 @@ const anatomyCode = await highlightSource(`
   import { animateLayout } from '@remix-run/ui/animation'
 
   {items.map((item) => (
-    <div key={item.id} mix={animateLayout()}>{item.title}</div>
+    <div key={item.id} mix={animateLayout()}>Item content</div>
   ))}
 `)
 
 const optionsCode = await highlightSource(`
-  <div mix={animateLayout({ ...spring('snappy'), size: false })}>Revenue</div>
+  <div
+    mix={animateLayout({
+      ...spring('snappy'),
+      size: false,
+    })}
+  >
+    Revenue
+  </div>
 `)
 
 const transformsCode = await highlightSource(`
   <div mix={animateLayout()}>
-    <div mix={css({ transform: 'rotate(-2deg)' })}>Preview</div>
+    <div mix={css({
+      transform: 'rotate(-2deg)',
+    })}>Preview</div>
   </div>
 `)
 

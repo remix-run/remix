@@ -11,6 +11,7 @@ describe('Spring iterator example', () => {
     let track = element(result.container, '[inert]').parentElement
     assert.ok(track)
     assert.equal(previous.disabled, true)
+    assert.ok(Math.abs(track.children[0].getBoundingClientRect().width - track.clientWidth) < 1)
     let x = () => new DOMMatrixReadOnly(getComputedStyle(track).transform).m41
     await result.act(() => next.click())
     await waitFor(() => assert.ok(x() < 0 && x() > -track.clientWidth))

@@ -19,15 +19,59 @@ const disabledItemExample = await loadExample('tabs/disabled-item')
 
 const anatomyCode = await highlightSource(`
   import * as tabs from '@remix-run/ui/tabs'
+  import { css } from 'remix/component'
 
-  <tabs.Context defaultActiveTab="overview">
-    <div mix={tabs.root()}>
-      <div aria-label="Project sections" mix={tabs.list()}>
-        <button mix={tabs.tab({ name: 'overview' })}>Overview</button>
-        <button mix={tabs.tab({ name: 'activity' })}>Activity</button>
+  <tabs.Context defaultActiveTab="tab-name">
+    <div
+      mix={[
+        tabs.root(),
+        css({
+          '&[data-disabled]': {},
+        }),
+      ]}
+    >
+      <div
+        aria-label="Tab list label"
+        mix={[
+          tabs.list(),
+          css({
+            '&[aria-disabled]': {},
+          }),
+        ]}
+      >
+        <button
+          type="button"
+          mix={[
+            tabs.tab({
+              name: 'tab-name',
+            }),
+            css({
+              '&[data-state="active"]': {},
+              '&[data-state="inactive"]': {},
+              '&[aria-selected="true"]': {},
+              '&[aria-selected="false"]': {},
+              '&:focus-visible': {},
+              '&:disabled': {},
+            }),
+          ]}
+        >
+          Tab text
+        </button>
       </div>
-      <div mix={tabs.panel({ name: 'overview' })}>Project summary</div>
-      <div mix={tabs.panel({ name: 'activity' })}>Recent changes</div>
+      <div
+        mix={[
+          tabs.panel({
+            name: 'tab-name',
+          }),
+          css({
+            '&[data-state="active"]': {},
+            '&[data-state="inactive"]': {},
+            '&[hidden]': {},
+          }),
+        ]}
+      >
+        Panel content
+      </div>
     </div>
   </tabs.Context>
 `)
@@ -62,7 +106,9 @@ const contextCode = await highlightSource(`
 const accessibilityCode = await highlightSource(`
   <div
     tabIndex={0}
-    mix={tabs.panel({ name: 'overview' })}
+    mix={tabs.panel({
+      name: 'overview',
+    })}
   >
     Project summary
   </div>
@@ -121,6 +167,7 @@ export default function TabsPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>Wrap the tab list and panels in a provider and match each tab to its panel by name.</p>
+        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="state" title="Controlled state">

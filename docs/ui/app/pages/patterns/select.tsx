@@ -21,17 +21,58 @@ const formExample = await loadExample('select/form')
 const anatomyCode = await highlightSource(`
   import * as select from '@remix-run/ui/select'
   import * as popover from '@remix-run/ui/popover'
+  import { css } from 'remix/component'
+  import type { Handle } from 'remix/component'
 
-  <select.Context defaultLabel="Choose delivery">
-    <button type="button" mix={select.trigger()}><SelectedLabel /></button>
+  <select.Context name="field-name" defaultLabel="Trigger text">
+    <button
+      type="button"
+      aria-label="Select label"
+      mix={[
+        select.trigger(),
+        css({
+          '&[aria-expanded="true"]': {},
+          '&[aria-expanded="false"]': {},
+          '&:focus-visible': {},
+          '&:disabled': {},
+        }),
+      ]}
+    >
+      <SelectedLabel />
+    </button>
     <popover.Context>
-      <div mix={select.popover()}>
-        <div aria-label="Delivery methods" mix={select.list()}>
-          <div mix={select.option({ label: 'Standard', value: 'standard' })}>Standard</div>
-          <div mix={select.option({ label: 'Express', value: 'express' })}>Express</div>
+      <div
+        mix={[
+          select.popover(),
+          css({
+            '&:popover-open': {},
+          }),
+        ]}
+      >
+        <div aria-label="Options" mix={select.list()}>
+          <div
+            mix={[
+              select.option({
+                label: 'Option text',
+                value: 'option-value',
+              }),
+              css({
+                '&[data-highlighted="true"]': {},
+                '&[data-highlighted="false"]': {},
+                '&[aria-selected="true"]': {},
+                '&[aria-selected="false"]': {},
+                '&[aria-disabled="true"]': {},
+                '&[aria-disabled="false"]': {},
+                '&[data-select-flash]': {},
+              }),
+            ]}
+          >
+            Option text
+          </div>
         </div>
       </div>
     </popover.Context>
+    <input mix={select.hiddenInput()} />
   </select.Context>
 
   function SelectedLabel(handle: Handle) {
@@ -85,6 +126,7 @@ export default function SelectPage(handle: Handle<PageProps>) {
           Keep the trigger, popover, list and options inside the select provider. The surface also
           needs a Popover provider.
         </p>
+        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="initial" title="Initial selection">

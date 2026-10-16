@@ -22,14 +22,55 @@ const imperativeExample = await loadExample('combobox/imperative')
 
 const anatomyCode = await highlightSource(`
   import * as combobox from '@remix-run/ui/combobox'
+  import { css } from 'remix/component'
 
-  <combobox.Context name="state">
-    <label for="state">State</label>
-    <input id="state" mix={combobox.input()} />
-    <div mix={combobox.popover()}>
-      <div aria-label="US states" mix={combobox.list()}>
-        <div mix={combobox.option({ label: 'California', value: 'CA' })}>California</div>
-        <div mix={combobox.option({ label: 'New York', value: 'NY' })}>New York</div>
+  <combobox.Context name="field-name">
+    <label>
+      Combobox label
+      <input
+        mix={[
+          combobox.input(),
+          css({
+            '&:focus-visible': {},
+            '&:disabled': {},
+            '&[aria-expanded="true"]': {},
+            '&[aria-expanded="false"]': {},
+            '&[data-surface-visible]': {},
+          }),
+        ]}
+      />
+    </label>
+    <div
+      mix={[
+        combobox.popover(),
+        css({
+          '&:popover-open': {},
+          '&[data-show-reason="hint"]': {},
+          '&[data-show-reason="nav"]': {},
+        }),
+      ]}
+    >
+      <div aria-label="Options" mix={combobox.list()}>
+        <div
+          mix={[
+            combobox.option({
+              label: 'Option text',
+              value: 'option-value',
+            }),
+            css({
+              '&[hidden]': {},
+              '&[data-highlighted="true"]': {},
+              '&[data-highlighted="false"]': {},
+              '&[aria-selected="true"]': {},
+              '&[aria-selected="false"]': {},
+              '&[aria-disabled="true"]': {},
+              '&[aria-disabled="false"]': {},
+              '&[data-combobox-flash]': {},
+            }),
+          ]}
+        >
+          Option text
+        </div>
       </div>
     </div>
     <input mix={combobox.hiddenInput()} />
@@ -96,6 +137,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           Wrap the input, popover and options in one provider. Combobox supplies its Popover and
           Listbox providers.
         </p>
+        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="initial" title="Selection">

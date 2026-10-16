@@ -30,8 +30,12 @@ const placementCode = await highlightSource(`
   anchor(surface, target, { placement: 'right-start', offset: 8 })
 
   css({
-    '&[data-anchor-placement^="right"]': { transformOrigin: 'left center' },
-    '&[data-anchor-placement^="left"]': { transformOrigin: 'right center' },
+    '&[data-anchor-placement^="right"]': {
+      transformOrigin: 'left center',
+    },
+    '&[data-anchor-placement^="left"]': {
+      transformOrigin: 'right center',
+    },
   })
 `)
 

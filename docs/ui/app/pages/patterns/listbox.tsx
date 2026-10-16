@@ -19,18 +19,45 @@ const richOptionsExample = await loadExample('listbox/rich-options')
 
 const anatomyCode = await highlightSource(`
   import * as listbox from '@remix-run/ui/listbox'
+  import { css } from 'remix/component'
 
   <listbox.Context
     value={value}
     activeValue={activeValue}
-    onSelect={(next) => { value = next
-      handle.update() }}
-    onHighlight={(next) => { activeValue = next
-      handle.update() }}
+    onSelect={onSelect}
+    onHighlight={onHighlight}
+    flashSelection
   >
-    <div tabIndex={0} aria-label="Teams" mix={listbox.list()}>
-      <div mix={listbox.option({ label: 'Design', value: 'design' })}>Design</div>
-      <div mix={listbox.option({ label: 'Engineering', value: 'engineering' })}>Engineering</div>
+    <div
+      tabIndex={0}
+      aria-label="Options"
+      aria-activedescendant={activeId}
+      mix={[
+        listbox.list(),
+        css({
+          '&:focus-visible': {},
+        }),
+      ]}
+    >
+      <div
+        mix={[
+          listbox.option({
+            label: 'Option text',
+            value: 'option-value',
+          }),
+          css({
+            '&[data-highlighted="true"]': {},
+            '&[data-highlighted="false"]': {},
+            '&[aria-selected="true"]': {},
+            '&[aria-selected="false"]': {},
+            '&[aria-disabled="true"]': {},
+            '&[aria-disabled="false"]': {},
+            '&[data-listbox-flash]': {},
+          }),
+        ]}
+      >
+        Option text
+      </div>
     </div>
   </listbox.Context>
 `)
@@ -167,6 +194,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>Provide selection and highlight state, then apply list and option mixins.</p>
+        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="state" title="Selection and highlighting">

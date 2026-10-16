@@ -22,11 +22,45 @@ const formExample = await loadExample('toggle/form')
 
 const anatomyCode = await highlightSource(`
   import { toggle } from '@remix-run/ui/toggle'
+  import { css } from 'remix/component'
 
   <label>
-    Email notifications
-    <input type="checkbox" mix={toggle({ defaultChecked: true })} />
+    Switch label
+    <input type="checkbox" mix={[
+      toggle(),
+      css({
+        '&[data-state="checked"]': {},
+        '&[data-state="unchecked"]': {},
+        '&:focus-visible': {},
+        '&:disabled': {},
+        '&[readonly]': {},
+        '&:checked': {},
+        '&:required': {},
+      }),
+    ]} />
   </label>
+`)
+
+const customHostAnatomyCode = await highlightSource(`
+  <button
+    type="button"
+    mix={[
+      toggle(),
+      css({
+        '&[data-state="checked"]': {},
+        '&[data-state="unchecked"]': {},
+        '&[aria-checked="true"]': {},
+        '&[aria-checked="false"]': {},
+        '&[aria-disabled]': {},
+        '&[aria-readonly]': {},
+        '&[aria-required]': {},
+        '&:focus-visible': {},
+        '&:disabled': {},
+      }),
+    ]}
+  >
+    Switch label
+  </button>
 `)
 
 const eventsCode = await highlightSource(`
@@ -44,7 +78,10 @@ const accessibilityCode = await highlightSource(`
     type="button"
     disabled
     aria-label="Security alerts"
-    mix={toggle({ disabled: true, defaultChecked: true })}
+    mix={toggle({
+      disabled: true,
+      defaultChecked: true,
+    })}
   />
 `)
 
@@ -74,7 +111,13 @@ export default function TogglePage(handle: Handle<PageProps>) {
         <p>
           Apply <code>toggle()</code> to a checkbox input or a custom switch element.
         </p>
+        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
+        <p>
+          Custom hosts expose checked, disabled, read-only and required state through ARIA
+          attributes. A button can also use its native <code>disabled</code> attribute.
+        </p>
+        <CodeBlock html={customHostAnatomyCode} />
       </Section>
       <Section id="hosts" title="Button switches">
         <p>

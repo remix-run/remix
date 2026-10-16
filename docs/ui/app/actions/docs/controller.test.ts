@@ -101,7 +101,7 @@ describe('UI docs', () => {
     assert.ok(html.indexOf('id="state"') < html.indexOf('id="controlled-single"'))
     assert.match(html, /<h3>Controlled single value<\/h3>/)
     assert.match(html, /data-state/)
-    assert.match(html, /role="radiogroup" aria-label="Open order section"/)
+    assert.match(html, /role="group" aria-label="Open order section"/)
     assert.match(html, /aria-pressed="true"/)
     assert.doesNotMatch(html, /Open value:|Close all/)
     assert.match(html, /<h2>Change events<\/h2>/)

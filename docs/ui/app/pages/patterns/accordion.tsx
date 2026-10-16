@@ -23,15 +23,53 @@ const disabledItem = await loadExample('accordion/disabled-item')
 
 const anatomyCode = await highlightSource(`
   import * as accordion from '@remix-run/ui/accordion'
+  import { css } from 'remix/component'
 
   <accordion.Context>
-    <div mix={accordion.root()}>
-      <accordion.ItemContext value="shipping">
-        <section mix={accordion.item()}>
+    <div mix={[
+      accordion.root(),
+      css({
+        '&[data-type="single"]': {},
+        '&[data-type="multiple"]': {},
+        '&[data-disabled]': {},
+      }),
+    ]}>
+      <accordion.ItemContext value="item-value">
+        <section mix={[
+          accordion.item(),
+          css({
+            '&[data-state="open"]': {},
+            '&[data-state="closed"]': {},
+            '&[data-disabled]': {},
+          }),
+        ]}>
           <h3>
-            <button type="button" mix={accordion.trigger()}>Shipping</button>
+            <button type="button" mix={[
+              accordion.trigger(),
+              css({
+                '&[data-state="open"]': {},
+                '&[data-state="closed"]': {},
+                '&[aria-expanded="true"]': {},
+                '&[aria-expanded="false"]': {},
+                '&:focus-visible': {},
+                '&:disabled': {},
+                '&[aria-disabled]': {},
+              }),
+            ]}>
+              Trigger text
+            </button>
           </h3>
-          <div mix={accordion.content()}>Delivery preferences</div>
+          <div mix={[
+            accordion.content(),
+            css({
+              '&[data-state="open"]': {},
+              '&[data-state="closed"]': {},
+              '&[aria-hidden]': {},
+              '&[inert]': {},
+            }),
+          ]}>
+            Panel content
+          </div>
         </section>
       </accordion.ItemContext>
     </div>
@@ -90,6 +128,7 @@ export default function AccordionPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>Wrap relevant markup in providers and apply mixins to your own elements.</p>
+        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="multiple-state" title="Multiple open panels">

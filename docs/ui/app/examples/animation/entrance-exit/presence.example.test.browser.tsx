@@ -13,6 +13,15 @@ import {
 describe('Entrance and exit example', () => {
   it('keeps the notification mounted for exit and animates it when shown again', async (t) => {
     let result = await mount(t, <Example />)
+    let other = await mount(t, <Example />)
+    let toggle = button(result.container, 'Hide notification')
+    let targetId = toggle.getAttribute('aria-controls')
+    assert.ok(targetId)
+    assert.equal(document.getElementById(targetId), element(result.container, '[id]'))
+    assert.notEqual(
+      targetId,
+      button(other.container, 'Hide notification').getAttribute('aria-controls'),
+    )
     await finishAnimations(result.container)
     let notification = element(result.container, '[role="status"]').parentElement
     assert.ok(notification)

@@ -20,8 +20,8 @@ const webAnimationsExample = await loadExample('animation/spring/web-animations'
 const iteratorExample = await loadExample('animation/spring/iterator')
 
 const anatomyCode = await highlightSource(`
-  import { css } from 'remix/component'
   import { spring } from '@remix-run/ui/animation'
+  import { css } from 'remix/component'
 
   <div mix={css({
     transform: moved ? 'translateX(200px)' : 'translateX(0)',
@@ -38,10 +38,20 @@ const cssCode = await highlightSource(`
 `)
 
 const mixinsCode = await highlightSource(`
-  <div mix={[
-    animateEntrance({ opacity: 0, ...spring('snappy') }),
-    animateExit({ opacity: 0, ...spring('snappy') }),
-  ]}>Saved</div>
+  <div
+    mix={[
+      animateEntrance({
+        opacity: 0,
+        ...spring('snappy'),
+      }),
+      animateExit({
+        opacity: 0,
+        ...spring('snappy'),
+      }),
+    ]}
+  >
+    Saved
+  </div>
 `)
 
 const typeDefinitions = {

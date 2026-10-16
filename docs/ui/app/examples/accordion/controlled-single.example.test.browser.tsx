@@ -1,24 +1,26 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import Example from './controlled-single.example.tsx'
-import { button, input, mount } from '../test-helpers.ts'
+import { button, element, mount } from '../test-helpers.ts'
 
 describe('Controlled single accordion example', () => {
-  it('synchronizes the radio toolbar and panels in both directions', async (t) => {
+  it('synchronizes the toggle toolbar and panels in both directions', async (t) => {
     let result = await mount(t, <Example />)
-    let shipping = input(result.container, 'input[value="shipping"]')
-    let billing = input(result.container, 'input[value="billing"]')
-    assert.equal(shipping.checked, true)
+    let toolbar = element(result.container, '[role="group"]')
+    let shipping = button(toolbar, 'Shipping')
+    let billing = button(toolbar, 'Billing')
+    let panels = element(result.container, ':scope > div > div:last-child')
+    assert.equal(shipping.getAttribute('aria-pressed'), 'true')
     await result.act(() => billing.click())
-    assert.equal(shipping.checked, false)
-    assert.equal(button(result.container, 'Billing').getAttribute('aria-expanded'), 'true')
+    assert.equal(shipping.getAttribute('aria-pressed'), 'false')
+    assert.equal(button(panels, 'Billing').getAttribute('aria-expanded'), 'true')
     await result.act(() => billing.click())
-    assert.equal(billing.checked, false)
-    assert.equal(button(result.container, 'Billing').getAttribute('aria-expanded'), 'false')
-    await result.act(() => button(result.container, 'Shipping').click())
-    assert.equal(shipping.checked, true)
-    await result.act(() => button(result.container, 'Billing').click())
-    assert.equal(shipping.checked, false)
-    assert.equal(billing.checked, true)
+    assert.equal(billing.getAttribute('aria-pressed'), 'false')
+    assert.equal(button(panels, 'Billing').getAttribute('aria-expanded'), 'false')
+    await result.act(() => button(panels, 'Shipping').click())
+    assert.equal(shipping.getAttribute('aria-pressed'), 'true')
+    await result.act(() => button(panels, 'Billing').click())
+    assert.equal(shipping.getAttribute('aria-pressed'), 'false')
+    assert.equal(billing.getAttribute('aria-pressed'), 'true')
   })
 })

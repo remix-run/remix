@@ -1,11 +1,11 @@
+import * as popover from '@remix-run/ui/popover'
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
-import * as popover from '@remix-run/ui/popover'
 
-export default function Example(handle: Handle) {
+export default function ExamplePopover(handle: Handle) {
   let open = false
   return () => (
-    <div mix={stackCss}>
+    <div mix={styles.root}>
       <popover.Context>
         <button
           type="button"
@@ -13,8 +13,11 @@ export default function Example(handle: Handle) {
           aria-controls={`${handle.id}-surface`}
           aria-expanded={open}
           mix={[
-            buttonCss,
-            popover.anchor({ placement: 'bottom', offset: 8 }),
+            styles.button,
+            popover.anchor({
+              placement: 'bottom',
+              offset: 8,
+            }),
             popover.focusOnHide(),
             on('click', () => {
               open = !open
@@ -29,7 +32,7 @@ export default function Example(handle: Handle) {
           role="dialog"
           aria-label="Filter pull requests"
           mix={[
-            surfaceCss,
+            styles.surface,
             popover.surface({
               open,
               onHide() {
@@ -39,9 +42,9 @@ export default function Example(handle: Handle) {
             }),
           ]}
         >
-          <fieldset mix={filtersCss}>
+          <fieldset mix={styles.filters}>
             <legend>Status</legend>
-            <label mix={checkboxCss}>
+            <label mix={styles.checkbox}>
               <input
                 type="checkbox"
                 name="status"
@@ -51,11 +54,11 @@ export default function Example(handle: Handle) {
               />
               Open
             </label>
-            <label mix={checkboxCss}>
+            <label mix={styles.checkbox}>
               <input type="checkbox" name="status" value="merged" />
               Merged
             </label>
-            <label mix={checkboxCss}>
+            <label mix={styles.checkbox}>
               <input type="checkbox" name="status" value="closed" />
               Closed
             </label>
@@ -66,76 +69,105 @@ export default function Example(handle: Handle) {
   )
 }
 
-const stackCss = css({
-  colorScheme: 'light dark',
-  width: '320px',
-  maxWidth: '100%',
-  display: 'flex',
-  justifyContent: 'center',
-  color: 'light-dark(#202027, #eeeef2)',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
+const styles = {
+  root: css({
+    '--text': 'light-dark(#202027, #eeeef2)',
+    '--hover-control': 'light-dark(#f0f0f5, #303038)',
+    '--accent': 'light-dark(#0578be, #2dacf9)',
 
-const buttonCss = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '10px',
-  border: '1px solid light-dark(#d8d8df, #44444c)',
-  borderRadius: '8px',
-  background: 'light-dark(#fff, #25252b)',
-  color: 'inherit',
-  font: 'inherit',
-  cursor: 'pointer',
-  '&:hover': { background: 'light-dark(#f0f0f5, #303038)' },
-  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-})
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    width: '320px',
+    maxWidth: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    color: 'var(--text)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
 
-const surfaceCss = css({
-  colorScheme: 'light dark',
-  boxSizing: 'border-box',
-  margin: 0,
-  padding: '12px',
-  width: '196px',
-  maxWidth: 'calc(100vw - 32px)',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '10px',
-  background: 'light-dark(#fff, #1b1b20)',
-  color: 'light-dark(#202027, #eeeef2)',
-  boxShadow: '0 12px 32px #00000024',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  opacity: 0,
-  transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-  '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-})
+  button: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '10px',
+    border: '1px solid light-dark(#d8d8df, #44444c)',
+    borderRadius: '8px',
+    background: 'light-dark(#fff, #25252b)',
+    color: 'inherit',
+    font: 'inherit',
+    cursor: 'pointer',
+    '&:hover': {
+      background: 'var(--hover-control)',
+    },
+    '&:focus-visible': {
+      outline: '2px solid #5bb8ef',
+      outlineOffset: '3px',
+    },
+  }),
 
-const filtersCss = css({
-  margin: 0,
-  padding: 0,
-  border: 0,
-  '& legend': {
-    padding: '0 8px 6px',
-    fontSize: '12px',
-    fontWeight: 600,
-    color: 'light-dark(#62626c, #b0b0bb)',
-  },
-})
+  surface: css({
+    colorScheme: 'light dark',
+    margin: 0,
+    padding: '12px',
+    width: '196px',
+    maxWidth: 'calc(100vw - 32px)',
+    border: '1px solid light-dark(#e0e0e6, #393940)',
+    borderRadius: '10px',
+    background: 'light-dark(#fff, #1b1b20)',
+    color: 'var(--text)',
+    boxShadow: '0 12px 32px #00000024',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+    opacity: 0,
+    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+    '&:popover-open': {
+      opacity: 1,
+      '@starting-style': {
+        opacity: 0,
+      },
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
 
-const checkboxCss = css({
-  boxSizing: 'border-box',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  minHeight: '40px',
-  padding: '8px',
-  borderRadius: '5px',
-  fontSize: '13px',
-  cursor: 'pointer',
-  '&:hover': { background: 'light-dark(#f0f0f5, #303038)' },
-  '& input': { margin: 0, width: '16px', height: '16px', accentColor: '#7462e7' },
-  '& input:focus-visible': { outline: '2px solid #7462e7', outlineOffset: '3px' },
-})
+  filters: css({
+    margin: 0,
+    padding: 0,
+    border: 0,
+    '& legend': {
+      padding: '0 8px 6px',
+      fontSize: '12px',
+      fontWeight: 600,
+      color: 'light-dark(#62626c, #b0b0bb)',
+    },
+  }),
+
+  checkbox: css({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    minHeight: '40px',
+    padding: '8px',
+    borderRadius: '5px',
+    fontSize: '13px',
+    cursor: 'pointer',
+    '&:hover': {
+      background: 'var(--hover-control)',
+    },
+    '& input': {
+      margin: 0,
+      width: '16px',
+      height: '16px',
+      accentColor: 'var(--accent)',
+    },
+    '& input:focus-visible': {
+      outline: '2px solid var(--accent)',
+      outlineOffset: '3px',
+    },
+  }),
+}
 
 function FilterIcon() {
   return () => (

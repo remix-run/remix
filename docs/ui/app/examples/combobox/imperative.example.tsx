@@ -1,11 +1,11 @@
+import * as combobox from '@remix-run/ui/combobox'
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
-import * as combobox from '@remix-run/ui/combobox'
 
-export default function Example(handle: Handle) {
+export default function ExampleCombobox(handle: Handle) {
   let control: combobox.ComboboxHandle | undefined
   return () => (
-    <div mix={stackCss}>
+    <div mix={styles.root}>
       <combobox.Context
         ref={(comboboxHandle) => {
           control = comboboxHandle
@@ -15,12 +15,12 @@ export default function Example(handle: Handle) {
         <input
           id={`${handle.id}-state`}
           placeholder="Search states"
-          mix={[inputCss, combobox.input()]}
+          mix={[styles.input, combobox.input()]}
         />
         <button
           type="button"
           mix={[
-            buttonCss,
+            styles.button,
             on('click', () => {
               void control?.open('first')
             }),
@@ -28,10 +28,10 @@ export default function Example(handle: Handle) {
         >
           Browse states
         </button>
-        <div mix={[surfaceCss, combobox.popover()]}>
-          <div aria-label="US states" mix={[listCss, combobox.list()]}>
+        <div mix={[styles.surface, combobox.popover()]}>
+          <div aria-label="US states" mix={[styles.list, combobox.list()]}>
             {options.map((option) => (
-              <div key={option.value} mix={[optionCss, combobox.option(option)]}>
+              <div key={option.value} mix={[styles.option, combobox.option(option)]}>
                 {option.label}
               </div>
             ))}
@@ -42,6 +42,136 @@ export default function Example(handle: Handle) {
     </div>
   )
 }
+
+const styles = {
+  root: css({
+    '--text': 'light-dark(#202027, #eeeef2)',
+    '--surface': 'light-dark(#fff, #1b1b20)',
+    '--control-border': 'light-dark(#d8d8df, #44444c)',
+    '--accent': 'light-dark(#0578be, #80caff)',
+    '--focus-ring': '#5bb8ef',
+
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    width: '320px',
+    maxWidth: '100%',
+    display: 'grid',
+    gap: '16px',
+    color: 'var(--text)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+
+  input: css({
+    width: '100%',
+    padding: '10px 12px',
+    border: '1px solid var(--control-border)',
+    borderRadius: '8px',
+    background: 'var(--surface)',
+    color: 'inherit',
+    font: 'inherit',
+    '&:focus-visible': {
+      outline: '2px solid var(--focus-ring)',
+      outlineOffset: '2px',
+    },
+    '&:disabled': {
+      opacity: 0.45,
+      cursor: 'not-allowed',
+    },
+  }),
+
+  button: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '9px 14px',
+    border: '1px solid var(--control-border)',
+    borderRadius: '8px',
+    background: 'light-dark(#fff, #25252b)',
+    color: 'inherit',
+    font: 'inherit',
+    fontWeight: 600,
+    cursor: 'pointer',
+    '&:hover:not(:disabled)': {
+      background: 'light-dark(#f0f0f5, #303038)',
+    },
+    '&:focus-visible': {
+      outline: '2px solid var(--focus-ring)',
+      outlineOffset: '3px',
+    },
+    '&:disabled': {
+      opacity: 0.45,
+      cursor: 'not-allowed',
+    },
+  }),
+
+  surface: css({
+    colorScheme: 'light dark',
+    margin: 0,
+    padding: '6px',
+    minWidth: '220px',
+    maxWidth: 'calc(100vw - 32px)',
+    border: '1px solid light-dark(#e0e0e6, #393940)',
+    borderRadius: '10px',
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    boxShadow: '0 12px 32px #00000024',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+    opacity: 0,
+    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+    '&:popover-open': {
+      opacity: 1,
+      '@starting-style': {
+        opacity: 0,
+      },
+    },
+    '&[data-show-reason="hint"]': {
+      transition: 'none',
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
+
+  list: css({
+    display: 'grid',
+    gap: '2px',
+    maxHeight: '240px',
+    overflow: 'auto',
+    outline: 0,
+  }),
+
+  option: css({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    padding: '10px 12px',
+    borderRadius: '6px',
+    cursor: 'default',
+    '&[hidden]': {
+      display: 'none',
+    },
+    '&[data-highlighted="true"]': {
+      background: 'light-dark(#eeeef3, #303038)',
+    },
+    '&[aria-selected="true"]': {
+      color: 'var(--accent)',
+      background: 'light-dark(#eaf5fc, #173348)',
+    },
+    '&[aria-disabled="true"]': {
+      opacity: 0.4,
+      cursor: 'not-allowed',
+    },
+    '&[data-combobox-flash]': {
+      background: 'light-dark(#d6eaf8, #254c66)',
+      color: 'var(--accent)',
+    },
+  }),
+}
+
 const options = [
   { value: 'AL', label: 'Alabama' },
   { value: 'AK', label: 'Alaska' },
@@ -94,93 +224,3 @@ const options = [
   { value: 'WI', label: 'Wisconsin' },
   { value: 'WY', label: 'Wyoming' },
 ]
-
-const stackCss = css({
-  colorScheme: 'light dark',
-  width: '320px',
-  maxWidth: '100%',
-  display: 'grid',
-  gap: '16px',
-  color: 'light-dark(#202027, #eeeef2)',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
-
-const buttonCss = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  padding: '9px 14px',
-  border: '1px solid light-dark(#d8d8df, #44444c)',
-  borderRadius: '8px',
-  background: 'light-dark(#fff, #25252b)',
-  color: 'inherit',
-  font: 'inherit',
-  fontWeight: 600,
-  cursor: 'pointer',
-  '&:hover:not(:disabled)': { background: 'light-dark(#f0f0f5, #303038)' },
-  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '3px' },
-  '&:disabled': { opacity: 0.45, cursor: 'not-allowed' },
-})
-
-const inputCss = css({
-  boxSizing: 'border-box',
-  width: '100%',
-  padding: '10px 12px',
-  border: '1px solid light-dark(#d8d8df, #44444c)',
-  borderRadius: '8px',
-  background: 'light-dark(#fff, #1b1b20)',
-  color: 'inherit',
-  font: 'inherit',
-  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '2px' },
-  '&:disabled': { opacity: 0.45, cursor: 'not-allowed' },
-})
-
-const surfaceCss = css({
-  colorScheme: 'light dark',
-  boxSizing: 'border-box',
-  margin: 0,
-  padding: '6px',
-  minWidth: '220px',
-  maxWidth: 'calc(100vw - 32px)',
-  border: '1px solid light-dark(#e0e0e6, #393940)',
-  borderRadius: '10px',
-  background: 'light-dark(#fff, #1b1b20)',
-  color: 'light-dark(#202027, #eeeef2)',
-  boxShadow: '0 12px 32px #00000024',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  opacity: 0,
-  transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-  '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-  '&[data-show-reason="hint"]': { transition: 'none' },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-})
-
-const listCss = css({
-  display: 'grid',
-  gap: '2px',
-  maxHeight: '240px',
-  overflow: 'auto',
-  outline: 0,
-})
-
-const optionCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '12px',
-  padding: '10px 12px',
-  borderRadius: '6px',
-  cursor: 'default',
-  '&[hidden]': { display: 'none' },
-  '&[data-highlighted="true"]': { background: 'light-dark(#eeeef3, #303038)' },
-  '&[aria-selected="true"]': {
-    color: 'light-dark(#0578be, #80caff)',
-    background: 'light-dark(#eaf5fc, #173348)',
-  },
-  '&[aria-disabled="true"]': { opacity: 0.4, cursor: 'not-allowed' },
-  '&[data-combobox-flash]': {
-    background: 'light-dark(#0578be, #80caff)',
-    color: 'light-dark(#fff, #102332)',
-  },
-})

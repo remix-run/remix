@@ -1,27 +1,19 @@
+import { animateLayout, prefersReducedMotion, spring } from '@remix-run/ui/animation'
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { animateLayout, prefersReducedMotion, spring } from '@remix-run/ui/animation'
 
-export default function Example(handle: Handle) {
+export default function ExampleLayout(handle: Handle) {
   let activity = false
   return () => (
-    <div role="group" aria-label="Project view" mix={toolbarCss}>
+    <div role="group" aria-label="Project view" mix={styles.toolbar}>
       <div
+        style={{
+          left: activity ? 'calc(var(--inset) + var(--overview-width))' : 'var(--inset)',
+          width: activity ? 'var(--activity-width)' : 'var(--overview-width)',
+        }}
         aria-hidden="true"
         inert
-        mix={[
-          css({
-            position: 'absolute',
-            top: '5px',
-            bottom: '5px',
-            left: activity ? '101px' : '5px',
-            width: activity ? '144px' : '96px',
-            borderRadius: '6px',
-            background: 'light-dark(#fff, #393940)',
-            boxShadow: '0 1px 3px #00000018',
-          }),
-          animateLayout(prefersReducedMotion() ? false : { ...spring('snappy') }),
-        ]}
+        mix={[styles.highlight, animateLayout(prefersReducedMotion() ? false : spring('snappy'))]}
       />
       {['Overview', 'Activity log'].map((label, index) => (
         <button
@@ -29,7 +21,7 @@ export default function Example(handle: Handle) {
           type="button"
           aria-pressed={activity === (index === 1)}
           mix={[
-            buttonCss,
+            styles.button,
             on('click', () => {
               activity = index === 1
               handle.update()
@@ -43,27 +35,49 @@ export default function Example(handle: Handle) {
   )
 }
 
-const toolbarCss = css({
-  colorScheme: 'light dark',
-  display: 'grid',
-  gridTemplateColumns: '96px 144px',
-  position: 'relative',
-  padding: '5px',
-  width: 'fit-content',
-  borderRadius: '10px',
-  background: 'light-dark(#ececf0, #25252b)',
-  color: 'light-dark(#202027, #eeeef2)',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
-const buttonCss = css({
-  position: 'relative',
-  padding: '8px 12px',
-  border: 0,
-  borderRadius: '6px',
-  background: 'transparent',
-  color: 'inherit',
-  font: 'inherit',
-  fontWeight: 600,
-  cursor: 'pointer',
-  '&:focus-visible': { outline: '2px solid #5bb8ef', outlineOffset: '2px' },
-})
+const styles = {
+  toolbar: css({
+    '--inset': '5px',
+    '--overview-width': '96px',
+    '--activity-width': '144px',
+
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    display: 'grid',
+    gridTemplateColumns: 'var(--overview-width) var(--activity-width)',
+    position: 'relative',
+    padding: 'var(--inset)',
+    width: 'fit-content',
+    borderRadius: '10px',
+    background: 'light-dark(#ececf0, #25252b)',
+    color: 'light-dark(#202027, #eeeef2)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+
+  highlight: css({
+    position: 'absolute',
+    top: 'var(--inset)',
+    bottom: 'var(--inset)',
+    borderRadius: '6px',
+    background: 'light-dark(#fff, #393940)',
+    boxShadow: '0 1px 3px #00000018',
+  }),
+
+  button: css({
+    position: 'relative',
+    padding: '8px 12px',
+    border: 0,
+    borderRadius: '6px',
+    background: 'transparent',
+    color: 'inherit',
+    font: 'inherit',
+    fontWeight: 600,
+    cursor: 'pointer',
+    '&:focus-visible': {
+      outline: '2px solid #5bb8ef',
+      outlineOffset: '2px',
+    },
+  }),
+}

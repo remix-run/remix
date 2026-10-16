@@ -17,23 +17,48 @@ const basic = await loadExample('popover/basic')
 
 const anatomyCode = await highlightSource(`
   import * as popover from '@remix-run/ui/popover'
+  import { css, on } from 'remix/component'
 
   <popover.Context>
     <button
       type="button"
+      aria-expanded={open}
+      aria-controls="popover-content"
       mix={[
-        popover.anchor({ placement: 'bottom-start', offset: 8 }),
+        popover.anchor({
+          placement: 'bottom-start',
+          offset: 8,
+        }),
         popover.focusOnHide(),
-        on('click', () => { open = true
-          handle.update() }),
+        on('click', show),
+        css({
+          '&[aria-expanded="true"]': {},
+          '&[aria-expanded="false"]': {},
+          '&:focus-visible': {},
+          '&:disabled': {},
+        }),
       ]}
-    >Filters</button>
-    <div mix={popover.surface({
-      open,
-      onHide() { open = false
-        handle.update() },
-    })}>
-      <input aria-label="Filter files" mix={popover.focusOnShow()} />
+    >
+      Trigger text
+    </button>
+    <div
+      id="popover-content"
+      role="dialog"
+      aria-label="Popover label"
+      tabIndex={-1}
+      mix={[
+        popover.surface({
+          open,
+          onHide: hide,
+        }),
+        popover.focusOnShow(),
+        css({
+          '&:popover-open': {},
+          '&:focus-visible': {},
+        }),
+      ]}
+    >
+      Popover content
     </div>
   </popover.Context>
 `)
@@ -59,28 +84,56 @@ const anchorInteractionCode = await highlightSource(`
 const focusCode = await highlightSource(`
   <>
     <button mix={popover.focusOnHide()}>Open filters</button>
-    <div mix={popover.surface({ open, onHide, restoreFocusOnHide: false })}>
+    <div
+      mix={popover.surface({
+        open,
+        onHide,
+        restoreFocusOnHide: false,
+      })}
+    >
       <input aria-label="Filter files" mix={popover.focusOnShow()} />
     </div>
   </>
 `)
 
 const motionCode = await highlightSource(`
-  <div mix={[
-    css({
-      opacity: 0,
-      transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-      '&:popover-open': { opacity: 1, '@starting-style': { opacity: 0 } },
-      '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-    }),
-    popover.surface({ open, onHide }),
-  ]} />
+  <div
+    mix={[
+      css({
+        opacity: 0,
+        transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+        '&:popover-open': {
+          opacity: 1,
+          '@starting-style': {
+            opacity: 0,
+          },
+        },
+        '@media (prefers-reduced-motion: reduce)': {
+          transition: 'none',
+        },
+      }),
+      popover.surface({
+        open,
+        onHide,
+      }),
+    ]}
+  />
 `)
 
 const accessibilityCode = await highlightSource(`
   <>
-    <button aria-expanded={open} aria-controls="file-filters">Filters</button>
-    <div id="file-filters" role="dialog" aria-label="File filters" mix={popover.surface({ open, onHide })} />
+    <button aria-expanded={open} aria-controls="file-filters">
+      Filters
+    </button>
+    <div
+      id="file-filters"
+      role="dialog"
+      aria-label="File filters"
+      mix={popover.surface({
+        open,
+        onHide,
+      })}
+    />
   </>
 `)
 
@@ -121,6 +174,7 @@ export default function PopoverPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>Wrap the anchor, surface and focus targets in the same provider.</p>
+        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="state" title="Opening and dismissal">

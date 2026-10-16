@@ -20,13 +20,106 @@ const submenuExample = await loadExample('menu/submenu')
 
 const anatomyCode = await highlightSource(`
   import * as menu from '@remix-run/ui/menu'
+  import { css } from 'remix/component'
 
-  <menu.Context label="Edit">
-    <button type="button" mix={menu.trigger()}>Edit</button>
-    <div mix={menu.popover()}>
+  <menu.Context>
+    <button
+      type="button"
+      mix={[
+        menu.trigger(),
+        css({
+          '&[aria-expanded="true"]': {},
+          '&[aria-expanded="false"]': {},
+          '&:focus-visible': {},
+          '&:disabled': {},
+        }),
+      ]}
+    >
+      Trigger text
+    </button>
+    <div
+      mix={[
+        menu.popover(),
+        css({
+          '&:popover-open': {},
+          '&[data-close-animation="none"]': {},
+        }),
+      ]}
+    >
       <div mix={menu.list()}>
-        <div mix={menu.item({ name: 'copy' })}>Copy</div>
-        <div mix={menu.item({ name: 'paste' })}>Paste</div>
+        <div
+          mix={[
+            menu.item({
+              name: 'action-name',
+            }),
+            css({
+              '&[data-highlighted]': {},
+              '&[aria-disabled]': {},
+              '&[data-menu-flash]': {},
+            }),
+          ]}
+        >
+          Item text
+        </div>
+      </div>
+    </div>
+  </menu.Context>
+`)
+
+const checkedItemAnatomyCode = await highlightSource(`
+  <div
+    mix={[
+      menu.item({
+        name: 'item-name',
+        type: 'checkbox',
+        checked,
+      }),
+      css({
+        '&[aria-checked="true"]': {},
+        '&[aria-checked="false"]': {},
+        '&[data-highlighted]': {},
+        '&[aria-disabled]': {},
+        '&[data-menu-flash]': {},
+      }),
+    ]}
+  >
+    Checked item text
+  </div>
+`)
+
+const submenuAnatomyCode = await highlightSource(`
+  <menu.Context>
+    <div
+      mix={[
+        menu.submenuTrigger({}),
+        css({
+          '&[aria-expanded="true"]': {},
+          '&[aria-expanded="false"]': {},
+          '&[aria-disabled]': {},
+          '&[data-highlighted]': {},
+          '&[data-submenu-state="dismissing"]': {},
+          '&[data-submenu-state="selecting"]': {},
+        }),
+      ]}
+    >
+      Submenu trigger text
+    </div>
+    <div
+      mix={[
+        menu.popover(),
+        css({
+          '&:popover-open': {},
+          '&[data-menu-submenu]': {},
+          '&[data-close-animation="none"]': {},
+        }),
+      ]}
+    >
+      <div mix={menu.list()}>
+        <div mix={menu.item({
+          name: 'child-action-name',
+        })}>
+          Child item text
+        </div>
       </div>
     </div>
   </menu.Context>
@@ -44,7 +137,19 @@ const actionsCode = await highlightSource(`
 
 const contextMenuCode = await highlightSource(`
   <menu.Context label="File actions">
-    <div tabIndex={0} mix={menu.contextTrigger()}>Project brief.pdf</div>
+    <div
+      tabIndex={0}
+      mix={[
+        menu.contextTrigger(),
+        css({
+          '&[aria-expanded="true"]': {},
+          '&[aria-expanded="false"]': {},
+          '&:focus-visible': {},
+        }),
+      ]}
+    >
+      File name
+    </div>
     {/* Surface and menu items */}
   </menu.Context>
 `)
@@ -110,7 +215,18 @@ export default function MenuPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>Wrap the trigger, floating surface and menu items in a provider.</p>
+        <p>Empty CSS rules mark the styling hooks on each element.</p>
         <CodeBlock html={anatomyCode} />
+        <p>
+          Checkbox and radio items also expose checked state. Both use the same styling hooks; set{' '}
+          <code>type</code> to <code>'checkbox'</code> or <code>'radio'</code>.
+        </p>
+        <CodeBlock html={checkedItemAnatomyCode} />
+        <p>
+          Place a child provider inside the parent menu’s list. Its trigger exposes the child’s open
+          and closing states. Child items use the same hooks as root items.
+        </p>
+        <CodeBlock html={submenuAnatomyCode} />
       </Section>
       <Section id="actions" title="Handling actions">
         <p>

@@ -1,15 +1,17 @@
+import { anchor } from '@remix-run/ui/anchor'
 import { css, on, ref } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { anchor } from '@remix-run/ui/anchor'
 
-export default function Example(handle: Handle) {
+export default function ExampleAnchor(handle: Handle) {
   let selected = 3
   let surface: HTMLElement | undefined
+  let buttons: HTMLButtonElement[] = []
+  let points: HTMLElement[] = []
   let cleanup = () => {}
 
-  function selectPoint(point: HTMLElement, index: number) {
+  function selectPoint(index: number) {
     if (selected === index) return
-    let target = point.querySelector<HTMLElement>('[data-point]')
+    let target = points[index]
     if (!target) return
     selected = index
     cleanup()
@@ -18,9 +20,28 @@ export default function Example(handle: Handle) {
   }
 
   return () => (
-    <div mix={chartCss}>
-      <div mix={headingCss}>Visits</div>
-      <div role="group" aria-label="Daily visits" mix={plotCss}>
+    <div
+      mix={[
+        styles.root,
+        ref((node, signal) => {
+          let observer = new IntersectionObserver(
+            ([entry]) => {
+              if (surface)
+                surface.style.visibility = entry.intersectionRatio === 1 ? 'visible' : 'hidden'
+            },
+            {
+              threshold: 1,
+            },
+          )
+          observer.observe(node)
+          signal.addEventListener('abort', () => observer.disconnect(), {
+            once: true,
+          })
+        }),
+      ]}
+    >
+      <div mix={styles.heading}>Visits</div>
+      <div role="group" aria-label="Daily visits" mix={styles.plot}>
         <ChartLine />
         {days.map((day, index) => (
           <button
@@ -31,12 +52,13 @@ export default function Example(handle: Handle) {
             tabIndex={selected === index ? 0 : -1}
             data-day={index}
             mix={[
-              dayCss,
-              on('pointerenter', (event) => {
-                selectPoint(event.currentTarget, index)
+              styles.day,
+              ref((node: HTMLButtonElement) => {
+                buttons[index] = node
               }),
-              on('focus', (event) => selectPoint(event.currentTarget, index)),
-              on('click', (event) => selectPoint(event.currentTarget, index)),
+              on('pointerenter', () => selectPoint(index)),
+              on('focus', () => selectPoint(index)),
+              on('click', () => selectPoint(index)),
               on('keydown', (event) => {
                 let next = index
                 if (event.key === 'ArrowRight') next = Math.min(days.length - 1, index + 1)
@@ -45,21 +67,27 @@ export default function Example(handle: Handle) {
                 else if (event.key === 'End') next = days.length - 1
                 else return
                 event.preventDefault()
-                event.currentTarget.parentElement
-                  ?.querySelector<HTMLButtonElement>(`[data-day="${next}"]`)
-                  ?.focus()
+                buttons[next]?.focus()
               }),
             ]}
           >
             <span
               data-point
               aria-hidden="true"
-              mix={[pointCss, css({ top: `${100 - (day.visits / 2000) * 100}%` })]}
+              style={{
+                top: `${100 - (day.visits / 2000) * 100}%`,
+              }}
+              mix={[
+                styles.point,
+                ref((node) => {
+                  points[index] = node
+                }),
+              ]}
             />
           </button>
         ))}
       </div>
-      <div aria-hidden="true" mix={daysCss}>
+      <div aria-hidden="true" mix={styles.days}>
         {days.map((day) => (
           <span key={day.label}>{day.label}</span>
         ))}
@@ -69,28 +97,24 @@ export default function Example(handle: Handle) {
         aria-hidden="true"
         inert
         mix={[
-          bubbleCss,
+          styles.bubble,
           ref((node, signal) => {
             surface = node
-            let point = node.parentElement?.querySelector<HTMLElement>(
-              `[data-day="${selected}"] [data-point]`,
-            )
-            if (point) cleanup = anchor(node, point, { placement: 'top', offset: 10 })
-            let observer = new IntersectionObserver(
-              ([entry]) => {
-                node.style.visibility = entry.intersectionRatio === 1 ? 'visible' : 'hidden'
-              },
-              { threshold: 1 },
-            )
-            if (node.parentElement) observer.observe(node.parentElement)
+            let point = points[selected]
+            if (point)
+              cleanup = anchor(node, point, {
+                placement: 'top',
+                offset: 10,
+              })
             signal.addEventListener(
               'abort',
               () => {
                 cleanup()
-                observer.disconnect()
                 surface = undefined
               },
-              { once: true },
+              {
+                once: true,
+              },
             )
           }),
         ]}
@@ -102,83 +126,102 @@ export default function Example(handle: Handle) {
   )
 }
 
-const days = [
-  { label: 'Mon', visits: 840 },
-  { label: 'Tue', visits: 1120 },
-  { label: 'Wed', visits: 980 },
-  { label: 'Thu', visits: 1480 },
-  { label: 'Fri', visits: 1260 },
-  { label: 'Sat', visits: 1640 },
-  { label: 'Sun', visits: 1520 },
-]
+const styles = {
+  root: css({
+    '--text': 'light-dark(#202027, #eeeef2)',
+    '--muted': 'light-dark(#62626c, #b0b0bb)',
 
-const chartCss = css({
-  colorScheme: 'light dark',
-  width: '360px',
-  maxWidth: '100%',
-  padding: '12px 14px',
-  boxSizing: 'border-box',
-  color: 'light-dark(#202027, #eeeef2)',
-  font: '13px/1.5 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
-const headingCss = css({ fontWeight: 600, marginBottom: '40px' })
-const plotCss = css({
-  position: 'relative',
-  display: 'grid',
-  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-  height: '144px',
-  backgroundImage: 'linear-gradient(to top, light-dark(#e4e4eb, #33333b) 1px, transparent 1px)',
-  backgroundSize: '100% 48px',
-  '& > svg': { position: 'absolute', inset: 0, pointerEvents: 'none' },
-})
-const dayCss = css({
-  position: 'relative',
-  padding: 0,
-  border: 0,
-  background: 'transparent',
-  cursor: 'crosshair',
-  outline: 'none',
-  '&[aria-pressed="true"] [data-point]': { boxShadow: '0 0 0 3px #8a78ed33' },
-  '&:focus-visible [data-point]': { outline: '2px solid #8a78ed', outlineOffset: '4px' },
-})
-const pointCss = css({
-  position: 'absolute',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  boxSizing: 'border-box',
-  width: '9px',
-  height: '9px',
-  border: '2px solid light-dark(#f9f9fb, #1b1b20)',
-  borderRadius: '50%',
-  background: '#8a78ed',
-  pointerEvents: 'none',
-})
-const daysCss = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-  marginTop: '12px',
-  color: 'light-dark(#62626c, #b0b0bb)',
-  textAlign: 'center',
-  fontSize: '11px',
-})
-const bubbleCss = css({
-  visibility: 'hidden',
-  colorScheme: 'light dark',
-  margin: 0,
-  padding: '7px 10px',
-  border: '1px solid light-dark(#d8d8df, #44444c)',
-  borderRadius: '7px',
-  background: 'light-dark(#fff, #25252b)',
-  color: 'light-dark(#202027, #eeeef2)',
-  boxShadow: '0 4px 12px #00000016',
-  font: '12px/1.5 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  pointerEvents: 'none',
-  display: 'flex',
-  gap: '10px',
-  alignItems: 'center',
-  '& span': { color: 'light-dark(#62626c, #b0b0bb)' },
-  '& strong': { fontWeight: 600, fontVariantNumeric: 'tabular-nums' },
-})
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    width: '360px',
+    maxWidth: '100%',
+    padding: '12px 14px',
+    color: 'var(--text)',
+    font: '13px/1.5 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+
+  heading: css({
+    fontWeight: 600,
+    marginBottom: '40px',
+  }),
+
+  plot: css({
+    position: 'relative',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+    height: '144px',
+    backgroundImage: 'linear-gradient(to top, light-dark(#e4e4eb, #33333b) 1px, transparent 1px)',
+    backgroundSize: '100% 48px',
+    '& > svg': {
+      position: 'absolute',
+      inset: 0,
+      pointerEvents: 'none',
+    },
+  }),
+
+  day: css({
+    position: 'relative',
+    padding: 0,
+    border: 0,
+    background: 'transparent',
+    cursor: 'crosshair',
+    outline: 'none',
+    '&[aria-pressed="true"] [data-point]': {
+      boxShadow: '0 0 0 3px #8a78ed33',
+    },
+    '&:focus-visible [data-point]': {
+      outline: '2px solid #8a78ed',
+      outlineOffset: '4px',
+    },
+  }),
+
+  point: css({
+    position: 'absolute',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: '9px',
+    height: '9px',
+    border: '2px solid light-dark(#f9f9fb, #1b1b20)',
+    borderRadius: '50%',
+    background: '#8a78ed',
+    pointerEvents: 'none',
+  }),
+
+  days: css({
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+    marginTop: '12px',
+    color: 'var(--muted)',
+    textAlign: 'center',
+    fontSize: '11px',
+  }),
+
+  bubble: css({
+    visibility: 'hidden',
+    colorScheme: 'light dark',
+    margin: 0,
+    padding: '7px 10px',
+    border: '1px solid light-dark(#d8d8df, #44444c)',
+    borderRadius: '7px',
+    background: 'light-dark(#fff, #25252b)',
+    color: 'var(--text)',
+    boxShadow: '0 4px 12px #00000016',
+    font: '12px/1.5 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+    pointerEvents: 'none',
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'center',
+    '& span': {
+      color: 'var(--muted)',
+    },
+    '& strong': {
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums',
+    },
+  }),
+}
 
 function ChartLine() {
   return () => (
@@ -203,3 +246,13 @@ function ChartLine() {
     </svg>
   )
 }
+
+const days = [
+  { label: 'Mon', visits: 840 },
+  { label: 'Tue', visits: 1120 },
+  { label: 'Wed', visits: 980 },
+  { label: 'Thu', visits: 1480 },
+  { label: 'Fri', visits: 1260 },
+  { label: 'Sat', visits: 1640 },
+  { label: 'Sun', visits: 1520 },
+]
