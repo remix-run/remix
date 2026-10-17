@@ -1,0 +1,296 @@
+.pricing-page {
+  color: #fff;
+  background: #000;
+  color-scheme: dark;
+}
+.pricing-page .container {
+  width: min(1320px, 90%);
+}
+.pricing-heading {
+  text-align: center;
+  margin: 0 auto 44px;
+}
+.pricing-heading h1 {
+  font-size: clamp(3.6rem, 6.5vw, 6.5rem);
+  letter-spacing: -0.06em;
+}
+.pricing-heading p {
+  font-size: clamp(1rem, 1.6vw, 1.35rem);
+  margin-top: 25px;
+  color: #ddd;
+}
+.pricing-billing {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.pricing-billing-labels {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto 48px;
+  border: 1px solid #5e5e5e;
+  border-radius: 99px;
+  padding: 5px;
+}
+.pricing-billing-labels label {
+  padding: 12px 25px;
+  border-radius: 99px;
+  cursor: pointer;
+  color: #bcbcbc;
+}
+#billing-yearly:checked ~ .pricing-billing-labels label[for='billing-yearly'],
+#billing-monthly:checked ~ .pricing-billing-labels label[for='billing-monthly'] {
+  color: #000;
+  background: #fff;
+}
+#billing-yearly:focus-visible ~ .pricing-billing-labels label[for='billing-yearly'],
+#billing-monthly:focus-visible ~ .pricing-billing-labels label[for='billing-monthly'] {
+  outline: 3px solid var(--focus-color);
+  outline-offset: 3px;
+}
+.pricing-monthly {
+  display: none;
+}
+#billing-monthly:checked ~ .pricing-plans .pricing-yearly {
+  display: none;
+}
+#billing-monthly:checked ~ .pricing-plans .pricing-monthly {
+  display: inline;
+}
+.pricing-plans {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+.pricing-plan {
+  border: 1px solid #434343;
+  border-radius: 22px;
+  padding: 32px 24px;
+  background: linear-gradient(155deg, #1b1c1a, #090909 65%);
+}
+.pricing-plan h2 {
+  font-size: 1.9rem;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+.pricing-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-block: 24px 12px;
+  font-size: clamp(2.3rem, 3.3vw, 3.4rem);
+  font-weight: 450;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+.pricing-amount small {
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.pricing-audience {
+  color: #d1fba4;
+  font-size: 0.9rem;
+}
+.pricing-cadence {
+  margin-top: 8px;
+  color: #a9a9a9;
+  font-size: 0.75rem;
+}
+.pricing-plan .button {
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px;
+  min-height: 46px;
+  font-size: 0.9rem;
+}
+.pricing-features {
+  margin-top: 28px;
+}
+.pricing-features li {
+  position: relative;
+  padding-left: 22px;
+  margin-top: 17px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.pricing-features li::before {
+  position: absolute;
+  left: 0;
+  color: #d1fba4;
+  content: '✓';
+}
+.pricing-terms {
+  max-width: 960px;
+  margin: 26px auto 0;
+  font-size: 0.75rem;
+  color: #a6a6a6;
+  line-height: 1.6;
+}
+.pricing-hero .pricing-terms,
+.pricing-closing .pricing-terms {
+  text-align: center;
+}
+.pricing-terms a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.pricing-included h2,
+.pricing-extras h2,
+.pricing-comparison h2 {
+  font-size: clamp(2.5rem, 4.6vw, 4.5rem);
+  margin-bottom: 50px;
+}
+.pricing-included-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 28px;
+}
+.pricing-included-grid article {
+  padding-top: 32px;
+  border-top: 1px solid #444;
+}
+.pricing-included h3 {
+  font-size: 1.5rem;
+  min-height: 3.5em;
+  letter-spacing: -0.035em;
+}
+.pricing-included p {
+  color: #b0b0b0;
+  font-size: 0.95rem;
+}
+.pricing-extra-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.pricing-extra-grid article {
+  padding: 40px;
+  border: 1px solid #444;
+  border-radius: 22px;
+  background: #151515;
+}
+.pricing-extra-title {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.pricing-extra-title span {
+  padding: 4px 12px;
+  border: 1px solid #767676;
+  border-radius: 99px;
+  font-size: 0.75rem;
+}
+.pricing-extra-price {
+  font-size: 3.5rem;
+  letter-spacing: -0.055em;
+  margin-top: 24px;
+}
+.pricing-extra-price small {
+  font-size: 0.9rem;
+  margin-left: 5px;
+  letter-spacing: 0;
+}
+.pricing-extra-grid .button {
+  margin-top: 30px;
+}
+.pricing-comparison table {
+  min-width: 840px;
+  table-layout: fixed;
+}
+.pricing-comparison th:first-child {
+  width: 32%;
+}
+.pricing-comparison th,
+.pricing-comparison td {
+  border-color: #383838;
+  padding: 20px 16px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.pricing-comparison td {
+  color: #bcbcbc;
+}
+.pricing-comparison thead th {
+  background: #171717;
+  font-size: 1.2rem;
+}
+.pricing-category th {
+  padding-top: 48px;
+  color: #d1fba4;
+  font-size: 1rem;
+}
+.pricing-faq details {
+  border-color: #444;
+}
+.pricing-faq .faq-grid details p {
+  color: #bcbcbc;
+}
+.pricing-closing {
+  text-align: center;
+  background: radial-gradient(ellipse at bottom, #213019, #000 70%);
+}
+.pricing-closing > .container > p:not(.pricing-terms) {
+  margin: 28px auto 32px;
+  max-width: 680px;
+  font-size: 1.2rem;
+  color: #d1fba4;
+  line-height: 1.7;
+}
+
+@media (max-width: 1100px) {
+  .pricing-plans {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pricing-amount {
+    font-size: 3.4rem;
+  }
+  .pricing-included-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 40px;
+  }
+}
+@media (max-width: 650px) {
+  .pricing-heading {
+    margin-bottom: 32px;
+  }
+  .pricing-heading h1 {
+    font-size: 3.4rem;
+  }
+  .pricing-billing-labels {
+    margin-bottom: 32px;
+  }
+  .pricing-billing-labels label {
+    font-size: 0.85rem;
+    padding: 12px 22px;
+  }
+  .pricing-plans,
+  .pricing-extra-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pricing-plan {
+    padding: 28px;
+  }
+  .pricing-included-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 20px;
+  }
+  .pricing-included h3 {
+    font-size: 1.4rem;
+    min-height: 0;
+    margin-bottom: 18px;
+  }
+  .pricing-extra-grid article {
+    padding: 28px;
+  }
+  .pricing-extra-title h3 {
+    font-size: 2rem;
+  }
+  .pricing-extra-price {
+    font-size: 3rem;
+  }
+  .pricing-extra-price small {
+    font-size: 0.75rem;
+  }
+}

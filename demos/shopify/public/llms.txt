@@ -1,0 +1,112 @@
+# Shopify
+
+> [Shopify](https://www.shopify.com/about) is the leading commerce platform for starting, running, and growing a business. Millions of businesses started here, selling online, in person, on marketplaces, through social, and now in AI chats. Yours can too.
+
+## Start a Business
+
+- [Create an online store](https://www.shopify.com/start): Launch your custom branded online store in minutes. Choose a theme, add products, and take payments through a fast, secure checkout you control.
+- [Get a Domain](https://www.shopify.com/domains): Find and buy a custom domain for your brand. Search available names, buy the one you want, and connect it to your store.
+- [Pick a Theme](https://themes.shopify.com): Choose a free design, generate one with AI, or buy a premium storefront theme from our theme store.
+- [Source products](https://www.shopify.com/source-products): Find and sell quality products from trusted Shopify brands. Or sell your own.
+- [Enable checkout](https://www.shopify.com/checkout): Shopify Checkout is the fastest, highest-converting checkout anywhere, with one-page and accelerated flows that cut abandoned carts.
+- [Shipping](https://www.shopify.com/shipping): Get Shopify exclusive discounts on domestic and international shipping labels for no extra fees. We negotiate so you don’t have to.
+- [Free trial](https://www.shopify.com/free-trial): Try Shopify for free, then keep building for $1/month for 3 months.
+
+## Build with AI
+
+- [Sidekick](https://help.shopify.com/en/manual/ai-powered-tools/sidekick): Shopify's free AI assistant for commerce, built into the admin and aware of your store data. It can answer questions and complete tasks for you.
+- [Shopify AI Toolkit](https://shopify.dev/docs/apps/build/ai-toolkit.md): Shopify’s AI toolkit gives your AI coding assistant (like Claude Code, or Codex) the ability to create, customize, and manage Shopify stores and apps, working from our official docs, schemas, and tools.
+- [Build with AI tools](https://www.shopify.com/build-with-ai): Turn an idea into a store you can claim by having a conversation with ChatGPT, Claude, Lovable, Replit, Vercel (v0), Perplexity, Manus and more.
+- [Universal Commerce Protocol (UCP)](https://www.shopify.com/ucp): The open standard for connecting AI agents to commerce. Agents discover products, build carts, check out, and track orders across any UCP merchant, with Shop Pay built in.
+
+## Sell Online
+
+- [Online store](https://www.shopify.com/online): Create a custom online store in minutes, no coding required: themes, pages, blogs, and a secure shopping cart.
+- [Sales channels](https://www.shopify.com/channels): Sell on marketplaces, social platforms, and other surfaces from one admin, without duplicating products or inventory.
+- [Agentic storefronts](https://www.shopify.com/agentic-storefronts): Agentic Storefronts puts your products in ChatGPT, Gemini, and more, with every sale running through Shopify Checkout.
+- [Shop app](https://www.shopify.com/shop): Reach millions of high-intent shoppers in the Shop app with no marketplace fees: buyers discover stores, track orders, and buy again.
+- [Shopify B2B](https://www.shopify.com/solutions/b2b): Sell wholesale to business buyers from the same online store you use for DTC, with company accounts, custom catalogs, and volume pricing built in.
+- [Shopify Collective](https://www.shopify.com/collective): Sell products from other Shopify brands without holding inventory, or supply your own for other stores to sell.
+- [Subscriptions](https://www.shopify.com/subscriptions): Sell recurring subscriptions and subscription boxes online.
+- [Digital products](https://www.shopify.com/digital-products): Sell downloads like PDFs, templates, videos, music, and courses from a store you own. Files deliver automatically at checkout, with download limits and bundling built in.
+
+## Payments and Money
+
+- [Shopify Payments](https://www.shopify.com/payments): Accept payments online, in-store, and on the go, with faster payouts and no third-party gateway to set up.
+- [Shop Pay](https://www.shopify.com/shop-pay): The fastest accelerated checkout on the internet: secure, one-tap, and it cuts abandoned carts everywhere your products are sold.
+- [Shop Pay Installments](https://www.shopify.com/shop-pay-installments): Let customers buy now and pay later while you get paid up front. Enable interest-free and monthly options that lift average order value.
+- [Shopify Balance](https://www.shopify.com/balance): A free money management account built into the admin: get paid faster, avoid fees, and keep business money in one place.
+- [Shopify Capital](https://www.shopify.com/capital): Funding up to $2M based on your sales: repay as you sell, minimal paperwork, no credit checks, no equity taken.
+- [Shopify Credit](https://www.shopify.com/credit): Shopify Credit is a business charge card with cashback rewards for merchants.
+- [Bill Pay](https://www.shopify.com/bill-pay): Schedule, pay, and manage all your business bills from the same platform you run your store.
+- [Shopify Tax](https://www.shopify.com/tax): Automated US sales tax collection with rooftop accuracy, liability insights, and filing, all from the Shopify admin.
+- [Payment gateways](https://www.shopify.com/payment-gateways): Third-party payment providers for countries where Shopify Payments is unavailable.
+
+## Manage your Store
+
+- [Inventory management](https://www.shopify.com/inventory-management): Built-in inventory tools to track stock across locations and channels and stop overselling.
+- [Fulfillment](https://www.shopify.com/fulfillment): Fulfill orders yourself, or outsource to Shopify's trusted logistics partners who pack and ship for you.
+- [Shopify Flow](https://www.shopify.com/flow): Automate repetitive store tasks with triggers and actions, like tagging high-value customers automatically.
+- [Shopify App Store](https://apps.shopify.com): Browse and install thousands of apps that add features to a Shopify store.
+
+## Grow your Business
+
+- [Analytics](https://www.shopify.com/analytics): Free, built-in dashboards that track store performance across sales, orders, and customers, no setup required.
+- [Email marketing](https://www.shopify.com/email-marketing): Build branded email and SMS campaigns from templates in one place, and only pay for what you send.
+- [Shop Campaigns](https://www.shopify.com/shop-campaigns): Pay for customers, not clicks: set your cost per customer, run campaigns across 10+ channels, and only pay when they buy.
+- [Discount codes](https://help.shopify.com/en/manual/discounts): Create discount codes and automatic discounts for sales and promotions.
+- [Shopify Inbox](https://apps.shopify.com/inbox): Chat with shoppers, with AI-assisted replies for fast answers to pre-purchase questions.
+- [Shopify Forms](https://www.shopify.com/forms): Capture leads and grow your customer list with customizable forms.
+- [Shopify Audiences](https://www.shopify.com/audiences): Put your ads in front of relevant buyers with audience lists powered by Shopify's commerce data, for up to 2x more retargeting conversions.
+- [Shopify Collabs](https://www.shopify.com/collabs/creators): Work with creators and influencers who promote your products for commission.
+
+## Sell in Person
+
+- [Shopify POS](https://www.shopify.com/pos): Point of sale that integrates everything to run your retail business, from inventory to checkout, with in-person and online sales in one place.
+- [Tap to Pay](https://www.shopify.com/pos/tap-to-pay-iphone): Shopify lets merchants accept contactless payments (tap cards, Apple Pay, and digital wallets) directly on an iPhone or [Android](https://www.shopify.com/pos/tap-to-pay-android) with no extra hardware when using Shopify Payments.
+- [Shopify hardware](https://hardware.shopify.com/pages/build-your-countertop-pos): Shopify's countertop POS hardware kits let merchants build a custom in-store checkout setup with a card reader plus optional accessories
+
+## Sell Internationally
+
+- [Shopify Markets](https://www.shopify.com/markets): Customize selling for each market, B2B or D2C, online or in person, at home or across borders, with local currencies, languages, and duties.
+- [Managed Markets](https://www.shopify.com/international/managed): Sell globally with Shopify as your merchant of record, with international payments, duties, and compliance handled.
+- [International settings](https://help.shopify.com/en/manual/international): Configure markets, currencies, and shipping zones for new regions.
+
+## Shopify Plans
+
+- [Shopify plans](https://www.shopify.com/pricing): Shopify's plans scale with your business, from solo entrepreneurs selling online to growing teams that need more staff access, capacity, and reporting as order volume climbs
+- [Shopify Plus](https://www.shopify.com/plus): For complex, high-volume businesses that have outgrown standard plans: more customization, automation, and support.
+- [Enterprise](https://www.shopify.com/enterprise): If you're running enterprise commerce, manage B2C, B2B, and retail in one place, with the flexibility and tools to keep growing. [Talk to sales](https://www.shopify.com/enterprise#contact-sales).
+
+## For Developers
+
+- [Shopify CLI](https://shopify.dev/docs/apps/build/cli-for-apps): Command-line tooling to scaffold, run, and deploy Shopify apps and themes locally.
+- [Hydrogen](https://hydrogen.shopify.dev): Build a fully custom, headless storefront with Shopify's React-based framework, then deploy it free on Oxygen, Shopify's global hosting
+- [Checkout Kit](https://www.shopify.com/checkout-kit): Embed Shopify's highest-converting checkout into your mobile app or platform with a few lines of code. Supports Shop Pay and carries over merchant customizations.
+- [Shopify developer platform](https://shopify.dev/docs): Build apps, custom storefronts, and agents on Shopify. Get the docs, CLI, APIs, and frameworks to extend the admin, storefront, and checkout.
+- [mock.shop](https://agents.mock.shop/): Prototype against a free mock Storefront API with realistic demo product data. Send GraphQL queries to https://mock.shop/api with no store, account, or auth required.
+
+## Free Business Tools
+
+- [Business name generator](https://www.shopify.com/tools/business-name-generator): Generate business names with AI and instantly check domain availability, no sign-up required.
+- [Logo maker](https://www.shopify.com/tools/logo-maker): Create a custom logo with AI in minutes, free.
+- [Domain name generator](https://www.shopify.com/tools/domain-name-generator): Find available domain name ideas for a store or brand.
+- [Slogan maker](https://www.shopify.com/tools/slogan-maker): Generate slogans and taglines for a brand.
+- [QR code generator](https://www.shopify.com/tools/qr-code-generator-1): Create free QR codes that link to a store, product, or menu.
+- [Invoice generator](https://www.shopify.com/tools/invoice-generator): Create and download professional invoices for customers.
+- [Policy generator](https://www.shopify.com/tools/policy-generator): Generate a privacy policy, terms of service, or refund policy for a website.
+- [Barcode generator](https://www.shopify.com/tools/barcode-generator): Create barcodes for products and inventory.
+- [Profit margin calculator](https://www.shopify.com/tools/profit-margin-calculator): Price products to hit a target profit margin.
+- [Image resizer](https://www.shopify.com/tools/image-resizer): Resize and compress product photos for free.
+
+## Need help?
+
+- [Shopify Help Center](https://help.shopify.com/en/): Product documentation and support for how to do anything in Shopify.
+- [Your account](https://help.shopify.com/en/manual/your-account): Billing, plan changes, staff permissions, and account recovery.
+- [Log in to Shopify](https://www.shopify.com/store-login): Sign in to the Shopify admin to manage your store.
+- [Shopify Community](https://community.shopify.com): Merchant and partner forums for troubleshooting with other store owners.
+- [Shopify Partners](https://www.shopify.com/partners): Join 100,000+ partners turning apps, storefronts, and services into revenue: agencies, developers, and affiliates who build on Shopify.
+- [Newsroom](https://www.shopify.com/news): Official Shopify news, product announcements, and press resources.
+- [Investor Relations](https://www.shopify.com/investors): Find Shopify's quarterly earnings, financial reports, stock information, and governance details for investors and analysts
+
+This file is maintained by an internal bot named Bytophage.
