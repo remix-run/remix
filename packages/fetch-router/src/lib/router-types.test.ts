@@ -186,6 +186,96 @@ describe('router type inference', () => {
     void factoryMiddleware
   })
 
+  it('derives router context when inline middleware starts with a conditional entry', async () => {
+    let includeFormData = false as boolean
+    let router = createRouter({
+      middleware: [...(includeFormData ? [setFormData()] : []), requireUser(), setRole('viewer')],
+    })
+    type DerivedContext = RouterContext<typeof router>
+
+    function assertContext(context: DerivedContext) {
+      let user = context.get(CurrentUser)
+      let role = context.get(CurrentRole)
+      let formData = context.get(FormData)
+
+      expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+    }
+
+    router.get('/account', (context) => new Response(context.currentUser.id + ':' + context.role))
+
+    let response = await router.fetch('https://remix.run/account')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'user-1:viewer')
+    void assertContext
+  })
+
+  it('derives router context when inline middleware has a conditional entry in the middle', () => {
+    let includeFormData = false as boolean
+    let router = createRouter({
+      middleware: [requireUser(), ...(includeFormData ? [setFormData()] : []), setRole('viewer')],
+    })
+    type DerivedContext = RouterContext<typeof router>
+
+    function assertContext(context: DerivedContext) {
+      let formData = context.get(FormData)
+
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+    }
+
+    void assertContext
+  })
+
+  it('derives router context when inline middleware ends with a conditional entry', () => {
+    let includeFormData = false as boolean
+    let router = createRouter({
+      middleware: [requireUser(), setRole('viewer'), ...(includeFormData ? [setFormData()] : [])],
+    })
+    type DerivedContext = RouterContext<typeof router>
+
+    function assertContext(context: DerivedContext) {
+      let formData = context.get(FormData)
+
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+    }
+
+    void assertContext
+  })
+
+  it('applies later middleware over earlier middleware around a conditional entry', () => {
+    let includeFormData = false as boolean
+    let router = createRouter({
+      middleware: [
+        setRole('viewer'),
+        ...(includeFormData ? [setFormData()] : []),
+        requireUser(),
+        loadAdminRole(),
+      ],
+    })
+    type DerivedContext = RouterContext<typeof router>
+
+    function assertContext(context: DerivedContext) {
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+    }
+
+    void assertContext
+  })
+
+  it('falls back to the base context for middleware arrays without a known order', () => {
+    type ArrayContext = MiddlewareContext<ReturnType<typeof requireUser>[]>
+
+    expectTypeEquality<IsEqual<ArrayContext, RequestContext>>()
+  })
+
   it('types stored actions with route params and explicit app context', () => {
     let accountAction = {
       handler(context) {
