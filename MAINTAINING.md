@@ -126,7 +126,7 @@ flowchart LR
 | Command      | Where                                 | Direct triggers                                                                 | Result                                                                                                                                                                                                                                                                     |
 | ------------ | ------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/review`    | Issue                                 | Comment beginning with `/review`, or apply `aw:review`                          | Investigates the report and duplicates. It may ask for information, explain a likely fix, or comment and close only a clear duplicate, proposal, support request, spam, or out-of-scope issue. It can queue a high-confidence fix for implementation. It never edits code. |
-| `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment with high-confidence P1-P3 findings. It never executes contributor code, edits the pull request, approves it, or merges it.                                                                                                             |
+| `/review`    | Pull request                          | Comment beginning with `/review`, or apply `aw:review`                          | Posts one read-only review comment using the shared PR review skill. It never executes contributor code, edits the pull request, approves it, or merges it.                                                                                                                |
 | `/review`    | Proposal Discussion                   | Comment beginning with `/review`                                                | Posts one design assessment with actionable concerns, open questions, and next steps. It never accepts, implements, closes, or locks the proposal.                                                                                                                         |
 | `/implement` | Issue or accepted Proposal Discussion | Comment beginning with `/implement`; `aw:implement` is also available on issues | Implements a focused change from trusted `main`, validates it, and opens at most one draft pull request. Protected changes remain visible in the draft for review; if changes outside the allowed paths are required, it falls back to an issue instead.                   |
 | `/iterate`   | Pull request                          | Comment beginning with `/iterate`, or apply `aw:iterate`                        | Applies administrator feedback directly to the triggering branch. Community forks require maintainer edits. It never creates a replacement pull request, merges, or approves.                                                                                              |
@@ -142,6 +142,11 @@ and proposal reviews in
 Each workflow has its own prompt, model, timeout, tools, permissions, and output limits. The event
 filters ensure that only the matching workflow handles a `/review` comment or `aw:review` label.
 Only the issue review workflow can close an issue or hand a fix to `/implement`.
+
+Pull request reviews use the same
+[`review-pr` skill](https://github.com/remix-run/remix/blob/main/.agents/skills/review-pr/SKILL.md)
+as local agents. The skill owns review context, priorities, validation reporting, and response format;
+the workflow defines trigger handling, trusted skill loading, tool restrictions, and comment delivery.
 
 When an issue review establishes the root cause, a small fix, and focused regression coverage
 with high confidence, it can automatically request `/implement` for that same issue. It posts its
