@@ -963,7 +963,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       let entryRequested = page.waitForRequest('**/assets/app/entry.tsx*', {
         timeout: browserStartupTimeout,
       })
-      let reloaded = waitForNavigation(page)
+      let reloaded = waitForNavigation(page, { waitUntil: 'commit' })
       let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await fs.writeFile(
         clientFieldPath,
@@ -2655,7 +2655,10 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
   return result
 }
 
-function waitForNavigation(page: TestPage): Promise<void> {
+function waitForNavigation(
+  page: TestPage,
+  options: { waitUntil?: 'commit' | 'load' } = {},
+): Promise<void> {
   attachPageDiagnostics(page)
   let result = new Promise<void>((resolve, reject) => {
     let timeout = setTimeout(() => {
@@ -2671,6 +2674,9 @@ function waitForNavigation(page: TestPage): Promise<void> {
       page.off('framenavigated', handleFrameNavigated)
       resolve()
     }
+  }).then(async () => {
+    if (options.waitUntil === 'commit') return
+    await page.waitForLoadState('load', { timeout: browserStartupTimeout })
   })
   // A failed update can leave this event unawaited while the page is cleaned up.
   void result.catch(() => {})
