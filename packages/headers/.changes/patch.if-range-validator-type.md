@@ -1,0 +1,1 @@
+Ensure `IfRange.matches()` classifies validators before comparing them, so HTTP dates are evaluated only against `Last-Modified` and malformed, empty, or bare values are not treated as entity tags (see #12042).
