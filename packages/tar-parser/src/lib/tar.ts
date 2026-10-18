@@ -462,6 +462,7 @@ export class TarParser {
   #missing = 0
   #header: TarHeader | null = null
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null
+  #discardBody = false
   #longHeader = false
   #longHeaderBuffer: Uint8Array | null = null
   #gnuLongPath: string | null = null
@@ -555,6 +556,7 @@ export class TarParser {
     this.#missing = 0
     this.#header = null
     this.#bodyController = null
+    this.#discardBody = false
     this.#longHeader = false
     this.#longHeaderBuffer = null
     this.#gnuLongPath = null
@@ -584,6 +586,11 @@ export class TarParser {
 
         if (this.#longHeader) {
           this.#parseLongHeader()
+          continue
+        }
+
+        if (this.#discardBody) {
+          this.#parseDiscardedBody()
           continue
         }
 
@@ -662,7 +669,8 @@ export class TarParser {
 
       handler(new TarEntry(this.#header, emptyBody))
       this.#bodyController = null
-      this.#missing = 0
+      this.#discardBody = this.#header.type === 'directory' && this.#header.size > 0
+      this.#missing = this.#discardBody ? this.#header.size : 0
       return
     }
 
@@ -735,6 +743,18 @@ export class TarParser {
     this.#bodyController!.enqueue(this.#read(this.#missing))
     this.#bodyController!.close()
     this.#bodyController = null
+    this.#missing = overflow(this.#header!.size)
+  }
+
+  #parseDiscardedBody(): void {
+    if (this.#missing > this.#buffer!.length) {
+      this.#missing -= this.#buffer!.length
+      this.#buffer = null
+      return
+    }
+
+    this.#read(this.#missing)
+    this.#discardBody = false
     this.#missing = overflow(this.#header!.size)
   }
 

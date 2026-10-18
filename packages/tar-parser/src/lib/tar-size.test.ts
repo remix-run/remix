@@ -922,11 +922,43 @@ describe('TarEntry body readers', () => {
     assert.deepEqual(values, ['héllo'])
   })
 
-  it('returns empty content for directories with a nonzero size', async () => {
-    await parseTar(createHeader(12, '5'), async (entry) => {
-      assert.equal(entry.size, 12)
-      assert.equal((await entry.bytes()).byteLength, 0)
+  it('skips nonzero directory content before parsing the next entry', async () => {
+    let archive = new Uint8Array(1536)
+    archive.set(createHeader(12, '5'))
+    archive.set(new Uint8Array(12).fill(1), 512)
+    archive.set(createHeader(0), 1024)
+    let entries: Array<[string, number, number]> = []
+
+    await parseTar(archive, async (entry) => {
+      entries.push([entry.header.type, entry.size, (await entry.bytes()).byteLength])
     })
+
+    assert.deepEqual(entries, [
+      ['directory', 12, 0],
+      ['file', 0, 0],
+    ])
+  })
+
+  it('skips chunk-split directory content and padding before the next entry', async () => {
+    let entries: Array<[string, number]> = []
+
+    await parseTar(
+      [
+        createHeader(12, '5'),
+        new Uint8Array(12).fill(1),
+        new Uint8Array(200),
+        new Uint8Array(300),
+        createHeader(0),
+      ],
+      async (entry) => {
+        entries.push([entry.header.type, (await entry.bytes()).byteLength])
+      },
+    )
+
+    assert.deepEqual(entries, [
+      ['directory', 0],
+      ['file', 0],
+    ])
   })
 
   it(
