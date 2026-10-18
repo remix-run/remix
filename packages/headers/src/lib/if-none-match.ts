@@ -43,11 +43,21 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
   /**
    * Checks if this header matches the given entity tag.
    *
+   * Uses weak comparison, so matching strong and weak entity tags are equivalent.
+   *
    * @param tag The entity tag to check for
    * @returns `true` if the tag is present in the header (or the header contains a wildcard), `false` otherwise
    */
   matches(tag: string): boolean {
-    return this.has(tag) || this.tags.includes('*')
+    let normalizedTag = quoteEtag(tag)
+    let opaqueTag = normalizedTag.startsWith('W/') ? normalizedTag.slice(2) : normalizedTag
+
+    return (
+      this.tags.includes('*') ||
+      this.tags.some((headerTag) =>
+        headerTag.startsWith('W/') ? headerTag.slice(2) === opaqueTag : headerTag === opaqueTag,
+      )
+    )
   }
 
   /**

@@ -79,7 +79,9 @@ describe('IfNoneMatch', () => {
 
     let header2 = new IfNoneMatch('W/"67ab43", "54ed21"')
     assert.ok(header2.matches('W/"67ab43"'))
+    assert.ok(header2.matches('"67ab43"'))
     assert.ok(header2.matches('"54ed21"'))
+    assert.ok(header2.matches('W/"54ed21"'))
     assert.ok(!header2.matches('"7892dd"'))
 
     let header3 = new IfNoneMatch('*')
