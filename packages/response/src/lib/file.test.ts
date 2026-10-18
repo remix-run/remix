@@ -848,6 +848,31 @@ describe('createFileResponse()', () => {
       assert.equal(await response.text(), '')
     })
 
+    it('returns 416 (Range Not Satisfiable) for a zero-length suffix range', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'bytes=-0' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 416)
+      assert.equal(response.headers.get('Content-Range'), 'bytes */10')
+    })
+
+    it('ignores a suffix range on an empty file', async () => {
+      let mockFile = new File([], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'bytes=-1' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '')
+      assert.equal(response.headers.get('Content-Range'), null)
+    })
+
     it('returns 416 (Range Not Satisfiable) for unsatisfiable range', async () => {
       let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
       let request = new Request('http://localhost/video.mp4', {
