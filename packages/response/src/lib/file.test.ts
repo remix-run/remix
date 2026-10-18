@@ -1197,6 +1197,22 @@ describe('createFileResponse()', () => {
       assert.equal(response.headers.get('Content-Range'), null)
     })
 
+    it('returns full file when If-Range is empty', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: {
+          Range: 'bytes=0-4',
+          'If-Range': '',
+        },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '0123456789')
+      assert.equal(response.headers.get('Content-Range'), null)
+    })
+
     it('returns full file when If-Range is malformed', async () => {
       let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
       let request = new Request('http://localhost/video.mp4', {

@@ -294,6 +294,28 @@ describe('SuperHeaders', () => {
     assert.equal(getResponseHeaders(headers).get('Content-Type'), 'text/html; charset=utf-8')
   })
 
+  it('syncs If-Range value mutations to native storage', () => {
+    let headers = new SuperHeaders()
+    headers.ifRange.value = '"abc"'
+
+    assert.equal(headers.get('If-Range'), '"abc"')
+    assert.ok(headers.ifRange.matches({ etag: '"abc"' }))
+
+    let ifRange = headers.ifRange
+    ifRange.value = ''
+
+    assert.equal(headers.get('If-Range'), null)
+    assert.ok(ifRange.matches({}))
+    assert.ok(headers.ifRange.matches({}))
+  })
+
+  it('preserves an explicitly empty If-Range header as present', () => {
+    let headers = new SuperHeaders({ 'If-Range': '' })
+
+    assert.equal(headers.get('If-Range'), '')
+    assert.ok(!headers.ifRange.matches({}))
+  })
+
   it('syncs typed mutator methods to native storage', () => {
     let headers = new SuperHeaders()
 
