@@ -1,6 +1,9 @@
 import { type HeaderValue } from './header-value.ts'
 import { parseHttpDate, removeMilliseconds } from './utils.ts'
-import { quoteEtag } from './utils.ts'
+
+function isStrongEntityTag(value: string): boolean {
+  return /^"[\x21\x23-\x7e\x80-\xff]*"$/.test(value)
+}
 
 /**
  * The value of an `If-Range` HTTP header.
@@ -12,13 +15,23 @@ import { quoteEtag } from './utils.ts'
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-3.2)
  */
 export class IfRange implements HeaderValue {
+  #present = false
+  #value = ''
+
   /**
    * Raw header value, either an entity tag or an HTTP date.
    */
-  value: string = ''
+  get value(): string {
+    return this.#value
+  }
 
-  constructor(init?: string | Date) {
-    if (init) return IfRange.from(init)
+  set value(value: string) {
+    this.#value = value
+    this.#present = value !== ''
+  }
+
+  constructor(init?: string | Date | IfRange) {
+    if (init !== undefined) return IfRange.from(init)
   }
 
   /**
@@ -51,27 +64,22 @@ export class IfRange implements HeaderValue {
    * ```
    */
   matches(resource: { etag?: string | null; lastModified?: number | Date | null }): boolean {
-    if (!this.value) {
+    if (!this.#present) {
       return true
     }
 
-    // Try parsing as HTTP date first
-    let dateTimestamp = parseHttpDate(this.value)
-    if (dateTimestamp !== null && resource.lastModified != null) {
-      return removeMilliseconds(dateTimestamp) === removeMilliseconds(resource.lastModified)
+    if (isStrongEntityTag(this.value)) {
+      return (
+        resource.etag != null && isStrongEntityTag(resource.etag) && this.value === resource.etag
+      )
     }
 
-    // Otherwise treat as ETag
-    if (resource.etag != null) {
-      let normalizedTag = quoteEtag(this.value)
-      let normalizedResourceTag = quoteEtag(resource.etag)
-
-      // Weak tags never match in If-Range (strong comparison only, per RFC 7233)
-      if (normalizedTag.startsWith('W/') || normalizedResourceTag.startsWith('W/')) {
-        return false
-      }
-
-      return normalizedTag === normalizedResourceTag
+    let dateTimestamp = parseHttpDate(this.value)
+    if (dateTimestamp !== null) {
+      return (
+        resource.lastModified != null &&
+        removeMilliseconds(dateTimestamp) === removeMilliseconds(resource.lastModified)
+      )
     }
 
     return false
@@ -89,18 +97,20 @@ export class IfRange implements HeaderValue {
   /**
    * Parse an If-Range header value.
    *
-   * @param value The header value (string, Date, or null)
+   * @param value The header value (string, Date, IfRange, or null)
    * @returns An IfRange instance (empty if null)
    */
-  static from(value: string | Date | null): IfRange {
+  static from(value: string | Date | IfRange | null): IfRange {
     let header = new IfRange()
 
-    if (value !== null) {
-      if (typeof value === 'string') {
-        header.value = value
-      } else {
-        header.value = value.toUTCString()
-      }
+    if (value instanceof IfRange) {
+      header.#present = value.#present
+      header.#value = value.#value
+    } else if (typeof value === 'string') {
+      header.#present = true
+      header.#value = value
+    } else if (value !== null) {
+      header.value = value.toUTCString()
     }
 
     return header
