@@ -69,7 +69,7 @@ function SignupPage(handle: Handle<{ submission?: FormSubmission }>) {
 }
 ```
 
-## `createFormMixins(formDefinition, { getSubmission, onChange }?)`
+## `createFormMixins(formDefinition, { getSubmission, onChange, validations }?)`
 
 Create the binding once per component instance in setup. Its methods can be destructured: `form()` enhances unmanaged native controls, `field(name)` supplies each projected control's behavior, `label(name)` associates its label, and `error(name)` supplies the generated error-element id. Each field uses the same binding machinery as `createFieldMixins()`. `input(name)` remains an alias for `field(name)`, and `errors.name` reads the same messages as `fields.name.errors`.
 
@@ -84,9 +84,44 @@ Standalone bindings expose these properties directly; form bindings expose them 
 
 Server errors are visible immediately, even while `touched` is false. Once true, `touched` stays true until a reset or new submission.
 
-The objects are stable and read-only. Read properties during rendering; destructuring a boolean or message array in setup captures a snapshot. `onChange` requests a render when messages or touched state change, including the first blur of a valid field. It does not fire for edits or blurs that leave both unchanged. Without it, validation and ARIA still update, but application-owned UI needs another render trigger.
+The objects are stable and read-only. Read properties during rendering; destructuring a boolean or message array in setup captures a snapshot. `onChange` requests a render when messages, touched, pending, or validationError change, including the first blur of a valid field. It does not fire for edits or blurs that leave state unchanged. Without it, validation and ARIA still update, but application-owned UI needs another render trigger.
 
 A non-canceled native form reset clears touched state and displayed errors. Programmatic value changes require an `input` or `change` event to refresh validation.
+
+## Custom and asynchronous `validations`
+
+Add client-only checks to the binding, not the shared form definition. Native constraints and synchronous schema checks still run first.
+
+```tsx
+let { form, field, error, fields } = createFormMixins(Signup, {
+  getSubmission: () => handle.props.submission,
+  onChange: () => handle.update(),
+  validations: {
+    email: {
+      debounceMs: 300,
+      async validate(value, { signal }) {
+        let response = await fetch(`/email-available?email=${encodeURIComponent(value)}`, {
+          signal,
+        })
+        if (!response.ok) throw new Error('Availability check failed')
+        let available: unknown = await response.json()
+        if (typeof available !== 'boolean') throw new Error('Invalid availability response')
+        return available ? [] : ['This email is already registered']
+      },
+    },
+  },
+})
+```
+
+For the default 300ms typing delay, use a callback directly: `validations: { email: checkEmail }`. Set `debounceMs: 0` for immediate synchronous checks. A standalone binding accepts the same callback or `{ validate, debounceMs }` as its `validations` option, without the field-name map.
+
+Callbacks receive a snapshot of the native control's raw string `value` and `{ signal, control }`, not parsed schema output. For checkboxes, read `control.checked` after narrowing to `HTMLInputElement`; capture it before awaiting. Return a message array (or its promise), with `[]` meaning valid. The first message becomes `setCustomValidity()`; all messages are available in `errors` after feedback is revealed.
+
+Checks run after `input`/`change`, debounced by value, and immediately on blur. They do not run during SSR or initial insertion. Unchanged values reuse their pending or completed check; a failed check can retry on the next interaction. Superseded checks, non-canceled resets, unmounts, and new server submissions abort their signal. Late results are ignored even if the callback disregards cancellation. Server errors remain visible until editing.
+
+`fields.email.pending` is true during the debounce delay or an outstanding promise. It is independent of `touched` and invalidity; render a checking indicator if useful. Thrown errors or rejected promises clear pending and appear as `fields.email.validationError`, not validation messages. They do not make the control invalid. Standalone bindings expose `pending` and `validationError` directly. `onChange` and `onInputValidation` include these state changes.
+
+Pending checks do **not** delay submission. Completed errors block ordinary native submission through the [Constraint Validation API](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation). The submit handler must repeat availability/business checks and enforce database uniqueness: availability can change between checking and saving. Without JavaScript, these checks happen in that handler. The mixins do not implement endpoints or async submission coordination.
 
 ## Control behavior
 
@@ -113,7 +148,7 @@ The returned error mixin applies the generated id during SSR and client renderin
 
 ## `onInputValidation(handler)`
 
-An optional lower-level observer. Apply it to a control or ancestor to receive bubbling `rmx:input-validation` events with `field`, `errorId`, `errors`, and `touched`. Events are snapshots; binding state remains live. The event's errors contain only messages that should be displayed. Observing does not disable default behavior.
+An optional lower-level observer. Apply it to a control or ancestor to receive bubbling `rmx:input-validation` events with `field`, `errorId`, `errors`, `touched`, `pending`, and `validationError`. Events are snapshots; binding state remains live. The event's errors contain only messages that should be displayed. Observing does not disable default behavior.
 
 Use `errors` and `onChange` for ordinary error rendering. Use this observer for custom event handling or inspection of touched state. The mixins never create, hide, or change the text of the application's error elements.
 
