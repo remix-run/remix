@@ -38,14 +38,8 @@ interface FrameRedirectNavigationInfo {
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
-// Lets the navigation handler tell the WebKit workaround once it has reset scroll.
-const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
-
-// WebKit can lose the scroll reset after a navigation. It can reset its internal scroll position
-// without synchronizing the visual viewport (https://bugs.webkit.org/show_bug.cgi?id=309542), and
-// iOS Safari can restore the previous position, or the new page's bottom, for several frames after
-// the reset. Reassert the reset until it holds, unless the user scrolls first.
 function resyncWebKitScrollAfterNavigation(
+  navigation: Navigation,
   event: NavigateEvent,
   resetScroll: boolean,
   transition: NavigationTransition,
@@ -56,91 +50,29 @@ function resyncWebKitScrollAfterNavigation(
     return
   if (new URL(event.destination.url).hash) return
 
-  let startY = window.scrollY
-  let input = new AbortController()
-  let interacted = false
-  for (let type of ['touchstart', 'wheel', 'keydown']) {
-    window.addEventListener(type, () => (interacted = true), {
-      capture: true,
-      passive: true,
-      signal: input.signal,
+  // iOS Safari can restore the previous position, or the new page's bottom, for several frames
+  // after the scroll reset. Opt the new entry out of browser scroll restoration while it's current,
+  // and back in when the next navigation starts so traversing back to it still restores.
+  if (history.scrollRestoration === 'auto') {
+    history.scrollRestoration = 'manual'
+    navigation.addEventListener('navigate', () => (history.scrollRestoration = 'auto'), {
+      once: true,
     })
   }
 
-  // iOS restores the previous position clamped to the new page's height at that moment, and the
-  // page can grow before the reset is checked, so remember each restored position as it happens.
-  // Once the new page has reset scroll, undo a restoration right away: scroll events run before
-  // the frame paints, so the restored position may never be drawn.
-  let restoredPositions = [startY]
-  let resetApplied = false
-  window.addEventListener(
-    'scroll',
-    () => {
-      let y = window.scrollY
-      if (interacted || !isRestoredScrollPosition(y, startY)) return
-      restoredPositions.push(y)
-      if (resetApplied) window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
-    },
-    { passive: true, signal: input.signal },
-  )
-  webKitScrollResets.set(event, () => (resetApplied = true))
-  let isRestored = (y: number) =>
-    isRestoredScrollPosition(y, startY) ||
-    restoredPositions.some((position) => Math.abs(y - position) < 1)
-
   void transition.finished.then(
-    () =>
-      keepWebKitScrollReset(
-        isRestored,
-        () => interacted,
-        () => input.abort(),
-      ),
-    () => input.abort(),
+    () => {
+      // WebKit can reset its internal scroll position without synchronizing the visual viewport.
+      // https://bugs.webkit.org/show_bug.cgi?id=309542
+      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
+      window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
+      requestAnimationFrame(() => {
+        if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
+        window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
+      })
+    },
+    () => {},
   )
-}
-
-const maxWebKitScrollResetFrames = 30
-
-function keepWebKitScrollReset(
-  isRestored: (y: number) => boolean,
-  interacted: () => boolean,
-  done: () => void,
-) {
-  let frames = 0
-  let framesAtTop = 0
-  let nudged = false
-
-  function check() {
-    if (interacted()) return done()
-    let y = window.scrollY
-    if (window.scrollX === 0 && y === 0) {
-      // A reset that reads 0 may not have moved the visual viewport, so nudge it once.
-      if (!nudged) {
-        nudged = true
-        window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
-      } else if (++framesAtTop >= 2) {
-        return done()
-      }
-    } else if (nudged && window.scrollX === 0 && y === 1) {
-      window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
-    } else if (isRestored(y)) {
-      framesAtTop = 0
-      window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
-    } else {
-      // Something else scrolled the page, such as a mount task, so leave it there.
-      return done()
-    }
-
-    if (++frames >= maxWebKitScrollResetFrames) return done()
-    requestAnimationFrame(check)
-  }
-
-  check()
-}
-
-function isRestoredScrollPosition(y: number, startY: number): boolean {
-  let maxY = document.documentElement.scrollHeight - window.innerHeight
-  return Math.abs(y - startY) < 1 || (startY > maxY && Math.abs(y - maxY) < 1)
 }
 
 /**
@@ -318,10 +250,7 @@ export function startNavigationListenerImpl(
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
-        if (scroll !== 'manual') {
-          event.scroll()
-          webKitScrollResets.get(event)?.()
-        }
+        if (scroll !== 'manual') event.scroll()
 
         let { redirectedTo } = await reload.finished
         if (event.signal.aborted || reload.signal.aborted) return
@@ -478,7 +407,7 @@ function interceptNavigation(
     if (!transition) return scrollStyleWorkarounds?.remove()
     transitionBound = true
 
-    resyncWebKitScrollAfterNavigation(event, resetScroll, transition)
+    resyncWebKitScrollAfterNavigation(navigation, event, resetScroll, transition)
     if (scrollStyleWorkarounds) scheduleNavigationScrollCleanup(transition, scrollStyleWorkarounds)
   }
 
