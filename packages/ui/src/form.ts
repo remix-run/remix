@@ -1,34 +1,34 @@
-import { attrs, createElement, createMixin, on } from '@remix-run/component'
+import { attrs, createElement, createMixin, on, ref } from '@remix-run/component'
 import type { Dispatched, ElementProps, MixinDescriptor } from '@remix-run/component'
 
 type ValidatableControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 type FormMixin = MixinDescriptor<HTMLFormElement, [], ElementProps>
-type InputValidator = (input: HTMLInputElement) => void
-type InputMixin = MixinDescriptor<
-  HTMLInputElement,
-  [getConfig: () => InputMixinConfig],
+type FieldValidator = (control: ValidatableControl) => void
+type FieldMixin = MixinDescriptor<
+  ValidatableControl,
+  [getConfig: () => FieldMixinConfig],
   ElementProps
 >
 
-interface InputMixinConfig {
+interface FieldMixinConfig {
   attrs: object
-  validate: InputValidator
+  validate: FieldValidator
   field: string
   errorId: string
-  feedback: InputFeedback
-  onFeedbackChange(previousErrors: ReadonlyArray<string>): void
+  feedback: FieldFeedback
+  onFeedbackChange(previous: FieldState): void
 }
 
-interface InputFeedback {
+interface FieldFeedback {
   touched: boolean
   hasServerErrors: boolean
   errors: ReadonlyArray<string>
 }
 
-interface InputFormDefinition<fields extends Readonly<Record<string, unknown>>, submission> {
+interface FormDefinitionSource<fields extends Readonly<Record<string, unknown>>, submission> {
   readonly fields: fields
   getInputAttrs<field extends keyof fields & string>(field: field, submission?: submission): object
-  createInputValidator<field extends keyof fields & string>(field: field): InputValidator
+  createInputValidator<field extends keyof fields & string>(field: field): FieldValidator
   getErrorAttrs<field extends keyof fields & string>(field: field): { id: string }
   getFieldErrors<field extends keyof fields & string>(
     field: field,
@@ -36,16 +36,53 @@ interface InputFormDefinition<fields extends Readonly<Record<string, unknown>>, 
   ): ReadonlyArray<string>
 }
 
+interface FieldDefinitionSource<submission> {
+  getInputAttrs(name: string, submission?: submission): object
+  createInputValidator(name?: string): FieldValidator
+  getErrorAttrs(name: string): { id: string }
+  getFieldErrors(name: string, submission?: submission): ReadonlyArray<string>
+}
+
+/** Live, read-only feedback for one field. */
+export interface FieldState {
+  /** Visible client messages or server errors. */
+  readonly errors: ReadonlyArray<string>
+  /** Whether feedback was revealed by blur, invalid submission, or editing a server error. */
+  readonly touched: boolean
+}
+
+/** Related mixins and live state for a single input, select, or textarea. */
+export interface FieldMixins extends FieldState {
+  /**
+   * Applies native attributes, validation, interaction state, and error accessibility.
+   * @returns A mixin for the native control.
+   */
+  field(): FieldMixin
+  /**
+   * Identifies application-owned error markup without choosing its content or role.
+   * @returns An attribute-only error mixin.
+   */
+  error(): ReturnType<typeof attrs<Element>>
+}
+
+/** Naming, current submission, and render notification for a standalone field. */
+export interface FieldMixinsOptions<submission> extends FormMixinsOptions<submission> {
+  /** Logical field name, used to read submission values and errors. */
+  name: string
+}
+
 /** Dynamic submission data for setup-scoped form mixins. */
 export interface FormMixinsOptions<submission> {
   /** Reads the current submission when rendering mixins or reading errors; does not subscribe. */
   getSubmission?: () => submission | undefined
-  /** Requests application rendering when visible client error messages change. */
+  /** Requests rendering when visible errors or touched state change. */
   onChange?: () => void
 }
 
 /** Related validation mixins bound to one form definition. */
 export interface FormMixins<fields extends Readonly<Record<string, unknown>>> {
+  /** Stable, read-only field states; read their live properties during rendering. */
+  readonly fields: { readonly [field in keyof fields & string]: FieldState }
   /** Stable, read-only object of current visible messages; read field arrays during rendering. */
   readonly errors: { readonly [field in keyof fields & string]: ReadonlyArray<string> }
   /**
@@ -60,14 +97,20 @@ export interface FormMixins<fields extends Readonly<Record<string, unknown>>> {
    * @param field The projected field name.
    * @returns A mixin for the field's native input.
    */
-  input<field extends keyof fields & string>(field: field): InputMixin
+  input<field extends keyof fields & string>(field: field): FieldMixin
+  /**
+   * Applies validation to a native input, select, or textarea.
+   * @param field The projected field name.
+   * @returns A mixin for the field's native control.
+   */
+  field<field extends keyof fields & string>(field: field): FieldMixin
   /**
    * Applies the generated error-element id without controlling content, visibility, or role.
    *
    * @param field The projected field name.
    * @returns An attribute-only mixin for application-owned error markup.
    */
-  error<field extends keyof fields & string>(field: field): ReturnType<typeof attrs>
+  error<field extends keyof fields & string>(field: field): ReturnType<typeof attrs<Element>>
 }
 
 const INPUT_VALIDATION_EVENT = 'rmx:input-validation' as const
@@ -79,15 +122,11 @@ declare global {
 }
 
 /** Presentation-ready validation state for a model-backed input. */
-export interface InputValidationState {
+export interface InputValidationState extends FieldState {
   /** The projected field name, independent of an overridden input name or id. */
   readonly field: string
   /** The generated id to apply to the application's error element. */
   readonly errorId: string
-  /** Visible errors, empty until blur or an invalid submission unless the server returned errors. */
-  readonly errors: ReadonlyArray<string>
-  /** Whether client feedback is revealed after blur, invalid submission, or editing a server error. */
-  readonly touched: boolean
 }
 
 /** A bubbling notification for rendering application-owned field errors. */
@@ -155,15 +194,17 @@ const formValidity = createMixin<HTMLFormElement, [], ElementProps>(() => () => 
   ),
 ])
 
-const inputValidity = createMixin<
-  HTMLInputElement,
-  [getConfig: () => InputMixinConfig],
+const fieldValidity = createMixin<
+  ValidatableControl,
+  [getConfig: () => FieldMixinConfig],
   ElementProps
->((handle) => {
-  let previousConfig: InputMixinConfig | undefined
+>((handle, hostType) => {
+  let previousConfig: FieldMixinConfig | undefined
 
   handle.addEventListener('insert', (event) => {
-    if (previousConfig) validateInput(event.node, previousConfig.validate)
+    if (previousConfig) {
+      validateInput(event.node, previousConfig.validate)
+    }
   })
 
   return (getConfig, props) => {
@@ -174,6 +215,11 @@ const inputValidity = createMixin<
     function getFeedbackProps(): ElementProps {
       let { touched, hasServerErrors, errors } = feedback
       let attrs: ElementProps = { ...config.attrs, ...props }
+      if (hostType !== 'input') {
+        delete attrs.type
+        delete attrs.defaultChecked
+      }
+      if (hostType === 'select') delete attrs.defaultValue
       let describedBy =
         typeof attrs['aria-describedby'] === 'string'
           ? attrs['aria-describedby'].split(/\s+/).filter((id) => id && id !== config.errorId)
@@ -190,12 +236,18 @@ const inputValidity = createMixin<
       }
     }
 
-    function updateFeedback(input: HTMLInputElement, reason: 'input' | 'focusout' | 'invalid') {
+    function updateFeedback(
+      input: ValidatableControl,
+      reason: 'input' | 'focusout' | 'invalid' | 'reset',
+    ) {
       validateInput(input, config.validate)
-      let previousErrors = feedback.errors
+      let previous = { ...feedback }
 
       if (reason === 'input') {
         feedback.touched ||= feedback.hasServerErrors
+        feedback.hasServerErrors = false
+      } else if (reason === 'reset') {
+        feedback.touched = false
         feedback.hasServerErrors = false
       } else {
         feedback.touched = true
@@ -212,7 +264,7 @@ const inputValidity = createMixin<
       input.toggleAttribute('data-touched', feedback.touched)
       if (!feedback.hasServerErrors) input.removeAttribute('data-form-error-id')
 
-      config.onFeedbackChange(previousErrors)
+      config.onFeedbackChange(previous)
 
       input.dispatchEvent(
         new InputValidationEvent({
@@ -227,11 +279,25 @@ const inputValidity = createMixin<
     return createElement(handle.element, {
       ...getFeedbackProps(),
       mix: [
-        on<HTMLInputElement>('input', (event) => updateFeedback(event.currentTarget, 'input')),
-        on<HTMLInputElement>('focusout', (event) =>
+        ref((control: ValidatableControl, signal) => {
+          control.form?.addEventListener(
+            'reset',
+            (event) => {
+              queueMicrotask(() => {
+                if (!event.defaultPrevented && !signal.aborted) updateFeedback(control, 'reset')
+              })
+            },
+            { signal },
+          )
+        }),
+        on<ValidatableControl>('input', (event) => updateFeedback(event.currentTarget, 'input')),
+        on<ValidatableControl>('change', (event) => updateFeedback(event.currentTarget, 'input')),
+        on<ValidatableControl>('focusout', (event) =>
           updateFeedback(event.currentTarget, 'focusout'),
         ),
-        on<HTMLInputElement>('invalid', (event) => updateFeedback(event.currentTarget, 'invalid')),
+        on<ValidatableControl>('invalid', (event) =>
+          updateFeedback(event.currentTarget, 'invalid'),
+        ),
       ],
     })
   }
@@ -247,6 +313,72 @@ export function form(): FormMixin {
 }
 
 /**
+ * Binds one reusable field definition to a native control without requiring a form binding.
+ *
+ * Create once in component setup. State properties remain live across renders; a new submission
+ * resets touched state. `onChange` fires when errors or touched state change.
+ *
+ * @param fieldDefinition Shared field attributes, validation, and server error readers.
+ * @param options Logical name, submission getter, and optional render notification.
+ * @returns Control and error mixins with live read-only state.
+ */
+export function createFieldMixins<submission>(
+  fieldDefinition: FieldDefinitionSource<submission>,
+  options: FieldMixinsOptions<submission>,
+): FieldMixins {
+  let previousSubmission: submission | undefined
+  let feedback: FieldFeedback | undefined
+
+  function getFeedback(): FieldFeedback {
+    let submission = options.getSubmission?.()
+    if (!feedback || submission !== previousSubmission) {
+      previousSubmission = submission
+      let errors = fieldDefinition.getFieldErrors(options.name, submission)
+      feedback = {
+        touched: false,
+        hasServerErrors: errors.length > 0,
+        errors,
+      }
+    }
+    return feedback
+  }
+
+  return Object.freeze({
+    get errors() {
+      return getFeedback().errors
+    },
+    get touched() {
+      return getFeedback().touched
+    },
+    field() {
+      return fieldValidity(() => {
+        let feedback = getFeedback()
+        return {
+          attrs: fieldDefinition.getInputAttrs(options.name, options.getSubmission?.()),
+          validate: fieldDefinition.createInputValidator(options.name),
+          field: options.name,
+          errorId: fieldDefinition.getErrorAttrs(options.name).id,
+          feedback,
+          onFeedbackChange(previous) {
+            if (getFeedback() !== feedback) return
+            if (
+              previous.touched !== feedback.touched ||
+              previous.errors.length !== feedback.errors.length ||
+              previous.errors.some((message, index) => message !== feedback.errors[index])
+            ) {
+              options.onChange?.()
+            }
+          },
+        }
+      })
+    },
+    error() {
+      return attrs(fieldDefinition.getErrorAttrs(options.name))
+    },
+  })
+}
+
+/**
  * Binds form and input validation mixins to a model-backed form definition.
  *
  * Applies native constraints and restored server values during SSR. In the browser, it validates
@@ -255,82 +387,74 @@ export function form(): FormMixin {
  * Explicit host props override generated attributes; error ids are appended to `aria-describedby`.
  * Create the binding in component setup and use `getSubmission` to read changing submission props.
  * The getter is evaluated while reading errors or rendering inputs, including SSR, not on binding.
- * Use `onChange` to request a render when visible client errors change. New submissions reset
- * feedback without calling `onChange`; ordinary renders preserve it.
+ * Use `onChange` to request a render when visible errors or touched state change. New submissions
+ * reset feedback without calling `onChange`; ordinary renders preserve it.
  *
  * @param formDefinition Form definition that provides attributes, errors, and field validators.
  * @param options Current submission source and render notification (optional).
  * @returns Related form, input, and error mixin factories, plus live visible field errors.
  */
 export function createFormMixins<fields extends Readonly<Record<string, unknown>>, submission>(
-  formDefinition: InputFormDefinition<fields, submission>,
+  formDefinition: FormDefinitionSource<fields, submission>,
   options: FormMixinsOptions<submission> = {},
 ): FormMixins<fields> {
-  let previousSubmission: submission | undefined
-  let feedbackByField = new Map<keyof fields & string, InputFeedback>()
+  let bindings: Record<string, FieldMixins> = {}
+  let fieldStates: Record<string, FieldState> = {}
   let errors: Record<string, ReadonlyArray<string>> = {}
-
-  function getSubmission(): submission | undefined {
-    let submission = options.getSubmission?.()
-    if (submission !== previousSubmission) {
-      feedbackByField.clear()
-      previousSubmission = submission
-    }
-    return submission
-  }
-
-  function getFeedback(field: keyof fields & string): InputFeedback {
-    let submission = getSubmission()
-    let feedback = feedbackByField.get(field)
-    if (!feedback) {
-      let errors = formDefinition.getFieldErrors(field, submission)
-      feedback = { touched: false, hasServerErrors: errors.length > 0, errors }
-      feedbackByField.set(field, feedback)
-    }
-    return feedback
-  }
 
   for (let field in formDefinition.fields) {
     if (!Object.hasOwn(formDefinition.fields, field)) continue
+    Object.defineProperty(bindings, field, {
+      enumerable: true,
+      value: createFieldMixins(
+        {
+          getInputAttrs(_name, submission) {
+            return formDefinition.getInputAttrs(field, submission)
+          },
+          createInputValidator() {
+            return formDefinition.createInputValidator(field)
+          },
+          getErrorAttrs() {
+            return formDefinition.getErrorAttrs(field)
+          },
+          getFieldErrors(_name, submission) {
+            return formDefinition.getFieldErrors(field, submission)
+          },
+        },
+        { ...options, name: field },
+      ),
+    })
     Object.defineProperty(errors, field, {
       enumerable: true,
       get() {
-        return getFeedback(field).errors
+        return bindings[field].errors
       },
     })
+    Object.defineProperty(fieldStates, field, { enumerable: true, value: bindings[field] })
   }
 
   return {
+    // Every own projected field has one independent binding installed above.
+    fields: Object.freeze(fieldStates) as FormMixins<fields>['fields'],
     // Every own projected field has a live getter installed above.
     errors: Object.freeze(errors) as FormMixins<fields>['errors'],
     form() {
       return formValidity()
     },
     input(field) {
-      return inputValidity(() => {
-        let submission = getSubmission()
-        let feedback = getFeedback(field)
-        return {
-          attrs: formDefinition.getInputAttrs(field, submission),
-          validate: formDefinition.createInputValidator(field),
-          field,
-          errorId: formDefinition.getErrorAttrs(field).id,
-          feedback,
-          onFeedbackChange(previousErrors) {
-            if (getFeedback(field) !== feedback) return
-            if (
-              previousErrors.length !== feedback.errors.length ||
-              previousErrors.some((message, index) => message !== feedback.errors[index])
-            ) {
-              options.onChange?.()
-            }
-          },
-        }
-      })
+      return getBinding(field).field()
+    },
+    field(field) {
+      return getBinding(field).field()
     },
     error(field) {
-      return attrs(formDefinition.getErrorAttrs(field))
+      return getBinding(field).error()
     },
+  }
+
+  function getBinding(field: keyof fields & string): FieldMixins {
+    if (!Object.hasOwn(bindings, field)) throw new Error(`Unknown form field "${field}"`)
+    return bindings[field]
   }
 }
 
@@ -351,7 +475,7 @@ export function onInputValidation<target extends HTMLElement>(
   return on(INPUT_VALIDATION_EVENT, handler, captureBoolean)
 }
 
-function validateInput(input: HTMLInputElement, validate: InputValidator): void {
+function validateInput(input: ValidatableControl, validate: FieldValidator): void {
   input.setCustomValidity('')
   if (input.validity.valid) validate(input)
 }

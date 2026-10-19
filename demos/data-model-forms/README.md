@@ -1,21 +1,8 @@
 # Data model forms demo
 
-This demo shows how one Remix data model can drive native form constraints, server parsing, and accessible error rendering without taking ownership of the application's markup.
+Four routes show different ways to define schema-backed native forms. Each has its own GET/POST controller and browser component, with explicit labels, controls, mixins, and error markup.
 
-The registration flow demonstrates:
-
-- selecting `displayName`, `email`, `age`, and `website` from the persisted account model while omitting its server-owned `id`
-- adding request-only password and terms fields with their own schemas
-- spreading low-level helpers directly onto native labels, inputs, and error elements
-- blocking invalid submissions with the browser Constraint Validation API
-- applying a model refinement through native custom validity as the user types
-- showing inline validation messages and invalid state after blur, then updating both as the user types
-- returning a populated form with server errors after a failed POST
-- validating database writes with the same field schemas used by the form
-- persisting non-sensitive fields in an in-memory SQLite database across requests
-- omitting password and UI-only terms values from both failed responses and stored rows
-
-## Run the demo
+## Run it
 
 From the repository root:
 
@@ -24,37 +11,66 @@ pnpm install
 pnpm -C demos/data-model-forms dev
 ```
 
-Open <http://localhost:44100>.
+Open <http://localhost:44100>. The root redirects to `/schema`; navigation links connect all four examples.
 
-Each router owns an in-memory SQLite database. It persists across requests for the lifetime of the demo process, while separately created routers receive isolated databases.
+## Examples
 
-## How it works
+| Route           | Definition                             | Browser binding                            | Server parsing                                          |
+| --------------- | -------------------------------------- | ------------------------------------------ | ------------------------------------------------------- |
+| `/schema`       | One object schema + `createForm()`     | `createFormMixins()`                       | One `AccountForm.parse(formData)` call                  |
+| `/fields`       | Individual schemas + `createField()`   | Independent `createFieldMixins()` bindings | Parse each field, then combine failed values and errors |
+| `/extra-fields` | Object schema + request-only fields    | `createFormMixins()`                       | One parse call; persist only account fields             |
+| `/inline`       | `createForm()` with all schemas inline | `createFormMixins()`                       | One parse call, without a backing object schema         |
 
-The account schema remains the source of truth for persisted account data in `app/data/public/account-schema.ts`. `createForm()` selects the account fields this UI needs and adds request-only password and terms fields separately:
+### One object schema
+
+[Schema example source](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/schema)
 
 ```ts
-import * as s from 'remix/data-schema'
-import { email, minLength } from 'remix/data-schema/checks'
-import { createForm } from 'remix/data-schema/form'
-
-let Account = s.object({
-  id: s.string(),
-  displayName: s
-    .string()
-    .pipe(minLength(2))
-    .refine((value) => value.trim() === value, 'Remove leading or trailing spaces'),
-  email: s.string().pipe(email()),
-})
-
-let RegistrationForm = createForm(Account, {
+const AccountForm = createForm({
+  schema: Account,
   fields: {
     displayName: { label: 'Display name', type: 'text' },
     email: { label: 'Email address', type: 'email' },
-    password: {
-      label: 'Password',
-      type: 'password',
-      schema: s.string().pipe(minLength(8)),
-    },
+    age: { label: 'Age', type: 'number' },
+    website: { label: 'Website', type: 'url' },
+  },
+})
+```
+
+The form reuses the account model's field rules and omits the server-owned `id`. Parsing validates only configured fields, not whole-object refinements.
+
+### Individual fields
+
+[Independent fields source](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/fields)
+
+```ts
+const Email = createField({
+  schema: EmailSchema,
+  label: 'Email address',
+  type: 'email',
+})
+
+let email = createFieldMixins(Email, {
+  name: 'email',
+  getSubmission: () => handle.props.submission,
+  onChange: () => handle.update(),
+})
+```
+
+The UI uses `email.field()`, `email.error()`, `email.errors`, and `email.touched`. The ordinary native `<form>` needs no form binding. Its handler calls `DisplayName.parse(formData, 'displayName')` and `Email.parse(formData, 'email')`, and explicitly combines failed values and errors. Both field schemas are also used by the persisted account schema.
+
+### Schema plus extra fields
+
+[Extra-fields source](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/extra-fields)
+
+```ts
+const RegistrationForm = createForm({
+  schema: Account,
+  fields: {
+    displayName: { label: 'Display name', type: 'text' },
+    email: { label: 'Email address', type: 'email' },
+    password: Password,
     terms: {
       label: 'I agree to the terms of service',
       type: 'checkbox',
@@ -64,135 +80,52 @@ let RegistrationForm = createForm(Account, {
 })
 ```
 
-The data table validates writes with the `Account` schema directly. Because request-only fields are not part of `Account`, neither `password` nor `terms` can pass through the persistence model:
+The reusable `Password` field is created with `createField()`. Password and terms are validated but never stored. Passwords are also omitted from failed-submission values.
+
+### All inline schemas
+
+[Inline example source](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/inline)
 
 ```ts
-import * as s from 'remix/data-schema'
-import { column as c, table } from 'remix/data-table'
-
-let accounts = table({
-  name: 'accounts',
-  columns: {
-    id: c.text(),
-    displayName: c.text(),
-    email: c.text(),
-    age: c.integer().nullable(),
-    website: c.text().nullable(),
-  },
-  validate({ operation, value }) {
-    if (operation === 'update') {
-      return { issues: [{ message: 'Account updates are not supported' }] }
-    }
-
-    let result = s.parseSafe(Account, value)
-    return result.success
-      ? { value: result.value }
-      : { issues: result.issues.map((issue) => ({ message: issue.message })) }
+const AccountForm = createForm({
+  fields: {
+    displayName: {
+      label: 'Display name',
+      type: 'text',
+      schema: s.string().pipe(minLength(2)),
+    },
+    email: {
+      label: 'Email address',
+      type: 'email',
+      schema: s.string().pipe(email()),
+    },
   },
 })
 ```
 
-This POC has no account update flow, so it does not define an `AccountUpdate` schema. If partial updates are added later, that schema should be derived mechanically from `Account` rather than repeating each field by hand.
+This excerpt shows the shape; the running example also checks maximum name length and leading/trailing spaces. With no backing schema, every field must provide its own schema. Use this for form-specific validation; use a shared model or field schema when the same rules belong in several places.
 
-The router creates a `DatabaseSync(':memory:')` instance and exposes the resulting Remix `Database` through request middleware. Creating the database inside `createDataModelFormsRouter()` gives the server process persistent state while keeping router instances isolated.
+## Shared behavior
 
-The page owns its DOM structure. Its hydrated component creates the validation binding in setup and reads changing submissions through a getter:
+All four examples use native HTML constraints before JavaScript loads. After hydration, field mixins validate as you type, reveal client feedback after blur or a blocked submission, and manage `aria-invalid` and error-description linkage. The UI owns the error elements and displays the binding's live `errors` and `touched` state. Error elements stay mounted with space reserved for their messages so blur feedback does not move the action buttons.
 
-```tsx
-import { createFormMixins } from '@remix-run/ui/form'
+Each form includes a client-only **Fill demo values** button. Add spaces around the display name and blur it to see a synchronous schema refinement rendered inline. With JavaScript disabled, submit `a@b` as the email: native email validation accepts it, but the server schema returns a populated form with a field error.
 
-let { form, input, error, errors } = createFormMixins(RegistrationForm, {
-  getSubmission: () => handle.props.submission,
-  onChange: () => handle.update(),
-})
+Successful POSTs redirect back to their example. All routes share one in-memory SQLite database, so saved accounts are visible on every page for the lifetime of the demo process. The table validates writes with `Account`; controllers supply the id and explicitly select persisted fields. Cross-field rules remain a separate handler concern.
 
-return () => (
-  <form method="post" mix={form()}>
-    <label {...RegistrationForm.getLabelAttrs('displayName')}>
-      {RegistrationForm.fields.displayName.label}
-      {RegistrationForm.fields.displayName.required ? <span>Required</span> : null}
-    </label>
-    <input autoComplete="name" mix={input('displayName')} />
-    {errors.displayName.length > 0 ? (
-      <p mix={error('displayName')} role="alert">
-        {errors.displayName.join(' ')}
-      </p>
-    ) : null}
-  </form>
-)
-```
+## Code layout
 
-The render middleware owns the shared document shell, so route pages only render their content. Its
-second argument keeps document behavior separate from the underlying response options:
+- Route-local controllers, pages, and definitions live under `app/actions/{schema,fields,extra-fields,inline}/`.
+- Browser components and definitions live in each route's `public/` directory.
+- `app/ui/example-page.tsx` shares navigation and the stored-account panel; `app/ui/public/styles.ts` shares styles.
+- `app/data/public/account-schema.ts` contains schemas shared by browser validation and database writes.
+- Controllers, table definitions, and SQLite setup stay outside the browser asset boundary.
+- The render middleware supplies the document by default. Handlers can set `document: { title }`, pass `responseInit`, or use `document: false` for partial HTML.
 
-```ts
-interface RenderOptions {
-  document?: { title?: string } | false
-  responseInit?: ResponseInit
-}
-```
-
-Most handlers use the default document and may override only its title. A handler that serves a
-frame or another partial HTML response can pass `document: false` without changing the content
-component:
-
-```tsx
-return render(<RegistrationPage storedAccounts={storedAccounts} />, {
-  document: { title: 'Create an account' },
-})
-
-return render(<RegistrationSummary account={account} />, {
-  document: false,
-})
-```
-
-This keeps frame content selection in the handler while the middleware remains responsible for the
-generic HTML document, asset preloads, and client runtime script.
-
-The POST action validates the request boundary in one call:
-
-```tsx
-let submission = RegistrationForm.parse(formData)
-
-if (!submission.success) {
-  return render(<RegistrationPage submission={submission} />, {
-    responseInit: { status: 400 },
-  })
-}
-
-let { displayName, email, age, website } = submission.value
-
-await db.create(accounts, {
-  id: crypto.randomUUID(),
-  displayName,
-  email,
-  ...(age === undefined ? {} : { age }),
-  ...(website === undefined ? {} : { website }),
-})
-
-return redirect(routes.registration.index.href(), 303)
-```
-
-The redirect makes the successful flow POST-redirect-GET. The following GET queries SQLite and renders every stored account, proving that the form payload reached the persistent data layer without retaining the raw password.
-
-The form controls live inside a small `clientEntry()` component so the mixins can attach their input and blur listeners. `createFormMixins(RegistrationForm, { getSubmission, onChange })` binds the form definition once in setup. Its destructured `form()` enhances plain native controls, and `input(field)` gives every projected input one validation mixin: it applies `getInputAttrs()` during SSR, checks native constraints first, then uses `createInputValidator()` to report supplemental synchronous schema issues through `setCustomValidity()`. The getter reads current submission props while rendering inputs or reading errors, while the binding preserves interaction state across ordinary renders. The input mixin owns touched state, `aria-invalid`, and `aria-describedby`; it reveals client errors after blur or a blocked submission. If JavaScript is unavailable, native constraints still block representable errors and the server returns accessible error markup for every schema issue.
-
-With JavaScript enabled, add a leading or trailing space to the display name, then blur the input to see its non-native model refinement reported inline. To exercise the server-error path, disable JavaScript and submit `a@b` as the email address: browsers accept it as a native email value, while the data model's email rule requires a dotted domain. The returned page keeps the email and checkbox state, highlights the email error, and leaves the password blank.
-
-The demo renders the binding's live `errors` arrays inline beside each input. `error(field)` supplies the generated error-element ID, and `onChange` requests a render when visible client messages change. The binding tracks submission changes and server errors internally, so the UI needs no error map or manual reset logic. It does not manage touched state or read `validationMessage` itself. Server errors stay visible until their field is edited, then client messages take over. The error mixin only supplies attributes; application markup owns content, visibility, and announcement behavior. The browser still owns constraint validation and its submission blocking behavior.
-
-## Browser assets
-
-Browser source lives in colocated `public/` directories, following the bookstore demo:
-
-- `app/actions/public/entry.ts` starts the browser runtime.
-- `app/actions/registration/public/` contains the hydrated form, form definition, and styles.
-- `app/data/public/account-schema.ts` contains the shared schema used by both the form and database validation.
-
-The asset server allows `app/**/public/**` and the shared route map, while denying test files. Controllers, database setup, and table definitions remain outside the browser asset boundary.
-
-## Verify the demo
+## Verify it
 
 ```sh
 pnpm -C demos/data-model-forms typecheck
 ```
+
+This POC intentionally has no committed test suite.

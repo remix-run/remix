@@ -1,7 +1,9 @@
-export { createForm } from './lib/form.ts'
+export { createField, createForm } from './lib/form.ts'
 export type {
   AncillaryFormFieldOptions,
   ErrorAttributes,
+  FieldDefinition,
+  FieldOptions,
   FormDefinition,
   FormErrors,
   FormFailure,

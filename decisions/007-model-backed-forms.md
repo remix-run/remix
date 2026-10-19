@@ -6,15 +6,23 @@ The starting point was an existing data model, server request validation, and UI
 
 ## A form describes an operation, not a persisted object
 
-`createForm(Account, { fields })` selects the model fields used by an operation and adds UI metadata such as labels, input types, names, and ids. Keeping this metadata outside `Account` lets the same model support different forms without acquiring presentation concerns.
+`createForm({ schema: Account, fields })` selects the model fields used by an operation and adds UI metadata such as labels, input types, names, and ids. Keeping this metadata outside `Account` lets the same model support different forms without acquiring presentation concerns.
 
 Selected fields inherit their schemas. Fields absent from the model must provide an inline schema, and model fields cannot override their authoritative schema. These rules are enforced by TypeScript and checked at runtime. Omitting a model field means the form does not validate it; it does not make that field optional in the model. See `packages/data-schema/src/lib/form.ts`.
 
-This supports four configurations without four separate form APIs: selecting fields from one schema, adding inline ancillary fields, composing fields from multiple schemas through `.shape`, and defining every field inline against an empty object schema. The [package README][form-docs] shows each variation. Exposing `.shape` makes existing field schemas reusable rather than requiring duplicate definitions.
+This supports four configurations without four separate form APIs: selecting fields from one schema, adding inline ancillary fields, composing fields from multiple schemas through `.shape`, and omitting the backing `schema` to define every field inline. The [package README][form-docs] shows each variation. Exposing `.shape` makes existing field schemas reusable rather than requiring duplicate definitions.
 
 `Form.parse(formData)` decodes and validates the configured fields. A registration form can omit a server-generated account id and include a password or terms checkbox that is not an account property. Successful parsing therefore does not establish that the result is a complete, valid `Account`.
 
 The handler owns the remaining operation: business checks, generated values, credential handling, splitting values across tables, and transactions. Persistence validation is separate. In the [registration demo][registration-action], the handler assembles an account and the [table validation hook][account-table] validates the complete record with `Account` before writing it. A form definition does not save anything automatically.
+
+## Fields compose into forms
+
+`createField({ schema, label, type })` describes a reusable field without browser state or an assigned logical name. It can parse independently with `Field.parse(formData, name)` or appear in `createForm({ fields: { name: Field } })`. `createForm()` resolves every field through this same field layer, including fields inherited from its backing schema. This keeps decoding, constraints, and server error handling consistent.
+
+`createFieldMixins(Field, { name, getSubmission, onChange })` owns one native control's feedback. `createFormMixins()` composes independent field bindings rather than providing a separate validation implementation. Independently bound controls can also share an ordinary native form; the browser collects values and blocks invalid controls. The application then supplies each binding's submission/render wiring and either parses each definition separately or composes a form definition for combined values and errors.
+
+The live state is `fields.name.errors/touched` on form bindings and direct properties on standalone bindings. `touched` becomes true after blur, a native invalid event, or editing a field with server errors. Server errors are visible immediately regardless of touched state. New server submissions reset touched state. Native reset clears touched state and visible errors unless canceled. `onChange` reports changes to errors or touched state, including the first blur of a valid field, but not edits or blurs that leave both unchanged. The `field()` mixin supports inputs, selects, and textareas; `input()` and top-level `errors` remain available on form bindings.
 
 ## Native constraints remain the primary browser mechanism
 
@@ -51,7 +59,7 @@ return () => (
 
 The factory name avoids the naming collision in `let { form, input } = form(...)`. It also reflects that the binding supplies attributes, restored values, and accessibility wiring, not only validation.
 
-Setup-scoped state preserves touched fields and edited feedback across renders. `getSubmission` reads current props during rendering or error access, including SSR; a new submission identity resets feedback. It is not a subscription. `onChange` requests rendering when visible client messages change, while receiving new submission props remains the application's responsibility.
+Setup-scoped state preserves interaction flags and edited feedback across renders. `getSubmission` reads current props during rendering or state access, including SSR; a new submission identity resets feedback. It is not a subscription. `onChange` requests rendering when visible messages or interaction flags change, while receiving new submission props remains the application's responsibility.
 
 Inputs validate while typing, but client errors become visible only after blur or a native invalid event. Server errors are visible immediately and remain until that field is edited. The mixin owns that state and its `aria-invalid` and `aria-describedby` wiring. Applications should not need their own parallel error maps or previous-submission tracking.
 
@@ -63,11 +71,11 @@ Low-level attribute helpers remain available for custom integrations, and `onInp
 
 We deferred automatic whole-object and cross-field refinements. A projection can omit fields that the original object schema requires. Running that whole schema would reject otherwise valid partial submissions, while running only selected field schemas cannot establish relationships such as start date preceding end date.
 
-Requiring all model fields would be safe but unnecessarily restrictive when a refinement uses only some fields. Arbitrary predicates do not declare those dependencies, so we cannot reliably determine which object rules survive a projection. The current API requires an object schema with `.shape`; object-level `.refine()` returns a general schema that does not satisfy that contract. Field-level refinements remain supported.
+Requiring all model fields would be safe but unnecessarily restrictive when a refinement uses only some fields. Arbitrary predicates do not declare those dependencies, so we cannot reliably determine which object rules survive a projection. When supplied, the backing `schema` must be an object schema with `.shape`; object-level `.refine()` returns a general schema that does not satisfy that contract. Field-level refinements remain supported.
 
 For now, handlers run cross-field or business validation as a second step and report failures through the existing form errors or an explicitly selected field. We did not add a parallel callback-based rule language when schema refinements already provide validation machinery.
 
-We also discussed `createForm({ schema?, fields })` to make model-backed and entirely inline forms share a single options shape. That signature is not implemented; the current API remains `createForm(model, { fields })`.
+We chose one options object with an optional `schema` so model-backed and entirely inline forms share the same call shape. Omitting it requires an explicit schema on every configured field, rather than a placeholder empty object schema.
 
 ## When to revisit
 
@@ -77,6 +85,6 @@ We also discussed `createForm({ schema?, fields })` to make model-backed and ent
 
 [form-docs]: ../packages/data-schema/README.md#model-backed-forms
 [mixin-docs]: ../packages/ui/src/form/README.md
-[registration-action]: ../demos/data-model-forms/app/actions/registration/controller.tsx
+[registration-action]: ../demos/data-model-forms/app/actions/extra-fields/controller.tsx
 [account-table]: ../demos/data-model-forms/app/data/account.ts
 [constraint-validation]: https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation

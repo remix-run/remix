@@ -3,7 +3,10 @@ import { formData } from 'remix/middleware/form-data'
 import { logger } from 'remix/middleware/logger'
 
 import rootController from './actions/controller.tsx'
-import registrationController from './actions/registration/controller.tsx'
+import extraFieldsController from './actions/extra-fields/controller.tsx'
+import schemaController from './actions/schema/controller.tsx'
+import fieldsController from './actions/fields/controller.tsx'
+import inlineController from './actions/inline/controller.tsx'
 import { createDataModelFormsDatabase } from './data/database.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { loadDatabase } from './middleware/database.ts'
@@ -37,6 +40,9 @@ export function createDataModelFormsRouter() {
 
   let router = createRouter<AppContext>({ middleware })
   router.map(routes, rootController)
-  router.map(routes.registration, registrationController)
+  router.map(routes['extra-fields'], extraFieldsController)
+  router.map(routes.schema, schemaController)
+  router.map(routes.fields, fieldsController)
+  router.map(routes.inline, inlineController)
   return router
 }

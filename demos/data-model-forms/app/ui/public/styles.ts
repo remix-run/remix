@@ -27,6 +27,7 @@ export const page = css({
 })
 
 export const intro = css({
+  minWidth: 0,
   alignSelf: 'start',
   position: 'sticky',
   top: '3rem',
@@ -69,6 +70,41 @@ export const featureList = css({
   lineHeight: 1.5,
 })
 
+export const navigation = css({
+  display: 'grid',
+  gap: '0.5rem',
+  marginBlock: '2rem',
+  '& a': {
+    display: 'block',
+    padding: '0.75rem 1rem',
+    border: `1px solid ${color.border}`,
+    borderRadius: '0.5rem',
+    color: color.textSecondary,
+    textDecoration: 'none',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+  },
+  '& a[aria-current="page"]': {
+    borderColor: color.accent,
+    background: color.accentSoft,
+    color: color.accent,
+  },
+  '& a:focus-visible': {
+    outline: `2px solid ${color.accent}`,
+    outlineOffset: '2px',
+  },
+})
+
+export const code = css({
+  overflowX: 'auto',
+  padding: '1rem',
+  border: `1px solid ${color.border}`,
+  borderRadius: '0.5rem',
+  background: color.surface,
+  fontSize: '0.75rem',
+  lineHeight: 1.6,
+})
+
 export const panel = css({
   border: `1px solid ${color.border}`,
   borderRadius: '0.75rem',
@@ -78,6 +114,7 @@ export const panel = css({
 })
 
 export const workspace = css({
+  minWidth: 0,
   display: 'grid',
   gap: '1.5rem',
 })
@@ -189,6 +226,7 @@ export const checkbox = css({
 
 export const fieldError = css({
   gridColumn: '1 / -1',
+  minHeight: '1.4em',
   margin: 0,
   color: color.danger,
   fontSize: '0.75rem',

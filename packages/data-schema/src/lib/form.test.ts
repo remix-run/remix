@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { max, maxLength, min, minLength } from '../checks.ts'
-import { createForm } from '../form.ts'
+import { createField, createForm } from '../form.ts'
 import * as s from '../index.ts'
 
 type Equal<left, right> =
@@ -19,7 +19,8 @@ const User = s.object({
   bio: s.optional(s.string().pipe(maxLength(200))),
 })
 
-const UserForm = createForm(User, {
+const UserForm = createForm({
+  schema: User,
   fields: {
     name: { label: 'Name', type: 'text' },
     age: { label: 'Age', type: 'number' },
@@ -33,23 +34,155 @@ const UserForm = createForm(User, {
 })
 
 function checkInvalidFieldTypes(): void {
-  createForm(User, {
+  // @ts-expect-error reusable fields require an authoritative schema
+  createField({ label: 'Password', type: 'password' })
+  createForm({
+    schema: User,
     fields: {
       // @ts-expect-error ancillary fields require their own schema
       inviteCode: { label: 'Invite code', type: 'text' },
     },
   })
-  createForm(User, {
+  createForm({
+    schema: User,
     fields: {
       // @ts-expect-error model fields cannot override their authoritative schema
       name: { label: 'Name', type: 'text', schema: s.string() },
+    },
+  })
+  createForm({
+    fields: {
+      // @ts-expect-error forms without a backing schema require a schema for every field
+      password: { label: 'Password', type: 'password' },
     },
   })
 }
 
 void checkInvalidFieldTypes
 
+describe('createField', () => {
+  it('derives attributes and parses one field independently', () => {
+    let Age = createField({ schema: s.number().pipe(min(13)), label: 'Age', type: 'number' })
+    assert.equal(Age.required, true)
+    assert.deepEqual(Age.getInputAttrs('age'), {
+      id: 'age',
+      name: 'age',
+      type: 'number',
+      required: true,
+      min: 13,
+      step: 'any',
+    })
+    let data = new FormData()
+    data.set('age', '37')
+    let result = Age.parse(data, 'age')
+    assert.equal(result.success, true)
+    expectType<Equal<typeof result.value, number>>()
+    assert.equal(result.value, 37)
+    data.set('age', '12')
+    let failure = Age.parse(data, 'age')
+    assert.equal(failure.success, false)
+    assert.deepEqual(failure.values, { age: '12' })
+    assert.equal(failure.errors.fields.age.length, 1)
+    assert.equal(Age.getInputAttrs('age', failure).defaultValue, '12')
+  })
+
+  it('composes reusable fields without sharing names or overriding backing schemas', () => {
+    let Name = createField({ schema: s.string(), label: 'Name', type: 'text' })
+    let Names = createForm({ fields: { first: Name, second: Name } })
+    let data = new FormData()
+    data.set('first', 'Ada')
+    data.set('second', 'Grace')
+    let result = Names.parse(data)
+    assert.equal(result.success, true)
+    expectType<Equal<typeof result.value, { first: string; second: string }>>()
+    assert.deepEqual(result.value, { first: 'Ada', second: 'Grace' })
+    assert.equal(Names.fields.first.getInputAttrs('first').name, 'first')
+    assert.equal(Name.getInputAttrs('other').name, 'other')
+  })
+
+  it('keeps logical error keys separate from native names and omits failed passwords', () => {
+    let Password = createField({
+      schema: s.string().pipe(minLength(8)),
+      label: 'Password',
+      type: 'password',
+      name: 'credentials.password',
+      id: 'new-password',
+    })
+    let data = new FormData()
+    data.set('credentials.password', 'short')
+    let result = Password.parse(data, 'password')
+    assert.equal(result.success, false)
+    assert.deepEqual(result.values, {})
+    assert.deepEqual(result.issues[0].path, ['password'])
+    assert.equal(result.errors.fields.password.length, 1)
+    assert.equal(Password.getInputAttrs('password', result).defaultValue, undefined)
+    assert.deepEqual(Password.getErrorAttrs('password'), { id: 'new-password-error' })
+    assert.deepEqual(Password.getLabelAttrs('password'), { htmlFor: 'new-password' })
+    let message = ''
+    Password.createInputValidator('password')({
+      value: 'long-enough',
+      setCustomValidity(value) {
+        message = value
+      },
+    })
+    assert.equal(message, '')
+  })
+})
+
 describe('createForm', () => {
+  it('infers and validates inline fields without a backing schema', () => {
+    let InlineForm = createForm({
+      fields: {
+        name: { label: 'Name', type: 'text', schema: s.string().pipe(minLength(2)) },
+        age: { label: 'Age', type: 'number', schema: s.number() },
+        bio: { label: 'Bio', type: 'text', schema: s.optional(s.string()) },
+        terms: { label: 'Accept the terms', type: 'checkbox', schema: s.literal(true) },
+      },
+    })
+    let formData = new FormData()
+    formData.set('name', 'Ada')
+    formData.set('age', '37')
+    formData.set('terms', 'on')
+
+    let result = InlineForm.parse(formData)
+
+    assert.equal(result.success, true)
+    expectType<
+      Equal<
+        typeof result.value,
+        { name: string; age: number; bio: string | undefined; terms: true }
+      >
+    >()
+    assert.deepEqual(result.value, { name: 'Ada', age: 37, bio: undefined, terms: true })
+    assert.deepEqual(InlineForm.getInputAttrs('name'), {
+      id: 'name',
+      name: 'name',
+      type: 'text',
+      required: true,
+      minLength: 2,
+    })
+    assert.equal(InlineForm.fields.bio.required, false)
+
+    let invalid = InlineForm.parse(new FormData())
+    assert.equal(invalid.success, false)
+    assert.deepEqual(invalid.errors.fields, {
+      name: ['Expected string'],
+      age: ['Expected number'],
+      terms: ['Expected literal value'],
+    })
+  })
+
+  it('rejects inline fields without schemas at runtime', () => {
+    assert.throws(() => {
+      createForm({
+        fields: {
+          // @ts-expect-error exercise the runtime guard for untyped callers
+          name: { label: 'Name', type: 'text' },
+        },
+      })
+    }, /Ancillary form field "name" requires a schema/)
+  })
+
   it('derives native input attributes from projected model fields', () => {
     expectType<Equal<ReturnType<typeof UserForm.getInputAttrs<'name'>>['type'], 'text'>>()
     expectType<Equal<typeof UserForm.fields.name.required, boolean>>()
@@ -98,7 +231,8 @@ describe('createForm', () => {
         return 'system'
       }),
     })
-    let SettingsForm = createForm(Settings, {
+    let SettingsForm = createForm({
+      schema: Settings,
       fields: { theme: { label: 'Theme', type: 'text' } },
     })
 
@@ -179,7 +313,8 @@ describe('createForm', () => {
 
   it('decodes and restores boolean checkbox fields', () => {
     let Preferences = s.object({ newsletter: s.boolean() })
-    let PreferencesForm = createForm(Preferences, {
+    let PreferencesForm = createForm({
+      schema: Preferences,
       fields: {
         newsletter: { label: 'Send me updates', type: 'checkbox' },
         terms: {
@@ -220,7 +355,8 @@ describe('createForm', () => {
 
   it('treats reserved object property names as ancillary fields', () => {
     let Model = s.object({ name: s.string() })
-    let ReservedNameForm = createForm(Model, {
+    let ReservedNameForm = createForm({
+      schema: Model,
       fields: {
         ['__proto__']: {
           label: 'Reserved name',
@@ -241,7 +377,8 @@ describe('createForm', () => {
 
   it('does not serialize password values after failed validation', () => {
     let Credentials = s.object({ password: s.string().pipe(minLength(8)) })
-    let CredentialsForm = createForm(Credentials, {
+    let CredentialsForm = createForm({
+      schema: Credentials,
       fields: {
         password: { label: 'Password', type: 'password' },
       },
@@ -260,7 +397,8 @@ describe('createForm', () => {
     let Profile = s.object({
       username: s.string().refine((value) => value.startsWith('@'), 'Start with @'),
     })
-    let ProfileForm = createForm(Profile, {
+    let ProfileForm = createForm({
+      schema: Profile,
       fields: { username: { label: 'Username', type: 'text' } },
     })
     let validationMessage = ''
@@ -285,7 +423,8 @@ describe('createForm', () => {
     let Preferences = s.object({
       age: s.number().refine((value) => value >= 18, 'Must be at least 18'),
     })
-    let PreferencesForm = createForm(Preferences, {
+    let PreferencesForm = createForm({
+      schema: Preferences,
       fields: {
         age: { label: 'Age', type: 'number' },
         terms: {

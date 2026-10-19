@@ -1,16 +1,16 @@
-import type { FormRawValue } from 'remix/data-schema/form'
+import type { FormSubmission } from 'remix/data-schema/form'
 import { clientEntry, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 import { createFormMixins } from '@remix-run/ui/form'
 
 import { RegistrationForm } from './registration-form.ts'
-import * as styles from './styles.ts'
+import * as styles from '../../../ui/public/styles.ts'
 import { routes } from '../../../routes.ts'
 
 export const RegistrationFields = clientEntry(
   import.meta.url,
-  function RegistrationFields(handle: Handle<{ submission?: RegistrationSubmission }>) {
-    let { form, input, error, errors } = createFormMixins(RegistrationForm, {
+  function RegistrationFields(handle: Handle<{ submission?: FormSubmission }>) {
+    let { form, field, error, fields } = createFormMixins(RegistrationForm, {
       getSubmission: () => handle.props.submission,
       onChange: () => handle.update(),
     })
@@ -43,7 +43,7 @@ export const RegistrationFields = clientEntry(
           ) : null}
 
           <form
-            action={routes.registration.action.href()}
+            action={routes['extra-fields'].action.href()}
             method="post"
             mix={[form(), styles.form]}
           >
@@ -60,12 +60,13 @@ export const RegistrationFields = clientEntry(
                 <input
                   autoComplete="name"
                   placeholder="Ada Lovelace"
-                  mix={[input('displayName'), styles.control]}
+                  mix={[field('displayName'), styles.control]}
                 />
-                {errors.displayName.length > 0 ? (
-                  <p role="alert" mix={[error('displayName'), styles.fieldError]}>
-                    {errors.displayName.join(' ')}
-                  </p>
+                <p role="alert" mix={[error('displayName'), styles.fieldError]}>
+                  {fields.displayName.errors.join(' ')}
+                </p>
+                {hydrated ? (
+                  <small>Field state: touched {String(fields.displayName.touched)}</small>
                 ) : null}
               </div>
 
@@ -81,13 +82,11 @@ export const RegistrationFields = clientEntry(
                 <input
                   autoComplete="email"
                   placeholder="ada@example.com"
-                  mix={[input('email'), styles.control]}
+                  mix={[field('email'), styles.control]}
                 />
-                {errors.email.length > 0 ? (
-                  <p role="alert" mix={[error('email'), styles.fieldError]}>
-                    {errors.email.join(' ')}
-                  </p>
-                ) : null}
+                <p role="alert" mix={[error('email'), styles.fieldError]}>
+                  {fields.email.errors.join(' ')}
+                </p>
               </div>
 
               <div mix={styles.field}>
@@ -99,12 +98,10 @@ export const RegistrationFields = clientEntry(
                     <span mix={styles.optional}>Optional</span>
                   )}
                 </label>
-                <input inputMode="numeric" placeholder="36" mix={[input('age'), styles.control]} />
-                {errors.age.length > 0 ? (
-                  <p role="alert" mix={[error('age'), styles.fieldError]}>
-                    {errors.age.join(' ')}
-                  </p>
-                ) : null}
+                <input inputMode="numeric" placeholder="36" mix={[field('age'), styles.control]} />
+                <p role="alert" mix={[error('age'), styles.fieldError]}>
+                  {fields.age.errors.join(' ')}
+                </p>
               </div>
 
               <div mix={styles.field}>
@@ -119,13 +116,11 @@ export const RegistrationFields = clientEntry(
                 <input
                   autoComplete="url"
                   placeholder="https://example.com"
-                  mix={[input('website'), styles.control]}
+                  mix={[field('website'), styles.control]}
                 />
-                {errors.website.length > 0 ? (
-                  <p role="alert" mix={[error('website'), styles.fieldError]}>
-                    {errors.website.join(' ')}
-                  </p>
-                ) : null}
+                <p role="alert" mix={[error('website'), styles.fieldError]}>
+                  {fields.website.errors.join(' ')}
+                </p>
               </div>
             </div>
 
@@ -141,28 +136,24 @@ export const RegistrationFields = clientEntry(
               <input
                 autoComplete="new-password"
                 placeholder="At least 8 characters"
-                mix={[input('password'), styles.control]}
+                mix={[field('password'), styles.control]}
               />
-              {errors.password.length > 0 ? (
-                <p role="alert" mix={[error('password'), styles.fieldError]}>
-                  {errors.password.join(' ')}
-                </p>
-              ) : null}
+              <p role="alert" mix={[error('password'), styles.fieldError]}>
+                {fields.password.errors.join(' ')}
+              </p>
             </div>
 
             <div mix={styles.checkboxField}>
-              <input mix={[input('terms'), styles.checkbox]} />
+              <input mix={[field('terms'), styles.checkbox]} />
               <label {...RegistrationForm.getLabelAttrs('terms')} mix={styles.checkboxLabel}>
                 {RegistrationForm.fields.terms.label}
                 {RegistrationForm.fields.terms.required ? (
                   <span mix={styles.required}> Required</span>
                 ) : null}
               </label>
-              {errors.terms.length > 0 ? (
-                <p role="alert" mix={[error('terms'), styles.fieldError]}>
-                  {errors.terms.join(' ')}
-                </p>
-              ) : null}
+              <p role="alert" mix={[error('terms'), styles.fieldError]}>
+                {fields.terms.errors.join(' ')}
+              </p>
             </div>
 
             <div mix={styles.formActions}>
@@ -212,11 +203,3 @@ export const RegistrationFields = clientEntry(
     }
   },
 )
-
-export type RegistrationSubmission = {
-  values: Record<string, FormRawValue>
-  errors: {
-    fields: Record<string, string[]>
-    form: string[]
-  }
-}

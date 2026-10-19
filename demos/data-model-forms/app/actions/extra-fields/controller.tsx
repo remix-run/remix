@@ -6,12 +6,14 @@ import { routes } from '../../routes.ts'
 import { RegistrationPage } from './page.tsx'
 import { RegistrationForm } from './public/registration-form.ts'
 
-export default createController(routes.registration, {
+export default createController(routes['extra-fields'], {
   actions: {
     async index({ db, render }) {
       let storedAccounts = await db.findMany(accounts, { orderBy: ['displayName', 'asc'] })
 
-      return render(<RegistrationPage storedAccounts={storedAccounts} />)
+      return render(<RegistrationPage storedAccounts={storedAccounts} />, {
+        document: { title: 'Schema + extra fields | Form examples' },
+      })
     },
     async action({ db, formData, render }) {
       let submission = RegistrationForm.parse(formData)
@@ -21,7 +23,10 @@ export default createController(routes.registration, {
 
         return render(
           <RegistrationPage storedAccounts={storedAccounts} submission={submission} />,
-          { responseInit: { status: 400 } },
+          {
+            document: { title: 'Schema + extra fields | Form examples' },
+            responseInit: { status: 400 },
+          },
         )
       }
 
@@ -35,7 +40,7 @@ export default createController(routes.registration, {
         ...(website === undefined ? {} : { website }),
       })
 
-      return redirect(routes.registration.index.href(), 303)
+      return redirect(routes['extra-fields'].index.href(), 303)
     },
   },
 })

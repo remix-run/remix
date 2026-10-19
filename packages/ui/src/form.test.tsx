@@ -4,15 +4,219 @@ import { renderToString } from '@remix-run/component/server'
 import { render } from '@remix-run/component/test'
 import type { Handle } from '@remix-run/component'
 
-import { createFormMixins, form, onInputValidation } from './form.ts'
+import { createFieldMixins, createFormMixins, form, onInputValidation } from './form.ts'
 import type { InputValidationEvent } from './form.ts'
+
+type TestControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+
+describe('createFieldMixins', () => {
+  it('exposes independent live touched state and notifies on first blur, not valid edits', (t) => {
+    let changes = 0
+    let definition = {
+      getInputAttrs(name: string) {
+        return { name, defaultValue: 'Ada' }
+      },
+      getErrorAttrs(name: string) {
+        return { id: `${name}-error` }
+      },
+      getFieldErrors() {
+        return []
+      },
+      createInputValidator() {
+        return (_control: { setCustomValidity(message: string): void }) => {}
+      },
+    }
+    let first = createFieldMixins(definition, { name: 'first', onChange: () => changes++ })
+    let second = createFieldMixins(definition, { name: 'second' })
+    let { container, cleanup } = render(
+      <form>
+        <input mix={first.field()} />
+        <input mix={second.field()} />
+      </form>,
+    )
+    t.after(cleanup)
+    let control = container.querySelector('input')
+    if (!control) throw new Error('Missing input')
+    expect(first.touched).toBe(false)
+    control.value = 'Grace'
+    control.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(first.touched).toBe(false)
+    expect(changes).toBe(0)
+    control.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    expect(first.touched).toBe(true)
+    expect(first.errors).toEqual([])
+    expect(changes).toBe(1)
+    control.value = 'Ada'
+    control.dispatchEvent(new Event('input', { bubbles: true }))
+    control.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    expect(first.touched).toBe(true)
+    expect(changes).toBe(1)
+    expect(second.touched).toBe(false)
+    expect(Reflect.set(first, 'touched', false)).toBe(false)
+  })
+
+  it('supports select, textarea, checkbox, native invalid events, and reset', async (t) => {
+    let definition = {
+      getInputAttrs(name: string) {
+        return { name, required: true }
+      },
+      getErrorAttrs(name: string) {
+        return { id: `${name}-error` }
+      },
+      getFieldErrors() {
+        return []
+      },
+      createInputValidator() {
+        return (_control: { setCustomValidity(message: string): void }) => {}
+      },
+    }
+    let choice = createFieldMixins(definition, { name: 'choice' })
+    let bio = createFieldMixins(definition, { name: 'bio' })
+    let terms = createFieldMixins(definition, { name: 'terms' })
+    let { container, cleanup } = render(
+      <form>
+        <select mix={choice.field()}>
+          <option value="">Choose</option>
+          <option value="a">A</option>
+        </select>
+        <textarea mix={bio.field()} />
+        <input type="checkbox" mix={terms.field()} />
+      </form>,
+    )
+    t.after(cleanup)
+    let form = container.querySelector('form')
+    let select = container.querySelector('select')
+    let textarea = container.querySelector('textarea')
+    let checkbox = container.querySelector('input')
+    if (!form || !select || !textarea || !checkbox) throw new Error('Missing controls')
+    expect(form.checkValidity()).toBe(false)
+    expect(choice.touched).toBe(true)
+    expect(bio.touched).toBe(true)
+    expect(terms.touched).toBe(true)
+    expect(bio.errors.length).toBe(1)
+    select.value = 'a'
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+    textarea.value = 'Hello'
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    checkbox.checked = true
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }))
+    expect(choice.errors).toEqual([])
+    expect(bio.errors).toEqual([])
+    expect(terms.errors).toEqual([])
+    expect(form.checkValidity()).toBe(true)
+    form.reset()
+    await Promise.resolve()
+    expect(choice.touched).toBe(false)
+    expect(bio.touched).toBe(false)
+    expect(terms.touched).toBe(false)
+    expect(bio.errors).toEqual([])
+    expect(textarea.value).toBe('')
+  })
+
+  it('resets touched state for a new submission without notifying', (t) => {
+    type Submission = { value: string; errors: string[] }
+    let submission: Submission = { value: 'Ada', errors: ['Already registered'] }
+    let changes = 0
+    let field = createFieldMixins(
+      {
+        getInputAttrs(name: string, submission?: Submission) {
+          return { name, defaultValue: submission?.value }
+        },
+        getErrorAttrs(name: string) {
+          return { id: `${name}-error` }
+        },
+        getFieldErrors(_name: string, submission?: Submission) {
+          return submission?.errors ?? []
+        },
+        createInputValidator() {
+          return (_control: TestControl) => {}
+        },
+      },
+      { name: 'name', getSubmission: () => submission, onChange: () => changes++ },
+    )
+    let { container, root, cleanup } = render(<input mix={field.field()} />)
+    t.after(cleanup)
+    let input = container.querySelector('input')
+    if (!input) throw new Error('Missing input')
+    expect(field.errors).toEqual(['Already registered'])
+    expect(field.touched).toBe(false)
+    input.value = 'Grace'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(field.touched).toBe(true)
+    expect(field.errors).toEqual([])
+    input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    expect(changes).toBe(1)
+
+    submission = { value: 'Lin', errors: ['Try again'] }
+    expect(field.touched).toBe(false)
+    expect(field.errors).toEqual(['Try again'])
+    expect(changes).toBe(1)
+    root.render(<input mix={field.field()} />)
+    root.flush()
+    input.value = 'Other'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(field.touched).toBe(true)
+    expect(field.errors).toEqual([])
+    expect(changes).toBe(2)
+  })
+
+  it('keeps state after a canceled reset and preserves textarea defaults during SSR', async (t) => {
+    let field = createFieldMixins(
+      {
+        getInputAttrs(name: string) {
+          return { name, type: 'text', defaultValue: 'Original', required: true }
+        },
+        getErrorAttrs(name: string) {
+          return { id: `${name}-error` }
+        },
+        getFieldErrors() {
+          return []
+        },
+        createInputValidator() {
+          return (_control: TestControl) => {}
+        },
+      },
+      { name: 'bio' },
+    )
+    let html = await renderToString(<textarea mix={field.field()} />)
+    expect(html).toContain('>Original</textarea>')
+    expect(html).not.toContain('type=')
+    let selectHtml = await renderToString(
+      <select mix={field.field()}>
+        <option value="Original" selected>
+          Original
+        </option>
+      </select>,
+    )
+    expect(selectHtml).not.toContain('type=')
+    expect(selectHtml.toLowerCase()).not.toContain('defaultvalue=')
+    expect(selectHtml).toContain('selected')
+    let { container, cleanup } = render(
+      <form>
+        <textarea mix={field.field()} />
+      </form>,
+    )
+    t.after(cleanup)
+    let form = container.querySelector('form')
+    let textarea = container.querySelector('textarea')
+    if (!form || !textarea) throw new Error('Missing controls')
+    textarea.value = 'Edited'
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    textarea.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    form.addEventListener('reset', (event) => event.preventDefault())
+    form.reset()
+    await Promise.resolve()
+    expect(textarea.value).toBe('Edited')
+    expect(field.touched).toBe(true)
+  })
+})
 
 describe('form', () => {
   it('reads live server errors before inputs render and supplies an attribute-only error mixin', async () => {
     type Submission = { errors: string[] }
     let submission: Submission | undefined
     let changes = 0
-    let { input, error, errors } = createFormMixins(
+    let { input, error, errors, fields } = createFormMixins(
       {
         fields: { email: {} },
         getInputAttrs(_field: 'email') {
@@ -25,7 +229,7 @@ describe('form', () => {
           return failed?.errors ?? []
         },
         createInputValidator(_field: 'email') {
-          return (_input: HTMLInputElement) => {}
+          return (_input: TestControl) => {}
         },
       },
       {
@@ -36,6 +240,8 @@ describe('form', () => {
       },
     )
     expect(errors.email).toEqual([])
+    let emailState = fields.email
+    expect(emailState.touched).toBe(false)
 
     submission = { errors: ['Already registered'] }
     let html = await renderToString(
@@ -53,6 +259,8 @@ describe('form', () => {
 
     submission = { errors: ['Try another address'] }
     expect(errors.email).toEqual(['Try another address'])
+    expect(fields.email).toBe(emailState)
+    expect(emailState.errors).toBe(errors.email)
     submission = undefined
     expect(errors.email).toEqual([])
     expect(changes).toBe(0)
@@ -84,7 +292,7 @@ describe('form', () => {
             return []
           },
           createInputValidator(_field: 'username') {
-            return (input: HTMLInputElement) => {
+            return (input: TestControl) => {
               input.setCustomValidity(input.value.startsWith('@') ? '' : 'Start with @')
             }
           },
@@ -157,7 +365,7 @@ describe('form', () => {
         return []
       },
       createInputValidator(_field: 'name') {
-        return (_input: HTMLInputElement) => {}
+        return (_input: TestControl) => {}
       },
     }
     let changes = 0
@@ -203,7 +411,7 @@ describe('form', () => {
           }
         },
         createInputValidator(_field: 'name') {
-          return (_input: HTMLInputElement) => {}
+          return (_input: TestControl) => {}
         },
         getErrorAttrs(_field: 'name') {
           return { id: 'name-error' }
@@ -242,7 +450,7 @@ describe('form', () => {
         return { id: 'username', name: 'username', required: true }
       },
       createInputValidator(_field: 'username') {
-        return (input: HTMLInputElement) => {
+        return (input: TestControl) => {
           input.setCustomValidity(input.value.startsWith('@') ? '' : 'Start with @')
         }
       },
@@ -292,7 +500,7 @@ describe('form', () => {
         return []
       },
       createInputValidator(_field: 'username') {
-        return (input: HTMLInputElement) => {
+        return (input: TestControl) => {
           input.setCustomValidity(input.value.startsWith('@') ? '' : 'Start with @')
         }
       },
@@ -361,7 +569,7 @@ describe('form', () => {
           return failed?.errors ?? []
         },
         createInputValidator(_field: 'email') {
-          return (_input: HTMLInputElement) => {}
+          return (_input: TestControl) => {}
         },
       },
       { getSubmission: () => submission },
@@ -415,7 +623,7 @@ describe('form', () => {
         return []
       },
       createInputValidator(_field: 'email') {
-        return (input: HTMLInputElement) => {
+        return (input: TestControl) => {
           validations++
           input.setCustomValidity(input.value.endsWith('@example.com') ? '' : 'Use example.com')
         }
@@ -461,7 +669,7 @@ describe('form', () => {
         return []
       },
       createInputValidator(field: 'username' | 'terms') {
-        return (input: HTMLInputElement) => {
+        return (input: TestControl) => {
           input.setCustomValidity(
             field === 'username' && !input.value.startsWith('@') ? 'Start with @' : '',
           )
@@ -516,7 +724,7 @@ describe('form', () => {
             return failed?.errors ?? []
           },
           createInputValidator(_field: 'email') {
-            return (_input: HTMLInputElement) => {}
+            return (_input: TestControl) => {}
           },
         },
         {

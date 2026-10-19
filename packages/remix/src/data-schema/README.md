@@ -130,7 +130,8 @@ let Account = s.object({
   age: s.number().pipe(min(13), max(120)),
 })
 
-let ProfileForm = createForm(Account, {
+let ProfileForm = createForm({
+  schema: Account,
   fields: {
     email: { label: 'Email', type: 'email' },
     displayName: { label: 'Display name', type: 'text' },
@@ -141,7 +142,8 @@ let ProfileForm = createForm(Account, {
 **Partial inline:** reuse model fields and add request-only fields with their own schemas.
 
 ```ts
-let AccountForm = createForm(Account, {
+let AccountForm = createForm({
+  schema: Account,
   fields: {
     email: { label: 'Email', type: 'email' },
     displayName: { label: 'Display name', type: 'text' },
@@ -164,7 +166,8 @@ let Checkout = s.object({
   postalCode: Address.shape.postalCode,
 })
 
-let CheckoutForm = createForm(Checkout, {
+let CheckoutForm = createForm({
+  schema: Checkout,
   fields: {
     email: { label: 'Email', type: 'email' },
     postalCode: { label: 'Postal code', type: 'text' },
@@ -172,10 +175,10 @@ let CheckoutForm = createForm(Checkout, {
 })
 ```
 
-**Entirely inline:** pass an empty object schema and give every field its own schema. Fields absent from the model must supply a schema; model fields cannot override theirs.
+**Entirely inline:** omit `schema` and give every field its own schema. Fields absent from a backing schema must supply a schema; model fields cannot override theirs.
 
 ```ts
-let LoginForm = createForm(s.object({}), {
+let LoginForm = createForm({
   fields: {
     email: { label: 'Email', type: 'email', schema: s.string().pipe(email()) },
     password: {
@@ -188,6 +191,21 @@ let LoginForm = createForm(s.object({}), {
 ```
 
 All four variations use the same parsing and rendering APIs below. A form can collect values for multiple tables; the handler splits the parsed values and coordinates persistence.
+
+### Reusable fields
+
+`createField()` defines one field without form or browser state. It can parse independently or compose into a form:
+
+```ts
+import { createField } from 'remix/data-schema/form'
+
+let Email = createField({ schema: Account.shape.email, label: 'Email', type: 'email' })
+let result = Email.parse(await request.formData(), 'email')
+
+let ContactForm = createForm({ fields: { email: Email } })
+```
+
+`Email.required`, `getInputAttrs(name, submission?)`, `getLabelAttrs(name)`, `getErrorAttrs(name)`, and `createInputValidator(name?)` are available independently. The logical name is supplied when parsing or binding, so one definition can be reused under different names. Explicit `name` and `id` options override native attributes, not the logical keys in submission results. `createForm()` resolves each configured field through this same field layer and exposes the definitions through `Form.fields`.
 
 Server handlers receive a typed value or a serializable failure containing the submitted values and grouped errors. Password values are deliberately omitted from failed results so they are not copied into action data or server-rendered HTML.
 
@@ -243,7 +261,7 @@ function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
 }
 ```
 
-The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. Call `createFormMixins(AccountForm, { getSubmission, onChange })` once in component setup; its input mixins read the latest submission during rendering and apply generated native constraints during SSR. In the browser, they supplement native validation with synchronous schema issues through `setCustomValidity()` and own touched state and error accessibility. The stable `errors` object exposes current visible messages, while `error(field)` supplies their element ids and `onChange` requests rendering when client messages change. New submissions reset feedback automatically. Do not add `noValidate` unless the application intentionally opts out of native validation.
+The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. Call `createFormMixins(AccountForm, { getSubmission, onChange })` once in component setup; its control mixins apply native constraints during SSR and supplement native validation with synchronous schema issues through `setCustomValidity()`. Live `fields.email.errors/touched` properties expose feedback, while `error(field)` supplies the error-element id. `onChange` requests rendering when messages or touched state changes. `createFieldMixins(Email, { name, getSubmission, onChange })` supplies the same behavior independently for one input, select, or textarea. New submissions reset feedback automatically. Do not add `noValidate` unless intentionally opting out of native validation.
 
 The first release maps field-level `required`, `minLength`, `maxLength`, `min`, and `max` constraints to native attributes. Other synchronous field refinements can use `createInputValidator()` for client-side feedback and still run authoritatively during server parsing. Whole-object, cross-field, and asynchronous form rules are not part of the projection yet and should be applied in the server handler.
 

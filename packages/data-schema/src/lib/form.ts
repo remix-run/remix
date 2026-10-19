@@ -5,7 +5,6 @@ import type {
   ObjectSchema,
   ObjectShape,
   Schema,
-  SchemaConstraints,
 } from './schema.ts'
 import { getConstraints } from './schema.ts'
 
@@ -29,13 +28,17 @@ export interface FormFieldOptions {
 }
 
 /**
- * UI configuration and validation for a field that is not part of the model.
+ * UI configuration and validation for a reusable field.
  */
-export interface AncillaryFormFieldOptions<schema extends Schema<any, unknown>>
-  extends FormFieldOptions {
-  /** The authoritative schema for the ancillary value. */
+export interface FieldOptions<schema extends Schema<unknown, unknown>> extends FormFieldOptions {
+  /** The authoritative schema for the field value. */
   schema: schema
 }
+
+/** UI configuration and validation for a field absent from the backing model. */
+export interface AncillaryFormFieldOptions<
+  schema extends Schema<any, unknown>,
+> extends FieldOptions<schema> {}
 
 /**
  * Native attributes derived for a projected model field.
@@ -143,8 +146,8 @@ export interface ErrorAttributes {
 export interface InputValidationTarget {
   /** The input's current string value. */
   readonly value: string
-  /** Whether a checkbox input is currently checked. */
-  readonly checked: boolean
+  /** Whether a checkbox input is currently checked; absent for selects and textareas. */
+  readonly checked?: boolean
   /** Sets or clears the input's custom Constraint Validation API message. */
   setCustomValidity(message: string): void
 }
@@ -153,10 +156,9 @@ type AnyFormFieldOptions = FormFieldOptions | AncillaryFormFieldOptions<Schema<a
 
 type FormFields = Record<string, AnyFormFieldOptions>
 
-type ResolvedFormFields<fields extends FormFields> = {
-  readonly [field in keyof fields]: Omit<fields[field], 'required'> & {
-    readonly required: boolean
-  }
+type ResolvedFormFields<shape extends ObjectShape, fields extends FormFields> = {
+  readonly [field in keyof fields]: Omit<fields[field], 'required'> &
+    FieldDefinition<FormFieldSchema<shape, fields, field>, fields[field]['type']>
 }
 
 type ValidFormFields<shape extends ObjectShape, fields extends FormFields> = {
@@ -188,7 +190,7 @@ type FormValue<shape extends ObjectShape, fields extends FormFields> = {
  */
 export interface FormDefinition<shape extends ObjectShape, fields extends FormFields> {
   /** The field configuration in render order, including schema-derived requiredness. */
-  readonly fields: ResolvedFormFields<fields>
+  readonly fields: ResolvedFormFields<shape, fields>
   /**
    * Derives native attributes for one projected model field.
    *
@@ -247,11 +249,131 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
   parse(formData: FormData): FormParseResult<FormValue<shape, fields>>
 }
 
+/** A reusable schema-backed field, independent of any form or browser state. */
+export interface FieldDefinition<
+  schema extends Schema<unknown, unknown>,
+  type extends FormInputType,
+> extends FieldOptions<schema> {
+  /** The native input type and form-value decoder. */
+  readonly type: type
+  /** Whether the field requires a value. */
+  readonly required: boolean
+  /**
+   * Derives native control attributes and restores submitted values and errors.
+   * @param name Logical field name, used when no explicit name or id is configured.
+   * @param submission Failed submission to restore.
+   * @returns Native control attributes.
+   */
+  getInputAttrs(name: string, submission?: FormSubmission): InputAttributes<type>
+  /**
+   * Associates a label with this field.
+   * @param name Logical field name.
+   * @returns Label attributes.
+   */
+  getLabelAttrs(name: string): LabelAttributes
+  /**
+   * Identifies the application's error element.
+   * @param name Logical field name.
+   * @returns Error attributes.
+   */
+  getErrorAttrs(name: string): ErrorAttributes
+  /**
+   * Reads server validation messages.
+   * @param name Logical field name.
+   * @param submission Failed submission to read.
+   * @returns Visible server messages.
+   */
+  getFieldErrors(name: string, submission?: FormSubmission): ReadonlyArray<string>
+  /**
+   * Creates a synchronous validator using the native Constraint Validation API.
+   * @param name Logical field name used in validation issue paths (optional).
+   * @returns A validator for an input, select, or textarea.
+   */
+  createInputValidator(name?: string): (control: InputValidationTarget) => void
+  /**
+   * Decodes and validates this field from a form payload.
+   * @param formData Submitted payload.
+   * @param name Logical field name used for values and error paths.
+   * @returns A typed value or a serializable failed submission.
+   */
+  parse(formData: FormData, name: string): FormParseResult<InferOutput<schema>>
+}
+
 /**
- * Creates a UI form projection from selected fields in an object schema.
+ * Creates a reusable field definition with native constraints and server parsing.
+ * @param options The field's schema and UI metadata; names default when the field is bound.
+ * @returns A stateless field definition that can be used independently or composed into a form.
+ */
+export function createField<
+  schema extends Schema<unknown, unknown>,
+  const type extends FormInputType,
+>(options: FieldOptions<schema> & { type: type }): FieldDefinition<schema, type> {
+  let constraints = getConstraints(options.schema, { type: options.type })
+
+  return {
+    ...options,
+    required: constraints.required === true,
+    getInputAttrs(name, submission) {
+      let id = options.id ?? name
+      let attrs: InputAttributes<type> = {
+        id,
+        name: options.name ?? name,
+        type: options.type,
+        ...constraints,
+      }
+      let rawValue = submission?.values[name]
+      if (typeof rawValue === 'string') attrs.defaultValue = rawValue
+      else if (typeof rawValue === 'boolean') attrs.defaultChecked = rawValue
+      if (readFieldErrors(name, submission).length > 0) {
+        let errorId = getErrorId(id)
+        attrs['aria-invalid'] = 'true'
+        attrs['aria-describedby'] = errorId
+        attrs['data-form-error-id'] = errorId
+      }
+      return attrs
+    },
+    getLabelAttrs(name) {
+      return { htmlFor: options.id ?? name }
+    },
+    getErrorAttrs(name) {
+      return { id: getErrorId(options.id ?? name) }
+    },
+    getFieldErrors(name, submission) {
+      return readFieldErrors(name, submission)
+    },
+    createInputValidator(name) {
+      return (control) => {
+        let rawValue = options.type === 'checkbox' ? control.checked : control.value
+        let result = options.schema['~run'](decodeFormValue(rawValue, options.type), {
+          path: name === undefined ? [] : [name],
+        })
+        control.setCustomValidity(result.issues?.[0]?.message ?? '')
+      }
+    },
+    parse(formData, name) {
+      let rawValue = readRawFormValue(formData, options.name ?? name, options.type)
+      let result = options.schema['~run'](decodeFormValue(rawValue, options.type), { path: [name] })
+      if (result.issues) {
+        return {
+          success: false,
+          issues: result.issues,
+          values: rawValue !== undefined && options.type !== 'password' ? { [name]: rawValue } : {},
+          errors: groupFormErrors(result.issues, new Set([name])),
+        }
+      }
+      // The schema's validator produces its inferred output after successful validation.
+      return { success: true, value: result.value as InferOutput<schema> }
+    },
+  }
+}
+
+/**
+ * Creates a UI form from an optional object schema and configured fields.
  *
- * @param model The authoritative object schema.
- * @param options UI-only configuration for the fields included in this form.
+ * Fields inherit their schemas from `options.schema`. Fields absent from that schema must provide
+ * an inline schema; when `options.schema` is omitted, every field must provide one.
+ *
+ * @param options The optional backing schema and UI configuration for the included fields.
  * @returns A form definition that derives native attributes and validates `FormData`.
  * @example
  * ```ts
@@ -259,7 +381,8 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
  * import { createForm } from 'remix/data-schema/form'
  *
  * let User = s.object({ name: s.string(), age: s.number() })
- * let UserForm = createForm(User, {
+ * let UserForm = createForm({
+ *   schema: User,
  *   fields: {
  *     name: { label: 'Name', type: 'text' },
  *     age: { label: 'Age', type: 'number' },
@@ -272,76 +395,44 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
  * })
  * ```
  */
-export function createForm<shape extends ObjectShape, const fields extends FormFields>(
-  model: ObjectSchema<shape>,
-  options: { fields: fields & ValidFormFields<shape, fields> },
-): FormDefinition<shape, fields> {
+export function createForm<
+  const fields extends FormFields,
+  shape extends ObjectShape = Record<never, never>,
+>(options: {
+  schema?: ObjectSchema<shape>
+  fields: fields & ValidFormFields<NoInfer<shape>, fields>
+}): FormDefinition<shape, fields> {
+  let model = options.schema
   let configuredFields = options.fields
-  let fieldConstraints = new Map<string, SchemaConstraints>()
-  let resolvedFieldEntries: Array<[string, AnyFormFieldOptions & { readonly required: boolean }]> =
-    []
+  let resolvedFieldEntries: Array<
+    [string, FieldDefinition<Schema<unknown, unknown>, FormInputType>]
+  > = []
 
   for (let field of Object.keys(configuredFields)) {
     let fieldOptions = getFieldOptions(configuredFields, field)
     let schema = getFieldSchema(model, field, fieldOptions)
-    let constraints = getConstraints(schema, { type: fieldOptions.type })
-
-    fieldConstraints.set(field, constraints)
-    resolvedFieldEntries.push([field, { ...fieldOptions, required: constraints.required === true }])
+    resolvedFieldEntries.push([field, createField({ ...fieldOptions, schema })])
   }
 
-  let fields = Object.fromEntries(resolvedFieldEntries) as ResolvedFormFields<fields>
+  // Every configured field is resolved with its authoritative schema above.
+  let fields = Object.fromEntries(resolvedFieldEntries) as ResolvedFormFields<shape, fields>
 
   return {
     fields,
     getInputAttrs(field, submission) {
-      let fieldOptions = getFieldOptions(fields, field)
-      let id = fieldOptions.id ?? field
-      let attrs: InputAttributes<typeof fieldOptions.type> = {
-        id,
-        name: fieldOptions.name ?? field,
-        type: fieldOptions.type,
-      }
-
-      Object.assign(attrs, getFieldConstraints(fieldConstraints, field))
-
-      let rawValue = submission?.values[field]
-
-      if (typeof rawValue === 'string') {
-        attrs.defaultValue = rawValue
-      } else if (typeof rawValue === 'boolean') {
-        attrs.defaultChecked = rawValue
-      }
-
-      if (readFieldErrors(field, submission).length > 0) {
-        let errorId = getErrorId(id)
-        attrs['aria-invalid'] = 'true'
-        attrs['aria-describedby'] = errorId
-        attrs['data-form-error-id'] = errorId
-      }
-
-      return attrs
+      return getFieldOptions(fields, field).getInputAttrs(field, submission)
     },
     getLabelAttrs(field) {
-      return { htmlFor: getFieldId(fields, field) }
+      return getFieldOptions(fields, field).getLabelAttrs(field)
     },
     getErrorAttrs(field) {
-      return { id: getErrorId(getFieldId(fields, field)) }
+      return getFieldOptions(fields, field).getErrorAttrs(field)
     },
     getFieldErrors(field, submission) {
-      return readFieldErrors(field, submission)
+      return getFieldOptions(fields, field).getFieldErrors(field, submission)
     },
     createInputValidator(field) {
-      let fieldOptions = getFieldOptions(fields, field)
-      let schema = getFieldSchema(model, field, fieldOptions)
-
-      return (input) => {
-        let rawValue = fieldOptions.type === 'checkbox' ? input.checked : input.value
-        let value = decodeFormValue(rawValue, fieldOptions.type)
-        let result = schema['~run'](value, { path: [field] })
-
-        input.setCustomValidity(result.issues?.[0]?.message ?? '')
-      }
+      return getFieldOptions(fields, field).createInputValidator(field)
     },
     parse(formData) {
       let issues: Issue[] = []
@@ -350,7 +441,6 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
 
       for (let field of Object.keys(fields)) {
         let fieldOptions = getFieldOptions(fields, field)
-        let schema = getFieldSchema(model, field, fieldOptions)
         let fieldName = fieldOptions.name ?? field
         let rawValue = readRawFormValue(formData, fieldName, fieldOptions.type)
 
@@ -358,10 +448,8 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
           rawValueEntries.push([field, rawValue])
         }
 
-        let input = decodeFormValue(rawValue, fieldOptions.type)
-        let result = schema['~run'](input, { path: [field] })
-
-        if (result.issues) {
+        let result = fieldOptions.parse(formData, field)
+        if (!result.success) {
           issues.push(...result.issues)
         } else {
           valueEntries.push([field, result.value])
@@ -385,19 +473,6 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
   }
 }
 
-function getFieldConstraints(
-  constraints: ReadonlyMap<string, SchemaConstraints>,
-  field: string,
-): SchemaConstraints {
-  let fieldConstraints = constraints.get(field)
-
-  if (!fieldConstraints) {
-    throw new Error(`Unknown form field "${field}"`)
-  }
-
-  return fieldConstraints
-}
-
 function getFieldOptions<fields extends FormFields, field extends keyof fields & string>(
   fields: fields,
   field: field,
@@ -409,14 +484,6 @@ function getFieldOptions<fields extends FormFields, field extends keyof fields &
   return fields[field]
 }
 
-function getFieldId<fields extends FormFields>(
-  fields: fields,
-  field: keyof fields & string,
-): string {
-  let options = getFieldOptions(fields, field)
-  return options.id ?? field
-}
-
 function getErrorId(fieldId: string): string {
   return `${fieldId}-error`
 }
@@ -426,16 +493,14 @@ function readFieldErrors(field: string, submission?: FormSubmission): ReadonlyAr
 }
 
 function getFieldSchema<shape extends ObjectShape>(
-  model: ObjectSchema<shape>,
+  model: ObjectSchema<shape> | undefined,
   field: string,
   options: AnyFormFieldOptions,
 ): Schema<any, unknown> {
-  let schema: Schema<any, unknown> | undefined = Object.prototype.hasOwnProperty.call(
-    model.shape,
-    field,
-  )
-    ? model.shape[field]
-    : undefined
+  let schema =
+    model && Object.prototype.hasOwnProperty.call(model.shape, field)
+      ? model.shape[field]
+      : undefined
 
   if (schema) {
     if ('schema' in options) {
