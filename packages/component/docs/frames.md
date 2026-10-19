@@ -318,6 +318,18 @@ await navigate(`/products/shirt?variant=${variantId}`, { history: 'replace', rel
 
 Scroll position and focus stay where they are. Back and forward traversal to the entry reloads the top frame from its URL, so that URL must render the same page. If the update interrupts an unfinished frame navigation, Remix reloads the top frame instead so the content matches the URL.
 
+A component rendered by a navigation can run its queued tasks before that navigation finishes, so a URL update from one would fetch and render the page again. Await [`navigation.settled()`](#waiting-for-navigation-to-finish) first:
+
+```ts
+import { navigate, navigation } from 'remix/component'
+
+handle.queueTask(async () => {
+  await navigation.settled()
+  if (handle.signal.aborted) return
+  await navigate(`/products/shirt?variant=${variantId}`, { history: 'replace', reload: false })
+})
+```
+
 Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 
 To keep links/forms as a document navigations while still hydrating client entries and using explicit

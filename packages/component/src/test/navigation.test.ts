@@ -3000,6 +3000,7 @@ function startHeldNavigationListener() {
       getReload(index)[2](new Error('Frame reload failed'))
     },
     stop: () => controller.abort(),
+    reloadCount: () => requested,
     async cleanup() {
       holding = false
       for (let [, resolve] of reloads) resolve({ signal: new AbortController().signal })

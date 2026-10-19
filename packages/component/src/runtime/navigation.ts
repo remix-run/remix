@@ -156,7 +156,8 @@ export type NavigationOptions = {
    * fetching or rendering anything, leaving scroll position and focus untouched. `src`, `target`,
    * `resetScroll`, and `resetFocus` are ignored. Back and forward traversal to the new entry
    * reloads the top frame like any other entry. Without frame navigation, this falls back to
-   * document navigation like other `navigate()` calls. (default: `true`)
+   * document navigation like other `navigate()` calls. If a frame navigation is still loading,
+   * the top frame reloads instead, so await `navigation.settled()` first. (default: `true`)
    */
   reload?: boolean
 }
