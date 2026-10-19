@@ -44,7 +44,7 @@ export const AccountFields = clientEntry(
             </p>
           ) : null}
           <div mix={styles.field}>
-            <label {...DisplayName.getLabelAttrs('displayName')} mix={styles.label}>
+            <label mix={[displayName.label(), styles.label]}>
               {DisplayName.label}
               {DisplayName.required ? <span mix={styles.required}>Required</span> : null}
             </label>
@@ -59,7 +59,7 @@ export const AccountFields = clientEntry(
             {hydrated ? <small>Field state: touched {String(displayName.touched)}</small> : null}
           </div>
           <div mix={styles.field}>
-            <label {...Email.getLabelAttrs('email')} mix={styles.label}>
+            <label mix={[email.label(), styles.label]}>
               {Email.label}
               {Email.required ? <span mix={styles.required}>Required</span> : null}
             </label>

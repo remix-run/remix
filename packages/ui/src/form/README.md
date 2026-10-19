@@ -20,7 +20,7 @@ let email = createFieldMixins(Email, {
 
 return () => (
   <form method="post">
-    <label {...Email.getLabelAttrs('email')}>{Email.label}</label>
+    <label mix={email.label()}>{Email.label}</label>
     <input autoComplete="email" mix={email.field()} />
     {email.errors.length > 0 ? (
       <p role="alert" mix={email.error()}>
@@ -49,14 +49,14 @@ let Signup = createForm({
 })
 
 function SignupPage(handle: Handle<{ submission?: FormSubmission }>) {
-  let { form, field, error, fields } = createFormMixins(Signup, {
+  let { form, field, label, error, fields } = createFormMixins(Signup, {
     getSubmission: () => handle.props.submission,
     onChange: () => handle.update(),
   })
 
   return () => (
     <form method="post" mix={form()}>
-      <label {...Signup.getLabelAttrs('email')}>{Signup.fields.email.label}</label>
+      <label mix={label('email')}>{Signup.fields.email.label}</label>
       <input autoComplete="email" mix={field('email')} />
       {fields.email.errors.length > 0 ? (
         <p mix={error('email')} role="alert">
@@ -71,7 +71,7 @@ function SignupPage(handle: Handle<{ submission?: FormSubmission }>) {
 
 ## `createFormMixins(formDefinition, { getSubmission, onChange }?)`
 
-Create the binding once per component instance in setup. Its methods can be destructured: `form()` enhances unmanaged native controls, `field(name)` supplies each projected control's behavior, and `error(name)` supplies the generated error-element id. Each field uses the same binding machinery as `createFieldMixins()`. `input(name)` remains an alias for `field(name)`, and `errors.name` reads the same messages as `fields.name.errors`.
+Create the binding once per component instance in setup. Its methods can be destructured: `form()` enhances unmanaged native controls, `field(name)` supplies each projected control's behavior, `label(name)` associates its label, and `error(name)` supplies the generated error-element id. Each field uses the same binding machinery as `createFieldMixins()`. `input(name)` remains an alias for `field(name)`, and `errors.name` reads the same messages as `fields.name.errors`.
 
 The optional `getSubmission` getter reads the current server submission when rendering controls or reading state, including SSR. It is not a subscription: update component props or call `handle.update()` after changing a local submission. Return the same object until it changes; a new identity resets touched state and reads the new server messages without firing `onChange`.
 
@@ -102,6 +102,10 @@ Each input mixin:
 Apply the returned mixin to every projected input, including fields whose schemas map entirely to native constraints. This keeps native and custom validation on one rendering path.
 
 Use `type: 'text'` for string-valued select/textarea definitions; the mixin omits the input-only `type` attribute on these elements. Single-value native selects are supported. Applications own option markup, including `selected` attributes when restoring a server-rendered selection. Multi-select arrays and radio groups are not modeled by this scalar field API.
+
+## `label(field)`
+
+Apply this attribute-only mixin to a `<label>` to associate it with the field's configured id during SSR and client rendering. Standalone bindings provide `label()` without a field name. Label text, required markers, styles, and markup remain application-owned. Explicit `htmlFor` props override the generated association; configure a custom id in the field definition to keep the label and control linked automatically. The low-level `getLabelAttrs()` helper remains available for custom integrations.
 
 ## `error(field)`
 

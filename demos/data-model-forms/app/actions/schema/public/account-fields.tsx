@@ -10,7 +10,7 @@ import { routes } from '../../../routes.ts'
 export const AccountFields = clientEntry(
   import.meta.url,
   function AccountFields(handle: Handle<{ submission?: FormSubmission }>) {
-    let { form, field, error, fields } = createFormMixins(AccountForm, {
+    let { form, field, label, error, fields } = createFormMixins(AccountForm, {
       getSubmission: () => handle.props.submission,
       onChange: () => handle.update(),
     })
@@ -39,7 +39,7 @@ export const AccountFields = clientEntry(
           ) : null}
           <div mix={styles.fieldGrid}>
             <div mix={styles.field}>
-              <label {...AccountForm.getLabelAttrs('displayName')} mix={styles.label}>
+              <label mix={[label('displayName'), styles.label]}>
                 {AccountForm.fields.displayName.label}
                 {AccountForm.fields.displayName.required ? (
                   <span mix={styles.required}>Required</span>
@@ -58,7 +58,7 @@ export const AccountFields = clientEntry(
               ) : null}
             </div>
             <div mix={styles.field}>
-              <label {...AccountForm.getLabelAttrs('email')} mix={styles.label}>
+              <label mix={[label('email'), styles.label]}>
                 {AccountForm.fields.email.label}
                 {AccountForm.fields.email.required ? (
                   <span mix={styles.required}>Required</span>
@@ -74,7 +74,7 @@ export const AccountFields = clientEntry(
               </p>
             </div>
             <div mix={styles.field}>
-              <label {...AccountForm.getLabelAttrs('age')} mix={styles.label}>
+              <label mix={[label('age'), styles.label]}>
                 {AccountForm.fields.age.label}
                 <span mix={styles.optional}>
                   {AccountForm.fields.age.required ? 'Required' : 'Optional'}
@@ -86,7 +86,7 @@ export const AccountFields = clientEntry(
               </p>
             </div>
             <div mix={styles.field}>
-              <label {...AccountForm.getLabelAttrs('website')} mix={styles.label}>
+              <label mix={[label('website'), styles.label]}>
                 {AccountForm.fields.website.label}
                 <span mix={styles.optional}>
                   {AccountForm.fields.website.required ? 'Required' : 'Optional'}

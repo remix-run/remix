@@ -8,7 +8,7 @@ import { LoginForm } from '../../auth/login/login-form.ts'
 export const LoginFields = clientEntry(
   import.meta.url,
   function LoginFields(handle: Handle<{ formAction: string; submission?: LoginSubmission }>) {
-    let { form, field, error, fields } = createFormMixins(LoginForm, {
+    let { form, field, label, error, fields } = createFormMixins(LoginForm, {
       getSubmission: () => handle.props.submission,
       onChange: () => handle.update(),
     })
@@ -26,7 +26,7 @@ export const LoginFields = clientEntry(
 
           <form method="POST" action={formAction} mix={form()}>
             <div class="form-group">
-              <label {...LoginForm.getLabelAttrs('email')}>{LoginForm.fields.email.label}</label>
+              <label mix={label('email')}>{LoginForm.fields.email.label}</label>
               <input autoComplete="email" mix={field('email')} />
               {fields.email.errors.length > 0 ? (
                 <p mix={error('email')} role="alert">
@@ -36,9 +36,7 @@ export const LoginFields = clientEntry(
             </div>
 
             <div class="form-group">
-              <label {...LoginForm.getLabelAttrs('password')}>
-                {LoginForm.fields.password.label}
-              </label>
+              <label mix={label('password')}>{LoginForm.fields.password.label}</label>
               <input autoComplete="current-password" mix={field('password')} />
               {fields.password.errors.length > 0 ? (
                 <p mix={error('password')} role="alert">

@@ -28,6 +28,7 @@ interface FieldFeedback {
 interface FormDefinitionSource<fields extends Readonly<Record<string, unknown>>, submission> {
   readonly fields: fields
   getInputAttrs<field extends keyof fields & string>(field: field, submission?: submission): object
+  getLabelAttrs<field extends keyof fields & string>(field: field): { htmlFor: string }
   createInputValidator<field extends keyof fields & string>(field: field): FieldValidator
   getErrorAttrs<field extends keyof fields & string>(field: field): { id: string }
   getFieldErrors<field extends keyof fields & string>(
@@ -38,6 +39,7 @@ interface FormDefinitionSource<fields extends Readonly<Record<string, unknown>>,
 
 interface FieldDefinitionSource<submission> {
   getInputAttrs(name: string, submission?: submission): object
+  getLabelAttrs(name: string): { htmlFor: string }
   createInputValidator(name?: string): FieldValidator
   getErrorAttrs(name: string): { id: string }
   getFieldErrors(name: string, submission?: submission): ReadonlyArray<string>
@@ -58,6 +60,11 @@ export interface FieldMixins extends FieldState {
    * @returns A mixin for the native control.
    */
   field(): FieldMixin
+  /**
+   * Associates application-owned label markup with the native control.
+   * @returns An attribute-only label mixin.
+   */
+  label(): ReturnType<typeof attrs<HTMLLabelElement>>
   /**
    * Identifies application-owned error markup without choosing its content or role.
    * @returns An attribute-only error mixin.
@@ -104,6 +111,14 @@ export interface FormMixins<fields extends Readonly<Record<string, unknown>>> {
    * @returns A mixin for the field's native control.
    */
   field<field extends keyof fields & string>(field: field): FieldMixin
+  /**
+   * Associates application-owned label markup with the field's native control.
+   * @param field The projected field name.
+   * @returns An attribute-only label mixin.
+   */
+  label<field extends keyof fields & string>(
+    field: field,
+  ): ReturnType<typeof attrs<HTMLLabelElement>>
   /**
    * Applies the generated error-element id without controlling content, visibility, or role.
    *
@@ -320,7 +335,7 @@ export function form(): FormMixin {
  *
  * @param fieldDefinition Shared field attributes, validation, and server error readers.
  * @param options Logical name, submission getter, and optional render notification.
- * @returns Control and error mixins with live read-only state.
+ * @returns Control, label, and error mixins with live read-only state.
  */
 export function createFieldMixins<submission>(
   fieldDefinition: FieldDefinitionSource<submission>,
@@ -372,6 +387,9 @@ export function createFieldMixins<submission>(
         }
       })
     },
+    label() {
+      return attrs<HTMLLabelElement>(fieldDefinition.getLabelAttrs(options.name))
+    },
     error() {
       return attrs(fieldDefinition.getErrorAttrs(options.name))
     },
@@ -392,7 +410,7 @@ export function createFieldMixins<submission>(
  *
  * @param formDefinition Form definition that provides attributes, errors, and field validators.
  * @param options Current submission source and render notification (optional).
- * @returns Related form, input, and error mixin factories, plus live visible field errors.
+ * @returns Related form, control, label, and error mixin factories, plus live field state.
  */
 export function createFormMixins<fields extends Readonly<Record<string, unknown>>, submission>(
   formDefinition: FormDefinitionSource<fields, submission>,
@@ -413,6 +431,9 @@ export function createFormMixins<fields extends Readonly<Record<string, unknown>
           },
           createInputValidator() {
             return formDefinition.createInputValidator(field)
+          },
+          getLabelAttrs() {
+            return formDefinition.getLabelAttrs(field)
           },
           getErrorAttrs() {
             return formDefinition.getErrorAttrs(field)
@@ -446,6 +467,9 @@ export function createFormMixins<fields extends Readonly<Record<string, unknown>
     },
     field(field) {
       return getBinding(field).field()
+    },
+    label(field) {
+      return getBinding(field).label()
     },
     error(field) {
       return getBinding(field).error()

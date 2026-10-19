@@ -37,16 +37,14 @@ Without JavaScript, supported HTML constraints still apply and the server valida
 We chose `createFormMixins()` over separately wiring input attributes, validators, event listeners, client error maps, and submission resets. Within component setup:
 
 ```tsx
-let { form, input, error, errors } = createFormMixins(RegistrationForm, {
+let { form, input, label, error, errors } = createFormMixins(RegistrationForm, {
   getSubmission: () => handle.props.submission,
   onChange: () => handle.update(),
 })
 
 return () => (
   <form method="post" mix={form()}>
-    <label {...RegistrationForm.getLabelAttrs('email')}>
-      {RegistrationForm.fields.email.label}
-    </label>
+    <label mix={label('email')}>{RegistrationForm.fields.email.label}</label>
     <input mix={input('email')} />
     {errors.email.length > 0 ? (
       <p role="alert" mix={error('email')}>
@@ -63,7 +61,7 @@ Setup-scoped state preserves interaction flags and edited feedback across render
 
 Inputs validate while typing, but client errors become visible only after blur or a native invalid event. Server errors are visible immediately and remain until that field is edited. The mixin owns that state and its `aria-invalid` and `aria-describedby` wiring. Applications should not need their own parallel error maps or previous-submission tracking.
 
-We chose a stable live `errors` object instead of a per-field error getter. Read `errors.email` during rendering; destructuring a field's array in setup captures a snapshot. `error(field)` is an attribute-only mixin that supplies the generated error id. It keeps composition consistent with `form()` and `input()` without deciding content, visibility, styles, or announcement roles. Those remain application-owned. See the [UI form documentation][mixin-docs].
+We chose a stable live `errors` object instead of a per-field error getter. Read `errors.email` during rendering; destructuring a field's array in setup captures a snapshot. `label(field)` associates the label with the configured control id, and `error(field)` supplies the generated error id. Both are attribute-only mixins that keep composition consistent with `form()` and `input()` without deciding content, visibility, styles, or announcement roles. Those remain application-owned. See the [UI form documentation][mixin-docs].
 
 Low-level attribute helpers remain available for custom integrations, and `onInputValidation()` remains an optional event observer. The standalone `form()` mixin supports unmanaged native controls and skips inputs already managed by the binding. Higher-level `<Input field="..." />` components can build on these primitives; they are not required to adopt the behavior.
 

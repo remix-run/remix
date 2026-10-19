@@ -10,11 +10,64 @@ import type { InputValidationEvent } from './form.ts'
 type TestControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 
 describe('createFieldMixins', () => {
+  it('provides label mixins with custom ids during SSR and client rendering', async (t) => {
+    let changes = 0
+    let { field, label } = createFieldMixins(
+      {
+        getInputAttrs() {
+          return { id: 'contact-email', name: 'contact.email', type: 'email' }
+        },
+        getLabelAttrs() {
+          return { htmlFor: 'contact-email' }
+        },
+        getErrorAttrs() {
+          return { id: 'contact-email-error' }
+        },
+        getFieldErrors() {
+          return []
+        },
+        createInputValidator() {
+          return (_control: TestControl) => {}
+        },
+      },
+      { name: 'email', onChange: () => changes++ },
+    )
+    let markup = (
+      <>
+        <label mix={label()}>Email address</label>
+        <input mix={field()} />
+      </>
+    )
+    let html = await renderToString(markup)
+    expect(html).toContain('<label for="contact-email">Email address</label>')
+    expect(html).toContain('id="contact-email"')
+    let { container, cleanup } = render(markup)
+    t.after(cleanup)
+    let labelElement = container.querySelector('label')
+    let input = container.querySelector('input')
+    if (!labelElement || !input) throw new Error('Missing label or input')
+    expect(labelElement.control).toBe(input)
+    expect(changes).toBe(0)
+
+    let overridden = await renderToString(
+      <label htmlFor="other-control" title="Application title" mix={label()}>
+        Application label
+      </label>,
+    )
+    expect(overridden).toContain('for="other-control"')
+    expect(overridden).toContain('title="Application title"')
+    expect(overridden).toContain('Application label')
+    expect(overridden).not.toContain('role=')
+  })
+
   it('exposes independent live touched state and notifies on first blur, not valid edits', (t) => {
     let changes = 0
     let definition = {
       getInputAttrs(name: string) {
         return { name, defaultValue: 'Ada' }
+      },
+      getLabelAttrs(name: string) {
+        return { htmlFor: name }
       },
       getErrorAttrs(name: string) {
         return { id: `${name}-error` }
@@ -59,6 +112,9 @@ describe('createFieldMixins', () => {
     let definition = {
       getInputAttrs(name: string) {
         return { name, required: true }
+      },
+      getLabelAttrs(name: string) {
+        return { htmlFor: name }
       },
       getErrorAttrs(name: string) {
         return { id: `${name}-error` }
@@ -122,6 +178,9 @@ describe('createFieldMixins', () => {
         getInputAttrs(name: string, submission?: Submission) {
           return { name, defaultValue: submission?.value }
         },
+        getLabelAttrs(name: string) {
+          return { htmlFor: name }
+        },
         getErrorAttrs(name: string) {
           return { id: `${name}-error` }
         },
@@ -165,6 +224,9 @@ describe('createFieldMixins', () => {
       {
         getInputAttrs(name: string) {
           return { name, type: 'text', defaultValue: 'Original', required: true }
+        },
+        getLabelAttrs(name: string) {
+          return { htmlFor: name }
         },
         getErrorAttrs(name: string) {
           return { id: `${name}-error` }
@@ -212,6 +274,50 @@ describe('createFieldMixins', () => {
 })
 
 describe('form', () => {
+  it('provides field-specific label mixins that can be destructured', async (t) => {
+    let { field, label } = createFormMixins({
+      fields: { email: {}, password: {} },
+      getInputAttrs(name: 'email' | 'password') {
+        return { id: `signup-${name}`, name }
+      },
+      getLabelAttrs(name: 'email' | 'password') {
+        return { htmlFor: `signup-${name}` }
+      },
+      getErrorAttrs(name: 'email' | 'password') {
+        return { id: `signup-${name}-error` }
+      },
+      getFieldErrors() {
+        return []
+      },
+      createInputValidator() {
+        return (_control: TestControl) => {}
+      },
+    })
+    let markup = (
+      <>
+        <label mix={label('email')}>Email</label>
+        <input mix={field('email')} />
+        <label mix={label('password')}>Password</label>
+        <input mix={field('password')} />
+      </>
+    )
+    let html = await renderToString(markup)
+    expect(html).toContain('<label for="signup-email">Email</label>')
+    expect(html).toContain('<label for="signup-password">Password</label>')
+    let { container, cleanup } = render(markup)
+    t.after(cleanup)
+    let labels = container.querySelectorAll('label')
+    let inputs = container.querySelectorAll('input')
+    expect(labels[0].control).toBe(inputs[0])
+    expect(labels[1].control).toBe(inputs[1])
+    let overridden = await renderToString(
+      <label htmlFor="other-control" mix={label('email')}>
+        Other
+      </label>,
+    )
+    expect(overridden).toContain('for="other-control"')
+  })
+
   it('reads live server errors before inputs render and supplies an attribute-only error mixin', async () => {
     type Submission = { errors: string[] }
     let submission: Submission | undefined
@@ -221,6 +327,9 @@ describe('form', () => {
         fields: { email: {} },
         getInputAttrs(_field: 'email') {
           return { name: 'email', type: 'email' }
+        },
+        getLabelAttrs(_field: 'email') {
+          return { htmlFor: 'email' }
         },
         getErrorAttrs(_field: 'email') {
           return { id: 'email-error' }
@@ -284,6 +393,9 @@ describe('form', () => {
           fields: { username: {} },
           getInputAttrs(_field: 'username') {
             return { name: 'username', required: true }
+          },
+          getLabelAttrs(_field: 'username') {
+            return { htmlFor: 'username' }
           },
           getErrorAttrs(_field: 'username') {
             return { id: 'username-error' }
@@ -358,6 +470,9 @@ describe('form', () => {
       getInputAttrs(_field: 'name') {
         return { name: 'name', required: true }
       },
+      getLabelAttrs(_field: 'name') {
+        return { htmlFor: 'name' }
+      },
       getErrorAttrs(_field: 'name') {
         return { id: 'name-error' }
       },
@@ -413,6 +528,9 @@ describe('form', () => {
         createInputValidator(_field: 'name') {
           return (_input: TestControl) => {}
         },
+        getLabelAttrs(_field: 'name') {
+          return { htmlFor: 'name' }
+        },
         getErrorAttrs(_field: 'name') {
           return { id: 'name-error' }
         },
@@ -454,6 +572,9 @@ describe('form', () => {
           input.setCustomValidity(input.value.startsWith('@') ? '' : 'Start with @')
         }
       },
+      getLabelAttrs(_field: 'username') {
+        return { htmlFor: 'username' }
+      },
       getErrorAttrs(_field: 'username') {
         return { id: 'username-error' }
       },
@@ -492,6 +613,9 @@ describe('form', () => {
       fields: { username: {} },
       getInputAttrs(_field: 'username') {
         return { id: 'username', name: 'username', required: true }
+      },
+      getLabelAttrs(_field: 'username') {
+        return { htmlFor: 'username' }
       },
       getErrorAttrs(_field: 'username') {
         return { id: 'username-error' }
@@ -562,6 +686,9 @@ describe('form', () => {
             'data-form-error-id': failed ? 'email-error' : undefined,
           }
         },
+        getLabelAttrs(_field: 'email') {
+          return { htmlFor: 'email' }
+        },
         getErrorAttrs(_field: 'email') {
           return { id: 'email-error' }
         },
@@ -616,6 +743,9 @@ describe('form', () => {
       getInputAttrs(_field: 'email') {
         return { name: 'email', type: 'email', required: true }
       },
+      getLabelAttrs(_field: 'email') {
+        return { htmlFor: 'email' }
+      },
       getErrorAttrs(_field: 'email') {
         return { id: 'email-error' }
       },
@@ -661,6 +791,9 @@ describe('form', () => {
         return field === 'username'
           ? { id: field, name: field, defaultValue: 'ada' }
           : { id: field, name: field, type: 'checkbox', required: true }
+      },
+      getLabelAttrs(field: 'username' | 'terms') {
+        return { htmlFor: field }
       },
       getErrorAttrs(field: 'username' | 'terms') {
         return { id: `${field}-error` }
@@ -716,6 +849,9 @@ describe('form', () => {
           fields: { email: {} },
           getInputAttrs(_field: 'email', failed?: Submission) {
             return { name: 'email', 'aria-describedby': failed ? 'email-error' : undefined }
+          },
+          getLabelAttrs(_field: 'email') {
+            return { htmlFor: 'email' }
           },
           getErrorAttrs(_field: 'email') {
             return { id: 'email-error' }

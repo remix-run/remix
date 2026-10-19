@@ -227,14 +227,14 @@ import type { Handle } from 'remix/component'
 import { createFormMixins } from '@remix-run/ui/form'
 
 function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
-  let { form, input, error, errors } = createFormMixins(AccountForm, {
+  let { form, input, label, error, errors } = createFormMixins(AccountForm, {
     getSubmission: () => handle.props.submission,
     onChange: () => handle.update(),
   })
 
   return () => (
     <form method="post" mix={form()}>
-      <label {...AccountForm.getLabelAttrs('email')}>
+      <label mix={label('email')}>
         {AccountForm.fields.email.label}
         {AccountForm.fields.email.required ? <span>Required</span> : null}
       </label>
@@ -261,7 +261,7 @@ function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
 }
 ```
 
-The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. Call `createFormMixins(AccountForm, { getSubmission, onChange })` once in component setup; its control mixins apply native constraints during SSR and supplement native validation with synchronous schema issues through `setCustomValidity()`. Live `fields.email.errors/touched` properties expose feedback, while `error(field)` supplies the error-element id. `onChange` requests rendering when messages or touched state changes. `createFieldMixins(Email, { name, getSubmission, onChange })` supplies the same behavior independently for one input, select, or textarea. New submissions reset feedback automatically. Do not add `noValidate` unless intentionally opting out of native validation.
+The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. Call `createFormMixins(AccountForm, { getSubmission, onChange })` once in component setup; its control mixins apply native constraints during SSR and supplement native validation with synchronous schema issues through `setCustomValidity()`. Live `fields.email.errors/touched` properties expose feedback, while `label(field)` associates the label and `error(field)` supplies the error-element id. `onChange` requests rendering when messages or touched state changes. `createFieldMixins(Email, { name, getSubmission, onChange })` supplies the same behavior independently for one input, select, or textarea. New submissions reset feedback automatically. Do not add `noValidate` unless intentionally opting out of native validation.
 
 The first release maps field-level `required`, `minLength`, `maxLength`, `min`, and `max` constraints to native attributes. Other synchronous field refinements can use `createInputValidator()` for client-side feedback and still run authoritatively during server parsing. Whole-object, cross-field, and asynchronous form rules are not part of the projection yet and should be applied in the server handler.
 

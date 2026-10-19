@@ -10,7 +10,7 @@ import { routes } from '../../../routes.ts'
 export const RegistrationFields = clientEntry(
   import.meta.url,
   function RegistrationFields(handle: Handle<{ submission?: FormSubmission }>) {
-    let { form, field, error, fields } = createFormMixins(RegistrationForm, {
+    let { form, field, label, error, fields } = createFormMixins(RegistrationForm, {
       getSubmission: () => handle.props.submission,
       onChange: () => handle.update(),
     })
@@ -49,7 +49,7 @@ export const RegistrationFields = clientEntry(
           >
             <div mix={styles.fieldGrid}>
               <div mix={styles.field}>
-                <label {...RegistrationForm.getLabelAttrs('displayName')} mix={styles.label}>
+                <label mix={[label('displayName'), styles.label]}>
                   {RegistrationForm.fields.displayName.label}
                   {RegistrationForm.fields.displayName.required ? (
                     <span mix={styles.required}>Required</span>
@@ -71,7 +71,7 @@ export const RegistrationFields = clientEntry(
               </div>
 
               <div mix={styles.field}>
-                <label {...RegistrationForm.getLabelAttrs('email')} mix={styles.label}>
+                <label mix={[label('email'), styles.label]}>
                   {RegistrationForm.fields.email.label}
                   {RegistrationForm.fields.email.required ? (
                     <span mix={styles.required}>Required</span>
@@ -90,7 +90,7 @@ export const RegistrationFields = clientEntry(
               </div>
 
               <div mix={styles.field}>
-                <label {...RegistrationForm.getLabelAttrs('age')} mix={styles.label}>
+                <label mix={[label('age'), styles.label]}>
                   {RegistrationForm.fields.age.label}
                   {RegistrationForm.fields.age.required ? (
                     <span mix={styles.required}>Required</span>
@@ -105,7 +105,7 @@ export const RegistrationFields = clientEntry(
               </div>
 
               <div mix={styles.field}>
-                <label {...RegistrationForm.getLabelAttrs('website')} mix={styles.label}>
+                <label mix={[label('website'), styles.label]}>
                   {RegistrationForm.fields.website.label}
                   {RegistrationForm.fields.website.required ? (
                     <span mix={styles.required}>Required</span>
@@ -125,7 +125,7 @@ export const RegistrationFields = clientEntry(
             </div>
 
             <div mix={styles.field}>
-              <label {...RegistrationForm.getLabelAttrs('password')} mix={styles.label}>
+              <label mix={[label('password'), styles.label]}>
                 {RegistrationForm.fields.password.label}
                 {RegistrationForm.fields.password.required ? (
                   <span mix={styles.required}>Required</span>
@@ -145,7 +145,7 @@ export const RegistrationFields = clientEntry(
 
             <div mix={styles.checkboxField}>
               <input mix={[field('terms'), styles.checkbox]} />
-              <label {...RegistrationForm.getLabelAttrs('terms')} mix={styles.checkboxLabel}>
+              <label mix={[label('terms'), styles.checkboxLabel]}>
                 {RegistrationForm.fields.terms.label}
                 {RegistrationForm.fields.terms.required ? (
                   <span mix={styles.required}> Required</span>

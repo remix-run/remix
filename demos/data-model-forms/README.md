@@ -58,7 +58,7 @@ let email = createFieldMixins(Email, {
 })
 ```
 
-The UI uses `email.field()`, `email.error()`, `email.errors`, and `email.touched`. The ordinary native `<form>` needs no form binding. Its handler calls `DisplayName.parse(formData, 'displayName')` and `Email.parse(formData, 'email')`, and explicitly combines failed values and errors. Both field schemas are also used by the persisted account schema.
+The UI uses `email.field()`, `email.label()`, `email.error()`, `email.errors`, and `email.touched`. The ordinary native `<form>` needs no form binding. Its handler calls `DisplayName.parse(formData, 'displayName')` and `Email.parse(formData, 'email')`, and explicitly combines failed values and errors. Both field schemas are also used by the persisted account schema.
 
 ### Schema plus extra fields
 
