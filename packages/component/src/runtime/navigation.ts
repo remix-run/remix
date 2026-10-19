@@ -183,8 +183,8 @@ export const navigation = {
    * starts while waiting, this waits for that one too.
    *
    * Components rendered by a navigation can run their queued tasks before the navigation
-   * finishes. Changing the URL from one of those tasks, even with `navigate()`, cancels the
-   * navigation before it resets scroll and focus, so wait for this first.
+   * finishes. Changing the URL from one of those tasks interrupts the navigation before it resets
+   * scroll and focus, so wait for this first.
    *
    * @returns A promise that resolves once no navigation is in progress. It resolves right away when
    * nothing is navigating or the Navigation API is unavailable, and it never rejects.

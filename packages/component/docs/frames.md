@@ -400,7 +400,7 @@ A newer reload cancels earlier client work for that frame, including pending req
 
 ## Waiting for navigation to finish
 
-Components rendered by a navigation can run their queued tasks before that navigation finishes, while Remix is still waiting for blocking frames or following a redirect, and before it resets or restores scroll and focus. A task that scrolls there is undone by the navigation's scroll reset, and a task that changes the URL cancels the navigation before it resets scroll.
+Components rendered by a navigation can run their queued tasks before that navigation finishes, while Remix is still waiting for blocking frames or following a redirect, and before it resets or restores scroll and focus. A task that scrolls there is undone by the navigation's scroll reset, and a task that changes the URL interrupts the navigation before it resets scroll.
 
 Wait for `navigation.settled()` before doing that work:
 
