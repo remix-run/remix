@@ -82,9 +82,22 @@ function stubWindowScrollPosition(t: TestContext) {
   }
 }
 
+function stubAnimationFrames(t: TestContext) {
+  let callbacks: FrameRequestCallback[] = []
+  t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+    callbacks.push(callback)
+    return callbacks.length
+  })
+  return {
+    pending: () => callbacks.length,
+    next: () => callbacks.shift()?.(0),
+  }
+}
+
 type StubNavigationTransition = {
   runHandler(): Promise<void>
   succeed(): Promise<void>
+  fail(): Promise<void>
 }
 
 function startStubNavigationListener(
@@ -107,7 +120,7 @@ function startStubNavigationListener(
     let intercept = Reflect.get(event, 'intercept')
     if (typeof intercept !== 'function') throw new Error('Expected an intercept method')
 
-    let [finished, resolveFinished] = withResolvers<void>()
+    let [finished, resolveFinished, rejectFinished] = withResolvers<void>()
     let transition = { finished } as NavigationTransition
     let interceptOptions: NavigationInterceptOptions | undefined
     Reflect.set(event, 'intercept', (options?: NavigationInterceptOptions) => {
@@ -128,6 +141,12 @@ function startStubNavigationListener(
       async succeed() {
         resolveFinished()
         await finished
+        await Promise.resolve()
+        clearTransition()
+      },
+      async fail() {
+        rejectFinished(new Error('Navigation failed'))
+        await finished.catch(() => {})
         await Promise.resolve()
         clearTransition()
       },
@@ -435,11 +454,7 @@ describe('navigate', () => {
 
   it('suppresses Chromium scroll anchoring until after a push navigation paints', async (t) => {
     stubNavigatorUserAgent(t, 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36')
-    let animationFrameCallbacks: FrameRequestCallback[] = []
-    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
-      animationFrameCallbacks.push(callback)
-      return animationFrameCallbacks.length
-    })
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -469,13 +484,13 @@ describe('navigate', () => {
     await transition.runHandler()
     await transition.succeed()
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
-    expect(animationFrameCallbacks).toHaveLength(1)
+    expect(animationFrames.pending()).toBe(1)
 
-    animationFrameCallbacks.shift()?.(0)
+    animationFrames.next()
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
-    expect(animationFrameCallbacks).toHaveLength(1)
+    expect(animationFrames.pending()).toBe(1)
 
-    animationFrameCallbacks.shift()?.(0)
+    animationFrames.next()
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
   })
 
@@ -802,11 +817,6 @@ describe('navigate', () => {
   })
 
   it('ignores manual scroll and focus settings on traverse navigations', async (t) => {
-    let animationFrameCallbacks: FrameRequestCallback[] = []
-    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
-      animationFrameCallbacks.push(callback)
-      return animationFrameCallbacks.length
-    })
     let dispatchNavigation = startStubNavigationListener(t)
     let event = createTraverseNavigateEvent({
       target: undefined,
@@ -822,9 +832,6 @@ describe('navigate', () => {
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
     await transition.runHandler()
     await transition.succeed()
-    animationFrameCallbacks.shift()?.(0)
-    animationFrameCallbacks.shift()?.(0)
-    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -974,11 +981,7 @@ describe('navigate', () => {
       },
     })
 
-    let animationFrameCallbacks: FrameRequestCallback[] = []
-    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
-      animationFrameCallbacks.push(callback)
-      return animationFrameCallbacks.length
-    })
+    let animationFrames = stubAnimationFrames(t)
     let scroll = mock.fn()
     let intercept = mock.fn()
     let eventController = new AbortController()
@@ -1004,6 +1007,7 @@ describe('navigate', () => {
     let adoptedStyleSheetCount = document.adoptedStyleSheets.length
     let startingDocumentHeight = document.documentElement.scrollHeight
     let startingViewportHeight = document.documentElement.clientHeight
+    let startingMinHeight = getComputedStyle(document.documentElement).minHeight
     try {
       navigateListener?.(event)
       let interceptOptions = intercept.mock.calls[0]?.arguments[0]
@@ -1047,24 +1051,40 @@ describe('navigate', () => {
       await transitionFinished
       await Promise.resolve()
       // Scroll anchoring stays disabled while the page shrinks back to its own height.
-      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
-      expect(document.adoptedStyleSheets[adoptedStyleSheetCount]).toBe(stylesheet)
-      let settledRule = stylesheet?.cssRules[0]
-      if (!(settledRule instanceof CSSStyleRule)) throw new Error('Expected scroll anchoring rule')
-      expect(settledRule.selectorText).toBe('html, body')
-      expect(settledRule.style.minHeight).toBe('')
-      expect(settledRule.style.overflowAnchor).toBe('none')
-      expect(settledRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
-      expect(stylesheet?.cssRules).toHaveLength(1)
+      expect(getComputedStyle(document.documentElement).minHeight).toBe(startingMinHeight)
+      expect(getComputedStyle(document.documentElement).overflowAnchor).toBe('none')
+      expect(getComputedStyle(document.body).overflowAnchor).toBe('none')
 
-      animationFrameCallbacks.shift()?.(0)
+      animationFrames.next()
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
-      animationFrameCallbacks.shift()?.(0)
+      animationFrames.next()
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
     } finally {
       eventController.abort()
       controller.abort()
     }
+  })
+
+  it('removes traversal scroll styles as soon as the navigation fails', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
+
+    let transition = dispatchNavigation(
+      createTraverseNavigateEvent({
+        target: undefined,
+        src: '/previous',
+        resetScroll: true,
+        $rmx: true,
+      }),
+    )
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+
+    await transition.runHandler()
+    await transition.fail()
+
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
+    expect(animationFrames.pending()).toBe(0)
   })
 
   it('does not intercept anchors marked for document navigation', (t) => {
