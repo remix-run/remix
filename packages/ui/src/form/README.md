@@ -84,9 +84,95 @@ Standalone bindings expose these properties directly; form bindings expose them 
 
 Server errors are visible immediately, even while `touched` is false. Once true, `touched` stays true until a reset or new submission.
 
-The objects are stable and read-only. Read properties during rendering; destructuring a boolean or message array in setup captures a snapshot. `onChange` requests a render when messages or touched state change, including the first blur of a valid field. It does not fire for edits or blurs that leave both unchanged. Without it, validation and ARIA still update, but application-owned UI needs another render trigger.
+The objects are stable and their state properties are read-only. Read properties during rendering; destructuring a boolean or message array in setup captures a snapshot. `onChange` requests a render when messages or touched state change, including the first blur of a valid field. It does not fire for edits or blurs that leave both unchanged. Without it, validation and ARIA still update, but application-owned UI needs another render trigger.
 
 A non-canceled native form reset clears touched state and displayed errors. Programmatic value changes require an `input` or `change` event to refresh validation.
+
+## `setCustomErrors(messages)`
+
+Use `fields.username.setCustomErrors(messages)` on a form binding, or `username.setCustomErrors(messages)` on a standalone field binding, to supply application-owned validation messages. Pass `[]` to clear them; empty strings are ignored. The binding copies the array, so later edits to the caller's array do not change the messages.
+
+For a mounted control, setting errors synchronously updates native validity and error accessibility, then emits `onInputValidation` with the final feedback. `onChange` requests a render if visible errors change. Setting errors does not mark the field touched: messages block native submission immediately but appear in `errors` only after blur or a native `invalid` event. Existing server errors remain visible until editing. Native/schema errors come first, with custom messages appended; clearing custom messages never clears native/schema errors.
+
+Messages belong to the control's current value (including checkbox checked state). They survive blur, same-value input/change events, schema revalidation, and ordinary renders. A changed value, non-canceled reset, or new server submission clears them. Starting another application-owned check does not clear them. Before mounting, messages are stored and associated with the first mounted value.
+
+### Custom async validation
+
+An availability check can use ordinary event mixins. In component setup, bind a form definition that includes a `username` field:
+
+```tsx
+import { on } from 'remix/component'
+import { createFormMixins } from '@remix-run/ui/form'
+
+// In component setup; SignupForm includes a username field.
+let { form, field, label, error, fields } = createFormMixins(SignupForm, {
+  getSubmission: () => handle.props.submission,
+  onChange: () => handle.update(),
+})
+let resetVersion = 0
+
+return () => (
+  <form
+    method="post"
+    mix={[
+      form(),
+      on('reset', () => {
+        resetVersion++
+      }),
+    ]}
+  >
+    <label mix={label('username')}>Username</label>
+    <input
+      autoComplete="username"
+      mix={[
+        field('username'),
+        on('input', async (event, signal) => {
+          let control = event.currentTarget
+          let username = control.value
+          let submission = handle.props.submission
+          let version = resetVersion
+          let isCurrent = () =>
+            !signal.aborted &&
+            control.value === username &&
+            handle.props.submission === submission &&
+            resetVersion === version
+
+          if (!username) return
+
+          try {
+            let response = await fetch(
+              `/username-available?username=${encodeURIComponent(username)}`,
+              { signal },
+            )
+            if (!response.ok) throw new Error('Availability check failed')
+            let available: unknown = await response.json()
+            if (typeof available !== 'boolean') throw new Error('Invalid availability response')
+            if (!isCurrent()) return
+
+            fields.username.setCustomErrors(
+              available ? [] : ['This username is already registered'],
+            )
+          } catch (error) {
+            if (isCurrent()) console.error('Could not check username availability', error)
+          }
+        }),
+      ]}
+    />
+    {fields.username.errors.length > 0 ? (
+      <p mix={error('username')} role="alert">
+        {fields.username.errors.join(' ')}
+      </p>
+    ) : null}
+    <button type="submit">Register</button>
+  </form>
+)
+```
+
+The example endpoint returns a JSON boolean. `on()` aborts its signal when another input event arrives or the control is removed. The extra guards discard results after a value change, reset attempt, or new server submission, even if the request ignores cancellation. Do not clear custom errors merely to start another check of the same value; replace them when its result arrives.
+
+Debouncing, caching, pending indicators, and request-failure UI remain application-owned. A failed lookup is not evidence of an invalid username, so report it separately rather than calling `setCustomErrors()` with a network error. The example logs failures; an application can show a separate status message instead. Keep requests and setters out of render functions.
+
+Pending work does not delay submission. Completed custom errors block ordinary native submission. The server must repeat business checks and enforce uniqueness when saving, since availability can change after a successful check. Without JavaScript, the submission handler remains the validation path.
 
 ## Control behavior
 

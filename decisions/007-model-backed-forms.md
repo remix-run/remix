@@ -32,6 +32,12 @@ The input mixin emits those attributes during SSR. In the browser it clears stal
 
 Without JavaScript, supported HTML constraints still apply and the server validates every configured field. Failed responses restore submitted text and checkbox values and render server errors; password values are deliberately omitted. Non-native rules may require a server round trip. We chose functional parity, not identical timing or presentation. Browser checks never replace server validation.
 
+## Application-owned checks supply supplemental errors
+
+`fields.name.setCustomErrors(messages)` bridges application-owned checks into the existing field behavior. Standalone bindings expose the same method. These messages live separately from schema errors, belong to the current control value, and survive synchronous revalidation. Native/schema errors remain primary. Setting messages updates native validity immediately but does not mark the field touched; visible feedback and error accessibility follow the existing rules. Value changes, non-canceled resets, and new server submissions clear supplemental messages.
+
+We chose this bridge over a `validations` callback API that would own asynchronous checks, debounce timing, cancellation, and pending/failure state. Applications can compose `on()` and their preferred request tools without duplicating field validation or error accessibility. They are responsible for rejecting stale results after typing, reset, or submission changes and for presenting request failures separately from invalid values. Pending work does not implicitly delay submission. Server business checks and database uniqueness remain authoritative.
+
 ## One setup-scoped binding owns feedback, not markup
 
 We chose `createFormMixins()` over separately wiring input attributes, validators, event listeners, client error maps, and submission resets. Within component setup:
@@ -78,7 +84,7 @@ We chose one options object with an optional `schema` so model-backed and entire
 ## When to revisit
 
 1. Add object-level validation when concrete workflows justify a dependency or missing-value policy. Any automatic support should be explicit opt-in and preserve existing field-only behavior.
-2. Add asynchronous client validation when cancellation, stale results, and submission timing have a defined contract. The current synchronous mixin does not provide those guarantees.
+2. Add asynchronous orchestration only if application-owned checks plus `setCustomErrors()` prove insufficient. The mixins do not currently own cancellation, stale-result protection, or waiting for checks before submission.
 3. Add higher-level field components when repeated application markup establishes useful defaults without constraining custom DOM structure.
 
 [form-docs]: ../packages/data-schema/README.md#model-backed-forms

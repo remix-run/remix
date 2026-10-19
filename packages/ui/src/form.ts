@@ -23,6 +23,9 @@ interface FieldFeedback {
   touched: boolean
   hasServerErrors: boolean
   errors: ReadonlyArray<string>
+  customErrors: ReadonlyArray<string>
+  customValue?: string
+  refreshControl?: () => void
 }
 
 interface FormDefinitionSource<fields extends Readonly<Record<string, unknown>>, submission> {
@@ -53,8 +56,20 @@ export interface FieldState {
   readonly touched: boolean
 }
 
+/** Live field feedback with application-owned supplemental errors. */
+export interface FieldBinding extends FieldState {
+  /**
+   * Replaces supplemental errors for the control's current value; `[]` clears them.
+   * Updates native validity synchronously without marking the field touched. Messages survive
+   * revalidation, but clear on a changed value, non-canceled reset, or new submission.
+   * Native/schema errors remain primary. Async work and stale-result protection are caller-owned.
+   * @param messages Supplemental messages; empty strings are ignored.
+   */
+  setCustomErrors(messages: ReadonlyArray<string>): void
+}
+
 /** Related mixins and live state for a single input, select, or textarea. */
-export interface FieldMixins extends FieldState {
+export interface FieldMixins extends FieldBinding {
   /**
    * Applies native attributes, validation, interaction state, and error accessibility.
    * @returns A mixin for the native control.
@@ -88,8 +103,8 @@ export interface FormMixinsOptions<submission> {
 
 /** Related validation mixins bound to one form definition. */
 export interface FormMixins<fields extends Readonly<Record<string, unknown>>> {
-  /** Stable, read-only field states; read their live properties during rendering. */
-  readonly fields: { readonly [field in keyof fields & string]: FieldState }
+  /** Stable field bindings; read live properties during rendering and supply custom errors. */
+  readonly fields: { readonly [field in keyof fields & string]: FieldBinding }
   /** Stable, read-only object of current visible messages; read field arrays during rendering. */
   readonly errors: { readonly [field in keyof fields & string]: ReadonlyArray<string> }
   /**
@@ -215,16 +230,38 @@ const fieldValidity = createMixin<
   ElementProps
 >((handle, hostType) => {
   let previousConfig: FieldMixinConfig | undefined
+  let mountedControl: ValidatableControl | undefined
+  let resetControl: (control: ValidatableControl) => void
 
   handle.addEventListener('insert', (event) => {
+    mountedControl = event.node
     if (previousConfig) {
-      validateInput(event.node, previousConfig.validate)
+      let { feedback, validate } = previousConfig
+      let key = getControlKey(event.node)
+      if (feedback.customValue !== undefined && feedback.customValue !== key) {
+        feedback.customErrors = []
+      }
+      feedback.customValue = key
+      validateInput(event.node, validate, feedback.customErrors)
     }
+  })
+
+  handle.addEventListener('remove', () => {
+    mountedControl = undefined
+    if (previousConfig) previousConfig.feedback.refreshControl = undefined
   })
 
   return (getConfig, props) => {
     let config = getConfig()
     let feedback = config.feedback
+    if (previousConfig && previousConfig.feedback !== feedback) {
+      previousConfig.feedback.refreshControl = undefined
+      handle.queueTask(() => {
+        if (mountedControl && previousConfig?.feedback === feedback) {
+          updateFeedback(mountedControl, 'sync')
+        }
+      })
+    }
     previousConfig = config
 
     function getFeedbackProps(): ElementProps {
@@ -253,10 +290,18 @@ const fieldValidity = createMixin<
 
     function updateFeedback(
       input: ValidatableControl,
-      reason: 'input' | 'focusout' | 'invalid' | 'reset',
+      reason: 'input' | 'focusout' | 'invalid' | 'reset' | 'custom' | 'sync',
     ) {
-      validateInput(input, config.validate)
       let previous = { ...feedback }
+      let key = getControlKey(input)
+      if (
+        reason === 'reset' ||
+        (feedback.customValue !== undefined && feedback.customValue !== key)
+      ) {
+        feedback.customErrors = []
+      }
+      feedback.customValue = key
+      let errors = validateInput(input, config.validate, feedback.customErrors)
 
       if (reason === 'input') {
         feedback.touched ||= feedback.hasServerErrors
@@ -264,13 +309,12 @@ const fieldValidity = createMixin<
       } else if (reason === 'reset') {
         feedback.touched = false
         feedback.hasServerErrors = false
-      } else {
+      } else if (reason === 'focusout' || reason === 'invalid') {
         feedback.touched = true
       }
 
       if (!feedback.hasServerErrors) {
-        feedback.errors =
-          feedback.touched && input.validationMessage ? [input.validationMessage] : []
+        feedback.errors = feedback.touched ? errors : []
       }
 
       let props = getFeedbackProps()
@@ -291,6 +335,17 @@ const fieldValidity = createMixin<
       )
     }
 
+    feedback.refreshControl = function refreshControl() {
+      let nextConfig = getConfig()
+      if (nextConfig.feedback !== feedback) feedback.refreshControl = undefined
+      config = nextConfig
+      feedback = config.feedback
+      feedback.refreshControl = refreshControl
+      previousConfig = config
+      if (mountedControl) updateFeedback(mountedControl, 'custom')
+    }
+    resetControl = (control) => updateFeedback(control, 'reset')
+
     return createElement(handle.element, {
       ...getFeedbackProps(),
       mix: [
@@ -299,7 +354,7 @@ const fieldValidity = createMixin<
             'reset',
             (event) => {
               queueMicrotask(() => {
-                if (!event.defaultPrevented && !signal.aborted) updateFeedback(control, 'reset')
+                if (!event.defaultPrevented && !signal.aborted) resetControl(control)
               })
             },
             { signal },
@@ -353,6 +408,8 @@ export function createFieldMixins<submission>(
         touched: false,
         hasServerErrors: errors.length > 0,
         errors,
+        customErrors: [],
+        refreshControl: feedback?.refreshControl,
       }
     }
     return feedback
@@ -364,6 +421,12 @@ export function createFieldMixins<submission>(
     },
     get touched() {
       return getFeedback().touched
+    },
+    setCustomErrors(messages: ReadonlyArray<string>) {
+      let feedback = getFeedback()
+      feedback.customErrors = messages.filter((message) => message.length > 0)
+      feedback.customValue = undefined
+      feedback.refreshControl?.()
     },
     field() {
       return fieldValidity(() => {
@@ -417,7 +480,7 @@ export function createFormMixins<fields extends Readonly<Record<string, unknown>
   options: FormMixinsOptions<submission> = {},
 ): FormMixins<fields> {
   let bindings: Record<string, FieldMixins> = {}
-  let fieldStates: Record<string, FieldState> = {}
+  let fieldStates: Record<string, FieldBinding> = {}
   let errors: Record<string, ReadonlyArray<string>> = {}
 
   for (let field in formDefinition.fields) {
@@ -499,9 +562,30 @@ export function onInputValidation<target extends HTMLElement>(
   return on(INPUT_VALIDATION_EVENT, handler, captureBoolean)
 }
 
-function validateInput(input: ValidatableControl, validate: FieldValidator): void {
+function validateInput(
+  input: ValidatableControl,
+  validate: FieldValidator,
+  customErrors: ReadonlyArray<string> = [],
+): ReadonlyArray<string> {
+  let previousMessage = input.validity.customError ? input.validationMessage : ''
   input.setCustomValidity('')
-  if (input.validity.valid) validate(input)
+  try {
+    if (input.validity.valid) validate(input)
+    let message = input.validationMessage
+    let errors = message ? [message, ...customErrors] : customErrors
+    if (input.validity.valid) input.setCustomValidity(customErrors[0] ?? '')
+    return errors
+  } catch (error) {
+    input.setCustomValidity(previousMessage || customErrors[0] || '')
+    throw error
+  }
+}
+
+function getControlKey(control: ValidatableControl): string {
+  return JSON.stringify([
+    control.value,
+    control instanceof HTMLInputElement ? control.checked : undefined,
+  ])
 }
 
 function setAttribute(element: HTMLElement, name: string, value: unknown): void {
