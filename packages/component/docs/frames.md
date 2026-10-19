@@ -398,6 +398,35 @@ Custom resolvers receive the requested `src`, `method`, and `signal`. GET form v
 
 A newer reload cancels earlier client work for that frame, including pending requests and streamed content. Disposing the frame also cancels its active reload. Cancellation resolves with an aborted signal; other errors reject. Cancelling client work cannot undo a mutation the server has already performed.
 
+## Waiting for navigation to finish
+
+Components rendered by a navigation can run their queued tasks before that navigation finishes, while Remix is still waiting for blocking frames or following a redirect, and before it resets or restores scroll and focus. A task that scrolls there is undone by the navigation's scroll reset, and a task that changes the URL cancels the navigation before it resets scroll.
+
+Wait for `navigation.settled()` before doing that work:
+
+```tsx
+import { navigation, ref, type Handle } from 'remix/component'
+
+function Comment(handle: Handle<{ highlighted: boolean; text: string }>) {
+  let element: HTMLElement
+
+  handle.queueTask(async () => {
+    if (!handle.props.highlighted) return
+    await navigation.settled()
+    if (handle.signal.aborted) return
+    element.scrollIntoView({ block: 'center' })
+  })
+
+  return () => <article mix={[ref((node) => (element = node))]}>{handle.props.text}</article>
+}
+```
+
+- It resolves once no navigation is in progress. If another navigation starts while it waits, such as a frame redirect or the user's next click, it waits for that one too.
+- It resolves right away when nothing is navigating or the browser doesn't support frame navigation, and it never rejects, including when the navigation fails.
+- Check `handle.signal` or your own state after it resolves: the component may have been removed, or a later navigation may have given it new props.
+
+In iOS Safari, Remix keeps undoing Safari's scroll restoration for a short time after a push or replace navigation finishes. Scrolling back to the previous page's position or to the bottom of the page during that time can be undone too.
+
 ## Frame lifecycle
 
 1. **Server render** - Frame content is resolved via `resolveFrame` and serialized into the HTML stream. Frame metadata is stored in the `rmx-data` script.

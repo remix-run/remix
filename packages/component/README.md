@@ -197,6 +197,18 @@ Scroll and focus controls accept the Navigation API values `"after-transition"` 
 
 Existing boolean options and `"true"` / `"false"` attribute values remain supported: `true` corresponds to `"after-transition"` and `false` to `"manual"`.
 
+Components rendered by a navigation can run their queued tasks before the navigation resets scroll and focus. Await `navigation.settled()` before scrolling or changing the URL from those tasks. It resolves once no navigation is in progress, including any redirect or navigation that starts while it waits:
+
+```ts
+import { navigation } from 'remix/component'
+
+handle.queueTask(async () => {
+  await navigation.settled()
+  if (handle.signal.aborted) return
+  document.getElementById('reviews')?.scrollIntoView()
+})
+```
+
 Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
 and forms as document navigations while still hydrating client entries and using explicit frames,
 register a listener before calling `run()`:

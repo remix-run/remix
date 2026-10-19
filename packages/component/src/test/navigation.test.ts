@@ -2,6 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import {
   navigate,
+  navigation,
   startNavigationListener,
   startNavigationListenerImpl,
 } from '../runtime/navigation.ts'
@@ -1643,6 +1644,103 @@ describe('navigate', () => {
   })
 })
 
+describe('navigation.settled', () => {
+  it('resolves right away when no navigation is in progress', async () => {
+    expect(window.navigation.transition).toBe(null)
+    let settled = trackSettled()
+
+    await nextTask()
+
+    expect(settled.done).toBe(true)
+  })
+
+  it('resolves right away when the Navigation API is unavailable', async (t) => {
+    stubGlobalField(t, 'navigation', undefined)
+    let settled = trackSettled()
+
+    await nextTask()
+
+    expect(settled.done).toBe(true)
+  })
+
+  it('waits until the destination finishes loading', async () => {
+    let listener = startHeldNavigationListener()
+    try {
+      let destination = createTestUrl('settled-loading')
+      void navigate(destination).catch(() => {})
+      let settled = trackSettled()
+
+      await nextTask()
+      expect(settled.done).toBe(false)
+
+      listener.finishReload(0)
+      await settled.promise
+
+      expect(window.navigation.transition).toBe(null)
+      expect(window.location.href).toBe(destination)
+    } finally {
+      await listener.cleanup()
+    }
+  })
+
+  it('waits for the navigation that follows a frame redirect', async () => {
+    let listener = startHeldNavigationListener()
+    try {
+      let requested = createTestUrl('settled-requested')
+      let redirected = createTestUrl('settled-redirected')
+      void navigate(requested).catch(() => {})
+      let settled = navigation.settled()
+
+      listener.finishReload(0, redirected)
+      await settled
+
+      expect(window.navigation.transition).toBe(null)
+      expect(window.location.href).toBe(redirected)
+    } finally {
+      await listener.cleanup()
+    }
+  })
+
+  it('waits for a navigation that starts while it is waiting', async () => {
+    let listener = startHeldNavigationListener()
+    try {
+      let first = createTestUrl('settled-first')
+      let second = createTestUrl('settled-second')
+      void navigate(first).catch(() => {})
+      let settled = trackSettled()
+      await nextTask()
+      void navigate(second).catch(() => {})
+
+      listener.finishReload(0)
+      await nextTask()
+      expect(settled.done).toBe(false)
+
+      listener.finishReload(1)
+      await settled.promise
+
+      expect(window.navigation.transition).toBe(null)
+      expect(window.location.href).toBe(second)
+    } finally {
+      await listener.cleanup()
+    }
+  })
+
+  it('resolves when the navigation fails', async () => {
+    let listener = startHeldNavigationListener()
+    try {
+      void navigate(createTestUrl('settled-failed')).catch(() => {})
+      let settled = navigation.settled()
+
+      listener.failReload(0)
+      await settled
+
+      expect(window.navigation.transition).toBe(null)
+    } finally {
+      await listener.cleanup()
+    }
+  })
+})
+
 describe('frame navigation sources', () => {
   function setup(t: TestContext) {
     let topFrame = { src: window.location.href } as FrameHandle
@@ -2579,6 +2677,62 @@ function waitForNavigationUrl(url: string): Promise<void> {
     }
     window.navigation.addEventListener('navigatesuccess', onNavigateSuccess)
   })
+}
+
+// Starts a real Navigation API listener whose frame reloads wait until the test finishes them. A
+// reload can be finished before the navigation handler requests it.
+function startHeldNavigationListener() {
+  let originalUrl = window.location.href
+  let topFrame = { src: originalUrl } as FrameHandle
+  let reloads: ReturnType<typeof withResolvers<StubFrameReloadResult>>[] = []
+  let getReload = (index: number) => (reloads[index] ??= withResolvers<StubFrameReloadResult>())
+  let requested = 0
+  let holding = true
+  let controller = new AbortController()
+  startNavigationListenerImpl(controller.signal, {
+    getTopFrame: () => topFrame,
+    getNamedFrame: () => topFrame,
+    reloadFrame() {
+      if (!holding) return createReloadTransition({ signal: new AbortController().signal })
+      return createReloadTransition(getReload(requested++)[0])
+    },
+  })
+
+  return {
+    finishReload(index: number, redirectedTo?: string) {
+      getReload(index)[1]({ signal: new AbortController().signal, redirectedTo })
+    },
+    failReload(index: number) {
+      getReload(index)[2](new Error('Frame reload failed'))
+    },
+    async cleanup() {
+      holding = false
+      for (let [, resolve] of reloads) resolve({ signal: new AbortController().signal })
+      await navigation.settled()
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    },
+  }
+}
+
+function trackSettled() {
+  let settled = { done: false, promise: Promise.resolve() }
+  settled.promise = navigation.settled().then(() => {
+    settled.done = true
+  })
+  return settled
+}
+
+function createTestUrl(name: string): string {
+  let url = new URL(window.location.href)
+  url.searchParams.set('frame-navigation', name)
+  return url.href
+}
+
+function nextTask(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
 function waitForNextNavigation(): Promise<void> {

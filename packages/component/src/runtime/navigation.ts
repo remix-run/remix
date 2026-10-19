@@ -174,6 +174,38 @@ export async function navigate(href: string, options?: NavigationOptions) {
 }
 
 /**
+ * The state of client-side navigation in the Remix frame runtime.
+ */
+export const navigation = {
+  /**
+   * Waits until no navigation is in progress. By then, Remix has rendered the destination,
+   * followed any frame redirect, and reset or restored scroll and focus. If another navigation
+   * starts while waiting, this waits for that one too.
+   *
+   * Components rendered by a navigation can run their queued tasks before the navigation
+   * finishes. Changing the URL from one of those tasks, even with `navigate()`, cancels the
+   * navigation before it resets scroll and focus, so wait for this first.
+   *
+   * @returns A promise that resolves once no navigation is in progress. It resolves right away when
+   * nothing is navigating or the Navigation API is unavailable, and it never rejects.
+   */
+  async settled(): Promise<void> {
+    let browserNavigation = typeof window === 'undefined' ? undefined : getInterceptableNavigation()
+    if (!browserNavigation) return
+
+    // A navigation can start another before it finishes, as frame redirects and POST replays do,
+    // so keep waiting until none is in progress.
+    let transition = browserNavigation.transition
+    while (transition) {
+      await transition.finished.catch(() => {})
+      let next = browserNavigation.transition
+      if (next === transition) return
+      transition = next
+    }
+  },
+}
+
+/**
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.

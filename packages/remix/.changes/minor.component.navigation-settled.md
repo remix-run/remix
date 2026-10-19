@@ -1,0 +1,1 @@
+Await `navigation.settled()` from `remix/component` before scrolling or changing the URL from a component rendered by a navigation. It resolves once no frame navigation is in progress, after redirects and the navigation's scroll and focus resets.
