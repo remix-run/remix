@@ -74,8 +74,14 @@ describe('auth handlers', () => {
     assertContains(html, 'value="not-an-email"')
     assertContains(html, 'aria-invalid="true"')
     assertContains(html, 'aria-describedby="email-error"')
-    assertContains(html, 'id="email-error" role="alert"')
-    assertContains(html, 'id="password-error" role="alert"')
+
+    let emailError = html.match(/<p\b[^>]*\bid="email-error"[^>]*>/)?.[0]
+    assert.ok(emailError, 'Expected an email error element')
+    assertContains(emailError, 'role="alert"')
+
+    let passwordError = html.match(/<p\b[^>]*\bid="password-error"[^>]*>/)?.[0]
+    assert.ok(passwordError, 'Expected a password error element')
+    assertContains(passwordError, 'role="alert"')
   })
 
   it('POST /register creates new user and sets session', async () => {
