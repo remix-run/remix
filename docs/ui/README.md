@@ -16,9 +16,25 @@ pnpm --filter remix-ui-docs run prerender:serve
 
 The development server uses port 44100 by default. Set `PORT` to choose another port. Node's watch mode restarts the server after imported source changes; reload the browser to see them.
 
-Prerender writes the documentation pages, example modules, shared assets and Pagefind search index into `docs/ui/build/site/`. Pass `--dir` to choose another output directory. Search becomes available in development after prerendering. Hosting and deployment are not configured yet.
+## Static site
 
-The sidebar displays the version from `packages/ui/package.json`. Build published docs from the corresponding Remix UI release checkout so the version, documentation and live examples match.
+`pnpm --filter remix-ui-docs run prerender` writes the documentation pages, example modules, shared assets and Pagefind search index into `docs/ui/build/site/`. Pass `--dir` to choose another output directory. The output uses directory `index.html` files for clean URLs and is intended to be hosted at the root of a domain.
+
+Deployment is configured for the [`remix-run/remix-ui-docs`](https://github.com/remix-run/remix-ui-docs) GitHub Pages workflow. It checks out this repository, runs the prerender command and uploads the static output. `server.ts` and its middleware run locally only. The Pagefind version is pinned in this repository's pnpm catalog.
+
+The development server serves an existing search index from `docs/ui/build/site/assets/pagefind/`. Run prerender once to enable search during development, and rerun it when the content changes to refresh the index.
+
+The sidebar displays the version from `packages/ui/package.json`. Deploying the release tag keeps the version, documentation and live examples aligned.
+
+## Deployment setup
+
+Automatic UI deployment is temporarily disabled in the [publish workflow](https://github.com/remix-run/remix/blob/main/.github/workflows/publish.yaml). Once enabled, any package release refreshes API and UI docs from the same source tag.
+
+1. Merge the UI site and release integration into this repository's `main` branch, keeping the `ui_docs` job disabled.
+2. In `remix-run/remix-ui-docs`, configure Settings > Pages to use GitHub Actions, and configure the custom domain and DNS for `ui.remix.run`. Then merge the prepared hosting workflow. This immediately deploys the new site and removes the legacy generated `docs/` directory, so the source site must already be available on this repository's `main` branch.
+3. Add the `REMIX_UI_DOCS_PAT` Actions secret to this repository. Use a token with permission to send repository dispatches to `remix-run/remix-ui-docs`. A fine-grained token needs Contents write access on that repository.
+4. Run the hosting workflow manually with the source ref containing the site. Verify direct page links, search and interactive examples before restoring UI to the shared top navigation.
+5. Remove the temporary `false &&` guard from the `ui_docs` job to enable deployment on releases.
 
 ## Authoring
 
