@@ -22,3 +22,4 @@ autoresearch-results/
 .env
 
 /reference
+/.agents/worktrees/

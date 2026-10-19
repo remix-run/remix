@@ -3008,6 +3008,143 @@ describe('asset-server', () => {
     )
   })
 
+  it('reuses script entry metadata across concurrent and later requests', async (t) => {
+    await write(dir, 'app/cached-entry.ts', 'import "./cached-dep.ts"')
+    await write(dir, 'app/cached-dep.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+    let getImportMap = t.mock.method(assetServer, 'getImportMap')
+
+    try {
+      let [first, concurrent] = await Promise.all([
+        assetServer.getScriptEntry('app/cached-entry.ts'),
+        assetServer.getScriptEntry('app/cached-entry.ts'),
+      ])
+      let later = await assetServer.getScriptEntry('app/cached-entry.ts')
+      assert.deepEqual(concurrent, first)
+      assert.deepEqual(later, first)
+      assert.equal(getImportMap.mock.calls.length, 1)
+
+      let dependency = await assetServer.getScriptEntry('app/cached-dep.ts')
+      assert.notEqual(dependency.href, first.href)
+      assert.equal(getImportMap.mock.calls.length, 2)
+
+      first.preloads.length = 0
+      first.importMap.imports['/assets/app/cached-dep.ts'] = '/changed.ts'
+      let unchanged = await assetServer.getScriptEntry('app/cached-entry.ts')
+      assert.deepEqual(unchanged, later)
+    } finally {
+      await assetServer.close()
+    }
+  })
+
+  it('retries script entry metadata after a failed request', async (t) => {
+    await write(dir, 'app/retried-entry.ts', 'export const value = 1')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+    let getImportMap = assetServer.getImportMap.bind(assetServer)
+    let fail = true
+    t.mock.method(assetServer, 'getImportMap', (filePath: string | readonly string[]) => {
+      if (fail) return Promise.reject(new Error('Temporary failure'))
+      return getImportMap(filePath)
+    })
+
+    try {
+      await assert.rejects(assetServer.getScriptEntry('app/retried-entry.ts'), /Temporary failure/)
+      fail = false
+      let entry = await assetServer.getScriptEntry('app/retried-entry.ts')
+      assert.match(entry.href, /retried-entry\.@/)
+    } finally {
+      await assetServer.close()
+    }
+  })
+
+  it('refreshes cached script entry metadata after a watched dependency changes', async () => {
+    await write(dir, 'app/watched-entry.ts', 'import "./watched-dep.ts"')
+    let depPath = await write(dir, 'app/watched-dep.ts', 'export const value = 1')
+    let assetServer = createWatchedTestServer(dir)
+
+    try {
+      let before = await assetServer.getScriptEntry('app/watched-entry.ts')
+      assert.ok(!before.preloads.includes('/assets/app/added-dep.ts'))
+      await write(dir, 'app/added-dep.ts', 'export const added = true')
+      await write(dir, 'app/watched-dep.ts', 'import "./added-dep.ts"\nexport const value = 2')
+      await emitWatchEvent(assetServer, depPath, 'change')
+      let after = await assetServer.getScriptEntry('app/watched-entry.ts')
+      assert.ok(after.preloads.includes('/assets/app/added-dep.ts'))
+    } finally {
+      await assetServer.close()
+    }
+  })
+
+  it('refreshes cached script entries after browser HMR events', async () => {
+    await write(dir, 'app/hmr-entry.ts', 'import "./hmr-dep.ts"')
+    let depPath = await write(dir, 'app/hmr-dep.ts', 'export const value = 1')
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    let assetServer = createWatchedTestServer(dir, {
+      hmr() {
+        return {
+          close() {},
+          onFileEvents(handler) {
+            handleFileEvents = handler
+            return () => {}
+          },
+          updateWatchedFiles() {},
+          url: 'http://127.0.0.1:1234/hmr',
+        }
+      },
+    })
+
+    try {
+      let before = await assetServer.getScriptEntry('app/hmr-entry.ts')
+      assert.ok(!before.preloads.includes('/assets/app/hmr-added.ts'))
+      await write(dir, 'app/hmr-added.ts', 'export const added = true')
+      await write(dir, 'app/hmr-dep.ts', 'import "./hmr-added.ts"\nexport const value = 2')
+      assert.ok(handleFileEvents)
+      await handleFileEvents([{ filePath: getWatchEventFilePath(depPath), event: 'change' }])
+      let after = await assetServer.getScriptEntry('app/hmr-entry.ts')
+      assert.ok(after.preloads.some((href) => href.startsWith('/assets/app/hmr-added.ts')))
+    } finally {
+      await assetServer.close()
+    }
+  })
+
+  it('does not cache script entries computed while a browser HMR event is pending', async () => {
+    await write(dir, 'app/hmr-race-entry.ts', 'import "./hmr-race-dep.ts"')
+    let depPath = await write(dir, 'app/hmr-race-dep.ts', 'export const value = 1')
+    let handleFileEvents: BrowserHmrFileEventHandler | undefined
+    let assetServer = createWatchedTestServer(dir, {
+      hmr() {
+        return {
+          close() {},
+          onFileEvents(handler) {
+            handleFileEvents = handler
+            return () => {}
+          },
+          updateWatchedFiles() {},
+          url: 'http://127.0.0.1:1234/hmr',
+        }
+      },
+    })
+
+    try {
+      let otherPath = await write(dir, 'app/hmr-race-other.ts', 'export const other = 1')
+      await assetServer.getScriptEntry('app/hmr-race-other.ts')
+      await assetServer.getScriptEntry('app/hmr-race-entry.ts')
+      await write(dir, 'app/hmr-race-other.ts', 'export const other = 2')
+      await write(dir, 'app/hmr-race-dep.ts', 'export const value = 2')
+      assert.ok(handleFileEvents)
+      let pending = handleFileEvents([
+        { filePath: getWatchEventFilePath(otherPath), event: 'change' },
+        { filePath: getWatchEventFilePath(depPath), event: 'change' },
+      ])
+      await assetServer.getScriptEntry('app/hmr-race-entry.ts')
+      await pending
+      let entry = await assetServer.getScriptEntry('app/hmr-race-entry.ts')
+      assert.deepEqual(entry.preloads, await assetServer.getPreloads('app/hmr-race-entry.ts'))
+    } finally {
+      await assetServer.close()
+    }
+  })
+
   it('getImportMap rejects non-script files with a TypeError', async () => {
     let assetServer = createTestServer(dir)
 
@@ -3705,6 +3842,49 @@ describe('asset-server', () => {
           '/assets/app/entry.ts',
           '/assets/app/second.ts',
           '/assets/app/third.ts',
+        ])
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps rewritten barrel file imports when a module behind the barrel changes', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        ['import { first } from "./barrel.ts"', 'console.log(first)'].join('\n'),
+      )
+      await write(
+        caseDir,
+        'app/barrel.ts',
+        ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+      )
+      let firstPath = await write(caseDir, 'app/first.ts', 'export const first = 1')
+      await write(caseDir, 'app/second.ts', 'export const second = 2')
+      let assetServer = createWatchedTestServer(caseDir)
+
+      try {
+        let firstResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /from "\/assets\/app\/first\.ts"/)
+
+        await write(caseDir, 'app/first.ts', 'export const first = 10')
+        await emitWatchEvent(assetServer, firstPath, 'change')
+
+        let secondResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(secondResponse)
+        let secondBody = await secondResponse.text()
+        assert.match(secondBody, /from "\/assets\/app\/first\.ts"/)
+        assert.doesNotMatch(secondBody, /from "\/assets\/app\/barrel\.ts"/)
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/first.ts',
         ])
       } finally {
         await assetServer.close()

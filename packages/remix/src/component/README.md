@@ -46,6 +46,19 @@ function Counter(handle: Handle<{ initialCount?: number }>) {
 
 Use `createMixin(...)` to share host behavior, manage DOM resources, or provide default props. The [Mixins guide](https://github.com/remix-run/remix/blob/main/packages/component/docs/mixins.md) covers setup and render, `MixinHandle`, lifecycle events, and deferred removal with `beforeRemove` and `event.persistNode(...)`.
 
+For behavior that does not affect server HTML, pass `{ ssr: false }` to skip setup and render on the server:
+
+```tsx
+import { createMixin } from 'remix/component'
+
+const focusOnInsert = createMixin<HTMLElement>(
+  (handle) => {
+    handle.addEventListener('insert', ({ node }) => node.focus())
+  },
+  { ssr: false },
+)
+```
+
 ## Client Entry Loading
 
 `run()` hydrates client entries by calling `loadModule` for each component module:
