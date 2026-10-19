@@ -1,17 +1,19 @@
-import type { ErrorAttributes, FormRawValue } from 'remix/data-schema/form'
+import type { FormRawValue } from 'remix/data-schema/form'
 import { clientEntry, on } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { createInputMixin, form as formValidation } from '@remix-run/ui/form'
+import { createFormMixins } from '@remix-run/ui/form'
 
 import { RegistrationForm } from './registration-form.ts'
 import * as styles from './styles.ts'
 import { routes } from '../../../routes.ts'
 
-const registrationInput = createInputMixin(RegistrationForm)
-
 export const RegistrationFields = clientEntry(
   import.meta.url,
   function RegistrationFields(handle: Handle<{ submission?: RegistrationSubmission }>) {
+    let { form, input, error, errors } = createFormMixins(RegistrationForm, {
+      getSubmission: () => handle.props.submission,
+      onChange: () => handle.update(),
+    })
     let hydrated = false
 
     handle.queueTask(() => {
@@ -43,7 +45,7 @@ export const RegistrationFields = clientEntry(
           <form
             action={routes.registration.action.href()}
             method="post"
-            mix={[formValidation(), styles.form]}
+            mix={[form(), styles.form]}
           >
             <div mix={styles.fieldGrid}>
               <div mix={styles.field}>
@@ -58,12 +60,13 @@ export const RegistrationFields = clientEntry(
                 <input
                   autoComplete="name"
                   placeholder="Ada Lovelace"
-                  mix={[registrationInput('displayName', submission), styles.control]}
+                  mix={[input('displayName'), styles.control]}
                 />
-                <FieldErrors
-                  attrs={RegistrationForm.getErrorAttrs('displayName')}
-                  errors={RegistrationForm.getFieldErrors('displayName', submission)}
-                />
+                {errors.displayName.length > 0 ? (
+                  <p role="alert" mix={[error('displayName'), styles.fieldError]}>
+                    {errors.displayName.join(' ')}
+                  </p>
+                ) : null}
               </div>
 
               <div mix={styles.field}>
@@ -78,12 +81,13 @@ export const RegistrationFields = clientEntry(
                 <input
                   autoComplete="email"
                   placeholder="ada@example.com"
-                  mix={[registrationInput('email', submission), styles.control]}
+                  mix={[input('email'), styles.control]}
                 />
-                <FieldErrors
-                  attrs={RegistrationForm.getErrorAttrs('email')}
-                  errors={RegistrationForm.getFieldErrors('email', submission)}
-                />
+                {errors.email.length > 0 ? (
+                  <p role="alert" mix={[error('email'), styles.fieldError]}>
+                    {errors.email.join(' ')}
+                  </p>
+                ) : null}
               </div>
 
               <div mix={styles.field}>
@@ -95,15 +99,12 @@ export const RegistrationFields = clientEntry(
                     <span mix={styles.optional}>Optional</span>
                   )}
                 </label>
-                <input
-                  inputMode="numeric"
-                  placeholder="36"
-                  mix={[registrationInput('age', submission), styles.control]}
-                />
-                <FieldErrors
-                  attrs={RegistrationForm.getErrorAttrs('age')}
-                  errors={RegistrationForm.getFieldErrors('age', submission)}
-                />
+                <input inputMode="numeric" placeholder="36" mix={[input('age'), styles.control]} />
+                {errors.age.length > 0 ? (
+                  <p role="alert" mix={[error('age'), styles.fieldError]}>
+                    {errors.age.join(' ')}
+                  </p>
+                ) : null}
               </div>
 
               <div mix={styles.field}>
@@ -118,12 +119,13 @@ export const RegistrationFields = clientEntry(
                 <input
                   autoComplete="url"
                   placeholder="https://example.com"
-                  mix={[registrationInput('website', submission), styles.control]}
+                  mix={[input('website'), styles.control]}
                 />
-                <FieldErrors
-                  attrs={RegistrationForm.getErrorAttrs('website')}
-                  errors={RegistrationForm.getFieldErrors('website', submission)}
-                />
+                {errors.website.length > 0 ? (
+                  <p role="alert" mix={[error('website'), styles.fieldError]}>
+                    {errors.website.join(' ')}
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -139,26 +141,28 @@ export const RegistrationFields = clientEntry(
               <input
                 autoComplete="new-password"
                 placeholder="At least 8 characters"
-                mix={[registrationInput('password', submission), styles.control]}
+                mix={[input('password'), styles.control]}
               />
-              <FieldErrors
-                attrs={RegistrationForm.getErrorAttrs('password')}
-                errors={RegistrationForm.getFieldErrors('password', submission)}
-              />
+              {errors.password.length > 0 ? (
+                <p role="alert" mix={[error('password'), styles.fieldError]}>
+                  {errors.password.join(' ')}
+                </p>
+              ) : null}
             </div>
 
             <div mix={styles.checkboxField}>
-              <input mix={[registrationInput('terms', submission), styles.checkbox]} />
+              <input mix={[input('terms'), styles.checkbox]} />
               <label {...RegistrationForm.getLabelAttrs('terms')} mix={styles.checkboxLabel}>
                 {RegistrationForm.fields.terms.label}
                 {RegistrationForm.fields.terms.required ? (
                   <span mix={styles.required}> Required</span>
                 ) : null}
               </label>
-              <FieldErrors
-                attrs={RegistrationForm.getErrorAttrs('terms')}
-                errors={RegistrationForm.getFieldErrors('terms', submission)}
-              />
+              {errors.terms.length > 0 ? (
+                <p role="alert" mix={[error('terms'), styles.fieldError]}>
+                  {errors.terms.join(' ')}
+                </p>
+              ) : null}
             </div>
 
             <div mix={styles.formActions}>
@@ -214,22 +218,5 @@ export type RegistrationSubmission = {
   errors: {
     fields: Record<string, string[]>
     form: string[]
-  }
-}
-
-interface FieldErrorsProps {
-  attrs: ErrorAttributes
-  errors: ReadonlyArray<string>
-}
-
-function FieldErrors(handle: Handle<FieldErrorsProps>) {
-  return () => {
-    let { attrs, errors } = handle.props
-
-    return errors.length > 0 ? (
-      <p {...attrs} role="alert" mix={styles.fieldError}>
-        {errors.join(' ')}
-      </p>
-    ) : null
   }
 }

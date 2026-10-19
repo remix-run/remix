@@ -9,7 +9,7 @@ The registration flow demonstrates:
 - spreading low-level helpers directly onto native labels, inputs, and error elements
 - blocking invalid submissions with the browser Constraint Validation API
 - applying a model refinement through native custom validity as the user types
-- showing invalid state after blur and updating it as the user types
+- showing inline validation messages and invalid state after blur, then updating both as the user types
 - returning a populated form with server errors after a failed POST
 - validating database writes with the same field schemas used by the form
 - persisting non-sensitive fields in an in-memory SQLite database across requests
@@ -96,21 +96,30 @@ This POC has no account update flow, so it does not define an `AccountUpdate` sc
 
 The router creates a `DatabaseSync(':memory:')` instance and exposes the resulting Remix `Database` through request middleware. Creating the database inside `createDataModelFormsRouter()` gives the server process persistent state while keeping router instances isolated.
 
-The page owns its DOM structure and applies the generated attributes directly:
+The page owns its DOM structure. Its hydrated component creates the validation binding in setup and reads changing submissions through a getter:
 
 ```tsx
-import { createInputMixin } from '@remix-run/ui/form'
+import { createFormMixins } from '@remix-run/ui/form'
 
-let registrationInput = createInputMixin(RegistrationForm)
+let { form, input, error, errors } = createFormMixins(RegistrationForm, {
+  getSubmission: () => handle.props.submission,
+  onChange: () => handle.update(),
+})
 
-<label {...RegistrationForm.getLabelAttrs('displayName')}>
-  {RegistrationForm.fields.displayName.label}
-  {RegistrationForm.fields.displayName.required ? <span>Required</span> : null}
-</label>
-<input
-  autoComplete="name"
-  mix={registrationInput('displayName', submission)}
-/>
+return () => (
+  <form method="post" mix={form()}>
+    <label {...RegistrationForm.getLabelAttrs('displayName')}>
+      {RegistrationForm.fields.displayName.label}
+      {RegistrationForm.fields.displayName.required ? <span>Required</span> : null}
+    </label>
+    <input autoComplete="name" mix={input('displayName')} />
+    {errors.displayName.length > 0 ? (
+      <p mix={error('displayName')} role="alert">
+        {errors.displayName.join(' ')}
+      </p>
+    ) : null}
+  </form>
+)
 ```
 
 The render middleware owns the shared document shell, so route pages only render their content. Its
@@ -166,9 +175,11 @@ return redirect(routes.registration.index.href(), 303)
 
 The redirect makes the successful flow POST-redirect-GET. The following GET queries SQLite and renders every stored account, proving that the form payload reached the persistent data layer without retaining the raw password.
 
-The form controls live inside a small `clientEntry()` component so the mixins can attach their input and blur listeners. `createInputMixin()` gives every field one validation mixin: it applies `getInputAttrs()` during SSR, then uses `createInputValidator()` in the browser to report synchronous schema issues through the input's native `setCustomValidity()` method. The form mixin only presents invalid state after the field has blurred once. If JavaScript is unavailable, native constraints still block representable errors and the server returns accessible error markup for every schema issue.
+The form controls live inside a small `clientEntry()` component so the mixins can attach their input and blur listeners. `createFormMixins(RegistrationForm, { getSubmission, onChange })` binds the form definition once in setup. Its destructured `form()` enhances plain native controls, and `input(field)` gives every projected input one validation mixin: it applies `getInputAttrs()` during SSR, checks native constraints first, then uses `createInputValidator()` to report supplemental synchronous schema issues through `setCustomValidity()`. The getter reads current submission props while rendering inputs or reading errors, while the binding preserves interaction state across ordinary renders. The input mixin owns touched state, `aria-invalid`, and `aria-describedby`; it reveals client errors after blur or a blocked submission. If JavaScript is unavailable, native constraints still block representable errors and the server returns accessible error markup for every schema issue.
 
-With JavaScript enabled, add a leading or trailing space to the display name to see its non-native model refinement participate in client-side constraint validation. Try `a@b` as the email address to see the server-error path: browsers accept it as a native email value, while the data model's email rule requires a dotted domain. The returned page keeps the email and checkbox state, highlights the email error, and leaves the password blank.
+With JavaScript enabled, add a leading or trailing space to the display name, then blur the input to see its non-native model refinement reported inline. To exercise the server-error path, disable JavaScript and submit `a@b` as the email address: browsers accept it as a native email value, while the data model's email rule requires a dotted domain. The returned page keeps the email and checkbox state, highlights the email error, and leaves the password blank.
+
+The demo renders the binding's live `errors` arrays inline beside each input. `error(field)` supplies the generated error-element ID, and `onChange` requests a render when visible client messages change. The binding tracks submission changes and server errors internally, so the UI needs no error map or manual reset logic. It does not manage touched state or read `validationMessage` itself. Server errors stay visible until their field is edited, then client messages take over. The error mixin only supplies attributes; application markup owns content, visibility, and announcement behavior. The browser still owns constraint validation and its submission blocking behavior.
 
 ## Browser assets
 

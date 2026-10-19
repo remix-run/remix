@@ -114,7 +114,9 @@ The input type supplies the control-specific requiredness and numeric step behav
 
 ## Model-backed forms
 
-Use `createForm()` to select fields from an object schema, attach UI-only metadata, derive native input constraints, and decode submitted `FormData` with the original field schemas. Fields omitted from the projection are neither rendered nor required. Ancillary fields provide their own schema.
+Use `createForm()` to select fields from object schemas, attach UI-only metadata, derive native input constraints, and decode submitted `FormData` with the original field schemas. Only configured fields are validated; omitted model fields are not required. Cross-field rules belong in a separate handler step.
+
+**Single schema:** select model fields without repeating their validation rules.
 
 ```ts
 import * as s from 'remix/data-schema'
@@ -128,7 +130,18 @@ let Account = s.object({
   age: s.number().pipe(min(13), max(120)),
 })
 
-export let AccountForm = createForm(Account, {
+let ProfileForm = createForm(Account, {
+  fields: {
+    email: { label: 'Email', type: 'email' },
+    displayName: { label: 'Display name', type: 'text' },
+  },
+})
+```
+
+**Partial inline:** reuse model fields and add request-only fields with their own schemas.
+
+```ts
+let AccountForm = createForm(Account, {
   fields: {
     email: { label: 'Email', type: 'email' },
     displayName: { label: 'Display name', type: 'text' },
@@ -142,6 +155,40 @@ export let AccountForm = createForm(Account, {
 })
 ```
 
+**Multiple schemas:** compose a form-specific object from existing field schemas. The `.shape` property exposes the fields passed to `s.object()`.
+
+```ts
+let Address = s.object({ postalCode: s.string().pipe(minLength(1)) })
+let Checkout = s.object({
+  email: Account.shape.email,
+  postalCode: Address.shape.postalCode,
+})
+
+let CheckoutForm = createForm(Checkout, {
+  fields: {
+    email: { label: 'Email', type: 'email' },
+    postalCode: { label: 'Postal code', type: 'text' },
+  },
+})
+```
+
+**Entirely inline:** pass an empty object schema and give every field its own schema. Fields absent from the model must supply a schema; model fields cannot override theirs.
+
+```ts
+let LoginForm = createForm(s.object({}), {
+  fields: {
+    email: { label: 'Email', type: 'email', schema: s.string().pipe(email()) },
+    password: {
+      label: 'Password',
+      type: 'password',
+      schema: s.string().pipe(minLength(8)),
+    },
+  },
+})
+```
+
+All four variations use the same parsing and rendering APIs below. A form can collect values for multiple tables; the handler splits the parsed values and coordinates persistence.
+
 Server handlers receive a typed value or a serializable failure containing the submitted values and grouped errors. Password values are deliberately omitted from failed results so they are not copied into action data or server-rendered HTML.
 
 ```tsx
@@ -154,44 +201,49 @@ if (!submission.success) {
 await createAccount(submission.value)
 ```
 
-The same form definition produces low-level attribute bags. Markup remains application-owned, while Remix UI supplies styling and the small progressive enhancement for touched state:
+The same form definition produces low-level attribute bags. Markup and styling remain application-owned, while `@remix-run/ui/form` supplies the small progressive enhancement for touched state:
 
 ```tsx
 import type { FormFailure } from 'remix/data-schema/form'
 import type { Handle } from 'remix/component'
-import { createInputMixin, form as formValidation } from '@remix-run/ui/form'
-
-let accountInput = createInputMixin(AccountForm)
+import { createFormMixins } from '@remix-run/ui/form'
 
 function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
-  return () => {
-    let { submission } = handle.props
-    let emailError = AccountForm.getFieldErrors('email', submission)[0]
-    let termsError = AccountForm.getFieldErrors('terms', submission)[0]
+  let { form, input, error, errors } = createFormMixins(AccountForm, {
+    getSubmission: () => handle.props.submission,
+    onChange: () => handle.update(),
+  })
 
-    return (
-      <form method="post" mix={formValidation()}>
-        <label {...AccountForm.getLabelAttrs('email')}>
-          {AccountForm.fields.email.label}
-          {AccountForm.fields.email.required ? <span>Required</span> : null}
-        </label>
-        <input autoComplete="email" mix={accountInput('email', submission)} />
-        {emailError ? <p {...AccountForm.getErrorAttrs('email')}>{emailError}</p> : null}
+  return () => (
+    <form method="post" mix={form()}>
+      <label {...AccountForm.getLabelAttrs('email')}>
+        {AccountForm.fields.email.label}
+        {AccountForm.fields.email.required ? <span>Required</span> : null}
+      </label>
+      <input autoComplete="email" mix={input('email')} />
+      {errors.email.length > 0 ? (
+        <p mix={error('email')} role="alert">
+          {errors.email.join(' ')}
+        </p>
+      ) : null}
 
-        <label>
-          <input mix={accountInput('terms', submission)} />
-          {AccountForm.fields.terms.label}
-        </label>
-        {termsError ? <p {...AccountForm.getErrorAttrs('terms')}>{termsError}</p> : null}
+      <label>
+        <input mix={input('terms')} />
+        {AccountForm.fields.terms.label}
+      </label>
+      {errors.terms.length > 0 ? (
+        <p mix={error('terms')} role="alert">
+          {errors.terms.join(' ')}
+        </p>
+      ) : null}
 
-        <button type="submit">Create account</button>
-      </form>
-    )
-  }
+      <button type="submit">Create account</button>
+    </form>
+  )
 }
 ```
 
-The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. `createInputMixin()` applies each field's generated native constraints during SSR and uses `createInputValidator()` internally to report synchronous schema issues through `setCustomValidity()` as the user types. `formValidation()` marks a field after its first blur and updates its accessible invalid state as the user types. Do not add `noValidate` unless the application intentionally opts out of native validation.
+The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. Call `createFormMixins(AccountForm, { getSubmission, onChange })` once in component setup; its input mixins read the latest submission during rendering and apply generated native constraints during SSR. In the browser, they supplement native validation with synchronous schema issues through `setCustomValidity()` and own touched state and error accessibility. The stable `errors` object exposes current visible messages, while `error(field)` supplies their element ids and `onChange` requests rendering when client messages change. New submissions reset feedback automatically. Do not add `noValidate` unless the application intentionally opts out of native validation.
 
 The first release maps field-level `required`, `minLength`, `maxLength`, `min`, and `max` constraints to native attributes. Other synchronous field refinements can use `createInputValidator()` for client-side feedback and still run authoritatively during server parsing. Whole-object, cross-field, and asynchronous form rules are not part of the projection yet and should be applied in the server handler.
 
