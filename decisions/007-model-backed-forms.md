@@ -32,14 +32,6 @@ The input mixin emits those attributes during SSR. In the browser it clears stal
 
 Without JavaScript, supported HTML constraints still apply and the server validates every configured field. Failed responses restore submitted text and checkbox values and render server errors; password values are deliberately omitted. Non-native rules may require a server round trip. We chose functional parity, not identical timing or presentation. Browser checks never replace server validation.
 
-## Supplemental client checks stay in the binding
-
-`createFormMixins(Form, { validations: { username: async (value, { signal }) => messages } })` adds client-only checks after native constraints and synchronous schema validation. Standalone field bindings accept a callback directly as `validations`. Values are raw control strings, not schema output. A callback can instead be configured as `{ validate, debounceMs }`; input/change defaults to a 300ms delay and blur runs immediately. Checks do not run during SSR or initial insertion.
-
-Each field exposes `pending` and `validationError` alongside `errors` and `touched`. Pending includes the typing delay, while thrown/rejected checks are reported separately from invalid values. Messages still use touched-state gating, `setCustomValidity()`, and the existing error-element linkage. Superseded checks, reset, removal, and new submissions cancel pending work; late results cannot overwrite current feedback even if they ignore the abort signal.
-
-We deliberately do not intercept submissions to await these checks. Pending checks are advisory; completed validation messages block native submission. The server repeats business checks and remains authoritative, including database uniqueness enforcement for availability races. Async submission coordination is a separate future capability, not an implicit side effect of adding a field check.
-
 ## One setup-scoped binding owns feedback, not markup
 
 We chose `createFormMixins()` over separately wiring input attributes, validators, event listeners, client error maps, and submission resets. Within component setup:
@@ -79,14 +71,14 @@ We deferred automatic whole-object and cross-field refinements. A projection can
 
 Requiring all model fields would be safe but unnecessarily restrictive when a refinement uses only some fields. Arbitrary predicates do not declare those dependencies, so we cannot reliably determine which object rules survive a projection. When supplied, the backing `schema` must be an object schema with `.shape`; object-level `.refine()` returns a general schema that does not satisfy that contract. Field-level refinements remain supported.
 
-For now, handlers run cross-field or business validation as a second step and report failures through the existing form errors or an explicitly selected field. Supplemental client callbacks do not participate in form parsing or replace schema refinements.
+For now, handlers run cross-field or business validation as a second step and report failures through the existing form errors or an explicitly selected field. We did not add a parallel callback-based rule language when schema refinements already provide validation machinery.
 
 We chose one options object with an optional `schema` so model-backed and entirely inline forms share the same call shape. Omitting it requires an explicit schema on every configured field, rather than a placeholder empty object schema.
 
 ## When to revisit
 
 1. Add object-level validation when concrete workflows justify a dependency or missing-value policy. Any automatic support should be explicit opt-in and preserve existing field-only behavior.
-2. Add opt-in async submission coordination if workflows require awaiting pending client checks before submitting; field checks currently leave pending submissions to authoritative server validation.
+2. Add asynchronous client validation when cancellation, stale results, and submission timing have a defined contract. The current synchronous mixin does not provide those guarantees.
 3. Add higher-level field components when repeated application markup establishes useful defaults without constraining custom DOM structure.
 
 [form-docs]: ../packages/data-schema/README.md#model-backed-forms

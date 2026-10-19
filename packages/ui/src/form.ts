@@ -16,8 +16,6 @@ interface FieldMixinConfig {
   field: string
   errorId: string
   feedback: FieldFeedback
-  validation?: FieldValidationOptions
-  isCurrent(): boolean
   onFeedbackChange(previous: FieldState): void
 }
 
@@ -25,9 +23,6 @@ interface FieldFeedback {
   touched: boolean
   hasServerErrors: boolean
   errors: ReadonlyArray<string>
-  pending: boolean
-  validationError: unknown
-  cancelValidation?: () => void
 }
 
 interface FormDefinitionSource<fields extends Readonly<Record<string, unknown>>, submission> {
@@ -56,10 +51,6 @@ export interface FieldState {
   readonly errors: ReadonlyArray<string>
   /** Whether feedback was revealed by blur, invalid submission, or editing a server error. */
   readonly touched: boolean
-  /** Whether a supplemental check is scheduled or awaiting a result; not an invalid state. */
-  readonly pending: boolean
-  /** A thrown/rejected supplemental check, distinct from validation messages. */
-  readonly validationError: unknown
 }
 
 /** Related mixins and live state for a single input, select, or textarea. */
@@ -82,55 +73,17 @@ export interface FieldMixins extends FieldState {
 }
 
 /** Naming, current submission, and render notification for a standalone field. */
-export interface FieldMixinsOptions<submission> extends SubmissionBindingOptions<submission> {
+export interface FieldMixinsOptions<submission> extends FormMixinsOptions<submission> {
   /** Logical field name, used to read submission values and errors. */
   name: string
-  /** Supplemental client checks for this field, after native and schema validation. */
-  validations?: FieldValidation | FieldValidationOptions
-}
-
-/** Browser context for a supplemental field validation. */
-export interface FieldValidationContext {
-  /** Aborted when superseded, reset, unmounted, or replaced by a server submission. */
-  signal: AbortSignal
-  /** The native control; use `checked` for checkbox-specific checks. */
-  control: ValidatableControl
-}
-
-/**
- * Checks a snapshot of the control's raw string value; return no messages when valid.
- * These checks supplement, but never replace, authoritative server validation.
- */
-export type FieldValidation = (
-  value: string,
-  context: FieldValidationContext,
-) => ReadonlyArray<string> | Promise<ReadonlyArray<string>>
-
-/** Supplemental validation and its typing delay. */
-export interface FieldValidationOptions {
-  /** Runs after native and schema constraints pass. */
-  validate: FieldValidation
-  /** Delay in milliseconds after input/change; blur runs immediately (300 by default). */
-  debounceMs?: number
 }
 
 /** Dynamic submission data for setup-scoped form mixins. */
-interface SubmissionBindingOptions<submission> {
+export interface FormMixinsOptions<submission> {
   /** Reads the current submission when rendering mixins or reading errors; does not subscribe. */
   getSubmission?: () => submission | undefined
-  /** Requests rendering when errors, touched, pending, or validationError change. */
+  /** Requests rendering when visible errors or touched state change. */
   onChange?: () => void
-}
-
-/** Per-field supplemental client checks for a form binding. */
-export interface FormMixinsOptions<
-  submission,
-  fields extends Readonly<Record<string, unknown>> = Readonly<Record<string, unknown>>,
-> extends SubmissionBindingOptions<submission> {
-  /** Checks keyed by projected field name; callbacks use a 300ms typing delay by default. */
-  validations?: {
-    [field in keyof fields & string]?: FieldValidation | FieldValidationOptions
-  }
 }
 
 /** Related validation mixins bound to one form definition. */
@@ -201,10 +154,6 @@ export class InputValidationEvent extends Event implements InputValidationState 
   readonly errors: ReadonlyArray<string>
   /** Whether client feedback has been revealed for this input. */
   readonly touched: boolean
-  /** Whether a supplemental check is scheduled or awaiting a result. */
-  readonly pending: boolean
-  /** A failed supplemental check, rather than a validation message. */
-  readonly validationError: unknown
 
   /**
    * Creates a validation notification.
@@ -217,8 +166,6 @@ export class InputValidationEvent extends Event implements InputValidationState 
     this.errorId = state.errorId
     this.errors = [...state.errors]
     this.touched = state.touched
-    this.pending = state.pending
-    this.validationError = state.validationError
   }
 }
 
@@ -268,23 +215,6 @@ const fieldValidity = createMixin<
   ElementProps
 >((handle, hostType) => {
   let previousConfig: FieldMixinConfig | undefined
-  let customErrors: ReadonlyArray<string> = []
-  let validatedValue: string | undefined
-  let controller: AbortController | undefined
-  let timer: ReturnType<typeof setTimeout> | undefined
-  let runScheduled: (() => void) | undefined
-  let mountedControl: ValidatableControl | undefined
-  let resetControl: (control: ValidatableControl) => void
-  let publishCurrent: (control: ValidatableControl, previous: FieldState) => void
-  let updatingFeedback = false
-
-  function cancelValidation() {
-    controller?.abort()
-    controller = undefined
-    clearTimeout(timer)
-    timer = undefined
-    runScheduled = undefined
-  }
 
   handle.addEventListener('insert', (event) => {
     if (previousConfig) {
@@ -295,17 +225,6 @@ const fieldValidity = createMixin<
   return (getConfig, props) => {
     let config = getConfig()
     let feedback = config.feedback
-    if (previousConfig?.feedback !== feedback) {
-      cancelValidation()
-      customErrors = []
-      validatedValue = undefined
-      if (mountedControl) {
-        handle.queueTask(() => {
-          if (mountedControl && config.isCurrent()) validateInput(mountedControl, config.validate)
-        })
-      }
-    }
-    feedback.cancelValidation = cancelValidation
     previousConfig = config
 
     function getFeedbackProps(): ElementProps {
@@ -338,7 +257,6 @@ const fieldValidity = createMixin<
     ) {
       validateInput(input, config.validate)
       let previous = { ...feedback }
-      updatingFeedback = true
 
       if (reason === 'input') {
         feedback.touched ||= feedback.hasServerErrors
@@ -350,87 +268,9 @@ const fieldValidity = createMixin<
         feedback.touched = true
       }
 
-      let key = getControlKey(input)
-      if (reason === 'reset' || !input.validity.valid) {
-        cancelValidation()
-        customErrors = []
-        validatedValue = undefined
-        feedback.pending = false
-        feedback.validationError = undefined
-      } else if (config.validation && !feedback.hasServerErrors) {
-        if (validatedValue !== key || feedback.validationError !== undefined) {
-          cancelValidation()
-          customErrors = []
-          validatedValue = key
-          feedback.pending = true
-          feedback.validationError = undefined
-          let request = new AbortController()
-          controller = request
-          let value = input.value
-          let validation = config.validation
-
-          function complete(errors: ReadonlyArray<string>, error?: unknown) {
-            if (!config.isCurrent() || request.signal.aborted) return
-            let previous = { ...feedback }
-            feedback.pending = false
-            feedback.validationError = error
-            if (getControlKey(input) === key) {
-              // Recheck native/schema constraints in case application code changed attributes.
-              validateInput(input, config.validate)
-              if (input.validity.valid) {
-                customErrors = [...errors]
-                input.setCustomValidity(customErrors[0] ?? '')
-              }
-            }
-            if (!updatingFeedback) publishCurrent(input, previous)
-          }
-
-          let run = () => {
-            timer = undefined
-            runScheduled = undefined
-            if (!config.isCurrent() || request.signal.aborted) return
-            let result: ReturnType<FieldValidation>
-            try {
-              result = validation.validate(value, { control: input, signal: request.signal })
-            } catch (error) {
-              complete([], error)
-              return
-            }
-            if (isValidationPromise(result)) {
-              void result.then(
-                (errors) => complete(errors),
-                (error: unknown) => complete([], error),
-              )
-            } else {
-              complete(result)
-            }
-          }
-          let delay = reason === 'input' ? (validation.debounceMs ?? 300) : 0
-          if (delay > 0) {
-            runScheduled = run
-            timer = setTimeout(run, delay)
-          } else {
-            run()
-          }
-        } else if (reason !== 'input' && runScheduled) {
-          clearTimeout(timer)
-          runScheduled()
-        }
-        input.setCustomValidity(customErrors[0] ?? '')
-      }
-
-      updatingFeedback = false
-      publishFeedback(input, previous)
-    }
-
-    function publishFeedback(input: ValidatableControl, previous: FieldState) {
       if (!feedback.hasServerErrors) {
         feedback.errors =
-          feedback.touched && input.validationMessage
-            ? customErrors.length > 0
-              ? customErrors
-              : [input.validationMessage]
-            : []
+          feedback.touched && input.validationMessage ? [input.validationMessage] : []
       }
 
       let props = getFeedbackProps()
@@ -447,34 +287,19 @@ const fieldValidity = createMixin<
           errorId: config.errorId,
           errors: feedback.errors,
           touched: feedback.touched,
-          pending: feedback.pending,
-          validationError: feedback.validationError,
         }),
       )
     }
-
-    resetControl = (control) => updateFeedback(control, 'reset')
-    publishCurrent = publishFeedback
 
     return createElement(handle.element, {
       ...getFeedbackProps(),
       mix: [
         ref((control: ValidatableControl, signal) => {
-          mountedControl = control
-          signal.addEventListener(
-            'abort',
-            () => {
-              cancelValidation()
-              if (previousConfig) previousConfig.feedback.pending = false
-              mountedControl = undefined
-            },
-            { once: true },
-          )
           control.form?.addEventListener(
             'reset',
             (event) => {
               queueMicrotask(() => {
-                if (!event.defaultPrevented && !signal.aborted) resetControl(control)
+                if (!event.defaultPrevented && !signal.aborted) updateFeedback(control, 'reset')
               })
             },
             { signal },
@@ -506,12 +331,10 @@ export function form(): FormMixin {
  * Binds one reusable field definition to a native control without requiring a form binding.
  *
  * Create once in component setup. State properties remain live across renders; a new submission
- * resets feedback and cancels pending checks. `onChange` fires when live field state changes.
- * Supplemental `validations` run after native/schema checks, with debounced input and immediate
- * blur. Pending checks do not block submission; completed errors use `setCustomValidity()`.
+ * resets touched state. `onChange` fires when errors or touched state change.
  *
  * @param fieldDefinition Shared field attributes, validation, and server error readers.
- * @param options Logical name, submission getter, supplemental checks, and render notification.
+ * @param options Logical name, submission getter, and optional render notification.
  * @returns Control, label, and error mixins with live read-only state.
  */
 export function createFieldMixins<submission>(
@@ -524,15 +347,12 @@ export function createFieldMixins<submission>(
   function getFeedback(): FieldFeedback {
     let submission = options.getSubmission?.()
     if (!feedback || submission !== previousSubmission) {
-      feedback?.cancelValidation?.()
       previousSubmission = submission
       let errors = fieldDefinition.getFieldErrors(options.name, submission)
       feedback = {
         touched: false,
         hasServerErrors: errors.length > 0,
         errors,
-        pending: false,
-        validationError: undefined,
       }
     }
     return feedback
@@ -545,12 +365,6 @@ export function createFieldMixins<submission>(
     get touched() {
       return getFeedback().touched
     },
-    get pending() {
-      return getFeedback().pending
-    },
-    get validationError() {
-      return getFeedback().validationError
-    },
     field() {
       return fieldValidity(() => {
         let feedback = getFeedback()
@@ -560,17 +374,10 @@ export function createFieldMixins<submission>(
           field: options.name,
           errorId: fieldDefinition.getErrorAttrs(options.name).id,
           feedback,
-          validation:
-            typeof options.validations === 'function'
-              ? { validate: options.validations }
-              : options.validations,
-          isCurrent: () => getFeedback() === feedback,
           onFeedbackChange(previous) {
             if (getFeedback() !== feedback) return
             if (
               previous.touched !== feedback.touched ||
-              previous.pending !== feedback.pending ||
-              previous.validationError !== feedback.validationError ||
               previous.errors.length !== feedback.errors.length ||
               previous.errors.some((message, index) => message !== feedback.errors[index])
             ) {
@@ -598,18 +405,16 @@ export function createFieldMixins<submission>(
  * Explicit host props override generated attributes; error ids are appended to `aria-describedby`.
  * Create the binding in component setup and use `getSubmission` to read changing submission props.
  * The getter is evaluated while reading errors or rendering inputs, including SSR, not on binding.
- * Use `onChange` to request a render when field state changes. Optional `validations` supplement
- * native/schema checks and can return promises. Pending checks do not delay submission; completed
- * errors block it through native validity. New submissions cancel checks and reset feedback
- * without calling `onChange`; ordinary renders preserve it.
+ * Use `onChange` to request a render when visible errors or touched state change. New submissions
+ * reset feedback without calling `onChange`; ordinary renders preserve it.
  *
  * @param formDefinition Form definition that provides attributes, errors, and field validators.
- * @param options Current submission source, render notification, and supplemental checks (optional).
+ * @param options Current submission source and render notification (optional).
  * @returns Related form, control, label, and error mixin factories, plus live field state.
  */
 export function createFormMixins<fields extends Readonly<Record<string, unknown>>, submission>(
   formDefinition: FormDefinitionSource<fields, submission>,
-  options: FormMixinsOptions<submission, fields> = {},
+  options: FormMixinsOptions<submission> = {},
 ): FormMixins<fields> {
   let bindings: Record<string, FieldMixins> = {}
   let fieldStates: Record<string, FieldState> = {}
@@ -637,7 +442,7 @@ export function createFormMixins<fields extends Readonly<Record<string, unknown>
             return formDefinition.getFieldErrors(field, submission)
           },
         },
-        { ...options, name: field, validations: options.validations?.[field] },
+        { ...options, name: field },
       ),
     })
     Object.defineProperty(errors, field, {
@@ -680,7 +485,7 @@ export function createFormMixins<fields extends Readonly<Record<string, unknown>
 /**
  * Observes field feedback without taking ownership of its markup or disabling default behavior.
  *
- * @param handler Receives a snapshot of the field name, error id, and live field state.
+ * @param handler Receives the field, error element id, visible errors, and touched state.
  * @param captureBoolean Whether to listen during capture (false by default).
  * @returns An event mixin for an input or an ancestor such as its form.
  */
@@ -697,19 +502,6 @@ export function onInputValidation<target extends HTMLElement>(
 function validateInput(input: ValidatableControl, validate: FieldValidator): void {
   input.setCustomValidity('')
   if (input.validity.valid) validate(input)
-}
-
-function getControlKey(control: ValidatableControl): string {
-  return JSON.stringify([
-    control.value,
-    control instanceof HTMLInputElement ? control.checked : undefined,
-  ])
-}
-
-function isValidationPromise(
-  result: ReadonlyArray<string> | Promise<ReadonlyArray<string>>,
-): result is Promise<ReadonlyArray<string>> {
-  return 'then' in result
 }
 
 function setAttribute(element: HTMLElement, name: string, value: unknown): void {
