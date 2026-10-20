@@ -33,7 +33,7 @@ export async function writeResult(
     // Update script references for static HTML hosting.
     let updated = rewriteExtensionsToJs(html)
     await fs.writeFile(outputPath, updated, 'utf-8')
-  } else if (SCRIPT_FILE_EXT.test(filepath)) {
+  } else if (SCRIPT_FILE_EXT.test(decodedFilepath)) {
     let content = await response.text()
     // Write all script files to disk as JS files
     await fs.writeFile(outputPath, content.replace(SCRIPT_EXT_IN_JS_IMPORT, '.js'), 'utf-8')

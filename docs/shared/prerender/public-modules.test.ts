@@ -7,7 +7,7 @@ import { describe, it } from 'remix/test'
 import { discoverPublicModuleHrefs } from './public-modules.ts'
 
 describe('discoverPublicModuleHrefs()', () => {
-  it('discovers modules inside colocated public directories with their preloads', async () => {
+  it('discovers modules inside colocated public directories with their preloads and local import map targets', async () => {
     let tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-docs-public-modules-'))
 
     try {
