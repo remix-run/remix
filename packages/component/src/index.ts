@@ -74,4 +74,10 @@ export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 
 // -- Navigation --
 export { navigate, navigation } from './runtime/navigation.ts'
-export type { NavigationOptions } from './runtime/navigation.ts'
+export type {
+  NavigationEventMap,
+  NavigationOptions,
+  NavigationState,
+  NavigationSubmission,
+  PendingNavigation,
+} from './runtime/navigation.ts'

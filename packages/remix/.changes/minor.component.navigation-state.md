@@ -1,0 +1,1 @@
+`remix/component` exports `navigation` for frame navigation state: `navigation.current` describes the navigation in progress for pending UI, `navigation.settled()` waits for it to finish before scrolling or changing the URL, and `navigation.supported` reports whether the browser supports frame navigation (see #12051).
