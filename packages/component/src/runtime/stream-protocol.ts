@@ -1,5 +1,7 @@
 export type FlushKind = 'document' | 'fragment'
 
+export const FRAME_TEMPLATE_END_MARKER = 'rmx:template-end'
+
 const FLUSH_MARKER_PATTERN = /<!--\s*rmx:flush\s+(document|fragment)\s*-->/g
 
 export function appendFlushMarker(html: string, kind: FlushKind): string {

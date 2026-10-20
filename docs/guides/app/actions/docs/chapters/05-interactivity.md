@@ -728,8 +728,14 @@ the `link(...)` and `navigate(...)` options:
 - `data-rmx-target` names the frame to reload.
 - `data-rmx-src` provides the URL to fetch for the mounted named frame selected by `data-rmx-target` while `href` remains the browser's destination.
 - `data-rmx-history="push|replace"` controls how the navigation updates history, including overriding a form's default.
-- `data-rmx-reset-scroll="false"` preserves the current scroll position.
+- `data-rmx-reset-scroll="manual"` preserves the current scroll position.
+- `data-rmx-reset-focus="manual"` disables the browser's automatic focus reset after navigation.
 - `data-rmx-document` opts out of interception and lets the browser perform a full-document navigation.
+
+Use `resetScroll: "manual"` or `resetFocus: "manual"` for the same behavior in `link(...)` and
+`navigate(...)`. Both controls also accept `"after-transition"`, the default. Existing boolean options
+and `"true"` / `"false"` attribute values still work: `true` corresponds to `"after-transition"` and
+`false` to `"manual"`.
 
 The top frame follows the browser URL. If `data-rmx-target` is omitted, an intercepted navigation
 reloads the top frame from the link or form destination. If a specified target does not match a

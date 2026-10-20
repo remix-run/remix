@@ -190,18 +190,36 @@ export type FrameHandleEventMap = {
 }
 
 /**
+ * Options for reloading a frame's source.
+ */
+export interface FrameReloadOptions {
+  /** Source to reload and retain for subsequent reloads. Defaults to the current source. */
+  src?: string
+  /** Form request method: `GET` or `POST`, case-insensitive. Other values default to `GET`. */
+  method?: string
+  /**
+   * Form encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`,
+   * or `text/plain`. Case-insensitive; invalid values use the default. Ignored for GET.
+   */
+  encType?: string
+  /** Form values to submit. GET encodes them into the source query instead of a request body. */
+  body?: FormData
+}
+
+/**
  * Public API for interacting with a frame instance.
  */
 export type FrameHandle = TypedEventTarget<FrameHandleEventMap> & {
   /** Source used by the next reload. Assigning it alone does not load content or change history. */
   src: string
   /**
-   * Resolves the current source and reconciles the frame with its returned content.
+   * Resolves a source and reconciles the frame with its returned content without changing history.
    * A newer reload cancels earlier reload work. Non-cancellation errors reject the promise.
    *
+   * @param options Source and request settings.
    * @returns The reload's signal, which is aborted if that reload is superseded or disposed.
    */
-  reload(): Promise<AbortSignal>
+  reload(options?: FrameReloadOptions): Promise<AbortSignal>
   /**
    * Renders supplied trusted content directly without calling the resolver or changing the source.
    * HTML strings and streams are not sanitized.

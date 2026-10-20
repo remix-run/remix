@@ -190,72 +190,76 @@ const animateEntranceMixin = createMixin<Element, [config: AnimationConfig], Ele
       return handle.element
     }
   },
+  { ssr: false },
 )
 
-const animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementProps>((handle) => {
-  let currentConfig: AnimationConfig = true
-  let node: Element | null = null
+const animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementProps>(
+  (handle) => {
+    let currentConfig: AnimationConfig = true
+    let node: Element | null = null
 
-  handle.addEventListener('insert', (event) => {
-    node = event.node
-  })
-
-  handle.addEventListener('reclaimed', (event) => {
-    node = event.node
-    let current = animatingNodes.get(event.node)
-    if (current && current.animation.playState === 'running') {
-      // WAAPI can throw InvalidStateError here if the target is transiently non-rendered
-      // during reclaim; we still have computed-style fallback below for retargeting.
-      try {
-        current.animation.commitStyles()
-      } catch {}
-      current.animation.cancel()
-
-      let style = (event.node as HTMLElement).style
-      let computed = getComputedStyle(event.node as Element)
-      let from: Keyframe = {}
-      for (let property of current.properties) {
-        let cssProperty = toCssPropertyName(property)
-        let value = readInlineStyle(style, property) || computed.getPropertyValue(cssProperty)
-        if (value !== '') {
-          from[property as keyof Keyframe] = value
-        }
-        writeInlineStyle(style, property, '')
-      }
-
-      let enterConfig = resolveEnterConfig(currentConfig) ?? DEFAULT_ENTER
-      let keyframes: Keyframe[] = [from, {}]
-      let options = createAnimationOptions(enterConfig, 'none')
-      let animation = (event.node as HTMLElement).animate(keyframes, options)
-      trackAnimation(event.node, animation, keyframes)
-    }
-  })
-
-  handle.addEventListener('beforeRemove', (event) => {
-    let config = resolveExitConfig(currentConfig)
-    if (!config) return
-    event.persistNode(async (signal) => {
-      if (!node) throw new Error('Cannot animate an element before it is inserted')
-      let current = animatingNodes.get(node)
-      if (current && current.animation.playState === 'running') {
-        current.animation.reverse()
-        await waitForAnimationOrAbort(current.animation, signal)
-        return
-      }
-
-      let keyframes = buildExitKeyframes(config)
-      let options = createAnimationOptions(config, 'forwards')
-      let animation = (node as HTMLElement).animate(keyframes, options)
-      trackAnimation(node, animation, keyframes)
-      await waitForAnimationOrAbort(animation, signal)
+    handle.addEventListener('insert', (event) => {
+      node = event.node
     })
-  })
 
-  return (config) => {
-    currentConfig = config
-    return handle.element
-  }
-})
+    handle.addEventListener('reclaimed', (event) => {
+      node = event.node
+      let current = animatingNodes.get(event.node)
+      if (current && current.animation.playState === 'running') {
+        // WAAPI can throw InvalidStateError here if the target is transiently non-rendered
+        // during reclaim; we still have computed-style fallback below for retargeting.
+        try {
+          current.animation.commitStyles()
+        } catch {}
+        current.animation.cancel()
+
+        let style = (event.node as HTMLElement).style
+        let computed = getComputedStyle(event.node as Element)
+        let from: Keyframe = {}
+        for (let property of current.properties) {
+          let cssProperty = toCssPropertyName(property)
+          let value = readInlineStyle(style, property) || computed.getPropertyValue(cssProperty)
+          if (value !== '') {
+            from[property as keyof Keyframe] = value
+          }
+          writeInlineStyle(style, property, '')
+        }
+
+        let enterConfig = resolveEnterConfig(currentConfig) ?? DEFAULT_ENTER
+        let keyframes: Keyframe[] = [from, {}]
+        let options = createAnimationOptions(enterConfig, 'none')
+        let animation = (event.node as HTMLElement).animate(keyframes, options)
+        trackAnimation(event.node, animation, keyframes)
+      }
+    })
+
+    handle.addEventListener('beforeRemove', (event) => {
+      let config = resolveExitConfig(currentConfig)
+      if (!config) return
+      event.persistNode(async (signal) => {
+        if (!node) throw new Error('Cannot animate an element before it is inserted')
+        let current = animatingNodes.get(node)
+        if (current && current.animation.playState === 'running') {
+          current.animation.reverse()
+          await waitForAnimationOrAbort(current.animation, signal)
+          return
+        }
+
+        let keyframes = buildExitKeyframes(config)
+        let options = createAnimationOptions(config, 'forwards')
+        let animation = (node as HTMLElement).animate(keyframes, options)
+        trackAnimation(node, animation, keyframes)
+        await waitForAnimationOrAbort(animation, signal)
+      })
+    })
+
+    return (config) => {
+      currentConfig = config
+      return handle.element
+    }
+  },
+  { ssr: false },
+)
 
 /**
  * Animates an element when it is inserted into the DOM.

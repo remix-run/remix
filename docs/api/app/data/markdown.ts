@@ -68,9 +68,10 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
 
   let markdown = fs.readFileSync(fullPath, 'utf-8')
   let { attributes } = parseMarkdownFrontmatter(markdown)
+  let packagePath = parts.slice(0, attributes.type === 'package' ? -1 : -2).join('/')
+  let packageName = packagePath.replace(/^remix-run\//, '@remix-run/')
 
   if (attributes.type === 'package') {
-    let packageName = parts.slice(0, -1).join('/')
     return {
       kind: 'package',
       path: fullPath,
@@ -81,7 +82,6 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
     }
   }
 
-  let packageName = parts.slice(0, -2).join('/')
   return {
     kind: 'api',
     path: fullPath,

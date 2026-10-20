@@ -218,8 +218,15 @@ This GET form reloads the recommendations frame without a client entry or submit
 The form remains a normal document navigation before the runtime starts. Native constraint
 validation and the form's `submit` event run before Remix intercepts it. `data-rmx-target` chooses a named
 frame, `data-rmx-src` can provide a different request URL for that named frame,
-`data-rmx-reset-scroll="false"` preserves the current scroll position, and `data-rmx-document` opts out of
-interception. `data-rmx-history="push|replace"` controls how the navigation updates history.
+`data-rmx-reset-scroll="manual"` preserves the current scroll position, and
+`data-rmx-reset-focus="manual"` disables the browser's automatic focus reset. A submit button's values
+take precedence over its form's values. `data-rmx-document` opts out of interception, and
+`data-rmx-history="push|replace"` controls how the navigation updates history.
+
+Scroll and focus controls accept `"after-transition"` (the default) and `"manual"`. Existing `"true"`
+attributes keep the default behavior, and `"false"` attributes select `"manual"`. The `resetScroll` and
+`resetFocus` options in `navigate()` and `link()` accept the same strings, along with `true` and `false`
+for compatibility.
 
 GET controls are already encoded in the destination URL. For non-GET forms, the default resolver
 sends the form's body with its method and encoding. The action should return HTML for the targeted
@@ -285,7 +292,8 @@ A link can keep its public destination in `href` while loading a smaller route i
   href={routes.albums.show.href({ albumId: album.id })}
   data-rmx-src={routes.albums.recommendations.href({ albumId: album.id })}
   data-rmx-target="album-recommendations"
-  data-rmx-reset-scroll="false"
+  data-rmx-reset-scroll="manual"
+  data-rmx-reset-focus="manual"
 >
   Show recommendations
 </a>
@@ -299,6 +307,9 @@ URL regardless of the target. Invalid or cross-origin values also disable interc
 
 Add `data-rmx-history="replace"` when it should replace the current history entry. Use
 `data-rmx-document` when a same-origin link must perform an ordinary document navigation instead.
+
+These `"manual"` values disable automatic scroll restoration and focus reset during navigation.
+They cannot retain focus if the update removes the focused element.
 
 ## Handle failures and cancellation
 

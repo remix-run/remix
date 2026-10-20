@@ -46,6 +46,19 @@ function Counter(handle: Handle<{ initialCount?: number }>) {
 
 Use `createMixin(...)` to share host behavior, manage DOM resources, or provide default props. The [Mixins guide](https://github.com/remix-run/remix/blob/main/packages/component/docs/mixins.md) covers setup and render, `MixinHandle`, lifecycle events, and deferred removal with `beforeRemove` and `event.persistNode(...)`.
 
+For behavior that does not affect server HTML, pass `{ ssr: false }` to skip setup and render on the server:
+
+```tsx
+import { createMixin } from 'remix/component'
+
+const focusOnInsert = createMixin<HTMLElement>(
+  (handle) => {
+    handle.addEventListener('insert', ({ node }) => node.focus())
+  },
+  { ssr: false },
+)
+```
+
 ## Client Entry Loading
 
 `run()` hydrates client entries by calling `loadModule` for each component module:
@@ -115,13 +128,16 @@ async function resolveFrame(src, options) {
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (options?.target != null) headers.set('X-Remix-Target', options.target)
 
-  let response = await fetch(src, {
-    body: getRequestBody(options),
+  let { body, encType } = getRequestBody(options)
+  if (encType) headers.set('Content-Type', encType)
+  let requestInit = {
+    body,
     headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,
-  })
+  }
+  let response = await fetch(src, requestInit)
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
@@ -133,26 +149,31 @@ async function resolveFrame(src, options) {
 
 function getRequestBody(options) {
   let formData = options?.formData
-  let method = options?.method
-  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+  if (!formData) return {}
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
 
-  if (options?.encType === 'text/plain') {
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') return { body: formData }
+
+  if (encType === 'text/plain') {
     let body = ''
     for (let [name, value] of formData) {
       name = normalizeLineBreaks(name)
       value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
-    return new Blob([body], { type: 'text/plain' })
+    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
   }
-
-  if (options?.encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
+    body.append(
+      normalizeLineBreaks(name),
+      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
+    )
   }
-  return body
+  return { body, encType: 'application/x-www-form-urlencoded' }
 }
 
 function normalizeLineBreaks(value) {
@@ -165,6 +186,16 @@ The default resolver requests HTML. GET form values are already encoded in `src`
 CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass a custom
 `resolveFrame` when the server requires additional headers, another body encoding, or a different
 response policy.
+
+Scroll and focus controls accept the Navigation API values `"after-transition"` (the default) and `"manual"`. Set `data-rmx-reset-scroll="manual"` or `data-rmx-reset-focus="manual"` on a link or form to disable the corresponding automatic behavior. The equivalent options for `navigate()` and `link()` are `resetScroll: 'manual'` and `resetFocus: 'manual'`:
+
+```tsx
+<a href="/search?page=2" data-rmx-reset-scroll="manual" data-rmx-reset-focus="manual">
+  Next page
+</a>
+```
+
+Existing boolean options and `"true"` / `"false"` attribute values remain supported: `true` corresponds to `"after-transition"` and `false` to `"manual"`.
 
 Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
 and forms as document navigations while still hydrating client entries and using explicit frames,
@@ -179,7 +210,7 @@ This prevents Remix from intercepting Navigation API events. Explicit frame relo
 
 The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom `resolveFrame` may return a `Response` with any status when it wants the component runtime to render the response body.
 
-Forms remain ordinary HTML forms before the runtime starts. Add `data-rmx-target` to reload a named frame, or `data-rmx-document` to require a full-document submission:
+Links and forms remain ordinary HTML elements before the runtime starts. Use `data-rmx-target` to reload a named frame, `data-rmx-src` to fetch a different same-origin URL for that named frame while keeping `href` or `action` as the browser destination, or `data-rmx-document` to force a full-document navigation:
 
 ```tsx
 import { Frame } from 'remix/component'
@@ -199,6 +230,22 @@ function AccountPage() {
 ```
 
 Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
+
+Reload another source or send a request body without changing browser history:
+
+```tsx
+await handle.frame.reload({ src: '/account/edit' })
+
+let body = new FormData()
+body.set('displayName', 'Ada')
+await handle.frame.reload({
+  src: '/account/edit',
+  method: 'post',
+  body,
+})
+```
+
+`src` becomes the source for subsequent reloads. Pass `FormData` as `body` to submit fields. The method defaults to GET, which encodes the fields into the source query. POST defaults to `application/x-www-form-urlencoded`; use `encType` to select `multipart/form-data` or `text/plain`. Methods and encodings are case-insensitive; unsupported values use the defaults. See [Reload requests](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#reload-requests) for request and cancellation behavior.
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
@@ -249,6 +296,21 @@ Use `data-rmx-preserve-attrs` when client code owns only specific attributes, su
 ```
 
 On frame reloads, the space-separated attribute names in the incoming HTML keep their live values or absence. Other attributes and children reconcile normally. An empty or omitted list uses normal attribute reconciliation. This works on any matched element; it does not prevent removal or replacement. See [Preserving client-owned attributes](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#preserving-client-owned-attributes) for examples and ownership rules.
+
+## Raw HTML with unsafeHTML
+
+Host raw-HTML props (`innerHTML` and iframe `srcDoc` / `srcdoc`) require an explicit value created with `unsafeHTML(...)`:
+
+```tsx
+import { unsafeHTML } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+function ArticleBody(handle: Handle<{ html: string }>) {
+  return () => <article innerHTML={unsafeHTML(handle.props.html)} />
+}
+```
+
+When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` is an authorization boundary and does not sanitize input; only pass trusted or already-sanitized HTML.
 
 ## Cascade Layers
 

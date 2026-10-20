@@ -1,6 +1,10 @@
 import { invariant } from './invariant.ts'
 import type { FrameContext } from './frame.ts'
-import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
+import {
+  disposeClientEntryBoundary,
+  getClientEntryBoundaryOwner,
+  getClientEntryKey,
+} from './client-entry-boundary.ts'
 
 type MarkerKind = 'frame-start' | 'frame-end' | 'virtual-root-start' | 'virtual-root-end'
 
@@ -388,6 +392,11 @@ function diffSiblingUnits(
     committed[i] = currentUnit
   }
 
+  // Remove obsolete siblings first so they do not force surviving nodes to move and lose focus.
+  for (let i = 0; i < currentUnits.length; i++) {
+    if (!used[i]) removeSiblingUnit(currentUnits[i], parent, context)
+  }
+
   let anchor: Node | null = regionTailRef
   for (let i = committed.length - 1; i >= 0; i--) {
     let unit = committed[i]
@@ -405,10 +414,6 @@ function diffSiblingUnits(
 
     placeSiblingUnitBefore(unit, parent, ref)
     if (first.parentNode === parent) anchor = first
-  }
-
-  for (let i = 0; i < currentUnits.length; i++) {
-    if (!used[i]) removeSiblingUnit(currentUnits[i], parent, context)
   }
 }
 
@@ -649,8 +654,8 @@ function shouldPreserveHydrationStartMarker(
   return (
     currentOwner !== undefined &&
     nextData !== undefined &&
-    currentOwner.identity.moduleUrl === nextData.moduleUrl &&
-    currentOwner.identity.exportName === nextData.exportName
+    getClientEntryKey(currentOwner.identity) ===
+      getClientEntryKey({ moduleUrl: nextData.moduleUrl, exportName: nextData.exportName })
   )
 }
 

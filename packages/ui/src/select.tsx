@@ -8,7 +8,6 @@ import {
   type Handle,
   type MixinHandle,
   type MixinFactory,
-  type Props,
   type RemixNode,
 } from '@remix-run/component'
 import * as listbox from './listbox.ts'
@@ -62,15 +61,6 @@ export interface SelectContextProps {
   labelSwapDelayMs?: number
   name?: string
 }
-
-export interface SelectProps extends Omit<Props<'button'>, 'children' | 'name'> {
-  children?: RemixNode
-  defaultLabel: string
-  defaultValue?: string | null
-  name?: string
-}
-
-export type SelectOptionProps = Props<'div'> & Omit<listbox.ListboxOption, 'id'>
 
 type State = 'initializing' | 'closed' | 'open' | 'selecting'
 
@@ -496,15 +486,6 @@ export const list = listMixin
 export const option = listbox.option
 export { popoverMixin as popover }
 export const trigger = triggerMixin
-
-const select = {
-  Context,
-  hiddenInput,
-  list,
-  option,
-  popover: popoverMixin,
-  trigger,
-} as const
 
 export function onSelectChange<target extends HTMLElement>(
   handler: SelectChangeHandler<target>,

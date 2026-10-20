@@ -33,6 +33,7 @@ export type {
   FrameHandleEventMap,
   FrameContent,
   FrameHandle,
+  FrameReloadOptions,
   FrameProps,
 } from './runtime/component.ts'
 export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame.ts'
@@ -56,6 +57,7 @@ export type {
   MixinDescriptor,
   MixinFactory,
   MixinHandle,
+  MixinOptions,
   MixinType,
   MixInput,
   MixValue,

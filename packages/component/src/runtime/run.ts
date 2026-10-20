@@ -79,14 +79,17 @@ export function getNamedFrame(name: string): FrameHandle | undefined {
   return namedFrames.get(name)
 }
 
-// Frame reloads can receive raw FormData without going through form navigation. Encode it here so
-// manual reloads use the requested form encoding instead of always sending multipart bodies.
-function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+function getRequestBody(options?: ResolveFrameOptions): {
+  body?: BodyInit
+  encType?: string
+} {
   let formData = options?.formData
-  let method = options?.method
-  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
+  if (!formData) return {}
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
 
-  let encType = options?.encType
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') return { body: formData }
 
   if (encType === 'text/plain') {
     let body = ''
@@ -95,16 +98,17 @@ function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
       value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
-    return new Blob([body], { type: 'text/plain' })
+    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
   }
-
-  if (encType !== 'application/x-www-form-urlencoded') return formData
 
   let body = new URLSearchParams()
   for (let [name, value] of formData) {
-    body.append(name, typeof value === 'string' ? value : value.name)
+    body.append(
+      normalizeLineBreaks(name),
+      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
+    )
   }
-  return body
+  return { body, encType: 'application/x-www-form-urlencoded' }
 }
 
 function normalizeLineBreaks(value: string): string {
@@ -115,13 +119,16 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (options?.target != null) headers.set('X-Remix-Target', options.target)
 
-  let response = await fetch(src, {
-    body: getRequestBody(options),
+  let { body, encType } = getRequestBody(options)
+  if (encType) headers.set('Content-Type', encType)
+  let requestInit: RequestInit = {
+    body,
     headers,
     method: options?.method,
     mode: 'same-origin',
     signal: options?.signal,
-  })
+  }
+  let response = await fetch(src, requestInit)
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {

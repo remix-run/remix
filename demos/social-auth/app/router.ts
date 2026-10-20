@@ -1,4 +1,4 @@
-import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
+import { createRouter, type RouterContext } from 'remix/router'
 import type { Cookie } from 'remix/cookie'
 import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'
@@ -20,8 +20,7 @@ import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
 import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
 
-type AppMiddleware = ReturnType<typeof createSocialAuthMiddleware>
-type AppContext = MiddlewareContext<AppMiddleware>
+type AppContext = RouterContext<ReturnType<typeof createSocialAuthRouter>>
 
 declare module 'remix' {
   interface RouterTypes {
@@ -39,7 +38,20 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
   let providers = options?.externalProviderRegistry ?? externalProviderRegistry
-  let router = createRouter({ middleware: createSocialAuthMiddleware(cookie, storage) })
+  let router = createRouter({
+    middleware: [
+      staticFiles('./public', {
+        cacheControl: 'no-store, must-revalidate',
+        etag: false,
+        lastModified: false,
+      }),
+      formData(),
+      session(cookie, storage),
+      loadDatabase(),
+      loadAuth(),
+      render(),
+    ],
+  })
 
   router.map(routes, createRootController(providers))
   router.map(routes.auth, createAuthController())
@@ -51,19 +63,4 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   router.map(routes.auth.x, createXAuthController(providers))
 
   return router
-}
-
-function createSocialAuthMiddleware(cookie: Cookie, storage: SessionStorage) {
-  return createMiddleware(
-    staticFiles('./public', {
-      cacheControl: 'no-store, must-revalidate',
-      etag: false,
-      lastModified: false,
-    }),
-    formData(),
-    session(cookie, storage),
-    loadDatabase(),
-    loadAuth(),
-    render(),
-  )
 }

@@ -10,49 +10,52 @@ export const hiddenTypeahead = createMixin<
   HTMLElement,
   [onTypeahead: HiddenTypeaheadHandler],
   ElementProps
->((handle) => {
-  let text = ''
-  let timeoutId = 0
+>(
+  (handle) => {
+    let text = ''
+    let timeoutId = 0
 
-  function clearTypeahead() {
-    clearTimeout(timeoutId)
-    timeoutId = 0
-    text = ''
-  }
+    function clearTypeahead() {
+      clearTimeout(timeoutId)
+      timeoutId = 0
+      text = ''
+    }
 
-  function updateTypeahead(nextText: string, onTypeahead: HiddenTypeaheadHandler) {
-    text = nextText
-    onTypeahead(text)
-  }
+    function updateTypeahead(nextText: string, onTypeahead: HiddenTypeaheadHandler) {
+      text = nextText
+      onTypeahead(text)
+    }
 
-  handle.addEventListener('remove', clearTypeahead)
+    handle.addEventListener('remove', clearTypeahead)
 
-  return (onTypeahead) => [
-    on('focusout', (event) => {
-      if (
-        event.relatedTarget instanceof Node &&
-        event.currentTarget.contains(event.relatedTarget)
-      ) {
-        return
-      }
+    return (onTypeahead) => [
+      on('focusout', (event) => {
+        if (
+          event.relatedTarget instanceof Node &&
+          event.currentTarget.contains(event.relatedTarget)
+        ) {
+          return
+        }
 
-      clearTypeahead()
-    }),
-    on('keydown', (event) => {
-      if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
-        clearTimeout(timeoutId)
-        updateTypeahead(text + event.key.toLowerCase(), onTypeahead)
-        timeoutId = window.setTimeout(clearTypeahead, HIDDEN_TYPEAHEAD_TIMEOUT)
-      } else if (event.key === 'Escape') {
         clearTypeahead()
-      } else if (event.key === 'Backspace' && text.length > 0) {
-        clearTimeout(timeoutId)
-        updateTypeahead(text.slice(0, -1), onTypeahead)
-        timeoutId = window.setTimeout(clearTypeahead, HIDDEN_TYPEAHEAD_TIMEOUT)
-      }
-    }),
-  ]
-})
+      }),
+      on('keydown', (event) => {
+        if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+          clearTimeout(timeoutId)
+          updateTypeahead(text + event.key.toLowerCase(), onTypeahead)
+          timeoutId = window.setTimeout(clearTypeahead, HIDDEN_TYPEAHEAD_TIMEOUT)
+        } else if (event.key === 'Escape') {
+          clearTypeahead()
+        } else if (event.key === 'Backspace' && text.length > 0) {
+          clearTimeout(timeoutId)
+          updateTypeahead(text.slice(0, -1), onTypeahead)
+          timeoutId = window.setTimeout(clearTypeahead, HIDDEN_TYPEAHEAD_TIMEOUT)
+        }
+      }),
+    ]
+  },
+  { ssr: false },
+)
 
 export function itemMatchesSearchText<item>(
   item: item,
