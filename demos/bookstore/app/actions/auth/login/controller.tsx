@@ -1,6 +1,6 @@
 import { createController } from 'remix/router'
 import { completeAuth, verifyCredentials } from 'remix/auth'
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from '@remix-run/ui/form'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../../routes.ts'
@@ -28,7 +28,9 @@ export default createController(routes.auth.login, {
       let submission = LoginForm.parse(formData)
 
       if (!submission.success) {
-        return render(<LoginPage formAction={formAction} submission={submission} />, { status: 400 })
+        return render(<LoginPage formAction={formAction} submission={submission} />, {
+          status: 400,
+        })
       }
 
       let user = await verifyCredentials(passwordProvider, context)

@@ -1,6 +1,6 @@
 import * as s from 'remix/data-schema'
 import { maxLength, minLength } from 'remix/data-schema/checks'
-import { createField, createForm } from 'remix/data-schema/form'
+import { createField, createForm } from '@remix-run/ui/form'
 
 import { Account } from '../../../data/public/account-schema.ts'
 
@@ -23,7 +23,6 @@ export const RegistrationForm = createForm({
       errorMap({ code }) {
         if (code === 'value.required') return 'Enter your display name'
         if (code === 'string.min_length') return 'Use at least 2 characters for your display name'
-        if (code === 'refine.failed') return 'Enter your display name without extra spaces'
       },
     },
     email: { label: 'Email address', type: 'email' },

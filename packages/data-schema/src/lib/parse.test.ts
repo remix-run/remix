@@ -159,15 +159,32 @@ describe('parseSafe', () => {
     assert.equal(result.issues[0].message, 'Expected number')
   })
 
-  it('uses explicit refinement messages as overridable defaults', () => {
+  it('preserves explicit refinement messages without calling errorMap', () => {
     let schema = string().refine(() => false, 'Original message')
-    let unchanged = parseSafe(schema, 'value')
-    assert.ok(!unchanged.success)
-    assert.equal(unchanged.issues[0].message, 'Original message')
     let result = parseSafe(schema, 'value', {
-      errorMap(context) {
-        assert.equal(context.code, 'refine.failed')
-        assert.equal(context.defaultMessage, 'Original message')
+      errorMap() {
+        throw new Error('Explicit refinement messages must bypass errorMap')
+      },
+    })
+    assert.ok(!result.success)
+    assert.equal(result.issues[0].message, 'Original message')
+  })
+
+  it('preserves an explicitly empty refinement message', () => {
+    let schema = string().refine(() => false, '')
+    let result = parseSafe(schema, 'value', {
+      errorMap: () => 'Mapped message',
+    })
+    assert.ok(!result.success)
+    assert.equal(result.issues[0].message, '')
+  })
+
+  it('maps refinements without explicit messages and falls back when the map declines', () => {
+    let schema = string().refine(() => false)
+    let result = parseSafe(schema, 'value', {
+      errorMap({ code, defaultMessage }) {
+        assert.equal(code, 'refine.failed')
+        assert.equal(defaultMessage, 'Refinement failed')
         return 'Mapped message'
       },
     })
@@ -175,14 +192,38 @@ describe('parseSafe', () => {
     assert.equal(result.issues[0].message, 'Mapped message')
     let fallback = parseSafe(schema, 'value', { errorMap: () => undefined })
     assert.ok(!fallback.success)
-    assert.equal(fallback.issues[0].message, 'Original message')
+    assert.equal(fallback.issues[0].message, 'Refinement failed')
   })
 
-  it('maps custom checks without a code through check.failed', () => {
+  it('preserves uncoded check messages without calling errorMap', () => {
     let schema = string().pipe({ check: () => false, message: 'Original check' })
     let result = parseSafe(schema, 'value', {
+      errorMap() {
+        throw new Error('Uncoded checks must bypass errorMap')
+      },
+    })
+    assert.ok(!result.success)
+    assert.equal(result.issues[0].message, 'Original check')
+  })
+
+  it('preserves the default message of uncoded checks', () => {
+    let schema = string().pipe({ check: () => false })
+    let result = parseSafe(schema, 'value', {
+      errorMap: () => 'Mapped check',
+    })
+    assert.ok(!result.success)
+    assert.equal(result.issues[0].message, 'Check failed')
+  })
+
+  it('continues mapping coded checks with explicit messages', () => {
+    let schema = string().pipe({
+      check: () => false,
+      code: 'username.reserved',
+      message: 'Original check',
+    })
+    let result = parseSafe(schema, 'value', {
       errorMap({ code, defaultMessage }) {
-        assert.equal(code, 'check.failed')
+        assert.equal(code, 'username.reserved')
         assert.equal(defaultMessage, 'Original check')
         return 'Mapped check'
       },

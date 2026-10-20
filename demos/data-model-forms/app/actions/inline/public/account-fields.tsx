@@ -1,4 +1,4 @@
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from '@remix-run/ui/form'
 import { clientEntry, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 import { createFormMixins } from '@remix-run/ui/form'

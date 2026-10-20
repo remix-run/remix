@@ -1,6 +1,8 @@
 # Schema-backed fields with native validation and mixin-owned feedback
 
-We chose reusable field definitions in `data-schema` and setup-scoped browser bindings in `ui`. Definitions connect schema validation, native HTML constraints, and submitted values; mixins coordinate feedback without choosing DOM structure or error markup.
+We chose reusable field definitions and setup-scoped browser bindings in `ui/form`. Definitions connect schema validation, native HTML constraints, and submitted values; mixins coordinate feedback without choosing DOM structure or error markup.
+
+`data-schema` owns validation and generic `getSchemaMetadata()` introspection. HTML constraints, field configuration, form decoding, and mixins live together in `ui/form`, keeping browser concepts out of the schema package without splitting a field's configuration across declarations. Definitions and parsing are server-safe; importing them does not require a DOM.
 
 ## A form describes an operation, not a database record
 
@@ -26,7 +28,7 @@ Controls validate while typing, but client feedback appears only after blur or a
 
 ## One field-level map customizes messages
 
-We chose an optional `errorMap` on field definitions over a mixin-only hook, a separate native-message map, or message arguments on each schema helper. Schema/domain codes keep browser vocabulary out of the server API. Explicit check and refinement messages are overridable defaults; returning `undefined` preserves them. Required empty form values use `value.required`, while other failures retain their schema codes.
+We chose an optional `errorMap` on field definitions over a mixin-only hook, a separate native-message map, or message arguments on each schema helper. Schema/domain codes keep browser vocabulary out of the server API. Existing schema message precedence stays unchanged: explicit refinement messages and uncoded checks bypass the map; coded checks remain mappable. Omit a refinement's message to customize `refine.failed` in the field map. Required empty form values use `value.required`, while other failures retain their schema codes.
 
 The browser adapter maps supported native failures to those codes and sets the resolved primary message synchronously, aligning tooltips and inline feedback. Native-only constraints keep browser wording. A message override adds no validation: an email input still needs an email schema check on the server. Without JavaScript, native tooltips remain unchanged.
 
@@ -48,7 +50,7 @@ For now, the backing schema must expose `.shape`; an object-level `.refine()` re
 2. Add asynchronous orchestration if application-owned checks plus `setCustomErrors()` prove insufficient.
 3. Add higher-level field components when repeated markup establishes defaults without constraining DOM structure.
 
-[form-docs]: ../packages/data-schema/README.md#model-backed-forms
+[form-docs]: ../packages/ui/src/form/README.md#form-definitions
 [mixin-docs]: ../packages/ui/src/form/README.md
 [registration-action]: ../demos/data-model-forms/app/actions/extra-fields/controller.tsx
 [account-table]: ../demos/data-model-forms/app/data/account.ts

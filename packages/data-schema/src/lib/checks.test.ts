@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { email, max, maxLength, min, minLength, url } from './checks.ts'
-import { boolean, getConstraints, literal, number, optional, string } from '../index.ts'
+import { defaulted, getSchemaMetadata, number, optional, string } from '../index.ts'
 import type { Issue, ValidationResult } from './schema.ts'
 
 function assertSuccess<output>(
@@ -73,44 +73,32 @@ describe('checks', () => {
   })
 })
 
-describe('getConstraints', () => {
-  it('returns native length and range constraints', () => {
-    assert.deepEqual(getConstraints(string().pipe(minLength(2), maxLength(50)), { type: 'text' }), {
-      required: true,
-      minLength: 2,
-      maxLength: 50,
-    })
-    assert.deepEqual(getConstraints(number().pipe(min(13), max(120)), { type: 'number' }), {
-      required: true,
-      step: 'any',
-      min: 13,
-      max: 120,
-    })
+describe('getSchemaMetadata', () => {
+  it('exposes domain check metadata without HTML attributes', () => {
+    let metadata = getSchemaMetadata(string().pipe(minLength(2), maxLength(50)))
+    assert.deepEqual(metadata.checks, [
+      { code: 'string.min_length', values: { min: 2 } },
+      { code: 'string.max_length', values: { max: 50 } },
+    ])
+    assert.equal(metadata.acceptsUndefined, undefined)
   })
 
-  it('derives requiredness from the input type', () => {
-    assert.deepEqual(getConstraints(string(), { type: 'text' }), {
-      required: true,
-    })
-    assert.deepEqual(getConstraints(optional(string()), { type: 'text' }), {})
-    assert.deepEqual(getConstraints(boolean(), { type: 'checkbox' }), {})
-    assert.deepEqual(getConstraints(literal(true), { type: 'checkbox' }), {
-      required: true,
-    })
-  })
-
-  it('preserves constraints through schema composition', () => {
-    let schema = optional(string().pipe(minLength(2), maxLength(50)))
+  it('preserves metadata through optional schemas and refinements', () => {
+    let schema = optional(string().pipe(minLength(2)))
       .refine((value) => value !== 'admin')
       .transform((value) => value?.trim())
-
-    assert.deepEqual(getConstraints(schema, { type: 'text' }), {
-      minLength: 2,
-      maxLength: 50,
-    })
+    let metadata = getSchemaMetadata(schema)
+    assert.equal(metadata.acceptsUndefined, true)
+    assert.deepEqual(metadata.checks, [{ code: 'string.min_length', values: { min: 2 } }])
   })
 
-  it('omits checks that do not map to native constraints', () => {
-    assert.deepEqual(getConstraints(optional(string().pipe(email(), url())), { type: 'url' }), {})
+  it('inspects defaulted schemas without evaluating their defaults', () => {
+    let calls = 0
+    let schema = defaulted(string(), () => {
+      calls++
+      return 'guest'
+    })
+    assert.equal(getSchemaMetadata(schema).acceptsUndefined, true)
+    assert.equal(calls, 0)
   })
 })

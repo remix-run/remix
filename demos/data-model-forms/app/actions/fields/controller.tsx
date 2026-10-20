@@ -1,6 +1,6 @@
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from '@remix-run/ui/form'
 
 import { accounts } from '../../data/account.ts'
 import { routes } from '../../routes.ts'

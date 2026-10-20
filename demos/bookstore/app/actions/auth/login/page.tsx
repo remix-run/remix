@@ -1,6 +1,6 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from '@remix-run/ui/form'
 
 import { LoginFields, type LoginSubmission } from '../../fragments/public/login-form.tsx'
 import { routes } from '../../../routes.ts'

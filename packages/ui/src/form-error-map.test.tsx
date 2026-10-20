@@ -3,9 +3,7 @@ import { describe, it } from '@remix-run/test'
 import { render } from '@remix-run/component/test'
 import * as s from '@remix-run/data-schema'
 import { email, max, min, minLength, url } from '@remix-run/data-schema/checks'
-import { createField, createForm } from '@remix-run/data-schema/form'
-
-import { createFieldMixins, createFormMixins } from './form.ts'
+import { createField, createFieldMixins, createForm, createFormMixins } from './form.ts'
 
 describe('field errorMap', () => {
   it('maps native messages immediately and reveals the same inline message after blur', (t) => {
@@ -53,7 +51,7 @@ describe('field errorMap', () => {
           schema: s
             .number()
             .pipe(min(13))
-            .refine((value) => value !== 42, 'Reserved age'),
+            .refine((value) => value !== 42),
           label: 'Age',
           type: 'number',
           errorMap({ code, input, values, defaultMessage }) {
@@ -62,7 +60,10 @@ describe('field errorMap', () => {
               expect(values).toEqual({ min: 13 })
               return 'You must be at least 13'
             }
-            if (code === 'refine.failed') return `Custom: ${defaultMessage}`
+            if (code === 'refine.failed') {
+              expect(defaultMessage).toBe('Refinement failed')
+              return 'Choose another age'
+            }
           },
         },
       },
@@ -85,13 +86,34 @@ describe('field errorMap', () => {
     expect(fields.age.errors).toEqual(['You must be at least 13', 'Application error'])
     input.value = '42'
     input.dispatchEvent(new Event('input', { bubbles: true }))
-    expect(fields.age.errors).toEqual(['Custom: Reserved age'])
+    expect(fields.age.errors).toEqual(['Choose another age'])
     fields.age.setCustomErrors(['Application error'])
-    expect(fields.age.errors).toEqual(['Custom: Reserved age', 'Application error'])
+    expect(fields.age.errors).toEqual(['Choose another age', 'Application error'])
     input.value = '37'
     input.dispatchEvent(new Event('input', { bubbles: true }))
     expect(input.validity.valid).toBe(true)
     expect(fields.age.errors).toEqual([])
+  })
+
+  it('preserves explicit refinement messages in native validity and visible feedback', (t) => {
+    let Username = createField({
+      schema: s.string().refine((value) => value !== 'admin', 'Reserved username'),
+      label: 'Username',
+      type: 'text',
+      errorMap() {
+        throw new Error('Explicit refinement messages must bypass errorMap')
+      },
+    })
+    let binding = createFieldMixins(Username, { name: 'username' })
+    let { container, cleanup } = render(<input defaultValue="admin" mix={binding.field()} />)
+    t.after(cleanup)
+    let input = container.querySelector('input')
+    if (!input) throw new Error('Missing input')
+    expect(input.validationMessage).toBe('Reserved username')
+    expect(binding.errors).toEqual([])
+    input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    expect(binding.errors).toEqual(['Reserved username'])
+    expect(input.getAttribute('aria-invalid')).toBe('true')
   })
 
   it('uses deterministic native priority and preserves browser wording on fallback', (t) => {

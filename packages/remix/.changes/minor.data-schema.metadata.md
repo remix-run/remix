@@ -1,0 +1,1 @@
+Object schemas expose `.shape` for field reuse, and `getSchemaMetadata()` provides generic check descriptions without running validation (see #11630). Schema-backed form definitions and parsing are available separately from `@remix-run/ui/form`.

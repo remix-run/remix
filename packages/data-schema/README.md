@@ -96,202 +96,22 @@ let filters = s.parse(
 
 `f.object(...)` is the root schema for `FormData` and `URLSearchParams`. Use `f.field(...)` for one text value, `f.fields(...)` for repeated text values, `f.file(...)` for one uploaded file, and `f.files(...)` for repeated files. When you want a fallback value, prefer `s.defaulted(s.string(), '')`. File helpers are intended for `FormData`; `URLSearchParams` only supports text values.
 
-## Native constraints
+## Schema metadata
 
-Use `getConstraints()` to derive native HTML length and range attributes from recognized schema checks:
-
-```tsx
-import { getConstraints, string } from 'remix/data-schema'
-import { maxLength, minLength } from 'remix/data-schema/checks'
-
-let Username = string().pipe(minLength(3), maxLength(20))
-
-<input {...getConstraints(Username, { type: 'text' })} />
-// <input required minlength="3" maxlength="20" />
-```
-
-The input type supplies requiredness semantics; number inputs receive `step="any"`. Recognized checks provide `minLength`, `maxLength`, `min`, and `max`. Arbitrary refinements, patterns, and numeric increments are not converted to attributes.
-
-## Model-backed forms
-
-Use `createForm({ schema?, fields })` to select existing field schemas or define inline ones, attach labels and input types, and parse `FormData`. Parsing validates configured fields only, not the complete backing object or its object-level refinements. Cross-field rules belong in a separate handler step.
-
-**Single schema:** select model fields without repeating their validation rules.
+Object schemas expose their property schemas through `.shape` for reuse. Adapters can inspect generic check descriptions without running validators or default factories:
 
 ```ts
-import * as s from 'remix/data-schema'
-import { email, max, maxLength, min, minLength } from 'remix/data-schema/checks'
-import { createForm } from 'remix/data-schema/form'
-
-let Account = s.object({
-  id: s.string(),
-  email: s.string().pipe(email()),
-  displayName: s.string().pipe(minLength(2), maxLength(50)),
-  age: s.number().pipe(min(13), max(120)),
-})
-
-let ProfileForm = createForm({
-  schema: Account,
-  fields: {
-    email: { label: 'Email', type: 'email' },
-    displayName: { label: 'Display name', type: 'text' },
-  },
-})
-```
-
-**Partial inline:** reuse model fields and add request-only fields with their own schemas.
-
-```ts
-let AccountForm = createForm({
-  schema: Account,
-  fields: {
-    email: { label: 'Email', type: 'email' },
-    displayName: { label: 'Display name', type: 'text' },
-    age: { label: 'Age', type: 'number' },
-    terms: {
-      label: 'Accept the terms',
-      type: 'checkbox',
-      schema: s.literal(true),
-    },
-  },
-})
-```
-
-**Multiple schemas:** compose a form-specific object from existing field schemas. The `.shape` property exposes the fields passed to `s.object()`.
-
-```ts
-let Address = s.object({ postalCode: s.string().pipe(minLength(1)) })
-let Checkout = s.object({
-  email: Account.shape.email,
-  postalCode: Address.shape.postalCode,
-})
-
-let CheckoutForm = createForm({
-  schema: Checkout,
-  fields: {
-    email: { label: 'Email', type: 'email' },
-    postalCode: { label: 'Postal code', type: 'text' },
-  },
-})
-```
-
-**Entirely inline:** omit `schema` and give every field its own schema. Fields absent from a backing schema must supply a schema; model fields cannot override theirs.
-
-```ts
-let LoginForm = createForm({
-  fields: {
-    email: { label: 'Email', type: 'email', schema: s.string().pipe(email()) },
-    password: {
-      label: 'Password',
-      type: 'password',
-      schema: s.string().pipe(minLength(8)),
-    },
-  },
-})
-```
-
-All four variations use the same parsing and rendering APIs below. A form can collect values for multiple tables; the handler splits the parsed values and coordinates persistence.
-
-### Reusable fields
-
-`createField()` defines one field without form or browser state. It can parse independently or compose into a form:
-
-```ts
-import { createField } from 'remix/data-schema/form'
-
-let Email = createField({ schema: Account.shape.email, label: 'Email', type: 'email' })
-let result = Email.parse(await request.formData(), 'email')
-
-let ContactForm = createForm({ fields: { email: Email } })
-```
-
-Field definitions expose `required` and the low-level `getInputAttrs()`, `getLabelAttrs()`, `getErrorAttrs()`, `getFieldErrors()`, and `createInputValidator()` helpers. `Form.fields` contains the resolved definitions. Logical field names key parsed values and errors; optional `name` and `id` settings change HTML attributes without changing those keys.
-
-### Parsing and rendering
-
-Parsing returns `{ success: true, value }` or `{ success: false, issues, values, errors }`. Failures retain raw values and group messages in `errors.fields` and `errors.form`; password values are omitted. A parsed form is not necessarily a complete model: handlers supply generated values, select persisted fields, and validate the resulting record.
-
-```tsx
-let submission = AccountForm.parse(await request.formData())
-
-if (!submission.success) {
-  return render(<AccountPage submission={submission} />, { status: 400 })
-}
-
-let { email, displayName, age } = submission.value
-await createAccount({ id: crypto.randomUUID(), email, displayName, age })
-```
-
-For browser feedback, install `@remix-run/ui` alongside `remix` and bind the same definition in component setup:
-
-```tsx
-import type { FormFailure } from 'remix/data-schema/form'
-import type { Handle } from 'remix/component'
-import { createFormMixins } from '@remix-run/ui/form'
-
-function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
-  let { form, field, label, error, fields } = createFormMixins(AccountForm, {
-    getSubmission: () => handle.props.submission,
-    onChange: () => handle.update(),
-  })
-
-  return () => (
-    <form method="post" mix={form()}>
-      <label mix={label('email')}>
-        {AccountForm.fields.email.label}
-        {AccountForm.fields.email.required ? <span>Required</span> : null}
-      </label>
-      <input autoComplete="email" mix={field('email')} />
-      {fields.email.errors.length > 0 ? (
-        <p mix={error('email')} role="alert">
-          {fields.email.errors.join(' ')}
-        </p>
-      ) : null}
-
-      {/* Render the remaining configured fields with the same mixins. */}
-      <button type="submit">Create account</button>
-    </form>
-  )
-}
-```
-
-The mixins emit native constraints during SSR, validate while typing, and reveal client feedback after blur or a blocked submission. Server errors appear immediately; a new submission resets feedback. Read `fields.email.errors` and `fields.email.touched` during rendering. Applications own the markup and styles.
-
-Native checks remain primary, followed by synchronous field refinements through `setCustomValidity()`. Without JavaScript, native constraints and server validation still apply. For standalone bindings, supplemental async errors, and control limitations, see the [UI form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md).
-
-### Shared field messages
-
-Set `errorMap` on a field to share optional wording between server parsing and the UI mixins:
-
-```ts
-import * as s from 'remix/data-schema'
+import { getSchemaMetadata, object, string } from 'remix/data-schema'
 import { minLength } from 'remix/data-schema/checks'
-import { createField, createForm } from 'remix/data-schema/form'
 
-let Username = createField({
-  schema: s
-    .string()
-    .pipe(minLength(3))
-    .refine((value) => value !== 'admin', 'Reserved username'),
-  label: 'Username',
-  type: 'text',
-  errorMap({ code }) {
-    if (code === 'value.required') return 'Enter a username'
-    if (code === 'string.min_length') return 'Use at least 3 characters'
-    if (code === 'refine.failed') return 'Choose another username'
-  },
-})
-
-let Signup = createForm({ fields: { username: Username } })
-let result = Signup.parse(await request.formData())
-// createFormMixins(Signup) uses these messages too.
+let Account = object({ username: string().pipe(minLength(3)) })
+let metadata = getSchemaMetadata(Account.shape.username)
+// metadata.checks: [{ code: 'string.min_length', values: { min: 3 } }]
 ```
 
-The option also works on entries in `createForm({ fields })`, including model-backed fields. It receives the existing `ErrorMap` context: `{ code, defaultMessage, path, values, input, locale }`. Field input is decoded and paths use logical names. Return `undefined` to preserve the default, including explicit refinement messages. Uncoded checks use `check.failed`.
+Metadata also reports known undefined handling from schema wrappers. It does not describe arbitrary refinements or replace validation.
 
-Required empty form values use `value.required`; raw `s.parse()` retains the underlying schema code, such as `type.string`. The UI maps supported native failures to these domain codes for matching tooltips and inline feedback. Manually authored `pattern`/`step` constraints retain browser wording, and `setCustomErrors()` messages are not remapped. Without JavaScript, only server errors use the map.
-
-Customizing a message does not add a validation rule: `type: 'email'` alone does not validate email format on the server; include an `email()` schema check. Browser and schema acceptance rules can differ.
+For schema-backed field definitions, typed form parsing, HTML constraints, and browser feedback, see the [UI form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). Those APIs live in `@remix-run/ui/form` and can also be used in server handlers.
 
 ## Per-parse messages
 
@@ -321,7 +141,7 @@ let result = parseSafe(User, input, {
 })
 ```
 
-`errorMap` receives `{ code, defaultMessage, path, values, input, locale }`. Return `undefined` to keep the default message.
+`errorMap` receives `{ code, defaultMessage, path, values, input, locale }`. Return `undefined` to keep the default message. Explicit refinement messages and uncoded checks bypass the map. Omit a refinement's message to customize `refine.failed`; coded checks remain mappable even when they supply a message.
 
 ## Primitives
 

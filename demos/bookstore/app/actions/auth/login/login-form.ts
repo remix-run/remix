@@ -1,4 +1,4 @@
-import { createForm } from 'remix/data-schema/form'
+import { createForm } from '@remix-run/ui/form'
 
 import { loginSchema } from './login-schema.ts'
 

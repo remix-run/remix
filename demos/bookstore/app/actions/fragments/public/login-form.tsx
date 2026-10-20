@@ -1,4 +1,4 @@
-import type { FormRawValue } from 'remix/data-schema/form'
+import type { FormRawValue } from '@remix-run/ui/form'
 import { clientEntry, css } from 'remix/component'
 import type { Handle } from 'remix/component'
 import { createFormMixins } from '@remix-run/ui/form'

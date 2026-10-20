@@ -1,4 +1,4 @@
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from '@remix-run/ui/form'
 import type { TableRow } from 'remix/data-table'
 import type { Handle } from 'remix/component'
 

@@ -1,4 +1,4 @@
-import { createField } from 'remix/data-schema/form'
+import { createField } from '@remix-run/ui/form'
 
 import { DisplayNameSchema, EmailSchema } from '../../../data/public/account-schema.ts'
 

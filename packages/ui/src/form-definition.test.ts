@@ -1,9 +1,10 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { max, maxLength, min, minLength } from '../checks.ts'
-import { createField, createForm } from '../form.ts'
-import * as s from '../index.ts'
+import { max, maxLength, min, minLength } from '@remix-run/data-schema/checks'
+import * as s from '@remix-run/data-schema'
+
+import { createField, createForm } from './form.ts'
 
 type Equal<left, right> =
   (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2
@@ -96,14 +97,38 @@ describe('createField', () => {
     assert.deepEqual(missing.errors.fields.age, ['Enter your age'])
   })
 
-  it('maps explicit refinement messages and preserves them when the map declines', () => {
+  it('preserves explicit refinement messages during parsing and input validation', () => {
     let Username = createField({
       schema: s.string().refine((value) => value !== 'admin', 'Reserved username'),
       label: 'Username',
       type: 'text',
+      errorMap() {
+        throw new Error('Explicit refinement messages must bypass errorMap')
+      },
+    })
+    let data = new FormData()
+    data.set('username', 'admin')
+    let failure = Username.parse(data, 'username')
+    assert.equal(failure.success, false)
+    assert.deepEqual(failure.errors.fields.username, ['Reserved username'])
+    let message = ''
+    Username.createInputValidator('username')({
+      value: 'admin',
+      setCustomValidity(value) {
+        message = value
+      },
+    })
+    assert.equal(message, 'Reserved username')
+  })
+
+  it('maps refinements without explicit messages and preserves the fallback', () => {
+    let Username = createField({
+      schema: s.string().refine((value) => value !== 'admin'),
+      label: 'Username',
+      type: 'text',
       errorMap({ code, defaultMessage }) {
         assert.equal(code, 'refine.failed')
-        assert.equal(defaultMessage, 'Reserved username')
+        assert.equal(defaultMessage, 'Refinement failed')
         return 'Choose another username'
       },
     })
@@ -115,7 +140,7 @@ describe('createField', () => {
     let Fallback = createField({ ...Username, errorMap: () => undefined })
     let fallback = Fallback.parse(data, 'username')
     assert.equal(fallback.success, false)
-    assert.deepEqual(fallback.errors.fields.username, ['Reserved username'])
+    assert.deepEqual(fallback.errors.fields.username, ['Refinement failed'])
   })
 
   it('maps required checkboxes without turning optional empty values into failures', () => {

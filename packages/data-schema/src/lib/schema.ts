@@ -75,14 +75,20 @@ export type Check<output> = {
   values?: Record<string, unknown>
 }
 
-type SchemaCheckMetadata = {
-  code?: string
-  values?: Record<string, unknown>
+/** Descriptive metadata for a schema check, independent of its validation function. */
+export interface SchemaCheckMetadata {
+  /** The schema/domain issue code, when supplied by the check. */
+  readonly code?: string
+  /** Parameters associated with the check, such as a minimum or maximum. */
+  readonly values?: Record<string, unknown>
 }
 
-type SchemaMetadata = {
-  checks: readonly SchemaCheckMetadata[]
-  acceptsUndefined?: boolean
+/** Schema facts available to adapters without interpreting presentation concerns. */
+export interface SchemaMetadata {
+  /** Checks retained through schema composition. Arbitrary refinements are not described. */
+  readonly checks: readonly SchemaCheckMetadata[]
+  /** Known undefined handling from schema wrappers; absent when validation must be evaluated. */
+  readonly acceptsUndefined?: boolean
 }
 
 const schemaMetadata = Symbol('schemaMetadata')
@@ -92,29 +98,13 @@ type SchemaWithMetadata = {
 }
 
 /**
- * Native HTML constraints that can be derived from a schema's checks.
+ * Reads schema check metadata without running validators or default factories.
+ *
+ * @param schema The schema to inspect.
+ * @returns Generic check descriptions and known undefined handling, not HTML constraints.
  */
-export interface SchemaConstraints {
-  /** Whether the input must contain a value or a checkbox must be checked. */
-  required?: true
-  /** The minimum text length accepted by the schema. */
-  minLength?: number
-  /** The maximum text length accepted by the schema. */
-  maxLength?: number
-  /** The minimum numeric value accepted by the schema. */
-  min?: number
-  /** The maximum numeric value accepted by the schema. */
-  max?: number
-  /** The interval accepted by a numeric input. */
-  step?: number | 'any'
-}
-
-/**
- * Input control context used to derive native HTML constraints.
- */
-export interface GetConstraintsOptions {
-  /** The native input type and its corresponding empty-value semantics. */
-  type: 'checkbox' | 'email' | 'number' | 'password' | 'text' | 'url'
+export function getSchemaMetadata<input, output>(schema: Schema<input, output>): SchemaMetadata {
+  return readSchemaMetadata(schema) ?? { checks: [] }
 }
 
 /**
@@ -125,8 +115,8 @@ export type Schema<input, output = input> = SyncStandardSchema<input, output> & 
    * Compose one or more reusable checks onto this schema.
    *
    * Checks run after the underlying schema has validated and produced an `output` value.
-   * If any check fails, validation fails with an issue. The check's `message` is the default;
-   * an `errorMap` may override it. Checks without a code use `check.failed`.
+   * If any check fails, validation fails with an issue using the check's `message` if provided.
+   * Coded checks support `errorMap`; checks without a code keep their own message.
    *
    * @param checks One or more `Check`s to apply in order
    * @returns A new schema with the checks applied
@@ -139,7 +129,7 @@ export type Schema<input, output = input> = SyncStandardSchema<input, output> & 
    * If the predicate returns `false`, validation fails with an issue.
    *
    * @param predicate A function that returns `true` for valid values
-   * @param message Default issue message when the predicate fails; an `errorMap` may override it
+   * @param message Issue message when the predicate fails; bypasses `errorMap` when provided
    * @returns A new schema with the refinement applied
    */
   refine: (predicate: (value: output) => boolean, message?: string) => Schema<input, output>
@@ -250,10 +240,14 @@ export function createSchema<input, output>(
 
           for (let check of checks) {
             if (!check.check(result.value)) {
+              if (!check.code) {
+                return { issues: [createIssue(check.message ?? 'Check failed', [...context.path])] }
+              }
+
               return {
                 issues: [
                   createIssueFromContext(context, {
-                    code: check.code ?? 'check.failed',
+                    code: check.code,
                     defaultMessage: check.message ?? 'Check failed',
                     input: result.value,
                     values: check.values,
@@ -273,7 +267,7 @@ export function createSchema<input, output>(
           ...existingChecks,
           ...checks.map((check) => ({ code: check.code, values: check.values })),
         ],
-        acceptsUndefined: getSchemaMetadata(schema)?.acceptsUndefined,
+        acceptsUndefined: readSchemaMetadata(schema)?.acceptsUndefined,
       })
 
       return pipedSchema
@@ -289,11 +283,15 @@ export function createSchema<input, output>(
           }
 
           if (!predicate(result.value)) {
+            if (message !== undefined) {
+              return { issues: [createIssue(message, [...context.path])] }
+            }
+
             return {
               issues: [
                 createIssueFromContext(context, {
                   code: 'refine.failed',
-                  defaultMessage: message ?? 'Refinement failed',
+                  defaultMessage: 'Refinement failed',
                   input: result.value,
                 }),
               ],
@@ -331,79 +329,10 @@ export function createSchema<input, output>(
   return schema
 }
 
-/**
- * Returns native HTML constraints represented by a schema's recognized checks.
- *
- * Checks without an equivalent native constraint are omitted.
- *
- * @param schema The schema to inspect.
- * @param options The input control receiving the constraints.
- * @returns Constraint attributes that can be spread onto a native `input` element.
- */
-export function getConstraints<input, output>(
-  schema: Schema<input, output>,
-  options: GetConstraintsOptions,
-): SchemaConstraints {
-  let constraints: SchemaConstraints = {}
-
-  if (options.type === 'number') {
-    constraints.step = 'any'
-  }
-
-  if (
-    options.type === 'checkbox'
-      ? !schemaAcceptsValue(schema, false)
-      : !schemaAcceptsUndefined(schema)
-  ) {
-    constraints.required = true
-  }
-
-  for (let check of getSchemaChecks(schema)) {
-    switch (check.code) {
-      case 'string.min_length': {
-        let minLength = getConstraintValue(check.values, 'min')
-        if (minLength !== undefined) constraints.minLength = minLength
-        break
-      }
-      case 'string.max_length': {
-        let maxLength = getConstraintValue(check.values, 'max')
-        if (maxLength !== undefined) constraints.maxLength = maxLength
-        break
-      }
-      case 'number.min': {
-        let min = getConstraintValue(check.values, 'min')
-        if (min !== undefined) constraints.min = min
-        break
-      }
-      case 'number.max': {
-        let max = getConstraintValue(check.values, 'max')
-        if (max !== undefined) constraints.max = max
-        break
-      }
-    }
-  }
-
-  return constraints
-}
-
-function schemaAcceptsUndefined<input, output>(schema: Schema<input, output>): boolean {
-  let acceptsUndefined = getSchemaMetadata(schema)?.acceptsUndefined
-
-  if (acceptsUndefined !== undefined) {
-    return acceptsUndefined
-  }
-
-  return !schema['~run'](undefined, { path: [] }).issues
-}
-
-function schemaAcceptsValue<input, output>(schema: Schema<input, output>, value: unknown): boolean {
-  return !schema['~run'](value, { path: [] }).issues
-}
-
 function copySchemaMetadata(source: object, target: object): void {
   setSchemaMetadata(target, {
     checks: getSchemaChecks(source),
-    acceptsUndefined: getSchemaMetadata(source)?.acceptsUndefined,
+    acceptsUndefined: readSchemaMetadata(source)?.acceptsUndefined,
   })
 }
 
@@ -419,10 +348,10 @@ function setAcceptsUndefined<input, output>(
 }
 
 function getSchemaChecks(schema: object): readonly SchemaCheckMetadata[] {
-  return getSchemaMetadata(schema)?.checks ?? []
+  return readSchemaMetadata(schema)?.checks ?? []
 }
 
-function getSchemaMetadata(schema: object): SchemaMetadata | undefined {
+function readSchemaMetadata(schema: object): SchemaMetadata | undefined {
   return hasSchemaMetadata(schema) ? schema[schemaMetadata] : undefined
 }
 
@@ -440,14 +369,6 @@ function setSchemaMetadata(schema: object, metadata: SchemaMetadata): void {
 
 function hasSchemaMetadata(schema: object): schema is SchemaWithMetadata {
   return schemaMetadata in schema
-}
-
-function getConstraintValue(
-  values: Record<string, unknown> | undefined,
-  key: string,
-): number | undefined {
-  let value = values?.[key]
-  return typeof value === 'number' ? value : undefined
 }
 
 function isBuiltinSchema(schema: Schema<any, any>): boolean {

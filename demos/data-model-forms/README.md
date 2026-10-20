@@ -15,6 +15,8 @@ Open <http://localhost:44100>. The root redirects to `/schema`; navigation links
 
 ## Examples
 
+Definitions, parsing, and mixins all come from `@remix-run/ui/form`; shared data schemas come from `remix/data-schema`.
+
 | Route           | Definition                             | Binding               |
 | --------------- | -------------------------------------- | --------------------- |
 | `/schema`       | Object schema + `createForm()`         | `createFormMixins()`  |
@@ -82,7 +84,7 @@ const RegistrationForm = createForm({
 
 The reusable `Password` field is created with `createField()`. Password and terms are validated but never stored. Passwords are also omitted from failed-submission values.
 
-Display name, password, and terms use field-level `errorMap` configuration for shared browser/server messages. Display name covers requiredness, minimum length, and a whitespace refinement. Without JavaScript, native tooltips keep browser wording.
+Display name, password, and terms use field-level `errorMap` configuration for shared browser/server messages. Display name maps requiredness and minimum length; its whitespace refinement keeps the explicit schema message. Without JavaScript, native tooltips keep browser wording.
 
 ### All inline schemas
 
@@ -105,7 +107,7 @@ const AccountForm = createForm({
 })
 ```
 
-With no backing schema, every field supplies its own. The running example also checks maximum name length and leading/trailing spaces. Prefer shared model or field schemas when rules are reused.
+With no backing schema, every field supplies its own. The running example also checks maximum name length and leading/trailing spaces. Its refinement omits a message so the field's `errorMap` can customize `refine.failed`. Prefer shared model or field schemas when rules are reused.
 
 ## Shared behavior
 

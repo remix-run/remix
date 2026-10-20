@@ -1,6 +1,6 @@
 # form
 
-`createFieldMixins()` binds a reusable field to a native input, select, or textarea. `createFormMixins()` composes the same behavior for all fields in a form definition. Applications own the markup, styles, and displayed errors.
+Define schema-backed fields, parse submissions on the server, and bind native controls with progressive browser feedback. Definitions, parsing, HTML constraints, and mixins all live in this module. Applications own the markup, styles, and displayed errors.
 
 ## Usage
 
@@ -9,10 +9,9 @@ Install with `npm i remix @remix-run/ui`. Create the definition once and bind it
 ```tsx
 import * as s from 'remix/data-schema'
 import { email } from 'remix/data-schema/checks'
-import { createField, createForm } from 'remix/data-schema/form'
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from '@remix-run/ui/form'
 import type { Handle } from 'remix/component'
-import { createFormMixins } from '@remix-run/ui/form'
+import { createField, createForm, createFormMixins } from '@remix-run/ui/form'
 
 let Email = createField({
   schema: s.string().pipe(email()),
@@ -41,6 +40,73 @@ function SignupPage(handle: Handle<{ submission?: FormSubmission }>) {
   )
 }
 ```
+
+## Form definitions
+
+`createForm({ schema?, fields })` selects model fields or supplies inline schemas. All variations use the same parsing and mixin APIs.
+
+```ts
+let Account = s.object({ id: s.string(), email: s.string().pipe(email()) })
+let Address = s.object({ postalCode: s.string() })
+
+// Single schema: select fields without repeating their validation rules.
+let Profile = createForm({
+  schema: Account,
+  fields: { email: { label: 'Email', type: 'email' } },
+})
+
+// Partial inline: add request-only fields alongside model fields.
+let Registration = createForm({
+  schema: Account,
+  fields: {
+    email: { label: 'Email', type: 'email' },
+    terms: { label: 'Accept terms', type: 'checkbox', schema: s.literal(true) },
+  },
+})
+
+// Multiple schemas: compose existing field rules into one operation.
+let Checkout = createForm({
+  schema: s.object({ email: Account.shape.email, postalCode: Address.shape.postalCode }),
+  fields: {
+    email: { label: 'Email', type: 'email' },
+    postalCode: { label: 'Postal code', type: 'text' },
+  },
+})
+
+// Entirely inline: every field supplies its own schema.
+let Search = createForm({
+  fields: { query: { label: 'Search', type: 'text', schema: s.string() } },
+})
+```
+
+Model-backed fields cannot override their schemas; fields absent from the model must supply one. `Form.fields` contains resolved definitions, including `label` and schema-derived `required`. Logical field names key parsed values and errors; optional `name` and `id` settings change HTML attributes without changing those keys.
+
+### Server parsing
+
+Definitions and parsing are server-safe and do not require a DOM:
+
+```tsx
+let submission = Registration.parse(await request.formData())
+
+if (!submission.success) {
+  return render(<RegistrationPage submission={submission} />, {
+    responseInit: { status: 400 },
+  })
+}
+
+let { email } = submission.value
+await createAccount({ id: crypto.randomUUID(), email })
+```
+
+Parsing validates configured fields only, not the complete backing object or its object-level refinements. Handlers own cross-field/business checks, generated values, transactions, and selecting persisted fields. A form spanning multiple tables still parses once; the handler splits its values for persistence.
+
+Results are `{ success: true, value }` or `{ success: false, issues, values, errors }`. Failures retain raw values and group messages in `errors.fields` and `errors.form`; password values are omitted.
+
+### Native constraints and low-level helpers
+
+`getConstraints(schema, { type })` derives `required`, `minLength`, `maxLength`, `min`, and `max` from schema metadata and input context. Number inputs also receive `step="any"`. Arbitrary refinements, patterns, and numeric increments are not converted to attributes.
+
+Definitions expose `getInputAttrs()`, `getLabelAttrs()`, `getErrorAttrs()`, `getFieldErrors()`, and `createInputValidator()` for custom integrations. Prefer the mixins for automatic SSR attributes, feedback, and accessibility.
 
 ## A standalone field
 
@@ -82,23 +148,29 @@ A non-canceled native form reset clears touched state and displayed errors. Prog
 
 ## Shared error messages
 
-Configure `errorMap` on `createField()` or a `createForm({ fields })` entry, not on the mixin. The same configuration customizes server schema failures and supported native browser failures. Return a string to override a message or `undefined` to preserve the default; explicit refinement messages become `defaultMessage`.
+Configure `errorMap` on `createField()` or a `createForm({ fields })` entry, not on the mixin. The same configuration customizes server schema failures and supported native browser failures. Return a string to override a message or `undefined` to preserve the default.
 
 ```ts
 import * as s from 'remix/data-schema'
 import { email } from 'remix/data-schema/checks'
-import { createField } from 'remix/data-schema/form'
+import { createField } from '@remix-run/ui/form'
 
 let Email = createField({
-  schema: s.string().pipe(email()),
+  schema: s
+    .string()
+    .pipe(email())
+    .refine((value) => value.endsWith('@example.com')),
   label: 'Email',
   type: 'email',
   errorMap({ code }) {
     if (code === 'value.required') return 'Enter your email'
     if (code === 'string.email') return 'Use a valid email address'
+    if (code === 'refine.failed') return 'Use your example.com email'
   },
 })
 ```
+
+Explicit refinement messages bypass the map: `.refine(predicate, 'Specific message')` keeps that message. Omit it to map `refine.failed`, as above. Uncoded checks also bypass mapping; coded checks use the normal schema `errorMap` behavior.
 
 The native adapter uses this priority when multiple flags fail:
 

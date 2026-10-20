@@ -121,11 +121,11 @@
     }
   },
   "dependencies": {
-    "@remix-run/component": "workspace:^"
+    "@remix-run/component": "workspace:^",
+    "@remix-run/data-schema": "workspace:^"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
-    "@remix-run/data-schema": "workspace:^",
     "@remix-run/test": "workspace:*",
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",

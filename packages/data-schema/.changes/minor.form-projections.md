@@ -1,5 +1,1 @@
-Define reusable schema-backed fields with `createField()` and compose them with `createForm({ schema?, fields })` from `@remix-run/data-schema/form` (see #11630). Forms can select model fields, add request-only fields, or define every schema inline. Object schemas expose `.shape` for reusing rules across models. Parsing validates configured fields only and returns typed values or serializable field/form errors with non-password values retained.
-
-`getConstraints()` derives requiredness, length/range attributes, and `step="any"` for number inputs. Field definitions expose these attributes, requiredness, label/error associations, and a synchronous `createInputValidator()` for custom integrations.
-
-An optional field-level `errorMap` customizes server and browser messages, including `value.required` for required empty form values. Explicit check/refinement messages become overridable defaults, and uncoded checks use `check.failed`; returning `undefined` preserves the default. This precedence also applies to `parse()` and `parseSafe()`.
+Object schemas now expose `.shape` for reusing individual field schemas. `getSchemaMetadata()` provides generic check descriptions and known undefined handling without running validators or default factories (see #11630). HTML constraints and form definitions live in `@remix-run/ui/form`.
