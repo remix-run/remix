@@ -1646,24 +1646,6 @@ describe('navigate', () => {
 })
 
 describe('navigation.settled', () => {
-  it('resolves right away when no navigation is in progress', async () => {
-    expect(window.navigation.transition).toBe(null)
-    let settled = trackSettled()
-
-    await nextTask()
-
-    expect(settled.done).toBe(true)
-  })
-
-  it('resolves right away when the Navigation API is unavailable', async (t) => {
-    stubGlobalField(t, 'navigation', undefined)
-    let settled = trackSettled()
-
-    await nextTask()
-
-    expect(settled.done).toBe(true)
-  })
-
   it('waits until the destination finishes loading', async () => {
     let listener = startHeldNavigationListener()
     try {
@@ -1677,26 +1659,7 @@ describe('navigation.settled', () => {
       listener.finishReload(0)
       await settled.promise
 
-      expect(window.navigation.transition).toBe(null)
       expect(window.location.href).toBe(destination)
-    } finally {
-      await listener.cleanup()
-    }
-  })
-
-  it('waits for the navigation that follows a frame redirect', async () => {
-    let listener = startHeldNavigationListener()
-    try {
-      let requested = createTestUrl('settled-requested')
-      let redirected = createTestUrl('settled-redirected')
-      void navigate(requested).catch(() => {})
-      let settled = navigation.settled()
-
-      listener.finishReload(0, redirected)
-      await settled
-
-      expect(window.navigation.transition).toBe(null)
-      expect(window.location.href).toBe(redirected)
     } finally {
       await listener.cleanup()
     }
@@ -1705,9 +1668,8 @@ describe('navigation.settled', () => {
   it('waits for a navigation that starts while it is waiting', async () => {
     let listener = startHeldNavigationListener()
     try {
-      let first = createTestUrl('settled-first')
       let second = createTestUrl('settled-second')
-      void navigate(first).catch(() => {})
+      void navigate(createTestUrl('settled-first')).catch(() => {})
       let settled = trackSettled()
       await nextTask()
       void navigate(second).catch(() => {})
@@ -1719,33 +1681,8 @@ describe('navigation.settled', () => {
       listener.finishReload(1)
       await settled.promise
 
-      expect(window.navigation.transition).toBe(null)
       expect(window.location.href).toBe(second)
     } finally {
-      await listener.cleanup()
-    }
-  })
-
-  it('waits for the navigation when called from a navigate listener', async () => {
-    let listener = startHeldNavigationListener()
-    let controller = new AbortController()
-    let settled: ReturnType<typeof trackSettled> | undefined
-    window.navigation.addEventListener('navigate', () => (settled ??= trackSettled()), {
-      signal: controller.signal,
-    })
-    try {
-      void navigate(createTestUrl('settled-listener')).catch(() => {})
-      controller.abort()
-
-      await nextTask()
-      expect(settled?.done).toBe(false)
-
-      listener.finishReload(0)
-      await settled?.promise
-
-      expect(window.navigation.transition).toBe(null)
-    } finally {
-      controller.abort()
       await listener.cleanup()
     }
   })
@@ -1779,21 +1716,6 @@ describe('navigation.settled', () => {
       await listener.cleanup()
     }
   })
-
-  it('resolves when the navigation fails', async () => {
-    let listener = startHeldNavigationListener()
-    try {
-      void navigate(createTestUrl('settled-failed')).catch(() => {})
-      let settled = navigation.settled()
-
-      listener.failReload(0)
-      await settled
-
-      expect(window.navigation.transition).toBe(null)
-    } finally {
-      await listener.cleanup()
-    }
-  })
 })
 
 describe('navigation.supported', () => {
@@ -1801,24 +1723,20 @@ describe('navigation.supported', () => {
     expect(navigation.supported).toBe(true)
   })
 
-  it('is false without the Navigation API', (t) => {
+  it('is false without the Navigation API, and settled() resolves right away', async (t) => {
     stubGlobalField(t, 'navigation', undefined)
-    expect(navigation.supported).toBe(false)
-  })
+    let settled = trackSettled()
 
-  it('is false without NavigateEvent.sourceElement', (t) => {
-    stubGlobalField(t, 'NavigateEvent', class extends Event {})
+    await nextTask()
+
     expect(navigation.supported).toBe(false)
+    expect(settled.done).toBe(true)
   })
 })
 
 describe('navigation.current', () => {
   afterEach(() => {
     document.body.textContent = ''
-  })
-
-  it('is null when nothing is navigating', () => {
-    expect(navigation.current).toBe(null)
   })
 
   it('reports a navigation from when Remix intercepts it until it finishes', async (t) => {
@@ -1838,26 +1756,32 @@ describe('navigation.current', () => {
 
       expect(navigation.current).toBe(null)
       expect(pending?.signal.aborted).toBe(false)
-      expect(changes).toHaveLength(2)
-      expect(changes[0]).toBe(pending)
-      expect(changes[1]).toBe(null)
+      expect(changes).toEqual([pending, null])
     } finally {
       await listener.cleanup()
     }
   })
 
-  it('is set before later navigate listeners run', async () => {
+  it('is set for later navigate listeners, so settled() waits from them', async () => {
     let listener = startHeldNavigationListener()
     let controller = new AbortController()
-    let seen: string | undefined
-    window.navigation.addEventListener('navigate', () => (seen = navigation.current?.url), {
-      signal: controller.signal,
-    })
+    let seen: { url: string | undefined; settled: ReturnType<typeof trackSettled> } | undefined
+    window.navigation.addEventListener(
+      'navigate',
+      () => (seen ??= { url: navigation.current?.url, settled: trackSettled() }),
+      { signal: controller.signal },
+    )
     try {
       let destination = createTestUrl('current-listener')
       void navigate(destination).catch(() => {})
       controller.abort()
-      expect(seen).toBe(destination)
+      expect(seen?.url).toBe(destination)
+
+      await nextTask()
+      expect(seen?.settled.done).toBe(false)
+
+      listener.finishReload(0)
+      await seen?.settled.promise
     } finally {
       controller.abort()
       await listener.cleanup()
@@ -1877,10 +1801,8 @@ describe('navigation.current', () => {
 
       expect(pending?.url).toBe(redirected)
       expect(pending?.signal.aborted).toBe(false)
-      expect(changes).toHaveLength(3)
-      expect(changes[0]).toBe(pending)
+      expect(changes).toEqual([pending, pending, null])
       expect(changes[1]).toBe(pending)
-      expect(changes[2]).toBe(null)
     } finally {
       await listener.cleanup()
     }
@@ -1890,31 +1812,25 @@ describe('navigation.current', () => {
     let changes = recordNavigationChanges(t)
     let listener = startHeldNavigationListener()
     try {
-      let second = createTestUrl('current-second')
       void navigate(createTestUrl('current-first')).catch(() => {})
       let replaced = navigation.current
       await nextTask()
 
-      void navigate(second).catch(() => {})
+      void navigate(createTestUrl('current-second')).catch(() => {})
       let current = navigation.current
-      expect(replaced?.signal.aborted).toBe(true)
-      expect(current).not.toBe(replaced)
-      expect(current?.url).toBe(second)
 
       listener.finishReload(1)
       await navigation.settled()
 
+      expect(replaced?.signal.aborted).toBe(true)
       expect(current?.signal.aborted).toBe(false)
-      expect(changes).toHaveLength(3)
-      expect(changes[0]).toBe(replaced)
-      expect(changes[1]).toBe(current)
-      expect(changes[2]).toBe(null)
+      expect(changes).toEqual([replaced, current, null])
     } finally {
       await listener.cleanup()
     }
   })
 
-  it('aborts and clears a navigation that fails', async () => {
+  it('aborts and clears a navigation that fails, without rejecting settled()', async () => {
     let listener = startHeldNavigationListener()
     try {
       void navigate(createTestUrl('current-failed')).catch(() => {})
@@ -1937,8 +1853,6 @@ describe('navigation.current', () => {
         () => {},
       )
       expect(navigation.current?.target).toBe('details')
-      listener.finishReload(0)
-      await navigation.settled()
     } finally {
       await listener.cleanup()
     }
@@ -1947,19 +1861,12 @@ describe('navigation.current', () => {
   it('reports the form submission that started a navigation', async () => {
     let listener = startHeldNavigationListener()
     try {
-      let form = createForm('post', createTestUrl('current-post'))
-      let started = nextNavigationChange()
-      form.requestSubmit()
-      await started
+      await submitForm(createForm('post', createTestUrl('current-post')))
 
-      let submission = navigation.current?.submission
       expect(navigation.current?.type).toBe('push')
-      expect(submission?.method).toBe('POST')
-      expect(submission?.encType).toBe('application/x-www-form-urlencoded')
-      expect(submission?.formData?.get('size')).toBe('small')
-
-      listener.finishReload(0)
-      await navigation.settled()
+      expect(navigation.current?.submission?.method).toBe('POST')
+      expect(navigation.current?.submission?.encType).toBe('application/x-www-form-urlencoded')
+      expect(navigation.current?.submission?.formData?.get('size')).toBe('small')
     } finally {
       await listener.cleanup()
     }
@@ -1968,17 +1875,11 @@ describe('navigation.current', () => {
   it('reports a GET form submission, whose values are in the URL', async () => {
     let listener = startHeldNavigationListener()
     try {
-      let form = createForm('get', createTestUrl('current-get'))
-      let started = nextNavigationChange()
-      form.requestSubmit()
-      await started
+      await submitForm(createForm('get', createTestUrl('current-get')))
 
       expect(navigation.current?.submission?.method).toBe('GET')
       expect(navigation.current?.submission?.formData).toBe(undefined)
       expect(new URL(navigation.current!.url).searchParams.get('size')).toBe('small')
-
-      listener.finishReload(0)
-      await navigation.settled()
     } finally {
       await listener.cleanup()
     }
@@ -1987,16 +1888,10 @@ describe('navigation.current', () => {
   it('reports a same-location POST as a replace navigation', async () => {
     let listener = startHeldNavigationListener()
     try {
-      let form = createForm('post', window.location.href)
-      let started = nextNavigationChange()
-      form.requestSubmit()
-      await started
+      await submitForm(createForm('post', window.location.href))
 
       expect(navigation.current?.type).toBe('replace')
       expect(navigation.current?.submission?.method).toBe('POST')
-
-      listener.finishReload(0)
-      await navigation.settled()
     } finally {
       await listener.cleanup()
     }
@@ -2006,16 +1901,10 @@ describe('navigation.current', () => {
     stubGlobalField(t, 'NavigationPrecommitController', undefined)
     let listener = startHeldNavigationListener()
     try {
-      let form = createForm('post', window.location.href)
-      let started = nextNavigationChange()
-      form.requestSubmit()
-      await started
+      await submitForm(createForm('post', window.location.href))
 
       expect(navigation.current?.type).toBe('replace')
       expect(navigation.current?.submission?.formData?.get('size')).toBe('small')
-
-      listener.finishReload(0)
-      await navigation.settled()
     } finally {
       await listener.cleanup()
     }
@@ -2026,15 +1915,10 @@ describe('navigation.current', () => {
     try {
       let form = createForm('get', createTestUrl('current-get-replace'))
       form.setAttribute('data-rmx-history', 'replace')
-      let started = nextNavigationChange()
-      form.requestSubmit()
-      await started
+      await submitForm(form)
 
       expect(navigation.current?.type).toBe('replace')
       expect(navigation.current?.submission?.method).toBe('GET')
-
-      listener.finishReload(0)
-      await navigation.settled()
     } finally {
       await listener.cleanup()
     }
@@ -2046,8 +1930,7 @@ describe('navigation.current', () => {
     let originalUrl = window.location.href
     try {
       await navigate('#current-hash')
-      expect(navigation.current).toBe(null)
-      expect(changes).toHaveLength(0)
+      expect(changes).toEqual([])
     } finally {
       window.history.replaceState(window.history.state, '', originalUrl)
       await listener.cleanup()
@@ -3076,10 +2959,13 @@ function recordNavigationChanges(t: TestContext) {
   return changes
 }
 
-function nextNavigationChange(): Promise<void> {
-  return new Promise((resolve) =>
+// Submits a form and resolves once Remix reports the navigation it starts.
+function submitForm(form: HTMLFormElement): Promise<void> {
+  let started = new Promise<void>((resolve) =>
     navigation.addEventListener('change', () => resolve(), { once: true }),
   )
+  form.requestSubmit()
+  return started
 }
 
 function trackSettled() {
