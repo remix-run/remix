@@ -241,7 +241,7 @@ function SidebarContent(
             open={openSections.includes(section.id) || undefined}
           >
             <summary>
-              <PathLabel label={section.label} />
+              <PathLabel label={getSidebarPackageLabel(section.label)} />
             </summary>
             <div class="api-nav-content">
               {section.groups.map((group) => (
@@ -259,6 +259,14 @@ function SidebarContent(
       </div>
     )
   }
+}
+
+// The sidebar drops the scope prefix to keep labels short: `remix/assert` -> `assert`,
+// `@remix-run/ui/tabs` -> `ui/tabs`. Pages still show the full import path.
+function getSidebarPackageLabel(label: string): string {
+  if (label.startsWith('remix/')) return label.slice('remix/'.length)
+  if (label.startsWith('@remix-run/')) return label.slice('@remix-run/'.length)
+  return label
 }
 
 // Long package paths wrap after a slash instead of at hyphens or mid-segment.

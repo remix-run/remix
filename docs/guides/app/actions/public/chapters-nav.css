@@ -4,7 +4,7 @@
   height: var(--docs-nav-item-height);
   margin: 0;
   padding: 0 12px;
-  color: var(--rmx-color-text-primary);
+  color: var(--docs-sidebar-heading);
   font-family: var(--rmx-font-family-sans);
   font-size: 14px;
   font-weight: var(--rmx-font-weight-semibold);
@@ -60,7 +60,7 @@
 
 .docs-chapters-nav__eyebrow {
   padding: 0;
-  color: var(--rmx-color-text-muted);
+  color: var(--rmx-color-text-secondary);
   font-family: var(--rmx-font-family-mono);
   font-size: 14px;
   line-height: normal;
@@ -79,7 +79,7 @@
   white-space: nowrap;
 }
 
-@media (max-height: 715px) and (width >= 900px) {
+@media (max-height: 780px) and (width >= 900px) {
   .docs-chapters-nav__heading {
     height: 28px;
   }

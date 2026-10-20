@@ -50,22 +50,12 @@
   font-weight: 600;
   letter-spacing: -0.025em;
 }
-.docs-page-header > p {
-  color: var(--rmx-color-text-secondary);
-}
-.ui-doc-section > p,
-.ui-doc-section > ul,
-.ui-doc-section > ol,
-.ui-example > p {
-  color: var(--docs-color-text-body);
-}
 .ui-doc-section > dl > dt {
   margin-top: 20px;
   font-weight: 600;
 }
 .ui-doc-section > dl > dd {
   margin: 6px 0 0;
-  color: var(--docs-color-text-body);
 }
 .ui-doc-section table {
   width: 100%;
@@ -99,6 +89,7 @@
   height: var(--docs-nav-item-height);
   margin: 0 0 8px;
   padding: 0 12px;
+  color: var(--docs-sidebar-heading);
   font-size: 14px;
   font-weight: 600;
   line-height: var(--docs-nav-item-height);
@@ -120,7 +111,7 @@
   height: var(--docs-nav-item-height);
   margin: 0 0 4px;
   padding: 0 12px;
-  color: var(--rmx-color-text-primary);
+  color: var(--docs-sidebar-heading);
   font-size: 12px;
   font-weight: var(--rmx-font-weight-semibold);
 }

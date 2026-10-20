@@ -65,7 +65,7 @@ export const navigationCss = css({
     visibility: 'hidden',
     pointerEvents: 'none',
   },
-  '@media (max-height: 715px) and (width >= 900px)': {
+  '@media (max-height: 780px) and (width >= 900px)': {
     overflowX: 'hidden',
     overflowY: 'auto',
     overscrollBehaviorY: 'auto',

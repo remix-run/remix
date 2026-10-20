@@ -62,7 +62,6 @@
   --rmx-color-text-primary: #1b1b1f;
   --rmx-color-text-secondary: #6b7280;
   --rmx-color-text-muted: #9ca3af;
-  --docs-color-text-body: #43464f;
   --rmx-color-text-link: #0578be;
   --rmx-color-text-link-hover: #022f4b;
 
@@ -115,11 +114,12 @@
   --docs-nav-link-hover: #00304a;
   --docs-nav-hover-background: rgb(0 0 0 / 5%);
   --docs-nav-selected-background: rgb(0 0 0 / 10%);
-  --docs-sidebar-link: var(--rmx-color-text-secondary);
+  --docs-sidebar-heading: var(--rmx-color-text-secondary);
+  --docs-sidebar-link: var(--rmx-color-text-primary);
   --docs-sidebar-link-hover: var(--rmx-color-text-primary);
-  --docs-sidebar-group-gap: 32px;
+  --docs-sidebar-group-gap: 22px;
   --docs-nav-control-border: rgb(0 0 0 / 10%);
-  --docs-nav-item-height: 32px;
+  --docs-nav-item-height: 36px;
   --docs-nav-item-gap: 4px;
   --docs-nav-item-inset: 12px;
   --docs-sidebar-offset: 300px;
@@ -182,7 +182,6 @@
     --rmx-color-text-primary: #e7e7ea;
     --rmx-color-text-secondary: #9aa0aa;
     --rmx-color-text-muted: #6b7280;
-    --docs-color-text-body: var(--rmx-color-text-secondary);
     --rmx-color-text-link: #2dacf9;
     --rmx-color-text-link-hover: #63c2fb;
 
