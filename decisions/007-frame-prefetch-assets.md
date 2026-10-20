@@ -1,6 +1,6 @@
 # Discover prefetch assets from HTML and use the browser cache
 
-We chose HTML discovery with asset prefetch tags as the direction for Remix's default frame prefetching. Remix fetches a destination's HTML, parses it without activating the page, and creates prefetch hints for its explicit JavaScript and CSS URLs. Navigation uses the normal frame resolver. The browser owns response caching and revalidation.
+We chose HTML discovery with asset prefetch tags as the direction for Remix's default frame prefetching. Remix fetches a destination's HTML, parses it without activating the page, and creates prefetch hints for its explicit JavaScript, CSS, and image and font preload URLs. Navigation uses the normal frame resolver. The browser owns response caching and revalidation.
 
 This extends the HTML-only prefetching in [PR #12004][base-pr]. We evaluated four strategies in `demos/prefetch`, then promoted HTML discovery into the component runtime. The demo now uses that default and contains no custom prefetch implementation or strategy selector.
 
@@ -39,8 +39,8 @@ The default implementation is `packages/component/src/runtime/default-prefetch.t
 
 1. Normalize the same-origin URL and make a GET with `priority: 'low'` and the normal frame headers, `Accept: text/html` and `X-Remix-Frame: true`. Use ordinary fetch caching behavior.
 2. Read a successful HTML response into a detached `<template>`. Resolve asset URLs against the final response URL after redirects, honoring its first `<base href>`.
-3. Find external scripts, stylesheet links, module preload links, and script/style preload links. Recursively inspect nested template contents, including assets carried in streamed frame templates.
-4. Skip matching assets already active in the current document and deduplicate pending asset hints. Create new script/style **prefetch** links, preserving the relevant CORS, integrity, and referrer attributes.
+3. Find external scripts, stylesheet links, module preload links, and script/style/image/font preload links. Recursively inspect nested template contents, including assets carried in streamed frame templates.
+4. Skip matching assets already active in the current document and deduplicate pending asset hints. Create new script/style/image/font **prefetch** links, preserving the relevant CORS, integrity, and referrer attributes.
 5. Keep hints connected while they load, including across a frame navigation. Remove each hint on load or error. The runtime tracks its own pending head links and excludes them from document head reconciliation so navigation does not cancel unfinished work. Runtime disposal cancels speculative HTML requests and removes pending hints.
 6. Discard the consumed HTML. On navigation, use the default resolver, which performs its normal request and lets the browser decide whether to reuse, validate, or fetch a response.
 
@@ -55,6 +55,10 @@ We considered loading the destination in a hidden iframe so the browser could di
 We also avoid copying destination `modulepreload` links into the current document as module preloads. Module preloading can fetch a dependency graph using the current document's module environment.[modulepreload] That is the wrong environment when the destination has a different import map. Instead, we read the explicit URL attributes and warm their bytes with ordinary asset prefetch hints. The destination's import map and module graph are handled during actual navigation.
 
 This deliberately stops at explicit URLs. It does not resolve bare imports, traverse JavaScript dependencies, parse CSS `@import`, or discover CSS images and fonts. Assets that need warming must appear in the HTML's resource declarations.
+
+Image discovery follows explicit `<link rel="preload" as="image" href="…">` declarations rather than scanning every `<img>`. Authors can choose which destination images warrant speculative loading. Image media conditions must match, and declarations with `imagesrcset` are skipped: ordinary prefetch hints cannot select responsive image candidates.[image-preloads]
+
+Font discovery likewise follows explicit `<link rel="preload" as="font" href="…" crossorigin>` declarations with matching media conditions. It preserves the declared CORS setting, allowing authors to match the anonymous CORS requests used for CSS fonts.[font-fetching] It does not parse `@font-face` rules or choose font weights and character subsets from stylesheets.
 
 ## Browser caching remains authoritative
 
@@ -101,7 +105,7 @@ Other limits follow from the chosen mechanisms:
 
 The four-strategy demo was the evaluation tool. After selecting HTML discovery, we removed its custom implementations, cookie-backed selector, response cache, and diagnostic request header. The demo now exercises the framework default with artificial HTML and asset delays.
 
-`packages/component/src/test/default-prefetch.test.ts` covers inert discovery, nested templates, base URLs, final response URLs, active assets, request attributes, pending-work deduplication, failed responses, and disposal. `prefetch.test.ts` covers intent detection, eligibility, override hooks, default frame request headers, and the low-priority HTML fetch. The demo's `app/app.test.e2e.ts` checks browser HTTP cache reuse, asset warming for `no-store` HTML, independent navigation while discovery streams, and pending hints surviving frame navigation. These are functional checks, not a claim that one strategy is fastest for every application.
+`packages/component/src/test/default-prefetch.test.ts` covers inert discovery, nested templates, base URLs, final response URLs, active assets, image and font preload declarations, media conditions, responsive image exclusions, request attributes, pending-work deduplication, failed responses, and disposal. `prefetch.test.ts` covers intent detection, eligibility, override hooks, default frame request headers, and the low-priority HTML fetch. The demo's `app/app.test.e2e.ts` checks browser HTTP cache reuse, asset warming for `no-store` HTML, independent navigation while discovery streams, and pending hints surviving frame navigation. These are functional checks, not a claim that one strategy is fastest for every application.
 
 ## Keep customization hooks and defer helper exports
 
@@ -125,6 +129,8 @@ The private resolver and its form-encoding helpers remain in `packages/component
 [prefetch-hints]: https://html.spec.whatwg.org/multipage/links.html#link-type-prefetch
 [templates]: https://html.spec.whatwg.org/multipage/scripting.html#the-template-element
 [modulepreload]: https://html.spec.whatwg.org/multipage/links.html#link-type-modulepreload
+[image-preloads]: https://html.spec.whatwg.org/multipage/semantics.html#attr-link-imagesrcset
+[font-fetching]: https://www.w3.org/TR/css-fonts-4/#font-fetching-requirements
 [http-cache]: https://www.rfc-editor.org/rfc/rfc9111.html
 [chrome-prefetch-cache]: https://developer.chrome.com/release-notes/133
 [forbidden-headers]: https://fetch.spec.whatwg.org/#forbidden-request-header

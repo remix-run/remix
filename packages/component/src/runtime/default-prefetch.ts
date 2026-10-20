@@ -106,7 +106,19 @@ function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement
     if (
       !element.relList.contains('modulepreload') &&
       !element.relList.contains('stylesheet') &&
-      !(element.relList.contains('preload') && ['script', 'style'].includes(element.as))
+      !(
+        element.relList.contains('preload') &&
+        ['script', 'style', 'image', 'font'].includes(element.as)
+      )
+    ) {
+      return
+    }
+    // Prefetch hints cannot select a responsive candidate from imagesrcset.
+    if (element.as === 'image' && element.imageSrcset) return
+    if (
+      ['image', 'font'].includes(element.as) &&
+      element.media &&
+      !matchMedia(element.media).matches
     ) {
       return
     }
@@ -139,8 +151,10 @@ function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement
   // Ordinary prefetches don't evaluate modules or resolve their imports in the current import map.
   link.rel = 'prefetch'
   link.fetchPriority = 'low'
-  link.as =
-    element instanceof HTMLScriptElement || isModule || element.as === 'script' ? 'script' : 'style'
+  link.as = 'script'
+  if (element instanceof HTMLLinkElement && !isModule) {
+    link.as = element.relList.contains('stylesheet') ? 'style' : element.as
+  }
   link.href = url.href
   for (let name of ['integrity', 'referrerpolicy']) {
     let value = element.getAttribute(name)

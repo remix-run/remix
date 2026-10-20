@@ -15,7 +15,8 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
 
 /**
  * Prefetches a page so a later top-frame navigation to it can reuse the response. By default this
- * fetches HTML and discovers external JavaScript and CSS for `<link rel="prefetch">` hints.
+ * fetches HTML and discovers external JavaScript, CSS, and explicit image and font preloads for
+ * `<link rel="prefetch">` hints.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
  * `prefetch` to `run()` to change this behavior. Cross-origin URLs, the current page, and
  * browsers where Remix doesn't handle navigations are skipped.

@@ -96,6 +96,93 @@ describe('default frame prefetch', () => {
     expect(hints[0].referrerPolicy).toBe('no-referrer')
   })
 
+  it('prefetches explicit image preload URLs, including nested templates', async (t) => {
+    t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse(`<base href="/images/">
+        <link rel="preload" as="image" href="hero.jpg" crossorigin="anonymous"
+          referrerpolicy="no-referrer" fetchpriority="high">
+        <template><link rel="preload" as="image" href="detail.jpg"></template>
+        <img src="not-prefetched.jpg">
+        <link rel="preload" as="fetch" href="not-prefetched.json">`),
+    )
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t)
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual([
+      '/images/hero.jpg',
+      '/images/detail.jpg',
+    ])
+    expect(hints.every((link) => link.as === 'image' && link.fetchPriority === 'low')).toBe(true)
+    expect(hints[0].crossOrigin).toBe('anonymous')
+    expect(hints[0].referrerPolicy).toBe('no-referrer')
+    expect(hints[1].hasAttribute('crossorigin')).toBe(false)
+    expect(hints.every((link) => !link.isConnected)).toBe(true)
+  })
+
+  it('skips active image preloads, responsive candidates, and unmatched image media', async (t) => {
+    let active = document.createElement('link')
+    active.rel = 'preload'
+    active.as = 'image'
+    active.href = '/images/active.jpg'
+    document.head.append(active)
+    t.after(() => active.remove())
+    t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse(`<link rel="preload" as="image" href="/images/active.jpg">
+        <link rel="preload" as="image" href="/images/fallback.jpg"
+          imagesrcset="/images/small.jpg 400w, /images/large.jpg 1200w" imagesizes="100vw">
+        <link rel="preload" as="image" imagesrcset="/images/responsive.jpg 1x">
+        <link rel="preload" as="image" href="/images/print.jpg" media="not all">
+        <link rel="preload" as="image" href="/images/screen.jpg" media="all">`),
+    )
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t)
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/images/screen.jpg'])
+    expect(hints[0].as).toBe('image')
+  })
+
+  it('prefetches explicit font preload URLs, honoring media, active assets, and CORS', async (t) => {
+    let active = document.createElement('link')
+    active.rel = 'preload'
+    active.as = 'font'
+    active.href = '/fonts/active.woff2'
+    active.crossOrigin = 'anonymous'
+    document.head.append(active)
+    t.after(() => active.remove())
+    t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse(`<base href="/fonts/">
+        <link rel="preload" as="font" href="active.woff2" crossorigin>
+        <link rel="preload" as="font" href="body.woff2" type="font/woff2" crossorigin
+          integrity="sha256-example" referrerpolicy="no-referrer" fetchpriority="high">
+        <template><link rel="preload" as="font" href="heading.woff2"
+          crossorigin="anonymous" media="all"></template>
+        <link rel="preload" as="font" href="print.woff2" crossorigin media="not all">
+        <style>@font-face { font-family: undiscovered; src: url(css-only.woff2) }</style>`),
+    )
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t)
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual([
+      '/fonts/body.woff2',
+      '/fonts/heading.woff2',
+    ])
+    expect(
+      hints.every(
+        (link) =>
+          link.as === 'font' && link.fetchPriority === 'low' && link.crossOrigin === 'anonymous',
+      ),
+    ).toBe(true)
+    expect(hints[0].integrity).toBe('sha256-example')
+    expect(hints[0].referrerPolicy).toBe('no-referrer')
+    expect(hints.every((link) => !link.isConnected)).toBe(true)
+  })
+
   it('shares only pending discovery work and does not retain completed no-store responses', async (t) => {
     let response = Promise.withResolvers<Response>()
     let fetch = t.mock.method(globalThis, 'fetch', () => response.promise)
