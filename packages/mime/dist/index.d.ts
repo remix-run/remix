@@ -1,0 +1,7 @@
+export { detectContentType } from './lib/detect-content-type.ts';
+export { detectMimeType } from './lib/detect-mime-type.ts';
+export { isCompressibleMimeType } from './lib/is-compressible-mime-type.ts';
+export { mimeTypeToContentType } from './lib/mime-type-to-content-type.ts';
+export { defineMimeType } from './lib/define-mime-type.ts';
+export type { MimeTypeDefinition } from './lib/define-mime-type.ts';
+//# sourceMappingURL=index.d.ts.map
