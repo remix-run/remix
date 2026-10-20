@@ -43,6 +43,10 @@ const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
 
 const webKitScrollResetDuration = 500
 
+// The navigation Remix has intercepted while the browser is still running `navigate` listeners.
+// The browser only creates its transition once every listener has run.
+let pendingInterception: NavigateEvent | undefined
+
 // iOS Safari can restore the previous position, or the new page's bottom, for several frames after
 // a navigation resets scroll. Undo those restorations until shortly after the navigation finishes,
 // the user interacts with the page, or another navigation starts. App code that scrolls to one of
@@ -180,7 +184,8 @@ export const navigation = {
   /**
    * Waits until no navigation is in progress. By then, Remix has rendered the destination,
    * followed any frame redirect, and reset or restored scroll and focus. If another navigation
-   * starts while waiting, this waits for that one too.
+   * starts while waiting, this waits for that one too, including when called from a `navigate`
+   * event listener before the browser has started the navigation.
    *
    * Components rendered by a navigation can run their queued tasks before the navigation
    * finishes. Changing the URL from one of those tasks interrupts the navigation before it resets
@@ -192,6 +197,12 @@ export const navigation = {
   async settled(): Promise<void> {
     let browserNavigation = typeof window === 'undefined' ? undefined : getInterceptableNavigation()
     if (!browserNavigation) return
+
+    // Called from a `navigate` listener, the navigation Remix just intercepted has no transition
+    // yet. The browser creates it once the listeners finish.
+    if (pendingInterception && !pendingInterception.signal.aborted) {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
 
     // A navigation can start another before it finishes, as frame redirects and POST replays do,
     // so keep waiting until none is in progress.
@@ -473,6 +484,7 @@ function interceptNavigation(
 
   let transitionBound = false
   function bindTransition() {
+    if (pendingInterception === event) pendingInterception = undefined
     if (transitionBound) return
     if (event.signal.aborted) return scrollStyleWorkarounds?.remove()
 
@@ -506,6 +518,7 @@ function interceptNavigation(
     scrollStyleWorkarounds?.remove()
     throw error
   }
+  pendingInterception = event
 }
 
 const disableScrollAnchoringCssText = `

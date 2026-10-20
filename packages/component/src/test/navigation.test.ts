@@ -1725,6 +1725,30 @@ describe('navigation.settled', () => {
     }
   })
 
+  it('waits for the navigation when called from a navigate listener', async () => {
+    let listener = startHeldNavigationListener()
+    let controller = new AbortController()
+    let settled: ReturnType<typeof trackSettled> | undefined
+    window.navigation.addEventListener('navigate', () => (settled ??= trackSettled()), {
+      signal: controller.signal,
+    })
+    try {
+      void navigate(createTestUrl('settled-listener')).catch(() => {})
+      controller.abort()
+
+      await nextTask()
+      expect(settled?.done).toBe(false)
+
+      listener.finishReload(0)
+      await settled?.promise
+
+      expect(window.navigation.transition).toBe(null)
+    } finally {
+      controller.abort()
+      await listener.cleanup()
+    }
+  })
+
   it('resolves when the navigation fails', async () => {
     let listener = startHeldNavigationListener()
     try {

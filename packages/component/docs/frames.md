@@ -422,6 +422,7 @@ function Comment(handle: Handle<{ highlighted: boolean; text: string }>) {
 ```
 
 - It resolves once no navigation is in progress. If another navigation starts while it waits, such as a frame redirect or the user's next click, it waits for that one too.
+- It also waits when called from a `navigate` event listener. The browser runs those listeners before it starts the navigation.
 - It resolves right away when nothing is navigating or the browser doesn't support frame navigation, and it never rejects, including when the navigation fails.
 - Check `handle.signal` or your own state after it resolves: the component may have been removed, or a later navigation may have given it new props.
 
