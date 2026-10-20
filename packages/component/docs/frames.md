@@ -308,6 +308,30 @@ Disabling the reset does not retain focus if navigation removes the focused elem
 
 During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted, an intercepted navigation reloads the top frame from `href`. If a specified target does not match a mounted frame, Remix leaves fresh link, form, and `navigate()` navigations to the browser. Back and forward traversal reloads the destination document instead of reconciling stale frame content. Native form navigation preserves the selected method, body, files, and submitter overrides.
 
+To change the URL without reloading anything, for example to reflect a product variant the page already shows, pass `reload: false` to `navigate()`:
+
+```ts
+import { navigate } from 'remix/component'
+
+await navigate(`/products/shirt?variant=${variantId}`, { history: 'replace', reload: false })
+```
+
+Scroll position and focus stay where they are. Back and forward traversal to the entry reloads the top frame from its URL, so that URL must render the same page. If the update interrupts an unfinished frame navigation, Remix reloads the top frame instead so the content matches the URL.
+
+Without frame navigation, `history: 'replace'` updates still only replace the URL, since Remix keeps no state on history entries there. Pushed updates load the new URL as a document instead, because the browser wouldn't render the previous page when going back to it.
+
+A component rendered by a navigation can run its queued tasks before that navigation finishes, so a URL update from one would fetch and render the page again. Await [`navigation.settled()`](#waiting-for-navigation-to-finish) first:
+
+```ts
+import { navigate, navigation } from 'remix/component'
+
+handle.queueTask(async () => {
+  await navigation.settled()
+  if (handle.signal.aborted) return
+  await navigate(`/products/shirt?variant=${variantId}`, { history: 'replace', reload: false })
+})
+```
+
 Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 
 To keep links/forms as a document navigations while still hydrating client entries and using explicit
@@ -443,7 +467,7 @@ let searching = navigation.current?.target === 'search-results'
 
 - A frame redirect keeps the same pending navigation. Its `url` changes to the final URL and `change` fires.
 - When another navigation interrupts it, its `signal` aborts and `navigation.current` becomes the new navigation, in a single `change` event.
-- `handle.frame.reload()` and document navigations aren't frame navigations, so they don't appear in `navigation.current`. Frames report their own reloads with `reloadStart` and `reloadComplete`.
+- URL updates with `reload: false`, `handle.frame.reload()`, and document navigations aren't frame navigations, so they don't appear in `navigation.current`. Frames report their own reloads with `reloadStart` and `reloadComplete`.
 
 ### Waiting for navigation to finish
 

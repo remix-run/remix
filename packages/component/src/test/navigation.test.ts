@@ -403,6 +403,43 @@ describe('navigate', () => {
     }
   })
 
+  it('replaces the URL in place for URL-only updates when the Navigation API is unavailable', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'history-fallback')
+    let originalHistoryLength = window.history.length
+    let originalState = window.history.state
+    stubGlobalField(t, 'navigation', undefined)
+
+    try {
+      await navigate(destination.href, { history: 'replace', reload: false })
+      expect(window.location.href).toBe(destination.href)
+      expect(window.history.length).toBe(originalHistoryLength)
+      expect(window.history.state).toBe(originalState)
+    } finally {
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('uses document navigation for pushed URL-only updates when the Navigation API is unavailable', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.hash = 'push-url-only-fallback'
+    stubGlobalField(t, 'navigation', undefined)
+
+    try {
+      // A document navigation to a fragment fires hashchange; history.pushState() wouldn't.
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
+      await navigate(destination.href, { reload: false })
+      await navigated
+      expect(window.location.href).toBe(destination.href)
+    } finally {
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
   it('skips navigation listeners when the Navigation API is unavailable', (t) => {
     stubGlobalField(t, 'navigation', undefined)
     let addDocumentListener = t.mock.method(document, 'addEventListener')
@@ -1637,6 +1674,90 @@ describe('navigate', () => {
         $rmx: true,
       })
     } finally {
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
+
+  it('replaces the URL without reloading frames when reload is false', async (t) => {
+    let changes = recordNavigationChanges(t)
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'replace')
+    let reloadFrame = mock.fn(stubFrames.reloadFrame)
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, { ...stubFrames, reloadFrame })
+
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    try {
+      await navigate(destination.href, {
+        history: 'replace',
+        reload: false,
+        src: '/partials/details',
+        target: 'details',
+      })
+
+      expect(window.location.href).toBe(destination.href)
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation)
+      expect(window.navigation.currentEntry?.getState()).toEqual({
+        target: undefined,
+        src: destination.href,
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+        $rmx: true,
+      })
+      expect(reloadFrame).not.toHaveBeenCalled()
+      expect(document.activeElement).toBe(input)
+      // Nothing loads, so it isn't a frame navigation.
+      expect(changes).toEqual([])
+    } finally {
+      window.history.replaceState(window.history.state, '', originalUrl)
+      controller.abort()
+    }
+  })
+
+  it('reloads the top frame when a URL update interrupts a frame load', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'pending-url-update')
+    let updatedUrl = new URL(destination)
+    updatedUrl.searchParams.set('variant', 'interrupted')
+    let topFrame = { src: '' } as FrameHandle
+    let [started, resolveStarted] = withResolvers<void>()
+    let [pending, resolvePending] = withResolvers<StubFrameReloadResult>()
+    let reloads = 0
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame() {
+        reloads++
+        if (reloads === 1) {
+          resolveStarted()
+          return createReloadTransition(pending)
+        }
+        return createReloadTransition({ signal: new AbortController().signal })
+      },
+    })
+
+    try {
+      let interrupted = navigate(destination.href).catch(() => {})
+      await started
+
+      await navigate(updatedUrl.href, { history: 'replace', reload: false })
+      await interrupted
+
+      expect(reloads).toBe(2)
+      expect(window.location.href).toBe(updatedUrl.href)
+      expect(topFrame.src).toBe(updatedUrl.href)
+    } finally {
+      resolvePending({ signal: new AbortController().signal })
       if (window.location.href !== originalUrl) {
         await navigate(originalUrl, { history: 'replace' })
       }
