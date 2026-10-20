@@ -20,18 +20,36 @@ export function Layout(handle: Handle<LayoutProps>) {
         <header>
           <div class="container">
             <h1>
-              <a href={routes.home.href()}>📚 Bookstore</a>
+              <a data-rmx-prefetch="intent" href={routes.home.href()}>
+                📚 Bookstore
+              </a>
             </h1>
             <nav>
-              <a href={routes.home.href()}>Home</a>
-              <a href={routes.books.index.href()}>Books</a>
-              <a href={routes.about.href()}>About</a>
-              <a href={routes.contact.index.href()}>Contact</a>
-              <a href={routes.cart.index.href()}>Cart</a>
+              <a data-rmx-prefetch="intent" href={routes.home.href()}>
+                Home
+              </a>
+              <a data-rmx-prefetch="intent" href={routes.books.index.href()}>
+                Books
+              </a>
+              <a data-rmx-prefetch="intent" href={routes.about.href()}>
+                About
+              </a>
+              <a data-rmx-prefetch="intent" href={routes.contact.index.href()}>
+                Contact
+              </a>
+              <a data-rmx-prefetch="intent" href={routes.cart.index.href()}>
+                Cart
+              </a>
               {user ? (
                 <>
-                  <a href={routes.account.index.href()}>Account</a>
-                  {user.role === 'admin' ? <a href={routes.admin.index.href()}>Admin</a> : null}
+                  <a data-rmx-prefetch="intent" href={routes.account.index.href()}>
+                    Account
+                  </a>
+                  {user.role === 'admin' ? (
+                    <a data-rmx-prefetch="intent" href={routes.admin.index.href()}>
+                      Admin
+                    </a>
+                  ) : null}
                   <form
                     method="POST"
                     action={routes.auth.logout.href()}
@@ -49,7 +67,9 @@ export function Layout(handle: Handle<LayoutProps>) {
               ) : (
                 <>
                   <a href={routes.auth.login.index.href()}>Login</a>
-                  <a href={routes.auth.register.index.href()}>Register</a>
+                  <a data-rmx-prefetch="intent" href={routes.auth.register.index.href()}>
+                    Register
+                  </a>
                 </>
               )}
             </nav>
