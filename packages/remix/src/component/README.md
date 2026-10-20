@@ -174,6 +174,20 @@ CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass 
 `resolveFrame` when the server requires additional headers, another body encoding, or a different
 response policy.
 
+Import `defaultResolveFrame` to delegate from a custom resolver. Pass `src` and `options` to preserve
+the default headers, method, form encoding, abort signal, and response policy:
+
+```ts
+import { run, defaultResolveFrame } from 'remix/component'
+
+run({
+  loadModule,
+  resolveFrame(src, options) {
+    return cache.get(src) ?? defaultResolveFrame(src, options)
+  },
+})
+```
+
 Scroll and focus controls accept the Navigation API values `"after-transition"` (the default) and `"manual"`. Set `data-rmx-reset-scroll="manual"` or `data-rmx-reset-focus="manual"` on a link or form to disable the corresponding automatic behavior. The equivalent options for `navigate()` and `link()` are `resetScroll: 'manual'` and `resetFocus: 'manual'`:
 
 ```tsx
@@ -236,7 +250,7 @@ await handle.frame.reload({
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
-Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for caching requirements and custom prefetch strategies.
+Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Remix fetches its HTML to discover JavaScript and CSS for asset prefetch hints. Navigation uses the default resolver and browser HTTP cache; even uncacheable HTML can reveal cacheable assets. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for caching behavior and custom strategies.
 
 ## Single-page Applications
 
