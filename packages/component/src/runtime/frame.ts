@@ -1,3 +1,4 @@
+import { isPendingPrefetchLink } from './default-prefetch.ts'
 import { jsx } from './jsx.ts'
 import { Frame, createFrameHandle, type FrameContent, type FrameResolution } from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
@@ -371,6 +372,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let initialClientEntryResources: Promise<boolean> | undefined
   function shouldPreserveManagedHeadNode(node: Node): boolean {
     return (
+      isPendingPrefetchLink(node) ||
       importMapManager.shouldPreserveHeadNode(node) ||
       (modulePreloader.hasActivePreloads() && modulePreloader.isActivePreload(node))
     )

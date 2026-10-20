@@ -10,6 +10,12 @@ export const ProductSearch = clientEntry(
   import.meta.url,
   function ProductSearch(handle: Handle<{ products: SearchableProduct[] }>) {
     let query = ''
+    let interactive = false
+
+    handle.queueTask(() => {
+      interactive = true
+      handle.update()
+    })
 
     return () => {
       let matches = findMatches(handle.props.products, query)
@@ -22,6 +28,7 @@ export const ProductSearch = clientEntry(
           <input
             id={handle.id}
             type="search"
+            disabled={!interactive}
             placeholder="Try “mug”"
             mix={[
               inputStyle,

@@ -1,6 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 
+import { defaultResolveFrame } from '../index.ts'
+import { createRoot } from '../runtime/vdom.ts'
 import { Frame, type Handle } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import {
@@ -49,6 +51,99 @@ describe('frames', () => {
   afterEach(() => {
     resetDocumentImportMapManager(document)
     document.documentElement.innerHTML = '<head></head><body></body>'
+  })
+
+  it('can use a cached response without calling the default resolver', async (t) => {
+    let fetch = t.mock.method(globalThis, 'fetch', () => {
+      throw new Error('Unexpected request')
+    })
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let cache = new Map([['https://example.com/initial', new Response('<main>Cached</main>')]])
+    let frame = createTestFrame(root, {
+      resolveFrame(src, options) {
+        return cache.get(src) ?? defaultResolveFrame(src, options)
+      },
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+
+    expect(root.textContent).toBe('Cached')
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('delegates a named frame submission with its encoding and abort signal', async (t) => {
+    let fetched: Request | undefined
+    let fetch = t.mock.method(
+      globalThis,
+      'fetch',
+      async (src: RequestInfo | URL, init?: RequestInit) => {
+        fetched = new Request(src, init)
+        return new Response('<main>Saved</main>', { headers: { 'Content-Type': 'text/html' } })
+      },
+    )
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let frame = createTestFrame(root, {
+      src: 'https://example.com/account',
+      name: 'account',
+      resolveFrame(src, options) {
+        return defaultResolveFrame(src, options)
+      },
+    })
+    t.after(() => frame.dispose())
+    let formData = new FormData()
+    formData.set('message', 'first\nsecond')
+
+    await frame.ready()
+    await frame.handle.reload({ method: 'POST', body: formData })
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetched?.url).toBe('https://example.com/account')
+    expect(fetched?.method).toBe('POST')
+    expect(fetched?.mode).toBe('same-origin')
+    expect(fetched?.headers.get('Accept')).toBe('text/html')
+    expect(fetched?.headers.get('X-Remix-Frame')).toBe('true')
+    expect(fetched?.headers.get('X-Remix-Target')).toBe('account')
+    expect(fetched?.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
+    expect(await fetched?.text()).toBe('message=first%0D%0Asecond')
+    expect(fetch.mock.calls[0].arguments[1]?.signal).toBeInstanceOf(AbortSignal)
+    expect(root.textContent).toBe('Saved')
+  })
+
+  it('can delegate an initial client frame load to the default resolver', async (t) => {
+    let fetch = t.mock.method(
+      globalThis,
+      'fetch',
+      async () => new Response('<main>Loaded</main>', { headers: { 'Content-Type': 'text/html' } }),
+    )
+    let container = document.createElement('div')
+    document.body.append(container)
+    let root = createRoot(container, {
+      frameInit: {
+        resolveFrame(src, options) {
+          return defaultResolveFrame(src, options)
+        },
+      },
+    })
+    t.after(() => root.dispose())
+
+    root.render(jsx(Frame, { src: '/child', name: 'child' }))
+    root.flush()
+    await fetch.mock.calls[0]?.result
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    root.flush()
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetch.mock.calls[0].arguments[0]).toBe('/child')
+    expect(fetch.mock.calls[0].arguments[1]?.headers).toEqual(
+      new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true', 'X-Remix-Target': 'child' }),
+    )
+    expect(container.textContent).toBe('Loaded')
   })
 
   it('preserves named html and body attributes across top frame reloads', async () => {

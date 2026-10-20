@@ -28,8 +28,9 @@ export interface RunInit {
    * Defaults to fetching the frame source as HTML with the submitted form data, method, encoding,
    * and abort signal. All requests send `X-Remix-Frame: true`, plus `X-Remix-Target` when named.
    * The default resolver only fetches from the document origin, including
-   * redirects, but does not sanitize the returned HTML. Custom resolvers own their request,
-   * redirect, and content trust policies.
+   * redirects, but does not sanitize the returned HTML. Call {@link defaultResolveFrame} with
+   * `src` and `options` from a custom resolver to use the default behavior. Custom resolvers own
+   * their request, redirect, and content trust policies.
    */
   resolveFrame?: ResolveFrame
 
@@ -38,7 +39,7 @@ export interface RunInit {
 
   /**
    * Starts loading a page for `data-rmx-prefetch` links and `prefetch()` calls, replacing the
-   * default `<link rel="prefetch">`. Use it with `resolveFrame` when pages aren't HTTP-cacheable,
+   * default HTML fetch and asset prefetch hints. Use it with `resolveFrame` to reuse uncacheable HTML,
    * for example to hold the response in memory until the next navigation to that URL.
    */
   prefetch?: PrefetchFrame
@@ -123,7 +124,22 @@ function normalizeLineBreaks(value: string): string {
   return value.replace(/\r\n|\r|\n/g, '\r\n')
 }
 
-async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
+/**
+ * Fetches frame HTML using the client runtime's default request and response handling.
+ *
+ * Requests and redirects must stay on the document origin. Sends `Accept: text/html` and
+ * `X-Remix-Frame: true`, plus `X-Remix-Target` for a named frame. Encodes submitted form data
+ * using the requested encoding and forwards the abort signal. Rejects all `5xx` responses
+ * and `3xx` or `4xx` responses without an HTML content type.
+ *
+ * @param src Frame source or destination URL, including any GET form values.
+ * @param options Frame name, submission metadata, and abort signal for the request.
+ * @returns The fetched response for the frame to render.
+ */
+export async function defaultResolveFrame(
+  src: string,
+  options?: ResolveFrameOptions,
+): Promise<Response> {
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (options?.target != null) headers.set('X-Remix-Target', options.target)
 

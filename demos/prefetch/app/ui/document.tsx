@@ -5,7 +5,13 @@ import { ImportMap } from 'remix/component/server'
 import { getScriptEntry } from '../middleware/asset-entry.ts'
 import { routes } from '../routes.ts'
 
-export function Document(handle: Handle<{ title: string; children?: RemixNode }>) {
+export function Document(
+  handle: Handle<{
+    title: string
+    stylesheet?: string
+    children?: RemixNode
+  }>,
+) {
   return () => {
     let { href, importMap, preloads } = getScriptEntry()
 
@@ -15,17 +21,30 @@ export function Document(handle: Handle<{ title: string; children?: RemixNode }>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>{`${handle.props.title} | Prefetch Demo`}</title>
+          {handle.props.stylesheet && (
+            <link
+              data-rmx-key={`stylesheet:${handle.props.stylesheet}`}
+              rel="stylesheet"
+              href={handle.props.stylesheet}
+            />
+          )}
           <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
-            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
+            <link
+              key={preloadHref}
+              data-rmx-key={`modulepreload:${preloadHref}`}
+              rel="modulepreload"
+              href={preloadHref}
+            />
           ))}
-          <script type="module" src={href} />
+          <script data-rmx-key={`script:${href}`} type="module" src={href} />
         </head>
         <body mix={bodyStyle}>
           <header mix={headerStyle}>
             <a href={routes.home.href()} mix={brandStyle}>
               Trailhead Goods
             </a>
+            <p>Hover or focus a product to prefetch its HTML, JavaScript, and CSS.</p>
           </header>
           <main mix={mainStyle}>{handle.props.children}</main>
         </body>

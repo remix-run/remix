@@ -1,3 +1,4 @@
+import { createDefaultPrefetch } from './default-prefetch.ts'
 import { getInterceptableNavigation } from './navigation.ts'
 
 /**
@@ -9,13 +10,14 @@ export type PrefetchFrame = (src: string) => void
 
 const INTENT_DELAY_MS = 100
 
-let prefetchFrame: PrefetchFrame = prefetchWithLink
-const pendingLinks = new Set<string>()
+const defaultPrefetch = createDefaultPrefetch()
+let prefetchFrame: PrefetchFrame = defaultPrefetch
 
 /**
  * Prefetches a page so a later top-frame navigation to it can reuse the response. By default this
- * adds a `<link rel="prefetch">`, which only helps when the response is HTTP-cacheable. Pass
- * `prefetch` to `run()` to change how pages are prefetched. Cross-origin URLs, the current page, and
+ * fetches HTML and discovers external JavaScript and CSS for `<link rel="prefetch">` hints.
+ * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
+ * `prefetch` to `run()` to change this behavior. Cross-origin URLs, the current page, and
  * browsers where Remix doesn't handle navigations are skipped.
  *
  * @param href URL to prefetch, resolved against the document base URL.
@@ -45,11 +47,11 @@ export function prefetch(href: string): void {
  * @param prefetchOverride Replaces how pages are prefetched while the listeners are active.
  */
 export function startPrefetching(signal: AbortSignal, prefetchOverride?: PrefetchFrame): void {
-  prefetchFrame = prefetchOverride ?? prefetchWithLink
+  prefetchFrame = prefetchOverride ?? createDefaultPrefetch(signal)
   signal.addEventListener(
     'abort',
     () => {
-      prefetchFrame = prefetchWithLink
+      prefetchFrame = defaultPrefetch
     },
     { once: true },
   )
@@ -130,21 +132,4 @@ function prefetchAnchor(anchor: HTMLAnchorElement): void {
     return
   }
   prefetch(anchor.href)
-}
-
-function prefetchWithLink(src: string): void {
-  if (pendingLinks.has(src)) return
-  pendingLinks.add(src)
-
-  let link = document.createElement('link')
-  link.rel = 'prefetch'
-  link.href = src
-  // Once loaded, the response lives in the HTTP cache, so the element is no longer needed.
-  function remove() {
-    pendingLinks.delete(src)
-    link.remove()
-  }
-  link.addEventListener('load', remove, { once: true })
-  link.addEventListener('error', remove, { once: true })
-  document.head.append(link)
 }
