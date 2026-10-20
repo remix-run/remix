@@ -3,8 +3,10 @@ import { raceRequestAbort } from './request-abort.ts'
 import type {
   ContextEntries,
   ContextEntry,
+  ContextParams,
   ContextWithEntries,
   ContextWithEntry,
+  GetContextValue,
   RequestContext,
 } from './request-context.ts'
 
@@ -40,26 +42,71 @@ type ContextWithTransform<
         : context
       : context
 
-/**
- * Resolves the request-context type produced by a middleware tuple.
- *
- * Conditional entries like `...(isDev ? [logger()] : [])` may not run, so their values are not
- * added to the context. Plain arrays, which have no known order, resolve to the base context.
- */
-export type MiddlewareContext<
+type EntriesOf<transform> = transform extends ContextEntries
+  ? transform[number]
+  : transform extends ContextEntry
+    ? transform
+    : never
+
+type PossibleEntryValue<key extends object, writes> = writes extends ContextEntry
+  ? key extends writes['key']
+    ? writes['value']
+    : writes['key'] extends key
+      ? writes['value']
+      : never
+  : never
+
+type WidenContextEntries<context, entries extends ContextEntries, writes> = {
+  [index in keyof entries]: Omit<entries[index], 'value'> & {
+    // Installed properties read their key's latest value, even when a write omits `property`.
+    value:
+      | GetContextValue<context, entries[index]['key']>
+      | PossibleEntryValue<entries[index]['key'], writes>
+  }
+}
+
+type ContextWithOptionalTransforms<context extends RequestContext<any, any>, transform> = [
+  transform,
+] extends [ContextEntry | ContextEntries]
+  ? [EntriesOf<transform>] extends [never]
+    ? context
+    : context extends RequestContext<infer params, infer entries>
+      ? entries extends readonly []
+        ? context
+        : ContextWithEntries<
+            RequestContext<params>,
+            WidenContextEntries<context, entries, EntriesOf<transform>>
+          >
+      : context
+  : RequestContext<ContextParams<context>>
+
+type ApplyMiddlewareContext<
   middleware extends readonly AnyMiddleware[],
-  context extends RequestContext<any, any> = RequestContext,
+  context extends RequestContext<any, any>,
 > = middleware extends readonly [
   infer first extends AnyMiddleware,
   ...infer rest extends readonly AnyMiddleware[],
 ]
-  ? MiddlewareContext<rest, ContextWithTransform<context, TransformOf<first>>>
+  ? ApplyMiddlewareContext<rest, ContextWithTransform<context, TransformOf<first>>>
   : middleware extends readonly [
         ...infer init extends readonly AnyMiddleware[],
         infer last extends AnyMiddleware,
       ]
-    ? ContextWithTransform<MiddlewareContext<init, context>, TransformOf<last>>
-    : context
+    ? ContextWithTransform<ApplyMiddlewareContext<init, context>, TransformOf<last>>
+    : ContextWithOptionalTransforms<context, TransformOf<middleware[number]>>
+
+/**
+ * Resolves the request-context type produced by middleware.
+ *
+ * Conditional entries like `...(isDev ? [logger()] : [])` do not guarantee new properties, but
+ * widen existing values they may overwrite. Later fixed entries override those possible values.
+ * Opaque transforms in a rest segment discard context refinements. Broad middleware arrays retain
+ * the explicitly supplied base context.
+ */
+export type MiddlewareContext<
+  middleware extends readonly AnyMiddleware[],
+  context extends RequestContext<any, any> = RequestContext,
+> = AnyMiddleware[] extends middleware ? context : ApplyMiddlewareContext<middleware, context>
 
 /**
  * A special kind of request handler that either returns a response or passes control
