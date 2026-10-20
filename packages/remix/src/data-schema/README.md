@@ -265,7 +265,43 @@ The browser blocks invalid submissions with the Constraint Validation API even w
 
 The first release maps field-level `required`, `minLength`, `maxLength`, `min`, and `max` constraints to native attributes. Other synchronous field refinements can use `createInputValidator()` for client-side feedback and still run authoritatively during server parsing. Whole-object, cross-field, and asynchronous form rules are not part of the projection yet and should be applied in the server handler.
 
-You can also customize built-in validation messages with `errorMap`:
+### Shared field messages
+
+Set `errorMap` on a field to share optional wording between server parsing and the UI mixins:
+
+```ts
+import * as s from 'remix/data-schema'
+import { minLength } from 'remix/data-schema/checks'
+import { createField, createForm } from 'remix/data-schema/form'
+
+let Username = createField({
+  schema: s
+    .string()
+    .pipe(minLength(3))
+    .refine((value) => value !== 'admin', 'Reserved username'),
+  label: 'Username',
+  type: 'text',
+  errorMap({ code }) {
+    if (code === 'value.required') return 'Enter a username'
+    if (code === 'string.min_length') return 'Use at least 3 characters'
+    if (code === 'refine.failed') return 'Choose another username'
+  },
+})
+
+let Signup = createForm({ fields: { username: Username } })
+let result = Signup.parse(await request.formData())
+// createFormMixins(Signup) uses these messages too.
+```
+
+The same option works directly in `createForm({ schema, fields })` entries, including model-backed fields. The map receives `{ code, defaultMessage, path, values, input, locale }`; `input` is decoded, and `path` uses the logical field name, not an overridden HTML name. Return `undefined` to retain the default. A required empty value or unchecked required checkbox uses `value.required`. Other schema failures retain their codes. Explicit check/refinement messages are defaults that the map can override; uncoded custom checks use `check.failed`.
+
+The UI translates supported native failures to the same domain codes and uses the resolved message for both native tooltips and inline feedback. Native-only constraints without a matching code keep browser wording. `setCustomErrors()` messages are application-authored and are never remapped. Without JavaScript, native tooltips keep browser wording and server parsing still uses the map.
+
+Customizing a message does not add a validation rule: `type: 'email'` alone does not validate email format on the server; include an `email()` schema check. Browser and schema acceptance rules can differ.
+
+### Per-parse messages
+
+For schemas outside field definitions, pass `errorMap` to `parse()` or `parseSafe()`:
 
 ```ts
 import { object, parseSafe, string } from 'remix/data-schema'
