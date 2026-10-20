@@ -18,11 +18,12 @@ export const skipLinkCss = css({
 
 const navigationToggleExpandedLeft =
   'calc(var(--docs-sidebar-inline-start) + var(--docs-sidebar-content-width) - 32px)'
+const navigationToggleCollapsedLeft = 'calc(var(--docs-sidebar-inline-start) + 61px)'
 
 export const navigationToggleCss = css({
   position: 'fixed',
-  top: '16px',
-  left: `calc(${navigationToggleExpandedLeft} + (85px - ${navigationToggleExpandedLeft}) * var(--docs-nav-collapse))`,
+  top: 'calc((var(--site-header-height) - 32px) / 2)',
+  left: `calc(${navigationToggleExpandedLeft} + (${navigationToggleCollapsedLeft} - ${navigationToggleExpandedLeft}) * var(--docs-nav-collapse))`,
   zIndex: 51,
   display: 'grid',
   width: '32px',
@@ -42,17 +43,18 @@ export const navigationToggleCss = css({
 
 export const navigationCss = css({
   position: 'fixed',
-  top: '108px',
-  left: 'var(--docs-sidebar-inline-start)',
+  top: 'calc(var(--site-header-height) + 44px)',
+  // Hang the item padding outside the column so nav text lines up with the logo
+  left: 'calc(var(--docs-sidebar-inline-start) - var(--docs-nav-item-inset))',
   zIndex: 40,
-  width: 'var(--docs-sidebar-content-width)',
-  maxHeight: 'calc(100dvh - 108px)',
+  width: 'calc(var(--docs-sidebar-content-width) + var(--docs-nav-item-inset))',
+  maxHeight: 'calc(100dvh - var(--site-header-height) - 44px)',
   padding: 0,
   overflow: 'visible',
   opacity: 'calc(1 - var(--docs-nav-collapse))',
   transform: 'translateX(calc(-1 * var(--docs-sidebar-offset) * var(--docs-nav-collapse)))',
   '&[data-scrollable]': {
-    width: 'calc(var(--docs-sidebar-content-width) + 8px)',
+    width: 'calc(var(--docs-sidebar-content-width) + var(--docs-nav-item-inset) + 8px)',
     marginLeft: '-4px',
     paddingBlockEnd: 'var(--rmx-space-lg)',
     paddingInline: '4px',

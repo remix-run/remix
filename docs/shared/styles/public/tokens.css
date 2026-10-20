@@ -98,7 +98,7 @@
   --rmx-content-max-width: 48rem;
   --rmx-page-gutter: calc(var(--rmx-space-xl) + var(--rmx-space-sm));
 
-  --site-header-height: 64px;
+  --site-header-height: 88px;
   --docs-shell-background: #f3f5f7;
   --docs-footer-foreground: #69707b;
   --docs-footer-link-foreground: #858c98;
@@ -117,8 +117,10 @@
   --docs-nav-control-border: rgb(0 0 0 / 10%);
   --docs-nav-item-height: 32px;
   --docs-nav-item-gap: 4px;
-  --docs-sidebar-offset: 288px;
-  --docs-sidebar-inline-start: 24px;
+  --docs-nav-item-inset: 12px;
+  --docs-sidebar-offset: 300px;
+  --docs-edge-inset: 36px;
+  --docs-sidebar-inline-start: var(--docs-edge-inset);
   --docs-sidebar-content-width: 240px;
   --docs-collapsed-offset: 24px;
   --docs-collapsed-content-padding: 220px;
@@ -157,6 +159,12 @@
   --pf-outline-focus: var(--rmx-color-focus-ring);
   --pf-outline-width: 1px;
   --pf-modal-backdrop: light-dark(rgb(0 0 0 / 50%), rgb(0 0 0 / 72%));
+}
+
+@media (width < 900px) {
+  :root {
+    --site-header-height: 64px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

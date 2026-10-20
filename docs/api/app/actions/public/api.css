@@ -5,7 +5,7 @@ html {
 /* Package paths are long, so the API sidebar is wider than the other docs sites. */
 :root {
   --docs-sidebar-content-width: 288px;
-  --docs-sidebar-offset: 336px;
+  --docs-sidebar-offset: 348px;
 }
 
 .api-nav-sections,

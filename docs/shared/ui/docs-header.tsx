@@ -155,8 +155,8 @@ const docsHeaderCss = css({
 
 const compactSearchButtonCss = css({
   position: 'fixed',
-  top: '16px',
-  left: '121px',
+  top: 'calc((var(--site-header-height) - 32px) / 2)',
+  left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
   zIndex: 51,
   display: 'grid',
   width: '32px',
@@ -191,13 +191,13 @@ const compactSearchButtonCss = css({
 
 const searchButtonCss = css({
   position: 'fixed',
-  top: '64px',
-  left: '24px',
+  top: 'var(--site-header-height)',
+  left: 'var(--docs-sidebar-inline-start)',
   zIndex: 40,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  width: '240px',
+  width: 'var(--docs-sidebar-content-width)',
   height: '32px',
   padding: '8px',
   border: '1px solid var(--docs-nav-control-border)',
@@ -246,8 +246,8 @@ const expandedOnlySearchButtonCss = css({
 const collapsibleSearchButtonCss = css({
   '@media (width >= 900px)': {
     ':root[data-docs-nav-collapsed] &': {
-      top: '16px',
-      left: '121px',
+      top: 'calc((var(--site-header-height) - 32px) / 2)',
+      left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
       justifyContent: 'center',
       width: '32px',
       padding: '8px',
@@ -309,8 +309,8 @@ const searchShortcutKeyCss = css({
 
 const brandCss = css({
   position: 'absolute',
-  top: '24px',
-  left: 'var(--docs-header-brand-inline-start, 24px)',
+  top: 'calc((var(--site-header-height) - 16px) / 2)',
+  left: 'var(--docs-sidebar-inline-start)',
   display: 'block',
   width: '163px',
   height: '16px',
@@ -320,6 +320,7 @@ const brandCss = css({
     width: '37px',
   },
   '@media (width < 900px)': {
+    left: '24px',
     '&, :root[data-docs-nav-collapsed] &': {
       width: '163px',
     },
@@ -401,7 +402,7 @@ const menuIconCss = css({
 const navigationCss = css({
   position: 'absolute',
   top: 0,
-  right: '30px',
+  right: 'var(--docs-edge-inset)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'flex-end',
