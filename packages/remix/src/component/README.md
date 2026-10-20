@@ -114,7 +114,8 @@ This soft-navigation behavior applies even when the page only uses `clientEntry(
 render an explicit `<Frame>`.
 
 Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElement`. Browsers
-missing either capability use document navigation for links, forms, and `navigate()`. Hydration and
+missing either capability use document navigation for links, forms, and `navigate()`, except that
+`navigate(href, { history: 'replace', reload: false })` only replaces the URL. Hydration and
 explicit frame reloads still work.
 
 The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`; top-frame and unnamed frame requests omit the target. It only fetches same-origin sources and follows same-origin redirects.
