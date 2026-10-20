@@ -95,6 +95,12 @@ interface HydrationData {
   propsJson: string
 }
 
+interface SerializedHydrationData {
+  moduleUrl: string
+  exportName: string
+  props: Record<string, unknown>
+}
+
 interface UnresolvedHydrationData {
   entryId: string
   component: EntryComponent
@@ -176,7 +182,7 @@ interface SerializedFrameData extends Omit<FrameData, 'fallback'> {
   fallback?: {
     html: string
     data: {
-      h?: Record<string, HydrationData>
+      h?: Record<string, SerializedHydrationData>
       f?: Record<string, SerializedFrameData>
     }
   }
@@ -1527,7 +1533,18 @@ function materializeFrameData(
   let hydrationData = Object.fromEntries(
     fallback.hydrationIds.flatMap((id) => {
       let data = context.hydrationData.get(id)
-      return data ? [[id, data]] : []
+      return data
+        ? [
+            [
+              id,
+              {
+                exportName: data.exportName,
+                moduleUrl: data.moduleUrl,
+                props: JSON.parse(data.propsJson),
+              },
+            ],
+          ]
+        : []
     }),
   )
   let frameDataEntries = Object.fromEntries(
