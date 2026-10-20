@@ -90,7 +90,7 @@
 .docs-toc__heading {
   height: 32px;
   margin: 0;
-  padding: 8px;
+  padding: 8px 12px;
   color: var(--rmx-color-text-primary);
   font-family: var(--rmx-font-family-sans);
   font-size: 12px;
@@ -124,7 +124,7 @@
   padding: 8px 12px;
   border: 0;
   border-radius: 8px;
-  color: var(--docs-nav-link);
+  color: var(--docs-sidebar-link);
   line-height: 1.4;
   text-decoration: none;
   transition:
@@ -133,7 +133,7 @@
 }
 
 .docs-toc__list a:hover {
-  color: var(--docs-nav-link-hover);
+  color: var(--docs-sidebar-link-hover);
   background: var(--docs-nav-hover-background);
   text-decoration: none;
 }
@@ -145,6 +145,7 @@
 .docs-toc__list a[aria-current='location'] {
   color: var(--rmx-color-text-primary);
   background: var(--docs-nav-selected-background);
+  font-weight: var(--rmx-font-weight-medium);
 }
 
 @media (width >= 640px) {

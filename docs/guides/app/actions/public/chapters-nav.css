@@ -36,7 +36,7 @@
   padding: 8px 12px;
   border: 0;
   border-radius: 8px;
-  color: var(--docs-nav-link);
+  color: var(--docs-sidebar-link);
   text-decoration: none;
   transition:
     color 150ms ease-in-out,
@@ -44,13 +44,14 @@
 }
 
 .docs-chapters-nav__list a:hover {
-  color: var(--docs-nav-link-hover);
+  color: var(--docs-sidebar-link-hover);
   background: var(--docs-nav-hover-background);
 }
 
 .docs-chapters-nav__list a[aria-current='page'] {
   color: var(--rmx-color-text-primary);
   background: var(--docs-nav-selected-background);
+  font-weight: var(--rmx-font-weight-medium);
 }
 
 .docs-chapters-nav__item[aria-disabled='true'] {
@@ -59,10 +60,15 @@
 
 .docs-chapters-nav__eyebrow {
   padding: 0;
-  color: inherit;
+  color: var(--rmx-color-text-muted);
   font-family: var(--rmx-font-family-mono);
   font-size: 14px;
   line-height: normal;
+  transition: color 150ms ease-in-out;
+}
+
+.docs-chapters-nav__list a:is(:hover, [aria-current='page']) .docs-chapters-nav__eyebrow {
+  color: inherit;
 }
 
 .docs-chapters-nav__title {

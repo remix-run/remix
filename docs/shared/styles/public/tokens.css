@@ -114,6 +114,9 @@
   --docs-nav-link-hover: #00304a;
   --docs-nav-hover-background: rgb(0 0 0 / 5%);
   --docs-nav-selected-background: rgb(0 0 0 / 10%);
+  --docs-sidebar-link: var(--rmx-color-text-secondary);
+  --docs-sidebar-link-hover: var(--rmx-color-text-primary);
+  --docs-sidebar-group-gap: 32px;
   --docs-nav-control-border: rgb(0 0 0 / 10%);
   --docs-nav-item-height: 32px;
   --docs-nav-item-gap: 4px;
