@@ -1,3 +1,1 @@
 Add `data-rmx-prefetch="intent"` to links, or call `prefetch(href)` from `remix/component`, to start loading pages before a visitor opens them. Remix fetches HTML to discover JavaScript and CSS for asset prefetch hints, then leaves navigation and response caching to the browser. Even uncacheable HTML can reveal cacheable assets. `run({ prefetch })` lets apps replace this strategy (see #12004).
-
-Custom frame resolvers can import `defaultResolveFrame` from `remix/component` and call `defaultResolveFrame(src, options)` to fall back to the standard frame request after checking an application cache.

@@ -103,36 +103,22 @@ The four-strategy demo was the evaluation tool. After selecting HTML discovery, 
 
 `packages/component/src/test/default-prefetch.test.ts` covers inert discovery, nested templates, base URLs, final response URLs, active assets, request attributes, pending-work deduplication, failed responses, and disposal. `prefetch.test.ts` covers intent detection, eligibility, override hooks, default frame request headers, and the low-priority HTML fetch. The demo's `app/app.test.e2e.ts` checks browser HTTP cache reuse, asset warming for `no-store` HTML, independent navigation while discovery streams, and pending hints surviving frame navigation. These are functional checks, not a claim that one strategy is fastest for every application.
 
-## Custom resolvers delegate through an exported helper
+## Keep customization hooks and defer helper exports
 
-Applications can still choose a custom `prefetch` and `resolveFrame` when response handoff is valuable. We exported `defaultResolveFrame` from `remix/component` so those resolvers can delegate misses without copying submission encoding, headers, cancellation, or response handling:
+Applications can still choose a custom `prefetch` and `resolveFrame` when response handoff is valuable. Those hooks replace the default behavior, so applications own their fetch implementation, submission encoding, cancellation, response handling, and any cache lifetime or invalidation. The chosen default needs no custom resolver or application-provided container markup.
 
-```ts
-import { run, defaultResolveFrame } from 'remix/component'
+We considered both an injected `options.defaultResolveFrame()` callback and an exported `defaultResolveFrame(src, options)` helper. The callback required changing the resolver options contract and plumbing it through frame reloads and initial client-frame resolution. A direct export avoided that plumbing, but neither the chosen default nor the demo needs it. We deferred both forms until an application has a concrete need to compose the built-in behavior. `ResolveFrame` retains its existing `(src: string, options?: ResolveFrameOptions)` parameters.
 
-run({
-  loadModule,
-  resolveFrame(src, options) {
-    let isGet = !options?.method || options.method.toUpperCase() === 'GET'
-    let response = options?.target == null && isGet ? cache.take(src) : undefined
-    return response ?? defaultResolveFrame(src, options)
-  },
-})
-```
+The same reasoning applies to exporting `defaultPrefetch`. A cache-first resolver or a prefetch wrapper for filtering or logging could justify helper exports later. Calling the public `prefetch()` function from a custom prefetch hook would recurse, so composition would need access to the default implementation if that use case arises.
 
-Here `cache` is application-owned; this is an extension point, not a cache provided by the default strategy. The default resolver remains independent of prefetching, and prefetching remains GET-only. Applications must forward both `src` and `options` when delegating so named-frame targeting, submissions, and cancellation retain their normal behavior.
-
-We initially injected a request-bound `options.defaultResolveFrame()` callback into every resolver call. That required changing the resolver options contract and adding plumbing to both frame reloads and initial client-frame resolution. An import gives applications the same fallback without changing either call path. `ResolveFrame` retains its existing `(src: string, options?: ResolveFrameOptions)` parameters.
-
-The implementation and form-encoding helpers stay in `packages/component/src/runtime/run.ts`, where the default resolver already lived. Once frame loading no longer imports the helper to construct callbacks, the separate `runtime/default-resolve-frame.ts` module has no remaining purpose and was removed. The public entry point exports the function directly from `run.ts`. Tests in `frame.test.ts` exercise the public export, cache hits that avoid fetching, delegated named-frame submissions, and initial client-frame loads.
-
-The chosen default needs no custom resolver or application-provided container markup.
+The private resolver and its form-encoding helpers remain in `packages/component/src/runtime/run.ts`. There is no separate `runtime/default-resolve-frame.ts` module or additional resolver plumbing.
 
 ## When to revisit
 
 1. Measurements show that losing HTML handoff dominates navigation latency for common applications with uncacheable HTML, enough to justify the additional cache and invalidation contract.
 2. Browser support or scheduling makes asset prefetch hints ineffective for important target environments, warranting a different hint strategy or an explicit fallback.
 3. Streaming HTML delays asset discovery enough to justify incremental parsing rather than waiting for the full response body.
+4. An application needs to compose the built-in resolver or prefetch behavior, giving us a concrete consumer for a public helper contract.
 
 [base-pr]: https://github.com/remix-run/remix/pull/12004
 [base-commit]: https://github.com/remix-run/remix/commit/4c6a6989b51295501fb0ae2ee44f14a453664af9

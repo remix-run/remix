@@ -174,20 +174,6 @@ CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass 
 `resolveFrame` when the server requires additional headers, another body encoding, or a different
 response policy.
 
-Import `defaultResolveFrame` to delegate from a custom resolver. Pass `src` and `options` to preserve
-the default headers, method, form encoding, abort signal, and response policy:
-
-```ts
-import { run, defaultResolveFrame } from 'remix/component'
-
-run({
-  loadModule,
-  resolveFrame(src, options) {
-    return cache.get(src) ?? defaultResolveFrame(src, options)
-  },
-})
-```
-
 Scroll and focus controls accept the Navigation API values `"after-transition"` (the default) and `"manual"`. Set `data-rmx-reset-scroll="manual"` or `data-rmx-reset-focus="manual"` on a link or form to disable the corresponding automatic behavior. The equivalent options for `navigate()` and `link()` are `resetScroll: 'manual'` and `resetFocus: 'manual'`:
 
 ```tsx

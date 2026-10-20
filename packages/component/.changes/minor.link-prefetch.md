@@ -7,5 +7,3 @@ Prefetch pages before a visitor opens them by adding `data-rmx-prefetch="intent"
 ```
 
 By default Remix fetches the HTML with a low-priority hint and discovers explicit JavaScript and CSS URLs for `<link rel="prefetch">` hints, without activating the destination's scripts, styles, or import map. Navigation uses the default resolver and browser HTTP cache. Cacheable HTML can be reused; `no-store` HTML is fetched again while its cacheable assets can still be prefetched. Apps can pass `prefetch` to `run()` to replace this strategy (see #12004).
-
-Custom frame resolvers can delegate cache misses to the exported `defaultResolveFrame(src, options)` helper to preserve the default request headers, form encoding, cancellation, and response handling without reimplementing them.

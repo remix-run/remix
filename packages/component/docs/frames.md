@@ -267,10 +267,8 @@ calls, link navigations, and form navigations. GET form values are already encod
 submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for
 `text/plain`, and `FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs
 additional headers, another body encoding, or a different response policy. Custom resolvers receive
-`signal` and the frame name as `target` when named; non-GET form submissions also provide `formData`, `method`, and `encType`. Import
-`defaultResolveFrame` from `remix/component` and call `defaultResolveFrame(src, options)` when a cache
-or other custom source has no result. Forwarding both arguments preserves the default headers,
-method, encoding, signal, and response policy.
+`signal` and the frame name as `target` when named; non-GET form submissions also provide `formData`,
+`method`, and `encType`.
 
 The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom resolver may return a `Response` with any status when it wants the component runtime to render the response body.
 
@@ -422,10 +420,10 @@ The consumed HTML is discarded. Navigation uses the normal frame resolver and br
 
 Remix deduplicates pending prefetch work but keeps no completed response cache. An early navigation starts its normal fetch independently of discovery; request sharing is up to the browser. Asset prefetches are hints and may be deferred or ignored. Browsers without link-prefetch support skip asset hints while still fetching HTML. Discovery waits for the full HTML body and does not traverse JavaScript imports, CSS imports, or CSS images and fonts.
 
-To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next untargeted GET request, where `fetchFrame()` is the app's own GET-only prefetch request. Cache misses and submissions delegate to the default resolver. Applications own the lifetime and invalidation of any responses they retain:
+To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next untargeted GET request. The app provides `fetchFrame(src, options)` to handle frame headers, submissions, cancellation, and response handling; prefetch calls it without options for a GET request. Applications also own the lifetime and invalidation of any responses they retain:
 
 ```ts
-import { run, defaultResolveFrame } from 'remix/component'
+import { run } from 'remix/component'
 
 let prefetched = new Map<string, Promise<Response>>()
 
@@ -438,7 +436,7 @@ run({
     let isGet = !options?.method || options.method.toUpperCase() === 'GET'
     let response = options?.target == null && isGet ? prefetched.get(src) : undefined
     prefetched.clear()
-    return response ?? defaultResolveFrame(src, options)
+    return response ?? fetchFrame(src, options)
   },
 })
 ```
