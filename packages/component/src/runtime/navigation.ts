@@ -38,7 +38,17 @@ interface FrameRedirectNavigationInfo {
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
+// Lets the navigation handler tell the WebKit workaround once it has reset scroll.
+const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
+
+const webKitScrollResetDuration = 500
+
+// iOS Safari can restore the previous position, or the new page's bottom, for several frames after
+// a navigation resets scroll. Undo those restorations until shortly after the navigation finishes,
+// the user interacts with the page, or another navigation starts. App code that scrolls to one of
+// those positions in that time is undone too.
 function resyncWebKitScrollAfterNavigation(
+  navigation: Navigation,
   event: NavigateEvent,
   resetScroll: boolean,
   transition: NavigationTransition,
@@ -49,19 +59,59 @@ function resyncWebKitScrollAfterNavigation(
     return
   if (new URL(event.destination.url).hash) return
 
-  void transition.finished.then(
-    () => {
-      // WebKit can reset its internal scroll position without synchronizing the visual viewport.
-      // https://bugs.webkit.org/show_bug.cgi?id=309542
-      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
-      window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
-      requestAnimationFrame(() => {
-        if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
-        window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
-      })
-    },
-    () => {},
-  )
+  let startY = window.scrollY
+  let controller = new AbortController()
+  let { signal } = controller
+  let stop = () => controller.abort()
+  for (let type of ['pointerdown', 'wheel', 'keydown']) {
+    window.addEventListener(type, stop, { capture: true, passive: true, signal })
+  }
+  navigation.addEventListener('navigate', stop, { signal })
+
+  // Safari clamps the previous position to the page's height when it restores it, and the page can
+  // grow before the scroll event runs, so remember every bottom the new page has had.
+  let restoredPositions = new Set([startY])
+  function rememberBottom() {
+    let maxY = document.documentElement.scrollHeight - window.innerHeight
+    if (startY > maxY) restoredPositions.add(maxY)
+  }
+  function undoRestoration() {
+    rememberBottom()
+    let y = window.scrollY
+    if (y === 0) return
+    for (let position of restoredPositions) {
+      if (Math.abs(y - position) < 1) {
+        return window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
+      }
+    }
+  }
+
+  let resetApplied = false
+  webKitScrollResets.set(event, () => {
+    resetApplied = true
+    rememberBottom()
+  })
+  // Scroll events run before the frame paints, so an undone restoration may never be drawn.
+  window.addEventListener('scroll', () => resetApplied && undoRestoration(), {
+    passive: true,
+    signal,
+  })
+
+  void transition.finished.then(() => {
+    if (!signal.aborted) {
+      undoRestoration()
+      setTimeout(stop, webKitScrollResetDuration)
+    }
+
+    // WebKit can reset its internal scroll position without synchronizing the visual viewport.
+    // https://bugs.webkit.org/show_bug.cgi?id=309542
+    if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
+    window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
+    requestAnimationFrame(() => {
+      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
+      window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
+    })
+  }, stop)
 }
 
 /**
@@ -239,7 +289,10 @@ export function startNavigationListenerImpl(
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
-        if (scroll !== 'manual') event.scroll()
+        if (scroll !== 'manual') {
+          event.scroll()
+          webKitScrollResets.get(event)?.()
+        }
 
         let { redirectedTo } = await reload.finished
         if (event.signal.aborted || reload.signal.aborted) return
@@ -396,7 +449,7 @@ function interceptNavigation(
     if (!transition) return scrollStyleWorkarounds?.remove()
     transitionBound = true
 
-    resyncWebKitScrollAfterNavigation(event, resetScroll, transition)
+    resyncWebKitScrollAfterNavigation(navigation, event, resetScroll, transition)
     if (scrollStyleWorkarounds) scheduleNavigationScrollCleanup(transition, scrollStyleWorkarounds)
   }
 
