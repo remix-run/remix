@@ -318,6 +318,8 @@ await navigate(`/products/shirt?variant=${variantId}`, { history: 'replace', rel
 
 Scroll position and focus stay where they are. Back and forward traversal to the entry reloads the top frame from its URL, so that URL must render the same page. If the update interrupts an unfinished frame navigation, Remix reloads the top frame instead so the content matches the URL.
 
+Without frame navigation, `history: 'replace'` updates still only replace the URL, since Remix keeps no state on history entries there. Pushed updates load the new URL as a document instead, because the browser wouldn't render the previous page when going back to it.
+
 A component rendered by a navigation can run its queued tasks before that navigation finishes, so a URL update from one would fetch and render the page again. Await [`navigation.settled()`](#waiting-for-navigation-to-finish) first:
 
 ```ts

@@ -403,6 +403,43 @@ describe('navigate', () => {
     }
   })
 
+  it('replaces the URL in place for URL-only updates when the Navigation API is unavailable', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'history-fallback')
+    let originalHistoryLength = window.history.length
+    let originalState = window.history.state
+    stubGlobalField(t, 'navigation', undefined)
+
+    try {
+      await navigate(destination.href, { history: 'replace', reload: false })
+      expect(window.location.href).toBe(destination.href)
+      expect(window.history.length).toBe(originalHistoryLength)
+      expect(window.history.state).toBe(originalState)
+    } finally {
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('uses document navigation for pushed URL-only updates when the Navigation API is unavailable', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.hash = 'push-url-only-fallback'
+    stubGlobalField(t, 'navigation', undefined)
+
+    try {
+      // A document navigation to a fragment fires hashchange; history.pushState() wouldn't.
+      let navigated = new Promise<void>((resolve) => {
+        window.addEventListener('hashchange', () => resolve(), { once: true })
+      })
+      await navigate(destination.href, { reload: false })
+      await navigated
+      expect(window.location.href).toBe(destination.href)
+    } finally {
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
   it('skips navigation listeners when the Navigation API is unavailable', (t) => {
     stubGlobalField(t, 'navigation', undefined)
     let addDocumentListener = t.mock.method(document, 'addEventListener')

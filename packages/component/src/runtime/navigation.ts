@@ -155,8 +155,9 @@ export type NavigationOptions = {
    * Whether to reload frame content. Set to `false` to update the browser URL and history without
    * fetching or rendering anything, leaving scroll position and focus untouched. `src`, `target`,
    * `resetScroll`, and `resetFocus` are ignored. Back and forward traversal to the new entry
-   * reloads the top frame like any other entry. Without frame navigation, this falls back to
-   * document navigation like other `navigate()` calls. If a frame navigation is still loading,
+   * reloads the top frame like any other entry. Without frame navigation, `history: 'replace'`
+   * replaces the URL in place, and other updates fall back to document navigation like other
+   * `navigate()` calls. If a frame navigation is still loading,
    * the top frame reloads instead, so await `navigation.settled()` first. (default: `true`)
    */
   reload?: boolean
@@ -180,7 +181,11 @@ export async function navigate(href: string, options?: NavigationOptions) {
   } satisfies NavigationEntryState
   let navigation = getInterceptableNavigation()
   if (!navigation) {
-    if (options?.history === 'replace') {
+    // Remix keeps no state on history entries here, and replacing adds no entry to go back to, so
+    // only the URL needs to change. A pushed entry would change the URL on back without rendering.
+    if (options?.reload === false && options.history === 'replace' && isSameOriginUrl(href)) {
+      window.history.replaceState(window.history.state, '', href)
+    } else if (options?.history === 'replace') {
       window.location.replace(href)
     } else {
       window.location.assign(href)
