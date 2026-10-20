@@ -485,15 +485,12 @@ export function createFieldMixins<submission>(
 /**
  * Binds form and control mixins to a schema-backed form definition.
  *
- * Applies native constraints and restored server values during SSR. In the browser, it validates
- * on input, reveals feedback after blur or an invalid submission, and owns error accessibility.
- * Render live `fields.name.errors` in application-owned markup and link it with `error(name)`.
- * Explicit host props override generated attributes; error ids are appended to `aria-describedby`.
- * Create the binding in component setup and use `getSubmission` to read changing submission props.
- * The getter runs while reading field state or rendering controls, including SSR, not on binding.
- * Use `onChange` to request a render when visible errors or touched state change. New submissions
- * reset feedback without calling `onChange`; ordinary renders preserve it.
- * Each field's `errorMap` also resolves supported native constraint messages.
+ * Supplies SSR attributes, restored values, native-first validation, and error accessibility.
+ * Client feedback appears after blur or a blocked submission; render live `fields.name.errors`
+ * in application-owned markup linked with `error(name)`. Explicit host props win.
+ * Create once in setup. `getSubmission` reads current state during rendering or field access;
+ * a new submission resets feedback without firing `onChange`. Use `onChange` to request a render
+ * when visible errors or touched state change.
  *
  * @param formDefinition Form definition that provides attributes, errors, and field validators.
  * @param options Current submission source and render notification (optional).
@@ -758,7 +755,7 @@ export interface FormFieldOptions {
   /** The DOM id used by the control, label, and error. (defaults to the logical field name) */
   id?: string
   /**
-   * Customizes schema and native constraint messages on the server and client.
+   * Customizes schema failures during parsing and supported native failures in the browser.
    * Return `undefined` to keep the default. Required empty values use `value.required`;
    * other failures use schema/domain codes. Supplemental `setCustomErrors` are not mapped.
    * Explicit refinement messages and uncoded checks bypass the map, matching schema parsing.
@@ -1122,6 +1119,7 @@ export function createField<
  *
  * Fields inherit their schemas from `options.schema`. Fields absent from that schema must provide
  * an inline schema; when `options.schema` is omitted, every field must provide one.
+ * Only configured field schemas run during parsing; cross-field validation is caller-owned.
  *
  * @param options The optional backing schema and UI configuration for the included fields.
  * @returns A form definition that derives native attributes and validates `FormData`.
@@ -1339,7 +1337,8 @@ function decodeFormValue(value: FormRawValue | undefined, type: FormInputType): 
 /**
  * Returns native HTML constraints represented by a schema's recognized checks.
  *
- * Checks without an equivalent native constraint are omitted.
+ * Checks without an equivalent native constraint are omitted. Requiredness may evaluate the
+ * schema with `undefined` or `false` when metadata alone cannot determine it.
  *
  * @param schema The schema to inspect.
  * @param options The input control receiving the constraints.

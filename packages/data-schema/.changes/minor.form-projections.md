@@ -1,1 +1,1 @@
-Object schemas now expose `.shape` for reusing individual field schemas. `getSchemaMetadata()` provides generic check descriptions and known undefined handling without running validators or default factories (see #11630). HTML constraints and form definitions live in `@remix-run/ui/form`.
+Reuse object property schemas through `.shape`, and inspect check descriptions and known undefined handling with `getSchemaMetadata()` without running validators or default factories (see #11630).

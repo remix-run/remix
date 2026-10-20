@@ -115,7 +115,7 @@ For schema-backed field definitions, typed form parsing, HTML constraints, and b
 
 ## Per-parse messages
 
-For schemas outside field definitions, pass `errorMap` to `parse()` or `parseSafe()`:
+Pass `errorMap` to `parse()` or `parseSafe()` to customize validation messages:
 
 ```ts
 import { object, parseSafe, string } from 'remix/data-schema'

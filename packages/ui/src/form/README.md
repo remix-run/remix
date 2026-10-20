@@ -1,6 +1,6 @@
 # form
 
-Define schema-backed fields, parse submissions on the server, and bind native controls with progressive browser feedback. Definitions, parsing, HTML constraints, and mixins all live in this module. Applications own the markup, styles, and displayed errors.
+Define schema-backed fields, parse submissions on the server, and bind native controls with progressive browser feedback. Applications own markup, styles, and error UI.
 
 ## Usage
 
@@ -40,6 +40,8 @@ function SignupPage(handle: Handle<{ submission?: FormSubmission }>) {
   )
 }
 ```
+
+Mount or hydrate the component through your app's [client-entry setup](https://github.com/remix-run/remix/blob/main/packages/component/README.md#client-entry-loading) to enable browser behavior.
 
 ## Form definitions
 
@@ -89,16 +91,16 @@ Definitions and parsing are server-safe and do not require a DOM:
 let submission = Registration.parse(await request.formData())
 
 if (!submission.success) {
-  return render(<RegistrationPage submission={submission} />, {
-    responseInit: { status: 400 },
-  })
+  return render(<RegistrationPage submission={submission} />, { status: 400 })
 }
 
 let { email } = submission.value
 await createAccount({ id: crypto.randomUUID(), email })
 ```
 
-Parsing validates configured fields only, not the complete backing object or its object-level refinements. Handlers own cross-field/business checks, generated values, transactions, and selecting persisted fields. A form spanning multiple tables still parses once; the handler splits its values for persistence.
+Parsing runs only the configured field schemas. The backing schema must expose `.shape`; an object-level `.refine()` returns a general schema that cannot be passed directly. Run cross-field/business checks separately, then supply generated values and select fields for persistence. A form spanning multiple tables still parses once.
+
+Empty text and number values decode to `undefined`, numbers use `Number()`, and checkboxes decode to booleans. Use `optional()` or `defaulted()` in the field schema to accept empty values.
 
 Results are `{ success: true, value }` or `{ success: false, issues, values, errors }`. Failures retain raw values and group messages in `errors.fields` and `errors.form`; password values are omitted.
 
@@ -129,7 +131,7 @@ Independent bindings can share an ordinary `<form>` without a form mixin. Native
 
 ## `createFormMixins(formDefinition, { getSubmission, onChange }?)`
 
-The destructurable factories provide `form()` for unmanaged controls, `field(name)` for a configured control, `label(name)` for its label association, and `error(name)` for its error-element id. `input(name)` aliases `field(name)`; `errors.name` aliases `fields.name.errors`.
+The factories provide `form()` for unmanaged controls, `field(name)` for a configured control, `label(name)` for its label association, and `error(name)` for its error-element id. `input(name)` aliases `field(name)`; `errors.name` aliases `fields.name.errors`.
 
 `getSubmission` reads current server state during rendering or state access, including SSR. It is not a subscription: update props or request a render after changing a local submission. Return the same submission object until a new submission arrives; a new object resets feedback without firing `onChange`.
 
@@ -138,17 +140,15 @@ The destructurable factories provide `form()` for unmanaged controls, `field(nam
 Standalone bindings expose these properties directly; form bindings expose them through `fields.name`:
 
 - `errors`: visible client messages or server errors; empty for pristine client fields
-- `touched`: feedback has been revealed by blur, a native invalid event, or editing a server error
+- `touched`: revealed by blur, a native invalid event, or editing a server error; stays true until reset or a new submission
 
-Server errors are visible immediately, even while `touched` is false. Once true, `touched` stays true until a reset or new submission.
-
-State objects are stable and properties are read-only. Read them during rendering; destructuring a boolean or array in setup captures a snapshot. `onChange` requests a render only when errors or touched state change. Without it, native validity and ARIA still update, but application-owned markup needs another render trigger.
+Server errors are visible immediately, even while `touched` is false. State objects are stable and properties are read-only: read them during rendering, since destructuring a boolean or array in setup captures a snapshot. `onChange` requests a render when errors or touched state change. Without it, native validity and ARIA still update, but error markup needs another render trigger.
 
 A non-canceled native form reset clears touched state and displayed errors. Programmatic value changes require an `input` or `change` event to refresh validation.
 
 ## Shared error messages
 
-Configure `errorMap` on `createField()` or a `createForm({ fields })` entry, not on the mixin. The same configuration customizes server schema failures and supported native browser failures. Return a string to override a message or `undefined` to preserve the default.
+Configure `errorMap` on `createField()` or a `createForm({ fields })` entry. It customizes schema failures during parsing and supported native failures in the browser. Return a string to replace a message or `undefined` to keep the default.
 
 ```ts
 import * as s from 'remix/data-schema'
@@ -188,13 +188,13 @@ The native adapter uses this priority when multiple flags fail:
 
 Only the first failure is mapped. If it has no mapping or the callback returns `undefined`, browser wording remains. Schema validation runs only after native checks pass. The map receives decoded `input`, a logical field `path`, and any constraint `values`. Resolved messages drive tooltips and inline feedback without revealing pristine fields.
 
-`value.required` is specific to form decoding; other mapped codes come from data-schema. Authored `pattern` and `step` attributes are supported by native validation but have no message mapping. Supplemental `setCustomErrors()` messages are not remapped. Message overrides add no server rules; include `email()` in the schema to validate email format. Without JavaScript, native tooltips remain unchanged.
+`value.required` normalizes required empty-value failures; other mapped codes come from data-schema. Authored `pattern` and `step` constraints keep browser wording. Message overrides add no server rules; include `email()` in the schema to validate email format. Without JavaScript, native tooltips remain unchanged.
 
 ## `setCustomErrors(messages)`
 
-Call `fields.username.setCustomErrors(messages)` or a standalone binding's `setCustomErrors(messages)` to replace supplemental messages. Pass `[]` to clear them. Arrays are copied and empty strings ignored.
+Call `fields.username.setCustomErrors(messages)` or a standalone binding's `setCustomErrors(messages)` to replace supplemental messages. Pass `[]` to clear them. Arrays are copied, empty strings ignored, and messages are not passed through `errorMap`.
 
-For mounted controls, messages synchronously update native validity and accessibility without marking the field touched. They block native submission immediately but follow normal feedback visibility. Native/schema errors remain primary, with custom messages appended; this API cannot replace a native `pattern` or `step` tooltip. Existing server errors remain visible until editing.
+For mounted controls, messages synchronously update native validity and accessibility without marking the field touched. They block native submission but follow normal feedback visibility. Native/schema errors remain primary, with custom messages appended. Existing server errors remain visible until editing.
 
 Messages belong to the current value, including checkbox state. They survive revalidation and same-value checks, but clear on a changed value, non-canceled reset, or new submission. Before mounting, they attach to the first mounted value.
 
@@ -270,11 +270,9 @@ return () => (
 )
 ```
 
-The endpoint returns a JSON boolean. `on()` aborts the signal on the next input event or control removal. Extra guards reject results after value changes, reset attempts, or new submissions, even if cancellation is ignored. Keep existing errors while rechecking the same value; replace them when the result arrives.
+The endpoint returns a JSON boolean. `on()` aborts the signal on the next input event or control removal; the extra guards reject stale results even if cancellation is ignored. Existing errors survive same-value rechecks until replaced.
 
-Applications own debouncing, caching, pending indicators, and request-failure UI. A failed lookup is not an invalid username; show a separate status rather than a custom validation error. Keep requests and setters out of render functions.
-
-Pending work does not delay submission. Completed errors block native submission. Repeat business checks and enforce uniqueness on the server; availability can change after a successful lookup. Without JavaScript, validation happens on submission.
+Applications own debouncing, caching, pending indicators, and request-failure UI. A failed lookup is not an invalid username. Pending work does not delay submission: repeat business checks and enforce uniqueness on the server. Without JavaScript, validation happens on submission.
 
 ## Control behavior
 
