@@ -32,6 +32,14 @@ The input mixin emits those attributes during SSR. In the browser it clears stal
 
 Without JavaScript, supported HTML constraints still apply and the server validates every configured field. Failed responses restore submitted text and checkbox values and render server errors; password values are deliberately omitted. Non-native rules may require a server round trip. We chose functional parity, not identical timing or presentation. Browser checks never replace server validation.
 
+## Message customization lives on the shared field
+
+We chose one optional `errorMap` on `createField()` and `createForm({ fields })` entries rather than a mixin-only hook, a separate native-message map, or message arguments on every schema helper. The existing schema error-map context supplies domain codes, defaults, paths, values, and decoded input. This keeps browser vocabulary out of the server-facing API and makes the same configuration available during parsing and browser validation.
+
+Explicit check and refinement messages are defaults, not overrides of the map. Returning `undefined` keeps them unchanged; uncoded custom checks use `check.failed`. Field parsing normalizes required empty values to `value.required`. The UI translates supported native failures to domain codes and sets an overridden primary message synchronously through `setCustomValidity()`, keeping tooltips and inline messages aligned. It retains native-first validation and does not map application-authored supplemental errors.
+
+This does not promise identical validation or wording everywhere. Native-only constraints retain browser wording, and the adapter has an explicit failure priority rather than relying on the browser's choice among simultaneous failures. Without JavaScript, native tooltips remain unchanged, while the server uses the field map. Message configuration does not add validation rules: an email input still needs an email schema check for server validation. See the [UI form documentation][mixin-docs] for supported mappings and priority.
+
 ## Application-owned checks supply supplemental errors
 
 `fields.name.setCustomErrors(messages)` bridges application-owned checks into the existing field behavior. Standalone bindings expose the same method. These messages live separately from schema errors, belong to the current control value, and survive synchronous revalidation. Native/schema errors remain primary. Setting messages updates native validity immediately but does not mark the field touched; visible feedback and error accessibility follow the existing rules. Value changes, non-canceled resets, and new server submissions clear supplemental messages.

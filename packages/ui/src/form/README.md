@@ -88,6 +88,44 @@ The objects are stable and their state properties are read-only. Read properties
 
 A non-canceled native form reset clears touched state and displayed errors. Programmatic value changes require an `input` or `change` event to refresh validation.
 
+## Shared error messages
+
+Configure `errorMap` on `createField()` or a `createForm({ fields })` entry, not on the mixin. The same configuration customizes server schema failures and supported native browser failures. Return a string to override a message or `undefined` to preserve the default; explicit refinement messages become `defaultMessage`.
+
+```ts
+import * as s from 'remix/data-schema'
+import { email } from 'remix/data-schema/checks'
+import { createField } from 'remix/data-schema/form'
+
+let Email = createField({
+  schema: s.string().pipe(email()),
+  label: 'Email',
+  type: 'email',
+  errorMap({ code }) {
+    if (code === 'value.required') return 'Enter your email'
+    if (code === 'string.email') return 'Use a valid email address'
+  },
+})
+```
+
+The native adapter uses this priority when multiple flags fail:
+
+| Native failure                             | Domain code                   | `values`  |
+| ------------------------------------------ | ----------------------------- | --------- |
+| Missing required value                     | `value.required`              | —         |
+| Unparseable number                         | `type.number`                 | —         |
+| Email or URL type mismatch                 | `string.email` / `string.url` | —         |
+| Pattern mismatch                           | Browser fallback              | —         |
+| Too long                                   | `string.max_length`           | `{ max }` |
+| Too short                                  | `string.min_length`           | `{ min }` |
+| Numeric range underflow                    | `number.min`                  | `{ min }` |
+| Numeric range overflow                     | `number.max`                  | `{ max }` |
+| Step mismatch or other native-only failure | Browser fallback              | —         |
+
+Only the first failure is mapped. If it has no mapping or the callback returns `undefined`, the browser chooses its default wording. Native checks remain primary; synchronous schema validation runs only after they pass. `input` is decoded (numbers and checkbox booleans included), and `path` contains the logical field name. The resolved primary message drives both `validationMessage` and visible feedback, without revealing pristine fields. `setCustomErrors()` messages are not remapped.
+
+A message override adds no server validation. Include `email()` in the schema if the server must reject invalid email addresses. Without JavaScript, native tooltips retain browser wording; server errors still use `errorMap`.
+
 ## `setCustomErrors(messages)`
 
 Use `fields.username.setCustomErrors(messages)` on a form binding, or `username.setCustomErrors(messages)` on a standalone field binding, to supply application-owned validation messages. Pass `[]` to clear them; empty strings are ignored. The binding copies the array, so later edits to the caller's array do not change the messages.

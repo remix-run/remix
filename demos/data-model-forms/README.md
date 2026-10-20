@@ -82,6 +82,8 @@ const RegistrationForm = createForm({
 
 The reusable `Password` field is created with `createField()`. Password and terms are validated but never stored. Passwords are also omitted from failed-submission values.
 
+The display-name field configures one `errorMap` for requiredness, minimum length, and its whitespace refinement. These messages appear in enhanced browser feedback and server-rendered failures. With JavaScript disabled, the browser keeps its own native tooltip wording.
+
 ### All inline schemas
 
 [Inline example source](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/inline)

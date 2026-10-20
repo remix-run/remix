@@ -125,7 +125,8 @@ export type Schema<input, output = input> = SyncStandardSchema<input, output> & 
    * Compose one or more reusable checks onto this schema.
    *
    * Checks run after the underlying schema has validated and produced an `output` value.
-   * If any check fails, validation fails with an issue (using the check's `message` if provided).
+   * If any check fails, validation fails with an issue. The check's `message` is the default;
+   * an `errorMap` may override it. Checks without a code use `check.failed`.
    *
    * @param checks One or more `Check`s to apply in order
    * @returns A new schema with the checks applied
@@ -138,7 +139,7 @@ export type Schema<input, output = input> = SyncStandardSchema<input, output> & 
    * If the predicate returns `false`, validation fails with an issue.
    *
    * @param predicate A function that returns `true` for valid values
-   * @param message Optional issue message when the predicate fails
+   * @param message Default issue message when the predicate fails; an `errorMap` may override it
    * @returns A new schema with the refinement applied
    */
   refine: (predicate: (value: output) => boolean, message?: string) => Schema<input, output>
@@ -249,14 +250,10 @@ export function createSchema<input, output>(
 
           for (let check of checks) {
             if (!check.check(result.value)) {
-              if (!check.code) {
-                return { issues: [createIssue(check.message ?? 'Check failed', [...context.path])] }
-              }
-
               return {
                 issues: [
                   createIssueFromContext(context, {
-                    code: check.code,
+                    code: check.code ?? 'check.failed',
                     defaultMessage: check.message ?? 'Check failed',
                     input: result.value,
                     values: check.values,
@@ -292,15 +289,11 @@ export function createSchema<input, output>(
           }
 
           if (!predicate(result.value)) {
-            if (message !== undefined) {
-              return { issues: [createIssue(message, [...context.path])] }
-            }
-
             return {
               issues: [
                 createIssueFromContext(context, {
                   code: 'refine.failed',
-                  defaultMessage: 'Refinement failed',
+                  defaultMessage: message ?? 'Refinement failed',
                   input: result.value,
                 }),
               ],

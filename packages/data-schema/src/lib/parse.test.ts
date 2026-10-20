@@ -158,4 +158,36 @@ describe('parseSafe', () => {
     assert.ok(!result.success)
     assert.equal(result.issues[0].message, 'Expected number')
   })
+
+  it('uses explicit refinement messages as overridable defaults', () => {
+    let schema = string().refine(() => false, 'Original message')
+    let unchanged = parseSafe(schema, 'value')
+    assert.ok(!unchanged.success)
+    assert.equal(unchanged.issues[0].message, 'Original message')
+    let result = parseSafe(schema, 'value', {
+      errorMap(context) {
+        assert.equal(context.code, 'refine.failed')
+        assert.equal(context.defaultMessage, 'Original message')
+        return 'Mapped message'
+      },
+    })
+    assert.ok(!result.success)
+    assert.equal(result.issues[0].message, 'Mapped message')
+    let fallback = parseSafe(schema, 'value', { errorMap: () => undefined })
+    assert.ok(!fallback.success)
+    assert.equal(fallback.issues[0].message, 'Original message')
+  })
+
+  it('maps custom checks without a code through check.failed', () => {
+    let schema = string().pipe({ check: () => false, message: 'Original check' })
+    let result = parseSafe(schema, 'value', {
+      errorMap({ code, defaultMessage }) {
+        assert.equal(code, 'check.failed')
+        assert.equal(defaultMessage, 'Original check')
+        return 'Mapped check'
+      },
+    })
+    assert.ok(!result.success)
+    assert.equal(result.issues[0].message, 'Mapped check')
+  })
 })

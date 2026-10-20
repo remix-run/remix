@@ -1,4 +1,5 @@
 import type {
+  ErrorMap,
   GetConstraintsOptions,
   InferOutput,
   Issue,
@@ -14,7 +15,7 @@ import { getConstraints } from './schema.ts'
 export type FormInputType = GetConstraintsOptions['type']
 
 /**
- * UI-only configuration for a projected model field.
+ * UI configuration and message customization for a projected model field.
  */
 export interface FormFieldOptions {
   /** The visible label text for the field. */
@@ -25,6 +26,12 @@ export interface FormFieldOptions {
   name?: string
   /** The DOM id used to associate the input, label, and error. (defaults to the property name) */
   id?: string
+  /**
+   * Customizes schema and native constraint messages on the server and client.
+   * Return `undefined` to keep the default. Required empty values use `value.required`;
+   * other failures use schema/domain codes. Supplemental `setCustomErrors` are not mapped.
+   */
+  errorMap?: ErrorMap
 }
 
 /**
@@ -161,14 +168,11 @@ type ResolvedFormFields<shape extends ObjectShape, fields extends FormFields> = 
     FieldDefinition<FormFieldSchema<shape, fields, field>, fields[field]['type']>
 }
 
-type ValidFormFields<shape extends ObjectShape, fields extends FormFields> = {
-  [key in keyof fields]: key extends keyof shape
-    ? fields[key] extends { schema: unknown }
-      ? never
-      : fields[key]
-    : fields[key] extends AncillaryFormFieldOptions<Schema<any, unknown>>
-      ? fields[key]
-      : never
+// Infer names independently so inline errorMap callbacks retain contextual types.
+type ValidFormFields<shape extends ObjectShape, field extends string> = {
+  [key in field]: key extends keyof shape
+    ? FormFieldOptions & { schema?: never }
+    : AncillaryFormFieldOptions<Schema<any, unknown>>
 }
 
 type FormFieldSchema<
@@ -232,7 +236,7 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
    *
    * The validator decodes the current input state just like {@link parse} and sets the first schema
    * issue as the input's custom Constraint Validation API message. A valid value clears any prior
-   * custom message.
+   * custom message. Messages use the field's `errorMap` when configured.
    *
    * @param field The projected field name.
    * @returns A validator that accepts a native input or compatible input state.
@@ -285,7 +289,7 @@ export interface FieldDefinition<
    */
   getFieldErrors(name: string, submission?: FormSubmission): ReadonlyArray<string>
   /**
-   * Creates a synchronous validator using the native Constraint Validation API.
+   * Creates a synchronous schema validator using the field's `errorMap` and native custom validity.
    * @param name Logical field name used in validation issue paths (optional).
    * @returns A validator for an input, select, or textarea.
    */
@@ -309,6 +313,22 @@ export function createField<
   const type extends FormInputType,
 >(options: FieldOptions<schema> & { type: type }): FieldDefinition<schema, type> {
   let constraints = getConstraints(options.schema, { type: options.type })
+
+  function validate(rawValue: FormRawValue | undefined, name?: string) {
+    let value = decodeFormValue(rawValue, options.type)
+    let errorMap = options.errorMap
+    return options.schema['~run'](value, {
+      path: name === undefined ? [] : [name],
+      options: errorMap
+        ? {
+            errorMap(context) {
+              let missing = constraints.required && (value === undefined || value === false)
+              return errorMap(missing ? { ...context, code: 'value.required' } : context)
+            },
+          }
+        : undefined,
+    })
+  }
 
   return {
     ...options,
@@ -344,15 +364,13 @@ export function createField<
     createInputValidator(name) {
       return (control) => {
         let rawValue = options.type === 'checkbox' ? control.checked : control.value
-        let result = options.schema['~run'](decodeFormValue(rawValue, options.type), {
-          path: name === undefined ? [] : [name],
-        })
+        let result = validate(rawValue, name)
         control.setCustomValidity(result.issues?.[0]?.message ?? '')
       }
     },
     parse(formData, name) {
       let rawValue = readRawFormValue(formData, options.name ?? name, options.type)
-      let result = options.schema['~run'](decodeFormValue(rawValue, options.type), { path: [name] })
+      let result = validate(rawValue, name)
       if (result.issues) {
         return {
           success: false,
@@ -396,11 +414,12 @@ export function createField<
  * ```
  */
 export function createForm<
-  const fields extends FormFields,
+  field extends string,
+  const fields extends FormFields & Record<field, AnyFormFieldOptions>,
   shape extends ObjectShape = Record<never, never>,
 >(options: {
   schema?: ObjectSchema<shape>
-  fields: fields & ValidFormFields<NoInfer<shape>, fields>
+  fields: fields & ValidFormFields<NoInfer<shape>, field>
 }): FormDefinition<shape, fields> {
   let model = options.schema
   let configuredFields = options.fields

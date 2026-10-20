@@ -2365,6 +2365,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test

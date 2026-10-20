@@ -4,6 +4,17 @@ import type { Dispatched, ElementProps, MixinDescriptor } from '@remix-run/compo
 type ValidatableControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 type FormMixin = MixinDescriptor<HTMLFormElement, [], ElementProps>
 type FieldValidator = (control: ValidatableControl) => void
+type FieldErrorMap = (context: {
+  code: string
+  defaultMessage: string
+  path?: ReadonlyArray<string>
+  values?: Record<string, unknown>
+  input: unknown
+}) => string | undefined
+
+interface FieldMessageOptions {
+  readonly errorMap?: FieldErrorMap
+}
 type FieldMixin = MixinDescriptor<
   ValidatableControl,
   [getConfig: () => FieldMixinConfig],
@@ -14,6 +25,7 @@ interface FieldMixinConfig {
   attrs: object
   validate: FieldValidator
   field: string
+  errorMap?: FieldErrorMap
   errorId: string
   feedback: FieldFeedback
   onFeedbackChange(previous: FieldState): void
@@ -29,7 +41,7 @@ interface FieldFeedback {
 }
 
 interface FormDefinitionSource<fields extends Readonly<Record<string, unknown>>, submission> {
-  readonly fields: fields
+  readonly fields: fields & { readonly [field in keyof fields]: FieldMessageOptions }
   getInputAttrs<field extends keyof fields & string>(field: field, submission?: submission): object
   getLabelAttrs<field extends keyof fields & string>(field: field): { htmlFor: string }
   createInputValidator<field extends keyof fields & string>(field: field): FieldValidator
@@ -40,7 +52,7 @@ interface FormDefinitionSource<fields extends Readonly<Record<string, unknown>>,
   ): ReadonlyArray<string>
 }
 
-interface FieldDefinitionSource<submission> {
+interface FieldDefinitionSource<submission> extends FieldMessageOptions {
   getInputAttrs(name: string, submission?: submission): object
   getLabelAttrs(name: string): { htmlFor: string }
   createInputValidator(name?: string): FieldValidator
@@ -236,13 +248,13 @@ const fieldValidity = createMixin<
   handle.addEventListener('insert', (event) => {
     mountedControl = event.node
     if (previousConfig) {
-      let { feedback, validate } = previousConfig
+      let { feedback } = previousConfig
       let key = getControlKey(event.node)
       if (feedback.customValue !== undefined && feedback.customValue !== key) {
         feedback.customErrors = []
       }
       feedback.customValue = key
-      validateInput(event.node, validate, feedback.customErrors)
+      validateInput(event.node, previousConfig, feedback.customErrors)
     }
   })
 
@@ -301,7 +313,7 @@ const fieldValidity = createMixin<
         feedback.customErrors = []
       }
       feedback.customValue = key
-      let errors = validateInput(input, config.validate, feedback.customErrors)
+      let errors = validateInput(input, config, feedback.customErrors)
 
       if (reason === 'input') {
         feedback.touched ||= feedback.hasServerErrors
@@ -387,6 +399,7 @@ export function form(): FormMixin {
  *
  * Create once in component setup. State properties remain live across renders; a new submission
  * resets touched state. `onChange` fires when errors or touched state change.
+ * A field definition's `errorMap` customizes supported native failures as well as schema errors.
  *
  * @param fieldDefinition Shared field attributes, validation, and server error readers.
  * @param options Logical name, submission getter, and optional render notification.
@@ -435,6 +448,7 @@ export function createFieldMixins<submission>(
           attrs: fieldDefinition.getInputAttrs(options.name, options.getSubmission?.()),
           validate: fieldDefinition.createInputValidator(options.name),
           field: options.name,
+          errorMap: fieldDefinition.errorMap,
           errorId: fieldDefinition.getErrorAttrs(options.name).id,
           feedback,
           onFeedbackChange(previous) {
@@ -470,6 +484,7 @@ export function createFieldMixins<submission>(
  * The getter is evaluated while reading errors or rendering inputs, including SSR, not on binding.
  * Use `onChange` to request a render when visible errors or touched state change. New submissions
  * reset feedback without calling `onChange`; ordinary renders preserve it.
+ * Each field's `errorMap` also resolves supported native constraint messages.
  *
  * @param formDefinition Form definition that provides attributes, errors, and field validators.
  * @param options Current submission source and render notification (optional).
@@ -489,6 +504,7 @@ export function createFormMixins<fields extends Readonly<Record<string, unknown>
       enumerable: true,
       value: createFieldMixins(
         {
+          errorMap: formDefinition.fields[field].errorMap,
           getInputAttrs(_name, submission) {
             return formDefinition.getInputAttrs(field, submission)
           },
@@ -564,13 +580,26 @@ export function onInputValidation<target extends HTMLElement>(
 
 function validateInput(
   input: ValidatableControl,
-  validate: FieldValidator,
+  config: Pick<FieldMixinConfig, 'validate' | 'field' | 'errorMap'>,
   customErrors: ReadonlyArray<string> = [],
 ): ReadonlyArray<string> {
   let previousMessage = input.validity.customError ? input.validationMessage : ''
   input.setCustomValidity('')
   try {
-    if (input.validity.valid) validate(input)
+    if (input.validity.valid) {
+      config.validate(input)
+    } else if (config.errorMap) {
+      let issue = getNativeIssue(input)
+      if (issue) {
+        let message = config.errorMap({
+          ...issue,
+          defaultMessage: input.validationMessage,
+          path: [config.field],
+          input: getControlValue(input),
+        })
+        if (message !== undefined) input.setCustomValidity(message)
+      }
+    }
     let message = input.validationMessage
     let errors = message ? [message, ...customErrors] : customErrors
     if (input.validity.valid) input.setCustomValidity(customErrors[0] ?? '')
@@ -579,6 +608,41 @@ function validateInput(
     input.setCustomValidity(previousMessage || customErrors[0] || '')
     throw error
   }
+}
+
+function getNativeIssue(
+  input: ValidatableControl,
+): { code: string; values?: Record<string, unknown> } | undefined {
+  let validity = input.validity
+  let type = input instanceof HTMLInputElement ? input.type : undefined
+  if (validity.valueMissing) return { code: 'value.required' }
+  if (validity.badInput) return type === 'number' ? { code: 'type.number' } : undefined
+  if (validity.typeMismatch) {
+    if (type === 'email') return { code: 'string.email' }
+    if (type === 'url') return { code: 'string.url' }
+    return undefined
+  }
+  // Native-only constraints keep browser wording, even when another flag is also set.
+  if (validity.patternMismatch) return undefined
+  if (!(input instanceof HTMLSelectElement)) {
+    if (validity.tooLong) return { code: 'string.max_length', values: { max: input.maxLength } }
+    if (validity.tooShort) return { code: 'string.min_length', values: { min: input.minLength } }
+  }
+  if (input instanceof HTMLInputElement && type === 'number') {
+    if (validity.rangeUnderflow) return { code: 'number.min', values: { min: Number(input.min) } }
+    if (validity.rangeOverflow) return { code: 'number.max', values: { max: Number(input.max) } }
+  }
+}
+
+function getControlValue(input: ValidatableControl): unknown {
+  if (input instanceof HTMLInputElement) {
+    if (input.type === 'checkbox') return input.checked
+    if (input.type === 'number') {
+      if (input.validity.badInput) return NaN
+      return input.value.trim() === '' ? undefined : Number(input.value)
+    }
+  }
+  return input.value === '' ? undefined : input.value
 }
 
 function getControlKey(control: ValidatableControl): string {

@@ -61,6 +61,88 @@ function checkInvalidFieldTypes(): void {
 void checkInvalidFieldTypes
 
 describe('createField', () => {
+  it('uses one error map for parsing and input validation with decoded context', () => {
+    let contexts: s.ErrorMapContext[] = []
+    let Age = createField({
+      schema: s.number().pipe(min(13)),
+      label: 'Age',
+      type: 'number',
+      name: 'profile.age',
+      errorMap(context) {
+        contexts.push(context)
+        if (context.code === 'number.min') return 'You must be at least 13'
+        if (context.code === 'value.required') return 'Enter your age'
+      },
+    })
+    let data = new FormData()
+    data.set('profile.age', '12')
+    let failure = Age.parse(data, 'age')
+    assert.equal(failure.success, false)
+    assert.deepEqual(failure.errors.fields.age, ['You must be at least 13'])
+    let message = ''
+    Age.createInputValidator('age')({
+      value: '12',
+      setCustomValidity(value) {
+        message = value
+      },
+    })
+    assert.equal(message, 'You must be at least 13')
+    assert.deepEqual(contexts[0], contexts[1])
+    assert.equal(contexts[0].input, 12)
+    assert.deepEqual(contexts[0].path, ['age'])
+    assert.deepEqual(contexts[0].values, { min: 13 })
+    let missing = Age.parse(new FormData(), 'age')
+    assert.equal(missing.success, false)
+    assert.deepEqual(missing.errors.fields.age, ['Enter your age'])
+  })
+
+  it('maps explicit refinement messages and preserves them when the map declines', () => {
+    let Username = createField({
+      schema: s.string().refine((value) => value !== 'admin', 'Reserved username'),
+      label: 'Username',
+      type: 'text',
+      errorMap({ code, defaultMessage }) {
+        assert.equal(code, 'refine.failed')
+        assert.equal(defaultMessage, 'Reserved username')
+        return 'Choose another username'
+      },
+    })
+    let data = new FormData()
+    data.set('username', 'admin')
+    let failure = Username.parse(data, 'username')
+    assert.equal(failure.success, false)
+    assert.deepEqual(failure.errors.fields.username, ['Choose another username'])
+    let Fallback = createField({ ...Username, errorMap: () => undefined })
+    let fallback = Fallback.parse(data, 'username')
+    assert.equal(fallback.success, false)
+    assert.deepEqual(fallback.errors.fields.username, ['Reserved username'])
+  })
+
+  it('maps required checkboxes without turning optional empty values into failures', () => {
+    let Terms = createField({
+      label: 'Terms',
+      type: 'checkbox',
+      schema: s.literal(true),
+      errorMap({ code, input }) {
+        assert.equal(code, 'value.required')
+        assert.equal(input, false)
+        return 'Accept the terms'
+      },
+    })
+    let failure = Terms.parse(new FormData(), 'terms')
+    assert.equal(failure.success, false)
+    assert.deepEqual(failure.errors.fields.terms, ['Accept the terms'])
+    let Optional = createField({
+      label: 'Optional',
+      type: 'text',
+      schema: s.optional(s.string()),
+      errorMap() {
+        throw new Error('Optional empty values must not fail')
+      },
+    })
+    assert.equal(Optional.parse(new FormData(), 'optional').success, true)
+  })
+
   it('derives attributes and parses one field independently', () => {
     let Age = createField({ schema: s.number().pipe(min(13)), label: 'Age', type: 'number' })
     assert.equal(Age.required, true)
@@ -130,6 +212,57 @@ describe('createField', () => {
 })
 
 describe('createForm', () => {
+  it('infers model-backed field maps without callback annotations', () => {
+    let Form = createForm({
+      schema: User,
+      fields: {
+        name: {
+          label: 'Name',
+          type: 'text',
+          errorMap({ code }) {
+            expectType<Equal<typeof code, string>>()
+            if (code === 'string.min_length') return 'Use a longer name'
+          },
+        },
+      },
+    })
+    let data = new FormData()
+    data.set('name', 'a')
+    let failure = Form.parse(data)
+    expectType<Equal<ReturnType<typeof Form.getInputAttrs<'name'>>['type'], 'text'>>()
+    assert.equal(failure.success, false)
+    assert.deepEqual(failure.errors.fields.name, ['Use a longer name'])
+  })
+
+  it('retains field maps on model-backed, ancillary, inline, and reusable fields', () => {
+    let field = {
+      label: 'Name',
+      type: 'text',
+      errorMap: () => 'Use a longer name',
+    } as const
+    let Name = createField({ ...field, schema: s.string().pipe(minLength(3)) })
+    let Form = createForm({
+      schema: s.object({ model: Name.schema }),
+      fields: { model: field, extra: { ...field, schema: Name.schema }, reused: Name },
+    })
+    let Inline = createForm({ fields: { name: { ...field, schema: Name.schema } } })
+    let data = new FormData()
+    data.set('model', 'a')
+    data.set('extra', 'a')
+    data.set('reused', 'a')
+    data.set('name', 'a')
+    let failure = Form.parse(data)
+    assert.equal(failure.success, false)
+    assert.deepEqual(failure.errors.fields, {
+      model: ['Use a longer name'],
+      extra: ['Use a longer name'],
+      reused: ['Use a longer name'],
+    })
+    let inlineFailure = Inline.parse(data)
+    assert.equal(inlineFailure.success, false)
+    assert.deepEqual(inlineFailure.errors.fields.name, ['Use a longer name'])
+  })
+
   it('infers and validates inline fields without a backing schema', () => {
     let InlineForm = createForm({
       fields: {
