@@ -110,11 +110,11 @@ let Username = string().pipe(minLength(3), maxLength(20))
 // <input required minlength="3" maxlength="20" />
 ```
 
-The input type supplies the control-specific requiredness and numeric step behavior. Checks without an equivalent native constraint are omitted.
+The input type supplies requiredness semantics; number inputs receive `step="any"`. Recognized checks provide `minLength`, `maxLength`, `min`, and `max`. Arbitrary refinements, patterns, and numeric increments are not converted to attributes.
 
 ## Model-backed forms
 
-Use `createForm()` to select fields from object schemas, attach UI-only metadata, derive native input constraints, and decode submitted `FormData` with the original field schemas. Only configured fields are validated; omitted model fields are not required. Cross-field rules belong in a separate handler step.
+Use `createForm({ schema?, fields })` to select existing field schemas or define inline ones, attach labels and input types, and parse `FormData`. Parsing validates configured fields only, not the complete backing object or its object-level refinements. Cross-field rules belong in a separate handler step.
 
 **Single schema:** select model fields without repeating their validation rules.
 
@@ -205,9 +205,11 @@ let result = Email.parse(await request.formData(), 'email')
 let ContactForm = createForm({ fields: { email: Email } })
 ```
 
-`Email.required`, `getInputAttrs(name, submission?)`, `getLabelAttrs(name)`, `getErrorAttrs(name)`, and `createInputValidator(name?)` are available independently. The logical name is supplied when parsing or binding, so one definition can be reused under different names. Explicit `name` and `id` options override native attributes, not the logical keys in submission results. `createForm()` resolves each configured field through this same field layer and exposes the definitions through `Form.fields`.
+Field definitions expose `required` and the low-level `getInputAttrs()`, `getLabelAttrs()`, `getErrorAttrs()`, `getFieldErrors()`, and `createInputValidator()` helpers. `Form.fields` contains the resolved definitions. Logical field names key parsed values and errors; optional `name` and `id` settings change HTML attributes without changing those keys.
 
-Server handlers receive a typed value or a serializable failure containing the submitted values and grouped errors. Password values are deliberately omitted from failed results so they are not copied into action data or server-rendered HTML.
+### Parsing and rendering
+
+Parsing returns `{ success: true, value }` or `{ success: false, issues, values, errors }`. Failures retain raw values and group messages in `errors.fields` and `errors.form`; password values are omitted. A parsed form is not necessarily a complete model: handlers supply generated values, select persisted fields, and validate the resulting record.
 
 ```tsx
 let submission = AccountForm.parse(await request.formData())
@@ -216,10 +218,11 @@ if (!submission.success) {
   return render(<AccountPage submission={submission} />, { status: 400 })
 }
 
-await createAccount(submission.value)
+let { email, displayName, age } = submission.value
+await createAccount({ id: crypto.randomUUID(), email, displayName, age })
 ```
 
-The same form definition produces low-level attribute bags. Markup and styling remain application-owned, while `@remix-run/ui/form` supplies the small progressive enhancement for touched state:
+For browser feedback, install `@remix-run/ui` alongside `remix` and bind the same definition in component setup:
 
 ```tsx
 import type { FormFailure } from 'remix/data-schema/form'
@@ -227,7 +230,7 @@ import type { Handle } from 'remix/component'
 import { createFormMixins } from '@remix-run/ui/form'
 
 function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
-  let { form, input, label, error, errors } = createFormMixins(AccountForm, {
+  let { form, field, label, error, fields } = createFormMixins(AccountForm, {
     getSubmission: () => handle.props.submission,
     onChange: () => handle.update(),
   })
@@ -238,32 +241,23 @@ function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
         {AccountForm.fields.email.label}
         {AccountForm.fields.email.required ? <span>Required</span> : null}
       </label>
-      <input autoComplete="email" mix={input('email')} />
-      {errors.email.length > 0 ? (
+      <input autoComplete="email" mix={field('email')} />
+      {fields.email.errors.length > 0 ? (
         <p mix={error('email')} role="alert">
-          {errors.email.join(' ')}
+          {fields.email.errors.join(' ')}
         </p>
       ) : null}
 
-      <label>
-        <input mix={input('terms')} />
-        {AccountForm.fields.terms.label}
-      </label>
-      {errors.terms.length > 0 ? (
-        <p mix={error('terms')} role="alert">
-          {errors.terms.join(' ')}
-        </p>
-      ) : null}
-
+      {/* Render the remaining configured fields with the same mixins. */}
       <button type="submit">Create account</button>
     </form>
   )
 }
 ```
 
-The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. Call `createFormMixins(AccountForm, { getSubmission, onChange })` once in component setup; its control mixins apply native constraints during SSR and supplement native validation with synchronous schema issues through `setCustomValidity()`. Live `fields.email.errors/touched` properties expose feedback, while `label(field)` associates the label and `error(field)` supplies the error-element id. `onChange` requests rendering when messages or touched state changes. `createFieldMixins(Email, { name, getSubmission, onChange })` supplies the same behavior independently for one input, select, or textarea. New submissions reset feedback automatically. Do not add `noValidate` unless intentionally opting out of native validation.
+The mixins emit native constraints during SSR, validate while typing, and reveal client feedback after blur or a blocked submission. Server errors appear immediately; a new submission resets feedback. Read `fields.email.errors` and `fields.email.touched` during rendering. Applications own the markup and styles.
 
-The first release maps field-level `required`, `minLength`, `maxLength`, `min`, and `max` constraints to native attributes. Other synchronous field refinements can use `createInputValidator()` for client-side feedback and still run authoritatively during server parsing. Whole-object, cross-field, and asynchronous form rules are not part of the projection yet and should be applied in the server handler.
+Native checks remain primary, followed by synchronous field refinements through `setCustomValidity()`. Without JavaScript, native constraints and server validation still apply. For standalone bindings, supplemental async errors, and control limitations, see the [UI form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md).
 
 ### Shared field messages
 
@@ -293,13 +287,13 @@ let result = Signup.parse(await request.formData())
 // createFormMixins(Signup) uses these messages too.
 ```
 
-The same option works directly in `createForm({ schema, fields })` entries, including model-backed fields. The map receives `{ code, defaultMessage, path, values, input, locale }`; `input` is decoded, and `path` uses the logical field name, not an overridden HTML name. Return `undefined` to retain the default. A required empty value or unchecked required checkbox uses `value.required`. Other schema failures retain their codes. Explicit check/refinement messages are defaults that the map can override; uncoded custom checks use `check.failed`.
+The option also works on entries in `createForm({ fields })`, including model-backed fields. It receives the existing `ErrorMap` context: `{ code, defaultMessage, path, values, input, locale }`. Field input is decoded and paths use logical names. Return `undefined` to preserve the default, including explicit refinement messages. Uncoded checks use `check.failed`.
 
-The UI translates supported native failures to the same domain codes and uses the resolved message for both native tooltips and inline feedback. Native-only constraints without a matching code keep browser wording. `setCustomErrors()` messages are application-authored and are never remapped. Without JavaScript, native tooltips keep browser wording and server parsing still uses the map.
+Required empty form values use `value.required`; raw `s.parse()` retains the underlying schema code, such as `type.string`. The UI maps supported native failures to these domain codes for matching tooltips and inline feedback. Manually authored `pattern`/`step` constraints retain browser wording, and `setCustomErrors()` messages are not remapped. Without JavaScript, only server errors use the map.
 
 Customizing a message does not add a validation rule: `type: 'email'` alone does not validate email format on the server; include an `email()` schema check. Browser and schema acceptance rules can differ.
 
-### Per-parse messages
+## Per-parse messages
 
 For schemas outside field definitions, pass `errorMap` to `parse()` or `parseSafe()`:
 

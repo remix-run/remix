@@ -1,6 +1,6 @@
 # Data model forms demo
 
-Four routes show different ways to define schema-backed native forms. Each has its own GET/POST controller and browser component, with explicit labels, controls, mixins, and error markup.
+Four routes show schema-backed native forms connected to in-memory SQLite. Each keeps labels, controls, and error markup under application control.
 
 ## Run it
 
@@ -15,12 +15,12 @@ Open <http://localhost:44100>. The root redirects to `/schema`; navigation links
 
 ## Examples
 
-| Route           | Definition                             | Browser binding                            | Server parsing                                          |
-| --------------- | -------------------------------------- | ------------------------------------------ | ------------------------------------------------------- |
-| `/schema`       | One object schema + `createForm()`     | `createFormMixins()`                       | One `AccountForm.parse(formData)` call                  |
-| `/fields`       | Individual schemas + `createField()`   | Independent `createFieldMixins()` bindings | Parse each field, then combine failed values and errors |
-| `/extra-fields` | Object schema + request-only fields    | `createFormMixins()`                       | One parse call; persist only account fields             |
-| `/inline`       | `createForm()` with all schemas inline | `createFormMixins()`                       | One parse call, without a backing object schema         |
+| Route           | Definition                             | Binding               |
+| --------------- | -------------------------------------- | --------------------- |
+| `/schema`       | Object schema + `createForm()`         | `createFormMixins()`  |
+| `/fields`       | Individual `createField()` definitions | `createFieldMixins()` |
+| `/extra-fields` | Object schema + request-only fields    | `createFormMixins()`  |
+| `/inline`       | All schemas inline in `createForm()`   | `createFormMixins()`  |
 
 ### One object schema
 
@@ -58,7 +58,7 @@ let email = createFieldMixins(Email, {
 })
 ```
 
-The UI uses `email.field()`, `email.label()`, `email.error()`, `email.errors`, and `email.touched`. The ordinary native `<form>` needs no form binding. Its handler calls `DisplayName.parse(formData, 'displayName')` and `Email.parse(formData, 'email')`, and explicitly combines failed values and errors. Both field schemas are also used by the persisted account schema.
+The UI uses `email.field()`, `email.label()`, `email.error()`, `email.errors`, and `email.touched`. No form binding is needed. The handler parses each field and combines failures; both schemas are also reused by the persisted account schema.
 
 ### Schema plus extra fields
 
@@ -82,7 +82,7 @@ const RegistrationForm = createForm({
 
 The reusable `Password` field is created with `createField()`. Password and terms are validated but never stored. Passwords are also omitted from failed-submission values.
 
-The display-name field configures one `errorMap` for requiredness, minimum length, and its whitespace refinement. These messages appear in enhanced browser feedback and server-rendered failures. With JavaScript disabled, the browser keeps its own native tooltip wording.
+Display name, password, and terms use field-level `errorMap` configuration for shared browser/server messages. Display name covers requiredness, minimum length, and a whitespace refinement. Without JavaScript, native tooltips keep browser wording.
 
 ### All inline schemas
 
@@ -105,15 +105,15 @@ const AccountForm = createForm({
 })
 ```
 
-This excerpt shows the shape; the running example also checks maximum name length and leading/trailing spaces. With no backing schema, every field must provide its own schema. Use this for form-specific validation; use a shared model or field schema when the same rules belong in several places.
+With no backing schema, every field supplies its own. The running example also checks maximum name length and leading/trailing spaces. Prefer shared model or field schemas when rules are reused.
 
 ## Shared behavior
 
-All four examples use native HTML constraints before JavaScript loads. After hydration, field mixins validate as you type, reveal client feedback after blur or a blocked submission, and manage `aria-invalid` and error-description linkage. The UI owns the error elements and displays the binding's live `errors` and `touched` state. Error elements stay mounted with space reserved for their messages so blur feedback does not move the action buttons.
+Native constraints work before JavaScript loads. After hydration, mixins validate while typing, reveal feedback after blur or a blocked submission, and manage error accessibility. The UI reads live `errors` and `touched` state and reserves space for messages to avoid moving the action buttons.
 
 Each form includes a client-only **Fill demo values** button. Add spaces around the display name and blur it to see a synchronous schema refinement rendered inline. With JavaScript disabled, submit `a@b` as the email: native email validation accepts it, but the server schema returns a populated form with a field error.
 
-Successful POSTs redirect back to their example. All routes share one in-memory SQLite database, so saved accounts are visible on every page for the lifetime of the demo process. The table validates writes with `Account`; controllers supply the id and explicitly select persisted fields. Cross-field rules remain a separate handler concern.
+Successful POSTs redirect back to their example. Saved accounts are visible on every page until the process exits. The table validates writes with `Account`; controllers supply the id and select persisted fields. Cross-field rules remain a separate handler concern.
 
 ## Code layout
 

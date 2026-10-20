@@ -22,9 +22,9 @@ export interface FormFieldOptions {
   label: string
   /** The native input type and corresponding `FormData` decoder. */
   type: FormInputType
-  /** The submitted field name. (defaults to the model property name) */
+  /** The submitted field name. (defaults to the logical field name) */
   name?: string
-  /** The DOM id used to associate the input, label, and error. (defaults to the property name) */
+  /** The DOM id used by the control, label, and error. (defaults to the logical field name) */
   id?: string
   /**
    * Customizes schema and native constraint messages on the server and client.
@@ -190,15 +190,15 @@ type FormValue<shape extends ObjectShape, fields extends FormFields> = {
 }
 
 /**
- * A model-backed form projection with native input attributes and server parsing.
+ * Configured schema-backed fields with native attributes and server parsing.
  */
 export interface FormDefinition<shape extends ObjectShape, fields extends FormFields> {
   /** The field configuration in render order, including schema-derived requiredness. */
   readonly fields: ResolvedFormFields<shape, fields>
   /**
-   * Derives native attributes for one projected model field.
+   * Derives native attributes for one configured field.
    *
-   * @param field The projected model property name.
+   * @param field The logical field name.
    * @param submission A failed form result whose values and errors should be restored.
    * @returns Attributes that can be spread onto a native `input` element.
    */
@@ -234,7 +234,7 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
   /**
    * Creates a synchronous client-side validator for one projected field.
    *
-   * The validator decodes the current input state just like {@link parse} and sets the first schema
+   * The validator decodes the current input state like the form's `parse()` and sets the first schema
    * issue as the input's custom Constraint Validation API message. A valid value clears any prior
    * custom message. Messages use the field's `errorMap` when configured.
    *
@@ -245,10 +245,10 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
     field: field,
   ): (input: InputValidationTarget) => void
   /**
-   * Decodes submitted values according to their input types and validates them with the model.
+   * Decodes and validates configured fields, without running backing object-level rules.
    *
    * @param formData The submitted form payload.
-   * @returns A typed value or the model validation issues.
+   * @returns Typed field values or a serializable failure with values and grouped errors.
    */
   parse(formData: FormData): FormParseResult<FormValue<shape, fields>>
 }

@@ -126,14 +126,14 @@ export interface FormMixins<fields extends Readonly<Record<string, unknown>>> {
    */
   form(): FormMixin
   /**
-   * Applies generated attributes, validation, touched state, and error accessibility to an input.
+   * Alias for `field()`; applies control attributes, validation, and error accessibility.
    *
    * @param field The projected field name.
    * @returns A mixin for the field's native input.
    */
   input<field extends keyof fields & string>(field: field): FieldMixin
   /**
-   * Applies validation to a native input, select, or textarea.
+   * Applies control attributes, validation, touched state, and error accessibility.
    * @param field The projected field name.
    * @returns A mixin for the field's native control.
    */
@@ -474,14 +474,14 @@ export function createFieldMixins<submission>(
 }
 
 /**
- * Binds form and input validation mixins to a model-backed form definition.
+ * Binds form and control mixins to a schema-backed form definition.
  *
  * Applies native constraints and restored server values during SSR. In the browser, it validates
  * on input, reveals feedback after blur or an invalid submission, and owns error accessibility.
- * Render the live `errors` arrays in application-owned markup and apply `error(field)` to link it.
+ * Render live `fields.name.errors` in application-owned markup and link it with `error(name)`.
  * Explicit host props override generated attributes; error ids are appended to `aria-describedby`.
  * Create the binding in component setup and use `getSubmission` to read changing submission props.
- * The getter is evaluated while reading errors or rendering inputs, including SSR, not on binding.
+ * The getter runs while reading field state or rendering controls, including SSR, not on binding.
  * Use `onChange` to request a render when visible errors or touched state change. New submissions
  * reset feedback without calling `onChange`; ordinary renders preserve it.
  * Each field's `errorMap` also resolves supported native constraint messages.

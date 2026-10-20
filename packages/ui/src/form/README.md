@@ -2,51 +2,24 @@
 
 `createFieldMixins()` binds a reusable field to a native input, select, or textarea. `createFormMixins()` composes the same behavior for all fields in a form definition. Applications own the markup, styles, and displayed errors.
 
-## A standalone field
+## Usage
+
+Install with `npm i remix @remix-run/ui`. Create the definition once and bind it per component instance:
 
 ```tsx
 import * as s from 'remix/data-schema'
-import { createField } from 'remix/data-schema/form'
-import { createFieldMixins } from '@remix-run/ui/form'
-
-let Email = createField({ schema: s.string(), label: 'Email', type: 'email' })
-
-// In component setup:
-let email = createFieldMixins(Email, {
-  name: 'email',
-  getSubmission: () => handle.props.submission,
-  onChange: () => handle.update(),
-})
-
-return () => (
-  <form method="post">
-    <label mix={email.label()}>{Email.label}</label>
-    <input autoComplete="email" mix={email.field()} />
-    {email.errors.length > 0 ? (
-      <p role="alert" mix={email.error()}>
-        {email.errors.join(' ')}
-      </p>
-    ) : null}
-    <button type="submit">Save</button>
-  </form>
-)
-```
-
-Create one binding per control in component setup. Definitions can be shared, but bindings have independent state. Multiple independent bindings can appear inside one ordinary `<form>`: native submission collects their values and blocks invalid controls. The handler can parse them separately with `Email.parse(formData, 'email')`, or compose their definitions into `createForm({ fields: { email: Email } })` for combined parsing and failed-submission handling.
-
-## A form binding
-
-```tsx
-import * as s from 'remix/data-schema'
-import { createForm } from 'remix/data-schema/form'
+import { email } from 'remix/data-schema/checks'
+import { createField, createForm } from 'remix/data-schema/form'
 import type { FormSubmission } from 'remix/data-schema/form'
 import type { Handle } from 'remix/component'
 import { createFormMixins } from '@remix-run/ui/form'
 
-let Signup = createForm({
-  schema: s.object({ email: s.string() }),
-  fields: { email: { label: 'Email', type: 'email' } },
+let Email = createField({
+  schema: s.string().pipe(email()),
+  label: 'Email',
+  type: 'email',
 })
+let Signup = createForm({ fields: { email: Email } })
 
 function SignupPage(handle: Handle<{ submission?: FormSubmission }>) {
   let { form, field, label, error, fields } = createFormMixins(Signup, {
@@ -69,11 +42,30 @@ function SignupPage(handle: Handle<{ submission?: FormSubmission }>) {
 }
 ```
 
+## A standalone field
+
+For a single control, bind `Email` directly in component setup:
+
+```tsx
+import { createFieldMixins } from '@remix-run/ui/form'
+
+let emailField = createFieldMixins(Email, {
+  name: 'email',
+  getSubmission: () => handle.props.submission,
+  onChange: () => handle.update(),
+})
+
+// Use emailField.field(), emailField.label(), and emailField.error() in markup.
+// Read emailField.errors and emailField.touched during rendering.
+```
+
+Independent bindings can share an ordinary `<form>` without a form mixin. Native submission collects their values and checks validity. Parse each definition with `Email.parse(formData, 'email')`, combining failures in the handler, or compose them into `createForm()` for combined parsing.
+
 ## `createFormMixins(formDefinition, { getSubmission, onChange }?)`
 
-Create the binding once per component instance in setup. Its methods can be destructured: `form()` enhances unmanaged native controls, `field(name)` supplies each projected control's behavior, `label(name)` associates its label, and `error(name)` supplies the generated error-element id. Each field uses the same binding machinery as `createFieldMixins()`. `input(name)` remains an alias for `field(name)`, and `errors.name` reads the same messages as `fields.name.errors`.
+The destructurable factories provide `form()` for unmanaged controls, `field(name)` for a configured control, `label(name)` for its label association, and `error(name)` for its error-element id. `input(name)` aliases `field(name)`; `errors.name` aliases `fields.name.errors`.
 
-The optional `getSubmission` getter reads the current server submission when rendering controls or reading state, including SSR. It is not a subscription: update component props or call `handle.update()` after changing a local submission. Return the same object until it changes; a new identity resets touched state and reads the new server messages without firing `onChange`.
+`getSubmission` reads current server state during rendering or state access, including SSR. It is not a subscription: update props or request a render after changing a local submission. Return the same submission object until a new submission arrives; a new object resets feedback without firing `onChange`.
 
 ## Live field state
 
@@ -84,7 +76,7 @@ Standalone bindings expose these properties directly; form bindings expose them 
 
 Server errors are visible immediately, even while `touched` is false. Once true, `touched` stays true until a reset or new submission.
 
-The objects are stable and their state properties are read-only. Read properties during rendering; destructuring a boolean or message array in setup captures a snapshot. `onChange` requests a render when messages or touched state change, including the first blur of a valid field. It does not fire for edits or blurs that leave both unchanged. Without it, validation and ARIA still update, but application-owned UI needs another render trigger.
+State objects are stable and properties are read-only. Read them during rendering; destructuring a boolean or array in setup captures a snapshot. `onChange` requests a render only when errors or touched state change. Without it, native validity and ARIA still update, but application-owned markup needs another render trigger.
 
 A non-canceled native form reset clears touched state and displayed errors. Programmatic value changes require an `input` or `change` event to refresh validation.
 
@@ -122,17 +114,17 @@ The native adapter uses this priority when multiple flags fail:
 | Numeric range overflow                     | `number.max`                  | `{ max }` |
 | Step mismatch or other native-only failure | Browser fallback              | —         |
 
-Only the first failure is mapped. If it has no mapping or the callback returns `undefined`, the browser chooses its default wording. Native checks remain primary; synchronous schema validation runs only after they pass. `input` is decoded (numbers and checkbox booleans included), and `path` contains the logical field name. The resolved primary message drives both `validationMessage` and visible feedback, without revealing pristine fields. `setCustomErrors()` messages are not remapped.
+Only the first failure is mapped. If it has no mapping or the callback returns `undefined`, browser wording remains. Schema validation runs only after native checks pass. The map receives decoded `input`, a logical field `path`, and any constraint `values`. Resolved messages drive tooltips and inline feedback without revealing pristine fields.
 
-A message override adds no server validation. Include `email()` in the schema if the server must reject invalid email addresses. Without JavaScript, native tooltips retain browser wording; server errors still use `errorMap`.
+`value.required` is specific to form decoding; other mapped codes come from data-schema. Authored `pattern` and `step` attributes are supported by native validation but have no message mapping. Supplemental `setCustomErrors()` messages are not remapped. Message overrides add no server rules; include `email()` in the schema to validate email format. Without JavaScript, native tooltips remain unchanged.
 
 ## `setCustomErrors(messages)`
 
-Use `fields.username.setCustomErrors(messages)` on a form binding, or `username.setCustomErrors(messages)` on a standalone field binding, to supply application-owned validation messages. Pass `[]` to clear them; empty strings are ignored. The binding copies the array, so later edits to the caller's array do not change the messages.
+Call `fields.username.setCustomErrors(messages)` or a standalone binding's `setCustomErrors(messages)` to replace supplemental messages. Pass `[]` to clear them. Arrays are copied and empty strings ignored.
 
-For a mounted control, setting errors synchronously updates native validity and error accessibility, then emits `onInputValidation` with the final feedback. `onChange` requests a render if visible errors change. Setting errors does not mark the field touched: messages block native submission immediately but appear in `errors` only after blur or a native `invalid` event. Existing server errors remain visible until editing. Native/schema errors come first, with custom messages appended; clearing custom messages never clears native/schema errors.
+For mounted controls, messages synchronously update native validity and accessibility without marking the field touched. They block native submission immediately but follow normal feedback visibility. Native/schema errors remain primary, with custom messages appended; this API cannot replace a native `pattern` or `step` tooltip. Existing server errors remain visible until editing.
 
-Messages belong to the control's current value (including checkbox checked state). They survive blur, same-value input/change events, schema revalidation, and ordinary renders. A changed value, non-canceled reset, or new server submission clears them. Starting another application-owned check does not clear them. Before mounting, messages are stored and associated with the first mounted value.
+Messages belong to the current value, including checkbox state. They survive revalidation and same-value checks, but clear on a changed value, non-canceled reset, or new submission. Before mounting, they attach to the first mounted value.
 
 ### Custom async validation
 
@@ -206,15 +198,15 @@ return () => (
 )
 ```
 
-The example endpoint returns a JSON boolean. `on()` aborts its signal when another input event arrives or the control is removed. The extra guards discard results after a value change, reset attempt, or new server submission, even if the request ignores cancellation. Do not clear custom errors merely to start another check of the same value; replace them when its result arrives.
+The endpoint returns a JSON boolean. `on()` aborts the signal on the next input event or control removal. Extra guards reject results after value changes, reset attempts, or new submissions, even if cancellation is ignored. Keep existing errors while rechecking the same value; replace them when the result arrives.
 
-Debouncing, caching, pending indicators, and request-failure UI remain application-owned. A failed lookup is not evidence of an invalid username, so report it separately rather than calling `setCustomErrors()` with a network error. The example logs failures; an application can show a separate status message instead. Keep requests and setters out of render functions.
+Applications own debouncing, caching, pending indicators, and request-failure UI. A failed lookup is not an invalid username; show a separate status rather than a custom validation error. Keep requests and setters out of render functions.
 
-Pending work does not delay submission. Completed custom errors block ordinary native submission. The server must repeat business checks and enforce uniqueness when saving, since availability can change after a successful check. Without JavaScript, the submission handler remains the validation path.
+Pending work does not delay submission. Completed errors block native submission. Repeat business checks and enforce uniqueness on the server; availability can change after a successful lookup. Without JavaScript, validation happens on submission.
 
 ## Control behavior
 
-Each input mixin:
+Each `field()` mixin:
 
 - applies generated ids, names, types, native constraints, restored values, and server error attributes during SSR
 - validates initially and on `input`, `change`, and blur using native constraints first and synchronous schema validation through `setCustomValidity()` when native constraints pass
@@ -223,33 +215,24 @@ Each input mixin:
 - sets `data-touched`, `aria-invalid`, and error-description linkage, preserving other `aria-describedby` ids
 - preserves explicit host props, so authored attributes such as `autoComplete`, `aria-invalid`, or an intentional `type` override win
 
-Apply the returned mixin to every projected input, including fields whose schemas map entirely to native constraints. This keeps native and custom validation on one rendering path.
+Apply it to every configured control, even when all its constraints are native.
 
 Use `type: 'text'` for string-valued select/textarea definitions; the mixin omits the input-only `type` attribute on these elements. Single-value native selects are supported. Applications own option markup, including `selected` attributes when restoring a server-rendered selection. Multi-select arrays and radio groups are not modeled by this scalar field API.
 
 ## `label(field)`
 
-Apply this attribute-only mixin to a `<label>` to associate it with the field's configured id during SSR and client rendering. Standalone bindings provide `label()` without a field name. Label text, required markers, styles, and markup remain application-owned. Explicit `htmlFor` props override the generated association; configure a custom id in the field definition to keep the label and control linked automatically. The low-level `getLabelAttrs()` helper remains available for custom integrations.
+Associates a `<label>` with the field's configured id during SSR and client rendering. Standalone bindings use `label()`. Applications own text, required markers, and styles. Explicit `htmlFor` overrides the association; configure the field's `id` to change both label and control together. This is not a legend or radio-group binding.
 
 ## `error(field)`
 
-The returned error mixin applies the generated id during SSR and client rendering. It does not add listeners, change content or visibility, or choose a live-region role. Explicit host props override its defaults; keep the generated id to preserve the input's automatic error linkage. Choose your own error element, styles, and announcement behavior.
+Applies the error-element id during SSR and client rendering. It does not choose content, visibility, styles, or announcement roles. Explicit host props win; keep the generated id to preserve automatic error linkage.
 
 ## `onInputValidation(handler)`
 
-An optional lower-level observer. Apply it to a control or ancestor to receive bubbling `rmx:input-validation` events with `field`, `errorId`, `errors`, and `touched`. Events are snapshots; binding state remains live. The event's errors contain only messages that should be displayed. Observing does not disable default behavior.
-
-Use `errors` and `onChange` for ordinary error rendering. Use this observer for custom event handling or inspection of touched state. The mixins never create, hide, or change the text of the application's error elements.
+Observe bubbling `rmx:input-validation` events on a control or ancestor. Events snapshot the logical `field`, `errorId`, visible `errors`, and `touched` state. Prefer live field state and `onChange` for ordinary rendering; observing does not disable default behavior.
 
 ## `form()`
 
-The standalone `form()` export returns a mixin for plain inputs, selects, and textareas. This is the same behavior supplied by the `form()` method returned from `createFormMixins()`. It:
-
-- leaves fields unmarked while the user types before their first blur
-- sets `data-touched` and synchronizes `aria-invalid` after blur
-- observes native `invalid` events when the browser blocks submission
-- clears stale server error linkage after an invalid field changes
-
-Managed inputs own this behavior themselves. The form mixin skips them, so mixed forms can use both APIs without duplicate handling.
+The standalone export and the form-binding method enhance unmanaged inputs, selects, and textareas. They synchronize touched/ARIA state after blur or a native invalid event and clear stale server-error linkage after editing. Managed controls are skipped to avoid duplicate handling.
 
 Without JavaScript, native constraints still prevent invalid submissions and server-rendered errors remain accessible. Do not add `noValidate` unless the application intentionally opts out of native constraint validation.
