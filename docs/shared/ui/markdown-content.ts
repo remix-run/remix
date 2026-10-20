@@ -27,7 +27,7 @@ export const docsMarkdownContentCss = css({
       textDecoration: 'none',
     },
   '& :is(p, ul, ol, dl)': {
-    color: 'var(--rmx-color-text-secondary)',
+    color: 'var(--docs-color-text-body)',
   },
   '& h2': {
     margin: '40px 0 var(--rmx-space-lg)',

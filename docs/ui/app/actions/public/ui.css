@@ -50,12 +50,14 @@
   font-weight: 600;
   letter-spacing: -0.025em;
 }
-.docs-page-header > p,
+.docs-page-header > p {
+  color: var(--rmx-color-text-secondary);
+}
 .ui-doc-section > p,
 .ui-doc-section > ul,
 .ui-doc-section > ol,
 .ui-example > p {
-  color: var(--rmx-color-text-secondary);
+  color: var(--docs-color-text-body);
 }
 .ui-doc-section > dl > dt {
   margin-top: 20px;
@@ -63,7 +65,7 @@
 }
 .ui-doc-section > dl > dd {
   margin: 6px 0 0;
-  color: var(--rmx-color-text-secondary);
+  color: var(--docs-color-text-body);
 }
 .ui-doc-section table {
   width: 100%;
