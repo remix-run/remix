@@ -1,0 +1,78 @@
+import type { RequestHandler } from './controller.ts';
+import type { ContextEntries, ContextEntry, ContextParams, ContextWithEntries, ContextWithEntry, GetContextValue, RequestContext } from './request-context.ts';
+/**
+ * A middleware of any context transform.
+ */
+export type AnyMiddleware = Middleware<ContextTransform>;
+type ContextTransform = ContextEntry | ContextEntries | (<context extends RequestContext<any, any>>(context: context) => RequestContext<any, any>);
+type EmptyContextTransform = readonly [];
+declare const contextTransform: unique symbol;
+type TransformOf<middleware> = middleware extends Middleware<infer transform> ? transform : EmptyContextTransform;
+type ContextWithTransform<context extends RequestContext<any, any>, transform> = transform extends ContextEntries ? ContextWithEntries<context, transform> : transform extends ContextEntry ? ContextWithEntry<context, transform> : transform extends {
+    <inputContext extends context>(context: inputContext): infer output;
+} ? output extends RequestContext<any, any> ? output : context : context;
+type EntriesOf<transform> = transform extends ContextEntries ? transform[number] : transform extends ContextEntry ? transform : never;
+type PossibleEntryValue<key extends object, writes> = writes extends ContextEntry ? key extends writes['key'] ? writes['value'] : writes['key'] extends key ? writes['value'] : never : never;
+type WidenContextEntries<context, entries extends ContextEntries, writes> = {
+    [index in keyof entries]: Omit<entries[index], 'value'> & {
+        value: GetContextValue<context, entries[index]['key']> | PossibleEntryValue<entries[index]['key'], writes>;
+    };
+};
+type ContextWithOptionalTransforms<context extends RequestContext<any, any>, transform> = [
+    transform
+] extends [ContextEntry | ContextEntries] ? [EntriesOf<transform>] extends [never] ? context : context extends RequestContext<infer params, infer entries> ? entries extends readonly [] ? context : ContextWithEntries<RequestContext<params>, WidenContextEntries<context, entries, EntriesOf<transform>>> : context : RequestContext<ContextParams<context>>;
+type ApplyMiddlewareContext<middleware extends readonly AnyMiddleware[], context extends RequestContext<any, any>> = middleware extends readonly [
+    infer first extends AnyMiddleware,
+    ...infer rest extends readonly AnyMiddleware[]
+] ? ApplyMiddlewareContext<rest, ContextWithTransform<context, TransformOf<first>>> : middleware extends readonly [
+    ...infer init extends readonly AnyMiddleware[],
+    infer last extends AnyMiddleware
+] ? ContextWithTransform<ApplyMiddlewareContext<init, context>, TransformOf<last>> : ContextWithOptionalTransforms<context, TransformOf<middleware[number]>>;
+/**
+ * Resolves the request-context type produced by middleware.
+ *
+ * Conditional entries like `...(isDev ? [logger()] : [])` do not guarantee new properties, but
+ * widen existing values they may overwrite. Later fixed entries override those possible values.
+ * Opaque transforms in a rest segment discard context refinements. Broad middleware arrays retain
+ * the explicitly supplied base context.
+ */
+export type MiddlewareContext<middleware extends readonly AnyMiddleware[], context extends RequestContext<any, any> = RequestContext> = AnyMiddleware[] extends middleware ? context : ApplyMiddlewareContext<middleware, context>;
+/**
+ * A special kind of request handler that either returns a response or passes control
+ * to the next middleware or request handler in the chain.
+ *
+ * @param context The request context
+ * @param next A function that invokes the next middleware or request handler in the chain
+ * @returns A response to short-circuit the chain, or the response from `next()` to continue
+ *
+ * The generic describes the context effect this middleware has. Use a `{ key, value }` object for
+ * middleware that provides one context value, add a `property` field to install a direct context
+ * property, or use {@link ContextEntries} for multiple values.
+ */
+export type Middleware<transform extends ContextTransform = EmptyContextTransform> = ((context: RequestContext<any>, next: NextFunction) => Response | Promise<Response>) & {
+    /**
+     * Type-only metadata that carries the middleware's declared context effect.
+     */
+    readonly [contextTransform]?: transform | undefined;
+};
+/**
+ * Creates a reusable middleware chain while preserving its exact tuple type.
+ *
+ * Prefer plain inline arrays for `middleware` options on routers, controllers, and actions. Use
+ * this helper when a middleware chain is stored in a variable and its exact type must be preserved,
+ * such as when deriving {@link MiddlewareContext} from the chain, exporting the chain for reuse, or
+ * returning it from a factory.
+ *
+ * @param middleware The middleware functions to run in order.
+ * @returns The middleware chain with its tuple type preserved.
+ */
+export declare function createMiddleware<const middleware extends readonly AnyMiddleware[]>(...middleware: middleware): middleware;
+/**
+ * A function that invokes the next middleware or handler in the chain.
+ *
+ * @returns The response from the downstream handler
+ */
+export type NextFunction = () => Promise<Response>;
+export declare function runMiddleware(middleware: AnyMiddleware[], context: RequestContext<any, any>, handler: RequestHandler<any>): Promise<Response>;
+export {};
+//# sourceMappingURL=middleware.d.ts.map
