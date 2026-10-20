@@ -74,6 +74,7 @@
   --rmx-color-accent-hover: #022f4b;
   --rmx-color-eyebrow: #eb2358;
   --rmx-color-code-highlight: rgb(34 197 94 / 18%);
+  --rmx-color-code-background: #f2f2f4;
 
   --rmx-color-action-primary-background: #1b1b1f;
   --rmx-color-action-primary-background-hover: #3d3d41;
@@ -179,6 +180,7 @@
     --rmx-color-border-default: #3f3f46;
     --rmx-color-border-strong: #52525b;
     --rmx-color-code-highlight: rgb(34 197 94 / 22%);
+    --rmx-color-code-background: #1c1c21;
 
     --rmx-color-action-primary-background: #e7e7ea;
     --rmx-color-action-primary-background-hover: #cbcbce;

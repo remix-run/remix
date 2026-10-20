@@ -19,6 +19,7 @@ packages:
   - docs/api
   - docs/guides
   - docs/shared
+  - docs/ui
   - docs/shared/prerender/bench
   - packages/*
   - packages/*/demo

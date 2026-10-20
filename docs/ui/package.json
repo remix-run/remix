@@ -1,0 +1,28 @@
+{
+  "name": "remix-ui-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "start": "node --import remix/node-tsx server.ts",
+    "prerender": "NODE_ENV=production node --import remix/node-tsx scripts/prerender.ts",
+    "prerender:serve": "npx http-server -p 44100 build/site",
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "pnpm -w exec tsc --noEmit -p docs/ui/tsconfig.json"
+  },
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "@remix-run/component": "workspace:^",
+    "@remix-run/ui": "workspace:^",
+    "oxfmt": "catalog:",
+    "remix": "workspace:^",
+    "remix-docs-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "pagefind": "catalog:",
+    "typescript": "6.0.3"
+  }
+}
