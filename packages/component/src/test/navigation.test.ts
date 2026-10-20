@@ -1681,7 +1681,8 @@ describe('navigate', () => {
     }
   })
 
-  it('replaces the URL without reloading frames when reload is false', async () => {
+  it('replaces the URL without reloading frames when reload is false', async (t) => {
+    let changes = recordNavigationChanges(t)
     let originalUrl = window.location.href
     let destination = new URL(originalUrl)
     destination.searchParams.set('variant', 'replace')
@@ -1713,6 +1714,8 @@ describe('navigate', () => {
       })
       expect(reloadFrame).not.toHaveBeenCalled()
       expect(document.activeElement).toBe(input)
+      // Nothing loads, so it isn't a frame navigation.
+      expect(changes).toEqual([])
     } finally {
       window.history.replaceState(window.history.state, '', originalUrl)
       controller.abort()
@@ -2037,19 +2040,6 @@ describe('navigation.current', () => {
 
       expect(navigation.current?.type).toBe('replace')
       expect(navigation.current?.submission?.method).toBe('GET')
-    } finally {
-      await listener.cleanup()
-    }
-  })
-
-  it("doesn't report URL-only updates", async (t) => {
-    let changes = recordNavigationChanges(t)
-    let listener = startHeldNavigationListener()
-    try {
-      await navigate(createTestUrl('current-url-only'), { history: 'replace', reload: false })
-      expect(navigation.current).toBe(null)
-      expect(changes).toHaveLength(0)
-      expect(listener.reloadCount()).toBe(0)
     } finally {
       await listener.cleanup()
     }
@@ -3050,7 +3040,6 @@ function startHeldNavigationListener() {
       getReload(index)[2](new Error('Frame reload failed'))
     },
     stop: () => controller.abort(),
-    reloadCount: () => requested,
     async cleanup() {
       holding = false
       for (let [, resolve] of reloads) resolve({ signal: new AbortController().signal })
