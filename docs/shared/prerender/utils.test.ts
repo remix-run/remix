@@ -30,4 +30,28 @@ export let template = import(\`./template.js\`)
       await fs.rm(outputDir, { recursive: true, force: true })
     }
   })
+
+  it('writes URL-encoded paths to decoded file paths', async () => {
+    let outputDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-docs-prerender-'))
+
+    try {
+      let response = new Response('export let value = 1', {
+        headers: { 'Content-Type': 'application/javascript' },
+      })
+
+      await writeResult(
+        outputDir,
+        '/assets/npm/.pnpm/pkg%402.0.0/index.ts',
+        '/assets/npm/.pnpm/pkg%402.0.0/index.ts',
+        response,
+      )
+
+      assert.equal(
+        await fs.readFile(path.join(outputDir, 'assets/npm/.pnpm/pkg@2.0.0/index.js'), 'utf8'),
+        'export let value = 1',
+      )
+    } finally {
+      await fs.rm(outputDir, { recursive: true, force: true })
+    }
+  })
 })

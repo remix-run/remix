@@ -17,9 +17,12 @@ export async function writeResult(
     return
   }
 
-  let outputFilepath = SCRIPT_FILE_EXT.test(filepath)
-    ? filepath.replace(SCRIPT_FILE_EXT, '.js')
-    : filepath
+  // Crawled paths are URL-encoded (e.g. `.pnpm/pkg%402.0.0`), but static hosts decode request
+  // paths before looking up files, so write files using their decoded names.
+  let decodedFilepath = decodeURIComponent(filepath)
+  let outputFilepath = SCRIPT_FILE_EXT.test(decodedFilepath)
+    ? decodedFilepath.replace(SCRIPT_FILE_EXT, '.js')
+    : decodedFilepath
   let outputPath = path.join(outputDir, outputFilepath)
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
 
