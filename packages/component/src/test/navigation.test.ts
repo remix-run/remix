@@ -2042,6 +2042,19 @@ describe('navigation.current', () => {
     }
   })
 
+  it("doesn't report URL-only updates", async (t) => {
+    let changes = recordNavigationChanges(t)
+    let listener = startHeldNavigationListener()
+    try {
+      await navigate(createTestUrl('current-url-only'), { history: 'replace', reload: false })
+      expect(navigation.current).toBe(null)
+      expect(changes).toHaveLength(0)
+      expect(listener.reloadCount()).toBe(0)
+    } finally {
+      await listener.cleanup()
+    }
+  })
+
   it("doesn't report navigations Remix leaves to the browser", async (t) => {
     let changes = recordNavigationChanges(t)
     let listener = startHeldNavigationListener()

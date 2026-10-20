@@ -467,7 +467,7 @@ let searching = navigation.current?.target === 'search-results'
 
 - A frame redirect keeps the same pending navigation. Its `url` changes to the final URL and `change` fires.
 - When another navigation interrupts it, its `signal` aborts and `navigation.current` becomes the new navigation, in a single `change` event.
-- `handle.frame.reload()` and document navigations aren't frame navigations, so they don't appear in `navigation.current`. Frames report their own reloads with `reloadStart` and `reloadComplete`.
+- URL updates with `reload: false`, `handle.frame.reload()`, and document navigations aren't frame navigations, so they don't appear in `navigation.current`. Frames report their own reloads with `reloadStart` and `reloadComplete`.
 
 ### Waiting for navigation to finish
 

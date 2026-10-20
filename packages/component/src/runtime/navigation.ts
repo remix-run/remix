@@ -260,8 +260,8 @@ export interface NavigationState extends TypedEventTarget<NavigationEventMap> {
   /**
    * The frame navigation Remix is handling, or `null`. It's set as soon as Remix intercepts a
    * navigation, so later `navigate` listeners see it, and stays the same object through frame
-   * redirects. Frame reloads and document navigations aren't frame navigations, so they don't
-   * appear here.
+   * redirects. URL updates with `reload: false`, frame reloads, and document navigations aren't
+   * frame navigations, so they don't appear here.
    */
   readonly current: PendingNavigation | null
   /**
