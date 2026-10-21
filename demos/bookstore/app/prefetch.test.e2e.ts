@@ -10,14 +10,20 @@ const router = await createTestRouter()
 
 describe('bookstore prefetching', () => {
   it('reuses viewport-prefetched frame HTML without caching document navigations', async (t) => {
+    let releaseImages = Promise.withResolvers<void>()
+    t.after(() => releaseImages.resolve())
     let requests: Request[] = []
     let imageRequests: string[] = []
     let page = await t.serve(
-      await createTestServer((request) => {
+      await createTestServer(async (request) => {
         let { pathname, search } = new URL(request.url)
         if (pathname === '/books/bbq') requests.push(request)
         if (pathname.startsWith('/assets/app/images/') || pathname.startsWith('/images/')) {
           imageRequests.push(pathname + search)
+        }
+        // Keep lazy images pending while navigation adopts and hydrates the carousel.
+        if (pathname.includes('/bbq-2.') || pathname.includes('/bbq-3.')) {
+          await releaseImages.promise
         }
         return router.fetch(request)
       }),
@@ -40,12 +46,19 @@ describe('bookstore prefetching', () => {
       }
       if (pathname.startsWith('/assets/app/actions/public/entry.')) entryRequests.push(pathname)
     })
-    page.on('requestfailed', (request) => {
-      if (new URL(request.url()).pathname.startsWith('/assets/')) failedAssets.push(request.url())
-    })
     let cover = page.getByRole('img', { name: 'Ash & Smoke', exact: true })
     let coverHref = await cover.getAttribute('src')
     assert.ok(coverHref?.match(/^\/assets\/app\/images\/bbq-1\.@[\w-]+\.png$/))
+    page.on('requestfailed', (request) => {
+      let pathname = new URL(request.url()).pathname
+      // Firefox can cancel lazy images during hydration; only the cover was prefetched.
+      if (
+        pathname.startsWith('/assets/') &&
+        (request.resourceType() !== 'image' || pathname === coverHref)
+      ) {
+        failedAssets.push(request.url())
+      }
+    })
     await page.waitForFunction(() => {
       let image = document.querySelector('img[alt="Ash & Smoke"]')
       return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0
@@ -92,12 +105,13 @@ describe('bookstore prefetching', () => {
     )
     assert.equal(stylesheetRequests.length, 0)
     assert.deepEqual(entryRequests, [])
-    assert.deepEqual(failedAssets, [])
+    assert.deepEqual(failedAssets, [], `Unexpected asset failures: ${failedAssets.join(', ')}`)
     assert.equal(
       imageRequests.some((path) => path.startsWith('/images/')),
       false,
     )
 
+    releaseImages.resolve()
     let freshDocument = await page.goto('/books/bbq')
     assert.equal(freshDocument?.headers()['cache-control'], 'no-store')
     assert.equal(requests.length, 2)
@@ -259,7 +273,7 @@ describe('bookstore prefetching', () => {
     await started.promise
     let failedAssets: string[] = []
     page.on('requestfailed', (request) => {
-      if (new URL(request.url()).pathname.startsWith('/assets/')) failedAssets.push(request.url())
+      if (new URL(request.url()).pathname === scriptHref) failedAssets.push(request.url())
     })
     await link.click()
     await page.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
