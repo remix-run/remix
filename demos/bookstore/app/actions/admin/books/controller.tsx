@@ -96,6 +96,8 @@ export default createController(routes.admin.books, {
         return render(<AdminBookNotFoundPage />, { status: 404 })
       }
 
+      book = await resolveBookCover(book)
+
       return render(
         <AdminBookFormPage
           title="Edit Book"
@@ -103,7 +105,7 @@ export default createController(routes.admin.books, {
           cancelHref={routes.admin.books.index.href()}
           submitLabel="Update Book"
           method="PUT"
-          book={await resolveBookCover(book)}
+          book={book}
         />,
       )
     },

@@ -64,14 +64,11 @@ export default createController(routes, {
             orderBy: ['id', 'asc'],
           })
         : []
+      matchingBooks = await Promise.all(matchingBooks.map(resolveBookCover))
       let cart = getCurrentCart(session)
 
       return render(
-        <SearchPage
-          query={query}
-          matchingBooks={await Promise.all(matchingBooks.map(resolveBookCover))}
-          cart={cart}
-        />,
+        <SearchPage query={query} matchingBooks={matchingBooks} cart={cart} />,
         browsingResponseInit(request),
       )
     },

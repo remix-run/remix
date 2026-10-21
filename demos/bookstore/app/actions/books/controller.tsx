@@ -15,15 +15,12 @@ export default createController(routes.books, {
   actions: {
     async index({ db, render, request, session }) {
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
+      allBooks = await Promise.all(allBooks.map(resolveBookCover))
       let genreRows = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
       let cart = getCurrentCart(session)
 
       return render(
-        <IndexPage
-          allBooks={await Promise.all(allBooks.map(resolveBookCover))}
-          genres={genreRows.map((row) => row.genre)}
-          cart={cart}
-        />,
+        <IndexPage allBooks={allBooks} genres={genreRows.map((row) => row.genre)} cart={cart} />,
         browsingResponseInit(request),
       )
     },
@@ -39,14 +36,12 @@ export default createController(routes.books, {
         return render(<GenreNotFoundPage genre={genre} />, { status: 404 })
       }
 
+      matchingBooks = await Promise.all(matchingBooks.map(resolveBookCover))
+
       let cart = getCurrentCart(session)
 
       return render(
-        <GenrePage
-          genre={genre}
-          matchingBooks={await Promise.all(matchingBooks.map(resolveBookCover))}
-          cart={cart}
-        />,
+        <GenrePage genre={genre} matchingBooks={matchingBooks} cart={cart} />,
         browsingResponseInit(request),
       )
     },
