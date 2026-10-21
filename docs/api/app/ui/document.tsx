@@ -2,6 +2,7 @@ import * as path from 'node:path'
 
 import type { ScriptEntry } from 'remix/assets'
 import type { Handle, RemixNode } from 'remix/component'
+import { Fragment } from 'remix/component'
 import { ImportMap } from 'remix/component/server'
 import { PagefindElements, shouldLoadPagefind } from 'remix-docs-shared/search'
 import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy'
@@ -13,12 +14,12 @@ import { Icon } from 'remix-docs-shared/ui/icon'
 import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 
-import type { DocsRegistry, NavItemKind, NavPackage, PageDefinition } from '../data/registry.ts'
+import type { DocsRegistry, NavNode, NavSection, PageDefinition } from '../data/registry.ts'
 import {
   buildNotFoundPage,
   getDocPage,
   getHomePage,
-  getNavPackage,
+  getNavChain,
   isPageActive,
 } from '../data/registry.ts'
 import { getAssetEntry } from '../middleware/asset-entry.ts'
@@ -224,15 +225,19 @@ function MainContent(
   }
 }
 
+const navSections: NavSection[] = ['APIs', 'Types']
+
 function SidebarContent(handle: Handle<{ registry: DocsRegistry; page: PageDefinition }>) {
   return () => {
     let { registry, page } = handle.props
     let homePage = getHomePage(registry)
-    let navPackage = getNavPackage(registry, page.packageId)
+    // One panel per menu from the package list down to this page's import path.
+    let chain = getNavChain(registry, page.navId)
+    let stateAt = (depth: number) => (depth === chain.length ? 'current' : 'before')
 
     return (
-      <div class="api-nav" data-api-nav-view={navPackage ? 'package' : 'root'}>
-        <div class="api-nav-panel" data-api-nav-panel="root" inert={navPackage ? true : undefined}>
+      <div class="api-nav">
+        <NavPanel id="root" state={stateAt(0)}>
           <a
             class="docs-nav-item api-nav-row"
             href={homePage.path}
@@ -241,140 +246,119 @@ function SidebarContent(handle: Handle<{ registry: DocsRegistry; page: PageDefin
             {homePage.navLabel}
           </a>
           <h2 class="docs-nav-heading api-nav-heading">Packages</h2>
-          <ul class="api-nav-list">
-            {registry.packages.map((item) => {
-              let itemHome = registry.pages[item.homePageId]
-              let current: 'page' | 'true' | undefined = isPageActive(itemHome, page.path)
-                ? 'page'
-                : item.id === navPackage?.id
-                  ? 'true'
-                  : undefined
+          <NodeLinks registry={registry} nodes={registry.packages} open={chain[0]} />
+        </NavPanel>
+        {chain.map((node, index) => {
+          let parent = chain[index - 1]
+          let back = parent ? registry.pages[parent.homePageId] : homePage
 
-              return (
-                <li key={item.id}>
-                  <a
-                    class="docs-nav-item api-nav-row api-nav-package"
-                    href={itemHome.path}
-                    aria-current={current}
-                  >
-                    {item.label}
-                    <Icon name="chevron-r" />
-                  </a>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-        <div
-          class="api-nav-panel"
-          data-api-nav-panel="package"
-          inert={navPackage ? undefined : true}
-        >
-          {navPackage ? (
-            <PackageMenu
-              registry={registry}
-              navPackage={navPackage}
-              homePage={homePage}
-              currentPath={page.path}
-            />
-          ) : null}
-        </div>
+          return (
+            <NavPanel key={node.id} id={node.id} state={stateAt(index + 1)}>
+              <a class="docs-nav-item api-nav-row api-nav-back" href={back.path} data-api-nav-back>
+                <Icon name="chevron-r" />
+                {parent ? parent.label : 'All packages'}
+              </a>
+              <HeadingLink
+                class="api-nav-title"
+                page={registry.pages[node.homePageId]}
+                currentPath={page.path}
+              >
+                <PathLabel label={node.label} />
+              </HeadingLink>
+              {node.children.length > 0 ? (
+                <>
+                  <h2 class="docs-nav-heading api-nav-heading">Modules</h2>
+                  <NodeLinks registry={registry} nodes={node.children} open={chain[index + 1]} />
+                </>
+              ) : null}
+              {navSections.map((section) => {
+                let items = node.pageIds
+                  .map((pageId) => registry.pages[pageId])
+                  .filter((item) => item.navSection === section)
+                if (items.length === 0) return null
+
+                return (
+                  <Fragment key={section}>
+                    <h2 class="docs-nav-heading api-nav-heading">{section}</h2>
+                    <ul class="api-nav-list">
+                      {items.map((item) => (
+                        <li key={item.path}>
+                          <a
+                            class="docs-nav-item api-nav-row api-nav-symbol"
+                            href={item.path}
+                            aria-current={isPageActive(item, page.path) ? 'page' : undefined}
+                          >
+                            {item.navLabel}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </Fragment>
+                )
+              })}
+            </NavPanel>
+          )
+        })}
       </div>
     )
   }
 }
 
-const kindLetters: Record<NavItemKind, string> = {
-  function: 'F',
-  class: 'C',
-  interface: 'I',
-  type: 'T',
-  variable: 'V',
-  mixin: 'M',
-  demo: 'E',
+// Panels are keyed so the document diff keeps each menu's element, letting state changes slide.
+function NavPanel(
+  handle: Handle<{ id: string; state: 'before' | 'current'; children: RemixNode }>,
+) {
+  return () => (
+    <div
+      class="api-nav-panel"
+      data-rmx-key={`api-nav:${handle.props.id}`}
+      data-api-nav-panel={handle.props.state}
+      inert={handle.props.state === 'current' ? undefined : true}
+    >
+      {handle.props.children}
+    </div>
+  )
 }
 
-function PackageMenu(
-  handle: Handle<{
-    registry: DocsRegistry
-    navPackage: NavPackage
-    homePage: PageDefinition
-    currentPath: string
-  }>,
-) {
+// Rows that open a nested menu. The row for the open menu stays highlighted.
+function NodeLinks(handle: Handle<{ registry: DocsRegistry; nodes: NavNode[]; open?: NavNode }>) {
   return () => {
-    let { registry, navPackage, homePage, currentPath } = handle.props
-    // Groups like `middleware` have no root import path, so their index page heads the menu.
-    let hasRoot = navPackage.subpackages.some((subpackage) => subpackage.label === navPackage.id)
-    let sections = hasRoot
-      ? navPackage.subpackages
-      : [
-          {
-            id: registry.pages[navPackage.homePageId].title,
-            label: navPackage.id,
-            overviewPageId: navPackage.homePageId,
-            pageIds: [],
-          },
-          ...navPackage.subpackages,
-        ]
+    let { registry, nodes, open } = handle.props
 
     return (
-      <>
-        <a class="docs-nav-item api-nav-row api-nav-back" href={homePage.path} data-api-nav-back>
-          <Icon name="chevron-r" />
-          All packages
-        </a>
-        <p class="docs-nav-heading api-nav-row api-nav-title">{navPackage.label}</p>
-        {sections.map((subpackage) => (
-          <section key={subpackage.id} class="api-nav-subpackage">
-            {subpackage.label === navPackage.id ? null : (
-              <p class="docs-nav-heading api-nav-row api-nav-subpackage__heading">
-                <PathLabel label={subpackage.label} />
-              </p>
-            )}
-            <ul class="api-nav-list" aria-label={subpackage.id}>
-              {subpackage.overviewPageId ? (
-                <NavLink page={registry.pages[subpackage.overviewPageId]} currentPath={currentPath}>
-                  Overview
-                </NavLink>
-              ) : null}
-              {subpackage.pageIds.map((pageId) => {
-                let page = registry.pages[pageId]
-                return (
-                  <NavLink key={page.path} page={page} currentPath={currentPath}>
-                    {page.kind ? (
-                      <span class="api-nav-kind" data-kind={page.kind} aria-hidden="true">
-                        {kindLetters[page.kind]}
-                      </span>
-                    ) : null}
-                    <span class="api-nav-symbol__name">{page.navLabel}</span>
-                  </NavLink>
-                )
-              })}
-            </ul>
-          </section>
+      <ul class="api-nav-list">
+        {nodes.map((node) => (
+          <li key={node.id}>
+            <a
+              class="docs-nav-item api-nav-row api-nav-node"
+              href={registry.pages[node.homePageId].path}
+              aria-current={node === open ? 'true' : undefined}
+            >
+              <PathLabel label={node.label} />
+              <Icon name="chevron-r" />
+            </a>
+          </li>
         ))}
-      </>
+      </ul>
     )
   }
 }
 
-function NavLink(
-  handle: Handle<{ page: PageDefinition; currentPath: string; children: RemixNode }>,
+// The menu title links to its overview but keeps the heading style.
+function HeadingLink(
+  handle: Handle<{ class: string; page: PageDefinition; currentPath: string; children: RemixNode }>,
 ) {
   return () => {
     let { page, currentPath, children } = handle.props
 
     return (
-      <li>
-        <a
-          class="docs-nav-item api-nav-row api-nav-symbol"
-          href={page.path}
-          aria-current={isPageActive(page, currentPath) ? 'page' : undefined}
-        >
-          {children}
-        </a>
-      </li>
+      <a
+        class={`docs-nav-item api-nav-row api-nav-heading-link ${handle.props.class}`}
+        href={page.path}
+        aria-current={isPageActive(page, currentPath) ? 'page' : undefined}
+      >
+        {children}
+      </a>
     )
   }
 }

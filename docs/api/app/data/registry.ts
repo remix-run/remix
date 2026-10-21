@@ -16,8 +16,6 @@ const TYPE_EYEBROW: Record<ApiTypeKind, string> = {
 export const HOME_PAGE_ID = '__home__'
 export const NOT_FOUND_PAGE_ID = '__not-found__'
 
-export type NavItemKind = ApiTypeKind | 'demo'
-
 export type PageDefinition = {
   id: string
   description: string
@@ -26,35 +24,33 @@ export type PageDefinition = {
   path: string
   title: string
   docFile?: DocFile
-  kind?: NavItemKind
-  // The top-level package whose menu the sidebar shows for this page.
-  packageId?: string
+  // The sidebar section this page is listed under in its menu.
+  navSection?: NavSection
+  // The import path whose sidebar menu this page belongs to.
+  navId?: string
 }
 
-// One import path, like `remix/data-table/mysql`, and its pages.
-export type NavSubpackage = {
-  id: string
-  label: string
-  overviewPageId?: string
-  pageIds: string[]
-}
+export type NavSection = 'APIs' | 'Types'
 
-// One top-level package, like `data-table`, and its import paths.
-export type NavPackage = {
+// One sidebar menu: an import path like `remix/data-table/mysql` (or a group like
+// `remix/middleware` with no exports of its own), its pages and the import paths nested under it.
+export type NavNode = {
   id: string
   label: string
   homePageId: string
-  subpackages: NavSubpackage[]
+  pageIds: string[]
+  children: NavNode[]
 }
 
 export type DocsRegistry = {
   pages: Record<string, PageDefinition>
-  packages: NavPackage[]
+  packages: NavNode[]
 }
 
 export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegistry {
   let pages: Record<string, PageDefinition> = {}
-  let packages = new Map<string, NavPackage>()
+  // Import path menus, grouped by top-level package (`data-table`, `middleware`, …).
+  let nodesByPackage = new Map<string, NavNode[]>()
 
   pages[HOME_PAGE_ID] = {
     id: HOME_PAGE_ID,
@@ -75,14 +71,20 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
   for (let pkg of sortedPackages) {
     let packageId = getNavPackageId(pkg)
     let files = filesByPackage.get(pkg)!
-    let subpackage: NavSubpackage = { id: pkg, label: getImportLabel(pkg), pageIds: [] }
+    let node: NavNode = {
+      id: pkg,
+      label: getImportLabel(pkg),
+      homePageId: '',
+      pageIds: [],
+      children: [],
+    }
 
-    let addPage = (file: DocFile, page: Omit<PageDefinition, 'id' | 'path' | 'packageId'>) => {
+    let addPage = (file: DocFile, page: Omit<PageDefinition, 'id' | 'path' | 'navId'>) => {
       pages[file.urlPath] = {
         ...page,
         id: file.urlPath,
         path: getDocPath(file.urlPath, version),
-        packageId,
+        navId: packageId === undefined ? undefined : pkg,
       }
     }
 
@@ -95,74 +97,85 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
         title: pkg,
         docFile: overview,
       })
-      subpackage.overviewPageId = overview.urlPath
+      node.homePageId = overview.urlPath
     }
 
-    let demos = files
-      .filter((file) => file.kind === 'demo')
-      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
-    for (let file of demos) {
+    // Demo pages stay reachable by URL but aren't listed in the sidebar.
+    for (let file of files) {
+      if (file.kind !== 'demo') continue
       addPage(file, {
         description: '',
         eyebrow: `${pkg} · Demo`,
         navLabel: file.name,
         title: file.name,
         docFile: file,
-        kind: 'demo',
       })
-      subpackage.pageIds.push(file.urlPath)
     }
 
+    // Runtime exports first, then type-only exports, each A–Z.
     let apis = files
       .filter((file) => file.kind === 'api')
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => Number(isTypeOnly(a)) - Number(isTypeOnly(b)) || a.name.localeCompare(b.name))
     for (let file of apis) {
       addPage(file, {
         description: '',
         eyebrow: `${pkg} · ${TYPE_EYEBROW[file.type]}`,
-        navLabel: file.name,
+        navSection: isTypeOnly(file) ? 'Types' : 'APIs',
+        navLabel: getApiNavLabel(file),
         title: file.name,
         docFile: file,
-        kind: file.type,
       })
-      subpackage.pageIds.push(file.urlPath)
+      node.pageIds.push(file.urlPath)
     }
 
-    if (packageId === undefined) continue
+    if (packageId !== undefined) getOrSet(nodesByPackage, packageId, () => []).push(node)
+  }
 
-    let navPackage = getOrSet(packages, packageId, () => ({
-      id: packageId,
+  let packages: NavNode[] = []
+  for (let [packageId, nodes] of nodesByPackage) {
+    let top = nodes.find((node) => node.label === packageId) ?? {
+      id: `${nodes[0].id.split('/')[0]}/${packageId}`,
       label: packageId,
       homePageId: '',
-      subpackages: [],
-    }))
-    navPackage.subpackages.push(subpackage)
-  }
-
-  for (let navPackage of packages.values()) {
-    let root = navPackage.subpackages.find((subpackage) => subpackage.label === navPackage.id)
-    if (root?.overviewPageId) {
-      navPackage.homePageId = root.overviewPageId
-      continue
+      pageIds: [],
+      children: [],
     }
 
-    // Groups like `remix/middleware` have no exports of their own, so they get an index page
-    // that links to each import path.
-    let scope = navPackage.subpackages[0].id.split('/')[0]
-    let id = `${scope.replace(/^@/, '')}/${navPackage.id}`
-    pages[id] = {
-      id,
-      description: '',
-      eyebrow: 'Package',
-      navLabel: navPackage.id,
-      path: getDocPath(id, version),
-      title: `${scope}/${navPackage.id}`,
-      packageId: navPackage.id,
+    // Nest each import path under the closest one it extends: `data-table/migrations/node` goes
+    // under `data-table/migrations`, and `component/dev/refresh` under `component`.
+    for (let node of nodes) {
+      if (node === top) continue
+      let parent = nodes.reduce(
+        (closest, other) =>
+          node.id.startsWith(`${other.id}/`) && other.id.length > closest.id.length
+            ? other
+            : closest,
+        top,
+      )
+      parent.children.push(node)
     }
-    navPackage.homePageId = id
+
+    // Menus need a page to open. Groups like `remix/middleware` and the few import paths without
+    // a README get an index page listing their exports and nested import paths.
+    for (let node of [top, ...nodes]) {
+      if (node.homePageId) continue
+      let slug = node.id.replace(/^@/, '')
+      pages[slug] = {
+        id: slug,
+        description: '',
+        eyebrow: 'Package',
+        navLabel: node.label,
+        path: getDocPath(slug, version),
+        title: node.id,
+        navId: node.id,
+      }
+      node.homePageId = slug
+    }
+
+    packages.push(top)
   }
 
-  return { pages, packages: [...packages.values()].sort((a, b) => a.id.localeCompare(b.id)) }
+  return { pages, packages: packages.sort((a, b) => a.label.localeCompare(b.label)) }
 }
 
 export function getHomePage(registry: DocsRegistry): PageDefinition {
@@ -173,11 +186,22 @@ export function getDocPage(registry: DocsRegistry, slug: string): PageDefinition
   return registry.pages[slug]
 }
 
-export function getNavPackage(
-  registry: DocsRegistry,
-  packageId: string | undefined,
-): NavPackage | undefined {
-  return registry.packages.find((navPackage) => navPackage.id === packageId)
+// The menus from the top-level package down to the one for `navId`.
+export function getNavChain(registry: DocsRegistry, navId: string | undefined): NavNode[] {
+  if (navId === undefined) return []
+  for (let node of registry.packages) {
+    let chain = findNavChain(node, navId)
+    if (chain) return chain
+  }
+  return []
+}
+
+function findNavChain(node: NavNode, navId: string): NavNode[] | undefined {
+  if (node.id === navId) return [node]
+  for (let child of node.children) {
+    let chain = findNavChain(child, navId)
+    if (chain) return [node, ...chain]
+  }
 }
 
 export function buildNotFoundPage(slug: string, version?: string): PageDefinition {
@@ -210,6 +234,16 @@ function getImportLabel(pkg: string): string {
 
 function getDocPath(slug: string, version: string | undefined): string {
   return withVersion(routes.api.document.href({ slug }), version)
+}
+
+// Functions read as calls (`createRoot()`) and components as elements (`<Frame>`).
+function getApiNavLabel(file: ApiDocFile): string {
+  if (file.type !== 'function') return file.name
+  return /^[A-Z]/.test(file.name) ? `<${file.name}>` : `${file.name}()`
+}
+
+function isTypeOnly(file: ApiDocFile): boolean {
+  return file.type === 'type' || file.type === 'interface'
 }
 
 function getOrSet<key, value>(map: Map<key, value>, key: key, init: () => value): value {

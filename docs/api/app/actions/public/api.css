@@ -8,7 +8,11 @@ html {
   --docs-sidebar-offset: 348px;
 }
 
-/* The sidebar shows either the package list or one package's menu, iOS-settings style. */
+/*
+  The sidebar is a stack of menus, iOS-settings style: the package list, then one panel per level
+  down to the current import path. Panels before the current one wait off to the left, and panels
+  the user backed out of wait off to the right, past the menu's padding.
+*/
 .api-nav {
   --api-nav-slide-duration: 280ms;
   --api-nav-slide: var(--api-nav-slide-duration) cubic-bezier(0.32, 0.72, 0, 1);
@@ -18,6 +22,36 @@ html {
   overflow-x: clip;
 }
 
+/*
+  Sliding panels are clipped at the menu's edges. Desktop menus pad out to the window's left edge
+  and the page content on the right, so items keep their shape until they reach those edges.
+*/
+@media (width >= 900px) {
+  #docs-navigation {
+    --api-nav-pad-start: calc(var(--docs-sidebar-inline-start) - var(--docs-nav-item-inset));
+    /* A classic scrollbar sits in the right padding, next to the page content. */
+    --api-nav-pad-end: calc(
+      var(--docs-sidebar-offset) - var(--docs-sidebar-inline-start) -
+        var(--docs-sidebar-content-width) - var(--docs-navigation-scrollbar-width, 0px)
+    );
+  }
+
+  .api-nav {
+    margin-inline: calc(-1 * var(--api-nav-pad-start)) calc(-1 * var(--api-nav-pad-end));
+    padding-inline: var(--api-nav-pad-start) var(--api-nav-pad-end);
+  }
+
+  /* The scrolling sidebar clips too, so its padding holds the same space. */
+  #docs-navigation[data-scrollable] {
+    width: calc(
+      var(--docs-sidebar-content-width) + var(--docs-nav-item-inset) + var(--api-nav-pad-start) +
+        var(--api-nav-pad-end) + var(--docs-navigation-scrollbar-width, 0px)
+    );
+    margin-left: calc(-1 * var(--api-nav-pad-start));
+    padding-inline: var(--api-nav-pad-start) var(--api-nav-pad-end);
+  }
+}
+
 .api-nav-panel {
   display: flex;
   flex-direction: column;
@@ -25,24 +59,23 @@ html {
 }
 
 /*
-  The outgoing panel hides and collapses once it has slid away, so it neither shows nor stretches
-  the sidebar's scroll height. The incoming one shows (and can take focus) at once.
+  Waiting panels hide and collapse once they have slid away, so they neither show nor stretch the
+  sidebar's scroll height. The current one shows (and can take focus) at once.
 */
-.api-nav[data-api-nav-view='root'] [data-api-nav-panel='package'],
-.api-nav[data-api-nav-view='package'] [data-api-nav-panel='root'] {
+.api-nav-panel:not([data-api-nav-panel='current']) {
   position: absolute;
-  inset: 0 0 auto;
+  inset: 0 var(--api-nav-pad-end, 0) auto var(--api-nav-pad-start, 0);
   max-height: 0;
   overflow: hidden;
   visibility: hidden;
 }
 
-.api-nav[data-api-nav-view='root'] [data-api-nav-panel='package'] {
-  transform: translateX(100%);
+.api-nav-panel[data-api-nav-panel='before'] {
+  transform: translateX(calc(-100% - var(--api-nav-pad-start, 0px)));
 }
 
-.api-nav[data-api-nav-view='package'] [data-api-nav-panel='root'] {
-  transform: translateX(-100%);
+.api-nav-panel[data-api-nav-panel='after'] {
+  transform: translateX(calc(100% + var(--api-nav-pad-end, 0px)));
 }
 
 /* Only the desktop sidebar slides; the mobile menu switches instantly. */
@@ -51,12 +84,12 @@ html {
     transition: transform var(--api-nav-slide);
   }
 
-  .api-nav[data-api-nav-view='root'] [data-api-nav-panel='package'],
-  .api-nav[data-api-nav-view='package'] [data-api-nav-panel='root'] {
+  /* `max-height` goes from `none`, which can't interpolate, so the delay needs allow-discrete. */
+  .api-nav-panel:not([data-api-nav-panel='current']) {
     transition:
       transform var(--api-nav-slide),
       visibility var(--api-nav-slide),
-      max-height 0s var(--api-nav-slide-duration);
+      max-height 0s var(--api-nav-slide-duration) allow-discrete;
   }
 }
 
@@ -86,11 +119,11 @@ html {
   font-size: var(--docs-font-size-label);
 }
 
-.api-nav-package {
+.api-nav-node {
   justify-content: space-between;
 }
 
-.api-nav-package svg,
+.api-nav-node svg,
 .api-nav-back svg {
   flex: none;
   width: 16px;
@@ -113,24 +146,17 @@ html {
 .api-nav-title {
   display: flex;
   align-items: center;
-  margin: 0 0 calc(8px - var(--docs-nav-item-gap));
 }
 
-.api-nav-subpackage {
-  display: flex;
-  flex-direction: column;
-  gap: var(--docs-nav-item-gap);
+/* The menu title links to its overview but keeps the heading look until hovered or current. */
+.docs-nav-item.api-nav-heading-link {
+  color: var(--docs-sidebar-heading);
+  font-weight: var(--rmx-font-weight-semibold);
 }
 
-.api-nav-subpackage + .api-nav-subpackage {
-  margin-top: var(--docs-sidebar-group-gap);
-}
-
-.api-nav-subpackage__heading {
-  display: flex;
-  align-items: center;
-  margin: 0;
-  padding-block: 8px;
+a.docs-nav-item.api-nav-heading-link:is(:hover, [aria-current]) {
+  color: var(--rmx-color-text-primary);
+  font-weight: var(--rmx-font-weight-semibold);
 }
 
 .api-nav-path-segment {
@@ -138,52 +164,12 @@ html {
 }
 
 .api-nav-symbol {
+  display: block;
   height: var(--docs-nav-item-height);
-}
-
-.api-nav-symbol__name {
   overflow: hidden;
+  line-height: var(--docs-nav-item-height);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.api-nav-kind {
-  display: inline-grid;
-  flex: none;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border: 1.5px solid currentColor;
-  border-radius: 5px;
-  color: var(--api-kind-color);
-  font-size: 11px;
-  font-weight: var(--rmx-font-weight-semibold);
-  line-height: 1;
-}
-
-.api-nav-kind[data-kind='function'] {
-  --api-kind-color: light-dark(#6d28d9, #a78bfa);
-}
-
-.api-nav-kind[data-kind='class'] {
-  --api-kind-color: light-dark(#1d4ed8, #60a5fa);
-}
-
-.api-nav-kind[data-kind='interface'] {
-  --api-kind-color: light-dark(#15803d, #4ade80);
-}
-
-.api-nav-kind[data-kind='type'] {
-  --api-kind-color: light-dark(#be185d, #f472b6);
-}
-
-.api-nav-kind[data-kind='variable'] {
-  --api-kind-color: light-dark(#b45309, #fbbf24);
-}
-
-.api-nav-kind[data-kind='mixin'],
-.api-nav-kind[data-kind='demo'] {
-  --api-kind-color: light-dark(#0f766e, #2dd4bf);
 }
 
 .api-page-header {

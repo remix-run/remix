@@ -4,7 +4,7 @@ import { clientEntry } from 'remix/component'
 import type { DocsContext } from '../../data/docs.ts'
 import { loadDemoComponent, renderDemoSource } from '../../data/demos.tsx'
 import { renderMarkdownFile } from '../../data/markdown.ts'
-import { getDocPage, getNavPackage } from '../../data/registry.ts'
+import { getDocPage, getNavChain } from '../../data/registry.ts'
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
 import { fileResponse } from '../file-response.ts'
@@ -58,11 +58,11 @@ export function createApiController(options: ApiControllerOptions) {
           )
         }
 
-        let navPackage = getNavPackage(registry, getDocPage(registry, params.slug)?.packageId)
-        if (navPackage) {
+        let node = getNavChain(registry, getDocPage(registry, params.slug)?.navId).at(-1)
+        if (node) {
           return render(
             <Document {...docProps}>
-              <PackageIndex registry={registry} navPackage={navPackage} />
+              <PackageIndex registry={registry} node={node} />
             </Document>,
           )
         }

@@ -2,7 +2,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import { getVersionedLookupHref } from './data/lookup.ts'
-import { buildRegistry, type DocFile } from './data/registry.ts'
+import { buildRegistry, getNavChain, type DocFile, type NavNode } from './data/registry.ts'
 import { createApiRouter } from './router.ts'
 import { getApiRouteHref } from './routes.ts'
 import { createAssetServer } from './assets.ts'
@@ -302,39 +302,89 @@ describe('getApiRouteHref()', () => {
 })
 
 describe('buildRegistry()', () => {
-  it('groups import paths under their top-level package', () => {
+  it('nests import paths into menus and lists runtime exports before types', () => {
     let registry = buildRegistry([
       packageFile('remix/data-table'),
+      packageFile('remix/data-table/migrations'),
+      packageFile('remix/data-table/migrations/node'),
       packageFile('remix/data-table/mysql'),
       apiFile('remix/data-table', 'function', 'query'),
       apiFile('remix/data-table', 'class', 'Database'),
-      apiFile('remix/data-table/mysql', 'function', 'createMysqlDatabase'),
+      apiFile('remix/data-table', 'type', 'AnyTable'),
       packageFile('remix/middleware/cors'),
       packageFile('remix'),
     ])
 
-    assert.deepEqual(
-      registry.packages.map((navPackage) => [
-        navPackage.id,
-        navPackage.homePageId,
-        navPackage.subpackages.map((subpackage) => [subpackage.label, subpackage.pageIds]),
-      ]),
-      [
-        [
-          'data-table',
-          'remix/data-table',
-          [
-            ['data-table', ['remix/data-table/class/Database', 'remix/data-table/function/query']],
-            ['data-table/mysql', ['remix/data-table/mysql/function/createMysqlDatabase']],
-          ],
+    assert.deepEqual(registry.packages.map(summarizeNavNode), [
+      {
+        label: 'data-table',
+        home: 'remix/data-table',
+        pages: [
+          'remix/data-table/class/Database',
+          'remix/data-table/function/query',
+          'remix/data-table/type/AnyTable',
         ],
-        ['middleware', 'remix/middleware', [['middleware/cors', []]]],
-      ],
-    )
+        children: [
+          {
+            label: 'data-table/migrations',
+            home: 'remix/data-table/migrations',
+            pages: [],
+            children: [
+              {
+                label: 'data-table/migrations/node',
+                home: 'remix/data-table/migrations/node',
+                pages: [],
+                children: [],
+              },
+            ],
+          },
+          { label: 'data-table/mysql', home: 'remix/data-table/mysql', pages: [], children: [] },
+        ],
+      },
+      {
+        label: 'middleware',
+        home: 'remix/middleware',
+        pages: [],
+        children: [
+          { label: 'middleware/cors', home: 'remix/middleware/cors', pages: [], children: [] },
+        ],
+      },
+    ])
     assert.equal(registry.pages['remix/middleware'].path, '/remix/middleware/')
-    assert.equal(registry.pages.remix.packageId, undefined)
+    assert.deepEqual(
+      getNavChain(registry, registry.pages['remix/data-table/migrations/node'].navId).map(
+        (node) => node.label,
+      ),
+      ['data-table', 'data-table/migrations', 'data-table/migrations/node'],
+    )
+    assert.equal(registry.pages.remix.navId, undefined)
   })
 })
+
+describe('sidebar labels', () => {
+  it('shows functions as calls and components as elements', () => {
+    let registry = buildRegistry([
+      apiFile('remix/component', 'function', 'css'),
+      apiFile('remix/component', 'function', 'Frame'),
+      apiFile('remix/component', 'class', 'Database'),
+    ])
+
+    assert.equal(registry.pages['remix/component/function/css'].navLabel, 'css()')
+    assert.equal(registry.pages['remix/component/function/Frame'].navLabel, '<Frame>')
+    assert.equal(registry.pages['remix/component/class/Database'].navLabel, 'Database')
+  })
+})
+
+type NavNodeSummary = { label: string; home: string; pages: string[]; children: NavNodeSummary[] }
+
+function summarizeNavNode(node: NavNode): NavNodeSummary {
+  return {
+    label: node.label,
+    home: node.homePageId,
+    pages: node.pageIds,
+    children: node.children.map(summarizeNavNode),
+  }
+}
 
 function packageFile(pkg: string): DocFile {
   return {
@@ -347,6 +397,6 @@ function packageFile(pkg: string): DocFile {
   }
 }
 
-function apiFile(pkg: string, type: 'class' | 'function', name: string): DocFile {
+function apiFile(pkg: string, type: 'class' | 'function' | 'type', name: string): DocFile {
   return { kind: 'api', path: '', type, name, package: pkg, urlPath: `${pkg}/${type}/${name}` }
 }

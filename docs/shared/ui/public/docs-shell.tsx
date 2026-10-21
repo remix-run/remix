@@ -87,6 +87,7 @@ export function startDocsShellBehavior(
 
   signal.addEventListener('abort', () => {
     navigation?.removeAttribute('data-scrollable')
+    navigation?.style.removeProperty('--docs-navigation-scrollbar-width')
     root.removeAttribute('data-docs-mobile-panel')
     if (mobileNavigationTop) {
       root.style.setProperty('--docs-mobile-navigation-top', mobileNavigationTop)
@@ -104,9 +105,12 @@ export function startDocsShellBehavior(
   }
 
   function updateNavigationScrollable() {
-    navigation?.toggleAttribute(
-      'data-scrollable',
-      navigation.scrollHeight > navigation.clientHeight,
+    if (!navigation) return
+    navigation.toggleAttribute('data-scrollable', navigation.scrollHeight > navigation.clientHeight)
+    // Classic scrollbars take their width from the content, so publish it for the styles to add.
+    navigation.style.setProperty(
+      '--docs-navigation-scrollbar-width',
+      `${navigation.offsetWidth - navigation.clientWidth}px`,
     )
   }
 

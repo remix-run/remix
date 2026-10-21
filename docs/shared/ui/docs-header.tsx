@@ -222,7 +222,8 @@ const searchButtonCss = css({
     top: 'var(--site-header-height)',
     left: 'var(--docs-sidebar-inline-start)',
     justifyContent: 'space-between',
-    width: 'var(--docs-sidebar-content-width)',
+    // Ends at the collapse icon, which sits 8px inside its button at the column's edge.
+    width: 'calc(var(--docs-sidebar-content-width) - 8px)',
     border: '1px solid var(--docs-nav-control-border)',
   },
 })

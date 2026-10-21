@@ -85,7 +85,8 @@ export const navigationCss = css({
     transform: 'translateX(calc(-1 * var(--docs-sidebar-offset) * var(--docs-nav-collapse)))',
     pointerEvents: 'auto',
     '&[data-scrollable]': {
-      width: 'calc(var(--docs-sidebar-content-width) + var(--docs-nav-item-inset) + 8px)',
+      width:
+        'calc(var(--docs-sidebar-content-width) + var(--docs-nav-item-inset) + 8px + var(--docs-navigation-scrollbar-width, 0px))',
       marginLeft: '-4px',
       paddingBlockEnd: 'var(--rmx-space-lg)',
       paddingInline: '4px',
