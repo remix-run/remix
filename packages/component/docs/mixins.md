@@ -37,7 +37,34 @@ Use `<handle.element {...props} />` to return host props, with your overrides af
 
 Mixins run in order, so each one sees the props produced by earlier mixins. `mix` accepts a descriptor, nested arrays, and falsy entries such as `enabled && behavior()`. The runtime flattens arrays and ignores falsy entries. Keep setup functions at module scope and keep mixin ordering stable: changing the setup function at a slot disposes that mixin and sets up its replacement.
 
-Setup and render also run during server rendering. Put DOM access in lifecycle listeners or queued tasks, which run in the browser.
+By default, setup and render also run during server rendering. Put DOM access in lifecycle listeners or queued tasks, which run in the browser.
+
+## Browser-only mixins
+
+Pass `{ ssr: false }` as the second argument to `createMixin` when a mixin only adds browser behavior:
+
+```tsx
+import { createMixin } from 'remix/component'
+
+const focusOnInsert = createMixin<HTMLElement>(
+  (handle) => {
+    handle.addEventListener('insert', ({ node }) => node.focus())
+  },
+  { ssr: false },
+)
+
+function SearchField() {
+  return () => <input type="search" mix={focusOnInsert()} />
+}
+```
+
+The server skips both setup and render for this mixin. The browser initializes it as usual, including during hydration. Options are read when the factory is created. Omitting `ssr`, or setting it to `true`, keeps server rendering enabled.
+
+Only use this option when skipping the mixin leaves correct server HTML. Keep server rendering enabled for mixins that supply initial attributes, ARIA props, styles, or nested mixins that affect the HTML. A server-rendered mixin can still return browser-only mixins; the server skips those nested mixins too.
+
+The module containing the mixin and the arguments passed to its factory still run on the server. `ssr: false` skips mixin setup and render; it does not remove the module from the server bundle.
+
+The built-in `on` and `ref` mixins use this option because their work only runs in the browser.
 
 ## The mixin handle
 

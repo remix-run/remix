@@ -157,6 +157,67 @@ describe('createHtmlResponse()', () => {
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
 
+      it('checks a short prefix without decoding a large first chunk', async (t) => {
+        let content = '<!DOCTYPE html><p>' + '日本語🙂'.repeat(5000) + '</p>'
+        let bytes = new TextEncoder().encode(content)
+        let decodedBytes = 0
+        let decode = TextDecoder.prototype.decode
+        t.mock.method(
+          TextDecoder.prototype,
+          'decode',
+          function (this: TextDecoder, ...args: Parameters<TextDecoder['decode']>) {
+            decodedBytes += args[0]?.byteLength ?? 0
+            return decode.apply(this, args)
+          },
+        )
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(bytes)
+            controller.close()
+          },
+        })
+
+        let response = createHtmlResponse(stream)
+        assert.deepEqual(new Uint8Array(await response.arrayBuffer()), bytes)
+        assert.ok(decodedBytes < 1024)
+      })
+
+      it('recognizes a doctype that crosses the prefix boundary', async () => {
+        let content = ' '.repeat(60) + '<!doctype html><p>日本語🙂</p>'
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(content))
+            controller.close()
+          },
+        })
+
+        assert.equal(await createHtmlResponse(stream).text(), content)
+      })
+
+      it('recognizes a doctype after Unicode whitespace split at the prefix boundary', async () => {
+        let content = ' '.repeat(63) + '\u2003<!DOCTYPE html><p>日本語🙂</p>'
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(content))
+            controller.close()
+          },
+        })
+
+        assert.equal(await createHtmlResponse(stream).text(), content)
+      })
+
+      it('prepends a doctype after long whitespace when one is missing', async () => {
+        let content = '\u2003'.repeat(50) + '<p>日本語🙂</p>'
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(content))
+            controller.close()
+          },
+        })
+
+        assert.equal(await createHtmlResponse(stream).text(), '<!DOCTYPE html>' + content)
+      })
+
       it('handles empty ReadableStream', async () => {
         let stream = new ReadableStream({
           start(controller) {
