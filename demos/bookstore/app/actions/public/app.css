@@ -139,6 +139,11 @@
     min-height: 100px;
     resize: vertical;
   }
+  .form-group input[data-touched]:invalid,
+  .form-group input[aria-invalid='true'] {
+    border-color: #e74c3c;
+    background: #fff1ef;
+  }
   .alert {
     padding: 1rem;
     border-radius: 4px;

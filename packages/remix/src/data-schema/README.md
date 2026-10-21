@@ -96,7 +96,26 @@ let filters = s.parse(
 
 `f.object(...)` is the root schema for `FormData` and `URLSearchParams`. Use `f.field(...)` for one text value, `f.fields(...)` for repeated text values, `f.file(...)` for one uploaded file, and `f.files(...)` for repeated files. When you want a fallback value, prefer `s.defaulted(s.string(), '')`. File helpers are intended for `FormData`; `URLSearchParams` only supports text values.
 
-You can also customize built-in validation messages with `errorMap`:
+## Schema metadata
+
+Object schemas expose their property schemas through `.shape` for reuse. Adapters can inspect generic check descriptions without running validators or default factories:
+
+```ts
+import { getSchemaMetadata, object, string } from 'remix/data-schema'
+import { minLength } from 'remix/data-schema/checks'
+
+let Account = object({ username: string().pipe(minLength(3)) })
+let metadata = getSchemaMetadata(Account.shape.username)
+// metadata.checks: [{ code: 'string.min_length', values: { min: 3 } }]
+```
+
+Metadata also reports known undefined handling from schema wrappers. It does not describe arbitrary refinements or replace validation.
+
+For schema-backed field definitions, typed form parsing, HTML constraints, and browser feedback, see the [UI form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). Those APIs live in `@remix-run/ui/form` and can also be used in server handlers.
+
+## Per-parse messages
+
+Pass `errorMap` to `parse()` or `parseSafe()` to customize validation messages:
 
 ```ts
 import { object, parseSafe, string } from 'remix/data-schema'
@@ -122,7 +141,7 @@ let result = parseSafe(User, input, {
 })
 ```
 
-`errorMap` receives `{ code, defaultMessage, path, values, input, locale }`. Return `undefined` to keep the default message.
+`errorMap` receives `{ code, defaultMessage, path, values, input, locale }`. Return `undefined` to keep the default message. Explicit refinement messages and uncoded checks bypass the map. Omit a refinement's message to customize `refine.failed`; coded checks remain mappable even when they supply a message.
 
 ## Primitives
 

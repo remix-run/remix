@@ -8,8 +8,13 @@
       "npm": "node_modules",
       "packages": "packages"
     },
-    "allowFiles": ["demos/bookstore/app/routes.ts", "demos/bookstore/app/**/public/**"],
-    "allowPackages": ["remix"],
+    "allowFiles": [
+      "demos/bookstore/app/routes.ts",
+      "demos/bookstore/app/**/public/**",
+      "demos/bookstore/app/actions/auth/login/login-form.ts",
+      "demos/bookstore/app/actions/auth/login/login-schema.ts"
+    ],
+    "allowPackages": ["remix", "@remix-run/ui"],
     "denyFiles": ["demos/bookstore/app/**/*.test.*"]
   },
   "db": {

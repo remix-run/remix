@@ -75,6 +75,9 @@ importers:
 
   demos/bookstore:
     dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -88,6 +91,22 @@ importers:
       playwright:
         specifier: 'catalog:'
         version: 1.60.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  demos/data-model-forms:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -2367,6 +2386,9 @@ importers:
       '@remix-run/component':
         specifier: workspace:^
         version: link:../component
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../data-schema
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*

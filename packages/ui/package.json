@@ -41,6 +41,10 @@
       "types": "./src/combobox.tsx",
       "default": "./src/combobox.tsx"
     },
+    "./form": {
+      "types": "./src/form.ts",
+      "default": "./src/form.ts"
+    },
     "./listbox": {
       "types": "./src/listbox.ts",
       "default": "./src/listbox.ts"
@@ -85,6 +89,10 @@
         "types": "./dist/combobox.d.ts",
         "default": "./dist/combobox.js"
       },
+      "./form": {
+        "types": "./dist/form.d.ts",
+        "default": "./dist/form.js"
+      },
       "./listbox": {
         "types": "./dist/listbox.d.ts",
         "default": "./dist/listbox.js"
@@ -113,7 +121,8 @@
     }
   },
   "dependencies": {
-    "@remix-run/component": "workspace:^"
+    "@remix-run/component": "workspace:^",
+    "@remix-run/data-schema": "workspace:^"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
