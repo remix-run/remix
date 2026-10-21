@@ -7,6 +7,8 @@ import { run } from 'remix/component'
 import { reloadOnServerUpdate } from 'remix-docs-shared/hmr/browser'
 import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/search/browser'
 
+import { startApiNav } from './api-nav.ts'
+
 let app = run({
   async loadModule(moduleUrl: string, exportName: string) {
     let module = await importModule(moduleUrl)
@@ -59,6 +61,7 @@ app.ready().catch((error: unknown) => {
 reloadOnServerUpdate(app)
 
 startPagefindSearch()
+startApiNav()
 
 window.navigation?.addEventListener('navigate', () => {
   closePagefindSearch()

@@ -284,7 +284,7 @@ The button has no request behavior to prove, so this test stays at the browser c
 
 An end-to-end test runs the router behind a real local HTTP server and drives the app through a Playwright `Page`. Use this boundary for a small number of flows where navigation, browser behavior, server rendering, and persistence must work together.
 
-[`createTestServer(...)`](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/) adapts the router to a server on an available local port. [`t.serve(...)`](https://api.remix.run/api/remix/test/interface/TestContext/) gives the Playwright page that server as its base URL and closes both after the test:
+[`createTestServer(...)`](https://api.remix.run/remix/node-fetch-server/test/function/createTestServer/) adapts the router to a server on an available local port. [`t.serve(...)`](https://api.remix.run/remix/test/interface/TestContext/) gives the Playwright page that server as its base URL and closes both after the test:
 
 ```ts filename=app/app.test.e2e.ts
 import * as assert from "remix/assert";

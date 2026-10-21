@@ -74,6 +74,13 @@ export function startDocsShellBehavior(
   window.addEventListener('scroll', updateMobileNavigationTop, { signal })
   window.addEventListener('resize', updateShellState, { signal })
 
+  // Sidebar content can change height without a resize, e.g. when the API sidebar swaps menus.
+  if (navigation) {
+    let contentObserver = new ResizeObserver(updateNavigationScrollable)
+    for (let child of navigation.children) contentObserver.observe(child)
+    signal.addEventListener('abort', () => contentObserver.disconnect())
+  }
+
   void document.fonts.ready.then(() => {
     if (!signal.aborted) updateShellState()
   })
@@ -90,15 +97,17 @@ export function startDocsShellBehavior(
   })
 
   function updateShellState() {
-    if (navigation) {
-      navigation.toggleAttribute(
-        'data-scrollable',
-        navigation.scrollHeight > navigation.clientHeight,
-      )
-    }
+    updateNavigationScrollable()
     setNavigationCollapsed(navigationCollapsed)
     updateMobileNavigationTop()
     syncMobileNavigation()
+  }
+
+  function updateNavigationScrollable() {
+    navigation?.toggleAttribute(
+      'data-scrollable',
+      navigation.scrollHeight > navigation.clientHeight,
+    )
   }
 
   function openBrandPage(event: MouseEvent) {

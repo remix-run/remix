@@ -78,7 +78,8 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
       type: 'package',
       name: packageName,
       package: packageName,
-      urlPath: relativePath.replace(/\.md$/, '').replace(/\\/g, '/'),
+      // `remix/router/overview.md` is served at `/remix/router/`.
+      urlPath: relativePath.replace(/\\/g, '/').replace(/\/overview\.md$/, ''),
     }
   }
 

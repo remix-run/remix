@@ -5,14 +5,18 @@ import { createController } from 'remix/router'
 
 import type { DocsContext, Versions } from '../data/docs.ts'
 import { getVersionedLookupHref } from '../data/lookup.ts'
-import { routes } from '../routes.ts'
+import { renderMarkdownFile } from '../data/markdown.ts'
+import { getApiRouteHref, routes, withVersion } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import type { DocsAssetServer } from '../assets.ts'
+import { MarkdownContent } from './api/page.tsx'
 import { fileResponse } from './file-response.ts'
-import { Home } from './home.tsx'
+import { VersionList } from './home.tsx'
+import { LegacyRedirect } from './legacy-redirect.tsx'
 
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
 const markdownDir = path.join(apiDir, 'build', 'md')
+const gettingStartedPath = path.join(import.meta.dirname, 'getting-started.md')
 const defaultPagefindAssetsDir = path.join(apiDir, 'build', 'site', 'assets', 'pagefind')
 
 interface RootControllerOptions {
@@ -39,15 +43,31 @@ export function createRootController(options: RootControllerOptions) {
       },
       async home({ render }) {
         let docsContext = await options.getDocsContext()
+        let { html, headings } = await renderMarkdownFile(
+          gettingStartedPath,
+          docsContext.docFilesLookup,
+          options.activeVersion,
+          false,
+        )
         return render(
           <Document
             registry={docsContext.getRegistry(options.activeVersion)}
-            versions={options.versions}
             activeVersion={options.activeVersion}
+            headings={headings}
           >
-            <Home />
+            <MarkdownContent html={html} />
+            <VersionList versions={options.versions} activeVersion={options.activeVersion} />
           </Document>,
         )
+      },
+      legacy({ params, render }) {
+        let href =
+          getApiRouteHref(`/api/${params.slug}`, options.activeVersion) ??
+          withVersion(routes.home.href(), options.activeVersion)
+        if (href.endsWith('.md')) {
+          return new Response(null, { status: 301, headers: { Location: href } })
+        }
+        return render(<LegacyRedirect href={href} />)
       },
       async lookup({ request }) {
         let jsonPath = path.join(markdownDir, 'api.json')

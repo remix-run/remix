@@ -8,98 +8,182 @@ html {
   --docs-sidebar-offset: 348px;
 }
 
-.api-nav-sections,
-.api-nav-content,
-.api-nav-group,
-.api-nav-links {
+/* The sidebar shows either the package list or one package's menu, iOS-settings style. */
+.api-nav {
+  --api-nav-slide-duration: 280ms;
+  --api-nav-slide: var(--api-nav-slide-duration) cubic-bezier(0.32, 0.72, 0, 1);
+  position: relative;
+  /* Room below the last item, so long menus don't end flush with the window. */
+  padding-bottom: calc(var(--docs-sidebar-group-gap) * 2);
+  overflow-x: clip;
+}
+
+.api-nav-panel {
   display: flex;
   flex-direction: column;
-}
-
-.api-nav-sections {
   gap: var(--docs-nav-item-gap);
-  margin-top: var(--docs-nav-item-gap);
 }
 
-.api-nav-section {
+/*
+  The outgoing panel hides and collapses once it has slid away, so it neither shows nor stretches
+  the sidebar's scroll height. The incoming one shows (and can take focus) at once.
+*/
+.api-nav[data-api-nav-view='root'] [data-api-nav-panel='package'],
+.api-nav[data-api-nav-view='package'] [data-api-nav-panel='root'] {
+  position: absolute;
+  inset: 0 0 auto;
+  max-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.api-nav[data-api-nav-view='root'] [data-api-nav-panel='package'] {
+  transform: translateX(100%);
+}
+
+.api-nav[data-api-nav-view='package'] [data-api-nav-panel='root'] {
+  transform: translateX(-100%);
+}
+
+/* Only the desktop sidebar slides; the mobile menu switches instantly. */
+@media (width >= 900px) and (prefers-reduced-motion: no-preference) {
+  .api-nav-panel {
+    transition: transform var(--api-nav-slide);
+  }
+
+  .api-nav[data-api-nav-view='root'] [data-api-nav-panel='package'],
+  .api-nav[data-api-nav-view='package'] [data-api-nav-panel='root'] {
+    transition:
+      transform var(--api-nav-slide),
+      visibility var(--api-nav-slide),
+      max-height 0s var(--api-nav-slide-duration);
+  }
+}
+
+.api-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--docs-nav-item-gap);
   margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.api-nav-section > summary {
-  position: relative;
+.api-nav-row {
+  flex: none;
+  gap: 10px;
+  min-height: var(--docs-nav-item-height);
+  font-size: var(--docs-font-size-ui);
+  line-height: 1.4;
+}
+
+.api-nav-heading {
   display: flex;
   align-items: center;
-  min-height: var(--docs-nav-item-height);
+  height: var(--docs-nav-item-height);
+  /* The panel's item gap already adds space above. */
+  margin: calc(var(--docs-sidebar-group-gap) - var(--docs-nav-item-gap)) 0 0;
+  font-size: var(--docs-font-size-label);
+}
+
+.api-nav-package {
+  justify-content: space-between;
+}
+
+.api-nav-package svg,
+.api-nav-back svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  opacity: 0.55;
+}
+
+/* Spaced like the UI site's version heading. */
+.api-nav-back {
+  gap: 6px;
+  margin-bottom: calc(8px - var(--docs-nav-item-gap));
+  color: var(--docs-sidebar-heading);
+}
+
+.api-nav-back svg {
+  margin-inline-start: -4px;
+  transform: rotate(180deg);
+}
+
+.api-nav-title {
+  display: flex;
+  align-items: center;
+  margin: 0 0 calc(8px - var(--docs-nav-item-gap));
+}
+
+.api-nav-subpackage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--docs-nav-item-gap);
+}
+
+.api-nav-subpackage + .api-nav-subpackage {
+  margin-top: var(--docs-sidebar-group-gap);
+}
+
+.api-nav-subpackage__heading {
+  display: flex;
+  align-items: center;
+  margin: 0;
   padding-block: 8px;
-  padding-inline-end: 28px;
-  border-radius: var(--rmx-radius-md);
-  font-size: var(--docs-font-size-ui);
-  line-height: normal;
-  list-style: none;
-  cursor: pointer;
 }
 
 .api-nav-path-segment {
   white-space: nowrap;
 }
 
-.api-nav-section > summary::-webkit-details-marker {
-  display: none;
-}
-
-.api-nav-section > summary::after {
-  position: absolute;
-  right: 10px;
-  width: 6px;
-  height: 6px;
-  border-right: 1px solid currentColor;
-  border-bottom: 1px solid currentColor;
-  content: '';
-  opacity: 0.55;
-  transform: translateY(-2px) rotate(45deg);
-  transition: transform 150ms ease;
-}
-
-.api-nav-section[open] > summary::after {
-  transform: translateY(2px) rotate(225deg);
-}
-
-.api-nav-section > summary:hover {
-  color: var(--docs-sidebar-link-hover);
-  background: var(--docs-nav-hover-background);
-}
-
-.api-nav-content {
-  gap: var(--docs-sidebar-group-gap);
-  padding: var(--docs-nav-item-gap) 0 var(--docs-sidebar-group-gap) var(--docs-nav-item-inset);
-}
-
-.api-nav-group {
-  gap: var(--docs-nav-item-gap);
-}
-
-.api-nav-group__heading {
-  display: flex;
-  align-items: center;
+.api-nav-symbol {
   height: var(--docs-nav-item-height);
-  margin: 0;
-  font-size: var(--docs-font-size-label);
 }
 
-.api-nav-links {
-  gap: var(--docs-nav-item-gap);
-}
-
-.api-nav-links a {
-  position: relative;
-  flex: none;
-  width: 100%;
-  height: var(--docs-nav-item-height);
+.api-nav-symbol__name {
   overflow: hidden;
-  font-size: var(--docs-font-size-ui);
-  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.api-nav-kind {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid currentColor;
+  border-radius: 5px;
+  color: var(--api-kind-color);
+  font-size: 11px;
+  font-weight: var(--rmx-font-weight-semibold);
+  line-height: 1;
+}
+
+.api-nav-kind[data-kind='function'] {
+  --api-kind-color: light-dark(#6d28d9, #a78bfa);
+}
+
+.api-nav-kind[data-kind='class'] {
+  --api-kind-color: light-dark(#1d4ed8, #60a5fa);
+}
+
+.api-nav-kind[data-kind='interface'] {
+  --api-kind-color: light-dark(#15803d, #4ade80);
+}
+
+.api-nav-kind[data-kind='type'] {
+  --api-kind-color: light-dark(#be185d, #f472b6);
+}
+
+.api-nav-kind[data-kind='variable'] {
+  --api-kind-color: light-dark(#b45309, #fbbf24);
+}
+
+.api-nav-kind[data-kind='mixin'],
+.api-nav-kind[data-kind='demo'] {
+  --api-kind-color: light-dark(#0f766e, #2dd4bf);
 }
 
 .api-page-header {
@@ -130,14 +214,9 @@ html {
   color: var(--rmx-color-text-primary);
 }
 
-.api-page-content > h1:first-child,
 .api-page-content > div > h1:first-child {
   margin: 0 0 var(--rmx-space-xxl);
   overflow-wrap: anywhere;
-}
-
-.api-page-content > ol:first-of-type {
-  margin-top: 0;
 }
 
 .api-demo {
@@ -158,14 +237,7 @@ html {
 }
 
 @media (width >= 900px) {
-  .api-page-content > h1:first-child,
   .api-page-content > div > h1:first-child {
     margin-bottom: 40px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .api-nav-section > summary::after {
-    transition: none;
   }
 }

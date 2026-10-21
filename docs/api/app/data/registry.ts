@@ -1,19 +1,8 @@
-import { css } from 'remix/component'
-import { theme } from './design.ts'
 import type { DemoDocFile } from './demos.tsx'
 import type { ApiDocFile, ApiTypeKind, PackageDocFile } from './markdown.ts'
 import { routes, withVersion } from '../routes.ts'
 
 export type DocFile = ApiDocFile | PackageDocFile | DemoDocFile
-
-const TYPE_LABEL: Record<ApiTypeKind, string> = {
-  type: 'Types',
-  interface: 'Interfaces',
-  class: 'Classes',
-  function: 'Functions',
-  mixin: 'Mixins',
-  variable: 'Variables',
-}
 
 const TYPE_EYEBROW: Record<ApiTypeKind, string> = {
   type: 'Type',
@@ -24,10 +13,10 @@ const TYPE_EYEBROW: Record<ApiTypeKind, string> = {
   variable: 'Variable',
 }
 
-const TYPE_ORDER: ApiTypeKind[] = ['type', 'interface', 'class', 'function', 'mixin', 'variable']
-
 export const HOME_PAGE_ID = '__home__'
 export const NOT_FOUND_PAGE_ID = '__not-found__'
+
+export type NavItemKind = ApiTypeKind | 'demo'
 
 export type PageDefinition = {
   id: string
@@ -35,136 +24,145 @@ export type PageDefinition = {
   eyebrow: string
   navLabel: string
   path: string
-  sectionId: string
   title: string
   docFile?: DocFile
-  css?: ReturnType<typeof css>
+  kind?: NavItemKind
+  // The top-level package whose menu the sidebar shows for this page.
+  packageId?: string
 }
 
-export type NavGroup = {
+// One import path, like `remix/data-table/mysql`, and its pages.
+export type NavSubpackage = {
   id: string
-  label?: string
+  label: string
+  overviewPageId?: string
   pageIds: string[]
 }
 
-export type NavSection = {
+// One top-level package, like `data-table`, and its import paths.
+export type NavPackage = {
   id: string
   label: string
-  groups: NavGroup[]
+  homePageId: string
+  subpackages: NavSubpackage[]
 }
 
 export type DocsRegistry = {
   pages: Record<string, PageDefinition>
-  sections: NavSection[]
+  packages: NavPackage[]
 }
 
 export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegistry {
   let pages: Record<string, PageDefinition> = {}
-  let sections: NavSection[] = []
+  let packages = new Map<string, NavPackage>()
 
-  let homePage: PageDefinition = {
+  pages[HOME_PAGE_ID] = {
     id: HOME_PAGE_ID,
     description: '',
     eyebrow: '',
-    navLabel: 'Overview',
+    navLabel: 'Getting Started',
     path: withVersion(routes.home.href(), version),
-    sectionId: 'start',
-    title: '',
-    css: homePageCss,
+    title: 'Getting Started',
   }
-  pages[HOME_PAGE_ID] = homePage
 
-  let packageGroups = new Map<string, Map<ApiTypeKind, ApiDocFile[]>>()
-  let packageOverviews = new Map<string, PackageDocFile>()
-  let packageDemos = new Map<string, DemoDocFile[]>()
+  let filesByPackage = new Map<string, DocFile[]>()
   for (let file of docFiles) {
-    if (file.kind === 'package') {
-      packageOverviews.set(file.package, file)
-      continue
-    }
-
-    if (file.kind === 'demo') {
-      getOrSet(packageDemos, file.package, () => []).push(file)
-      continue
-    }
-
-    let typeMap = getOrSet(packageGroups, file.package, () => new Map())
-    getOrSet(typeMap, file.type, () => []).push(file)
+    getOrSet(filesByPackage, file.package, () => []).push(file)
   }
 
-  let sortedPackages = Array.from(
-    new Set([...packageGroups.keys(), ...packageOverviews.keys(), ...packageDemos.keys()]),
-  ).sort(comparePackages)
+  let sortedPackages = [...filesByPackage.keys()].sort((a, b) => a.localeCompare(b))
 
   for (let pkg of sortedPackages) {
-    let typeMap = packageGroups.get(pkg)
-    let groups: NavGroup[] = []
-    let overview = packageOverviews.get(pkg)
+    let packageId = getNavPackageId(pkg)
+    let files = filesByPackage.get(pkg)!
+    let subpackage: NavSubpackage = { id: pkg, label: getImportLabel(pkg), pageIds: [] }
+
+    let addPage = (file: DocFile, page: Omit<PageDefinition, 'id' | 'path' | 'packageId'>) => {
+      pages[file.urlPath] = {
+        ...page,
+        id: file.urlPath,
+        path: getDocPath(file.urlPath, version),
+        packageId,
+      }
+    }
+
+    let overview = files.find((file) => file.kind === 'package')
     if (overview) {
-      let page: PageDefinition = {
-        id: overview.urlPath,
+      addPage(overview, {
         description: '',
         eyebrow: 'Package',
-        navLabel: 'Overview',
-        path: withVersion(routes.api.document.href({ slug: overview.urlPath }), version),
-        sectionId: pkg,
+        navLabel: getImportLabel(pkg),
         title: pkg,
         docFile: overview,
-      }
-      pages[overview.urlPath] = page
-      groups.push({ id: `${pkg}::overview`, pageIds: [overview.urlPath] })
+      })
+      subpackage.overviewPageId = overview.urlPath
     }
 
-    let demos = packageDemos.get(pkg)
-    if (demos && demos.length > 0) {
-      let groupId = `${pkg}::demos`
-      let sortedDemos = [...demos].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
-      let pageIds: string[] = []
-      for (let file of sortedDemos) {
-        let page: PageDefinition = {
-          id: file.urlPath,
-          description: '',
-          eyebrow: `${pkg} · Demo`,
-          navLabel: file.name,
-          path: withVersion(routes.api.document.href({ slug: file.urlPath }), version),
-          sectionId: pkg,
-          title: file.name,
-          docFile: file,
-        }
-        pages[file.urlPath] = page
-        pageIds.push(file.urlPath)
-      }
-      groups.push({ id: groupId, label: 'Examples', pageIds })
+    let demos = files
+      .filter((file) => file.kind === 'demo')
+      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+    for (let file of demos) {
+      addPage(file, {
+        description: '',
+        eyebrow: `${pkg} · Demo`,
+        navLabel: file.name,
+        title: file.name,
+        docFile: file,
+        kind: 'demo',
+      })
+      subpackage.pageIds.push(file.urlPath)
     }
 
-    for (let kind of TYPE_ORDER) {
-      let files = typeMap?.get(kind)
-      if (!files || files.length === 0) continue
-      let groupId = `${pkg}::${kind}`
-      let sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name))
-      let pageIds: string[] = []
-      for (let file of sortedFiles) {
-        let page: PageDefinition = {
-          id: file.urlPath,
-          description: '',
-          eyebrow: `${pkg} · ${TYPE_EYEBROW[kind]}`,
-          navLabel: file.name,
-          path: withVersion(routes.api.document.href({ slug: file.urlPath }), version),
-          sectionId: pkg,
-          title: file.name,
-          docFile: file,
-        }
-        pages[file.urlPath] = page
-        pageIds.push(file.urlPath)
-      }
-      groups.push({ id: groupId, label: TYPE_LABEL[kind], pageIds })
+    let apis = files
+      .filter((file) => file.kind === 'api')
+      .sort((a, b) => a.name.localeCompare(b.name))
+    for (let file of apis) {
+      addPage(file, {
+        description: '',
+        eyebrow: `${pkg} · ${TYPE_EYEBROW[file.type]}`,
+        navLabel: file.name,
+        title: file.name,
+        docFile: file,
+        kind: file.type,
+      })
+      subpackage.pageIds.push(file.urlPath)
     }
-    if (groups.length > 0) {
-      sections.push({ id: pkg, label: pkg, groups })
-    }
+
+    if (packageId === undefined) continue
+
+    let navPackage = getOrSet(packages, packageId, () => ({
+      id: packageId,
+      label: packageId,
+      homePageId: '',
+      subpackages: [],
+    }))
+    navPackage.subpackages.push(subpackage)
   }
 
-  return { pages, sections }
+  for (let navPackage of packages.values()) {
+    let root = navPackage.subpackages.find((subpackage) => subpackage.label === navPackage.id)
+    if (root?.overviewPageId) {
+      navPackage.homePageId = root.overviewPageId
+      continue
+    }
+
+    // Groups like `remix/middleware` have no exports of their own, so they get an index page
+    // that links to each import path.
+    let scope = navPackage.subpackages[0].id.split('/')[0]
+    let id = `${scope.replace(/^@/, '')}/${navPackage.id}`
+    pages[id] = {
+      id,
+      description: '',
+      eyebrow: 'Package',
+      navLabel: navPackage.id,
+      path: getDocPath(id, version),
+      title: `${scope}/${navPackage.id}`,
+      packageId: navPackage.id,
+    }
+    navPackage.homePageId = id
+  }
+
+  return { pages, packages: [...packages.values()].sort((a, b) => a.id.localeCompare(b.id)) }
 }
 
 export function getHomePage(registry: DocsRegistry): PageDefinition {
@@ -175,14 +173,20 @@ export function getDocPage(registry: DocsRegistry, slug: string): PageDefinition
   return registry.pages[slug]
 }
 
+export function getNavPackage(
+  registry: DocsRegistry,
+  packageId: string | undefined,
+): NavPackage | undefined {
+  return registry.packages.find((navPackage) => navPackage.id === packageId)
+}
+
 export function buildNotFoundPage(slug: string, version?: string): PageDefinition {
   return {
     id: NOT_FOUND_PAGE_ID,
     description: `The requested document was not found: ${slug}`,
     eyebrow: 'Not Found',
     navLabel: 'Not Found',
-    path: withVersion(routes.api.document.href({ slug }), version),
-    sectionId: 'start',
+    path: getDocPath(slug, version),
     title: 'Page not found',
   }
 }
@@ -191,13 +195,21 @@ export function isPageActive(page: PageDefinition, currentPath: string) {
   return currentPath === page.path
 }
 
-function comparePackages(a: string, b: string): number {
-  if (a === 'remix' && b.startsWith('remix/')) return -1
-  if (b === 'remix' && a.startsWith('remix/')) return 1
-  if (a.startsWith('remix/') && b.startsWith('remix/')) return a.localeCompare(b)
-  if (a === 'remix' || a.startsWith('remix/')) return -1
-  if (b === 'remix' || b.startsWith('remix/')) return 1
-  return a.localeCompare(b)
+// `remix/data-table/mysql` -> `data-table`, `@remix-run/ui/tabs` -> `ui`. The bare `remix`
+// package isn't in the sidebar; Getting Started covers it.
+function getNavPackageId(pkg: string): string | undefined {
+  let label = getImportLabel(pkg)
+  return label === pkg ? undefined : label.split('/')[0]
+}
+
+// The sidebar drops the scope prefix to keep labels short: `remix/assert` -> `assert`,
+// `@remix-run/ui/tabs` -> `ui/tabs`. Pages still show the full import path.
+function getImportLabel(pkg: string): string {
+  return pkg.replace(/^(?:remix|@remix-run)\//, '')
+}
+
+function getDocPath(slug: string, version: string | undefined): string {
+  return withVersion(routes.api.document.href({ slug }), version)
 }
 
 function getOrSet<key, value>(map: Map<key, value>, key: key, init: () => value): value {
@@ -208,12 +220,3 @@ function getOrSet<key, value>(map: Map<key, value>, key: key, init: () => value)
   }
   return value
 }
-
-const homePageCss = css({
-  '& > p': {
-    margin: `${theme.space.sm} 0`,
-  },
-  '& > ol > li + li': {
-    marginTop: theme.space.md,
-  },
-})

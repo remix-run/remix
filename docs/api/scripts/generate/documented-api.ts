@@ -114,8 +114,8 @@ export type DocumentedVariableFunction = BaseDocumentedAPI & {
   example: string | undefined
 }
 
-// Path docs are served at on the website
-export const WEBSITE_DOCS_PATH = '/api'
+// Path docs are served at on the website (the site root)
+export const WEBSITE_DOCS_PATH = ''
 
 // Convert a typedoc reflection for a given node into a documentable instance
 export function getDocumentedAPI(fullName: string, node: typedoc.Reflection): DocumentedAPI {

@@ -42,7 +42,6 @@
   font-family: var(--rmx-font-family-mono);
   font-size: var(--docs-font-size-ui);
   line-height: normal;
-  transition: color 150ms ease-in-out;
 }
 
 .docs-chapters-nav__list a:is(:hover, [aria-current='page']) .docs-chapters-nav__eyebrow {
@@ -55,6 +54,12 @@
   line-height: normal;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (width >= 900px) {
+  .docs-chapters-nav__eyebrow {
+    transition: color 150ms ease-in-out;
+  }
 }
 
 @media (width >= 900px) and (height <= 780px) {

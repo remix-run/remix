@@ -9,12 +9,18 @@ import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
+import { Icon } from 'remix-docs-shared/ui/icon'
 import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 
-import type { Versions } from '../data/docs.ts'
-import type { DocsRegistry, NavGroup, PageDefinition } from '../data/registry.ts'
-import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from '../data/registry.ts'
+import type { DocsRegistry, NavItemKind, NavPackage, PageDefinition } from '../data/registry.ts'
+import {
+  buildNotFoundPage,
+  getDocPage,
+  getHomePage,
+  getNavPackage,
+  isPageActive,
+} from '../data/registry.ts'
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 import { routes, withVersion } from '../routes.ts'
 
@@ -25,7 +31,6 @@ const pagefindModulePath = path.resolve(
 
 export function Document(
   handle: Handle<{
-    versions: Versions
     activeVersion?: string
     slug?: string
     registry: DocsRegistry
@@ -35,7 +40,7 @@ export function Document(
   }>,
 ) {
   return () => {
-    let { registry, versions, activeVersion, slug, sourceUrl, headings, children } = handle.props
+    let { registry, activeVersion, slug, sourceUrl, headings, children } = handle.props
     let { scriptEntry, stylesheetHref, stylesheetPreloads } = getAssetEntry()
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let page = slug
@@ -68,14 +73,7 @@ export function Document(
                 searchEnabled={searchEnabled}
               />
             }
-            navigation={
-              <SidebarContent
-                registry={registry}
-                currentPath={page.path}
-                versions={versions}
-                activeVersion={activeVersion}
-              />
-            }
+            navigation={<SidebarContent registry={registry} page={page} />}
             navigationLabel="API reference"
             mobileNavigationLabel={page.title || page.navLabel}
             navigationName="API navigation"
@@ -122,25 +120,28 @@ function Head(
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {page.description ? <meta name="description" content={page.description} /> : null}
+        {page.description ? (
+          <meta data-rmx-key="docs-description" name="description" content={page.description} />
+        ) : null}
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         {stylesheetPreloads.map((href) => (
-          <link key={href} rel="preload" href={href} as="style" />
+          <link key={href} data-rmx-key={`preload:${href}`} rel="preload" href={href} as="style" />
         ))}
         {activeVersion != null ? (
           <>
-            <meta name="robots" content="noindex,nofollow" />
-            <meta name="googlebot" content="noindex,nofollow" />
+            <meta data-rmx-key="docs-robots" name="robots" content="noindex,nofollow" />
+            <meta data-rmx-key="docs-googlebot" name="googlebot" content="noindex,nofollow" />
           </>
         ) : shouldNofollow ? (
           // Overview pages already link densely to pages in the sidebar, while
           // demo links are examples rather than docs routes.
-          <meta name="robots" content="nofollow" />
+          <meta data-rmx-key="docs-robots" name="robots" content="nofollow" />
         ) : null}
-        <title>{`${page.title || 'Remix'} | Remix API Documentation`}</title>
+        <title data-rmx-key="docs-title">{`${page.title || 'Remix'} | Remix API Documentation`}</title>
         {page.docFile ? (
           <link
+            data-rmx-key="docs-markdown-alternate"
             rel="alternate"
             type="text/markdown"
             href={withVersion(
@@ -150,7 +151,11 @@ function Head(
             title={`Markdown docs for ${page.docFile.name ?? page.title}`}
           />
         ) : null}
-        {/* Keep styles after variable head content so frame diffs do not reload them. */}
+        {/*
+          Key every tag that varies between pages. The document diff pairs unkeyed tags by
+          position, so an optional tag would shift the pairing and move (and briefly unload)
+          the stylesheets below.
+        */}
         {searchEnabled ? (
           <link
             data-rmx-key="docs-pagefind-stylesheet"
@@ -164,7 +169,12 @@ function Head(
         <link data-rmx-key="docs-stylesheet" rel="stylesheet" href={stylesheetHref} />
         <ImportMap value={importMap} />
         {preloads.map((preloadHref) => (
-          <link key={preloadHref} rel="modulepreload" href={preloadHref} />
+          <link
+            key={preloadHref}
+            data-rmx-key={`modulepreload:${preloadHref}`}
+            rel="modulepreload"
+            href={preloadHref}
+          />
         ))}
         <script data-rmx-key="docs-client-entry" type="module" src={href} />
         {searchEnabled ? (
@@ -197,11 +207,7 @@ function MainContent(
     return (
       <div class="docs-layout" data-rmx-key={`api-page-${handle.props.page.path}`}>
         <article class="docs-article">
-          <div
-            id={contentId}
-            class="api-page-content rmx-page-body"
-            mix={[docsMarkdownContentCss, handle.props.page.css]}
-          >
+          <div id={contentId} class="api-page-content rmx-page-body" mix={docsMarkdownContentCss}>
             {handle.props.header}
             {handle.props.children}
           </div>
@@ -218,55 +224,159 @@ function MainContent(
   }
 }
 
-function SidebarContent(
-  handle: Handle<{
-    registry: DocsRegistry
-    currentPath: string
-    versions: Versions
-    activeVersion?: string
-  }>,
-) {
+function SidebarContent(handle: Handle<{ registry: DocsRegistry; page: PageDefinition }>) {
   return () => {
-    let { registry, currentPath, versions, activeVersion } = handle.props
-    let activePage = Object.values(registry.pages).find((page) => page.path === currentPath)
-    let openSections = activePage?.docFile ? [activePage.sectionId] : []
+    let { registry, page } = handle.props
+    let homePage = getHomePage(registry)
+    let navPackage = getNavPackage(registry, page.packageId)
 
     return (
-      <div class="api-nav-sections">
-        <VersionSwitcher versions={versions} activeVersion={activeVersion} />
-        {registry.sections.map((section) => (
-          <details
-            key={section.id}
-            class="api-nav-section"
-            open={openSections.includes(section.id) || undefined}
+      <div class="api-nav" data-api-nav-view={navPackage ? 'package' : 'root'}>
+        <div class="api-nav-panel" data-api-nav-panel="root" inert={navPackage ? true : undefined}>
+          <a
+            class="docs-nav-item api-nav-row"
+            href={homePage.path}
+            aria-current={isPageActive(homePage, page.path) ? 'page' : undefined}
           >
-            <summary class="docs-nav-heading">
-              <PathLabel label={getSidebarPackageLabel(section.label)} />
-            </summary>
-            <div class="api-nav-content">
-              {section.groups.map((group) => (
-                <SidebarGroup
-                  key={group.id}
-                  registry={registry}
-                  group={group}
-                  currentPath={currentPath}
-                  sectionLabel={section.label}
-                />
-              ))}
-            </div>
-          </details>
-        ))}
+            {homePage.navLabel}
+          </a>
+          <h2 class="docs-nav-heading api-nav-heading">Packages</h2>
+          <ul class="api-nav-list">
+            {registry.packages.map((item) => {
+              let itemHome = registry.pages[item.homePageId]
+              let current: 'page' | 'true' | undefined = isPageActive(itemHome, page.path)
+                ? 'page'
+                : item.id === navPackage?.id
+                  ? 'true'
+                  : undefined
+
+              return (
+                <li key={item.id}>
+                  <a
+                    class="docs-nav-item api-nav-row api-nav-package"
+                    href={itemHome.path}
+                    aria-current={current}
+                  >
+                    {item.label}
+                    <Icon name="chevron-r" />
+                  </a>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+        <div
+          class="api-nav-panel"
+          data-api-nav-panel="package"
+          inert={navPackage ? undefined : true}
+        >
+          {navPackage ? (
+            <PackageMenu
+              registry={registry}
+              navPackage={navPackage}
+              homePage={homePage}
+              currentPath={page.path}
+            />
+          ) : null}
+        </div>
       </div>
     )
   }
 }
 
-// The sidebar drops the scope prefix to keep labels short: `remix/assert` -> `assert`,
-// `@remix-run/ui/tabs` -> `ui/tabs`. Pages still show the full import path.
-function getSidebarPackageLabel(label: string): string {
-  if (label.startsWith('remix/')) return label.slice('remix/'.length)
-  if (label.startsWith('@remix-run/')) return label.slice('@remix-run/'.length)
-  return label
+const kindLetters: Record<NavItemKind, string> = {
+  function: 'F',
+  class: 'C',
+  interface: 'I',
+  type: 'T',
+  variable: 'V',
+  mixin: 'M',
+  demo: 'E',
+}
+
+function PackageMenu(
+  handle: Handle<{
+    registry: DocsRegistry
+    navPackage: NavPackage
+    homePage: PageDefinition
+    currentPath: string
+  }>,
+) {
+  return () => {
+    let { registry, navPackage, homePage, currentPath } = handle.props
+    // Groups like `middleware` have no root import path, so their index page heads the menu.
+    let hasRoot = navPackage.subpackages.some((subpackage) => subpackage.label === navPackage.id)
+    let sections = hasRoot
+      ? navPackage.subpackages
+      : [
+          {
+            id: registry.pages[navPackage.homePageId].title,
+            label: navPackage.id,
+            overviewPageId: navPackage.homePageId,
+            pageIds: [],
+          },
+          ...navPackage.subpackages,
+        ]
+
+    return (
+      <>
+        <a class="docs-nav-item api-nav-row api-nav-back" href={homePage.path} data-api-nav-back>
+          <Icon name="chevron-r" />
+          All packages
+        </a>
+        <p class="docs-nav-heading api-nav-row api-nav-title">{navPackage.label}</p>
+        {sections.map((subpackage) => (
+          <section key={subpackage.id} class="api-nav-subpackage">
+            {subpackage.label === navPackage.id ? null : (
+              <p class="docs-nav-heading api-nav-row api-nav-subpackage__heading">
+                <PathLabel label={subpackage.label} />
+              </p>
+            )}
+            <ul class="api-nav-list" aria-label={subpackage.id}>
+              {subpackage.overviewPageId ? (
+                <NavLink page={registry.pages[subpackage.overviewPageId]} currentPath={currentPath}>
+                  Overview
+                </NavLink>
+              ) : null}
+              {subpackage.pageIds.map((pageId) => {
+                let page = registry.pages[pageId]
+                return (
+                  <NavLink key={page.path} page={page} currentPath={currentPath}>
+                    {page.kind ? (
+                      <span class="api-nav-kind" data-kind={page.kind} aria-hidden="true">
+                        {kindLetters[page.kind]}
+                      </span>
+                    ) : null}
+                    <span class="api-nav-symbol__name">{page.navLabel}</span>
+                  </NavLink>
+                )
+              })}
+            </ul>
+          </section>
+        ))}
+      </>
+    )
+  }
+}
+
+function NavLink(
+  handle: Handle<{ page: PageDefinition; currentPath: string; children: RemixNode }>,
+) {
+  return () => {
+    let { page, currentPath, children } = handle.props
+
+    return (
+      <li>
+        <a
+          class="docs-nav-item api-nav-row api-nav-symbol"
+          href={page.path}
+          aria-current={isPageActive(page, currentPath) ? 'page' : undefined}
+        >
+          {children}
+        </a>
+      </li>
+    )
+  }
 }
 
 // Long package paths wrap after a slash instead of at hyphens or mid-segment.
@@ -292,86 +402,6 @@ function PathLabel(handle: Handle<{ label: string }>) {
               ],
         )}
       </span>
-    )
-  }
-}
-
-function SidebarGroup(
-  handle: Handle<{
-    registry: DocsRegistry
-    group: NavGroup
-    currentPath: string
-    sectionLabel: string
-  }>,
-) {
-  return () => {
-    let { registry, group, currentPath, sectionLabel } = handle.props
-
-    return (
-      <div class="api-nav-group">
-        {group.label ? <p class="docs-nav-heading api-nav-group__heading">{group.label}</p> : null}
-        <nav
-          class="api-nav-links"
-          aria-label={group.label ? `${sectionLabel} ${group.label}` : `${sectionLabel} pages`}
-        >
-          {group.pageIds.map((pageId) => {
-            let page = registry.pages[pageId]
-            let active = isPageActive(page, currentPath)
-
-            return (
-              <a
-                key={page.path}
-                class="docs-nav-item"
-                href={page.path}
-                aria-current={active ? 'page' : undefined}
-                data-active-doc={active ? 'true' : undefined}
-              >
-                {page.navLabel}
-              </a>
-            )
-          })}
-        </nav>
-      </div>
-    )
-  }
-}
-
-function VersionSwitcher(handle: Handle<{ versions: Versions; activeVersion?: string }>) {
-  return () => {
-    let { versions, activeVersion } = handle.props
-    let navVersions = versions
-
-    if (activeVersion) {
-      let index = versions.findIndex((version) => version === activeVersion)
-      if (index >= 0) navVersions = versions.slice(index)
-    }
-
-    return (
-      <details class="api-nav-section" open={activeVersion != null || undefined}>
-        <summary class="docs-nav-heading">Version</summary>
-        <div class="api-nav-content">
-          <nav class="api-nav-links" aria-label="Versions">
-            {navVersions.map((version) => {
-              let latest = (versions.length === 0 || version === versions[0]) && !activeVersion
-              let active = version === activeVersion || latest
-              let href = withVersion(routes.home.href(), !latest ? version : undefined)
-
-              return (
-                <a
-                  key={version}
-                  class="docs-nav-item"
-                  href={href}
-                  rel={active ? undefined : 'nofollow'}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  {version}
-                  {latest ? ' (latest)' : null}
-                </a>
-              )
-            })}
-          </nav>
-        </div>
-      </details>
     )
   }
 }

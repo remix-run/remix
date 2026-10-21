@@ -11,9 +11,15 @@
   border-radius: var(--rmx-radius-md);
   color: var(--docs-sidebar-link);
   text-decoration: none;
-  transition:
-    color 150ms ease-in-out,
-    background-color 150ms ease-in-out;
+}
+
+/* Mobile menus don't animate. */
+@media (width >= 900px) {
+  .docs-nav-item {
+    transition:
+      color 150ms ease-in-out,
+      background-color 150ms ease-in-out;
+  }
 }
 
 a.docs-nav-item:hover {

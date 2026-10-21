@@ -2,7 +2,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import { getVersionedLookupHref } from './data/lookup.ts'
-import { buildRegistry } from './data/registry.ts'
+import { buildRegistry, type DocFile } from './data/registry.ts'
 import { createApiRouter } from './router.ts'
 import { getApiRouteHref } from './routes.ts'
 import { createAssetServer } from './assets.ts'
@@ -151,14 +151,39 @@ describe('createApiRouter()', () => {
     })
 
     let [rootResponse, versionedResponse] = await Promise.all([
-      router.fetch(new Request('http://localhost/api/missing/')),
-      router.fetch(new Request('http://localhost/v1.2.3/api/missing/')),
+      router.fetch(new Request('http://localhost/missing/')),
+      router.fetch(new Request('http://localhost/v1.2.3/missing/')),
     ])
 
     assert.equal(rootResponse.status, 404)
     assert.match(await rootResponse.text(), /Could not find a document at:/)
     assert.equal(versionedResponse.status, 404)
     assert.match(await versionedResponse.text(), /Could not find a document at:/)
+  })
+
+  it('forwards legacy /api/ URLs to the root docs URLs', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let router = createApiRouter({
+      assetServer,
+      docsContext: await getTestDocsContext(),
+      versions: ['v1.2.3'],
+    })
+
+    let [page, versionedPage, markdown] = await Promise.all([
+      router.fetch(new Request('http://localhost/api/@remix-run/ui/tabs/overview/')),
+      router.fetch(new Request('http://localhost/v1.2.3/api/remix/router/overview/')),
+      router.fetch(new Request('http://localhost/api/remix/router/overview.md')),
+    ])
+
+    assert.equal(page.status, 200)
+    assert.match(await page.text(), /http-equiv="refresh" content="0; url=\/remix-run\/ui\/tabs\/"/)
+    assert.match(
+      await versionedPage.text(),
+      /http-equiv="refresh" content="0; url=\/v1\.2\.3\/remix\/router\/"/,
+    )
+    assert.equal(markdown.status, 301)
+    assert.equal(markdown.headers.get('Location'), '/remix/router.md')
   })
 
   it('serves only the configured asset URL space', async (t) => {
@@ -222,25 +247,22 @@ async function getTestDocsContext() {
 describe('getVersionedLookupHref()', () => {
   it('preserves dots in versioned markdown lookup targets', () => {
     assert.equal(
-      getVersionedLookupHref('/api/remix/headers/accept/class/Accept.md', 'v1.2.3'),
-      '/v1.2.3/api/remix/headers/accept/class/Accept.md',
+      getVersionedLookupHref('/remix/headers/accept/class/Accept.md', 'v1.2.3'),
+      '/v1.2.3/remix/headers/accept/class/Accept.md',
     )
   })
 
   it('uses docs routes for HTML lookup targets', () => {
     assert.equal(
-      getVersionedLookupHref('/api/remix/headers/accept/class/Accept', 'v1.2.3'),
-      '/v1.2.3/api/remix/headers/accept/class/Accept/',
+      getVersionedLookupHref('/remix/headers/accept/class/Accept', 'v1.2.3'),
+      '/v1.2.3/remix/headers/accept/class/Accept/',
     )
   })
 
   it('preserves query strings and hashes', () => {
     assert.equal(
-      getVersionedLookupHref(
-        '/api/remix/headers/accept/class/Accept.md?tab=docs#example',
-        'v1.2.3',
-      ),
-      '/v1.2.3/api/remix/headers/accept/class/Accept.md?tab=docs#example',
+      getVersionedLookupHref('/remix/headers/accept/class/Accept.md?tab=docs#example', 'v1.2.3'),
+      '/v1.2.3/remix/headers/accept/class/Accept.md?tab=docs#example',
     )
   })
 
@@ -259,8 +281,72 @@ describe('getApiRouteHref()', () => {
 
   it('preserves unversioned docs hrefs when version is undefined', () => {
     assert.equal(
-      getApiRouteHref('/api/remix/headers/accept/class/Accept.md?tab=docs#example', undefined),
-      '/api/remix/headers/accept/class/Accept.md?tab=docs#example',
+      getApiRouteHref('/remix/headers/accept/class/Accept.md?tab=docs#example', undefined),
+      '/remix/headers/accept/class/Accept.md?tab=docs#example',
+    )
+  })
+
+  it('rewrites legacy /api/ hrefs to root docs hrefs', () => {
+    assert.equal(
+      getApiRouteHref('/api/@remix-run/ui/tabs/overview', 'v1.2.3'),
+      '/v1.2.3/remix-run/ui/tabs/',
+    )
+  })
+
+  it('keeps overview segments in current docs hrefs', () => {
+    assert.equal(
+      getApiRouteHref('/remix/example/function/overview', undefined),
+      '/remix/example/function/overview/',
     )
   })
 })
+
+describe('buildRegistry()', () => {
+  it('groups import paths under their top-level package', () => {
+    let registry = buildRegistry([
+      packageFile('remix/data-table'),
+      packageFile('remix/data-table/mysql'),
+      apiFile('remix/data-table', 'function', 'query'),
+      apiFile('remix/data-table', 'class', 'Database'),
+      apiFile('remix/data-table/mysql', 'function', 'createMysqlDatabase'),
+      packageFile('remix/middleware/cors'),
+      packageFile('remix'),
+    ])
+
+    assert.deepEqual(
+      registry.packages.map((navPackage) => [
+        navPackage.id,
+        navPackage.homePageId,
+        navPackage.subpackages.map((subpackage) => [subpackage.label, subpackage.pageIds]),
+      ]),
+      [
+        [
+          'data-table',
+          'remix/data-table',
+          [
+            ['data-table', ['remix/data-table/class/Database', 'remix/data-table/function/query']],
+            ['data-table/mysql', ['remix/data-table/mysql/function/createMysqlDatabase']],
+          ],
+        ],
+        ['middleware', 'remix/middleware', [['middleware/cors', []]]],
+      ],
+    )
+    assert.equal(registry.pages['remix/middleware'].path, '/remix/middleware/')
+    assert.equal(registry.pages.remix.packageId, undefined)
+  })
+})
+
+function packageFile(pkg: string): DocFile {
+  return {
+    kind: 'package',
+    path: '',
+    type: 'package',
+    name: pkg,
+    package: pkg,
+    urlPath: pkg,
+  }
+}
+
+function apiFile(pkg: string, type: 'class' | 'function', name: string): DocFile {
+  return { kind: 'api', path: '', type, name, package: pkg, urlPath: `${pkg}/${type}/${name}` }
+}

@@ -70,14 +70,11 @@ describe('renderMarkdownFile()', () => {
   it('rewrites API links for the active version', async (t) => {
     let result = await renderMarkdown(
       t,
-      '[Route docs](/api/remix/router/type/Route.md?raw=true#details)\n',
+      '[Route docs](/remix/router/type/Route.md?raw=true#details)\n',
       { version: '1.2.3' },
     )
 
-    assert.match(
-      result.html,
-      /href="\/1.2.3\/api\/remix\/router\/type\/Route.md\?raw=true#details"/,
-    )
+    assert.match(result.html, /href="\/1.2.3\/remix\/router\/type\/Route.md\?raw=true#details"/)
   })
 
   it('links API symbols inside highlighted code', async (t) => {
@@ -95,7 +92,7 @@ describe('renderMarkdownFile()', () => {
       version: '1.2.3',
     })
 
-    assert.match(result.html, /href="\/1.2.3\/api\/remix\/router\/type\/Route\/"/)
+    assert.match(result.html, /href="\/1.2.3\/remix\/router\/type\/Route\/"/)
   })
 })
 

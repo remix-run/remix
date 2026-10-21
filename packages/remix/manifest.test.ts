@@ -295,7 +295,7 @@ describe('manifest', () => {
 
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '[Router](https://api.remix.run/api/remix/router/overview/)',
+        '[Router](https://api.remix.run/remix/router/)',
         guidePath,
         mappings,
       ),
@@ -311,7 +311,7 @@ describe('manifest', () => {
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '[Router][router]\n\n[router]: https://api.remix.run/api/remix/router/overview/#middleware',
+        '[Router][router]\n\n[router]: https://api.remix.run/remix/router/#middleware',
         guidePath,
         mappings,
       ),
@@ -319,19 +319,19 @@ describe('manifest', () => {
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+        '`[Router](https://api.remix.run/remix/router/)`\n\n```md\n[Router](https://api.remix.run/remix/router/)\n```',
         guidePath,
         mappings,
       ),
-      '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+      '`[Router](https://api.remix.run/remix/router/)`\n\n```md\n[Router](https://api.remix.run/remix/router/)\n```',
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+        '[createTestServer](https://api.remix.run/remix/node-fetch-server/test/function/createTestServer/)',
         guidePath,
         mappings,
       ),
-      '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+      '[createTestServer](https://api.remix.run/remix/node-fetch-server/test/function/createTestServer/)',
     )
   })
 

@@ -3,6 +3,7 @@ import * as util from 'node:util'
 import { discoverPublicModuleHrefs } from 'remix-docs-shared/prerender/public-modules'
 import { prerender } from 'remix-docs-shared/prerender/run'
 
+import { createDocsContextLoader } from '../app/data/docs.ts'
 import { createApiRouter, getDefaultVersions } from '../app/router.ts'
 import { routes, withVersion } from '../app/routes.ts'
 import { createAssetServer } from '../app/assets.ts'
@@ -44,7 +45,19 @@ const publicModuleHrefs = await discoverPublicModuleHrefs(assetServer, [
   sharedDir,
 ])
 const homePath = withVersion(routes.home.href(), buildVersion)
-const paths = [homePath, withVersion(routes.lookup.href(), buildVersion), ...publicModuleHrefs]
+// Docs used to live under `/api/`, so write a redirect page at each old URL.
+const registry = (await createDocsContextLoader()()).getRegistry(buildVersion)
+const legacyPaths = Object.values(registry.pages).flatMap((page) => {
+  if (!page.docFile) return []
+  let slug = page.docFile.kind === 'package' ? `${page.id}/overview/` : `${page.id}/`
+  return [withVersion(routes.legacy.href({ slug }), buildVersion)]
+})
+const paths = [
+  homePath,
+  withVersion(routes.lookup.href(), buildVersion),
+  ...publicModuleHrefs,
+  ...legacyPaths,
+]
 const pagefindSiteDir = buildVersion ? path.join(outputDir, buildVersion) : outputDir
 
 await prerender(router, {

@@ -4,7 +4,9 @@ export const routes = route({
   assets: '/assets/*asset',
   home: '/',
   lookup: '/api.json',
-  api: route('api', {
+  // Docs used to live under `/api/`. Keep old links working.
+  legacy: '/api/*slug',
+  api: route({
     document: '*slug/',
     markdown: '*slug.md',
   }),
@@ -18,13 +20,19 @@ export function withVersion(href: string, version: string | undefined): string {
   return version === undefined ? href : `${getVersionPathname(version)}${href}`
 }
 
+// Matches docs paths like `/remix/router/type/Route` and legacy `/api/@remix-run/ui/...` links.
+const docsPathnamePattern = /^\/(api\/)?(?:@|%40)?(remix(?:-run)?\/.+)$/
+
 export function getApiRouteHref(href: string, version: string | undefined): string | undefined {
-  if (!href.startsWith('/api/')) return undefined
+  if (!href.startsWith('/') || href.startsWith('//')) return undefined
 
   let url = new URL(href, 'http://localhost')
-  let pathname = url.pathname.replace(/^\/api\/(?:@|%40)/, '/api/')
-  if (pathname === '/api/') return undefined
+  let match = docsPathnamePattern.exec(url.pathname)
+  if (!match) return undefined
 
+  let [, legacy, slug] = match
+  // Legacy package overviews lived at `.../overview/`.
+  let pathname = `/${legacy ? slug.replace(/\/overview(?=\/?$|\.md$)/, '') : slug}`
   if (!pathname.endsWith('.md')) {
     pathname = pathname.replace(/\/?$/, '/')
   }
