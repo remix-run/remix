@@ -1,6 +1,7 @@
 import { css } from 'remix/component'
 
 import { Icon } from './icon.tsx'
+import { mobileMedia } from './media.ts'
 
 export function DocsFooter() {
   return () => (
@@ -43,7 +44,7 @@ const docsFooterCss = css({
   padding: '48px var(--docs-main-padding)',
   paddingLeft: 'var(--docs-content-padding-start)',
   color: 'var(--docs-footer-foreground)',
-  fontSize: '16px',
+  fontSize: 'var(--rmx-font-size-md)',
   lineHeight: '24px',
   textAlign: 'left',
   '& a': {
@@ -53,7 +54,7 @@ const docsFooterCss = css({
   '& a:hover': {
     color: 'var(--rmx-color-text-primary)',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     flexDirection: 'column',
     alignItems: 'center',
     width: '100%',
@@ -71,7 +72,7 @@ const footerLinksCss = css({
   gap: '24px',
   color: 'var(--docs-footer-link-foreground)',
   flexWrap: 'wrap',
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     justifyContent: 'center',
   },
 })
@@ -116,12 +117,12 @@ const footerLegalCss = css({
   '& p': {
     margin: 0,
     fontFamily: 'var(--rmx-font-family-mono)',
-    fontSize: '10px',
+    fontSize: 'var(--rmx-font-size-xxxs)',
     lineHeight: '16px',
     letterSpacing: '0.05em',
     textTransform: 'uppercase',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     width: '100%',
     alignItems: 'center',
     textAlign: 'center',

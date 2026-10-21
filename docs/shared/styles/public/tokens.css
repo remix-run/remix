@@ -122,6 +122,10 @@
   --docs-nav-item-height: 36px;
   --docs-nav-item-gap: 4px;
   --docs-nav-item-inset: 12px;
+  --docs-font-size-ui: 14px;
+  --docs-font-size-small: 14px;
+  --docs-font-size-label: 12px;
+  --docs-letter-spacing-label: 0.6px;
   --docs-sidebar-offset: 300px;
   --docs-edge-inset: 36px;
   --docs-sidebar-inline-start: var(--docs-edge-inset);

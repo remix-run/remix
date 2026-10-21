@@ -209,7 +209,7 @@ function MainContent(
         </article>
         {headings.length > 0 ? (
           <DocsSecondaryNavigation>
-            <h2 class="docs-toc__heading">On this page</h2>
+            <h2 class="docs-nav-heading docs-toc__heading">On this page</h2>
             <DocsTableOfContents headings={headings} />
           </DocsSecondaryNavigation>
         ) : null}
@@ -240,7 +240,7 @@ function SidebarContent(
             class="api-nav-section"
             open={openSections.includes(section.id) || undefined}
           >
-            <summary>
+            <summary class="docs-nav-heading">
               <PathLabel label={getSidebarPackageLabel(section.label)} />
             </summary>
             <div class="api-nav-content">
@@ -309,7 +309,7 @@ function SidebarGroup(
 
     return (
       <div class="api-nav-group">
-        {group.label ? <p class="api-nav-group__heading">{group.label}</p> : null}
+        {group.label ? <p class="docs-nav-heading api-nav-group__heading">{group.label}</p> : null}
         <nav
           class="api-nav-links"
           aria-label={group.label ? `${sectionLabel} ${group.label}` : `${sectionLabel} pages`}
@@ -321,6 +321,7 @@ function SidebarGroup(
             return (
               <a
                 key={page.path}
+                class="docs-nav-item"
                 href={page.path}
                 aria-current={active ? 'page' : undefined}
                 data-active-doc={active ? 'true' : undefined}
@@ -347,7 +348,7 @@ function VersionSwitcher(handle: Handle<{ versions: Versions; activeVersion?: st
 
     return (
       <details class="api-nav-section" open={activeVersion != null || undefined}>
-        <summary>Version</summary>
+        <summary class="docs-nav-heading">Version</summary>
         <div class="api-nav-content">
           <nav class="api-nav-links" aria-label="Versions">
             {navVersions.map((version) => {
@@ -358,6 +359,7 @@ function VersionSwitcher(handle: Handle<{ versions: Versions; activeVersion?: st
               return (
                 <a
                   key={version}
+                  class="docs-nav-item"
                   href={href}
                   rel={active ? undefined : 'nofollow'}
                   aria-current={active ? 'page' : undefined}

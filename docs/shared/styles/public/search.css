@@ -113,7 +113,7 @@ pagefind-modal {
   background: var(--rmx-surface-lvl0);
   box-shadow: none;
   font-family: var(--rmx-font-family-mono);
-  font-size: 12px;
+  font-size: var(--docs-font-size-label);
   font-weight: var(--rmx-font-weight-normal);
   line-height: 1;
 }

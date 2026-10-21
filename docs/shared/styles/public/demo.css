@@ -1,7 +1,7 @@
 .docs-demo {
   overflow: clip;
   border: 1px solid var(--rmx-color-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--rmx-radius-xl);
 }
 
 .docs-demo-preview {
@@ -58,8 +58,8 @@
   box-shadow: 0 2px 6px rgb(0 0 0 / 8%);
   color: var(--rmx-color-text-secondary);
   font: inherit;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--docs-font-size-ui);
+  font-weight: var(--rmx-font-weight-medium);
   cursor: pointer;
 }
 

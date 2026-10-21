@@ -152,7 +152,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
           </article>
 
           <DocsSecondaryNavigation pagefindIgnore>
-            <h2 class="docs-toc__heading">On this page</h2>
+            <h2 class="docs-nav-heading docs-toc__heading">On this page</h2>
             <DocsTableOfContents headings={handle.props.sections} />
           </DocsSecondaryNavigation>
         </div>

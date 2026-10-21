@@ -23,10 +23,10 @@
   margin: 0;
   color: var(--rmx-color-eyebrow);
   font-family: var(--rmx-font-family-sans);
-  font-size: 12px;
+  font-size: var(--docs-font-size-label);
   font-weight: var(--rmx-font-weight-bold);
   line-height: normal;
-  letter-spacing: 0.6px;
+  letter-spacing: var(--docs-letter-spacing-label);
   text-transform: uppercase;
 }
 
@@ -51,7 +51,7 @@
   padding: 24px;
   overflow: hidden;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--rmx-radius-xl);
   background: var(--docs-chapter-card-background);
   font-family: 'Inter', var(--rmx-font-family-sans);
   cursor: pointer;
@@ -74,20 +74,20 @@
   margin: 0;
   color: var(--rmx-color-text-primary);
   font-family: var(--rmx-font-family-mono);
-  font-size: 16px;
+  font-size: var(--rmx-font-size-md);
   font-weight: var(--rmx-font-weight-normal);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--rmx-letter-spacing-tight);
   opacity: 0.35;
 }
 
 .chapter-card__title {
   margin: 0;
   font-family: 'Inter', var(--rmx-font-family-sans);
-  font-size: 16px;
+  font-size: var(--rmx-font-size-md);
   font-weight: var(--rmx-font-weight-semibold);
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--rmx-letter-spacing-tight);
 }
 
 .chapter-card__title a,
@@ -100,7 +100,7 @@
 .chapter-card__title a::after {
   position: absolute;
   inset: 0;
-  border-radius: 12px;
+  border-radius: var(--rmx-radius-xl);
   content: '';
 }
 
@@ -119,7 +119,7 @@
   overflow: hidden;
   color: var(--rmx-color-text-primary);
   font-family: 'Inter', var(--rmx-font-family-sans);
-  font-size: 16px;
+  font-size: var(--rmx-font-size-md);
   font-weight: var(--rmx-font-weight-normal);
   line-height: 1.4;
 }

@@ -1,5 +1,7 @@
 import { css } from 'remix/component'
 
+import { desktopMedia, mobileMedia, shortDesktopMedia } from './media.ts'
+
 const mobileSubheaderHeight = '48px'
 const mobileNavigationTop = `var(--docs-mobile-navigation-top, calc(var(--site-header-height) + ${mobileSubheaderHeight}))`
 
@@ -31,14 +33,14 @@ export const navigationToggleCss = css({
   padding: '8px',
   placeItems: 'center',
   border: 0,
-  borderRadius: '8px',
+  borderRadius: 'var(--rmx-radius-md)',
   color: 'var(--rmx-color-text-secondary)',
   background: 'transparent',
   cursor: 'pointer',
   transition: 'background-color 150ms ease-in-out',
   '&:hover, &:focus-visible': { background: 'var(--docs-nav-hover-background)' },
   '& svg': { display: 'block', width: '16px', height: '16px' },
-  '@media (width < 900px)': { display: 'none' },
+  [mobileMedia]: { display: 'none' },
 })
 
 export const navigationCss = css({
@@ -65,12 +67,12 @@ export const navigationCss = css({
     visibility: 'hidden',
     pointerEvents: 'none',
   },
-  '@media (max-height: 780px) and (width >= 900px)': {
+  [shortDesktopMedia]: {
     overflowX: 'hidden',
     overflowY: 'auto',
     overscrollBehaviorY: 'auto',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     top: mobileNavigationTop,
     right: 0,
     bottom: 'auto',
@@ -106,7 +108,7 @@ export const navigationCss = css({
 
 export const mobileNavigationBarCss = css({
   display: 'none',
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     position: 'sticky',
     top: 0,
     zIndex: 60,
@@ -150,7 +152,7 @@ export const mobileNavigationButtonCss = css({
 
 export const mobileNavigationBackdropCss = css({
   display: 'none',
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     position: 'fixed',
     inset: `${mobileNavigationTop} 0 0`,
     zIndex: 65,
@@ -190,7 +192,7 @@ export const mainCss = css({
     content: "''",
     pointerEvents: 'none',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     width: '100%',
     margin: 0,
     padding: '24px',
@@ -201,7 +203,7 @@ export const mainCss = css({
 
 export const sidebarRailCss = css({
   display: 'none',
-  '@media (width >= 900px)': {
+  [desktopMedia]: {
     position: 'fixed',
     inset: 'var(--site-header-height) auto 0 0',
     zIndex: 30,
@@ -226,7 +228,7 @@ export const secondaryNavigationCss = css({
     overflowY: 'auto',
     overscrollBehaviorY: 'contain',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     position: 'fixed',
     inset: `${mobileNavigationTop} 0 auto`,
     zIndex: 70,

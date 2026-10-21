@@ -17,8 +17,8 @@ html {
 }
 
 .api-nav-sections {
-  gap: 4px;
-  margin-top: 4px;
+  gap: var(--docs-nav-item-gap);
+  margin-top: var(--docs-nav-item-gap);
 }
 
 .api-nav-section {
@@ -30,11 +30,10 @@ html {
   display: flex;
   align-items: center;
   min-height: var(--docs-nav-item-height);
-  padding: 8px 28px 8px 12px;
+  padding-block: 8px;
+  padding-inline-end: 28px;
   border-radius: var(--rmx-radius-md);
-  color: var(--docs-sidebar-heading);
-  font-size: 14px;
-  font-weight: var(--rmx-font-weight-semibold);
+  font-size: var(--docs-font-size-ui);
   line-height: normal;
   list-style: none;
   cursor: pointer;
@@ -72,11 +71,11 @@ html {
 
 .api-nav-content {
   gap: var(--docs-sidebar-group-gap);
-  padding: 4px 0 var(--docs-sidebar-group-gap) var(--docs-nav-item-inset);
+  padding: var(--docs-nav-item-gap) 0 var(--docs-sidebar-group-gap) var(--docs-nav-item-inset);
 }
 
 .api-nav-group {
-  gap: 4px;
+  gap: var(--docs-nav-item-gap);
 }
 
 .api-nav-group__heading {
@@ -84,10 +83,7 @@ html {
   align-items: center;
   height: var(--docs-nav-item-height);
   margin: 0;
-  padding: 0 12px;
-  color: var(--docs-sidebar-heading);
-  font-size: 12px;
-  font-weight: var(--rmx-font-weight-semibold);
+  font-size: var(--docs-font-size-label);
 }
 
 .api-nav-links {
@@ -96,34 +92,14 @@ html {
 
 .api-nav-links a {
   position: relative;
-  display: flex;
   flex: none;
-  align-items: center;
   width: 100%;
   height: var(--docs-nav-item-height);
-  padding: 0 12px;
   overflow: hidden;
-  border-radius: var(--rmx-radius-md);
-  color: var(--docs-sidebar-link);
-  font-size: 14px;
+  font-size: var(--docs-font-size-ui);
   line-height: 1.4;
-  text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition:
-    color 150ms ease-in-out,
-    background-color 150ms ease-in-out;
-}
-
-.api-nav-links a:hover {
-  color: var(--docs-sidebar-link-hover);
-  background: var(--docs-nav-hover-background);
-}
-
-.api-nav-links a[aria-current='page'] {
-  color: var(--rmx-color-text-primary);
-  background: var(--docs-nav-selected-background);
-  font-weight: var(--rmx-font-weight-medium);
 }
 
 .api-page-header {

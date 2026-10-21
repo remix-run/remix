@@ -48,6 +48,7 @@ export function DocsTableOfContents(handle: Handle<{ headings: DocsHeadingLink[]
           {handle.props.headings.map((heading, index) => (
             <li key={heading.id} class={heading.depth === 3 ? 'docs-toc__item--nested' : undefined}>
               <a
+                class="docs-nav-item"
                 href={`#${heading.id}`}
                 aria-current={index === 0 ? 'location' : undefined}
                 innerHTML={unsafeHTML(heading.titleHtml)}

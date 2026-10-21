@@ -2,6 +2,7 @@ import { css, type Handle } from 'remix/component'
 
 import { button } from './button.ts'
 import { Icon } from './icon.tsx'
+import { abovePhoneMedia, desktopMedia, mobileMedia, phoneMedia, tabletMedia } from './media.ts'
 
 export interface DocsNavigationLink {
   href: string
@@ -147,7 +148,7 @@ const docsHeaderCss = css({
   padding: 0,
   border: 0,
   background: 'var(--docs-shell-background)',
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     position: 'relative',
     borderBottom: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
   },
@@ -165,7 +166,7 @@ const compactSearchButtonCss = css({
   visibility: 'hidden',
   placeItems: 'center',
   border: 0,
-  borderRadius: '8px',
+  borderRadius: 'var(--rmx-radius-md)',
   color: 'var(--rmx-color-text-secondary)',
   background: 'transparent',
   cursor: 'pointer',
@@ -184,7 +185,7 @@ const compactSearchButtonCss = css({
     opacity: 1,
     pointerEvents: 'auto',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     display: 'none',
   },
 })
@@ -201,10 +202,10 @@ const searchButtonCss = css({
   height: '32px',
   padding: '8px',
   border: '1px solid var(--docs-nav-control-border)',
-  borderRadius: '8px',
+  borderRadius: 'var(--rmx-radius-md)',
   color: 'var(--rmx-color-text-secondary)',
   background: 'transparent',
-  fontSize: '14px',
+  fontSize: 'var(--docs-font-size-ui)',
   opacity: 1,
   cursor: 'pointer',
   '&:hover, &:focus-visible': {
@@ -215,7 +216,7 @@ const searchButtonCss = css({
     width: '16px',
     height: '16px',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     '&, :root[data-docs-nav-collapsed] &': {
       position: 'absolute',
       top: '16px',
@@ -233,7 +234,7 @@ const searchButtonCss = css({
 })
 
 const expandedOnlySearchButtonCss = css({
-  '@media (width >= 900px)': {
+  [desktopMedia]: {
     ':root[data-docs-nav-collapsed] &': {
       visibility: 'hidden',
       opacity: 0,
@@ -244,7 +245,7 @@ const expandedOnlySearchButtonCss = css({
 })
 
 const collapsibleSearchButtonCss = css({
-  '@media (width >= 900px)': {
+  [desktopMedia]: {
     ':root[data-docs-nav-collapsed] &': {
       top: 'calc((var(--site-header-height) - 32px) / 2)',
       left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
@@ -260,7 +261,7 @@ const searchButtonLabelCss = css({
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     gap: 0,
   },
 })
@@ -275,7 +276,7 @@ const searchButtonTextCss = css({
   ':root[data-docs-nav-collapsed] &': {
     display: 'none',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     display: 'none',
   },
 })
@@ -287,7 +288,7 @@ const searchButtonShortcutCss = css({
   ':root[data-docs-nav-collapsed] &': {
     display: 'none',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     display: 'none',
   },
 })
@@ -299,11 +300,11 @@ const searchShortcutKeyCss = css({
   padding: 0,
   placeItems: 'center',
   border: '1px solid rgb(0 0 0 / 2%)',
-  borderRadius: '4px',
+  borderRadius: 'var(--rmx-radius-sm)',
   color: '#9ca3b0',
   background: 'var(--rmx-surface-lvl0)',
   fontFamily: 'var(--rmx-font-family-mono)',
-  fontSize: '12px',
+  fontSize: 'var(--docs-font-size-label)',
   lineHeight: 1,
 })
 
@@ -319,7 +320,7 @@ const brandCss = css({
   ':root[data-docs-nav-collapsed] &': {
     width: '37px',
   },
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     left: '24px',
     '&, :root[data-docs-nav-collapsed] &': {
       width: '163px',
@@ -342,21 +343,21 @@ const brandImageCss = css({
 
 const logoMarkCss = css({
   opacity: 'var(--docs-nav-collapse)',
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     opacity: 0,
   },
 })
 
 const wordmarkCss = css({
   opacity: 'calc(1 - var(--docs-nav-collapse))',
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     opacity: 1,
   },
 })
 
 const menuToggleCss = css({
   display: 'none',
-  '@media (width < 640px)': {
+  [phoneMedia]: {
     position: 'absolute',
     top: '12px',
     right: '16px',
@@ -376,7 +377,7 @@ const menuToggleCss = css({
 })
 
 const menuIconCss = css({
-  '@media (width < 640px)': {
+  [phoneMedia]: {
     display: 'grid',
     width: '16px',
     gap: '3px',
@@ -410,9 +411,9 @@ const navigationCss = css({
   height: 'var(--site-header-height)',
   gap: '24px',
   overflow: 'visible',
-  fontSize: '16px',
+  fontSize: 'var(--rmx-font-size-md)',
   flexWrap: 'nowrap',
-  '@media (width < 900px)': {
+  [mobileMedia]: {
     left: '210px',
     right: '24px',
     justifyContent: 'flex-start',
@@ -423,13 +424,13 @@ const navigationCss = css({
       display: 'none',
     },
   },
-  '@media (width >= 640px) and (width < 900px)': {
+  [tabletMedia]: {
     left: 'auto',
     right: '24px',
     justifyContent: 'flex-end',
     overflow: 'visible',
   },
-  '@media (width < 640px)': {
+  [phoneMedia]: {
     position: 'fixed',
     inset: '64px 0 auto',
     zIndex: 60,
@@ -437,7 +438,7 @@ const navigationCss = css({
     alignItems: 'stretch',
     width: '100%',
     height: 'auto',
-    gap: '4px',
+    gap: 'var(--docs-nav-item-gap)',
     margin: 0,
     padding: '8px 16px 16px',
     overflow: 'visible',
@@ -449,16 +450,16 @@ const navigationCss = css({
 })
 
 const desktopNavigationCss = css({
-  '@media (width < 640px)': {
+  [phoneMedia]: {
     display: 'none',
   },
 })
 
 const mobileNavigationCss = css({
-  '@media (width >= 640px)': {
+  [abovePhoneMedia]: {
     display: 'none',
   },
-  '@media (width < 640px)': {
+  [phoneMedia]: {
     display: 'none',
     '@supports selector(:popover-open)': {
       '&:popover-open': {
@@ -475,12 +476,12 @@ const navigationLinkCss = css({
   '&:hover': {
     color: 'var(--docs-nav-link-hover)',
   },
-  '@media (width < 640px)': {
+  [phoneMedia]: {
     display: 'flex',
     alignItems: 'center',
     minHeight: '44px',
-    padding: '8px 12px',
-    borderRadius: '8px',
+    padding: '8px var(--docs-nav-item-inset)',
+    borderRadius: 'var(--rmx-radius-md)',
     '&:hover, &:focus-visible': {
       background: 'var(--docs-nav-hover-background)',
     },

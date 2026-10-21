@@ -10,7 +10,7 @@ type ChapterNavigationProps = {
 export function ChapterNavigationContent(handle: Handle<ChapterNavigationProps>) {
   return () => (
     <>
-      <div class="docs-chapters-nav__heading">Guide chapters</div>
+      <div class="docs-nav-heading docs-chapters-nav__heading">Guide chapters</div>
       <ol class="docs-chapters-nav__list">
         {handle.props.chapters.map((chapter) => {
           let label = (
@@ -23,12 +23,12 @@ export function ChapterNavigationContent(handle: Handle<ChapterNavigationProps>)
           return (
             <li key={chapter.slug}>
               {chapter.disabled ? (
-                <span class="docs-chapters-nav__item" aria-disabled="true">
+                <span class="docs-nav-item docs-chapters-nav__item" aria-disabled="true">
                   {label}
                 </span>
               ) : (
                 <a
-                  class="docs-chapters-nav__item"
+                  class="docs-nav-item docs-chapters-nav__item"
                   href={chapter.href}
                   aria-current={chapter.slug === handle.props.currentSlug ? 'page' : undefined}
                 >

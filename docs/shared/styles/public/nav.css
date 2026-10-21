@@ -1,0 +1,28 @@
+.docs-nav-heading {
+  padding-inline: var(--docs-nav-item-inset);
+  color: var(--docs-sidebar-heading);
+  font-weight: var(--rmx-font-weight-semibold);
+}
+
+.docs-nav-item {
+  display: flex;
+  align-items: center;
+  padding-inline: var(--docs-nav-item-inset);
+  border-radius: var(--rmx-radius-md);
+  color: var(--docs-sidebar-link);
+  text-decoration: none;
+  transition:
+    color 150ms ease-in-out,
+    background-color 150ms ease-in-out;
+}
+
+a.docs-nav-item:hover {
+  color: var(--docs-sidebar-link-hover);
+  background: var(--docs-nav-hover-background);
+}
+
+a.docs-nav-item[aria-current] {
+  color: var(--rmx-color-text-primary);
+  background: var(--docs-nav-selected-background);
+  font-weight: var(--rmx-font-weight-medium);
+}

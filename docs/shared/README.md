@@ -16,7 +16,7 @@ Browser source is colocated with its owner under `public/` directories. Server m
 
 Site-specific routes, document shells, Markdown transforms, styles, and static files stay in the owning site. For example, the API's `favicon.ico` remains in `docs/api/public/`. Repository README artwork lives in `.github/assets/` rather than either site's public directory.
 
-Navigation behavior also stays site-owned: Guides animates selection in its flat chapter list, while the API uses static active styles within grouped disclosure sections.
+Navigation lists share the `.docs-nav-item` and `.docs-nav-heading` styles in `styles/public/nav.css`. Each site keeps only its own sizing and layout, such as the Guides chapter numbers and the API disclosure sections.
 
 ## Markdown contract
 

@@ -42,7 +42,7 @@
   z-index: 0;
   display: none;
   height: var(--docs-selection-indicator-height);
-  border-radius: 8px;
+  border-radius: var(--rmx-radius-md);
   background: var(--docs-nav-selected-background);
   content: '';
   pointer-events: none;

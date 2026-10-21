@@ -82,7 +82,7 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
               </article>
               {headings.length > 0 ? (
                 <DocsSecondaryNavigation pagefindIgnore>
-                  <h2 class="docs-toc__heading">On this page</h2>
+                  <h2 class="docs-nav-heading docs-toc__heading">On this page</h2>
                   <DocsTableOfContents headings={headings} />
                 </DocsSecondaryNavigation>
               ) : null}
@@ -98,11 +98,11 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
 function Sidebar(handle: Handle<{ pages: UiPage[]; currentPage?: PageMeta }>) {
   return () => (
     <>
-      <p class="ui-nav-heading">
+      <p class="docs-nav-heading ui-nav-heading">
         Remix UI <span class="ui-nav-version">v{uiPackage.version}</span>
       </p>
       <a
-        class="ui-nav-link ui-nav-start"
+        class="docs-nav-item ui-nav-link ui-nav-start"
         href={routes.docs.index.href()}
         aria-current={handle.props.currentPage === undefined ? 'page' : undefined}
       >
@@ -110,14 +110,14 @@ function Sidebar(handle: Handle<{ pages: UiPage[]; currentPage?: PageMeta }>) {
       </a>
       {categories.map((category) => (
         <section key={category.id} class="ui-nav-group">
-          <h2>{category.title}</h2>
+          <h2 class="docs-nav-heading">{category.title}</h2>
           <ul>
             {handle.props.pages
               .filter((page) => page.category === category.id)
               .map((page) => (
                 <li key={page.slug}>
                   <a
-                    class="ui-nav-link"
+                    class="docs-nav-item ui-nav-link"
                     href={routes.docs.page.href({ category: category.id, slug: page.slug })}
                     aria-current={
                       handle.props.currentPage?.category === page.category &&

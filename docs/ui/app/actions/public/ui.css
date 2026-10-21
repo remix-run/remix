@@ -8,7 +8,7 @@
   font-family: var(--rmx-font-family-sans);
   font-weight: var(--rmx-font-weight-bold);
   line-height: normal;
-  letter-spacing: 0.6px;
+  letter-spacing: var(--docs-letter-spacing-label);
 }
 .ui-notice {
   display: flex;
@@ -16,7 +16,7 @@
   gap: 12px;
   padding: 20px 24px;
   border: 1px solid var(--rmx-color-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--rmx-radius-lg);
   background: var(--rmx-surface-lvl2);
 }
 .ui-notice > svg {
@@ -27,7 +27,7 @@
 .ui-notice p {
   margin: 0;
   color: var(--rmx-color-text-secondary);
-  font-size: 14px;
+  font-size: var(--docs-font-size-small);
 }
 .ui-doc-section,
 .ui-example {
@@ -46,13 +46,13 @@
 .ui-example > h2,
 .ui-example > h3 {
   margin: 0 0 16px;
-  font-size: 24px;
-  font-weight: 600;
+  font-size: var(--rmx-font-size-xl);
+  font-weight: var(--rmx-font-weight-semibold);
   letter-spacing: -0.025em;
 }
 .ui-doc-section > dl > dt {
   margin-top: 20px;
-  font-weight: 600;
+  font-weight: var(--rmx-font-weight-semibold);
 }
 .ui-doc-section > dl > dd {
   margin: 6px 0 0;
@@ -61,7 +61,7 @@
   width: 100%;
   min-width: 40rem;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--docs-font-size-small);
 }
 .ui-doc-section th,
 .ui-doc-section td {
@@ -88,16 +88,13 @@
   gap: 8px;
   height: var(--docs-nav-item-height);
   margin: 0 0 8px;
-  padding: 0 12px;
-  color: var(--docs-sidebar-heading);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--docs-font-size-ui);
   line-height: var(--docs-nav-item-height);
 }
 .ui-nav-version {
   color: var(--rmx-color-text-secondary);
-  font-size: 12px;
-  font-weight: 400;
+  font-size: var(--docs-font-size-label);
+  font-weight: var(--rmx-font-weight-normal);
 }
 .ui-nav-start {
   margin-bottom: var(--docs-sidebar-group-gap);
@@ -109,11 +106,8 @@
   display: flex;
   align-items: center;
   height: var(--docs-nav-item-height);
-  margin: 0 0 4px;
-  padding: 0 12px;
-  color: var(--docs-sidebar-heading);
-  font-size: 12px;
-  font-weight: var(--rmx-font-weight-semibold);
+  margin: 0 0 var(--docs-nav-item-gap);
+  font-size: var(--docs-font-size-label);
 }
 .ui-nav-group ul {
   display: grid;
@@ -123,26 +117,8 @@
   list-style: none;
 }
 .ui-nav-link {
-  display: flex;
-  align-items: center;
   height: var(--docs-nav-item-height);
-  padding: 0 12px;
-  border-radius: 8px;
-  color: var(--docs-sidebar-link);
-  font-size: 14px;
-  text-decoration: none;
-  transition:
-    color 150ms ease-in-out,
-    background-color 150ms ease-in-out;
-}
-.ui-nav-link:hover {
-  color: var(--docs-sidebar-link-hover);
-  background: var(--docs-nav-hover-background);
-}
-.ui-nav-link[aria-current] {
-  color: var(--rmx-color-text-primary);
-  background: var(--docs-nav-selected-background);
-  font-weight: var(--rmx-font-weight-medium);
+  font-size: var(--docs-font-size-ui);
 }
 .ui-preview-card-demo {
   display: grid;
@@ -162,7 +138,7 @@
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--rmx-color-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--rmx-radius-xl);
 }
 .ui-preview-card-content {
   padding: 24px;
@@ -182,7 +158,7 @@
   position: absolute;
   z-index: 1;
   inset: 0;
-  border-radius: 12px;
+  border-radius: var(--rmx-radius-xl);
   content: '';
   transition: background-color 150ms ease-in-out;
 }
@@ -207,7 +183,7 @@
 }
 .ui-preview-card-content p:last-child {
   margin-bottom: 0;
-  font-size: 14px;
+  font-size: var(--docs-font-size-small);
   color: var(--rmx-color-text-secondary);
 }
 .ui-page-navigation {
@@ -222,7 +198,7 @@
   gap: 8px;
   padding: 20px;
   border: 1px solid var(--rmx-color-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--rmx-radius-xl);
   color: var(--rmx-color-text-primary);
   font-weight: var(--rmx-font-weight-semibold);
   text-decoration: none;
@@ -240,7 +216,7 @@
 }
 .ui-page-navigation-direction {
   color: var(--rmx-color-text-secondary);
-  font-size: 13px;
+  font-size: var(--rmx-font-size-xs);
   font-weight: var(--rmx-font-weight-normal);
 }
 @container docs-main (width >= 56rem) {
@@ -268,7 +244,7 @@
 .ui-api-table {
   margin: 24px 0 32px;
   border: 1px solid var(--rmx-color-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--rmx-radius-lg);
 }
 .ui-api-table-header,
 .ui-api-entry > summary {
@@ -283,8 +259,8 @@
 }
 .ui-api-table-header {
   color: var(--rmx-color-text-secondary);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--rmx-font-size-xs);
+  font-weight: var(--rmx-font-weight-medium);
 }
 .ui-api-entry {
   border-top: 1px solid var(--rmx-color-border-subtle);
@@ -309,13 +285,13 @@
 .ui-api-entry > summary:focus-visible {
   outline: 2px solid var(--rmx-color-focus-ring);
   outline-offset: -3px;
-  border-radius: 4px;
+  border-radius: var(--rmx-radius-sm);
 }
 .ui-api-entry code {
   padding: 0;
   border: 0;
   background: none;
-  font-size: 13px;
+  font-size: var(--rmx-font-size-xs);
 }
 .ui-api-name {
   display: flex;
@@ -323,13 +299,13 @@
   align-items: center;
   gap: 6px 10px;
   min-width: 0;
-  font-weight: 600;
+  font-weight: var(--rmx-font-weight-semibold);
   overflow-wrap: anywhere;
 }
 .ui-api-required {
   color: var(--rmx-color-text-secondary);
-  font-size: 11px;
-  font-weight: 400;
+  font-size: var(--rmx-font-size-xxs);
+  font-weight: var(--rmx-font-weight-normal);
 }
 .ui-api-default-label {
   position: absolute;
@@ -342,13 +318,13 @@
 .ui-api-type {
   overflow: hidden;
   color: var(--rmx-color-text-secondary);
-  font-size: 13px;
+  font-size: var(--rmx-font-size-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .ui-api-default {
   color: var(--rmx-color-text-secondary);
-  font-size: 13px;
+  font-size: var(--rmx-font-size-xs);
 }
 .ui-api-chevron {
   width: 6px;
@@ -364,7 +340,7 @@
 .ui-api-entry-content {
   padding: 16px 20px 20px;
   scroll-margin-top: calc(var(--ui-anchor-offset) + 56px);
-  font-size: 14px;
+  font-size: var(--docs-font-size-small);
   line-height: 1.65;
 }
 .ui-api-entry-content .ui-api-details {
@@ -381,7 +357,7 @@
   float: inline-end;
   margin: -4px -4px 4px 12px;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: var(--rmx-radius-sm);
   color: var(--rmx-color-text-secondary);
 }
 .ui-api-permalink:hover {
@@ -396,8 +372,8 @@
   width: 104px;
   padding-right: 20px;
   color: var(--rmx-color-text-secondary);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--rmx-font-size-xs);
+  font-weight: var(--rmx-font-weight-medium);
   white-space: normal;
 }
 .ui-api-details td {

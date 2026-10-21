@@ -12,7 +12,7 @@ describe('UI docs', () => {
     assert.equal(response.status, 200)
     assert.equal(html.match(/class="ui-nav-version">([^<]+)<\/span>/)?.[1], `v${uiPackage.version}`)
     assert.match(html, /Unstyled, accessible UI patterns and animation for Remix/)
-    assert.match(html, /<h2>Patterns<\/h2>/)
+    assert.match(html, /<h2 class="docs-nav-heading">Patterns<\/h2>/)
     assert.match(html, /is currently unstable and versioned in the v0\.x range/)
     assert.match(html, /npm/)
     assert.match(html, /@remix-run\/ui/)
