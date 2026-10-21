@@ -12,9 +12,9 @@ This repository includes the source code for Remix 3, a web framework for buildi
 
 ## Git Workflow
 
-- **Worktrees**: always do your work in a dedicated git worktree under `.agents/worktrees/` in the main Remix checkout, for example `git worktree add .agents/worktrees/fix-flaky-bun-test -b mjackson/fix-flaky-bun-test origin/main`. Do not create worktrees anywhere else, such as tool-specific directories in your home directory
+- **Worktrees**: do your work in a dedicated git worktree, not the main checkout. Don't nest worktrees inside the main checkout; they inherit its config files like `.oxlintrc.json`, which breaks `oxlint`
 - **Main checkout**: leave the main Remix checkout on `main` and do not check out `main` in any other worktree; git only allows a branch to be checked out in one worktree at a time
-- **Cleanup**: remove a worktree with `git worktree remove .agents/worktrees/<name>` once its branch is merged or abandoned
+- **Cleanup**: remove a worktree with `git worktree remove <path>` once its branch is merged or abandoned
 - **Branch names**: use `<author>/<pr-description>`, where `author` is the GitHub username of the person making the commit and `pr-description` is a few meaningful, hyphen-separated words describing the pull request, for example `mjackson/fix-flaky-bun-test`
 
 ## Default Development Loop
