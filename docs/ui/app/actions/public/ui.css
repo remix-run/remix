@@ -1,5 +1,5 @@
 .ui-article {
-  --ui-anchor-offset: calc(var(--site-header-height) + 24px);
+  --ui-anchor-offset: 72px;
 
   max-width: none;
 }
@@ -126,7 +126,7 @@
   place-items: center;
   isolation: isolate;
   min-height: 300px;
-  padding: 32px 24px;
+  padding: 24px 16px;
   background: var(--rmx-surface-lvl2);
 }
 .ui-preview-grid {
@@ -230,9 +230,9 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (width < 640px) {
+@media (width >= 640px) {
   .ui-preview-card-demo {
-    padding: 24px 16px;
+    padding: 32px 24px;
   }
 }
 
@@ -443,8 +443,8 @@
     padding-right: 12px;
   }
 }
-@media (width < 900px) {
+@media (width >= 900px) {
   .ui-article {
-    --ui-anchor-offset: 72px;
+    --ui-anchor-offset: calc(var(--site-header-height) + 24px);
   }
 }

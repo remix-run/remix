@@ -57,7 +57,7 @@
   white-space: nowrap;
 }
 
-@media (max-height: 780px) and (width >= 900px) {
+@media (width >= 900px) and (height <= 780px) {
   .docs-chapters-nav__heading {
     height: 28px;
   }

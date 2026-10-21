@@ -9,7 +9,7 @@
   grid-template-columns: minmax(0, 1fr);
   place-items: center;
   isolation: isolate;
-  padding: 64px 32px;
+  padding: 48px 20px;
   background: var(--rmx-surface-lvl2);
 }
 
@@ -94,8 +94,8 @@
   outline-offset: 3px;
 }
 
-@media (width < 640px) {
+@media (width >= 640px) {
   .docs-demo-preview {
-    padding: 48px 20px;
+    padding: 64px 32px;
   }
 }

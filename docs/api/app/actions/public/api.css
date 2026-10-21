@@ -132,7 +132,7 @@ html {
 
 .api-page-content > h1:first-child,
 .api-page-content > div > h1:first-child {
-  margin: 0 0 40px;
+  margin: 0 0 var(--rmx-space-xxl);
   overflow-wrap: anywhere;
 }
 
@@ -157,10 +157,10 @@ html {
   margin: 0;
 }
 
-@media (width < 900px) {
+@media (width >= 900px) {
   .api-page-content > h1:first-child,
   .api-page-content > div > h1:first-child {
-    margin-bottom: var(--rmx-space-xxl);
+    margin-bottom: 40px;
   }
 }
 

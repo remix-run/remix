@@ -98,7 +98,7 @@
   --rmx-content-max-width: 48rem;
   --rmx-page-gutter: calc(var(--rmx-space-xl) + var(--rmx-space-sm));
 
-  --site-header-height: 88px;
+  --site-header-height: 64px;
   --docs-shell-background: #f3f5f7;
   --docs-footer-foreground: #69707b;
   --docs-footer-link-foreground: #858c98;
@@ -169,9 +169,9 @@
   --pf-modal-backdrop: light-dark(rgb(0 0 0 / 50%), rgb(0 0 0 / 72%));
 }
 
-@media (width < 900px) {
+@media (width >= 900px) {
   :root {
-    --site-header-height: 64px;
+    --site-header-height: 88px;
   }
 }
 

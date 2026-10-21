@@ -118,6 +118,7 @@ pagefind-modal {
   line-height: 1;
 }
 
+/* Matches Pagefind's own fullscreen-modal breakpoint, which includes 640px. */
 @media (max-width: 640px) {
   :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal dialog.pf-modal {
     border: 0;

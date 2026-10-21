@@ -47,9 +47,6 @@
   content: '';
   pointer-events: none;
   transform: translateY(var(--docs-selection-indicator-y));
-  transition:
-    transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    height 180ms ease;
   will-change: transform;
 }
 
@@ -67,14 +64,20 @@
   transition: none;
 }
 
+/* Mobile drawers open and close instantly; sliding panels felt sluggish on touch. */
+@media (width >= 900px) {
+  .docs-selection-list::before {
+    transition:
+      transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      height 180ms ease;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --docs-nav-duration: 0s;
   }
-}
 
-/* Mobile drawers open and close instantly; sliding panels felt sluggish on touch. */
-@media (prefers-reduced-motion: reduce), (width < 900px) {
   .docs-selection-list::before {
     transition: none;
   }

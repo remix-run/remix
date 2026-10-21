@@ -2,7 +2,7 @@ import { css, type Handle } from 'remix/component'
 
 import { button } from './button.ts'
 import { Icon } from './icon.tsx'
-import { abovePhoneMedia, desktopMedia, mobileMedia, phoneMedia, tabletMedia } from './media.ts'
+import { media } from './media.ts'
 
 export interface DocsNavigationLink {
   href: string
@@ -140,17 +140,18 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
 }
 
 const docsHeaderCss = css({
-  position: 'fixed',
+  position: 'relative',
   inset: '0 0 auto',
   zIndex: 50,
   display: 'block',
   height: 'var(--site-header-height)',
   padding: 0,
   border: 0,
+  borderBottom: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
   background: 'var(--docs-shell-background)',
-  [mobileMedia]: {
-    position: 'relative',
-    borderBottom: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
+  [media.md]: {
+    position: 'fixed',
+    borderBottom: 0,
   },
 })
 
@@ -159,7 +160,7 @@ const compactSearchButtonCss = css({
   top: 'calc((var(--site-header-height) - 32px) / 2)',
   left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
   zIndex: 51,
-  display: 'grid',
+  display: 'none',
   width: '32px',
   height: '32px',
   padding: '8px',
@@ -185,23 +186,23 @@ const compactSearchButtonCss = css({
     opacity: 1,
     pointerEvents: 'auto',
   },
-  [mobileMedia]: {
-    display: 'none',
+  [media.md]: {
+    display: 'grid',
   },
 })
 
 const searchButtonCss = css({
-  position: 'fixed',
-  top: 'var(--site-header-height)',
-  left: 'var(--docs-sidebar-inline-start)',
+  position: 'absolute',
+  top: '16px',
+  left: 'min(211px, calc(100% - 125px))',
   zIndex: 40,
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'space-between',
-  width: 'var(--docs-sidebar-content-width)',
+  justifyContent: 'center',
+  width: '32px',
   height: '32px',
   padding: '8px',
-  border: '1px solid var(--docs-nav-control-border)',
+  border: 0,
   borderRadius: 'var(--rmx-radius-md)',
   color: 'var(--rmx-color-text-secondary)',
   background: 'transparent',
@@ -216,25 +217,18 @@ const searchButtonCss = css({
     width: '16px',
     height: '16px',
   },
-  [mobileMedia]: {
-    '&, :root[data-docs-nav-collapsed] &': {
-      position: 'absolute',
-      top: '16px',
-      left: 'min(211px, calc(100% - 125px))',
-      justifyContent: 'center',
-      width: '32px',
-      padding: '8px',
-      border: 0,
-      visibility: 'visible',
-      opacity: 1,
-      transform: 'none',
-      pointerEvents: 'auto',
-    },
+  [media.md]: {
+    position: 'fixed',
+    top: 'var(--site-header-height)',
+    left: 'var(--docs-sidebar-inline-start)',
+    justifyContent: 'space-between',
+    width: 'var(--docs-sidebar-content-width)',
+    border: '1px solid var(--docs-nav-control-border)',
   },
 })
 
 const expandedOnlySearchButtonCss = css({
-  [desktopMedia]: {
+  [media.md]: {
     ':root[data-docs-nav-collapsed] &': {
       visibility: 'hidden',
       opacity: 0,
@@ -245,7 +239,7 @@ const expandedOnlySearchButtonCss = css({
 })
 
 const collapsibleSearchButtonCss = css({
-  [desktopMedia]: {
+  [media.md]: {
     ':root[data-docs-nav-collapsed] &': {
       top: 'calc((var(--site-header-height) - 32px) / 2)',
       left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
@@ -260,9 +254,9 @@ const collapsibleSearchButtonCss = css({
 const searchButtonLabelCss = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '12px',
-  [mobileMedia]: {
-    gap: 0,
+  gap: 0,
+  [media.md]: {
+    gap: '12px',
   },
 })
 
@@ -273,23 +267,24 @@ const collapsibleSearchButtonLabelCss = css({
 })
 
 const searchButtonTextCss = css({
-  ':root[data-docs-nav-collapsed] &': {
-    display: 'none',
-  },
-  [mobileMedia]: {
-    display: 'none',
+  display: 'none',
+  [media.md]: {
+    display: 'inline',
+    ':root[data-docs-nav-collapsed] &': {
+      display: 'none',
+    },
   },
 })
 
 const searchButtonShortcutCss = css({
-  display: 'flex',
+  display: 'none',
   alignItems: 'center',
   gap: '4px',
-  ':root[data-docs-nav-collapsed] &': {
-    display: 'none',
-  },
-  [mobileMedia]: {
-    display: 'none',
+  [media.md]: {
+    display: 'flex',
+    ':root[data-docs-nav-collapsed] &': {
+      display: 'none',
+    },
   },
 })
 
@@ -311,19 +306,16 @@ const searchShortcutKeyCss = css({
 const brandCss = css({
   position: 'absolute',
   top: 'calc((var(--site-header-height) - 16px) / 2)',
-  left: 'var(--docs-sidebar-inline-start)',
+  left: '24px',
   display: 'block',
   width: '163px',
   height: '16px',
   color: 'var(--rmx-color-text-primary)',
   textDecoration: 'none',
-  ':root[data-docs-nav-collapsed] &': {
-    width: '37px',
-  },
-  [mobileMedia]: {
-    left: '24px',
-    '&, :root[data-docs-nav-collapsed] &': {
-      width: '163px',
+  [media.md]: {
+    left: 'var(--docs-sidebar-inline-start)',
+    ':root[data-docs-nav-collapsed] &': {
+      width: '37px',
     },
   },
 })
@@ -342,129 +334,121 @@ const brandImageCss = css({
 })
 
 const logoMarkCss = css({
-  opacity: 'var(--docs-nav-collapse)',
-  [mobileMedia]: {
-    opacity: 0,
+  opacity: 0,
+  [media.md]: {
+    opacity: 'var(--docs-nav-collapse)',
   },
 })
 
 const wordmarkCss = css({
-  opacity: 'calc(1 - var(--docs-nav-collapse))',
-  [mobileMedia]: {
-    opacity: 1,
+  opacity: 1,
+  [media.md]: {
+    opacity: 'calc(1 - var(--docs-nav-collapse))',
   },
 })
 
 const menuToggleCss = css({
+  position: 'absolute',
+  top: '12px',
+  right: '16px',
   display: 'none',
-  [phoneMedia]: {
-    position: 'absolute',
-    top: '12px',
-    right: '16px',
-    alignItems: 'center',
-    gap: '8px',
-    minWidth: '44px',
-    minHeight: '40px',
-    padding: '8px 10px',
-    cursor: 'pointer',
-    '&:hover, &:focus-visible': {
-      background: 'var(--docs-nav-hover-background)',
-    },
-    '@supports selector(:popover-open)': {
-      display: 'inline-flex',
-    },
+  alignItems: 'center',
+  gap: '8px',
+  minWidth: '44px',
+  minHeight: '40px',
+  padding: '8px 10px',
+  cursor: 'pointer',
+  '&:hover, &:focus-visible': {
+    background: 'var(--docs-nav-hover-background)',
+  },
+  '@supports selector(:popover-open)': {
+    display: 'inline-flex',
+  },
+  [media.sm]: {
+    display: 'none',
   },
 })
 
 const menuIconCss = css({
-  [phoneMedia]: {
-    display: 'grid',
-    width: '16px',
-    gap: '3px',
-    '& span': {
-      display: 'block',
-      height: '1.5px',
-      borderRadius: 'var(--rmx-radius-full)',
-      background: 'currentColor',
-      transformOrigin: 'center',
-    },
-    ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(1)': {
-      transform: 'translateY(4.5px) rotate(45deg)',
-    },
-    ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(2)': {
-      opacity: 0,
-    },
-    ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(3)': {
-      transform: 'translateY(-4.5px) rotate(-45deg)',
-    },
+  display: 'grid',
+  width: '16px',
+  gap: '3px',
+  '& span': {
+    display: 'block',
+    height: '1.5px',
+    borderRadius: 'var(--rmx-radius-full)',
+    background: 'currentColor',
+    transformOrigin: 'center',
+  },
+  ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(1)': {
+    transform: 'translateY(4.5px) rotate(45deg)',
+  },
+  ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(2)': {
+    opacity: 0,
+  },
+  ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(3)': {
+    transform: 'translateY(-4.5px) rotate(-45deg)',
   },
 })
 
 const navigationCss = css({
-  position: 'absolute',
-  top: 0,
-  right: 'var(--docs-edge-inset)',
+  position: 'fixed',
+  inset: '64px 0 auto',
+  zIndex: 60,
   display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'flex-end',
-  width: 'auto',
-  height: 'var(--site-header-height)',
-  gap: '24px',
+  flexDirection: 'column',
+  alignItems: 'stretch',
+  justifyContent: 'flex-start',
+  width: '100%',
+  height: 'auto',
+  gap: 'var(--docs-nav-item-gap)',
+  margin: 0,
+  padding: '8px 16px 16px',
   overflow: 'visible',
+  border: 0,
+  borderBottom: '1px solid var(--rmx-color-border-subtle)',
+  background: 'var(--docs-shell-background)',
+  boxShadow: '0 12px 24px rgb(0 0 0 / 12%)',
   fontSize: 'var(--rmx-font-size-md)',
   flexWrap: 'nowrap',
-  [mobileMedia]: {
-    left: '210px',
-    right: '24px',
-    justifyContent: 'flex-start',
-    gap: '20px',
-    overflowX: 'auto',
-    scrollbarWidth: 'none',
-    '&::-webkit-scrollbar': {
-      display: 'none',
-    },
-  },
-  [tabletMedia]: {
-    left: 'auto',
-    right: '24px',
+  [media.sm]: {
+    position: 'absolute',
+    inset: '0 24px auto auto',
+    zIndex: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'flex-end',
-    overflow: 'visible',
-  },
-  [phoneMedia]: {
-    position: 'fixed',
-    inset: '64px 0 auto',
-    zIndex: 60,
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    width: '100%',
-    height: 'auto',
-    gap: 'var(--docs-nav-item-gap)',
-    margin: 0,
-    padding: '8px 16px 16px',
-    overflow: 'visible',
+    width: 'auto',
+    height: 'var(--site-header-height)',
+    gap: '20px',
+    padding: 0,
     border: 0,
-    borderBottom: '1px solid var(--rmx-color-border-subtle)',
-    background: 'var(--docs-shell-background)',
-    boxShadow: '0 12px 24px rgb(0 0 0 / 12%)',
+    background: 'none',
+    boxShadow: 'none',
+  },
+  [media.md]: {
+    right: 'var(--docs-edge-inset)',
+    gap: '24px',
   },
 })
 
 const desktopNavigationCss = css({
-  [phoneMedia]: {
-    display: 'none',
+  display: 'none',
+  [media.sm]: {
+    display: 'flex',
   },
 })
 
 const mobileNavigationCss = css({
-  [abovePhoneMedia]: {
-    display: 'none',
+  display: 'none',
+  '@supports selector(:popover-open)': {
+    '&:popover-open': {
+      display: 'flex',
+    },
   },
-  [phoneMedia]: {
-    display: 'none',
-    '@supports selector(:popover-open)': {
-      '&:popover-open': {
-        display: 'flex',
-      },
+  [media.sm]: {
+    '&, &:popover-open': {
+      display: 'none',
     },
   },
 })
@@ -473,17 +457,25 @@ const navigationLinkCss = css({
   color: 'var(--docs-nav-link)',
   textDecoration: 'none',
   whiteSpace: 'nowrap',
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: '44px',
+  padding: '8px var(--docs-nav-item-inset)',
+  borderRadius: 'var(--rmx-radius-md)',
   '&:hover': {
     color: 'var(--docs-nav-link-hover)',
   },
-  [phoneMedia]: {
-    display: 'flex',
-    alignItems: 'center',
-    minHeight: '44px',
-    padding: '8px var(--docs-nav-item-inset)',
-    borderRadius: 'var(--rmx-radius-md)',
+  '&:hover, &:focus-visible': {
+    background: 'var(--docs-nav-hover-background)',
+  },
+  [media.sm]: {
+    display: 'inline',
+    alignItems: 'normal',
+    minHeight: 'auto',
+    padding: 0,
+    borderRadius: 0,
     '&:hover, &:focus-visible': {
-      background: 'var(--docs-nav-hover-background)',
+      background: 'none',
     },
   },
 })
