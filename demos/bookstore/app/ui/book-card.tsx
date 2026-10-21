@@ -21,7 +21,11 @@ export function BookCard(handle: Handle<BookCardProps>) {
           <p class="author">by {book.author}</p>
           <p class="price">${book.price.toFixed(2)}</p>
           <div mix={css({ display: 'flex', gap: '0.5rem', alignItems: 'center' })}>
-            <a href={routes.books.show.href({ slug: book.slug })} class="btn">
+            <a
+              href={routes.books.show.href({ slug: book.slug })}
+              data-rmx-prefetch="intent"
+              class="btn"
+            >
               View Details
             </a>
 

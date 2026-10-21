@@ -236,7 +236,7 @@ await handle.frame.reload({
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
-Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for caching requirements and custom prefetch strategies.
+Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Remix fetches its HTML to discover JavaScript, CSS, and explicit image and font preloads for asset prefetch hints. Navigation uses the default resolver and browser HTTP cache; even uncacheable HTML can reveal cacheable assets. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for caching behavior and custom strategies.
 
 ## Single-page Applications
 

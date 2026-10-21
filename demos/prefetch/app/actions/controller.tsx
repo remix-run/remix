@@ -7,23 +7,24 @@ import { assets } from '../utils/assets.ts'
 import { HomePage } from './home-page.tsx'
 import { ProductPage, type RequestKind } from './product-page.tsx'
 
+const ASSET_RESPONSE_DELAY_MS = 200
 const PRODUCT_RENDER_DELAY_MS = 800
 
-// The default prefetch strategy relies on the browser's HTTP cache, so prefetched pages must be
-// cacheable. Without this header, a prefetch would only add a second request.
-const PRODUCT_CACHE_CONTROL = 'private, max-age=30'
+const PRODUCT_STYLESHEET_PATH = new URL('./public/product.css', import.meta.url).pathname
 
 export default createController(routes, {
   actions: {
     async assets({ request }) {
+      await new Promise((resolve) => setTimeout(resolve, ASSET_RESPONSE_DELAY_MS))
       let assetResponse = await assets.fetch(request)
       return assetResponse ?? new Response('Not found', { status: 404 })
     },
-    home({ render }) {
+    async home({ render }) {
       return render(
         <Document title="Catalog">
           <HomePage />
         </Document>,
+        { headers: { 'Cache-Control': 'no-store' } },
       )
     },
     async product({ params, render, request }) {
@@ -32,22 +33,23 @@ export default createController(routes, {
 
       await new Promise((resolve) => setTimeout(resolve, PRODUCT_RENDER_DELAY_MS))
 
+      let cacheControl = product.slug === 'enamel-mug' ? 'no-store' : 'private, max-age=30'
       return render(
-        <Document title={product.name}>
+        <Document title={product.name} stylesheet={await assets.getHref(PRODUCT_STYLESHEET_PATH)}>
           <ProductPage
             product={product}
             requestedAs={getRequestKind(request)}
             renderedAt={new Date()}
+            cacheControl={cacheControl}
           />
         </Document>,
-        { headers: { 'Cache-Control': PRODUCT_CACHE_CONTROL } },
+        { headers: { 'Cache-Control': cacheControl } },
       )
     },
   },
 })
 
 function getRequestKind(request: Request): RequestKind {
-  if (request.headers.get('Sec-Purpose')?.includes('prefetch')) return 'prefetch'
-  if (request.headers.get('X-Remix-Frame') === 'true') return 'frame navigation'
+  if (request.headers.get('X-Remix-Frame') === 'true') return 'frame request'
   return 'document load'
 }

@@ -267,7 +267,8 @@ calls, link navigations, and form navigations. GET form values are already encod
 submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for
 `text/plain`, and `FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs
 additional headers, another body encoding, or a different response policy. Custom resolvers receive
-`signal` and the frame name as `target` when named; non-GET form submissions also provide `formData`, `method`, and `encType`.
+`signal` and the frame name as `target` when named; non-GET form submissions also provide `formData`,
+`method`, and `encType`.
 
 The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom resolver may return a `Response` with any status when it wants the component runtime to render the response body.
 
@@ -404,7 +405,6 @@ Add `data-rmx-prefetch="intent"` to a link to start loading its page when the vi
 
 ```tsx
 import { prefetch } from 'remix/component'
-
 ;<a href="/products/shirt" data-rmx-prefetch="intent">
   Shirt
 </a>
@@ -414,11 +414,26 @@ prefetch(`/search?q=${encodeURIComponent(query)}`)
 
 Prefetching is opt-in per link because it requests pages speculatively. Only mark links whose GET requests are safe to repeat. Only links that would reload the top frame from another same-origin URL are prefetched, so links with `data-rmx-target`, `data-rmx-document`, `download`, or a `target` other than `_self` are skipped, as is the current page.
 
-By default, Remix adds a `<link rel="prefetch">` for the page, and the browser keeps the response in its HTTP cache for the next navigation's `resolveFrame` request. The browser only reuses that response when the page is HTTP-cacheable, for example with `Cache-Control: private, max-age=30`, and the response does not `Vary` on `X-Remix-Frame`. Pages sent with `no-store` are requested twice. Browsers without `<link rel="prefetch">` support, such as Safari, skip the prefetch.
+By default, Remix fetches the page with GET, a `priority: 'low'` hint, and the same `Accept: text/html` and `X-Remix-Frame: true` headers as a top-frame navigation. It reads the response into an inert template and discovers explicit JavaScript and CSS URLs and `<link rel="preload" as="image|font" href="…">` declarations, including resources inside nested frame templates. It adds ordinary `<link rel="prefetch" as="script|style|image|font">` hints for assets that are not already active in the document. These hints do not run scripts, apply styles, install import maps, or follow module dependencies. They remain connected through frame navigation and are removed on load, error, or runtime disposal.
 
-When pages can't be HTTP-cached, pass `prefetch` to `run()` to load them another way, and pair it with a `resolveFrame` that reuses the result. Remix still decides when and which links to prefetch. This example holds each prefetched response in memory for the next untargeted GET request, where `fetchFrame()` is the app's own frame request:
+Declare important destination images and fonts with preload links to include them in discovery:
+
+```html
+<link rel="preload" as="image" href="/images/product-hero.jpg" />
+<link rel="preload" as="font" href="/fonts/body.woff2" type="font/woff2" crossorigin />
+```
+
+Image and font preload links must have an explicit `href` and a matching `media` condition, if specified. Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix preserves that setting on the prefetch hint. It skips image declarations with `imagesrcset` because ordinary prefetch hints cannot select a responsive image candidate. It does not scan `<img>` elements or parse CSS `@font-face` rules.
+
+The consumed HTML is discarded. Navigation uses the normal frame resolver and browser HTTP cache: matching fresh responses can be reused, `no-cache` responses revalidate, and `no-store` responses are fetched again. Asset discovery still works for `no-store` HTML because assets have their own cache policies. No special HTML cache headers are required to discover assets; reusing responses requires appropriate HTTP caching headers, such as `Cache-Control: private, max-age=30`, and matching request variants selected by `Vary`.
+
+Remix deduplicates pending prefetch work but keeps no completed response cache. An early navigation starts its normal fetch independently of discovery; request sharing is up to the browser. Asset prefetches are hints and may be deferred or ignored. Browsers without link-prefetch support skip asset hints while still fetching HTML. Discovery waits for the full HTML body and does not traverse JavaScript imports, CSS imports, or CSS images and fonts.
+
+To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next untargeted GET request. The app provides `fetchFrame(src, options)` to handle frame headers, submissions, cancellation, and response handling; prefetch calls it without options for a GET request. Applications also own the lifetime and invalidation of any responses they retain:
 
 ```ts
+import { run } from 'remix/component'
+
 let prefetched = new Map<string, Promise<Response>>()
 
 run({
@@ -427,9 +442,10 @@ run({
     prefetched.set(src, fetchFrame(src))
   },
   resolveFrame(src, options) {
-    let response = !options?.target && !options?.formData && prefetched.get(src)
+    let isGet = !options?.method || options.method.toUpperCase() === 'GET'
+    let response = options?.target == null && isGet ? prefetched.get(src) : undefined
     prefetched.clear()
-    return response || fetchFrame(src, options)
+    return response ?? fetchFrame(src, options)
   },
 })
 ```

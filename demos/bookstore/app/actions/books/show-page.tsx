@@ -78,7 +78,11 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
             )}
 
             <p mix={css({ marginTop: '1.5rem' })}>
-              <a href={routes.books.index.href()} class="btn btn-secondary">
+              <a
+                data-rmx-prefetch="intent"
+                href={routes.books.index.href()}
+                class="btn btn-secondary"
+              >
                 Back to Books
               </a>
             </p>

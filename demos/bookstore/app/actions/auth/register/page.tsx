@@ -50,7 +50,7 @@ export function ExistingAccountPage() {
       <div class="card" mix={authCardStyle}>
         <div class="alert alert-error">An account with this email already exists.</div>
         <p>
-          <a href={routes.auth.register.index.href()} class="btn">
+          <a data-rmx-prefetch="intent" href={routes.auth.register.index.href()} class="btn">
             Back to Register
           </a>
           <a

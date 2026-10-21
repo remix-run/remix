@@ -108,20 +108,26 @@ describe('prefetch', () => {
     expect(prefetchFrame).not.toHaveBeenCalled()
   })
 
-  it('adds one prefetch link per URL by default and removes it once settled', async (t) => {
+  it('fetches HTML with low priority and frame headers by default', async (t) => {
+    let fetch = t.mock.method(
+      globalThis,
+      'fetch',
+      async (_src: RequestInfo | URL, _init?: RequestInit) =>
+        new Response('<main>Next page</main>', { headers: { 'Content-Type': 'text/html' } }),
+    )
     startTestPrefetching(t)
     let href = new URL('/products/default-prefetch', location.href).href
 
     prefetch(href)
     prefetch(href)
 
-    let links = document.head.querySelectorAll(`link[rel="prefetch"][href="${href}"]`)
-    expect(links).toHaveLength(1)
-    let link = links[0]
-    await new Promise((resolve) => {
-      link?.addEventListener('load', resolve, { once: true })
-      link?.addEventListener('error', resolve, { once: true })
-    })
-    expect(link?.isConnected).toBe(false)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    let [src, init] = fetch.mock.calls[0].arguments
+    expect(src).toBe(href)
+    expect(init?.method).toBe('GET')
+    expect(init?.mode).toBe('same-origin')
+    expect(init?.priority).toBe('low')
+    expect(new Headers(init?.headers).get('X-Remix-Frame')).toBe('true')
+    expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
   })
 })

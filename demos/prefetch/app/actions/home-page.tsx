@@ -17,7 +17,8 @@ export function HomePage() {
       <h1 mix={titleStyle}>Catalog</h1>
       <p mix={introStyle}>
         Every product page takes 800ms to render. Hover, focus, or press a prefetched product and
-        its page loads in the background, so opening it is instant.
+        its HTML starts loading in the background, followed by prefetch hints for its JavaScript and
+        CSS. The browser caches responses according to their HTTP headers.
       </p>
 
       <ProductSearch products={searchableProducts} />

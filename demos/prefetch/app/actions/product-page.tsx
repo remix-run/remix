@@ -3,18 +3,20 @@ import { css } from 'remix/component'
 
 import type { Product } from '../data/products.ts'
 import { routes } from '../routes.ts'
+import { ProductQuantity } from './public/product-quantity.tsx'
 
-export type RequestKind = 'prefetch' | 'frame navigation' | 'document load'
+export type RequestKind = 'frame request' | 'document load'
 
 type ProductPageProps = {
   product: Product
   requestedAs: RequestKind
   renderedAt: Date
+  cacheControl: string
 }
 
 export function ProductPage(handle: Handle<ProductPageProps>) {
   return () => {
-    let { product, requestedAs, renderedAt } = handle.props
+    let { product, requestedAs, renderedAt, cacheControl } = handle.props
 
     return (
       <article>
@@ -24,12 +26,15 @@ export function ProductPage(handle: Handle<ProductPageProps>) {
         <h1 mix={titleStyle}>{product.name}</h1>
         <p mix={priceStyle}>{product.price}</p>
         <p mix={descriptionStyle}>{product.description}</p>
+        <ProductQuantity />
 
         <dl mix={detailsStyle}>
-          <dt>Requested as</dt>
+          <dt>Request type</dt>
           <dd data-testid="requested-as">{requestedAs}</dd>
           <dt>Rendered at</dt>
           <dd>{renderedAt.toISOString().slice(11, 23)} UTC</dd>
+          <dt>Cache-Control</dt>
+          <dd>{cacheControl}</dd>
         </dl>
       </article>
     )
