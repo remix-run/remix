@@ -70,12 +70,12 @@ Browsers with multiple import map support retain native module loading and nativ
 
 ## Content Security Policy
 
-Polyfilled module graphs are evaluated from blob URLs, and `es-module-lexer` compiles its parser from Wasm. Content Security Policies must allow `blob:` module scripts and Wasm compilation with `'wasm-unsafe-eval'`.
+Polyfilled module graphs are evaluated from blob URLs, so Content Security Policies must allow `blob:` module scripts. Modules are parsed with the asm.js build of `es-module-lexer`, which needs neither `'unsafe-eval'` nor `'wasm-unsafe-eval'`.
 
 The support detector creates a Trusted Types policy named `remix/multiple-import-maps-polyfill`. Allow this policy when Trusted Types are required for scripts, for example:
 
 ```http
-Content-Security-Policy: script-src 'self' blob: 'wasm-unsafe-eval'; require-trusted-types-for 'script'; trusted-types remix/multiple-import-maps-polyfill;
+Content-Security-Policy: script-src 'self' blob:; require-trusted-types-for 'script'; trusted-types remix/multiple-import-maps-polyfill;
 ```
 
 ## `remix/assets` HMR Support
