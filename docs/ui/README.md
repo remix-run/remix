@@ -14,7 +14,7 @@ pnpm --filter remix-ui-docs run prerender
 pnpm --filter remix-ui-docs run prerender:serve
 ```
 
-The development server uses port 44100 by default. Set `PORT` to choose another port. Node's watch mode restarts the server after imported source changes; reload the browser to see them.
+The development server uses port 44100 by default. Set `PORT` to choose another port. Edits to pages, examples, styles, and browser modules show up in open pages without a refresh.
 
 ## Static site
 

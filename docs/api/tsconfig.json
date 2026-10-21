@@ -1,7 +1,7 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node", "dom-navigation"]
+    "types": ["node", "dom-navigation", "remix/assets/types/hmr"]
   },
   "exclude": ["dist"]
 }

@@ -2,13 +2,7 @@ import type { Handle, RemixNode } from 'remix/component'
 import { ImportMap } from 'remix/component/server'
 import { PagefindElements } from 'remix-docs-shared/search'
 
-import {
-  devRefreshScript,
-  importMap,
-  scriptEntry,
-  stylesheetHref,
-  stylesheetPreloads,
-} from '../assets.ts'
+import { importMap, scriptEntry, stylesheetHref, stylesheetPreloads } from '../assets.ts'
 
 export interface DocumentProps {
   children?: RemixNode
@@ -47,7 +41,6 @@ export function Document(handle: Handle<DocumentProps>) {
           {searchEnabled ? (
             <script type="module" src="/assets/pagefind/pagefind-component-ui.js"></script>
           ) : null}
-          {devRefreshScript ? <script type="module" src={devRefreshScript.href}></script> : null}
           <script type="module" src={href}></script>
           {head}
         </head>

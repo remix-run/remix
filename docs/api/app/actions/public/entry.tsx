@@ -4,6 +4,7 @@ import {
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 import { run } from 'remix/component'
+import { reloadOnServerUpdate } from 'remix-docs-shared/hmr/browser'
 import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/search/browser'
 
 let app = run({
@@ -54,6 +55,8 @@ function getRequestBody(
 app.ready().catch((error: unknown) => {
   console.error('Frame adoption failed:', error)
 })
+
+reloadOnServerUpdate(app)
 
 startPagefindSearch()
 

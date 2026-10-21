@@ -60,7 +60,7 @@ pnpm --filter remix-api run test
 pnpm --filter remix-api run typecheck
 ```
 
-The development server listens on http://localhost:44100 by default. Set `PORT` to override.
+The development server listens on http://localhost:44100 by default. Set `PORT` to override. Edits to components, styles, browser modules, and `build/md/` show up in open pages without a refresh.
 
 ## Static site
 
