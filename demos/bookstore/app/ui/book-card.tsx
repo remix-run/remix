@@ -23,7 +23,7 @@ export function BookCard(handle: Handle<BookCardProps>) {
           <div mix={css({ display: 'flex', gap: '0.5rem', alignItems: 'center' })}>
             <a
               href={routes.books.show.href({ slug: book.slug })}
-              data-rmx-prefetch="intent"
+              data-rmx-prefetch="viewport"
               class="btn"
             >
               View Details

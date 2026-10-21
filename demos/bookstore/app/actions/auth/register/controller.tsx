@@ -5,13 +5,14 @@ import { redirect } from 'remix/response/redirect'
 import { users } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
+import { browsingResponseInit } from '../../browsing-response.ts'
 import { normalizeEmail, registrationSchema } from '../schemas.ts'
 import { ExistingAccountPage, RegisterPage } from './page.tsx'
 
 export default createController(routes.auth.register, {
   actions: {
-    index({ render }) {
-      return render(<RegisterPage />)
+    index({ render, request }) {
+      return render(<RegisterPage />, browsingResponseInit(request))
     },
 
     async action({ db, formData, render, session }) {

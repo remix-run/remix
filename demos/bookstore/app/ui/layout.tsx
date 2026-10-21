@@ -7,16 +7,17 @@ import { Document } from './document.tsx'
 
 export interface LayoutProps {
   title?: string
+  head?: RemixNode
   children?: RemixNode
 }
 
 export function Layout(handle: Handle<LayoutProps>) {
   return () => {
-    let { title, children } = handle.props
+    let { title, head, children } = handle.props
     let user = getCurrentUserSafely()
 
     return (
-      <Document title={title}>
+      <Document title={title} head={head}>
         <header>
           <div class="container">
             <h1>

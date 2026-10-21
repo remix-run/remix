@@ -8,6 +8,7 @@ import { books } from '../../../data/schema.ts'
 import { requireAdmin } from '../../../middleware/admin.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
+import { resolveBookCover } from '../../../utils/book-images.ts'
 import { parseId } from '../../../utils/ids.ts'
 import { AdminBookFormPage } from './form.tsx'
 import { AdminBooksIndexPage } from './index-page.tsx'
@@ -102,7 +103,7 @@ export default createController(routes.admin.books, {
           cancelHref={routes.admin.books.index.href()}
           submitLabel="Update Book"
           method="PUT"
-          book={book}
+          book={await resolveBookCover(book)}
         />,
       )
     },

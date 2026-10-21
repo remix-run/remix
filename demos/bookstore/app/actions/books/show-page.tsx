@@ -14,9 +14,10 @@ export interface ShowPageProps {
 export function ShowPage(handle: Handle<ShowPageProps>) {
   return () => {
     let { book, imageUrls } = handle.props
+    let mainImage = imageUrls[0]
 
     return (
-      <Layout>
+      <Layout head={mainImage ? <link rel="preload" as="image" href={mainImage} /> : null}>
         <div mix={css({ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' })}>
           <div
             mix={css({
