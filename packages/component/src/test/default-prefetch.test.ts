@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it, type TestContext } from '@remix-run/test'
 
-import { createDefaultPrefetch } from '../runtime/default-prefetch.ts'
+import { createDefaultPrefetch } from '../runtime/prefetch.ts'
 
 function createPrefetch(t: TestContext) {
   let controller = new AbortController()

@@ -43,7 +43,7 @@ We chose option 4 because it adds the missing asset discovery without making the
 
 ## How HTML discovery works
 
-The default implementation is `packages/component/src/runtime/default-prefetch.ts`. The intent, viewport, and eligibility code in `prefetch.ts` calls it unless the application supplies an override.
+The default implementation lives alongside intent, viewport, and eligibility handling in `packages/component/src/runtime/prefetch.ts`. Applications can replace the loading strategy with an override. Only the shared set of pending asset links lives in `prefetch-links.ts`, so frame reconciliation can preserve those links without importing the prefetch runtime.
 
 1. Normalize the same-origin frame source and make a GET with `priority: 'low'` and the normal frame headers, `Accept: text/html` and `X-Remix-Frame: true`, plus `X-Remix-Target` for named frames. Use ordinary fetch caching behavior.
 2. Read a successful HTML response into a detached `<template>`. Resolve asset URLs against the final response URL after redirects, honoring its first `<base href>`.
