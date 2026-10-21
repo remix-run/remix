@@ -236,9 +236,9 @@ await handle.frame.reload({
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
-Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Remix fetches its HTML to discover JavaScript, CSS, and explicit image and font preloads for asset prefetch hints. Navigation uses the default resolver and browser HTTP cache; even uncacheable HTML can reveal cacheable assets. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for caching behavior and custom strategies.
+Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. Remix fetches its HTML to discover JavaScript, CSS, and explicit image and font preloads for asset prefetch hints. Navigation uses the default resolver and browser HTTP cache; even uncacheable HTML can reveal cacheable assets. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for trigger details, caching behavior, and custom strategies.
 
-You can implement other prefetch strategies in userland with the imperative `prefetch()` API from `remix/component`. For example, use an `IntersectionObserver` to prefetch links as they enter the viewport and a `MutationObserver` to register links added by frame navigation or client rendering.
+You can implement other prefetch triggers in userland with the imperative `prefetch()` API from `remix/component`, such as prefetching a search result as the visitor types.
 
 ## Single-page Applications
 

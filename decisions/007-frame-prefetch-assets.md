@@ -18,6 +18,12 @@ That branch establishes when and which pages Remix prefetches:
 
 The original default creates an HTML `<link rel="prefetch">`. It does not read the response or discover destination assets. This helps HTML delivery when the response is reusable, but destination client entries and stylesheets can still need network requests after navigation. Our decision changes the loading strategy while retaining those intent and eligibility rules.
 
+## Prefetch triggers in the initial release
+
+We chose to ship `data-rmx-prefetch="intent"` and `data-rmx-prefetch="viewport"`. Intent starts discovery after the visitor rests on a link or presses it. Viewport starts the same discovery when the link enters view. Rendering a link alone does not trigger a prefetch; there is no `render` strategy. The imperative `prefetch(href)` API remains available for application-specific triggers.
+
+Viewport support lives in `packages/component/src/runtime/prefetch.ts` and uses the same same-origin and top-frame eligibility checks as intent links. One `IntersectionObserver` tracks visibility, and one `MutationObserver` registers links inserted or changed by streaming, frame navigation, or client rendering. Each mounted link triggers once for its current normalized destination. Leaving and reentering view does not trigger again; a destination change or a later mount makes the link eligible again. This tracking retains no responses. Runtime disposal disconnects both observers, and browsers without `IntersectionObserver` skip viewport prefetching.
+
 ## Four approaches we compared
 
 | Strategy                                    | HTML loading                                                             | Asset loading                              | Navigation reuse                                                            | Main tradeoff                                                                               |
@@ -35,7 +41,7 @@ We chose option 4 because it adds the missing asset discovery without making the
 
 ## How HTML discovery works
 
-The default implementation is `packages/component/src/runtime/default-prefetch.ts`. The existing intent and eligibility code in `prefetch.ts` calls it unless the application supplies an override.
+The default implementation is `packages/component/src/runtime/default-prefetch.ts`. The intent, viewport, and eligibility code in `prefetch.ts` calls it unless the application supplies an override.
 
 1. Normalize the same-origin URL and make a GET with `priority: 'low'` and the normal frame headers, `Accept: text/html` and `X-Remix-Frame: true`. Use ordinary fetch caching behavior.
 2. Read a successful HTML response into a detached `<template>`. Resolve asset URLs against the final response URL after redirects, honoring its first `<base href>`.
@@ -105,7 +111,7 @@ Other limits follow from the chosen mechanisms:
 
 The four-strategy demo was the evaluation tool. After selecting HTML discovery, we removed its custom implementations, cookie-backed selector, response cache, and diagnostic request header. The demo now exercises the framework default with artificial HTML and asset delays.
 
-`packages/component/src/test/default-prefetch.test.ts` covers inert discovery, nested templates, base URLs, final response URLs, active assets, image and font preload declarations, media conditions, responsive image exclusions, request attributes, pending-work deduplication, failed responses, and disposal. `prefetch.test.ts` covers intent detection, eligibility, override hooks, default frame request headers, and the low-priority HTML fetch. The demo's `app/app.test.e2e.ts` checks browser HTTP cache reuse, asset warming for `no-store` HTML, independent navigation while discovery streams, and pending hints surviving frame navigation. These are functional checks, not a claim that one strategy is fastest for every application.
+`packages/component/src/test/default-prefetch.test.ts` covers inert discovery, nested templates, base URLs, final response URLs, active assets, image and font preload declarations, media conditions, responsive image exclusions, request attributes, pending-work deduplication, failed responses, and disposal. `prefetch.test.ts` covers intent detection, viewport entry, dynamic links, changed destinations, eligibility, observer disposal, override hooks, default frame request headers, and the low-priority HTML fetch. The prefetch demo's `app/app.test.e2e.ts` checks browser HTTP cache reuse, asset warming for `no-store` HTML, independent navigation while discovery streams, and pending hints surviving frame navigation. The bookstore's `app/prefetch.test.e2e.ts` exercises built-in intent and viewport links through real frame navigation. These are functional checks, not a claim that one strategy is fastest for every application.
 
 ## Keep customization hooks and defer helper exports
 

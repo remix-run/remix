@@ -1,8 +1,11 @@
-Prefetch pages before a visitor opens them by adding `data-rmx-prefetch="intent"` to a link. Remix starts loading the page when the mouse or keyboard focus rests on the link for 100ms, or when it's pressed. Each link triggers once while hovered or focused, so moving between its children or pressing it after hovering does not repeat the prefetch. Hover and focus on separate links are tracked independently. Call `prefetch(href)` to do the same from a script:
+Prefetch pages before a visitor opens them with `data-rmx-prefetch="intent"` or `data-rmx-prefetch="viewport"`. Intent links start loading when the mouse or keyboard focus rests on them for 100ms, or when they're pressed. Each intent link triggers once while hovered or focused, so moving between its children or pressing it after hovering does not repeat the prefetch. Hover and focus on separate links are tracked independently. Viewport links start loading when they enter the viewport, once while mounted with the same destination. Newly inserted links and changed destinations are observed automatically; browsers without `IntersectionObserver` skip viewport prefetching. Call `prefetch(href)` to do the same from a script:
 
 ```tsx
 <a href="/products/shirt" data-rmx-prefetch="intent">
   Shirt
+</a>
+<a href="/products/hat" data-rmx-prefetch="viewport">
+  Hat
 </a>
 ```
 

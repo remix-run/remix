@@ -401,12 +401,15 @@ A newer reload cancels earlier client work for that frame, including pending req
 
 ## Prefetching
 
-Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor shows intent to open it: resting the mouse or keyboard focus on the link for 100ms, or pressing it. Call `prefetch()` to do the same from a script, for example as the visitor types a search query:
+Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor shows intent to open it: resting the mouse or keyboard focus on the link for 100ms, or pressing it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. Call `prefetch()` to do the same from a script, for example as the visitor types a search query:
 
 ```tsx
 import { prefetch } from 'remix/component'
 ;<a href="/products/shirt" data-rmx-prefetch="intent">
   Shirt
+</a>
+;<a href="/products/hat" data-rmx-prefetch="viewport">
+  Hat
 </a>
 
 prefetch(`/search?q=${encodeURIComponent(query)}`)
@@ -415,6 +418,8 @@ prefetch(`/search?q=${encodeURIComponent(query)}`)
 Prefetching is opt-in per link because it requests pages speculatively. Only mark links whose GET requests are safe to repeat. Only links that would reload the top frame from another same-origin URL are prefetched, so links with `data-rmx-target`, `data-rmx-document`, `download`, or a `target` other than `_self` are skipped, as is the current page.
 
 Hover and focus are tracked independently. Moving between children of a link, pressing it after its prefetch starts, or focusing it while it is hovered does not repeat the prefetch. Leaving the link with both the pointer and focus ends that interaction; returning can prefetch again. A press starts prefetching immediately if the interaction has not triggered yet, including touch and pen presses.
+
+Viewport links prefetch once while mounted with the same destination. Leaving and reentering the viewport, hovering, focusing, or pressing them does not repeat the prefetch. Changing a link's destination makes it eligible again; changing only its fragment does not. Removing and later mounting a link also makes it eligible again. Remix uses one `IntersectionObserver` and one `MutationObserver` to track initial links and links added or changed by streaming, frame navigation, or client rendering. Runtime disposal disconnects both observers. Browsers without `IntersectionObserver` skip viewport prefetching while retaining intent and imperative prefetching.
 
 By default, Remix fetches the page with GET, a `priority: 'low'` hint, and the same `Accept: text/html` and `X-Remix-Frame: true` headers as a top-frame navigation. It reads the response into an inert template and discovers explicit JavaScript and CSS URLs and `<link rel="preload" as="image|font" href="…">` declarations, including resources inside nested frame templates. It adds ordinary `<link rel="prefetch" as="script|style|image|font">` hints for assets that are not already active in the document. These hints do not run scripts, apply styles, install import maps, or follow module dependencies. They remain connected through frame navigation and are removed on load, error, or runtime disposal.
 
