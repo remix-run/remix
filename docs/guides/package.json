@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "dev": "NODE_ENV=development node ../shared/hmr/run.ts",
     "prerender": "pnpm run validate && NODE_ENV=production node --import remix/node-tsx scripts/prerender.ts",
     "prerender:serve": "npx http-server -p 44100 build/site",
     "start": "node --import remix/node-tsx server.ts",

@@ -10,13 +10,7 @@ export async function discoverPublicModuleHrefs(
 
   for (let rootDir of rootDirs) {
     for await (let entry of fs.glob('**/public/**/*.{ts,tsx}', { cwd: rootDir })) {
-      if (
-        entry.includes('.test.') ||
-        entry.includes('.dev.') ||
-        path.basename(entry) === 'dev-refresh.ts'
-      ) {
-        continue
-      }
+      if (entry.includes('.test.') || entry.includes('.dev.')) continue
 
       let entryPath = path.join(rootDir, entry)
       hrefs.add(await assetServer.getHref(entryPath))

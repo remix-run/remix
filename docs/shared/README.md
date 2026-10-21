@@ -5,6 +5,7 @@
 ## Ownership
 
 - `assets/` — static files required by the shared UI.
+- `hmr/` — hot module reloading for `pnpm run dev`.
 - `prerender/` — crawling and static-output helpers.
 - `search/` — Pagefind elements and browser behavior.
 - `server.ts` — local Node server startup, request adaptation, errors, and graceful shutdown.

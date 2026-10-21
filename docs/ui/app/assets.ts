@@ -1,8 +1,10 @@
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
+import { docsAssetHmrOptions } from 'remix-docs-shared/hmr/assets'
 
 const nodeEnv = process.env.NODE_ENV ?? 'production'
 const isProduction = nodeEnv === 'production'
+const { hmr, scriptLoaders, watch } = docsAssetHmrOptions
 
 export const assetServer = createAssetServer({
   basePath: '/assets',
@@ -23,8 +25,12 @@ export const assetServer = createAssetServer({
   sourceMaps: isProduction ? undefined : 'external',
   minify: isProduction,
   fingerprint: isProduction,
-  watch: false,
-  scripts: { define: { 'process.env.NODE_ENV': JSON.stringify(nodeEnv) } },
+  watch,
+  hmr,
+  scripts: {
+    define: { 'process.env.NODE_ENV': JSON.stringify(nodeEnv) },
+    loaders: scriptLoaders,
+  },
 })
 
 export const scriptEntry = await assetServer.getScriptEntry(
