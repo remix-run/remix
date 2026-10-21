@@ -17,14 +17,23 @@ function createIntentLink(href: string): HTMLAnchorElement {
   return anchor
 }
 
-function press(element: Element) {
+function press(element: Element, pointerType = 'mouse') {
   element.dispatchEvent(
     new PointerEvent('pointerdown', {
       bubbles: true,
       button: 0,
       isPrimary: true,
-      pointerType: 'mouse',
+      pointerType,
     }),
+  )
+}
+
+function movePointer(from: Element, to: Element) {
+  from.dispatchEvent(
+    new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse', relatedTarget: to }),
+  )
+  to.dispatchEvent(
+    new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse', relatedTarget: from }),
   )
 }
 
@@ -75,6 +84,163 @@ describe('prefetch', () => {
     press(anchor)
 
     expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href)
+  })
+
+  it('prefetches once across descendants during a hover and again on a later hover', async (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let anchor = createIntentLink('/products/shirt')
+    let first = document.createElement('span')
+    let second = document.createElement('span')
+    anchor.replaceChildren(first, second)
+
+    movePointer(document.body, first)
+    await wait(150)
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+
+    movePointer(first, second)
+    await wait(150)
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+
+    movePointer(second, document.body)
+    movePointer(document.body, first)
+    await wait(150)
+    expect(prefetchFrame).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps keyboard focus intent when the pointer enters and leaves another link', async (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let focused = createIntentLink('/products/focused')
+    let hovered = createIntentLink('/products/hovered')
+
+    focused.focus()
+    movePointer(document.body, hovered)
+    movePointer(hovered, document.body)
+    await wait(150)
+
+    expect(document.activeElement).toBe(focused)
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+    expect(prefetchFrame).toHaveBeenCalledWith(focused.href)
+  })
+
+  it('prefetches separate hovered and focused links without replacing either intent', async (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let focused = createIntentLink('/products/focused')
+    let hovered = createIntentLink('/products/hovered')
+
+    focused.focus()
+    movePointer(document.body, hovered)
+    await wait(150)
+
+    expect(prefetchFrame).toHaveBeenCalledTimes(2)
+    expect(prefetchFrame).toHaveBeenCalledWith(focused.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href)
+  })
+
+  it('keeps hover intent when another link loses focus', async (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let focused = createIntentLink('/products/focused')
+    let hovered = createIntentLink('/products/hovered')
+
+    focused.focus()
+    movePointer(document.body, hovered)
+    focused.blur()
+    await wait(150)
+
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href)
+  })
+
+  it('keeps focus intent when the pointer leaves the same link', async (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let anchor = createIntentLink('/products/shirt')
+
+    movePointer(document.body, anchor)
+    anchor.focus()
+    movePointer(anchor, document.body)
+    await wait(150)
+
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps hover intent when the same link loses focus', async (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let anchor = createIntentLink('/products/shirt')
+
+    anchor.focus()
+    movePointer(document.body, anchor)
+    anchor.blur()
+    await wait(150)
+
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not repeat completed hover prefetch on press or focus', async (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let anchor = createIntentLink('/products/shirt')
+
+    movePointer(document.body, anchor)
+    await wait(150)
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+
+    press(anchor)
+    anchor.focus()
+    await wait(150)
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('prefetches on an early press without repeating after the hover or focus delay', async (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let anchor = createIntentLink('/products/shirt')
+
+    movePointer(document.body, anchor)
+    press(anchor)
+    anchor.focus()
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+    await wait(150)
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('prefetches touch and pen presses immediately without repeating on focus', async (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let touched = createIntentLink('/products/touched')
+    let penned = createIntentLink('/products/penned')
+
+    press(touched, 'touch')
+    touched.focus()
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+    await wait(150)
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+
+    press(penned, 'pen')
+    penned.focus()
+    expect(prefetchFrame).toHaveBeenCalledTimes(2)
+    await wait(150)
+    expect(prefetchFrame).toHaveBeenCalledTimes(2)
+  })
+
+  it('cancels pending hover and focus intent when disposed', async () => {
+    let prefetchFrame = mock.fn()
+    let controller = new AbortController()
+    startPrefetching(controller.signal, prefetchFrame)
+    let hovered = createIntentLink('/products/hovered')
+    let focused = createIntentLink('/products/focused')
+
+    movePointer(document.body, hovered)
+    focused.focus()
+    controller.abort()
+    press(hovered)
+    await wait(150)
+
+    expect(prefetchFrame).not.toHaveBeenCalled()
   })
 
   it('skips links that would not reload the top frame from another URL', (t) => {

@@ -98,7 +98,7 @@ Other limits follow from the chosen mechanisms:
 
 - Asset prefetch links are hints; browsers may defer or ignore them. The runtime feature-detects support and skips unsupported asset hints. Navigation still works.
 - The runtime reads the complete HTML body before discovering assets. Nested streamed templates are inspected after that read; this is not incremental discovery as chunks arrive.
-- Repeated intent after work completes can initiate another HTML fetch. A fresh cache entry can satisfy it, but repeated speculation against `no-store` HTML can produce additional network requests.
+- A new intent interaction or programmatic call after work completes can initiate another HTML fetch. Hover and focus are tracked independently, with one prefetch per link while either remains active. Descendant pointer movement and a later press during that interaction do not repeat it; pressing before the intent delay still starts it immediately. A fresh cache entry can satisfy later prefetches, but repeated speculation against `no-store` HTML can produce additional network requests.
 - Removing a completed link does not reserve cached bytes. Later requests can still miss or revalidate. Network-panel request rows can represent cache reads, so server request counts and transferred bytes matter when assessing reuse.
 
 ## Evidence and extension points

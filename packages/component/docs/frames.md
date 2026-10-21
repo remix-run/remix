@@ -414,6 +414,8 @@ prefetch(`/search?q=${encodeURIComponent(query)}`)
 
 Prefetching is opt-in per link because it requests pages speculatively. Only mark links whose GET requests are safe to repeat. Only links that would reload the top frame from another same-origin URL are prefetched, so links with `data-rmx-target`, `data-rmx-document`, `download`, or a `target` other than `_self` are skipped, as is the current page.
 
+Hover and focus are tracked independently. Moving between children of a link, pressing it after its prefetch starts, or focusing it while it is hovered does not repeat the prefetch. Leaving the link with both the pointer and focus ends that interaction; returning can prefetch again. A press starts prefetching immediately if the interaction has not triggered yet, including touch and pen presses.
+
 By default, Remix fetches the page with GET, a `priority: 'low'` hint, and the same `Accept: text/html` and `X-Remix-Frame: true` headers as a top-frame navigation. It reads the response into an inert template and discovers explicit JavaScript and CSS URLs and `<link rel="preload" as="image|font" href="…">` declarations, including resources inside nested frame templates. It adds ordinary `<link rel="prefetch" as="script|style|image|font">` hints for assets that are not already active in the document. These hints do not run scripts, apply styles, install import maps, or follow module dependencies. They remain connected through frame navigation and are removed on load, error, or runtime disposal.
 
 Declare important destination images and fonts with preload links to include them in discovery:

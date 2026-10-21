@@ -58,30 +58,46 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
   )
   if (!getInterceptableNavigation()) return
 
-  let resting: { anchor: HTMLAnchorElement; timer: ReturnType<typeof setTimeout> } | undefined
-  function stopResting() {
-    clearTimeout(resting?.timer)
-    resting = undefined
+  // Hover and focus share an intent on the same link until both inputs leave it.
+  interface Intent {
+    anchor: HTMLAnchorElement
+    timer: ReturnType<typeof setTimeout> | undefined
+    prefetched: boolean
   }
-  function rest(anchor: HTMLAnchorElement) {
-    if (resting?.anchor === anchor) return
-    stopResting()
-    let timer = setTimeout(() => {
-      resting = undefined
-      prefetchAnchor(anchor)
-    }, INTENT_DELAY_MS)
-    resting = { anchor, timer }
+  let pointerIntent: Intent | undefined
+  let focusIntent: Intent | undefined
+
+  function rest(anchor: HTMLAnchorElement): Intent {
+    if (pointerIntent?.anchor === anchor) return pointerIntent
+    if (focusIntent?.anchor === anchor) return focusIntent
+    let intent: Intent = { anchor, timer: undefined, prefetched: false }
+    intent.timer = setTimeout(() => trigger(intent), INTENT_DELAY_MS)
+    return intent
   }
-  function leave(event: PointerEvent | FocusEvent) {
+  function trigger(intent: Intent) {
+    clearTimeout(intent.timer)
+    intent.timer = undefined
+    if (intent.prefetched) return
+    intent.prefetched = true
+    prefetchAnchor(intent.anchor)
+  }
+  function stopResting(intent: Intent | undefined) {
+    if (intent !== pointerIntent && intent !== focusIntent) clearTimeout(intent?.timer)
+  }
+  function leave(event: PointerEvent | FocusEvent, intent: Intent | undefined): Intent | undefined {
+    if (!(event.target instanceof Node && intent?.anchor.contains(event.target))) return intent
     let next = event.relatedTarget
-    if (!(next instanceof Node && resting?.anchor.contains(next))) stopResting()
+    return next instanceof Node && intent.anchor.contains(next) ? intent : undefined
   }
 
   document.addEventListener(
     'pointerover',
     (event) => {
       let anchor = getIntentAnchor(event.target)
-      if (anchor && event.pointerType === 'mouse') rest(anchor)
+      if (!anchor || event.pointerType !== 'mouse') return
+      let previous = pointerIntent
+      pointerIntent = rest(anchor)
+      stopResting(previous)
     },
     { signal },
   )
@@ -89,12 +105,31 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     'focusin',
     (event) => {
       let anchor = getIntentAnchor(event.target)
-      if (anchor) rest(anchor)
+      if (!anchor) return
+      let previous = focusIntent
+      focusIntent = rest(anchor)
+      stopResting(previous)
     },
     { signal },
   )
-  document.addEventListener('pointerout', leave, { signal })
-  document.addEventListener('focusout', leave, { signal })
+  document.addEventListener(
+    'pointerout',
+    (event) => {
+      let previous = pointerIntent
+      pointerIntent = leave(event, pointerIntent)
+      stopResting(previous)
+    },
+    { signal },
+  )
+  document.addEventListener(
+    'focusout',
+    (event) => {
+      let previous = focusIntent
+      focusIntent = leave(event, focusIntent)
+      stopResting(previous)
+    },
+    { signal },
+  )
   document.addEventListener(
     'pointerdown',
     (event) => {
@@ -108,12 +143,22 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
         !event.shiftKey
       let anchor = getIntentAnchor(event.target)
       if (!anchor || !opensHere) return
-      stopResting()
-      prefetchAnchor(anchor)
+      let previous = pointerIntent
+      pointerIntent = rest(anchor)
+      stopResting(previous)
+      trigger(pointerIntent)
     },
     { passive: true, signal },
   )
-  signal.addEventListener('abort', stopResting, { once: true })
+  signal.addEventListener(
+    'abort',
+    () => {
+      clearTimeout(pointerIntent?.timer)
+      clearTimeout(focusIntent?.timer)
+      pointerIntent = focusIntent = undefined
+    },
+    { once: true },
+  )
 }
 
 function getIntentAnchor(target: EventTarget | null): HTMLAnchorElement | null {
