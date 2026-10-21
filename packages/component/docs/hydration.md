@@ -71,6 +71,7 @@ and how to opt out for one navigation or the whole app.
 - **`loadModule(moduleUrl, exportName)`** (required) - Called for each client entry found in the page. Return the component function. Typically uses dynamic `import()`.
 - **`processClientEntryPreloads(preloads)`** (optional) - Processes module preloads discovered in frame responses before they are added to the document. Return the preload URLs that should remain as native `<link rel="modulepreload">` elements.
 - **`resolveFrame(src, options)`** (optional) - Overrides the default `fetch()` resolver when a `<Frame>` needs to load or reload content and when a link or form performs a frame navigation. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`. GET form values are already encoded in `src`. See [Frames](./frames.md#form-navigation) for request encoding, targeting, and opt-outs.
+- **`prefetch(src)`** (optional) - Replaces the default HTML discovery and asset prefetching strategy used by `prefetch()` and links marked with `data-rmx-prefetch="intent|render|viewport"`. Receives an absolute same-origin URL without a hash. See [Prefetching](./frames.md#prefetching) for the default behavior and how to pair this hook with `resolveFrame` to reuse uncacheable HTML.
 
 ### Trusted documents and module loading
 

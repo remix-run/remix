@@ -2,7 +2,7 @@
 
 We chose HTML discovery with asset prefetch tags as the direction for Remix's default frame prefetching. Remix fetches a destination's HTML, parses it without activating the page, and creates prefetch hints for its explicit JavaScript, CSS, and image and font preload URLs. Navigation uses the normal frame resolver. The browser owns response caching and revalidation.
 
-This extends the HTML-only prefetching in [PR #12004][base-pr]. We evaluated four strategies in `demos/prefetch`, then promoted HTML discovery into the component runtime. The demo now uses that default and contains no custom prefetch implementation or strategy selector.
+This extends the HTML-only prefetching in [PR #12004][base-pr]. We evaluated four strategies in `demos/prefetch`, then promoted HTML discovery into the component runtime. The demo now uses that default without a custom prefetch implementation. Its intent, render, and viewport selector changes when prefetching starts, while keeping the loading strategy the same.
 
 ## Starting point
 
@@ -102,6 +102,8 @@ Other limits follow from the chosen mechanisms:
 - Removing a completed link does not reserve cached bytes. Later requests can still miss or revalidate. Network-panel request rows can represent cache reads, so server request counts and transferred bytes matter when assessing reuse.
 
 ## Evidence and extension points
+
+Intent, render, and viewport modes share the same discovery strategy. Intent uses delegated input listeners. Render and viewport use an initial scan and one mutation observer so links inserted by frame navigation or client rendering need no hydration of their own. One intersection observer watches viewport links and stops watching each after prefetch starts. State belongs to each mounted link and resets when its destination or mode changes. This avoids repeated speculation when a link moves within the document or scrolls out of view and back. Runtime disposal disconnects both observers.
 
 The four-strategy demo was the evaluation tool. After selecting HTML discovery, we removed its custom implementations, cookie-backed selector, response cache, and diagnostic request header. The demo now exercises the framework default with artificial HTML and asset delays.
 

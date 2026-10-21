@@ -8,6 +8,53 @@ import { routes } from './routes.ts'
 import { assets } from './utils/assets.ts'
 
 describe('prefetch demo', () => {
+  it('prefetches render links at startup and reuses their HTML on navigation', async (t) => {
+    let productHref = routes.product.href({ slug: 'canvas-tote' })
+    let requests = 0
+    let page = await t.serve(
+      await createTestServer((request) => {
+        if (new URL(request.url).pathname === productHref) requests++
+        return router.fetch(request)
+      }),
+    )
+    let prefetched = page.waitForResponse(productHref)
+    await page.goto(routes.home.href(undefined, { searchParams: { prefetch: 'render' } }))
+    await (await prefetched).finished()
+    assert.equal(await page.getByRole('heading', { name: 'Catalog', exact: true }).count(), 1)
+
+    await page.getByRole('link', { name: /Canvas Tote/ }).click()
+    await page.getByRole('heading', { name: 'Canvas Tote' }).waitFor()
+    assert.equal(requests, 1)
+  })
+
+  it('discovers viewport links after frame navigation and prefetches when scrolled into view', async (t) => {
+    let productHref = routes.product.href({ slug: 'canvas-tote' })
+    let requests = 0
+    let page = await t.serve(
+      await createTestServer((request) => {
+        if (new URL(request.url).pathname === productHref) requests++
+        return router.fetch(request)
+      }),
+    )
+    await page.goto(routes.home.href())
+    await waitForNavigationRuntime(page)
+    await page
+      .getByRole('navigation', { name: 'Prefetch mode' })
+      .getByRole('link', { name: 'Viewport' })
+      .click()
+    await page.getByRole('heading', { name: 'Prefetched on viewport' }).waitFor()
+    let link = page.getByRole('link', { name: /Canvas Tote/ })
+    assert.ok(await link.evaluate((anchor) => anchor.getBoundingClientRect().top > innerHeight))
+    assert.equal(requests, 0)
+
+    let prefetched = page.waitForResponse(productHref)
+    await link.scrollIntoViewIfNeeded()
+    await (await prefetched).finished()
+    await link.click()
+    await page.getByRole('heading', { name: 'Canvas Tote' }).waitFor()
+    assert.equal(requests, 1)
+  })
+
   it('warms assets even when HTML cannot be cached and fetches HTML again on navigation', async (t) => {
     let productHref = routes.product.href({ slug: 'enamel-mug' })
     let scriptHref = await assets.getHref(

@@ -19,10 +19,11 @@ export default createController(routes, {
       let assetResponse = await assets.fetch(request)
       return assetResponse ?? new Response('Not found', { status: 404 })
     },
-    async home({ render }) {
+    async home({ render, url }) {
+      let mode = url.searchParams.get('prefetch')
       return render(
         <Document title="Catalog">
-          <HomePage />
+          <HomePage prefetchMode={mode === 'render' || mode === 'viewport' ? mode : 'intent'} />
         </Document>,
         { headers: { 'Cache-Control': 'no-store' } },
       )

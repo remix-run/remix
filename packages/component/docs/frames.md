@@ -412,6 +412,15 @@ import { prefetch } from 'remix/component'
 prefetch(`/search?q=${encodeURIComponent(query)}`)
 ```
 
+Use `render` to prefetch as soon as the link is inserted into the live DOM, or `viewport` to wait until it enters the viewport:
+
+```html
+<a href="/products/shirt" data-rmx-prefetch="render">Shirt</a>
+<a href="/products/shoes" data-rmx-prefetch="viewport">Shoes</a>
+```
+
+Both modes discover existing links when `run()` starts and newly inserted links from frame navigations or client rendering. `render` includes hidden links. `viewport` triggers when any part of the link intersects the viewport, including links already in view, and skips automatic prefetching if `IntersectionObserver` is unavailable. Each mode triggers once per mounted link until its `href` or prefetch mode changes. Moving a link within the document does not repeat the request; removing it and inserting it again after removal has been observed starts a new lifetime. Scrolling a viewport link out of view and back does not repeat the request. Observers are disconnected when the runtime is disposed.
+
 Prefetching is opt-in per link because it requests pages speculatively. Only mark links whose GET requests are safe to repeat. Only links that would reload the top frame from another same-origin URL are prefetched, so links with `data-rmx-target`, `data-rmx-document`, `download`, or a `target` other than `_self` are skipped, as is the current page.
 
 Hover and focus are tracked independently. Moving between children of a link, pressing it after its prefetch starts, or focusing it while it is hovered does not repeat the prefetch. Leaving the link with both the pointer and focus ends that interaction; returning can prefetch again. A press starts prefetching immediately if the interaction has not triggered yet, including touch and pen presses.

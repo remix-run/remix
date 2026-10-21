@@ -26,6 +26,11 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
 export function prefetch(href: string): void {
   if (!getInterceptableNavigation()) return
 
+  let url = getPrefetchUrl(href)
+  if (url) prefetchFrame(url.href)
+}
+
+function getPrefetchUrl(href: string): URL | undefined {
   let url: URL
   try {
     url = new URL(href, document.baseURI)
@@ -37,17 +42,17 @@ export function prefetch(href: string): void {
   currentUrl.hash = ''
   if (url.origin !== currentUrl.origin || url.href === currentUrl.href) return
 
-  prefetchFrame(url.href)
+  return url
 }
 
 /**
- * Prefetches links marked `data-rmx-prefetch="intent"` when the visitor rests on one with the
- * mouse or keyboard focus, or presses it.
+ * Starts automatic prefetching for links marked with `data-rmx-prefetch`.
  *
- * @param signal Abort signal used to remove the listeners.
+ * @param signal Abort signal used to remove listeners and disconnect observers.
  * @param prefetchOverride Replaces how pages are prefetched while the listeners are active.
  */
 export function startPrefetching(signal: AbortSignal, prefetchOverride?: PrefetchFrame): void {
+  if (signal.aborted) return
   prefetchFrame = prefetchOverride ?? createDefaultPrefetch(signal)
   signal.addEventListener(
     'abort',
@@ -57,6 +62,7 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     { once: true },
   )
   if (!getInterceptableNavigation()) return
+  startObservedPrefetching(signal)
 
   // Hover and focus share an intent on the same link until both inputs leave it.
   interface Intent {
@@ -167,7 +173,7 @@ function getIntentAnchor(target: EventTarget | null): HTMLAnchorElement | null {
   return anchor instanceof HTMLAnchorElement ? anchor : null
 }
 
-function prefetchAnchor(anchor: HTMLAnchorElement): void {
+function prefetchAnchor(anchor: HTMLAnchorElement): boolean {
   // Only links that reload the top frame on click can reuse a prefetch.
   if (
     anchor.hasAttribute('download') ||
@@ -175,7 +181,114 @@ function prefetchAnchor(anchor: HTMLAnchorElement): void {
     anchor.hasAttribute('data-rmx-target') ||
     (anchor.target !== '' && anchor.target !== '_self')
   ) {
-    return
+    return false
   }
-  prefetch(anchor.href)
+  let url = getPrefetchUrl(anchor.href)
+  if (!url) return false
+  prefetchFrame(url.href)
+  return true
+}
+
+function startObservedPrefetching(signal: AbortSignal): void {
+  interface LinkState {
+    href: string
+    mode: 'render' | 'viewport'
+    prefetched: boolean
+  }
+  let links = new Map<HTMLAnchorElement, LinkState>()
+  let viewport =
+    typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver((entries) => {
+          if (signal.aborted) return
+          for (let entry of entries) {
+            let anchor = entry.target
+            if (!(anchor instanceof HTMLAnchorElement) || !anchor.isConnected) continue
+            let state = links.get(anchor)
+            if (
+              entry.isIntersecting &&
+              state?.mode === 'viewport' &&
+              !state.prefetched &&
+              anchor.href === state.href &&
+              anchor.getAttribute('data-rmx-prefetch') === 'viewport'
+            ) {
+              state.prefetched = prefetchAnchor(anchor)
+              if (state.prefetched) viewport?.unobserve(anchor)
+            }
+          }
+        })
+      : undefined
+
+  function forget(anchor: HTMLAnchorElement) {
+    viewport?.unobserve(anchor)
+    links.delete(anchor)
+  }
+
+  function update(anchor: HTMLAnchorElement) {
+    if (signal.aborted) return
+    let mode = anchor.getAttribute('data-rmx-prefetch')
+    if (
+      !anchor.isConnected ||
+      !anchor.hasAttribute('href') ||
+      (mode !== 'render' && mode !== 'viewport')
+    ) {
+      forget(anchor)
+      return
+    }
+    let state = links.get(anchor)
+    if (state?.href !== anchor.href || state.mode !== mode) {
+      state = { href: anchor.href, mode, prefetched: false }
+      links.set(anchor, state)
+    }
+    viewport?.unobserve(anchor)
+    if (state.prefetched) return
+    if (mode === 'render') {
+      state.prefetched = prefetchAnchor(anchor)
+    } else {
+      viewport?.observe(anchor)
+    }
+  }
+
+  function visit(node: Node, callback: (anchor: HTMLAnchorElement) => void) {
+    if (!(node instanceof Element)) return
+    if (node instanceof HTMLAnchorElement) callback(node)
+    for (let anchor of node.querySelectorAll('a')) callback(anchor)
+  }
+
+  let mutations = new MutationObserver((records) => {
+    if (signal.aborted) return
+    for (let record of records) {
+      if (record.type === 'attributes' && record.target instanceof HTMLAnchorElement) {
+        update(record.target)
+      }
+      for (let node of record.removedNodes) {
+        if (!node.isConnected) visit(node, forget)
+      }
+      for (let node of record.addedNodes) {
+        if (node.isConnected) visit(node, update)
+      }
+    }
+  })
+  mutations.observe(document, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: [
+      'href',
+      'data-rmx-prefetch',
+      'download',
+      'data-rmx-document',
+      'data-rmx-target',
+      'target',
+    ],
+  })
+  signal.addEventListener(
+    'abort',
+    () => {
+      mutations.disconnect()
+      viewport?.disconnect()
+      links.clear()
+    },
+    { once: true },
+  )
+  visit(document.documentElement, update)
 }

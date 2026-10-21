@@ -4,14 +4,16 @@ import { css } from 'remix/component'
 import type { Product } from '../data/products.ts'
 import { routes } from '../routes.ts'
 
-export function ProductCard(handle: Handle<{ product: Product; prefetch?: boolean }>) {
+export function ProductCard(
+  handle: Handle<{ product: Product; prefetch?: 'intent' | 'render' | 'viewport' }>,
+) {
   return () => {
     let { product, prefetch } = handle.props
 
     return (
       <a
         href={routes.product.href({ slug: product.slug })}
-        data-rmx-prefetch={prefetch ? 'intent' : undefined}
+        data-rmx-prefetch={prefetch}
         mix={cardStyle}
       >
         <span mix={nameStyle}>{product.name}</span>

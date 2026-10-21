@@ -6,4 +6,6 @@ Prefetch pages before a visitor opens them by adding `data-rmx-prefetch="intent"
 </a>
 ```
 
+Use `data-rmx-prefetch="render"` to start when a link enters the DOM, including links present when `run()` starts, or `data-rmx-prefetch="viewport"` to wait until it intersects the viewport. These modes also discover links added by frame navigation and client rendering. They trigger once per mounted link until its destination or mode changes; scrolling out of view and back does not repeat the prefetch.
+
 By default Remix fetches the HTML with a low-priority hint and discovers explicit JavaScript and CSS URLs, plus image and font preload declarations, for `<link rel="prefetch">` hints without activating the destination's scripts, styles, or import map. Images and fonts must be declared with `<link rel="preload" as="image|font" href="…">`; their media conditions and CORS settings are honored, and image declarations with `imagesrcset` are skipped. Navigation uses the default resolver and browser HTTP cache. Cacheable HTML can be reused; `no-store` HTML is fetched again while its cacheable assets can still be prefetched. Apps can pass `prefetch` to `run()` to replace this strategy (see #12054).

@@ -20,6 +20,7 @@ NODE_ENV=production pnpm --filter prefetch-demo start
 ## What to try
 
 - Hover or focus a product under **Prefetched on intent**, wait a moment, then open it. Watch its HTML load first in the Network panel, followed by script and stylesheet prefetches while the catalog remains on screen.
+- Choose **Render** to start prefetching the marked products as soon as their links enter the DOM. Choose **Viewport** and scroll down to start prefetching as their links enter view. These modes also work when navigating between modes without reloading the document.
 - Search for “mug”. When one product matches, the search calls `prefetch()` programmatically. Enamel Mug's HTML uses `Cache-Control: no-store`, so navigation requests it again. Its cacheable assets can still be warmed before navigation.
 - Click a product under **Not prefetched** to see the render delay.
 - Click **Add one** on a product page. This client entry and its external stylesheet are only needed on product pages and can be discovered before navigation.

@@ -6,7 +6,7 @@ import { routes } from '../routes.ts'
 import { ProductCard } from '../ui/product-card.tsx'
 import { ProductSearch } from './public/product-search.tsx'
 
-export function HomePage() {
+export function HomePage(handle: Handle<{ prefetchMode: 'intent' | 'render' | 'viewport' }>) {
   let searchableProducts = products.map((product) => ({
     name: product.name,
     href: routes.product.href({ slug: product.slug }),
@@ -16,21 +16,53 @@ export function HomePage() {
     <>
       <h1 mix={titleStyle}>Catalog</h1>
       <p mix={introStyle}>
-        Every product page takes 800ms to render. Hover, focus, or press a prefetched product and
-        its HTML starts loading in the background, followed by prefetch hints for its JavaScript and
-        CSS. The browser caches responses according to their HTTP headers.
+        Every product page takes 800ms to render. Prefetching starts its HTML request in the
+        background, followed by hints for its JavaScript and CSS. Choose when it starts below. The
+        browser caches responses according to their HTTP headers.
       </p>
+
+      <nav aria-label="Prefetch mode">
+        <a
+          href={routes.home.href()}
+          aria-current={handle.props.prefetchMode === 'intent' ? 'page' : undefined}
+        >
+          Intent
+        </a>{' '}
+        <a
+          href={routes.home.href(undefined, { searchParams: { prefetch: 'render' } })}
+          aria-current={handle.props.prefetchMode === 'render' ? 'page' : undefined}
+        >
+          Render
+        </a>{' '}
+        <a
+          href={routes.home.href(undefined, { searchParams: { prefetch: 'viewport' } })}
+          aria-current={handle.props.prefetchMode === 'viewport' ? 'page' : undefined}
+        >
+          Viewport
+        </a>
+      </nav>
 
       <ProductSearch products={searchableProducts} />
 
-      <ProductSection title="Prefetched on intent" products={prefetchedProducts} prefetch />
+      {handle.props.prefetchMode === 'viewport' ? (
+        <p mix={viewportSpacerStyle}>Scroll down to bring the prefetched products into view.</p>
+      ) : null}
+      <ProductSection
+        title={`Prefetched on ${handle.props.prefetchMode}`}
+        products={prefetchedProducts}
+        prefetch={handle.props.prefetchMode}
+      />
       <ProductSection title="Not prefetched" products={plainProducts} />
     </>
   )
 }
 
 function ProductSection(
-  handle: Handle<{ title: string; products: Product[]; prefetch?: boolean }>,
+  handle: Handle<{
+    title: string
+    products: Product[]
+    prefetch?: 'intent' | 'render' | 'viewport'
+  }>,
 ) {
   return () => (
     <section mix={sectionStyle}>
@@ -57,6 +89,10 @@ const introStyle = css({
 
 const sectionStyle = css({
   marginTop: '2rem',
+})
+
+const viewportSpacerStyle = css({
+  minHeight: '100vh',
 })
 
 const sectionTitleStyle = css({
