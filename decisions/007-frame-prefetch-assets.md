@@ -2,7 +2,7 @@
 
 We chose HTML discovery with asset prefetch tags as the direction for Remix's default frame prefetching. Remix fetches a destination's HTML, parses it without activating the page, and creates prefetch hints for its explicit JavaScript, CSS, and image and font preload URLs. Navigation uses the normal frame resolver. The browser owns response caching and revalidation.
 
-This extends the HTML-only prefetching in [PR #12004][base-pr]. We evaluated four strategies in `demos/prefetch`, then promoted HTML discovery into the component runtime. The demo now uses that default and contains no custom prefetch implementation or strategy selector.
+This extends the HTML-only prefetching in [PR #12004][base-pr]. We evaluated four strategies in a dedicated prefetch demo, then promoted HTML discovery into the component runtime. The bookstore now demonstrates that default, including intent and viewport triggers, browser caching, and explicit image preloads. We removed the evaluation demo after moving its unique browser regression checks into the bookstore suite.
 
 ## Starting point
 
@@ -109,9 +109,9 @@ Other limits follow from the chosen mechanisms:
 
 ## Evidence and extension points
 
-The four-strategy demo was the evaluation tool. After selecting HTML discovery, we removed its custom implementations, cookie-backed selector, response cache, and diagnostic request header. The demo now exercises the framework default with artificial HTML and asset delays.
+The four-strategy demo was the evaluation tool. After selecting HTML discovery, we removed its custom implementations, cookie-backed selector, response cache, and diagnostic request header. We later removed the demo itself once the bookstore demonstrated the framework default. The bookstore uses intent on header links and viewport on “View Details” links, privately caches browsing frame GETs for 30 seconds, and serves fingerprinted images with a preload for the main product image.
 
-`packages/component/src/test/default-prefetch.test.ts` covers inert discovery, nested templates, base URLs, final response URLs, active assets, image and font preload declarations, media conditions, responsive image exclusions, request attributes, pending-work deduplication, failed responses, and disposal. `prefetch.test.ts` covers intent detection, viewport entry, dynamic links, changed destinations, eligibility, observer disposal, override hooks, default frame request headers, and the low-priority HTML fetch. The prefetch demo's `app/app.test.e2e.ts` checks browser HTTP cache reuse, asset warming for `no-store` HTML, independent navigation while discovery streams, and pending hints surviving frame navigation. The bookstore's `app/prefetch.test.e2e.ts` exercises built-in intent and viewport links through real frame navigation. These are functional checks, not a claim that one strategy is fastest for every application.
+`packages/component/src/test/default-prefetch.test.ts` covers inert discovery, nested templates, base URLs, final response URLs, active assets, image and font preload declarations, media conditions, responsive image exclusions, request attributes, pending-work deduplication, failed responses, and disposal. `prefetch.test.ts` covers intent detection, viewport entry, dynamic links, changed destinations, eligibility, observer disposal, override hooks, default frame request headers, and the low-priority HTML fetch. The bookstore's `app/prefetch.test.e2e.ts` exercises built-in intent and viewport links through real frame navigation, browser HTTP cache reuse, asset warming for `no-store` HTML, independent navigation while discovery streams, and pending hints surviving frame navigation. These are functional checks, not a claim that one strategy is fastest for every application.
 
 ## Keep customization hooks and defer helper exports
 
