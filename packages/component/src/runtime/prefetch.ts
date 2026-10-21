@@ -1,12 +1,16 @@
-import { createDefaultPrefetch } from './default-prefetch.ts'
+import { createDefaultPrefetch, type PrefetchOptions } from './default-prefetch.ts'
 import { getInterceptableNavigation } from './navigation.ts'
+import { getNamedFrame } from './run.ts'
 
 /**
- * Starts loading a same-origin page so a later top-frame navigation to it can reuse the response.
+ * Starts loading same-origin frame content so a later navigation can reuse the response.
  *
  * @param src Absolute URL of the page to prefetch, without a hash.
+ * @param options Destination frame for the request.
  */
-export type PrefetchFrame = (src: string) => void
+export type PrefetchFrame = (src: string, options?: PrefetchOptions) => void
+
+type PrefetchRequest = [src: string, options?: PrefetchOptions]
 
 const INTENT_DELAY_MS = 100
 
@@ -14,18 +18,19 @@ const defaultPrefetch = createDefaultPrefetch()
 let prefetchFrame: PrefetchFrame = defaultPrefetch
 
 /**
- * Prefetches a page so a later top-frame navigation to it can reuse the response. By default this
+ * Prefetches frame content so a later navigation can reuse the response. By default this
  * fetches HTML and discovers external JavaScript, CSS, and explicit image and font preloads for
  * `<link rel="prefetch">` hints.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
- * `prefetch` to `run()` to change this behavior. Cross-origin URLs, the current page, and
+ * `prefetch` to `run()` to change this behavior. Cross-origin URLs, the current untargeted page, and
  * browsers where Remix doesn't handle navigations are skipped.
  *
  * @param href URL to prefetch, resolved against the document base URL.
+ * @param options Destination frame for the request.
  */
-export function prefetch(href: string): void {
-  let src = getPrefetchHref(href)
-  if (src) prefetchFrame(src)
+export function prefetch(href: string, options?: PrefetchOptions): void {
+  let request = getPrefetchRequest(href, options)
+  if (request) prefetchFrame(...request)
 }
 
 /**
@@ -67,8 +72,8 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     intent.timer = undefined
     if (intent.prefetched || intent.anchor.getAttribute('data-rmx-prefetch') !== 'intent') return
     intent.prefetched = true
-    let src = getAnchorPrefetchHref(intent.anchor)
-    if (src) prefetchFrame(src)
+    let request = getAnchorPrefetchRequest(intent.anchor)
+    if (request && hasPrefetchTarget(request)) prefetchFrame(...request)
   }
   function stopResting(intent: Intent | undefined) {
     if (intent !== pointerIntent && intent !== focusIntent) clearTimeout(intent?.timer)
@@ -156,20 +161,22 @@ function startViewportPrefetching(signal: AbortSignal): void {
 
   let completed = new WeakMap<HTMLAnchorElement, string>()
 
-  function getHref(anchor: HTMLAnchorElement): string | undefined {
+  function getRequest(anchor: HTMLAnchorElement): PrefetchRequest | undefined {
     if (anchor.getAttribute('data-rmx-prefetch') !== 'viewport') return
-    return getAnchorPrefetchHref(anchor)
+    return getAnchorPrefetchRequest(anchor)
   }
 
   let viewport = new IntersectionObserver((entries) => {
     if (signal.aborted) return
     for (let { target, isIntersecting } of entries) {
       if (!isIntersecting || !(target instanceof HTMLAnchorElement)) continue
-      let href = getHref(target)
-      if (!href || completed.get(target) === href) continue
-      completed.set(target, href)
+      let request = getRequest(target)
+      if (!request || !hasPrefetchTarget(request)) continue
+      let key = JSON.stringify(request)
+      if (completed.get(target) === key) continue
+      completed.set(target, key)
       viewport.unobserve(target)
-      prefetchFrame(href)
+      prefetchFrame(...request)
     }
   })
 
@@ -179,8 +186,9 @@ function startViewportPrefetching(signal: AbortSignal): void {
       completed.delete(anchor)
       return
     }
-    let href = getHref(anchor)
-    if (href && completed.get(anchor) !== href) viewport.observe(anchor)
+    // Named frames can still be hydrating here; check their registration when the link enters view.
+    let request = getRequest(anchor)
+    if (request && completed.get(anchor) !== JSON.stringify(request)) viewport.observe(anchor)
   }
 
   function scan(node: Node): void {
@@ -209,6 +217,7 @@ function startViewportPrefetching(signal: AbortSignal): void {
       'download',
       'data-rmx-document',
       'data-rmx-target',
+      'data-rmx-src',
       'target',
     ],
   })
@@ -230,24 +239,39 @@ function getIntentAnchor(target: EventTarget | null): HTMLAnchorElement | null {
   return anchor instanceof HTMLAnchorElement ? anchor : null
 }
 
-function getAnchorPrefetchHref(anchor: HTMLAnchorElement): string | undefined {
-  // Only links that reload the top frame on click can reuse a prefetch.
+function getAnchorPrefetchRequest(anchor: HTMLAnchorElement): PrefetchRequest | undefined {
   if (
     !anchor.isConnected ||
     !anchor.hasAttribute('href') ||
     anchor.hasAttribute('download') ||
     anchor.hasAttribute('data-rmx-document') ||
-    anchor.hasAttribute('data-rmx-target') ||
     (anchor.target !== '' && anchor.target !== '_self')
   ) {
     return
   }
-  return getPrefetchHref(anchor.href)
+  let href = getSameOriginHref(anchor.href)
+  let src = getSameOriginHref(anchor.getAttribute('data-rmx-src') ?? anchor.href)
+  if (!href || !src) return
+  let target = anchor.getAttribute('data-rmx-target')
+  return target ? getPrefetchRequest(src, { target }) : getPrefetchRequest(href)
 }
 
-function getPrefetchHref(href: string): string | undefined {
-  if (!getInterceptableNavigation()) return
+function hasPrefetchTarget(request: PrefetchRequest): boolean {
+  let target = request[1]?.target
+  return !target || getNamedFrame(target) != null
+}
 
+function getPrefetchRequest(href: string, options?: PrefetchOptions): PrefetchRequest | undefined {
+  if (!getInterceptableNavigation()) return
+  let src = getSameOriginHref(href)
+  if (!src) return
+  if (options?.target) return [src, { target: options.target }]
+  let currentUrl = new URL(window.location.href)
+  currentUrl.hash = ''
+  if (src !== currentUrl.href) return [src]
+}
+
+function getSameOriginHref(href: string): string | undefined {
   let url: URL
   try {
     url = new URL(href, document.baseURI)
@@ -255,9 +279,7 @@ function getPrefetchHref(href: string): string | undefined {
     return
   }
   url.hash = ''
-  let currentUrl = new URL(window.location.href)
-  currentUrl.hash = ''
-  if (url.origin !== currentUrl.origin || url.href === currentUrl.href) return
+  if (url.origin !== window.location.origin) return
 
   return url.href
 }

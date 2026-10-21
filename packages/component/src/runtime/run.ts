@@ -39,7 +39,8 @@ export interface RunInit {
   /**
    * Starts loading a page for `data-rmx-prefetch` links and `prefetch()` calls, replacing the
    * default HTML fetch and asset prefetch hints. Use it with `resolveFrame` to reuse uncacheable HTML,
-   * for example to hold the response in memory until the next navigation to that URL.
+   * for example to hold the response in memory until the next navigation to that URL and target.
+   * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
    */
   prefetch?: PrefetchFrame
 }

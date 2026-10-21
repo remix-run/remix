@@ -1,11 +1,40 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import { prefetch, startPrefetching } from '../runtime/prefetch.ts'
+import { Frame } from '../runtime/component.ts'
+import { jsx } from '../runtime/jsx.ts'
+import { prefetch, startPrefetching, type PrefetchFrame } from '../runtime/prefetch.ts'
+import { run } from '../runtime/run.ts'
+import { renderToStream } from '../server/stream.ts'
+import { drain } from './utils.ts'
 
-function startTestPrefetching(t: TestContext, prefetchFrame?: (src: string) => void) {
+function startTestPrefetching(t: TestContext, prefetchFrame?: PrefetchFrame) {
   let controller = new AbortController()
   startPrefetching(controller.signal, prefetchFrame)
   t.after(() => controller.abort())
+}
+
+async function startNamedFramePrefetching(
+  t: TestContext,
+  prefetchFrame?: PrefetchFrame,
+  ...links: HTMLAnchorElement[]
+) {
+  document.body.innerHTML = await drain(
+    renderToStream(
+      jsx('main', {
+        children: [
+          jsx(Frame, { name: 'details', src: '/initial-details' }),
+          jsx(Frame, { name: 'sidebar', src: '/initial-sidebar' }),
+        ],
+      }),
+      { resolveFrame: () => 'Initial frame' },
+    ),
+  )
+  document.body.append(...links)
+  let app = run({ loadModule: mock.fn(), prefetch: prefetchFrame })
+  t.after(() => app.dispose())
+  await app.ready()
+  expect(app.frames.get('details')).toBeDefined()
+  return app
 }
 
 function createIntentLink(href: string): HTMLAnchorElement {
@@ -260,7 +289,7 @@ describe('prefetch', () => {
     expect(prefetchFrame).not.toHaveBeenCalled()
   })
 
-  it('skips links that would not reload the top frame from another URL', (t) => {
+  it('skips document navigations, missing frames, and the current untargeted page', (t) => {
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let unmarked = createIntentLink('/products/unmarked')
@@ -291,6 +320,106 @@ describe('prefetch', () => {
     expect(prefetchFrame).not.toHaveBeenCalled()
   })
 
+  it('prefetches named-frame intent links with their target and source override', async (t) => {
+    let prefetchFrame = mock.fn()
+    await startNamedFramePrefetching(t, prefetchFrame)
+    let anchor = createIntentLink('/products/shirt')
+    anchor.setAttribute('data-rmx-target', 'details')
+    press(anchor)
+    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { target: 'details' })
+
+    let overridden = createIntentLink('/products/hat')
+    overridden.setAttribute('data-rmx-target', 'details')
+    overridden.setAttribute('data-rmx-src', './partials/hat?size=small#details')
+    movePointer(document.body, overridden)
+    await wait(150)
+    expect(prefetchFrame).toHaveBeenCalledWith(
+      new URL('./partials/hat?size=small', document.baseURI).href,
+      { target: 'details' },
+    )
+    expect(prefetchFrame).toHaveBeenCalledTimes(2)
+  })
+
+  it('only applies source overrides to named frames, allowing a current-page frame source', async (t) => {
+    let prefetchFrame = mock.fn()
+    await startNamedFramePrefetching(t, prefetchFrame)
+    let named = createIntentLink('/products/named')
+    named.setAttribute('data-rmx-target', 'details')
+    named.setAttribute('data-rmx-src', location.href)
+    press(named)
+    let current = new URL(location.href)
+    current.hash = ''
+    expect(prefetchFrame).toHaveBeenCalledWith(current.href, { target: 'details' })
+
+    let top = createIntentLink('/products/top')
+    top.setAttribute('data-rmx-target', '')
+    top.setAttribute('data-rmx-src', '/ignored')
+    press(top)
+    expect(prefetchFrame).toHaveBeenCalledWith(top.href)
+    expect(prefetchFrame).toHaveBeenCalledTimes(2)
+  })
+
+  it('skips invalid and cross-origin sources even when the source would be ignored', async (t) => {
+    let prefetchFrame = mock.fn()
+    await startNamedFramePrefetching(t, prefetchFrame)
+    let invalid = createIntentLink('/products/invalid')
+    invalid.setAttribute('data-rmx-target', 'details')
+    invalid.setAttribute('data-rmx-src', 'http://[')
+    let crossOriginSource = createIntentLink('/products/cross-origin-source')
+    crossOriginSource.setAttribute('data-rmx-target', 'details')
+    crossOriginSource.setAttribute('data-rmx-src', 'https://example.com/partial')
+    let crossOriginHref = createIntentLink('https://example.com/products/shirt')
+    crossOriginHref.setAttribute('data-rmx-target', 'details')
+    crossOriginHref.setAttribute('data-rmx-src', '/partial')
+    let untargeted = createIntentLink('/products/top')
+    untargeted.setAttribute('data-rmx-src', 'https://example.com/ignored')
+
+    press(invalid)
+    press(crossOriginSource)
+    press(crossOriginHref)
+    press(untargeted)
+    expect(prefetchFrame).not.toHaveBeenCalled()
+  })
+
+  it('passes target context to imperative prefetch overrides', (t) => {
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    prefetch('/partial#details', { target: 'details' })
+    expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partial', location.href).href, {
+      target: 'details',
+    })
+    prefetch('https://example.com/partial', { target: 'details' })
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('prefetches named-frame content with the same URL and headers as a frame reload', async (t) => {
+    let app = await startNamedFramePrefetching(t)
+    let fetch = t.mock.method(
+      globalThis,
+      'fetch',
+      async (_src: RequestInfo | URL, _init?: RequestInit) =>
+        new Response('<main>Details</main>', { headers: { 'Content-Type': 'text/html' } }),
+    )
+    let anchor = createIntentLink('/products/shirt')
+    anchor.setAttribute('data-rmx-target', 'details')
+    anchor.setAttribute('data-rmx-src', '/partials/shirt')
+    press(anchor)
+    let frame = app.frames.get('details')
+    if (!frame) throw new Error('Missing details frame')
+    let src = new URL('/partials/shirt', document.baseURI).href
+    await frame.reload({ src })
+
+    expect(fetch).toHaveBeenCalledTimes(2)
+    for (let call of fetch.mock.calls) {
+      let [input, init] = call.arguments
+      expect(input).toBe(src)
+      let headers = new Headers(init?.headers)
+      expect(headers.get('Accept')).toBe('text/html')
+      expect(headers.get('X-Remix-Frame')).toBe('true')
+      expect(headers.get('X-Remix-Target')).toBe('details')
+    }
+  })
+
   it('fetches HTML with low priority and frame headers by default', async (t) => {
     let fetch = t.mock.method(
       globalThis,
@@ -315,6 +444,47 @@ describe('prefetch', () => {
   })
 
   describe('viewport', () => {
+    it('prefetches initial named-frame links and observes changes to source and target', async (t) => {
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt')
+      anchor.setAttribute('data-rmx-target', 'details')
+      anchor.setAttribute('data-rmx-src', '/partials/shirt#details')
+      await startNamedFramePrefetching(t, prefetchFrame, anchor)
+
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/shirt', location.href).href, {
+        target: 'details',
+      })
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+
+      anchor.setAttribute('data-rmx-src', '/partials/shirt#reviews')
+      anchor.href = '/products/another-navigation-url'
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+
+      anchor.setAttribute('data-rmx-src', '/partials/hat')
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledTimes(2)
+      expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/hat', location.href).href, {
+        target: 'details',
+      })
+
+      anchor.setAttribute('data-rmx-target', 'sidebar')
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledTimes(3)
+      expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/hat', location.href).href, {
+        target: 'sidebar',
+      })
+
+      anchor.setAttribute('data-rmx-target', 'missing')
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledTimes(3)
+      anchor.removeAttribute('data-rmx-target')
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledTimes(4)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
     it('prefetches existing links only when they enter the viewport', async (t) => {
       let prefetchFrame = mock.fn()
       let visible = createViewportLink('/products/visible')

@@ -1,10 +1,18 @@
+/** Options for prefetching frame content. */
+export interface PrefetchOptions {
+  /** Name of the destination frame, sent as `X-Remix-Target` by the default strategy. */
+  target?: string
+}
+
 const pendingAssetLinks = new WeakSet<Node>()
 
 export function isPendingPrefetchLink(node: Node): boolean {
   return pendingAssetLinks.has(node)
 }
 
-export function createDefaultPrefetch(signal?: AbortSignal): (src: string) => Promise<void> {
+export function createDefaultPrefetch(
+  signal?: AbortSignal,
+): (src: string, options?: PrefetchOptions) => Promise<void> {
   let pending = new Map<string, Promise<void>>()
   let assets = new Map<string, Promise<void>>()
 
@@ -49,13 +57,15 @@ export function createDefaultPrefetch(signal?: AbortSignal): (src: string) => Pr
     return Promise.all(requests)
   }
 
-  async function discover(src: string): Promise<void> {
+  async function discover(src: string, options?: PrefetchOptions): Promise<void> {
     try {
+      let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+      if (options?.target != null) headers.set('X-Remix-Target', options.target)
       let response = await fetch(src, {
         method: 'GET',
         mode: 'same-origin',
         priority: 'low',
-        headers: { Accept: 'text/html', 'X-Remix-Frame': 'true' },
+        headers,
         signal,
       })
       if (
@@ -91,12 +101,13 @@ export function createDefaultPrefetch(signal?: AbortSignal): (src: string) => Pr
     }
   }
 
-  return function prefetch(src) {
+  return function prefetch(src, options) {
     if (signal?.aborted) return Promise.resolve()
-    let existing = pending.get(src)
+    let key = JSON.stringify([src, options?.target])
+    let existing = pending.get(key)
     if (existing) return existing
-    let ready = discover(src).finally(() => pending.delete(src))
-    pending.set(src, ready)
+    let ready = discover(src, options).finally(() => pending.delete(key))
+    pending.set(key, ready)
     return ready
   }
 }

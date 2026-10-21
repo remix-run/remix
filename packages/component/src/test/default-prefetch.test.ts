@@ -201,7 +201,34 @@ describe('default frame prefetch', () => {
     await third
   })
 
-  it('deduplicates pending asset hints across pages and removes failed hints', async (t) => {
+  it('deduplicates HTML by source and target without mixing frame response variants', async (t) => {
+    let response = Promise.withResolvers<void>()
+    let fetch = t.mock.method(
+      globalThis,
+      'fetch',
+      async (_src: RequestInfo | URL, _init?: RequestInit) => {
+        await response.promise
+        return htmlResponse('<main>Frame</main>')
+      },
+    )
+    let { prefetch } = createPrefetch(t)
+    let src = new URL('/page', location.href).href
+    let requests = [
+      prefetch(src),
+      prefetch(src, { target: 'details' }),
+      prefetch(src, { target: 'sidebar' }),
+      prefetch(src, { target: 'details' }),
+    ]
+
+    expect(fetch).toHaveBeenCalledTimes(3)
+    expect(
+      fetch.mock.calls.map((call) => new Headers(call.arguments[1]?.headers).get('X-Remix-Target')),
+    ).toEqual([null, 'details', 'sidebar'])
+    response.resolve()
+    await Promise.all(requests)
+  })
+
+  it('deduplicates pending asset hints across pages and targets and removes failed hints', async (t) => {
     t.mock.method(globalThis, 'fetch', async () =>
       htmlResponse('<script src="/shared.js"></script>'),
     )
@@ -222,6 +249,7 @@ describe('default frame prefetch', () => {
     let ready = Promise.all([
       prefetch(new URL('/first', location.href).href),
       prefetch(new URL('/second', location.href).href),
+      prefetch(new URL('/first', location.href).href, { target: 'details' }),
     ])
     await new Promise(requestAnimationFrame)
     expect(hints).toHaveLength(1)

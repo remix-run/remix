@@ -16,13 +16,15 @@ That branch establishes when and which pages Remix prefetches:
 - Prefetching is opt-in. Marked GET routes must be safe to request speculatively; submissions are not prefetched.
 - `run({ prefetch })` lets applications replace the loading strategy while retaining Remix's intent detection and link eligibility rules.
 
-The original default creates an HTML `<link rel="prefetch">`. It does not read the response or discover destination assets. This helps HTML delivery when the response is reusable, but destination client entries and stylesheets can still need network requests after navigation. Our decision changes the loading strategy while retaining those intent and eligibility rules.
+The original default creates an HTML `<link rel="prefetch">`. It does not read the response or discover destination assets. This helps HTML delivery when the response is reusable, but destination client entries and stylesheets can still need network requests after navigation. Our decision changes the loading strategy and extends eligible links to mounted named frames.
 
 ## Prefetch triggers in the initial release
 
 We chose to ship `data-rmx-prefetch="intent"` and `data-rmx-prefetch="viewport"`. Intent starts discovery after the visitor rests on a link or presses it. Viewport starts the same discovery when the link enters view. Rendering a link alone does not trigger a prefetch; there is no `render` strategy. The imperative `prefetch(href)` API remains available for application-specific triggers.
 
-Viewport support lives in `packages/component/src/runtime/prefetch.ts` and uses the same same-origin and top-frame eligibility checks as intent links. One `IntersectionObserver` tracks visibility, and one `MutationObserver` registers links inserted or changed by streaming, frame navigation, or client rendering. Each mounted link triggers once for its current normalized destination. Leaving and reentering view does not trigger again; a destination change or a later mount makes the link eligible again. This tracking retains no responses. Runtime disposal disconnects both observers, and browsers without `IntersectionObserver` skip viewport prefetching.
+Viewport support lives in `packages/component/src/runtime/prefetch.ts` and uses the same frame-navigation eligibility checks as intent links. One `IntersectionObserver` tracks visibility, and one `MutationObserver` registers links inserted or changed by streaming, frame navigation, or client rendering. Each mounted link triggers once for its current normalized frame source and target. Leaving and reentering view does not trigger again; a source or target change or a later mount makes the link eligible again. This tracking retains no responses. Runtime disposal disconnects both observers, and browsers without `IntersectionObserver` skip viewport prefetching.
+
+Both triggers support `data-rmx-target` and `data-rmx-src`. A named-frame link prefetches its source override, or `href` when no override is present, and sends the selected frame name. The browser navigation destination remains `href`. Both URLs must be same-origin, and the named frame must be mounted when the trigger runs; a missing target would fall back to document navigation, so its frame response is not prefetched. Without a nonempty target, a valid source override is ignored, matching top-frame navigation. Downloads, explicit document navigations, and links opening another browsing context remain excluded. Untargeted requests skip the current page; named-frame sources can use its URL because their target selects different content. `prefetch(src, { target })` provides the same request context imperatively, and `run({ prefetch })` receives that context as an optional second argument.
 
 ## Four approaches we compared
 
@@ -43,14 +45,14 @@ We chose option 4 because it adds the missing asset discovery without making the
 
 The default implementation is `packages/component/src/runtime/default-prefetch.ts`. The intent, viewport, and eligibility code in `prefetch.ts` calls it unless the application supplies an override.
 
-1. Normalize the same-origin URL and make a GET with `priority: 'low'` and the normal frame headers, `Accept: text/html` and `X-Remix-Frame: true`. Use ordinary fetch caching behavior.
+1. Normalize the same-origin frame source and make a GET with `priority: 'low'` and the normal frame headers, `Accept: text/html` and `X-Remix-Frame: true`, plus `X-Remix-Target` for named frames. Use ordinary fetch caching behavior.
 2. Read a successful HTML response into a detached `<template>`. Resolve asset URLs against the final response URL after redirects, honoring its first `<base href>`.
 3. Find external scripts, stylesheet links, module preload links, and script/style/image/font preload links. Recursively inspect nested template contents, including assets carried in streamed frame templates.
 4. Skip matching assets already active in the current document and deduplicate pending asset hints. Create new script/style/image/font **prefetch** links, preserving the relevant CORS, integrity, and referrer attributes.
 5. Keep hints connected while they load, including across a frame navigation. Remove each hint on load or error. The runtime tracks its own pending head links and excludes them from document head reconciliation so navigation does not cancel unfinished work. Runtime disposal cancels speculative HTML requests and removes pending hints.
 6. Discard the consumed HTML. On navigation, use the default resolver, which performs its normal request and lets the browser decide whether to reuse, validate, or fetch a response.
 
-A map of pending discovery work prevents overlapping prefetch calls from starting identical work in userland. Its entries disappear when that work finishes. It contains no completed response cache, has no expiration policy, and is never consulted by navigation. Failures remain speculative and do not replace or block the normal navigation path.
+A map of pending discovery work, keyed by normalized source and target, prevents overlapping prefetch calls from starting identical work in userland. Different targets may return different HTML at the same URL, so they must not share discovery work. Asset hints remain deduplicated across targets. Entries disappear when that work finishes. The map contains no completed response cache, has no expiration policy, and is never consulted by navigation. Failures remain speculative and do not replace or block the normal navigation path.
 
 ## Inert parsing and import maps
 
@@ -80,7 +82,7 @@ These are HTTP cache rules, not Remix freshness rules.[http-cache] Assets have t
 
 An HTML prefetch link does not give us a portable five-minute reuse window when the response has no explicit freshness lifetime. Chrome removed its special five-minute rule in version 133 and now applies normal HTTP cache semantics to link prefetches.[chrome-prefetch-cache] We therefore rely on the server's cache policy for both HTML fetches and asset hints, rather than choosing HTML links for an assumed cache lifetime.
 
-Reuse also requires a matching cache entry, including request variants selected by `Vary`. Using the normal frame headers avoids the original HTML link strategy's inability to send `X-Remix-Frame`. It does not override variant matching, credentials, cache partitioning, eviction, or browser resource policies.
+Reuse also requires a matching cache entry, including request variants selected by `Vary`. Using the normal frame headers avoids the original HTML link strategy's inability to send `X-Remix-Frame` and `X-Remix-Target`. Servers that select different HTML by target must vary cacheable responses on `X-Remix-Target`. Aligned headers do not override variant matching, credentials, cache partitioning, eviction, or browser resource policies.
 
 We considered using an HTML prefetch link, then reading it with `fetch(..., { cache: 'only-if-cached' })` solely for discovery. That loses asset discovery when HTML is not stored: the link exposes no response body, and its load event does not guarantee a cache entry.[prefetch-hints] A fallback network fetch could recover the HTML, but adds another speculative request for an uncacheable page. Fetching the HTML ourselves from the start avoids that dependency on storage.
 
@@ -115,7 +117,7 @@ The four-strategy demo was the evaluation tool. After selecting HTML discovery, 
 
 ## Keep customization hooks and defer helper exports
 
-Applications can still choose a custom `prefetch` and `resolveFrame` when response handoff is valuable. Those hooks replace the default behavior, so applications own their fetch implementation, submission encoding, cancellation, response handling, and any cache lifetime or invalidation. The chosen default needs no custom resolver or application-provided container markup.
+Applications can still choose a custom `prefetch` and `resolveFrame` when response handoff is valuable. Both hooks receive the frame source and optional target; a custom response cache must distinguish those variants. Those hooks replace the default behavior, so applications own their fetch implementation, submission encoding, cancellation, response handling, and any cache lifetime or invalidation. The chosen default needs no custom resolver or application-provided container markup.
 
 We considered both an injected `options.defaultResolveFrame()` callback and an exported `defaultResolveFrame(src, options)` helper. The callback required changing the resolver options contract and plumbing it through frame reloads and initial client-frame resolution. A direct export avoided that plumbing, but neither the chosen default nor the demo needs it. We deferred both forms until an application has a concrete need to compose the built-in behavior. `ResolveFrame` retains its existing `(src: string, options?: ResolveFrameOptions)` parameters.
 

@@ -415,13 +415,26 @@ import { prefetch } from 'remix/component'
 prefetch(`/search?q=${encodeURIComponent(query)}`)
 ```
 
-Prefetching is opt-in per link because it requests pages speculatively. Only mark links whose GET requests are safe to repeat. Only links that would reload the top frame from another same-origin URL are prefetched, so links with `data-rmx-target`, `data-rmx-document`, `download`, or a `target` other than `_self` are skipped, as is the current page.
+Prefetching is opt-in per link because it requests pages speculatively. Only mark links whose GET requests are safe to repeat. Links with `data-rmx-document`, `download`, or a `target` other than `_self` are skipped. The current page is skipped for untargeted requests. Both the navigation destination and any `data-rmx-src` override must resolve to the document origin.
+
+Links with `data-rmx-target="details"` prefetch content for that mounted named frame, sending `X-Remix-Target: details`. With `data-rmx-src`, they fetch that source instead of `href`, just as the eventual frame navigation does. Missing named frames are skipped. Without a nonempty target, a valid `data-rmx-src` is ignored and `href` is prefetched. To prefetch a named frame imperatively, pass its source and target: `prefetch('/partials/shirt', { target: 'details' })`. Custom `run({ prefetch })` hooks receive that same source and an optional `{ target }` argument.
+
+```tsx
+<a
+  href="/products/shirt"
+  data-rmx-target="details"
+  data-rmx-src="/partials/shirt"
+  data-rmx-prefetch="intent"
+>
+  View shirt details
+</a>
+```
 
 Hover and focus are tracked independently. Moving between children of a link, pressing it after its prefetch starts, or focusing it while it is hovered does not repeat the prefetch. Leaving the link with both the pointer and focus ends that interaction; returning can prefetch again. A press starts prefetching immediately if the interaction has not triggered yet, including touch and pen presses.
 
-Viewport links prefetch once while mounted with the same destination. Leaving and reentering the viewport, hovering, focusing, or pressing them does not repeat the prefetch. Changing a link's destination makes it eligible again; changing only its fragment does not. Removing and later mounting a link also makes it eligible again. Remix uses one `IntersectionObserver` and one `MutationObserver` to track initial links and links added or changed by streaming, frame navigation, or client rendering. Runtime disposal disconnects both observers. Browsers without `IntersectionObserver` skip viewport prefetching while retaining intent and imperative prefetching.
+Viewport links prefetch once while mounted with the same normalized frame source and target. Leaving and reentering the viewport, hovering, focusing, or pressing them does not repeat the prefetch. Changing the requested source or target makes a link eligible again; changing only a fragment, or changing `href` while a named frame's source override stays the same, does not. Removing and later mounting a link also makes it eligible again. Remix uses one `IntersectionObserver` and one `MutationObserver` to track initial links and links added or changed by streaming, frame navigation, or client rendering. Runtime disposal disconnects both observers. Browsers without `IntersectionObserver` skip viewport prefetching while retaining intent and imperative prefetching.
 
-By default, Remix fetches the page with GET, a `priority: 'low'` hint, and the same `Accept: text/html` and `X-Remix-Frame: true` headers as a top-frame navigation. It reads the response into an inert template and discovers explicit JavaScript and CSS URLs and `<link rel="preload" as="image|font" href="…">` declarations, including resources inside nested frame templates. It adds ordinary `<link rel="prefetch" as="script|style|image|font">` hints for assets that are not already active in the document. These hints do not run scripts, apply styles, install import maps, or follow module dependencies. They remain connected through frame navigation and are removed on load, error, or runtime disposal.
+By default, Remix fetches the frame source with GET, a `priority: 'low'` hint, and the same `Accept: text/html` and `X-Remix-Frame: true` headers as a frame navigation, plus `X-Remix-Target` for named frames. It reads the response into an inert template and discovers explicit JavaScript and CSS URLs and `<link rel="preload" as="image|font" href="…">` declarations, including resources inside nested frame templates. It adds ordinary `<link rel="prefetch" as="script|style|image|font">` hints for assets that are not already active in the document. These hints do not run scripts, apply styles, install import maps, or follow module dependencies. They remain connected through frame navigation and are removed on load, error, or runtime disposal.
 
 Declare important destination images and fonts with preload links to include them in discovery:
 
@@ -434,23 +447,29 @@ Image and font preload links must have an explicit `href` and a matching `media`
 
 The consumed HTML is discarded. Navigation uses the normal frame resolver and browser HTTP cache: matching fresh responses can be reused, `no-cache` responses revalidate, and `no-store` responses are fetched again. Asset discovery still works for `no-store` HTML because assets have their own cache policies. No special HTML cache headers are required to discover assets; reusing responses requires appropriate HTTP caching headers, such as `Cache-Control: private, max-age=30`, and matching request variants selected by `Vary`.
 
-Remix deduplicates pending prefetch work but keeps no completed response cache. An early navigation starts its normal fetch independently of discovery; request sharing is up to the browser. Asset prefetches are hints and may be deferred or ignored. Browsers without link-prefetch support skip asset hints while still fetching HTML. Discovery waits for the full HTML body and does not traverse JavaScript imports, CSS imports, or CSS images and fonts.
+Remix deduplicates pending HTML discovery by source and target, and asset hints across frame requests, but keeps no completed response cache. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary` when making those responses cacheable. An early navigation starts its normal fetch independently of discovery; request sharing is up to the browser. Asset prefetches are hints and may be deferred or ignored. Browsers without link-prefetch support skip asset hints while still fetching HTML. Discovery waits for the full HTML body and does not traverse JavaScript imports, CSS imports, or CSS images and fonts.
 
-To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next untargeted GET request. The app provides `fetchFrame(src, options)` to handle frame headers, submissions, cancellation, and response handling; prefetch calls it without options for a GET request. Applications also own the lifetime and invalidation of any responses they retain:
+To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next GET request with the same source and target. The app provides `fetchFrame(src, options)` to handle frame headers, submissions, cancellation, and response handling. Applications also own the lifetime and invalidation of any responses they retain:
 
 ```ts
 import { run } from 'remix/component'
 
 let prefetched = new Map<string, Promise<Response>>()
 
+function frameKey(src: string, target?: string) {
+  let url = new URL(src, document.baseURI)
+  url.hash = ''
+  return JSON.stringify([url.href, target])
+}
+
 run({
   loadModule,
-  prefetch(src) {
-    prefetched.set(src, fetchFrame(src))
+  prefetch(src, options) {
+    prefetched.set(frameKey(src, options?.target), fetchFrame(src, options))
   },
   resolveFrame(src, options) {
     let isGet = !options?.method || options.method.toUpperCase() === 'GET'
-    let response = options?.target == null && isGet ? prefetched.get(src) : undefined
+    let response = isGet ? prefetched.get(frameKey(src, options?.target)) : undefined
     prefetched.clear()
     return response ?? fetchFrame(src, options)
   },
