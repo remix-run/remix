@@ -91,7 +91,8 @@ export function rewriteLinksToRemixReadmes(
     } else if (url.hostname === 'github.com') {
       readmePath = readmePaths.github.get(withoutTrailingSlash(url.pathname))
     }
-    if (!readmePath) return
+    // A README's link to its own API docs stays external rather than pointing at itself.
+    if (!readmePath || path.resolve(readmePath) === path.resolve(outputPath)) return
 
     let relativePath = toPosixPath(path.relative(path.dirname(outputPath), readmePath))
     let localHref = relativePath.startsWith('.') ? relativePath : `./${relativePath}`
