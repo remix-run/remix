@@ -5,12 +5,13 @@ import { getAssetEntry } from '../middleware/asset-entry.ts'
 
 export interface DocumentProps {
   title?: string
+  head?: RemixNode
   children?: RemixNode
 }
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { title = 'Bookstore', children } = handle.props
+    let { title = 'Bookstore', head, children } = handle.props
     let { scriptEntry, stylesheetHref } = getAssetEntry()
     let { href, importMap, preloads } = scriptEntry
 
@@ -26,6 +27,7 @@ export function Document(handle: Handle<DocumentProps>) {
             <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
           <script type="module" src={href} />
+          {head}
         </head>
         <body>{children}</body>
       </html>

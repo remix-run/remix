@@ -18,7 +18,7 @@ export function AccountOrderNotFoundPage() {
       <div class="card">
         <h1>Order Not Found</h1>
         <p>
-          <a href={routes.account.orders.index.href()} class="btn">
+          <a data-rmx-prefetch="intent" href={routes.account.orders.index.href()} class="btn">
             Back to Orders
           </a>
         </p>
@@ -83,7 +83,11 @@ export function AccountOrderShowPage(
         </div>
 
         <p mix={css({ marginTop: '1.5rem' })}>
-          <a href={routes.account.orders.index.href()} class="btn btn-secondary">
+          <a
+            data-rmx-prefetch="intent"
+            href={routes.account.orders.index.href()}
+            class="btn btn-secondary"
+          >
             Back to Orders
           </a>
         </p>
