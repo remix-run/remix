@@ -30,7 +30,7 @@ export type PageDefinition = {
   navId?: string
 }
 
-export type NavSection = 'APIs' | 'Types'
+export type NavSection = 'Examples' | 'APIs' | 'Types'
 
 // One sidebar menu: an import path like `remix/data-table/mysql` (or a group like
 // `remix/middleware` with no exports of its own), its pages and the import paths nested under it.
@@ -51,6 +51,8 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
   let pages: Record<string, PageDefinition> = {}
   // Import path menus, grouped by top-level package (`data-table`, `middleware`, …).
   let nodesByPackage = new Map<string, NavNode[]>()
+  let nodesById = new Map<string, NavNode>()
+  let demos: DemoDocFile[] = []
 
   pages[HOME_PAGE_ID] = {
     id: HOME_PAGE_ID,
@@ -100,16 +102,17 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
       node.homePageId = overview.urlPath
     }
 
-    // Demo pages stay reachable by URL but aren't listed in the sidebar.
     for (let file of files) {
       if (file.kind !== 'demo') continue
       addPage(file, {
         description: '',
         eyebrow: `${pkg} · Demo`,
+        navSection: 'Examples',
         navLabel: file.name,
         title: file.name,
         docFile: file,
       })
+      demos.push(file)
     }
 
     // Runtime exports first, then type-only exports, each A–Z.
@@ -128,7 +131,21 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
       node.pageIds.push(file.urlPath)
     }
 
-    if (packageId !== undefined) getOrSet(nodesByPackage, packageId, () => []).push(node)
+    if (packageId !== undefined) {
+      getOrSet(nodesByPackage, packageId, () => []).push(node)
+      nodesById.set(pkg, node)
+    }
+  }
+
+  // A demo is listed in the menu of the module it shows (`ui/demos/tabs` under `ui/tabs`), or else
+  // in its package's menu.
+  demos.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+  for (let file of demos) {
+    let node = nodesById.get(`${file.package}/${file.slug}`) ?? nodesById.get(file.package)
+    if (!node) continue
+    pages[file.urlPath].navId = node.id
+    pages[file.urlPath].eyebrow = `${node.id} · Demo`
+    node.pageIds.push(file.urlPath)
   }
 
   let packages: NavNode[] = []

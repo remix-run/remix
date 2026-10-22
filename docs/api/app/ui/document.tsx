@@ -226,7 +226,7 @@ function MainContent(
   }
 }
 
-const navSections: NavSection[] = ['APIs', 'Types']
+const navSections: NavSection[] = ['Examples', 'APIs', 'Types']
 
 function SidebarContent(handle: Handle<{ registry: DocsRegistry; page: PageDefinition }>) {
   return () => {
