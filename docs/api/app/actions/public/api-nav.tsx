@@ -34,7 +34,6 @@ export const ApiNav = clientEntry(
     // right when going up.
     let exiting = new Map<string, Side>()
     let elements = new Map<string, HTMLElement>()
-    let scrollbarWidth = 0
     let hydrated = false
     // The menu that was current at the last slide.
     let shownId: string | undefined
@@ -42,10 +41,6 @@ export const ApiNav = clientEntry(
     let focusWasInNav = false
 
     handle.queueTask(() => {
-      // Panels reserve a scrollbar gutter; give its width back to their right padding.
-      let current = elements.get(panels[currentIndex].id)
-      scrollbarWidth = current ? current.offsetWidth - current.clientWidth : 0
-      if (scrollbarWidth > 0) void handle.update()
       slide()
       hydrated = true
     })
@@ -176,7 +171,7 @@ export const ApiNav = clientEntry(
       }
 
       return (
-        <div class="api-nav" style={{ '--api-nav-scrollbar': `${scrollbarWidth}px` }}>
+        <div class="api-nav">
           {rendered.map((panel) => {
             let side = sideOf(panel.id)
             let current = side === 'current' && !exiting.has(panel.id)

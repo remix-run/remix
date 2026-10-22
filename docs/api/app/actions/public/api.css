@@ -57,8 +57,7 @@ html {
 
 /*
   Desktop panels pad out to the window's left edge and the page content on the right, so sliding
-  items keep their shape until they reach those edges. Each panel's scrollbar sits in its right
-  padding, next to the page content.
+  items keep their shape until they reach those edges.
 */
 @media (width >= 900px) {
   #docs-navigation {
@@ -76,9 +75,17 @@ html {
     margin-inline: calc(-1 * var(--api-nav-pad-start)) calc(-1 * var(--api-nav-pad-end));
   }
 
+  /*
+    The scrollbar takes its width from the right padding, which leaves room for a thin one. Items
+    have a fixed width, so they don't change whether the menu scrolls or not.
+  */
   .api-nav-panel {
-    padding-inline: var(--api-nav-pad-start)
-      calc(var(--api-nav-pad-end) - var(--api-nav-scrollbar, 0px));
+    padding-inline: var(--api-nav-pad-start) calc(var(--api-nav-pad-end) - 16px);
+    scrollbar-gutter: auto;
+  }
+
+  .api-nav-panel > * {
+    max-width: calc(var(--docs-sidebar-content-width) + var(--docs-nav-item-inset));
   }
 }
 
