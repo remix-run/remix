@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
-import { Frame } from '../runtime/component.ts'
+import { Fragment, Frame } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { reloadFrameForNavigation } from '../runtime/frame.ts'
 import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
@@ -2197,6 +2197,151 @@ describe('run', () => {
     expect(document.querySelectorAll('li')).toHaveLength(3)
 
     frame.dispose()
+  })
+
+  it('renders fragment props after hydration', async (t) => {
+    let Disclosure = clientEntry(
+      '/js/disclosure.js#Disclosure',
+      function Disclosure(handle: Handle<{ content: RemixNode }>) {
+        let open = true
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                open = !open
+                handle.update()
+              })}
+            >
+              Toggle
+            </button>
+            <section>{open ? handle.props.content : null}</section>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Disclosure
+          content={
+            <>
+              <b>Bold</b>
+              <i>Italic</i>
+            </>
+          }
+        />,
+      ),
+    )
+    expect(document.querySelector('section')?.innerHTML).toBe('<b>Bold</b><i>Italic</i>')
+
+    let app = run({ loadModule: () => Disclosure })
+    t.after(() => app.dispose())
+    await app.ready()
+    let button = document.querySelector('button')
+    invariant(button)
+
+    button.click()
+    app.flush()
+    expect(document.querySelector('section')?.innerHTML).toBe('')
+
+    button.click()
+    app.flush()
+    expect(document.querySelector('section')?.innerHTML).toBe('<b>Bold</b><i>Italic</i>')
+  })
+
+  it('preserves element keys in props after hydration', async (t) => {
+    let ReversibleList = clientEntry(
+      '/js/reversible-list.js#ReversibleList',
+      function ReversibleList(handle: Handle<{ items: RemixNode[] }>) {
+        let reversed = false
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                reversed = !reversed
+                handle.update()
+              })}
+            >
+              Reverse
+            </button>
+            <ul>{reversed ? [...handle.props.items].reverse() : handle.props.items}</ul>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(<ReversibleList items={[<li key="a">A</li>, <li key="b">B</li>]} />),
+    )
+
+    let app = run({ loadModule: () => ReversibleList })
+    t.after(() => app.dispose())
+    await app.ready()
+    let [a, b] = Array.from(document.querySelectorAll('li'))
+    invariant(a && b)
+
+    document.querySelector('button')?.click()
+    app.flush()
+
+    let [first, second] = Array.from(document.querySelectorAll('li'))
+    expect(first).toBe(b)
+    expect(second).toBe(a)
+    expect([a.textContent, b.textContent]).toEqual(['A', 'B'])
+  })
+
+  it('preserves keyed fragment props after hydration', async (t) => {
+    let ReversibleTerms = clientEntry(
+      '/js/reversible-terms.js#ReversibleTerms',
+      function ReversibleTerms(handle: Handle<{ terms: RemixNode[] }>) {
+        let reversed = false
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                reversed = !reversed
+                handle.update()
+              })}
+            >
+              Reverse
+            </button>
+            <dl>{reversed ? [...handle.props.terms].reverse() : handle.props.terms}</dl>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <ReversibleTerms
+          terms={[
+            <Fragment key="a">
+              <dt>A</dt>
+              <dd>First</dd>
+            </Fragment>,
+            <Fragment key="b">
+              <dt>B</dt>
+              <dd>Second</dd>
+            </Fragment>,
+          ]}
+        />,
+      ),
+    )
+
+    let app = run({ loadModule: () => ReversibleTerms })
+    t.after(() => app.dispose())
+    await app.ready()
+    let [dtA, ddA, dtB, ddB] = Array.from(document.querySelectorAll('dl > *'))
+    invariant(dtA && ddA && dtB && ddB)
+
+    document.querySelector('button')?.click()
+    app.flush()
+
+    let [first, second, third, fourth] = Array.from(document.querySelectorAll('dl > *'))
+    expect(first).toBe(dtB)
+    expect(second).toBe(ddB)
+    expect(third).toBe(dtA)
+    expect(fourth).toBe(ddA)
+    expect(document.querySelector('dl')?.textContent).toBe('BSecondAFirst')
   })
 
   it('ready() does not wait for hydration markers from later frame templates', async () => {
