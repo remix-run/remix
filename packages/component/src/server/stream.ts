@@ -1006,9 +1006,19 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
       }
     }
 
+    // Fragment renders null and relies on the reconciler to render its
+    // children, so it can't go through the component branch below.
+    if (type === Fragment) {
+      return {
+        $rmxFragment: true,
+        props: transformProps(props),
+        key: element.key,
+      }
+    }
+
     // If it's a DOM tag, return a serializable shape with transformed props
     if (typeof type === 'string') {
-      return { $rmx: true, type, props: transformProps(props) }
+      return { $rmx: true, type, props: transformProps(props), key: element.key }
     }
 
     // Component function: render synchronously, then unwrap its result

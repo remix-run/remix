@@ -7,7 +7,7 @@ import { createElement } from '../runtime/create-element.ts'
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
-import { Frame } from '../runtime/component.ts'
+import { Fragment, Frame } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
@@ -2449,6 +2449,103 @@ describe('stream', () => {
           },
         },
       })
+    })
+
+    it('serializes Fragment elements in entry props as fragment descriptors', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={
+              <>
+                <b>Bold</b>
+                <i>Italic</i>
+              </>
+            }
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(html).toContain('<div><b>Bold</b><i>Italic</i></div>')
+      expect(entry.props.content).toEqual({
+        $rmxFragment: true,
+        props: {
+          children: [
+            { $rmx: true, type: 'b', props: { children: 'Bold' } },
+            { $rmx: true, type: 'i', props: { children: 'Italic' } },
+          ],
+        },
+      })
+    })
+
+    it('serializes fragments rendered by virtual components in entry props', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      function Pair() {
+        return () => (
+          <>
+            <b>Bold</b>
+            <i>Italic</i>
+          </>
+        )
+      }
+
+      let html = await drain(renderToStream(<Slot content={<Pair />} />))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual({
+        $rmxFragment: true,
+        props: {
+          children: [
+            { $rmx: true, type: 'b', props: { children: 'Bold' } },
+            { $rmx: true, type: 'i', props: { children: 'Italic' } },
+          ],
+        },
+      })
+    })
+
+    it('serializes element and fragment keys in entry props', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={[
+              <b key="bold">Bold</b>,
+              <Fragment key={2}>
+                <i>Italic</i>
+              </Fragment>,
+            ]}
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual([
+        { $rmx: true, type: 'b', props: { children: 'Bold' }, key: 'bold' },
+        {
+          $rmxFragment: true,
+          props: { children: { $rmx: true, type: 'i', props: { children: 'Italic' } } },
+          key: 2,
+        },
+      ])
     })
 
     it('nests hydrated components', async () => {
