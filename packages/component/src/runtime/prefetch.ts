@@ -26,7 +26,7 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
 /**
  * Prefetches frame content so a later navigation can reuse the response. By default this
  * fetches HTML and discovers external JavaScript, CSS, and explicit image and font preloads for
- * `<link rel="prefetch">` hints.
+ * `<link rel="prefetch">` hints, falling back to low-priority asset fetches when unsupported.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
  * `prefetch` to `run()` to change this behavior. Cross-origin URLs, the current untargeted page, and
  * browsers where Remix doesn't handle navigations are skipped.
@@ -317,7 +317,26 @@ export function createDefaultPrefetch(
     let key = assetKey(link)
     let existing = assets.get(key)
     if (existing) return existing
-    if (activeAssets.has(key) || !link.relList.supports('prefetch')) return Promise.resolve()
+    if (activeAssets.has(key)) return Promise.resolve()
+
+    if (!link.relList.supports('prefetch')) {
+      let ready = fetch(link.href, {
+        priority: 'low',
+        mode: link.crossOrigin === null ? 'no-cors' : 'cors',
+        credentials: link.crossOrigin === 'anonymous' ? 'same-origin' : 'include',
+        integrity: link.integrity,
+        // The reflected DOM property is limited to valid policies or the empty default.
+        referrerPolicy: link.referrerPolicy as ReferrerPolicy,
+        signal,
+      })
+        .then((response) => response.body?.pipeTo(new WritableStream()))
+        .catch(() => {
+          // Speculative failures leave navigation to load the asset normally.
+        })
+        .finally(() => assets.delete(key))
+      assets.set(key, ready)
+      return ready
+    }
 
     let ready = new Promise<void>((resolve) => {
       function finish() {

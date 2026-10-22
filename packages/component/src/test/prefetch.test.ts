@@ -970,6 +970,143 @@ describe('default frame prefetch', () => {
     expect(hints.every((link) => !link.isConnected)).toBe(true)
   })
 
+  it('fetches discovered assets when prefetch hints are unsupported, preserving request attributes', async (t) => {
+    t.mock.method(DOMTokenList.prototype, 'supports', () => false)
+    let requests: { src: string; init?: RequestInit }[] = []
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL, init?: RequestInit) => {
+      if (new URL(String(src)).pathname === '/page') {
+        return htmlResponse(`<base href="/resources/">
+          <script src="classic.js" integrity="sha256-example" referrerpolicy="no-referrer"></script>
+          <script type="module" src="module.js"></script>
+          <link rel="stylesheet" href="styles.css" crossorigin="use-credentials">
+          <link rel="preload" as="image" href="hero.jpg">
+          <template><link rel="preload" as="font" href="body.woff2" crossorigin></template>
+          <script>document.documentElement.dataset.executed = 'yes'</script>`)
+      }
+      requests.push({ src: String(src), init })
+      return new Response('asset bytes')
+    })
+    let hints = collectHints(t)
+    let { prefetch, controller } = createPrefetch(t)
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(requests.map(({ src }) => new URL(src).pathname)).toEqual([
+      '/resources/classic.js',
+      '/resources/module.js',
+      '/resources/styles.css',
+      '/resources/hero.jpg',
+      '/resources/body.woff2',
+    ])
+    expect(requests.map(({ init }) => init?.mode)).toEqual([
+      'no-cors',
+      'cors',
+      'cors',
+      'no-cors',
+      'cors',
+    ])
+    expect(requests.map(({ init }) => init?.credentials)).toEqual([
+      'include',
+      'same-origin',
+      'include',
+      'include',
+      'same-origin',
+    ])
+    expect(requests.every(({ init }) => init?.priority === 'low')).toBe(true)
+    expect(requests.every(({ init }) => init?.signal === controller.signal)).toBe(true)
+    expect(requests[0].init?.integrity).toBe('sha256-example')
+    expect(requests[0].init?.referrerPolicy).toBe('no-referrer')
+    expect(hints).toHaveLength(0)
+    expect(document.documentElement.dataset.executed).toBe(undefined)
+    expect(document.querySelector('link[href$="/resources/styles.css"]')).toBe(null)
+  })
+
+  it('shares pending asset fetches until their bodies finish, then allows later attempts', async (t) => {
+    t.mock.method(DOMTokenList.prototype, 'supports', () => false)
+    let release = Promise.withResolvers<void>()
+    let started = Promise.withResolvers<void>()
+    t.after(() => release.resolve())
+    let assetRequests = 0
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      if (new URL(String(src)).pathname !== '/shared.js') {
+        return htmlResponse('<script src="/shared.js"></script>')
+      }
+      assetRequests++
+      started.resolve()
+      return new Response(
+        new ReadableStream({
+          async start(controller) {
+            controller.enqueue(new TextEncoder().encode('first chunk'))
+            await release.promise
+            controller.close()
+          },
+        }),
+      )
+    })
+    let { prefetch } = createPrefetch(t)
+    let finished = false
+    let ready = Promise.all([
+      prefetch(new URL('/first', location.href).href),
+      prefetch(new URL('/second', location.href).href, { target: 'details' }),
+    ]).then(() => {
+      finished = true
+    })
+
+    await started.promise
+    await new Promise(requestAnimationFrame)
+    expect(assetRequests).toBe(1)
+    expect(finished).toBe(false)
+    release.resolve()
+    await ready
+    await prefetch(new URL('/third', location.href).href)
+    expect(assetRequests).toBe(2)
+  })
+
+  it('ignores failed asset fetches and retries them on a later prefetch', async (t) => {
+    t.mock.method(DOMTokenList.prototype, 'supports', () => false)
+    let assetRequests = 0
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      if (new URL(String(src)).pathname !== '/retry.js') {
+        return htmlResponse('<script src="/retry.js"></script>')
+      }
+      assetRequests++
+      if (assetRequests === 1) throw new TypeError('Failed to fetch')
+      return new Response('asset bytes')
+    })
+    let { prefetch } = createPrefetch(t)
+    let src = new URL('/page', location.href).href
+
+    await prefetch(src)
+    await prefetch(src)
+
+    expect(assetRequests).toBe(2)
+  })
+
+  it('aborts fallback asset fetches when the runtime is disposed', async (t) => {
+    t.mock.method(DOMTokenList.prototype, 'supports', () => false)
+    let started = Promise.withResolvers<void>()
+    let fetchedSignal: AbortSignal | null | undefined
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL, init?: RequestInit) => {
+      if (new URL(String(src)).pathname !== '/pending.js') {
+        return htmlResponse('<script src="/pending.js"></script>')
+      }
+      fetchedSignal = init?.signal
+      started.resolve()
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true })
+      })
+    })
+    let { prefetch, controller } = createPrefetch(t)
+    let ready = prefetch(new URL('/page', location.href).href)
+
+    await started.promise
+    controller.abort()
+    await ready
+
+    expect(fetchedSignal).toBe(controller.signal)
+    expect(fetchedSignal?.aborted).toBe(true)
+  })
+
   it('shares only pending discovery work and does not retain completed no-store responses', async (t) => {
     let response = Promise.withResolvers<Response>()
     let fetch = t.mock.method(globalThis, 'fetch', () => response.promise)
