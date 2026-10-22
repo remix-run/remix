@@ -2548,6 +2548,39 @@ describe('stream', () => {
       ])
     })
 
+    it('omits entry prop keys that cannot round-trip through JSON', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={[
+              <b key={1n}>Bold</b>,
+              <Fragment key={{ id: 'italic' }}>
+                <i>Italic</i>
+              </Fragment>,
+              <u key={Number.NaN}>Underline</u>,
+            ]}
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual([
+        { $rmx: true, type: 'b', props: { children: 'Bold' } },
+        {
+          $rmxFragment: true,
+          props: { children: { $rmx: true, type: 'i', props: { children: 'Italic' } } },
+        },
+        { $rmx: true, type: 'u', props: { children: 'Underline' } },
+      ])
+    })
+
     it('nests hydrated components', async () => {
       let Card = clientEntry(
         '/card.js#Card',

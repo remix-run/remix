@@ -1012,13 +1012,13 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
       return {
         $rmxFragment: true,
         props: transformProps(props),
-        key: element.key,
+        key: serializeKey(element.key),
       }
     }
 
     // If it's a DOM tag, return a serializable shape with transformed props
     if (typeof type === 'string') {
-      return { $rmx: true, type, props: transformProps(props), key: element.key }
+      return { $rmx: true, type, props: transformProps(props), key: serializeKey(element.key) }
     }
 
     // Component function: render synchronously, then unwrap its result
@@ -1090,6 +1090,14 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     }
     return value
   }
+}
+
+// Other key types don't survive JSON: bigints throw, and objects are revived
+// with a new identity on every render, so keyed diffs would remount them.
+function serializeKey(key: unknown): string | number | undefined {
+  if (typeof key === 'string') return key
+  if (typeof key === 'number' && Number.isFinite(key)) return key
+  return undefined
 }
 
 function buildEntrySegment(

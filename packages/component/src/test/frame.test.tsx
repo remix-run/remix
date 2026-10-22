@@ -2199,7 +2199,7 @@ describe('run', () => {
     frame.dispose()
   })
 
-  it('renders fragment props after hydration', async () => {
+  it('renders fragment props after hydration', async (t) => {
     let Disclosure = clientEntry(
       '/js/disclosure.js#Disclosure',
       function Disclosure(handle: Handle<{ content: RemixNode }>) {
@@ -2234,25 +2234,22 @@ describe('run', () => {
     )
     expect(document.querySelector('section')?.innerHTML).toBe('<b>Bold</b><i>Italic</i>')
 
-    let app = run({ loadModule: mock.fn(() => Promise.resolve(Disclosure)) })
-    try {
-      await app.ready()
-      let button = document.querySelector('button')
-      invariant(button)
+    let app = run({ loadModule: () => Disclosure })
+    t.after(() => app.dispose())
+    await app.ready()
+    let button = document.querySelector('button')
+    invariant(button)
 
-      button.click()
-      app.flush()
-      expect(document.querySelector('section')?.innerHTML).toBe('')
+    button.click()
+    app.flush()
+    expect(document.querySelector('section')?.innerHTML).toBe('')
 
-      button.click()
-      app.flush()
-      expect(document.querySelector('section')?.innerHTML).toBe('<b>Bold</b><i>Italic</i>')
-    } finally {
-      app.dispose()
-    }
+    button.click()
+    app.flush()
+    expect(document.querySelector('section')?.innerHTML).toBe('<b>Bold</b><i>Italic</i>')
   })
 
-  it('preserves element keys in props after hydration', async () => {
+  it('preserves element keys in props after hydration', async (t) => {
     let ReversibleList = clientEntry(
       '/js/reversible-list.js#ReversibleList',
       function ReversibleList(handle: Handle<{ items: RemixNode[] }>) {
@@ -2277,25 +2274,22 @@ describe('run', () => {
       renderToStream(<ReversibleList items={[<li key="a">A</li>, <li key="b">B</li>]} />),
     )
 
-    let app = run({ loadModule: mock.fn(() => Promise.resolve(ReversibleList)) })
-    try {
-      await app.ready()
-      let [a, b] = Array.from(document.querySelectorAll('li'))
-      invariant(a && b)
+    let app = run({ loadModule: () => ReversibleList })
+    t.after(() => app.dispose())
+    await app.ready()
+    let [a, b] = Array.from(document.querySelectorAll('li'))
+    invariant(a && b)
 
-      document.querySelector('button')?.click()
-      app.flush()
+    document.querySelector('button')?.click()
+    app.flush()
 
-      let [first, second] = Array.from(document.querySelectorAll('li'))
-      expect(first).toBe(b)
-      expect(second).toBe(a)
-      expect([a.textContent, b.textContent]).toEqual(['A', 'B'])
-    } finally {
-      app.dispose()
-    }
+    let [first, second] = Array.from(document.querySelectorAll('li'))
+    expect(first).toBe(b)
+    expect(second).toBe(a)
+    expect([a.textContent, b.textContent]).toEqual(['A', 'B'])
   })
 
-  it('preserves keyed fragment props after hydration', async () => {
+  it('preserves keyed fragment props after hydration', async (t) => {
     let ReversibleTerms = clientEntry(
       '/js/reversible-terms.js#ReversibleTerms',
       function ReversibleTerms(handle: Handle<{ terms: RemixNode[] }>) {
@@ -2333,24 +2327,21 @@ describe('run', () => {
       ),
     )
 
-    let app = run({ loadModule: mock.fn(() => Promise.resolve(ReversibleTerms)) })
-    try {
-      await app.ready()
-      let [dtA, ddA, dtB, ddB] = Array.from(document.querySelectorAll('dl > *'))
-      invariant(dtA && ddA && dtB && ddB)
+    let app = run({ loadModule: () => ReversibleTerms })
+    t.after(() => app.dispose())
+    await app.ready()
+    let [dtA, ddA, dtB, ddB] = Array.from(document.querySelectorAll('dl > *'))
+    invariant(dtA && ddA && dtB && ddB)
 
-      document.querySelector('button')?.click()
-      app.flush()
+    document.querySelector('button')?.click()
+    app.flush()
 
-      let [first, second, third, fourth] = Array.from(document.querySelectorAll('dl > *'))
-      expect(first).toBe(dtB)
-      expect(second).toBe(ddB)
-      expect(third).toBe(dtA)
-      expect(fourth).toBe(ddA)
-      expect(document.querySelector('dl')?.textContent).toBe('BSecondAFirst')
-    } finally {
-      app.dispose()
-    }
+    let [first, second, third, fourth] = Array.from(document.querySelectorAll('dl > *'))
+    expect(first).toBe(dtB)
+    expect(second).toBe(ddB)
+    expect(third).toBe(dtA)
+    expect(fourth).toBe(ddA)
+    expect(document.querySelector('dl')?.textContent).toBe('BSecondAFirst')
   })
 
   it('ready() does not wait for hydration markers from later frame templates', async () => {
