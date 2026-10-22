@@ -9,87 +9,76 @@ html {
 }
 
 /*
-  The sidebar is a stack of menus, iOS-settings style: the package list, then one panel per level
-  down to the current import path. Panels before the current one wait off to the left, and panels
-  the user backed out of wait off to the right, past the menu's padding.
+  The menu stack (see `public/api-nav.tsx`). The current panel sets the stack's height; the others
+  overlay it, waiting off to the left or right, and the component slides them. Each panel scrolls
+  on its own, capped to the visible sidebar, so it keeps its place while hidden or sliding.
 */
 .api-nav {
-  --api-nav-slide-duration: 280ms;
-  --api-nav-slide: var(--api-nav-slide-duration) cubic-bezier(0.32, 0.72, 0, 1);
+  --api-nav-panel-height: calc(
+    100dvh - var(--docs-mobile-navigation-top, calc(var(--site-header-height) + 48px)) - 2 *
+      var(--rmx-space-lg)
+  );
   position: relative;
-  /* Room below the last item, so long menus don't end flush with the window. */
-  padding-bottom: calc(var(--docs-sidebar-group-gap) * 2);
+  /* Panels scroll, which clips; this room keeps focus rings visible without moving the items. */
+  margin: -4px -4px 0;
   overflow-x: clip;
-}
-
-/*
-  Sliding panels are clipped at the menu's edges. Desktop menus pad out to the window's left edge
-  and the page content on the right, so items keep their shape until they reach those edges.
-*/
-@media (width >= 900px) {
-  #docs-navigation {
-    --api-nav-pad-start: calc(var(--docs-sidebar-inline-start) - var(--docs-nav-item-inset));
-    /* A classic scrollbar sits in the right padding, next to the page content. */
-    --api-nav-pad-end: calc(
-      var(--docs-sidebar-offset) - var(--docs-sidebar-inline-start) -
-        var(--docs-sidebar-content-width) - var(--docs-navigation-scrollbar-width, 0px)
-    );
-  }
-
-  .api-nav {
-    margin-inline: calc(-1 * var(--api-nav-pad-start)) calc(-1 * var(--api-nav-pad-end));
-    padding-inline: var(--api-nav-pad-start) var(--api-nav-pad-end);
-  }
-
-  /* The scrolling sidebar clips too, so its padding holds the same space. */
-  #docs-navigation[data-scrollable] {
-    width: calc(
-      var(--docs-sidebar-content-width) + var(--docs-nav-item-inset) + var(--api-nav-pad-start) +
-        var(--api-nav-pad-end) + var(--docs-navigation-scrollbar-width, 0px)
-    );
-    margin-left: calc(-1 * var(--api-nav-pad-start));
-    padding-inline: var(--api-nav-pad-start) var(--api-nav-pad-end);
-  }
 }
 
 .api-nav-panel {
   display: flex;
   flex-direction: column;
   gap: var(--docs-nav-item-gap);
+  box-sizing: border-box;
+  max-height: var(--api-nav-panel-height);
+  /* Room below the last item, so long menus don't end flush with the window. */
+  padding: 4px 4px calc(var(--docs-sidebar-group-gap) * 2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
-/*
-  Waiting panels hide and collapse once they have slid away, so they neither show nor stretch the
-  sidebar's scroll height. The current one shows (and can take focus) at once.
-*/
+.api-nav-panel > * {
+  flex-shrink: 0;
+}
+
 .api-nav-panel:not([data-api-nav-panel='current']) {
   position: absolute;
-  inset: 0 var(--api-nav-pad-end, 0) auto var(--api-nav-pad-start, 0);
-  max-height: 0;
-  overflow: hidden;
+  inset: 0 0 auto;
   visibility: hidden;
 }
 
 .api-nav-panel[data-api-nav-panel='before'] {
-  transform: translateX(calc(-100% - var(--api-nav-pad-start, 0px)));
+  transform: translateX(calc(-100% + var(--api-nav-pad-end, 0px)));
 }
 
 .api-nav-panel[data-api-nav-panel='after'] {
-  transform: translateX(calc(100% + var(--api-nav-pad-end, 0px)));
+  transform: translateX(calc(100% - var(--api-nav-pad-start, 0px)));
 }
 
-/* Only the desktop sidebar slides; the mobile menu switches instantly. */
-@media (width >= 900px) and (prefers-reduced-motion: no-preference) {
-  .api-nav-panel {
-    transition: transform var(--api-nav-slide);
+/*
+  Desktop panels pad out to the window's left edge and the page content on the right, so sliding
+  items keep their shape until they reach those edges. Each panel's scrollbar sits in its right
+  padding, next to the page content.
+*/
+@media (width >= 900px) {
+  #docs-navigation {
+    --api-nav-pad-start: calc(var(--docs-sidebar-inline-start) - var(--docs-nav-item-inset));
+    --api-nav-pad-end: calc(
+      var(--docs-sidebar-offset) - var(--docs-sidebar-inline-start) -
+        var(--docs-sidebar-content-width)
+    );
+    /* Panels scroll themselves, so the sidebar doesn't need to clip or scroll. */
+    overflow: visible;
   }
 
-  /* `max-height` goes from `none`, which can't interpolate, so the delay needs allow-discrete. */
-  .api-nav-panel:not([data-api-nav-panel='current']) {
-    transition:
-      transform var(--api-nav-slide),
-      visibility var(--api-nav-slide),
-      max-height 0s var(--api-nav-slide-duration) allow-discrete;
+  .api-nav {
+    --api-nav-panel-height: calc(100dvh - var(--site-header-height) - 44px);
+    margin-inline: calc(-1 * var(--api-nav-pad-start)) calc(-1 * var(--api-nav-pad-end));
+  }
+
+  .api-nav-panel {
+    padding-inline: var(--api-nav-pad-start)
+      calc(var(--api-nav-pad-end) - var(--api-nav-scrollbar, 0px));
   }
 }
 

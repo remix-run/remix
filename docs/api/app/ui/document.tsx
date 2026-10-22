@@ -2,7 +2,6 @@ import * as path from 'node:path'
 
 import type { ScriptEntry } from 'remix/assets'
 import type { Handle, RemixNode } from 'remix/component'
-import { Fragment } from 'remix/component'
 import { ImportMap } from 'remix/component/server'
 import { PagefindElements, shouldLoadPagefind } from 'remix-docs-shared/search'
 import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy'
@@ -22,6 +21,8 @@ import {
   getNavChain,
   isPageActive,
 } from '../data/registry.ts'
+import { ApiNav } from '../actions/public/api-nav.tsx'
+import type { ApiNavPanel } from '../actions/public/api-nav.tsx'
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 import { routes, withVersion } from '../routes.ts'
 
@@ -233,91 +234,101 @@ function SidebarContent(handle: Handle<{ registry: DocsRegistry; page: PageDefin
     let homePage = getHomePage(registry)
     // One panel per menu from the package list down to this page's import path.
     let chain = getNavChain(registry, page.navId)
-    let stateAt = (depth: number) => (depth === chain.length ? 'current' : 'before')
 
-    return (
-      <div class="api-nav">
-        <NavPanel id="root" state={stateAt(0)}>
+    // Client entry props are serialized, and fragments don't survive that, so each panel's
+    // content is a flat array of keyed elements.
+    let panels: ApiNavPanel[] = [
+      {
+        id: 'root',
+        content: [
           <a
+            key="home"
             class="docs-nav-item api-nav-row"
             href={homePage.path}
             aria-current={isPageActive(homePage, page.path) ? 'page' : undefined}
           >
             {homePage.navLabel}
-          </a>
-          <h2 class="docs-nav-heading api-nav-heading">Packages</h2>
-          <NodeLinks registry={registry} nodes={registry.packages} open={chain[0]} />
-        </NavPanel>
-        {chain.map((node, index) => {
-          let parent = chain[index - 1]
-          let back = parent ? registry.pages[parent.homePageId] : homePage
+          </a>,
+          <h2 key="packages-heading" class="docs-nav-heading api-nav-heading">
+            Packages
+          </h2>,
+          <NodeLinks
+            key="packages"
+            registry={registry}
+            nodes={registry.packages}
+            open={chain[0]}
+          />,
+        ],
+      },
+      ...chain.map((node, index) => {
+        let parent = chain[index - 1]
+        let back = parent ? registry.pages[parent.homePageId] : homePage
+        let content: RemixNode[] = [
+          <a
+            key="back"
+            class="docs-nav-item api-nav-row api-nav-back"
+            href={back.path}
+            data-api-nav-back
+          >
+            <Icon name="chevron-r" />
+            {parent ? parent.label : 'All packages'}
+          </a>,
+          <HeadingLink
+            key="title"
+            class="api-nav-title"
+            page={registry.pages[node.homePageId]}
+            currentPath={page.path}
+          >
+            <PathLabel label={node.label} />
+          </HeadingLink>,
+        ]
 
-          return (
-            <NavPanel key={node.id} id={node.id} state={stateAt(index + 1)}>
-              <a class="docs-nav-item api-nav-row api-nav-back" href={back.path} data-api-nav-back>
-                <Icon name="chevron-r" />
-                {parent ? parent.label : 'All packages'}
-              </a>
-              <HeadingLink
-                class="api-nav-title"
-                page={registry.pages[node.homePageId]}
-                currentPath={page.path}
-              >
-                <PathLabel label={node.label} />
-              </HeadingLink>
-              {node.children.length > 0 ? (
-                <>
-                  <h2 class="docs-nav-heading api-nav-heading">Modules</h2>
-                  <NodeLinks registry={registry} nodes={node.children} open={chain[index + 1]} />
-                </>
-              ) : null}
-              {navSections.map((section) => {
-                let items = node.pageIds
-                  .map((pageId) => registry.pages[pageId])
-                  .filter((item) => item.navSection === section)
-                if (items.length === 0) return null
-
-                return (
-                  <Fragment key={section}>
-                    <h2 class="docs-nav-heading api-nav-heading">{section}</h2>
-                    <ul class="api-nav-list">
-                      {items.map((item) => (
-                        <li key={item.path}>
-                          <a
-                            class="docs-nav-item api-nav-row api-nav-symbol"
-                            href={item.path}
-                            aria-current={isPageActive(item, page.path) ? 'page' : undefined}
-                          >
-                            {item.navLabel}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </Fragment>
-                )
-              })}
-            </NavPanel>
+        if (node.children.length > 0) {
+          content.push(
+            <h2 key="modules-heading" class="docs-nav-heading api-nav-heading">
+              Modules
+            </h2>,
+            <NodeLinks
+              key="modules"
+              registry={registry}
+              nodes={node.children}
+              open={chain[index + 1]}
+            />,
           )
-        })}
-      </div>
-    )
-  }
-}
+        }
 
-// Panels are keyed so the document diff keeps each menu's element, letting state changes slide.
-function NavPanel(
-  handle: Handle<{ id: string; state: 'before' | 'current'; children: RemixNode }>,
-) {
-  return () => (
-    <div
-      class="api-nav-panel"
-      data-rmx-key={`api-nav:${handle.props.id}`}
-      data-api-nav-panel={handle.props.state}
-      inert={handle.props.state === 'current' ? undefined : true}
-    >
-      {handle.props.children}
-    </div>
-  )
+        for (let section of navSections) {
+          let items = node.pageIds
+            .map((pageId) => registry.pages[pageId])
+            .filter((item) => item.navSection === section)
+          if (items.length === 0) continue
+
+          content.push(
+            <h2 key={`${section}-heading`} class="docs-nav-heading api-nav-heading">
+              {section}
+            </h2>,
+            <ul key={section} class="api-nav-list">
+              {items.map((item) => (
+                <li key={item.path}>
+                  <a
+                    class="docs-nav-item api-nav-row api-nav-symbol"
+                    href={item.path}
+                    aria-current={isPageActive(item, page.path) ? 'page' : undefined}
+                  >
+                    {item.navLabel}
+                  </a>
+                </li>
+              ))}
+            </ul>,
+          )
+        }
+
+        return { id: node.id, content }
+      }),
+    ]
+
+    return <ApiNav panels={panels} />
+  }
 }
 
 // Rows that open a nested menu. The row for the open menu stays highlighted.
