@@ -253,6 +253,8 @@ Add `data-rmx-prefetch="intent"` to a link to start loading its page when the vi
 
 Named-frame links with `data-rmx-target` are supported, including `data-rmx-src` overrides. Prefetching uses the selected frame's source and sends its target, matching the eventual frame request.
 
+Automatic link prefetching is skipped when the browser reports Save-Data or an effective connection type of `slow-2g` or `2g`. Imperative `prefetch()` calls remain available regardless of these settings.
+
 You can implement other prefetch triggers in userland with the imperative `prefetch()` API from `remix/component`, such as prefetching a search result as the visitor types. Call `prefetch(src, { target: 'details' })` to prefetch content for a named frame.
 
 ## Single-page Applications

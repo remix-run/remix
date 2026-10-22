@@ -76,7 +76,13 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
   function trigger(intent: Intent) {
     clearTimeout(intent.timer)
     intent.timer = undefined
-    if (intent.prefetched || intent.anchor.getAttribute('data-rmx-prefetch') !== 'intent') return
+    if (
+      intent.prefetched ||
+      intent.anchor.getAttribute('data-rmx-prefetch') !== 'intent' ||
+      !canPrefetchAutomatically()
+    ) {
+      return
+    }
     intent.prefetched = true
     let request = getAnchorPrefetchRequest(intent.anchor)
     if (request && hasPrefetchTarget(request)) prefetchFrame(...request)
@@ -173,7 +179,7 @@ function startViewportPrefetching(signal: AbortSignal): void {
   }
 
   let viewport = new IntersectionObserver((entries) => {
-    if (signal.aborted) return
+    if (signal.aborted || !canPrefetchAutomatically()) return
     for (let { target, isIntersecting } of entries) {
       if (!isIntersecting || !(target instanceof HTMLAnchorElement)) continue
       let request = getRequest(target)
@@ -237,6 +243,17 @@ function startViewportPrefetching(signal: AbortSignal): void {
     },
     { once: true },
   )
+}
+
+function canPrefetchAutomatically(): boolean {
+  if (!('connection' in navigator)) return true
+  let connection = navigator.connection
+  if (typeof connection !== 'object' || connection === null) return true
+  if ('saveData' in connection && connection.saveData === true) return false
+  if ('effectiveType' in connection) {
+    return connection.effectiveType !== 'slow-2g' && connection.effectiveType !== '2g'
+  }
+  return true
 }
 
 function getIntentAnchor(target: EventTarget | null): HTMLAnchorElement | null {

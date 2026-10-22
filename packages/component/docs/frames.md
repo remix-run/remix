@@ -417,6 +417,8 @@ prefetch(`/search?q=${encodeURIComponent(query)}`)
 
 Prefetching is opt-in per link because it requests pages speculatively. Only mark links whose GET requests are safe to repeat. Links with `data-rmx-document`, `download`, or a `target` other than `_self` are skipped. The current page is skipped for untargeted requests. Both the navigation destination and any `data-rmx-src` override must resolve to the document origin.
 
+When the browser exposes `navigator.connection`, automatic intent and viewport prefetching are skipped if `saveData` is `true` or `effectiveType` is `"slow-2g"` or `"2g"`. The check runs when a trigger fires; it does not cancel prefetches already in progress. Browsers without this API retain normal prefetching. Imperative `prefetch()` calls remain available regardless of these settings.
+
 Links with `data-rmx-target="details"` prefetch content for that mounted named frame, sending `X-Remix-Target: details`. With `data-rmx-src`, they fetch that source instead of `href`, just as the eventual frame navigation does. Missing named frames are skipped. Without a nonempty target, a valid `data-rmx-src` is ignored and `href` is prefetched. To prefetch a named frame imperatively, pass its source and target: `prefetch('/partials/shirt', { target: 'details' })`. Custom `run({ prefetch })` hooks receive that same source and an optional `{ target }` argument.
 
 ```tsx

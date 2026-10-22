@@ -92,6 +92,18 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function stubConnection(
+  t: TestContext,
+  connection: { saveData?: boolean; effectiveType?: string } | undefined,
+): void {
+  let descriptor = Object.getOwnPropertyDescriptor(navigator, 'connection')
+  Object.defineProperty(navigator, 'connection', { configurable: true, value: connection })
+  t.after(() => {
+    if (descriptor) Object.defineProperty(navigator, 'connection', descriptor)
+    else Reflect.deleteProperty(navigator, 'connection')
+  })
+}
+
 function createPrefetch(t: TestContext) {
   let controller = new AbortController()
   t.after(() => controller.abort())
@@ -124,6 +136,121 @@ function htmlResponse(html: string) {
 describe('prefetch', () => {
   afterEach(() => {
     document.body.textContent = ''
+  })
+
+  it('skips intent and viewport prefetching when Save-Data is enabled', async (t) => {
+    stubConnection(t, { saveData: true, effectiveType: '4g' })
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let hovered = createIntentLink('/products/hovered')
+    let focused = createIntentLink('/products/focused')
+    let pressed = createIntentLink('/products/pressed')
+    let visible = createViewportLink('/products/visible')
+
+    movePointer(document.body, hovered)
+    focused.focus()
+    press(pressed, 'touch')
+    expect(await readIntersection(visible)).toBe(true)
+    await wait(150)
+
+    expect(prefetchFrame).not.toHaveBeenCalled()
+  })
+
+  it('skips intent and viewport prefetching on slow-2g and 2g connections', async (t) => {
+    let connection = { saveData: false, effectiveType: 'slow-2g' }
+    stubConnection(t, connection)
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+
+    for (let effectiveType of ['slow-2g', '2g']) {
+      connection.effectiveType = effectiveType
+      press(createIntentLink(`/products/intent-${effectiveType}`))
+      let visible = createViewportLink(`/products/viewport-${effectiveType}`)
+      expect(await readIntersection(visible)).toBe(true)
+    }
+
+    expect(prefetchFrame).not.toHaveBeenCalled()
+  })
+
+  it('allows intent and viewport prefetching on 3g and 4g connections', async (t) => {
+    let connection = { saveData: false, effectiveType: '3g' }
+    stubConnection(t, connection)
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+
+    for (let effectiveType of ['3g', '4g']) {
+      connection.effectiveType = effectiveType
+      let pressed = createIntentLink(`/products/intent-${effectiveType}`)
+      press(pressed)
+      expect(prefetchFrame).toHaveBeenCalledWith(pressed.href)
+      let visible = createViewportLink(`/products/viewport-${effectiveType}`)
+      expect(await readIntersection(visible)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
+    }
+
+    expect(prefetchFrame).toHaveBeenCalledTimes(4)
+  })
+
+  it('allows automatic prefetching when connection information is unavailable', async (t) => {
+    stubConnection(t, undefined)
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let pressed = createIntentLink('/products/pressed')
+    let visible = createViewportLink('/products/visible')
+
+    press(pressed)
+    expect(await readIntersection(visible)).toBe(true)
+
+    expect(prefetchFrame).toHaveBeenCalledTimes(2)
+    expect(prefetchFrame).toHaveBeenCalledWith(pressed.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
+  })
+
+  it('checks connection settings after the intent delay and allows a later press', async (t) => {
+    let connection = { saveData: false }
+    stubConnection(t, connection)
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+    let anchor = createIntentLink('/products/shirt')
+
+    movePointer(document.body, anchor)
+    connection.saveData = true
+    await wait(150)
+    expect(prefetchFrame).not.toHaveBeenCalled()
+
+    connection.saveData = false
+    press(anchor)
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+  })
+
+  it('allows a skipped viewport link to prefetch on reentry after the connection improves', async (t) => {
+    let connection = { effectiveType: '2g' }
+    stubConnection(t, connection)
+    let prefetchFrame = mock.fn()
+    let anchor = createViewportLink('/products/shirt')
+    startTestPrefetching(t, prefetchFrame)
+    expect(await readIntersection(anchor)).toBe(true)
+    expect(prefetchFrame).not.toHaveBeenCalled()
+
+    anchor.style.top = `${innerHeight + 100}px`
+    expect(await readIntersection(anchor)).toBe(false)
+    connection.effectiveType = '4g'
+    anchor.style.top = '0px'
+    expect(await readIntersection(anchor)).toBe(true)
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+  })
+
+  it('allows imperative prefetching with Save-Data enabled on a slow connection', (t) => {
+    stubConnection(t, { saveData: true, effectiveType: 'slow-2g' })
+    let prefetchFrame = mock.fn()
+    startTestPrefetching(t, prefetchFrame)
+
+    prefetch('/products/shirt')
+
+    expect(prefetchFrame).toHaveBeenCalledTimes(1)
+    expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href)
   })
 
   it('prefetches intent links after mouse hover or keyboard focus rests on them', async (t) => {
