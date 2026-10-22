@@ -197,6 +197,23 @@ Scroll and focus controls accept the Navigation API values `"after-transition"` 
 
 Existing boolean options and `"true"` / `"false"` attribute values remain supported: `true` corresponds to `"after-transition"` and `false` to `"manual"`.
 
+`navigation` reports the frame navigation in progress, for pending UI, and lets components wait for it to finish. Components rendered by a navigation can run their queued tasks before the navigation resets scroll and focus, so await `navigation.settled()` before scrolling or changing the URL from those tasks:
+
+```ts
+import { navigation } from 'remix/component'
+
+navigation.addEventListener('change', () => handle.update(), { signal: handle.signal })
+let saving = navigation.current?.submission?.method === 'POST'
+
+handle.queueTask(async () => {
+  await navigation.settled()
+  if (handle.signal.aborted) return
+  document.getElementById('reviews')?.scrollIntoView()
+})
+```
+
+See [Navigation state](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#navigation-state) for `navigation.current`, `navigation.supported`, and how redirects and interrupted navigations are reported.
+
 Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
 and forms as document navigations while still hydrating client entries and using explicit frames,
 register a listener before calling `run()`:

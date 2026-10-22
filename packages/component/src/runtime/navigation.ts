@@ -3,8 +3,9 @@ import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 import { isDocumentReload, reloadCurrentDocument } from './document-reload.ts'
 import type { FrameHandle } from './component.ts'
+import { TypedEventTarget } from './typed-event-target.ts'
 
-type NavigationState = {
+type NavigationEntryState = {
   target: string | undefined
   src: string
   resetScroll?: NavigationOptions['resetScroll']
@@ -17,16 +18,24 @@ type SourceElementNavigateEvent = NavigateEvent & {
 }
 
 type RuntimeNavigation = {
-  state: NavigationState
+  state: NavigationEntryState
   getSubmission?: () => Promise<FormSubmission>
+  submission?: FormSubmission
   replaceHistory?: boolean
 }
 
 interface FormSubmissionNavigationInfo {
   type: typeof formSubmissionNavigationInfoType
-  state: NavigationState
+  state: NavigationEntryState
   frame: FrameHandle
   getSubmission(): Promise<FormSubmission>
+  submission: FormSubmission | undefined
+}
+
+// Carries a GET form's submission to the replace navigation Remix starts in its place.
+interface ReplacedFormNavigationInfo {
+  type: typeof replacedFormNavigationInfoType
+  submission: FormSubmission
 }
 
 interface FrameRedirectNavigationInfo {
@@ -36,6 +45,7 @@ interface FrameRedirectNavigationInfo {
 }
 
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
+const replacedFormNavigationInfoType = Symbol('replaced-form-navigation')
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
 // Lets the navigation handler tell the WebKit workaround once it has reset scroll.
@@ -158,7 +168,7 @@ export async function navigate(href: string, options?: NavigationOptions) {
     resetScroll: normalizeResetBehavior(options?.resetScroll),
     resetFocus: normalizeResetBehavior(options?.resetFocus),
     $rmx: true,
-  } satisfies NavigationState
+  } satisfies NavigationEntryState
   let navigation = getInterceptableNavigation()
   if (!navigation) {
     if (options?.history === 'replace') {
@@ -171,6 +181,173 @@ export async function navigate(href: string, options?: NavigationOptions) {
 
   let transition = navigation.navigate(href, { state, history: options?.history })
   await transition.finished
+}
+
+/**
+ * The form submission that started a navigation.
+ */
+export interface NavigationSubmission {
+  /** Upper-case form method, including submitter overrides, such as `"POST"`. */
+  readonly method: string
+  /** Form encoding type, including submitter overrides. */
+  readonly encType: string
+  /** Submitted entries for non-GET submissions. GET submissions encode their values in the URL. */
+  readonly formData: FormData | undefined
+}
+
+/**
+ * A frame navigation the Remix runtime is handling.
+ */
+export interface PendingNavigation {
+  /** Destination URL. Changes to the final URL when the top frame follows a redirect. */
+  readonly url: string
+  /** How the navigation changes history. A redirect doesn't change it. */
+  readonly type: 'push' | 'replace' | 'reload' | 'traverse'
+  /** Named frame the navigation loads, or `undefined` for the top frame. */
+  readonly target: string | undefined
+  /** Form submission that started the navigation, or `undefined` for links and `navigate()`. */
+  readonly submission: NavigationSubmission | undefined
+  /** Aborted when another navigation replaces this one, or when it fails. */
+  readonly signal: AbortSignal
+}
+
+/**
+ * Events dispatched by {@link navigation}.
+ */
+export type NavigationEventMap = {
+  /** `navigation.current` started, changed, or ended. */
+  change: Event
+}
+
+/**
+ * Client-side frame navigation state for the Remix runtime.
+ */
+export interface NavigationState extends TypedEventTarget<NavigationEventMap> {
+  /**
+   * Whether the Remix runtime handles links, forms, and `navigate()` as frame navigations in this
+   * browser. Without the Navigation API and `NavigateEvent.sourceElement`, they load documents
+   * instead. Always `false` on the server.
+   */
+  readonly supported: boolean
+  /**
+   * The frame navigation Remix is handling, or `null`. It's set as soon as Remix intercepts a
+   * navigation, so later `navigate` listeners see it, and stays the same object through frame
+   * redirects. Frame reloads and document navigations aren't frame navigations, so they don't
+   * appear here.
+   */
+  readonly current: PendingNavigation | null
+  /**
+   * Waits until no navigation is in progress. By then, Remix has rendered the destination,
+   * followed any frame redirect, and reset or restored scroll and focus. If another navigation
+   * starts while waiting, this waits for that one too. It also waits for navigations other code
+   * intercepts, since changing the URL would interrupt those as well.
+   *
+   * Components rendered by a navigation can run their queued tasks before the navigation
+   * finishes. Changing the URL from one of those tasks interrupts the navigation before it resets
+   * scroll and focus, so wait for this first.
+   *
+   * @returns A promise that resolves once no navigation is in progress. It resolves right away when
+   * nothing is navigating, frame navigation is unsupported, or on the server, and it never rejects.
+   */
+  settled(): Promise<void>
+}
+
+type ActiveNavigation = {
+  pending: PendingNavigation
+  url: string
+  controller: AbortController
+  // The event, transition, or redirect navigation whose outcome ends this navigation.
+  following: object
+}
+
+let activeNavigation: ActiveNavigation | undefined
+
+class FrameNavigationState extends TypedEventTarget<NavigationEventMap> implements NavigationState {
+  get supported() {
+    return typeof window !== 'undefined' && getInterceptableNavigation() !== undefined
+  }
+
+  get current() {
+    return activeNavigation?.pending ?? null
+  }
+
+  async settled() {
+    let browserNavigation = typeof window === 'undefined' ? undefined : getInterceptableNavigation()
+    if (!browserNavigation) return
+
+    // A navigation can start another before it finishes, as frame redirects and POST replays do,
+    // so keep waiting until none is in progress.
+    while (true) {
+      if (activeNavigation) {
+        await new Promise((resolve) =>
+          navigation.addEventListener('change', resolve, { once: true }),
+        )
+        continue
+      }
+      let transition = browserNavigation.transition
+      if (!transition) return
+      await transition.finished.catch(() => {})
+      if (!activeNavigation && browserNavigation.transition === transition) return
+    }
+  }
+}
+
+/**
+ * Client-side frame navigation state for the Remix runtime: whether frame navigation is supported,
+ * the navigation in progress, and a way to wait for it to finish.
+ */
+export const navigation: NavigationState = new FrameNavigationState()
+
+function startActiveNavigation(
+  event: NavigateEvent,
+  type: PendingNavigation['type'],
+  target: string | undefined,
+  submission: FormSubmission | undefined,
+): ActiveNavigation {
+  let controller = new AbortController()
+  let active: ActiveNavigation = {
+    url: event.destination.url,
+    controller,
+    following: event,
+    pending: {
+      get url() {
+        return active.url
+      },
+      type,
+      target,
+      submission,
+      signal: controller.signal,
+    },
+  }
+  let previous = activeNavigation
+  activeNavigation = active
+  previous?.controller.abort()
+  followActiveNavigation(
+    active,
+    event,
+    new Promise((_, reject) => event.signal.addEventListener('abort', reject, { once: true })),
+  )
+  dispatchNavigationChange()
+  return active
+}
+
+function followActiveNavigation(active: ActiveNavigation, token: object, done: Promise<unknown>) {
+  active.following = token
+  done.then(
+    () => endActiveNavigation(active, token, true),
+    () => endActiveNavigation(active, token, false),
+  )
+}
+
+function endActiveNavigation(active: ActiveNavigation, token: object, completed: boolean) {
+  if (activeNavigation !== active || active.following !== token) return
+  activeNavigation = undefined
+  if (!completed) active.controller.abort()
+  dispatchNavigationChange()
+}
+
+function dispatchNavigationChange() {
+  navigation.dispatchEvent(new Event('change'))
 }
 
 /**
@@ -213,6 +390,14 @@ export function startNavigationListenerImpl(
     },
   })
 
+  signal.addEventListener(
+    'abort',
+    () => {
+      if (activeNavigation) endActiveNavigation(activeNavigation, activeNavigation.following, false)
+    },
+    { once: true },
+  )
+
   navigation.addEventListener(
     'navigate',
     (event) => {
@@ -240,14 +425,18 @@ export function startNavigationListenerImpl(
       }
 
       let replayedSubmission = isFormSubmissionNavigationInfo(event.info) ? event.info : undefined
-      let runtimeNavigation = replayedSubmission
+      let runtimeNavigation: RuntimeNavigation | undefined = replayedSubmission
         ? {
             state: replayedSubmission.state,
             getSubmission: replayedSubmission.getSubmission,
+            submission: replayedSubmission.submission,
           }
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
+      let submission =
+        runtimeNavigation.submission ??
+        (isReplacedFormNavigationInfo(event.info) ? event.info.submission : undefined)
       let isTraverse = event.navigationType === 'traverse'
       let scroll = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetScroll)
       let focusReset = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetFocus)
@@ -271,6 +460,24 @@ export function startNavigationListenerImpl(
       }
 
       needsFrameReload = true
+      let active: ActiveNavigation | undefined
+      let interceptFrameNavigation = (
+        interceptOptions: NavigationInterceptOptions,
+        type: PendingNavigation['type'] = event.navigationType,
+      ) => {
+        interceptNavigation(
+          navigation,
+          event,
+          scroll !== 'manual',
+          interceptOptions,
+          (transition) => {
+            if (active) followActiveNavigation(active, transition, transition.finished)
+          },
+        )
+        let target = frame === topFrame ? undefined : state.target
+        active = startActiveNavigation(event, type, target, submission)
+      }
+
       let handler = async () => {
         if (event.signal.aborted) return
 
@@ -302,7 +509,7 @@ export function startNavigationListenerImpl(
           frame.src = redirectedTo
           // Start the successor navigation without awaiting it: this handler must settle before
           // the replacement navigation can finish.
-          navigation.navigate(redirectedTo, {
+          let redirect = navigation.navigate(redirectedTo, {
             history: 'replace',
             state: { ...state, src: redirectedTo },
             info: {
@@ -311,6 +518,13 @@ export function startNavigationListenerImpl(
               resetFocus: focusReset,
             } satisfies FrameRedirectNavigationInfo,
           })
+          // The redirect aborts this navigation's transition, but the navigation carries on as the
+          // redirect until it finishes.
+          if (active) {
+            followActiveNavigation(active, redirect, redirect.finished ?? Promise.resolve())
+            active.url = redirectedTo
+            dispatchNavigationChange()
+          }
         }
       }
 
@@ -328,12 +542,15 @@ export function startNavigationListenerImpl(
 
           // Modern browsers allow you to update the in-flight navigation entry before it's committed
           if (supportsPrecommit) {
-            interceptNavigation(navigation, event, scroll !== 'manual', {
-              ...interceptOptions,
-              precommitHandler(controller) {
-                controller.redirect(event.destination.url, { history: 'replace' })
+            interceptFrameNavigation(
+              {
+                ...interceptOptions,
+                precommitHandler(controller) {
+                  controller.redirect(event.destination.url, { history: 'replace' })
+                },
               },
-            })
+              'replace',
+            )
             return
           }
 
@@ -348,20 +565,30 @@ export function startNavigationListenerImpl(
                 state,
                 frame,
                 getSubmission: runtimeNavigation.getSubmission,
+                submission,
               } satisfies FormSubmissionNavigationInfo,
             })
             return
           }
         }
 
-        interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
+        interceptFrameNavigation(interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
         if (runtimeNavigation.replaceHistory && event.cancelable) {
           event.preventDefault()
-          navigation.navigate(event.destination.url, { history: 'replace', state })
+          navigation.navigate(event.destination.url, {
+            history: 'replace',
+            state,
+            info: submission
+              ? ({
+                  type: replacedFormNavigationInfoType,
+                  submission,
+                } satisfies ReplacedFormNavigationInfo)
+              : undefined,
+          })
         } else {
-          interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
+          interceptFrameNavigation(interceptOptions)
         }
       }
     },
@@ -381,7 +608,7 @@ function getInterceptableNavigation(): Navigation | undefined {
   return navigation
 }
 
-function isRuntimeNavigation(info: unknown): info is NavigationState {
+function isRuntimeNavigation(info: unknown): info is NavigationEntryState {
   return typeof info === 'object' && info != null && '$rmx' in info
 }
 
@@ -396,6 +623,16 @@ function isFormSubmissionNavigationInfo(value: unknown): value is FormSubmission
     'frame' in value &&
     'getSubmission' in value &&
     typeof value.getSubmission === 'function'
+  )
+}
+
+function isReplacedFormNavigationInfo(value: unknown): value is ReplacedFormNavigationInfo {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'type' in value &&
+    value.type === replacedFormNavigationInfoType &&
+    'submission' in value
   )
 }
 
@@ -436,6 +673,7 @@ function interceptNavigation(
   event: NavigateEvent,
   resetScroll: boolean,
   options: NavigationInterceptOptions,
+  onTransition?: (transition: NavigationTransition) => void,
 ): void {
   let scrollStyleWorkarounds = installNavigationScrollStyleWorkarounds(event, resetScroll)
 
@@ -448,6 +686,7 @@ function interceptNavigation(
     let transition = navigation.transition
     if (!transition) return scrollStyleWorkarounds?.remove()
     transitionBound = true
+    onTransition?.(transition)
 
     resyncWebKitScrollAfterNavigation(navigation, event, resetScroll, transition)
     if (scrollStyleWorkarounds) scheduleNavigationScrollCleanup(transition, scrollStyleWorkarounds)
@@ -598,7 +837,7 @@ function getRuntimeNavigation(
 function getTraverseNavigationState(
   navigation: Navigation,
   event: NavigateEvent,
-): NavigationState | undefined {
+): NavigationEntryState | undefined {
   let destinationState = event.destination.getState()
   if (isRuntimeNavigation(destinationState)) {
     return destinationState
@@ -663,6 +902,7 @@ function getSourceElementNavigation(
       replaceHistoryByDefault,
     ),
     getSubmission: formNavigation.getSubmission,
+    submission: formNavigation.submission,
   }
 }
 

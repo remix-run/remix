@@ -398,6 +398,92 @@ Custom resolvers receive the requested `src`, `method`, and `signal`. GET form v
 
 A newer reload cancels earlier client work for that frame, including pending requests and streamed content. Disposing the frame also cancels its active reload. Cancellation resolves with an aborted signal; other errors reject. Cancelling client work cannot undo a mutation the server has already performed.
 
+## Navigation state
+
+`navigation` from `remix/component` reports the frame navigation Remix is handling, and lets components wait for it to finish:
+
+```ts
+import { navigation } from 'remix/component'
+
+navigation.supported // whether links, forms, and navigate() use frame navigation in this browser
+navigation.current // the navigation in progress, or null
+await navigation.settled() // resolves once nothing is navigating
+navigation.addEventListener('change', listener) // navigation.current changed
+```
+
+### Pending navigations
+
+`navigation.current` is set as soon as Remix intercepts a navigation and cleared once it finishes or fails. Listen for `change` and update to show pending UI:
+
+```tsx
+import { navigation, type Handle } from 'remix/component'
+
+function NavigationProgress(handle: Handle) {
+  navigation.addEventListener('change', () => handle.update(), { signal: handle.signal })
+  return () => <div class="progress" hidden={!navigation.current} />
+}
+```
+
+Each pending navigation describes what's loading:
+
+```ts
+let pending = navigation.current
+
+pending?.url // destination, or the final URL once the top frame follows a redirect
+pending?.type // 'push' | 'replace' | 'reload' | 'traverse'
+pending?.target // the named frame it loads, or undefined for the top frame
+pending?.submission // { method, encType, formData } when a form started it
+pending?.signal // aborted if another navigation replaces it, or it fails
+```
+
+```tsx
+let saving = navigation.current?.submission?.method === 'POST'
+let searching = navigation.current?.target === 'search-results'
+```
+
+- A frame redirect keeps the same pending navigation. Its `url` changes to the final URL and `change` fires.
+- When another navigation interrupts it, its `signal` aborts and `navigation.current` becomes the new navigation, in a single `change` event.
+- `handle.frame.reload()` and document navigations aren't frame navigations, so they don't appear in `navigation.current`. Frames report their own reloads with `reloadStart` and `reloadComplete`.
+
+### Waiting for navigation to finish
+
+Components rendered by a navigation can run their queued tasks before that navigation finishes, while Remix is still waiting for blocking frames or following a redirect, and before it resets or restores scroll and focus. A task that scrolls there is undone by the navigation's scroll reset, and a task that changes the URL interrupts the navigation before it resets scroll.
+
+Wait for `navigation.settled()` before doing that work:
+
+```tsx
+import { navigation, ref, type Handle } from 'remix/component'
+
+function Comment(handle: Handle<{ highlighted: boolean; text: string }>) {
+  let element: HTMLElement
+
+  handle.queueTask(async () => {
+    if (!handle.props.highlighted) return
+    await navigation.settled()
+    if (handle.signal.aborted) return
+    element.scrollIntoView({ block: 'center' })
+  })
+
+  return () => <article mix={[ref((node) => (element = node))]}>{handle.props.text}</article>
+}
+```
+
+- It resolves once no navigation is in progress. If another navigation starts while it waits, such as a frame redirect or the user's next click, it waits for that one too.
+- It also waits for navigations other code intercepts, since changing the URL would interrupt those as well.
+- It works from a `navigate` event listener, because Remix sets `navigation.current` before later listeners run.
+- It resolves right away when nothing is navigating, when frame navigation is unsupported, or on the server, and it never rejects, including when the navigation fails.
+- Check `handle.signal` or your own state after it resolves: the component may have been removed, or a later navigation may have given it new props.
+
+In iOS Safari, Remix keeps undoing Safari's scroll restoration for a short time after a push or replace navigation finishes. Scrolling back to the previous page's position or to the bottom of the page during that time can be undone too.
+
+### Frame navigation support
+
+Frame navigation needs the Navigation API and `NavigateEvent.sourceElement`. `navigation.supported` reports whether this browser has both, so code that only helps frame navigations can skip itself otherwise. It's `false` on the server.
+
+```ts
+if (navigation.supported) startPrefetchingLinks()
+```
+
 ## Frame lifecycle
 
 1. **Server render** - Frame content is resolved via `resolveFrame` and serialized into the HTML stream. Frame metadata is stored in the `rmx-data` script.

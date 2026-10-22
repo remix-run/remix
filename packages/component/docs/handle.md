@@ -95,6 +95,10 @@ function Form(handle: Handle) {
 
 When you need to perform async work (like data fetching) that should respond to prop changes, use `queueTask` in the render function. The signal will be aborted if props change or the component is removed, ensuring only the latest work completes.
 
+**Wait for navigation before scrolling or changing the URL:**
+
+When a navigation renders the component, its tasks can run before the navigation finishes resetting scroll and focus. Await `navigation.settled()` first. See [Waiting for navigation to finish](./frames.md#waiting-for-navigation-to-finish).
+
 ### Anti-patterns
 
 **Don't create states as values to "react to" on the next render with `queueTask`:**

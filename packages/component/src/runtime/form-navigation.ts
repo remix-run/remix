@@ -34,6 +34,8 @@ export interface FormNavigation {
   getAttribute(name: string, submitterName?: string): string | null
   /** Resolves browser-generated data for a non-GET submission. */
   getSubmission: (() => Promise<FormSubmission>) | undefined
+  /** The submission as reported by `navigation.current`, with an upper-case method. */
+  submission: FormSubmission
 }
 
 const PENDING_FORM_SUBMISSION_TIMEOUT = 1000
@@ -114,8 +116,14 @@ export function createFormNavigationResolver(
     if (method === 'dialog' || target?.toLowerCase() === '_blank') return
 
     let formEvent = event as FormNavigateEvent
+    let isGet = method.toLowerCase() === 'get'
+    let submission: FormSubmission = {
+      formData: isGet ? undefined : (formEvent.formData ?? pending?.formData),
+      method: method.toUpperCase(),
+      encType,
+    }
     let getSubmission: FormNavigation['getSubmission']
-    if (method.toLowerCase() === 'get') {
+    if (isGet) {
       if (pending) clearPending(pending)
     } else {
       getSubmission = async () => {
@@ -135,6 +143,7 @@ export function createFormNavigationResolver(
         return getSubmissionAttribute(form, submitter, name, submitterName)
       },
       getSubmission,
+      submission,
     }
   }
 }
