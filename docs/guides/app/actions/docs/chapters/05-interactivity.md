@@ -750,6 +750,42 @@ apply to the `src` and `target` options of `link(...)` and `navigate(...)`.
 [Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames and
 explains when a form can submit directly through the frame resolver.
 
+## Prefetch links before navigation
+
+Add `data-rmx-prefetch="intent"` to the album link to start loading its destination before the
+visitor opens it:
+
+```tsx
+// Inside AlbumLink's render function:
+<a href={routes.albums.show.href({ albumId: handle.props.albumId })} data-rmx-prefetch="intent">
+  {handle.props.title}
+</a>
+```
+
+`intent` starts after a short hover or keyboard focus, or immediately on pointer press. Use
+`data-rmx-prefetch="viewport"` instead to start when the link enters view, such as album cards in a
+scrolling catalog. Both work on server-rendered anchors once `run()` starts, without making each
+link a client entry.
+
+When browser code already knows which album the visitor is likely to open, call `prefetch()`
+directly:
+
+```ts
+import { prefetch } from "remix/component";
+
+import { routes } from "../routes.ts";
+
+prefetch(routes.albums.show.href({ albumId: "thriller" }));
+```
+
+Remix reads the destination HTML to discover JavaScript, CSS, and declared image and font preloads
+without running the destination's code. Navigation reuses matching fresh responses from the browser
+HTTP cache. Uncacheable HTML is requested again, but its cacheable assets can still be prefetched.
+
+Only mark same-origin links whose GET requests are safe to make speculatively. The
+[prefetching reference](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching)
+covers eligibility, cache policies, and custom loading strategies.
+
 ## Enhancing forms with fetch and navigation
 
 Now we can enhance the album form without adding a second mutation API. The handler sends the form's
