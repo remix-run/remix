@@ -28,7 +28,7 @@ import { routes, withVersion } from '../routes.ts'
 
 const pagefindModulePath = path.resolve(
   import.meta.dirname,
-  '../../build/site/assets/pagefind/pagefind-component-ui.js',
+  '../../build/site/_assets/pagefind/pagefind-component-ui.js',
 )
 
 export function Document(

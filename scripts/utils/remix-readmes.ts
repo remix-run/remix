@@ -108,7 +108,8 @@ function getReadmePathsByUrlPath(mappings: RemixReadmeCopy[]): {
   let github = new Map<string, string>()
 
   for (let mapping of mappings) {
-    api.set(`/${mapping.remixPath}`, mapping.remixReadmePath)
+    // API docs URLs drop the `remix/` scope: `remix/router` is at `/router/`.
+    api.set(`/${mapping.remixPath.replace(/^remix\//, '')}`, mapping.remixReadmePath)
 
     let sourcePath = toPosixPath(path.relative(packagesDir, mapping.sourceReadmePath))
     let readmePath = `packages/${sourcePath}`

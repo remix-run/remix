@@ -17,7 +17,7 @@ import { LegacyRedirect } from './legacy-redirect.tsx'
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
 const markdownDir = path.join(apiDir, 'build', 'md')
 const gettingStartedPath = path.join(import.meta.dirname, 'getting-started.md')
-const defaultPagefindAssetsDir = path.join(apiDir, 'build', 'site', 'assets', 'pagefind')
+const defaultPagefindAssetsDir = path.join(apiDir, 'build', 'site', '_assets', 'pagefind')
 
 interface RootControllerOptions {
   activeVersion?: string
@@ -61,9 +61,11 @@ export function createRootController(options: RootControllerOptions) {
         )
       },
       legacy({ params, render }) {
-        let href =
-          getApiRouteHref(`/api/${params.slug}`, options.activeVersion) ??
-          withVersion(routes.home.href(), options.activeVersion)
+        let href = getApiRouteHref(`/api/${params.slug}`, options.activeVersion)
+        // Paths that aren't docs (they come back unchanged) go to the home page.
+        if (!href || href.startsWith(withVersion('/api/', options.activeVersion))) {
+          href = withVersion(routes.home.href(), options.activeVersion)
+        }
         if (href.endsWith('.md')) {
           return new Response(null, { status: 301, headers: { Location: href } })
         }

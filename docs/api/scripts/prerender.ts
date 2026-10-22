@@ -49,7 +49,8 @@ const homePath = withVersion(routes.home.href(), buildVersion)
 const registry = (await createDocsContextLoader()()).getRegistry(buildVersion)
 const legacyPaths = Object.values(registry.pages).flatMap((page) => {
   if (!page.docFile) return []
-  let slug = page.docFile.kind === 'package' ? `${page.id}/overview/` : `${page.id}/`
+  let { docsPath } = page.docFile
+  let slug = page.docFile.kind === 'package' ? `${docsPath}/overview/` : `${docsPath}/`
   return [withVersion(routes.legacy.href({ slug }), buildVersion)]
 })
 const paths = [
@@ -72,5 +73,6 @@ await prerender(router, {
     ignorePageNofollow: buildVersion ? (pathname) => pathname === homePath : undefined,
   },
   pagefindSiteDir,
+  assetsDir: '_assets',
   onFinally: () => assetServer.close(),
 })

@@ -4,7 +4,7 @@ import { describe, it } from 'remix/test'
 import { getVersionedLookupHref } from './data/lookup.ts'
 import { buildRegistry, getNavChain, type DocFile, type NavNode } from './data/registry.ts'
 import { createApiRouter } from './router.ts'
-import { getApiRouteHref } from './routes.ts'
+import { getApiRouteHref, getDocsUrlPath } from './routes.ts'
 import { createAssetServer } from './assets.ts'
 describe('createApiRouter()', () => {
   it('does not load generated docs output while creating the router', (t) => {
@@ -30,13 +30,13 @@ describe('createApiRouter()', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
 
-    assert.equal(html.includes('src="/assets/app/actions/public/entry.tsx"'), true)
-    assert.equal(html.includes('href="/assets/app/actions/public/entry.tsx"'), true)
-    assert.equal(html.includes('href="/assets/app/actions/public/docs.css"'), true)
-    assert.equal(html.includes('/assets/docs-shared/ui/public/docs-shell.tsx'), true)
-    assert.equal(html.includes('/assets/docs-shared/ui/public/code-block-copy.tsx'), true)
-    assert.equal(html.includes('src="/v1.2.3/assets/app/actions/public/entry.tsx"'), false)
-    assert.equal(html.includes('href="/v1.2.3/assets/app/actions/public/entry.tsx"'), false)
+    assert.equal(html.includes('src="/_assets/app/actions/public/entry.tsx"'), true)
+    assert.equal(html.includes('href="/_assets/app/actions/public/entry.tsx"'), true)
+    assert.equal(html.includes('href="/_assets/app/actions/public/docs.css"'), true)
+    assert.equal(html.includes('/_assets/docs-shared/ui/public/docs-shell.tsx'), true)
+    assert.equal(html.includes('/_assets/docs-shared/ui/public/code-block-copy.tsx'), true)
+    assert.equal(html.includes('src="/v1.2.3/_assets/app/actions/public/entry.tsx"'), false)
+    assert.equal(html.includes('href="/v1.2.3/_assets/app/actions/public/entry.tsx"'), false)
   })
 
   it('keeps persistent stylesheets after variable head content', async (t) => {
@@ -52,18 +52,18 @@ describe('createApiRouter()', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     let entryPreloadIndex = html.indexOf(
-      'rel="modulepreload" href="/assets/app/actions/public/entry.tsx"',
+      'rel="modulepreload" href="/_assets/app/actions/public/entry.tsx"',
     )
     let pagefindStylesIndex = html.indexOf(
-      'data-rmx-key="docs-pagefind-stylesheet" href="/assets/pagefind/pagefind-component-ui.css"',
+      'data-rmx-key="docs-pagefind-stylesheet" href="/_assets/pagefind/pagefind-component-ui.css"',
     )
     let docsStylesIndex = html.indexOf(
-      'data-rmx-key="docs-stylesheet" rel="stylesheet" href="/assets/app/actions/public/docs.css"',
+      'data-rmx-key="docs-stylesheet" rel="stylesheet" href="/_assets/app/actions/public/docs.css"',
     )
     let importMapIndex = html.indexOf('type="importmap"')
 
     let entryScriptIndex = html.indexOf(
-      'data-rmx-key="docs-client-entry" type="module" src="/assets/app/actions/public/entry.tsx"',
+      'data-rmx-key="docs-client-entry" type="module" src="/_assets/app/actions/public/entry.tsx"',
     )
     let pagefindScriptIndex = html.indexOf('data-rmx-key="docs-pagefind-client-entry"')
 
@@ -89,12 +89,12 @@ describe('createApiRouter()', () => {
     let html = await response.text()
     let assetUrls = getLoadedAssetUrls(html).filter((url) => shouldVersionAssetUrl(url))
 
-    assert.equal(html.includes('src="/v1.2.3/assets/app/actions/public/entry.tsx"'), true)
-    assert.equal(html.includes('href="/v1.2.3/assets/app/actions/public/entry.tsx"'), true)
-    assert.equal(html.includes('/v1.2.3/assets/docs-shared/ui/public/docs-shell.tsx'), true)
-    assert.equal(html.includes('/v1.2.3/assets/docs-shared/ui/public/code-block-copy.tsx'), true)
-    assert.equal(html.includes('src="/assets/app/actions/public/entry.tsx"'), false)
-    assert.equal(html.includes('href="/assets/app/actions/public/entry.tsx"'), false)
+    assert.equal(html.includes('src="/v1.2.3/_assets/app/actions/public/entry.tsx"'), true)
+    assert.equal(html.includes('href="/v1.2.3/_assets/app/actions/public/entry.tsx"'), true)
+    assert.equal(html.includes('/v1.2.3/_assets/docs-shared/ui/public/docs-shell.tsx'), true)
+    assert.equal(html.includes('/v1.2.3/_assets/docs-shared/ui/public/code-block-copy.tsx'), true)
+    assert.equal(html.includes('src="/_assets/app/actions/public/entry.tsx"'), false)
+    assert.equal(html.includes('href="/_assets/app/actions/public/entry.tsx"'), false)
     assert.equal(assetUrls.length > 0, true)
     assert.deepEqual(
       assetUrls.filter((url) => !url.startsWith('/v1.2.3/')),
@@ -177,13 +177,13 @@ describe('createApiRouter()', () => {
     ])
 
     assert.equal(page.status, 200)
-    assert.match(await page.text(), /http-equiv="refresh" content="0; url=\/remix-run\/ui\/tabs\/"/)
+    assert.match(await page.text(), /http-equiv="refresh" content="0; url=\/ui\/tabs\/"/)
     assert.match(
       await versionedPage.text(),
-      /http-equiv="refresh" content="0; url=\/v1\.2\.3\/remix\/router\/"/,
+      /http-equiv="refresh" content="0; url=\/v1\.2\.3\/router\/"/,
     )
     assert.equal(markdown.status, 301)
-    assert.equal(markdown.headers.get('Location'), '/remix/router.md')
+    assert.equal(markdown.headers.get('Location'), '/router.md')
   })
 
   it('serves only the configured asset URL space', async (t) => {
@@ -195,13 +195,13 @@ describe('createApiRouter()', () => {
     })
 
     let versionedResponse = await router.fetch(
-      new Request('http://localhost/v1.2.3/assets/app/actions/public/entry.tsx'),
+      new Request('http://localhost/v1.2.3/_assets/app/actions/public/entry.tsx'),
     )
     assert.equal(versionedResponse.status, 200)
 
     let [rootResponse, privateResponse] = await Promise.all([
-      router.fetch(new Request('http://localhost/assets/app/actions/public/entry.tsx')),
-      router.fetch(new Request('http://localhost/v1.2.3/assets/app/actions/controller.tsx')),
+      router.fetch(new Request('http://localhost/_assets/app/actions/public/entry.tsx')),
+      router.fetch(new Request('http://localhost/v1.2.3/_assets/app/actions/controller.tsx')),
     ])
     assert.equal(rootResponse.status, 404)
     assert.equal(privateResponse.status, 404)
@@ -247,22 +247,22 @@ async function getTestDocsContext() {
 describe('getVersionedLookupHref()', () => {
   it('preserves dots in versioned markdown lookup targets', () => {
     assert.equal(
-      getVersionedLookupHref('/remix/headers/accept/class/Accept.md', 'v1.2.3'),
-      '/v1.2.3/remix/headers/accept/class/Accept.md',
+      getVersionedLookupHref('/headers/accept/class/Accept.md', 'v1.2.3'),
+      '/v1.2.3/headers/accept/class/Accept.md',
     )
   })
 
   it('uses docs routes for HTML lookup targets', () => {
     assert.equal(
-      getVersionedLookupHref('/remix/headers/accept/class/Accept', 'v1.2.3'),
-      '/v1.2.3/remix/headers/accept/class/Accept/',
+      getVersionedLookupHref('/headers/accept/class/Accept', 'v1.2.3'),
+      '/v1.2.3/headers/accept/class/Accept/',
     )
   })
 
   it('preserves query strings and hashes', () => {
     assert.equal(
-      getVersionedLookupHref('/remix/headers/accept/class/Accept.md?tab=docs#example', 'v1.2.3'),
-      '/v1.2.3/remix/headers/accept/class/Accept.md?tab=docs#example',
+      getVersionedLookupHref('/headers/accept/class/Accept.md?tab=docs#example', 'v1.2.3'),
+      '/v1.2.3/headers/accept/class/Accept.md?tab=docs#example',
     )
   })
 
@@ -281,22 +281,32 @@ describe('getApiRouteHref()', () => {
 
   it('preserves unversioned docs hrefs when version is undefined', () => {
     assert.equal(
-      getApiRouteHref('/remix/headers/accept/class/Accept.md?tab=docs#example', undefined),
-      '/remix/headers/accept/class/Accept.md?tab=docs#example',
+      getApiRouteHref('/headers/accept/class/Accept.md?tab=docs#example', undefined),
+      '/headers/accept/class/Accept.md?tab=docs#example',
     )
   })
 
+  it('adds the version and trailing slash to docs page hrefs', () => {
+    assert.equal(getApiRouteHref('/ui/tabs', 'v1.2.3'), '/v1.2.3/ui/tabs/')
+    assert.equal(getApiRouteHref('/v1.2.3/ui/tabs/', 'v1.2.3'), '/v1.2.3/ui/tabs/')
+  })
+
+  it('drops the scope from import-path hrefs', () => {
+    assert.equal(getApiRouteHref('/remix/router/type/Route', undefined), '/router/type/Route/')
+    assert.equal(getApiRouteHref('/remix-run/ui/tabs/', undefined), '/ui/tabs/')
+    assert.equal(getApiRouteHref('/remix/', undefined), '/remix/')
+  })
+
   it('rewrites legacy /api/ hrefs to root docs hrefs', () => {
-    assert.equal(
-      getApiRouteHref('/api/@remix-run/ui/tabs/overview', 'v1.2.3'),
-      '/v1.2.3/remix-run/ui/tabs/',
-    )
+    assert.equal(getApiRouteHref('/api/@remix-run/ui/tabs/overview', 'v1.2.3'), '/v1.2.3/ui/tabs/')
+    assert.equal(getApiRouteHref('/api/remix/overview.md', undefined), '/remix.md')
+    assert.equal(getApiRouteHref('/api/remix/overview/', undefined), '/remix/')
   })
 
   it('keeps overview segments in current docs hrefs', () => {
     assert.equal(
       getApiRouteHref('/remix/example/function/overview', undefined),
-      '/remix/example/function/overview/',
+      '/example/function/overview/',
     )
   })
 })
@@ -318,41 +328,39 @@ describe('buildRegistry()', () => {
     assert.deepEqual(registry.packages.map(summarizeNavNode), [
       {
         label: 'data-table',
-        home: 'remix/data-table',
+        home: 'data-table',
         pages: [
-          'remix/data-table/class/Database',
-          'remix/data-table/function/query',
-          'remix/data-table/type/AnyTable',
+          'data-table/class/Database',
+          'data-table/function/query',
+          'data-table/type/AnyTable',
         ],
         children: [
           {
             label: 'data-table/migrations',
-            home: 'remix/data-table/migrations',
+            home: 'data-table/migrations',
             pages: [],
             children: [
               {
                 label: 'data-table/migrations/node',
-                home: 'remix/data-table/migrations/node',
+                home: 'data-table/migrations/node',
                 pages: [],
                 children: [],
               },
             ],
           },
-          { label: 'data-table/mysql', home: 'remix/data-table/mysql', pages: [], children: [] },
+          { label: 'data-table/mysql', home: 'data-table/mysql', pages: [], children: [] },
         ],
       },
       {
         label: 'middleware',
-        home: 'remix/middleware',
+        home: 'middleware',
         pages: [],
-        children: [
-          { label: 'middleware/cors', home: 'remix/middleware/cors', pages: [], children: [] },
-        ],
+        children: [{ label: 'middleware/cors', home: 'middleware/cors', pages: [], children: [] }],
       },
     ])
-    assert.equal(registry.pages['remix/middleware'].path, '/remix/middleware/')
+    assert.equal(registry.pages.middleware.path, '/middleware/')
     assert.deepEqual(
-      getNavChain(registry, registry.pages['remix/data-table/migrations/node'].navId).map(
+      getNavChain(registry, registry.pages['data-table/migrations/node'].navId).map(
         (node) => node.label,
       ),
       ['data-table', 'data-table/migrations', 'data-table/migrations/node'],
@@ -369,9 +377,9 @@ describe('sidebar labels', () => {
       apiFile('remix/component', 'class', 'Database'),
     ])
 
-    assert.equal(registry.pages['remix/component/function/css'].navLabel, 'css()')
-    assert.equal(registry.pages['remix/component/function/Frame'].navLabel, '<Frame>')
-    assert.equal(registry.pages['remix/component/class/Database'].navLabel, 'Database')
+    assert.equal(registry.pages['component/function/css'].navLabel, 'css()')
+    assert.equal(registry.pages['component/function/Frame'].navLabel, '<Frame>')
+    assert.equal(registry.pages['component/class/Database'].navLabel, 'Database')
   })
 })
 
@@ -393,10 +401,20 @@ function packageFile(pkg: string): DocFile {
     type: 'package',
     name: pkg,
     package: pkg,
-    urlPath: pkg,
+    docsPath: pkg,
+    urlPath: getDocsUrlPath(pkg),
   }
 }
 
 function apiFile(pkg: string, type: 'class' | 'function' | 'type', name: string): DocFile {
-  return { kind: 'api', path: '', type, name, package: pkg, urlPath: `${pkg}/${type}/${name}` }
+  let docsPath = `${pkg}/${type}/${name}`
+  return {
+    kind: 'api',
+    path: '',
+    type,
+    name,
+    package: pkg,
+    docsPath,
+    urlPath: getDocsUrlPath(docsPath),
+  }
 }

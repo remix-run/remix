@@ -8,7 +8,7 @@ import { parseMarkdownDocument, parseMarkdownFrontmatter } from 'remix-docs-shar
 import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 
-import { getApiRouteHref, routes, withVersion } from '../routes.ts'
+import { getApiRouteHref, getDocsUrlPath, routes, withVersion } from '../routes.ts'
 import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../utils/symbols.ts'
 
 const apiTypeKinds = ['type', 'interface', 'class', 'function', 'mixin', 'variable'] as const
@@ -20,6 +20,8 @@ export type ApiDocFile = {
   type: ApiTypeKind
   name: string
   package: string
+  // Where the page lives under the docs build, e.g. `remix/router/function/createRouter`.
+  docsPath: string
   urlPath: string
 }
 
@@ -29,6 +31,7 @@ export type PackageDocFile = {
   type: 'package'
   name: string
   package: string
+  docsPath: string
   urlPath: string
 }
 
@@ -72,24 +75,28 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
   let packageName = packagePath.replace(/^remix-run\//, '@remix-run/')
 
   if (attributes.type === 'package') {
+    // `remix/router/overview.md` is served at `/router/`.
+    let docsPath = relativePath.replace(/\\/g, '/').replace(/\/overview\.md$/, '')
     return {
       kind: 'package',
       path: fullPath,
       type: 'package',
       name: packageName,
       package: packageName,
-      // `remix/router/overview.md` is served at `/remix/router/`.
-      urlPath: relativePath.replace(/\\/g, '/').replace(/\/overview\.md$/, ''),
+      docsPath,
+      urlPath: getDocsUrlPath(docsPath),
     }
   }
 
+  let docsPath = relativePath.replace(/\.md$/, '').replace(/\\/g, '/')
   return {
     kind: 'api',
     path: fullPath,
     type: getApiTypeKind(parts.at(-2)),
     name,
     package: packageName,
-    urlPath: relativePath.replace(/\.md$/, '').replace(/\\/g, '/'),
+    docsPath,
+    urlPath: getDocsUrlPath(docsPath),
   }
 }
 

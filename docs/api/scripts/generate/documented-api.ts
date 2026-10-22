@@ -4,6 +4,7 @@ import {
   hasRemixPackage,
   mapToRemixPackage,
 } from '../../app/utils/package-manifest.ts'
+import { getDocsUrlPath } from '../../app/routes.ts'
 import { MDN_SYMBOLS } from '../../app/utils/symbols.ts'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
 
@@ -804,7 +805,7 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
           }
 
           let path = getApiFilePath(target.getFriendlyFullName(), type).replace(/\.md$/, '')
-          href = `${WEBSITE_DOCS_PATH}/${path}/`
+          href = `${WEBSITE_DOCS_PATH}/${getDocsUrlPath(path)}/`
           transformed = `[\`${part.text}\`](${href})`
         } else {
           warn(`Missing/invalid target for @link content: ${part.text}; using plain text`)

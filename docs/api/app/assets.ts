@@ -15,7 +15,7 @@ export function createAssetServer(version?: string): DocsAssetServer {
   let { hmr, scriptLoaders, watch } = docsAssetHmrOptions
 
   return createRemixAssetServer({
-    basePath: version ? `${getVersionPathname(version)}/assets` : '/assets',
+    basePath: version ? `${getVersionPathname(version)}/_assets` : '/_assets',
     rootDir: path.resolve(import.meta.dirname, '../../..'),
     allowFiles: [
       'docs/api/build/demos/**',

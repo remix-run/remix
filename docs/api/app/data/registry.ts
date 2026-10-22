@@ -1,6 +1,6 @@
 import type { DemoDocFile } from './demos.tsx'
 import type { ApiDocFile, ApiTypeKind, PackageDocFile } from './markdown.ts'
-import { routes, withVersion } from '../routes.ts'
+import { getDocsUrlPath, routes, withVersion } from '../routes.ts'
 
 export type DocFile = ApiDocFile | PackageDocFile | DemoDocFile
 
@@ -176,7 +176,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
     // a README get an index page listing their exports and nested import paths.
     for (let node of [top, ...nodes]) {
       if (node.homePageId) continue
-      let slug = node.id.replace(/^@/, '')
+      let slug = getDocsUrlPath(node.id)
       pages[slug] = {
         id: slug,
         description: '',
