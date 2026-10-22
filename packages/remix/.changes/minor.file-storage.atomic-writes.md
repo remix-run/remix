@@ -1,0 +1,1 @@
+`createFsFileStorage` from `remix/file-storage/fs` accepts an `atomicWrites: true` option to preserve the previous file when a replacement upload fails. Legacy writes remain the default. Upgrade all processes sharing storage before enabling the option; migrated entries keep the new format even if the option is later disabled (see #11909).
