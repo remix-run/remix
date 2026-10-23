@@ -1,4 +1,4 @@
-Add a `@remix-run/form-data-parser/future` entrypoint where `parseFormData()` streams file uploads to your upload handler instead of buffering them (see #12030). Future APIs are not stable and may change in any release, but they are a good indication of where this package will land in its next major release.
+Add a `@remix-run/form-data-parser/future` entrypoint where `parseFormData()` streams file uploads to your upload handler instead of buffering them. Future APIs are not stable and may change in any release, but they are a good indication of where this package will land in its next major release.
 
 The future `FileUpload` is yielded as soon as the part's headers arrive, and its contents stream from the request body as you read them, so you can write a large upload to storage without holding it in memory. It has the same shape as `File`, with these differences:
 

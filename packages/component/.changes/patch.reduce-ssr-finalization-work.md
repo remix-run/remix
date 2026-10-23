@@ -1,1 +1,0 @@
-Reduce server rendering work by writing ordinary HTML into a shared chunk list, awaiting blocking frames directly instead of scanning the rendered tree, skipping DOM event mixin setup, avoiding `delete` when merging `class` props, and inserting head resources and hydration data in a single pass before assembling the final document.
