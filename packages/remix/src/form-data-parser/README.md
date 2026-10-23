@@ -32,7 +32,7 @@ npm i remix
 
 ## Usage
 
-The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads. The upload handler receives each file as a `FileUpload` as soon as its headers arrive, and the file's contents are streamed from the request as you read them, so you can store large uploads without holding them in memory.
+The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads.
 
 `parseFormData()` accepts `multipart/*` and `application/x-www-form-urlencoded` media types, matched case-insensitively. Other media types throw `FormDataParseError` before the request body is read.
 
@@ -51,8 +51,8 @@ async function uploadHandler(fileUpload: FileUpload) {
   if (fileUpload.fieldName === 'user-avatar') {
     let filename = `/uploads/${crypto.randomUUID()}`
 
-    // Stream the file to disk under an application-generated name in an existing upload directory
-    await fsp.writeFile(filename, fileUpload.stream(), { flag: 'wx' })
+    // Store under an application-generated name in an existing upload directory
+    await fsp.writeFile(filename, new Uint8Array(await fileUpload.arrayBuffer()), { flag: 'wx' })
 
     // Return the file name to use in the FormData object so we don't
     // keep the file contents around in memory.
@@ -148,18 +148,30 @@ async function uploadHandler(fileUpload: FileUpload) {
 }
 ```
 
-### File Uploads
+## Future API
 
-A `FileUpload` has the properties and methods of a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), but because its contents are streamed from the request, there are a few differences:
+**Future APIs are not stable.** The `remix/form-data-parser/future` entrypoint may change in any release, but it is a good indication of where this package will land in its next major release.
 
-- Its contents can only be read once, with `stream()`, `bytes()`, `arrayBuffer()`, `text()`, or `json()`, and only in the upload handler
-- `size` throws until its contents have been read, so limit upload sizes with `maxFileSize`
+`parseFormData()` from `remix/form-data-parser/future` streams file uploads to your upload handler instead of buffering them. Each `FileUpload` is passed to the handler as soon as its headers arrive, and its contents stream from the request body as you read them.
+
+```ts
+import { parseFormData } from 'remix/form-data-parser/future'
+
+let formData = await parseFormData(request, async (fileUpload) => {
+  let storageKey = crypto.randomUUID()
+  // Streams the upload to storage without holding it in memory
+  await fileStorage.set(storageKey, fileUpload)
+  return storageKey
+})
+```
+
+The future `FileUpload` has the same shape as `File`, with a few differences:
+
+- Its contents can be read once, and only while the upload handler is running
+- `size` throws until the contents have been read
 - `slice()` is not supported
-- It is not a `File` instance, so don't pass it to APIs that read a `File` natively, like `new Response(fileUpload)`; pass `fileUpload.stream()` instead
 
-Parts are read in order, so the parser waits for your upload handler, and for any read of the upload it started, to finish before moving on to the next part. Contents your handler doesn't read are discarded.
-
-If your upload handler returns the upload itself, it is read into memory and stored in the `FormData` as a `File`. This is what the default upload handler does, so `parseFormData(request)` works like `request.formData()`, within the configured limits.
+If the upload handler returns the `FileUpload` without reading it, or you don't pass an upload handler, `parseFormData()` reads it into a regular `File` and puts that in the `FormData`.
 
 ## Demos
 
