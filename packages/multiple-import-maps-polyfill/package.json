@@ -46,7 +46,7 @@
     }
   },
   "dependencies": {
-    "es-module-lexer": "^2.0.0"
+    "es-module-lexer": "^2.3.0"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:^",
