@@ -53,7 +53,34 @@ export class FileUpload extends File {
 
     this.fieldName = fieldName
   }
+
+  /**
+   * Returns a stream of the file's contents.
+   *
+   * @returns A byte stream of the file's contents
+   */
+  stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
+    // Node.js before 24.20.0 and 26.6.0 never frees the contents of a Blob read through
+    // `stream()`, so read the file in slices instead (https://github.com/nodejs/node/issues/63574).
+    // Remove this override once our minimum supported Node.js version is >=24.20.0.
+    let offset = 0
+    return new ReadableStream({
+      type: 'bytes',
+      pull: async (controller) => {
+        if (offset >= this.size) {
+          controller.close()
+          controller.byobRequest?.respond(0)
+          return
+        }
+        let chunk = new Uint8Array(await this.slice(offset, offset + streamChunkSize).arrayBuffer())
+        offset += chunk.byteLength
+        controller.enqueue(chunk)
+      },
+    })
+  }
 }
+
+const streamChunkSize = 64 * 1024
 
 /**
  * A function used for handling file uploads.
