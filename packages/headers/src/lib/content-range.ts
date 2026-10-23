@@ -16,8 +16,13 @@ function isValidContentRange(
   end: number | null,
   size: number | '*' | undefined,
 ): boolean {
-  if (start !== null && end !== null && start > end) return false
-  if (typeof size === 'number' && end !== null && end >= size) return false
+  // Incomplete bounds serialize as an unsatisfied range with no positions to validate.
+  if (start === null || end === null) return true
+
+  // Range responses must have ordered bounds within the known complete length:
+  // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.4
+  if (start > end) return false
+  if (typeof size === 'number' && end >= size) return false
   return true
 }
 

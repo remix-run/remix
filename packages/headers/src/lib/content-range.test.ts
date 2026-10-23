@@ -151,6 +151,14 @@ describe('ContentRange', () => {
     assert.equal(contentRange.toString(), 'bytes */1000')
   })
 
+  it('serializes an unsatisfied range after clearing the start', () => {
+    let contentRange = new ContentRange('bytes 0-99/100')
+    contentRange.start = null
+    contentRange.end = 100
+
+    assert.equal(contentRange.toString(), 'bytes */100')
+  })
+
   it('handles zero-based ranges', () => {
     let contentRange = new ContentRange('bytes 0-0/1')
     assert.equal(contentRange.start, 0)
@@ -229,5 +237,15 @@ describe('ContentRange.from', () => {
     let result = ContentRange.from({ unit: 'bytes', start: null, end: null, size: 67589 })
     assert.equal(result.unit, 'bytes')
     assert.equal(result.toString(), 'bytes */67589')
+  })
+
+  it('preserves an end-only initializer whose end reaches the resource size', () => {
+    let result = ContentRange.from({ unit: 'bytes', end: 100, size: 100 })
+
+    assert.equal(result.unit, 'bytes')
+    assert.equal(result.start, null)
+    assert.equal(result.end, 100)
+    assert.equal(result.size, 100)
+    assert.equal(result.toString(), 'bytes */100')
   })
 })
