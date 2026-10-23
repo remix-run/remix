@@ -39,12 +39,7 @@ const pagePaths = Object.values(registry.pages).flatMap((page) => {
   if (!page.docFile) return [page.path]
   return [page.path, routes.api.markdown.href({ slug: page.id })]
 })
-const paths = [
-  routes.home.href(),
-  routes.lookup.href(),
-  ...publicModuleHrefs,
-  ...pagePaths,
-]
+const paths = [routes.home.href(), routes.lookup.href(), ...publicModuleHrefs, ...pagePaths]
 
 await prerender(router, {
   outputDir,
