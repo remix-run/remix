@@ -27,7 +27,9 @@
 }
 
 .docs-markdown :is(h1, h2, h3, h4, h5, h6) > :is(a, .docs-heading-link),
-.docs-markdown :is(h1, h2, h3, h4, h5, h6) > :is(a, .docs-heading-link):is(:hover, :visited, :focus-visible) {
+.docs-markdown
+  :is(h1, h2, h3, h4, h5, h6)
+  > :is(a, .docs-heading-link):is(:hover, :visited, :focus-visible) {
   color: inherit;
   text-decoration: none;
 }

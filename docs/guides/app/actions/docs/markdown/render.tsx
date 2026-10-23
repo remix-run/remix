@@ -112,10 +112,5 @@ function getRootRelativePathname(href: string): string | undefined {
 }
 
 function MarkdownHtml(handle: Handle<{ html: string }>) {
-  return () => (
-    <div
-      class="rmx-page-body docs-markdown"
-      innerHTML={unsafeHTML(handle.props.html)}
-    />
-  )
+  return () => <div class="rmx-page-body docs-markdown" innerHTML={unsafeHTML(handle.props.html)} />
 }
