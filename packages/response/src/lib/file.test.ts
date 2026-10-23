@@ -779,6 +779,20 @@ describe('createFileResponse()', () => {
       assert.equal(response.headers.get('Content-Length'), '5')
     })
 
+    it('recognizes byte range units case-insensitively', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'ByTeS=0-9' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 206)
+      assert.equal(await response.text(), '0123456789')
+      assert.equal(response.headers.get('Content-Range'), 'bytes 0-9/10')
+      assert.equal(response.headers.get('Content-Length'), '10')
+    })
+
     it('handles range with only start', async () => {
       let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
       let request = new Request('http://localhost/video.mp4', {
@@ -846,6 +860,20 @@ describe('createFileResponse()', () => {
       assert.equal(response.headers.get('Content-Range'), null)
       assert.equal(response.headers.get('Content-Length'), '10')
       assert.equal(await response.text(), '')
+    })
+
+    it('ignores unknown range units with byte-like ranges', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'items=0-4' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '0123456789')
+      assert.equal(response.headers.get('Content-Range'), null)
+      assert.equal(response.headers.get('Content-Length'), '10')
     })
 
     it('ignores unknown token range units', async () => {

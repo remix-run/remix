@@ -316,6 +316,8 @@ function generateWeakETag(file: FileLike): string {
 }
 
 function hasUnknownRangeUnit(value: string): boolean {
+  // RFC 9110 requires ignoring range units we do not understand:
+  // https://httpwg.org/specs/rfc9110.html#field.range
   let unitSeparator = value.indexOf('=')
   let unit = unitSeparator > 0 ? value.slice(0, unitSeparator) : ''
 
