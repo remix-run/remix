@@ -622,16 +622,83 @@ describe('tar size limits', () => {
     let entries = 0
     await assert.rejects(
       () =>
+        parseTar([createHeader(0), new Uint8Array(512), createHeader(0)], { maxEntries: 1 }, () => {
+          entries++
+        }),
+      MaxEntriesExceededError,
+    )
+    assert.equal(entries, 1)
+  })
+
+  it('continues parsing after nonconsecutive zero blocks', async () => {
+    let entries = 0
+
+    await parseTar(
+      [createHeader(0), new Uint8Array(512), createHeader(0), new Uint8Array(512), createHeader(0)],
+      () => {
+        entries++
+      },
+    )
+
+    assert.equal(entries, 3)
+  })
+
+  it('stops parsing entries after two zero blocks', async () => {
+    let archive = new Uint8Array(2048)
+    archive.set(createHeader(0))
+    archive.set(createHeader(0), 1536)
+    let entries = 0
+
+    await parseTar(archive, () => {
+      entries++
+    })
+
+    assert.equal(entries, 1)
+  })
+
+  it('stops parsing entries after a chunk-split end marker', async () => {
+    let zeroBlocks = new Uint8Array(1024)
+    let entries = 0
+
+    await parseTar(
+      [createHeader(0), zeroBlocks.subarray(0, 700), zeroBlocks.subarray(700), createHeader(0)],
+      () => {
+        entries++
+      },
+    )
+
+    assert.equal(entries, 1)
+  })
+
+  it('counts trailing input after the end marker toward the total size limit', async () => {
+    let entries = 0
+
+    await assert.rejects(
+      () =>
         parseTar(
-          [createHeader(0), new Uint8Array(1024), createHeader(0)],
-          { maxEntries: 1 },
+          [createHeader(0), new Uint8Array(1024), new Uint8Array(1)],
+          { maxTotalSize: 1536 },
           () => {
             entries++
           },
         ),
-      MaxEntriesExceededError,
+      MaxTotalSizeExceededError,
     )
+
     assert.equal(entries, 1)
+  })
+
+  it('resets end marker state between parses', async () => {
+    let parser = new TarParser()
+    let entries = 0
+    function handleEntry() {
+      entries++
+    }
+
+    await parser.parse([createHeader(0), new Uint8Array(1024)], handleEntry)
+    await parser.parse(createHeader(0), handleEntry)
+
+    assert.equal(entries, 2)
   })
 
   it('resets entry accounting between successful and failed parses', async () => {

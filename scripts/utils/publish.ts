@@ -1,3 +1,5 @@
+import * as cp from 'node:child_process'
+import { getLocalTagTarget } from './git.ts'
 import type { ChangelogEntry } from './changes.ts'
 
 export interface PublishCandidate {
@@ -26,6 +28,42 @@ interface GetReleaseNotesOptions {
   entries: ChangelogEntry[]
   targetVersion: string
   isVersionPublished(version: string): Promise<boolean>
+}
+
+export function getDocsReleaseTag(packages: PublishCandidate[], cwd?: string): string | undefined {
+  let latestRelease: { pkg: PublishCandidate; targetCommit: string } | undefined
+
+  // Include completed releases from the current checkout. On a retry, only an
+  // older release may still need repair, but docs should use the newest snapshot.
+  for (let pkg of packages) {
+    let targetCommit = getLocalTagTarget(pkg.tag, cwd)
+    if (targetCommit === null) {
+      continue
+    }
+
+    if (latestRelease === undefined) {
+      latestRelease = { pkg, targetCommit }
+      continue
+    }
+
+    if (targetCommit === latestRelease.targetCommit) {
+      if (pkg.packageName === 'remix') {
+        latestRelease = { pkg, targetCommit }
+      }
+      continue
+    }
+
+    let commonAncestor = cp.execFileSync(
+      'git',
+      ['merge-base', latestRelease.targetCommit, targetCommit],
+      { cwd, encoding: 'utf8' },
+    )
+    if (commonAncestor.trim() === latestRelease.targetCommit) {
+      latestRelease = { pkg, targetCommit }
+    }
+  }
+
+  return latestRelease?.pkg.tag
 }
 
 export async function isPackageVersionPublished(

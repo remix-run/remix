@@ -1,0 +1,1 @@
+Fix back and forward navigations in Chromium that sometimes jumped down the page right after restoring the scroll position. Scroll anchoring now stays disabled until after the first paint following the navigation, instead of turning back on in the same frame the page shrinks to its restored height (see #12009).

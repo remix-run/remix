@@ -38,6 +38,7 @@ export function AccountOrdersIndexPage(handle: Handle<{ orders: Order[] }>) {
                     </td>
                     <td>
                       <a
+                        data-rmx-prefetch="intent"
                         href={routes.account.orders.show.href({ orderId: order.id })}
                         class="btn btn-secondary"
                         mix={css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })}
@@ -55,7 +56,11 @@ export function AccountOrdersIndexPage(handle: Handle<{ orders: Order[] }>) {
         </div>
 
         <p mix={css({ marginTop: '1.5rem' })}>
-          <a href={routes.account.index.href()} class="btn btn-secondary">
+          <a
+            data-rmx-prefetch="intent"
+            href={routes.account.index.href()}
+            class="btn btn-secondary"
+          >
             Back to Account
           </a>
         </p>
