@@ -1,1 +1,1 @@
-Ensure `IfRange.matches()` classifies validators before comparing them, so HTTP dates are evaluated only against `Last-Modified` and malformed, empty, or bare values are not treated as entity tags (see #12042).
+`IfRange.matches()` now compares HTTP dates only against `Last-Modified` and quoted strong entity tags only against `ETag`. Explicitly empty, bare, and malformed header values fail the condition, while absent headers continue to match unconditionally. Copies preserve this distinction, including values read from `SuperHeaders.ifRange` (see #12049).

@@ -2,6 +2,8 @@ import { type HeaderValue } from './header-value.ts'
 import { parseHttpDate, removeMilliseconds } from './utils.ts'
 
 function isStrongEntityTag(value: string): boolean {
+  // Strong ETags use the quoted opaque-tag grammar without the W/ prefix.
+  // https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3
   return /^"[\x21\x23-\x7e\x80-\xff]*"$/.test(value)
 }
 
@@ -12,7 +14,7 @@ function isStrongEntityTag(value: string): boolean {
  *
  * [MDN `If-Range` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range)
  *
- * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-3.2)
+ * [HTTP Semantics Specification](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.5)
  */
 export class IfRange implements HeaderValue {
   #present = false
@@ -20,6 +22,7 @@ export class IfRange implements HeaderValue {
 
   /**
    * Raw header value, either an entity tag or an HTTP date.
+   * Assigning an empty string clears the condition.
    */
   get value(): string {
     return this.#value
@@ -39,12 +42,13 @@ export class IfRange implements HeaderValue {
    *
    * This method always returns `true` if the `If-Range` header is not present,
    * meaning the range request should proceed unconditionally.
+   * An explicitly empty or malformed header value returns `false`.
    *
    * The `If-Range` header can contain either:
    * - An HTTP date (RFC 7231 IMF-fixdate format)
    * - An entity tag (ETag)
    *
-   * When comparing ETags, only strong entity tags are matched as per RFC 7233.
+   * When comparing ETags, only quoted strong entity tags are matched as per RFC 9110.
    * Weak entity tags (prefixed with `W/`) are never considered a match.
    *
    * @param resource The current resource state to compare against
@@ -68,6 +72,8 @@ export class IfRange implements HeaderValue {
       return true
     }
 
+    // Evaluate tags and dates separately, using strong ETag or exact date comparison.
+    // https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.5
     if (isStrongEntityTag(this.value)) {
       return (
         resource.etag != null && isStrongEntityTag(resource.etag) && this.value === resource.etag
@@ -96,6 +102,8 @@ export class IfRange implements HeaderValue {
 
   /**
    * Parse an If-Range header value.
+   * A `null` value represents absence; an empty string represents a present, invalid value.
+   * Existing instances are copied with their presence state preserved.
    *
    * @param value The header value (string, Date, IfRange, or null)
    * @returns An IfRange instance (empty if null)
@@ -104,8 +112,10 @@ export class IfRange implements HeaderValue {
     let header = new IfRange()
 
     if (value instanceof IfRange) {
-      header.#present = value.#present
-      header.#value = value.#value
+      // Read through the public API because SuperHeaders can wrap instances in a Proxy.
+      // Only an absent value matches a resource with no validators.
+      header.#value = value.value
+      header.#present = header.#value !== '' || !value.matches({})
     } else if (typeof value === 'string') {
       header.#present = true
       header.#value = value
