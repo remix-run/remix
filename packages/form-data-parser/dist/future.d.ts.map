@@ -1,0 +1,1 @@
+{"version":3,"file":"future.d.ts","sourceRoot":"","sources":["../src/future.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,KAAK,oBAAoB,EACzB,kBAAkB,EAClB,qBAAqB,GACtB,MAAM,oBAAoB,CAAA;AAC3B,OAAO,EAAE,KAAK,iBAAiB,EAAE,UAAU,EAAE,aAAa,EAAE,MAAM,2BAA2B,CAAA;AAG7F,OAAO,EACL,mBAAmB,EACnB,0BAA0B,EAC1B,wBAAwB,EACxB,qBAAqB,EACrB,yBAAyB,GAC1B,MAAM,oCAAoC,CAAA"}

@@ -20,22 +20,15 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./future": "./src/future.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./future": {
+      "types": "./dist/future.d.ts",
+      "default": "./dist/future.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./future": {
-        "types": "./dist/future.d.ts",
-        "default": "./dist/future.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
@@ -46,9 +39,9 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/form-data-parser": "workspace:^",
-    "@remix-run/headers": "workspace:^"
+    "@remix-run/fetch-router": "remix-run/remix#preview/main&path:packages/fetch-router",
+    "@remix-run/form-data-parser": "remix-run/remix#preview/main&path:packages/form-data-parser",
+    "@remix-run/headers": "remix-run/remix#preview/main&path:packages/headers"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
