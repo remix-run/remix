@@ -1,1 +1,1 @@
-`createFileResponse()` now ignores `Range` headers that use unsupported range units instead of interpreting them as byte ranges (see #12038).
+`createFileResponse()` now ignores unsupported `Range` units and returns the full file instead of interpreting those ranges as byte ranges (see #12045).
