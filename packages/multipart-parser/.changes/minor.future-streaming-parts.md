@@ -14,4 +14,14 @@ for await (let part of parseMultipartRequest(request)) {
 }
 ```
 
+Because parts are yielded before their content is buffered, a large file is available to your code almost immediately, and memory stays flat no matter how big it is. Measured on Node.js 24.18 with an Apple M5 Pro, as the median of 7 runs that each use a fresh process, reading every part's content with `parseMultipartRequest()`:
+
+| Request                     | Total time (stable → future) | Time until the first file part is yielded | Peak memory growth   |
+| --------------------------- | ---------------------------- | ----------------------------------------- | -------------------- |
+| 1 × 100 MiB file            | 37.0 ms → 34.8 ms            | 36.9 ms → 0.2 ms                          | 100 MiB → 44 MiB     |
+| 5 × 20 MiB files            | 37.8 ms → 35.1 ms            | 8.4 ms → 0.2 ms                           | 59 MiB → 23 MiB      |
+| 10 fields and an 8 KiB file | 0.43 ms → 0.47 ms            | 0.41 ms → 0.39 ms                         | No measurable change |
+
 Compared to the stable entrypoint, `/future` drops the synchronous `parseMultipart()`, the `MultipartParser` class, and the `/node` entrypoint, and `MultipartPart` no longer has the `arrayBuffer`, `bytes`, `content`, `isText`, `size`, and `text` getters. The error classes are shared with the stable entrypoint, so `instanceof` checks work with either.
+
+If your app handles file uploads, please give `@remix-run/multipart-parser/future` a try and tell us how it goes in [GitHub Discussions](https://github.com/remix-run/remix/discussions). We'd especially like to hear about anything that breaks, behaves unexpectedly, or feels awkward, since that feedback will shape the next major release.
