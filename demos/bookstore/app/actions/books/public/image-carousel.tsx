@@ -57,6 +57,7 @@ export const ImageCarousel = clientEntry(
                 <img
                   src={src}
                   alt={`Image ${i + 1} of ${total}`}
+                  loading={i === 0 ? 'eager' : 'lazy'}
                   mix={css({
                     width: '100%',
                     height: '100%',

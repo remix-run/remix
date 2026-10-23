@@ -35,6 +35,7 @@ export function AccountSettingsPage(handle: Handle<{ user: User }>) {
               Update Settings
             </button>
             <a
+              data-rmx-prefetch="intent"
               href={routes.account.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}

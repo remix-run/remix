@@ -1,5 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import assertDefault, { equal } from 'remix/assert'
+import Headers, { SuperHeaders } from 'remix/headers'
 
 import * as fs from 'node:fs'
 import * as os from 'node:os'
@@ -95,6 +97,20 @@ const allRemixRunPackages: string[] = fs
 // --- Tests ---
 
 describe('manifest', () => {
+  it('re-exports the callable assertion default alongside named exports', () => {
+    assert.equal(assertDefault, assert.default)
+    assert.equal(equal, assert.equal)
+    assertDefault(true)
+    assertDefault.equal(1, 1)
+  })
+
+  it('re-exports the headers default alongside named exports', () => {
+    assert.equal(Headers, SuperHeaders)
+    let headers = new Headers({ 'Content-Type': 'application/json' })
+    assert.equal(headers.get('Content-Type'), 'application/json')
+    assert.equal(headers.contentType.mediaType, 'application/json')
+  })
+
   it('exports application types from the package root', () => {
     let packageJson: {
       exports: Record<string, unknown>

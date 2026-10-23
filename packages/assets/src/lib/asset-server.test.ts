@@ -516,7 +516,7 @@ describe('asset-server', () => {
     assert.equal(notModified.status, 304)
   })
 
-  it('does not match a stripped weak ETag prefix in If-None-Match', async () => {
+  it('matches a stripped weak ETag prefix in If-None-Match', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     let assetServer = createTestServer(dir)
 
@@ -527,7 +527,7 @@ describe('asset-server', () => {
       'If-None-Match': response.headers.get('ETag')!.replace(/^W\//, ''),
     })
     assert.ok(notModified)
-    assert.equal(notModified.status, 200)
+    assert.equal(notModified.status, 304)
   })
 
   it('serves allow-listed internal modules directly by default with ETags', async () => {

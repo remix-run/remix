@@ -1,5 +1,12 @@
+import { pendingPrefetchLinks } from './prefetch-links.ts'
 import { jsx } from './jsx.ts'
-import { Frame, createFrameHandle, type FrameContent, type FrameResolution } from './component.ts'
+import {
+  Fragment,
+  Frame,
+  createFrameHandle,
+  type FrameContent,
+  type FrameResolution,
+} from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
@@ -371,6 +378,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let initialClientEntryResources: Promise<boolean> | undefined
   function shouldPreserveManagedHeadNode(node: Node): boolean {
     return (
+      pendingPrefetchLinks.has(node) ||
       importMapManager.shouldPreserveHeadNode(node) ||
       (modulePreloader.hasActivePreloads() && modulePreloader.isActivePreload(node))
     )
@@ -1412,6 +1420,12 @@ function reviveSerializedValue(value: unknown): unknown {
     let props = reviveSerializedObject(record.props)
     let key = reviveSerializedValue(record.key)
     return jsx(Frame, props, key)
+  }
+
+  if (record.$rmxFragment === true) {
+    let props = reviveSerializedObject(record.props)
+    let key = reviveSerializedValue(record.key)
+    return jsx(Fragment, props, key)
   }
 
   if (record.$rmx === true && typeof record.type === 'string') {

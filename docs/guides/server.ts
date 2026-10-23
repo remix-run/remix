@@ -1,13 +1,11 @@
+import * as path from 'node:path'
 import { startDocsServer } from 'remix-docs-shared/server'
 
 import { router } from './app/router.ts'
 import { assetServer } from './app/assets.ts'
-import { createDevRefreshEvents } from './app/utils/dev-refresh-server.ts'
-
-const devRefresh = process.env.NODE_ENV === 'production' ? undefined : createDevRefreshEvents()
 
 startDocsServer(router, {
   assetServer,
-  devRefresh,
+  content: { dir: path.resolve(import.meta.dirname, 'app/actions/docs/chapters') },
   label: 'Remix Guides server',
 })
