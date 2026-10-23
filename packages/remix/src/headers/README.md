@@ -493,8 +493,12 @@ ifRange.matches({ lastModified: new Date('2021-01-01') }) // true
 let etagHeader = IfRange.from('"67ab43"')
 etagHeader.matches({ etag: '"67ab43"' }) // true
 
-// Empty/null returns empty instance (range proceeds unconditionally)
-let empty = IfRange.from(null)
+// An absent header lets the range request proceed unconditionally
+let absent = IfRange.from(null)
+absent.matches({ etag: '"any"' }) // true
+
+// Empty values retain the same unconditional matching behavior
+let empty = IfRange.from('')
 empty.matches({ etag: '"any"' }) // true
 
 // Construct directly
