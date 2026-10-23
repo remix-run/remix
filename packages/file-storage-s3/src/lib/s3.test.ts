@@ -331,6 +331,31 @@ describe('s3 file storage', () => {
     assertExpectedBytes(await retrieved.bytes(), PART_SIZE)
   })
 
+  it('reads in-memory files with slice() instead of stream()', async () => {
+    let requests: string[] = []
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      partSize: PART_SIZE,
+      fetch: createMockS3Fetch({ requests }),
+    })
+    let size = 2 * PART_SIZE + 10
+    let file = new File([expectedBytesBuffer(size)], 'a.bin')
+    file.stream = () => {
+      throw new Error('stream() should not be called on a Blob')
+    }
+
+    await storage.set('a', file)
+
+    assert.equal(requests.length, 5)
+    let retrieved = await storage.get('a')
+    assert.ok(retrieved)
+    assertExpectedBytes(await retrieved.bytes(), size)
+  })
+
   it('stores an empty file with a single PUT', async () => {
     let requests: string[] = []
     let storage = createS3FileStorage({
@@ -715,6 +740,12 @@ function createStreamingFile(
   }
 
   return { file: file as unknown as File, pulled: () => pulled, canceled: () => canceled }
+}
+
+function expectedBytesBuffer(size: number): Uint8Array<ArrayBuffer> {
+  let bytes = new Uint8Array(size)
+  for (let index = 0; index < size; index++) bytes[index] = index % 251
+  return bytes
 }
 
 // Checks bytes from `createStreamingFile()` without a deep equality check, which is slow for
