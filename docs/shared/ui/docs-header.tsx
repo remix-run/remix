@@ -12,6 +12,7 @@ export interface DocsNavigationLink {
 export type DocsNavigationLinkId =
   | 'guides'
   | 'api'
+  | 'ui'
   | 'github'
   | 'blog'
   | 'newsletter'

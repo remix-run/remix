@@ -53,16 +53,16 @@
     "@remix-run/node-fetch-server": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "playwright": "catalog:"
+    "playwright": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "pnpm run build && remix test",
     "test:bun": "bun x --bun remix test --type server",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "remix",

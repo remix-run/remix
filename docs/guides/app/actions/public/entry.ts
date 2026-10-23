@@ -5,6 +5,7 @@ import {
   importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
+import { reloadOnServerUpdate } from 'remix-docs-shared/hmr/browser'
 import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/search/browser'
 
 startNavigationGuard()
@@ -69,11 +70,13 @@ app.addEventListener('error', (event) => {
   console.error('Remix component runtime error:', event.error)
 })
 
+reloadOnServerUpdate(app)
+
 app.ready().catch(() => {})
 
 // HACK: `remix/component` currently intercepts reloads and same-document hash
 // navigations because the current Navigation API entry has Remix runtime state.
-// That prevents dev refresh from reloading the document and breaks native hash
+// That prevents full-page reloads and breaks native hash
 // scrolling/history. Stop these navigations before the Remix listener sees them
 // so the browser keeps owning their behavior. Remove this once `remix/component` ignores
 // reloads and same-document hash navigations itself.

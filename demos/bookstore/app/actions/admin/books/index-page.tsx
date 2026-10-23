@@ -15,10 +15,11 @@ export function AdminBooksIndexPage(handle: Handle<{ books: Book[] }>) {
         <h1>Manage Books</h1>
 
         <p mix={css({ marginBottom: '1rem' })}>
-          <a href={routes.admin.books.new.href()} class="btn">
+          <a data-rmx-prefetch="intent" href={routes.admin.books.new.href()} class="btn">
             Add New Book
           </a>
           <a
+            data-rmx-prefetch="intent"
             href={routes.admin.index.href()}
             class="btn btn-secondary"
             mix={css({ marginLeft: '0.5rem' })}
@@ -53,6 +54,7 @@ export function AdminBooksIndexPage(handle: Handle<{ books: Book[] }>) {
                   </td>
                   <td class="actions">
                     <a
+                      data-rmx-prefetch="intent"
                       href={routes.admin.books.edit.href({ bookId: book.id })}
                       class="btn btn-secondary"
                       mix={css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' })}

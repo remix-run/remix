@@ -65,6 +65,32 @@ describe('Range', () => {
       assert.equal(range.ranges[1].start, 200)
       assert.equal(range.ranges[1].end, 299)
     })
+
+    it('caps decimal bounds above the maximum safe integer', () => {
+      let huge = '9'.repeat(309)
+      let range = new Range(`bytes=9007199254740992-,0-${huge},-${huge}`)
+
+      assert.deepEqual(range.ranges, [
+        { start: Number.MAX_SAFE_INTEGER, end: undefined },
+        { start: 0, end: Number.MAX_SAFE_INTEGER },
+        { start: undefined, end: Number.MAX_SAFE_INTEGER },
+      ])
+      assert.equal(range.toString(), 'bytes=9007199254740991-,0-9007199254740991,-9007199254740991')
+      assert.deepEqual(Range.from(range.toString()).ranges, range.ranges)
+    })
+
+    it('parses leading-zero bounds without capping their magnitude', () => {
+      let range = new Range(`bytes=${'0'.repeat(100)}1-`)
+      assert.deepEqual(range.ranges, [{ start: 1, end: undefined }])
+    })
+
+    it('rejects reversed oversized decimal bounds before capping them', () => {
+      let range = new Range(`bytes=9007199254740992-9007199254740991`)
+      assert.deepEqual(range.ranges, [])
+
+      range = new Range(`bytes=${'9'.repeat(310)}-${'9'.repeat(309)}`)
+      assert.deepEqual(range.ranges, [])
+    })
   })
 
   describe('construction from object', () => {
@@ -128,6 +154,13 @@ describe('Range', () => {
     it('returns false for invalid resource sizes', () => {
       let range = new Range('bytes=-500')
       assert.equal(range.canSatisfy(0.5), false)
+      assert.equal(range.canSatisfy(Number.NaN), false)
+      assert.equal(range.canSatisfy(Infinity), false)
+    })
+
+    it('returns false for resource sizes outside the safe integer range', () => {
+      let range = new Range('bytes=0-')
+      assert.equal(range.canSatisfy(Number.MAX_SAFE_INTEGER + 1), false)
       assert.equal(range.canSatisfy(Number.NaN), false)
       assert.equal(range.canSatisfy(Infinity), false)
     })
@@ -244,8 +277,9 @@ describe('Range', () => {
       assert.deepEqual(range.normalize(1000), [])
     })
 
-    it('returns an empty array for an empty resource', () => {
+    it('returns no byte positions for a satisfiable suffix on an empty resource', () => {
       let range = new Range('bytes=-500')
+      assert.equal(range.canSatisfy(0), true)
       assert.deepEqual(range.normalize(0), [])
     })
 
@@ -279,6 +313,13 @@ describe('Range', () => {
       let huge = '9'.repeat(309)
       assert.deepEqual(Range.from(`bytes=0-${huge}`).normalize(500), [{ start: 0, end: 499 }])
       assert.deepEqual(Range.from(`bytes=-${huge}`).normalize(500), [{ start: 0, end: 499 }])
+    })
+
+    it('returns an empty array for resource sizes outside the safe integer range', () => {
+      let range = new Range('bytes=0-')
+      assert.deepEqual(range.normalize(Number.MAX_SAFE_INTEGER + 1), [])
+      assert.deepEqual(range.normalize(Number.NaN), [])
+      assert.deepEqual(range.normalize(Infinity), [])
     })
   })
 

@@ -14,7 +14,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/docs/layout.tsx` and `chapter-navigation.tsx` — guides-specific content and navigation rendered inside the shell from `../shared/ui/`.
 - `app/actions/docs/public/` — browser behavior owned by the Guides route, including its active-chapter animation.
 - `app/actions/docs/examples/` — frame handlers used by chapters. Each chapter group's `public/` directory contains its browser-hydrated demo modules and their local dependencies.
-- `app/actions/public/` — root-owned browser entrypoint, development refresh module, and stylesheets.
+- `app/actions/public/` — root-owned browser entrypoint and stylesheets.
 - `app/assets.ts` — the source asset server and root entry hrefs/preloads, configured around colocated `public/` directories.
 - `app/router.ts` — installs the standard `render()` middleware with the asset server.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
@@ -170,7 +170,7 @@ pnpm --filter remix-guides run test
 pnpm --filter remix-guides run typecheck
 ```
 
-The dev server listens on http://localhost:44100 by default. Set `PORT` to override. The guides index is served at `/`.
+The dev server listens on http://localhost:44100 by default. Set `PORT` to override. The guides index is served at `/`. Edits to chapters, components, styles, and browser modules show up in open pages without a refresh.
 
 ## Static site
 

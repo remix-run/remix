@@ -143,6 +143,24 @@ Pass `size: false` when the element should animate position only and avoid scale
 
 Passing `true` or no argument enables the default layout animation. Passing `false`, `null`, or `undefined` disables it. Layout animation skips work when geometry does not change, keeps in-flight animations running when their target geometry has not changed, and continues from the current visual transform when a new layout change interrupts an active animation.
 
+## Reduced Motion
+
+`prefersReducedMotion()` reads the current `prefers-reduced-motion: reduce` media query. It returns `false` during server rendering or when `matchMedia` is unavailable. Call it during render or before starting playback so each check uses the current preference.
+
+```tsx
+import { animateLayout, prefersReducedMotion, spring } from '@remix-run/ui/animation'
+
+function Card() {
+  return () => (
+    <section mix={animateLayout(prefersReducedMotion() ? false : { ...spring('snappy') })}>
+      Details
+    </section>
+  )
+}
+```
+
+The helper returns a snapshot; it does not subscribe to preference changes or update components. Animation mixins do not check the preference automatically. For CSS transitions, use the `@media (prefers-reduced-motion: reduce)` media query.
+
 ## Spring
 
 `spring` returns a decorated iterator. It can be iterated for JavaScript animation, spread into Web Animations API options, or stringified for CSS transition syntax.
@@ -308,6 +326,7 @@ let animation = tween({
 - `animateEntrance(config?)`: mixin that animates an element when it enters the DOM.
 - `animateExit(config?)`: mixin that persists a removed keyed element long enough to run its exit animation.
 - `animateLayout(config?)`: mixin that animates layout changes by comparing geometry between renders.
+- `prefersReducedMotion()`: reads the current reduced-motion preference, returning `false` when `matchMedia` is unavailable.
 - `spring(preset?, overrides?)`: creates a `SpringIterator` from a named preset.
 - `spring(options?)`: creates a `SpringIterator` from explicit spring options.
 - `spring.transition(property, presetOrOptions?, overrides?)`: builds one or more CSS transition entries from a spring.

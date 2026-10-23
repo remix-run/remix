@@ -6,6 +6,7 @@ import { createComponentErrorEvent } from './error-event.ts'
 import type { ComponentErrorEvent } from './error-event.ts'
 import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
 import { startNavigationListener } from './navigation.ts'
+import { startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 
@@ -34,6 +35,14 @@ export interface RunInit {
 
   /** Processes module preloads discovered in late client entry responses before activation. */
   processClientEntryPreloads?: ProcessClientEntryPreloads
+
+  /**
+   * Starts loading a page for `data-rmx-prefetch` links and `prefetch()` calls, replacing the
+   * default HTML fetch and asset prefetch hints. Use it with `resolveFrame` to reuse uncacheable HTML,
+   * for example to hold the response in memory until the next navigation to that URL and target.
+   * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
+   */
+  prefetch?: PrefetchFrame
 }
 
 /**
@@ -175,6 +184,7 @@ export function run(init: RunInit): AppRuntime {
     },
   }
   startNavigationListener(appController.signal)
+  startPrefetching(appController.signal, init.prefetch)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error

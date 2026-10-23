@@ -437,6 +437,25 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('X-Forwarded-Proto'), 'https')
   })
 
+  it('returns null for numeric header values with no integer prefix', () => {
+    let headers = new SuperHeaders({
+      'Access-Control-Max-Age': 'invalid',
+      Age: 'invalid',
+      'Content-Length': 'invalid',
+      'Max-Forwards': 'invalid',
+      'Upgrade-Insecure-Requests': 'invalid',
+    })
+
+    assert.equal(headers.accessControlMaxAge, null)
+    assert.equal(headers.age, null)
+    assert.equal(headers.contentLength, null)
+    assert.equal(headers.maxForwards, null)
+    assert.equal(headers.upgradeInsecureRequests, null)
+
+    headers.set('Content-Length', '12bytes')
+    assert.equal(headers.contentLength, 12)
+  })
+
   it('preserves native iteration and raw stringification utilities', () => {
     let headers = new SuperHeaders({ contentType: 'text/html' })
 

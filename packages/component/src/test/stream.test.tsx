@@ -7,7 +7,7 @@ import { createElement } from '../runtime/create-element.ts'
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
-import { Frame } from '../runtime/component.ts'
+import { Fragment, Frame } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
@@ -54,6 +54,52 @@ describe('stream', () => {
       let stream = renderToStream(<div>Hello, world!</div>)
       let html = await drain(stream)
       expect(html).toBe('<div>Hello, world!</div>')
+    })
+
+    it('removes the request abort listener after rendering finishes', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+
+      await drain(renderToStream(<p>Finished</p>, { signal: controller.signal }))
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+    })
+
+    it('removes the request abort listener when rendering fails', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+      function Broken(): never {
+        throw new Error('Render failed')
+      }
+
+      await expect(
+        drain(renderToStream(<Broken />, { signal: controller.signal, onError() {} })),
+      ).rejects.toThrow('Render failed')
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+    })
+
+    it('removes the request abort listener when the consumer cancels pending rendering', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+      let [frame, resolve] = withResolvers<string>()
+      let stream = renderToStream(<Frame src="/pending" fallback={<p>Loading</p>} />, {
+        signal: controller.signal,
+        resolveFrame() {
+          return frame
+        },
+      })
+      let reader = stream.getReader()
+      await reader.read()
+
+      expect(remove).toHaveBeenCalledTimes(0)
+      await reader.cancel()
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+      resolve('<p>Done</p>')
     })
 
     it('keeps earlier stream chunks intact while other renders finish', async () => {
@@ -2169,6 +2215,41 @@ describe('stream', () => {
       }
     })
 
+    it('snapshots hydration props before resolving client entries and calls toJSON once', async () => {
+      let calls = 0
+      let value = {
+        count: 1,
+        toJSON() {
+          calls++
+          return { count: this.count, label: '</script>日本語🙂' }
+        },
+      }
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let html = await drain(
+        renderToStream(createElement(Entry, { value }), {
+          async resolveClientEntry() {
+            value.count = 2
+            return { href: '/entry.js', exportName: 'Entry' }
+          },
+        }),
+      )
+
+      let [, data] = getSingleEntry(parseRmxDataFromHtml(html).h)
+      expect(data.props.value).toEqual({ count: 1, label: '</script>日本語🙂' })
+      expect(calls).toBe(1)
+    })
+
+    it('rejects client entry props whose toJSON returns undefined', async () => {
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let stream = renderToStream(createElement(Entry, { toJSON() {} }), { onError() {} })
+
+      await expect(drain(stream)).rejects.toThrow('Client entry props must serialize to JSON')
+    })
+
     it('renders hydrated component with complex props', async () => {
       let Card = clientEntry(
         '/js/card.js#Card',
@@ -2368,6 +2449,136 @@ describe('stream', () => {
           },
         },
       })
+    })
+
+    it('serializes Fragment elements in entry props as fragment descriptors', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={
+              <>
+                <b>Bold</b>
+                <i>Italic</i>
+              </>
+            }
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(html).toContain('<div><b>Bold</b><i>Italic</i></div>')
+      expect(entry.props.content).toEqual({
+        $rmxFragment: true,
+        props: {
+          children: [
+            { $rmx: true, type: 'b', props: { children: 'Bold' } },
+            { $rmx: true, type: 'i', props: { children: 'Italic' } },
+          ],
+        },
+      })
+    })
+
+    it('serializes fragments rendered by virtual components in entry props', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      function Pair() {
+        return () => (
+          <>
+            <b>Bold</b>
+            <i>Italic</i>
+          </>
+        )
+      }
+
+      let html = await drain(renderToStream(<Slot content={<Pair />} />))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual({
+        $rmxFragment: true,
+        props: {
+          children: [
+            { $rmx: true, type: 'b', props: { children: 'Bold' } },
+            { $rmx: true, type: 'i', props: { children: 'Italic' } },
+          ],
+        },
+      })
+    })
+
+    it('serializes element and fragment keys in entry props', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={[
+              <b key="bold">Bold</b>,
+              <Fragment key={2}>
+                <i>Italic</i>
+              </Fragment>,
+            ]}
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual([
+        { $rmx: true, type: 'b', props: { children: 'Bold' }, key: 'bold' },
+        {
+          $rmxFragment: true,
+          props: { children: { $rmx: true, type: 'i', props: { children: 'Italic' } } },
+          key: 2,
+        },
+      ])
+    })
+
+    it('omits entry prop keys that cannot round-trip through JSON', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={[
+              <b key={1n}>Bold</b>,
+              <Fragment key={{ id: 'italic' }}>
+                <i>Italic</i>
+              </Fragment>,
+              <u key={Number.NaN}>Underline</u>,
+            ]}
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual([
+        { $rmx: true, type: 'b', props: { children: 'Bold' } },
+        {
+          $rmxFragment: true,
+          props: { children: { $rmx: true, type: 'i', props: { children: 'Italic' } } },
+        },
+        { $rmx: true, type: 'u', props: { children: 'Underline' } },
+      ])
     })
 
     it('nests hydrated components', async () => {

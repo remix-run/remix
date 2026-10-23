@@ -1,6 +1,7 @@
 import * as path from 'node:path'
 import { createAssetServer as createRemixAssetServer } from 'remix/assets'
 import type { AssetServer } from 'remix/assets'
+import { docsAssetHmrOptions } from 'remix-docs-shared/hmr/assets'
 
 import { getVersionPathname } from './routes.ts'
 
@@ -11,6 +12,8 @@ const isProduction = nodeEnv === 'production'
 export type DocsAssetServer = AssetServer
 
 export function createAssetServer(version?: string): DocsAssetServer {
+  let { hmr, scriptLoaders, watch } = docsAssetHmrOptions
+
   return createRemixAssetServer({
     basePath: version ? `${getVersionPathname(version)}/assets` : '/assets',
     rootDir: path.resolve(import.meta.dirname, '../../..'),
@@ -32,11 +35,13 @@ export function createAssetServer(version?: string): DocsAssetServer {
     sourceMaps: isDevelopment ? 'external' : undefined,
     minify: isProduction,
     fingerprint: isProduction,
-    watch: false,
+    watch,
+    hmr,
     scripts: {
       define: {
         'process.env.NODE_ENV': JSON.stringify(nodeEnv),
       },
+      loaders: scriptLoaders,
     },
   })
 }

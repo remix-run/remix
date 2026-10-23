@@ -1,0 +1,1 @@
+Reduce server rendering memory use by assembling each HTML response with a single join and keeping client entry hydration props serialized. Request abort listeners are removed when rendering finishes, fails, or is canceled, so long-lived request signals no longer keep finished renders reachable.

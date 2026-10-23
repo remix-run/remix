@@ -38,7 +38,17 @@ interface FrameRedirectNavigationInfo {
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
+// Lets the navigation handler tell the WebKit workaround once it has reset scroll.
+const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
+
+const webKitScrollResetDuration = 500
+
+// iOS Safari can restore the previous position, or the new page's bottom, for several frames after
+// a navigation resets scroll. Undo those restorations until shortly after the navigation finishes,
+// the user interacts with the page, or another navigation starts. App code that scrolls to one of
+// those positions in that time is undone too.
 function resyncWebKitScrollAfterNavigation(
+  navigation: Navigation,
   event: NavigateEvent,
   resetScroll: boolean,
   transition: NavigationTransition,
@@ -49,19 +59,59 @@ function resyncWebKitScrollAfterNavigation(
     return
   if (new URL(event.destination.url).hash) return
 
-  void transition.finished.then(
-    () => {
-      // WebKit can reset its internal scroll position without synchronizing the visual viewport.
-      // https://bugs.webkit.org/show_bug.cgi?id=309542
-      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
-      window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
-      requestAnimationFrame(() => {
-        if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
-        window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
-      })
-    },
-    () => {},
-  )
+  let startY = window.scrollY
+  let controller = new AbortController()
+  let { signal } = controller
+  let stop = () => controller.abort()
+  for (let type of ['pointerdown', 'wheel', 'keydown']) {
+    window.addEventListener(type, stop, { capture: true, passive: true, signal })
+  }
+  navigation.addEventListener('navigate', stop, { signal })
+
+  // Safari clamps the previous position to the page's height when it restores it, and the page can
+  // grow before the scroll event runs, so remember every bottom the new page has had.
+  let restoredPositions = new Set([startY])
+  function rememberBottom() {
+    let maxY = document.documentElement.scrollHeight - window.innerHeight
+    if (startY > maxY) restoredPositions.add(maxY)
+  }
+  function undoRestoration() {
+    rememberBottom()
+    let y = window.scrollY
+    if (y === 0) return
+    for (let position of restoredPositions) {
+      if (Math.abs(y - position) < 1) {
+        return window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
+      }
+    }
+  }
+
+  let resetApplied = false
+  webKitScrollResets.set(event, () => {
+    resetApplied = true
+    rememberBottom()
+  })
+  // Scroll events run before the frame paints, so an undone restoration may never be drawn.
+  window.addEventListener('scroll', () => resetApplied && undoRestoration(), {
+    passive: true,
+    signal,
+  })
+
+  void transition.finished.then(() => {
+    if (!signal.aborted) {
+      undoRestoration()
+      setTimeout(stop, webKitScrollResetDuration)
+    }
+
+    // WebKit can reset its internal scroll position without synchronizing the visual viewport.
+    // https://bugs.webkit.org/show_bug.cgi?id=309542
+    if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
+    window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
+    requestAnimationFrame(() => {
+      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
+      window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
+    })
+  }, stop)
 }
 
 /**
@@ -239,7 +289,10 @@ export function startNavigationListenerImpl(
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
-        if (scroll !== 'manual') event.scroll()
+        if (scroll !== 'manual') {
+          event.scroll()
+          webKitScrollResets.get(event)?.()
+        }
 
         let { redirectedTo } = await reload.finished
         if (event.signal.aborted || reload.signal.aborted) return
@@ -316,7 +369,7 @@ export function startNavigationListenerImpl(
   )
 }
 
-function getInterceptableNavigation(): Navigation | undefined {
+export function getInterceptableNavigation(): Navigation | undefined {
   let navigation = window.navigation
   if (
     !navigation ||
@@ -396,14 +449,8 @@ function interceptNavigation(
     if (!transition) return scrollStyleWorkarounds?.remove()
     transitionBound = true
 
-    resyncWebKitScrollAfterNavigation(event, resetScroll, transition)
-    if (scrollStyleWorkarounds) {
-      scheduleNavigationScrollCleanup(
-        transition,
-        scrollStyleWorkarounds.remove,
-        scrollStyleWorkarounds.cleanup,
-      )
-    }
+    resyncWebKitScrollAfterNavigation(navigation, event, resetScroll, transition)
+    if (scrollStyleWorkarounds) scheduleNavigationScrollCleanup(transition, scrollStyleWorkarounds)
   }
 
   let interceptOptions: NavigationInterceptOptions = {
@@ -429,15 +476,14 @@ function interceptNavigation(
   }
 }
 
-type NavigationScrollStyles = {
-  cssText: string
-  cleanup: 'finished' | 'after-paint'
-}
+const disableScrollAnchoringCssText = `
+  html,
+  body {
+    overflow-anchor: none !important;
+  }
+`
 
-function getNavigationScrollStyles(
-  event: NavigateEvent,
-  resetScroll: boolean,
-): NavigationScrollStyles | undefined {
+function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): string | undefined {
   if (!resetScroll) return
 
   if (event.navigationType === 'traverse') {
@@ -445,25 +491,25 @@ function getNavigationScrollStyles(
     // before the Navigation API performs its deferred restoration. Preserve the starting scroll
     // range and position until the navigation finishes so native restoration remains authoritative.
     // Root scroll height includes page-level effects such as body padding.
+    //
+    // Re-enabling scroll anchoring while the page shrinks back to its own height lets Chromium
+    // move the restored scroll position, so anchoring stays disabled until after the next paint.
 
     // We think this is a bug in Chromium where they are incorrectly classifying a
     // DOM-modification-driven scroll change as a user scroll action, causing it to skip restoration
     // after the transition. The intended user-scroll behavior is tested here:
     // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
     let { scrollHeight, clientHeight } = document.documentElement
-    return {
-      cssText: `
-        html {
-          min-height: ${scrollHeight + clientHeight}px !important;
-          overflow-anchor: none !important;
-        }
+    return `
+      html {
+        min-height: ${scrollHeight + clientHeight}px !important;
+        overflow-anchor: none !important;
+      }
 
-        body {
-          overflow-anchor: none !important;
-        }
-      `,
-      cleanup: 'finished',
-    }
+      body {
+        overflow-anchor: none !important;
+      }
+    `
   }
 
   if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
@@ -473,15 +519,7 @@ function getNavigationScrollStyles(
   // Chromium can treat reconciliation-driven scroll anchoring as user scrolling and preserve an
   // offset after NavigateEvent.scroll() resets the destination. Suppress anchoring before
   // interception and keep it disabled through the first post-navigation paint.
-  return {
-    cssText: `
-      html,
-      body {
-        overflow-anchor: none !important;
-      }
-    `,
-    cleanup: 'after-paint',
-  }
+  return disableScrollAnchoringCssText
 }
 
 function isChromiumUserAgent(userAgent: string): boolean {
@@ -490,18 +528,18 @@ function isChromiumUserAgent(userAgent: string): boolean {
 
 type NavigationScrollStylesheet = {
   remove(): void
-  cleanup: NavigationScrollStyles['cleanup']
+  settle(): void
 }
 
 function installNavigationScrollStyleWorkarounds(
   event: NavigateEvent,
   resetScroll: boolean,
 ): NavigationScrollStylesheet | undefined {
-  let scrollStyles = getNavigationScrollStyles(event, resetScroll)
-  if (!scrollStyles) return
+  let cssText = getNavigationScrollStyles(event, resetScroll)
+  if (!cssText) return
 
   let stylesheet = new CSSStyleSheet()
-  stylesheet.replaceSync(scrollStyles.cssText)
+  stylesheet.replaceSync(cssText)
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
 
   let removed = false
@@ -514,24 +552,30 @@ function installNavigationScrollStyleWorkarounds(
     )
   }
 
+  // Drop everything but the scroll anchoring suppression once the navigation has finished.
+  function settle() {
+    if (!removed && cssText !== disableScrollAnchoringCssText) {
+      stylesheet.replaceSync(disableScrollAnchoringCssText)
+    }
+  }
+
   if (event.signal.aborted) remove()
   else event.signal.addEventListener('abort', remove, { once: true })
-  return { remove, cleanup: scrollStyles.cleanup }
+  return { remove, settle }
 }
 
 function scheduleNavigationScrollCleanup(
   transition: NavigationTransition,
-  removeScrollStyles: () => void,
-  cleanup: NavigationScrollStylesheet['cleanup'],
+  scrollStyles: NavigationScrollStylesheet,
 ): void {
-  function removeAfterSuccess() {
-    if (cleanup === 'finished') return removeScrollStyles()
+  function settleAfterSuccess() {
+    scrollStyles.settle()
     // The first callback runs before the first post-navigation paint. The second removes the
     // stylesheet before the following frame.
-    requestAnimationFrame(() => requestAnimationFrame(removeScrollStyles))
+    requestAnimationFrame(() => requestAnimationFrame(scrollStyles.remove))
   }
 
-  void transition.finished.then(removeAfterSuccess, removeScrollStyles)
+  void transition.finished.then(settleAfterSuccess, scrollStyles.remove)
 }
 
 function getRuntimeNavigation(

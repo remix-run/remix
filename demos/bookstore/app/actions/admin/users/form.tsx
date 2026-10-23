@@ -48,7 +48,12 @@ export function AdminUserFormPage(handle: Handle<AdminUserFormPageProps>) {
             <button type="submit" class="btn">
               {submitLabel}
             </button>
-            <a href={cancelHref} class="btn btn-secondary" mix={css({ marginLeft: '0.5rem' })}>
+            <a
+              data-rmx-prefetch="intent"
+              href={cancelHref}
+              class="btn btn-secondary"
+              mix={css({ marginLeft: '0.5rem' })}
+            >
               Cancel
             </a>
           </RestfulForm>

@@ -305,6 +305,10 @@ source to keep it in sync with the browser URL. If a specified target does not m
 the browser performs a document navigation. A supplied `data-rmx-src` must still be a valid same-origin
 URL regardless of the target. Invalid or cross-origin values also disable interception.
 
+Add `data-rmx-prefetch="intent"` or `data-rmx-prefetch="viewport"` to prefetch that same source and
+target before navigation. [Interactivity](/interactivity/#prefetch-links-before-navigation) covers
+both triggers and the imperative `prefetch()` API.
+
 Add `data-rmx-history="replace"` when it should replace the current history entry. Use
 `data-rmx-document` when a same-origin link must perform an ordinary document navigation instead.
 

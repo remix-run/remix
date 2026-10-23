@@ -8,9 +8,14 @@
       "npm": "node_modules",
       "packages": "packages"
     },
-    "allowFiles": ["demos/bookstore/app/routes.ts", "demos/bookstore/app/**/public/**"],
+    "allowFiles": [
+      "demos/bookstore/app/routes.ts",
+      "demos/bookstore/app/**/public/**",
+      "demos/bookstore/app/images/*.png"
+    ],
     "allowPackages": ["remix"],
-    "denyFiles": ["demos/bookstore/app/**/*.test.*"]
+    "denyFiles": ["demos/bookstore/app/**/*.test.*"],
+    "files": { "extensions": [".png"] }
   },
   "db": {
     "adapter": {
