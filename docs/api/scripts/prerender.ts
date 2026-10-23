@@ -3,6 +3,8 @@ import * as util from 'node:util'
 import { discoverPublicModuleHrefs } from 'remix-docs-shared/prerender/public-modules'
 import { prerender } from 'remix-docs-shared/prerender/run'
 
+import { createDocsContextLoader } from '../app/data/docs.ts'
+import { HOME_PAGE_ID } from '../app/data/registry.ts'
 import { createApiRouter, getDefaultVersions } from '../app/router.ts'
 import { routes, withVersion } from '../app/routes.ts'
 import { createAssetServer } from '../app/assets.ts'
@@ -44,7 +46,31 @@ const publicModuleHrefs = await discoverPublicModuleHrefs(assetServer, [
   sharedDir,
 ])
 const homePath = withVersion(routes.home.href(), buildVersion)
-const paths = [homePath, withVersion(routes.lookup.href(), buildVersion), ...publicModuleHrefs]
+// List every docs page rather than relying on the crawl, which stops at nofollow package pages.
+const registry = (await createDocsContextLoader()()).getRegistry(buildVersion)
+const pagePaths = Object.values(registry.pages).flatMap((page) => {
+  if (page.id === HOME_PAGE_ID) return []
+  if (!page.docFile) return [page.path]
+  return [page.path, withVersion(routes.api.markdown.href({ slug: page.id }), buildVersion)]
+})
+// Docs used to live under `/api/`. Until api.remix.run redirects them, write a redirect page at
+// each old URL and a copy of the Markdown at each old `.md` URL.
+const legacyPaths = Object.values(registry.pages).flatMap((page) => {
+  if (!page.docFile || page.docFile.kind === 'demo') return []
+  let { docsPath } = page.docFile
+  let slugs =
+    page.docFile.kind === 'package'
+      ? [`${docsPath}/overview/`, `${docsPath}/overview.md`]
+      : [`${docsPath}/`, `${docsPath}.md`]
+  return slugs.map((slug) => withVersion(routes.legacy.href({ slug }), buildVersion))
+})
+const paths = [
+  homePath,
+  withVersion(routes.lookup.href(), buildVersion),
+  ...publicModuleHrefs,
+  ...pagePaths,
+  ...legacyPaths,
+]
 const pagefindSiteDir = buildVersion ? path.join(outputDir, buildVersion) : outputDir
 
 await prerender(router, {
@@ -59,5 +85,6 @@ await prerender(router, {
     ignorePageNofollow: buildVersion ? (pathname) => pathname === homePath : undefined,
   },
   pagefindSiteDir,
+  assetsDir: '_assets',
   onFinally: () => assetServer.close(),
 })

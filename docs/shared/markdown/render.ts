@@ -1,4 +1,4 @@
-import type { Element, Root as HastRoot } from 'hast'
+import type { Element, ElementContent, Root as HastRoot } from 'hast'
 import type { Root } from 'mdast'
 import rehypeStringify from 'rehype-stringify'
 import remarkRehype from 'remark-rehype'
@@ -6,6 +6,7 @@ import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
 
 import { rehypeHighlightCode } from './code-blocks.ts'
+import { groupMarkdownSections } from './sections.ts'
 import type { MarkdownHtmlOptions } from './types.ts'
 
 export async function renderMarkdownHtml(
@@ -14,12 +15,38 @@ export async function renderMarkdownHtml(
 ): Promise<string> {
   let processor = unified()
     .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeWrapSections, { sections: options.sections ?? false })
     .use(rehypeLinkHeadings)
     .use(rehypeHighlightCode, options.highlightCode ?? {})
     .use(rehypeTransformLinks, { transformLink: options.transformLink })
     .use(rehypeStringify, { allowDangerousHtml: true })
   let hast = await processor.run(root)
   return processor.stringify(hast)
+}
+
+function rehypeWrapSections(options: { sections: boolean }) {
+  return function transform(tree: HastRoot): void {
+    if (!options.sections) {
+      return
+    }
+
+    let { intro, sections } = groupMarkdownSections(
+      tree.children,
+      (node) => node.type === 'element' && node.tagName === 'h2',
+    )
+
+    tree.children = [
+      ...intro,
+      ...sections.map(
+        (children): Element => ({
+          type: 'element',
+          tagName: 'section',
+          properties: { class: 'docs-section' },
+          children: children.filter((child): child is ElementContent => child.type !== 'doctype'),
+        }),
+      ),
+    ]
+  }
 }
 
 function rehypeLinkHeadings() {

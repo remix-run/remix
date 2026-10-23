@@ -4,6 +4,7 @@ import {
   hasRemixPackage,
   mapToRemixPackage,
 } from '../../app/utils/package-manifest.ts'
+import { getDocsUrlPath } from '../../app/routes.ts'
 import { MDN_SYMBOLS } from '../../app/utils/symbols.ts'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
 
@@ -114,8 +115,8 @@ export type DocumentedVariableFunction = BaseDocumentedAPI & {
   example: string | undefined
 }
 
-// Path docs are served at on the website
-export const WEBSITE_DOCS_PATH = '/api'
+// Path docs are served at on the website (the site root)
+export const WEBSITE_DOCS_PATH = ''
 
 // Convert a typedoc reflection for a given node into a documentable instance
 export function getDocumentedAPI(fullName: string, node: typedoc.Reflection): DocumentedAPI {
@@ -804,7 +805,7 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
           }
 
           let path = getApiFilePath(target.getFriendlyFullName(), type).replace(/\.md$/, '')
-          href = `${WEBSITE_DOCS_PATH}/${path}/`
+          href = `${WEBSITE_DOCS_PATH}/${getDocsUrlPath(path)}/`
           transformed = `[\`${part.text}\`](${href})`
         } else {
           warn(`Missing/invalid target for @link content: ${part.text}; using plain text`)

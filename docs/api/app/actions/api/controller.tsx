@@ -1,18 +1,18 @@
 import { createController } from 'remix/router'
 import { clientEntry } from 'remix/component'
 
-import type { DocsContext, Versions } from '../../data/docs.ts'
+import type { DocsContext } from '../../data/docs.ts'
 import { loadDemoComponent, renderDemoSource } from '../../data/demos.tsx'
 import { renderMarkdownFile } from '../../data/markdown.ts'
+import { getDocPage, getNavChain } from '../../data/registry.ts'
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
 import { fileResponse } from '../file-response.ts'
-import { DemoContent, MarkdownContent, NotFound } from './page.tsx'
+import { DemoContent, MarkdownContent, NotFound, PackageIndex } from './page.tsx'
 
 interface ApiControllerOptions {
   activeVersion?: string
   getDocsContext(): Promise<DocsContext>
-  versions: Versions
 }
 
 export function createApiController(options: ApiControllerOptions) {
@@ -21,9 +21,9 @@ export function createApiController(options: ApiControllerOptions) {
       async document({ params, render }) {
         let docsContext = await options.getDocsContext()
         let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
+        let registry = docsContext.getRegistry(options.activeVersion)
         let docProps = {
-          registry: docsContext.getRegistry(options.activeVersion),
-          versions: options.versions,
+          registry,
           slug: params.slug,
           activeVersion: options.activeVersion,
         }
@@ -54,6 +54,15 @@ export function createApiController(options: ApiControllerOptions) {
           return render(
             <Document {...docProps} sourceUrl={source} headings={headings}>
               <MarkdownContent html={html} />
+            </Document>,
+          )
+        }
+
+        let node = getNavChain(registry, getDocPage(registry, params.slug)?.navId).at(-1)
+        if (node) {
+          return render(
+            <Document {...docProps}>
+              <PackageIndex registry={registry} node={node} />
             </Document>,
           )
         }

@@ -124,7 +124,7 @@ A "demo with code" shows a live, hydrated component next to its own highlighted 
    export const handler = demoWithCode(demoUrl, Counter)
    ```
 
-3. **The shared shell** — `app/actions/docs/examples/demo-with-code.tsx` exports `demoWithCode` (which loads and highlights the `.demo.tsx` source, hydrates the component via `clientEntry`, and renders the preview + source) and the `Demo` component that lays them out. You don't touch this per example.
+3. **The shared shell** — `app/actions/docs/examples/demo-with-code.tsx` exports `demoWithCode` (which loads and highlights the `.demo.tsx` source, hydrates the component via `clientEntry`, and renders the preview + source) and the `Demo` component that lays them out with the shared `DocsDemo`, with the source collapsed behind a "Show code" button. You don't touch this per example.
 
 The named export matters: `demoWithCode` resolves the client entry from the function's `name`, so the export name and the function name must be the same token (e.g. `export function Counter`), not a `default` export.
 

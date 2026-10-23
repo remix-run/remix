@@ -1,7 +1,9 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { unsafeHTML } from 'remix/component'
+import { DocsDemo } from 'remix-docs-shared/ui/demo'
 
 import type { DemoDocFile } from '../../data/demos.tsx'
+import type { DocsRegistry, NavNode } from '../../data/registry.ts'
 
 export function MarkdownContent(handle: Handle<{ html: string }>) {
   return () => <div innerHTML={unsafeHTML(handle.props.html)} />
@@ -24,10 +26,7 @@ export function DemoContent(
           <p>{demo.description}</p>
         </header>
 
-        <div class="api-demo__frame">
-          <div class="api-demo__preview">{children}</div>
-          <div class="api-demo__source" innerHTML={unsafeHTML(sourceHtml)} />
-        </div>
+        <DocsDemo sourceHtml={sourceHtml}>{children}</DocsDemo>
       </div>
     )
   }
@@ -42,4 +41,54 @@ export function NotFound(handle: Handle<{ slug: string }>) {
       </p>
     </div>
   )
+}
+
+export function PackageIndex(handle: Handle<{ registry: DocsRegistry; node: NavNode }>) {
+  return () => {
+    let { registry, node } = handle.props
+    let hasExports = node.pageIds.length > 0
+
+    return (
+      <>
+        {hasExports ? (
+          <>
+            <p>
+              <code>{node.id}</code> exports:
+            </p>
+            <ul>
+              {node.pageIds.map((pageId) => (
+                <li key={pageId}>
+                  <a href={registry.pages[pageId].path}>
+                    <code>{registry.pages[pageId].navLabel}</code>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+        {node.children.length > 0 ? (
+          <>
+            <p>
+              {hasExports ? (
+                'Nested import paths:'
+              ) : (
+                <>
+                  <code>{node.id}</code> has no exports of its own. Import one of these instead:
+                </>
+              )}
+            </p>
+            <ul>
+              {node.children.map((child) => (
+                <li key={child.id}>
+                  <a href={registry.pages[child.homePageId].path}>
+                    <code>{child.id}</code>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+      </>
+    )
+  }
 }

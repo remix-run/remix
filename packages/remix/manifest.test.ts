@@ -310,11 +310,7 @@ describe('manifest', () => {
     let sessionReadmePath = path.join(__dirname, 'src', 'session', 'README.md')
 
     assert.equal(
-      rewriteLinksToRemixReadmes(
-        '[Router](https://api.remix.run/api/remix/router/overview/)',
-        guidePath,
-        mappings,
-      ),
+      rewriteLinksToRemixReadmes('[Router](https://api.remix.run/router/)', guidePath, mappings),
       '[Router](../src/fetch-router/README.md)',
     )
     assert.equal(
@@ -327,7 +323,7 @@ describe('manifest', () => {
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '[Router][router]\n\n[router]: https://api.remix.run/api/remix/router/overview/#middleware',
+        '[Router][router]\n\n[router]: https://api.remix.run/router/#middleware',
         guidePath,
         mappings,
       ),
@@ -335,19 +331,19 @@ describe('manifest', () => {
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+        '`[Router](https://api.remix.run/router/)`\n\n```md\n[Router](https://api.remix.run/router/)\n```',
         guidePath,
         mappings,
       ),
-      '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+      '`[Router](https://api.remix.run/router/)`\n\n```md\n[Router](https://api.remix.run/router/)\n```',
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+        '[createTestServer](https://api.remix.run/node-fetch-server/test/function/createTestServer/)',
         guidePath,
         mappings,
       ),
-      '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+      '[createTestServer](https://api.remix.run/node-fetch-server/test/function/createTestServer/)',
     )
   })
 
