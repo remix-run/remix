@@ -2,6 +2,21 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Reduce server rendering work by caching `getScriptEntry()` metadata between calls. A warm lookup now takes about 3 µs instead of 210 µs and no longer touches the filesystem. Watched file changes and browser HMR events clear the cache, failed requests can be retried, and each caller receives a separate copy of the metadata. ([#12005](https://github.com/remix-run/remix/pull/12005))
+
+- Ensure script entries requested after an HMR update use current cache-busting URLs. ([#11980](https://github.com/remix-run/remix/pull/11980))
+
+- Avoid competing frame refreshes when a browser HMR update requires a full page reload. Server updates now wait for pending browser updates before refreshing server-rendered content. ([#11930](https://github.com/remix-run/remix/pull/11930))
+
+- Reduce rebuild work in watch mode. When a watched script changes, modules that import it are no longer transformed again because their own source did not change, and barrel file import analysis reuses its results for unchanged modules instead of parsing them again. In a benchmark that edits a widely imported module, each edit now runs about 2 transforms instead of 38 and rebuilds in 21 ms instead of 30 ms. ([#12010](https://github.com/remix-run/remix/pull/12010))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.1`](https://github.com/remix-run/remix/releases/tag/headers@1.0.1)
+
 ## v1.0.0
 
 ### Major Changes
