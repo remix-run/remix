@@ -1,0 +1,1 @@
+`ContentRange` now rejects ranges whose end precedes their start or reaches a known resource size, including ranges made invalid by field mutation. Initializers with an incomplete pair of bounds continue to serialize as unsatisfied ranges (see #12040).
