@@ -18,6 +18,8 @@ function compareRangeBounds(left: string, right: string): number {
 function parseRangeBound(value: string): number | undefined {
   if (value === '') return undefined
 
+  // RFC 9110 requires handling large decimal bounds without integer overflow.
+  // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2
   let significantValue = normalizeRangeBound(value)
   if (
     significantValue.length > maxRangeBound.length ||
