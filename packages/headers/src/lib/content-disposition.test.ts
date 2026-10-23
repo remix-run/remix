@@ -113,6 +113,7 @@ describe('ContentDisposition', () => {
   it('round trips backslashes in attribute values', () => {
     let filename = String.raw`one\two.txt`
     let value = ContentDisposition.from({ type: 'attachment', filename }).toString()
+    assert.equal(value, String.raw`attachment; filename="one\\two.txt"`)
     assert.equal(ContentDisposition.from(value).filename, filename)
   })
 
