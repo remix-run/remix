@@ -49,6 +49,8 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
    * @returns `true` if the tag is present in the header (or the header contains a wildcard), `false` otherwise
    */
   matches(tag: string): boolean {
+    // If-None-Match requires weak comparison, ignoring the W/ marker:
+    // https://httpwg.org/specs/rfc9110.html#field.if-none-match
     let normalizedTag = quoteEtag(tag)
     let opaqueTag = normalizedTag.startsWith('W/') ? normalizedTag.slice(2) : normalizedTag
 
