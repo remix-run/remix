@@ -25,6 +25,7 @@ import { ApiNav } from '../actions/public/api-nav.tsx'
 import type { ApiNavPanel } from '../actions/public/api-nav.tsx'
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 import { routes, withVersion } from '../routes.ts'
+import remixPackage from '../../../../packages/remix/package.json' with { type: 'json' }
 
 const pagefindModulePath = path.resolve(
   import.meta.dirname,
@@ -51,7 +52,7 @@ export function Document(
     let navigationLinks = createDocsNavigationLinks()
     navigationLinks.set('api', {
       href: routes.home.href({ version: activeVersion }),
-      label: 'API',
+      label: 'Docs',
       current: 'page',
     })
 
@@ -69,7 +70,7 @@ export function Document(
           <DocsShell
             header={
               <DocsHeader
-                brandLabel="Remix API Documentation"
+                brandLabel="Remix Docs"
                 navigationLinks={[...navigationLinks.values()]}
                 compactSearch
                 searchEnabled={searchEnabled}
@@ -140,7 +141,7 @@ function Head(
           // demo links are examples rather than docs routes.
           <meta data-rmx-key="docs-robots" name="robots" content="nofollow" />
         ) : null}
-        <title data-rmx-key="docs-title">{`${page.title || 'Remix'} | Remix API Documentation`}</title>
+        <title data-rmx-key="docs-title">{`${page.title || 'Remix'} | Remix Docs`}</title>
         {page.docFile ? (
           <link
             data-rmx-key="docs-markdown-alternate"
@@ -327,7 +328,14 @@ function SidebarContent(handle: Handle<{ registry: DocsRegistry; page: PageDefin
       }),
     ]
 
-    return <ApiNav panels={panels} />
+    return (
+      <>
+        <p class="docs-nav-heading docs-nav-title">
+          Remix <span class="docs-nav-version">v{remixPackage.version}</span>
+        </p>
+        <ApiNav panels={panels} />
+      </>
+    )
   }
 }
 

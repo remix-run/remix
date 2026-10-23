@@ -55,7 +55,7 @@
   border: 1px solid var(--rmx-color-border-subtle);
   border-radius: 999px;
   background: var(--rmx-surface-lvl1);
-  box-shadow: 0 2px 6px rgb(0 0 0 / 8%);
+  box-shadow: var(--docs-floating-button-shadow);
   color: var(--rmx-color-text-secondary);
   font: inherit;
   font-size: var(--docs-font-size-ui);

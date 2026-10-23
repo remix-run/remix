@@ -71,7 +71,10 @@ html {
   }
 
   .api-nav {
-    --api-nav-panel-height: calc(100dvh - var(--site-header-height) - 44px);
+    /* The window below the header, minus the sidebar title and its gap. */
+    --api-nav-panel-height: calc(
+      100dvh - var(--site-header-height) - 44px - var(--docs-nav-item-height) - 8px
+    );
     margin-inline: calc(-1 * var(--api-nav-pad-start)) calc(-1 * var(--api-nav-pad-end));
   }
 

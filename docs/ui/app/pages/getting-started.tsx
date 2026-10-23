@@ -27,8 +27,7 @@ export default function GettingStarted() {
   return () => {
     let content = (
       <>
-        <header class="docs-page-header ui-landing-header">
-          <p class="docs-page-eyebrow">Remix UI</p>
+        <header class="docs-page-header">
           <h1 class="rmx-page-title">Unstyled, accessible UI patterns and animation for Remix</h1>
           <p class="docs-page-description">
             Compose accessible behavior directly onto your own elements with Remix's mixins feature,

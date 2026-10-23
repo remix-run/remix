@@ -12,7 +12,7 @@ export interface DocumentProps {
   searchEnabled: boolean
 }
 
-const DEFAULT_TITLE = 'Remix Docs'
+const DEFAULT_TITLE = 'Remix Guides'
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {

@@ -1,5 +1,7 @@
 import type { Handle } from 'remix/component'
 
+import remixPackage from '../../../../../packages/remix/package.json' with { type: 'json' }
+
 import type { DocsNavigationItem } from './markdown-chapters.tsx'
 
 type ChapterNavigationProps = {
@@ -10,7 +12,9 @@ type ChapterNavigationProps = {
 export function ChapterNavigationContent(handle: Handle<ChapterNavigationProps>) {
   return () => (
     <>
-      <div class="docs-nav-heading docs-chapters-nav__heading">Guide chapters</div>
+      <p class="docs-nav-heading docs-nav-title docs-chapters-nav__heading">
+        Remix Guides <span class="docs-nav-version">v{remixPackage.version}</span>
+      </p>
       <ol class="docs-chapters-nav__list">
         {handle.props.chapters.map((chapter) => {
           let label = (

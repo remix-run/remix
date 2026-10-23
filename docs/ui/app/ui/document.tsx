@@ -98,8 +98,8 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
 function Sidebar(handle: Handle<{ pages: UiPage[]; currentPage?: PageMeta }>) {
   return () => (
     <>
-      <p class="docs-nav-heading ui-nav-heading">
-        Remix UI <span class="ui-nav-version">v{uiPackage.version}</span>
+      <p class="docs-nav-heading docs-nav-title">
+        Remix UI <span class="docs-nav-version">v{uiPackage.version}</span>
       </p>
       <a
         class="docs-nav-item ui-nav-link ui-nav-start"

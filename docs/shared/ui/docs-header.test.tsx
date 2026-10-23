@@ -18,7 +18,7 @@ describe('createDocsNavigationLinks', () => {
       [...links],
       [
         ['guides', { href: 'https://guides.remix.run/', label: 'Guides' }],
-        ['api', { href: 'https://docs.remix.run', label: 'API' }],
+        ['api', { href: 'https://docs.remix.run', label: 'Docs' }],
         ['github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' }],
         ['blog', { href: 'https://remix.run/blog', label: 'Blog' }],
         ['newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' }],
@@ -30,13 +30,13 @@ describe('createDocsNavigationLinks', () => {
 
   it('retains order when a caller replaces an existing link', () => {
     let links = createDocsNavigationLinks()
-    links.set('api', { href: '/v3', label: 'API', current: 'page' })
+    links.set('api', { href: '/v3', label: 'Docs', current: 'page' })
 
     assert.deepEqual(
       [...links.values()].map((link) => link.label),
-      ['Guides', 'API', 'GitHub', 'Blog', 'Newsletter', 'Jam', 'Store'],
+      ['Guides', 'Docs', 'GitHub', 'Blog', 'Newsletter', 'Jam', 'Store'],
     )
-    assert.deepEqual(links.get('api'), { href: '/v3', label: 'API', current: 'page' })
+    assert.deepEqual(links.get('api'), { href: '/v3', label: 'Docs', current: 'page' })
   })
 })
 

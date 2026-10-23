@@ -41,7 +41,7 @@ const docsFooterCss = css({
   width: '100%',
   gap: '16px',
   padding: '48px 24px',
-  color: 'var(--docs-footer-foreground)',
+  color: 'var(--rmx-color-text-secondary)',
   fontSize: 'var(--rmx-font-size-md)',
   lineHeight: '24px',
   textAlign: 'center',
@@ -68,7 +68,7 @@ const footerLinksCss = css({
   alignItems: 'center',
   justifyContent: 'center',
   gap: '24px',
-  color: 'var(--docs-footer-link-foreground)',
+  color: 'var(--rmx-color-text-secondary)',
   flexWrap: 'wrap',
   [media.md]: {
     justifyContent: 'flex-start',

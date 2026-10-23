@@ -23,7 +23,7 @@ export type DocsNavigationLinkId =
 export function createDocsNavigationLinks(): Map<DocsNavigationLinkId, DocsNavigationLink> {
   return new Map<DocsNavigationLinkId, DocsNavigationLink>()
     .set('guides', { href: 'https://guides.remix.run/', label: 'Guides' })
-    .set('api', { href: 'https://docs.remix.run', label: 'API' })
+    .set('api', { href: 'https://docs.remix.run', label: 'Docs' })
     .set('github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' })
     .set('blog', { href: 'https://remix.run/blog', label: 'Blog' })
     .set('newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' })
@@ -295,9 +295,9 @@ const searchShortcutKeyCss = css({
   height: '16px',
   padding: 0,
   placeItems: 'center',
-  border: '1px solid rgb(0 0 0 / 2%)',
+  border: '1px solid var(--docs-key-border)',
   borderRadius: 'var(--rmx-radius-sm)',
-  color: '#9ca3b0',
+  color: 'var(--rmx-color-text-muted)',
   background: 'var(--rmx-surface-lvl0)',
   fontFamily: 'var(--rmx-font-family-mono)',
   fontSize: 'var(--docs-font-size-label)',
@@ -409,7 +409,7 @@ const navigationCss = css({
   border: 0,
   borderBottom: '1px solid var(--rmx-color-border-subtle)',
   background: 'var(--docs-shell-background)',
-  boxShadow: '0 12px 24px rgb(0 0 0 / 12%)',
+  boxShadow: 'var(--docs-menu-shadow)',
   fontSize: 'var(--rmx-font-size-md)',
   flexWrap: 'nowrap',
   [media.sm]: {
@@ -455,7 +455,8 @@ const mobileNavigationCss = css({
 })
 
 const navigationLinkCss = css({
-  color: 'var(--docs-nav-link)',
+  color: 'var(--docs-header-link)',
+  opacity: 0.8,
   textDecoration: 'none',
   whiteSpace: 'nowrap',
   display: 'flex',
@@ -463,8 +464,9 @@ const navigationLinkCss = css({
   minHeight: '44px',
   padding: '8px var(--docs-nav-item-inset)',
   borderRadius: 'var(--rmx-radius-md)',
-  '&:hover': {
-    color: 'var(--docs-nav-link-hover)',
+  '&:hover, &:focus-visible, &[aria-current]': {
+    color: 'var(--docs-header-link-active)',
+    opacity: 1,
   },
   '&:hover, &:focus-visible': {
     background: 'var(--docs-nav-hover-background)',

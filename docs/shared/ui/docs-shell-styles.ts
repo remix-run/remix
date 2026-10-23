@@ -61,7 +61,7 @@ export const navigationCss = css({
   overscrollBehaviorY: 'contain',
   visibility: 'hidden',
   background: 'var(--docs-shell-background)',
-  boxShadow: '0 12px 32px rgb(0 0 0 / 18%)',
+  boxShadow: 'var(--docs-panel-shadow)',
   pointerEvents: 'none',
   ':root[data-docs-mobile-panel="navigation"] &': {
     visibility: 'visible',
@@ -124,7 +124,7 @@ export const mobileNavigationButtonCss = css({
   minHeight: '36px',
   flexShrink: 1,
   paddingInline: 'var(--rmx-space-sm)',
-  color: 'var(--docs-nav-link)',
+  color: 'var(--rmx-color-text-link)',
   fontSize: 'var(--rmx-font-size-sm)',
   '&[aria-expanded="true"]': {
     background: 'var(--docs-nav-hover-background)',
@@ -154,7 +154,7 @@ export const mobileNavigationBackdropCss = css({
   padding: 0,
   visibility: 'hidden',
   border: 0,
-  background: 'rgb(0 0 0 / 32%)',
+  background: 'var(--docs-backdrop)',
   pointerEvents: 'none',
   ':root[data-docs-mobile-panel] &': {
     visibility: 'visible',
@@ -219,7 +219,7 @@ export const secondaryNavigationCss = css({
   overflowY: 'auto',
   visibility: 'hidden',
   background: 'var(--docs-shell-background)',
-  boxShadow: '0 12px 32px rgb(0 0 0 / 18%)',
+  boxShadow: 'var(--docs-panel-shadow)',
   pointerEvents: 'none',
   ':root[data-docs-mobile-panel="secondary"] &': {
     visibility: 'visible',

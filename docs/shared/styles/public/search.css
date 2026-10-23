@@ -78,7 +78,7 @@ pagefind-modal {
 }
 
 :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-heading-link:hover {
-  color: var(--docs-nav-link);
+  color: var(--rmx-color-text-link);
   text-decoration: none;
 }
 
@@ -87,12 +87,12 @@ pagefind-modal {
 }
 
 :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-result-link {
-  color: var(--docs-nav-link);
+  color: var(--rmx-color-text-link);
   text-decoration: none;
 }
 
 :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-result-link:hover {
-  color: var(--docs-nav-link-hover);
+  color: var(--rmx-color-text-link-hover);
   text-decoration: none;
 }
 
@@ -107,9 +107,9 @@ pagefind-modal {
   min-width: 16px;
   height: 16px;
   padding-inline: 3px;
-  border: 1px solid rgb(0 0 0 / 2%);
+  border: 1px solid var(--docs-key-border);
   border-radius: var(--rmx-radius-sm);
-  color: #9ca3b0;
+  color: var(--rmx-color-text-muted);
   background: var(--rmx-surface-lvl0);
   box-shadow: none;
   font-family: var(--rmx-font-family-mono);

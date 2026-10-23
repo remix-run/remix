@@ -57,7 +57,9 @@ type DocsChapterProps = {
 export function DocsDocument(handle: Handle<DocsDocumentProps>) {
   return () => {
     let title =
-      handle.props.title === 'Remix Docs' ? 'Remix Docs' : `${handle.props.title} | Remix Docs`
+      handle.props.title === 'Remix Guides'
+        ? 'Remix Guides'
+        : `${handle.props.title} | Remix Guides`
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
 
     return (
@@ -70,7 +72,7 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
         <DocsShell
           header={
             <DocsHeader
-              brandLabel="Remix Docs"
+              brandLabel="Remix Guides"
               navigationLinks={[...navigationLinks.values()]}
               searchEnabled={searchEnabled}
             />

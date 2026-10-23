@@ -1,17 +1,8 @@
-.docs-chapters-nav__heading {
-  display: flex;
-  align-items: center;
-  height: var(--docs-nav-item-height);
-  margin: 0;
-  font-family: var(--rmx-font-family-sans);
-  font-size: var(--docs-font-size-ui);
-}
-
 .docs-chapters-nav__list {
   display: flex;
   flex-direction: column;
   gap: var(--docs-nav-item-gap);
-  margin: var(--docs-nav-item-gap) 0 0;
+  margin: 0;
   padding: 0;
   overflow: visible;
   font-size: var(--docs-font-size-ui);
@@ -65,6 +56,8 @@
 @media (width >= 900px) and (height <= 780px) {
   .docs-chapters-nav__heading {
     height: 28px;
+    margin-bottom: var(--docs-nav-item-gap);
+    line-height: 28px;
   }
 
   .docs-chapters-nav__list {

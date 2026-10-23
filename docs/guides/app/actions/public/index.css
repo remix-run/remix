@@ -19,17 +19,6 @@
   margin-bottom: 0;
 }
 
-.docs-chapter-eyebrow {
-  margin: 0;
-  color: var(--rmx-color-eyebrow);
-  font-family: var(--rmx-font-family-sans);
-  font-size: var(--docs-font-size-label);
-  font-weight: var(--rmx-font-weight-bold);
-  line-height: normal;
-  letter-spacing: var(--docs-letter-spacing-label);
-  text-transform: uppercase;
-}
-
 .docs-index__cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 320px));

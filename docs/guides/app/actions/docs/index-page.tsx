@@ -21,13 +21,12 @@ type DocsIndexPageProps = {
 function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
   return () => (
     <DocsDocument
-      title="Remix Docs"
+      title="Remix Guides"
       description="Guides, explanations, examples, and tutorials for learning Remix."
       chapters={handle.props.navigation}
     >
       <div class="docs-index">
         <header class="docs-index__header">
-          <p class="docs-chapter-eyebrow docs-accent">Remix Guides</p>
           <h1 class="rmx-page-title">Learn Remix from the request up.</h1>
           <p class="rmx-page-body">
             These guide chapters introduce Remix at a high level, then progressively deepen into
