@@ -146,7 +146,7 @@ function GetStartedCard() {
         })}
       >
         <li>
-          <CardLink href="https://api.remix.run" icon={<AtomIcon />} label="Remix API" />
+          <CardLink href="https://docs.remix.run" icon={<AtomIcon />} label="Remix API" />
         </li>
         <li>
           <CardLink

@@ -35,7 +35,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
             production, examples, and tutorials.
           </p>
           <p class="rmx-page-body">
-            API reference lives separately at <a href="https://api.remix.run">api.remix.run</a>.
+            API reference lives separately at <a href="https://docs.remix.run">docs.remix.run</a>.
           </p>
         </header>
 
