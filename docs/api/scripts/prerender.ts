@@ -50,15 +50,26 @@ const homePath = withVersion(routes.home.href(), buildVersion)
 const registry = (await createDocsContextLoader()()).getRegistry(buildVersion)
 const pagePaths = Object.values(registry.pages).flatMap((page) => {
   if (page.id === HOME_PAGE_ID) return []
-  return page.docFile
-    ? [page.path, withVersion(routes.api.markdown.href({ slug: page.id }), buildVersion)]
-    : [page.path]
+  if (!page.docFile) return [page.path]
+  return [page.path, withVersion(routes.api.markdown.href({ slug: page.id }), buildVersion)]
+})
+// Docs used to live under `/api/`. Until api.remix.run redirects them, write a redirect page at
+// each old URL and a copy of the Markdown at each old `.md` URL.
+const legacyPaths = Object.values(registry.pages).flatMap((page) => {
+  if (!page.docFile || page.docFile.kind === 'demo') return []
+  let { docsPath } = page.docFile
+  let slugs =
+    page.docFile.kind === 'package'
+      ? [`${docsPath}/overview/`, `${docsPath}/overview.md`]
+      : [`${docsPath}/`, `${docsPath}.md`]
+  return slugs.map((slug) => withVersion(routes.legacy.href({ slug }), buildVersion))
 })
 const paths = [
   homePath,
   withVersion(routes.lookup.href(), buildVersion),
   ...publicModuleHrefs,
   ...pagePaths,
+  ...legacyPaths,
 ]
 const pagefindSiteDir = buildVersion ? path.join(outputDir, buildVersion) : outputDir
 

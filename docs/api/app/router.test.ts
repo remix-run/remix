@@ -1,3 +1,7 @@
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
+
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
@@ -161,6 +165,36 @@ describe('createApiRouter()', () => {
     assert.match(await versionedResponse.text(), /Could not find a document at:/)
   })
 
+  it('forwards legacy /api/ URLs to the root docs URLs and serves old Markdown URLs', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-api-legacy-'))
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+    let overview = packageFile('remix/router')
+    overview.path = path.join(directory, 'overview.md')
+    fs.writeFileSync(overview.path, '# remix/router\n')
+    let router = createApiRouter({
+      assetServer,
+      docsContext: { ...(await getTestDocsContext()), docFiles: [overview] },
+      versions: ['v1.2.3'],
+    })
+
+    let [page, versionedPage, markdown] = await Promise.all([
+      router.fetch(new Request('http://localhost/api/@remix-run/ui/tabs/overview/')),
+      router.fetch(new Request('http://localhost/v1.2.3/api/remix/router/overview/')),
+      router.fetch(new Request('http://localhost/api/remix/router/overview.md')),
+    ])
+
+    assert.equal(page.status, 200)
+    assert.match(await page.text(), /http-equiv="refresh" content="0; url=\/ui\/tabs\/"/)
+    assert.match(
+      await versionedPage.text(),
+      /http-equiv="refresh" content="0; url=\/v1\.2\.3\/router\/"/,
+    )
+    assert.equal(markdown.status, 200)
+    assert.equal(await markdown.text(), '# remix/router\n')
+  })
+
   it('serves only the configured asset URL space', async (t) => {
     let assetServer = createAssetServer('v1.2.3')
     t.after(() => assetServer.close())
@@ -271,6 +305,19 @@ describe('getApiRouteHref()', () => {
     assert.equal(getApiRouteHref('/remix-run/ui/tabs/', undefined), '/ui/tabs/')
     assert.equal(getApiRouteHref('/remix/', undefined), '/remix/')
   })
+
+  it('rewrites legacy /api/ hrefs to root docs hrefs', () => {
+    assert.equal(getApiRouteHref('/api/@remix-run/ui/tabs/overview', 'v1.2.3'), '/v1.2.3/ui/tabs/')
+    assert.equal(getApiRouteHref('/api/remix/overview.md', undefined), '/remix.md')
+    assert.equal(getApiRouteHref('/api/remix/overview/', undefined), '/remix/')
+  })
+
+  it('keeps overview segments in current docs hrefs', () => {
+    assert.equal(
+      getApiRouteHref('/remix/example/function/overview', undefined),
+      '/example/function/overview/',
+    )
+  })
 })
 
 describe('buildRegistry()', () => {
@@ -363,17 +410,20 @@ function packageFile(pkg: string): DocFile {
     type: 'package',
     name: pkg,
     package: pkg,
+    docsPath: pkg,
     urlPath: getDocsUrlPath(pkg),
   }
 }
 
 function apiFile(pkg: string, type: 'class' | 'function' | 'type', name: string): DocFile {
+  let docsPath = `${pkg}/${type}/${name}`
   return {
     kind: 'api',
     path: '',
     type,
     name,
     package: pkg,
-    urlPath: getDocsUrlPath(`${pkg}/${type}/${name}`),
+    docsPath,
+    urlPath: getDocsUrlPath(docsPath),
   }
 }

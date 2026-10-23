@@ -6,12 +6,13 @@ import { createController } from 'remix/router'
 import type { DocsContext, Versions } from '../data/docs.ts'
 import { getVersionedLookupHref } from '../data/lookup.ts'
 import { renderMarkdownFile } from '../data/markdown.ts'
-import { routes } from '../routes.ts'
+import { getApiRouteHref, routes, withVersion } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import type { DocsAssetServer } from '../assets.ts'
 import { MarkdownContent } from './api/page.tsx'
 import { fileResponse } from './file-response.ts'
 import { VersionList } from './home.tsx'
+import { LegacyRedirect } from './legacy-redirect.tsx'
 
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
 const markdownDir = path.join(apiDir, 'build', 'md')
@@ -58,6 +59,23 @@ export function createRootController(options: RootControllerOptions) {
             <VersionList versions={options.versions} activeVersion={options.activeVersion} />
           </Document>,
         )
+      },
+      async legacy({ request, params, render }) {
+        let href = getApiRouteHref(`/api/${params.slug}`, options.activeVersion)
+        // Paths that aren't docs (they come back unchanged) go to the home page.
+        if (!href || href.startsWith(withVersion('/api/', options.activeVersion))) {
+          href = withVersion(routes.home.href(), options.activeVersion)
+        }
+        // A static host can't redirect, so old Markdown URLs serve the file itself.
+        if (href.endsWith('.md')) {
+          let slug = href.slice(withVersion('/', options.activeVersion).length, -'.md'.length)
+          let docsContext = await options.getDocsContext()
+          let docFile = docsContext.docFiles.find((file) => file.urlPath === slug)
+          return docFile && docFile.kind !== 'demo'
+            ? fileResponse(request, docFile.path)
+            : new Response('Not Found', { status: 404 })
+        }
+        return render(<LegacyRedirect href={href} />)
       },
       async lookup({ request }) {
         let jsonPath = path.join(markdownDir, 'api.json')

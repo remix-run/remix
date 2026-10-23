@@ -28,6 +28,7 @@ export type DemoDocFile = {
   slug: string
   source: string
   sourceUrl: string
+  docsPath: string
   urlPath: string
 }
 
@@ -98,6 +99,7 @@ async function getDemoFile(filePath: string): Promise<DemoDocFile> {
   let { name, description, order, displaySource } = extractDemoMetadata(source, relativePath)
   let formattedSource = await formatDemoSource(displaySource, filePath)
   let importHref = url.pathToFileURL(filePath).href
+  let docsPath = `${getDocsPackagePath(packageName)}/demos/${slug}`
 
   await loadDemoComponent({ importHref, slug })
 
@@ -113,7 +115,8 @@ async function getDemoFile(filePath: string): Promise<DemoDocFile> {
     slug,
     source: formattedSource,
     sourceUrl: `${SOURCE_URL_BASE}/${relativePath}`,
-    urlPath: getDocsUrlPath(`${getDocsPackagePath(packageName)}/demos/${slug}`),
+    docsPath,
+    urlPath: getDocsUrlPath(docsPath),
   }
 }
 

@@ -168,7 +168,7 @@ and encoding, and cancels requests when a frame is removed or its request is sup
 keeps the redirect destination available so navigation can update the browser URL after a form saves.
 
 If your app needs different request or response handling, you can provide your own `resolveFrame`
-function in the `run()` options. The [`remix/component` API overview](https://docs.remix.run/component/)
+function in the `run()` options. The [`remix/component` API overview](https://api.remix.run/component/)
 covers the callback's arguments and return values.
 
 Remix does not sanitize returned HTML before reconciling it into the current document, and
