@@ -154,12 +154,17 @@ async function uploadHandler(fileUpload: FileUpload) {
 
 `parseFormData()` from `remix/form-data-parser/future` streams file uploads to your upload handler instead of buffering them. Each `FileUpload` is passed to the handler as soon as its headers arrive, and its contents stream from the request body as you read them.
 
+Pair it with a storage backend that streams, like the filesystem and S3 backends of [`remix/file-storage`](../file-storage/README.md), and a large upload goes from the request to storage without being buffered:
+
 ```ts
+import { createS3FileStorage } from 'remix/file-storage/s3'
 import { parseFormData } from 'remix/form-data-parser/future'
 
+let fileStorage = createS3FileStorage({ accessKeyId, secretAccessKey, bucket, region })
+
 let formData = await parseFormData(request, async (fileUpload) => {
-  let storageKey = crypto.randomUUID()
-  // Streams the upload to storage without holding it in memory
+  let storageKey = `uploads/${crypto.randomUUID()}`
+  // Streams the upload to S3 without holding it in memory
   await fileStorage.set(storageKey, fileUpload)
   return storageKey
 })
