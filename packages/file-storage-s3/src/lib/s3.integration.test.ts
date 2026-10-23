@@ -172,8 +172,8 @@ describe('s3 file storage integration', () => {
   })
 })
 
-// Creates a file whose contents can only be streamed, like a `FileUpload` from
-// `@remix-run/form-data-parser/future`.
+// Creates a file whose contents can only be streamed, like a file upload read straight from a
+// request.
 function createStreamingFile(size: number, name: string, type: string, lastModified: number): File {
   let pulled = 0
   let stream = new ReadableStream<Uint8Array>({

@@ -129,8 +129,8 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage<
     headers.set('X-Amz-Meta-File-Last-Modified', String(file.lastModified))
 
     let kept: Uint8Array<ArrayBuffer>[] = []
-    // Streaming uploads, like `FileUpload` from `@remix-run/form-data-parser/future`, have the shape
-    // of a `File` without being a `Blob`, so they can only be read with `stream()`.
+    // Streaming sources, like a file upload read straight from a request, can have the shape of a
+    // `File` without being a `Blob`, so they can only be read with `stream()`.
     let source: Pick<File, 'stream'> = file
     let parts =
       file instanceof Blob ? sliceParts(file, partSize) : readParts(source.stream(), partSize)
@@ -407,6 +407,8 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage<
 // Reads a `Blob` in parts with `slice()`. Node.js before 24.20.0 and 26.6.0 keeps every chunk read
 // through `Blob#stream()` in memory for the life of the process
 // (https://github.com/nodejs/node/issues/63574), which would leak every file stored this way.
+// Remove this workaround and read every file with `readParts(file.stream())` once our minimum
+// supported Node.js version is >=24.20.0.
 async function* sliceParts(
   blob: Blob,
   partSize: number,

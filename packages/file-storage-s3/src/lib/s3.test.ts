@@ -689,8 +689,8 @@ function describeRequest(method: string, url: URL): string {
   return params.length === 0 ? method : `${method} ?${params.join('&')}`
 }
 
-// Creates a file whose contents can only be streamed, like a `FileUpload` from
-// `@remix-run/form-data-parser/future`. Records how many bytes have been pulled from it.
+// Creates a file whose contents can only be streamed, like a file upload read straight from a
+// request. Records how many bytes have been pulled from it.
 function createStreamingFile(
   size: number,
   chunkSize: number,

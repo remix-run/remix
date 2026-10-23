@@ -53,17 +53,7 @@ let storage = createS3FileStorage({
 })
 ```
 
-This works well with [`remix/form-data-parser/future`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser#future-api), whose file uploads stream straight from the request, so a large upload goes from the client to S3 without being buffered:
-
-```ts
-import { parseFormData } from 'remix/form-data-parser/future'
-
-let formData = await parseFormData(request, async (fileUpload) => {
-  let key = `uploads/${crypto.randomUUID()}`
-  await storage.set(key, fileUpload)
-  return key
-})
-```
+Anything with the shape of a `File` works, including streaming sources that can only be read with `stream()` and don't know their `size` up front, such as a file upload read straight from a request. Those are sent to S3 as they're read, without being buffered.
 
 If an upload fails, it is aborted so S3 doesn't keep its parts. It's still a good idea to add a [lifecycle rule](https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu-lifecycle-config.html) that removes incomplete multipart uploads, in case a process exits before it can abort one.
 
