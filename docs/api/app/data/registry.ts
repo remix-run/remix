@@ -30,7 +30,7 @@ export type PageDefinition = {
   navId?: string
 }
 
-export type NavSection = 'Examples' | 'APIs' | 'Types'
+export type NavSection = 'Examples' | 'API' | 'Types'
 
 // One sidebar menu: an import path like `remix/data-table/mysql` (or a group like
 // `remix/middleware` with no exports of its own), its pages and the import paths nested under it.
@@ -123,7 +123,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
       addPage(file, {
         description: '',
         eyebrow: `${pkg} · ${TYPE_EYEBROW[file.type]}`,
-        navSection: isTypeOnly(file) ? 'Types' : 'APIs',
+        navSection: isTypeOnly(file) ? 'Types' : 'API',
         navLabel: getApiNavLabel(file),
         title: file.name,
         docFile: file,
