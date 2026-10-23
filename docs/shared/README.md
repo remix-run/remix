@@ -18,6 +18,8 @@ Site-specific routes, document shells, Markdown transforms, styles, and static f
 
 Each site's `docs.css` imports `styles/public/docs.css`, which pulls in every shared stylesheet in order, followed by the site's own stylesheets.
 
+Link previews use `DocsSocialMeta` from `ui/social-meta.tsx`, which renders canonical, Open Graph and Twitter card tags. Each site's 1200x630 preview image lives in `assets/social/`.
+
 Navigation lists share the `.docs-nav-item` and `.docs-nav-heading` styles in `styles/public/nav.css`. Each site keeps only its own sizing and layout, such as the Guides chapter numbers and the API package menus.
 
 ## Markdown contract

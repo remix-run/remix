@@ -23,6 +23,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
     <DocsDocument
       title="Remix Guides"
       description="Guides, explanations, examples, and tutorials for learning Remix."
+      path="/"
       chapters={handle.props.navigation}
     >
       <div class="docs-index">

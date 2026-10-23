@@ -10,6 +10,7 @@ import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 import { Icon } from 'remix-docs-shared/ui/icon'
+import { DocsSocialMeta } from 'remix-docs-shared/ui/social-meta'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 
 import type { DocsRegistry, NavNode, NavSection, PageDefinition } from '../data/registry.ts'
@@ -18,6 +19,7 @@ import {
   getDocPage,
   getHomePage,
   getNavChain,
+  HOME_PAGE_ID,
   isPageActive,
 } from '../data/registry.ts'
 import { ApiNav } from '../actions/public/api-nav.tsx'
@@ -100,6 +102,21 @@ export function Document(
   }
 }
 
+const siteUrl = 'https://docs.remix.run'
+
+// Most pages have no written description, so link previews describe what the page documents.
+function getPageDescription(page: PageDefinition): string {
+  if (page.description) return page.description
+  if (page.id === HOME_PAGE_ID) {
+    return 'API reference for Remix, a full-stack TypeScript framework for building web applications on web standards.'
+  }
+  let { docFile } = page
+  if (!docFile) return `API reference for ${page.title}.`
+  if (docFile.kind === 'demo') return docFile.description
+  if (docFile.kind === 'api') return `API reference for ${page.navLabel} from ${docFile.package}.`
+  return `API reference for ${docFile.package}.`
+}
+
 function Head(
   handle: Handle<{
     page: PageDefinition
@@ -113,14 +130,14 @@ function Head(
     let { page, scriptEntry, stylesheetHref, stylesheetPreloads, searchEnabled } = handle.props
     let { href, importMap, preloads } = scriptEntry
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
+    let title = `${page.title || 'Remix'} | Remix Docs`
+    let description = getPageDescription(page)
 
     return (
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {page.description ? (
-          <meta data-rmx-key="docs-description" name="description" content={page.description} />
-        ) : null}
+        <meta data-rmx-key="docs-description" name="description" content={description} />
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         {stylesheetPreloads.map((href) => (
@@ -131,7 +148,15 @@ function Head(
           // demo links are examples rather than docs routes.
           <meta data-rmx-key="docs-robots" name="robots" content="nofollow" />
         ) : null}
-        <title data-rmx-key="docs-title">{`${page.title || 'Remix'} | Remix Docs`}</title>
+        <title data-rmx-key="docs-title">{title}</title>
+        <DocsSocialMeta
+          siteName="Remix Docs"
+          url={`${siteUrl}${page.path}`}
+          title={title}
+          description={description}
+          image={`${siteUrl}/social/docs.png`}
+          imageAlt="Remix Docs"
+        />
         {page.docFile ? (
           <link
             data-rmx-key="docs-markdown-alternate"
