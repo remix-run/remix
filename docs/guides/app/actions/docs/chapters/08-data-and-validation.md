@@ -110,7 +110,7 @@ For this single-process app, call `await migrateDatabase()` in `server.ts` befor
 
 The migration runner records applied migrations in a journal and checks their checksums on later runs. Add a new migration when the schema changes instead of editing an applied migration. You must also keep the table definitions in `app/data/tables.ts` aligned with the resulting SQL schema.
 
-`db.migrate(...)` also supports dry-run plans, bounded rollbacks, and migration targets. The [`data-table` overview](https://api.remix.run/data-table/) covers those options and CLI configuration for `remix db`.
+`db.migrate(...)` also supports dry-run plans, bounded rollbacks, and migration targets. The [`data-table` overview](https://docs.remix.run/data-table/) covers those options and CLI configuration for `remix db`.
 
 ## Give actions access to the database
 
@@ -246,7 +246,7 @@ export const albumForm = f.object({
 
 `f.field(...)` reads the first value for each name, rejects files, and passes missing values to the field schema as `undefined`. `f.object(...)` selects only the declared fields, so an extra `id` in the submission won't become part of the update.
 
-For parsing plain objects or individual values, using `parse()` to throw on validation failure, and other schema options, see the [`data-schema` overview](https://api.remix.run/data-schema/).
+For parsing plain objects or individual values, using `parse()` to throw on validation failure, and other schema options, see the [`data-schema` overview](https://docs.remix.run/data-schema/).
 
 The album page now reads from SQLite, and `albumForm` defines the values the editor can submit. [Forms and Mutations](/forms-and-mutations/) connects the edit form: validating submissions, saving edits, showing field errors, and adding pending feedback.
 

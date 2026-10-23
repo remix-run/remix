@@ -5,12 +5,11 @@ import { createController } from 'remix/router'
 
 import type { DocsContext } from '../data/docs.ts'
 import { renderMarkdownFile } from '../data/markdown.ts'
-import { getApiRouteHref, routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import type { DocsAssetServer } from '../assets.ts'
 import { MarkdownContent } from './api/page.tsx'
 import { fileResponse } from './file-response.ts'
-import { LegacyRedirect } from './legacy-redirect.tsx'
 
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
 const markdownDir = path.join(apiDir, 'build', 'md')
@@ -49,23 +48,6 @@ export function createRootController(options: RootControllerOptions) {
             <MarkdownContent html={html} />
           </Document>,
         )
-      },
-      async legacy({ request, params, render }) {
-        let href = getApiRouteHref(`/api/${params.slug}`)
-        // Paths that aren't docs (they come back unchanged) go to the home page.
-        if (!href || href.startsWith('/api/')) {
-          href = routes.home.href()
-        }
-        // A static host can't redirect, so old Markdown URLs serve the file itself.
-        if (href.endsWith('.md')) {
-          let slug = href.slice(1, -'.md'.length)
-          let docsContext = await options.getDocsContext()
-          let docFile = docsContext.docFiles.find((file) => file.urlPath === slug)
-          return docFile && docFile.kind !== 'demo'
-            ? fileResponse(request, docFile.path)
-            : new Response('Not Found', { status: 404 })
-        }
-        return render(<LegacyRedirect href={href} />)
       },
       lookup({ request }) {
         return fileResponse(request, path.join(markdownDir, 'api.json'))
