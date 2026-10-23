@@ -10,6 +10,7 @@ null as unknown as ReturnType<typeof createS3FileStorage> satisfies FileStorage<
 
 const BUCKET = 'test-bucket'
 const ENDPOINT = 'https://s3.us-east-1.amazonaws.com'
+const PART_SIZE = 5 * 1024 * 1024
 
 type StoredObject = {
   body: ArrayBuffer
@@ -270,17 +271,263 @@ describe('s3 file storage', () => {
     assert.ok(await storage.has('folder/back\\slash.txt'))
     assert.ok(await storage.has('folder/control\u0001.txt'))
   })
+
+  it('stores a file larger than one part with a multipart upload', async () => {
+    let requests: string[] = []
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      partSize: PART_SIZE,
+      fetch: createMockS3Fetch({ requests }),
+    })
+    let lastModified = Date.now()
+    let { file } = createStreamingFile(2 * PART_SIZE + 1234, 64 * 1024, {
+      name: 'video.mp4',
+      type: 'video/mp4',
+      lastModified,
+    })
+
+    await storage.set('video', file)
+
+    assert.deepEqual(requests, [
+      'POST ?uploads',
+      'PUT ?partNumber=1&uploadId=upload-1',
+      'PUT ?partNumber=2&uploadId=upload-1',
+      'PUT ?partNumber=3&uploadId=upload-1',
+      'POST ?uploadId=upload-1',
+    ])
+
+    let retrieved = await storage.get('video')
+
+    assert.ok(retrieved)
+    assert.equal(retrieved.name, 'video.mp4')
+    assert.equal(retrieved.type, 'video/mp4')
+    assert.equal(retrieved.lastModified, lastModified)
+    assertExpectedBytes(await retrieved.bytes(), 2 * PART_SIZE + 1234)
+  })
+
+  it('stores a file that fits in one part with a single PUT', async () => {
+    let requests: string[] = []
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      partSize: PART_SIZE,
+      fetch: createMockS3Fetch({ requests }),
+    })
+    let { file } = createStreamingFile(PART_SIZE, 64 * 1024)
+
+    await storage.set('exact', file)
+
+    assert.deepEqual(requests, ['PUT'])
+
+    let retrieved = await storage.get('exact')
+    assert.ok(retrieved)
+    assertExpectedBytes(await retrieved.bytes(), PART_SIZE)
+  })
+
+  it('stores an empty file with a single PUT', async () => {
+    let requests: string[] = []
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      fetch: createMockS3Fetch({ requests }),
+    })
+
+    await storage.set('empty', new File([], 'empty.txt', { type: 'text/plain' }))
+
+    assert.deepEqual(requests, ['PUT'])
+
+    let retrieved = await storage.get('empty')
+    assert.ok(retrieved)
+    assert.equal(retrieved.name, 'empty.txt')
+    assert.equal(retrieved.size, 0)
+  })
+
+  it('holds at most two parts in memory during a multipart upload', async () => {
+    let chunkSize = 64 * 1024
+    let { file, pulled } = createStreamingFile(6 * PART_SIZE, chunkSize)
+    let uploaded = 0
+    let maxAhead = 0
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      partSize: PART_SIZE,
+      fetch: createMockS3Fetch({
+        async onRequest(request, url) {
+          if (request.method !== 'PUT' || !url.searchParams.has('partNumber')) return
+          maxAhead = Math.max(maxAhead, pulled() - uploaded)
+          // Simulate a slow network, so reading could get ahead of uploading
+          await new Promise((resolve) => setTimeout(resolve, 5))
+          uploaded += PART_SIZE
+          return undefined
+        },
+      }),
+    })
+
+    await storage.set('big', file)
+
+    assert.ok(maxAhead <= 2 * PART_SIZE + chunkSize, `read ${maxAhead} bytes ahead of uploads`)
+  })
+
+  it('aborts the multipart upload when a part fails to upload', async () => {
+    let requests: string[] = []
+    let uploads = new Map<string, MultipartUpload>()
+    let { file, canceled } = createStreamingFile(4 * PART_SIZE, 64 * 1024)
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      partSize: PART_SIZE,
+      fetch: createMockS3Fetch({
+        requests,
+        uploads,
+        onRequest(_request, url) {
+          if (url.searchParams.get('partNumber') === '2') {
+            return createErrorResponse(500, 'InternalError', 'Part upload failed')
+          }
+        },
+      }),
+    })
+
+    await assert.rejects(async () => {
+      await storage.set('big', file)
+    }, /UploadPart 2 "big": 500 .*Part upload failed/)
+
+    assert.equal(requests.at(-1), 'DELETE ?uploadId=upload-1')
+    assert.equal(uploads.size, 0)
+    assert.ok(canceled())
+    assert.ok(!(await storage.has('big')))
+  })
+
+  it('aborts the multipart upload when the file stream errors', async () => {
+    let requests: string[] = []
+    let { file } = createStreamingFile(4 * PART_SIZE, 64 * 1024, {
+      error: new Error('Client disconnected'),
+    })
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      partSize: PART_SIZE,
+      fetch: createMockS3Fetch({ requests }),
+    })
+
+    await assert.rejects(async () => {
+      await storage.set('big', file)
+    }, /Client disconnected/)
+
+    assert.equal(requests.at(-1), 'DELETE ?uploadId=upload-1')
+    assert.ok(!(await storage.has('big')))
+  })
+
+  it('rejects when S3 reports a failed completion in a 200 response', async () => {
+    let requests: string[] = []
+    let { file } = createStreamingFile(2 * PART_SIZE, 64 * 1024)
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      partSize: PART_SIZE,
+      fetch: createMockS3Fetch({
+        requests,
+        onRequest(request, url) {
+          if (request.method === 'POST' && url.searchParams.has('uploadId')) {
+            return new Response(
+              '<Error><Code>InternalError</Code><Message>We encountered an internal error</Message></Error>',
+              { status: 200 },
+            )
+          }
+        },
+      }),
+    })
+
+    await assert.rejects(async () => {
+      await storage.set('big', file)
+    }, /CompleteMultipartUpload "big": We encountered an internal error/)
+    assert.equal(requests.at(-1), 'DELETE ?uploadId=upload-1')
+  })
+
+  it('returns a file with the stored contents from put() after a multipart upload', async () => {
+    let storage = createS3FileStorage({
+      accessKeyId: 'test',
+      secretAccessKey: 'test',
+      bucket: BUCKET,
+      endpoint: ENDPOINT,
+      region: 'us-east-1',
+      partSize: PART_SIZE,
+      fetch: createMockS3Fetch(),
+    })
+    let { file } = createStreamingFile(PART_SIZE + 10, 64 * 1024, { name: 'a.bin' })
+
+    let stored = await storage.put('a', file)
+
+    assert.equal(stored.name, 'a.bin')
+    assert.equal(stored.size, PART_SIZE + 10)
+    assertExpectedBytes(await stored.bytes(), PART_SIZE + 10)
+  })
+
+  it('rejects a partSize smaller than the S3 minimum', () => {
+    assert.throws(
+      () =>
+        createS3FileStorage({
+          accessKeyId: 'test',
+          secretAccessKey: 'test',
+          bucket: BUCKET,
+          region: 'us-east-1',
+          partSize: 1024,
+        }),
+      RangeError,
+    )
+  })
 })
 
-function createMockS3Fetch(): typeof globalThis.fetch {
+type MultipartUpload = {
+  objectKey: string
+  contentType: string
+  metadata: Record<string, string>
+  parts: Map<number, ArrayBuffer>
+}
+
+type MockS3Options = {
+  requests?: string[]
+  onRequest?: (request: Request, url: URL) => Response | undefined | Promise<Response | undefined>
+  objects?: Map<string, StoredObject>
+  uploads?: Map<string, MultipartUpload>
+}
+
+function createMockS3Fetch(options: MockS3Options = {}): typeof globalThis.fetch {
   let buckets = new Set([BUCKET])
-  let objects = new Map<string, StoredObject>()
+  let objects = options.objects ?? new Map<string, StoredObject>()
+  let uploads = options.uploads ?? new Map<string, MultipartUpload>()
+  let nextUploadId = 1
 
   return async function fetch(input, init) {
     let request = new Request(input, init)
     let url = new URL(request.url)
     let method = request.method.toUpperCase()
     let { bucket, key } = parseBucketAndKey(url)
+
+    options.requests?.push(describeRequest(method, url))
+    let override = await options.onRequest?.(request, url)
+    if (override) return override
 
     if (bucket == null) {
       return createErrorResponse(400, 'InvalidBucketName', 'Could not determine bucket')
@@ -305,19 +552,67 @@ function createMockS3Fetch(): typeof globalThis.fetch {
 
     let objectKey = `${bucket}:${key}`
 
+    if (method === 'POST' && url.searchParams.has('uploads')) {
+      let uploadId = `upload-${nextUploadId++}`
+      uploads.set(uploadId, {
+        objectKey,
+        contentType: request.headers.get('Content-Type') ?? '',
+        metadata: readMetadataHeaders(request.headers),
+        parts: new Map(),
+      })
+
+      return new Response(
+        `<InitiateMultipartUploadResult><UploadId>${uploadId}</UploadId></InitiateMultipartUploadResult>`,
+        { status: 200, headers: { 'Content-Type': 'application/xml' } },
+      )
+    }
+
+    let uploadId = url.searchParams.get('uploadId')
+    if (uploadId != null) {
+      let upload = uploads.get(uploadId)
+      if (upload == null || upload.objectKey !== objectKey) {
+        return createErrorResponse(404, 'NoSuchUpload', 'The specified upload does not exist')
+      }
+
+      if (method === 'PUT') {
+        let partNumber = Number(url.searchParams.get('partNumber'))
+        upload.parts.set(partNumber, await request.arrayBuffer())
+        return new Response(null, { status: 200, headers: { ETag: `"etag-${partNumber}"` } })
+      }
+
+      if (method === 'POST') {
+        let xml = await request.text()
+        let partNumbers = Array.from(xml.matchAll(/<PartNumber>(\d+)<\/PartNumber>/g), (match) =>
+          Number(match[1]),
+        )
+        let body = new Blob(partNumbers.map((partNumber) => upload.parts.get(partNumber)!))
+
+        objects.set(objectKey, {
+          body: await body.arrayBuffer(),
+          metadata: upload.metadata,
+          contentType: upload.contentType,
+          updatedAt: Date.now(),
+        })
+        uploads.delete(uploadId)
+
+        return new Response('<CompleteMultipartUploadResult></CompleteMultipartUploadResult>', {
+          status: 200,
+          headers: { 'Content-Type': 'application/xml' },
+        })
+      }
+
+      if (method === 'DELETE') {
+        uploads.delete(uploadId)
+        return new Response(null, { status: 204 })
+      }
+    }
+
     if (method === 'PUT') {
       let body = await request.arrayBuffer()
-      let metadata: Record<string, string> = {}
-
-      request.headers.forEach((value, header) => {
-        if (header.startsWith('x-amz-meta-')) {
-          metadata[header] = value
-        }
-      })
 
       objects.set(objectKey, {
         body,
-        metadata,
+        metadata: readMetadataHeaders(request.headers),
         contentType: request.headers.get('Content-Type') ?? '',
         updatedAt: Date.now(),
       })
@@ -345,6 +640,91 @@ function createMockS3Fetch(): typeof globalThis.fetch {
     }
 
     return createErrorResponse(405, 'MethodNotAllowed', 'Unsupported method')
+  }
+}
+
+function readMetadataHeaders(headers: Headers): Record<string, string> {
+  let metadata: Record<string, string> = {}
+
+  headers.forEach((value, header) => {
+    if (header.startsWith('x-amz-meta-')) {
+      metadata[header] = value
+    }
+  })
+
+  return metadata
+}
+
+// Describes a request like `PUT ?partNumber=2&uploadId=upload-1`, leaving out the key.
+function describeRequest(method: string, url: URL): string {
+  let params = Array.from(url.searchParams.keys())
+    .filter((name) => name === 'uploads' || name === 'partNumber' || name === 'uploadId')
+    .map((name) => (name === 'uploads' ? name : `${name}=${url.searchParams.get(name)}`))
+
+  return params.length === 0 ? method : `${method} ?${params.join('&')}`
+}
+
+// Creates a file whose contents can only be streamed, like a `FileUpload` from
+// `@remix-run/form-data-parser/future`. Records how many bytes have been pulled from it.
+function createStreamingFile(
+  size: number,
+  chunkSize: number,
+  options: { name?: string; type?: string; lastModified?: number; error?: Error } = {},
+): { file: File; pulled: () => number; canceled: () => boolean } {
+  let pulled = 0
+  let canceled = false
+  let stream = new ReadableStream<Uint8Array>(
+    {
+      pull(controller) {
+        if (options.error && pulled >= size / 2) {
+          controller.error(options.error)
+          return
+        }
+        if (pulled >= size) {
+          controller.close()
+          return
+        }
+
+        let length = Math.min(chunkSize, size - pulled)
+        let chunk = new Uint8Array(length)
+        for (let index = 0; index < length; index++) chunk[index] = (pulled + index) % 251
+        pulled += length
+        controller.enqueue(chunk)
+      },
+      cancel() {
+        canceled = true
+      },
+    },
+    { highWaterMark: 0 },
+  )
+
+  let file = {
+    name: options.name ?? 'upload.bin',
+    type: options.type ?? 'application/octet-stream',
+    lastModified: options.lastModified ?? Date.now(),
+    get size(): number {
+      throw new TypeError('size is not available until the file has been read')
+    },
+    stream: () => stream,
+    arrayBuffer() {
+      throw new TypeError('arrayBuffer() is not supported')
+    },
+    slice() {
+      throw new TypeError('slice() is not supported')
+    },
+  }
+
+  return { file: file as unknown as File, pulled: () => pulled, canceled: () => canceled }
+}
+
+// Checks bytes from `createStreamingFile()` without a deep equality check, which is slow for
+// multi-megabyte arrays on some runtimes.
+function assertExpectedBytes(bytes: Uint8Array, size: number): void {
+  assert.equal(bytes.length, size)
+  for (let index = 0; index < size; index++) {
+    if (bytes[index] !== index % 251) {
+      assert.fail(`Unexpected byte ${bytes[index]} at index ${index}`)
+    }
   }
 }
 

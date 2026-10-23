@@ -12,8 +12,11 @@ const integrationEnabled =
   typeof process.env.FILE_STORAGE_S3_ACCESS_KEY_ID === 'string' &&
   typeof process.env.FILE_STORAGE_S3_SECRET_ACCESS_KEY === 'string'
 
+const PART_SIZE = 5 * 1024 * 1024
+
 describe('s3 file storage integration', () => {
   let storage: ReturnType<typeof createS3FileStorage>
+  let multipartStorage: ReturnType<typeof createS3FileStorage>
   let bucketUrl: URL
   let client: AwsClient
 
@@ -34,6 +37,17 @@ describe('s3 file storage integration', () => {
       endpoint,
       region: process.env.FILE_STORAGE_S3_REGION!,
       forcePathStyle,
+    })
+
+    multipartStorage = createS3FileStorage({
+      accessKeyId: process.env.FILE_STORAGE_S3_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.FILE_STORAGE_S3_SECRET_ACCESS_KEY!,
+      sessionToken: process.env.FILE_STORAGE_S3_SESSION_TOKEN,
+      bucket,
+      endpoint,
+      region: process.env.FILE_STORAGE_S3_REGION!,
+      forcePathStyle,
+      partSize: PART_SIZE,
     })
 
     client = new AwsClient({
@@ -111,6 +125,33 @@ describe('s3 file storage integration', () => {
     },
   )
 
+  it(
+    'streams a file larger than one part with a multipart upload',
+    { skip: !integrationEnabled },
+    async () => {
+      let size = 2 * PART_SIZE + 1234
+      let lastModified = Date.now()
+      let file = createStreamingFile(size, 'video.mp4', 'video/mp4', lastModified)
+
+      await multipartStorage.set('video', file)
+
+      let retrieved = await multipartStorage.get('video')
+
+      assert.ok(retrieved)
+      assert.equal(retrieved.name, 'video.mp4')
+      assert.equal(retrieved.type, 'video/mp4')
+      assert.equal(retrieved.lastModified, lastModified)
+      assert.equal(retrieved.size, size)
+
+      let bytes = await retrieved.bytes()
+      for (let index = 0; index < size; index++) {
+        if (bytes[index] !== index % 251) {
+          assert.fail(`Unexpected byte ${bytes[index]} at index ${index}`)
+        }
+      }
+    },
+  )
+
   it('lists files with metadata', { skip: !integrationEnabled }, async () => {
     let lastModified = Date.now()
     let file = new File(['Hello, world!'], 'hello.txt', {
@@ -130,6 +171,33 @@ describe('s3 file storage integration', () => {
     assert.equal(files[0].size, 13)
   })
 })
+
+// Creates a file whose contents can only be streamed, like a `FileUpload` from
+// `@remix-run/form-data-parser/future`.
+function createStreamingFile(size: number, name: string, type: string, lastModified: number): File {
+  let pulled = 0
+  let stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (pulled >= size) {
+        controller.close()
+        return
+      }
+
+      let length = Math.min(64 * 1024, size - pulled)
+      let chunk = new Uint8Array(length)
+      for (let index = 0; index < length; index++) chunk[index] = (pulled + index) % 251
+      pulled += length
+      controller.enqueue(chunk)
+    },
+  })
+
+  return {
+    name,
+    type,
+    lastModified,
+    stream: () => stream,
+  } as unknown as File
+}
 
 async function ensureBucketExists(client: AwsClient, bucketUrl: URL): Promise<void> {
   let response = await client.fetch(bucketUrl, { method: 'PUT' })
