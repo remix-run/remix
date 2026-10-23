@@ -253,7 +253,10 @@ export async function createFileResponse<file extends FileLike>(
 
     // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
     let ifRange = IfRange.from(headers.get('If-Range'))
+    // Range requests may be ignored for empty representations:
+    // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.2
     if (
+      file.size > 0 &&
       ifRange.matches({
         etag,
         lastModified,
@@ -270,8 +273,10 @@ export async function createFileResponse<file extends FileLike>(
 
       let normalizedRanges = range.normalize(file.size)
 
-      // We only support single ranges (not multipart)
-      if (normalizedRanges.length > 1) {
+      // We only support exactly one normalized range with ordered bounds.
+      // Zero-length suffix ranges are unsatisfiable:
+      // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2
+      if (normalizedRanges.length !== 1 || normalizedRanges[0].start > normalizedRanges[0].end) {
         return new Response('Range Not Satisfiable', {
           status: 416,
           headers: buildResponseHeaders({
