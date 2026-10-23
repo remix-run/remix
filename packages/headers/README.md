@@ -497,13 +497,9 @@ etagHeader.matches({ etag: '"67ab43"' }) // true
 let absent = IfRange.from(null)
 absent.matches({ etag: '"any"' }) // true
 
-// An explicitly empty header fails the condition
+// Empty values retain the same unconditional matching behavior
 let empty = IfRange.from('')
-empty.matches({ etag: '"any"' }) // false
-
-// Assigning an empty string clears the condition
-etagHeader.value = ''
-etagHeader.matches({ etag: '"any"' }) // true
+empty.matches({ etag: '"any"' }) // true
 
 // Construct directly
 new IfRange('"abc123"')

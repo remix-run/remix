@@ -17,24 +17,13 @@ function isStrongEntityTag(value: string): boolean {
  * [HTTP Semantics Specification](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.5)
  */
 export class IfRange implements HeaderValue {
-  #present = false
-  #value = ''
-
   /**
    * Raw header value, either an entity tag or an HTTP date.
-   * Assigning an empty string clears the condition.
    */
-  get value(): string {
-    return this.#value
-  }
+  value: string = ''
 
-  set value(value: string) {
-    this.#value = value
-    this.#present = value !== ''
-  }
-
-  constructor(init?: string | Date | IfRange) {
-    if (init !== undefined) return IfRange.from(init)
+  constructor(init?: string | Date) {
+    if (init) return IfRange.from(init)
   }
 
   /**
@@ -42,7 +31,7 @@ export class IfRange implements HeaderValue {
    *
    * This method always returns `true` if the `If-Range` header is not present,
    * meaning the range request should proceed unconditionally.
-   * An explicitly empty or malformed header value returns `false`.
+   * Empty values also return `true` for compatibility. Other malformed values return `false`.
    *
    * The `If-Range` header can contain either:
    * - An HTTP date (RFC 7231 IMF-fixdate format)
@@ -68,7 +57,7 @@ export class IfRange implements HeaderValue {
    * ```
    */
   matches(resource: { etag?: string | null; lastModified?: number | Date | null }): boolean {
-    if (!this.#present) {
+    if (!this.value) {
       return true
     }
 
@@ -102,25 +91,19 @@ export class IfRange implements HeaderValue {
 
   /**
    * Parse an If-Range header value.
-   * A `null` value represents absence; an empty string represents a present, invalid value.
-   * Existing instances are copied with their presence state preserved.
    *
-   * @param value The header value (string, Date, IfRange, or null)
+   * @param value The header value (string, Date, or null)
    * @returns An IfRange instance (empty if null)
    */
-  static from(value: string | Date | IfRange | null): IfRange {
+  static from(value: string | Date | null): IfRange {
     let header = new IfRange()
 
-    if (value instanceof IfRange) {
-      // Read through the public API because SuperHeaders can wrap instances in a Proxy.
-      // Only an absent value matches a resource with no validators.
-      header.#value = value.value
-      header.#present = header.#value !== '' || !value.matches({})
-    } else if (typeof value === 'string') {
-      header.#present = true
-      header.#value = value
-    } else if (value !== null) {
-      header.value = value.toUTCString()
+    if (value !== null) {
+      if (typeof value === 'string') {
+        header.value = value
+      } else {
+        header.value = value.toUTCString()
+      }
     }
 
     return header

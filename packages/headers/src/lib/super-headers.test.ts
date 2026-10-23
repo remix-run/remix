@@ -1,7 +1,6 @@
 import * as assert from '@remix-run/assert'
 import DefaultHeaders, {
   ContentType,
-  IfRange,
   stringify,
   SuperHeaders,
   type SuperHeadersInit,
@@ -310,65 +309,11 @@ describe('SuperHeaders', () => {
     assert.ok(headers.ifRange.matches({}))
   })
 
-  it('preserves an explicitly empty If-Range header as present', () => {
+  it('matches an explicitly empty If-Range header unconditionally', () => {
     let headers = new SuperHeaders({ 'If-Range': '' })
 
     assert.equal(headers.get('If-Range'), '')
-    assert.ok(!headers.ifRange.matches({}))
-  })
-
-  it('clones a present If-Range typed value independently', () => {
-    let headers = new SuperHeaders({ 'If-Range': '"abc"' })
-    let copy = IfRange.from(headers.ifRange)
-    let constructed = new IfRange(headers.ifRange)
-
-    assert.equal(copy.toString(), '"abc"')
-    assert.ok(copy.matches({ etag: '"abc"' }))
-    assert.equal(constructed.toString(), '"abc"')
-    assert.ok(constructed.matches({ etag: '"abc"' }))
-
-    copy.value = '"other"'
-    assert.equal(headers.get('If-Range'), '"abc"')
-    assert.ok(headers.ifRange.matches({ etag: '"abc"' }))
-    assert.ok(constructed.matches({ etag: '"abc"' }))
-  })
-
-  it('preserves absence when cloning an absent If-Range typed value', () => {
-    let headers = new SuperHeaders()
-    let copy = IfRange.from(headers.ifRange)
-    let constructed = new IfRange(headers.ifRange)
-
-    assert.equal(copy.toString(), '')
-    assert.ok(copy.matches({}))
-    assert.equal(constructed.toString(), '')
-    assert.ok(constructed.matches({}))
-    assert.equal(headers.get('If-Range'), null)
-  })
-
-  it('preserves presence when cloning an explicitly empty If-Range typed value', () => {
-    let headers = new SuperHeaders({ 'If-Range': '' })
-    let copy = IfRange.from(headers.ifRange)
-    let constructed = new IfRange(headers.ifRange)
-
-    assert.equal(copy.toString(), '')
-    assert.ok(!copy.matches({}))
-    assert.equal(constructed.toString(), '')
-    assert.ok(!constructed.matches({}))
-    assert.equal(headers.get('If-Range'), '')
-  })
-
-  it('preserves absence when cloning a cleared If-Range typed value', () => {
-    let headers = new SuperHeaders({ 'If-Range': '"abc"' })
-    let value = headers.ifRange
-    value.value = ''
-    let copy = IfRange.from(value)
-    let constructed = new IfRange(value)
-
-    assert.equal(copy.toString(), '')
-    assert.ok(copy.matches({}))
-    assert.equal(constructed.toString(), '')
-    assert.ok(constructed.matches({}))
-    assert.equal(headers.get('If-Range'), null)
+    assert.ok(headers.ifRange.matches({}))
   })
 
   it('syncs typed mutator methods to native storage', () => {
