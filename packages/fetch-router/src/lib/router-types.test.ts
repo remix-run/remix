@@ -3,8 +3,18 @@ import { describe, it } from '@remix-run/test'
 
 import { createRoutes as route } from '../routes.ts'
 import { createAction, createController, type Action, type Controller } from './controller.ts'
-import { createMiddleware, type Middleware, type MiddlewareContext } from './middleware.ts'
-import { createContextKey, type ContextWithEntry, type RequestContext } from './request-context.ts'
+import {
+  createMiddleware,
+  type AnyMiddleware,
+  type Middleware,
+  type MiddlewareContext,
+} from './middleware.ts'
+import {
+  createContextKey,
+  type ContextEntry,
+  type ContextWithEntry,
+  type RequestContext,
+} from './request-context.ts'
 import {
   createRouter,
   type RouteBuilder,
@@ -184,6 +194,303 @@ describe('router type inference', () => {
 
     void assertContext
     void factoryMiddleware
+  })
+
+  it('derives router context when inline middleware starts with a conditional entry', async () => {
+    let includeFormData = false as boolean
+    let router = createRouter({
+      middleware: [...(includeFormData ? [setFormData()] : []), requireUser(), setRole('viewer')],
+    })
+    type DerivedContext = RouterContext<typeof router>
+
+    function assertContext(context: DerivedContext) {
+      let user = context.get(CurrentUser)
+      let role = context.get(CurrentRole)
+      let formData = context.get(FormData)
+
+      expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+    }
+
+    router.get('/account', (context) => new Response(context.currentUser.id + ':' + context.role))
+
+    let response = await router.fetch('https://remix.run/account')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'user-1:viewer')
+    void assertContext
+  })
+
+  it('derives router context when inline middleware has a conditional entry in the middle', () => {
+    let includeFormData = false as boolean
+    let router = createRouter({
+      middleware: [requireUser(), ...(includeFormData ? [setFormData()] : []), setRole('viewer')],
+    })
+    type DerivedContext = RouterContext<typeof router>
+
+    function assertContext(context: DerivedContext) {
+      let formData = context.get(FormData)
+
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+    }
+
+    void assertContext
+  })
+
+  it('derives router context when inline middleware ends with a conditional entry', () => {
+    let includeFormData = false as boolean
+    let router = createRouter({
+      middleware: [requireUser(), setRole('viewer'), ...(includeFormData ? [setFormData()] : [])],
+    })
+    type DerivedContext = RouterContext<typeof router>
+
+    function assertContext(context: DerivedContext) {
+      let formData = context.get(FormData)
+
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+    }
+
+    void assertContext
+  })
+
+  it('applies later middleware over earlier middleware around a conditional entry', () => {
+    let includeFormData = false as boolean
+    let router = createRouter({
+      middleware: [
+        setRole('viewer'),
+        ...(includeFormData ? [setFormData()] : []),
+        requireUser(),
+        loadAdminRole(),
+      ],
+    })
+    type DerivedContext = RouterContext<typeof router>
+
+    function assertContext(context: DerivedContext) {
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+    }
+
+    void assertContext
+  })
+
+  it('falls back to the base context for middleware arrays without a known order', () => {
+    type ArrayContext = MiddlewareContext<ReturnType<typeof requireUser>[]>
+
+    expectTypeEquality<IsEqual<ArrayContext, RequestContext>>()
+  })
+
+  it('widens earlier values when conditional middleware can overwrite them', async () => {
+    function createRoleRouter(downgrade: boolean) {
+      let router = createRouter({
+        middleware: [requireUser(), setRole('admin'), ...(downgrade ? [setRole('viewer')] : [])],
+      })
+
+      router.get('/role', (context) => {
+        let role = context.get(CurrentRole)
+
+        expectTypeEquality<IsEqual<typeof role, 'admin' | 'viewer'>>()
+        expectTypeEquality<IsEqual<typeof context.role, 'admin' | 'viewer'>>()
+        expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+
+        return new Response(context.currentUser.id + ':' + context.role)
+      })
+
+      type RequiredAdminContext = MiddlewareContext<
+        [ReturnType<typeof requireUser>, ReturnType<typeof loadAdminRole>]
+      >
+      let adminAction: Action<'/admin', RequiredAdminContext> = (context) =>
+        new Response(context.role)
+      // @ts-expect-error - the conditional downgrade can remove the admin guarantee
+      router.get('/admin', adminAction)
+
+      return router
+    }
+
+    let enabledResponse = await createRoleRouter(true).fetch('https://remix.run/role')
+    let disabledResponse = await createRoleRouter(false).fetch('https://remix.run/role')
+
+    assert.equal(await enabledResponse.text(), 'user-1:viewer')
+    assert.equal(await disabledResponse.text(), 'user-1:admin')
+  })
+
+  it('lets guaranteed suffix middleware narrow a conditionally overwritten value', async () => {
+    function createRoleRouter(downgrade: boolean) {
+      return createRouter({
+        middleware: [setRole('admin'), ...(downgrade ? [setRole('viewer')] : []), setRole('admin')],
+      })
+    }
+
+    let router = createRoleRouter(true)
+    router.get('/role', (context) => {
+      let role = context.get(CurrentRole)
+
+      expectTypeEquality<IsEqual<typeof role, 'admin'>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+
+      return new Response(context.role)
+    })
+
+    let response = await router.fetch('https://remix.run/role')
+    assert.equal(await response.text(), 'admin')
+  })
+
+  it('widens installed properties when conditional writes omit the property name', async () => {
+    function clearUser(): Middleware<{ key: typeof CurrentUser; value: null }> {
+      return (context, next) => {
+        context.set(CurrentUser, null)
+        return next()
+      }
+    }
+
+    function createUserRouter(clear: boolean) {
+      return createRouter({
+        middleware: [requireUser(), ...(clear ? [clearUser()] : []), setRole('viewer')],
+      })
+    }
+
+    let router = createUserRouter(true)
+    router.get('/user', (context) => {
+      let user = context.get(CurrentUser)
+
+      expectTypeEquality<IsEqual<typeof user, { id: string } | null>>()
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string } | null>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+
+      if (false as boolean) {
+        // @ts-expect-error - the conditional middleware can clear the installed user
+        void context.currentUser.id
+      }
+
+      return Response.json({ user, currentUser: context.currentUser })
+    })
+
+    let response = await router.fetch('https://remix.run/user')
+    assert.deepEqual(await response.json(), { user: null, currentUser: null })
+  })
+
+  it('accounts for single-entry and multi-entry transforms in a conditional chain', async () => {
+    function resetContext(): Middleware<
+      [
+        { key: typeof CurrentUser; value: null },
+        { key: typeof FormData; value: FormData; property: 'formData' },
+      ]
+    > {
+      return (context, next) => {
+        context.set(CurrentUser, null)
+        context.set(FormData, new FormData(), { property: 'formData' })
+        return next()
+      }
+    }
+
+    function createResetRouter(reset: boolean) {
+      return createRouter({
+        middleware: [
+          requireUser(),
+          setRole('admin'),
+          ...(reset ? [resetContext(), setRole('viewer')] : []),
+        ],
+      })
+    }
+
+    let router = createResetRouter(true)
+    router.get('/reset', (context) => {
+      let user = context.get(CurrentUser)
+      let role = context.get(CurrentRole)
+      let formData = context.get(FormData)
+
+      expectTypeEquality<IsEqual<typeof user, { id: string } | null>>()
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string } | null>>()
+      expectTypeEquality<IsEqual<typeof role, 'admin' | 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'admin' | 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+
+      if (false as boolean) {
+        // @ts-expect-error - conditional middleware does not guarantee a new property
+        void context.formData
+      }
+
+      return Response.json({ user: context.currentUser, role: context.role })
+    })
+
+    let response = await router.fetch('https://remix.run/reset')
+    assert.deepEqual(await response.json(), { user: null, role: 'viewer' })
+  })
+
+  it('widens inherited context for conditional-only action middleware', async () => {
+    function createRoleAction(elevate: boolean) {
+      return createAction(routes.reports, {
+        middleware: [...(elevate ? [setRole('admin')] : [])],
+        handler(context) {
+          let role = context.get(CurrentRole)
+
+          expectTypeEquality<IsEqual<typeof role, 'viewer' | 'admin'>>()
+          expectTypeEquality<IsEqual<typeof context.role, 'viewer' | 'admin'>>()
+          expectTypeEquality<IsEqual<typeof context.params.reportId, string>>()
+
+          return new Response(context.params.reportId + ':' + context.role)
+        },
+      })
+    }
+
+    let router = createAppRouter()
+    router.map(routes.reports, createRoleAction(true))
+
+    let response = await router.fetch('https://remix.run/reports/123')
+    assert.equal(await response.text(), '123:admin')
+  })
+
+  it('discards refinements across conditional function transforms', () => {
+    type OpaqueMiddleware = Middleware<
+      <context extends RequestContext>(context: context) => RequestContext
+    >
+    type Context = MiddlewareContext<
+      [ReturnType<typeof requireUser>, ...OpaqueMiddleware[]],
+      RequestContext<{ accountId: string }>
+    >
+
+    expectTypeEquality<IsEqual<Context, RequestContext<{ accountId: string }>>>()
+  })
+
+  it('widens existing values for conditional entries with unknown keys and values', () => {
+    type Context = MiddlewareContext<
+      [ReturnType<typeof requireUser>, ...Middleware<ContextEntry>[]]
+    >
+
+    function assertContext(context: Context) {
+      let user = context.get(CurrentUser)
+
+      expectTypeEquality<IsEqual<typeof user, unknown>>()
+      expectTypeEquality<IsEqual<typeof context.currentUser, unknown>>()
+    }
+
+    void assertContext
+  })
+
+  it('discards refinements across a broadly typed rest before applying the suffix', () => {
+    type Context = MiddlewareContext<
+      [ReturnType<typeof requireUser>, ...AnyMiddleware[], ReturnType<typeof loadAdminRole>]
+    >
+
+    function assertContext(context: Context) {
+      let user = context.get(CurrentUser)
+      let role = context.get(CurrentRole)
+
+      expectTypeEquality<IsEqual<typeof user, { id: string } | null>>()
+      expectTypeEquality<IsEqual<typeof role, 'admin'>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+
+      // @ts-expect-error - unknown transforms may invalidate the user refinement
+      void context.currentUser
+    }
+
+    void assertContext
   })
 
   it('types stored actions with route params and explicit app context', () => {
