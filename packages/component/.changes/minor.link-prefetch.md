@@ -1,3 +1,0 @@
-Prefetch frame content with `data-rmx-prefetch="intent"` on hover, focus, or press; `data-rmx-prefetch="viewport"` on viewport entry; or `prefetch(src, options?)` from a script. Named-frame links honor `data-rmx-target` and `data-rmx-src`; imperative calls accept `{ target }`. Automatic link prefetching respects Save-Data and skips `slow-2g`/`2g` connections.
-
-The default discovers JavaScript, CSS, and explicit image and font preloads from destination HTML, using asset prefetch hints and the browser HTTP cache. Customize loading with `run({ prefetch })`. See the [prefetching guide](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for usage and caching details.

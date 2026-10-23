@@ -1,1 +1,0 @@
-Opt out of automatic focus resets during intercepted navigation with `resetFocus: 'manual'` in `navigate()` and `link()`, or `data-rmx-reset-focus="manual"` on links, forms, and submit buttons. Scroll and focus controls in `remix/component` now accept the Navigation API values `"after-transition"` (the default) and `"manual"`; existing boolean values remain supported.
