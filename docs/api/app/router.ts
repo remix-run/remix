@@ -82,7 +82,6 @@ export function createApiRouter(options: ApiRouterOptions) {
     router.mount(versionPathname, (versionRouter) => {
       versionRouter.map(routes.assets, versionRootController.actions.assets)
       versionRouter.map(routes.lookup, versionRootController.actions.lookup)
-      versionRouter.map(routes.legacy, versionRootController.actions.legacy)
       versionRouter.map(routes.api, versionApiController)
     })
   }

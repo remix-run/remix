@@ -161,31 +161,6 @@ describe('createApiRouter()', () => {
     assert.match(await versionedResponse.text(), /Could not find a document at:/)
   })
 
-  it('forwards legacy /api/ URLs to the root docs URLs', async (t) => {
-    let assetServer = createAssetServer()
-    t.after(() => assetServer.close())
-    let router = createApiRouter({
-      assetServer,
-      docsContext: await getTestDocsContext(),
-      versions: ['v1.2.3'],
-    })
-
-    let [page, versionedPage, markdown] = await Promise.all([
-      router.fetch(new Request('http://localhost/api/@remix-run/ui/tabs/overview/')),
-      router.fetch(new Request('http://localhost/v1.2.3/api/remix/router/overview/')),
-      router.fetch(new Request('http://localhost/api/remix/router/overview.md')),
-    ])
-
-    assert.equal(page.status, 200)
-    assert.match(await page.text(), /http-equiv="refresh" content="0; url=\/ui\/tabs\/"/)
-    assert.match(
-      await versionedPage.text(),
-      /http-equiv="refresh" content="0; url=\/v1\.2\.3\/router\/"/,
-    )
-    assert.equal(markdown.status, 301)
-    assert.equal(markdown.headers.get('Location'), '/router.md')
-  })
-
   it('serves only the configured asset URL space', async (t) => {
     let assetServer = createAssetServer('v1.2.3')
     t.after(() => assetServer.close())
@@ -296,19 +271,6 @@ describe('getApiRouteHref()', () => {
     assert.equal(getApiRouteHref('/remix-run/ui/tabs/', undefined), '/ui/tabs/')
     assert.equal(getApiRouteHref('/remix/', undefined), '/remix/')
   })
-
-  it('rewrites legacy /api/ hrefs to root docs hrefs', () => {
-    assert.equal(getApiRouteHref('/api/@remix-run/ui/tabs/overview', 'v1.2.3'), '/v1.2.3/ui/tabs/')
-    assert.equal(getApiRouteHref('/api/remix/overview.md', undefined), '/remix.md')
-    assert.equal(getApiRouteHref('/api/remix/overview/', undefined), '/remix/')
-  })
-
-  it('keeps overview segments in current docs hrefs', () => {
-    assert.equal(
-      getApiRouteHref('/remix/example/function/overview', undefined),
-      '/example/function/overview/',
-    )
-  })
 })
 
 describe('buildRegistry()', () => {
@@ -401,20 +363,17 @@ function packageFile(pkg: string): DocFile {
     type: 'package',
     name: pkg,
     package: pkg,
-    docsPath: pkg,
     urlPath: getDocsUrlPath(pkg),
   }
 }
 
 function apiFile(pkg: string, type: 'class' | 'function' | 'type', name: string): DocFile {
-  let docsPath = `${pkg}/${type}/${name}`
   return {
     kind: 'api',
     path: '',
     type,
     name,
     package: pkg,
-    docsPath,
-    urlPath: getDocsUrlPath(docsPath),
+    urlPath: getDocsUrlPath(`${pkg}/${type}/${name}`),
   }
 }

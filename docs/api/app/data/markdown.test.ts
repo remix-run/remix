@@ -84,7 +84,6 @@ describe('renderMarkdownFile()', () => {
       type: 'type',
       name: 'Route',
       package: 'remix/router',
-      docsPath: 'remix/router/type/Route',
       urlPath: 'router/type/Route',
     }
     let result = await renderMarkdown(t, '```ts\nlet route: Route\n```\n', {

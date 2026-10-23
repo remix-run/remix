@@ -4,6 +4,7 @@ import { discoverPublicModuleHrefs } from 'remix-docs-shared/prerender/public-mo
 import { prerender } from 'remix-docs-shared/prerender/run'
 
 import { createDocsContextLoader } from '../app/data/docs.ts'
+import { HOME_PAGE_ID } from '../app/data/registry.ts'
 import { createApiRouter, getDefaultVersions } from '../app/router.ts'
 import { routes, withVersion } from '../app/routes.ts'
 import { createAssetServer } from '../app/assets.ts'
@@ -45,19 +46,19 @@ const publicModuleHrefs = await discoverPublicModuleHrefs(assetServer, [
   sharedDir,
 ])
 const homePath = withVersion(routes.home.href(), buildVersion)
-// Docs used to live under `/api/`, so write a redirect page at each old URL.
+// List every docs page rather than relying on the crawl, which stops at nofollow package pages.
 const registry = (await createDocsContextLoader()()).getRegistry(buildVersion)
-const legacyPaths = Object.values(registry.pages).flatMap((page) => {
-  if (!page.docFile) return []
-  let { docsPath } = page.docFile
-  let slug = page.docFile.kind === 'package' ? `${docsPath}/overview/` : `${docsPath}/`
-  return [withVersion(routes.legacy.href({ slug }), buildVersion)]
+const pagePaths = Object.values(registry.pages).flatMap((page) => {
+  if (page.id === HOME_PAGE_ID) return []
+  return page.docFile
+    ? [page.path, withVersion(routes.api.markdown.href({ slug: page.id }), buildVersion)]
+    : [page.path]
 })
 const paths = [
   homePath,
   withVersion(routes.lookup.href(), buildVersion),
   ...publicModuleHrefs,
-  ...legacyPaths,
+  ...pagePaths,
 ]
 const pagefindSiteDir = buildVersion ? path.join(outputDir, buildVersion) : outputDir
 

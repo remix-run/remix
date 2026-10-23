@@ -6,13 +6,12 @@ import { createController } from 'remix/router'
 import type { DocsContext, Versions } from '../data/docs.ts'
 import { getVersionedLookupHref } from '../data/lookup.ts'
 import { renderMarkdownFile } from '../data/markdown.ts'
-import { getApiRouteHref, routes, withVersion } from '../routes.ts'
+import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import type { DocsAssetServer } from '../assets.ts'
 import { MarkdownContent } from './api/page.tsx'
 import { fileResponse } from './file-response.ts'
 import { VersionList } from './home.tsx'
-import { LegacyRedirect } from './legacy-redirect.tsx'
 
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
 const markdownDir = path.join(apiDir, 'build', 'md')
@@ -59,17 +58,6 @@ export function createRootController(options: RootControllerOptions) {
             <VersionList versions={options.versions} activeVersion={options.activeVersion} />
           </Document>,
         )
-      },
-      legacy({ params, render }) {
-        let href = getApiRouteHref(`/api/${params.slug}`, options.activeVersion)
-        // Paths that aren't docs (they come back unchanged) go to the home page.
-        if (!href || href.startsWith(withVersion('/api/', options.activeVersion))) {
-          href = withVersion(routes.home.href(), options.activeVersion)
-        }
-        if (href.endsWith('.md')) {
-          return new Response(null, { status: 301, headers: { Location: href } })
-        }
-        return render(<LegacyRedirect href={href} />)
       },
       async lookup({ request }) {
         let jsonPath = path.join(markdownDir, 'api.json')
