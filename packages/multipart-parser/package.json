@@ -22,6 +22,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./node": "./src/node.ts",
+    "./future": "./src/future.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -33,6 +34,10 @@
       "./node": {
         "types": "./dist/node.d.ts",
         "default": "./dist/node.js"
+      },
+      "./future": {
+        "types": "./dist/future.d.ts",
+        "default": "./dist/future.js"
       },
       "./package.json": "./package.json"
     }

@@ -106,7 +106,7 @@ const defaultMaxFiles = 20
 const defaultMaxFileSize = 2 * oneMb
 const defaultMaxParts = 1000
 
-function isParserLimitError(error: unknown): boolean {
+export function isParserLimitError(error: unknown): boolean {
   return (
     error instanceof MaxHeaderSizeExceededError ||
     error instanceof MaxFileSizeExceededError ||
@@ -130,7 +130,7 @@ async function* parseFormDataParts(
   }
 }
 
-function isUrlEncodedRequest(request: Request): boolean {
+export function isUrlEncodedRequest(request: Request): boolean {
   let mediaType = ContentType.from(request.headers.get('Content-Type')).mediaType?.toLowerCase()
   return mediaType === 'application/x-www-form-urlencoded'
 }
@@ -200,7 +200,7 @@ async function readUrlEncodedBody(
 
 let urlEncodedDecoder: TextDecoder | undefined
 
-async function parseUrlEncodedFormData(
+export async function parseUrlEncodedFormData(
   request: Request,
   maxParts: number,
   maxTotalSize: number,
