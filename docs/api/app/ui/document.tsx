@@ -154,8 +154,8 @@ function Head(
           url={`${siteUrl}${page.path}`}
           title={title}
           description={description}
-          image={`${siteUrl}/social/docs.png`}
-          imageAlt="Remix Docs"
+          image={`${siteUrl}/social/remix.jpg`}
+          imageAlt="Remix"
         />
         {page.docFile ? (
           <link

@@ -54,8 +54,8 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
             url={`${siteUrl}${pagePath.replace(/\/?$/, '/')}`}
             title={pageTitle}
             description={description}
-            image={`${siteUrl}/social/ui.png`}
-            imageAlt="Remix UI"
+            image={`${siteUrl}/social/remix.jpg`}
+            imageAlt="Remix"
           />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           {searchEnabled ? (

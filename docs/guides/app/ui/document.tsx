@@ -36,8 +36,8 @@ export function Document(handle: Handle<DocumentProps>) {
             url={`${siteUrl}${path}`}
             title={title}
             description={description}
-            image={`${siteUrl}/social/guides.png`}
-            imageAlt="Remix Guides"
+            image={`${siteUrl}/social/remix.jpg`}
+            imageAlt="Remix"
           />
           {searchEnabled ? (
             <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
