@@ -29,6 +29,7 @@ navigationLinks.set('guides', {
 type DocsDocumentProps = {
   title: string
   description: string
+  path: string
   chapters: DocsNavigationItem[]
   currentChapterSlug?: string
   hasSecondaryNavigation?: boolean
@@ -66,6 +67,7 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
       <Document
         title={title}
         description={handle.props.description}
+        path={handle.props.path}
         head={handle.props.head}
         searchEnabled={searchEnabled}
       >
@@ -104,6 +106,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
       <DocsDocument
         title={handle.props.title}
         description={handle.props.description}
+        path={`/${handle.props.slug}/`}
         chapters={handle.props.chapters}
         currentChapterSlug={handle.props.slug}
         hasSecondaryNavigation
