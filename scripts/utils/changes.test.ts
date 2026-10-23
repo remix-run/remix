@@ -1,4 +1,5 @@
 import * as fs from 'node:fs'
+import * as cp from 'node:child_process'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import assert from '@remix-run/assert'
@@ -54,6 +55,64 @@ function withTemporaryPackage(
 }
 
 describe('parsePackageChanges', () => {
+  it('links to the introducing PR even after a change file is edited and renamed', () => {
+    withTemporaryPackage('1.0.0', (packageDirName, packagePath) => {
+      function git(args: string[]) {
+        return cp
+          .execFileSync('git', ['-c', 'core.hooksPath=/dev/null', ...args], {
+            cwd: packagePath,
+            stdio: 'pipe',
+            encoding: 'utf-8',
+          })
+          .trim()
+      }
+
+      git(['init'])
+      git(['config', 'user.name', 'Test Bot'])
+      git(['config', 'user.email', 'test@example.com'])
+      let changesPath = path.join(packagePath, '.changes')
+      fs.mkdirSync(changesPath)
+      let filePath = path.join(changesPath, 'patch.fix.md')
+      fs.writeFileSync(filePath, 'Fix the bug')
+      git(['add', '.'])
+      git(['commit', '-m', 'Fix the bug (#123)'])
+      let introducingCommit = git(['rev-parse', 'HEAD'])
+
+      fs.writeFileSync(filePath, 'Clarify the bug fix')
+      git(['add', '.'])
+      git(['commit', '-m', 'Edit the release note (#456)'])
+      git(['mv', '.changes/patch.fix.md', '.changes/patch.renamed.md'])
+      fs.writeFileSync(path.join(changesPath, 'patch.direct.md'), 'Direct commit change')
+      git(['add', '.'])
+      git(['commit', '-m', 'Commit a direct fix'])
+      let directCommit = git(['rev-parse', 'HEAD'])
+      fs.writeFileSync(path.join(changesPath, 'patch.untracked.md'), 'Uncommitted change')
+      fs.writeFileSync(path.join(changesPath, 'patch.staged.md'), 'Staged change')
+      git(['add', '.changes/patch.staged.md'])
+
+      let result = parsePackageChanges(packageDirName, packagePath)
+      if (!result.valid) assert.fail('Expected valid changes')
+
+      assert.deepEqual(result.changes, [
+        {
+          file: 'patch.direct.md',
+          bump: 'patch',
+          content: 'Direct commit change',
+          gitSha: directCommit,
+        },
+        {
+          file: 'patch.renamed.md',
+          bump: 'patch',
+          content: 'Clarify the bug fix',
+          gitSha: introducingCommit,
+          prNumber: 123,
+        },
+        { file: 'patch.staged.md', bump: 'patch', content: 'Staged change' },
+        { file: 'patch.untracked.md', bump: 'patch', content: 'Uncommitted change' },
+      ])
+    })
+  })
+
   it('allows stable packages without .changes directories', () => {
     withTemporaryPackage('1.0.0', (packageDirName, packagePath) => {
       let result = parsePackageChanges(packageDirName, packagePath)
@@ -139,6 +198,51 @@ describe('parseChangelog', () => {
 })
 
 describe('generateChangelogContent', () => {
+  it('adds PR links to stable entries and commit links to multiline entries', () => {
+    let content = generateChangelogContent(
+      makeRelease({
+        nextVersion: '3.0.1',
+        changes: [
+          {
+            file: 'patch.a.md',
+            bump: 'patch',
+            content: 'Fix a bug',
+            gitSha: 'abcdef0123456789',
+            prNumber: 123,
+          },
+          {
+            file: 'patch.b.md',
+            bump: 'patch',
+            content: 'Fix another bug\n\nMore details\n\n```ts\nexample()\n```',
+            gitSha: '123456789abcdef0',
+          },
+        ],
+      }),
+    )
+
+    assert.equal(
+      content,
+      '## v3.0.1\n\n### Patch Changes\n\n' +
+        '- Fix a bug ([#123](https://github.com/remix-run/remix/pull/123))\n\n' +
+        '- Fix another bug ([1234567](https://github.com/remix-run/remix/commit/123456789abcdef0))\n\n' +
+        '  More details\n\n  ```ts\n  example()\n  ```\n',
+    )
+  })
+
+  it('adds source links to prerelease entries', () => {
+    let content = generateChangelogContent(
+      makeRelease({
+        changes: [{ file: 'patch.fix.md', bump: 'patch', content: 'Fix a bug', prNumber: 123 }],
+      }),
+    )
+
+    assert.equal(
+      content,
+      '## v3.0.0-alpha.4\n\n### Pre-release Changes\n\n' +
+        '- Fix a bug ([#123](https://github.com/remix-run/remix/pull/123))\n',
+    )
+  })
+
   it('groups prerelease changes into a single section', () => {
     let content = generateChangelogContent(
       makeRelease({

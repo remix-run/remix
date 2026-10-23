@@ -62,11 +62,23 @@ function generateHeader(): string {
 }
 
 function generateReleasesTable(releases: PackageRelease[]): string {
-  let lines = ['# Releases', '', '| Package | Version |', '|---------|---------|']
+  let lines = [
+    '# Releases',
+    '',
+    '| Package | Version | Change files |',
+    '|---------|---------|--------------|',
+  ]
 
   for (let release of releases) {
+    let changeFileCounts =
+      ['major', 'minor', 'patch']
+        .flatMap((bump) => {
+          let count = release.changes.filter((change) => change.bump === bump).length
+          return count > 0 ? [`${count} ${bump}`] : []
+        })
+        .join(', ') || 'n/a'
     lines.push(
-      `| ${release.packageName} | \`${release.currentVersion}\` → \`${release.nextVersion}\` |`,
+      `| ${release.packageName} | \`${release.currentVersion}\` → \`${release.nextVersion}\` | ${changeFileCounts} |`,
     )
   }
 
