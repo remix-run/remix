@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import * as assert from 'remix/assert'
 import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
@@ -120,7 +121,7 @@ describe('bookstore prefetching', () => {
 
   it('warms destination assets from no-store HTML and fetches HTML again on navigation', async (t) => {
     let scriptHref = await assets.getHref(
-      new URL('./actions/books/public/image-carousel.tsx', import.meta.url).pathname,
+      fileURLToPath(new URL('./actions/books/public/image-carousel.tsx', import.meta.url)),
     )
     let styleHref = '/prefetch-only.css'
     let release = Promise.withResolvers<void>()
@@ -250,7 +251,7 @@ describe('bookstore prefetching', () => {
 
   it('keeps an unfinished asset prefetch connected through frame navigation', async (t) => {
     let scriptHref = await assets.getHref(
-      new URL('./actions/books/public/image-carousel.tsx', import.meta.url).pathname,
+      fileURLToPath(new URL('./actions/books/public/image-carousel.tsx', import.meta.url)),
     )
     let started = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
