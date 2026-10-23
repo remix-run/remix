@@ -9,17 +9,10 @@ import { createRouter as createRemixRouter, type MiddlewareContext } from 'remix
 
 import { createApiController } from './actions/api/controller.tsx'
 import { createRootController } from './actions/controller.tsx'
-import {
-  createDocsContextLoader,
-  getDefaultVersions,
-  type DocsContext,
-  type Versions,
-} from './data/docs.ts'
+import { createDocsContextLoader, type DocsContext } from './data/docs.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
-import { getVersionPathname, routes } from './routes.ts'
+import { routes } from './routes.ts'
 import type { DocsAssetServer } from './assets.ts'
-
-export { getDefaultVersions } from './data/docs.ts'
 
 export type AppContext = MiddlewareContext<
   [ReturnType<typeof loadAssetEntry>, ReturnType<typeof render>]
@@ -39,7 +32,6 @@ export interface ApiRouterOptions {
   assetServer: DocsAssetServer
   docsContext?: DocsContext
   pagefindAssetsDir?: string
-  versions: Versions
 }
 
 export function createApiRouter(options: ApiRouterOptions) {
@@ -61,31 +53,9 @@ export function createApiRouter(options: ApiRouterOptions) {
     assetServer: options.assetServer,
     getDocsContext,
     ...(options.pagefindAssetsDir ? { pagefindAssetsDir: options.pagefindAssetsDir } : {}),
-    versions: options.versions,
   }
   router.map(routes, createRootController(rootControllerOptions))
   router.map(routes.api, createApiController(rootControllerOptions))
-
-  for (let activeVersion of new Set(options.versions)) {
-    let versionPathname = getVersionPathname(activeVersion)
-    let versionControllerOptions = { ...rootControllerOptions, activeVersion }
-    let versionRootController = createRootController(versionControllerOptions)
-    let versionApiController = createApiController(versionControllerOptions)
-
-    // A mounted route builder does not match its own root path, so map the
-    // versioned home action on the parent router. Wrap the route-specific action so TypeScript 7
-    // can infer context for dynamic version paths.
-    let homeAction = versionRootController.actions.home
-    router.map(`${versionPathname}/`, (context) =>
-      typeof homeAction === 'function' ? homeAction(context) : homeAction.handler(context),
-    )
-    router.mount(versionPathname, (versionRouter) => {
-      versionRouter.map(routes.assets, versionRootController.actions.assets)
-      versionRouter.map(routes.lookup, versionRootController.actions.lookup)
-      versionRouter.map(routes.legacy, versionRootController.actions.legacy)
-      versionRouter.map(routes.api, versionApiController)
-    })
-  }
 
   return router
 }

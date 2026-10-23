@@ -1,4 +1,3 @@
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 import { discoverDemoFiles } from './demos.tsx'
@@ -6,21 +5,12 @@ import { discoverMarkdownFiles, type DocFile as MarkdownDocFile } from './markdo
 import { buildRegistry, type DocFile, type DocsRegistry } from './registry.ts'
 
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
-const repoDir = path.resolve(apiDir, '..', '..')
 const markdownDir = path.join(apiDir, 'build', 'md')
-const remixPackageJson = path.join(repoDir, 'packages', 'remix', 'package.json')
-
-export type Versions = string[]
 
 export interface DocsContext {
   docFiles: DocFile[]
   docFilesLookup: Map<string, MarkdownDocFile>
-  getRegistry(version?: string): DocsRegistry
-}
-
-export function getDefaultVersions(): Versions {
-  let version = JSON.parse(fs.readFileSync(remixPackageJson, 'utf-8')).version
-  return [version]
+  registry: DocsRegistry
 }
 
 export function createDocsContextLoader(docsContext?: DocsContext): () => Promise<DocsContext> {
@@ -36,19 +26,5 @@ async function loadDocsContext(): Promise<DocsContext> {
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(markdownDir)
   let demoFiles = await discoverDemoFiles()
   let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
-  let registryByVersion = new Map<string | undefined, DocsRegistry>()
-  registryByVersion.set(undefined, buildRegistry(docFiles))
-
-  return {
-    docFiles,
-    docFilesLookup,
-    getRegistry(version?: string): DocsRegistry {
-      let registry = registryByVersion.get(version)
-      if (!registry) {
-        registry = buildRegistry(docFiles, version)
-        registryByVersion.set(version, registry)
-      }
-      return registry
-    },
-  }
+  return { docFiles, docFilesLookup, registry: buildRegistry(docFiles) }
 }

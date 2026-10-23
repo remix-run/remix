@@ -1,11 +1,11 @@
 import * as path from 'node:path'
 import { startDocsServer } from 'remix-docs-shared/server'
 
-import { createApiRouter, getDefaultVersions } from './app/router.ts'
+import { createApiRouter } from './app/router.ts'
 import { createAssetServer } from './app/assets.ts'
 
 const assetServer = createAssetServer()
-const router = createApiRouter({ assetServer, versions: getDefaultVersions() })
+const router = createApiRouter({ assetServer })
 
 startDocsServer(router, {
   assetServer,

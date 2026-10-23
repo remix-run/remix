@@ -67,14 +67,13 @@ describe('renderMarkdownFile()', () => {
     assert.match(result.html, /<aside data-api-note>Rendered HTML<\/aside>/)
   })
 
-  it('rewrites API links for the active version', async (t) => {
+  it('rewrites import-path API links to docs URLs', async (t) => {
     let result = await renderMarkdown(
       t,
       '[Route docs](/remix/router/type/Route.md?raw=true#details)\n',
-      { version: '1.2.3' },
     )
 
-    assert.match(result.html, /href="\/1.2.3\/router\/type\/Route.md\?raw=true#details"/)
+    assert.match(result.html, /href="\/router\/type\/Route.md\?raw=true#details"/)
   })
 
   it('links API symbols inside highlighted code', async (t) => {
@@ -90,10 +89,9 @@ describe('renderMarkdownFile()', () => {
     let result = await renderMarkdown(t, '```ts\nlet route: Route\n```\n', {
       addCodeLinks: true,
       docFilesLookup: new Map([['Route', routeDoc]]),
-      version: '1.2.3',
     })
 
-    assert.match(result.html, /href="\/1.2.3\/router\/type\/Route\/"/)
+    assert.match(result.html, /href="\/router\/type\/Route\/"/)
   })
 })
 
@@ -103,7 +101,6 @@ async function renderMarkdown(
   options: {
     addCodeLinks?: boolean
     docFilesLookup?: Map<string, DocFile>
-    version?: string
   } = {},
 ) {
   let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-docs-markdown-'))
@@ -114,7 +111,6 @@ async function renderMarkdown(
   return renderMarkdownFile(
     file,
     options.docFilesLookup ?? new Map(),
-    options.version,
     options.addCodeLinks ?? false,
   )
 }

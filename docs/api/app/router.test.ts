@@ -5,7 +5,6 @@ import * as path from 'node:path'
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { getVersionedLookupHref } from './data/lookup.ts'
 import { buildRegistry, getNavChain, type DocFile, type NavNode } from './data/registry.ts'
 import { createApiRouter } from './router.ts'
 import { getApiRouteHref, getDocsUrlPath } from './routes.ts'
@@ -16,18 +15,16 @@ describe('createApiRouter()', () => {
     t.after(() => assetServer.close())
     let router = createApiRouter({
       assetServer,
-      versions: ['v1.2.3'],
     })
     assert.equal(typeof router.fetch, 'function')
   })
 
-  it('uses root asset URLs when no asset version is configured', async (t) => {
+  it('uses root asset URLs', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
     let router = createApiRouter({
       assetServer,
       docsContext: await getTestDocsContext(),
-      versions: ['v1.2.3'],
     })
 
     let response = await router.fetch(new Request('http://localhost/'))
@@ -39,8 +36,6 @@ describe('createApiRouter()', () => {
     assert.equal(html.includes('href="/_assets/app/actions/public/docs.css"'), true)
     assert.equal(html.includes('/_assets/docs-shared/ui/public/docs-shell.tsx'), true)
     assert.equal(html.includes('/_assets/docs-shared/ui/public/code-block-copy.tsx'), true)
-    assert.equal(html.includes('src="/v1.2.3/_assets/app/actions/public/entry.tsx"'), false)
-    assert.equal(html.includes('href="/v1.2.3/_assets/app/actions/public/entry.tsx"'), false)
   })
 
   it('keeps persistent stylesheets after variable head content', async (t) => {
@@ -49,7 +44,6 @@ describe('createApiRouter()', () => {
     let router = createApiRouter({
       assetServer,
       docsContext: await getTestDocsContext(),
-      versions: ['v1.2.3'],
     })
 
     let response = await router.fetch(new Request('http://localhost/'))
@@ -79,39 +73,11 @@ describe('createApiRouter()', () => {
     assert.equal(pagefindScriptIndex > entryScriptIndex, true)
   })
 
-  it('uses versioned asset URLs when an asset version is configured', async (t) => {
-    let assetServer = createAssetServer('v1.2.3')
-    t.after(() => assetServer.close())
-    let router = createApiRouter({
-      assetServer,
-      docsContext: await getTestDocsContext(),
-      versions: ['v1.2.3'],
-    })
-
-    let response = await router.fetch(new Request('http://localhost/v1.2.3/'))
-    assert.equal(response.status, 200)
-    let html = await response.text()
-    let assetUrls = getLoadedAssetUrls(html).filter((url) => shouldVersionAssetUrl(url))
-
-    assert.equal(html.includes('src="/v1.2.3/_assets/app/actions/public/entry.tsx"'), true)
-    assert.equal(html.includes('href="/v1.2.3/_assets/app/actions/public/entry.tsx"'), true)
-    assert.equal(html.includes('/v1.2.3/_assets/docs-shared/ui/public/docs-shell.tsx'), true)
-    assert.equal(html.includes('/v1.2.3/_assets/docs-shared/ui/public/code-block-copy.tsx'), true)
-    assert.equal(html.includes('src="/_assets/app/actions/public/entry.tsx"'), false)
-    assert.equal(html.includes('href="/_assets/app/actions/public/entry.tsx"'), false)
-    assert.equal(assetUrls.length > 0, true)
-    assert.deepEqual(
-      assetUrls.filter((url) => !url.startsWith('/v1.2.3/')),
-      [],
-    )
-  })
-
   it('serves site-specific and shared static assets at root URLs', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
     let router = createApiRouter({
       assetServer,
-      versions: ['v1.2.3'],
     })
 
     let [siteResponse, sharedResponse] = await Promise.all([
@@ -126,43 +92,18 @@ describe('createApiRouter()', () => {
     assert.match(await sharedResponse.text(), /<svg width="144"/)
   })
 
-  it('serves dotted version routes only for configured versions', async (t) => {
+  it('maps API document actions at root paths', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
     let router = createApiRouter({
       assetServer,
       docsContext: await getTestDocsContext(),
-      versions: ['v1.2.3'],
     })
 
-    let configured = await router.fetch(new Request('http://localhost/v1.2.3/'))
-    assert.equal(configured.status, 200)
+    let response = await router.fetch(new Request('http://localhost/missing/'))
 
-    let encoded = await router.fetch(new Request('http://localhost/v1%2E2%2E3/'))
-    assert.equal(encoded.status, 404)
-
-    let unknown = await router.fetch(new Request('http://localhost/v9.9.9/'))
-    assert.equal(unknown.status, 404)
-  })
-
-  it('maps API document actions at root and versioned paths', async (t) => {
-    let assetServer = createAssetServer()
-    t.after(() => assetServer.close())
-    let router = createApiRouter({
-      assetServer,
-      docsContext: await getTestDocsContext(),
-      versions: ['v1.2.3'],
-    })
-
-    let [rootResponse, versionedResponse] = await Promise.all([
-      router.fetch(new Request('http://localhost/missing/')),
-      router.fetch(new Request('http://localhost/v1.2.3/missing/')),
-    ])
-
-    assert.equal(rootResponse.status, 404)
-    assert.match(await rootResponse.text(), /Could not find a document at:/)
-    assert.equal(versionedResponse.status, 404)
-    assert.match(await versionedResponse.text(), /Could not find a document at:/)
+    assert.equal(response.status, 404)
+    assert.match(await response.text(), /Could not find a document at:/)
   })
 
   it('forwards legacy /api/ URLs to the root docs URLs and serves old Markdown URLs', async (t) => {
@@ -176,147 +117,73 @@ describe('createApiRouter()', () => {
     let router = createApiRouter({
       assetServer,
       docsContext: { ...(await getTestDocsContext()), docFiles: [overview] },
-      versions: ['v1.2.3'],
     })
 
-    let [page, versionedPage, markdown] = await Promise.all([
+    let [page, markdown] = await Promise.all([
       router.fetch(new Request('http://localhost/api/@remix-run/ui/tabs/overview/')),
-      router.fetch(new Request('http://localhost/v1.2.3/api/remix/router/overview/')),
       router.fetch(new Request('http://localhost/api/remix/router/overview.md')),
     ])
 
     assert.equal(page.status, 200)
     assert.match(await page.text(), /http-equiv="refresh" content="0; url=\/ui\/tabs\/"/)
-    assert.match(
-      await versionedPage.text(),
-      /http-equiv="refresh" content="0; url=\/v1\.2\.3\/router\/"/,
-    )
     assert.equal(markdown.status, 200)
     assert.equal(await markdown.text(), '# remix/router\n')
   })
 
-  it('serves only the configured asset URL space', async (t) => {
-    let assetServer = createAssetServer('v1.2.3')
+  it('serves only public browser modules from the asset URL space', async (t) => {
+    let assetServer = createAssetServer()
     t.after(() => assetServer.close())
     let router = createApiRouter({
       assetServer,
-      versions: ['v1.2.3'],
     })
 
-    let versionedResponse = await router.fetch(
-      new Request('http://localhost/v1.2.3/_assets/app/actions/public/entry.tsx'),
-    )
-    assert.equal(versionedResponse.status, 200)
-
-    let [rootResponse, privateResponse] = await Promise.all([
+    let [publicResponse, privateResponse] = await Promise.all([
       router.fetch(new Request('http://localhost/_assets/app/actions/public/entry.tsx')),
-      router.fetch(new Request('http://localhost/v1.2.3/_assets/app/actions/controller.tsx')),
+      router.fetch(new Request('http://localhost/_assets/app/actions/controller.tsx')),
     ])
-    assert.equal(rootResponse.status, 404)
+    assert.equal(publicResponse.status, 200)
     assert.equal(privateResponse.status, 404)
   })
 })
-
-function getLoadedAssetUrls(html: string): string[] {
-  let urls: string[] = []
-  let tagPattern = /<(?:link|script|img)\b[^>]*>/g
-  let urlPattern = /\b(?:href|src)="([^"]+)"/
-
-  for (let tag of html.matchAll(tagPattern)) {
-    let url = tag[0].match(urlPattern)?.[1]
-    if (url) urls.push(url)
-  }
-
-  return urls
-}
-
-function shouldVersionAssetUrl(url: string): boolean {
-  if (!url.startsWith('/')) return false
-  if (
-    url === '/favicon.ico' ||
-    url === '/favicon.svg' ||
-    url === '/remix-logo-light-mode.svg' ||
-    url === '/remix-wordmark-light-mode.svg'
-  ) {
-    return false
-  }
-  return true
-}
 
 async function getTestDocsContext() {
   return {
     docFiles: [],
     docFilesLookup: new Map(),
-    getRegistry() {
-      return buildRegistry([])
-    },
+    registry: buildRegistry([]),
   }
 }
 
-describe('getVersionedLookupHref()', () => {
-  it('preserves dots in versioned markdown lookup targets', () => {
-    assert.equal(
-      getVersionedLookupHref('/headers/accept/class/Accept.md', 'v1.2.3'),
-      '/v1.2.3/headers/accept/class/Accept.md',
-    )
-  })
-
-  it('uses docs routes for HTML lookup targets', () => {
-    assert.equal(
-      getVersionedLookupHref('/headers/accept/class/Accept', 'v1.2.3'),
-      '/v1.2.3/headers/accept/class/Accept/',
-    )
-  })
-
-  it('preserves query strings and hashes', () => {
-    assert.equal(
-      getVersionedLookupHref('/headers/accept/class/Accept.md?tab=docs#example', 'v1.2.3'),
-      '/v1.2.3/headers/accept/class/Accept.md?tab=docs#example',
-    )
-  })
-
-  it('leaves non-API lookup targets unchanged', () => {
-    assert.equal(
-      getVersionedLookupHref('https://example.com/Accept', 'v1.2.3'),
-      'https://example.com/Accept',
-    )
-  })
-})
-
 describe('getApiRouteHref()', () => {
   it('returns undefined for non-API hrefs', () => {
-    assert.equal(getApiRouteHref('https://example.com/Accept', 'v1.2.3'), undefined)
+    assert.equal(getApiRouteHref('https://example.com/Accept'), undefined)
   })
 
-  it('preserves unversioned docs hrefs when version is undefined', () => {
+  it('preserves docs hrefs with files, queries and hashes', () => {
     assert.equal(
-      getApiRouteHref('/headers/accept/class/Accept.md?tab=docs#example', undefined),
+      getApiRouteHref('/headers/accept/class/Accept.md?tab=docs#example'),
       '/headers/accept/class/Accept.md?tab=docs#example',
     )
   })
 
-  it('adds the version and trailing slash to docs page hrefs', () => {
-    assert.equal(getApiRouteHref('/ui/tabs', 'v1.2.3'), '/v1.2.3/ui/tabs/')
-    assert.equal(getApiRouteHref('/v1.2.3/ui/tabs/', 'v1.2.3'), '/v1.2.3/ui/tabs/')
+  it('adds a trailing slash to docs page hrefs', () => {
+    assert.equal(getApiRouteHref('/ui/tabs'), '/ui/tabs/')
   })
 
   it('drops the scope from import-path hrefs', () => {
-    assert.equal(getApiRouteHref('/remix/router/type/Route', undefined), '/router/type/Route/')
-    assert.equal(getApiRouteHref('/remix-run/ui/tabs/', undefined), '/ui/tabs/')
-    assert.equal(getApiRouteHref('/remix/', undefined), '/remix/')
+    assert.equal(getApiRouteHref('/remix/router/type/Route'), '/router/type/Route/')
+    assert.equal(getApiRouteHref('/remix-run/ui/tabs/'), '/ui/tabs/')
+    assert.equal(getApiRouteHref('/remix/'), '/remix/')
   })
 
   it('rewrites legacy /api/ hrefs to root docs hrefs', () => {
-    assert.equal(getApiRouteHref('/api/@remix-run/ui/tabs/overview', 'v1.2.3'), '/v1.2.3/ui/tabs/')
-    assert.equal(getApiRouteHref('/api/remix/overview.md', undefined), '/remix.md')
-    assert.equal(getApiRouteHref('/api/remix/overview/', undefined), '/remix/')
+    assert.equal(getApiRouteHref('/api/@remix-run/ui/tabs/overview'), '/ui/tabs/')
+    assert.equal(getApiRouteHref('/api/remix/overview.md'), '/remix.md')
+    assert.equal(getApiRouteHref('/api/remix/overview/'), '/remix/')
   })
 
   it('keeps overview segments in current docs hrefs', () => {
-    assert.equal(
-      getApiRouteHref('/remix/example/function/overview', undefined),
-      '/example/function/overview/',
-    )
+    assert.equal(getApiRouteHref('/remix/example/function/overview'), '/example/function/overview/')
   })
 })
 

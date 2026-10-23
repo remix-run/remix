@@ -23,7 +23,7 @@ import {
 import { ApiNav } from '../actions/public/api-nav.tsx'
 import type { ApiNavPanel } from '../actions/public/api-nav.tsx'
 import { getAssetEntry } from '../middleware/asset-entry.ts'
-import { routes, withVersion } from '../routes.ts'
+import { routes } from '../routes.ts'
 import remixPackage from '../../../../packages/remix/package.json' with { type: 'json' }
 
 const pagefindModulePath = path.resolve(
@@ -33,7 +33,6 @@ const pagefindModulePath = path.resolve(
 
 export function Document(
   handle: Handle<{
-    activeVersion?: string
     slug?: string
     registry: DocsRegistry
     children?: RemixNode | RemixNode[]
@@ -42,15 +41,15 @@ export function Document(
   }>,
 ) {
   return () => {
-    let { registry, activeVersion, slug, sourceUrl, headings, children } = handle.props
+    let { registry, slug, sourceUrl, headings, children } = handle.props
     let { scriptEntry, stylesheetHref, stylesheetPreloads } = getAssetEntry()
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let page = slug
-      ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
+      ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug))
       : getHomePage(registry)
     let navigationLinks = createDocsNavigationLinks()
     navigationLinks.set('api', {
-      href: routes.home.href({ version: activeVersion }),
+      href: routes.home.href(),
       label: 'Docs',
       current: 'page',
     })
@@ -59,7 +58,6 @@ export function Document(
       <html lang="en">
         <Head
           page={page}
-          activeVersion={activeVersion}
           scriptEntry={scriptEntry}
           stylesheetHref={stylesheetHref}
           stylesheetPreloads={stylesheetPreloads}
@@ -92,8 +90,8 @@ export function Document(
           </DocsShell>
           {searchEnabled ? (
             <PagefindElements
-              baseUrl={withVersion(routes.home.href(), activeVersion)}
-              bundlePath={withVersion(routes.assets.href({ asset: 'pagefind/' }), activeVersion)}
+              baseUrl={routes.home.href()}
+              bundlePath={routes.assets.href({ asset: 'pagefind/' })}
             />
           ) : null}
         </body>
@@ -105,7 +103,6 @@ export function Document(
 function Head(
   handle: Handle<{
     page: PageDefinition
-    activeVersion?: string
     scriptEntry: ScriptEntry
     stylesheetHref: string
     stylesheetPreloads: readonly string[]
@@ -113,8 +110,7 @@ function Head(
   }>,
 ) {
   return () => {
-    let { page, activeVersion, scriptEntry, stylesheetHref, stylesheetPreloads, searchEnabled } =
-      handle.props
+    let { page, scriptEntry, stylesheetHref, stylesheetPreloads, searchEnabled } = handle.props
     let { href, importMap, preloads } = scriptEntry
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
 
@@ -130,12 +126,7 @@ function Head(
         {stylesheetPreloads.map((href) => (
           <link key={href} data-rmx-key={`preload:${href}`} rel="preload" href={href} as="style" />
         ))}
-        {activeVersion != null ? (
-          <>
-            <meta data-rmx-key="docs-robots" name="robots" content="noindex,nofollow" />
-            <meta data-rmx-key="docs-googlebot" name="googlebot" content="noindex,nofollow" />
-          </>
-        ) : shouldNofollow ? (
+        {shouldNofollow ? (
           // Overview pages already link densely to pages in the sidebar, while
           // demo links are examples rather than docs routes.
           <meta data-rmx-key="docs-robots" name="robots" content="nofollow" />
@@ -146,10 +137,7 @@ function Head(
             data-rmx-key="docs-markdown-alternate"
             rel="alternate"
             type="text/markdown"
-            href={withVersion(
-              routes.api.markdown.href({ slug: page.docFile.urlPath }),
-              activeVersion,
-            )}
+            href={routes.api.markdown.href({ slug: page.docFile.urlPath })}
             title={`Markdown docs for ${page.docFile.name ?? page.title}`}
           />
         ) : null}
@@ -161,10 +149,7 @@ function Head(
         {searchEnabled ? (
           <link
             data-rmx-key="docs-pagefind-stylesheet"
-            href={withVersion(
-              routes.assets.href({ asset: 'pagefind/pagefind-component-ui.css' }),
-              activeVersion,
-            )}
+            href={routes.assets.href({ asset: 'pagefind/pagefind-component-ui.css' })}
             rel="stylesheet"
           />
         ) : null}
@@ -182,10 +167,7 @@ function Head(
         {searchEnabled ? (
           <script
             data-rmx-key="docs-pagefind-client-entry"
-            src={withVersion(
-              routes.assets.href({ asset: 'pagefind/pagefind-component-ui.js' }),
-              activeVersion,
-            )}
+            src={routes.assets.href({ asset: 'pagefind/pagefind-component-ui.js' })}
             type="module"
           />
         ) : null}
