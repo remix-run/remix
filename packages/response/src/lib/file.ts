@@ -234,8 +234,14 @@ export async function createFileResponse<file extends FileLike>(
 
   // Range support: https://httpwg.org/specs/rfc9110.html#field.range
   // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
-  if (acceptRanges && request.method === 'GET' && headers.has('Range')) {
-    let range = Range.from(headers.get('Range'))
+  let rangeValue = headers.get('Range')
+  if (
+    acceptRanges &&
+    request.method === 'GET' &&
+    rangeValue !== null &&
+    !hasUnknownRangeUnit(rangeValue)
+  ) {
+    let range = Range.from(rangeValue)
 
     // Check if the Range header was sent but parsing resulted in no valid ranges (malformed)
     if (range.ranges.length === 0) {
@@ -307,6 +313,15 @@ export async function createFileResponse<file extends FileLike>(
 
 function generateWeakETag(file: FileLike): string {
   return `W/"${file.size}-${file.lastModified}"`
+}
+
+function hasUnknownRangeUnit(value: string): boolean {
+  // RFC 9110 requires ignoring range units we do not understand:
+  // https://httpwg.org/specs/rfc9110.html#field.range
+  let unitSeparator = value.indexOf('=')
+  let unit = unitSeparator > 0 ? value.slice(0, unitSeparator) : ''
+
+  return /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(unit) && unit.toLowerCase() !== 'bytes'
 }
 
 interface ResponseHeaderValues {
