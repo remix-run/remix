@@ -16,6 +16,8 @@ Browser source is colocated with its owner under `public/` directories. Server m
 
 Site-specific routes, document shells, Markdown transforms, styles, and static files stay in the owning site. For example, the API's `favicon.ico` remains in `docs/api/public/`. Repository README artwork lives in `.github/assets/` rather than either site's public directory.
 
+Each site's `docs.css` imports `styles/public/docs.css`, which pulls in every shared stylesheet in order, followed by the site's own stylesheets.
+
 Navigation lists share the `.docs-nav-item` and `.docs-nav-heading` styles in `styles/public/nav.css`. Each site keeps only its own sizing and layout, such as the Guides chapter numbers and the API package menus.
 
 ## Markdown contract
@@ -32,7 +34,7 @@ Every site shares the same vertical rhythm, defined in `styles/public/article.cs
 - **Sections** — each `h2` and the content under it sit in a `.docs-section`, which owns the 48px gap above it. Spacing lives on the wrapper rather than the heading, so the gap stays consistent whether a section follows prose, a demo or a table. Pass `sections: true` to `renderMarkdownHtml` to wrap rendered Markdown. Guides groups sections itself so a section can span frame boundaries.
 - **Demos** — `DocsDemo` from `remix-docs-shared/ui/demo` renders a live preview above its highlighted source, which starts collapsed behind a "Show code" button.
 
-`docsMarkdownContentCss` matches this rhythm for prose: semibold `h2`s and secondary-color paragraphs and lists.
+Prose rendered from Markdown uses the `.docs-markdown` class from `styles/public/markdown.css`, which follows the same rhythm: semibold `h2`s, plus spacing for lists, quotes, tables and images.
 
 ## Asset contract
 

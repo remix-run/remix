@@ -10,7 +10,6 @@ import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 import { Icon } from 'remix-docs-shared/ui/icon'
-import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 
 import type { DocsRegistry, NavNode, NavSection, PageDefinition } from '../data/registry.ts'
@@ -210,7 +209,7 @@ function MainContent(
     return (
       <div class="docs-layout" data-rmx-key={`api-page-${handle.props.page.path}`}>
         <article class="docs-article">
-          <div id={contentId} class="api-page-content rmx-page-body" mix={docsMarkdownContentCss}>
+          <div id={contentId} class="api-page-content rmx-page-body docs-markdown">
             {handle.props.header}
             {handle.props.children}
           </div>

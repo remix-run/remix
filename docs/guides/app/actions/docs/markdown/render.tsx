@@ -5,7 +5,6 @@ import { addHeadingIds, readMarkdownHeadingsFromRoot } from 'remix-docs-shared/m
 import { parseMarkdownDocument } from 'remix-docs-shared/markdown/parser'
 import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
 import { groupMarkdownSections } from 'remix-docs-shared/markdown/sections'
-import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 
 import { readChapterMetadata } from './frontmatter.ts'
 import { splitMarkdownRoot } from './frames.ts'
@@ -115,8 +114,7 @@ function getRootRelativePathname(href: string): string | undefined {
 function MarkdownHtml(handle: Handle<{ html: string }>) {
   return () => (
     <div
-      class="rmx-page-body"
-      mix={docsMarkdownContentCss}
+      class="rmx-page-body docs-markdown"
       innerHTML={unsafeHTML(handle.props.html)}
     />
   )
