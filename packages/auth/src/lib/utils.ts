@@ -94,13 +94,13 @@ export function sanitizeReturnTo(value: string | null): string | undefined {
   return url.pathname + url.search + url.hash
 }
 
-function createRandomToken(byteLength: number): string {
+export function createRandomToken(byteLength: number): string {
   let bytes = new Uint8Array(byteLength)
   crypto.getRandomValues(bytes)
   return toBase64Url(bytes)
 }
 
-function toBase64Url(bytes: Uint8Array): string {
+export function toBase64Url(bytes: Uint8Array): string {
   return toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 

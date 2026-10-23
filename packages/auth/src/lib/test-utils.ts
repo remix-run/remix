@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net'
 
 import { SetCookie } from '@remix-run/headers/set-cookie'
 
+import type { EmailAuthStorage } from './email-auth.ts'
 import { createCodeChallenge } from './utils.ts'
 
 export function createRequest(
@@ -27,6 +28,47 @@ export function createRequest(
     ...init,
     headers,
   })
+}
+
+export interface MemoryEmailAuthStorage extends EmailAuthStorage {
+  values: Map<string, { value: string; expiresAt: Date }>
+}
+
+export function createMemoryEmailAuthStorage(): MemoryEmailAuthStorage {
+  let values = new Map<string, { value: string; expiresAt: Date }>()
+
+  return {
+    values,
+    async get(key) {
+      await yieldToConcurrentRequests()
+      return values.get(key)?.value ?? null
+    },
+    async set(key, value, expiresAt) {
+      await yieldToConcurrentRequests()
+      values.set(key, { value, expiresAt })
+    },
+    async add(key, value, expiresAt) {
+      await yieldToConcurrentRequests()
+      let entry = values.get(key)
+      if (entry != null && entry.expiresAt.getTime() > Date.now()) {
+        return false
+      }
+
+      values.set(key, { value, expiresAt })
+      return true
+    },
+    async take(key) {
+      await yieldToConcurrentRequests()
+      let entry = values.get(key)
+      values.delete(key)
+      return entry?.value ?? null
+    },
+  }
+}
+
+// Concurrent requests interleave at every storage call, like they would against a real database.
+async function yieldToConcurrentRequests(): Promise<void> {
+  await new Promise((resolve) => setImmediate(resolve))
 }
 
 export function mockFetch(

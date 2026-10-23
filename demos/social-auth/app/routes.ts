@@ -9,6 +9,10 @@ export const routes = route({
     signup: form('/auth/signup'),
     forgotPassword: form('/auth/forgot-password'),
     resetPassword: form('/auth/reset-password/:token'),
+    magicLink: form('/auth/magic-link'),
+    magicLinkVerify: form('/auth/magic-link/verify'),
+    emailCode: form('/auth/email-code'),
+    emailCodeVerify: form('/auth/email-code/verify'),
     google: route('/auth/google', {
       login: get('/login'),
       callback: get('/callback'),
