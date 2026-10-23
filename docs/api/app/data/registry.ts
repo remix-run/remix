@@ -1,6 +1,6 @@
 import type { DemoDocFile } from './demos.tsx'
 import type { ApiDocFile, ApiTypeKind, PackageDocFile } from './markdown.ts'
-import { getDocsUrlPath, routes, withVersion } from '../routes.ts'
+import { getDocsUrlPath, routes } from '../routes.ts'
 
 export type DocFile = ApiDocFile | PackageDocFile | DemoDocFile
 
@@ -47,7 +47,7 @@ export type DocsRegistry = {
   packages: NavNode[]
 }
 
-export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegistry {
+export function buildRegistry(docFiles: DocFile[]): DocsRegistry {
   let pages: Record<string, PageDefinition> = {}
   // Import path menus, grouped by top-level package (`data-table`, `middleware`, …).
   let nodesByPackage = new Map<string, NavNode[]>()
@@ -59,7 +59,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
     description: '',
     eyebrow: '',
     navLabel: 'Getting Started',
-    path: withVersion(routes.home.href(), version),
+    path: routes.home.href(),
     title: 'Getting Started',
   }
 
@@ -85,7 +85,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
       pages[file.urlPath] = {
         ...page,
         id: file.urlPath,
-        path: getDocPath(file.urlPath, version),
+        path: getDocPath(file.urlPath),
         navId: packageId === undefined ? undefined : pkg,
       }
     }
@@ -182,7 +182,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
         description: '',
         eyebrow: 'Package',
         navLabel: node.label,
-        path: getDocPath(slug, version),
+        path: getDocPath(slug),
         title: node.id,
         navId: node.id,
       }
@@ -221,13 +221,13 @@ function findNavChain(node: NavNode, navId: string): NavNode[] | undefined {
   }
 }
 
-export function buildNotFoundPage(slug: string, version?: string): PageDefinition {
+export function buildNotFoundPage(slug: string): PageDefinition {
   return {
     id: NOT_FOUND_PAGE_ID,
     description: `The requested document was not found: ${slug}`,
     eyebrow: 'Not Found',
     navLabel: 'Not Found',
-    path: getDocPath(slug, version),
+    path: getDocPath(slug),
     title: 'Page not found',
   }
 }
@@ -249,8 +249,8 @@ function getImportLabel(pkg: string): string {
   return pkg.replace(/^(?:remix|@remix-run)\//, '')
 }
 
-function getDocPath(slug: string, version: string | undefined): string {
-  return withVersion(routes.api.document.href({ slug }), version)
+function getDocPath(slug: string): string {
+  return routes.api.document.href({ slug })
 }
 
 // Functions read as calls (`createRoot()`) and components as elements (`<Frame>`).

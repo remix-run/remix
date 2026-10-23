@@ -11,7 +11,6 @@ import { fileResponse } from '../file-response.ts'
 import { DemoContent, MarkdownContent, NotFound, PackageIndex } from './page.tsx'
 
 interface ApiControllerOptions {
-  activeVersion?: string
   getDocsContext(): Promise<DocsContext>
 }
 
@@ -21,12 +20,8 @@ export function createApiController(options: ApiControllerOptions) {
       async document({ params, render }) {
         let docsContext = await options.getDocsContext()
         let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
-        let registry = docsContext.getRegistry(options.activeVersion)
-        let docProps = {
-          registry,
-          slug: params.slug,
-          activeVersion: options.activeVersion,
-        }
+        let registry = docsContext.registry
+        let docProps = { registry, slug: params.slug }
 
         if (docFile?.kind === 'demo') {
           let ExampleComponent = clientEntry(
@@ -47,7 +42,6 @@ export function createApiController(options: ApiControllerOptions) {
           let { html, headings, source } = await renderMarkdownFile(
             docFile.path,
             docsContext.docFilesLookup,
-            options.activeVersion,
             // Don't auto-link code symbols in README - too many false positives.
             docFile.kind !== 'package',
           )

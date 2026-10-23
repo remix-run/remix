@@ -3,15 +3,13 @@ import * as path from 'node:path'
 
 import { createController } from 'remix/router'
 
-import type { DocsContext, Versions } from '../data/docs.ts'
-import { getVersionedLookupHref } from '../data/lookup.ts'
+import type { DocsContext } from '../data/docs.ts'
 import { renderMarkdownFile } from '../data/markdown.ts'
-import { getApiRouteHref, routes, withVersion } from '../routes.ts'
+import { getApiRouteHref, routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import type { DocsAssetServer } from '../assets.ts'
 import { MarkdownContent } from './api/page.tsx'
 import { fileResponse } from './file-response.ts'
-import { VersionList } from './home.tsx'
 import { LegacyRedirect } from './legacy-redirect.tsx'
 
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
@@ -20,11 +18,9 @@ const gettingStartedPath = path.join(import.meta.dirname, 'getting-started.md')
 const defaultPagefindAssetsDir = path.join(apiDir, 'build', 'site', '_assets', 'pagefind')
 
 interface RootControllerOptions {
-  activeVersion?: string
   assetServer: DocsAssetServer
   getDocsContext(): Promise<DocsContext>
   pagefindAssetsDir?: string
-  versions: Versions
 }
 
 export function createRootController(options: RootControllerOptions) {
@@ -46,29 +42,23 @@ export function createRootController(options: RootControllerOptions) {
         let { html, headings } = await renderMarkdownFile(
           gettingStartedPath,
           docsContext.docFilesLookup,
-          options.activeVersion,
           false,
         )
         return render(
-          <Document
-            registry={docsContext.getRegistry(options.activeVersion)}
-            activeVersion={options.activeVersion}
-            headings={headings}
-          >
+          <Document registry={docsContext.registry} headings={headings}>
             <MarkdownContent html={html} />
-            <VersionList versions={options.versions} activeVersion={options.activeVersion} />
           </Document>,
         )
       },
       async legacy({ request, params, render }) {
-        let href = getApiRouteHref(`/api/${params.slug}`, options.activeVersion)
+        let href = getApiRouteHref(`/api/${params.slug}`)
         // Paths that aren't docs (they come back unchanged) go to the home page.
-        if (!href || href.startsWith(withVersion('/api/', options.activeVersion))) {
-          href = withVersion(routes.home.href(), options.activeVersion)
+        if (!href || href.startsWith('/api/')) {
+          href = routes.home.href()
         }
         // A static host can't redirect, so old Markdown URLs serve the file itself.
         if (href.endsWith('.md')) {
-          let slug = href.slice(withVersion('/', options.activeVersion).length, -'.md'.length)
+          let slug = href.slice(1, -'.md'.length)
           let docsContext = await options.getDocsContext()
           let docFile = docsContext.docFiles.find((file) => file.urlPath === slug)
           return docFile && docFile.kind !== 'demo'
@@ -77,17 +67,8 @@ export function createRootController(options: RootControllerOptions) {
         }
         return render(<LegacyRedirect href={href} />)
       },
-      async lookup({ request }) {
-        let jsonPath = path.join(markdownDir, 'api.json')
-        if (!options.activeVersion) {
-          return fileResponse(request, jsonPath)
-        }
-
-        let content: Record<string, string> = JSON.parse(await fs.readFile(jsonPath, 'utf-8'))
-        for (let key in content) {
-          content[key] = getVersionedLookupHref(content[key], options.activeVersion)
-        }
-        return Response.json(content)
+      lookup({ request }) {
+        return fileResponse(request, path.join(markdownDir, 'api.json'))
       },
     },
   })

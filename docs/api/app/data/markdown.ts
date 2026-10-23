@@ -8,7 +8,7 @@ import { parseMarkdownDocument, parseMarkdownFrontmatter } from 'remix-docs-shar
 import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 
-import { getApiRouteHref, getDocsUrlPath, routes, withVersion } from '../routes.ts'
+import { getApiRouteHref, getDocsUrlPath, routes } from '../routes.ts'
 import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../utils/symbols.ts'
 
 const apiTypeKinds = ['type', 'interface', 'class', 'function', 'mixin', 'variable'] as const
@@ -117,7 +117,6 @@ function getApiTypeKind(value: string | undefined): ApiTypeKind {
 export async function renderMarkdownFile(
   filePath: string,
   docFilesLookup: Map<string, DocFile>,
-  version: string | undefined,
   addCodeLinks: boolean,
 ): Promise<{
   html: string
@@ -128,9 +127,7 @@ export async function renderMarkdownFile(
     let markdown = fs.readFileSync(filePath, 'utf-8')
     let { attributes, root } = parseMarkdownDocument(markdown)
     let title = typeof attributes.title === 'string' ? attributes.title : ''
-    let transformers = addCodeLinks
-      ? [createApiCodeLinkTransformer(title, docFilesLookup, version)]
-      : []
+    let transformers = addCodeLinks ? [createApiCodeLinkTransformer(title, docFilesLookup)] : []
 
     addHeadingIds(root)
 
@@ -142,7 +139,7 @@ export async function renderMarkdownFile(
           transformers,
         },
         transformLink(href) {
-          return getApiRouteHref(href, version)
+          return getApiRouteHref(href)
         },
       }),
       headings: readMarkdownHeadingsFromRoot(root),
@@ -164,7 +161,6 @@ export async function renderMarkdownFile(
 function createApiCodeLinkTransformer(
   apiName: string,
   docFilesLookup: Map<string, DocFile>,
-  version: string | undefined,
 ): ShikiTransformer {
   return {
     name: 'remix-api-code-links',
@@ -198,7 +194,7 @@ function createApiCodeLinkTransformer(
       let docFile = docFilesLookup.get(symbol)
       if (docFile !== undefined) {
         linkElement = createLink(symbol, {
-          href: withVersion(routes.api.document.href({ slug: docFile.urlPath }), version),
+          href: routes.api.document.href({ slug: docFile.urlPath }),
         })
       } else if (Object.hasOwn(MDN_SYMBOLS, symbol)) {
         linkElement = createLink(symbol, {

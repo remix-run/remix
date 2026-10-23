@@ -13,14 +13,6 @@ export const routes = route({
   }),
 })
 
-export function getVersionPathname(version: string): string {
-  return `/${encodePathSegment(version)}`
-}
-
-export function withVersion(href: string, version: string | undefined): string {
-  return version === undefined ? href : `${getVersionPathname(version)}${href}`
-}
-
 // Docs files live under their import path (`remix/router/...`, `remix-run/ui/...`), but URLs drop
 // the scope: `/router/...`, `/ui/...`. The bare `remix` package stays at `/remix/`.
 export function getDocsUrlPath(docsPath: string): string {
@@ -30,12 +22,11 @@ export function getDocsUrlPath(docsPath: string): string {
 // Matches docs paths like `/remix/router/type/Route` and legacy `/api/@remix-run/ui/...` links.
 const docsPathnamePattern = /^\/(api\/)?(?:@|%40)?(remix(?:-run)?\/.+)$/
 
-export function getApiRouteHref(href: string, version: string | undefined): string | undefined {
+export function getApiRouteHref(href: string): string | undefined {
   if (!href.startsWith('/') || href.startsWith('//')) return undefined
 
   let url = new URL(href, 'http://localhost')
   let pathname = url.pathname
-  if (version !== undefined && pathname.startsWith(`${getVersionPathname(version)}/`)) return href
   let match = docsPathnamePattern.exec(pathname)
   if (match) {
     let [, legacy, slug] = match
@@ -47,12 +38,5 @@ export function getApiRouteHref(href: string, version: string | undefined): stri
     pathname = pathname.replace(/\/?$/, '/')
   }
 
-  return `${withVersion(pathname, version)}${url.search}${url.hash}`
-}
-
-function encodePathSegment(value: string): string {
-  return encodeURIComponent(value).replace(
-    /[!'()*]/g,
-    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
-  )
+  return `${pathname}${url.search}${url.hash}`
 }

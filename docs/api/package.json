@@ -6,14 +6,12 @@
     "@remix-run/ui": "workspace:^",
     "oxfmt": "catalog:",
     "remix": "workspace:*",
-    "remix-docs-shared": "workspace:*",
-    "semver": "7.7.4"
+    "remix-docs-shared": "workspace:*"
   },
   "devDependencies": {
     "@types/dom-navigation": "1.0.7",
     "@types/hast": "catalog:",
     "@types/node": "catalog:",
-    "@types/semver": "7.5.8",
     "pagefind": "catalog:",
     "shiki": "catalog:",
     "typedoc": "0.28.19",
