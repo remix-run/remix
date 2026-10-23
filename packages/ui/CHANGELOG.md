@@ -32,7 +32,9 @@ This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/pa
 
   function Card() {
     return () => (
-      <div mix={animateLayout(prefersReducedMotion() ? false : { ...spring('snappy') })}>Details</div>
+      <div mix={animateLayout(prefersReducedMotion() ? false : { ...spring('snappy') })}>
+        Details
+      </div>
     )
   }
   ```
