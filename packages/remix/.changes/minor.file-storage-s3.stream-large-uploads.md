@@ -1,0 +1,1 @@
+`remix/file-storage/s3` now streams files to S3 with multipart uploads in `storage.set()`, so large files no longer need to fit in memory. A new `partSize` option controls the size of each part (see #12070). See the [`@remix-run/file-storage-s3` changelog](https://github.com/remix-run/remix/blob/main/packages/file-storage-s3/CHANGELOG.md) for details.
