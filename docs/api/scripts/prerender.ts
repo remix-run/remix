@@ -39,23 +39,11 @@ const pagePaths = Object.values(registry.pages).flatMap((page) => {
   if (!page.docFile) return [page.path]
   return [page.path, routes.api.markdown.href({ slug: page.id })]
 })
-// Docs used to live under `/api/`. Until api.remix.run redirects them, write a redirect page at
-// each old URL and a copy of the Markdown at each old `.md` URL.
-const legacyPaths = Object.values(registry.pages).flatMap((page) => {
-  if (!page.docFile || page.docFile.kind === 'demo') return []
-  let { docsPath } = page.docFile
-  let slugs =
-    page.docFile.kind === 'package'
-      ? [`${docsPath}/overview/`, `${docsPath}/overview.md`]
-      : [`${docsPath}/`, `${docsPath}.md`]
-  return slugs.map((slug) => routes.legacy.href({ slug }))
-})
 const paths = [
   routes.home.href(),
   routes.lookup.href(),
   ...publicModuleHrefs,
   ...pagePaths,
-  ...legacyPaths,
 ]
 
 await prerender(router, {

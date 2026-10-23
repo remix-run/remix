@@ -18,7 +18,7 @@ describe('createDocsNavigationLinks', () => {
       [...links],
       [
         ['guides', { href: 'https://guides.remix.run/', label: 'Guides' }],
-        ['api', { href: 'https://api.remix.run', label: 'Docs' }],
+        ['api', { href: 'https://docs.remix.run', label: 'Docs' }],
         ['github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' }],
         ['blog', { href: 'https://remix.run/blog', label: 'Blog' }],
         ['newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' }],

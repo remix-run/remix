@@ -173,7 +173,7 @@ The failure branch renders directly with status `400`. Redirecting back to the G
 
 ## Redirect after saving
 
-After parsing succeeds, `db.update(...)` saves `parsed.value` to the album selected by the route's `albumId`. If the update fails, the action logs the error on the server and returns `500` without exposing database details to the browser. For other read and write helpers and their error behavior, see the [`data-table` overview](https://api.remix.run/data-table/).
+After parsing succeeds, `db.update(...)` saves `parsed.value` to the album selected by the route's `albumId`. If the update fails, the action logs the error on the server and returns `500` without exposing database details to the browser. For other read and write helpers and their error behavior, see the [`data-table` overview](https://docs.remix.run/data-table/).
 
 After a successful save, the action returns `303 See Other` with the album page's URL. The browser follows that redirect with a GET:
 

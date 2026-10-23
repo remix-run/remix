@@ -86,7 +86,7 @@ export function rewriteLinksToRemixReadmes(
     if (!url || url.protocol !== 'https:' || url.port) return
 
     let readmePath: string | undefined
-    if (url.hostname === 'api.remix.run') {
+    if (url.hostname === 'docs.remix.run') {
       readmePath = readmePaths.api.get(withoutTrailingSlash(url.pathname))
     } else if (url.hostname === 'github.com') {
       readmePath = readmePaths.github.get(withoutTrailingSlash(url.pathname))
