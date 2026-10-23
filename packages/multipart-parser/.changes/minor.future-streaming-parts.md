@@ -1,4 +1,4 @@
-Add a `@remix-run/multipart-parser/future` entrypoint with a streaming multipart parser (see #12030). Future APIs are not stable and may change in any release, but they are a good indication of where this package will land in its next major release.
+Add a `@remix-run/multipart-parser/future` entrypoint with a streaming multipart parser. Future APIs are not stable and may change in any release, but they are a good indication of where this package will land in its next major release.
 
 `parseMultipartRequest()` and `parseMultipartStream()` from `/future` yield each `MultipartPart` as soon as its headers arrive, instead of after its content is buffered. Part content streams from the request body as you read it, so large files are never held in memory. Read each part once with `part.body`, `await part.bytes()`, `await part.text()`, or `for await...of`; content you skip is discarded when you continue to the next part. Breaking out of the loop early cancels the request body.
 
