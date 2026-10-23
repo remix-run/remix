@@ -1,1 +1,1 @@
-`createFileResponse()` now ignores valid range requests on empty files and returns `416 Range Not Satisfiable` instead of emitting an invalid partial response for a zero-length suffix range (see #12037).
+`createFileResponse()` now ignores valid range requests on empty files and returns `416 Range Not Satisfiable` for zero-length suffix ranges on nonempty files, avoiding invalid partial responses (see #12043).
