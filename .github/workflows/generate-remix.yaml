@@ -12,9 +12,9 @@ on:
       - 'main'
     paths:
       - '.github/workflows/generate-remix.yaml'
-      - 'docs/guides/app/actions/docs/chapters/**'
-      - 'docs/guides/app/actions/docs/examples/**'
-      - 'docs/guides/app/actions/docs/markdown/**'
+      - 'docs/site/app/actions/guides/chapters/**'
+      - 'docs/site/app/actions/guides/examples/**'
+      - 'docs/site/app/actions/guides/markdown/**'
       - 'packages/**/package.json'
       - 'packages/**/README.md'
       - 'packages/remix/guides/**'
@@ -28,9 +28,9 @@ on:
       - v2
     paths:
       - '.github/workflows/generate-remix.yaml'
-      - 'docs/guides/app/actions/docs/chapters/**'
-      - 'docs/guides/app/actions/docs/examples/**'
-      - 'docs/guides/app/actions/docs/markdown/**'
+      - 'docs/site/app/actions/guides/chapters/**'
+      - 'docs/site/app/actions/guides/examples/**'
+      - 'docs/site/app/actions/guides/markdown/**'
       - 'packages/**/package.json'
       - 'packages/**/README.md'
       - 'packages/remix/guides/**'

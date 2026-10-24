@@ -11,8 +11,7 @@ export interface DocsNavigationLink {
 }
 
 export type DocsNavigationLinkId =
-  | 'guides'
-  | 'api'
+  | 'docs'
   | 'ui'
   | 'github'
   | 'blog'
@@ -22,8 +21,7 @@ export type DocsNavigationLinkId =
 
 export function createDocsNavigationLinks(): Map<DocsNavigationLinkId, DocsNavigationLink> {
   return new Map<DocsNavigationLinkId, DocsNavigationLink>()
-    .set('guides', { href: 'https://guides.remix.run/', label: 'Guides' })
-    .set('api', { href: 'https://docs.remix.run', label: 'Docs' })
+    .set('docs', { href: 'https://docs.remix.run', label: 'Docs' })
     .set('github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' })
     .set('blog', { href: 'https://remix.run/blog', label: 'Blog' })
     .set('newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' })

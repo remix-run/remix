@@ -1,6 +1,6 @@
 # Shared docs infrastructure
 
-`remix-docs-shared` contains infrastructure used by both `docs/api` and `docs/guides`. It is a private workspace package, not a standalone site.
+`remix-docs-shared` contains infrastructure used by `docs/site` and `docs/ui`. It is a private workspace package, not a standalone site.
 
 ## Ownership
 
@@ -14,9 +14,9 @@
 
 Browser source is colocated with its owner under `public/` directories. Server modules remain outside that boundary.
 
-Site-specific routes, document shells, Markdown transforms, styles, and static files stay in the owning site. For example, the API's `favicon.ico` remains in `docs/api/public/`. Repository README artwork lives in `.github/assets/` rather than either site's public directory.
+Site-specific routes, document shells, Markdown transforms, styles, and static files stay in the owning site. For example, the docs site's `favicon.ico` remains in `docs/site/public/`. Repository README artwork lives in `.github/assets/` rather than either site's public directory.
 
-Each site's `docs.css` imports `styles/public/docs.css`, which pulls in every shared stylesheet in order, followed by the site's own stylesheets.
+Each site's main stylesheet imports `styles/public/docs.css`, which pulls in every shared stylesheet in order, followed by the site's own stylesheets.
 
 Navigation lists share the `.docs-nav-item` and `.docs-nav-heading` styles in `styles/public/nav.css`. Each site keeps only its own sizing and layout, such as the Guides chapter numbers and the API package menus.
 
@@ -44,7 +44,7 @@ Prose rendered from Markdown uses the `.docs-markdown` class from `styles/public
 - `/remix-logo-light-mode.svg`
 - `/remix-wordmark-light-mode.svg`
 
-Both document shells also load `/favicon.svg`. These files live in `assets/`. Each site must:
+Document shells also load `/favicon.svg`. These files live in `assets/`. Each site must:
 
 1. Serve `assets/` as static files at the site root during development and server rendering.
 2. Include `assets/` in the prerenderer's `publicDirs` so the files are copied to the static output root.
@@ -66,8 +66,8 @@ pnpm --filter remix-docs-shared run typecheck
 Changes consumed by a site should also be validated in that site:
 
 ```sh
-pnpm --filter remix-api run test
-pnpm --filter remix-api run typecheck
-pnpm --filter remix-guides run test
-pnpm --filter remix-guides run typecheck
+pnpm --filter remix-docs run test
+pnpm --filter remix-docs run typecheck
+pnpm --filter remix-ui-docs run test
+pnpm --filter remix-ui-docs run typecheck
 ```

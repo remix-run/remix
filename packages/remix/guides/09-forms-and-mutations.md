@@ -3,7 +3,7 @@ title: Forms and Mutations
 description: How native forms, action responses, validation failures, redirects, and enhanced mutations fit together.
 ---
 
-In [Data and Validation](/data-and-validation/), we moved our albums into SQLite and defined `albumForm` to validate edits.
+In [Data and Validation](/guides/data-and-validation/), we moved our albums into SQLite and defined `albumForm` to validate edits.
 
 Let's connect the edit form to that database. We'll parse submissions, return the form with field errors when validation fails, and save valid edits before redirecting to the album. Then we'll add pending feedback.
 
@@ -187,13 +187,13 @@ GET /albums/thriller
 
 Refreshing the resulting page repeats the GET instead of submitting the edit again.
 
-If the destination should display “Album saved,” session flash data can carry that message across the redirect. We'll add sessions in [Auth, Sessions, and Security](/auth-sessions-security/).
+If the destination should display “Album saved,” session flash data can carry that message across the redirect. We'll add sessions in [Auth, Sessions, and Security](/guides/auth-sessions-security/).
 
 ## Add pending feedback
 
 With the app's browser runtime running, Remix handles the form submission as a navigation. It renders validation responses into the page and follows redirects after a successful save.
 
-In [Start Here](/start-here/), we hydrated the whole form and set pending state when its submit event fired. Here, the button can follow the containing frame's reload events, which tell us when the navigation starts and when it finishes.
+In [Start Here](/guides/start-here/), we hydrated the whole form and set pending state when its submit event fired. Here, the button can follow the containing frame's reload events, which tell us when the navigation starts and when it finishes.
 
 We can show progress by hydrating just the save button. Put it in the edit action's `public/` directory:
 
@@ -274,4 +274,4 @@ export const router = createRouter({
 
 The browser sends POST. After parsing `_method`, the middleware sets `context.method` to PATCH before route matching. The same controller's `action` now matches that PATCH route. Installing method override on the controller would be too late to select the route. PUT and DELETE work the same way when you define matching routes.
 
-In [Auth, Sessions, and Security](/auth-sessions-security/), we'll decide who is allowed to edit an album and connect those decisions to the request's session.
+In [Auth, Sessions, and Security](/guides/auth-sessions-security/), we'll decide who is allowed to edit an album and connect those decisions to the request's session.
