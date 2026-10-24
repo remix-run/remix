@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/uNetworking/uWebSockets.js",
+  "version": "20.66.0",
+  "commit": "a63031f40f76dc2422e8da736c04217053e9db2b",
+  "sourceCommit": "407223ad0e975cfe907a4415088b5bfcf4e72d4e",
+  "archiveSha256": "3c72376ed510f199fef126f84613cd33937524c5dc758b761e046f1026dbce1a",
+  "nodeAbis": [115, 127, 137, 141]
+}
