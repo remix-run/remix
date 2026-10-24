@@ -2,7 +2,7 @@ Remix is a full-stack TypeScript framework for building web applications on web 
 
 These docs have two parts:
 
-- The guides explain how Remix works and show how its pieces fit together in a complete app. If you are new to Remix, begin with [Start Here](/guides/start-here/).
+- The guides explain how Remix works and show how its pieces fit together in a complete app. If you are new to Remix, begin with [Getting Started](/guides/start-here/).
 - The API reference below documents individual modules, functions and types. Use it when you know what feature you want to look up.
 
 ## Installation

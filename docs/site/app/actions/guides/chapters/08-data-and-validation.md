@@ -3,7 +3,7 @@ title: Data and Validation
 description: How Remix validates inputs, defines relational data, queries databases, and runs SQL migrations.
 ---
 
-In [Start Here](/guides/start-here/), we kept the record store's albums in an array and used a schema to parse an edit form. That was enough to follow a request through the app, but changes disappeared when the server restarted.
+In [Getting Started](/guides/start-here/), we kept the record store's albums in an array and used a schema to parse an edit form. That was enough to follow a request through the app, but changes disappeared when the server restarted.
 
 Let's replace that array with SQLite and load an album from the database. Then we'll define a schema for the values the album editor can submit.
 

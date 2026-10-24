@@ -1,5 +1,5 @@
 ---
-title: Start Here
+title: Getting Started
 description: A high-level introduction to Remix and the mental model behind a Remix application.
 ---
 
