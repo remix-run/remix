@@ -15,7 +15,7 @@ npm i remix
 
 ## Imports
 
-Remix ships as one `remix` package. Import each feature from its module:
+Each feature in Remix is available in its own module:
 
 ```ts
 import { createRouter } from 'remix/router'
