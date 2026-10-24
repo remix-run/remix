@@ -1,3 +1,5 @@
+import { getDocumentImportMapManager } from './import-map-manager.ts'
+
 const SERVER_MODULE_PRELOAD_SELECTOR = 'link[data-rmx-module-preload][rel~="modulepreload" i][href]'
 
 interface ModulePreloader {
@@ -21,6 +23,7 @@ export function getDocumentModulePreloader(doc: Document): ModulePreloader {
 }
 
 function createModulePreloader(doc: Document): ModulePreloader {
+  let nonce = getDocumentImportMapManager(doc).nonce
   let requestedUrls = new Set<string>()
   let activeLinks = new WeakSet<HTMLLinkElement>()
   let activeLinkCount = 0
@@ -39,6 +42,7 @@ function createModulePreloader(doc: Document): ModulePreloader {
     link.rel = 'modulepreload'
     link.href = href
     link.setAttribute('data-rmx-module-preload', '')
+    if (nonce) link.nonce = nonce
     let url = link.href
     if (requestedUrls.has(url)) return
     requestedUrls.add(url)
@@ -77,6 +81,7 @@ function createModulePreloader(doc: Document): ModulePreloader {
         observerLink.rel = 'modulepreload'
         observerLink.href = initialLink.href
         observerLink.setAttribute('data-rmx-module-preload', '')
+        if (initialLink.nonce) observerLink.nonce = initialLink.nonce
         let url = initialLink.href
         requestedUrls.add(url)
         activateLink(initialLink)

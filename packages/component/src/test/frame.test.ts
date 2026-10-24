@@ -2273,7 +2273,7 @@ describe('frames', () => {
   it('keeps active initial preloads connected across a document reload', async () => {
     document.documentElement.innerHTML = [
       '<head><title>Initial</title>',
-      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
+      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" nonce="document-nonce" />',
       '</head><body></body>',
     ].join('')
 
@@ -2306,6 +2306,7 @@ describe('frames', () => {
         document.head.querySelectorAll<HTMLLinkElement>(managedModulePreloadSelector),
       )
       expect(activePreloads).toHaveLength(2)
+      expect(activePreloads.map((link) => link.nonce)).toEqual(['document-nonce', 'document-nonce'])
 
       await frame.handle.reload()
 
