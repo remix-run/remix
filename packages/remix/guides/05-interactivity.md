@@ -3,7 +3,7 @@ title: Interactivity
 description: How server-rendered UI hydrates, handles events, connects components to application models, navigates, and cancels stale work.
 ---
 
-In [Start Here](/guides/start-here/), the album page, edit form, validation, mutation, and redirect all
+In [Getting Started](/guides/start-here/), the album page, edit form, validation, mutation, and redirect all
 worked before we added browser JavaScript. Then we marked the form as a client entry so its submit
 button could show pending state.
 

@@ -193,7 +193,7 @@ If the destination should display “Album saved,” session flash data can carr
 
 With the app's browser runtime running, Remix handles the form submission as a navigation. It renders validation responses into the page and follows redirects after a successful save.
 
-In [Start Here](/guides/start-here/), we hydrated the whole form and set pending state when its submit event fired. Here, the button can follow the containing frame's reload events, which tell us when the navigation starts and when it finishes.
+In [Getting Started](/guides/start-here/), we hydrated the whole form and set pending state when its submit event fired. Here, the button can follow the containing frame's reload events, which tell us when the navigation starts and when it finishes.
 
 We can show progress by hydrating just the save button. Put it in the edit action's `public/` directory:
 

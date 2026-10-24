@@ -122,7 +122,7 @@ describe('docs responses', () => {
 
     assert.equal(response.status, 200)
     assert.match(response.headers.get('Content-Type') ?? '', /^text\/markdown/)
-    assert.match(markdown, /^---\ntitle: Start Here\n/)
+    assert.match(markdown, /^---\ntitle: Getting Started\n/)
     assert.match(markdown, /## What is Remix\?/)
   })
 
