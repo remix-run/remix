@@ -3,7 +3,7 @@ title: Interactivity
 description: How server-rendered UI hydrates, handles events, connects components to application models, navigates, and cancels stale work.
 ---
 
-In [Start Here](/start-here/), the album page, edit form, validation, mutation, and redirect all
+In [Start Here](/guides/start-here/), the album page, edit form, validation, mutation, and redirect all
 worked before we added browser JavaScript. Then we marked the form as a client entry so its submit
 button could show pending state.
 
@@ -163,7 +163,7 @@ The returned app runtime has three lifecycle methods:
 `run()` hydrates the server-rendered page. It is not a second application router. Browser requests
 still go to the route actions that own the corresponding server behavior.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) uses the default browser resolver for
+[Streaming UI with Frames](/guides/streaming-ui-with-frames/) uses the default browser resolver for
 route-owned regions that load or reload independently.
 
 ## Mount client-only UI with createRoot {#client-only-roots}
@@ -525,7 +525,7 @@ The core mixins serve different host-level jobs:
 - `link(...)` adds client navigation behavior and link semantics.
 - `css(...)` applies static generated CSS.
 
-Animation mixins use the same prop and are covered in [Animation](/animation/). Put frequently
+Animation mixins use the same prop and are covered in [Animation](/guides/animation/). Put frequently
 changing values in normal props such as `style`, `value`, `checked`, and ARIA attributes rather than
 recreating static mixins for every state change.
 
@@ -834,7 +834,7 @@ A supplied `data-rmx-src` must be a valid same-origin URL regardless of the targ
 cross-origin values disable interception and leave the navigation to the browser. These rules also
 apply to the `src` and `target` options of `link(...)` and `navigate(...)`.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames and
+[Streaming UI with Frames](/guides/streaming-ui-with-frames/) shows these attributes with named frames and
 explains when a form can submit directly through the frame resolver.
 
 ## Prefetch links before navigation
@@ -926,7 +926,7 @@ Choose the synchronization boundary that matches the UI:
 - Send JSON when a browser-side model owns the data and no server-rendered region needs to change.
 - Poll a small JSON endpoint when data changes independently of the current page.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) covers the optional case where a mutation
+[Streaming UI with Frames](/guides/streaming-ui-with-frames/) covers the optional case where a mutation
 reloads one route-owned region without navigating the whole document.
 
 ## Pending and optimistic UI {#optimistic-ui}
@@ -1022,5 +1022,5 @@ uses it. The [`remix/component` API overview](../src/component/README.md) covers
 mixin API.
 
 The next chapter uses the same server renderer and browser runtime to stream and reload route-owned
-UI with `<Frame>`. [Animation](/animation/) then applies component state, `mix` composition, keys, and
+UI with `<Frame>`. [Animation](/guides/animation/) then applies component state, `mix` composition, keys, and
 cancellation to entrance, exit, layout, spring, and tween motion.

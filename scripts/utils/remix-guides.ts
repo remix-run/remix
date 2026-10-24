@@ -11,20 +11,20 @@ const rootDir = path.resolve(import.meta.dirname, '..', '..')
 const defaultSourceGuidesDir = path.join(
   rootDir,
   'docs',
-  'guides',
+  'site',
   'app',
   'actions',
-  'docs',
+  'guides',
   'chapters',
 )
 const defaultRemixGuidesDir = path.join(rootDir, 'packages', 'remix', 'guides')
 const chapterMarkdownModulePath = path.join(
   rootDir,
   'docs',
-  'guides',
+  'site',
   'app',
   'actions',
-  'docs',
+  'guides',
   'markdown',
   'chapter-markdown.ts',
 )
@@ -106,9 +106,9 @@ export async function syncRemixGuides({
   return copies
 }
 
-// Installed guides use the same markdown as the website's `/<chapter>.md` routes, so
+// Installed guides use the same markdown as the website's `/guides/<chapter>.md` routes, so
 // `::frame` directives are replaced with demo source (or omitted) rather than copied
-// verbatim. The renderer lives in the guides app and imports `.tsx` example modules.
+// verbatim. The renderer lives in the docs app and imports `.tsx` example modules.
 async function loadRenderChapterMarkdown(): Promise<(source: string) => Promise<string>> {
   let mod = await loadModule(chapterMarkdownModulePath, import.meta.url)
   if (!isRecord(mod) || typeof mod.renderChapterMarkdown !== 'function') {

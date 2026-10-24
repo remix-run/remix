@@ -67,8 +67,8 @@ export default function GettingStarted() {
           <p>
             Render your UI as Remix components and hydrate it with <code>clientEntry</code> and{' '}
             <code>run</code> for browser interaction. Follow the{' '}
-            <a href="https://guides.remix.run/rendering-ui/">rendering UI guide</a> and{' '}
-            <a href="https://guides.remix.run/interactivity/">interactivity guide</a> for
+            <a href="https://docs.remix.run/guides/rendering-ui/">rendering UI guide</a> and{' '}
+            <a href="https://docs.remix.run/guides/interactivity/">interactivity guide</a> for
             application setup.
           </p>
           <p>

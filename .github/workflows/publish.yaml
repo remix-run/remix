@@ -94,16 +94,15 @@ jobs:
     if: needs.publish.outputs.tag != ''
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger the API, Guides and UI docs deploys
+      - name: Trigger the Docs and UI deploys
         uses: actions/github-script@v8
         with:
-          # Needs permission to dispatch events to all three docs repos.
+          # Needs permission to dispatch events to both docs repos.
           github-token: ${{ secrets.REMIX_API_DOCS_PAT }}
           script: |
             let ref = '${{ needs.publish.outputs.tag }}';
             let deploys = [
               ['remix-api-docs', 'update-docs'],
-              ['remix-guides-docs', 'update-guides'],
               ['remix-ui-docs', 'update-ui'],
             ];
             for (let [repo, event_type] of deploys) {
