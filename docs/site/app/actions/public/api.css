@@ -151,15 +151,13 @@ html {
   align-items: center;
 }
 
-/* The menu title links to its overview but keeps the heading look until hovered or current. */
+/* Overview links use the same weight as other navigation items. */
 .docs-nav-item.api-nav-heading-link {
   color: var(--docs-sidebar-heading);
-  font-weight: var(--rmx-font-weight-semibold);
 }
 
 a.docs-nav-item.api-nav-heading-link:is(:hover, [aria-current]) {
   color: var(--rmx-color-text-primary);
-  font-weight: var(--rmx-font-weight-semibold);
 }
 
 .api-nav-path-segment {
