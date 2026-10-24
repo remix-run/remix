@@ -7,6 +7,8 @@ These docs have two parts:
 
 ## Installation
 
+Remix is available on [npm](https://www.npmjs.com/package/remix):
+
 ```sh
 npm i remix
 ```
