@@ -13,7 +13,7 @@ const TYPEDOC_DIR = path.join('build', 'typedoc')
 
 // Ensure we're running from the /docs/site directory
 const cwd = process.cwd()
-if (!cwd.endsWith('/site')) {
+if (path.basename(cwd) !== 'site') {
   console.error('❌ This script must be run from the /docs/site directory')
   process.exit(1)
 }
