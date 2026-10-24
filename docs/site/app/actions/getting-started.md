@@ -1,4 +1,4 @@
-Remix is a full-stack TypeScript framework for building web applications on web standards.
+Remix is a full-stack TypeScript framework for building fast, secure web applications using web standards.
 
 These docs have two parts:
 
