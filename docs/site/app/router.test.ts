@@ -61,6 +61,30 @@ describe('createDocsRouter()', () => {
     assert.equal(apiReferenceIndex > firstGuideIndex, true)
   })
 
+  it('keeps guides in the All modules panel on direct API reference requests', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let guides = await loadDocsNavigationItems()
+    let router = createDocsRouter({
+      assetServer,
+      docsContext: {
+        docFiles: [],
+        docFilesLookup: new Map(),
+        registry: buildRegistry([packageFile('remix/data-table')], guides),
+      },
+    })
+
+    let response = await router.fetch(new Request('http://localhost/data-table/'))
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    let rootPanel = /<div data-api-nav-panel="before"[^>]*>(.*?)<\/div>/s.exec(html)?.[1] ?? ''
+
+    assert.match(html, /data-api-nav-back[^>]*>.*All modules<\/a>/s)
+    assert.match(rootPanel, />Guides<\/h2>/)
+    assert.match(rootPanel, /href="\/guides\/start-here\/"/)
+    assert.match(rootPanel, />API Reference<\/h2>/)
+  })
+
   it('uses one active Docs link in the primary navigation', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
