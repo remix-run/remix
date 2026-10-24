@@ -67,6 +67,25 @@ export async function* crawl<T extends RequestContext<any, any>>(
     try {
       let response = await router.fetch(new Request(`${BASE_URL}${pathname}`))
 
+      if (isRedirect(response)) {
+        let location = response.headers.get('Location')
+        if (!location) {
+          throw new Error(`Crawl failed: redirect has no Location header (${pathname})`)
+        }
+
+        results.push({
+          pathname,
+          filepath: pathname.replace(/\/?$/, '/index.html'),
+          response: createStaticRedirectResponse(location),
+        })
+
+        let redirectUrl = new URL(location, `${BASE_URL}${pathname}`)
+        if (redirectUrl.origin === BASE_URL) {
+          enqueue([redirectUrl.pathname])
+        }
+        return
+      }
+
       if (!response.ok) {
         throw new Error(`Crawl failed: ${response.status} ${response.statusText} (${pathname})`)
       }
@@ -98,6 +117,36 @@ export async function* crawl<T extends RequestContext<any, any>>(
       bump()
     }
   }
+}
+
+function isRedirect(response: Response): boolean {
+  return [301, 302, 303, 307, 308].includes(response.status)
+}
+
+function createStaticRedirectResponse(location: string): Response {
+  let escapedLocation = escapeHtml(location)
+  let html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="robots" content="noindex">
+    <meta http-equiv="refresh" content="0; url=${escapedLocation}">
+    <link rel="canonical" href="${escapedLocation}">
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <p>Redirecting to <a href="${escapedLocation}">${escapedLocation}</a>.</p>
+  </body>
+</html>`
+  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
 }
 
 function extractAssetPaths(elements: HTMLElement[], baseUrl: string): string[] {
@@ -173,8 +222,6 @@ function resolveHref(href: string, baseUrl: string): string | null {
       return null
     }
   }
-
-  if (href.startsWith('/')) return href
 
   try {
     return new URL(href, `${BASE_URL}${baseUrl}`).pathname

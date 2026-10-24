@@ -4,7 +4,7 @@
   width: 100%;
   max-width: var(--docs-content-max-width);
   gap: 40px;
-  margin: 0 auto 0 0;
+  margin: 0 auto;
   padding: 0;
 }
 

@@ -3,7 +3,7 @@ import type { Root } from 'mdast'
 import rehypeStringify from 'rehype-stringify'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
-import { visit } from 'unist-util-visit'
+import { SKIP, visit } from 'unist-util-visit'
 
 import { rehypeHighlightCode } from './code-blocks.ts'
 import { groupMarkdownSections } from './sections.ts'
@@ -16,12 +16,31 @@ export async function renderMarkdownHtml(
   let processor = unified()
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeWrapSections, { sections: options.sections ?? false })
+    .use(rehypeWrapTables)
     .use(rehypeLinkHeadings)
     .use(rehypeHighlightCode, options.highlightCode ?? {})
     .use(rehypeTransformLinks, { transformLink: options.transformLink })
     .use(rehypeStringify, { allowDangerousHtml: true })
   let hast = await processor.run(root)
   return processor.stringify(hast)
+}
+
+function rehypeWrapTables() {
+  return function transform(tree: HastRoot): void {
+    visit(tree, 'element', (node, index, parent) => {
+      if (node.tagName !== 'table' || index === undefined || parent === undefined) {
+        return
+      }
+
+      parent.children[index] = {
+        type: 'element',
+        tagName: 'div',
+        properties: { class: 'docs-table-scroll' },
+        children: [node],
+      }
+      return SKIP
+    })
+  }
 }
 
 function rehypeWrapSections(options: { sections: boolean }) {

@@ -4,6 +4,8 @@ node_modules/
 !packages/assets/bench/fixtures/large-fixture/node_modules/**
 pnpm-publish-summary.json
 reference/
+!docs/site/app/actions/reference/
+!docs/site/app/actions/reference/**
 .coverage/
 .tmp/
 autoresearch-results/
