@@ -34,6 +34,16 @@ describe('renderMarkdownHtml', () => {
     assert.match(html, /<a href="\/v1\/api\/example\/">API<\/a>/)
   })
 
+  it('wraps tables in horizontal scrollers', async () => {
+    let { root } = parseMarkdownDocument(
+      '| Name | Description |\n| --- | --- |\n| Remix | Web framework |\n',
+    )
+
+    let html = await renderMarkdownHtml(root)
+
+    assert.match(html, /^<div class="docs-table-scroll"><table>.*<\/table><\/div>$/s)
+  })
+
   it('wraps each h2 and its content in a section when enabled', async () => {
     let { root } = parseMarkdownDocument(
       '# Title\n\nIntro.\n\n## First\n\nOne.\n\n### Detail\n\nTwo.\n\n## Second\n\nThree.\n',
