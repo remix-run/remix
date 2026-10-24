@@ -22,6 +22,13 @@
   opacity: 0;
 }
 
+@media (width < 900px) {
+  .docs-markdown :is(h1, h2, h3, h4, h5, h6)::before {
+    inset-inline-start: calc((1ch + var(--rmx-space-xs)) * -1);
+    font-size: 0.7em;
+  }
+}
+
 .docs-markdown :is(h1, h2, h3, h4, h5, h6):is(:hover, :focus-within)::before {
   opacity: 1;
 }
