@@ -24,14 +24,16 @@
 
 @media (width < 900px) {
   .docs-markdown :is(h1, h2, h3, h4, h5, h6)::before {
-    inset-inline-start: calc((1ch + var(--rmx-space-xs)) * -1);
-    font-size: 0.7em;
+    inset-inline-start: calc((1ch + var(--rmx-space-px)) * -1);
+    transform: scale(0.7);
+    transform-origin: center right;
   }
 }
 
 :root[data-docs-nav-collapsed] .docs-markdown :is(h1, h2, h3, h4, h5, h6)::before {
-  inset-inline-start: calc((1ch + var(--rmx-space-xs)) * -1);
-  font-size: 0.7em;
+  inset-inline-start: calc((1ch + var(--rmx-space-px)) * -1);
+  transform: scale(0.7);
+  transform-origin: center right;
 }
 
 .docs-markdown :is(h1, h2, h3, h4, h5, h6):is(:hover, :focus-within)::before {
