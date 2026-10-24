@@ -93,9 +93,16 @@
   border-top: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
 }
 
-.docs-markdown table {
+.docs-table-scroll {
   width: 100%;
   margin: var(--rmx-space-xl) 0;
+  overflow-x: auto;
+}
+
+.docs-table-scroll table {
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
   border-collapse: collapse;
   font-size: var(--rmx-font-size-sm);
 }
