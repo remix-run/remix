@@ -335,7 +335,7 @@ export function DocsNavigation(
             page={registry.pages[node.homePageId]}
             currentPath={currentPage.path}
           >
-            <PathLabel label={node.label} />
+            Overview
           </HeadingLink>,
         ]
 
@@ -478,7 +478,7 @@ function NodeLinks(handle: Handle<{ registry: DocsRegistry; nodes: NavNode[]; op
   }
 }
 
-// The menu title links to its overview but keeps the heading style.
+// The overview link keeps the menu title style.
 function HeadingLink(
   handle: Handle<{ class: string; page: PageDefinition; currentPath: string; children: RemixNode }>,
 ) {

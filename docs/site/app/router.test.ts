@@ -80,6 +80,7 @@ describe('createDocsRouter()', () => {
     let rootPanel = /<div data-api-nav-panel="before"[^>]*>(.*?)<\/div>/s.exec(html)?.[1] ?? ''
 
     assert.match(html, /data-api-nav-back[^>]*>.*All modules<\/a>/s)
+    assert.match(html, /href="\/data-table\/" aria-current="page"[^>]*>Overview<\/a>/)
     assert.match(rootPanel, />Guides<\/h2>/)
     assert.match(rootPanel, /href="\/guides\/start-here\/"/)
     assert.match(rootPanel, />API Reference<\/h2>/)
