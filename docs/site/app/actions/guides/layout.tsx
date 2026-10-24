@@ -9,6 +9,7 @@ type DocsDocumentProps = {
   registry: DocsRegistry
   title: string
   description: string
+  path: string
   currentChapterSlug?: string
   hasSecondaryNavigation?: boolean
   head?: RemixNode
@@ -43,6 +44,7 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
       <SiteDocument
         title={title}
         description={handle.props.description}
+        path={handle.props.path}
         head={handle.props.head}
         brandLabel="Remix Guides"
         navigation={
@@ -68,6 +70,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
       registry={handle.props.registry}
       title={handle.props.title}
       description={handle.props.description}
+      path={routes.guides.chapter.href({ chapter: handle.props.slug })}
       currentChapterSlug={handle.props.slug}
       hasSecondaryNavigation
       head={

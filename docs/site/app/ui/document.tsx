@@ -10,6 +10,7 @@ import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs
 import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 import { Icon } from 'remix-docs-shared/ui/icon'
+import { DocsSocialMeta } from 'remix-docs-shared/ui/social-meta'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 
@@ -25,6 +26,7 @@ import {
   getDocPage,
   getHomePage,
   getNavChain,
+  HOME_PAGE_ID,
   isPageActive,
 } from '../data/registry.ts'
 import { ApiNav } from '../actions/public/api-nav.tsx'
@@ -53,11 +55,13 @@ export function ReferenceDocument(
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug))
       : getHomePage(registry)
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
+    let description = getPageDescription(page)
 
     return (
       <DocsDocument
         title={`${page.title || 'Remix'} | Remix Docs`}
-        description={page.description}
+        description={description}
+        path={page.path}
         head={
           page.docFile ? (
             <link
@@ -95,6 +99,7 @@ export function DocsDocument(
   handle: Handle<{
     title: string
     description?: string
+    path: string
     head?: RemixNode
     nofollow?: boolean
     brandLabel: string
@@ -122,6 +127,7 @@ export function DocsDocument(
         <Head
           title={handle.props.title}
           description={handle.props.description}
+          path={handle.props.path}
           head={handle.props.head}
           nofollow={handle.props.nofollow}
           scriptEntry={scriptEntry}
@@ -160,10 +166,26 @@ export function DocsDocument(
   }
 }
 
+const siteUrl = 'https://docs.remix.run'
+
+// Most pages have no written description, so link previews describe what the page documents.
+function getPageDescription(page: PageDefinition): string {
+  if (page.description) return page.description
+  if (page.id === HOME_PAGE_ID) {
+    return 'Guides and API reference for Remix, a full-stack TypeScript framework for building web applications on web standards.'
+  }
+  let { docFile } = page
+  if (!docFile) return `API reference for ${page.title}.`
+  if (docFile.kind === 'demo') return docFile.description
+  if (docFile.kind === 'api') return `API reference for ${page.navLabel} from ${docFile.package}.`
+  return `API reference for ${docFile.package}.`
+}
+
 function Head(
   handle: Handle<{
     title: string
     description?: string
+    path: string
     head?: RemixNode
     nofollow?: boolean
     scriptEntry: ScriptEntry
@@ -196,7 +218,20 @@ function Head(
           <meta data-rmx-key="docs-robots" name="robots" content="nofollow" />
         ) : null}
         <title data-rmx-key="docs-title">{handle.props.title}</title>
+        <DocsSocialMeta
+          siteName="Remix Docs"
+          url={`${siteUrl}${handle.props.path}`}
+          title={handle.props.title}
+          description={handle.props.description}
+          image={`${siteUrl}/social/remix.jpg`}
+          imageAlt="Remix"
+        />
         {handle.props.head}
+        {/*
+          Key every tag that varies between pages. The document diff pairs unkeyed tags by
+          position, so an optional tag would shift the pairing and move (and briefly unload)
+          the stylesheets below.
+        */}
         {searchEnabled ? (
           <link
             data-rmx-key="docs-pagefind-stylesheet"

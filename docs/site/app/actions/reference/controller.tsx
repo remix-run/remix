@@ -78,7 +78,7 @@ export function createReferenceController(options: ReferenceControllerOptions) {
         if (docFile.kind === 'demo') {
           let markdown = `# ${docFile.name}\n\n${docFile.description}\n\n\`\`\`tsx\n${docFile.source}\n\`\`\`\n`
           return new Response(markdown, {
-            headers: { 'content-type': 'text/markdown; charset=utf-8' },
+            headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
           })
         }
 

@@ -6,6 +6,7 @@ import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsShell, DocsSecondaryNavigation } from 'remix-docs-shared/ui/docs-shell'
+import { DocsSocialMeta } from 'remix-docs-shared/ui/social-meta'
 import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 import uiPackage from '../../../../packages/ui/package.json' with { type: 'json' }
@@ -24,6 +25,8 @@ interface UiDocumentProps {
   children: RemixNode
 }
 
+const siteUrl = 'https://ui.remix.run'
+
 const pagefindModulePath = path.resolve(
   import.meta.dirname,
   '../../build/site/assets/pagefind/pagefind-component-ui.js',
@@ -35,13 +38,25 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let links = createDocsNavigationLinks()
     let contentId = `${handle.id}-content`
+    let pageTitle = title === 'Remix UI' ? title : `${title} | Remix UI`
+    let pagePath = currentPage
+      ? routes.docs.page.href({ category: currentPage.category, slug: currentPage.slug })
+      : routes.docs.index.href()
     return (
       <html lang="en">
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <meta name="description" content={description} />
-          <title>{title === 'Remix UI' ? title : `${title} | Remix UI`}</title>
+          <title>{pageTitle}</title>
+          <DocsSocialMeta
+            siteName="Remix UI"
+            url={`${siteUrl}${pagePath.replace(/\/?$/, '/')}`}
+            title={pageTitle}
+            description={description}
+            image={`${siteUrl}/social/remix.jpg`}
+            imageAlt="Remix"
+          />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           {searchEnabled ? (
             <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />

@@ -24,6 +24,7 @@
     "./ui/docs-footer": "./ui/docs-footer.tsx",
     "./ui/docs-header": "./ui/docs-header.tsx",
     "./ui/docs-shell": "./ui/docs-shell.tsx",
+    "./ui/social-meta": "./ui/social-meta.tsx",
     "./ui/table-of-contents": "./ui/table-of-contents.tsx",
     "./ui/selection-indicator": "./ui/public/selection-indicator.ts"
   },
