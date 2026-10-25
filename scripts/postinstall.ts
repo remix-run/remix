@@ -6,9 +6,11 @@ import { fileURLToPath } from 'node:url'
 import { syncRemixSchema } from './utils/remix-schema.ts'
 
 const PLAYWRIGHT_CLI_PATH = fileURLToPath(
-  new URL('../packages/ui/node_modules/playwright/cli.js', import.meta.url),
+  new URL('../packages/component/node_modules/playwright/cli.js', import.meta.url),
 )
-const PLAYWRIGHT_WORKING_DIRECTORY = fileURLToPath(new URL('../packages/ui', import.meta.url))
+const PLAYWRIGHT_WORKING_DIRECTORY = fileURLToPath(
+  new URL('../packages/component', import.meta.url),
+)
 const PLAYWRIGHT_INSTALL_ARGS = ['install', '--only-shell', 'chromium', 'firefox']
 const INSTALL_TIMEOUT_MS = 5 * 60 * 1000
 
@@ -48,7 +50,7 @@ async function main() {
           formatPlaywrightInstallError(retryError),
           '',
           'Playwright browser installation failed after one retry.',
-          'Run `pnpm --filter @remix-run/ui exec playwright install` to retry manually.',
+          'Run `pnpm --filter @remix-run/component exec playwright install` to retry manually.',
         ].join('\n'),
       )
     }

@@ -1,5 +1,5 @@
-import { css, type Handle } from "remix/ui";
-import * as menu from "remix/ui/menu/primitives";
+import { css, type Handle } from "remix/component";
+import * as menu from "@remix-run/ui/menu";
 
 /**
  * @name Menu Primitives

@@ -1,5 +1,5 @@
 import * as path from 'node:path'
-import * as fsp from 'node:fs/promises'
+import { promises as fsp } from 'node:fs'
 import { openLazyFile } from '@remix-run/fs'
 import type { Middleware } from '@remix-run/fetch-router'
 import { detectMimeType } from '@remix-run/mime'
@@ -70,6 +70,7 @@ export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRan
   /**
    * Whether to return an HTML page listing the files in a directory when the request path
    * targets a directory. If both this and `index` are set, `index` takes precedence.
+   * Listings show file sizes but omit folder sizes without reading subdirectory contents.
    *
    * @default false
    */

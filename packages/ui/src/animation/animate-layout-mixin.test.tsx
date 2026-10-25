@@ -1,8 +1,7 @@
-import { expect } from '@remix-run/assert'
+import assert, { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
-import { createRoot } from '../runtime/vdom.ts'
+import { createRoot } from '@remix-run/component'
 import { animateLayout } from './animate-layout-mixin.ts'
-import { invariant } from '../runtime/invariant.ts'
 
 interface MockAnimation {
   keyframes: Keyframe[]
@@ -24,16 +23,13 @@ function createMockAnimation(
   keyframes: Keyframe[],
   options: KeyframeAnimationOptions,
 ): MockAnimation {
-  let resolveFinished!: () => void
-  let finished = new Promise<Animation>((_resolve) => {
-    resolveFinished = () => _resolve({} as Animation)
-  })
+  let finished = Promise.withResolvers<Animation>()
   return {
     keyframes,
     options,
     currentTime: 0,
     playState: 'running',
-    finished,
+    finished: finished.promise,
     pause() {
       this.playState = 'paused'
     },
@@ -43,7 +39,7 @@ function createMockAnimation(
     commitStyles() {},
     cancel() {
       this.playState = 'idle'
-      resolveFinished()
+      finished.resolve({} as Animation)
     },
   }
 }
@@ -124,7 +120,7 @@ describe('animateLayout mixin', () => {
     root.render(<div data-tick="0" mix={[animateLayout({ duration: 350, easing: 'linear' })]} />)
     root.flush()
     let node = container.querySelector('div')
-    invariant(node)
+    assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
     root.render(<div data-tick="1" mix={[animateLayout({ duration: 350, easing: 'linear' })]} />)
@@ -151,7 +147,7 @@ describe('animateLayout mixin', () => {
     root.render(<div data-tick="0" mix={[animateLayout({ size: false })]} />)
     root.flush()
     let node = container.querySelector('div')
-    invariant(node)
+    assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
     root.render(<div data-tick="1" mix={[animateLayout({ size: false })]} />)
@@ -178,7 +174,7 @@ describe('animateLayout mixin', () => {
     root.render(<div data-tick="0" mix={[animateLayout({ size: false })]} />)
     root.flush()
     let node = container.querySelector('div')
-    invariant(node)
+    assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 40 })
     root.render(<div data-tick="1" mix={[animateLayout({ size: false })]} />)
@@ -202,7 +198,7 @@ describe('animateLayout mixin', () => {
     root.render(<div data-tick="0" mix={[animateLayout()]} />)
     root.flush()
     let node = container.querySelector('div')
-    invariant(node)
+    assert(node)
 
     mockBoundingRect(node, { left: 5, top: 5, right: 105, bottom: 105 })
     root.render(<div data-tick="1" mix={[animateLayout()]} />)
@@ -226,7 +222,7 @@ describe('animateLayout mixin', () => {
     root.render(<div data-tick="0" mix={[animateLayout()]} />)
     root.flush()
     let node = container.querySelector('div')
-    invariant(node)
+    assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
     root.render(<div data-tick="1" mix={[animateLayout()]} />)
@@ -263,7 +259,7 @@ describe('animateLayout mixin', () => {
     root.render(<div data-tick="0" mix={[animateLayout()]} />)
     root.flush()
     let node = container.querySelector('div')
-    invariant(node)
+    assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
     root.render(<div data-tick="1" mix={[animateLayout()]} />)
@@ -297,7 +293,7 @@ describe('animateLayout mixin', () => {
     root.render(<div data-tick="0" mix={[animateLayout()]} />)
     root.flush()
     let node = container.querySelector('div')
-    invariant(node)
+    assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
     root.render(<div data-tick="1" mix={[animateLayout()]} />)
@@ -333,7 +329,7 @@ describe('animateLayout mixin', () => {
     root.render(<div data-tick="0" mix={[animateLayout()]} />)
     root.flush()
     let node = container.querySelector('div')
-    invariant(node)
+    assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
     root.render(<div data-tick="1" mix={[animateLayout()]} />)

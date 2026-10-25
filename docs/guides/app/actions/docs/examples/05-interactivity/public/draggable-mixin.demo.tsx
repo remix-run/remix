@@ -1,4 +1,4 @@
-import { css, type Handle } from "remix/ui";
+import { css, type Handle } from "remix/component";
 import { draggable } from "./draggable.tsx";
 
 export function DraggableMixinDemo(_handle: Handle) {

@@ -1,7 +1,9 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { once } from 'node:events'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { promisify } from 'node:util'
 
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
@@ -15,6 +17,25 @@ const waitForTimeout = 5_000
 const fixtureServerReadyTimeout = isWindows ? 15_000 : waitForTimeout
 
 describe('node-hmr', () => {
+  it('stops the fixture child server during cleanup', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': 'export function getMessage() { return "hello" }',
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'hello')
+
+      await server.stop()
+
+      assert.throws(() => process.kill(ready.pid, 0), { code: 'ESRCH' })
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('hot updates self-accepting modules without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -38,7 +59,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
         [
           `export let message = 'two'`,
@@ -132,7 +153,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
         [
           `export function getMessage() {`,
@@ -167,11 +188,11 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
         [`export function getMessage() {`, `  return 'two'`, `}`].join('\n'),
       )
-      await fs.writeFile(path.join(fixture.path, 'unused.ts'), `export const unused = 'two'`)
+      await writeFileAtomically(path.join(fixture.path, 'unused.ts'), `export const unused = 'two'`)
 
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
@@ -230,7 +251,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(fixture.entryPath, getHmrProxyChildServerSource('two'))
+      await writeFileAtomically(fixture.entryPath, getHmrProxyChildServerSource('two'))
       await waitForOutput(server, /restart server\.ts/)
 
       let response = await fetch(`http://127.0.0.1:${ready.port}`)
@@ -251,7 +272,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(
+      await writeFileAtomically(
         fixture.entryPath,
         getHmrProxyHotChildServerSource('two', { listenDelayMs: 250 }),
       )
@@ -306,9 +327,9 @@ describe('node-hmr', () => {
       await supervisor.ready()
       events = await connectHmrEvents(await fs.readFile(hmrUrlFile, 'utf-8'))
 
-      await fs.writeFile(watchFileA, 'two')
+      await writeFileAtomically(watchFileA, 'two')
       await waitForFile(startedFileA)
-      await fs.writeFile(watchFileB, 'two')
+      await writeFileAtomically(watchFileB, 'two')
       await waitForFile(startedFileB)
 
       let readyResolved = false
@@ -318,9 +339,10 @@ describe('node-hmr', () => {
 
       await fs.writeFile(releaseFileA, '')
       assert.deepEqual(await events.read(), {
-        timestamp: 1,
+        data: {
+          'test/browser@1': { path: '/a.css', timestamp: 1 },
+        },
         type: 'browser:update',
-        updates: [{ path: '/a.css', type: 'css' }],
       })
       assert.equal(readyResolved, false)
 
@@ -370,9 +392,14 @@ describe('node-hmr', () => {
       watcher.emit('all', 'change', 'browser/entry.ts', watchFileStats)
 
       assert.deepEqual(await events.read(), {
-        timestamp: 1,
+        data: {
+          'test/browser@1': {
+            details: [null, true, { version: 1 }],
+            path: '/entry.ts',
+            timestamp: 1,
+          },
+        },
         type: 'browser:update',
-        updates: [{ path: '/entry.ts', type: 'js' }],
       })
 
       await new Promise((resolve) => setTimeout(resolve, 250))
@@ -399,7 +426,7 @@ describe('node-hmr', () => {
 
       let responsePromise = fetch(`http://127.0.0.1:${ready.port}/retry-during-restart`)
       await waitForOutput(server, /retry-during-restart/)
-      await fs.writeFile(fixture.entryPath, getHmrProxyChildServerSource('two'))
+      await writeFileAtomically(fixture.entryPath, getHmrProxyChildServerSource('two'))
 
       let response = await responsePromise
       assert.equal(response.status, 200)
@@ -438,7 +465,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
+      await writeFileAtomically(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
 
       await waitForResponse(ready.port, 'two')
       assert.equal(server.readyCount, 1)
@@ -477,7 +504,10 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one|message eval: one')
 
-      await fs.writeFile(path.join(fixture.path, 'value.ts'), getDisposeOnlyValueSource('two'))
+      await writeFileAtomically(
+        path.join(fixture.path, 'value.ts'),
+        getDisposeOnlyValueSource('two'),
+      )
 
       await waitForResponse(
         ready.port,
@@ -536,7 +566,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
         [
           `export function getMessage() {`,
@@ -584,7 +614,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), `${ready.pid}:one`)
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
         [
           `export function getMessage() {`,
@@ -652,7 +682,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'packages/fixture-message/index.ts'),
         `export const message = 'two'`,
       )
@@ -694,7 +724,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
         [
           `import { message as importedMessage } from './other.ts'`,
@@ -719,7 +749,10 @@ describe('node-hmr', () => {
       assert.equal(server.readyCount, 1)
       await waitForOutput(server, /hmr update message\.ts/)
 
-      await fs.writeFile(path.join(fixture.path, 'value.ts'), `export const message = 'stale'`)
+      await writeFileAtomically(
+        path.join(fixture.path, 'value.ts'),
+        `export const message = 'stale'`,
+      )
 
       await new Promise((resolve) => setTimeout(resolve, 250))
       assert.equal(server.readyCount, 1)
@@ -786,7 +819,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
+      await writeFileAtomically(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
 
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
@@ -826,7 +859,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
+      await writeFileAtomically(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
 
       await waitForResponse(ready.port, 'two')
       assert.equal(server.readyCount, 1)
@@ -847,7 +880,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
         [`export function getMessage() {`, `  return 'two'`, `}`].join('\n'),
       )
@@ -872,7 +905,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'Hello from generic boundary')
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'greeting.tsx'),
         getGenericGreetingSource({ message: 'Updated from generic boundary' }),
       )
@@ -901,16 +934,16 @@ describe('node-hmr', () => {
         let ready = await server.waitForReady(0)
         assert.equal(await fetchText(ready.port), `${ready.pid}:initial`)
 
-        await fs.writeFile(path.join(fixture.path, 'greeting.tsx'), updatedSource)
+        await writeFileAtomically(path.join(fixture.path, 'greeting.tsx'), updatedSource)
         await waitForResponse(ready.port, `${ready.pid}:updated`, () => server.output)
         assert.deepEqual(await events.read(), { type: 'server:update' })
 
-        await fs.writeFile(path.join(fixture.path, 'greeting.tsx'), updatedSource)
+        await writeFileAtomically(path.join(fixture.path, 'greeting.tsx'), updatedSource)
         assert.deepEqual(await events.read(), { type: 'server:update' })
         assert.equal(await fetchText(ready.port), `${ready.pid}:updated`)
         assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 2)
 
-        await fs.writeFile(path.join(fixture.path, 'greeting.tsx'), initialSource)
+        await writeFileAtomically(path.join(fixture.path, 'greeting.tsx'), initialSource)
         await waitForResponse(ready.port, `${ready.pid}:initial`, () => server.output)
         assert.deepEqual(await events.read(), { type: 'server:update' })
         assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 3)
@@ -933,7 +966,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'greeting.tsx'),
         getGenericGreetingSource({
           extraExports: [`export function addedExport() {`, `  return 'added'`, `}`],
@@ -964,7 +997,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'greeting.tsx'),
         getGenericGreetingSource({
           extraExports: [`export const foo = true`],
@@ -999,7 +1032,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'greeting.tsx'),
         getGenericGreetingSource({ message: 'Updated after restart' }),
       )
@@ -1030,7 +1063,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'greeting.tsx'),
         getGenericGreetingSource({
           extraExports: [`export const foo = false`],
@@ -1066,7 +1099,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'greeting.tsx'),
         getGenericGreetingSource({
           extraExports: [`import { foo } from './stable.ts'`, `export { foo }`],
@@ -1103,7 +1136,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'greeting.tsx'),
         getGenericGreetingSource({
           extraExports: [`export const foo = {}`],
@@ -1137,7 +1170,7 @@ describe('node-hmr', () => {
         let ready = await server.waitForReady(0)
         assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
-        await fs.writeFile(
+        await writeFileAtomically(
           path.join(fixture.path, 'greeting.tsx'),
           getGenericGreetingSource({
             extraExports: [`export function addedExport() {`, `  return 'added'`, `}`],
@@ -1182,7 +1215,7 @@ describe('node-hmr', () => {
           browserEvent = event
         })
 
-        await fs.writeFile(
+        await writeFileAtomically(
           path.join(fixture.path, 'shared.ts'),
           getSharedServerUpdateSource({ addedExport: true }),
         )
@@ -1214,8 +1247,8 @@ describe('node-hmr', () => {
     try {
       await waitForOutput(server, /Failed running server\.ts\. Waiting for file changes/)
 
-      await fs.writeFile(fixture.entryPath, getServerSource('./message.ts', 'getMessage()'))
-      await fs.writeFile(
+      await writeFileAtomically(fixture.entryPath, getServerSource('./message.ts', 'getMessage()'))
+      await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
         [`export function getMessage() {`, `  return 'fixed'`, `}`].join('\n'),
       )
@@ -1239,11 +1272,14 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(path.join(fixture.path, 'message.ts'), `export function getMessage( {\n`)
+      await writeFileAtomically(
+        path.join(fixture.path, 'message.ts'),
+        `export function getMessage( {\n`,
+      )
 
       await waitForOutput(server, /Failed running server\.ts\. Waiting for file changes/)
 
-      await fs.writeFile(
+      await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
         [`export function getMessage() {`, `  return 'two'`, `}`].join('\n'),
       )
@@ -1269,10 +1305,10 @@ describe('node-hmr', () => {
         let ready = await server.waitForReady(0)
         assert.equal(await fetchText(ready.port), 'one')
 
-        await fs.writeFile(fixture.entryPath, `export function broken( {\n`)
+        await writeFileAtomically(fixture.entryPath, `export function broken( {\n`)
         await waitForOutput(server, /Failed running server\.ts\. Waiting for file changes/)
 
-        await fs.writeFile(fixture.entryPath, getEventChannelServerSource('two'))
+        await writeFileAtomically(fixture.entryPath, getEventChannelServerSource('two'))
 
         let restarted = await server.waitForReady(1)
         assert.notEqual(restarted.pid, ready.pid)
@@ -1300,10 +1336,10 @@ describe('node-hmr', () => {
         let ready = await server.waitForReady(0)
         assert.equal(await fetchText(ready.port), 'one')
 
-        await fs.writeFile(fixture.entryPath, `export function broken( {\n`)
+        await writeFileAtomically(fixture.entryPath, `export function broken( {\n`)
         await waitForOutput(server, /Failed running server\.ts\. Waiting for file changes/)
 
-        await fs.writeFile(fixture.entryPath, getEventChannelServerSource('two!!!'))
+        await writeFileAtomically(fixture.entryPath, getEventChannelServerSource('two!!!'))
 
         let restarted = await server.waitForReady(1)
         assert.notEqual(restarted.pid, ready.pid)
@@ -1332,7 +1368,7 @@ describe('node-hmr', () => {
         let ready = await server.waitForReady(0)
         assert.equal(await fetchText(ready.port), 'one')
 
-        await fs.writeFile(fixture.entryPath, getSlowShutdownServerSource('two'))
+        await writeFileAtomically(fixture.entryPath, getSlowShutdownServerSource('two'))
 
         await waitForOutput(server, /"type":"child-sigterm","count":1/)
         await assertNoReadyEvent(server, 1, 5_250)
@@ -1669,9 +1705,13 @@ function getOverlappingBrowserHmrServerSource(): string {
     `    }`,
     `  }`,
     `  return [{`,
-    `    timestamp: isFileA ? 1 : 2,`,
+    `    data: {`,
+    `      'test/browser@1': {`,
+    `        path: isFileA ? '/a.css' : '/b.css',`,
+    `        timestamp: isFileA ? 1 : 2,`,
+    `      },`,
+    `    },`,
     `    type: 'update',`,
-    `    updates: [{ path: isFileA ? '/a.css' : '/b.css', type: 'css' }],`,
     `  }]`,
     `})`,
     `await fs.writeFile(process.env.HMR_URL_FILE, channel.url)`,
@@ -1690,9 +1730,14 @@ function getBrowserHmrServerSource(): string {
     `let channel = await createBrowserHmrChannel()`,
     `channel.updateWatchedFiles({ add: [process.env.WATCH_FILE], remove: [] })`,
     `channel.onFileEvents(() => [{`,
-    `  timestamp: 1,`,
+    `  data: {`,
+    `    'test/browser@1': {`,
+    `      details: [null, true, { version: 1 }],`,
+    `      path: '/entry.ts',`,
+    `      timestamp: 1,`,
+    `    },`,
+    `  },`,
     `  type: 'update',`,
-    `  updates: [{ path: '/entry.ts', type: 'js' }],`,
     `}])`,
     `await fs.writeFile(process.env.HMR_URL_FILE, channel.url)`,
     `emitServerReady()`,
@@ -1968,6 +2013,12 @@ async function writeFixtureFiles(root: string, files: Record<string, string>): P
       await fs.writeFile(absolutePath, contents)
     }),
   )
+}
+
+async function writeFileAtomically(filePath: string, contents: string): Promise<void> {
+  let temporaryPath = `${filePath}.tmp`
+  await fs.writeFile(temporaryPath, contents)
+  await fs.rename(temporaryPath, filePath)
 }
 
 async function waitForOutput(server: ReturnType<typeof startFixtureServer>, pattern: RegExp) {
@@ -2266,6 +2317,15 @@ function parseHmrUrlEvent(line: string): { pid: number; url: string } | null {
 
 async function stopProcess(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return
+
+  if (isWindows && child.pid !== undefined) {
+    // Windows does not run SIGTERM handlers, so stop the child server as well as its parent.
+    await Promise.all([
+      once(child, 'exit'),
+      promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F']),
+    ])
+    return
+  }
 
   await new Promise<void>((resolve) => {
     // The HMR runner gives its child five seconds to exit before force-killing it.

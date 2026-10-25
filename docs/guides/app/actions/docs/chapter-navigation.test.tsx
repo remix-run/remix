@@ -1,6 +1,6 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import { renderToString } from 'remix/ui/server'
+import { renderToString } from 'remix/component/server'
 
 import { ChapterNavigationContent } from './chapter-navigation.tsx'
 import type { DocsNavigationItem } from './markdown-chapters.tsx'
@@ -11,12 +11,14 @@ const chapters: DocsNavigationItem[] = [
     slug: 'start-here',
     href: '/start-here/',
     title: 'Start Here',
+    disabled: false,
   },
   {
     order: 2,
     slug: 'routing-and-controllers',
     href: '/routing-and-controllers/',
     title: 'Routing and Controllers',
+    disabled: false,
   },
 ]
 
@@ -26,6 +28,26 @@ describe('ChapterNavigationContent', () => {
 
     assert.match(html, /docs-chapters-nav__eyebrow">1\.<\/span>/)
     assert.match(html, /Routing and Controllers/)
+  })
+
+  it('renders disabled chapters without links', async () => {
+    let html = await renderToString(
+      <ChapterNavigationContent
+        chapters={[
+          ...chapters,
+          {
+            order: 3,
+            slug: 'request-handling',
+            href: '/request-handling/',
+            title: 'Request Handling',
+            disabled: true,
+          },
+        ]}
+      />,
+    )
+
+    assert.match(html, /aria-disabled="true"[^>]*><span[^>]*>3\.<\/span>/)
+    assert.doesNotMatch(html, /href="\/request-handling\/"/)
   })
 
   it('marks only the current chapter', async () => {

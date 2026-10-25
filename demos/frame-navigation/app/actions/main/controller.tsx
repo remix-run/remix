@@ -1,5 +1,5 @@
 import { createController } from 'remix/router'
-import { Frame } from 'remix/ui'
+import { Frame } from 'remix/component'
 
 import { requireAuth } from '../../middleware/auth.ts'
 import { frames, routes } from '../../routes.ts'

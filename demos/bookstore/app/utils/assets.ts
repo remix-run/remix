@@ -1,31 +1,26 @@
-import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/assets'
-import { assetsBase } from '../routes.ts'
+import { loadConfig } from 'remix/cli'
+import { componentHmr } from 'remix/component-hmr/assets'
+
+const config = await loadConfig(import.meta.dirname)
+if (config.assets === undefined) throw new Error('Missing assets configuration')
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
 export const assets = createAssetServer({
-  basePath: assetsBase,
-  rootDir: path.resolve(import.meta.dirname, '../../../..'),
-  allowFiles: ['demos/bookstore/app/routes.ts', 'demos/bookstore/app/**/public/**'],
-  allowPackages: ['remix'],
-  denyFiles: ['demos/bookstore/app/**/*.test.*'],
-  mounts: {
-    app: 'demos/bookstore/app',
-    packages: 'packages',
-  },
+  ...config.assets,
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
-  fingerprint: isDevelopment
-    ? undefined
-    : { buildId: process.env.GITHUB_SHA || String(Date.now()) },
-  watch: isDevelopment,
+  fingerprint: !isDevelopment,
+  watch: isHmr,
   hmr: isHmr
-    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    ? {
+        channel: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+        moduleImporter: 'remix/multiple-import-maps-polyfill',
+      }
     : undefined,
   scripts: {
-    loaders: isHmr ? [uiHmr()] : undefined,
+    loaders: isHmr ? [componentHmr()] : undefined,
   },
 })

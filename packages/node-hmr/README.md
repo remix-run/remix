@@ -18,14 +18,14 @@ npm i remix
 
 ## Usage
 
-Create a development script that starts your app server with HMR enabled, along with any additional Node args, such as the `--import` flag to provide [Node module customization hooks](https://nodejs.org/api/module.html#customization-hooks) for [JSX syntax support](https://github.com/remix-run/remix/tree/main/packages/node-tsx) and [Remix component HMR](https://github.com/remix-run/remix/tree/main/packages/ui-hmr):
+Create a development script that starts your app server with HMR enabled, along with any additional Node args, such as the `--import` flag to provide [Node module customization hooks](https://nodejs.org/api/module.html#customization-hooks) for [JSX syntax support](https://github.com/remix-run/remix/tree/main/packages/node-tsx) and [Remix component HMR](https://github.com/remix-run/remix/tree/main/packages/component-hmr):
 
 ```ts
 // hmr.ts
 import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
-  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/component-hmr/node'],
   watch: {
     ignore: ['**/node_modules/**'],
   },
@@ -75,6 +75,15 @@ const server = http.createServer(createRequestListener(createHmrReadyFetch(hmrRu
 
 server.listen(hmrProxyPort)
 ```
+
+Because the proxy sets forwarded origin headers, the child app server should trust them while supervised by `node-hmr`:
+
+```ts
+const isHmr = process.env.REMIX_NODE_HMR === '1'
+const server = http.createServer(createRequestListener(handler, { trustProxy: isHmr }))
+```
+
+This lets `cop()` and `csrf()` recognize same-origin form submissions.
 
 By default, `createHmrReadyFetch()` retries `GET` and `HEAD` requests when the wrapped fetch handler throws or returns a `502`, `503`, or `504` response, but only if the server updated or restarted while the request was in flight. You can customize this policy with `shouldRetry`:
 
@@ -152,7 +161,7 @@ You can optionally provide an array of glob patterns to the `watch.ignore` optio
 import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
-  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/component-hmr/node'],
   watch: {
     ignore: ['**/node_modules/**'],
   },
@@ -165,7 +174,7 @@ You can also configure polling behavior. Polling defaults to `true` on Windows a
 import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
-  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/component-hmr/node'],
   watch: {
     poll: true,
     pollInterval: 100,
@@ -175,7 +184,7 @@ run('./server.ts', {
 
 ## `import.meta.hot`
 
-The `import.meta.hot` API provided by `node-hmr` is a small runtime contract for modules that can handle updates without restarting the process. It is primarily intended for transforms like [remix/ui-hmr](https://github.com/remix-run/remix/tree/main/packages/ui-hmr), but it can also be used directly.
+The `import.meta.hot` API provided by `node-hmr` is a small runtime contract for modules that can handle updates without restarting the process. It is primarily intended for transforms like [remix/component-hmr](https://github.com/remix-run/remix/tree/main/packages/component-hmr), but it can also be used directly.
 
 To type `import.meta.hot`, add the HMR types to your TypeScript config:
 
@@ -299,7 +308,7 @@ if (import.meta.hot) {
 
 - [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Consumes browser HMR channels for coordinating server and browser HMR updates
 - [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Creates fetch handlers for forwarding requests to another server
-- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides code transforms and runtime for HMR for Remix UI components
+- [`component-hmr`](https://github.com/remix-run/remix/tree/main/packages/component-hmr) - Provides code transforms and runtime for HMR for Remix components
 
 ## License
 

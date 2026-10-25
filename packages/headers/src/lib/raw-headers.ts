@@ -19,7 +19,11 @@ export function parse(raw: string): Headers {
   for (let line of raw.split(CRLF)) {
     let match = line.match(/^([^:]+):(.*)/)
     if (match) {
-      headers.append(match[1].trim(), match[2].trim())
+      try {
+        headers.append(match[1].trim(), match[2].trim())
+      } catch (error) {
+        if (!(error instanceof TypeError)) throw error
+      }
     }
   }
 

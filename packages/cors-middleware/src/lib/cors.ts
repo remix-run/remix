@@ -53,6 +53,9 @@ export interface CorsOptions {
   /**
    * Allowed origins. Defaults to '*'.
    *
+   * The implicit default is not reflected when credentials are enabled. Configure an explicit
+   * origin policy for credentialed cross-origin requests.
+   *
    * - `true` reflects the request Origin
    * - `false` disables CORS headers
    * - `'*'` allows all origins
@@ -157,7 +160,7 @@ export function cors(options: CorsOptions = {}): Middleware {
     let vary = new Vary()
 
     let allowOriginHeader = allowedOrigin
-    if (allowCredentials && allowedOrigin === '*') {
+    if (allowCredentials && allowedOrigin === '*' && options.origin !== undefined) {
       allowOriginHeader = requestOrigin
     }
 
@@ -189,12 +192,14 @@ export function cors(options: CorsOptions = {}): Middleware {
         corsHeaders.set('Access-Control-Max-Age', String(maxAge))
       }
 
-      if (
-        options.allowPrivateNetwork &&
-        context.headers.get('Access-Control-Request-Private-Network')?.toLowerCase() === 'true'
-      ) {
-        corsHeaders.set('Access-Control-Allow-Private-Network', 'true')
+      if (options.allowPrivateNetwork) {
         vary.add('Access-Control-Request-Private-Network')
+
+        if (
+          context.headers.get('Access-Control-Request-Private-Network')?.toLowerCase() === 'true'
+        ) {
+          corsHeaders.set('Access-Control-Allow-Private-Network', 'true')
+        }
       }
 
       if (!preflightContinue) {

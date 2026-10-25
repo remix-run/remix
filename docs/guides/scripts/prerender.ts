@@ -5,6 +5,7 @@ import { discoverPublicModuleHrefs } from 'remix-docs-shared/prerender/public-mo
 import { prerender } from 'remix-docs-shared/prerender/run'
 
 import { assetServer } from '../app/assets.ts'
+import { loadDocsChapterSummaries } from '../app/actions/docs/markdown-chapters.tsx'
 import { router } from '../app/router.ts'
 import { routes } from '../app/routes.ts'
 
@@ -34,7 +35,8 @@ const publicModuleHrefs = await discoverPublicModuleHrefs(assetServer, [
   path.join(guidesDir, 'app'),
   sharedDir,
 ])
-const paths = [routes.docs.index.href(), ...publicModuleHrefs]
+const chapterHrefs = (await loadDocsChapterSummaries('production')).map((chapter) => chapter.href)
+const paths = [routes.docs.index.href(), ...chapterHrefs, ...publicModuleHrefs]
 
 await fs.rm(outputDir, { recursive: true, force: true })
 await prerender(router, {

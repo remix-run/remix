@@ -32,6 +32,7 @@ export interface CompressionOptions {
   /**
    * node:zlib options for gzip/deflate compression.
    * Can be static or a function that returns options based on the response.
+   * HTML and SSE responses use `Z_SYNC_FLUSH` unless you explicitly set a flush value.
    *
    * See: https://nodejs.org/api/zlib.html#class-options
    */
@@ -40,6 +41,7 @@ export interface CompressionOptions {
   /**
    * node:zlib options for Brotli compression.
    * Can be static or a function that returns options based on the response.
+   * HTML and SSE responses use `BROTLI_OPERATION_FLUSH` unless you explicitly set a flush value.
    *
    * See: https://nodejs.org/api/zlib.html#class-brotlioptions
    */

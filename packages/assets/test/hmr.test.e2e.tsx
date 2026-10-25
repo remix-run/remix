@@ -1,11 +1,13 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { once } from 'node:events'
 import * as fs from 'node:fs/promises'
 import * as http from 'node:http'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { promisify } from 'node:util'
 import { watch, type FSWatcher } from 'chokidar'
 import { createAssetServer, type AssetServer } from '../src/assets.ts'
 import type { HmrPayload } from '../src/lib/hmr.ts'
@@ -25,18 +27,26 @@ const nodeTsxImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
 ).href
 const consoleMessageTimeout = 5000
-const hmrConnectionTimeout = process.platform === 'win32' ? 15_000 : consoleMessageTimeout
+const hmrConnectionTimeout = 15_000
 
 describe('asset server HMR', () => {
-  it('updates accepted browser module output without losing page state', async (t) => {
+  it('cancels the HMR connection wait when navigation fails', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    t.after(fixture.close)
+    await page.route('**/*', (route) => route.abort())
+    await assert.rejects(navigateToHmrPage(page))
+  })
 
-    await page.goto('/')
-    await connected
+  it('updates accepted browser module output without losing page state', async (t) => {
+    let fixture = await createHmrFixture()
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    let documentResponse = await navigateToHmrPage(page)
+    assert.ok(documentResponse)
+    assert.equal(documentResponse.status(), 200, await documentResponse.text())
     await assertCount(page, 'Count: 3')
     await page.locator('[data-testid="field"]').fill('hello')
 
@@ -51,15 +61,664 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
   })
 
-  it('reloads the page when an accepted browser module export is added', async (t) => {
+  it('updates transitive dependencies of an accepted browser module', async (t) => {
     let fixture = await createHmrFixture()
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        buttonPrefixImport: './button-prefix.ts',
+        buttonText: 'Increment',
+      }),
+    )
+    await write(
+      fixture.rootDir,
+      'app/button-prefix.ts',
+      [
+        "import { buttonPrefix as leafButtonPrefix } from './button-prefix-leaf.ts'",
+        'export const buttonPrefix = leafButtonPrefix',
+        '',
+      ].join('\n'),
+    )
+    await write(
+      fixture.rootDir,
+      'app/button-prefix-leaf.ts',
+      "export const buttonPrefix = 'Before: '\n",
+    )
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Before: Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    await write(
+      fixture.rootDir,
+      'app/button-prefix-leaf.ts',
+      "export const buttonPrefix = 'After: '\n",
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'After: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('updates every dependency path through a diamond-shaped browser module graph', async (t) => {
+    let fixture = await createHmrFixture()
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        buttonPrefixImport: './button-prefix.ts',
+        buttonText: 'Increment',
+      }),
+    )
+    await write(
+      fixture.rootDir,
+      'app/button-prefix.ts',
+      [
+        "import { left } from './left.ts'",
+        "import { right } from './right.ts'",
+        '',
+        'export const buttonPrefix = `${left} ${right}: `',
+        '',
+      ].join('\n'),
+    )
+    await write(
+      fixture.rootDir,
+      'app/left.ts',
+      ["import { shared } from './shared.ts'", 'export const left = shared', ''].join('\n'),
+    )
+    await write(
+      fixture.rootDir,
+      'app/right.ts',
+      ["import { shared } from './shared.ts'", 'export const right = shared', ''].join('\n'),
+    )
+    await write(fixture.rootDir, 'app/shared.ts', "export const shared = 'Before'\n")
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Before Before: Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    await write(fixture.rootDir, 'app/shared.ts', "export const shared = 'After'\n")
+
+    await waitForText(page, '[data-testid="increment"]', 'After After: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('updates an accepting importer when an optimized barrel import is retargeted', async (t) => {
+    let fixture = await createHmrFixture({ counterBarrelHmrBoundary: true })
     t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('keep me')
 
-    await page.goto('/')
-    await connected
+    await write(
+      fixture.rootDir,
+      'app/counter-next.ts',
+      getCounterModuleSource({ buttonText: 'Retargeted through barrel' }),
+    )
+    await write(
+      fixture.rootDir,
+      'app/counter-inner.ts',
+      "export { renderCounter } from './counter-next.ts'\n",
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Retargeted through barrel')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  })
+
+  it('updates an accepting importer when a skipped barrel enters the served graph', async (t) => {
+    let fixture = await createHmrFixture({ counterBarrelHmrBoundary: true })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('keep me')
+
+    await write(
+      fixture.rootDir,
+      'app/counter-barrel.ts',
+      [
+        "import { renderCounter as render } from './counter-inner.ts'",
+        'export function renderCounter() {',
+        '  render()',
+        `  document.querySelector('[data-testid="increment"]')!.textContent = 'Wrapped'`,
+        '}',
+        '',
+      ].join('\n'),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Wrapped')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  })
+
+  it('updates an accepting importer when a served barrel becomes skippable', async (t) => {
+    let fixture = await createHmrFixture({ counterBarrelHmrBoundary: true })
+    t.after(fixture.close)
+    await write(
+      fixture.rootDir,
+      'app/counter-barrel.ts',
+      [
+        "import { renderCounter as render } from './counter-inner.ts'",
+        'export function renderCounter() {',
+        '  render()',
+        `  document.querySelector('[data-testid="increment"]')!.textContent = 'Wrapped'`,
+        '}',
+        '',
+      ].join('\n'),
+    )
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Wrapped')
+    await page.locator('[data-testid="field"]').fill('keep me')
+
+    await write(
+      fixture.rootDir,
+      'app/counter-barrel.ts',
+      "export { renderCounter } from './counter-inner.ts'\n",
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  })
+
+  it('loads the current version when an updated module is requested later as an entry', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImport: true })
+    let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
+    let entrySource = await fs.readFile(entryPath, 'utf-8')
+    await fs.writeFile(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
+    let sharedPath = path.join(fixture.rootDir, 'app/shared.ts')
+    await write(fixture.rootDir, 'app/shared.ts', "export const value = 'before'")
+    await write(fixture.rootDir, 'app/package.json', JSON.stringify({ sideEffects: false }))
+    await write(fixture.rootDir, 'app/shared-barrel.ts', "export { value } from './shared.ts'")
+    let hmrConsumerPath = path.join(fixture.rootDir, 'app/hmr-consumer.ts')
+    await fs.writeFile(
+      hmrConsumerPath,
+      [
+        "import { value } from './shared.ts'",
+        'document.body.dataset.hmrValue = value',
+        "if (import.meta.hot) import.meta.hot.accept('./shared.ts', module => {",
+        '  document.body.dataset.hmrValue = module?.value',
+        '})',
+      ].join('\n'),
+    )
+    let lateEntryPath = path.join(fixture.rootDir, 'app/late.ts')
+    await write(
+      fixture.rootDir,
+      'app/late.ts',
+      [
+        "import { value } from './shared-barrel.ts'",
+        'document.body.dataset.lateValue = value',
+      ].join('\n'),
+    )
+    let server = await createHmrTestServer(fixture)
+    let initialEntry = await server.getScriptEntry(entryPath)
+    let page = await t.serve(server)
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'before')
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    let installedImportMap = await page.locator('script[type="importmap"]').textContent()
+    assert.ok(installedImportMap)
+    assert.deepEqual(JSON.parse(installedImportMap), initialEntry.importMap)
+    assert.deepEqual(JSON.parse(installedImportMap).scopes['/assets/app/'], {
+      'test-package': '/assets/app/test-package.ts',
+    })
+
+    await fs.writeFile(sharedPath, "export const value = 'after'")
+    await page.locator('body[data-hmr-value="after"]').waitFor()
+
+    let currentEntry = await server.getScriptEntry(entryPath)
+    assert.deepEqual(currentEntry.importMap, initialEntry.importMap)
+    assert.doesNotMatch(JSON.stringify(currentEntry.importMap), /[?&]t=/)
+    assert.equal(await page.locator('script[type="importmap"]').textContent(), installedImportMap)
+
+    let updatedEntry = await server.getScriptEntry(sharedPath)
+    assert.match(updatedEntry.href, /\/shared\.ts\?t=\d+$/)
+    assert.ok(updatedEntry.preloads.includes(updatedEntry.href))
+
+    let updatedBoundaryEntry = await server.getScriptEntry(hmrConsumerPath)
+    assert.match(updatedBoundaryEntry.href, /\/hmr-consumer\.ts\?t=\d+$/)
+    assert.ok(updatedBoundaryEntry.preloads.includes(updatedBoundaryEntry.href))
+
+    await fs.writeFile(sharedPath, "export const value = 'after again'")
+    await page.locator('body[data-hmr-value="after again"]').waitFor()
+
+    let latestEntry = await server.getScriptEntry(sharedPath)
+    assert.match(latestEntry.href, /\/shared\.ts\?t=\d+$/)
+    assert.notEqual(latestEntry.href, updatedEntry.href)
+    assert.ok(latestEntry.preloads.includes(latestEntry.href))
+
+    let latestBoundaryEntry = await server.getScriptEntry(hmrConsumerPath)
+    assert.match(latestBoundaryEntry.href, /\/hmr-consumer\.ts\?t=\d+$/)
+    assert.notEqual(latestBoundaryEntry.href, updatedBoundaryEntry.href)
+    assert.ok(latestBoundaryEntry.preloads.includes(latestBoundaryEntry.href))
+    assert.deepEqual(latestBoundaryEntry.importMap, updatedBoundaryEntry.importMap)
+    assert.doesNotMatch(JSON.stringify(latestBoundaryEntry.importMap), /[?&]t=/)
+
+    let lateEntry = await server.getScriptEntry(lateEntryPath)
+    assert.match(lateEntry.href, /\/late\.ts$/)
+    assert.ok(lateEntry.preloads.includes(latestEntry.href))
+    assert.doesNotMatch(JSON.stringify(lateEntry.importMap), /[?&]t=/)
+    let lateEntrySource = await fetch(new URL(lateEntry.href, server.baseUrl)).then((response) =>
+      response.text(),
+    )
+    assert.ok(lateEntrySource.includes(latestEntry.href))
+    assert.doesNotMatch(lateEntrySource, /shared-barrel\.ts/)
+    await page.evaluate(async (href) => import(href), lateEntry.href)
+    assert.equal(await page.locator('body').getAttribute('data-late-value'), 'after again')
+  })
+
+  it('evaluates updated side-effect modules once through optimized barrel imports', async (t) => {
+    let fixture = await createHmrFixture()
+    let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
+    let entrySource = await fs.readFile(entryPath, 'utf-8')
+    await fs.writeFile(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
+    await write(
+      fixture.rootDir,
+      'app/package.json',
+      JSON.stringify({ sideEffects: ['./shared.ts'] }),
+    )
+    let sharedSource = [
+      'document.body.dataset.sharedEvaluations = String(',
+      '  Number(document.body.dataset.sharedEvaluations ?? 0) + 1,',
+      ')',
+      "export const shared = 'before'",
+    ].join('\n')
+    await write(fixture.rootDir, 'app/shared.ts', sharedSource)
+    await write(fixture.rootDir, 'app/unused.ts', "import './shared.ts'\nexport const unused = 0")
+    await write(
+      fixture.rootDir,
+      'app/value.ts',
+      "import { shared } from './shared.ts'\nexport const value = shared",
+    )
+    await write(
+      fixture.rootDir,
+      'app/shared-barrel.ts',
+      "export { unused } from './unused.ts'\nexport { value } from './value.ts'",
+    )
+    await write(
+      fixture.rootDir,
+      'app/hmr-consumer.ts',
+      [
+        "import { value } from './shared-barrel.ts'",
+        'document.body.dataset.hmrValue = value',
+        'if (import.meta.hot) import.meta.hot.accept()',
+      ].join('\n'),
+    )
+    let lateEntryPath = path.join(fixture.rootDir, 'app/late.ts')
+    await write(
+      fixture.rootDir,
+      'app/late.ts',
+      "import { value } from './shared-barrel.ts'\ndocument.body.dataset.lateValue = value",
+    )
+
+    let server = await createHmrTestServer(fixture)
+    let page = await t.serve(server)
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'before')
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '1')
+
+    let accepted = waitForConsoleMessage(
+      page,
+      '[remix] HMR accepted update /assets/app/hmr-consumer.ts',
+    )
+    await write(fixture.rootDir, 'app/shared.ts', sharedSource.replace("'before'", "'after'"))
+    await page.locator('body[data-hmr-value="after"]').waitFor()
+    await accepted
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '2')
+
+    let lateEntry = await server.getScriptEntry(lateEntryPath)
+    let lateEntrySource = await fetch(new URL(lateEntry.href, server.baseUrl)).then((response) =>
+      response.text(),
+    )
+    // A removed branch reaches shared.ts before value.ts, so the optimiser must emit this
+    // side-effect-only import as well as the named import of value.ts.
+    assert.ok(lateEntrySource.includes('import "/assets/app/shared.ts'))
+    assert.doesNotMatch(lateEntrySource, /shared-barrel\.ts|unused\.ts/)
+    await page.evaluate(async (href) => import(href), lateEntry.href)
+    assert.equal(await page.locator('body').getAttribute('data-late-value'), 'after')
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '2')
+
+    // A new document has neither URL cached, so inconsistent import URLs would execute shared.ts
+    // twice rather than silently reuse its pre-update instance.
+    await navigateToHmrPage(page)
+    assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'after')
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '1')
+  })
+
+  it('recovers an accepted browser module after a failed transform is fixed', async (t) => {
+    let fixture = await createHmrFixture()
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await assertCount(page, 'Count: 3')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    let failed = waitForConsoleMessage(page, '[remix] HMR update failed')
+    await write(fixture.rootDir, 'app/counter.ts', 'export const broken = "\n')
+    await failed
+
+    // Let both polling watchers observe the broken version before replacing it.
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({ buttonText: 'Increment after recovery' }),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Increment after recovery')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('resolves bare imports from timestamped browser module updates through import map scopes', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImport: true })
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    let documentResponse = await navigateToHmrPage(page)
+    assert.ok(documentResponse)
+    assert.equal(documentResponse.status(), 200, await documentResponse.text())
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    let importMap = await page.locator('script[type="importmap"]').textContent()
+    assert.ok(importMap)
+    assert.deepEqual(JSON.parse(importMap).scopes['/assets/app/'], {
+      'test-package': '/assets/app/test-package.ts',
+    })
+
+    let updatedModuleRequest = page.waitForResponse((response) => {
+      let url = new URL(response.url())
+      return url.pathname === '/assets/app/counter.ts' && url.searchParams.has('t')
+    })
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment via HMR',
+      }),
+    )
+
+    assert.equal((await updatedModuleRequest).status(), 200)
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment via HMR')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('installs a new bare import mapping before applying a browser module update', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 1)
+
+    let firstAccepted = waitForConsoleMessage(
+      page,
+      '[remix] HMR accepted update /assets/app/counter.ts',
+    )
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment via new package',
+      }),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment via new package')
+    await firstAccepted
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+
+    // Let both polling watchers observe the first update before replacing it.
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    let secondAccepted = waitForConsoleMessage(
+      page,
+      '[remix] HMR accepted update /assets/app/counter.ts',
+    )
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment via existing package mapping',
+      }),
+    )
+
+    await waitForText(
+      page,
+      '[data-testid="increment"]',
+      'Package: Increment via existing package mapping',
+    )
+    await secondAccepted
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  })
+
+  it('applies updates with new import map entries', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    let accepted = waitForConsoleMessage(page, '[remix] HMR accepted update /assets/app/counter.ts')
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment via new package',
+      }),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment via new package')
+    await accepted
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  })
+
+  it('installs mappings for a new transitive browser module graph before applying an update', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 1)
+
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        buttonPrefixImport: './feature.ts',
+        buttonText: 'Increment via new feature',
+      }),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Feature: Increment via new feature')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+    assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  })
+
+  it('logs and reloads when an update conflicts with a removed late import map', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('reload me')
+    await page.evaluate(async () => {
+      let script = document.createElement('script')
+      script.type = 'importmap'
+      script.textContent = JSON.stringify({
+        scopes: {
+          '/assets/app/': {
+            'test-package': '/assets/app/test-package-next.ts',
+          },
+        },
+      })
+      document.head.appendChild(script)
+      await new Promise((resolve) => setTimeout(resolve))
+      script.remove()
+    })
+
+    let warned = waitForConsoleMessage(
+      page,
+      '[remix] HMR reloading page after import map conflict for "test-package" in scope "/assets/app/"',
+    )
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment after import map conflict',
+      }),
+    )
+
+    await warned
+    await reloaded
+    await waitForText(
+      page,
+      '[data-testid="increment"]',
+      'Package: Increment after import map conflict',
+    )
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
+  it('logs and reloads when an update conflicts with a mutated import map', async (t) => {
+    let fixture = await createHmrFixture({
+      conflictingInitialBareImport: true,
+      counterBareImportConfigured: true,
+    })
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Increment')
+    await page.locator('[data-testid="field"]').fill('reload me')
+    await page.locator('script[type="importmap"]').evaluate((script) => {
+      script.textContent = (script.textContent ?? '').replace(
+        '/assets/app/test-package-next.ts',
+        '/assets/app/test-package.ts',
+      )
+    })
+
+    let warned = waitForConsoleMessage(
+      page,
+      '[remix] HMR reloading page after import map conflict for "test-package" in scope "/assets/app/"',
+    )
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'app/counter.ts',
+      getCounterModuleSource({
+        bareImport: true,
+        buttonText: 'Increment after import map conflict',
+      }),
+    )
+
+    await warned
+    await reloaded
+    await waitForText(
+      page,
+      '[data-testid="increment"]',
+      'Package: Increment after import map conflict',
+    )
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
+  it('updates bare dependencies accepted through import map scopes', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImport: true })
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    await page.locator('[data-testid="field"]').fill('hello')
+
+    let updatedDependencyRequest = page.waitForResponse((response) => {
+      let url = new URL(response.url())
+      return url.pathname === '/assets/app/test-package.ts' && url.searchParams.has('t')
+    })
+    await write(
+      fixture.rootDir,
+      'app/test-package.ts',
+      `export const buttonPrefix = 'Updated package: '\n`,
+    )
+
+    assert.equal((await updatedDependencyRequest).status(), 200)
+    await waitForText(page, '[data-testid="increment"]', 'Updated package: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
+  })
+
+  it('reloads when tsconfig metadata changes an installed import map', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImport: true })
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    await page.locator('[data-testid="field"]').fill('reload me')
+
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'tsconfig.json',
+      JSON.stringify(getHmrTsconfig('./app/test-package-next.ts')),
+    )
+
+    await reloaded
+    await waitForText(page, '[data-testid="increment"]', 'Updated package: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
+  it('reloads when package metadata changes an installed import map', async (t) => {
+    let fixture = await createHmrFixture({ counterPackageImport: true })
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    await page.locator('[data-testid="field"]').fill('reload me')
+
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'app/node_modules/test-package/package.json',
+      JSON.stringify(getHmrPackageJson('./next.ts')),
+    )
+
+    await reloaded
+    await waitForText(page, '[data-testid="increment"]', 'Updated package: Increment')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
+  it('reloads the page when an accepted browser module export is added', async (t) => {
+    let fixture = await createHmrFixture()
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
     let reloaded = waitForNavigation(page)
@@ -81,13 +740,10 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({
       counterExtraExports: 'export const foo = true\n',
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
     let reloaded = waitForNavigation(page)
@@ -108,13 +764,10 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({
       counterExtraExports: 'export const foo = true\n',
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
     let reloaded = waitForNavigation(page)
@@ -136,14 +789,11 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({
       counterExtraExports: ["import { foo } from './stable.ts'", 'export { foo }', ''].join('\n'),
     })
-    t.after(fixture.close)
     await write(fixture.rootDir, 'app/stable.ts', 'export const foo = {}\n')
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before update')
 
     await write(
@@ -163,13 +813,10 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({
       counterExtraExports: 'export const foo = {}\n',
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
     let reloaded = waitForNavigation(page)
@@ -194,13 +841,10 @@ describe('asset server HMR', () => {
         parentAccepts: true,
       },
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="browser-message"]', 'Browser: before')
     await page.locator('[data-testid="field"]').fill('typed before update')
 
@@ -219,13 +863,10 @@ describe('asset server HMR', () => {
         trackDependencyDispose: true,
       },
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="browser-message"]', 'Browser: before')
 
     await writeBrowserInvalidationMessage(fixture.rootDir, 'Browser: after', {
@@ -253,13 +894,10 @@ describe('asset server HMR', () => {
         parentAccepts: false,
       },
     })
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="browser-message"]', 'Browser: before')
     await page.locator('[data-testid="field"]').fill('typed before reload')
 
@@ -273,13 +911,10 @@ describe('asset server HMR', () => {
 
   it('updates a stylesheet after a failed HMR transform is fixed', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
     await waitForComputedStyle(page, '[data-testid="increment"]', 'padding-top', '13px')
 
@@ -317,13 +952,10 @@ describe('asset server HMR', () => {
 
   it('updates a linked stylesheet when an imported stylesheet changes', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let page = await t.serve(await createHmrTestServer(fixture))
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
 
     let linkedStyleRequest = waitForStylesheetResponse(page, 200)
@@ -349,15 +981,12 @@ describe('asset server HMR', () => {
 
   it('ignores JavaScript updates for modules that are not loaded in the page', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
     await write(fixture.rootDir, 'app/inactive.ts', getInactiveModuleSource('before'))
 
     let fixtureServer = await createHmrTestServer(fixture)
     let page = await t.serve(fixtureServer)
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await get(page, '/assets/app/inactive.ts')
     await page.locator('[data-testid="field"]').fill('typed before update')
 
@@ -372,15 +1001,12 @@ describe('asset server HMR', () => {
 
   it('ignores CSS updates for stylesheets that are not present in the page', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
     await write(fixture.rootDir, 'app/inactive.css', 'body { color: red; }\n')
 
     let fixtureServer = await createHmrTestServer(fixture)
     let page = await t.serve(fixtureServer)
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await get(page, '/assets/app/inactive.css')
     await page.locator('[data-testid="field"]').fill('typed before update')
 
@@ -401,22 +1027,21 @@ describe('asset server HMR', () => {
     try {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
 
       let unexpectedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 250 }).then(
         () => true,
         () => false,
       )
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
       await write(
         fixture.rootDir,
         'server-side-effect.ts',
         `export const sideEffect = 'style-test'\n`,
       )
-      await waitForConsoleMessage(page, 'Server frame reload complete')
+      await serverFrameReloaded
+      await server.waitForReady(1)
 
       assert.equal(await unexpectedStyleRequest, false)
       await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
@@ -430,40 +1055,35 @@ describe('asset server HMR', () => {
 
   it('recovers failed stylesheet updates after the HMR event stream reconnects', async (t) => {
     let fixture = await createHmrFixture()
-    t.after(fixture.close)
 
     let server = await createHmrTestServer(fixture)
     let page = await t.serve(server)
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
 
     let stylesheetPath = path.join(fixture.rootDir, 'app/styles.css')
 
     let lostConnection = waitForConsoleMessage(page, '[remix] HMR connection lost')
     let reconnected = waitForConsoleMessage(page, '[remix] HMR connected')
-    let failedStyleRequest = waitForStylesheetResponse(page, 500)
+    let failedStyleRequest = waitForStylesheetResponse(page, 500, { timeout: 15_000 })
     await server.stopAssets()
     await lostConnection
     await fs.writeFile(stylesheetPath, 'body { background: url("foo); }\n')
     await server.startAssets()
-    await reconnected
-    await failedStyleRequest
+    await Promise.all([reconnected, failedStyleRequest])
 
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
 
     lostConnection = waitForConsoleMessage(page, '[remix] HMR connection lost')
     reconnected = waitForConsoleMessage(page, '[remix] HMR connected')
-    let fixedStyleRequest = waitForStylesheetResponse(page, 200)
+    let fixedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 15_000 })
     await server.stopAssets()
     await lostConnection
     await fs.writeFile(stylesheetPath, '[data-testid="increment"] { color: blue; }\n')
     await server.startAssets()
-    await reconnected
-    await fixedStyleRequest
+    await Promise.all([reconnected, fixedStyleRequest])
 
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(0, 0, 255)')
@@ -476,10 +1096,7 @@ describe('asset server HMR', () => {
     try {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       await waitForText(page, '[data-testid="client-label"]', 'Client: before')
       await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
@@ -502,8 +1119,10 @@ describe('asset server HMR', () => {
       await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(0, 0, 255)')
       assert.equal(server.readyCount, 1)
 
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
       await write(fixture.rootDir, 'server-side-effect.ts', `export const sideEffect = 'mixed'\n`)
-      await waitForConsoleMessage(page, 'Server frame reload complete')
+      await serverFrameReloaded
+      await server.waitForReady(1)
       assert.equal(server.readyCount, 2)
     } finally {
       await server?.close()
@@ -519,10 +1138,7 @@ describe('asset server HMR', () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let ready = await server.waitForReady(0)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       await page.locator('[data-testid="client-field"]').fill('typed before reload')
 
@@ -556,10 +1172,7 @@ describe('asset server HMR', () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
 
       await write(fixture.rootDir, 'server-message.ts', `export const serverMessage = \n`)
@@ -599,10 +1212,7 @@ describe('asset server HMR', () => {
       server = await startNodeHmrFixtureServer(fixture)
       let page = await serveNodeHmrFixture(t, server)
       let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
-      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-      await page.goto('/')
-      await connected
+      await navigateToHmrPage(page)
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
 
       let serverMessagePath = path.join(fixture.rootDir, 'server-message.ts')
@@ -659,6 +1269,7 @@ type NodeHmrFixture = {
 type HmrTestServer = {
   baseUrl: string
   close(): Promise<void>
+  getScriptEntry(filePath: string): ReturnType<AssetServer['getScriptEntry']>
   restartAssets(): Promise<void>
   startAssets(): Promise<void>
   stopAssets(): Promise<void>
@@ -672,10 +1283,9 @@ type BrowserHmrFileEvent = {
 
 type BrowserHmrEvent =
   | {
+      data: Record<string, unknown>
       files?: string[]
-      timestamp: number
       type: 'update'
-      updates: Extract<HmrPayload, { type: 'browser:update' }>['updates']
     }
   | {
       files?: string[]
@@ -696,11 +1306,17 @@ type NodeHmrTestServer = {
 
 type TestPage = Awaited<ReturnType<TestContext['serve']>>
 
+type PageRequest = {
+  method(): string
+  url(): string
+}
+
 type PageDiagnostics = {
   consoleMessages: string[]
   getServerOutput?: () => string
   navigations: string[]
   pageErrors: string[]
+  pendingRequests: Map<PageRequest, number>
   requestFailures: string[]
   responseFailures: string[]
 }
@@ -725,6 +1341,7 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
     getServerOutput,
     navigations: [],
     pageErrors: [],
+    pendingRequests: new Map(),
     requestFailures: [],
     responseFailures: [],
   }
@@ -740,11 +1357,18 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
     if (frame.parentFrame() !== null) return
     diagnostics.navigations.push(frame.url())
   })
+  page.on('request', (request) => {
+    diagnostics.pendingRequests.set(request, Date.now())
+  })
   page.on('requestfailed', (request) => {
+    diagnostics.pendingRequests.delete(request)
     let failureText = request.failure()?.errorText
     diagnostics.requestFailures.push(
       `${request.method()} ${request.url()}${failureText ? ` (${failureText})` : ''}`,
     )
+  })
+  page.on('requestfinished', (request) => {
+    diagnostics.pendingRequests.delete(request)
   })
   page.on('response', (response) => {
     if (response.status() < 400) return
@@ -756,10 +1380,18 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
 
 function formatPageDiagnostics(page: TestPage): string {
   let diagnostics = attachPageDiagnostics(page)
+  let now = Date.now()
+  let pendingRequests = Array.from(
+    diagnostics.pendingRequests,
+    ([request, startedAt]) => `${request.method()} ${request.url()} (${now - startedAt}ms)`,
+  )
+  let browserName = page.context().browser()?.browserType().name() ?? 'unknown'
   let sections = [
+    `browser:\n${browserName}`,
     formatDiagnosticsSection('console', diagnostics.consoleMessages),
     formatDiagnosticsSection('pageerror', diagnostics.pageErrors),
     formatDiagnosticsSection('navigation', diagnostics.navigations),
+    formatDiagnosticsSection('pending request', pendingRequests),
     formatDiagnosticsSection('requestfailed', diagnostics.requestFailures),
     formatDiagnosticsSection('response >= 400', diagnostics.responseFailures),
   ].filter(Boolean)
@@ -785,22 +1417,60 @@ async function createHmrFixture(
       parentAccepts: boolean
       trackDependencyDispose?: boolean
     }
+    conflictingInitialBareImport?: boolean
+    counterBareImport?: boolean
+    counterBareImportConfigured?: boolean
+    counterBarrelHmrBoundary?: boolean
+    counterPackageImport?: boolean
     counterExtraExports?: string
   } = {},
 ): Promise<HmrFixture> {
   let tmpDir = path.join(packageDir, '.tmp')
   await fs.mkdir(tmpDir, { recursive: true })
   let rootDir = await fs.mkdtemp(path.join(tmpDir, 'hmr-e2e-'))
+  let polyfillEntryPath = path
+    .relative(
+      path.join(rootDir, 'app'),
+      path.join(workspaceDir, 'packages/multiple-import-maps-polyfill/src/index.ts'),
+    )
+    .replaceAll(path.sep, '/')
+  if (!polyfillEntryPath.startsWith('.')) polyfillEntryPath = `./${polyfillEntryPath}`
 
   await write(
     rootDir,
     'tsconfig.json',
-    JSON.stringify({
-      compilerOptions: {
-        jsx: 'react-jsx',
-      },
-    }),
+    JSON.stringify(
+      (options.counterBareImport || options.counterBareImportConfigured) &&
+        !options.counterPackageImport
+        ? getHmrTsconfig('./app/test-package.ts')
+        : getHmrTsconfig(),
+    ),
   )
+  if (options.counterBarrelHmrBoundary) {
+    await write(rootDir, 'app/package.json', JSON.stringify({ sideEffects: false }))
+    await write(rootDir, 'app/counter-inner.ts', "export { renderCounter } from './counter.ts'\n")
+    await write(
+      rootDir,
+      'app/counter-barrel.ts',
+      "export { renderCounter } from './counter-inner.ts'\n",
+    )
+    await write(
+      rootDir,
+      'app/counter-consumer.ts',
+      [
+        "import { renderCounter } from './counter-barrel.ts'",
+        '',
+        'export function startCounter() {',
+        '  renderCounter()',
+        '}',
+        '',
+        'if (import.meta.hot) {',
+        '  import.meta.hot.accept((module) => module?.startCounter())',
+        '}',
+        '',
+      ].join('\n'),
+    )
+  }
   await write(
     rootDir,
     'index.html',
@@ -820,19 +1490,32 @@ async function createHmrFixture(
     ].join('\n'),
   )
   if (options.browserInvalidationFixture) {
-    await writeBrowserInvalidationFixture(rootDir, options.browserInvalidationFixture)
+    await writeBrowserInvalidationFixture(
+      rootDir,
+      options.browserInvalidationFixture,
+      polyfillEntryPath,
+    )
   } else {
+    let counterModule = options.counterBarrelHmrBoundary ? './counter-consumer.ts' : './counter.ts'
+    let counterImport = options.counterBarrelHmrBoundary
+      ? "import { startCounter } from './counter-consumer.ts'"
+      : "import { renderCounter } from './counter.ts'"
+    let startCounter = options.counterBarrelHmrBoundary ? 'startCounter()' : 'renderCounter()'
     await write(
       rootDir,
       'app/entry.tsx',
       [
-        "import { renderCounter } from './counter.ts'",
+        `import { importModule } from ${JSON.stringify(polyfillEntryPath)}`,
+        counterImport,
+        '',
+        `await importModule(${JSON.stringify(counterModule)}, import.meta.url)`,
         '',
         "let app = document.getElementById('app')",
         "if (!app) throw new Error('Missing app container')",
         '',
         'app.innerHTML = \'<main><input data-testid="field"><p data-testid="count"></p><button data-testid="increment"></button></main>\'',
-        'renderCounter()',
+        startCounter,
+        "document.documentElement.dataset.hmrReady = 'true'",
         '',
       ].join('\n'),
     )
@@ -841,10 +1524,45 @@ async function createHmrFixture(
     rootDir,
     'app/counter.ts',
     getCounterModuleSource({
+      bareImport: options.counterBareImport || options.counterPackageImport,
       buttonText: 'Increment',
       extraExports: options.counterExtraExports,
     }),
   )
+  if (options.counterPackageImport) {
+    await write(
+      rootDir,
+      'app/node_modules/test-package/package.json',
+      JSON.stringify(getHmrPackageJson('./current.ts')),
+    )
+    await write(
+      rootDir,
+      'app/node_modules/test-package/current.ts',
+      `export const buttonPrefix = 'Package: '\n`,
+    )
+    await write(
+      rootDir,
+      'app/node_modules/test-package/next.ts',
+      `export const buttonPrefix = 'Updated package: '\n`,
+    )
+  } else if (options.counterBareImport || options.counterBareImportConfigured) {
+    await write(rootDir, 'app/test-package.ts', `export const buttonPrefix = 'Package: '\n`)
+    await write(
+      rootDir,
+      'app/test-package-next.ts',
+      `export const buttonPrefix = 'Updated package: '\n`,
+    )
+    await write(
+      rootDir,
+      'app/feature.ts',
+      [
+        "import { buttonPrefix as packagePrefix } from 'test-package'",
+        '',
+        "export const buttonPrefix = packagePrefix.replace('Package', 'Feature')",
+        '',
+      ].join('\n'),
+    )
+  }
   await write(rootDir, 'app/styles.css', '@import "./theme.css";\n')
   await write(
     rootDir,
@@ -852,31 +1570,110 @@ async function createHmrFixture(
     '[data-testid="increment"] { color: red; padding: 13px; }\n',
   )
 
+  let documentRenderCount = 0
+
   return {
     rootDir,
+    async renderDocument(assetServer) {
+      documentRenderCount++
+      let { href, importMap } = await assetServer.getScriptEntry(
+        path.join(rootDir, 'app/entry.tsx'),
+      )
+      if (options.conflictingInitialBareImport && documentRenderCount === 1) {
+        importMap.scopes ??= {}
+        importMap.scopes['/assets/app/'] = {
+          ...importMap.scopes['/assets/app/'],
+          'test-package': '/assets/app/test-package-next.ts',
+        }
+      }
+      let html = [
+        '<!doctype html>',
+        '<html>',
+        '  <head>',
+        '    <title>HMR Test</title>',
+        '    <link rel="stylesheet" href="/assets/app/styles.css">',
+        `    <script type="importmap">${JSON.stringify(importMap)}</script>`,
+        '  </head>',
+        '  <body>',
+        '    <div id="app"></div>',
+        `    <script type="module" src="${href}"></script>`,
+        '  </body>',
+        '</html>',
+        '',
+      ].join('\n')
+      let body = new Response(html).body
+      assert.ok(body)
+      return body
+    },
     async close() {
       await removeFixtureDir(rootDir)
     },
   }
 }
 
-function getCounterModuleSource(options: { buttonText: string; extraExports?: string }): string {
+function getHmrPackageJson(target: string): object {
+  return {
+    exports: target,
+    name: 'test-package',
+    type: 'module',
+  }
+}
+
+function getHmrTsconfig(bareImportTarget?: string): object {
+  return {
+    compilerOptions: {
+      jsx: 'react-jsx',
+      ...(bareImportTarget
+        ? {
+            baseUrl: '.',
+            paths: {
+              'test-package': [bareImportTarget],
+            },
+          }
+        : {}),
+    },
+  }
+}
+
+function getCounterModuleSource(options: {
+  bareImport?: boolean
+  buttonPrefixImport?: string
+  buttonText: string
+  extraExports?: string
+}): string {
+  let buttonPrefixImport = options.bareImport ? 'test-package' : options.buttonPrefixImport
   let runtimeExportNames = ['renderCounter']
   if (options.extraExports?.includes('foo')) runtimeExportNames.push('foo')
   if (options.extraExports?.includes('loader')) runtimeExportNames.push('loader')
 
   return [
+    ...(buttonPrefixImport
+      ? [`import { buttonPrefix } from ${JSON.stringify(buttonPrefixImport)}`, '']
+      : []),
     `let buttonText = ${JSON.stringify(options.buttonText)}`,
+    ...(buttonPrefixImport ? ['let currentButtonPrefix = buttonPrefix'] : []),
     'let count = 3',
     '',
     'export function renderCounter() {',
     '  document.querySelector(\'[data-testid="count"]\')!.textContent = `Count: ${count}`',
-    '  document.querySelector(\'[data-testid="increment"]\')!.textContent = buttonText',
+    `  document.querySelector('[data-testid="increment"]')!.textContent = ${
+      buttonPrefixImport ? 'currentButtonPrefix + buttonText' : 'buttonText'
+    }`,
     '}',
     '',
     options.extraExports ?? '',
     '',
     'if (import.meta.hot) {',
+    ...(options.bareImport
+      ? [
+          "  import.meta.hot.accept('test-package', (module) => {",
+          "    if (module && typeof module === 'object' && 'buttonPrefix' in module) {",
+          '      currentButtonPrefix = String(module.buttonPrefix)',
+          '      renderCounter()',
+          '    }',
+          '  })',
+        ]
+      : []),
     '  let runtimeExports = {',
     '    ...(import.meta.hot.data.runtimeExports as Record<string, unknown> | undefined),',
     ...runtimeExportNames.map((name) => `    ${name},`),
@@ -928,18 +1725,23 @@ async function writeBrowserInvalidationFixture(
     parentAccepts: boolean
     trackDependencyDispose?: boolean
   },
+  polyfillEntryPath: string,
 ): Promise<void> {
   await write(
     rootDir,
     'app/entry.tsx',
     [
+      `import { importModule } from ${JSON.stringify(polyfillEntryPath)}`,
       "import { renderMessage } from './browser-parent.ts'",
+      '',
+      "await importModule('./browser-parent.ts', import.meta.url)",
       '',
       "let app = document.getElementById('app')",
       "if (!app) throw new Error('Missing app container')",
       '',
       'app.innerHTML = \'<main><input data-testid="field"><p data-testid="browser-message"></p></main>\'',
       'renderMessage()',
+      "document.documentElement.dataset.hmrReady = 'true'",
       '',
     ].join('\n'),
   )
@@ -1094,6 +1896,7 @@ async function createNodeHmrFixture(
       '    console.info("Server frame reload complete")',
       '  })',
       '}',
+      "document.documentElement.dataset.hmrReady = 'true'",
       '',
     ].join('\n'),
   )
@@ -1176,6 +1979,14 @@ function getNodeHmrProxyDevSource(): string {
     '    console.log(JSON.stringify({ type: "proxy-ready", port: address.port, pid: process.pid }))',
     '  }',
     '})',
+    '',
+    'process.once("SIGINT", closeProxy)',
+    'process.once("SIGTERM", closeProxy)',
+    '',
+    'function closeProxy() {',
+    '  server.closeAllConnections()',
+    '  server.close()',
+    '}',
     '',
     'async function waitForPort(filePath) {',
     '  while (true) {',
@@ -1395,27 +2206,34 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   let browserHmrFileEventHandlers = new Set<BrowserHmrFileEventHandler>()
   let browserUpdateWaiters = new Map<string, Array<() => void>>()
   let browserHmrWatcher: FSWatcher | undefined
+  let pendingBrowserHmrEvents = Promise.resolve()
 
   let createCurrentAssetServer = () =>
     createAssetServer({
+      allowPackages: ['remix'],
       allowFiles: [`${appDir}/**`],
       basePath: '/assets',
       mounts: {
         app: appDir,
+        npm: 'node_modules',
+        polyfill: 'packages/multiple-import-maps-polyfill/src',
       },
-      hmr: () => ({
-        close() {
-          browserHmrFileEventHandlers.clear()
-        },
-        onFileEvents(handler) {
-          browserHmrFileEventHandlers.add(handler)
-          return () => {
-            browserHmrFileEventHandlers.delete(handler)
-          }
-        },
-        updateWatchedFiles() {},
-        url: '/hmr/events',
-      }),
+      hmr: {
+        channel: () => ({
+          close() {
+            browserHmrFileEventHandlers.clear()
+          },
+          onFileEvents(handler) {
+            browserHmrFileEventHandlers.add(handler)
+            return () => {
+              browserHmrFileEventHandlers.delete(handler)
+            }
+          },
+          updateWatchedFiles() {},
+          url: '/hmr/events',
+        }),
+        moduleImporter: './packages/multiple-import-maps-polyfill/src/index.ts',
+      },
       onError() {},
       rootDir: workspaceDir,
       watch: {
@@ -1429,20 +2247,21 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     if (assetServer) return
     hmrEventStream = createTestHmrEventStream()
     assetServer = createCurrentAssetServer()
-    startBrowserHmrWatcher()
+    await startBrowserHmrWatcher()
   }
 
   async function stopAssets(): Promise<void> {
-    await assetServer?.close()
-    assetServer = undefined
     await browserHmrWatcher?.close()
     browserHmrWatcher = undefined
+    await pendingBrowserHmrEvents
+    await assetServer?.close()
+    assetServer = undefined
     hmrEventStream?.close()
     hmrEventStream = undefined
   }
 
   hmrEventStream = createTestHmrEventStream()
-  startBrowserHmrWatcher()
+  await startBrowserHmrWatcher()
 
   let server = http.createServer(async (request, response) => {
     try {
@@ -1466,6 +2285,10 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
+    getScriptEntry(filePath) {
+      if (!assetServer) throw new Error('Asset server is not running')
+      return assetServer.getScriptEntry(filePath)
+    },
     async restartAssets() {
       await stopAssets()
       await startAssets()
@@ -1493,10 +2316,15 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     },
   }
 
-  function startBrowserHmrWatcher(): void {
+  async function startBrowserHmrWatcher(): Promise<void> {
     if (browserHmrWatcher) return
 
-    browserHmrWatcher = watch(path.join(fixture.rootDir, 'app'), {
+    browserHmrWatcher = watch(fixture.rootDir, {
+      // Match node-hmr's write stabilization so Chokidar does not drop rapid edits.
+      awaitWriteFinish: {
+        pollInterval: 10,
+        stabilityThreshold: 10,
+      },
       ignoreInitial: true,
       interval: 50,
       usePolling: true,
@@ -1504,10 +2332,14 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 
     browserHmrWatcher.on('all', (event, filePath) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
-      handleBrowserHmrFileEvent({ event, filePath }).catch((error: unknown) => {
-        console.error(error)
-      })
+      pendingBrowserHmrEvents = pendingBrowserHmrEvents
+        .then(() => handleBrowserHmrFileEvent({ event, filePath }))
+        .catch((error: unknown) => {
+          console.error(error)
+        })
     })
+
+    await once(browserHmrWatcher, 'ready')
   }
 
   async function handleBrowserHmrFileEvent(event: BrowserHmrFileEvent): Promise<void> {
@@ -1523,19 +2355,31 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
         }
 
         hmrEventStream?.send({
-          timestamp: browserHmrEvent.timestamp,
+          data: browserHmrEvent.data,
           type: 'browser:update',
-          updates: browserHmrEvent.updates,
         })
-        for (let update of browserHmrEvent.updates) {
-          let waiters = browserUpdateWaiters.get(update.path)
+        for (let updatePath of getBrowserHmrUpdatePaths(browserHmrEvent.data)) {
+          let waiters = browserUpdateWaiters.get(updatePath)
           if (!waiters) continue
-          browserUpdateWaiters.delete(update.path)
+          browserUpdateWaiters.delete(updatePath)
           for (let resolve of waiters) resolve()
         }
       }
     }
   }
+}
+
+function getBrowserHmrUpdatePaths(data: Record<string, unknown>): string[] {
+  let paths: string[] = []
+  for (let payload of Object.values(data)) {
+    if (typeof payload !== 'object' || payload === null || !('updates' in payload)) continue
+    if (!Array.isArray(payload.updates)) continue
+    for (let update of payload.updates) {
+      if (typeof update !== 'object' || update === null || !('path' in update)) continue
+      if (typeof update.path === 'string') paths.push(update.path)
+    }
+  }
+  return paths
 }
 
 async function getWatchEventFilePath(filePath: string): Promise<string> {
@@ -1615,6 +2459,7 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
   })
 
   let ready = fixture.devProxy ? await waitForProxyReady() : await waitForReadyEvent(0)
+  if (fixture.devProxy) await waitForReadyEvent(0)
 
   return {
     baseUrl: `http://127.0.0.1:${ready.port}`,
@@ -1652,7 +2497,9 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
       () => proxyReadyEvents[0] !== undefined,
       () => `Timed out waiting for node-hmr proxy server.\n${processOutput}`,
     )
-    return proxyReadyEvents[0]!
+    let event = proxyReadyEvents[0]
+    assert.ok(event)
+    return event
   }
 }
 
@@ -1720,7 +2567,7 @@ function createTestHmrEventStream() {
     for (let client of clients) client.enqueue(event)
   }
 
-  let send = (payload: HmrPayload) => {
+  let send = (payload: HmrPayload | { data: Record<string, unknown>; type: 'browser:update' }) => {
     let event = encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
     for (let client of clients) client.enqueue(event)
   }
@@ -1793,17 +2640,22 @@ async function writeFetchResponse(
   }
 }
 
-function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
+function waitForConsoleMessage(
+  page: TestPage,
+  text: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<void> {
   attachPageDiagnostics(page)
-  return new Promise((resolve, reject) => {
+  let startedAt = Date.now()
+  let promise = new Promise<void>((resolve, reject) => {
     let consoleMessages: string[] = []
     let pageErrors: string[] = []
     let timeoutMs = text === '[remix] HMR connected' ? hmrConnectionTimeout : consoleMessageTimeout
     let timeout = setTimeout(() => {
-      reject(
+      rejectWait(
         new Error(
           [
-            `Timed out waiting for console message: ${text}`,
+            `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
             ...consoleMessages.map((message) => `console: ${message}`),
             ...pageErrors.map((message) => `pageerror: ${message}`),
             formatPageDiagnostics(page),
@@ -1812,15 +2664,39 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
       )
     }, timeoutMs)
 
+    page.on('close', handlePageClose)
     page.on('console', handleConsole)
     page.on('pageerror', handlePageError)
+    options.signal?.addEventListener('abort', handleAbort, { once: true })
+
+    if (options.signal?.aborted) handleAbort()
+
+    function cleanup() {
+      clearTimeout(timeout)
+      page.off('close', handlePageClose)
+      page.off('console', handleConsole)
+      page.off('pageerror', handlePageError)
+      options.signal?.removeEventListener('abort', handleAbort)
+    }
+
+    function rejectWait(error: Error) {
+      cleanup()
+      reject(error)
+    }
+
+    function handleAbort() {
+      let reason = options.signal?.reason
+      rejectWait(reason instanceof Error ? reason : new Error(`Cancelled console wait: ${text}`))
+    }
+
+    function handlePageClose() {
+      rejectWait(new Error(`Page closed while waiting for console message: ${text}`))
+    }
 
     function handleConsole(message: { text(): string }) {
       consoleMessages.push(message.text())
       if (message.text().includes(text)) {
-        clearTimeout(timeout)
-        page.off('console', handleConsole)
-        page.off('pageerror', handlePageError)
+        cleanup()
         resolve()
       }
     }
@@ -1829,6 +2705,34 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
       pageErrors.push(error.stack ?? error.message)
     }
   })
+
+  // A triggering operation may fail before the test awaits this promise.
+  // Keep that later rejection attached to the named test instead of crashing the worker.
+  void promise.catch(() => {})
+  return promise
+}
+
+async function navigateToHmrPage(page: TestPage) {
+  let controller = new AbortController()
+  let connected = waitForConsoleMessage(page, '[remix] HMR connected', {
+    signal: controller.signal,
+  })
+
+  try {
+    let [response] = await Promise.all([page.goto('/'), connected])
+    // The event stream can connect before the fixture and its lazy module importer are ready.
+    await page.waitForFunction(
+      () => document.documentElement.dataset.hmrReady === 'true',
+      undefined,
+      { timeout: hmrConnectionTimeout },
+    )
+    return response
+  } catch (error) {
+    let message = error instanceof Error ? error.message : String(error)
+    throw new Error(`Failed to initialize HMR fixture: ${message}\n${formatPageDiagnostics(page)}`)
+  } finally {
+    controller.abort(new Error('Navigation ended before the HMR connection wait completed'))
+  }
 }
 
 function assertNoConsoleMessage(page: TestPage, text: string): void {
@@ -1841,21 +2745,36 @@ function assertNoConsoleMessage(page: TestPage, text: string): void {
 
 function waitForNavigation(page: TestPage): Promise<void> {
   attachPageDiagnostics(page)
-  return new Promise((resolve, reject) => {
+  let promise = new Promise<void>((resolve, reject) => {
     let timeout = setTimeout(() => {
-      page.off('framenavigated', handleFrameNavigated)
+      cleanup()
       reject(new Error(`Timed out waiting for page navigation\n${formatPageDiagnostics(page)}`))
-    }, 5000)
+    }, consoleMessageTimeout)
 
+    page.on('close', handlePageClose)
     page.on('framenavigated', handleFrameNavigated)
+
+    function cleanup() {
+      clearTimeout(timeout)
+      page.off('close', handlePageClose)
+      page.off('framenavigated', handleFrameNavigated)
+    }
+
+    function handlePageClose() {
+      cleanup()
+      reject(new Error('Page closed while waiting for navigation'))
+    }
 
     function handleFrameNavigated(frame: { parentFrame(): unknown }) {
       if (frame.parentFrame() !== null) return
-      clearTimeout(timeout)
-      page.off('framenavigated', handleFrameNavigated)
+      cleanup()
       resolve()
     }
   })
+
+  // File updates can fail before the test awaits this promise.
+  void promise.catch(() => {})
+  return promise
 }
 
 async function ignoreAbortedNavigation(navigation: Promise<unknown>): Promise<void> {
@@ -1897,7 +2816,8 @@ function monitorLocalRequestFailures(
     if (url.origin !== origin) return
 
     let failureText = request.failure()?.errorText
-    if (failureText === 'net::ERR_ABORTED') return
+    // Reloading cancels in-flight requests in both Chromium and Firefox.
+    if (failureText === 'net::ERR_ABORTED' || failureText === 'NS_BINDING_ABORTED') return
 
     let reason = failureText ? ` (${failureText})` : ''
     failures.push(`${request.method()} ${url.pathname}${url.search}${reason}`)
@@ -2113,6 +3033,15 @@ function parseProxyReadyEvent(line: string): { pid: number; port: number } | nul
 
 async function stopProcess(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return
+
+  if (process.platform === 'win32' && child.pid !== undefined) {
+    // Windows does not run SIGTERM handlers, so stop the child server as well as its parent.
+    await Promise.all([
+      once(child, 'exit'),
+      promisify(execFile)('taskkill', ['/pid', String(child.pid), '/T', '/F']),
+    ])
+    return
+  }
 
   await new Promise<void>((resolve) => {
     let timeout = setTimeout(() => {

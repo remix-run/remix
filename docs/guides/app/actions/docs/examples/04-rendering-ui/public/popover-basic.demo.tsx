@@ -1,6 +1,5 @@
-import { css, on, type Handle } from "remix/ui";
-import button from "remix/ui/button";
-import * as popover from "remix/ui/popover";
+import { css, on, type Handle } from "remix/component";
+import * as popover from "@remix-run/ui/popover";
 
 /**
  * @name Popover
@@ -20,7 +19,7 @@ export function PopoverBasic(handle: Handle) {
       <div mix={demoCss}>
         <button
           mix={[
-            button(),
+            buttonCss,
             popover.anchor({ placement: "bottom-start", offset: 8 }),
             popover.focusOnHide(),
             on("click", () => {
@@ -44,7 +43,7 @@ export function PopoverBasic(handle: Handle) {
         >
           <button
             mix={[
-              button({ tone: "ghost" }),
+              ghostButtonCss,
               popover.focusOnShow(),
               on("click", () => {
                 setOpen(false);
@@ -65,6 +64,23 @@ const demoCss = css({
   placeItems: "center",
   minHeight: "10rem",
   width: "min(100%, 24rem)",
+});
+
+const buttonCss = css({
+  minHeight: "30px",
+  paddingInline: "12px",
+  border: "1px solid #d1d1d1",
+  borderRadius: "999px",
+  background: "#fff",
+  color: "#101010",
+});
+
+const ghostButtonCss = css({
+  padding: "4px 8px",
+  border: 0,
+  borderRadius: "6px",
+  background: "transparent",
+  color: "#101010",
 });
 
 const surfaceCss = css({

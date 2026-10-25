@@ -2,12 +2,12 @@ import * as path from 'node:path'
 
 import { getContext } from 'remix/middleware/async-context'
 import { createContextKey, type Middleware } from 'remix/router'
+import type { ScriptEntry } from 'remix/assets'
 
 import type { DocsAssetServer } from '../assets.ts'
 
 interface AssetEntry {
-  scriptSrc: string
-  scriptPreloads: string[]
+  scriptEntry: ScriptEntry
   stylesheetHref: string
   stylesheetPreloads: string[]
 }
@@ -25,13 +25,11 @@ export function loadAssetEntry(
 
   return async (context, next) => {
     assetEntryPromise ??= Promise.all([
-      assetServer.getHref(scriptEntry),
-      assetServer.getPreloads(scriptEntry),
+      assetServer.getScriptEntry(scriptEntry),
       assetServer.getHref(stylesheet),
       assetServer.getPreloads(stylesheet),
-    ]).then(([scriptSrc, scriptPreloads, stylesheetHref, stylesheetPreloads]) => ({
-      scriptSrc,
-      scriptPreloads,
+    ]).then(([resolvedScriptEntry, stylesheetHref, stylesheetPreloads]) => ({
+      scriptEntry: resolvedScriptEntry,
       stylesheetHref,
       stylesheetPreloads,
     }))

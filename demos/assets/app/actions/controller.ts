@@ -11,7 +11,7 @@ const imageFilePath = path.resolve(import.meta.dirname, './public/images/image.s
 export default createController(routes, {
   actions: {
     async home() {
-      let entryUrl = await assetServer.getHref(entryFilePath)
+      let { href, importMap, preloads } = await assetServer.getScriptEntry(entryFilePath)
       let imageUrl = await assetServer.getHref(imageFilePath)
       let styleUrl = await assetServer.getHref(styleFilePath)
       let transformedImageUrl = await assetServer.getHref(imageFilePath, {
@@ -25,6 +25,8 @@ export default createController(routes, {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>remix/assets demo</title>
     <link rel="stylesheet" href="${escapeHtml(styleUrl)}">
+    <script type="importmap">${serializeImportMap(importMap)}</script>
+    ${preloads.map((preloadHref) => `<link rel="modulepreload" href="${escapeHtml(preloadHref)}">`).join('\n    ')}
   </head>
   <body>
     <main class="page-shell">
@@ -82,7 +84,7 @@ export default createController(routes, {
           <figcaption>CSS request-transformed background image</figcaption>
         </figure>
       </div>
-      <script type="module" src="${escapeHtml(entryUrl)}"></script>
+      <script type="module" src="${escapeHtml(href)}"></script>
     </main>
   </body>
 </html>`
@@ -100,4 +102,8 @@ export default createController(routes, {
 
 function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')
+}
+
+function serializeImportMap(importMap: unknown): string {
+  return JSON.stringify(importMap).replace(/</g, '\\u003c')
 }

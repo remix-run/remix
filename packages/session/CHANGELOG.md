@@ -2,6 +2,18 @@
 
 This is the changelog for [`session`](https://github.com/remix-run/remix/tree/main/packages/session). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+## v0.4.3
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
 ## v0.4.2
 
 ### Patch Changes

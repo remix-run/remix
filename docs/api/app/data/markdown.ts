@@ -8,7 +8,7 @@ import { parseMarkdownDocument, parseMarkdownFrontmatter } from 'remix-docs-shar
 import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 
-import { getApiRouteHref, routes, withVersion } from '../routes.ts'
+import { getApiRouteHref, getDocsUrlPath, routes } from '../routes.ts'
 import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../utils/symbols.ts'
 
 const apiTypeKinds = ['type', 'interface', 'class', 'function', 'mixin', 'variable'] as const
@@ -68,27 +68,28 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
 
   let markdown = fs.readFileSync(fullPath, 'utf-8')
   let { attributes } = parseMarkdownFrontmatter(markdown)
+  let packagePath = parts.slice(0, attributes.type === 'package' ? -1 : -2).join('/')
+  let packageName = packagePath.replace(/^remix-run\//, '@remix-run/')
 
   if (attributes.type === 'package') {
-    let packageName = parts.slice(0, -1).join('/')
     return {
       kind: 'package',
       path: fullPath,
       type: 'package',
       name: packageName,
       package: packageName,
-      urlPath: relativePath.replace(/\.md$/, '').replace(/\\/g, '/'),
+      // `remix/router/overview.md` is served at `/router/`.
+      urlPath: getDocsUrlPath(relativePath.replace(/\\/g, '/').replace(/\/overview\.md$/, '')),
     }
   }
 
-  let packageName = parts.slice(0, -2).join('/')
   return {
     kind: 'api',
     path: fullPath,
     type: getApiTypeKind(parts.at(-2)),
     name,
     package: packageName,
-    urlPath: relativePath.replace(/\.md$/, '').replace(/\\/g, '/'),
+    urlPath: getDocsUrlPath(relativePath.replace(/\.md$/, '').replace(/\\/g, '/')),
   }
 }
 
@@ -109,7 +110,6 @@ function getApiTypeKind(value: string | undefined): ApiTypeKind {
 export async function renderMarkdownFile(
   filePath: string,
   docFilesLookup: Map<string, DocFile>,
-  version: string | undefined,
   addCodeLinks: boolean,
 ): Promise<{
   html: string
@@ -120,20 +120,19 @@ export async function renderMarkdownFile(
     let markdown = fs.readFileSync(filePath, 'utf-8')
     let { attributes, root } = parseMarkdownDocument(markdown)
     let title = typeof attributes.title === 'string' ? attributes.title : ''
-    let transformers = addCodeLinks
-      ? [createApiCodeLinkTransformer(title, docFilesLookup, version)]
-      : []
+    let transformers = addCodeLinks ? [createApiCodeLinkTransformer(title, docFilesLookup)] : []
 
     addHeadingIds(root)
 
     return {
       html: await renderMarkdownHtml(root, {
+        sections: true,
         highlightCode: {
           includeExplanation: addCodeLinks,
           transformers,
         },
         transformLink(href) {
-          return getApiRouteHref(href, version)
+          return getApiRouteHref(href)
         },
       }),
       headings: readMarkdownHeadingsFromRoot(root),
@@ -155,7 +154,6 @@ export async function renderMarkdownFile(
 function createApiCodeLinkTransformer(
   apiName: string,
   docFilesLookup: Map<string, DocFile>,
-  version: string | undefined,
 ): ShikiTransformer {
   return {
     name: 'remix-api-code-links',
@@ -189,7 +187,7 @@ function createApiCodeLinkTransformer(
       let docFile = docFilesLookup.get(symbol)
       if (docFile !== undefined) {
         linkElement = createLink(symbol, {
-          href: withVersion(routes.api.document.href({ slug: docFile.urlPath }), version),
+          href: routes.api.document.href({ slug: docFile.urlPath }),
         })
       } else if (Object.hasOwn(MDN_SYMBOLS, symbol)) {
         linkElement = createLink(symbol, {

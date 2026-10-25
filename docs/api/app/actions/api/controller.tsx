@@ -1,18 +1,17 @@
 import { createController } from 'remix/router'
-import { clientEntry } from 'remix/ui'
+import { clientEntry } from 'remix/component'
 
-import type { DocsContext, Versions } from '../../data/docs.ts'
+import type { DocsContext } from '../../data/docs.ts'
 import { loadDemoComponent, renderDemoSource } from '../../data/demos.tsx'
 import { renderMarkdownFile } from '../../data/markdown.ts'
+import { getDocPage, getNavChain } from '../../data/registry.ts'
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
 import { fileResponse } from '../file-response.ts'
-import { DemoContent, MarkdownContent, NotFound } from './page.tsx'
+import { DemoContent, MarkdownContent, NotFound, PackageIndex } from './page.tsx'
 
 interface ApiControllerOptions {
-  activeVersion?: string
   getDocsContext(): Promise<DocsContext>
-  versions: Versions
 }
 
 export function createApiController(options: ApiControllerOptions) {
@@ -21,16 +20,12 @@ export function createApiController(options: ApiControllerOptions) {
       async document({ params, render }) {
         let docsContext = await options.getDocsContext()
         let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
-        let docProps = {
-          registry: docsContext.getRegistry(options.activeVersion),
-          versions: options.versions,
-          slug: params.slug,
-          activeVersion: options.activeVersion,
-        }
+        let registry = docsContext.registry
+        let docProps = { registry, slug: params.slug }
 
         if (docFile?.kind === 'demo') {
           let ExampleComponent = clientEntry(
-            `${docFile.assetHref}#default`,
+            `${docFile.importHref}#default`,
             await loadDemoComponent(docFile),
           )
           let sourceHtml = await renderDemoSource(docFile.source)
@@ -47,13 +42,21 @@ export function createApiController(options: ApiControllerOptions) {
           let { html, headings, source } = await renderMarkdownFile(
             docFile.path,
             docsContext.docFilesLookup,
-            options.activeVersion,
             // Don't auto-link code symbols in README - too many false positives.
             docFile.kind !== 'package',
           )
           return render(
             <Document {...docProps} sourceUrl={source} headings={headings}>
               <MarkdownContent html={html} />
+            </Document>,
+          )
+        }
+
+        let node = getNavChain(registry, getDocPage(registry, params.slug)?.navId).at(-1)
+        if (node) {
+          return render(
+            <Document {...docProps}>
+              <PackageIndex registry={registry} node={node} />
             </Document>,
           )
         }

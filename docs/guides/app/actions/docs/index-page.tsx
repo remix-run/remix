@@ -1,29 +1,33 @@
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import type { AppContext } from '../../router.ts'
-import { loadDocsChapterSummaries } from './markdown-chapters.tsx'
-import type { DocsChapterSummary } from './markdown-chapters.tsx'
+import { loadDocsIndexChapterSummaries, loadDocsNavigationItems } from './markdown-chapters.tsx'
+import type { DocsChapterSummary, DocsNavigationItem } from './markdown-chapters.tsx'
 import { DocsDocument } from './layout.tsx'
 
 export async function docsIndexHandler(context: AppContext) {
-  let chapters = await loadDocsChapterSummaries()
-  return context.render(<DocsIndexPage chapters={chapters} />)
+  let [chapters, navigation] = await Promise.all([
+    loadDocsIndexChapterSummaries(),
+    loadDocsNavigationItems(),
+  ])
+  return context.render(<DocsIndexPage chapters={chapters} navigation={navigation} />)
 }
 
 type DocsIndexPageProps = {
   chapters: DocsChapterSummary[]
+  navigation: DocsNavigationItem[]
 }
 
 function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
   return () => (
     <DocsDocument
-      title="Remix Docs"
+      title="Remix Guides"
       description="Guides, explanations, examples, and tutorials for learning Remix."
-      chapters={handle.props.chapters}
+      path="/"
+      chapters={handle.props.navigation}
     >
       <div class="docs-index">
         <header class="docs-index__header">
-          <p class="docs-chapter-eyebrow docs-accent">Remix Guides</p>
           <h1 class="rmx-page-title">Learn Remix from the request up.</h1>
           <p class="rmx-page-body">
             These guide chapters introduce Remix at a high level, then progressively deepen into
@@ -31,7 +35,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
             production, examples, and tutorials.
           </p>
           <p class="rmx-page-body">
-            API reference lives separately at <a href="https://api.remix.run">api.remix.run</a>.
+            API reference lives separately at <a href="https://docs.remix.run">docs.remix.run</a>.
           </p>
         </header>
 
@@ -50,11 +54,15 @@ export function ChapterCard(handle: Handle<{ chapter: DocsChapterSummary }>) {
     let chapter = handle.props.chapter
 
     return (
-      <li class="chapter-card">
+      <li class={`chapter-card${chapter.disabled ? ' chapter-card--disabled' : ''}`}>
         <div class="chapter-card__heading">
           <div class="chapter-card__eyebrow">{String(chapter.order).padStart(2, '0')}</div>
           <h2 class="rmx-page-title rmx-page-title-xs chapter-card__title">
-            <a href={chapter.href}>{chapter.title}</a>
+            {chapter.disabled ? (
+              <span aria-disabled="true">{chapter.title}</span>
+            ) : (
+              <a href={chapter.href}>{chapter.title}</a>
+            )}
           </h2>
         </div>
         <p class="rmx-page-body rmx-page-body-sm chapter-card__description">

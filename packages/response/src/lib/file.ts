@@ -108,6 +108,9 @@ export interface FileResponseOptions<file extends FileLike = File> {
  *
  * Accepts both native `File` objects and
  * {@link import('@remix-run/lazy-file').LazyFile} values.
+ * Uses `file.type` for `Content-Type` and includes `X-Content-Type-Options: nosniff`.
+ * Uploaded file metadata does not validate the contents. Validate uploaded files before
+ * serving them inline, or set `Content-Disposition: attachment` on the returned response.
  *
  * @param file The file to send (native `File` or `LazyFile`)
  * @param request The request object
@@ -231,19 +234,29 @@ export async function createFileResponse<file extends FileLike>(
 
   // Range support: https://httpwg.org/specs/rfc9110.html#field.range
   // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
-  if (acceptRanges && request.method === 'GET' && headers.has('Range')) {
-    let range = Range.from(headers.get('Range'))
+  let rangeValue = headers.get('Range')
+  if (
+    acceptRanges &&
+    request.method === 'GET' &&
+    rangeValue !== null &&
+    !hasUnknownRangeUnit(rangeValue)
+  ) {
+    let range = Range.from(rangeValue)
 
     // Check if the Range header was sent but parsing resulted in no valid ranges (malformed)
     if (range.ranges.length === 0) {
       return new Response('Bad Request', {
         status: 400,
+        headers: buildResponseHeaders({}),
       })
     }
 
     // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
     let ifRange = IfRange.from(headers.get('If-Range'))
+    // Range requests may be ignored for empty representations:
+    // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.2
     if (
+      file.size > 0 &&
       ifRange.matches({
         etag,
         lastModified,
@@ -260,8 +273,10 @@ export async function createFileResponse<file extends FileLike>(
 
       let normalizedRanges = range.normalize(file.size)
 
-      // We only support single ranges (not multipart)
-      if (normalizedRanges.length > 1) {
+      // We only support exactly one normalized range with ordered bounds.
+      // Zero-length suffix ranges are unsatisfiable:
+      // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2
+      if (normalizedRanges.length !== 1 || normalizedRanges[0].start > normalizedRanges[0].end) {
         return new Response('Range Not Satisfiable', {
           status: 416,
           headers: buildResponseHeaders({
@@ -305,6 +320,15 @@ function generateWeakETag(file: FileLike): string {
   return `W/"${file.size}-${file.lastModified}"`
 }
 
+function hasUnknownRangeUnit(value: string): boolean {
+  // RFC 9110 requires ignoring range units we do not understand:
+  // https://httpwg.org/specs/rfc9110.html#field.range
+  let unitSeparator = value.indexOf('=')
+  let unit = unitSeparator > 0 ? value.slice(0, unitSeparator) : ''
+
+  return /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(unit) && unit.toLowerCase() !== 'bytes'
+}
+
 interface ResponseHeaderValues {
   contentType?: string
   contentLength?: number
@@ -316,7 +340,7 @@ interface ResponseHeaderValues {
 }
 
 function buildResponseHeaders(values: ResponseHeaderValues): Headers {
-  let headers = new Headers()
+  let headers = new Headers({ 'X-Content-Type-Options': 'nosniff' })
 
   if (values.contentType) {
     headers.set('Content-Type', values.contentType)

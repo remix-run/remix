@@ -1,4 +1,4 @@
-import { css, type CSSMixinDescriptor } from "remix/ui";
+import { css, type CSSMixinDescriptor } from "remix/component";
 
 import { componentStyleValues as styles } from "./style-values.ts";
 

@@ -69,9 +69,9 @@ async function formatCodeBlock(content: string): Promise<string> {
 }
 
 function frontmatter(comment: DocumentedAPI) {
-  let lines = ['---', `title: ${comment.name}`]
+  let lines = ['---', `title: ${JSON.stringify(comment.name)}`]
   if (comment.source) {
-    lines.push(`source: ${comment.source}`)
+    lines.push(`source: ${JSON.stringify(comment.source)}`)
   }
   lines.push('---')
   return lines.join('\n')

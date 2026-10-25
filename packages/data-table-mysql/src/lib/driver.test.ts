@@ -924,7 +924,7 @@ describe('mysql driver', () => {
     )
   })
 
-  it('compiles column-to-column comparisons from string references', async () => {
+  it('binds dotted strings in explicit column-to-column queries', async () => {
     let statements: Array<{ text: string; values: unknown[] }> = []
 
     let connection = {
@@ -941,13 +941,13 @@ describe('mysql driver', () => {
 
     await db
       .query(accounts)
-      .join(projects, eq('accounts.id', 'projects.account_id'))
-      .where(eq('accounts.email', 'ops@example.com'))
+      .join(projects, eq(accounts.id, projects.account_id))
+      .where(eq(accounts.email, 'accounts.email'))
       .count()
 
     assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`projects`\.`account_id`/)
     assert.match(statements[0].text, /`accounts`\.`email`\s*=\s*\?/)
-    assert.deepEqual(statements[0].values, ['ops@example.com'])
+    assert.deepEqual(statements[0].values, ['accounts.email'])
   })
 
   it('compiles cross-schema table references in joins', async () => {

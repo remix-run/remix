@@ -1,6 +1,6 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import { renderToString } from 'remix/ui/server'
+import { renderToString } from 'remix/component/server'
 
 import { createDocsNavigationLinks, DocsHeader } from './docs-header.tsx'
 import type { DocsNavigationLink } from './docs-header.tsx'
@@ -18,7 +18,7 @@ describe('createDocsNavigationLinks', () => {
       [...links],
       [
         ['guides', { href: 'https://guides.remix.run/', label: 'Guides' }],
-        ['api', { href: 'https://api.remix.run', label: 'API' }],
+        ['api', { href: 'https://docs.remix.run', label: 'Docs' }],
         ['github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' }],
         ['blog', { href: 'https://remix.run/blog', label: 'Blog' }],
         ['newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' }],
@@ -30,13 +30,13 @@ describe('createDocsNavigationLinks', () => {
 
   it('retains order when a caller replaces an existing link', () => {
     let links = createDocsNavigationLinks()
-    links.set('api', { href: '/v3', label: 'API', current: 'page' })
+    links.set('api', { href: '/v3', label: 'Docs', current: 'page' })
 
     assert.deepEqual(
       [...links.values()].map((link) => link.label),
-      ['Guides', 'API', 'GitHub', 'Blog', 'Newsletter', 'Jam', 'Store'],
+      ['Guides', 'Docs', 'GitHub', 'Blog', 'Newsletter', 'Jam', 'Store'],
     )
-    assert.deepEqual(links.get('api'), { href: '/v3', label: 'API', current: 'page' })
+    assert.deepEqual(links.get('api'), { href: '/v3', label: 'Docs', current: 'page' })
   })
 })
 
@@ -60,14 +60,14 @@ describe('DocsHeader', () => {
     assert.doesNotMatch(html, /\[object Object\]/)
   })
 
-  it('renders the mobile menu reveal animation', async () => {
+  it('shows the mobile menu only while its popover is open, without animating', async () => {
     let html = await renderToString(
       <DocsHeader brandLabel="Remix Docs" navigationLinks={navigationLinks} />,
     )
 
-    assert.match(html, /clip-path: inset\(0 0 100% 0\)/)
-    assert.match(html, /transition-behavior: allow-discrete/)
-    assert.match(html, /@starting-style/)
+    assert.match(html, /&:popover-open \{\s*display: flex;/)
+    assert.doesNotMatch(html, /@starting-style/)
+    assert.doesNotMatch(html, /transition-behavior: allow-discrete/)
   })
 
   it('renders one responsive search trigger for Pagefind focus ownership', async () => {

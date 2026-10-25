@@ -48,11 +48,26 @@ describe('getHmrAnalysis', () => {
 
 describe('createHmrClientSource', () => {
   it('awaits async dispose and accept callbacks during JavaScript updates', () => {
-    let source = createHmrClientSource({ eventPathname: '/__hmr' })
+    let source = createHmrClientSource({
+      dataKey: 'remix/assets@1:/assets',
+      eventPathname: '/__hmr',
+      moduleImporter: null,
+    })
 
     assert.match(source, /await callback\(previousContext\.data\)/)
     assert.match(source, /await callback\(updatedModule\)/)
     assert.match(source, /await callback\(acceptedContext\.data\)/)
     assert.match(source, /await callback\(deps\.map\(\(dep\) =>/)
+  })
+
+  it('uses a configured browser module importer for JavaScript updates', () => {
+    let source = createHmrClientSource({
+      dataKey: 'remix/assets@1:/assets',
+      eventPathname: '/__hmr',
+      moduleImporter: 'app/module-importer',
+    })
+
+    assert.match(source, /import \{ importModule as __remixImport \} from "app\/module-importer"/)
+    assert.match(source, /__remixImport\(withTimestamp\(path, timestamp\), import\.meta\.url\)/)
   })
 })

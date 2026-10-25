@@ -1,4 +1,4 @@
-import { createMixin, on } from "remix/ui";
+import { createMixin, on } from "remix/component";
 
 export type DragDetail = {
   left: number;

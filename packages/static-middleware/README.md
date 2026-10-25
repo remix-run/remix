@@ -60,6 +60,18 @@ let router = createRouter({
 })
 ```
 
+### Directory Listings
+
+Set `listFiles: true` to list a directory's immediate files and folders when no index file is found. Listings are disabled by default, and index files take precedence unless `index: false` is set.
+
+```ts
+let router = createRouter({
+  middleware: [staticFiles('./public', { listFiles: true })],
+})
+```
+
+Listings include file sizes and types. Folder sizes are left blank, so generating a listing does not read subdirectory contents.
+
 ### Multiple Directories
 
 ```ts

@@ -294,6 +294,28 @@ describe('SuperHeaders', () => {
     assert.equal(getResponseHeaders(headers).get('Content-Type'), 'text/html; charset=utf-8')
   })
 
+  it('syncs If-Range value mutations to native storage', () => {
+    let headers = new SuperHeaders()
+    headers.ifRange.value = '"abc"'
+
+    assert.equal(headers.get('If-Range'), '"abc"')
+    assert.ok(headers.ifRange.matches({ etag: '"abc"' }))
+
+    let ifRange = headers.ifRange
+    ifRange.value = ''
+
+    assert.equal(headers.get('If-Range'), null)
+    assert.ok(ifRange.matches({}))
+    assert.ok(headers.ifRange.matches({}))
+  })
+
+  it('matches an explicitly empty If-Range header unconditionally', () => {
+    let headers = new SuperHeaders({ 'If-Range': '' })
+
+    assert.equal(headers.get('If-Range'), '')
+    assert.ok(headers.ifRange.matches({}))
+  })
+
   it('syncs typed mutator methods to native storage', () => {
     let headers = new SuperHeaders()
 
@@ -435,6 +457,25 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('X-Forwarded-For'), '203.0.113.7, 70.41.3.18')
     assert.equal(headers.get('X-Forwarded-Host'), 'example.com')
     assert.equal(headers.get('X-Forwarded-Proto'), 'https')
+  })
+
+  it('returns null for numeric header values with no integer prefix', () => {
+    let headers = new SuperHeaders({
+      'Access-Control-Max-Age': 'invalid',
+      Age: 'invalid',
+      'Content-Length': 'invalid',
+      'Max-Forwards': 'invalid',
+      'Upgrade-Insecure-Requests': 'invalid',
+    })
+
+    assert.equal(headers.accessControlMaxAge, null)
+    assert.equal(headers.age, null)
+    assert.equal(headers.contentLength, null)
+    assert.equal(headers.maxForwards, null)
+    assert.equal(headers.upgradeInsecureRequests, null)
+
+    headers.set('Content-Length', '12bytes')
+    assert.equal(headers.contentLength, 12)
   })
 
   it('preserves native iteration and raw stringification utilities', () => {

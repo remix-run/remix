@@ -1,4 +1,4 @@
-import { type Handle, clientEntry, on } from 'remix/ui'
+import { type Handle, clientEntry, on } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
 

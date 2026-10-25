@@ -9,11 +9,12 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/controller.tsx` — top-level asset route handling.
 - `app/actions/docs/chapters/*.md` — guide chapters.
 - `app/actions/docs/markdown/render.tsx` — chapter metadata and `::frame` rendering built on the shared unified/remark/rehype pipeline.
+- `app/actions/docs/markdown/chapter-markdown.ts` — the markdown version of a chapter, shared by `/<chapter>.md` and the guides copied into the `remix` package. See [Frames in markdown](#frames-in-markdown).
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and mtime-based render caches.
 - `app/actions/docs/layout.tsx` and `chapter-navigation.tsx` — guides-specific content and navigation rendered inside the shell from `../shared/ui/`.
 - `app/actions/docs/public/` — browser behavior owned by the Guides route, including its active-chapter animation.
 - `app/actions/docs/examples/` — frame handlers used by chapters. Each chapter group's `public/` directory contains its browser-hydrated demo modules and their local dependencies.
-- `app/actions/public/` — root-owned browser entrypoint, development refresh module, and stylesheets.
+- `app/actions/public/` — root-owned browser entrypoint and stylesheets.
 - `app/assets.ts` — the source asset server and root entry hrefs/preloads, configured around colocated `public/` directories.
 - `app/router.ts` — installs the standard `render()` middleware with the asset server.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
@@ -43,6 +44,8 @@ An optional chapter introduction can go here.
 ## Stable custom anchor {#custom-anchor}
 ```
 
+Chapters are published by default. For an unfinished chapter, keep it published with a note explaining its status and links to the relevant package READMEs. Link to the GitHub README URLs: the installed `remix` copy rewrites those links to its local README mirrors. Set `published: false` only for chapters that should not be publicly accessible, such as development fixtures. The production guide index and sidebar list unpublished chapters as disabled, and links to them render as plain text. Set `listed: false` for fixtures and other pages outside the guide sequence. The `remix` package copies only published chapters. The prerender seeds the crawler with published chapter URLs, so unpublished chapters are not written to the deployed site or added to Pagefind.
+
 Code fences support filename headers and line highlighting:
 
 ````md
@@ -65,26 +68,26 @@ export async function createProject(request: Request) {
 Use a frame directive in Markdown:
 
 ```md
-::frame{src="/examples/17-markdown-style-demo/counter/"}
+::frame{src="/examples/16-markdown-style-demo/counter/"}
 ```
 
-The examples controller maps `/examples/:chapter/:example/` to `app/actions/docs/examples/<chapter>/<example>.tsx` and dynamically imports the module, so no route changes are needed. The validator requires the `:chapter` segment to match the chapter directory name (e.g. `17-markdown-style-demo`) so examples stay scoped to the chapter that references them. Example directories are prefixed with the chapter order number to match the chapter file name.
+The examples controller maps `/examples/:chapter/:example/` to `app/actions/docs/examples/<chapter>/<example>.tsx` and dynamically imports the module, so no route changes are needed. The validator requires the `:chapter` segment to match the chapter directory name (e.g. `16-markdown-style-demo`) so examples stay scoped to the chapter that references them. Example directories are prefixed with the chapter order number to match the chapter file name.
 
 At render time, `markdown.tsx` turns the directive into `<Frame src="..." />`. The render middleware resolves that frame by doing an internal `router.fetch()` for the frame URL, so examples are normal Remix routes that return normal `Response` objects.
 
 ### Demos with code
 
-A "demo with code" shows a live, hydrated component next to its own highlighted source. It takes three co-located files:
+A "demo with code" shows a live, hydrated component next to its own highlighted source. It takes three co-located files. The unpublished Markdown style fixture below uses `.dev.` in its browser module name because production public-module discovery skips `.dev.` assets; regular chapter demos use `.demo.tsx`.
 
-1. **The demo code** — a `.demo.tsx` module inside the frame handler's `public/` directory that exports the component as a named export whose name matches the function name:
+1. **The demo code** — a demo module inside the frame handler's `public/` directory that exports the component as a named export whose name matches the function name:
 
    ```txt
-   app/actions/docs/examples/17-markdown-style-demo/public/counter.demo.tsx
+   app/actions/docs/examples/16-markdown-style-demo/public/counter.demo.dev.tsx
    ```
 
    ```tsx
-   import { css, on } from 'remix/ui'
-   import type { Handle } from 'remix/ui'
+   import { css, on } from 'remix/component'
+   import type { Handle } from 'remix/component'
 
    export function Counter(handle: Handle) {
      let count = 3
@@ -109,23 +112,48 @@ A "demo with code" shows a live, hydrated component next to its own highlighted 
 2. **The frame handler** — a `<example>.tsx` module that exports a `handler` built with `demoWithCode`, pointing at the demo module and its component:
 
    ```txt
-   app/actions/docs/examples/17-markdown-style-demo/counter.tsx
+   app/actions/docs/examples/16-markdown-style-demo/counter.tsx
    ```
 
    ```tsx
    import { demoWithCode } from '../demo-with-code.tsx'
-   import { Counter } from './public/counter.demo.tsx'
+   import { Counter } from './public/counter.demo.dev.tsx'
 
-   let demoUrl = new URL('./public/counter.demo.tsx', import.meta.url)
+   let demoUrl = new URL('./public/counter.demo.dev.tsx', import.meta.url)
 
    export const handler = demoWithCode(demoUrl, Counter)
    ```
 
-3. **The shared shell** — `app/actions/docs/examples/demo-with-code.tsx` exports `demoWithCode` (which loads and highlights the `.demo.tsx` source, hydrates the component via `clientEntry`, and renders the preview + source) and the `Demo` component that lays them out. You don't touch this per example.
+3. **The shared shell** — `app/actions/docs/examples/demo-with-code.tsx` exports `demoWithCode` (which loads and highlights the `.demo.tsx` source, hydrates the component via `clientEntry`, and renders the preview + source) and the `Demo` component that lays them out with the shared `DocsDemo`, with the source collapsed behind a "Show code" button. You don't touch this per example.
 
 The named export matters: `demoWithCode` resolves the client entry from the function's `name`, so the export name and the function name must be the same token (e.g. `export function Counter`), not a `default` export.
 
-For route-style frames that need full control, export a named `handler` that returns a `Response` directly instead of using `demoWithCode`.
+For route-style frames that need full control, export a named `handler` that returns a `Response` directly instead of using `demoWithCode`. To keep their code in the markdown guides, declare a markdown fallback (see below).
+
+### Frames in markdown
+
+Every published chapter is also available as markdown in two places, and both use the same output:
+
+- `/<chapter>.md` on the guides site (for example `/start-here.md`), linked from each chapter page with `<link rel="alternate" type="text/markdown">`
+- `packages/remix/guides/*.md`, copied by `pnpm run generate-remix` so agents can read the guides from `node_modules/remix`
+
+Frames only render on the website, so a frame handler can declare a markdown fallback with `setMarkdownFallback()` from `app/actions/docs/examples/markdown-fallback.ts`. `renderChapterMarkdown()` in `app/actions/docs/markdown/chapter-markdown.ts` imports the handler for each `::frame` and replaces the directive with the file at the fallback's `sourceUrl`, as a `tsx` code block. Frames without a fallback are stripped.
+
+`demoWithCode` declares its demo module as the fallback. `demoPreview` declares none, because the surrounding prose already shows the source. A custom handler can declare its own:
+
+```tsx
+import { setMarkdownFallback } from '../markdown-fallback.ts'
+
+let sourceUrl = new URL('./public/callouts.tsx', import.meta.url)
+
+export async function handler(context: AppContext) {
+  return context.render(<Callouts />)
+}
+
+setMarkdownFallback(handler, { sourceUrl })
+```
+
+In published chapters, prefer frames with a fallback so readers of the markdown guides still see the code.
 
 ## Commands
 
@@ -142,7 +170,7 @@ pnpm --filter remix-guides run test
 pnpm --filter remix-guides run typecheck
 ```
 
-The dev server listens on http://localhost:44100 by default. Set `PORT` to override. The guides index is served at `/`.
+The dev server listens on http://localhost:44100 by default. Set `PORT` to override. The guides index is served at `/`. Edits to chapters, components, styles, and browser modules show up in open pages without a refresh.
 
 ## Static site
 

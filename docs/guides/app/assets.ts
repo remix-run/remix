@@ -1,11 +1,13 @@
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
+import { docsAssetHmrOptions } from 'remix-docs-shared/hmr/assets'
 
 import { assetsBase } from './routes.ts'
 
 const nodeEnv = process.env.NODE_ENV ?? 'production'
 const isDevelopment = nodeEnv === 'development'
 const isProduction = nodeEnv === 'production'
+const { hmr, scriptLoaders, watch } = docsAssetHmrOptions
 
 export const assetServer = createAssetServer({
   basePath: assetsBase,
@@ -15,32 +17,31 @@ export const assetServer = createAssetServer({
     'docs/guides/app/**/public/**',
     'docs/shared/**/public/**',
   ],
-  allowPackages: ['remix'],
+  allowPackages: ['@remix-run/ui', 'remix'],
   denyFiles: ['**/*.test.*'],
   mounts: {
     app: 'docs/guides/app',
     'docs-shared': 'docs/shared',
+    npm: 'node_modules',
     packages: 'packages',
   },
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
-  fingerprint: isProduction ? { buildId: process.env.GITHUB_SHA || String(Date.now()) } : undefined,
-  watch: false,
+  fingerprint: isProduction,
+  watch,
+  hmr,
   scripts: {
     define: {
       'process.env.NODE_ENV': JSON.stringify(nodeEnv),
     },
+    loaders: scriptLoaders,
   },
 })
 
-const scriptEntry = path.resolve(import.meta.dirname, 'actions/public/entry.ts')
-const devRefreshScriptEntry = path.resolve(import.meta.dirname, 'actions/public/dev-refresh.ts')
+const scriptEntryPath = path.resolve(import.meta.dirname, 'actions/public/entry.ts')
 const stylesheetEntry = path.resolve(import.meta.dirname, 'actions/public/docs.css')
 
-export const scriptSrc = await assetServer.getHref(scriptEntry)
-export const scriptPreloads = await assetServer.getPreloads(scriptEntry)
+export const scriptEntry = await assetServer.getScriptEntry(scriptEntryPath)
 export const stylesheetHref = await assetServer.getHref(stylesheetEntry)
 export const stylesheetPreloads = await assetServer.getPreloads(stylesheetEntry)
-export const devRefreshScriptSrc = isProduction
-  ? undefined
-  : await assetServer.getHref(devRefreshScriptEntry)
+export const importMap = await assetServer.getImportMap(scriptEntryPath)

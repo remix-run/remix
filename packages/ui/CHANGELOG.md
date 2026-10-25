@@ -1,6 +1,197 @@
-# `theme` CHANGELOG
+# `ui` CHANGELOG
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
+
+## v0.13.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Prop types for the previously removed styled `Accordion`, `Select`, and `Combobox` components have also been removed: `AccordionProps`, `AccordionItemProps`, `AccordionTriggerProps`, `AccordionContentProps`, `SelectProps`, `SelectOptionProps`, `ComboboxProps`, and `ComboboxOptionProps`. Accordion's unused `headingLevel` prop and corresponding context fields, along with the `AccordionHeadingLevel` type, have also been removed. ([#11986](https://github.com/remix-run/remix/pull/11986))
+
+- BREAKING CHANGE: The toggle mixin is now exported as `toggle` instead of `control`. Since `toggle` consists of a single mixin, it can now be called directly as `toggle()` rather than grouped under `toggle.control()`. ([#11986](https://github.com/remix-run/remix/pull/11986))
+
+  ```diff
+  -import * as toggle from '@remix-run/ui/toggle'
+  +import { toggle } from '@remix-run/ui/toggle'
+
+  -<input mix={toggle.control({ defaultChecked: true })} />
+  +<input mix={toggle({ defaultChecked: true })} />
+  ```
+
+  The options type has also been renamed from `ToggleControlOptions` to `ToggleOptions`:
+
+  ```diff
+  -import type { ToggleControlOptions } from '@remix-run/ui/toggle'
+  +import type { ToggleOptions } from '@remix-run/ui/toggle'
+  ```
+
+- Check the user's current motion preference with `prefersReducedMotion()` from `@remix-run/ui/animation`. It returns `false` during server rendering or when `matchMedia` is unavailable, so it can be called safely from component render functions as well as browser event handlers. ([#11993](https://github.com/remix-run/remix/pull/11993))
+
+  ```tsx
+  import { animateLayout, prefersReducedMotion, spring } from '@remix-run/ui/animation'
+
+  function Card() {
+    return () => (
+      <div mix={animateLayout(prefersReducedMotion() ? false : { ...spring('snappy') })}>
+        Details
+      </div>
+    )
+  }
+  ```
+
+### Patch Changes
+
+- Server rendering skips setup and render for animation mixins, keyboard and outside-click helpers, typeahead behavior, and popover anchor and focus helpers. Mixins that provide initial attributes, styles, or ARIA props still run on the server. ([#12019](https://github.com/remix-run/remix/pull/12019))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@1.1.0`](https://github.com/remix-run/remix/releases/tag/component@1.1.0)
+
+## v0.12.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@1.0.0`](https://github.com/remix-run/remix/releases/tag/component@1.0.0)
+
+## v0.12.0
+
+### Minor Changes
+
+- BREAKING CHANGE: The core component APIs provided by `@remix-run/ui` have now moved to `@remix-run/component`. `@remix-run/ui` now provides headless, accessible UI primitives and animation utilities for Remix components.
+
+  The package root and its JSX runtime, server-rendering, test, development-refresh, and styled-component exports are no longer available. Move runtime imports to `@remix-run/component` or `remix/component`:
+
+  ```diff
+  -import { createRoot, css, on } from '@remix-run/ui'
+  +import { createRoot, css, on } from '@remix-run/component'
+  ```
+
+  If `jsxImportSource` currently points to `@remix-run/ui` or `remix/ui`, move it to the corresponding component entrypoint:
+
+  ```diff
+   {
+     "compilerOptions": {
+       "jsx": "react-jsx",
+  -    "jsxImportSource": "@remix-run/ui"
+  +    "jsxImportSource": "@remix-run/component"
+     }
+   }
+  ```
+
+  Primitive APIs retain their existing contracts but now use flat package subpaths:
+
+  ```diff
+  -import * as accordion from '@remix-run/ui/accordion/primitives'
+  +import * as accordion from '@remix-run/ui/accordion'
+  ```
+
+  The package exports the `accordion`, `anchor`, `animation`, `combobox`, `listbox`, `menu`, `popover`, `select`, `tabs`, and `toggle` subpaths. The previous styled `breadcrumbs`, `button`, `checkbox`, `input`, and `radio` modules have been removed.
+
+  `@remix-run/ui` is currently unstable and versioned independently. It is not available through the `remix` package and must be installed and imported directly. For an application that otherwise uses the `remix` package:
+
+  ```sh
+  npm i remix @remix-run/ui
+  ```
+
+  If the asset server restricts imports with `allowPackages`, add `@remix-run/ui` now that these APIs are imported from the standalone package:
+
+  ```diff
+   {
+     "assets": {
+  -    "allowPackages": ["remix"]
+  +    "allowPackages": ["@remix-run/ui", "remix"]
+     }
+   }
+  ```
+
+  Direct-package consumers should install both `@remix-run/component` and `@remix-run/ui` when they use the component runtime with the primitives or animation utilities.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@0.8.0`](https://github.com/remix-run/remix/releases/tag/component@0.8.0)
+
+## v0.11.0
+
+### Minor Changes
+
+- Preserve client-owned attributes during frame reloads with `data-rmx-preserve-attrs="class data-theme"` on any matched element, including `<html>` and `<body>` (see #11809). The named attributes keep their live values or absence while other attributes and children reconcile normally. The incoming HTML controls the list; clearing it or removing a name returns those attributes to normal reconciliation.
+
+### Patch Changes
+
+- Send `X-Remix-Frame: true` from the default browser resolver for all frame loads, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`, allowing handlers to identify and target frame requests consistently across browser and server rendering (see #11941).
+
+- Treat marker-less HTML that starts with a doctype or `<html>` as a document reload, so pages rendered with `renderToString` can be navigated by the client runtime (see #11808).
+
+- Keep hash-only navigations within a fully loaded page and download requests under browser control without reloading a frame. If a hash navigation interrupts a pending frame load, reload the destination so the previous page is not left visible. Preserve downloads even when another navigation listener changes the source link's `download` attribute.
+
+- Preserve parent component context for client entries rendered inside a `<Frame>`, including setup-time context reads when the provider module loads later and after frame reloads. Keep nested frame content interactive when its owning client entry module is already cached (see #11894).
+
+- Preserve server-rendered textarea values when a hydrated client entry first updates, without overwriting uncontrolled user edits.
+
+- Allow client entry props to use ordinary interfaces, including nested objects whose properties are all optional (see #11918).
+
+- Document custom mixin setup, lifecycle events, and deferred host removal with `event.persistNode()`, including cancellation and keyed-node reclamation. Expand public API documentation for root, frame, context, anchoring, CSS mixin, and server-rendering helpers, and correct the popover, context, and anchoring examples.
+
+## v0.10.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Navigations that specify a named frame that is not currently mounted now perform a document navigation instead of reloading the top frame. Fresh links, forms, and `navigate()` calls are left to the browser, preserving native form methods and bodies, while back and forward traversal reloads the destination document. Omit the target when the navigation should always reload the top frame:
+
+  ```diff
+  -<a href="/account" data-rmx-target="optional-account">
+  +<a href="/account">
+  ```
+
+- BREAKING CHANGE: The default `resolveFrame` now only fetches same-origin sources and follows same-origin redirects. Apps that load cross-origin frame content must provide a custom `resolveFrame` to `run()`.
+
+  Validate navigation source overrides regardless of the target, falling back to document navigation for invalid or cross-origin overrides.
+
+- BREAKING CHANGE: Raw HTML props now require an opaque value created by `unsafeHTML()`. This applies to `innerHTML` and both iframe `srcDoc` spellings (`srcDoc` and `srcdoc`). It prevents attacker-controlled prop spreads from activating HTML parsing with plain strings or JSON-shaped objects. `outerHTML` is not supported because it would replace a reconciler-owned element. `unsafeHTML()` is an explicit authorization boundary; it does not sanitize or otherwise modify its input.
+
+  ```diff
+  -import type { Handle } from 'remix/ui'
+  +import { unsafeHTML } from 'remix/ui'
+  +import type { Handle } from 'remix/ui'
+
+   function Content(handle: Handle<{ html: string }>) {
+  -  return () => <div innerHTML={handle.props.html} />
+  +  return () => <div innerHTML={unsafeHTML(handle.props.html)} />
+   }
+  ```
+
+### Patch Changes
+
+- Ignore invalid host prop names and reserved DOM mutation properties during server rendering and client reconciliation. Block `javascript:` URLs in executable URL attributes while preserving other URL schemes and non-executable attributes. Use the `on()` mixin for events; the explicit `innerHTML` API and standard DOM, `data-*`, `aria-*`, SVG, and custom-element properties continue to work as before.
+
+- Fix duplicated text during hydration when a browser splits long server-rendered text into multiple DOM nodes, including chunks that span adjacent text children (see #11591).
+
+- Avoid attaching duplicate event handlers when a client entry imports and renders another client entry, including through fragments and wrapper components. Preserve deferred removal and exit animations when removing nested client entries (see #11844).
+
+- Restore the previous named frame from `handle.frames.get(name)` when a more recently mounted frame with the same name unmounts.
+
+## v0.9.0
+
+### Minor Changes
+
+- Client entries can now provide import maps through `resolveClientEntry()`. The `<ImportMap>` component from `remix/ui/server` combines your mappings with those from blocking client entries so the initial document contains one complete import map. New mappings from later frame responses are installed before their client entries load. Plain `<script type="importmap">` elements remain supported when you do not need to combine mappings (see #11706).
+
+  When a frame response changes an installed import mapping or integrity value, Remix loads a fresh document so navigation after a deployment cannot mix old and new modules.
+
+- `run()` now accepts a `processClientEntryPreloads` callback to handle preloads for client entries discovered after the initial page load. Use it with `remix/multiple-import-maps-polyfill` to preload modules in browsers that need the polyfill, returning an empty array to skip native modulepreload links. See the [client entry setup example](https://github.com/remix-run/remix/tree/main/packages/multiple-import-maps-polyfill#usage) (see #11706).
+
+### Patch Changes
+
+- `handle.update()` now warns and skips the extra render when called during component setup. Calls during rendering, or before the initial commit from outside setup, report a clear component error. Move these updates into an event handler or a `handle.queueTask()` callback (see #11795).
+
+- Fixed delayed scroll resets and history scroll restoration during frame navigation. Scroll now updates once the destination and its blocking frames first render, without waiting for the rest of the streamed content or client entry hydration. Also fixed scroll jumps in Chromium and stale or repeated scroll changes during redirects and overlapping reloads (see #11755).
+
+  Failed `frame.reload()` calls no longer cause a second unhandled promise rejection when the caller already handles the error.
+
+- Browsers without `NavigateEvent.sourceElement` support now use full document navigation, so links and forms keep working when frame navigation is unavailable (see #11820).
+
+- Frames now render HTML responses with `3xx` and `4xx` status codes, so form validation messages and error pages appear in the frame when using the default resolver. HTML content types are now recognized regardless of case (see #11823).
 
 ## v0.8.0
 

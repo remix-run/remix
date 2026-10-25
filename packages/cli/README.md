@@ -4,7 +4,7 @@ Command-line interface for creating and managing Remix projects.
 
 ## Features
 
-- Create new Remix projects with `npx remix@next new` or installed `remix new`
+- Create new Remix projects with `npx remix new` or installed `remix new`
 - List browser-reachable files and inspect URL mappings with `remix assets`
 - Print shell completion scripts with `remix completion`
 - Check project environment and Remix app conventions with `remix doctor`
@@ -19,7 +19,7 @@ Command-line interface for creating and managing Remix projects.
 
 ## Installation
 
-Use `npx remix@next new <target-dir>` to scaffold a new Remix app. Install `remix` when you want the local `remix` command:
+Use `npx remix new <target-dir>` to scaffold a new Remix app. Install `remix` when you want the local `remix` command:
 
 ```sh
 npm i remix
@@ -41,7 +41,7 @@ remix completion zsh >> ~/.zshrc
 
 ## Usage
 
-Use `npx remix@next new my-remix-app` to scaffold a new Remix app. After installing Remix, the equivalent local command is `remix new my-remix-app`.
+Use `npx remix new my-remix-app` to scaffold a new Remix app. After installing Remix, the equivalent local command is `remix new my-remix-app`.
 
 The rest of the CLI is available through the installed `remix` command:
 
@@ -63,6 +63,8 @@ remix test
 remix version
 remix --no-color doctor
 ```
+
+Select test files by partial name with `remix test frame`, which expands to `**/*frame*.test*.{ts,tsx}`. File paths and explicit globs pass through unchanged. Multiple arguments select the union of matching files.
 
 You can also run the CLI programmatically:
 

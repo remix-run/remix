@@ -12,5 +12,5 @@
     "erasableSyntaxOnly": true,
     "isolatedModules": true
   },
-  "exclude": ["vendor", "dist"]
+  "exclude": ["bench", "vendor", "dist"]
 }

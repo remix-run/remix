@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/multipart-parser",
-  "version": "0.16.4",
+  "version": "1.1.0",
   "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
@@ -18,9 +18,11 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./node": "./src/node.ts",
+    "./future": "./src/future.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -32,6 +34,10 @@
       "./node": {
         "types": "./dist/node.d.ts",
         "default": "./dist/node.js"
+      },
+      "./future": {
+        "types": "./dist/future.d.ts",
+        "default": "./dist/future.js"
       },
       "./package.json": "./package.json"
     }

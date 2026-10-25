@@ -1,5 +1,5 @@
-import { css } from "remix/ui";
-import * as accordion from "remix/ui/accordion/primitives";
+import { css } from "remix/component";
+import * as accordion from "@remix-run/ui/accordion";
 
 /**
  * @name Accordion Primitives

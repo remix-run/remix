@@ -34,6 +34,12 @@ npm i remix
 
 The `parseFormData` interface allows you to define an "upload handler" function for fine-grained control of handling file uploads.
 
+`parseFormData()` accepts `multipart/*` and `application/x-www-form-urlencoded` media types, matched case-insensitively. Other media types throw `FormDataParseError` before the request body is read.
+
+`FileUpload.name` and `FileUpload.type` are untrusted client input from the submitted multipart metadata. Filenames are not sanitized for filesystem use, including on files returned in `FormData`. Do not use these names directly as filesystem paths or join them to an upload directory. Generate storage names in your application; see [Filename Safety](https://github.com/remix-run/remix/tree/main/packages/headers#filename-safety).
+
+The parser does not verify that the contents match the media type or filename extension. Validate file contents before serving uploads inline. To serve uploads as downloads, set `Content-Disposition: attachment` on the file response; see [File Responses](https://github.com/remix-run/remix/tree/main/packages/response#file-responses).
+
 ```ts
 import * as fsp from 'node:fs/promises'
 import type { FileUpload } from 'remix/form-data-parser'
@@ -43,10 +49,10 @@ import { parseFormData } from 'remix/form-data-parser'
 async function uploadHandler(fileUpload: FileUpload) {
   // Is this file upload from the <input type="file" name="user-avatar"> field?
   if (fileUpload.fieldName === 'user-avatar') {
-    let filename = `/uploads/user-${user.id}-avatar.bin`
+    let filename = `/uploads/${crypto.randomUUID()}`
 
-    // Store the file safely on disk
-    await fsp.writeFile(filename, fileUpload.bytes)
+    // Store under an application-generated name in an existing upload directory
+    await fsp.writeFile(filename, new Uint8Array(await fileUpload.arrayBuffer()), { flag: 'wx' })
 
     // Return the file name to use in the FormData object so we don't
     // keep the file contents around in memory.
@@ -133,13 +139,44 @@ async function uploadHandler(fileUpload: FileUpload) {
   if (fileUpload.fieldName === 'user-avatar') {
     let storageKey = `user-${user.id}-avatar`
 
-    // Put the file in storage and return the stored LazyFile
-    return fileStorage.put(storageKey, fileUpload)
+    // Store the file and return its key to use in the FormData object
+    await fileStorage.set(storageKey, fileUpload)
+    return storageKey
   }
 
   // Ignore unrecognized fields
 }
 ```
+
+## Future API
+
+**Future APIs are not stable.** The `remix/form-data-parser/future` entrypoint may change in any release, but it is a good indication of where this package will land in its next major release.
+
+`parseFormData()` from `remix/form-data-parser/future` streams file uploads to your upload handler instead of buffering them. Each `FileUpload` is passed to the handler as soon as its headers arrive, and its contents stream from the request body as you read them.
+
+Pair it with a storage backend that streams, like the filesystem and S3 backends of [`remix/file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage), and a large upload goes from the request to storage without being buffered:
+
+```ts
+import { createS3FileStorage } from 'remix/file-storage/s3'
+import { parseFormData } from 'remix/form-data-parser/future'
+
+let fileStorage = createS3FileStorage({ accessKeyId, secretAccessKey, bucket, region })
+
+let formData = await parseFormData(request, async (fileUpload) => {
+  let storageKey = `uploads/${crypto.randomUUID()}`
+  // Streams the upload to S3 without holding it in memory
+  await fileStorage.set(storageKey, fileUpload)
+  return storageKey
+})
+```
+
+The future `FileUpload` has the same shape as `File`, with a few differences:
+
+- Its contents can be read once, and only while the upload handler is running
+- `size` throws until the contents have been read
+- `slice()` is not supported
+
+If the upload handler returns the `FileUpload` without reading it, or you don't pass an upload handler, `parseFormData()` reads it into a regular `File` and puts that in the `FormData`.
 
 ## Demos
 

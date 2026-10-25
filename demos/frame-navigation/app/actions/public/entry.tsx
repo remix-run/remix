@@ -1,18 +1,29 @@
-import type { Handle, RemixNode, ResolveFrameOptions } from 'remix/ui'
-import { createRoot, css, on, run } from 'remix/ui'
+import type { Handle, RemixNode, ResolveFrameOptions } from 'remix/component'
+import { createRoot, css, on, run } from 'remix/component'
+import {
+  detectMultipleImportMapSupport,
+  importModule,
+  preloadShim,
+} from 'remix/multiple-import-maps-polyfill'
 
-import { animateEntrance, spring } from 'remix/ui/animation'
+import { animateEntrance, spring } from '@remix-run/ui/animation'
 
 import { routes } from '../../routes.ts'
 
 const app = run({
   async loadModule(moduleUrl, exportName) {
-    let mod = await import(moduleUrl)
-    let exp = (mod as any)[exportName]
+    let mod = await importModule(moduleUrl)
+    let exp = mod[exportName]
     if (typeof exp !== 'function') {
       throw new Error(`Export "${exportName}" from "${moduleUrl}" is not a function`)
     }
     return exp
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await detectMultipleImportMapSupport()) return preloads
+
+    preloadShim(preloads)
+    return []
   },
   async resolveFrame(src, options) {
     return resolveFrameResponse(new URL(src, window.location.href), options)

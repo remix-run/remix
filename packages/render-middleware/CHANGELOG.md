@@ -2,6 +2,86 @@
 
 This is the changelog for [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.1`](https://github.com/remix-run/remix/releases/tag/assets@1.0.1)
+  - [`component@1.1.0`](https://github.com/remix-run/remix/releases/tag/component@1.1.0)
+  - [`response@1.0.1`](https://github.com/remix-run/remix/releases/tag/response@1.0.1)
+
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.0`](https://github.com/remix-run/remix/releases/tag/assets@1.0.0)
+  - [`component@1.0.0`](https://github.com/remix-run/remix/releases/tag/component@1.0.0)
+  - [`fetch-router@1.0.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.0.0)
+  - [`response@1.0.0`](https://github.com/remix-run/remix/releases/tag/response@1.0.0)
+
+## v0.3.3
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@0.8.0`](https://github.com/remix-run/remix/releases/tag/component@0.8.0)
+
+## v0.3.2
+
+### Patch Changes
+
+- Report server rendering errors for browser-initiated frame requests through `onError`, or the default error reporter when no callback is configured. Internal frame subrequests continue to report errors through the enclosing render to avoid duplicate reports (see #11941).
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.8.0`](https://github.com/remix-run/remix/releases/tag/assets@0.8.0)
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`response@0.3.10`](https://github.com/remix-run/remix/releases/tag/response@0.3.10)
+  - [`ui@0.11.0`](https://github.com/remix-run/remix/releases/tag/ui@0.11.0)
+
+## v0.3.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.1`](https://github.com/remix-run/remix/releases/tag/assets@0.7.1)
+  - [`fetch-router@0.22.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.1)
+  - [`response@0.3.9`](https://github.com/remix-run/remix/releases/tag/response@0.3.9)
+  - [`ui@0.10.0`](https://github.com/remix-run/remix/releases/tag/ui@0.10.0)
+
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `render({ assets })` now uses `assets.getScriptEntry()` to resolve client entries from source files so their import maps are included in rendered documents and frame responses. Custom asset server implementations must provide `getScriptEntry()` instead of `getHref()` and `getPreloads()`. It must return a `Promise` resolving to the following `ScriptEntry` shape:
+
+  ```ts
+  interface ScriptEntry {
+    href: string
+    preloads: string[]
+    importMap: {
+      imports: Record<string, string>
+      scopes?: Record<string, Record<string, string>>
+    }
+  }
+  ```
+
+  Apps using `createAssetServer()` receive this integration automatically. Custom rendering setups can follow the [asset server migration steps](https://github.com/remix-run/remix/blob/main/packages/assets/CHANGELOG.md#v070) (see #11706).
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.7.0`](https://github.com/remix-run/remix/releases/tag/assets@0.7.0)
+  - [`fetch-router@0.22.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.0)
+  - [`ui@0.9.0`](https://github.com/remix-run/remix/releases/tag/ui@0.9.0)
+
 ## v0.2.0
 
 ### Minor Changes

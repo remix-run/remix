@@ -669,11 +669,73 @@ describe('migration directory name parsing', () => {
     })
   })
 
-  it('rejects invalid migration directory names', () => {
+  it('parses zero-padded sequential ids', () => {
+    assert.deepEqual(parseMigrationDirectoryName('0001_create_users'), {
+      id: '0001',
+      name: 'create_users',
+    })
+  })
+
+  it('parses single-digit ids', () => {
+    assert.deepEqual(parseMigrationDirectoryName('1_create_users'), {
+      id: '1',
+      name: 'create_users',
+    })
+  })
+
+  it('parses 64-digit ids without numeric conversion', () => {
+    let id = '9'.repeat(64)
+
+    assert.deepEqual(parseMigrationDirectoryName(id + '_create_users'), {
+      id,
+      name: 'create_users',
+    })
+  })
+
+  it('rejects ids longer than 64 digits', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('9'.repeat(65) + '_create_users'),
+      /Expected format <digits>_<name> with 1 to 64 digits/,
+    )
+  })
+
+  it('rejects directory names without an id', () => {
     assert.throws(
       () => parseMigrationDirectoryName('create_users'),
-      /Expected format YYYYMMDDHHmmss_name/,
+      /Expected format <digits>_<name>/,
     )
+  })
+
+  it('rejects empty ids', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('_create_users'),
+      /Expected format <digits>_<name>/,
+    )
+  })
+
+  it('rejects non-digit prefixes', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('000a_create_users'),
+      /Expected format <digits>_<name>/,
+    )
+  })
+
+  it('rejects signed ids', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('-0001_create_users'),
+      /Expected format <digits>_<name>/,
+    )
+  })
+
+  it('rejects decimal ids', () => {
+    assert.throws(
+      () => parseMigrationDirectoryName('1.5_create_users'),
+      /Expected format <digits>_<name>/,
+    )
+  })
+
+  it('rejects empty names', () => {
+    assert.throws(() => parseMigrationDirectoryName('0001_'), /Expected format <digits>_<name>/)
   })
 })
 

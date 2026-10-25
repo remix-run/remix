@@ -1,5 +1,5 @@
-import { on } from "remix/ui";
-import type { Handle } from "remix/ui";
+import { on } from "remix/component";
+import type { Handle } from "remix/component";
 
 const initialTitle = "Thriller";
 

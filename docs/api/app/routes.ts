@@ -1,43 +1,36 @@
 import { route } from 'remix/routes'
 
 export const routes = route({
-  assets: '/assets/*asset',
+  // Underscored so no package (like `remix/assets`) can take the path.
+  assets: '/_assets/*asset',
   home: '/',
   lookup: '/api.json',
-  api: route('api', {
+  api: route({
     document: '*slug/',
     markdown: '*slug.md',
   }),
 })
 
-export function getVersionPathname(version: string): string {
-  return `/${encodePathSegment(version)}`
+// Docs files live under their import path (`remix/router/...`, `remix-run/ui/...`), but URLs drop
+// the scope: `/router/...`, `/ui/...`. The bare `remix` package stays at `/remix/`.
+export function getDocsUrlPath(docsPath: string): string {
+  return docsPath.replace(/^@?remix(?:-run)?\/(?=.)/, '')
 }
 
-export function withVersion(href: string, version: string | undefined): string {
-  return version === undefined ? href : `${getVersionPathname(version)}${href}`
-}
+// Matches import-path links like `/remix/router/type/Route` and `/remix-run/ui/tabs/`.
+const docsPathnamePattern = /^\/(remix(?:-run)?\/.+)$/
 
-export function getApiRouteHref(href: string, version: string | undefined): string | undefined {
-  if (!href.startsWith('/api/')) return undefined
+export function getApiRouteHref(href: string): string | undefined {
+  if (!href.startsWith('/') || href.startsWith('//')) return undefined
 
   let url = new URL(href, 'http://localhost')
-  let slug = url.pathname.slice('/api/'.length)
-  if (slug.length === 0) return undefined
-
-  let routeHref: string
-  if (slug.endsWith('.md')) {
-    routeHref = routes.api.markdown.href({ slug: slug.slice(0, -'.md'.length) })
-  } else {
-    routeHref = routes.api.document.href({ slug: slug.replace(/\/$/, '') })
+  let pathname = url.pathname
+  let match = docsPathnamePattern.exec(pathname)
+  if (match) pathname = `/${getDocsUrlPath(match[1])}`
+  // Pages end in a slash; files like `.md` and `api.json` don't.
+  if (!/\.\w+$/.test(pathname)) {
+    pathname = pathname.replace(/\/?$/, '/')
   }
 
-  return `${withVersion(routeHref, version)}${url.search}${url.hash}`
-}
-
-function encodePathSegment(value: string): string {
-  return encodeURIComponent(value).replace(
-    /[!'()*]/g,
-    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
-  )
+  return `${pathname}${url.search}${url.hash}`
 }

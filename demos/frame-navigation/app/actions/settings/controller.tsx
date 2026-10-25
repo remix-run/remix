@@ -1,6 +1,6 @@
 import { createController } from 'remix/router'
-import type { Handle, RemixNode } from 'remix/ui'
-import { Frame } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
+import { Frame } from 'remix/component'
 import { redirect } from 'remix/response/redirect'
 
 import { requireAuth } from '../../middleware/auth.ts'

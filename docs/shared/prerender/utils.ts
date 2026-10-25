@@ -4,7 +4,7 @@ import { parse } from './html-parser.ts'
 
 const SCRIPT_FILE_EXT = /\.(?:tsx?|jsx|mts)$/
 const SCRIPT_EXT_IN_PATH = /\.(?:tsx?|jsx|mts)(?=[?#]|$)/
-const SCRIPT_EXT_IN_JS_IMPORT = /\.(?:tsx?|jsx|mts)(?=["'?#])/g
+const SCRIPT_EXT_IN_JS_IMPORT = /\.(?:tsx?|jsx|mts)(?=["'`?#])/g
 
 export async function writeResult(
   outputDir: string,
@@ -17,9 +17,12 @@ export async function writeResult(
     return
   }
 
-  let outputFilepath = SCRIPT_FILE_EXT.test(filepath)
-    ? filepath.replace(SCRIPT_FILE_EXT, '.js')
-    : filepath
+  // Crawled paths are URL-encoded (e.g. `.pnpm/pkg%402.0.0`), but static hosts decode request
+  // paths before looking up files, so write files using their decoded names.
+  let decodedFilepath = decodeURIComponent(filepath)
+  let outputFilepath = SCRIPT_FILE_EXT.test(decodedFilepath)
+    ? decodedFilepath.replace(SCRIPT_FILE_EXT, '.js')
+    : decodedFilepath
   let outputPath = path.join(outputDir, outputFilepath)
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
 
@@ -30,7 +33,7 @@ export async function writeResult(
     // Update script references for static HTML hosting.
     let updated = rewriteExtensionsToJs(html)
     await fs.writeFile(outputPath, updated, 'utf-8')
-  } else if (SCRIPT_FILE_EXT.test(filepath)) {
+  } else if (SCRIPT_FILE_EXT.test(decodedFilepath)) {
     let content = await response.text()
     // Write all script files to disk as JS files
     await fs.writeFile(outputPath, content.replace(SCRIPT_EXT_IN_JS_IMPORT, '.js'), 'utf-8')
@@ -49,7 +52,7 @@ export function rewriteExtensionsToJs(html: string): string {
   // github.com/.../basic.demo.tsx and code examples inside <pre>/<code>
   // blocks.
   //
-  // Preserve comments so Remix UI's hydration markers (`<!-- rmx:h:* -->`,
+  // Preserve comments so the component runtime's hydration markers (`<!-- rmx:h:* -->`,
   // `<!-- /rmx:h -->`, `<!-- rmx:flush document -->`) survive the
   // parse/serialize round-trip. Without them, frame navigation fails with
   // a "Can't insert an element before a doctype" HierarchyRequestError.

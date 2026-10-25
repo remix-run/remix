@@ -42,7 +42,12 @@ import {
   getPackagePath,
 } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
-import { createPublishPlan, getReleaseNotes, isPackageVersionPublished } from './utils/publish.ts'
+import {
+  createPublishPlan,
+  getDocsReleaseTag,
+  getReleaseNotes,
+  isPackageVersionPublished,
+} from './utils/publish.ts'
 
 const rootDir = getRootDir()
 
@@ -258,12 +263,12 @@ function isShallowRepository(): boolean {
 function ensureGitHistoryForVersionLookup() {
   if (isShallowRepository()) {
     console.log('\nRepository is shallow, fetching full history for release tag anchoring...')
-    logAndExec('git fetch --unshallow --tags origin')
+    logAndExec('git', ['fetch', '--unshallow', '--tags', 'origin'])
     return
   }
 
   console.log('\nFetching tags from origin...')
-  logAndExec('git fetch --tags origin')
+  logAndExec('git', ['fetch', '--tags', 'origin'])
 }
 
 function resolveTagPlans(packages: PublishedPackage[]): TagPlan[] {
@@ -577,8 +582,8 @@ async function main() {
 
   // Configure git
   console.log('\nConfiguring git...')
-  logAndExec('git config user.name "Remix Run Bot"')
-  logAndExec('git config user.email "hello@remix.run"')
+  logAndExec('git', ['config', 'user.name', 'Remix Run Bot'])
+  logAndExec('git', ['config', 'user.email', 'hello@remix.run'])
 
   // Create tags (skip if already exist)
   console.log(`\nCreating tag${tagPlans.length === 1 ? '' : 's'} for published packages...`)
@@ -652,6 +657,19 @@ async function main() {
     }
     console.error('\nYou may need to create these releases manually.')
     process.exit(1)
+  }
+
+  if (process.env.GITHUB_OUTPUT) {
+    let docsTag = getDocsReleaseTag(
+      getLocalPackages().map((pkg) => ({
+        packageName: pkg.npmName,
+        version: pkg.localVersion,
+        tag: getGitTag(pkg.npmName, pkg.localVersion),
+      })),
+    )
+    if (docsTag !== undefined) {
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=${docsTag}\n`)
+    }
   }
 
   console.log('\n✅ Done.')

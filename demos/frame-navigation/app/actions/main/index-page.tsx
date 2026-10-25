@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 import { DashboardStatGrid } from './public/dashboard-stat-grid.tsx'
 import { routes } from '../../routes.ts'

@@ -3,6 +3,7 @@ import type { Predicate, SqlStatement } from '@remix-run/data-table'
 import type { DataManipulationOperation } from '@remix-run/data-table'
 import {
   collectColumns as collectColumnsHelper,
+  compileOrderByDirection,
   normalizeJoinType as normalizeJoinTypeHelper,
   quotePath as quotePathHelper,
 } from '@remix-run/data-table/sql-helpers'
@@ -275,7 +276,7 @@ function compileOrderByClause(orderBy: { column: string; direction: 'asc' | 'des
   return (
     ' order by ' +
     orderBy
-      .map((clause) => quotePath(clause.column) + ' ' + clause.direction.toUpperCase())
+      .map((clause) => quotePath(clause.column) + ' ' + compileOrderByDirection(clause.direction))
       .join(', ')
   )
 }

@@ -12,4 +12,4 @@ pnpm -C demos/assets dev
 
 Then open [http://localhost:44100](http://localhost:44100).
 
-Run `pnpm -C demos/assets test` to verify that every asset referenced by the document is served and that server-only action source is rejected.
+Run `pnpm -C demos/assets typecheck` to validate the demo.

@@ -87,7 +87,7 @@ export function sanitizeReturnTo(value: string | null): string | undefined {
     return
   }
 
-  if (url.origin !== returnToBaseURL) {
+  if (url.origin !== returnToBaseURL || url.pathname.startsWith('//')) {
     return
   }
 

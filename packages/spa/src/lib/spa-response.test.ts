@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { spaResponse } from '@remix-run/ui'
+import { spaResponse } from '@remix-run/component'
 
 describe('spaResponse', () => {
   it('rejects use outside a browser environment', () => {

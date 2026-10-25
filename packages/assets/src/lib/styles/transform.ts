@@ -5,7 +5,6 @@ import {
   createAssetServerCompilationError,
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
-import { generateFingerprint } from '../fingerprint.ts'
 import type { ModuleTracking } from '../module-store.ts'
 import { rewriteSourceMapSources, stringifySourceMap } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
@@ -25,7 +24,6 @@ type TransformedStyleDependency =
     }
 
 export type TransformedStyle = {
-  fingerprint: string | null
   identityPath: string
   rawCode: string
   resolvedPath: string
@@ -49,7 +47,6 @@ type TransformResult = {
 )
 
 export type TransformArgs = {
-  buildId: string | null
   isWatchIgnored(filePath: string): boolean
   minify: boolean
   routes: CompiledRoutes
@@ -149,13 +146,6 @@ export async function transformStyle(
         trackedFiles,
       },
       value: {
-        fingerprint:
-          args.buildId === null
-            ? null
-            : await generateFingerprint({
-                buildId: args.buildId,
-                content: sourceText,
-              }),
         identityPath: record.identityPath,
         rawCode: Buffer.from(transformResult.code).toString('utf8'),
         resolvedPath,

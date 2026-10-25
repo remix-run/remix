@@ -3,7 +3,7 @@ import { describe, it } from 'remix/test'
 
 import { parseMarkdownRoot } from 'remix-docs-shared/markdown/parser'
 
-import { readMarkdownFrameReferences, splitMarkdownRoot } from './frames.ts'
+import { readMarkdownFrameReferences, replaceMarkdownFrames, splitMarkdownRoot } from './frames.ts'
 
 describe('readMarkdownFrameReferences', () => {
   it('collects every ::frame directive with its source and line number', () => {
@@ -101,5 +101,48 @@ describe('splitMarkdownRoot', () => {
     let segments = splitMarkdownRoot(parseMarkdownRoot('# Title\n\nBody.\n'))
     assert.equal(segments.length, 1)
     assert.equal(segments[0].type, 'markdown')
+  })
+})
+
+describe('replaceMarkdownFrames', () => {
+  it('replaces ::frame directives and leaves other markdown untouched', async () => {
+    let source = [
+      '---',
+      'title: Chapter',
+      '---',
+      '',
+      'Intro with `::frame{src="/not/a/frame/"}` in code.',
+      '',
+      '::frame{src="/examples/a/b/"}',
+      '',
+      '::note{src="/x/"}',
+      '',
+    ].join('\n')
+
+    let result = await replaceMarkdownFrames(source, async (src) => `<${src}>`)
+
+    assert.equal(
+      result,
+      [
+        '---',
+        'title: Chapter',
+        '---',
+        '',
+        'Intro with `::frame{src="/not/a/frame/"}` in code.',
+        '',
+        '</examples/a/b/>',
+        '',
+        '::note{src="/x/"}',
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('removes frames that resolve to an empty string', async () => {
+    let source = ['Before.', '', '::frame{src="/examples/a/b/"}', '', 'After.', ''].join('\n')
+
+    let result = await replaceMarkdownFrames(source, async () => '')
+
+    assert.equal(result, ['Before.', '', 'After.', ''].join('\n'))
   })
 })

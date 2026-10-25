@@ -1,4 +1,4 @@
-import { css, on, ref, TypedEventTarget, type Handle, type RemixNode } from "remix/ui";
+import { css, on, ref, TypedEventTarget, type Handle, type RemixNode } from "remix/component";
 
 // ============================================================================
 // Getting Started - Basic App Example

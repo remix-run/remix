@@ -1,6 +1,6 @@
 # Timeboxer Demo
 
-A small schedule-planning app that demonstrates username/password authentication, session-backed route protection, SQLite persistence, JSON schedule endpoints, ICS export, and progressively enhanced Remix UI.
+A small schedule-planning app that demonstrates username/password authentication, session-backed route protection, SQLite persistence, JSON schedule endpoints, ICS export, and progressively enhanced UI built with Remix components.
 
 ## Running the Demo
 

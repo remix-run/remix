@@ -9,6 +9,7 @@ export const routes = route({
     examples: route('examples', {
       show: get(':chapter/:example(/)'),
     }),
+    markdown: get(':chapter.md'),
     chapter: get(':chapter(/)'),
   }),
 })

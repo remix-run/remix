@@ -1,6 +1,6 @@
-import { css, on } from "remix/ui";
-import type { Handle } from "remix/ui";
-import { spring } from "remix/ui/animation";
+import { css, on } from "remix/component";
+import type { Handle } from "remix/component";
+import { spring } from "@remix-run/ui/animation";
 
 export function BouncySwitchDemo(handle: Handle) {
   let isOn = true;

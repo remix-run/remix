@@ -3,6 +3,13 @@ title: Production
 description: How to configure, start, cache, observe, and shut down a Remix application in production.
 ---
 
+This chapter is unfinished. The sections below outline what it will cover. For working API examples, see these READMEs:
+
+- [Node server](https://github.com/remix-run/remix/blob/main/packages/node-fetch-server/README.md)
+- [Assets](https://github.com/remix-run/remix/blob/main/packages/assets/README.md)
+- [Session middleware](https://github.com/remix-run/remix/blob/main/packages/session-middleware/README.md)
+- [Compression middleware](https://github.com/remix-run/remix/blob/main/packages/compression-middleware/README.md)
+
 A production Remix app is still a Fetch handler behind a runtime adapter. Deployment work configures that adapter, initializes durable services, assigns cache policy, and closes resources without inventing a separate application architecture.
 
 ## Run the generated Node server {#production-server}
@@ -47,4 +54,4 @@ Remix supplies request logging and explicit error hooks, not a deployment-specif
 
 ## Deployment checklist {#deployment-checklist}
 
-Verify runtime versions, environment validation, migrations, trusted-proxy settings, session and upload storage, asset build IDs, cache headers, graceful shutdown, error reporting, health checks, and a smoke request against the deployed origin.
+Verify runtime versions, environment validation, migrations, trusted-proxy settings, session and upload storage, asset fingerprinting, cache headers, graceful shutdown, error reporting, health checks, and a smoke request against the deployed origin.

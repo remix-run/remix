@@ -1,6 +1,7 @@
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
-import { ChapterNavigationIndicator } from './public/chapter-navigation-indicator.ts'
+import remixPackage from '../../../../../packages/remix/package.json' with { type: 'json' }
+
 import type { DocsNavigationItem } from './markdown-chapters.tsx'
 
 type ChapterNavigationProps = {
@@ -9,27 +10,39 @@ type ChapterNavigationProps = {
 }
 
 export function ChapterNavigationContent(handle: Handle<ChapterNavigationProps>) {
-  return () => {
-    let listId = `${handle.id}-list`
+  return () => (
+    <>
+      <p class="docs-nav-heading docs-nav-title docs-chapters-nav__heading">
+        Remix Guides <span class="docs-nav-version">v{remixPackage.version}</span>
+      </p>
+      <ol class="docs-chapters-nav__list">
+        {handle.props.chapters.map((chapter) => {
+          let label = (
+            <>
+              <span class="docs-chapters-nav__eyebrow">{chapter.order}.</span>
+              <span class="docs-chapters-nav__title">{chapter.title}</span>
+            </>
+          )
 
-    return (
-      <>
-        <div class="docs-chapters-nav__heading">Guide chapters</div>
-        <ol id={listId} class="docs-chapters-nav__list docs-selection-list">
-          {handle.props.chapters.map((chapter) => (
+          return (
             <li key={chapter.slug}>
-              <a
-                href={chapter.href}
-                aria-current={chapter.slug === handle.props.currentSlug ? 'page' : undefined}
-              >
-                <span class="docs-chapters-nav__eyebrow">{chapter.order}.</span>
-                <span class="docs-chapters-nav__title">{chapter.title}</span>
-              </a>
+              {chapter.disabled ? (
+                <span class="docs-nav-item docs-chapters-nav__item" aria-disabled="true">
+                  {label}
+                </span>
+              ) : (
+                <a
+                  class="docs-nav-item docs-chapters-nav__item"
+                  href={chapter.href}
+                  aria-current={chapter.slug === handle.props.currentSlug ? 'page' : undefined}
+                >
+                  {label}
+                </a>
+              )}
             </li>
-          ))}
-        </ol>
-        <ChapterNavigationIndicator listId={listId} />
-      </>
-    )
-  }
+          )
+        })}
+      </ol>
+    </>
+  )
 }

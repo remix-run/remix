@@ -2,6 +2,46 @@
 
 This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.1`](https://github.com/remix-run/remix/releases/tag/headers@1.0.1)
+
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.0`](https://github.com/remix-run/remix/releases/tag/headers@1.0.0)
+
+## v0.7.1
+
+### Patch Changes
+
+- `createCookie()` now accepts lowercase `'strict'`, `'lax'`, and `'none'` values for `sameSite`, matching the documented examples. The `Cookie.sameSite` getter and serialized headers use canonical `'Strict'`, `'Lax'`, or `'None'` values.
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+
+## v0.7.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `Cookie.secure` now returns `undefined` when the option was not configured, matching `Cookie.httpOnly`. Explicit `true` and `false` values are preserved. Use `cookie.secure ?? false` when a boolean is required. Direct cookie serialization is unchanged.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
 ## v0.6.0
 
 ### Minor Changes

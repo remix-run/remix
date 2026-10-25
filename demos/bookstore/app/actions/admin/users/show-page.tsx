@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import type { User } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
@@ -41,10 +41,15 @@ export function AdminUserShowPage(handle: Handle<{ user: User }>) {
           </p>
 
           <div mix={css({ marginTop: '2rem' })}>
-            <a href={routes.admin.users.edit.href({ userId: user.id })} class="btn">
+            <a
+              data-rmx-prefetch="intent"
+              href={routes.admin.users.edit.href({ userId: user.id })}
+              class="btn"
+            >
               Edit
             </a>
             <a
+              data-rmx-prefetch="intent"
               href={routes.admin.users.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}

@@ -2,7 +2,14 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createRouter, type MiddlewareContext } from '@remix-run/fetch-router'
-import { clientEntry, createElement, css, Frame, type Handle, type RemixNode } from '@remix-run/ui'
+import {
+  clientEntry,
+  createElement,
+  css,
+  Frame,
+  type Handle,
+  type RemixNode,
+} from '@remix-run/component'
 
 import { render } from '../index.ts'
 
@@ -14,7 +21,7 @@ type IsEqual<left, right> =
 function expectTypeEquality<_check extends true>() {}
 
 describe('render', () => {
-  it('adds a typed Remix UI renderer to request context', async () => {
+  it('adds a typed Remix component renderer to request context', async () => {
     let middleware = render()
     type AppContext = MiddlewareContext<[typeof middleware]>
     let router = createRouter<AppContext>({ middleware: [middleware] })
@@ -240,7 +247,10 @@ describe('render', () => {
     assert.match(slot?.[1] ?? '', /<h2>Blocking content<\/h2>/)
     assert.ok(html.indexOf('Blocking content') < html.indexOf('<p>after</p>'))
     // The non-blocking frame body streams as a template chunk
-    assert.match(html, /<template id="f[^"]+">[\s\S]*?Async content[\s\S]*?<\/template>/)
+    assert.match(
+      html,
+      /<template id="f[^"]+">[\s\S]*?Async content[\s\S]*?<!--rmx:template-end--><\/template>/,
+    )
     // The frame responses' own doctypes are stripped from the outer document
     assert.doesNotMatch(html.slice('<!DOCTYPE html>'.length), /<!DOCTYPE html>/i)
   })
@@ -248,15 +258,14 @@ describe('render', () => {
   it('resolves source client entries through the asset server', async () => {
     let errors: unknown[] = []
     let resolvedEntries: string[] = []
-    let preloadedEntries: string[] = []
     let assets = {
-      async getHref(source: string) {
+      async getScriptEntry(source: string) {
         resolvedEntries.push(source)
-        return '/assets/counter-123.js'
-      },
-      async getPreloads(source: string | readonly string[]) {
-        preloadedEntries.push(...(typeof source === 'string' ? [source] : source))
-        return ['/assets/shared-456.js']
+        return {
+          href: '/assets/counter-123.js',
+          importMap: { imports: { package: '/assets/package-789.js' } },
+          preloads: ['/assets/shared-456.js'],
+        }
       },
     }
     let middleware = render({ assets, onError: (error) => errors.push(error) })
@@ -295,8 +304,11 @@ describe('render', () => {
     let html = await response.text()
 
     assert.deepEqual(resolvedEntries, ['file:///app/counter.ts', 'file:///app/named-entry.ts'])
-    assert.deepEqual(preloadedEntries, ['file:///app/counter.ts', 'file:///app/named-entry.ts'])
     assert.match(html, /\/assets\/counter-123\.js/)
+    assert.match(
+      html,
+      /<script data-rmx-import-map type="importmap">\{"imports":\{"package":"\/assets\/package-789\.js"\}\}<\/script>/,
+    )
     assert.match(
       html,
       /<link data-rmx-module-preload rel="modulepreload" href="\/assets\/shared-456\.js" \/>/,
@@ -467,6 +479,74 @@ describe('render', () => {
 
     assert.equal(await frameStreamCancelled, reason)
     await body
+  })
+
+  it('reports rendering errors for browser-initiated frame requests', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken frame component')
+
+    function Broken() {
+      throw renderError
+    }
+
+    router.get('/frame', (context) => context.render(createElement(Broken)))
+
+    let response = await router.fetch('https://remix.run/frame', {
+      headers: { 'X-Remix-Frame': 'true', 'X-Remix-Target': 'details' },
+    })
+    await assert.rejects(response.text(), /Broken frame component/)
+
+    assert.deepEqual(errors, [renderError])
+  })
+
+  it('uses default error reporting for browser-initiated frame requests', async (t) => {
+    let reportError = t.mock.method(console, 'error', () => {})
+    let router = createRouter({ middleware: [render()] as const })
+    let renderError = new Error('Broken frame component')
+
+    function Broken() {
+      throw renderError
+    }
+
+    router.get('/frame', (context) => context.render(createElement(Broken)))
+
+    let response = await router.fetch('https://remix.run/frame', {
+      headers: { 'X-Remix-Frame': 'true' },
+    })
+    await assert.rejects(response.text(), /Broken frame component/)
+
+    assert.equal(reportError.mock.calls.length, 1)
+    assert.deepEqual(reportError.mock.calls[0].arguments, [renderError])
+  })
+
+  it('reports redirected nested errors once for browser-initiated frame requests', async () => {
+    let errors: unknown[] = []
+    let childErrors: unknown[] = []
+    let router = createRouter({
+      middleware: [render({ onError: (error) => errors.push(error) })] as const,
+    })
+    let renderError = new Error('Broken child component')
+
+    function Broken() {
+      throw renderError
+    }
+
+    router.get('/', (context) => context.render(createElement(Frame, { src: '/redirect' })))
+    router.get('/redirect', () => Response.redirect('https://remix.run/child'))
+    router.get('/child', {
+      middleware: [render({ onError: (error) => childErrors.push(error) })],
+      handler: (context) => context.render(createElement(Broken)),
+    })
+
+    let response = await router.fetch('https://remix.run/', {
+      headers: { 'X-Remix-Frame': 'true' },
+    })
+    await assert.rejects(response.text(), /Broken child component/)
+
+    assert.deepEqual(errors, [renderError])
+    assert.deepEqual(childErrors, [])
   })
 
   it('reports nested frame render errors once', async () => {

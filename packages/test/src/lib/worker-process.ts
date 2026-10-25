@@ -1,4 +1,3 @@
-import { runE2ETestFile } from './worker-e2e-file.ts'
 import type { TestResults } from './reporters/results.ts'
 import { runServerTestFile } from './worker-server.ts'
 import { createFailedResults } from './worker-results.ts'
@@ -45,9 +44,12 @@ async function runWorkerProcessFile(value: unknown): Promise<TestResults | undef
       throw new Error('Invalid test worker process data')
     }
 
-    return value.type === 'e2e'
-      ? await runE2ETestFile(value, sendResults)
-      : await runServerTestFile(value)
+    if (value.type === 'e2e') {
+      let { runE2ETestFile } = await import('./worker-e2e-file.ts')
+      return await runE2ETestFile(value, sendResults)
+    }
+
+    return await runServerTestFile(value)
   } catch (error) {
     return createFailedResults(error)
   }

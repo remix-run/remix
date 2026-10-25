@@ -34,6 +34,22 @@ describe('Accept', () => {
     assert.equal(header.size, 2)
   })
 
+  it('preserves weights and ordering around empty list entries', () => {
+    let header = Accept.from(' , TEXT/HTML ;q=0.5,\t,application/json;q=0.9, text/html;q=0.7, ')
+
+    assert.deepEqual(Array.from(header), [
+      ['application/json', 0.9],
+      ['text/html', 0.7],
+    ])
+    assert.equal(Accept.from(' \t ').size, 0)
+
+    let value = `text/html,application/json${' '.repeat(100)};q=0.5`
+    assert.deepEqual(Array.from(Accept.from(value)), [
+      ['text/html', 1],
+      ['application/json', 0.5],
+    ])
+  })
+
   it('gets all media types', () => {
     let header = new Accept('text/html,application/json;q=0.9')
     assert.deepEqual(header.mediaTypes, ['text/html', 'application/json'])

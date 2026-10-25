@@ -7,7 +7,6 @@ allowBuilds:
 catalog:
   '@types/hast': 3.0.5
   '@types/node': ^24.6.0
-  '@typescript/native-preview': 7.0.0-dev.20260707.2
   github-slugger: 2.0.0
   oxfmt: ^0.51.0
   pagefind: 1.5.2
@@ -20,15 +19,17 @@ packages:
   - docs/api
   - docs/guides
   - docs/shared
+  - docs/ui
   - docs/shared/prerender/bench
   - packages/*
   - packages/*/demo
   - packages/assets/bench
   - packages/cli/test/fixtures/*
+  - packages/component/bench
+  - packages/component/bench/frameworks/*
+  - packages/data-schema/bench
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
-  - packages/ui/bench
-  - packages/ui/bench/frameworks/*
   - packages/lazy-file/scripts
   - packages/multipart-parser/bench
   - packages/multipart-parser/demos/*

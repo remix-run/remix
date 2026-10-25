@@ -1,6 +1,6 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import { createRoot } from 'remix/ui'
+import { createRoot } from 'remix/component'
 
 import {
   startTableOfContentsBehavior,

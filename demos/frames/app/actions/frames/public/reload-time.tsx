@@ -1,4 +1,4 @@
-import { clientEntry, on, type Handle } from 'remix/ui'
+import { clientEntry, on, type Handle } from 'remix/component'
 
 import { reloadButtonStyle } from '../../../ui/public/styles.ts'
 

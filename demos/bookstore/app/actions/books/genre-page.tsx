@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import type { Book } from '../../data/schema.ts'
 import type { Cart } from '../../utils/cart.ts'
@@ -21,7 +21,7 @@ export function GenrePage(handle: Handle<GenrePageProps>) {
       <Layout>
         <h1>{genre.charAt(0).toUpperCase() + genre.slice(1)} Books</h1>
         <p mix={css({ margin: '1rem 0' })}>
-          <a href={routes.books.index.href()} class="btn btn-secondary">
+          <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn btn-secondary">
             View All Books
           </a>
         </p>
@@ -44,7 +44,7 @@ export function GenreNotFoundPage(handle: Handle<{ genre: string }>) {
         <h1>Genre Not Found</h1>
         <p>No books found in the "{handle.props.genre}" genre.</p>
         <p mix={css({ marginTop: '1rem' })}>
-          <a href={routes.books.index.href()} class="btn">
+          <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
             Browse All Books
           </a>
         </p>

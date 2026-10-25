@@ -1,4 +1,4 @@
-import { css } from '@remix-run/ui'
+import { css } from '@remix-run/component'
 
 const buttonStyles = css({
   padding: '8px 12px',

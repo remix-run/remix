@@ -1,4 +1,4 @@
-import { css, type Handle, clientEntry, on } from 'remix/ui'
+import { css, type Handle, clientEntry, on } from 'remix/component'
 
 export const ImageCarousel = clientEntry(
   import.meta.url,
@@ -57,6 +57,7 @@ export const ImageCarousel = clientEntry(
                 <img
                   src={src}
                   alt={`Image ${i + 1} of ${total}`}
+                  loading={i === 0 ? 'eager' : 'lazy'}
                   mix={css({
                     width: '100%',
                     height: '100%',

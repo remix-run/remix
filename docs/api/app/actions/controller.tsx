@@ -3,24 +3,23 @@ import * as path from 'node:path'
 
 import { createController } from 'remix/router'
 
-import type { DocsContext, Versions } from '../data/docs.ts'
-import { getVersionedLookupHref } from '../data/lookup.ts'
+import type { DocsContext } from '../data/docs.ts'
+import { renderMarkdownFile } from '../data/markdown.ts'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import type { DocsAssetServer } from '../assets.ts'
+import { MarkdownContent } from './api/page.tsx'
 import { fileResponse } from './file-response.ts'
-import { Home } from './home.tsx'
 
 const apiDir = path.resolve(import.meta.dirname, '..', '..')
 const markdownDir = path.join(apiDir, 'build', 'md')
-const defaultPagefindAssetsDir = path.join(apiDir, 'build', 'site', 'assets', 'pagefind')
+const gettingStartedPath = path.join(import.meta.dirname, 'getting-started.md')
+const defaultPagefindAssetsDir = path.join(apiDir, 'build', 'site', '_assets', 'pagefind')
 
 interface RootControllerOptions {
-  activeVersion?: string
   assetServer: DocsAssetServer
   getDocsContext(): Promise<DocsContext>
   pagefindAssetsDir?: string
-  versions: Versions
 }
 
 export function createRootController(options: RootControllerOptions) {
@@ -39,27 +38,19 @@ export function createRootController(options: RootControllerOptions) {
       },
       async home({ render }) {
         let docsContext = await options.getDocsContext()
+        let { html, headings } = await renderMarkdownFile(
+          gettingStartedPath,
+          docsContext.docFilesLookup,
+          false,
+        )
         return render(
-          <Document
-            registry={docsContext.getRegistry(options.activeVersion)}
-            versions={options.versions}
-            activeVersion={options.activeVersion}
-          >
-            <Home />
+          <Document registry={docsContext.registry} headings={headings}>
+            <MarkdownContent html={html} />
           </Document>,
         )
       },
-      async lookup({ request }) {
-        let jsonPath = path.join(markdownDir, 'api.json')
-        if (!options.activeVersion) {
-          return fileResponse(request, jsonPath)
-        }
-
-        let content: Record<string, string> = JSON.parse(await fs.readFile(jsonPath, 'utf-8'))
-        for (let key in content) {
-          content[key] = getVersionedLookupHref(content[key], options.activeVersion)
-        }
-        return Response.json(content)
+      lookup({ request }) {
+        return fileResponse(request, path.join(markdownDir, 'api.json'))
       },
     },
   })

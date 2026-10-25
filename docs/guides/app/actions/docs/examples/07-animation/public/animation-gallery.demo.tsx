@@ -1,4 +1,4 @@
-import { css, on, type Handle, type RemixNode } from "remix/ui";
+import { css, on, type Handle, type RemixNode } from "remix/component";
 import { DefaultAnimate } from "./gallery/default-animate.tsx";
 import { EnterAnimation } from "./gallery/enter.tsx";
 import { ExitAnimation } from "./gallery/exit.tsx";

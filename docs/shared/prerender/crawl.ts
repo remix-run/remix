@@ -14,14 +14,13 @@ export interface CrawlOptions {
   paths?: string[]
   spider?: boolean
   concurrency?: number
-  ignorePageNofollow?: (pathname: string) => boolean
 }
 
 export async function* crawl<T extends RequestContext<any, any>>(
   router: Router<T>,
   options: CrawlOptions = {},
 ): AsyncIterableIterator<CrawlResult> {
-  let { paths = ['/'], spider = true, concurrency = 1, ignorePageNofollow } = options
+  let { paths = ['/'], spider = true, concurrency = 1 } = options
 
   let queue: string[] = []
   let visited = new Set<string>()
@@ -86,7 +85,7 @@ export async function* crawl<T extends RequestContext<any, any>>(
 
         enqueue(extractAssetPaths(dom.elements, pathname))
 
-        if (spider && (ignorePageNofollow?.(pathname) || shouldCrawlLinks(dom.elements))) {
+        if (spider && shouldCrawlLinks(dom.elements)) {
           enqueue(extractLinkPaths(dom.elements, pathname))
         }
       } else {

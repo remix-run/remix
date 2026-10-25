@@ -1,5 +1,11 @@
-import type { FrameContent } from 'remix/ui'
-import { run } from 'remix/ui'
+import type { FrameContent } from 'remix/component'
+import { run } from 'remix/component'
+import {
+  detectMultipleImportMapSupport,
+  importModule,
+  preloadShim,
+} from 'remix/multiple-import-maps-polyfill'
+import { reloadOnServerUpdate } from 'remix-docs-shared/hmr/browser'
 import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/search/browser'
 
 startNavigationGuard()
@@ -7,8 +13,18 @@ startPagefindSearch()
 
 const app = run({
   async loadModule(moduleUrl, exportName) {
-    let mod = await import(moduleUrl)
-    return mod[exportName]
+    let mod = await importModule(moduleUrl)
+    let Component = mod[exportName]
+    if (typeof Component !== 'function') {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+    }
+    return Component
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await detectMultipleImportMapSupport()) return preloads
+
+    preloadShim(preloads)
+    return []
   },
   async resolveFrame(src, options): Promise<FrameContent> {
     let headers = new Headers({
@@ -51,16 +67,18 @@ function getRequestBody(
 }
 
 app.addEventListener('error', (event) => {
-  console.error('Remix UI runtime error:', event.error)
+  console.error('Remix component runtime error:', event.error)
 })
+
+reloadOnServerUpdate(app)
 
 app.ready().catch(() => {})
 
-// HACK: `remix/ui` currently intercepts reloads and same-document hash
+// HACK: `remix/component` currently intercepts reloads and same-document hash
 // navigations because the current Navigation API entry has Remix runtime state.
-// That prevents dev refresh from reloading the document and breaks native hash
+// That prevents full-page reloads and breaks native hash
 // scrolling/history. Stop these navigations before the Remix listener sees them
-// so the browser keeps owning their behavior. Remove this once `remix/ui` ignores
+// so the browser keeps owning their behavior. Remove this once `remix/component` ignores
 // reloads and same-document hash navigations itself.
 function startNavigationGuard() {
   let navigation = (window as Window & { navigation?: EventTarget }).navigation

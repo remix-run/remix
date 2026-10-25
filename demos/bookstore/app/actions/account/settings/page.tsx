@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import type { User } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
@@ -35,6 +35,7 @@ export function AccountSettingsPage(handle: Handle<{ user: User }>) {
               Update Settings
             </button>
             <a
+              data-rmx-prefetch="intent"
               href={routes.account.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}

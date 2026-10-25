@@ -4,20 +4,20 @@ import {
   createAssetServerCompilationError,
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
-import { hashContent } from '../fingerprint.ts'
+import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
 import type { ResolvedModule } from './resolve.ts'
-import { composeSourceMaps } from '../source-maps.ts'
+import { composeSourceMaps, replaceSourceMapMappings } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
 
 export type EmittedAsset = {
   content: string
   etag: string
+  fingerprint: string
 }
 
 export type EmittedModule = {
   code: EmittedAsset
   fingerprint: string | null
-  importUrls: string[]
   sourceMap: EmittedAsset | null
 }
 
@@ -32,46 +32,47 @@ type EmitResult =
     }
 
 type RewriteImportsOptions = {
-  getHmrImportTimestamp(identityPath: string): number | null
-  getServedUrl(identityPath: string): Promise<string>
+  getImportSpecifier(identityPath: string, originalSpecifier?: string): string
   getStableUrl(identityPath: string): string
 }
 
 export async function emitResolvedModule(
   resolvedModule: ResolvedModule,
   options: {
-    getHmrImportTimestamp(identityPath: string): number | null
-    getServedUrl(identityPath: string): Promise<string>
+    fingerprintAssets: boolean
+    getImportSpecifier(identityPath: string, originalSpecifier?: string): string
     getStableUrl(identityPath: string): string
     hmrClientPathname?: string
     sourceMaps?: 'external' | 'inline'
   },
 ): Promise<EmitResult> {
   try {
-    let importUrls = await Promise.all(
-      resolvedModule.deps.map((depPath) => options.getServedUrl(depPath)),
-    )
-    let rewriteResult = await rewriteImports(resolvedModule, options)
+    let rewriteResult = rewriteImports(resolvedModule, options)
     let finalCode = prependHmrContext(resolvedModule, rewriteResult.code, options)
+    let sourceMap = rewriteResult.sourceMap
+      ? await createEmittedAsset(rewriteResult.sourceMap)
+      : null
 
     if (rewriteResult.sourceMap) {
       if (options.sourceMaps === 'inline') {
         let encoded = Buffer.from(rewriteResult.sourceMap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (options.sourceMaps === 'external') {
-        finalCode += `\n//# sourceMappingURL=${await options.getServedUrl(resolvedModule.identityPath)}.map`
+        finalCode += `\n//# sourceMappingURL=${formatFingerprintedPathname(
+          resolvedModule.stableUrlPathname,
+          options.fingerprintAssets && sourceMap ? sourceMap.fingerprint : null,
+        )}.map`
       }
     }
+
+    let code = await createEmittedAsset(finalCode)
 
     return {
       ok: true,
       value: {
-        code: await createEmittedAsset(finalCode),
-        fingerprint: resolvedModule.fingerprint,
-        importUrls,
-        sourceMap: rewriteResult.sourceMap
-          ? await createEmittedAsset(rewriteResult.sourceMap)
-          : null,
+        code,
+        fingerprint: options.fingerprintAssets ? code.fingerprint : null,
+        sourceMap,
       },
     }
   } catch (error) {
@@ -82,49 +83,130 @@ export async function emitResolvedModule(
   }
 }
 
-async function rewriteImports(
+function rewriteImports(
   resolvedModule: ResolvedModule,
   options: RewriteImportsOptions,
-): Promise<{ code: string; sourceMap: string | null }> {
+): { code: string; sourceMap: string | null } {
   let rewrittenSource = new MagicString(resolvedModule.rawCode)
+  let changed = false
+  let edits: Array<{ end: number; replacementLength: number; start: number }> = []
+  let rewriteMappings: Array<{
+    declarationStart: number
+    name?: string
+    originalOffset: number
+    replacementOffset: number
+  }> = []
+  let rewrittenRanges = resolvedModule.importRewrites.map(({ start, end }) => ({
+    start,
+    end,
+  }))
+
+  for (let declaration of resolvedModule.importRewrites) {
+    let replacement = ''
+    for (let { depPath, sourceStart, specifiers } of declaration.imports) {
+      let url = options.getImportSpecifier(depPath)
+      if (replacement.length > 0) replacement += '\n'
+      replacement += specifiers.length === 0 ? 'import ' : 'import { '
+      for (let index = 0; index < specifiers.length; index++) {
+        let { authoredImportedName, importedName, importedStart, localName, localStart } =
+          specifiers[index]
+        if (index > 0) replacement += ', '
+        rewriteMappings.push({
+          declarationStart: declaration.start,
+          replacementOffset: replacement.length,
+          originalOffset: importedStart,
+          name: authoredImportedName,
+        })
+        replacement += importedName
+        if (importedName !== localName) {
+          replacement += ' as '
+          rewriteMappings.push({
+            declarationStart: declaration.start,
+            replacementOffset: replacement.length,
+            originalOffset: localStart,
+            name: localName,
+          })
+          replacement += localName
+        }
+      }
+      if (specifiers.length > 0) replacement += ' } from '
+      let stringifiedUrl = JSON.stringify(url)
+      rewriteMappings.push({
+        declarationStart: declaration.start,
+        replacementOffset: replacement.length + 1,
+        originalOffset: sourceStart,
+      })
+      replacement += `${stringifiedUrl};`
+    }
+    overwrite(declaration.start, declaration.end, replacement)
+    changed = true
+  }
 
   for (let imported of resolvedModule.imports) {
-    let url = await options.getServedUrl(imported.depPath)
-    let hmrImportTimestamp = options.getHmrImportTimestamp(imported.depPath)
-    if (hmrImportTimestamp !== null) {
-      url = addTimestampQuery(url, hmrImportTimestamp)
+    if (
+      rewrittenRanges.some((range) => imported.start >= range.start && imported.end <= range.end)
+    ) {
+      continue
     }
-    rewrittenSource.overwrite(
+    let replacementSpecifier = options.getImportSpecifier(imported.depPath, imported.specifier)
+    if (replacementSpecifier === imported.compiledSpecifier) continue
+
+    overwrite(
       imported.start,
       imported.end,
-      imported.quote ? `${imported.quote}${url}${imported.quote}` : url,
+      imported.quote
+        ? `${imported.quote}${replacementSpecifier}${imported.quote}`
+        : replacementSpecifier,
     )
+    changed = true
   }
 
   for (let acceptedDep of resolvedModule.hmr.acceptedDeps) {
     let url = options.getStableUrl(acceptedDep.depPath)
-    rewrittenSource.overwrite(
+    overwrite(
       acceptedDep.start,
       acceptedDep.end,
       acceptedDep.quote ? `${acceptedDep.quote}${url}${acceptedDep.quote}` : url,
     )
+    changed = true
   }
 
-  let code = rewrittenSource.toString()
+  let code = changed ? rewrittenSource.toString() : resolvedModule.rawCode
   let sourceMap =
-    resolvedModule.sourceMap &&
-    (resolvedModule.imports.length > 0 || resolvedModule.hmr.acceptedDeps.length > 0)
+    resolvedModule.sourceMap && changed
       ? composeSourceMaps(
-          rewrittenSource.generateMap({ hires: true }).toString(),
+          replaceSourceMapMappings(
+            rewrittenSource.generateMap({ hires: true }).toString(),
+            code,
+            resolvedModule.rawCode,
+            rewriteMappings.map(({ declarationStart, replacementOffset, ...mapping }) => ({
+              ...mapping,
+              generatedOffset: getGeneratedOffset(declarationStart, edits) + replacementOffset,
+            })),
+          ),
           resolvedModule.sourceMap,
         )
       : resolvedModule.sourceMap
 
   return { code, sourceMap }
+
+  function overwrite(start: number, end: number, replacement: string): void {
+    rewrittenSource.overwrite(start, end, replacement)
+    edits.push({ end, replacementLength: replacement.length, start })
+  }
 }
 
-function addTimestampQuery(pathname: string, timestamp: number): string {
-  return `${pathname}${pathname.includes('?') ? '&' : '?'}t=${timestamp}`
+function getGeneratedOffset(
+  originalOffset: number,
+  edits: readonly { end: number; replacementLength: number; start: number }[],
+): number {
+  let generatedOffset = originalOffset
+  for (let edit of edits) {
+    if (edit.end <= originalOffset) {
+      generatedOffset += edit.replacementLength - (edit.end - edit.start)
+    }
+  }
+  return generatedOffset
 }
 
 function prependHmrContext(
@@ -148,9 +230,11 @@ function prependHmrContext(
 }
 
 async function createEmittedAsset(content: string): Promise<EmittedAsset> {
+  let fingerprint = await hashContent(content)
   return {
     content,
-    etag: `W/"${await hashContent(content)}"`,
+    etag: `W/"${fingerprint}"`,
+    fingerprint,
   }
 }
 

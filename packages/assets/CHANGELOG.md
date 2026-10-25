@@ -2,6 +2,241 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Reduce server rendering work by caching `getScriptEntry()` metadata between calls. A warm lookup now takes about 3 µs instead of 210 µs and no longer touches the filesystem. Watched file changes and browser HMR events clear the cache, failed requests can be retried, and each caller receives a separate copy of the metadata. ([#12005](https://github.com/remix-run/remix/pull/12005))
+
+- Ensure script entries requested after an HMR update use current cache-busting URLs. ([#11980](https://github.com/remix-run/remix/pull/11980))
+
+- Avoid competing frame refreshes when a browser HMR update requires a full page reload. Server updates now wait for pending browser updates before refreshing server-rendered content. ([#11930](https://github.com/remix-run/remix/pull/11930))
+
+- Reduce rebuild work in watch mode. When a watched script changes, modules that import it are no longer transformed again because their own source did not change, and barrel file import analysis reuses its results for unchanged modules instead of parsing them again. In a benchmark that edits a widely imported module, each edit now runs about 2 transforms instead of 38 and rebuilds in 21 ms instead of 30 ms. ([#12010](https://github.com/remix-run/remix/pull/12010))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.1`](https://github.com/remix-run/remix/releases/tag/headers@1.0.1)
+
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`file-storage@1.0.0`](https://github.com/remix-run/remix/releases/tag/file-storage@1.0.0)
+  - [`headers@1.0.0`](https://github.com/remix-run/remix/releases/tag/headers@1.0.0)
+  - [`mime@1.0.0`](https://github.com/remix-run/remix/releases/tag/mime@1.0.0)
+
+## v0.8.0
+
+### Minor Changes
+
+- Customize transformed-file caching through the new `FileCache` interface, which requires only `get` and `put` methods. Existing `FileStorage` backends remain compatible without configuration changes (see #11859).
+
+  The new `createFsFileCache()` factory provides an opt-in filesystem LRU cache with configurable directory, entry count, and per-file and total size limits. It accepts native `File` objects and structurally compatible implementations such as `LazyFile`. Caching remains disabled when `files.cache` is omitted.
+
+  Reduce memory allocations when serving and caching transformed files.
+
+- Optimize named imports through eligible barrel files by rewriting them to their resolved implementation modules. This avoids intermediary requests and removes side-effect-free dependency branches that are no longer reachable while preserving package export restrictions.
+
+### Patch Changes
+
+- Include the configured HMR module importer and its dependencies in generated import maps, so its bare imports remain resolvable even when they are not used by the app entry.
+
+- Improve browser HMR for transitive dependency updates
+
+- Fix incorrect asset responses when concurrent file transforms modify their input bytes in place (see #11859).
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`file-storage@0.13.8`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.8)
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+  - [`mime@0.4.3`](https://github.com/remix-run/remix/releases/tag/mime@0.4.3)
+
+## v0.7.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
+## v0.7.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Fingerprinted assets now use hashes of their final emitted bytes instead of per-build source hashes. Replace `createAssetServer({ fingerprint: { buildId } })` with `createAssetServer({ fingerprint: true })` (see #11706).
+
+  If you enabled fingerprinting in `app/assets.ts`, update the option:
+
+  ```diff
+   import { createAssetServer } from 'remix/assets'
+
+   export const assets = createAssetServer({
+     basePath: '/assets',
+  -  fingerprint: { buildId: process.env.GIT_COMMIT_SHA },
+  +  fingerprint: true,
+     // ...
+   })
+  ```
+
+  If you use `files.cache` and previously relied on `fingerprint.buildId` to namespace persisted transformed file cache entries, move that value to `files.cacheKey`:
+
+  ```diff
+   export const assets = createAssetServer({
+     files: {
+       cache,
+  +    cacheKey: process.env.GIT_COMMIT_SHA,
+     },
+     fingerprint: true,
+     // ...
+   })
+  ```
+
+  Production servers can then reuse transformed file outputs across restarts for the same build. When `files.cacheKey` is omitted, transformed file caches use a random per-process namespace.
+
+- BREAKING CHANGE: Custom browser HMR update events now carry JSON data in a `data` record instead of top-level `timestamp` and `updates` fields (see #11706).
+
+  Apps using the standard asset server and `createBrowserHmrChannel()` integration need no changes to their event handling. Give each tool a separate key in the record, for example `{ type: 'update', data: { 'my-tool@1': { version: 1 } } }`.
+
+  ```diff
+   type BrowserHmrEvent = {
+     type: 'update'
+  -  timestamp: number
+  -  updates: HmrBrowserUpdate[]
+  +  data: Record<string, BrowserHmrData>
+   }
+  ```
+
+- BREAKING CHANGE: Browser scripts now use import maps to resolve imports instead of rewriting import specifiers to asset URLs (see #11706). Apps must render each script entry's import map before its modulepreload links and module script.
+
+  To migrate an app created from the Remix app template:
+
+  In `app/assets.ts`, replace the separate entry href and preload calls with `getScriptEntry()`:
+
+  ```diff
+   const entry = 'app/actions/public/entry.ts'
+  -export const entryHref = await assets.getHref(entry)
+  -export const entryPreloads = await assets.getPreloads(entry)
+  +export const scriptEntry = await assets.getScriptEntry(entry)
+  ```
+
+  HMR appends mappings for updated modules to the document in additional `<script type="importmap">` elements. When HMR must support browsers without native support for multiple import maps, configure `remix/multiple-import-maps-polyfill` as its module importer:
+
+  ```diff
+   export const assets = createAssetServer({
+     // ...
+     hmr: isHmr
+  -    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+  +    ? {
+  +        channel: async () =>
+  +          (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+  +        moduleImporter: 'remix/multiple-import-maps-polyfill',
+  +      }
+       : undefined,
+     scripts: { loaders: isHmr ? [uiHmr()] : undefined },
+   })
+  ```
+
+  In `app/actions/document.tsx`, render the managed import map before the entry's preloads and module script:
+
+  ```diff
+   import type { Handle, RemixNode } from 'remix/ui'
+   import { css } from 'remix/ui'
+  +import { ImportMap } from 'remix/ui/server'
+
+  -import { entryHref, entryPreloads } from '../assets.ts'
+  +import { scriptEntry } from '../assets.ts'
+
+   export function Document(handle: Handle<DocumentProps>) {
+     return () => {
+       let { children, head, title = DEFAULT_TITLE } = handle.props
+  +    let { href, importMap, preloads } = scriptEntry
+
+       return (
+         <html lang="en">
+           <head>
+             {/* ... */}
+  -          {entryPreloads.map((href) => (
+  -            <link key={href} rel="modulepreload" href={href} />
+  +          <ImportMap value={importMap} />
+  +          {preloads.map((preloadHref) => (
+  +            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
+             ))}
+  -          <script type="module" src={entryHref}></script>
+  +          <script type="module" src={href}></script>
+           </head>
+           {/* ... */}
+  ```
+
+  `<ImportMap>` combines the entry map with mappings from blocking client entries so the initial document contains a single complete import map. Regular `<script type="importmap">` elements remain supported when this behavior is not needed.
+
+  The standard `render({ assets })` middleware resolves client entries with `getScriptEntry()` and includes their import maps in rendered documents and frame responses. Custom rendering pipelines must include the returned `importMap` in their `resolveClientEntry()` metadata.
+
+  In `app/actions/public/entry.ts`, use `importModule()` to load client entries and `processClientEntryPreloads` to preload them in browsers that need the polyfill:
+
+  ```ts
+  import {
+    detectMultipleImportMapSupport,
+    importModule,
+    preloadShim,
+  } from 'remix/multiple-import-maps-polyfill'
+  import { run } from 'remix/ui'
+
+  run({
+    async loadModule(moduleUrl, exportName) {
+      let module = await importModule(moduleUrl)
+      let Component = module[exportName]
+      if (typeof Component !== 'function') {
+        throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+      }
+      return Component
+    },
+    async processClientEntryPreloads(preloads) {
+      if (await detectMultipleImportMapSupport()) return preloads
+
+      preloadShim(preloads)
+      return []
+    },
+  })
+  ```
+
+  Modules referenced by dynamic `import()` expressions are now fetched when the import runs, instead of being preloaded with the entry script. Imports with static specifiers still have entries in the import map.
+
+  The HMR module importer must be included in the initial import map. Importing it from the main client entry, as shown above, meets this requirement. If your app sets a Content Security Policy, follow the [polyfill CSP requirements](https://github.com/remix-run/remix/tree/main/packages/multiple-import-maps-polyfill#content-security-policy).
+
+  If you call `renderToStream()` directly, resolve client entries with `getScriptEntry()` and include their `importMap` in the object returned from `resolveClientEntry()`:
+
+  ```diff
+   let stream = renderToStream(node, {
+     async resolveClientEntry(entryId, component) {
+  -    let [href, preloads] = await Promise.all([
+  -      assets.getHref(entryId),
+  -      assets.getPreloads(entryId),
+  -    ])
+  +    let { href, importMap, preloads } = await assets.getScriptEntry(entryId)
+
+       return {
+         href,
+  +      importMap,
+         exportName: component.name,
+         preloads,
+       }
+     },
+   })
+  ```
+
+  `assets.getImportMap()` combines import maps for multiple script entries. The public types are `ScriptEntry` and `ScriptImportMap`.
+
+  In development, HMR installs new import map entries before loading an update. If an existing mapping would change, it reloads the page. Custom HMR importers can use `hmr.moduleImporter`, a module specifier resolved relative to the asset server root. That module must export `importModule(specifier, parentUrl)`.
+
+### Patch Changes
+
+- Fixed `IMPORT_OUTSIDE_MOUNTS` errors when serving dependencies installed in pnpm's global virtual store outside `rootDir`. The asset server now finds the store automatically, without requiring an extra mount in your configuration (see #11814).
+
 ## v0.6.0
 
 ### Minor Changes

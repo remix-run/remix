@@ -1,8 +1,7 @@
-import { expect } from '@remix-run/assert'
+import assert, { expect } from '@remix-run/assert'
 import { describe, it, mock } from '@remix-run/test'
-import { createRoot } from '../runtime/vdom.ts'
+import { createRoot } from '@remix-run/component'
 import { animateEntrance, animateExit } from './animate-mixins.ts'
-import { invariant } from '../runtime/invariant.ts'
 
 describe('animate entrance/exit mixins', () => {
   it('reclaims persisted nodes by type/key and reuses the same DOM element', () => {
@@ -15,7 +14,7 @@ describe('animate entrance/exit mixins', () => {
     root.flush()
 
     let first = container.querySelector('#reclaim-target')
-    invariant(first)
+    assert(first)
 
     root.render(null)
     root.flush()

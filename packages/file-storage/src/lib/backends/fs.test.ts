@@ -229,11 +229,12 @@ describe('fs file storage', () => {
     let retrieved = await storage.put('hello', file)
 
     assert.ok(await storage.has('hello'))
-    assert.ok(retrieved)
+    assert.ok(retrieved instanceof LazyFile)
     assert.equal(retrieved.name, 'hello.txt')
     assert.equal(retrieved.type, file.type)
     assert.equal(retrieved.lastModified, lastModified)
     assert.equal(retrieved.size, 13)
+    assert.equal(await retrieved.text(), 'Hello, world!')
   })
 
   describe('integration with form-data-parser', () => {

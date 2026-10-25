@@ -1,6 +1,6 @@
 # Remix API Reference
 
-A generated reference site for the Remix 3 packages. TypeDoc data and package overviews become Markdown, which the server renders into searchable, optionally versioned static HTML.
+A generated reference site for the Remix 3 packages. TypeDoc data and package overviews become Markdown, which the server renders into searchable static HTML.
 
 The hand-authored guides live in [`../guides`](../guides). Shared docs UI, styles, search, assets, and prerendering live in [`../shared`](../shared).
 
@@ -11,13 +11,13 @@ The hand-authored guides live in [`../guides`](../guides). Shared docs UI, style
 - `app/actions/public/` — root-owned browser entrypoint and stylesheet sources.
 - `app/assets.ts` — source asset server configured around colocated `public/` directories.
 - `app/data/` — generated-document discovery, Markdown rendering, demos, and navigation registry data.
-- `app/middleware/asset-entry.ts` and `render.ts` — request-scoped versioned asset hrefs and HTML rendering.
+- `app/middleware/asset-entry.ts` and `render.ts` — request-scoped asset hrefs and HTML rendering.
 - `app/ui/document.tsx` — API-specific document metadata and content rendered with the shared docs shell.
-- `app/routes.ts` and `app/router.ts` — typed route contract, middleware stack, controller wiring, and versioned route mounts.
+- `app/routes.ts` and `app/router.ts` — typed route contract, middleware stack, and controller wiring.
 - `app/utils/` — focused helpers shared with generation scripts.
 - `scripts/generate/` — TypeDoc loading, API filtering, package overview discovery, and Markdown generation.
 - `scripts/build-demos.ts` — discovers API examples and copies them into `build/demos/`.
-- `scripts/prerender.ts` — static-site entrypoint and version-picker integration.
+- `scripts/prerender.ts` — static-site entrypoint.
 - `server.ts` — local API docs server entrypoint.
 - `public/` — API-only static files. Shared docs assets live in `../shared/assets/`.
 
@@ -37,7 +37,11 @@ Pass a release tag when generated source links should target that tag:
 pnpm --filter remix-api run docs --tag remix@3.0.0
 ```
 
-`docs` accepts `--entryPoints` to change the TypeDoc inputs or `--input` to reuse an existing TypeDoc JSON file. Build the discovered demos separately:
+`docs` accepts `--entryPoints` to change the TypeDoc inputs or `--input` to reuse an existing TypeDoc JSON file.
+
+Unsupported JSDoc `@link` targets emit warnings and render as plain text so reference generation can continue.
+
+Build the discovered demos separately:
 
 ```sh
 pnpm --filter remix-api run build
@@ -56,7 +60,7 @@ pnpm --filter remix-api run test
 pnpm --filter remix-api run typecheck
 ```
 
-The development server listens on http://localhost:44100 by default. Set `PORT` to override.
+The development server listens on http://localhost:44100 by default. Set `PORT` to override. Edits to components, styles, browser modules, and `build/md/` show up in open pages without a refresh.
 
 ## Static site
 
@@ -68,4 +72,4 @@ pnpm --filter remix-api run build
 pnpm --filter remix-api run prerender
 ```
 
-Pass `--version` to emit version-prefixed routes and `--dir` to select the output directory. Shared and API-only public assets remain unversioned at the output root so one copy serves every generated version.
+Pass `--dir` to select the output directory. The site documents a single release; older docs are available at their Git tags.

@@ -1,4 +1,5 @@
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { unsafeHTML } from 'remix/component'
 
 import { TableOfContentsBehavior } from './public/table-of-contents.tsx'
 
@@ -47,14 +48,15 @@ export function DocsTableOfContents(handle: Handle<{ headings: DocsHeadingLink[]
           {handle.props.headings.map((heading, index) => (
             <li key={heading.id} class={heading.depth === 3 ? 'docs-toc__item--nested' : undefined}>
               <a
+                class="docs-nav-item"
                 href={`#${heading.id}`}
                 aria-current={index === 0 ? 'location' : undefined}
-                innerHTML={heading.titleHtml}
+                innerHTML={unsafeHTML(heading.titleHtml)}
               />
             </li>
           ))}
         </ol>
-        <script innerHTML={initializeTableOfContentsScript} />
+        <script innerHTML={unsafeHTML(initializeTableOfContentsScript)} />
         <TableOfContentsBehavior listId={listId} />
       </>
     )
