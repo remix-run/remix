@@ -62,7 +62,6 @@ describe('docs responses', () => {
     )
     let html = await response.text()
 
-    assert.match(getOpeningTag(html, 'nav', 'docs-breadcrumb'), /data-pagefind-ignore/)
     assert.match(getOpeningTag(html, 'nav', 'docs-pagination'), /data-pagefind-ignore/)
     assert.match(getTagById(html, 'aside', 'docs-secondary-navigation'), /data-pagefind-ignore/)
   })

@@ -85,6 +85,8 @@ Choose one development watcher. A long-lived asset server may watch source files
 
 Configure `formData({ uploadHandler, ...limits })` to parse multipart bodies once and stream file parts to storage. Set limits for headers, files, individual file size, part count, and total size, then translate known parser or storage failures into useful `400` or `413` responses.
 
+To avoid buffering large uploads in memory, try `formData()` from `remix/middleware/form-data/future`. It takes the same options, but each upload streams from the request body and must be read inside `uploadHandler`, for example by passing it to `storage.set()`. Future entrypoints are not stable and may change in any release.
+
 ## Store files by app-owned keys {#file-storage-memory-filesystem-s3}
 
 Use the common `FileStorage` API with memory, filesystem, or S3-compatible backends. Generate storage keys on the server, validate media type and size, keep original names as metadata rather than trusted paths, and authorize both writes and reads.

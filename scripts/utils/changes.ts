@@ -9,9 +9,11 @@ import {
   getGitHubReleaseUrl,
   getPackageDependencies,
   getGitTag,
+  GITHUB_REPO_URL,
 } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
 import { inc, major, prerelease, type ReleaseType } from './semver.ts'
+import { getFileIntroductionCommit, parsePrNumber } from './git.ts'
 
 const bumpTypes = ['major', 'minor', 'patch'] as const
 export type BumpType = (typeof bumpTypes)[number]
@@ -165,6 +167,8 @@ interface ChangeFile {
   file: string
   bump: BumpType
   content: string
+  gitSha?: string
+  prNumber?: number
 }
 
 interface ValidationError {
@@ -368,7 +372,14 @@ export function parsePackageChanges(
     }
 
     // File is valid, add to changes
-    changes.push({ file, bump, content })
+    let change: ChangeFile = { file, bump, content }
+    let commit = getFileIntroductionCommit(filePath)
+    if (commit) {
+      change.gitSha = commit.sha
+      let prNumber = parsePrNumber(commit.subject)
+      if (prNumber !== null) change.prNumber = prNumber
+    }
+    changes.push(change)
   }
 
   // Validate entering prerelease requires a major bump
@@ -621,16 +632,22 @@ function hasBreakingChangePrefix(content: string): boolean {
 /**
  * Formats a changelog entry from change file content
  */
-function formatChangelogEntry(content: string): string {
-  let lines = content.trim().split('\n')
+function formatChangelogEntry(change: ChangeFile): string {
+  let lines = change.content.trim().split('\n')
+  let link = ''
+  if (change.prNumber) {
+    link = ` ([#${change.prNumber}](${GITHUB_REPO_URL}/pull/${change.prNumber}))`
+  } else if (change.gitSha) {
+    link = ` ([${change.gitSha.slice(0, 7)}](${GITHUB_REPO_URL}/commit/${change.gitSha}))`
+  }
 
   if (lines.length === 1) {
-    return `- ${lines[0]}`
+    return `- ${lines[0]}${link}`
   }
 
   // Multi-line: first line is bullet, rest are indented
   let [firstLine, ...restLines] = lines
-  let formatted = [`- ${firstLine}`]
+  let formatted = [`- ${firstLine}${link}`]
 
   for (let index = 0; index < restLines.length; index++) {
     let line = restLines[index]
@@ -685,7 +702,7 @@ function generateBumpTypeSection(
   lines.push('')
 
   for (let change of sorted) {
-    lines.push(formatChangelogEntry(change.content))
+    lines.push(formatChangelogEntry(change))
     lines.push('')
   }
 
@@ -708,7 +725,7 @@ function generatePrereleaseChangesSection(
 
   let sortedChanges = sortChangelogChanges(changes)
   for (let change of sortedChanges) {
-    lines.push(formatChangelogEntry(change.content))
+    lines.push(formatChangelogEntry(change))
     lines.push('')
   }
 

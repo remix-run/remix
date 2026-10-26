@@ -26,8 +26,7 @@ import {
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
-import { isOnMixinDescriptor } from '../runtime/mixins/on-mixin.ts'
+import { composeMixedProps, isBrowserOnlyMixinDescriptor } from '../runtime/core/mix.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
@@ -108,13 +107,13 @@ export interface ResolveFrameContext {
 interface HydrationData {
   moduleUrl: string
   exportName: string
-  props: Record<string, unknown>
+  propsJson: string
 }
 
 interface UnresolvedHydrationData {
   entryId: string
   component: EntryComponent
-  props: Record<string, unknown>
+  propsJson: string
 }
 
 interface ResolvedClientEntry {
@@ -323,16 +322,20 @@ export function renderToStream(
   }
 
   function cancel(reason: unknown): void {
+    signal?.removeEventListener('abort', onAbort)
     if (!renderAbortController.signal.aborted) {
       renderAbortController.abort(reason)
     }
   }
 
   let signal = options?.signal
+  function onAbort(): void {
+    cancel(signal?.reason)
+  }
   if (signal?.aborted) {
     cancel(signal.reason)
   } else {
-    signal?.addEventListener('abort', () => cancel(signal.reason), { once: true })
+    signal?.addEventListener('abort', onAbort, { once: true })
   }
 
   return new ReadableStream({
@@ -352,21 +355,16 @@ export function renderToStream(
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
 
-        // If we have any tails from blocking frame streams, stream them now.
-        // These contain nested non-blocking frame templates (or other follow-up chunks)
-        // that must come after the initial document chunk.
-        let tailPromise =
-          context.blockingFrameTails.length > 0
-            ? streamByteStreams(context.blockingFrameTails, controller, context)
-            : Promise.resolve()
-
-        // If we have pending non-blocking frames, stream them as they resolve
-        let pendingPromise =
-          context.pendingFrames.length > 0
-            ? streamPendingFrames(context, controller, encoder)
-            : Promise.resolve()
-
-        await Promise.all([tailPromise, pendingPromise])
+        if (context.blockingFrameTails.length > 0) {
+          let tails = streamByteStreams(context.blockingFrameTails, controller, context)
+          if (context.pendingFrames.length > 0) {
+            await Promise.all([tails, streamPendingFrames(context, controller, encoder)])
+          } else {
+            await tails
+          }
+        } else if (context.pendingFrames.length > 0) {
+          await streamPendingFrames(context, controller, encoder)
+        }
 
         if (closeIfCancelled(controller, context)) return
         controller.close()
@@ -377,6 +375,8 @@ export function renderToStream(
         }
         onError(error)
         controller.error(error)
+      } finally {
+        signal?.removeEventListener('abort', onAbort)
       }
     },
     cancel(reason) {
@@ -813,18 +813,16 @@ function renderAttributes(
     if (!isAllowedHostPropName(key)) continue
 
     let value = props[key]
+    if (value === undefined || value === null) continue
     let attrName = transformAttributeName(key, isSvg)
-    let shouldStringifyBoolean = shouldStringifyBooleanAttribute(attrName)
-    if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
-      continue
-    }
-    value = sanitizeUrlAttribute(tag, attrName, value)
-
-    if (typeof value === 'boolean' && shouldStringifyBoolean) {
-      attrs += ` ${attrName}="${escapeHtml(String(value))}"`
-    } else if (value === true) {
-      attrs += ` ${attrName}`
+    if (typeof value === 'boolean') {
+      if (shouldStringifyBooleanAttribute(attrName)) {
+        attrs += ` ${attrName}="${value}"`
+      } else if (value) {
+        attrs += ` ${attrName}`
+      }
     } else {
+      value = sanitizeUrlAttribute(tag, attrName, value)
       attrs += ` ${attrName}="${escapeHtml(String(value))}"`
     }
   }
@@ -838,10 +836,23 @@ function resolveSsrMixedProps(
   context: RenderContext,
   frameState: SsrFrameState,
 ): ElementProps {
-  if (resolveMixDescriptors(initialProps).every(isOnMixinDescriptor)) return initialProps
+  let mix = initialProps.mix
+  if (!mix) return initialProps
+  if (Array.isArray(mix)) {
+    let hasServerMixin = false
+    for (let descriptor of mix) {
+      if (descriptor && !isBrowserOnlyMixinDescriptor(descriptor)) {
+        hasServerMixin = true
+        break
+      }
+    }
+    if (!hasServerMixin) return initialProps
+  } else if (isBrowserOnlyMixinDescriptor(mix)) {
+    return initialProps
+  }
 
   return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
-    if (isOnMixinDescriptor(descriptor)) return undefined
+    if (isBrowserOnlyMixinDescriptor(descriptor)) return undefined
     let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState)
     if (!runner) return undefined
     // Unlike the client runtime, a throwing mixin is isolated here so a
@@ -1016,9 +1027,19 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
       }
     }
 
+    // Fragment renders null and relies on the reconciler to render its
+    // children, so it can't go through the component branch below.
+    if (type === Fragment) {
+      return {
+        $rmxFragment: true,
+        props: transformProps(props),
+        key: serializeKey(element.key),
+      }
+    }
+
     // If it's a DOM tag, return a serializable shape with transformed props
     if (typeof type === 'string') {
-      return { $rmx: true, type, props: transformProps(props) }
+      return { $rmx: true, type, props: transformProps(props), key: serializeKey(element.key) }
     }
 
     // Component function: render synchronously, then unwrap its result
@@ -1092,6 +1113,14 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
   }
 }
 
+// Other key types don't survive JSON: bigints throw, and objects are revived
+// with a new identity on every render, so keyed diffs would remount them.
+function serializeKey(key: unknown): string | number | undefined {
+  if (typeof key === 'string') return key
+  if (typeof key === 'number' && Number.isFinite(key)) return key
+  return undefined
+}
+
 function buildEntrySegment(
   type: EntryComponent,
   props: any,
@@ -1105,10 +1134,12 @@ function buildEntrySegment(
 
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, frameState)
+  let propsJson = JSON.stringify(props, replacer)
+  if (propsJson === undefined) throw new TypeError('Client entry props must serialize to JSON')
   context.unresolvedHydrationData.set(instanceId, {
     entryId: type.$entryId,
     component: type,
-    props: JSON.parse(JSON.stringify(props, replacer)),
+    propsJson,
   })
 
   output.push('<!-- /rmx:h -->')
@@ -1154,7 +1185,7 @@ async function resolveClientEntries(
   let resolvedEntries = new Map<EntryComponent, ResolvedClientEntry>()
 
   for (let [hydrationId, unresolvedHydrationData] of context.unresolvedHydrationData) {
-    let { entryId, component, props } = unresolvedHydrationData
+    let { entryId, component, propsJson } = unresolvedHydrationData
     let resolvedEntry = resolvedEntries.get(component)
     if (!resolvedEntry) {
       resolvedEntry = resolveClientEntry
@@ -1168,7 +1199,7 @@ async function resolveClientEntries(
     context.hydrationData.set(hydrationId, {
       exportName: resolvedEntry.exportName,
       moduleUrl: resolvedEntry.href,
-      props,
+      propsJson,
     })
   }
 
@@ -1235,21 +1266,22 @@ function validateClientEntriesForHydration(context: RenderContext): void {
   }
 }
 
+// Joining once avoids building a deep rope of thousands of small strings, which raises RSS.
 function serializeSegment(segments: Segment[]): string {
-  let html = ''
+  let parts: string[] = []
   for (let seg of segments) {
     if (typeof seg === 'string') {
-      html += seg
+      parts.push(seg)
     } else if (seg.kind === 'static') {
-      html += seg.html
+      parts.push(seg.html)
     } else {
-      html += `<!-- rmx:f:${seg.frameId} -->`
-      if (typeof seg.content === 'string') html += seg.content
-      else if (seg.content) html += serializeSegment(seg.content)
-      html += '<!-- /rmx:f -->'
+      parts.push(`<!-- rmx:f:${seg.frameId} -->`)
+      if (typeof seg.content === 'string') parts.push(seg.content)
+      else if (seg.content) parts.push(serializeSegment(seg.content))
+      parts.push('<!-- /rmx:f -->')
     }
   }
-  return html
+  return parts.join('')
 }
 
 function escapeHtml(str: string): string {
@@ -1484,20 +1516,22 @@ function buildRmxDataScript(context: RenderContext): string {
     return ''
   }
 
-  let data: {
-    h?: Record<string, HydrationData>
-    f?: Record<string, FrameData>
-  } = {}
-
+  let fields: string[] = []
   if (context.hydrationData.size > 0) {
-    data.h = Object.fromEntries(context.hydrationData)
+    let entries: string[] = []
+    for (let [id, { exportName, moduleUrl, propsJson }] of context.hydrationData) {
+      entries.push(
+        `${JSON.stringify(id)}:{"exportName":${JSON.stringify(exportName)},"moduleUrl":${JSON.stringify(moduleUrl)},"props":${propsJson}}`,
+      )
+    }
+    fields.push(`"h":{${entries.join(',')}}`)
   }
 
   if (context.frameData.size > 0) {
-    data.f = Object.fromEntries(context.frameData)
+    fields.push(`"f":${JSON.stringify(Object.fromEntries(context.frameData))}`)
   }
 
-  let serializedData = escapeScriptJson(JSON.stringify(data))
+  let serializedData = escapeScriptJson(`{${fields.join(',')}}`)
   return `<script type="application/json" id="rmx-data">${serializedData}</script>`
 }
 

@@ -1,11 +1,13 @@
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
+import { docsAssetHmrOptions } from 'remix-docs-shared/hmr/assets'
 
 import { assetsBase } from './routes.ts'
 
 const nodeEnv = process.env.NODE_ENV ?? 'production'
 const isDevelopment = nodeEnv === 'development'
 const isProduction = nodeEnv === 'production'
+const { hmr, scriptLoaders, watch } = docsAssetHmrOptions
 
 export const assetServer = createAssetServer({
   basePath: assetsBase,
@@ -26,25 +28,20 @@ export const assetServer = createAssetServer({
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
   fingerprint: isProduction,
-  watch: false,
+  watch,
+  hmr,
   scripts: {
     define: {
       'process.env.NODE_ENV': JSON.stringify(nodeEnv),
     },
+    loaders: scriptLoaders,
   },
 })
 
 const scriptEntryPath = path.resolve(import.meta.dirname, 'actions/public/entry.ts')
-const devRefreshScriptEntry = path.resolve(import.meta.dirname, 'actions/public/dev-refresh.ts')
 const stylesheetEntry = path.resolve(import.meta.dirname, 'actions/public/docs.css')
 
 export const scriptEntry = await assetServer.getScriptEntry(scriptEntryPath)
 export const stylesheetHref = await assetServer.getHref(stylesheetEntry)
 export const stylesheetPreloads = await assetServer.getPreloads(stylesheetEntry)
-export const devRefreshScript = isProduction
-  ? undefined
-  : await assetServer.getScriptEntry(devRefreshScriptEntry)
-export const importMap = await assetServer.getImportMap([
-  scriptEntryPath,
-  ...(isProduction ? [] : [devRefreshScriptEntry]),
-])
+export const importMap = await assetServer.getImportMap(scriptEntryPath)

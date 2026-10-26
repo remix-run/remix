@@ -44,7 +44,7 @@ Exports covered by the same README are grouped together.
 | `remix/fetch-proxy` | An HTTP proxy for the web Fetch API | [README](src/fetch-proxy/README.md) |
 | `remix/file-storage`<br>`remix/file-storage/fs`<br>`remix/file-storage/memory` | Key/value storage for JavaScript File objects | [README](src/file-storage/README.md) |
 | `remix/file-storage/s3` | S3 backend for remix/file-storage | [README](src/file-storage-s3/README.md) |
-| `remix/form-data-parser` | A request.formData() wrapper with streaming file upload handling | [README](src/form-data-parser/README.md) |
+| `remix/form-data-parser`<br>`remix/form-data-parser/future` | A request.formData() wrapper with streaming file upload handling | [README](src/form-data-parser/README.md) |
 | `remix/fs` | Filesystem utilities using the Web File API | [README](src/fs/README.md) |
 | `remix/headers`<br>`remix/headers/accept`<br>`remix/headers/accept-encoding`<br>`remix/headers/accept-language`<br>`remix/headers/cache-control`<br>`remix/headers/content-disposition`<br>`remix/headers/content-range`<br>`remix/headers/content-type`<br>`remix/headers/cookie`<br>`remix/headers/if-match`<br>`remix/headers/if-none-match`<br>`remix/headers/if-range`<br>`remix/headers/range`<br>`remix/headers/raw-headers`<br>`remix/headers/set-cookie`<br>`remix/headers/vary` | A toolkit for working with HTTP headers in JavaScript | [README](src/headers/README.md) |
 | `remix/html-template` | HTML template tag with auto-escaping for JavaScript | [README](src/html-template/README.md) |
@@ -55,14 +55,14 @@ Exports covered by the same README are grouped together.
 | `remix/middleware/cop` | Middleware for tokenless cross-origin protection in Fetch API servers | [README](src/cop-middleware/README.md) |
 | `remix/middleware/cors` | Middleware for handling CORS in Fetch API servers | [README](src/cors-middleware/README.md) |
 | `remix/middleware/csrf` | Middleware for CSRF protection in Fetch API servers | [README](src/csrf-middleware/README.md) |
-| `remix/middleware/form-data` | Middleware for parsing FormData from request bodies | [README](src/form-data-middleware/README.md) |
+| `remix/middleware/form-data`<br>`remix/middleware/form-data/future` | Middleware for parsing FormData from request bodies | [README](src/form-data-middleware/README.md) |
 | `remix/middleware/logger` | Middleware for logging HTTP requests and responses | [README](src/logger-middleware/README.md) |
 | `remix/middleware/method-override` | Middleware for overriding HTTP request methods from form data | [README](src/method-override-middleware/README.md) |
 | `remix/middleware/render` | Conventional Remix component and custom request-scoped render middleware | [README](src/render-middleware/README.md) |
 | `remix/middleware/session` | Middleware for managing sessions with cookie-based storage | [README](src/session-middleware/README.md) |
 | `remix/middleware/static` | Middleware for serving static files from the filesystem | [README](src/static-middleware/README.md) |
 | `remix/mime` | Utilities for working with MIME types | [README](src/mime/README.md) |
-| `remix/multipart-parser`<br>`remix/multipart-parser/node` | A fast, efficient parser for multipart streams in any JavaScript environment | [README](src/multipart-parser/README.md) |
+| `remix/multipart-parser`<br>`remix/multipart-parser/future`<br>`remix/multipart-parser/node` | A fast, efficient parser for multipart streams in any JavaScript environment | [README](src/multipart-parser/README.md) |
 | `remix/multiple-import-maps-polyfill` | Polyfill for dynamic JavaScript imports that depend on import maps added at runtime | [README](src/multiple-import-maps-polyfill/README.md) |
 | `remix/node-fetch-server`<br>`remix/node-fetch-server/test` | Build servers for Node.js using the web fetch API | [README](src/node-fetch-server/README.md) |
 | `remix/node-hmr`<br>`remix/node-hmr/runtime`<br>`remix/node-hmr/types` | Run Node.js applications with Hot Module Reloading | [README](src/node-hmr/README.md) |

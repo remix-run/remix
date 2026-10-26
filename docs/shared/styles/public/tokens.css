@@ -62,18 +62,19 @@
   --rmx-color-text-primary: #1b1b1f;
   --rmx-color-text-secondary: #6b7280;
   --rmx-color-text-muted: #9ca3af;
-  --rmx-color-text-link: #0578be;
-  --rmx-color-text-link-hover: #022f4b;
+  --rmx-color-text-link: #0074c0;
+  --rmx-color-text-link-hover: #00304a;
 
   --rmx-color-border-subtle: #e5e7eb;
   --rmx-color-border-default: #d1d5db;
   --rmx-color-border-strong: #9ca3af;
 
-  --rmx-color-focus-ring: #0578be;
-  --rmx-color-accent: #0578be;
-  --rmx-color-accent-hover: #022f4b;
-  --rmx-color-eyebrow: #eb2358;
+  --rmx-color-focus-ring: #0074c0;
+  --rmx-color-accent: #0074c0;
+  --rmx-color-accent-hover: #00304a;
+  --rmx-color-warning: #9a720b;
   --rmx-color-code-highlight: rgb(34 197 94 / 18%);
+  --rmx-color-code-background: #f2f2f4;
 
   --rmx-color-action-primary-background: #1b1b1f;
   --rmx-color-action-primary-background-hover: #3d3d41;
@@ -99,8 +100,13 @@
 
   --site-header-height: 64px;
   --docs-shell-background: #f3f5f7;
-  --docs-footer-foreground: #69707b;
-  --docs-footer-link-foreground: #858c98;
+  --docs-selection-background: #ffdf5f;
+  --docs-selection-foreground: #1b1b1f;
+  --docs-backdrop: rgb(0 0 0 / 32%);
+  --docs-panel-shadow: 0 12px 32px rgb(0 0 0 / 18%);
+  --docs-menu-shadow: 0 12px 24px rgb(0 0 0 / 12%);
+  --docs-floating-button-shadow: 0 2px 6px rgb(0 0 0 / 8%);
+  --docs-key-border: rgb(0 0 0 / 2%);
   --docs-chapter-card-background: #f7f7f8;
   --docs-chapter-card-hover-background: color-mix(
     in srgb,
@@ -109,13 +115,26 @@
   );
   --docs-nav-duration: 300ms;
   --docs-nav-easing: ease-in-out;
-  --docs-nav-link: #0074c0;
-  --docs-nav-link-hover: #00304a;
+  /* Header links match remix.run: gray at rest, link blue when hovered, focused or current. */
+  --docs-header-link: #313539;
+  --docs-header-link-active: var(--rmx-color-text-link);
   --docs-nav-hover-background: rgb(0 0 0 / 5%);
   --docs-nav-selected-background: rgb(0 0 0 / 10%);
+  --docs-sidebar-heading: var(--rmx-color-text-secondary);
+  --docs-sidebar-link: var(--rmx-color-text-primary);
+  --docs-sidebar-link-hover: var(--rmx-color-text-primary);
+  --docs-sidebar-group-gap: 22px;
   --docs-nav-control-border: rgb(0 0 0 / 10%);
-  --docs-sidebar-offset: 288px;
-  --docs-sidebar-inline-start: 24px;
+  --docs-nav-item-height: 36px;
+  --docs-nav-item-gap: 4px;
+  --docs-nav-item-inset: 12px;
+  --docs-font-size-ui: 14px;
+  --docs-font-size-small: 14px;
+  --docs-font-size-label: 12px;
+  --docs-letter-spacing-label: 0.6px;
+  --docs-sidebar-offset: 300px;
+  --docs-edge-inset: 36px;
+  --docs-sidebar-inline-start: var(--docs-edge-inset);
   --docs-sidebar-content-width: 240px;
   --docs-collapsed-offset: 24px;
   --docs-collapsed-content-padding: 220px;
@@ -142,7 +161,7 @@
   --pf-skeleton: var(--rmx-surface-lvl3);
   --pf-skeleton-shine: var(--rmx-surface-lvl4);
   --pf-hover: var(--rmx-surface-lvl2);
-  --pf-mark: var(--docs-nav-link-hover);
+  --pf-mark: var(--rmx-color-text-link-hover);
   --pf-scroll-shadow: light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 10%));
   --pf-shadow-sm: var(--rmx-shadow-sm);
   --pf-shadow-md: var(--rmx-shadow-md);
@@ -154,6 +173,12 @@
   --pf-outline-focus: var(--rmx-color-focus-ring);
   --pf-outline-width: 1px;
   --pf-modal-backdrop: light-dark(rgb(0 0 0 / 50%), rgb(0 0 0 / 72%));
+}
+
+@media (width >= 900px) {
+  :root {
+    --site-header-height: 88px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -173,12 +198,13 @@
     --rmx-color-focus-ring: #2dacf9;
     --rmx-color-accent: #2dacf9;
     --rmx-color-accent-hover: #63c2fb;
-    --rmx-color-eyebrow: #ff5d7a;
+    --rmx-color-warning: #c7a45a;
 
     --rmx-color-border-subtle: #2a2a30;
     --rmx-color-border-default: #3f3f46;
     --rmx-color-border-strong: #52525b;
     --rmx-color-code-highlight: rgb(34 197 94 / 22%);
+    --rmx-color-code-background: #1c1c21;
 
     --rmx-color-action-primary-background: #e7e7ea;
     --rmx-color-action-primary-background-hover: #cbcbce;
@@ -199,16 +225,13 @@
     --rmx-color-action-danger-border: #f87171;
 
     --docs-shell-background: #0d0d10;
-    --docs-footer-foreground: #9aa0aa;
-    --docs-footer-link-foreground: #9aa0aa;
     --docs-chapter-card-background: var(--rmx-surface-lvl2);
     --docs-chapter-card-hover-background: color-mix(
       in srgb,
       var(--docs-chapter-card-background) 95%,
       #fff
     );
-    --docs-nav-link: #2dacf9;
-    --docs-nav-link-hover: var(--rmx-color-text-link-hover);
+    --docs-header-link: #e5e7eb;
     --docs-nav-hover-background: var(--rmx-surface-lvl4);
     --docs-nav-selected-background: var(--rmx-surface-lvl4);
     --docs-nav-control-border: var(--rmx-color-border-default);

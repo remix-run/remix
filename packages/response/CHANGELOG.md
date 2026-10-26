@@ -2,6 +2,19 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- `createFileResponse()` now ignores valid range requests on empty files and returns `416 Range Not Satisfiable` for zero-length suffix ranges on nonempty files, avoiding invalid partial responses. ([#12043](https://github.com/remix-run/remix/pull/12043))
+
+- Reduce memory use when streaming HTML by checking a short prefix for a doctype instead of decoding the whole first chunk. Leading whitespace and declarations that cross the prefix boundary continue to work. ([#12016](https://github.com/remix-run/remix/pull/12016))
+
+- `createFileResponse()` now ignores unsupported `Range` units and returns the full file instead of interpreting those ranges as byte ranges. ([#12045](https://github.com/remix-run/remix/pull/12045))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.1`](https://github.com/remix-run/remix/releases/tag/headers@1.0.1)
+
 ## v1.0.0
 
 ### Major Changes

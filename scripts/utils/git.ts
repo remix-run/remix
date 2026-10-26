@@ -1,7 +1,37 @@
 import * as cp from 'node:child_process'
+import * as path from 'node:path'
 
 function execGit(args: string[], cwd?: string): string {
   return cp.execFileSync('git', args, { cwd, stdio: 'pipe', encoding: 'utf-8' }).trim()
+}
+
+/** Returns the add commit, so later edits don't change a file's attribution. */
+export function getFileIntroductionCommit(
+  filePath: string,
+): { sha: string; subject: string } | null {
+  let absolutePath = path.resolve(filePath)
+  let output = execGit(
+    [
+      'log',
+      '-1',
+      '--follow',
+      '--diff-filter=A',
+      '--format=%H%n%s',
+      '--',
+      path.basename(absolutePath),
+    ],
+    path.dirname(absolutePath),
+  )
+  if (!output) return null
+
+  let [sha, subject = ''] = output.split('\n')
+  return { sha, subject }
+}
+
+/** Parses GitHub squash-merge and merge-commit subject lines. */
+export function parsePrNumber(subject: string): number | null {
+  let match = subject.match(/\(#(\d+)\)\s*$/) ?? subject.match(/^Merge pull request #(\d+)\b/i)
+  return match ? Number(match[1]) : null
 }
 
 function parseVersionFromPackageJson(content: string): string | null {

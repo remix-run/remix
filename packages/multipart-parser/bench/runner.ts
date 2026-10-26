@@ -5,6 +5,7 @@ import * as messages from './messages.ts'
 import * as busboy from './parsers/busboy.ts'
 import * as fastifyBusboy from './parsers/fastify-busboy.ts'
 import * as multipartParser from './parsers/multipart-parser.ts'
+import * as multipartParserFuture from './parsers/multipart-parser-future.ts'
 import * as multipasta from './parsers/multipasta.ts'
 
 const benchmarks = [
@@ -239,6 +240,9 @@ async function runBenchmarks(
 
   if (parserName === 'multipart-parser' || parserName === undefined) {
     results['multipart-parser'] = await runParserBenchmarks(multipartParser, options)
+  }
+  if (parserName === 'multipart-parser-future' || parserName === undefined) {
+    results['multipart-parser/future'] = await runParserBenchmarks(multipartParserFuture, options)
   }
   if (parserName === 'multipasta' || parserName === undefined) {
     results['multipasta'] = await runParserBenchmarks(multipasta, options)

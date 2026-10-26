@@ -56,6 +56,13 @@ describe('mixin composition ssr/client parity', () => {
     )
   })
 
+  it('preserves props with empty and conditional event mixins', async () => {
+    await expectParity(<div id="empty" mix={[]} />, { id: 'empty' })
+    await expectParity(<div id="conditional" mix={[false, on('click', () => {}), null]} />, {
+      id: 'conditional',
+    })
+  })
+
   it('composes prop mixins around DOM event listeners', async () => {
     let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
       <handle.element {...props} title={title} />

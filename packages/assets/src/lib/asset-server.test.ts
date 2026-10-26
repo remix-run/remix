@@ -516,7 +516,7 @@ describe('asset-server', () => {
     assert.equal(notModified.status, 304)
   })
 
-  it('does not match a stripped weak ETag prefix in If-None-Match', async () => {
+  it('matches a stripped weak ETag prefix in If-None-Match', async () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
     let assetServer = createTestServer(dir)
 
@@ -527,7 +527,7 @@ describe('asset-server', () => {
       'If-None-Match': response.headers.get('ETag')!.replace(/^W\//, ''),
     })
     assert.ok(notModified)
-    assert.equal(notModified.status, 200)
+    assert.equal(notModified.status, 304)
   })
 
   it('serves allow-listed internal modules directly by default with ETags', async () => {
@@ -3842,6 +3842,49 @@ describe('asset-server', () => {
           '/assets/app/entry.ts',
           '/assets/app/second.ts',
           '/assets/app/third.ts',
+        ])
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps rewritten barrel file imports when a module behind the barrel changes', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'app/package.json', { sideEffects: false })
+      await write(
+        caseDir,
+        'app/entry.ts',
+        ['import { first } from "./barrel.ts"', 'console.log(first)'].join('\n'),
+      )
+      await write(
+        caseDir,
+        'app/barrel.ts',
+        ['export { first } from "./first.ts"', 'export { second } from "./second.ts"'].join('\n'),
+      )
+      let firstPath = await write(caseDir, 'app/first.ts', 'export const first = 1')
+      await write(caseDir, 'app/second.ts', 'export const second = 2')
+      let assetServer = createWatchedTestServer(caseDir)
+
+      try {
+        let firstResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /from "\/assets\/app\/first\.ts"/)
+
+        await write(caseDir, 'app/first.ts', 'export const first = 10')
+        await emitWatchEvent(assetServer, firstPath, 'change')
+
+        let secondResponse = await getByFile(assetServer, 'app/entry.ts')
+        assert.ok(secondResponse)
+        let secondBody = await secondResponse.text()
+        assert.match(secondBody, /from "\/assets\/app\/first\.ts"/)
+        assert.doesNotMatch(secondBody, /from "\/assets\/app\/barrel\.ts"/)
+        assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+          '/assets/app/entry.ts',
+          '/assets/app/first.ts',
         ])
       } finally {
         await assetServer.close()

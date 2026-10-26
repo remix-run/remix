@@ -1,3 +1,33 @@
+/*
+ * Desktop sidebar collapse is driven by one animatable number: 0 when the
+ * sidebar is open and 1 when it is collapsed. Only this property transitions.
+ * Layout values are derived from it, so toggling the sidebar animates while
+ * crossing the mobile breakpoint just switches layouts instantly.
+ */
+@property --docs-nav-collapse {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+:root {
+  --docs-nav-collapse: 0;
+  --docs-content-offset: calc(
+    var(--docs-sidebar-offset) + (var(--docs-collapsed-offset) - var(--docs-sidebar-offset)) *
+      var(--docs-nav-collapse)
+  );
+  --docs-content-padding-start: calc(
+    var(--docs-main-padding) + (var(--docs-collapsed-content-padding) - var(--docs-main-padding)) *
+      var(--docs-nav-collapse)
+  );
+
+  transition: --docs-nav-collapse var(--docs-nav-duration) var(--docs-nav-easing);
+}
+
+:root[data-docs-nav-collapsed] {
+  --docs-nav-collapse: 1;
+}
+
 .docs-selection-list {
   --docs-selection-indicator-y: 0px;
   --docs-selection-indicator-height: 32px;
@@ -12,14 +42,11 @@
   z-index: 0;
   display: none;
   height: var(--docs-selection-indicator-height);
-  border-radius: 8px;
+  border-radius: var(--rmx-radius-md);
   background: var(--docs-nav-selected-background);
   content: '';
   pointer-events: none;
   transform: translateY(var(--docs-selection-indicator-y));
-  transition:
-    transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    height 180ms ease;
   will-change: transform;
 }
 
@@ -35,6 +62,15 @@
 .docs-selection-list[data-has-current] a[aria-current] {
   background: transparent;
   transition: none;
+}
+
+/* Mobile drawers open and close instantly; sliding panels felt sluggish on touch. */
+@media (width >= 900px) {
+  .docs-selection-list::before {
+    transition:
+      transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      height 180ms ease;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

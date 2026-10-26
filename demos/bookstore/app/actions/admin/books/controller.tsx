@@ -8,6 +8,7 @@ import { books } from '../../../data/schema.ts'
 import { requireAdmin } from '../../../middleware/admin.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
+import { resolveBookCover } from '../../../utils/book-images.ts'
 import { parseId } from '../../../utils/ids.ts'
 import { AdminBookFormPage } from './form.tsx'
 import { AdminBooksIndexPage } from './index-page.tsx'
@@ -94,6 +95,8 @@ export default createController(routes.admin.books, {
       if (!book) {
         return render(<AdminBookNotFoundPage />, { status: 404 })
       }
+
+      book = await resolveBookCover(book)
 
       return render(
         <AdminBookFormPage

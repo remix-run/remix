@@ -52,10 +52,15 @@ type ExportAnalysisCache = {
 }
 
 type ModuleStatements = {
-  body: Statement[]
-  hasErrors: boolean
+  canBeBarrelFile: boolean
   rawCode: string
+  statements: ImportExportStatement[]
 }
+
+type ImportExportStatement = Extract<
+  Statement,
+  { type: 'ExportAllDeclaration' | 'ExportNamedDeclaration' | 'ImportDeclaration' }
+>
 
 const emptyExportAnalysis: ExportAnalysis = {
   explicit: new Map(),
@@ -63,10 +68,6 @@ const emptyExportAnalysis: ExportAnalysis = {
   isBarrelFile: false,
   stars: [],
 }
-
-// Analysis only reads module-level import and export statements, so other statements are kept as
-// lightweight placeholders instead of retaining their full AST.
-const otherStatement = { type: 'ExpressionStatement' } as Statement
 
 export function createBarrelFileImportOptimizer(): (
   graph: ReadonlyMap<string, ResolvedModule>,
@@ -420,15 +421,15 @@ function getExportAnalysis(module: ResolvedModule, cache: ExportAnalysisCache): 
     return emptyExportAnalysis
   }
 
-  let statements = getModuleStatements(module, cache.statements)
+  let moduleStatements = getModuleStatements(module, cache.statements)
   let explicit = new Map<string, Reexport>()
   let importDeclarations: ImportDeclaration[] = []
   let importedLocals = new Map<string, Reexport>()
   let reexportedLocals = new Set<string>()
   let stars: string[] = []
-  let isBarrelFile = !statements.hasErrors && statements.body.length > 0
+  let isBarrelFile = moduleStatements.canBeBarrelFile
 
-  for (let statement of statements.body) {
+  for (let statement of moduleStatements.statements) {
     if (statement.type === 'ImportDeclaration') {
       let imported = findResolvedImport(
         module.imports,
@@ -564,7 +565,8 @@ function getExportAnalysis(module: ResolvedModule, cache: ExportAnalysisCache): 
 }
 
 // Re-resolving a module creates a new ResolvedModule, so statements are cached by file and code to
-// avoid parsing unchanged modules again.
+// avoid parsing unchanged modules again. Only module-level import and export statements are
+// retained because any other statement means the module is not a barrel file.
 function getModuleStatements(
   module: ResolvedModule,
   cache: Map<string, ModuleStatements>,
@@ -576,19 +578,23 @@ function getModuleStatements(
     lang: 'js',
     sourceType: 'module',
   })
-  let statements = {
-    body: parseResult.program.body.map((statement) =>
+  let canBeBarrelFile = parseResult.errors.length === 0 && parseResult.program.body.length > 0
+  let statements: ImportExportStatement[] = []
+  for (let statement of parseResult.program.body) {
+    if (
       statement.type === 'ImportDeclaration' ||
-      (statement.type === 'ExportNamedDeclaration' && statement.declaration === null) ||
-      statement.type === 'ExportAllDeclaration'
-        ? statement
-        : otherStatement,
-    ),
-    hasErrors: parseResult.errors.length > 0,
-    rawCode: module.rawCode,
+      statement.type === 'ExportAllDeclaration' ||
+      (statement.type === 'ExportNamedDeclaration' && statement.declaration === null)
+    ) {
+      statements.push(statement)
+    } else {
+      canBeBarrelFile = false
+    }
   }
-  cache.set(module.identityPath, statements)
-  return statements
+
+  let moduleStatements = { canBeBarrelFile, rawCode: module.rawCode, statements }
+  cache.set(module.identityPath, moduleStatements)
+  return moduleStatements
 }
 
 function findResolvedImport(

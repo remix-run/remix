@@ -57,6 +57,7 @@ export type {
   MixinDescriptor,
   MixinFactory,
   MixinHandle,
+  MixinOptions,
   MixinType,
   MixInput,
   MixValue,
@@ -74,3 +75,5 @@ export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 // -- Navigation --
 export { navigate } from './runtime/navigation.ts'
 export type { NavigationOptions } from './runtime/navigation.ts'
+export { prefetch } from './runtime/prefetch.ts'
+export type { PrefetchFrame, PrefetchOptions } from './runtime/prefetch.ts'
