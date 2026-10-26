@@ -14,13 +14,7 @@ Use this skill to draft and open a PR with consistent, high-signal writing. Keep
 1. Check the fast-path blockers first.
 
 - Check `git status --short --branch` and `git branch --show-current` before doing deeper prep.
-- If the repo is in a detached HEAD or worktree state and the user wants a PR opened, create a branch after the roadmap access preflight and before deeper prep.
-
-1. Check roadmap access before opening an eligible PR.
-
-- Only run this preflight when `origin` points to `github.com/remix-run/remix` and the active `gh` account is in `remix-run/remix-developers`. Check the account with `gh api user --jq '.login'` and team membership with `gh api orgs/remix-run/teams/remix-developers/members --paginate --jq '.[].login'`. Skip silently for forks, nonmembers, or an unavailable team lookup.
-- Before creating the PR, check for the write-capable `project` scope with `gh auth status -h github.com --json hosts --jq '[.hosts["github.com"][] | select(.active and .state == "success") | .scopes | split(", ") | index("project") != null] | any'`. `read:project` alone is insufficient.
-- If the scope is missing, run `gh auth refresh -h github.com -s project` and check again. If authorization cannot be completed, continue opening the PR and report that the roadmap update could not be completed.
+- If the repo is in a detached HEAD or worktree state and the user wants a PR opened, create a branch early.
 
 1. Gather only the context needed to write the PR.
 
@@ -76,6 +70,7 @@ gh pr create --base main --head <branch> --title "<title>" --body-file <file>
 - Get the current members of the `remix-run/remix-developers` team with `gh api orgs/remix-run/teams/remix-developers/members --paginate --jq '.[].login'`
 - If the team lookup fails or the PR author is not in the list, skip the rest of this step and do not assign an author or project.
 - Assign the `remix-developers` team member author with `gh pr edit <pr-url> --add-assignee <author-login>`. Report failures.
+- Before using `gh project`, check for the write-capable `project` scope with `gh auth status -h github.com --json hosts --jq '[.hosts["github.com"][] | select(.active and .state == "success") | .scopes | split(", ") | index("project") != null] | any'`. If it is missing, skip the project commands and report that `gh auth refresh -h github.com -s project` is needed.
 - Find the project titled exactly `Remix Roadmap` in `gh project list --owner remix-run`, then add the PR with `gh project item-add <project-number> --owner remix-run --url <pr-url>`. Do not guess the project number. Report failures.
 - Set its `Status` to `In Progress` with `gh project item-edit <project-number> --owner remix-run --url <pr-url> --field "Status" --value "In Progress"`. Report failures.
 
