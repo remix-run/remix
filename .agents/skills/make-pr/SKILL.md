@@ -14,7 +14,13 @@ Use this skill to draft and open a PR with consistent, high-signal writing. Keep
 1. Check the fast-path blockers first.
 
 - Check `git status --short --branch` and `git branch --show-current` before doing deeper prep.
-- If the repo is in a detached HEAD or worktree state and the user wants a PR opened, create a branch early.
+- If the repo is in a detached HEAD or worktree state and the user wants a PR opened, create a branch after the roadmap access preflight and before deeper prep.
+
+1. Check roadmap access before opening an eligible PR.
+
+- Only run this preflight when `origin` points to `github.com/remix-run/remix` and the active `gh` account is in `remix-run/remix-developers`. Check the account with `gh api user --jq '.login'` and team membership with `gh api orgs/remix-run/teams/remix-developers/members --paginate --jq '.[].login'`. Skip silently for forks, nonmembers, or an unavailable team lookup.
+- Before creating the PR, check for the write-capable `project` scope with `gh auth status -h github.com --json hosts --jq '[.hosts["github.com"][] | select(.active and .state == "success") | .scopes | split(", ") | index("project") != null] | any'`. `read:project` alone is insufficient.
+- If the scope is missing, run `gh auth refresh -h github.com -s project` and check again. If authorization cannot be completed, continue opening the PR and report that the roadmap update could not be completed.
 
 1. Gather only the context needed to write the PR.
 
