@@ -522,6 +522,37 @@ describe('run', () => {
     }
   })
 
+  it('generates npm scripts that run on Windows', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-scripts-'))
+    try {
+      let appDir = path.join(tmpDir, 'my-app')
+      let result = await captureOutput(() => run(['new', appDir, '--app-name', 'My App']))
+      assert.equal(result.exitCode, 0, result.stderr)
+
+      let packageJson = JSON.parse(
+        await fs.readFile(path.join(appDir, 'package.json'), 'utf8'),
+      ) as { scripts: Record<string, string> }
+
+      // A leading `NAME=value` assignment is POSIX shell syntax. npm runs
+      // scripts through cmd.exe on Windows, which treats it as a command and
+      // fails with "'NODE_ENV' is not recognized", so no script may start with
+      // one.
+      for (let [name, command] of Object.entries(packageJson.scripts)) {
+        assert.doesNotMatch(
+          command,
+          /^\s*[A-Za-z_][A-Za-z0-9_]*=/,
+          `the "${name}" script uses a POSIX-only inline environment variable: ${command}`,
+        )
+      }
+
+      // Production still opts into NODE_ENV=production, just portably.
+      let startScript = await fs.readFile(path.join(appDir, 'start.ts'), 'utf8')
+      assert.match(startScript, /process\.env\.NODE_ENV\s*=\s*['"]production['"]/)
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
   it('resolves relative scaffold targets from the configured cwd', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-cwd-'))
     let targetDir = `${path.basename(tmpDir)}-app`
