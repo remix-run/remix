@@ -25,11 +25,9 @@ const anatomy = await highlightSource(`
   import * as toast from '@remix-run/ui/toast'
   import { css, on } from 'remix/component'
 
-  const notifications = toast.createToastManager({
-    limit: 3,
-  })
+  const notifications = toast.createToastManager()
 
-  const element = <toast.Context manager={notifications}>
+  const element = <toast.Context manager={notifications} limit={3}>
     {toasts => (
       <section mix={[
         toast.root({ label: 'Notifications' }),
@@ -173,13 +171,11 @@ interface ToastRecord<action = RemixNode> {
   readonly paused: boolean
   readonly presented: boolean
   readonly priority: 'low' | 'high'
-  readonly limited: boolean
 }
 `),
   ToastManager: await highlightSource(`
 interface ToastManager<action = RemixNode> extends TypedEventTarget<{ change: Event }> {
   readonly toasts: readonly ToastRecord<action>[]
-  readonly limit: number
   add(options: ToastOptions<action>): string
   update(id: string, options: Partial<Omit<ToastOptions<action>, 'id'>>): void
   close(id?: string): void
@@ -188,14 +184,10 @@ interface ToastManager<action = RemixNode> extends TypedEventTarget<{ change: Ev
   present(id: string, signal: AbortSignal): void
 }
 `),
-  ToastManagerOptions: await highlightSource(`
-interface ToastManagerOptions {
-  limit?: number
-}
-`),
   ToastContextProps: await highlightSource(`
 interface ToastContextProps<action = RemixNode> {
   manager: ToastManager<action>
+  limit?: number
   children: (toasts: readonly ToastRecord<action>[]) => RemixNode
 }
 `),
@@ -302,7 +294,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
         <Example id="stack" example={stack} />
         <p>
-          Configure <code>limit</code> when creating the manager. The default is three. Overflow
+          Configure <code>limit</code> on <code>toast.Context</code>. The default is three. Overflow
           remains in the collection and in the DOM with <code>data-limited</code>, native inertness
           and <code>aria-hidden</code>. Keep rendering it so your CSS can fade and move it back into
           view. Limited timers continue running.
@@ -381,24 +373,12 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
       </Section>
       <Section id="api-reference" title="API reference">
-        <h3 id="create-manager">createToastManager&lt;action = RemixNode&gt;(options?)</h3>
-        <p>
-          Creates application-level state and commands. The optional policy applies before
-          rendering.
-        </p>
-        <ApiTable id="manager-options" label="Option" defaults>
-          <ApiEntry name="limit" type="number" defaultValue="3">
-            Positive integer. Newest open records within this count are available. Other records
-            stay mounted and inert. Invalid values throw RangeError.
-          </ApiEntry>
-        </ApiTable>
+        <h3 id="create-manager">createToastManager&lt;action = RemixNode&gt;()</h3>
+        <p>Creates application-level state and commands.</p>
         <h3 id="manager">ToastManager&lt;action&gt;</h3>
         <ApiTable id="manager-members" label="Member">
           <ApiEntry name="toasts" type="readonly ToastRecord<action>[]">
             Current immutable snapshots, newest first. Repeated IDs keep their position.
-          </ApiEntry>
-          <ApiEntry name="limit" type="number">
-            Configured visible limit, independent of mounted item elements.
           </ApiEntry>
           <ApiEntry name="add" type="(options: ToastOptions<action>) => string">
             Publishes <a href="#type-ToastOptions">ToastOptions</a> or merges by ID and restarts its
@@ -479,14 +459,16 @@ export default function ToastPage(handle: Handle<PageProps>) {
           <ApiEntry name="priority" type="'low' | 'high'">
             Resolved announcement urgency.
           </ApiEntry>
-          <ApiEntry name="limited" type="boolean">
-            Outside the newest available records. Render this record to preserve transitions.
-          </ApiEntry>
         </ApiTable>
         <h3 id="context">Context</h3>
         <ApiTable id="context-props" label="Prop">
           <ApiEntry name="manager" type="ToastManager<action>" required>
             Stable application-level manager. Mount one Context per manager.
+          </ApiEntry>
+          <ApiEntry name="limit" type="number">
+            Maximum available notifications. Defaults to 3. Must be a positive integer; invalid
+            values throw RangeError. Overflow remains mounted and inert, and its timers keep
+            running.
           </ApiEntry>
           <ApiEntry
             name="children"
@@ -584,7 +566,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </ApiTable>
         <ApiTable id="item-states" label="Attribute">
           <ApiEntry name="data-limited" type="''">
-            Record is outside the manager limit. It remains mounted and inert.
+            Notification is outside the context limit. It remains mounted and inert.
           </ApiEntry>
         </ApiTable>
         <h3 id="countdown">countdown()</h3>
@@ -609,9 +591,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
           <ApiEntry id="type-ToastManager" name="ToastManager" type="interface">
             <p>Commands and native state subscriptions.</p>
             <CodeBlock html={typeDefinitions.ToastManager} />
-          </ApiEntry>
-          <ApiEntry id="type-ToastManagerOptions" name="ToastManagerOptions" type="interface">
-            <CodeBlock html={typeDefinitions.ToastManagerOptions} />
           </ApiEntry>
           <ApiEntry id="type-ToastContextProps" name="ToastContextProps" type="interface">
             <CodeBlock html={typeDefinitions.ToastContextProps} />

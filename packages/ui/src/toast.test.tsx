@@ -506,42 +506,197 @@ describe('toast gestures and clocks', () => {
 })
 
 describe('toast availability', () => {
-  it('limits newest records independently of rendering and promotes retained overflow', () => {
-    let manager = createToastManager({ limit: 2 })
+  it('applies the context limit and promotes retained overflow without reordering updates', async (t) => {
+    let manager = createToastManager()
     manager.add({ id: 'first', title: 'First', duration: 0 })
     manager.add({ id: 'second', title: 'Second', duration: 0 })
     manager.add({ id: 'third', title: 'Third', duration: 0 })
-    assert.equal(manager.limit, 2)
+    manager.add({ id: 'fourth', title: 'Fourth', duration: 0 })
+    function view(limit?: number) {
+      return (
+        <Context manager={manager} limit={limit}>
+          {(toasts) => (
+            <section mix={root({ label: 'Notifications' })}>
+              {toasts.map((toast) => (
+                <ItemContext key={toast.id} toast={toast}>
+                  <article key={toast.id} data-id={toast.id} mix={item()}>
+                    {toast.title}
+                  </article>
+                </ItemContext>
+              ))}
+            </section>
+          )}
+        </Context>
+      )
+    }
+    let result = render(view())
+    t.after(result.cleanup)
+    let firstNode = element(result.container, '[data-id="first"]')
+    let secondNode = element(result.container, '[data-id="second"]')
+    assert.equal(firstNode.inert, true)
+    assert.equal(firstNode.hasAttribute('data-limited'), true)
+    assert.equal(secondNode.inert, false)
+    assert.equal(result.$$('[data-limited]').length, 1)
+    assert.equal(manager.toasts.length, 4)
+
+    await result.act(() => result.root.render(view(2)))
+    assert.equal(secondNode.inert, true)
+    assert.equal(result.$$('[data-limited]').length, 2)
+    await result.act(() => manager.add({ id: 'first', title: 'First updated' }))
+    assert.equal(firstNode.inert, true)
     assert.deepEqual(
-      manager.toasts.map(({ id, limited }) => [id, limited]),
-      [
-        ['third', false],
-        ['second', false],
-        ['first', true],
-      ],
+      manager.toasts.map((toast) => toast.id),
+      ['fourth', 'third', 'second', 'first'],
     )
-    manager.add({ id: 'first', title: 'First updated' })
-    assert.equal(manager.toasts[2]?.limited, true)
-    manager.close('second')
+
+    await result.act(() => manager.close('third'))
+    assert.equal(secondNode.inert, false)
+    assert.equal(secondNode.getAttribute('aria-hidden'), null)
+    assert.equal(secondNode.hasAttribute('data-limited'), false)
+    assert.equal(firstNode.inert, true)
+
+    await result.act(() => result.root.render(view(3)))
+    assert.equal(element(result.container, '[data-id="first"]'), firstNode)
+    assert.equal(firstNode.inert, false)
+    assert.equal(firstNode.getAttribute('aria-hidden'), null)
+    assert.equal(firstNode.hasAttribute('data-limited'), false)
+    await result.act(() => result.root.render(view(1)))
+    assert.equal(secondNode.inert, true)
+    assert.equal(firstNode.inert, true)
+    await result.act(() => result.root.render(view()))
+    assert.equal(firstNode.inert, false)
+    assert.equal(result.$$('[data-limited]').length, 0)
+  })
+
+  it('preserves remaining lifetimes when the context limit changes', async (t) => {
+    let time = clock(t)
+    let manager = createToastManager()
+    manager.add({ id: 'old', title: 'Old', duration: 1000 })
+    manager.add({ id: 'new', title: 'New', duration: 0 })
+    function view(limit: number) {
+      return (
+        <Context manager={manager} limit={limit}>
+          {(toasts) => (
+            <section mix={root({ label: 'Notifications' })}>
+              {toasts.map((toast) => (
+                <ItemContext key={toast.id} toast={toast}>
+                  <article key={toast.id} data-id={toast.id} mix={item()}>
+                    {toast.title}
+                  </article>
+                </ItemContext>
+              ))}
+            </section>
+          )}
+        </Context>
+      )
+    }
+    let result = render(view(1))
+    t.after(result.cleanup)
+    await result.act(() => time.advance(400))
+    await result.act(() => result.root.render(view(2)))
+    let old = element(result.container, '[data-id="old"]')
+    assert.equal(old.inert, false)
+    assert.equal(manager.toasts[1]?.remaining, 600)
+    assert.equal(manager.toasts[1]?.paused, false)
+    await result.act(() => result.root.render(view(1)))
+    assert.equal(old.inert, true)
+    await result.act(() => time.advance(200))
+    await result.act(() => result.root.render(view(2)))
+    assert.equal(manager.toasts[1]?.remaining, 400)
+    await result.act(() => time.advance(400))
+    assert.equal(old.isConnected, false)
     assert.deepEqual(
-      manager.toasts.map(({ id, limited }) => [id, limited]),
-      [
-        ['third', false],
-        ['first', false],
-      ],
+      manager.toasts.map((toast) => toast.id),
+      ['new'],
     )
-    assert.throws(() => createToastManager({ limit: 0 }), RangeError)
-    assert.throws(() => createToastManager({ limit: 1.5 }), RangeError)
-    assert.throws(() => createToastManager({ limit: Infinity }), RangeError)
+  })
+
+  it('moves keyboard focus to an available notification when the context limit shrinks', async (t) => {
+    let manager = createToastManager()
+    manager.add({ id: 'old', title: 'Old', duration: 0 })
+    manager.add({ id: 'new', title: 'New', duration: 0 })
+    function view(limit: number) {
+      return (
+        <>
+          <button data-origin="">Publish</button>
+          <Context manager={manager} limit={limit}>
+            {(toasts) => (
+              <section mix={root({ label: 'Notifications' })}>
+                {toasts.map((toast) => (
+                  <ItemContext key={toast.id} toast={toast}>
+                    <article key={toast.id} data-id={toast.id} mix={item()}>
+                      {toast.title}
+                    </article>
+                  </ItemContext>
+                ))}
+              </section>
+            )}
+          </Context>
+        </>
+      )
+    }
+    let result = render(view(2))
+    t.after(result.cleanup)
+    let origin = element(result.container, '[data-origin]')
+    origin.focus()
+    await result.act(() =>
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'F6', bubbles: true, cancelable: true }),
+      ),
+    )
+    let old = element(result.container, '[data-id="old"]')
+    await result.act(() => old.focus())
+    assert.equal(document.activeElement, old)
+    await result.act(() => result.root.render(view(1)))
+    let current = element(result.container, '[data-id="new"]')
+    assert.equal(old.inert, true)
+    assert.equal(document.activeElement, current)
+    assert.equal(result.$$('[data-toast-focus-guard][tabindex="0"]').length, 2)
+    await result.act(() => result.root.render(view(2)))
+    assert.equal(document.activeElement, current)
+    await result.act(() =>
+      current.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'F6', bubbles: true, cancelable: true }),
+      ),
+    )
+    assert.equal(document.activeElement, origin)
+  })
+
+  it('requires a positive integer context limit', async () => {
+    let manager = createToastManager()
+    await assert.rejects(
+      renderToString(
+        <Context manager={manager} limit={0}>
+          {() => null}
+        </Context>,
+      ),
+      RangeError,
+    )
+    await assert.rejects(
+      renderToString(
+        <Context manager={manager} limit={1.5}>
+          {() => null}
+        </Context>,
+      ),
+      RangeError,
+    )
+    await assert.rejects(
+      renderToString(
+        <Context manager={manager} limit={Infinity}>
+          {() => null}
+        </Context>,
+      ),
+      RangeError,
+    )
   })
 
   it('keeps limited timers running and composes window blur with manual pause', async (t) => {
     let time = clock(t)
-    let manager = createToastManager({ limit: 1 })
+    let manager = createToastManager()
     manager.add({ id: 'old', title: 'Old', duration: 1000 })
     manager.add({ id: 'new', title: 'New', duration: 0 })
     let result = render(
-      <Context manager={manager}>
+      <Context manager={manager} limit={1}>
         {(toasts) => (
           <section mix={root({ label: 'Notifications' })}>
             {toasts.map((toast) => (
@@ -571,10 +726,10 @@ describe('toast availability', () => {
   })
 
   it('does not steal focus later when an arrival limits the focused card', async (t) => {
-    let manager = createToastManager({ limit: 1 })
+    let manager = createToastManager()
     manager.add({ id: 'old', title: 'Old', duration: 0 })
     let result = render(
-      <Context manager={manager}>
+      <Context manager={manager} limit={1}>
         {(toasts) => (
           <section mix={root({ label: 'Notifications' })}>
             {toasts.map((toast) => (

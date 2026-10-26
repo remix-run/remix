@@ -12,9 +12,7 @@ import * as toast from '@remix-run/ui/toast'
 import { css, on, createMixin } from 'remix/component'
 import type { ElementProps } from 'remix/component'
 
-export const notifications = toast.createToastManager({
-  limit: 3,
-})
+export const notifications = toast.createToastManager()
 
 export default function ExampleToast() {
   return () => (
@@ -40,7 +38,7 @@ export default function ExampleToast() {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={notifications}>
+    <toast.Context manager={notifications} limit={3}>
       {(records) => (
         <section mix={[toast.root({ label: 'Notifications' }), styles.region]}>
           {records.map((notification, index) => (

@@ -37,16 +37,12 @@ export interface ToastRecord<action = RemixNode> {
   readonly presented: boolean
   /** Announcement urgency, independent of action presence and duration. */
   readonly priority: 'low' | 'high'
-  /** Outside the manager's visible limit. Retain the item in the DOM for transitions. */
-  readonly limited: boolean
 }
 
 /** Commands and observable state, without a bound component. Events signal that state can be read. */
 export interface ToastManager<action = RemixNode> extends TypedEventTarget<{ change: Event }> {
   /** Open toasts, newest first. Updating an existing identity preserves its position. */
   readonly toasts: readonly ToastRecord<action>[]
-  /** Maximum available toasts. Overflow remains in the collection and its timers keep running. */
-  readonly limit: number
   /** Adds or merges a toast by identity, returning its identity. */
   add(options: ToastOptions<action>): string
   /** Updates an open toast. Only an explicit duration restarts its timer. */
@@ -61,16 +57,12 @@ export interface ToastManager<action = RemixNode> extends TypedEventTarget<{ cha
   present(id: string, signal: AbortSignal): void
 }
 
-/** Notification policy shared independently of rendering. */
-export interface ToastManagerOptions {
-  /** Maximum available toasts. Defaults to 3. Must be a positive integer. */
-  limit?: number
-}
-
 /** Connects application-level state to consumer-owned markup. */
 export interface ToastContextProps<action = RemixNode> {
   /** Stable manager created outside the rendering component. */
   manager: ToastManager<action>
+  /** Maximum available toasts. Defaults to 3. Must be a positive integer. */
+  limit?: number
   /** Renders every open toast, including limited records, newest first. */
   children: (toasts: readonly ToastRecord<action>[]) => RemixNode
 }
@@ -102,15 +94,9 @@ type StoredToast<action> = {
 
 /**
  * Creates retained toast state independently of rendering. Timers run only while presented.
- * @param options Notification policy applied independently of rendering.
  * @returns A manager with native EventTarget subscriptions.
  */
-export function createToastManager<action = RemixNode>(
-  options: ToastManagerOptions = {},
-): ToastManager<action> {
-  let limit = options.limit ?? 3
-  if (!Number.isInteger(limit) || limit < 1)
-    throw new RangeError('Toast limit must be a positive integer')
+export function createToastManager<action = RemixNode>(): ToastManager<action> {
   let records = new Map<string, StoredToast<action>>()
   let reasons = new Set<unknown>()
   let nextId = 0
@@ -146,12 +132,9 @@ export function createToastManager<action = RemixNode>(
   }
 
   class ToastStore extends TypedEventTarget<{ change: Event }> implements ToastManager<action> {
-    get limit() {
-      return limit
-    }
     get toasts(): readonly ToastRecord<action>[] {
       return Object.freeze(
-        [...records].reverse().map(([id, record], index) =>
+        [...records].reverse().map(([id, record]) =>
           Object.freeze({
             id,
             title: record.options.title,
@@ -162,7 +145,6 @@ export function createToastManager<action = RemixNode>(
             paused: record.started === null,
             presented: record.presentations.size > 0,
             priority: record.options.priority ?? 'low',
-            limited: index >= limit,
           }),
         ),
       )
@@ -248,6 +230,7 @@ export function createToastManager<action = RemixNode>(
 }
 
 type RootState = {
+  readonly limit: number
   manager: Pick<ToastManager<unknown>, 'present' | 'close' | 'toasts' | 'pause' | 'resume'>
   registerRoot(node: HTMLElement, options: () => ToastRootOptions, signal: AbortSignal): void
   registerItem(id: string, node: HTMLElement): void
@@ -260,7 +243,6 @@ type RootState = {
 
 type ItemState = {
   readonly id: string
-  readonly toast: ToastRecord<unknown> | undefined
   readonly titleId: string | undefined
   readonly descriptionId: string | undefined
   registerPart(part: 'title' | 'description', node: HTMLElement, signal: AbortSignal): void
@@ -328,6 +310,7 @@ export function Context<action = RemixNode>(
   handle: Handle<ToastContextProps<action>>,
 ): () => RemixNode {
   let manager = handle.props.manager
+  let limit = handle.props.limit ?? 3
   let region: HTMLElement | undefined
   let returnTo: HTMLElement | undefined
   let touch = Symbol('touch')
@@ -355,7 +338,7 @@ export function Context<action = RemixNode>(
 
   function refresh() {
     let toasts = manager.toasts
-    let available = new Set(toasts.filter((toast) => !toast.limited).map((toast) => toast.id))
+    let available = new Set(toasts.slice(0, limit).map((toast) => toast.id))
     let active = region && activeElement(region.ownerDocument)
     if (region && !available.size && active && contains(region, active)) {
       if (!restoreFocus()) active.blur()
@@ -379,7 +362,7 @@ export function Context<action = RemixNode>(
     }
     // Focusing a neighbour may run consumer handlers that close more notifications.
     toasts = manager.toasts
-    available = new Set(toasts.filter((toast) => !toast.limited).map((toast) => toast.id))
+    available = new Set(toasts.slice(0, limit).map((toast) => toast.id))
     previous = toasts.map((toast) => toast.id)
     for (let [id, node] of presentations) {
       let unavailable = !available.has(id)
@@ -392,11 +375,14 @@ export function Context<action = RemixNode>(
 
   let state: RootState = {
     manager,
+    get limit() {
+      return limit
+    },
     focusGuard(previous) {
       let target =
         previous === region
           ? manager.toasts
-              .filter((toast) => !toast.limited)
+              .slice(0, limit)
               .map((toast) => presentations.get(toast.id))
               .find((node) => node?.isConnected && !node.inert)
           : undefined
@@ -555,8 +541,7 @@ export function Context<action = RemixNode>(
             node.closest('[inert]')
           )
             return
-          if (!manager.toasts.some((toast) => !toast.limited) || contains(node, activeElement(doc)))
-            return
+          if (!manager.toasts.length || contains(node, activeElement(doc))) return
           returnTo = activeElement(doc) ?? doc.body
           entering = true
           focusElement(node, true)
@@ -614,23 +599,32 @@ export function Context<action = RemixNode>(
     sync()
     handle.signal.addEventListener('abort', () => mountedManagers.delete(manager), { once: true })
   })
-  return () => (
-    <ToastScope value={state}>
-      {handle.props.children(manager.toasts)}
-      {!focused && (
-        <div mix={hidden}>
-          {manager.toasts
-            .filter((toast) => toast.presented && toast.priority === 'high')
-            .map((toast) => (
-              <div key={toast.id} role="alert" aria-atomic="true">
-                <div>{toast.title}</div>
-                <div>{toast.description}</div>
-              </div>
-            ))}
-        </div>
-      )}
-    </ToastScope>
-  )
+  return () => {
+    let nextLimit = handle.props.limit ?? 3
+    if (!Number.isInteger(nextLimit) || nextLimit < 1)
+      throw new RangeError('Toast limit must be a positive integer')
+    if (limit !== nextLimit) {
+      limit = nextLimit
+      refresh()
+    }
+    return (
+      <ToastScope value={state}>
+        {handle.props.children(manager.toasts)}
+        {!focused && (
+          <div mix={hidden}>
+            {manager.toasts
+              .filter((toast) => toast.presented && toast.priority === 'high')
+              .map((toast) => (
+                <div key={toast.id} role="alert" aria-atomic="true">
+                  <div>{toast.title}</div>
+                  <div>{toast.description}</div>
+                </div>
+              ))}
+          </div>
+        )}
+      </ToastScope>
+    )
+  }
 }
 
 /** A named notification region with polite announcements and keyboard entry. */
@@ -697,9 +691,6 @@ export function ItemContext<action = RemixNode>(
     get id() {
       return handle.props.toast.id
     },
-    get toast() {
-      return context.manager.toasts.find((toast) => toast.id === handle.props.toast.id)
-    },
     get titleId() {
       return parts.get('title')?.id
     },
@@ -735,7 +726,7 @@ export function ItemContext<action = RemixNode>(
     },
   })
   return () => {
-    let available = context.manager.toasts.filter((toast) => !toast.limited)
+    let available = context.manager.toasts.slice(0, context.limit)
     let first = available[0]?.id === handle.props.toast.id
     let last = available.at(-1)?.id === handle.props.toast.id
     return (
@@ -775,15 +766,16 @@ export const item = createMixin<HTMLElement, [], ElementProps>((handle) => {
   handle.addEventListener('remove', disconnect)
   handle.signal.addEventListener('abort', disconnect, { once: true })
   return () => {
-    let toast = scoped.toast
+    let toasts = context.manager.toasts
+    let index = toasts.findIndex((toast) => toast.id === scoped.id)
+    let toast = toasts[index]
+    let limited = index >= context.limit
     return [
       attrs({
-        inert: toast?.limited || !toast ? true : undefined,
+        inert: limited || !toast ? true : undefined,
         'aria-hidden':
-          toast?.limited || !toast || (toast.priority === 'high' && !context.focused)
-            ? 'true'
-            : undefined,
-        'data-limited': toast?.limited ? '' : undefined,
+          limited || !toast || (toast.priority === 'high' && !context.focused) ? 'true' : undefined,
+        'data-limited': limited ? '' : undefined,
         role: toast?.priority === 'high' ? 'alertdialog' : 'dialog',
         'aria-modal': 'false',
         'aria-labelledby': scoped.titleId,

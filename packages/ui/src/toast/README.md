@@ -1,6 +1,6 @@
 # toast
 
-Publish retained notifications from components or utilities and render them near the application root. The manager owns notification policy. Providers and mixins connect your markup to announcements, focus and dismissal.
+Publish retained notifications from components or utilities and render them near the application root. The manager retains notification state. Providers and mixins connect your markup to announcements, focus and dismissal.
 
 ## Usage
 
@@ -8,7 +8,7 @@ Publish retained notifications from components or utilities and render them near
 import * as toast from '@remix-run/ui/toast'
 import { css, on } from 'remix/component'
 
-export const notifications = toast.createToastManager({ limit: 3 })
+export const notifications = toast.createToastManager()
 
 export function SaveButton() {
   return () => (
@@ -20,7 +20,7 @@ export function SaveButton() {
 
 export function Notifications() {
   return () => (
-    <toast.Context manager={notifications}>
+    <toast.Context manager={notifications} limit={3}>
       {(records) => (
         <section
           mix={[
@@ -52,8 +52,8 @@ Supply the region label and control labels. Mount one `Context` per manager, out
 
 ## `@remix-run/ui/toast`
 
-- `createToastManager<action = RemixNode>({ limit = 3 }?)`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
-- `Context`: accepts a stable `manager` and a typed collection callback. Render every record, including overflow.
+- `createToastManager<action = RemixNode>()`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
+- `Context`: accepts a stable `manager`, an optional `limit` (default 3), and a typed collection callback. Render every record, including overflow.
 - `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and polite announcements. A non-empty `label` is required.
 - `ItemContext`: accepts the current `toast` record and scopes its markup. Key the provider and animated host by the record ID.
 - `item()`: applies non-modal dialog semantics, presentation lifetime, availability and focus recovery. It is a Tab stop before the controls.
@@ -61,9 +61,9 @@ Supply the region label and control labels. Mount one `Context` per manager, out
 - `close()`: dismisses the scoped toast from a native button. Supply translated text or an accessible label for an icon button. It defaults to `type="button"` and excludes the control from passive announcements while the collection is collapsed.
 - `countdown(record)`: animates the inherited `--toast-remaining` CSS property from 1 to 0 using the record's clock. Its host is decorative (`aria-hidden`) and hidden for persistent records.
 - `ToastOptions<action>`: optional renderable `title` and `description`, generic `action`, `id`, `duration` and `priority`.
-- `ToastRecord<action>`: immutable content, resolved `priority`, `limited`, and sampled clock state: `presented`, `paused`, `remaining` and `duration`.
-- `ToastManager<action>`: `add`, `update`, `close`, `pause`, `resume`, `present`, `limit` and `toasts`. Native `change` subscriptions support `AbortSignal` cleanup.
-- `ToastManagerOptions`, `ToastContextProps<action>`, `ToastItemContextProps<action>` and `ToastRootOptions`: configuration types.
+- `ToastRecord<action>`: immutable content, resolved `priority`, and sampled clock state: `presented`, `paused`, `remaining` and `duration`.
+- `ToastManager<action>`: `add`, `update`, `close`, `pause`, `resume`, `present` and `toasts`. Native `change` subscriptions support `AbortSignal` cleanup.
+- `ToastContextProps<action>`, `ToastItemContextProps<action>` and `ToastRootOptions`: configuration types.
 
 ## Announcements and keyboard access
 
