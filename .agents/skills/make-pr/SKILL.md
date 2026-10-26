@@ -1,6 +1,6 @@
 ---
 name: make-pr
-description: Create GitHub pull requests with clear, reviewer-friendly descriptions. Use when asked to open or prepare a PR, especially when the PR needs strong context, related links, and feature usage examples. This skill enforces concise PR structure, avoids redundant sections like validation/testing, and creates the PR with gh CLI.
+description: Create Remix GitHub pull requests with clear, reviewer-friendly descriptions. Use when asked to open or prepare a PR, especially when it needs strong context, related links, and feature usage examples. This skill enforces concise PR structure, avoids redundant sections like validation/testing, and creates the PR with gh CLI.
 ---
 
 # Make PR
@@ -62,6 +62,16 @@ gh pr create --base main --head <branch> --title "<title>" --body-file <file>
 ```
 
 - If `gh pr create` fails, leave the branch pushed when possible and give the user a ready-to-open compare URL plus the prepared title/body details.
+
+1. Add Remix developer PRs to the roadmap.
+
+- Only run this step when PR creation succeeded and `git remote get-url origin` points to `github.com/remix-run/remix` (SSH or HTTPS) and the created PR is in `remix-run/remix`. Skip it silently for forks or when the origin cannot be verified.
+- Read the GitHub author with `gh pr view <pr-url> --json author --jq '.author.login'`.
+- Get the current members of the `remix-run/remix-developers` team with `gh api orgs/remix-run/teams/remix-developers/members --paginate --jq '.[].login'`
+- If the team lookup fails or the PR author is not in the list, skip the rest of this step and do not assign an author or project.
+- Assign the `remix-developers` team member author with `gh pr edit <pr-url> --add-assignee <author-login>`. Report failures.
+- Find the project titled exactly `Remix Roadmap` in `gh project list --owner remix-run`, then add the PR with `gh project item-add <project-number> --owner remix-run --url <pr-url>`. Do not guess the project number. Report failures.
+- Set its `Status` to `In Progress` with `gh project item-edit <project-number> --owner remix-run --url <pr-url> --field "Status" --value "In Progress"`. Report failures.
 
 ## Body Template
 
