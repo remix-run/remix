@@ -13,3 +13,16 @@
 A `nonce` authored on `<ImportMap>` keeps its own value; the option only fills in the attribute when it is absent. The `#rmx-data` script is left alone because it is an `application/json` data block the browser never executes, so `script-src` does not apply to it. A nonce that changes with every response stays compatible with frame navigation, because the client uses the original document's import map nonce, falling back to its nonce metadata, for import maps and module preloads it installs later.
 
 Import maps and preloads from blocking frames are merged into the document head. Hoisted preloads use the enclosing render's nonce, and an authored document import map keeps its own nonce. Document renders retain the nonce in metadata so client entries introduced by later frames work even when there is no initial import map.
+
+`resolveFrame()` receives the enclosing render's nonce as `context.nonce`. Forward it to nested renderers so CSS mixin styles in blocking frames satisfy the document's CSP before hydration. Returned frame HTML is not rewritten to change style nonces.
+
+```diff
+ let stream = renderToStream(<App />, {
+   nonce,
+-  resolveFrame(src) {
+-    return renderToStream(<FrameContent src={src} />)
++  resolveFrame(src, _target, context) {
++    return renderToStream(<FrameContent src={src} />, { nonce: context?.nonce })
+   },
+ })
+```

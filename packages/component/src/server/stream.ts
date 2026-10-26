@@ -102,6 +102,11 @@ export interface ResolveFrameContext {
   currentFrameSrc: string
   /** Source URL for the top-level frame in the current render. */
   topFrameSrc: string
+  /**
+   * Nonce from the enclosing render. Pass it to nested `renderToStream()` calls so generated
+   * elements use the document's Content Security Policy nonce.
+   */
+  nonce?: string
 }
 
 interface HydrationData {
@@ -428,10 +433,11 @@ function createSsrFrameState(frameSrc: string, topFrameSrc = frameSrc): SsrFrame
   return { frame, topFrame }
 }
 
-function getResolveFrameContext(frameState: SsrFrameState): ResolveFrameContext {
+function getResolveFrameContext(frameState: SsrFrameState, nonce?: string): ResolveFrameContext {
   return {
     currentFrameSrc: frameState.frame.src,
     topFrameSrc: frameState.topFrame.src,
+    nonce,
   }
 }
 
@@ -600,7 +606,7 @@ function buildFrameSegment(
     content: null,
   }
 
-  let resolveFrameContext = getResolveFrameContext(frameState)
+  let resolveFrameContext = getResolveFrameContext(frameState, context.nonce)
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
     seg.content = buildSegment(props.fallback, context, frameState)

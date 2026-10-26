@@ -1551,6 +1551,57 @@ describe('stream', () => {
   })
 
   describe('nonce', () => {
+    it('forwards the nonce through nested blocking frame renders', async () => {
+      let nonce = 'document-"&<nonce>'
+      let html = await drain(
+        renderToStream(<Frame src="/child" />, {
+          nonce,
+          resolveFrame(_src, _target, context) {
+            return renderToStream(
+              <>
+                <p mix={[css({ color: 'red' })]}>Child</p>
+                <Frame src="/grandchild" />
+              </>,
+              {
+                nonce: context?.nonce,
+                resolveFrame(_src, _target, context) {
+                  return renderToStream(<p mix={[css({ color: 'blue' })]}>Grandchild</p>, {
+                    nonce: context?.nonce,
+                  })
+                },
+              },
+            )
+          },
+        }),
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      let styles = Array.from(doc.querySelectorAll<HTMLStyleElement>('style[data-rmx-style]'))
+
+      expect(styles).toHaveLength(2)
+      expect(styles.map((style) => style.nonce)).toEqual([nonce, nonce])
+      expect(html).toContain('nonce="document-&quot;&amp;&lt;nonce&gt;"')
+    })
+
+    it('forwards the nonce to non-blocking frame renders', async () => {
+      let html = await drain(
+        renderToStream(<Frame src="/child" fallback={<p>Loading</p>} />, {
+          nonce: 'document-nonce',
+          resolveFrame(_src, _target, context) {
+            return renderToStream(<p mix={[css({ color: 'red' })]}>Child</p>, {
+              nonce: context?.nonce,
+            })
+          },
+        }),
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      let template = doc.querySelector('template')
+      invariant(template)
+      let styles = template.content.querySelectorAll<HTMLStyleElement>('style[data-rmx-style]')
+
+      expect(styles).toHaveLength(1)
+      expect(styles[0].nonce).toBe('document-nonce')
+    })
+
     function Island() {
       return () => <section>Island</section>
     }
@@ -4871,11 +4922,13 @@ describe('stream', () => {
           src: '/settings',
           currentFrameSrc: 'https://example.com/app',
           topFrameSrc: 'https://example.com/app',
+          nonce: undefined,
         },
         {
           src: '/settings/profile',
           currentFrameSrc: 'https://example.com/settings',
           topFrameSrc: 'https://example.com/app',
+          nonce: undefined,
         },
       ])
 

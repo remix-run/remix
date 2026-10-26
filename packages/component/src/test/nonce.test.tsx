@@ -9,6 +9,43 @@ import { css } from '../style/css-mixin.ts'
 import { drain } from './utils.ts'
 
 describe('CSP nonces', () => {
+  it('applies blocking frame CSS mixin styles with the forwarded document nonce before hydration', async (t) => {
+    let html = await drain(
+      renderToStream(
+        <html>
+          <head>
+            <meta httpEquiv="Content-Security-Policy" content="style-src 'nonce-document-nonce'" />
+          </head>
+          <body>
+            <Frame src="/child" />
+          </body>
+        </html>,
+        {
+          nonce: 'document-nonce',
+          resolveFrame(_src, _target, context) {
+            return renderToStream(<p mix={[css({ color: 'rgb(12, 34, 56)' })]}>Styled frame</p>, {
+              nonce: context?.nonce,
+            })
+          },
+        },
+      ),
+    )
+    let iframe = document.createElement('iframe')
+    t.after(() => iframe.remove())
+    let loaded = new Promise<void>((resolve) => {
+      iframe.addEventListener('load', () => resolve(), { once: true, signal: t.signal })
+    })
+    iframe.srcdoc = html
+    document.body.append(iframe)
+    await loaded
+
+    let frameWindow = iframe.contentWindow
+    invariant(frameWindow)
+    let paragraph = frameWindow.document.querySelector('p')
+    invariant(paragraph)
+    expect(frameWindow.getComputedStyle(paragraph).color).toBe('rgb(12, 34, 56)')
+  })
+
   it('loads generated module preloads under nonce-only CSP', async (t) => {
     let doc = await renderPreloadUnderCsp(t)
 
