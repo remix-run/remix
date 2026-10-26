@@ -75,6 +75,40 @@ The middleware forwards request credentials and session headers to internal fram
 - **`assets`** - An asset server that resolves source-based client entry IDs to browser module URLs, import maps, and preload URLs. Omit it when client entries already use public URLs or the app has no client entries.
 - **`onError`** - A callback for server rendering errors, including browser-initiated frame requests. Errors from internal frame subrequests are reported by the enclosing render to avoid duplicate reports. When omitted, the UI renderer uses its default error reporting.
 
+### Content Security Policy
+
+Pass a per-response `nonce` to `context.render(node, init)` to apply it to generated import maps, module preloads, and CSS mixin styles. Use the same value in the response's Content Security Policy header.
+
+```tsx
+import { css, Frame } from 'remix/component'
+
+router.get('/', (context) => {
+  let nonce = crypto.getRandomValues(new Uint8Array(16)).toBase64()
+  return context.render(
+    <html>
+      <head />
+      <body>
+        <Frame src="/activity" />
+      </body>
+    </html>,
+    {
+      nonce,
+      headers: {
+        'Content-Security-Policy': `script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'`,
+      },
+    },
+  )
+})
+
+router.get('/activity', (context) =>
+  context.render(<p mix={[css({ color: 'rebeccapurple' })]}>Recent activity</p>),
+)
+```
+
+The middleware automatically forwards the nonce through internal frame requests and redirects, including nested blocking and non-blocking frames. The enclosing render's nonce takes precedence over a nonce supplied by a child handler. Blocking-frame styles therefore use the document's nonce before hydration. Independently requested frames use their own render options.
+
+The option does not set the CSP header or add nonce attributes to authored script and style tags. Those remain part of your document. `RenderResponseInit` extends `ResponseInit` with this option and is exported from `remix/middleware/render`.
+
 ## Custom renderers
 
 Use `renderWith()` when the input is not a Remix component node or the application owns a fully custom response pipeline. The factory runs once per request and may read the current request context.

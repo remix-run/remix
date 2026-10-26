@@ -11,7 +11,7 @@ import {
   type RemixNode,
 } from '@remix-run/component'
 
-import { render } from '../index.ts'
+import { render, type RenderResponseInit } from '../index.ts'
 
 type IsEqual<left, right> =
   (<type>() => type extends left ? 1 : 2) extends <type>() => type extends right ? 1 : 2
@@ -28,7 +28,7 @@ describe('render', () => {
 
     router.get('/', (context) => {
       expectTypeEquality<
-        IsEqual<typeof context.render, (node: RemixNode, init?: ResponseInit) => Response>
+        IsEqual<typeof context.render, (node: RemixNode, init?: RenderResponseInit) => Response>
       >()
 
       return context.render(createElement('h1', {}, 'Hello'), {
@@ -43,6 +43,127 @@ describe('render', () => {
     assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
     assert.equal(response.headers.get('X-Test'), 'render')
     assert.match(await response.text(), /^<!DOCTYPE html><h1>Hello<\/h1>/)
+  })
+
+  it('applies the render nonce to generated styles, import maps, and preloads', async () => {
+    let router = createRouter({
+      middleware: [
+        render({
+          assets: {
+            async getScriptEntry() {
+              return {
+                href: '/assets/island.js',
+                importMap: { imports: { island: '/assets/island.js' } },
+                preloads: ['/assets/island.js'],
+              }
+            },
+          },
+        }),
+      ] as const,
+    })
+    let Island = clientEntry('file:///app/island.ts#Island', function Island() {
+      return () => createElement('p', { mix: css({ color: 'red' }) }, 'Island')
+    })
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          'html',
+          {},
+          createElement('head'),
+          createElement('body', {}, createElement(Island)),
+        ),
+        {
+          nonce: 'document-nonce',
+          status: 201,
+          headers: {
+            'Content-Security-Policy':
+              "script-src 'nonce-document-nonce'; style-src 'nonce-document-nonce'",
+          },
+        },
+      ),
+    )
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+
+    assert.equal(response.status, 201)
+    assert.equal(
+      response.headers.get('Content-Security-Policy'),
+      "script-src 'nonce-document-nonce'; style-src 'nonce-document-nonce'",
+    )
+    assert.match(html, /<style data-rmx-style="[^"]+" nonce="document-nonce">/)
+    assert.match(html, /<script data-rmx-import-map type="importmap" nonce="document-nonce">/)
+    assert.match(
+      html,
+      /<link data-rmx-module-preload rel="modulepreload" href="\/assets\/island.js" nonce="document-nonce" \/>/,
+    )
+  })
+
+  it('propagates the document nonce through redirects and nested blocking frames', async () => {
+    let router = createRouter({ middleware: [render()] as const })
+    router.get('/', (context) =>
+      context.render(createElement(Frame, { src: '/redirect' }), { nonce: 'document-nonce' }),
+    )
+    router.get('/redirect', () => Response.redirect('https://remix.run/child'))
+    router.get('/child', (context) =>
+      context.render(
+        createElement(
+          'section',
+          {},
+          createElement('p', { mix: css({ color: 'red' }) }, 'Child'),
+          createElement(Frame, { src: '/grandchild' }),
+        ),
+        { nonce: 'child-nonce' },
+      ),
+    )
+    router.get('/grandchild', (context) =>
+      context.render(createElement('p', { mix: css({ color: 'blue' }) }, 'Grandchild')),
+    )
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+    let styles = html.match(/<style\b[^>]*>/g) ?? []
+
+    assert.equal(styles.length, 2)
+    assert.ok(styles.every((style) => style.includes('nonce="document-nonce"')))
+    assert.match(html, />Child<\/p>/)
+    assert.match(html, />Grandchild<\/p>/)
+    assert.doesNotMatch(html, /<template/)
+
+    let frameResponse = await router.fetch('https://remix.run/child', {
+      headers: { 'X-Remix-Frame': 'true' },
+    })
+    let frameHtml = await frameResponse.text()
+    let frameStyles = frameHtml.match(/<style\b[^>]*>/g) ?? []
+
+    assert.equal(frameStyles.length, 2)
+    assert.ok(frameStyles.every((style) => style.includes('nonce="child-nonce"')))
+    assert.doesNotMatch(frameHtml, /nonce="document-nonce"/)
+  })
+
+  it('propagates the document nonce to non-blocking frames', async () => {
+    let router = createRouter({ middleware: [render()] as const })
+    router.get('/', (context) =>
+      context.render(
+        createElement(Frame, { src: '/child', fallback: createElement('p', {}, 'Loading') }),
+        { nonce: 'document-nonce' },
+      ),
+    )
+    router.get('/child', (context) =>
+      context.render(createElement('p', { mix: css({ color: 'red' }) }, 'Child'), {
+        nonce: 'child-nonce',
+      }),
+    )
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+
+    assert.match(html, /<p>Loading<\/p>/)
+    assert.match(
+      html,
+      /<template\b[^>]*>[\s\S]*?<style data-rmx-style="[^"]+" nonce="document-nonce">/,
+    )
+    assert.doesNotMatch(html, /nonce="child-nonce"/)
   })
 
   it('resolves nested and targeted frames through the current router', async () => {

@@ -15,9 +15,9 @@ type RemixNode = Parameters<typeof renderToStream>[0]
 const FRAME_HEADER = 'X-Remix-Frame'
 const FRAME_TARGET_HEADER = 'X-Remix-Target'
 const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
-// Internal subrequest errors are reported by the enclosing render. Browser frame requests
-// use the same headers, so identify internal requests by object identity instead.
-const internalFrameRequests = new WeakSet<Request>()
+// Internal subrequests inherit the enclosing nonce and report errors through the enclosing render.
+// Browser frame requests use the same headers, so identify internal requests by object identity.
+const internalFrameRequests = new WeakMap<Request, { nonce: string | undefined }>()
 const MAX_FRAME_REDIRECTS = 20
 const FRAME_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const FRAME_REQUEST_HEADERS_TO_REMOVE = [
@@ -58,8 +58,17 @@ export interface RenderOptions {
   onError?: (error: unknown) => void
 }
 
+/** Response options for rendering a Remix component node. */
+export interface RenderResponseInit extends ResponseInit {
+  /**
+   * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
+   * Internal frame renders inherit the enclosing render's nonce when it is provided.
+   */
+  nonce?: string
+}
+
 /** Renders a Remix component node as an HTML response. */
-export type RenderFunction = (node: RemixNode, init?: ResponseInit) => Response
+export type RenderFunction = (node: RemixNode, init?: RenderResponseInit) => Response
 
 /**
  * Adds the standard Remix component renderer to request context.
@@ -75,12 +84,13 @@ export function render(
     let topFrameSrc = getTopFrameSrc(request)
     let onError = internalFrameRequests.has(request) ? () => {} : options.onError
 
-    return function render(node: RemixNode, init?: ResponseInit): Response {
+    return function render(node: RemixNode, init?: RenderResponseInit): Response {
       let stream = renderToStream(node, {
         frameSrc: request.url,
         topFrameSrc,
         signal: request.signal,
         onError,
+        nonce: internalFrameRequests.get(request)?.nonce ?? init?.nonce,
         resolveFrame: (src, target, frameContext) =>
           resolveFrame(context, src, target, frameContext),
         resolveClientEntry: (entryId, component) =>
@@ -107,7 +117,7 @@ async function resolveFrame(
   let topFrameSrc = frameContext?.topFrameSrc ?? getTopFrameSrc(context.request)
   let frameUrl = new URL(src, currentFrameSrc)
   let headers = createFrameRequestHeaders(context.headers, target, topFrameSrc)
-  let response = await followFrameRedirects(context, frameUrl, headers)
+  let response = await followFrameRedirects(context, frameUrl, headers, frameContext?.nonce)
 
   if (!isHtmlResponse(response)) {
     throw new Error('Frame response must be HTML')
@@ -155,6 +165,7 @@ async function followFrameRedirects(
   context: RenderRequestContext,
   initialUrl: URL,
   headers: Headers,
+  nonce: string | undefined,
 ): Promise<Response> {
   let url = initialUrl
 
@@ -168,7 +179,7 @@ async function followFrameRedirects(
       headers,
       signal: context.request.signal,
     })
-    internalFrameRequests.add(request)
+    internalFrameRequests.set(request, { nonce })
     let response = await context.router.fetch(request)
     let location = response.headers.get('Location')
 
