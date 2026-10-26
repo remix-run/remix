@@ -115,15 +115,36 @@ describe('animateLayout mixin', () => {
 
   it('animates when layout geometry changes', () => {
     let container = document.createElement('div')
+    document.body.append(container)
     let root = createRoot(container)
 
-    root.render(<div data-tick="0" mix={[animateLayout({ duration: 350, easing: 'linear' })]} />)
+    root.render(
+      <div
+        data-tick="0"
+        mix={[
+          animateLayout({
+            duration: 350,
+            easing: 'linear',
+          }),
+        ]}
+      />,
+    )
     root.flush()
     let node = container.querySelector('div')
     assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
-    root.render(<div data-tick="1" mix={[animateLayout({ duration: 350, easing: 'linear' })]} />)
+    root.render(
+      <div
+        data-tick="1"
+        mix={[
+          animateLayout({
+            duration: 350,
+            easing: 'linear',
+          }),
+        ]}
+      />,
+    )
     root.flush()
     mockAnimations = []
 
@@ -131,26 +152,56 @@ describe('animateLayout mixin', () => {
       { left: 0, top: 0, right: 100, bottom: 100 },
       { left: 40, top: 10, right: 140, bottom: 110 },
     ])
-    root.render(<div data-tick="2" mix={[animateLayout({ duration: 350, easing: 'linear' })]} />)
+    root.render(
+      <div
+        data-tick="2"
+        mix={[
+          animateLayout({
+            duration: 350,
+            easing: 'linear',
+          }),
+        ]}
+      />,
+    )
     root.flush()
 
-    expect(mockAnimations).toHaveLength(1)
+    expect(mockAnimations).toHaveLength(4)
     let animation = mockAnimations[0]
     expect(animation.options.duration).toBe(350)
     expect(animation.options.easing).toBe('linear')
+    expect(animation.options.composite).toBe('replace')
   })
 
   it('can animate translation without scale projection', () => {
     let container = document.createElement('div')
+    document.body.append(container)
     let root = createRoot(container)
 
-    root.render(<div data-tick="0" mix={[animateLayout({ size: false })]} />)
+    root.render(
+      <div
+        data-tick="0"
+        mix={[
+          animateLayout({
+            size: false,
+          }),
+        ]}
+      />,
+    )
     root.flush()
     let node = container.querySelector('div')
     assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
-    root.render(<div data-tick="1" mix={[animateLayout({ size: false })]} />)
+    root.render(
+      <div
+        data-tick="1"
+        mix={[
+          animateLayout({
+            size: false,
+          }),
+        ]}
+      />,
+    )
     root.flush()
     mockAnimations = []
 
@@ -158,26 +209,54 @@ describe('animateLayout mixin', () => {
       { left: 0, top: 0, right: 100, bottom: 100 },
       { left: 20, top: 30, right: 160, bottom: 170 },
     ])
-    root.render(<div data-tick="2" mix={[animateLayout({ size: false })]} />)
+    root.render(
+      <div
+        data-tick="2"
+        mix={[
+          animateLayout({
+            size: false,
+          }),
+        ]}
+      />,
+    )
     root.flush()
 
-    expect(mockAnimations).toHaveLength(1)
+    expect(mockAnimations).toHaveLength(4)
     let animation = mockAnimations[0]
-    expect(String(animation.keyframes[0].transform)).toContain('translate3d(')
-    expect(String(animation.keyframes[0].transform)).not.toContain('scale(')
+    expect(animation.keyframes[0]['--rmx-animation-layout-x']).toBe(-20)
+    expect(mockAnimations[2].keyframes[0]['--rmx-animation-layout-scale-x']).toBe(1)
   })
 
   it('does not invent translation for size-only changes when size projection is disabled', () => {
     let container = document.createElement('div')
+    document.body.append(container)
     let root = createRoot(container)
 
-    root.render(<div data-tick="0" mix={[animateLayout({ size: false })]} />)
+    root.render(
+      <div
+        data-tick="0"
+        mix={[
+          animateLayout({
+            size: false,
+          }),
+        ]}
+      />,
+    )
     root.flush()
     let node = container.querySelector('div')
     assert(node)
 
     mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 40 })
-    root.render(<div data-tick="1" mix={[animateLayout({ size: false })]} />)
+    root.render(
+      <div
+        data-tick="1"
+        mix={[
+          animateLayout({
+            size: false,
+          }),
+        ]}
+      />,
+    )
     root.flush()
     mockAnimations = []
 
@@ -185,7 +264,16 @@ describe('animateLayout mixin', () => {
       { left: 0, top: 0, right: 100, bottom: 40 },
       { left: 0, top: 0, right: 100, bottom: 120 },
     ])
-    root.render(<div data-tick="2" mix={[animateLayout({ size: false })]} />)
+    root.render(
+      <div
+        data-tick="2"
+        mix={[
+          animateLayout({
+            size: false,
+          }),
+        ]}
+      />,
+    )
     root.flush()
 
     expect(mockAnimations).toHaveLength(0)
@@ -193,6 +281,7 @@ describe('animateLayout mixin', () => {
 
   it('does not animate when geometry does not change', () => {
     let container = document.createElement('div')
+    document.body.append(container)
     let root = createRoot(container)
 
     root.render(<div data-tick="0" mix={[animateLayout()]} />)
@@ -217,6 +306,7 @@ describe('animateLayout mixin', () => {
 
   it('starts interrupted layout animations from the current visual position', () => {
     let container = document.createElement('div')
+    document.body.append(container)
     let root = createRoot(container)
 
     root.render(<div data-tick="0" mix={[animateLayout()]} />)
@@ -246,14 +336,15 @@ describe('animateLayout mixin', () => {
     root.flush()
 
     expect(firstAnimation.playState).toBe('idle')
-    expect(mockAnimations).toHaveLength(2)
+    expect(mockAnimations).toHaveLength(8)
 
-    let secondAnimation = mockAnimations[1]
-    expect(String(secondAnimation.keyframes[0].transform)).toBe('translate3d(-15px, 0px, 0)')
+    let secondAnimation = mockAnimations[4]
+    expect(secondAnimation.keyframes[0]['--rmx-animation-layout-x']).toBe(-45)
   })
 
   it('keeps active layout animations when the target geometry does not change', () => {
     let container = document.createElement('div')
+    document.body.append(container)
     let root = createRoot(container)
 
     root.render(<div data-tick="0" mix={[animateLayout()]} />)
@@ -283,11 +374,12 @@ describe('animateLayout mixin', () => {
     root.flush()
 
     expect(active.playState).toBe('running')
-    expect(mockAnimations).toHaveLength(1)
+    expect(mockAnimations).toHaveLength(4)
   })
 
   it('does not reuse completed animation geometry when beforeUpdate is skipped', async () => {
     let container = document.createElement('div')
+    document.body.append(container)
     let root = createRoot(container)
 
     root.render(<div data-tick="0" mix={[animateLayout()]} />)
@@ -324,6 +416,7 @@ describe('animateLayout mixin', () => {
 
   it('cancels active animation on remove', () => {
     let container = document.createElement('div')
+    document.body.append(container)
     let root = createRoot(container)
 
     root.render(<div data-tick="0" mix={[animateLayout()]} />)

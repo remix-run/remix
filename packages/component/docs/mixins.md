@@ -105,16 +105,18 @@ const observeSize = createMixin<HTMLElement>((handle) => {
 })
 ```
 
-| Event          | When it fires                                                                                                          | Event fields                     |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| `insert`       | After the mixin binds to its host, in the commit phase. This also runs when adding a mixin to an already-mounted host. | `node`, `parent`, optional `key` |
-| `beforeUpdate` | Before DOM changes in the host's update scope. Use it to measure the previous layout.                                  | `node`                           |
-| `commit`       | After DOM changes in the host's update scope. Use it to measure the new layout.                                        | `node`                           |
-| `beforeRemove` | When host removal begins, while a mixin can still defer it.                                                            | `persistNode(callback)`          |
-| `reclaimed`    | When a persisted keyed host returns before removal completes.                                                          | `node`, `parent`, optional `key` |
-| `remove`       | When the mixin is disposed. This also runs when the mixin is removed or replaced while its host stays mounted.         | Standard `Event` fields          |
+| Event          | When it fires                                                                                                          | Event fields                      |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `insert`       | After the mixin binds to its host, in the commit phase. This also runs when adding a mixin to an already-mounted host. | `node`, `parent`, optional `key`  |
+| `beforeUpdate` | Before DOM changes in the host's update scope. Use it to measure the previous layout.                                  | `node`, `afterDispatch(callback)` |
+| `commit`       | After DOM changes in the host's update scope. Use it to measure the new layout.                                        | `node`, `afterDispatch(callback)` |
+| `beforeRemove` | When host removal begins, while a mixin can still defer it.                                                            | `persistNode(callback)`           |
+| `reclaimed`    | When a persisted keyed host returns before removal completes.                                                          | `node`, `parent`, optional `key`  |
+| `remove`       | When the mixin is disposed. This also runs when the mixin is removed or replaced while its host stays mounted.         | Standard `Event` fields           |
 
 `beforeUpdate` and `commit` concern the containing update scope, so they can run when another element's update affects this host's layout. They are not a notification that this mixin's arguments changed.
+
+Call `event.afterDispatch(callback)` synchronously from a `beforeUpdate` or `commit` listener to group work after that lifecycle batch's listeners. Before-update callbacks run before the DOM changes. Commit callbacks run before ordinary `handle.queueTask` work. This lets mixins collect elements and coordinate DOM reads and writes across a batch without deferring them to another frame. An inline host update can have a smaller batch than a component update.
 
 `beforeRemove` and `remove` have different jobs. Register work that delays host removal in `beforeRemove`. Release resources in `remove`, which marks final disposal of the mixin slot. It is a cleanup notification, not a guarantee that the host has already been detached. Removing only a mixin from `mix` does not remove its host or provide a `persistNode` opportunity.
 

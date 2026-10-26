@@ -937,7 +937,9 @@ function insert(
     // Check for matching mixin-persisted node that can be reclaimed
     let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
     if (persistedNode) {
-      return reclaimPersistedMixinNode(persistedNode, node, vParent, context)
+      let reclaimed = reclaimPersistedMixinNode(persistedNode, node, vParent, context)
+      doInsert(reclaimed._dom)
+      return reclaimed
     }
 
     if (hydrationNode instanceof Element) {
@@ -2233,12 +2235,16 @@ function reclaimPersistedMixinNode(
   context: ReconcileContext,
 ): CommittedHostNode {
   let { frame, scheduler, styles } = context
-  cancelPendingMixinRemoval(persistedNode._mixState)
+  // Persisted hosts are unbound, so notify their existing mixins explicitly
+  // before resolving replacements and patching the returning host's props.
+  dispatchMixinBeforeUpdate(persistedNode._mixState, persistedNode._dom)
   unmarkNodePersistedByMixins(persistedNode)
 
   let prevProps = getHostProps(persistedNode)
   let childInputs = newNode._children
   let resolved = resolveNodeMixProps(newNode, vParent, frame, scheduler, persistedNode._mixState)
+  // Keep removal prepared while dropping old mixins so teardown does not restart it.
+  cancelPendingMixinRemoval(persistedNode._mixState)
   let nextProps = resolved.props
   let committed = commitHostNode(
     newNode,
@@ -2249,9 +2255,6 @@ function reclaimPersistedMixinNode(
   )
   committed._directEventState = persistedNode._directEventState
   committed._controlledState = persistedNode._controlledState
-  if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
-    dispatchMixinBeforeUpdate(committed._mixState)
-  }
   patchHostProps(prevProps, nextProps, persistedNode._dom)
   syncDirectEventListeners(committed)
   ensureControlledReflection(committed, scheduler)

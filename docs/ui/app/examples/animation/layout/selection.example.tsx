@@ -13,7 +13,16 @@ export default function ExampleLayout(handle: Handle) {
         }}
         aria-hidden="true"
         inert
-        mix={[animateLayout(prefersReducedMotion() ? false : spring('snappy')), styles.highlight]}
+        mix={[
+          animateLayout(
+            prefersReducedMotion()
+              ? false
+              : {
+                  ...spring('snappy'),
+                },
+          ),
+          styles.highlight,
+        ]}
       />
       {['Overview', 'Activity log'].map((label, index) => (
         <button

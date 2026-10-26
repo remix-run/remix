@@ -20,11 +20,11 @@ export const preview = presence
 const anatomyCode = await highlightSource(`
   import { animateEntrance, animateExit } from '@remix-run/ui/animation'
 
-  {visible && (
+  const element = visible && (
     <div key="content" mix={[animateEntrance(), animateExit()]}>
       Animated content
     </div>
-  )}
+  )
 `)
 
 const timingCode = await highlightSource(`
@@ -48,11 +48,11 @@ const timingCode = await highlightSource(`
 `)
 
 const identityCode = await highlightSource(`
-  {visible && (
+  const element = visible && (
     <div key="notification" mix={[animateEntrance(), animateExit()]}>
       Changes saved
     </div>
-  )}
+  )
 `)
 
 const initialEntranceCode = await highlightSource(
@@ -72,11 +72,12 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
       <Section id="timing" title="Customizing motion">
         <p>
           Style values define the entrance's starting keyframe and the exit's destination. The
-          element's normal styles define the other end. The example spreads{' '}
+          element's normal styles define the other end. Spread{' '}
           <a href="/animation/spring/">
             <code>spring('snappy')</code>
           </a>{' '}
-          into the options for spring timing.
+          into the options for spring timing. Use <code>transition</code> to override timing for
+          individual properties. Each property inherits settings you haven't overridden.
         </p>
 
         <CodeBlock html={timingCode} />
@@ -85,9 +86,10 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
         <p>
           The same element type and key under the same parent let an element return during exit.
           Entrance resumes from its current appearance, and removal waits until exit finishes.
-          Removing an element while its entrance is running reverses that animation instead of
-          starting the configured exit. Returning during exit animates back to normal styles using
-          the exit configuration’s timing.
+          Removing an element during entrance starts the configured exit from its current animated
+          appearance. Returning during exit animates back to normal styles using the exit
+          configuration’s timing. Retargeting preserves current values without carrying spring
+          velocity.
         </p>
 
         <CodeBlock html={identityCode} />
@@ -118,19 +120,25 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           <ApiEntry name="Omitted or true" type="undefined | true">
             150 ms opacity fade from zero with ease-out.
           </ApiEntry>
-          <ApiEntry
-            name="Options object"
-            type="{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }"
-          >
-            Uses the supplied keyframe and timing. Requires <code>duration</code>.
+          <ApiEntry name="Options object" type="AnimateMixinConfig">
+            Uses the supplied style values and optional transition settings.
           </ApiEntry>
           <ApiEntry name="false or null" type="false | null">
             Disables entrance animation.
           </ApiEntry>
         </ApiTable>
         <ApiTable id="entrance-options" label="Option" defaults>
-          <ApiEntry name="duration" type="number" required>
-            Playback time in milliseconds.
+          <ApiEntry name="transition" type="AnimationTransition" defaultValue="{}">
+            Per-property timing and compositing overrides. Each property inherits the animation's
+            settings, replacing only the fields you supply. Accepts a spring for each property.
+          </ApiEntry>
+          <ApiEntry name="Style properties" type="string | number">
+            Starting values for entrance or destination values for exit. Accepts CSS properties and
+            custom properties.
+          </ApiEntry>
+          <ApiEntry name="duration" type="number" defaultValue="150">
+            Playback time in milliseconds. Zero-duration exit properties apply immediately unless
+            delayed.
           </ApiEntry>
           <ApiEntry name="easing" type="string" defaultValue="'linear'">
             CSS easing function.
@@ -142,10 +150,6 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
             How the keyframe combines with underlying styles. Accepts <code>'replace'</code>,{' '}
             <code>'add'</code> or <code>'accumulate'</code>.
           </ApiEntry>
-          <ApiEntry name="Style properties" type="string | number">
-            Starting values for entrance or destination values for exit. Other value types are
-            ignored.
-          </ApiEntry>
         </ApiTable>
         <ApiTable id="entrance-entrance-options" label="Entrance option" defaults>
           <ApiEntry name="initial" type="boolean" defaultValue="true">
@@ -155,16 +159,14 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
         <h3 id="exit-reference">animateExit(config?)</h3>
         <p>
           Runs when the element is removed, from its current styles to the supplied values. Keeps
-          the element in the DOM until playback finishes. Returns an element mixin.
+          the element in the DOM until all property transitions finish. Retained elements are inert.
+          Returns an element mixin.
         </p>
         <ApiTable id="exit-config" label="Configuration" typeLabel="Value">
           <ApiEntry name="Omitted or true" type="undefined | true">
             150 ms opacity fade to zero with ease-in.
           </ApiEntry>
-          <ApiEntry
-            name="Options object"
-            type="{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }"
-          >
+          <ApiEntry name="Options object" type="AnimateMixinConfig">
             Accepts the same timing and style options as <code>animateEntrance()</code>. The style
             values are the destination keyframe. <code>initial</code> has no effect.
           </ApiEntry>

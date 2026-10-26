@@ -6,18 +6,24 @@ import { DemoSourceBehavior } from './public/demo-source.tsx'
 export interface DocsDemoProps {
   /** Highlighted source HTML. The source starts collapsed behind a "Show code" button. */
   sourceHtml?: string
+  /** Removes preview padding and clips content to the preview area. */
+  fullBleed?: boolean
   /** Live demo rendered in the preview area. */
   children: RemixNode
 }
 
 export function DocsDemo(handle: Handle<DocsDemoProps>) {
   return () => {
-    let { sourceHtml, children } = handle.props
+    let { sourceHtml, children, fullBleed } = handle.props
     let sourceId = `${handle.id}-source`
 
     return (
       <div class="docs-demo">
-        <div class="docs-demo-preview" data-pagefind-ignore>
+        <div
+          class="docs-demo-preview"
+          style={fullBleed ? { overflow: 'clip', padding: 0 } : undefined}
+          data-pagefind-ignore
+        >
           {children}
         </div>
         {sourceHtml ? (

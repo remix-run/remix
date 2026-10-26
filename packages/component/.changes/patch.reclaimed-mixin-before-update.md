@@ -1,0 +1,1 @@
+Retained mixins are now notified before a returning keyed element is updated, including when the element no longer uses those mixins. This lets them restore temporary DOM changes before the new props are applied.

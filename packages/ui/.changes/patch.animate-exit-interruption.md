@@ -1,0 +1,1 @@
+Removing an element during its entrance now runs the configured `animateExit()` transition from its current animated appearance. Previously, early removal reversed the entrance and ignored the exit's destination and timing. Returning keyed elements still animate back to their natural styles. Retargeting preserves current values without carrying spring velocity between animations.

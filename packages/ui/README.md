@@ -80,6 +80,7 @@ function ViewOptions(handle: Handle) {
 - [`@remix-run/ui/popover`](https://github.com/remix-run/remix/blob/main/packages/ui/src/popover/README.md)
 - [`@remix-run/ui/select`](https://github.com/remix-run/remix/blob/main/packages/ui/src/select/README.md)
 - [`@remix-run/ui/tabs`](https://github.com/remix-run/remix/blob/main/packages/ui/src/tabs/README.md)
+- [`@remix-run/ui/toast`](https://github.com/remix-run/remix/blob/main/packages/ui/src/toast/README.md)
 - [`@remix-run/ui/toggle`](https://github.com/remix-run/remix/blob/main/packages/ui/src/toggle/README.md)
 
 ## Animation
@@ -103,7 +104,7 @@ function Toast() {
 }
 ```
 
-See the [`animation` module README](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for layout animation, CSS transitions, Web Animations API options, and imperative animation.
+See the [`animation` module README](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for drag, layout animation, CSS transitions, Web Animations API options, and imperative animation.
 
 ## License
 

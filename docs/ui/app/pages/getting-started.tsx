@@ -6,7 +6,9 @@ import { UiDocument } from '../ui/document.tsx'
 import { CodeBlock, readPageHeadings, Section } from './page.tsx'
 
 const previews = categories.flatMap((category) => {
-  let page = pages.find((page) => page.category === category.id)
+  let page =
+    pages.find((page) => page.category === category.id && page.preview) ??
+    pages.find((page) => page.category === category.id)
   return page ? [{ category, page, Preview: page.preview?.Preview }] : []
 })
 
