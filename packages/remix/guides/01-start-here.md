@@ -104,13 +104,13 @@ server.listen(44100, () => {
 
 `server.ts` is the runtime entrypoint. In our Node-based example, it creates an HTTP server, adapts each Node request into a Web `Request`, and passes it to `router.fetch(request)`.
 
-The [Request Handling](/request-handling/) chapter digs into runtime adapters, `createRequestListener`, middleware ordering, and typed request context.
+Later you can read more about [`createRequestListener`](/request-handling/#createrequestlistener), [running on Bun, Deno, or Workers](/request-handling/#alternate-runtimes-bun-deno-workers), and [middleware ordering](/request-handling/#middleware-ordering).
 
 ## Define your first route {#define-your-first-route}
 
 In Remix, routes are defined separately from the actions that handle matched requests. In `app/routes.ts`, we define the URLs and HTTP methods your app accepts. In `app/actions/`, controllers decide what `Response` to return when one of those routes matches.
 
-Keeping the URL contract separate gives controllers, links, forms, redirects, and tests one typed source of truth without coupling URL generation to request handling.
+Because the URLs live in `routes.ts`, controllers, links, forms, redirects, and tests all import the same typed route objects, and generating a URL never requires loading the code that handles it.
 
 Start by defining a route where we can view different albums in a digital record store:
 
@@ -187,7 +187,7 @@ Navigate to [http://localhost:44100/albums/thriller](http://localhost:44100/albu
 Album: thriller
 ```
 
-The [Routing and Controllers](/routing-and-controllers/) chapter covers route maps and route builders in more depth.
+There are more [route builders](/routing-and-controllers/#route-builders) for other HTTP methods and resources, and more ways of [mapping controllers](/routing-and-controllers/#mapping-controllers) to nested route maps.
 
 ## Build your first page {#build-your-first-page}
 
@@ -195,7 +195,7 @@ Let's make this album page a little more interesting by returning HTML from a Re
 
 A component is a function that receives a `handle` and returns another function that renders JSX. The outer function is setup: it runs once when the component is created, so normal JavaScript variables declared there can hold local state. The returned function is render: it runs on the first render and every update afterward.
 
-We'll come back to the component model later. If you want the full model now, check out the [Rendering UI](/rendering-ui/) chapter.
+We'll come back to the [component model](/rendering-ui/#the-remix-component-model) later.
 
 ```tsx
 function MyComponent(handle) {
@@ -235,7 +235,7 @@ export function AlbumPage(handle: Handle<{ id: string }>) {
 }
 ```
 
-To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The middleware comes from `remix/middleware/render`. [Rendering UI](/rendering-ui/) covers the component model, and [Streaming UI with Frames](/streaming-ui-with-frames/) covers the renderer behind `context.render(...)`.
+To use this component we need to [render it through the request context](/rendering-ui/#rendering-pages-through-request-context) and return the response from our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. `context.render(...)` comes from the `render()` middleware in [`remix/middleware/render`](../src/render-middleware/README.md), which [streams the component tree as HTML](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring).
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[4,9]
 import { createController } from "remix/router";
@@ -252,7 +252,7 @@ export default createController(routes.albums, {
 });
 ```
 
-For this walkthrough we're going to set up a small in-memory database. The [Data and Validation](/data-and-validation/) chapter covers real database setup in more detail.
+For this walkthrough we're going to set up a small in-memory database. A real app would [give actions access to a database](/data-and-validation/#give-actions-access-to-the-database) instead.
 
 ```sh
 touch app/actions/albums/data.ts
@@ -346,7 +346,7 @@ export function AlbumPage(handle: Handle<{ album: Album }>) {
 
 Now the page displays the album title, artist, and year.
 
-Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI](/rendering-ui/) chapter covers this helper and prop in more detail.
+Center it and add a little spacing with the [`css` function](/rendering-ui/#styling-with-css) and the [`mix` prop](/interactivity/#the-mix-prop).
 
 ```tsx filename=app/actions/albums/show-page.tsx lines=[2,14-18,20]
 import type { Handle } from "remix/component";
@@ -535,7 +535,7 @@ Open [http://localhost:44100/albums/thriller/edit](http://localhost:44100/albums
 
 ![Album edit page with information for Thriller by Michael Jackson](/images/app/actions/docs/chapters/01-start-here/album-edit-page.png)
 
-Before handling the `POST` request, add the `form-data` middleware in `app/router.ts`. It parses browser form bodies once and makes the `FormData` available to route actions.
+Before handling the `POST` request, add the `formData()` middleware from [`remix/middleware/form-data`](../src/form-data-middleware/README.md) in `app/router.ts`. It parses browser form bodies once and makes the `FormData` available to route actions.
 
 ```ts filename=app/router.ts lines=[2,9]
 import { createRouter, type RouterContext } from "remix/router";
@@ -560,7 +560,7 @@ declare module "remix" {
 // ...
 ```
 
-We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The [Data and Validation](/data-and-validation/) chapter explores it in more detail.
+We'll also use [`remix/data-schema/form-data`](../src/data-schema/README.md) to turn the raw `FormData` into typed values before updating the album. [`remix/data-schema`](../src/data-schema/README.md) is a built-in Remix library for validating and parsing all sorts of data, from form fields to [query strings](/data-and-validation/#parse-query-strings-and-repeated-fields).
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[2-5,8,11-15,28-41]
 import { createController } from "remix/router";
@@ -609,13 +609,11 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The [Forms and Mutations](/forms-and-mutations/) chapter shows how to render field-level validation errors back into a form.
+The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. Instead of a plain `400` response, you can also [render field-level validation errors back into the form](/forms-and-mutations/#return-validation-failures-with-the-form).
 
 Now we can update our album data and set it to the correct year.
 
 ![Changing input with value 1983 to 1982, hitting submit, then being redirected to the corrected page](/images/app/actions/docs/chapters/01-start-here/correct-year.gif)
-
-The [Routing and Controllers](/routing-and-controllers/) and [Data and Validation](/data-and-validation/) chapters go deeper on request handling, validation, and database-backed mutations.
 
 ## Add your first hydrated component {#add-your-first-hydrated-component}
 
@@ -623,7 +621,7 @@ You might have noticed that saving that album takes a little bit of time. That's
 
 So far we have not used any JavaScript in the browser. Everything up to this point has been server-side JavaScript. Even our components are rendered on the server and streamed as HTML.
 
-If we want to signal to the user that their form submission is pending, we need to bring in a little bit of browser JavaScript. In Remix, the easiest way to do this is to wrap a component with `clientEntry(...)`. The component still renders on the server, but once it makes it to the browser Remix can hydrate it, respond to user interaction, and update the component without waiting for another server response.
+If we want to signal to the user that their form submission is pending, we need to bring in a little bit of browser JavaScript. In Remix, the easiest way to do this is to wrap a component with [`clientEntry(...)`](/interactivity/#cliententry). The component still renders on the server, but once it makes it to the browser Remix can hydrate it, respond to user interaction, and update the component without waiting for another server response.
 
 Start by creating a route-local browser module for the form:
 
@@ -632,7 +630,7 @@ mkdir -p app/actions/albums/edit/public
 touch app/actions/albums/edit/public/album-edit-form.tsx
 ```
 
-The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory; `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which starts the Remix component client runtime. The [Files and Assets](/files-and-assets/) chapter goes deeper into this bundlerless setup.
+The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory. `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which [starts the Remix component client runtime](/interactivity/#browser-entry-with-run). You can [configure the asset server boundary](/files-and-assets/) if your app needs different rules.
 
 Now that we have a place for the form to live, let's pull it into its own component.
 
@@ -736,7 +734,7 @@ export const AlbumEditForm = clientEntry(
 );
 ```
 
-The page should still look and behave the same. `clientEntry(...)` simply tells Remix to render the form on the server, serialize its props, and hydrate this component in the browser when the client runtime starts.
+The page should still look and behave the same. `clientEntry(...)` tells Remix to render the form on the server, serialize its props, and hydrate this component in the browser when the client runtime starts.
 
 Now that the form can run in the browser, we can add pending state. State in Remix is just a variable. Create your "state" as a variable in the setup scope (in this case, `let pending`):
 
@@ -755,7 +753,7 @@ export const AlbumEditForm = clientEntry(
 );
 ```
 
-When the form submits, we flip the `pending` variable from `false` to `true` and call `handle.update()`. `handle.update()` tells the component runtime to render this component again with the new local state. To listen for the submit, we add an event listener via the `on` helper and pass an array into the `mix` prop.
+When the form submits, we flip the `pending` variable from `false` to `true` and call `handle.update()`. `handle.update()` tells the component runtime to render this component again with the new local state. To listen for the submit, we add an event listener with the [`on` helper](/interactivity/#events-with-on) and pass an array into the `mix` prop.
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx lines=[1,25,27-31,34-36]
 import { clientEntry, css, on } from "remix/component";
@@ -805,6 +803,6 @@ Now when you submit the form, the button is disabled and the button text changes
 
 ![Submit button saying "Saving..." while being disabled](/images/app/actions/docs/chapters/01-start-here/pending-submit.png)
 
-There is a lot more we could do here to avoid a full page navigation, but that involves handling cancellations, error states, and more. The [Interactivity](/interactivity/) chapter covers client entries, events, and progressive enhancement in more detail.
+There is a lot more we could do here to [submit the form without a full page navigation](/interactivity/#enhancing-forms-with-fetch-and-navigation), but that involves handling cancellations, error states, and more.
 
-Next, [Routing and Controllers](/routing-and-controllers/) takes a closer look at the route leaves, nested maps, and controllers we started using here.
+Next, take a closer look at the [route maps](/routing-and-controllers/#routes-as-the-url-contract) and [controllers](/routing-and-controllers/#controllers-and-actions) we started using here.

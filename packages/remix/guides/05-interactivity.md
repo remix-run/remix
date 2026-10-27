@@ -3,18 +3,16 @@ title: Interactivity
 description: How server-rendered UI hydrates, handles events, connects components to application models, navigates, and cancels stale work.
 ---
 
-In [Getting Started](/start-here/), the album page, edit form, validation, mutation, and redirect all
-worked before we added browser JavaScript. Then we marked the form as a client entry so its submit
-button could show pending state.
-
-This chapter adds browser behavior to server-rendered components. We will mark a component for
-hydration, start the browser runtime, update local UI state, handle events, cancel stale async work,
-and enhance links and forms. For application state and business rules, components call ordinary
-TypeScript models and keep their own state focused on the UI.
+Remix renders pages on the server and hydrates only the components that need to run in the browser.
+This chapter covers marking those components with `clientEntry(...)`, starting the browser runtime
+with `run()`, updating local UI state, handling events with `on(...)` and other mixins, cancelling
+stale async work, and enhancing links and forms with client navigation. For application state and
+business rules, components call ordinary TypeScript models and keep their own state focused on the
+UI.
 
 ## Progressive enhancement {#progressive-enhancement}
 
-Begin with links and forms that already describe the request the server should receive. Our album
+Begin with links and forms that already describe the request the server should receive. This album
 form has a real action and method:
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
@@ -68,7 +66,7 @@ it needs rather than moving the whole page into browser code.
 
 ## Hydration boundaries with clientEntry {#cliententry}
 
-`clientEntry(...)` marks the smallest component that needs to run in the browser. The album edit page
+`clientEntry(...)` marks the smallest component that needs to run in the browser. An album edit page
 can remain server-only while its form hydrates:
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx lines=[1,13-15]
@@ -115,7 +113,8 @@ browser-safe values it needs to handle its part of the page.
 
 ## Booting the browser runtime with run {#browser-entry-with-run}
 
-The document shell loads `app/actions/public/entry.ts`. That module calls `run()` once:
+Client entries hydrate once a browser entry module calls `run()`. Load that module, such as
+`app/actions/public/entry.ts`, from the document shell and call `run()` once:
 
 ```ts filename=app/actions/public/entry.ts
 import {
@@ -151,7 +150,10 @@ await app.ready();
 
 `loadModule` imports the named component for every client entry discovered in the document. Browsers
 with multiple import map support use native imports and preloads. Browsers without that support use
-the polyfill when later frame responses introduce new mappings.
+the [`remix/multiple-import-maps-polyfill`](../src/multiple-import-maps-polyfill/README.md)
+shim when later frame responses introduce new mappings. If you only target browsers with native
+support, `loadModule` can call `import(moduleUrl)` directly and you can drop
+`processClientEntryPreloads`.
 
 The returned app runtime has three lifecycle methods:
 
@@ -163,8 +165,8 @@ The returned app runtime has three lifecycle methods:
 `run()` hydrates the server-rendered page. It is not a second application router. Browser requests
 still go to the route actions that own the corresponding server behavior.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) uses the default browser resolver for
-route-owned regions that load or reload independently.
+`run()` also provides a [default browser resolver for frames](/streaming-ui-with-frames/#resolve-frames-in-the-browser),
+the route-owned regions that load or reload independently.
 
 ## Mount client-only UI with createRoot {#client-only-roots}
 
@@ -223,14 +225,14 @@ function Counter(handle: Handle<{ initialCount: number }>) {
 `count` lives in setup scope, so it survives each render without becoming part of the component's
 props.
 
-Calling `handle.update()` schedules work and returns a promise. Await it when the next step needs the
-updated DOM:
+Call `handle.update()` from an event handler, queued task, subscription, timer, or other work that
+runs after the component commits. Calling it during setup warns and skips the extra render because
+the initial render follows setup. Calling it during rendering, or before the initial commit from
+outside setup, throws an error. If rendering discovers work that should run after the commit,
+schedule that work with `handle.queueTask()`.
 
-Call it from an event handler, queued task, subscription, timer, or other work that runs after the
-component commits. Calling it during setup warns and skips the extra render because the initial
-render follows setup. Calling it during rendering, or before the initial commit from outside setup,
-throws an error. If rendering discovers work that should run after the commit, schedule that work
-with `handle.queueTask()`.
+`handle.update()` schedules work and returns a promise. Await it when the next step needs the updated
+DOM:
 
 ```tsx
 import { on, ref } from "remix/component";
@@ -388,9 +390,8 @@ export function KeyedList(handle: Handle) {
 
 Setup-scope variables are a good home for UI state such as whether a menu is open, which field has
 focus, or whether a request is pending. Put business rules and shared application state in ordinary
-TypeScript outside the component, then call that code from event handlers.
-[Keep application logic outside components](#saving-a-client-owned-document) shows how to update a
-component when an application model changes.
+TypeScript outside the component, then call that code from event handlers and
+[update the component when the model changes](#saving-a-client-owned-document).
 
 ## Events with on {#events-with-on}
 
@@ -421,8 +422,7 @@ touch, Enter, and Space activation. A form's `submit` event covers its submit bu
 field. Use lower-level pointer or keyboard events when the interaction itself requires them, not to
 rebuild behavior the platform already supplies.
 
-Use lower-level pointer and keyboard events only when the interaction needs them. If an event starts
-temporary listeners on `window` or `document`, give those listeners their own cleanup signal and
+If an event starts temporary listeners on `window` or `document`, give those listeners their own cleanup signal and
 stop them when the interaction finishes or the component disconnects.
 
 Only call `preventDefault()` when the enhanced path will finish the browser's job. If an event
@@ -525,7 +525,7 @@ The core mixins serve different host-level jobs:
 - `link(...)` adds client navigation behavior and link semantics.
 - `css(...)` applies static generated CSS.
 
-Animation mixins use the same prop and are covered in [Animation](/animation/). Put frequently
+[Animation mixins](/animation/#entrance-and-exit-animations) use the same prop. Put frequently
 changing values in normal props such as `style`, `value`, `checked`, and ARIA attributes rather than
 recreating static mixins for every state change.
 
@@ -758,8 +758,9 @@ subscription when the component disconnects. If several components use the same 
 their nearest shared client boundary and provide it through component context. Do not pass a class
 instance through `clientEntry(...)` props because those props are serialized.
 
-This separation keeps each test focused. Test cart rules without a DOM. Use a component test for the
-details button and rendered item count because those depend on the component and DOM.
+With this split, you can test cart rules without a DOM and save
+[component tests](/testing/#test-remix-components-in-the-browser) for the details button and rendered
+item count, which depend on the component and DOM.
 
 ## Client navigation {#client-navigation}
 
@@ -834,8 +835,9 @@ A supplied `data-rmx-src` must be a valid same-origin URL regardless of the targ
 cross-origin values disable interception and leave the navigation to the browser. These rules also
 apply to the `src` and `target` options of `link(...)` and `navigate(...)`.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames and
-explains when a form can submit directly through the frame resolver.
+These attributes are most useful with [named frames](/streaming-ui-with-frames/#frames-and-partial-server-rendered-ui),
+and a form can [navigate a frame](/streaming-ui-with-frames/#navigate-a-frame-with-a-form) directly
+through the frame resolver.
 
 ## Prefetch links before navigation
 
@@ -867,55 +869,76 @@ Only prefetch links whose GET requests are safe to make speculatively. See the [
 
 ## Enhancing forms with fetch and navigation
 
-Now we can enhance the album form without adding a second mutation API. The handler sends the form's
+You can enhance a form without adding a second mutation API. The submit handler sends the form's
 existing action, method, and `FormData`, then follows the action's redirect:
 
-```tsx
-// Inside AlbumEditForm's render function:
-<form
-  action={routes.albums.edit.action.href({ albumId: album.id })}
-  method="post"
-  mix={on("submit", async (event, signal) => {
-    let form = event.currentTarget;
-    event.preventDefault();
-    error = undefined;
-    pending = true;
-    handle.update();
+```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
+import { clientEntry, navigate, on } from "remix/component";
+import type { Handle } from "remix/component";
 
-    try {
-      let response = await fetch(form.action, {
-        body: new FormData(form),
-        method: form.method,
-        signal,
-      });
+import { routes } from "../../../../routes.ts";
 
-      if (signal.aborted) return;
-      if (!response.ok) {
-        error = await response.text();
-        if (signal.aborted) return;
-        pending = false;
-        handle.update();
-        return;
-      }
+export const AlbumEditForm = clientEntry(
+  import.meta.url,
+  function AlbumEditForm(handle: Handle<{ album: { id: string; title: string } }>) {
+    let error: string | undefined;
+    let pending = false;
 
-      await navigate(response.url, { history: "replace" });
-    } catch (caught) {
-      if (signal.aborted) return;
-      error = caught instanceof Error ? caught.message : "Unable to save album";
-      pending = false;
-      handle.update();
-    }
-  })}
->
-  {/* The same fields from the progressively enhanced form above. */}
-  <button disabled={pending} type="submit">
-    {pending ? "Saving…" : "Save album"}
-  </button>
-  {error ? <p role="alert">{error}</p> : null}
-</form>
+    return () => {
+      let { album } = handle.props;
+
+      return (
+        <form
+          action={routes.albums.edit.action.href({ albumId: album.id })}
+          method="post"
+          mix={on("submit", async (event, signal) => {
+            let form = event.currentTarget;
+            event.preventDefault();
+            error = undefined;
+            pending = true;
+            handle.update();
+
+            try {
+              let response = await fetch(form.action, {
+                body: new FormData(form),
+                method: form.method,
+                signal,
+              });
+
+              if (signal.aborted) return;
+              if (!response.ok) {
+                error = await response.text();
+                if (signal.aborted) return;
+                pending = false;
+                handle.update();
+                return;
+              }
+
+              await navigate(response.url, { history: "replace" });
+            } catch (caught) {
+              if (signal.aborted) return;
+              error = caught instanceof Error ? caught.message : "Unable to save album";
+              pending = false;
+              handle.update();
+            }
+          })}
+        >
+          <label>
+            Title
+            <input defaultValue={album.title} name="title" required />
+          </label>
+          <button disabled={pending} type="submit">
+            {pending ? "Saving…" : "Save album"}
+          </button>
+          {error ? <p role="alert">{error}</p> : null}
+        </form>
+      );
+    };
+  },
+);
 ```
 
-The controller action has not changed. A non-enhanced submission still receives its redirect or
+The server action is the same one the plain form posts to. A non-enhanced submission still receives its redirect or
 error response. The enhanced path consumes that response, shows an error locally when it is not
 successful, and follows the controller's redirect URL with `navigate(...)`.
 
@@ -926,13 +949,15 @@ Choose the synchronization boundary that matches the UI:
 - Send JSON when a browser-side model owns the data and no server-rendered region needs to change.
 - Poll a small JSON endpoint when data changes independently of the current page.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) covers the optional case where a mutation
-reloads one route-owned region without navigating the whole document.
+A mutation can also
+[reload one route-owned frame](/streaming-ui-with-frames/#coordinating-forms-fetches-frame-reloads-and-navigation)
+without navigating the whole document.
 
 ## Pending and optimistic UI {#optimistic-ui}
 
-The album form keeps `pending` in setup scope because the render output reads it. The submit handler
-sets it before the request and clears it when the request settles. That is enough for disabled
+Keep a `pending` flag in setup scope when the render output reads it. Set it in the submit handler
+before the request and clear it when the request settles, as in the
+[enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough for disabled
 controls, pending labels, progress indicators, and duplicate-submission prevention.
 
 Optimistic UI renders the expected result before the request completes. Put the optimistic operation
@@ -1020,7 +1045,3 @@ Consume the semantic event with `on(...)` like any other DOM event:
 Namespace custom event names to avoid collisions, and keep one-off behavior in the component that
 uses it. The [`remix/component` API overview](../src/component/README.md) covers the full
 mixin API.
-
-The next chapter uses the same server renderer and browser runtime to stream and reload route-owned
-UI with `<Frame>`. [Animation](/animation/) then applies component state, `mix` composition, keys, and
-cancellation to entrance, exit, layout, spring, and tween motion.

@@ -3,25 +3,28 @@ title: Streaming UI with Frames
 description: How to stream and reload route-owned UI with Frame, fallbacks, and server and browser frame resolvers.
 ---
 
-The album page from [Rendering UI](/rendering-ui/) returns one component tree, and the enhanced form
-from [Interactivity](/interactivity/) navigates after it saves. Keep those simpler paths until one
-region of a page benefits from its own request.
+A `<Frame>` renders the HTML from another route inside the current page. Remix can resolve that
+route before it sends the page, stream it in behind a fallback, or reload it later in the browser
+without navigating the whole document.
 
-This chapter moves album recommendations behind a `GET` route, streams them into the page with
-`<Frame>`, and reloads that region without navigating the whole document.
+This guide uses an album page with a recommendations region to cover the frame route, the render
+middleware that resolves frames on the server, the browser resolver, and the links, forms, and
+handlers that reload a frame.
 
 ## Use a frame for route-owned UI
 
 A component does not need a frame merely because it is slow or interactive. Start with normal
-component composition. Reach for a frame when a region should have its own route and at least one of
-these behaviors:
+component composition, a single [rendered page](/rendering-ui/#rendering-pages-through-request-context),
+and [forms that navigate](/interactivity/#enhancing-forms-with-fetch-and-navigation). Reach for a
+frame when a region should have its own route and at least one of these behaviors:
 
-- it can arrive after the surrounding page;
-- it needs to reload independently after a mutation;
-- several pages render the same route-owned region; or
-- its data and error response belong to a separate request.
+- It can arrive after the surrounding page.
+- It needs to reload independently after a mutation.
+- Several pages render the same route-owned region.
+- Its data and error response belong to a separate request.
 
-Add a recommendations route next to the album route:
+Give the region its own `GET` route. For album recommendations, that route can sit beside the album
+page:
 
 ```ts filename=app/routes.ts
 import { form, get, route } from "remix/routes";
@@ -65,7 +68,7 @@ export default createController(routes.albums, {
 });
 ```
 
-Now the page can render that route with `Frame`:
+The page renders that route by passing its URL to `Frame` as `src`:
 
 ```tsx filename=app/actions/albums/show-page.tsx
 import { Frame } from "remix/component";
@@ -110,13 +113,15 @@ its rendered HTML and replaces the fallback.
 
 Use a fallback for a region that may arrive later without making the surrounding page confusing.
 Keep a frame blocking when the initial page does not make sense without it. A fallback is loading UI,
-not a generic error boundary; the frame resolver and app error handling still decide what happens
+not a generic error boundary. The frame resolver and app error handling still decide what happens
 when the request fails.
 
 ## Render the response as a stream {#server-rendering-with-rendertostream-and-rendertostring}
 
-Add the standard render middleware to `app/router.ts`. It gives actions `context.render(...)`,
-streams their component trees, and sends frame requests back through the same router:
+Frames resolve on the server through the `render()` middleware from
+[`remix/middleware/render`](https://docs.remix.run/middleware/render/). Add it to your router. It
+gives actions `context.render(...)`, streams their component trees, and sends frame requests back
+through the same router:
 
 ```ts filename=app/router.ts
 import { render } from "remix/middleware/render";
@@ -141,11 +146,13 @@ transport headers from its internal `GET` requests, follows redirects, and cance
 work when the outer request is canceled. It also uses the asset server to resolve hydrated client
 entries and their module preloads.
 
-Use `renderWith(...)` from `remix/middleware/render` when an app needs a different renderer or
-response type. Normal HTML actions should use the standard `render()` middleware.
+Use `renderWith(...)` from [`remix/middleware/render`](https://docs.remix.run/middleware/render/)
+when an app needs a different renderer or response type. Normal HTML actions should use the standard
+`render()` middleware.
 
-`renderToString()` is the smaller alternative when code needs the complete HTML value before it can
-continue, such as an email preview or a small embedded fragment:
+`renderToString()` from [`remix/component/server`](https://docs.remix.run/component/server/) is the
+smaller alternative when code needs the complete HTML value before it can continue, such as an email
+preview or a small embedded fragment:
 
 ```tsx
 import { renderToString } from "remix/component/server";
@@ -154,22 +161,24 @@ import { renderToString } from "remix/component/server";
 let html = await renderToString(<AlbumRecommendations albums={recommendations} />);
 ```
 
-Use the app's streaming renderer for normal page responses. It supports client entries and lets
+Use `context.render(...)` for normal page responses. It streams, supports client entries, and lets
 frames with fallbacks arrive after the initial HTML.
 
 ## Resolve frames in the browser
 
 A blocking frame resolves before the browser receives the page. A frame with a fallback may still
-be pending, and any frame can reload later. The `run()` call in `app/actions/public/entry.ts` already
-provides a default browser resolver, so these requests need no additional configuration.
+be pending, and any frame can reload later. Calling [`run()`](/interactivity/#browser-entry-with-run)
+in your browser entry installs a default browser resolver, so these requests need no additional
+configuration.
 
 The default resolver fetches same-origin HTML, follows redirects, preserves form submission methods
 and encoding, and cancels requests when a frame is removed or its request is superseded. It also
 keeps the redirect destination available so navigation can update the browser URL after a form saves.
 
-If your app needs different request or response handling, you can provide your own `resolveFrame`
-function in the `run()` options. The [`remix/component` API overview](https://docs.remix.run/component/)
-covers the callback's arguments and return values.
+Pass your own `resolveFrame` function in the `run()` options when your app needs different request
+or response handling, such as extra headers or another body encoding. The
+[`remix/component`](https://docs.remix.run/component/) API overview documents the callback's
+arguments and return values.
 
 Remix does not sanitize returned HTML before reconciling it into the current document, and
 same-origin user-generated HTML is not implicitly safe. Sanitize untrusted content before returning it.
@@ -216,12 +225,15 @@ This GET form reloads the recommendations frame without a client entry or submit
 ```
 
 The form remains a normal document navigation before the runtime starts. Native constraint
-validation and the form's `submit` event run before Remix intercepts it. `data-rmx-target` chooses a named
-frame, `data-rmx-src` can provide a different request URL for that named frame,
-`data-rmx-reset-scroll="manual"` preserves the current scroll position, and
-`data-rmx-reset-focus="manual"` disables the browser's automatic focus reset. A submit button's values
-take precedence over its form's values. `data-rmx-document` opts out of interception, and
-`data-rmx-history="push|replace"` controls how the navigation updates history.
+validation and the form's `submit` event run before Remix intercepts it. A submit button's values
+take precedence over its form's values. These attributes control the navigation:
+
+- `data-rmx-target` chooses a named frame.
+- `data-rmx-src` provides a different request URL for that named frame.
+- `data-rmx-reset-scroll="manual"` preserves the current scroll position.
+- `data-rmx-reset-focus="manual"` disables the browser's automatic focus reset.
+- `data-rmx-history="push|replace"` controls how the navigation updates history.
+- `data-rmx-document` opts out of interception.
 
 Scroll and focus controls accept `"after-transition"` (the default) and `"manual"`. Existing `"true"`
 attributes keep the default behavior, and `"false"` attributes select `"manual"`. The `resetScroll` and
@@ -231,7 +243,7 @@ for compatibility.
 GET controls are already encoded in the destination URL. For non-GET forms, the default resolver
 sends the form's body with its method and encoding. The action should return HTML for the targeted
 frame when it receives a frame request, while keeping its normal document response or redirect for
-unenhanced submissions. Non-GET submissions to the current URL replace that history entry; GET
+unenhanced submissions. Non-GET submissions to the current URL replace that history entry, while GET
 submissions and submissions to a different URL push one. The `data-rmx-history` attribute overrides
 those defaults.
 
@@ -270,17 +282,17 @@ import { on } from "remix/component";
 </form>;
 ```
 
-This custom handler is useful because the mutation response and recommendations frame are two
-different requests. When the form action itself returns the HTML that belongs in the target frame,
-prefer `data-rmx-target` and let the runtime submit it.
+The custom handler earns its place because the mutation response and the recommendations frame are
+two different requests. The mutation stays in the edit action, the recommendations HTML stays in its
+`GET` action, and the browser component only sequences them. When the form action itself returns the
+HTML that belongs in the target frame, prefer `data-rmx-target` and let the runtime submit it.
 
-The handler above keeps the mutation in its existing action and the recommendations HTML in its
-existing `GET` action. The browser component coordinates the two requests without duplicating either
-server path.
+Pick the update that matches the response:
 
-Use a normal navigation when the response should replace the whole page. Fetch JSON when a browser
-component will render the returned data itself. Reload a frame when an existing `GET` action renders
-the HTML for one region and only that region needs to update.
+- Use a normal navigation when the response should replace the whole page.
+- Fetch JSON when a browser component will render the returned data itself.
+- Reload a frame when a `GET` action renders the HTML for one region and only that region needs to
+  update.
 
 ## Target a frame from a link
 
@@ -305,9 +317,9 @@ source to keep it in sync with the browser URL. If a specified target does not m
 the browser performs a document navigation. A supplied `data-rmx-src` must still be a valid same-origin
 URL regardless of the target. Invalid or cross-origin values also disable interception.
 
-Add `data-rmx-prefetch="intent"` or `data-rmx-prefetch="viewport"` to prefetch that same source and
-target before navigation. [Interactivity](/interactivity/#prefetch-links-before-navigation) covers
-both triggers and the imperative `prefetch()` API.
+Add `data-rmx-prefetch="intent"` or `data-rmx-prefetch="viewport"` to
+[prefetch](/interactivity/#prefetch-links-before-navigation) that same source and target before
+navigation. When a link attribute doesn't fit, call `prefetch(src, { target })` instead.
 
 Add `data-rmx-history="replace"` when it should replace the current history entry. Use
 `data-rmx-document` when a same-origin link must perform an ordinary document navigation instead.
@@ -326,9 +338,9 @@ with a new error response. Keep the fallback useful, report the error, and let t
 continue when that is safe.
 
 Pass `request.signal` through server frame work. The default browser resolver forwards its cancellation
-signal to `fetch()`; a custom resolver should do the same.
-[Errors and Cancellation](/errors-and-cancellation/) covers reporting policy, while
-[Production](/production/) covers disconnects, compression, and other deployment concerns.
+signal to `fetch()`, and a custom resolver should do the same.
 
-The next chapter, [Animation](/animation/), adds motion to component insertion, removal, and layout
-changes.
+Decide how to [report streaming render failures](/errors-and-cancellation/#streaming-render-errors)
+and [frame-resolution failures](/errors-and-cancellation/#frame-resolution-errors). In production,
+make sure [aborts propagate through streaming work](/production/#streaming-and-aborts) and that
+[compression doesn't break streams](/production/#compression-and-streams).

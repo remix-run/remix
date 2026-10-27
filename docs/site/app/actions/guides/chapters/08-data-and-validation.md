@@ -3,13 +3,11 @@ title: Data and Validation
 description: How Remix validates inputs, defines relational data, queries databases, and runs SQL migrations.
 ---
 
-In [Getting Started](/start-here/), we kept the record store's albums in an array and used a schema to parse an edit form. That was enough to follow a request through the app, but changes disappeared when the server restarted.
-
-Let's replace that array with SQLite and load an album from the database. Then we'll define a schema for the values the album editor can submit.
+Remix handles persistent data with [`remix/data-table`](https://docs.remix.run/data-table/) and untrusted input with [`remix/data-schema`](https://docs.remix.run/data-schema/). This guide covers table definitions, SQL migrations, putting the database on request context, reading rows in actions, and parsing form and query-string values. Later sections cover relations, table-level validation hooks, transactions, and PostgreSQL or MySQL. The examples use SQLite and a record store's albums and tracks.
 
 ## Describe the stored rows
 
-The record store needs an albums table with the same fields as our in-memory records, so we'll define our data shape using `table()` which gives us metadata for typed queries, column references, and database value encoding. We'll also define a tracks table for the relation and transaction examples in the advanced section:
+`table()` from [`remix/data-table`](https://docs.remix.run/data-table/) describes a table's name and columns. Remix uses that metadata for typed queries, column references, and encoding values for the database. This module describes an albums table and a tracks table whose rows belong to an album:
 
 ```ts filename=app/data/tables.ts
 import { column as c, table } from "remix/data-table";
@@ -41,7 +39,7 @@ export type Album = TableRow<typeof albums>;
 
 The `id` column is the default primary key, but tables can specify a different key using `primaryKey`.
 
-`table(...)` does not create a SQL table for us - we'll do that with an SQL migration file.
+`table(...)` does not create a SQL table. Create the table with a [SQL migration](#create-the-tables-with-sql).
 
 ## Create the tables with SQL
 
@@ -56,7 +54,7 @@ db/migrations/
 
 The numeric prefix determines migration order. Keep every prefix the same width (`0001`, `0002`, and so on).
 
-This SQLite migration creates the tables described above:
+This SQLite migration creates `albums` and `tracks` tables:
 
 ```sql filename=db/migrations/0001_create_albums/up.sql
 create table albums (
@@ -84,7 +82,7 @@ drop table tracks;
 drop table albums;
 ```
 
-Now, our code can open the database and load the migration files:
+To apply migrations, open the database with [`remix/data-table/sqlite`](https://docs.remix.run/data-table/sqlite/), load the migration files with [`remix/data-table/migrations/node`](https://docs.remix.run/data-table/migrations/node/), and pass them to `db.migrate(...)`:
 
 ```ts filename=app/db.ts
 import { fileURLToPath } from "node:url";
@@ -106,15 +104,15 @@ export async function migrateDatabase() {
 
 `createSqliteDatabase(...)` uses the SQLite client built into Node.js or Bun, and `foreignKeys: true` enables enforcement of the track's reference to its album. The file path is relative to this module, so starting the server from another directory still references the proper database file.
 
-For this single-process app, call `await migrateDatabase()` in `server.ts` before the HTTP server starts listening to ensure all migrations are applied prior to serving the app. In a deployment with several server processes, run migrations once as a deployment step before those processes accept requests. Call `await db.close()` when shutting down the application.
+In a single-process app, call `await migrateDatabase()` in `server.ts` before the HTTP server starts listening, so every migration is applied before the first request. In a deployment with several server processes, run migrations once as a deployment step before those processes accept requests. Call `await db.close()` when the application [shuts down](/production/#startup-and-shutdown).
 
-The migration runner records applied migrations in a journal and checks their checksums on later runs. Add a new migration when the schema changes instead of editing an applied migration. You must also keep the table definitions in `app/data/tables.ts` aligned with the resulting SQL schema.
+The migration runner records applied migrations in a journal and checks their checksums on later runs. Add a new migration when the schema changes instead of editing an applied migration, and keep the table definitions in `app/data/tables.ts` aligned with the resulting SQL schema.
 
-`db.migrate(...)` also supports dry-run plans, bounded rollbacks, and migration targets. The [`data-table` overview](https://docs.remix.run/data-table/) covers those options and CLI configuration for `remix db`.
+`db.migrate(...)` also supports dry-run plans, bounded rollbacks, and migration targets. The [`remix/data-table`](https://docs.remix.run/data-table/) overview covers those options and CLI configuration for `remix db`.
 
 ## Give actions access to the database
 
-The database lives for the lifetime of the application. Middleware can put it on each request's context so controllers can use it without importing the connection module directly:
+The database lives for the lifetime of the application. Controllers can import `db` from `app/db.ts` directly, which is the simplest option. Alternatively, middleware can put it on each request's context, so controllers read `context.db` without importing the connection module:
 
 ```ts filename=app/middleware/database.ts
 import { createContextKey } from "remix/router";
@@ -139,7 +137,7 @@ export function loadDatabase(): Middleware<{
 
 `databaseContext` and `loadDatabase()` are application code. The middleware imports the shared database from `app/db.ts` and stores that same instance on each request's context. It does not open a connection or start a transaction per request.
 
-Add it to the router alongside form parsing and rendering, retaining the app's existing static-file middleware and controller mappings:
+Add it to the router's middleware list:
 
 ```ts filename=app/router.ts lines=[8,13]
 import { formData } from "remix/middleware/form-data";
@@ -168,14 +166,14 @@ declare module "remix" {
   }
 }
 
-// Keep the existing router.map(...) calls here.
+// router.map(...) calls go here.
 ```
 
-The `RouterTypes` declaration makes `context.db` (in addition to `context.formData` and `context.render`) available to controllers with their inferred types. The database can also be accessed via `context.get(databaseContext)`. [Request Handling](/request-handling/) explains how the middleware stack supplies these context properties.
+The `RouterTypes` declaration makes `context.db` (in addition to `context.formData` and `context.render`) available to controllers with their inferred types. The database can also be accessed via `context.get(databaseContext)`. See how [middleware adds typed context properties](/request-handling/#typed-request-context).
 
 ## Read an album
 
-With the migration applied, we can create and retrieve an album in application code. First, we need to seed the database with some data. Create and run the following seed script against the database:
+`db.create(...)` inserts a row and `db.find(...)` loads one by primary key. A seed script at the project root can insert an album once the migrations have run:
 
 ```ts
 import { db } from "./app/db.ts";
@@ -189,7 +187,7 @@ await db.create(albums, {
 });
 ```
 
-Now, replace the array lookup in the album's `show` action:
+In an action, look up the album through `context.db` and return a `404` when `find` returns `null`:
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[10]
 import { createController } from "remix/router";
@@ -206,18 +204,15 @@ export default createController(routes.albums, {
 
       return context.render(<AlbumPage album={album} />);
     },
-    async recommendations(context) {
-      /* ... */
-    },
   },
 });
 ```
 
-Now open `/albums/thriller` in your browser - the page now loads its data from SQLite. Restarting the server keeps the record we inserted.
+A request to `/albums/thriller` now reads the seeded row from the SQLite file, so the album is still there after the server restarts.
 
 ## Define the input schema
 
-Form fields arrive as text, even when the year input has `type="number"`. Define a form schema beside the edit controller to convert the year and reject blank titles and artists:
+Form fields arrive as text, even when the year input has `type="number"`. A form schema built with [`remix/data-schema/form-data`](https://docs.remix.run/data-schema/form-data/) can convert the year and reject blank titles and artists. Keeping it beside the edit controller puts it next to the action that parses the form:
 
 ```ts filename=app/actions/albums/edit/schema.ts
 import * as s from "remix/data-schema";
@@ -246,17 +241,17 @@ export const albumForm = f.object({
 
 `f.field(...)` reads the first value for each name, rejects files, and passes missing values to the field schema as `undefined`. `f.object(...)` selects only the declared fields, so an extra `id` in the submission won't become part of the update.
 
-For parsing plain objects or individual values, using `parse()` to throw on validation failure, and other schema options, see the [`data-schema` overview](https://docs.remix.run/data-schema/).
+For parsing plain objects or individual values, using `parse()` to throw on validation failure, and other schema options, see the [`remix/data-schema`](https://docs.remix.run/data-schema/) overview.
 
-The album page now reads from SQLite, and `albumForm` defines the values the editor can submit. [Forms and Mutations](/forms-and-mutations/) connects the edit form: validating submissions, saving edits, showing field errors, and adding pending feedback.
+To use a schema like `albumForm` in an action, [parse and save the submitted form](/forms-and-mutations/#parse-and-save-the-submitted-form), then [return validation failures with the form](/forms-and-mutations/#return-validation-failures-with-the-form) so the user can fix them.
 
 ## Advanced data and validation
 
-A catalog search needs different input fields, and an album's track listing needs related rows. These examples build on the same schemas, tables, and database connection.
+These sections cover query-string and repeated-field parsing, composed queries and relations, rules enforced on every table write, transactions, and PostgreSQL or MySQL adapters.
 
 ### Parse query strings and repeated fields
 
-The form-data schema helpers also accept `URLSearchParams`. For example, a catalog search can read a query, a page number, and several selected genres:
+The schema helpers in [`remix/data-schema/form-data`](https://docs.remix.run/data-schema/form-data/) also accept `URLSearchParams`. For example, a catalog search can read a query, a page number, and several selected genres:
 
 ```ts filename=app/actions/albums/search-schema.ts
 import * as s from "remix/data-schema";
@@ -277,15 +272,15 @@ export const albumSearch = f.object({
 
 Inside an action, `s.parseSafe(albumSearch, context.url.searchParams)` parses `?genre=soul&genre=pop&page=2` into `{ query: "", page: 2, genres: ["soul", "pop"] }`. `f.fields(...)` reads every value for a name and passes the array to its schema. A missing repeated field becomes an empty array.
 
-A few browser conventions affect these schemas:
+Browser form encoding changes what these schemas receive:
 
 - An unchecked checkbox is absent. For a checkbox with `value="yes"`, `s.optional(s.literal("yes")).transform((value) => value === "yes")` produces a boolean. `coerce.boolean()` accepts `"true"` and `"false"`, not the browser's default `"on"` value.
 - An empty text input is `""`, not `undefined`, so `optional()` and `defaulted()` do not make a blank string valid automatically.
-- Use `f.file(...)` or `f.files(...)` for file entries. The [Files and Assets](/files-and-assets/) chapter covers multipart forms, upload limits, and storage.
+- Use `f.file(...)` or `f.files(...)` for file entries, and [parse multipart uploads with limits](/files-and-assets/) before the schema sees them.
 
 ### Compose queries and load relations
 
-For a catalog page, we might want only an album's ID, title, and year. Build that query independently of the database connection:
+`query()` builds a query without a database connection. A catalog page that needs only each album's ID, title, and year can define its query in a module:
 
 ```ts filename=app/data/catalog.ts
 import { query } from "remix/data-table";
@@ -300,7 +295,7 @@ export const recentAlbums = query(albums)
 
 `recentAlbums` is a query value. No SQL runs until an action calls `await context.db.exec(recentAlbums)`. Its result contains only the selected columns. Use `db.query(albums)` when you already have a database and want to execute the chain directly with `.all()` or `.first()`.
 
-Relations describe how to load connected rows. Add the relationship between our albums and tracks in a separate module:
+Relations describe how to load connected rows. Define them with `hasMany(...)` and `belongsTo(...)`, here in their own module:
 
 ```ts filename=app/data/relations.ts
 import { belongsTo, hasMany } from "remix/data-table";
@@ -327,7 +322,7 @@ if (album !== null) {
 }
 ```
 
-The `with` key names the returned property, and TypeScript knows that `album.tracks` is an array of track rows. `hasOne(...)` describes a single related row, while `hasManyThrough(...)` follows an intermediate table. These descriptors affect queries. The foreign key we wrote in the migration is what enforces the relationship in the database.
+The `with` key names the returned property, and TypeScript knows that `album.tracks` is an array of track rows. `hasOne(...)` describes a single related row, while `hasManyThrough(...)` follows an intermediate table. These descriptors affect queries only. A foreign key in the [SQL migration](#create-the-tables-with-sql) is what enforces the relationship in the database.
 
 Query objects also support joins, aggregates, nested relation loading, and scoped writes. When a query is clearer as SQL, use the `sql` template tag to parameterize values:
 
@@ -345,7 +340,7 @@ let result = await context.db.exec(sql`
 
 ### Enforce rules across writes
 
-A seed script or import job can write albums without parsing a browser form. If every write through `data-table` should reject a blank title, add a table-level `validate` hook:
+A seed script or import job can write albums without parsing a browser form. If every write through [`remix/data-table`](https://docs.remix.run/data-table/) should reject a blank title, add a table-level `validate` hook:
 
 ```ts filename=app/data/tables.ts
 import { column as c, fail, table } from "remix/data-table";
@@ -372,7 +367,7 @@ export const albums = table({
 
 export type Album = TableRow<typeof albums>;
 
-// Keep the tracks declaration from above.
+// The tracks table is unchanged.
 ```
 
 Write payloads are partial objects. An update that changes only `year` has no `title` property, so this hook checks the title on creation or when an update supplies it. A validation failure rejects the write with a `DataTableValidationError`.
@@ -389,11 +384,11 @@ The other lifecycle hooks run around reads and writes:
 | `afterDelete`  | After a successful delete, with the affected-row count.                      |
 | `afterRead`    | For loaded rows, including related rows and rows returned from writes.       |
 
-Hooks are synchronous and do not open a transaction. An `afterRead` hook may receive a projection such as the catalog query's `{ id, title, year }`, so it must check whether a field is present before transforming it. Predicate values in `where`, `having`, or join conditions are not validated by table hooks.
+Hooks are synchronous and do not open a transaction. An `afterRead` hook may receive a projection such as `{ id, title, year }` from a `select(...)` query, so it must check whether a field is present before transforming it. Predicate values in `where`, `having`, or join conditions are not validated by table hooks.
 
 ### Group writes in a transaction
 
-Creating an album and its first track takes two writes. If the track insert fails, we want to undo the album insert too:
+Creating an album and its first track takes two writes. Run them inside `db.transaction(...)` so a failed track insert also undoes the album insert:
 
 ```ts
 import { db } from "./app/db.ts";
@@ -422,9 +417,9 @@ Transactions do not undo work outside the database, such as sending email or cal
 
 ### Use PostgreSQL or MySQL
 
-The examples use SQLite, but the query and table APIs also work with PostgreSQL and MySQL. Replace the database factory and write migrations for the chosen SQL dialect.
+The query and table APIs also work with PostgreSQL and MySQL. Replace the SQLite factory with the matching adapter and write migrations in that SQL dialect.
 
-For PostgreSQL, install `pg` with `npm i pg` and create the database with its connection configuration:
+For PostgreSQL, install `pg` with `npm i pg` and create the database with [`remix/data-table/postgres`](https://docs.remix.run/data-table/postgres/) and its connection configuration:
 
 ```ts filename=app/db.ts
 import { createPostgresDatabase } from "remix/data-table/postgres";
@@ -436,7 +431,7 @@ export const db = createPostgresDatabase({
 
 The PostgreSQL adapter supports transaction options such as `{ isolationLevel: "serializable" }` as the second argument to `db.transaction(...)`.
 
-For MySQL, install `mysql2` with `npm i mysql2`:
+For MySQL, install `mysql2` with `npm i mysql2` and use [`remix/data-table/mysql`](https://docs.remix.run/data-table/mysql/):
 
 ```ts filename=app/db.ts
 import { createMysqlDatabase } from "remix/data-table/mysql";

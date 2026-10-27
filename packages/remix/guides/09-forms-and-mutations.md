@@ -3,19 +3,17 @@ title: Forms and Mutations
 description: How native forms, action responses, validation failures, redirects, and enhanced mutations fit together.
 ---
 
-In [Data and Validation](/data-and-validation/), we moved our albums into SQLite and defined `albumForm` to validate edits.
+A mutation in Remix starts as a native HTML form that posts to a route action. This guide uses an album edit form at `/albums/:albumId/edit` to cover parsing a submission, rendering field errors with a `400` response, saving valid input and redirecting with `303`, showing pending feedback once the browser runtime starts, and submitting methods other than GET and POST.
 
-Let's connect the edit form to that database. We'll parse submissions, return the form with field errors when validation fails, and save valid edits before redirecting to the album. Then we'll add pending feedback.
+## Start with a native form
 
-## Keep the native form
+A `form("/albums/:albumId/edit")` route pairs two actions at the same URL. The GET `index` action loads the album for editing, and the POST `action` handler parses and saves a submission. Map both with one controller, such as `router.map(routes.albums.edit, albumsEditController)`.
 
-Our existing `form("/albums/:albumId/edit")` route pairs two actions at the same URL. The GET `index` action loads the album for editing, and the POST `action` handler parses and saves a submission. Both belong to the controller mapped with `router.map(routes.albums.edit, albumsEditController)`.
-
-We'll keep a native `<form method="post">`, named inputs, and a submit button. With JavaScript disabled, the browser still sends those fields to the action and displays its response. The router's `formData()` middleware already makes the parsed body available as `context.formData`.
+Render a native `<form method="post">` with named inputs and a submit button. With JavaScript disabled, the browser still sends those fields to the action and displays its response. The [`formData()` middleware](/request-handling/#common-middleware) from [`remix/middleware/form-data`](../src/form-data-middleware/README.md) parses the body before the action runs and makes it available as `context.formData`.
 
 ## Load the edit form
 
-First, replace the edit controller's array lookup with a database query. The `index` action loads the album, returns `404` if it is missing, and renders the edit page:
+The `index` action loads the album, returns `404` if it is missing, and renders the edit page. These examples read from a `context.db` that [database middleware puts on the request context](/data-and-validation/#give-actions-access-to-the-database), with an `albums` table defined in `app/data/tables.ts`:
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[3,9-14]
 import { createController } from "remix/router";
@@ -39,11 +37,11 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-Open `/albums/thriller/edit`. The form now starts with the album's stored values.
+`/albums/thriller/edit` now renders the form with the album's stored values.
 
 ## Return validation failures with the form
 
-The page needs to distinguish the stored album from an unsuccessful edit. Add optional `values` and `issues` props to `AlbumEditPage`:
+The page needs to distinguish the stored album from an unsuccessful edit. Give `AlbumEditPage` optional `values` and `issues` props:
 
 ```tsx filename=app/actions/albums/edit/page.tsx lines=[1,10-11,22,28,31-33,41-42,44-45,47]
 import type { Issue } from "remix/data-schema";
@@ -109,9 +107,33 @@ The inputs use the stored album initially and preserve submitted `values` after 
 
 ## Parse and save the submitted form
 
-Pass `context.formData` to `s.parseSafe(albumForm, context.formData)` in the edit action. When `parsed.success` is false, validation errors are available in `parsed.issues`. On success, `parsed.value` contains the validated fields, with trimmed text and a numeric year.
+Describe the fields the form may submit with a form-data schema from [`remix/data-schema/form-data`](../src/data-schema/README.md). This one trims the title and artist, rejects blank values, and converts the year to a positive whole number:
 
-Update the controller to load the album from SQLite, render invalid submissions with their errors, and save validated edits:
+```ts filename=app/actions/albums/edit/schema.ts
+import * as s from "remix/data-schema";
+import * as checks from "remix/data-schema/checks";
+import * as coerce from "remix/data-schema/coerce";
+import * as f from "remix/data-schema/form-data";
+
+const albumText = s
+  .string()
+  .transform((value) => value.trim())
+  .pipe(checks.minLength(1));
+
+const albumYear = coerce
+  .number()
+  .refine((value) => Number.isInteger(value) && value > 0, "Enter a positive whole year");
+
+export const albumForm = f.object({
+  title: f.field(albumText),
+  artist: f.field(albumText),
+  year: f.field(albumYear),
+});
+```
+
+[Defining input schemas](/data-and-validation/#define-the-input-schema) explains each of these helpers.
+
+In the POST action, pass `context.formData` to `s.parseSafe(albumForm, context.formData)`. When `parsed.success` is false, validation errors are available in `parsed.issues`. On success, `parsed.value` contains the validated fields, with trimmed text and a numeric year.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[5,19-20,30-33,36-43]
 import * as s from "remix/data-schema";
@@ -171,9 +193,11 @@ function readText(formData: FormData, name: string): string {
 
 The failure branch renders directly with status `400`. Redirecting back to the GET action would load the stored album again and lose the user's changes and errors. For forms with sensitive fields, choose which values to return. Leave password fields empty, and ask the user to select files again.
 
+Validation only checks the shape of the input. Before saving, also check that the current user [may edit this album](/auth-sessions-security/#authorization-checks).
+
 ## Redirect after saving
 
-After parsing succeeds, `db.update(...)` saves `parsed.value` to the album selected by the route's `albumId`. If the update fails, the action logs the error on the server and returns `500` without exposing database details to the browser. For other read and write helpers and their error behavior, see the [`data-table` overview](../src/data-table/README.md).
+After parsing succeeds, `db.update(...)` saves `parsed.value` to the album selected by the route's `albumId`. If the update fails, the action logs the error on the server and returns `500` without exposing database details to the browser. The [`remix/data-table`](../src/data-table/README.md) overview covers the other read and write helpers and their error behavior.
 
 After a successful save, the action returns `303 See Other` with the album page's URL. The browser follows that redirect with a GET:
 
@@ -187,15 +211,18 @@ GET /albums/thriller
 
 Refreshing the resulting page repeats the GET instead of submitting the edit again.
 
-If the destination should display “Album saved,” session flash data can carry that message across the redirect. We'll add sessions in [Auth, Sessions, and Security](/auth-sessions-security/).
+To show "Album saved" on the destination page, store the message as [session flash data](/auth-sessions-security/#flash-messages) before redirecting. It is available on the next request and then removed.
 
 ## Add pending feedback
 
-With the app's browser runtime running, Remix handles the form submission as a navigation. It renders validation responses into the page and follows redirects after a successful save.
+Once the page [boots the browser runtime with `run()`](/interactivity/#browser-entry-with-run), Remix handles the form submission as a [frame navigation](/streaming-ui-with-frames/#navigate-a-frame-with-a-form). It renders validation responses into the page and follows redirects after a successful save.
 
-In [Getting Started](/start-here/), we hydrated the whole form and set pending state when its submit event fired. Here, the button can follow the containing frame's reload events, which tell us when the navigation starts and when it finishes.
+You have two ways to show that a save is in progress:
 
-We can show progress by hydrating just the save button. Put it in the edit action's `public/` directory:
+- Hydrate the whole form with `clientEntry(...)` and set pending state from its `submit` handler, as the [hydrated album form](/start-here/#add-your-first-hydrated-component) does. This fits when the form already needs browser state, or when you intercept the submission with [`fetch()`](/interactivity/#enhancing-forms-with-fetch-and-navigation).
+- Hydrate only the submit button and follow the containing frame's `reloadStart` and `reloadComplete` events. The rest of the form stays server-rendered, and the button needs no knowledge of how the form submits.
+
+The second option looks like this. Put the button in the edit action's `public/` directory so it can load in the browser:
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
 import { clientEntry } from "remix/component";
@@ -230,7 +257,7 @@ export const SaveButton = clientEntry(import.meta.url, function SaveButton(handl
 });
 ```
 
-Back in `page.tsx`, import `SaveButton` and replace the plain submit button:
+Then render `SaveButton` in place of the plain submit button:
 
 ```tsx filename=app/actions/albums/edit/page.tsx
 import { SaveButton } from "./public/save-button.tsx";
@@ -242,19 +269,19 @@ import { SaveButton } from "./public/save-button.tsx";
 </form>;
 ```
 
-The button listens to its containing frame: `reloadStart` disables it and shows “Saving…”, and `reloadComplete` restores it after the navigation settles, including a validation response or request failure. Passing `handle.signal` removes the listeners when the component is removed.
+`reloadStart` disables the button and shows "Saving…", and `reloadComplete` restores it after the navigation settles, including a validation response or request failure. Passing `handle.signal` removes the listeners when the component is removed.
 
 ## Use other HTTP methods when the route calls for them
 
-Our edit route works with POST. If your app instead exposes a PATCH update route, HTML forms need a method override because their submission methods are GET and POST.
+HTML forms only submit GET and POST. If a route expects PATCH, PUT, or DELETE, the form still posts and names the intended method in a hidden field, and method override middleware rewrites the request method before routing.
 
-Change the edit route's action method with `form("/albums/:albumId/edit", { formMethod: "PATCH" })`, and add this hidden field inside its existing POST form:
+For a PATCH edit route, set the action method with `form("/albums/:albumId/edit", { formMethod: "PATCH" })`, and add this hidden field inside the POST form:
 
 ```html
 <input type="hidden" name="_method" value="PATCH" />
 ```
 
-Install method override in the router's middleware stack, immediately after form parsing:
+Install `methodOverride()` from [`remix/middleware/method-override`](../src/method-override-middleware/README.md) in the router's middleware stack, immediately after form parsing:
 
 ```ts lines=[2,10]
 // In app/router.ts:
@@ -272,6 +299,4 @@ export const router = createRouter({
 });
 ```
 
-The browser sends POST. After parsing `_method`, the middleware sets `context.method` to PATCH before route matching. The same controller's `action` now matches that PATCH route. Installing method override on the controller would be too late to select the route. PUT and DELETE work the same way when you define matching routes.
-
-In [Auth, Sessions, and Security](/auth-sessions-security/), we'll decide who is allowed to edit an album and connect those decisions to the request's session.
+The browser sends POST. After parsing `_method`, the middleware sets `context.method` to PATCH before route matching, so the controller's `action` matches the PATCH route. Installing method override on the controller would be too late to select the route. PUT and DELETE work the same way when you define matching routes.

@@ -3,7 +3,7 @@ title: Request Handling
 description: How a Web Request becomes a Web Response across runtime adapters and the middleware pipeline.
 ---
 
-[Routing and Controllers](/routing-and-controllers/) covered what happens after Remix finds a route. This chapter backs up to the server boundary: how a runtime hands the app a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), how middleware prepares request context, and how the resulting Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) gets back to the client.
+This guide follows a request from the server boundary to the [controller action](/routing-and-controllers/#controllers-and-actions) that handles it: how a runtime hands the app a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), how middleware prepares request context, and how the resulting Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) gets back to the client.
 
 The runtime-specific code stays in the server entry. The router, middleware, and actions work with the same Fetch API contract everywhere else.
 
@@ -40,7 +40,7 @@ Request and response bodies stay as Web streams. An action can read `request.bod
 
 ## The Node server entry {#the-node-server-entry}
 
-The default Remix app runs on `node:http`. Back in `server.ts`, the request-handling portion creates the Node server and connects it to the app router. The generated file also handles graceful shutdown, which is omitted here so we can focus on the request path.
+On Node, `server.ts` creates a `node:http` server and connects it to the app router. A production entry should also [shut down gracefully](/production/#startup-and-shutdown), which this example omits to keep the request path visible.
 
 ```ts filename=server.ts
 import * as http from "node:http";
@@ -107,7 +107,7 @@ const requestListener = createRequestListener((request, client) => {
 });
 ```
 
-If an existing Node integration needs lower-level control, `remix/node-fetch-server` also exports `createRequest(...)` and `sendResponse(...)`. Prefer `createRequestListener(...)` until you need to work between those two operations.
+If an existing Node integration needs lower-level control, [`remix/node-fetch-server`](https://docs.remix.run/node-fetch-server/) also exports `createRequest(...)` and `sendResponse(...)`. Prefer `createRequestListener(...)` until you need to work between those two operations.
 
 ## Alternate runtimes: Bun, Deno, Workers {#alternate-runtimes-bun-deno-workers}
 
@@ -152,7 +152,7 @@ The router contract is portable, but every package in a middleware stack may not
 
 ## Middleware ordering {#middleware-ordering}
 
-With the runtime connected, the rest of the request path lives in `app/router.ts`. Middleware wraps that path. Given two middleware functions, the request runs from left to right and the response unwinds from right to left:
+Middleware wraps every request that `router.fetch(...)` handles. Given two middleware functions, the request runs from left to right and the response unwinds from right to left:
 
 ```txt
 request  → first → second → action
@@ -184,7 +184,7 @@ Remix has three middleware scopes:
 2. **Controller middleware** runs for the direct actions owned by that controller.
 3. **Action middleware** runs for one action.
 
-The complete order is router middleware, controller middleware, action middleware, then the action handler. Controller and action middleware only run after a route matches. As covered in [Routing and Controllers](/routing-and-controllers/), controller middleware does not flow into controllers mapped for nested route maps.
+The complete order is router middleware, controller middleware, action middleware, then the action handler. Controller and action middleware only run after a route matches. Controller middleware does not flow into controllers [mapped for nested route maps](/routing-and-controllers/#mapping-controllers).
 
 Choose middleware order by dependency and wrapping behavior:
 
@@ -200,7 +200,7 @@ Every middleware and action in one `router.fetch(...)` call receives the same re
 
 Built-in middleware carries its context changes in its TypeScript type. For example, `formData()` provides `context.formData`, while `render()` provides the typed `context.render(...)` function.
 
-Back in `app/router.ts`, derive the application context from the configured router and use module augmentation to make that context the default for controllers:
+In `app/router.ts`, derive the application context from the configured router and use module augmentation to make that context the default for controllers:
 
 ```ts filename=app/router.ts
 import { formData } from "remix/middleware/form-data";
@@ -231,7 +231,7 @@ router.map(routes.albums, albumsController);
 router.map(routes.albums.edit, albumsEditController);
 ```
 
-`RouterContext<typeof router>` follows the inline middleware tuple in order. In the edit controller, TypeScript now knows that both values are present:
+`RouterContext<typeof router>` follows the inline middleware tuple in order. In any controller mapped to this router, such as the album edit controller, TypeScript knows that `context.formData` and `context.render` are present:
 
 ```tsx filename=app/actions/albums/edit/controller.tsx
 // inside the actions object:
@@ -246,19 +246,19 @@ The module augmentation is useful because controllers are created in separate fi
 
 When a reusable middleware chain must be stored in a variable, `createMiddleware(...)` preserves its tuple type and `MiddlewareContext<typeof middleware>` derives the resulting context. Inline middleware arrays and `RouterContext<typeof router>` are the simpler default.
 
-Request context is still an explicit per-request value, not a global. If a helper outside middleware or an action must reach it, add `asyncContext()` from `remix/middleware/async-context` and call `getContext()` inside that helper. That middleware uses Node's async context support, so passing the needed value as a function argument remains the portable option.
+Request context is still an explicit per-request value, not a global. If a helper outside middleware or an action must reach it, add `asyncContext()` from [`remix/middleware/async-context`](https://docs.remix.run/middleware/async-context/) and call `getContext()` inside that helper. That middleware uses Node's async context support, so passing the needed value as a function argument remains the portable option.
 
 ## Common middleware: form-data, render, static files, compression, logging {#common-middleware}
 
-The default app starts with static-file and render middleware. Add the others when the request path needs them:
+A server-rendered app usually needs at least static-file and render middleware. Add the others when the request path needs them:
 
-| Middleware      | Import                         | What it does                                                                                                                | Placement                                                                                       |
-| --------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `formData()`    | `remix/middleware/form-data`   | Parses URL-encoded and multipart bodies once, then provides `context.formData`. Non-form requests receive empty `FormData`. | Before CSRF form-field checks or actions that read parsed form data.                            |
-| `render()`      | `remix/middleware/render`      | Installs the standard Remix component `context.render(...)` function.                                                       | After middleware that may answer without rendering.                                             |
-| `staticFiles()` | `remix/middleware/static`      | Serves `GET` and `HEAD` requests from a directory, with conditional and range request support.                              | Early, before request enrichment that static files do not need.                                 |
-| `compression()` | `remix/middleware/compression` | Negotiates Brotli, gzip, or deflate for suitable downstream responses.                                                      | Before every response it should wrap, including `staticFiles()` when static text is compressed. |
-| `logger()`      | `remix/middleware/logger`      | Logs the request and downstream response and provides `context.logger(...)`.                                                | Usually first so early responses and `404`s are logged.                                         |
+| Middleware      | Import                                                                           | What it does                                                                                                                | Placement                                                                                       |
+| --------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `formData()`    | [`remix/middleware/form-data`](https://docs.remix.run/middleware/form-data/)     | Parses URL-encoded and multipart bodies once, then provides `context.formData`. Non-form requests receive empty `FormData`. | Before CSRF form-field checks or actions that read parsed form data.                            |
+| `render()`      | [`remix/middleware/render`](https://docs.remix.run/middleware/render/)           | Installs the standard Remix component `context.render(...)` function.                                                       | After middleware that may answer without rendering.                                             |
+| `staticFiles()` | [`remix/middleware/static`](https://docs.remix.run/middleware/static/)           | Serves `GET` and `HEAD` requests from a directory, with conditional and range request support.                              | Early, before request enrichment that static files do not need.                                 |
+| `compression()` | [`remix/middleware/compression`](https://docs.remix.run/middleware/compression/) | Negotiates Brotli, gzip, or deflate for suitable downstream responses.                                                      | Before every response it should wrap, including `staticFiles()` when static text is compressed. |
+| `logger()`      | [`remix/middleware/logger`](https://docs.remix.run/middleware/logger/)           | Logs the request and downstream response and provides `context.logger(...)`.                                                | Usually first so early responses and `404`s are logged.                                         |
 
 A server-rendered app that accepts HTML forms might use all five:
 
@@ -285,7 +285,9 @@ export const router = createRouter({
 
 Global middleware is convenient when most routes use it. If only one action accepts a form or upload, put `formData()` on that action instead so other requests skip body parsing.
 
-`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by `remix/assets` lives in colocated `public/` directories under `app/`; [Files and Assets](/files-and-assets/) covers that separate pipeline. The next chapter, [Rendering UI](/rendering-ui/), uses `render()` from `remix/middleware/render` to build component pages. [Streaming UI with Frames](/streaming-ui-with-frames/) covers the renderer behind it.
+`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by [`remix/assets`](https://docs.remix.run/assets/) lives in colocated `public/` directories under `app/` and goes through a separate [source-served asset pipeline](/files-and-assets/).
+
+`render()` from [`remix/middleware/render`](https://docs.remix.run/middleware/render/) is what lets actions [render component pages](/rendering-ui/#rendering-pages-through-request-context) with `context.render(...)`, backed by the [streaming renderer](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring).
 
 ## Custom middleware {#custom-middleware}
 
@@ -337,4 +339,4 @@ function requireJson(): Middleware {
 }
 ```
 
-Keep custom middleware focused on one request-lifecycle concern. Route-specific data loading or validation usually belongs in the action, while behavior shared across many routes—request IDs, sessions, authentication, security headers, and database access—fits the middleware pipeline. The next chapter, [Rendering UI](/rendering-ui/), uses `context.render(...)` to build the app's document and component tree.
+Keep custom middleware focused on one request-lifecycle concern. Route-specific data loading or validation usually belongs in the action, while behavior shared across many routes—request IDs, sessions, authentication, security headers, and database access—fits the middleware pipeline.

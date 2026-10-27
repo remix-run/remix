@@ -3,6 +3,19 @@ title: Animation
 description: The CSS-first animation model and Remix component helpers for motion that respects rendering state.
 ---
 
+Motion in a Remix app starts in CSS. Styles from `css(...)` in
+[`remix/component`](../src/component/README.md) handle hover, focus, and other browser-owned
+states. When motion depends on what a component renders, such as a node entering, leaving, or moving
+in a keyed list, the mixins and timing helpers in
+[`@remix-run/ui/animation`](https://docs.remix.run/ui/animation/) take over.
+
+[`@remix-run/ui`](https://docs.remix.run/ui/) is currently unstable and versioned independently. It
+is not available through the `remix` package, so install it separately:
+
+```sh
+npm i remix @remix-run/ui
+```
+
 ## CSS-first visual states {#css-first-visual-states}
 
 Start with CSS when the browser already owns the state. Hover, focus, active, checked, open, selected, and reduced-motion states do not need JavaScript state unless your render output also depends on them.
@@ -40,13 +53,7 @@ const cardStyle = css({
 });
 ```
 
-Use Remix animation helpers when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
-
-The animation helpers are provided by `@remix-run/ui`. This package is currently unstable and versioned independently. It is not available through the `remix` package, so install it separately:
-
-```sh
-npm i remix @remix-run/ui
-```
+Use the animation helpers from [`@remix-run/ui/animation`](https://docs.remix.run/ui/animation/) when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
 
 ```tsx
 import { createMixin, css, on } from "remix/component";
@@ -260,7 +267,7 @@ const noticeStyles = css({
 
 ## Layout animations {#layout-animations}
 
-`animateLayout(...)` measures a host node before and after a render, then animates the visual delta. This is the right tool for sorted lists, expanding cards, and elements that move because layout changed.
+`animateLayout(...)` measures a host node before and after a render, then animates the visual delta. Use it for sorted lists, expanding cards, and elements that move because layout changed.
 
 ```tsx filename=app/ui/public/reorder-list.tsx
 import { clientEntry, css, on } from "remix/component";
@@ -741,7 +748,7 @@ const thumbStyles = css({
 });
 ```
 
-The UI package also keeps a gallery of smaller motion experiments. Keep this kind of broad demo in a bounded frame so it does not take over the surrounding guide page.
+The gallery below collects smaller motion experiments built with the same helpers.
 
 ```tsx
 import { css, on, type Handle, type RemixNode } from "remix/component";
@@ -938,7 +945,7 @@ export function AnimationGallery() {
 
 ## Interruptible interactions {#interruptible-interactions}
 
-Event handlers receive abort signals, and animation mixins cancel or replace in-flight work when the DOM changes again. That makes interruption the default path instead of an edge case.
+Event handlers receive abort signals, and animation mixins cancel or replace in-flight work when the DOM changes again. If a user toggles a notice twice quickly, the notice animates back toward its rendered styles from wherever its exit had reached, instead of finishing the exit first.
 
 For custom imperative animations, keep the current animation in setup scope and cancel it before starting the next one:
 
@@ -1015,5 +1022,7 @@ export function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 ```
+
+[`@remix-run/ui/animation`](https://docs.remix.run/ui/animation/) exports the same check as `prefersReducedMotion()`. It also returns `false` when `matchMedia` is unavailable, so it is safe to call during server rendering.
 
 Reduced motion does not have to mean no feedback. Prefer shorter fades, instant layout changes, or non-motion state changes when movement is not essential.
