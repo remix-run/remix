@@ -23,15 +23,11 @@ export const ResetPasswordFields = clientEntry(
                 {errors.form.join(' ')}
               </div>
             )}
-            <Field
-              field={fields.password}
-              label="New Password"
-              input={{ autoComplete: 'new-password' }}
-            />
+            <Field field={fields.password} label="New Password" autoComplete="new-password" />
             <Field
               field={fields.confirmPassword}
               label="Confirm Password"
-              input={{ autoComplete: 'new-password' }}
+              autoComplete="new-password"
             />
             <button type="submit" class="btn">
               Reset Password

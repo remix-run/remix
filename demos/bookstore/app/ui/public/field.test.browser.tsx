@@ -16,7 +16,14 @@ describe('bookstore Field', () => {
       <form.Context schema={Settings}>
         {({ fields }) => (
           <RestfulForm method="PUT" action="/settings" mix={form.root()}>
-            <Field field={fields.name} label="Name" input={{ defaultValue: 'Ada' }} />
+            <Field
+              field={fields.name}
+              label="Name"
+              defaultValue="Ada"
+              placeholder="Your name"
+              class="bookstore-input"
+              maxLength={40}
+            />
           </RestfulForm>
         )}
       </form.Context>,
@@ -28,6 +35,9 @@ describe('bookstore Field', () => {
     let method = view.container.querySelector('input[name="_method"]') as HTMLInputElement
     assert.equal(label.control, input)
     assert.equal(input.value, 'Ada')
+    assert.equal(input.placeholder, 'Your name')
+    assert.equal(input.className, 'bookstore-input')
+    assert.equal(input.maxLength, 40)
     assert.equal(method.value, 'PUT')
 
     input.value = ''

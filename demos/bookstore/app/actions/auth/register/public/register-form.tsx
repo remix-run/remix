@@ -15,18 +15,9 @@ export const RegisterFields = clientEntry(
         {({ fields, errors }) => (
           <form method="POST" action={routes.auth.register.action.href()} mix={form.root()}>
             {errors.form && <p role="alert">{errors.form.join(' ')}</p>}
-            <Field field={fields.name} label="Name" input={{ autoComplete: 'name' }} />
-            <Field
-              field={fields.email}
-              label="Email"
-              type="email"
-              input={{ autoComplete: 'email' }}
-            />
-            <Field
-              field={fields.password}
-              label="Password"
-              input={{ autoComplete: 'new-password' }}
-            />
+            <Field field={fields.name} label="Name" autoComplete="name" />
+            <Field field={fields.email} label="Email" type="email" autoComplete="email" />
+            <Field field={fields.password} label="Password" autoComplete="new-password" />
             <button type="submit" class="btn">
               Register
             </button>

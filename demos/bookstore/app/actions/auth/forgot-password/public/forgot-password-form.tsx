@@ -15,12 +15,7 @@ export const ForgotPasswordFields = clientEntry(
         {({ fields, errors }) => (
           <form method="POST" action={routes.auth.forgotPassword.action.href()} mix={form.root()}>
             {errors.form && <p role="alert">{errors.form.join(' ')}</p>}
-            <Field
-              field={fields.email}
-              label="Email"
-              type="email"
-              input={{ autoComplete: 'email' }}
-            />
+            <Field field={fields.email} label="Email" type="email" autoComplete="email" />
             <button type="submit" class="btn">
               Send Reset Link
             </button>

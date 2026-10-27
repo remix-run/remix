@@ -29,20 +29,18 @@ export const AccountSettingsFields = clientEntry(
               <Field
                 field={fields.name}
                 label="Name"
-                input={{ defaultValue: typeof submittedName === 'string' ? submittedName : name }}
+                defaultValue={typeof submittedName === 'string' ? submittedName : name}
               />
               <Field
                 field={fields.email}
                 label="Email"
                 type="email"
-                input={{
-                  defaultValue: typeof submittedEmail === 'string' ? submittedEmail : email,
-                }}
+                defaultValue={typeof submittedEmail === 'string' ? submittedEmail : email}
               />
               <Field
                 field={fields.password}
                 label="New Password (leave blank to keep current)"
-                input={{ autoComplete: 'new-password' }}
+                autoComplete="new-password"
               />
               <button type="submit" class="btn">
                 Update Settings

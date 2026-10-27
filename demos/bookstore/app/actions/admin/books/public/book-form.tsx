@@ -48,17 +48,17 @@ export const AdminBookFields = clientEntry(
               <Field
                 field={fields.title}
                 label="Title"
-                input={{ defaultValue: restored('title', book?.title) }}
+                defaultValue={restored('title', book?.title)}
               />
               <Field
                 field={fields.author}
                 label="Author"
-                input={{ defaultValue: restored('author', book?.author) }}
+                defaultValue={restored('author', book?.author)}
               />
               <Field
                 field={fields.slug}
                 label="Slug (URL-friendly name)"
-                input={{ defaultValue: restored('slug', book?.slug) }}
+                defaultValue={restored('slug', book?.slug)}
               />
               <Field field={fields.description} label="Description">
                 <textarea
@@ -69,22 +69,19 @@ export const AdminBookFields = clientEntry(
               <Field
                 field={fields.price}
                 label="Price"
-                input={{ defaultValue: restored('price', book?.price), step: '0.01' }}
+                defaultValue={restored('price', book?.price)}
+                step="0.01"
               />
               <Field
                 field={fields.genre}
                 label="Genre"
-                input={{ defaultValue: restored('genre', book?.genre) }}
+                defaultValue={restored('genre', book?.genre)}
               />
-              <Field
-                field={fields.isbn}
-                label="ISBN"
-                input={{ defaultValue: restored('isbn', book?.isbn) }}
-              />
+              <Field field={fields.isbn} label="ISBN" defaultValue={restored('isbn', book?.isbn)} />
               <Field
                 field={fields.publishedYear}
                 label="Published Year"
-                input={{ defaultValue: restored('publishedYear', book?.published_year ?? 2024) }}
+                defaultValue={restored('publishedYear', book?.published_year ?? 2024)}
               />
               <Field field={fields.inStock} label="In Stock">
                 <select mix={form.control(fields.inStock)}>

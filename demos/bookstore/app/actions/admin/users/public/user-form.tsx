@@ -34,15 +34,13 @@ export const AdminUserFields = clientEntry(
               <Field
                 field={fields.name}
                 label="Name"
-                input={{ defaultValue: typeof submittedName === 'string' ? submittedName : name }}
+                defaultValue={typeof submittedName === 'string' ? submittedName : name}
               />
               <Field
                 field={fields.email}
                 label="Email"
                 type="email"
-                input={{
-                  defaultValue: typeof submittedEmail === 'string' ? submittedEmail : email,
-                }}
+                defaultValue={typeof submittedEmail === 'string' ? submittedEmail : email}
               />
               <Field field={fields.role} label="Role">
                 <select mix={form.control(fields.role)}>

@@ -23,17 +23,8 @@ export const LoginFields = clientEntry(
               ) : null}
 
               <form method="POST" action={formAction} mix={form.root()}>
-                <Field
-                  field={fields.email}
-                  label="Email"
-                  type="email"
-                  input={{ autoComplete: 'email' }}
-                />
-                <Field
-                  field={fields.password}
-                  label="Password"
-                  input={{ autoComplete: 'current-password' }}
-                />
+                <Field field={fields.email} label="Email" type="email" autoComplete="email" />
+                <Field field={fields.password} label="Password" autoComplete="current-password" />
 
                 <button type="submit" class="btn">
                   Login
