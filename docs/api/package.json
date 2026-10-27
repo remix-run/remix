@@ -6,14 +6,12 @@
     "@remix-run/ui": "workspace:^",
     "oxfmt": "catalog:",
     "remix": "workspace:*",
-    "remix-docs-shared": "workspace:*",
-    "semver": "7.7.4"
+    "remix-docs-shared": "workspace:*"
   },
   "devDependencies": {
     "@types/dom-navigation": "1.0.7",
     "@types/hast": "catalog:",
     "@types/node": "catalog:",
-    "@types/semver": "7.5.8",
     "pagefind": "catalog:",
     "shiki": "catalog:",
     "typedoc": "0.28.19",
@@ -23,7 +21,7 @@
     "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",
     "build:demos": "node --import remix/node-tsx scripts/build-demos.ts",
     "predev": "pnpm run build",
-    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "dev": "NODE_ENV=development node ../shared/hmr/run.ts",
     "docs": "node scripts/generate/index.ts",
     "docs:debug": "DEBUG=1 node scripts/generate/index.ts",
     "prerender": "NODE_ENV=production node --import remix/node-tsx scripts/prerender.ts",

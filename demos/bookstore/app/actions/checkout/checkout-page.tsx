@@ -17,7 +17,7 @@ export function EmptyCheckoutPage() {
         <h1>Checkout</h1>
         <p>Your cart is empty. Add some books before checking out.</p>
         <p mix={css({ marginTop: '1rem' })}>
-          <a href={routes.books.index.href()} class="btn">
+          <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
             Browse Books
           </a>
         </p>
@@ -93,6 +93,7 @@ export function CheckoutPage(handle: Handle<CheckoutPageProps>) {
               Place Order
             </button>
             <a
+              data-rmx-prefetch="intent"
               href={routes.cart.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}

@@ -15,7 +15,13 @@ describe('DocsTableOfContents', () => {
       />,
     )
 
-    assert.match(html, /<li><a href="#section" aria-current="location">Section<\/a><\/li>/)
-    assert.match(html, /<li class="docs-toc__item--nested"><a href="#detail">Detail<\/a><\/li>/)
+    assert.match(
+      html,
+      /<li><a href="#section" aria-current="location" class="docs-nav-item">Section<\/a><\/li>/,
+    )
+    assert.match(
+      html,
+      /<li class="docs-toc__item--nested"><a href="#detail" class="docs-nav-item">Detail<\/a><\/li>/,
+    )
   })
 })

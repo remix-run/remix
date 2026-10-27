@@ -1,28 +1,26 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { ImportMap } from 'remix/component/server'
 import { PagefindElements } from 'remix-docs-shared/search'
+import { DocsSocialMeta } from 'remix-docs-shared/ui/social-meta'
 
-import {
-  devRefreshScript,
-  importMap,
-  scriptEntry,
-  stylesheetHref,
-  stylesheetPreloads,
-} from '../assets.ts'
+import { importMap, scriptEntry, stylesheetHref, stylesheetPreloads } from '../assets.ts'
 
 export interface DocumentProps {
   children?: RemixNode
   head?: RemixNode
   title?: string
   description?: string
+  /** The page's path on the site, e.g. `/start-here/`. */
+  path: string
   searchEnabled: boolean
 }
 
-const DEFAULT_TITLE = 'Remix Docs'
+const DEFAULT_TITLE = 'Remix Guides'
+const siteUrl = 'https://guides.remix.run'
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { children, head, title = DEFAULT_TITLE, description, searchEnabled } = handle.props
+    let { children, head, title = DEFAULT_TITLE, description, path, searchEnabled } = handle.props
     let { href, preloads } = scriptEntry
 
     return (
@@ -33,6 +31,14 @@ export function Document(handle: Handle<DocumentProps>) {
           {description ? <meta name="description" content={description} /> : null}
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <title>{title}</title>
+          <DocsSocialMeta
+            siteName="Remix Guides"
+            url={`${siteUrl}${path}`}
+            title={title}
+            description={description}
+            image={`${siteUrl}/social/remix.jpg`}
+            imageAlt="Remix"
+          />
           {searchEnabled ? (
             <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
           ) : null}
@@ -47,7 +53,6 @@ export function Document(handle: Handle<DocumentProps>) {
           {searchEnabled ? (
             <script type="module" src="/assets/pagefind/pagefind-component-ui.js"></script>
           ) : null}
-          {devRefreshScript ? <script type="module" src={devRefreshScript.href}></script> : null}
           <script type="module" src={href}></script>
           {head}
         </head>

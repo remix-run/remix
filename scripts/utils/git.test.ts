@@ -3,8 +3,24 @@ import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { test } from '@remix-run/test'
-import { findVersionIntroductionCommit, getLocalTagTarget } from './git.ts'
+import { describe, it, test } from '@remix-run/test'
+import { findVersionIntroductionCommit, getLocalTagTarget, parsePrNumber } from './git.ts'
+
+describe('parsePrNumber', () => {
+  it('recognizes squash merge subjects', () => {
+    assert.equal(parsePrNumber('Fix a bug (#123)'), 123)
+  })
+
+  it('recognizes merge commit subjects', () => {
+    assert.equal(parsePrNumber('Merge pull request #456 from example/fix'), 456)
+  })
+
+  it('ignores ordinary issue references', () => {
+    assert.equal(parsePrNumber('Fix #123'), null)
+    assert.equal(parsePrNumber('Follow up on (#123) with more changes'), null)
+    assert.equal(parsePrNumber('Fix a bug'), null)
+  })
+})
 
 function execGit(args: string[], cwd: string): string {
   return cp.execFileSync('git', args, { cwd, stdio: 'pipe', encoding: 'utf-8' }).trim()

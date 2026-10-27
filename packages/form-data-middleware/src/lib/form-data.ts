@@ -50,9 +50,18 @@ export interface FormDataOptions extends ParseFormDataOptions {
 export function formData(
   options?: FormDataOptions,
 ): Middleware<{ key: typeof FormData; value: FormData; property: 'formData' }> {
-  let suppressErrors = options?.suppressErrors ?? false
   let uploadHandler = options?.uploadHandler
 
+  return createFormDataMiddleware(options?.suppressErrors ?? false, (request) =>
+    parseFormData(request, options, uploadHandler),
+  )
+}
+
+// Shared by the stable and future `formData()` middleware, which differ only in how they parse.
+export function createFormDataMiddleware(
+  suppressErrors: boolean,
+  parse: (request: Request) => Promise<FormData>,
+): Middleware<{ key: typeof FormData; value: FormData; property: 'formData' }> {
   return async (context, next) => {
     if (context.has(FormData)) {
       let formData = context.get(FormData)
@@ -75,7 +84,7 @@ export function formData(
     }
 
     try {
-      context.set(FormData, await parseFormData(context.request, options, uploadHandler), {
+      context.set(FormData, await parse(context.request), {
         property: 'formData',
       })
     } catch (error) {

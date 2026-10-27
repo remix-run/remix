@@ -27,10 +27,15 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
           />
 
           <p mix={css({ marginTop: '1.5rem' })}>
-            Don't have an account? <a href={routes.auth.register.index.href()}>Register here</a>
+            Don't have an account?{' '}
+            <a data-rmx-prefetch="intent" href={routes.auth.register.index.href()}>
+              Register here
+            </a>
           </p>
           <p>
-            <a href={routes.auth.forgotPassword.index.href()}>Forgot password?</a>
+            <a data-rmx-prefetch="intent" href={routes.auth.forgotPassword.index.href()}>
+              Forgot password?
+            </a>
           </p>
 
           <div

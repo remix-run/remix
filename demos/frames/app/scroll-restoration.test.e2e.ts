@@ -35,10 +35,17 @@ describe('scroll restoration', () => {
     await page.getByText('List row 48', { exact: true }).waitFor()
     await reproduction.getByRole('button', { name: 'Hydration check: 1', exact: true }).waitFor()
     await page.waitForFunction(
-      ({ expected, tolerance }) => Math.abs(window.scrollY - expected) < tolerance,
+      ({ expected, tolerance }) =>
+        window.navigation.transition === null && Math.abs(window.scrollY - expected) < tolerance,
       { expected: scrollPosition, tolerance: 50 },
     )
-    let restoredPosition = await page.evaluate(() => window.scrollY)
+    // The restored position must survive the frames in which the page shrinks to its own height.
+    let restoredPosition = await page.evaluate(
+      () =>
+        new Promise<number>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve(window.scrollY))),
+        ),
+    )
 
     assert.ok(
       Math.abs(restoredPosition - scrollPosition) < 50,
@@ -105,7 +112,12 @@ describe('scroll restoration', () => {
         window.navigation.transition === null && Math.abs(window.scrollY - expected) < tolerance,
       { expected: detailScrollPosition, tolerance: 50 },
     )
-    let detailRestoredPosition = await page.evaluate(() => window.scrollY)
+    let detailRestoredPosition = await page.evaluate(
+      () =>
+        new Promise<number>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve(window.scrollY))),
+        ),
+    )
 
     assert.ok(
       Math.abs(detailRestoredPosition - detailScrollPosition) < 50,

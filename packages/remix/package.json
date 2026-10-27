@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -67,6 +67,7 @@
     "./file-storage/memory": "./src/file-storage/memory.ts",
     "./file-storage/s3": "./src/file-storage-s3.ts",
     "./form-data-parser": "./src/form-data-parser.ts",
+    "./form-data-parser/future": "./src/form-data-parser/future.ts",
     "./fs": "./src/fs.ts",
     "./headers": "./src/headers.ts",
     "./headers/accept": "./src/headers/accept.ts",
@@ -93,6 +94,7 @@
     "./middleware/cors": "./src/cors-middleware.ts",
     "./middleware/csrf": "./src/csrf-middleware.ts",
     "./middleware/form-data": "./src/form-data-middleware.ts",
+    "./middleware/form-data/future": "./src/form-data-middleware/future.ts",
     "./middleware/logger": "./src/logger-middleware.ts",
     "./middleware/method-override": "./src/method-override-middleware.ts",
     "./middleware/render": "./src/render-middleware.ts",
@@ -100,6 +102,7 @@
     "./middleware/static": "./src/static-middleware.ts",
     "./mime": "./src/mime.ts",
     "./multipart-parser": "./src/multipart-parser.ts",
+    "./multipart-parser/future": "./src/multipart-parser/future.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./multiple-import-maps-polyfill": "./src/multiple-import-maps-polyfill.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
@@ -291,6 +294,10 @@
         "types": "./dist/form-data-parser.d.ts",
         "default": "./dist/form-data-parser.js"
       },
+      "./form-data-parser/future": {
+        "types": "./dist/form-data-parser/future.d.ts",
+        "default": "./dist/form-data-parser/future.js"
+      },
       "./fs": {
         "types": "./dist/fs.d.ts",
         "default": "./dist/fs.js"
@@ -395,6 +402,10 @@
         "types": "./dist/form-data-middleware.d.ts",
         "default": "./dist/form-data-middleware.js"
       },
+      "./middleware/form-data/future": {
+        "types": "./dist/form-data-middleware/future.d.ts",
+        "default": "./dist/form-data-middleware/future.js"
+      },
       "./middleware/logger": {
         "types": "./dist/logger-middleware.d.ts",
         "default": "./dist/logger-middleware.js"
@@ -422,6 +433,10 @@
       "./multipart-parser": {
         "types": "./dist/multipart-parser.d.ts",
         "default": "./dist/multipart-parser.js"
+      },
+      "./multipart-parser/future": {
+        "types": "./dist/multipart-parser/future.d.ts",
+        "default": "./dist/multipart-parser/future.js"
       },
       "./multipart-parser/node": {
         "types": "./dist/multipart-parser/node.d.ts",

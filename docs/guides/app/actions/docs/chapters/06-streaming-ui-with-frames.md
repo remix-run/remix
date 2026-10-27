@@ -168,7 +168,7 @@ and encoding, and cancels requests when a frame is removed or its request is sup
 keeps the redirect destination available so navigation can update the browser URL after a form saves.
 
 If your app needs different request or response handling, you can provide your own `resolveFrame`
-function in the `run()` options. The [`remix/component` API overview](https://api.remix.run/api/remix/component/overview/)
+function in the `run()` options. The [`remix/component` API overview](https://docs.remix.run/component/)
 covers the callback's arguments and return values.
 
 Remix does not sanitize returned HTML before reconciling it into the current document, and
@@ -304,6 +304,10 @@ The address bar still moves to `href`. If the target is omitted, Remix uses `hre
 source to keep it in sync with the browser URL. If a specified target does not match a mounted frame,
 the browser performs a document navigation. A supplied `data-rmx-src` must still be a valid same-origin
 URL regardless of the target. Invalid or cross-origin values also disable interception.
+
+Add `data-rmx-prefetch="intent"` or `data-rmx-prefetch="viewport"` to prefetch that same source and
+target before navigation. [Interactivity](/interactivity/#prefetch-links-before-navigation) covers
+both triggers and the imperative `prefetch()` API.
 
 Add `data-rmx-history="replace"` when it should replace the current history entry. Use
 `data-rmx-document` when a same-origin link must perform an ordinary document navigation instead.

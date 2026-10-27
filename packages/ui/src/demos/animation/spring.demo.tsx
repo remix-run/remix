@@ -103,13 +103,13 @@ function PointerTrail(handle: Handle) {
     if (!(event.target instanceof Element) || !event.target.closest('.draggable')) return
     isDown = true
     releaseTime = 0
-    points = [{ x: event.clientX, y: event.clientY, time: performance.now() }]
+    points = [{ ...localPoint(canvas, event), time: performance.now() }]
     startDrawing()
   }
 
   let onPointerMove = (event: PointerEvent) => {
     if (!isDown) return
-    points.push({ x: event.clientX, y: event.clientY, time: performance.now() })
+    points.push({ ...localPoint(canvas, event), time: performance.now() })
   }
 
   let onPointerUp = () => {
@@ -151,19 +151,18 @@ function PointerTrail(handle: Handle) {
 
 /**
  * @name Spring Drag Release
- * @description A full-screen spring physics playground with click targets and drag-release velocity.
+ * @description A spring physics playground with click targets and drag-release velocity.
  */
 export default function SpringDemo(handle: Handle) {
-  let viewportWidth = globalThis.window?.innerWidth ?? 1000
-  let viewportHeight = globalThis.window?.innerHeight ?? 700
+  let root: HTMLElement
 
-  // Target circle position (click to move)
-  let targetX = viewportWidth / 2
-  let targetY = viewportHeight / 2
+  // Target circle position (click to move), relative to the demo
+  let targetX = 0
+  let targetY = 0
 
   // Draggable circle state
-  let dragX = viewportWidth / 2 - 150
-  let dragY = viewportHeight / 2
+  let dragX = 0
+  let dragY = 0
   let isDragging = false
   let isAnimating = false
 
@@ -179,9 +178,18 @@ export default function SpringDemo(handle: Handle) {
   return () => (
     <div
       mix={[
+        ref((node) => {
+          root = node
+          targetX = node.clientWidth / 2
+          targetY = node.clientHeight / 2
+          dragX = targetX - 150
+          dragY = targetY
+          handle.update()
+        }),
         css({
-          position: 'fixed',
-          inset: 0,
+          position: 'relative',
+          width: '100%',
+          height: '480px',
           backgroundColor: '#1a1a2e',
           cursor: 'crosshair',
           overflow: 'hidden',
@@ -190,8 +198,9 @@ export default function SpringDemo(handle: Handle) {
           if (!(event.target instanceof Element)) return
           if (event.target.closest('.controls, .draggable')) return
 
-          targetX = event.clientX
-          targetY = event.clientY
+          let point = localPoint(root, event)
+          targetX = point.x
+          targetY = point.y
           handle.update()
         }),
       ]}
@@ -248,8 +257,9 @@ export default function SpringDemo(handle: Handle) {
           }),
           on('pointermove', (event) => {
             if (!isDragging) return
-            dragX = event.clientX
-            dragY = event.clientY
+            let point = localPoint(root, event)
+            dragX = point.x
+            dragY = point.y
             handle.update()
           }),
           dragVelocityEvents(),
@@ -379,4 +389,9 @@ export default function SpringDemo(handle: Handle) {
       </div>
     </div>
   )
+}
+
+function localPoint(element: Element, event: MouseEvent) {
+  let rect = element.getBoundingClientRect()
+  return { x: event.clientX - rect.left, y: event.clientY - rect.top }
 }

@@ -21,13 +21,13 @@ type DocsIndexPageProps = {
 function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
   return () => (
     <DocsDocument
-      title="Remix Docs"
+      title="Remix Guides"
       description="Guides, explanations, examples, and tutorials for learning Remix."
+      path="/"
       chapters={handle.props.navigation}
     >
       <div class="docs-index">
         <header class="docs-index__header">
-          <p class="docs-chapter-eyebrow docs-accent">Remix Guides</p>
           <h1 class="rmx-page-title">Learn Remix from the request up.</h1>
           <p class="rmx-page-body">
             These guide chapters introduce Remix at a high level, then progressively deepen into
@@ -35,7 +35,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
             production, examples, and tutorials.
           </p>
           <p class="rmx-page-body">
-            API reference lives separately at <a href="https://api.remix.run">api.remix.run</a>.
+            API reference lives separately at <a href="https://docs.remix.run">docs.remix.run</a>.
           </p>
         </header>
 

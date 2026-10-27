@@ -132,7 +132,7 @@ for (let [mediaType, quality] of accept) {
 // Modify and set header
 accept.set('application/json', 0.8)
 accept.delete('text/*')
-headers.set('Accept', accept)
+headers.set('Accept', accept.toString())
 
 // Construct directly
 new Accept('text/html, text/*;q=0.9')
@@ -141,10 +141,10 @@ new Accept(['text/html', ['text/*', 0.9]])
 
 // Use class for type safety when setting Headers values
 // via Accept's `.toString()` method
-let headers = new Headers({
-  Accept: new Accept({ 'text/html': 1, 'application/json': 0.8 }),
+let requestHeaders = new Headers({
+  Accept: new Accept({ 'text/html': 1, 'application/json': 0.8 }).toString(),
 })
-headers.set('Accept', new Accept({ 'text/html': 1, 'application/json': 0.8 }))
+requestHeaders.set('Accept', new Accept({ 'text/html': 1, 'application/json': 0.8 }).toString())
 ```
 
 ### Accept-Encoding
@@ -169,7 +169,7 @@ acceptEncoding.getPreferred(['gzip', 'deflate', 'br']) // 'gzip'
 // Modify and set header
 acceptEncoding.set('br', 1)
 acceptEncoding.delete('deflate')
-headers.set('Accept-Encoding', acceptEncoding)
+headers.set('Accept-Encoding', acceptEncoding.toString())
 
 // Construct directly
 new AcceptEncoding('gzip, deflate;q=0.8')
@@ -177,10 +177,10 @@ new AcceptEncoding({ gzip: 1, deflate: 0.8 })
 
 // Use class for type safety when setting Headers values
 // via AcceptEncoding's `.toString()` method
-let headers = new Headers({
-  'Accept-Encoding': new AcceptEncoding({ gzip: 1, br: 0.9 }),
+let requestHeaders = new Headers({
+  'Accept-Encoding': new AcceptEncoding({ gzip: 1, br: 0.9 }).toString(),
 })
-headers.set('Accept-Encoding', new AcceptEncoding({ gzip: 1, br: 0.9 }))
+requestHeaders.set('Accept-Encoding', new AcceptEncoding({ gzip: 1, br: 0.9 }).toString())
 ```
 
 ### Accept-Language
@@ -205,7 +205,7 @@ acceptLanguage.getPreferred(['en-US', 'en-GB', 'fr']) // 'en-US'
 // Modify and set header
 acceptLanguage.set('fr', 0.5)
 acceptLanguage.delete('en')
-headers.set('Accept-Language', acceptLanguage)
+headers.set('Accept-Language', acceptLanguage.toString())
 
 // Construct directly
 new AcceptLanguage('en-US, en;q=0.9')
@@ -213,10 +213,10 @@ new AcceptLanguage({ 'en-US': 1, en: 0.9 })
 
 // Use class for type safety when setting Headers values
 // via AcceptLanguage's `.toString()` method
-let headers = new Headers({
-  'Accept-Language': new AcceptLanguage({ 'en-US': 1, fr: 0.5 }),
+let requestHeaders = new Headers({
+  'Accept-Language': new AcceptLanguage({ 'en-US': 1, fr: 0.5 }).toString(),
 })
-headers.set('Accept-Language', new AcceptLanguage({ 'en-US': 1, fr: 0.5 }))
+requestHeaders.set('Accept-Language', new AcceptLanguage({ 'en-US': 1, fr: 0.5 }).toString())
 ```
 
 ### Cache-Control
@@ -241,7 +241,7 @@ cacheControl.immutable // undefined
 // Modify and set header
 cacheControl.maxAge = 7200
 cacheControl.immutable = true
-headers.set('Cache-Control', cacheControl)
+headers.set('Cache-Control', cacheControl.toString())
 
 // Construct directly
 new CacheControl('public, max-age=3600')
@@ -249,10 +249,10 @@ new CacheControl({ public: true, maxAge: 3600 })
 
 // Use class for type safety when setting Headers values
 // via CacheControl's `.toString()` method
-let headers = new Headers({
-  'Cache-Control': new CacheControl({ public: true, maxAge: 3600 }),
+let responseHeaders = new Headers({
+  'Cache-Control': new CacheControl({ public: true, maxAge: 3600 }).toString(),
 })
-headers.set('Cache-Control', new CacheControl({ public: true, maxAge: 3600 }))
+responseHeaders.set('Cache-Control', new CacheControl({ public: true, maxAge: 3600 }).toString())
 ```
 
 ### Content-Disposition
@@ -272,7 +272,7 @@ contentDisposition.preferredFilename // '例子.pdf' (decoded from filename*)
 
 // Modify and set header
 contentDisposition.filename = 'download.pdf'
-headers.set('Content-Disposition', contentDisposition)
+headers.set('Content-Disposition', contentDisposition.toString())
 
 // Construct directly
 new ContentDisposition('attachment; filename="example.pdf"')
@@ -280,12 +280,15 @@ new ContentDisposition({ type: 'attachment', filename: 'example.pdf' })
 
 // Use class for type safety when setting Headers values
 // via ContentDisposition's `.toString()` method
-let headers = new Headers({
-  'Content-Disposition': new ContentDisposition({ type: 'attachment', filename: 'example.pdf' }),
+let responseHeaders = new Headers({
+  'Content-Disposition': new ContentDisposition({
+    type: 'attachment',
+    filename: 'example.pdf',
+  }).toString(),
 })
-headers.set(
+responseHeaders.set(
   'Content-Disposition',
-  new ContentDisposition({ type: 'attachment', filename: 'example.pdf' }),
+  new ContentDisposition({ type: 'attachment', filename: 'example.pdf' }).toString(),
 )
 ```
 
@@ -322,9 +325,12 @@ new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 })
 // Use class for type safety when setting Headers values
 // via ContentRange's `.toString()` method
 let headers = new Headers({
-  'Content-Range': new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 }),
+  'Content-Range': new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 }).toString(),
 })
-headers.set('Content-Range', new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 }))
+headers.set(
+  'Content-Range',
+  new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 }).toString(),
+)
 ```
 
 ### Content-Type
@@ -343,7 +349,7 @@ contentType.boundary // undefined (or boundary string for multipart)
 
 // Modify and set header
 contentType.charset = 'iso-8859-1'
-headers.set('Content-Type', contentType)
+headers.set('Content-Type', contentType.toString())
 
 // Construct directly
 new ContentType('text/html; charset=utf-8')
@@ -351,10 +357,13 @@ new ContentType({ mediaType: 'text/html', charset: 'utf-8' })
 
 // Use class for type safety when setting Headers values
 // via ContentType's `.toString()` method
-let headers = new Headers({
-  'Content-Type': new ContentType({ mediaType: 'text/html', charset: 'utf-8' }),
+let responseHeaders = new Headers({
+  'Content-Type': new ContentType({ mediaType: 'text/html', charset: 'utf-8' }).toString(),
 })
-headers.set('Content-Type', new ContentType({ mediaType: 'text/html', charset: 'utf-8' }))
+responseHeaders.set(
+  'Content-Type',
+  new ContentType({ mediaType: 'text/html', charset: 'utf-8' }).toString(),
+)
 ```
 
 ### Cookie
@@ -384,7 +393,7 @@ for (let [name, value] of cookie) {
 cookie.set('theme', 'light')
 cookie.append('session_id', 'def456')
 cookie.delete('session_id')
-headers.set('Cookie', cookie)
+headers.set('Cookie', cookie.toString())
 
 // Construct directly
 new Cookie('session_id=abc123; theme=dark')
@@ -396,17 +405,15 @@ new Cookie([
 
 // Use class for type safety when setting Headers values
 // via Cookie's `.toString()` method
-let headers = new Headers({
-  Cookie: new Cookie({ session_id: 'abc123', theme: 'dark' }),
+let requestHeaders = new Headers({
+  Cookie: new Cookie({ session_id: 'abc123', theme: 'dark' }).toString(),
 })
-headers.set('Cookie', new Cookie({ session_id: 'abc123', theme: 'dark' }))
+requestHeaders.set('Cookie', new Cookie({ session_id: 'abc123', theme: 'dark' }).toString())
 ```
 
 ### If-Match
 
 Parse, manipulate and stringify [`If-Match` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match).
-
-Implements `Set<etag>`.
 
 ```ts
 import { IfMatch } from 'remix/headers'
@@ -424,26 +431,24 @@ let weak = IfMatch.from('W/"67ab43"')
 weak.matches('W/"67ab43"') // false
 
 // Modify and set header
-ifMatch.add('"newetag"')
-ifMatch.delete('"67ab43"')
-headers.set('If-Match', ifMatch)
+ifMatch.tags.push('"newetag"')
+ifMatch.tags = ifMatch.tags.filter((tag) => tag !== '"67ab43"')
+headers.set('If-Match', ifMatch.toString())
 
 // Construct directly
 new IfMatch(['abc123', 'def456'])
 
 // Use class for type safety when setting Headers values
 // via IfMatch's `.toString()` method
-let headers = new Headers({
-  'If-Match': new IfMatch(['"abc123"', '"def456"']),
+let requestHeaders = new Headers({
+  'If-Match': new IfMatch(['"abc123"', '"def456"']).toString(),
 })
-headers.set('If-Match', new IfMatch(['"abc123"', '"def456"']))
+requestHeaders.set('If-Match', new IfMatch(['"abc123"', '"def456"']).toString())
 ```
 
 ### If-None-Match
 
 Parse, manipulate and stringify [`If-None-Match` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match).
-
-Implements `Set<etag>`.
 
 ```ts
 import { IfNoneMatch } from 'remix/headers'
@@ -460,19 +465,19 @@ let weak = IfNoneMatch.from('W/"67ab43"')
 weak.matches('W/"67ab43"') // true
 
 // Modify and set header
-ifNoneMatch.add('"newetag"')
-ifNoneMatch.delete('"67ab43"')
-headers.set('If-None-Match', ifNoneMatch)
+ifNoneMatch.tags.push('"newetag"')
+ifNoneMatch.tags = ifNoneMatch.tags.filter((tag) => tag !== '"67ab43"')
+headers.set('If-None-Match', ifNoneMatch.toString())
 
 // Construct directly
 new IfNoneMatch(['abc123'])
 
 // Use class for type safety when setting Headers values
 // via IfNoneMatch's `.toString()` method
-let headers = new Headers({
-  'If-None-Match': new IfNoneMatch(['"abc123"']),
+let requestHeaders = new Headers({
+  'If-None-Match': new IfNoneMatch(['"abc123"']).toString(),
 })
-headers.set('If-None-Match', new IfNoneMatch(['"abc123"']))
+requestHeaders.set('If-None-Match', new IfNoneMatch(['"abc123"']).toString())
 ```
 
 ### If-Range
@@ -493,8 +498,12 @@ ifRange.matches({ lastModified: new Date('2021-01-01') }) // true
 let etagHeader = IfRange.from('"67ab43"')
 etagHeader.matches({ etag: '"67ab43"' }) // true
 
-// Empty/null returns empty instance (range proceeds unconditionally)
-let empty = IfRange.from(null)
+// An absent header lets the range request proceed unconditionally
+let absent = IfRange.from(null)
+absent.matches({ etag: '"any"' }) // true
+
+// Empty values retain the same unconditional matching behavior
+let empty = IfRange.from('')
 empty.matches({ etag: '"any"' }) // true
 
 // Construct directly
@@ -503,9 +512,9 @@ new IfRange('"abc123"')
 // Use class for type safety when setting Headers values
 // via IfRange's `.toString()` method
 let headers = new Headers({
-  'If-Range': new IfRange('"abc123"'),
+  'If-Range': new IfRange('"abc123"').toString(),
 })
-headers.set('If-Range', new IfRange('"abc123"'))
+headers.set('If-Range', new IfRange('"abc123"').toString())
 ```
 
 ### Range
@@ -538,9 +547,9 @@ new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] })
 // Use class for type safety when setting Headers values
 // via Range's `.toString()` method
 let headers = new Headers({
-  Range: new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] }),
+  Range: new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] }).toString(),
 })
-headers.set('Range', new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] }))
+headers.set('Range', new Range({ unit: 'bytes', ranges: [{ start: 0, end: 999 }] }).toString())
 ```
 
 ### Set-Cookie
@@ -566,7 +575,7 @@ setCookie.sameSite // undefined
 // Modify and set header
 setCookie.maxAge = 3600
 setCookie.sameSite = 'Strict'
-headers.set('Set-Cookie', setCookie)
+headers.set('Set-Cookie', setCookie.toString())
 
 // Construct directly
 new SetCookie('session_id=abc; Path=/; HttpOnly; Secure')
@@ -580,10 +589,13 @@ new SetCookie({
 
 // Use class for type safety when setting Headers values
 // via SetCookie's `.toString()` method
-let headers = new Headers({
-  'Set-Cookie': new SetCookie({ name: 'session_id', value: 'abc', httpOnly: true }),
+let responseHeaders = new Headers({
+  'Set-Cookie': new SetCookie({ name: 'session_id', value: 'abc', httpOnly: true }).toString(),
 })
-headers.set('Set-Cookie', new SetCookie({ name: 'session_id', value: 'abc', httpOnly: true }))
+responseHeaders.set(
+  'Set-Cookie',
+  new SetCookie({ name: 'session_id', value: 'abc', httpOnly: true }).toString(),
+)
 ```
 
 ### Vary
@@ -605,7 +617,7 @@ vary.size // 2
 // Modify and set header
 vary.add('User-Agent')
 vary.delete('Accept-Language')
-headers.set('Vary', vary)
+headers.set('Vary', vary.toString())
 
 // Construct directly
 new Vary('Accept-Encoding, Accept-Language')
@@ -614,10 +626,10 @@ new Vary({ headerNames: ['Accept-Encoding', 'Accept-Language'] })
 
 // Use class for type safety when setting Headers values
 // via Vary's `.toString()` method
-let headers = new Headers({
-  Vary: new Vary(['Accept-Encoding', 'Accept-Language']),
+let responseHeaders = new Headers({
+  Vary: new Vary(['Accept-Encoding', 'Accept-Language']).toString(),
 })
-headers.set('Vary', new Vary(['Accept-Encoding', 'Accept-Language']))
+responseHeaders.set('Vary', new Vary(['Accept-Encoding', 'Accept-Language']).toString())
 ```
 
 ## Raw Headers
