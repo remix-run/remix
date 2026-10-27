@@ -14,31 +14,24 @@ import type { ElementProps } from 'remix/component'
 
 const toastManager = toast.createToastManager()
 
-const toastIds = ['1', '2', '3']
-
-export default function ExampleToastStack() {
-  let counts = new Map<string, number>()
+export default function ExampleToastReplacement() {
   return () => (
-    <div mix={[styles.root, styles.controls]}>
-      {toastIds.map((id) => (
-        <button
-          type="button"
-          mix={[
-            styles.button,
-            on('click', () => {
-              let count = (counts.get(id) ?? 0) + 1
-              counts.set(id, count)
-              toastManager.add({
-                id,
-                title: `Toast ID ${id}`,
-                description: `Published ${count} ${count === 1 ? 'time' : 'times'}.`,
-              })
-            }),
-          ]}
-        >
-          Toast ID {id}
-        </button>
-      ))}
+    <div mix={styles.root}>
+      <button
+        type="button"
+        mix={[
+          styles.button,
+          on('click', () => {
+            toastManager.add({
+              id: 'example',
+              title: 'Toast title',
+              description: 'This is a toast description.',
+            })
+          }),
+        ]}
+      >
+        Show toast
+      </button>
     </div>
   )
 }
@@ -55,7 +48,6 @@ export function ToastRegion() {
               <article
                 key={toastItem.id}
                 data-toast-index={index}
-                data-toast-id={toastItem.id}
                 style={{ '--toast-index': index }}
                 mix={[
                   toast.item(),
@@ -75,7 +67,7 @@ export function ToastRegion() {
                     easing: 'ease-out',
                   }),
                   animateExit({
-                    position: 'var(--stack-position)',
+                    position: index === 0 ? 'absolute' : 'var(--stack-position)',
                     zIndex: index === 0 ? 101 : 100 - index,
                     opacity: 0,
                     gridTemplateRows: '0fr',
@@ -94,7 +86,7 @@ export function ToastRegion() {
                 ]}
               >
                 <div mix={styles.collapseSlot}>
-                  <div mix={[styles.surface]}>
+                  <div mix={[styles.surface, pulse(toastItem.revision)]}>
                     <div mix={[styles.message, styles.hideWhenCovered]}>
                       <strong mix={[toast.title(), styles.title]}>{toastItem.title}</strong>
                       <span mix={[toast.description(), styles.description]}>
@@ -118,6 +110,29 @@ export function ToastRegion() {
     </toast.Context>
   )
 }
+
+const pulse = createMixin<HTMLElement, [revision: number], ElementProps>((handle) => {
+  let revision = 0
+  let previousRevision = 0
+  let animation: Animation | undefined
+
+  handle.addEventListener('commit', ({ node }) => {
+    if (revision === previousRevision) return
+    previousRevision = revision
+    animation?.cancel()
+    if (revision === 0 || prefersReducedMotion()) return
+    animation = node.animate([{ scale: 1 }, { scale: 1.03 }, { scale: 1 }], {
+      duration: 240,
+      easing: 'ease-out',
+    })
+  })
+  handle.addEventListener('remove', () => animation?.cancel())
+
+  return (value) => {
+    revision = value
+    return handle.element
+  }
+})
 
 const swipeToDismiss = createMixin<HTMLElement, [id: string], ElementProps>(() => {
   let returning = false
@@ -180,11 +195,6 @@ const styles = {
     '&, & *': {
       boxSizing: 'border-box',
     },
-  }),
-  controls: css({
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px',
   }),
   title: css({
     display: 'block',

@@ -1,22 +1,20 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import Example, { ToastRegion } from './stack.example.tsx'
-import { button, element, frame, mount, waitFor } from '../test-helpers.ts'
+import { button, element, finishAnimations, mount, waitFor } from '../test-helpers.ts'
 
-async function settle(target: Element) {
-  await frame()
-  await waitFor(() =>
-    assert.equal(
-      target
-        .getAnimations({ subtree: true })
-        .some((animation) => animation.playState === 'running'),
-      false,
-    ),
-  )
+function pulseAnimation(surface: HTMLElement) {
+  return surface.getAnimations().find((animation) => {
+    let effect = animation.effect
+    return (
+      effect instanceof KeyframeEffect &&
+      effect.getKeyframes().some((keyframe) => Number(keyframe.scale) > 1)
+    )
+  })
 }
 
-describe('Toast stack example', () => {
-  it('deduplicates three toast IDs and retains a dismissed toast until its exit finishes', async (t) => {
+describe('Toast replacement example', () => {
+  it('replays a pulse on the same toast without losing focus or pulsing on focus changes', async (t) => {
     let result = await mount(
       t,
       <>
@@ -24,27 +22,61 @@ describe('Toast stack example', () => {
         <ToastRegion />
       </>,
     )
-    await result.act(() => button(result.container, 'Toast ID 1').click())
-    await result.act(() => button(result.container, 'Toast ID 2').click())
-    await result.act(() => button(result.container, 'Toast ID 3').click())
-    await settle(result.container)
-    let first = element(result.container, '[data-toast][data-toast-id="1"]')
-    let second = element(result.container, '[data-toast][data-toast-id="2"]')
-    await result.act(() => button(result.container, 'Toast ID 2').click())
-    assert.equal(result.container.querySelectorAll('[data-toast]').length, 3)
-    assert.equal(element(result.container, '[data-toast][data-toast-id="2"]'), second)
-    assert.match(second.textContent ?? '', /Published 2 times/)
-    await result.act(() => element(result.container, '[role="region"]').focus())
-    await settle(result.container)
-    let top = first.getBoundingClientRect().top
-    await result.act(() => button(second, 'Dismiss notification').click())
-    assert.equal(second.inert, true)
-    assert.equal(second.isConnected, true)
-    assert.ok(Math.abs(first.getBoundingClientRect().top - top) < 1)
-    await waitFor(() => assert.equal(second.isConnected, false))
-    assert.equal(result.container.querySelectorAll('[data-toast]').length, 2)
-    assert.equal(element(result.container, '[data-toast][data-toast-id="1"]'), first)
-    await settle(result.container)
-    assert.ok(first.getBoundingClientRect().top > top + 50)
+    let trigger = button(result.container, 'Show toast')
+    await result.act(() => trigger.click())
+    let region = element(result.container, '[role="region"]')
+    let toastItem = element(region, '[data-toast]')
+    let surface = element(toastItem, ':scope > div > div')
+    await finishAnimations(region)
+    assert.equal(pulseAnimation(surface), undefined)
+    let dismiss = button(toastItem, 'Dismiss notification')
+    await result.act(() => dismiss.focus())
+    assert.equal(pulseAnimation(surface), undefined)
+
+    await result.act(() => trigger.click())
+    assert.equal(region.querySelectorAll('[data-toast]').length, 1)
+    assert.equal(element(region, '[data-toast]'), toastItem)
+    assert.equal(document.activeElement, dismiss)
+    let firstPulse = pulseAnimation(surface)
+    assert.ok(firstPulse, 'Publishing the same ID replays the pulse')
+    firstPulse.pause()
+    await result.act(() => region.focus())
+    assert.equal(pulseAnimation(surface), firstPulse)
+
+    await result.act(() => trigger.click())
+    let secondPulse = pulseAnimation(surface)
+    assert.ok(secondPulse, 'A subsequent publication replays the pulse again')
+    assert.notEqual(secondPulse, firstPulse)
+    assert.equal(firstPulse.playState, 'idle')
+    assert.equal(element(region, '[data-toast]'), toastItem)
+
+    await result.act(() => dismiss.click())
+    await waitFor(() => assert.equal(toastItem.isConnected, false))
+    assert.equal(secondPulse.playState, 'idle')
+    await result.act(() => trigger.click())
+    let replacement = element(region, '[data-toast]')
+    assert.equal(pulseAnimation(element(replacement, ':scope > div > div')), undefined)
+    await result.act(() => button(replacement, 'Dismiss notification').click())
+    await waitFor(() => assert.equal(replacement.isConnected, false))
+  })
+
+  it('updates the same toast without a pulse when reduced motion is requested', async (t) => {
+    t.mock.method(window, 'matchMedia', () => ({ matches: true }))
+    let result = await mount(
+      t,
+      <>
+        <Example />
+        <ToastRegion />
+      </>,
+    )
+    let trigger = button(result.container, 'Show toast')
+    await result.act(() => trigger.click())
+    let toastItem = element(result.container, '[data-toast]')
+    await result.act(() => trigger.click())
+    assert.equal(result.container.querySelectorAll('[data-toast]').length, 1)
+    assert.equal(element(result.container, '[data-toast]'), toastItem)
+    assert.equal(pulseAnimation(element(toastItem, ':scope > div > div')), undefined)
+    await result.act(() => button(toastItem, 'Dismiss notification').click())
+    await waitFor(() => assert.equal(toastItem.isConnected, false))
   })
 })

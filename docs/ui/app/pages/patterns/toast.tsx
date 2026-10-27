@@ -10,21 +10,20 @@ export const meta = {
   slug: 'toast',
   category: 'patterns',
   description:
-    'Publish notifications from anywhere, with retained state, typed actions and pausable timers.',
+    'Publish notifications from anywhere, with retained state, typed data and pausable timers.',
   importPath: '@remix-run/ui/toast',
 } satisfies PageMeta
 
 const timeout = await loadExample('toast/timeout', { outlet: 'ToastRegion' })
 const basic = await loadExample('toast/basic', { outlet: 'ToastRegion' })
 const action = await loadExample('toast/action', { outlet: 'ToastRegion' })
-const updates = await loadExample('toast/updates', { outlet: 'ToastRegion' })
 const actions = await loadExample('toast/actions', { outlet: 'ToastRegion' })
 const stack = await loadExample('toast/stack', { outlet: 'ToastRegion' })
 const countdown = await loadExample('toast/countdown', { outlet: 'ToastRegion' })
 
 const anatomy = await highlightSource(`
   import * as toast from '@remix-run/ui/toast'
-  import { css, on } from 'remix/component'
+  import { css } from 'remix/component'
 
   const toastManager = toast.createToastManager()
 
@@ -49,7 +48,6 @@ const anatomy = await highlightSource(`
             <div>
               <h2 mix={toast.title()}>{toastItem.title}</h2>
               <p mix={toast.description()}>{toastItem.description}</p>
-              {toastItem.action}
               <button type="button" mix={toast.close()}>
                 Dismiss
               </button>
@@ -93,42 +91,6 @@ const subscribe = await highlightSource(`
   subscription.abort()
 `)
 
-const typed = await highlightSource(`
-  interface Action {
-    label: string
-    run(): void
-  }
-
-  const toastManager = toast.createToastManager<Action>()
-
-  toastManager.add({
-    id: 'example',
-    title: 'Toast title',
-    action: { label: 'Dismiss', run() { toastManager.close('example') } },
-  })
-
-  const element = <toast.Context manager={toastManager}>
-    {toastItems => (
-      <section mix={toast.root({ label: 'Notifications' })}>
-        {toastItems.map(toastItem => (
-          <toast.ItemContext key={toastItem.id} value={toastItem.id}>
-          <article key={toastItem.id} mix={toast.item()}>
-            <div>
-              <h2 mix={toast.title()}>{toastItem.title}</h2>
-              {toastItem.action && (
-                <button type="button" mix={on('click', toastItem.action.run)}>
-                  {toastItem.action.label}
-                </button>
-              )}
-            </div>
-          </article>
-          </toast.ItemContext>
-        ))}
-      </section>
-    )}
-  </toast.Context>
-`)
-
 const timing = await highlightSource(`
   let pauseReason = Symbol('application pause')
   toastManager.pause(pauseReason)
@@ -153,21 +115,22 @@ const position = await highlightSource(`
 
 const typeDefinitions = {
   ToastOptions: await highlightSource(`
-interface ToastOptions<action = RemixNode> {
+interface ToastOptions<data = unknown> {
   id?: string
   title?: RemixNode
   description?: RemixNode
-  action?: action
+  data?: data
   timeout?: number | false
   priority?: 'low' | 'high'
 }
 `),
   ToastItem: await highlightSource(`
-interface ToastItem<action = RemixNode> {
+interface ToastItem<data = unknown> {
   readonly id: string
+  readonly revision: number
   readonly title?: RemixNode
   readonly description?: RemixNode
-  readonly action?: action
+  readonly data?: data
   readonly timeout: number | false
   readonly remaining: number
   readonly paused: boolean
@@ -176,10 +139,9 @@ interface ToastItem<action = RemixNode> {
 }
 `),
   ToastManager: await highlightSource(`
-interface ToastManager<action = RemixNode> extends TypedEventTarget<{ change: Event }> {
-  readonly toastItems: readonly ToastItem<action>[]
-  add(options: ToastOptions<action>): string
-  update(id: string, options: Partial<Omit<ToastOptions<action>, 'id'>>): void
+interface ToastManager<data = unknown> extends TypedEventTarget<{ change: Event }> {
+  readonly toastItems: readonly ToastItem<data>[]
+  add(options: ToastOptions<data>): string
   close(id?: string): void
   pause(reason: unknown): void
   resume(reason: unknown): void
@@ -187,10 +149,10 @@ interface ToastManager<action = RemixNode> extends TypedEventTarget<{ change: Ev
 }
 `),
   ToastContextProps: await highlightSource(`
-interface ToastContextProps<action = RemixNode> {
-  manager: ToastManager<action>
+interface ToastContextProps<data = unknown> {
+  manager: ToastManager<data>
   limit?: number
-  children: (toastItems: readonly ToastItem<action>[]) => RemixNode
+  children: (toastItems: readonly ToastItem<data>[]) => RemixNode
 }
 `),
   ToastRootOptions: await highlightSource(`
@@ -217,7 +179,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
           {basic.Outlet && <basic.Outlet />}
           {action.Outlet && <action.Outlet />}
           {actions.Outlet && <actions.Outlet />}
-          {updates.Outlet && <updates.Outlet />}
           {stack.Outlet && <stack.Outlet />}
           {timeout.Outlet && <timeout.Outlet />}
           {countdown.Outlet && <countdown.Outlet />}
@@ -232,7 +193,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>
-          Create a manager to publish, update and close notifications. Mount one{' '}
+          Create a manager to publish, replace and close notifications. Mount one{' '}
           <code>toast.Context</code> for that manager and render its collection, newest first. Apply{' '}
           <code>root({`{ label }`})</code> to the region and wrap each notification in
           <code>ItemContext</code>. Connect its elements with <code>item()</code>,{' '}
@@ -270,9 +231,9 @@ export default function ToastPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="auto-dismiss" title="Timeout">
         <p>
-          Notifications dismiss after five seconds by default. Toasts with actions stay open. Set{' '}
-          <code>timeout</code> in milliseconds to choose a lifetime, or use{' '}
-          <code>timeout: false</code> to keep a toast open until explicitly closed.
+          Notifications dismiss after five seconds by default. Set <code>timeout</code> in
+          milliseconds to choose a lifetime, or use <code>timeout: false</code> to keep a toast open
+          until explicitly closed.
         </p>
         <Example id="timeout" example={timeout} />
         <p id="timers">
@@ -303,32 +264,41 @@ export default function ToastPage(handle: Handle<PageProps>) {
           its transform.
         </p>
       </Section>
-      <Section id="action" title="Actions">
+      <Section id="action" title="Actions and custom data">
         <p>
-          Pass a button, link or other renderable content as <code>action</code>. Actions remain
-          native controls. Attach handlers with <code>on()</code> and call <code>close()</code>
-          when appropriate. An action makes the toast persistent unless you supply a timeout.
+          Supply a data type to <code>createToastManager()</code> and pass custom values through
+          <code>data</code>. The context callback infers that type. Your renderer decides how to
+          display it.
+        </p>
+        <p>
+          Use data to define custom actions, including their labels and handlers. Your render logic
+          decides how to present them to the user.
         </p>
         <Example id="action-example" example={action} />
       </Section>
-      <Section id="actions" title="Typed actions">
+      <Section id="actions" title="Multiple actions">
         <p>
-          The default action type is <code>RemixNode</code>. For a design system, supply your own
-          type to <code>createToastManager()</code> and render that data in the context callback.
-          The collection infers your action type while keeping the standard toast fields.
-        </p>
-        <CodeBlock html={typed} />
-        <p>
-          An action type can also describe multiple controls. Use a discriminated union to render
-          buttons and links with their native semantics.
+          Custom data can describe multiple actions. Use a discriminated union to give each action
+          its own fields and behavior. Your render logic decides how to present each action and
+          whether it dismisses the toast.
         </p>
         <Example id="multiple-actions" example={actions} />
       </Section>
-      <Section id="deduplication" title="Deduplication">
+      <Section id="deduplication" title="Replacing a toast">
         <p>
-          Pass a stable <code>id</code> to <code>add()</code> to update an existing notification
-          instead of creating a duplicate. Supplied fields merge into the toast and its timer
-          restarts. Its position in the stack stays the same.
+          Pass a stable <code>id</code> to <code>add()</code> to replace an existing notification
+          instead of creating a duplicate. Its timer restarts and its position in the stack stays
+          the same. If the notification has been dismissed, it appears again.
+        </p>
+        <p>
+          Each call supplies the complete content and options. Omitted titles, descriptions and data
+          are cleared. Omitted timeout and priority use their defaults, including the five-second
+          timeout.
+        </p>
+        <p>
+          Each toast starts with <code>revision: 0</code>. Adding the same ID again increments its
+          revision, even when the content is unchanged. Your renderer can use this to replay
+          feedback without remounting the toast.
         </p>
         <Example id="stack" example={stack} />
         <p>
@@ -338,17 +308,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           view. Limited timers continue running.
         </p>
       </Section>
-      <Section id="updates" title="Updating a toast">
-        <p>
-          Use <code>update(id, options)</code> to change an open toast without restarting its timer.
-          Supplying a timeout starts a fresh lifetime. Updates to a closed toast do nothing.
-        </p>
-        <p>
-          An upload can use one notification throughout its progress. Success updates it with a
-          timed confirmation. Failure updates it with a persistent Retry action.
-        </p>
-        <Example id="upload" example={updates} />
-      </Section>
+
       <Section id="accessibility" title="Accessibility">
         <p>
           Supply the region's accessible name with <code>root({`{ label }`})</code>. Each
@@ -378,22 +338,17 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
       </Section>
       <Section id="api-reference" title="API reference">
-        <h3 id="create-manager">createToastManager&lt;action = RemixNode&gt;()</h3>
+        <h3 id="create-manager">createToastManager&lt;data = unknown&gt;()</h3>
         <p>Creates application-level state and commands.</p>
-        <h3 id="manager">ToastManager&lt;action&gt;</h3>
+        <h3 id="manager">ToastManager&lt;data&gt;</h3>
         <ApiTable id="manager-members" label="Member">
-          <ApiEntry name="toastItems" type="readonly ToastItem<action>[]">
+          <ApiEntry name="toastItems" type="readonly ToastItem<data>[]">
             Current immutable snapshots, newest first. Repeated IDs keep their position.
           </ApiEntry>
-          <ApiEntry name="add" type="(options: ToastOptions<action>) => string">
-            Publishes <a href="#type-ToastOptions">ToastOptions</a> or merges by ID and restarts its
-            lifetime. Returns the generated or supplied ID.
-          </ApiEntry>
-          <ApiEntry
-            name="update"
-            type="(id: string, options: Partial<Omit<ToastOptions<action>, 'id'>>) => void"
-          >
-            Merges into an open item. Only an explicit timeout restarts the timer.
+          <ApiEntry name="add" type="(options: ToastOptions<data>) => string">
+            Publishes <a href="#type-ToastOptions">ToastOptions</a> or replaces an existing ID's
+            content and options and restarts its lifetime. Omitted fields clear or use their
+            defaults. Returns the generated or supplied ID.
           </ApiEntry>
           <ApiEntry name="close" type="(id?: string) => void">
             Closes one item, or all items when omitted.
@@ -416,7 +371,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             <CodeBlock html={subscribe} />
           </ApiEntry>
         </ApiTable>
-        <h3 id="options">ToastOptions&lt;action = RemixNode&gt;</h3>
+        <h3 id="options">ToastOptions&lt;data = unknown&gt;</h3>
         <ApiTable id="toast-options" label="Option" defaults>
           <ApiEntry name="id" type="string" defaultValue="generated">
             Repeated IDs update in place. Generated IDs are unique within the manager.
@@ -427,16 +382,11 @@ export default function ToastPage(handle: Handle<PageProps>) {
           <ApiEntry name="description" type="RemixNode">
             Optional renderable supporting content. Apply description() to its element.
           </ApiEntry>
-          <ApiEntry name="action" type="action">
-            Native renderable content by default, or consumer-defined typed data. Only null and
-            undefined mean no action. Empty strings, false and empty arrays still make a toast
-            persistent unless a timeout is supplied.
+          <ApiEntry name="data" type="data">
+            Consumer-defined data interpreted by your renderer. Supply a type to
+            createToastManager() for typed access.
           </ApiEntry>
-          <ApiEntry
-            name="timeout"
-            type="number | false"
-            defaultValue="5000, or false with an action"
-          >
+          <ApiEntry name="timeout" type="number | false" defaultValue="5000">
             Finite, non-negative milliseconds, or false to disable automatic dismissal. Zero
             dismisses immediately once presented. Invalid values throw RangeError.
           </ApiEntry>
@@ -445,14 +395,18 @@ export default function ToastPage(handle: Handle<PageProps>) {
             change timeout.
           </ApiEntry>
         </ApiTable>
-        <h3 id="toast-item">ToastItem&lt;action = RemixNode&gt;</h3>
+        <h3 id="toast-item">ToastItem&lt;data = unknown&gt;</h3>
         <p>
-          Readonly title, description and action fields match the published content. Other snapshot
+          Readonly title, description and data fields match the published content. Other snapshot
           fields follow.
         </p>
         <ApiTable id="toast-item-fields" label="Field">
           <ApiEntry name="id" type="string">
             Stable identity for commands and the host's key.
+          </ApiEntry>
+          <ApiEntry name="revision" type="number">
+            Starts at zero and increments on each duplicate add, even when the content is unchanged.
+            Timer and presentation changes do not increment it.
           </ApiEntry>
           <ApiEntry name="timeout" type="number | false">
             Configured timeout in milliseconds, or false for a persistent toast.
@@ -472,7 +426,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </ApiTable>
         <h3 id="context">Context</h3>
         <ApiTable id="context-props" label="Prop">
-          <ApiEntry name="manager" type="ToastManager<action>" required>
+          <ApiEntry name="manager" type="ToastManager<data>" required>
             Stable application-level manager. Mount one Context per manager.
           </ApiEntry>
           <ApiEntry name="limit" type="number">
@@ -482,7 +436,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry
             name="children"
-            type="(toastItems: readonly ToastItem<action>[]) => RemixNode"
+            type="(toastItems: readonly ToastItem<data>[]) => RemixNode"
             required
           >
             Complete reactive collection. Wrap each toast item in a keyed ItemContext.

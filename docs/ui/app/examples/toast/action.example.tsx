@@ -12,7 +12,12 @@ import {
 import { css, on, createMixin } from 'remix/component'
 import type { ElementProps } from 'remix/component'
 
-const toastManager = toast.createToastManager()
+interface Action {
+  label: string
+  run(): void
+}
+
+const toastManager = toast.createToastManager<{ action: Action }>()
 
 export default function ExampleToastAction() {
   return () => (
@@ -26,14 +31,14 @@ export default function ExampleToastAction() {
               id: 'example',
               title: 'Toast title',
               description: 'This toast has an action.',
-              action: (
-                <button
-                  type="button"
-                  mix={[styles.button, on('click', () => toastManager.close('example'))]}
-                >
-                  Action
-                </button>
-              ),
+              data: {
+                action: {
+                  label: 'Action',
+                  run() {
+                    toastManager.close('example')
+                  },
+                },
+              },
             })
           }),
         ]}
@@ -101,8 +106,17 @@ export function ToastRegion() {
                         {toastItem.description}
                       </span>
                     </div>
-                    {toastItem.action != null && (
-                      <div mix={styles.hideWhenCovered}>{toastItem.action}</div>
+                    {toastItem.data?.action != null && (
+                      <button
+                        type="button"
+                        mix={[
+                          on('click', toastItem.data.action.run),
+                          styles.button,
+                          styles.hideWhenCovered,
+                        ]}
+                      >
+                        {toastItem.data.action.label}
+                      </button>
                     )}
                     <button
                       type="button"

@@ -2,31 +2,33 @@ import { attrs, createMixin, css, on, ref, TypedEventTarget } from '@remix-run/c
 import type { ElementProps, Handle, RemixNode } from '@remix-run/component'
 
 /** Content published to a toast manager. */
-export interface ToastOptions<action = RemixNode> {
-  /** Stable identity. Adding the same identity updates the existing toast and restarts its timer. */
+export interface ToastOptions<data = unknown> {
+  /** Stable identity. Reusing it replaces the content and options and restarts the timer. */
   id?: string
   /** Renderable heading content. Connect its element with `title()`. */
   title?: RemixNode
   /** Renderable supporting content. Connect its element with `description()`. */
   description?: RemixNode
-  /** Consumer-defined action content. Any value except null or undefined counts as an action. */
-  action?: action
-  /** Auto-dismiss timeout in milliseconds, or false to disable. Zero dismisses immediately. Defaults to 5000, or false with an action. */
+  /** Consumer-defined data interpreted by the renderer. */
+  data?: data
+  /** Auto-dismiss timeout in milliseconds, or false to disable. Zero dismisses immediately. Defaults to 5000. */
   timeout?: number | false
   /** Announcement urgency. Defaults to low (polite); high uses an assertive alert. */
   priority?: 'low' | 'high'
 }
 
 /** An immutable toast item snapshot. Read the manager again for the current remaining time. */
-export interface ToastItem<action = RemixNode> {
+export interface ToastItem<data = unknown> {
   /** Stable identity, including generated identities. */
   readonly id: string
+  /** Starts at zero and increments on each duplicate add, even with unchanged content. */
+  readonly revision: number
   /** Visible heading. */
   readonly title?: RemixNode
   /** Supporting content. */
   readonly description?: RemixNode
   /** Content interpreted by the consumer's renderer. */
-  readonly action?: action
+  readonly data?: data
   /** Configured timeout in milliseconds, or false for a persistent toast. */
   readonly timeout: number | false
   /** Remaining time in milliseconds, or zero when persistent. Sampled when this snapshot was read. */
@@ -35,18 +37,16 @@ export interface ToastItem<action = RemixNode> {
   readonly paused: boolean
   /** Whether at least one mounted item presents this toast. */
   readonly presented: boolean
-  /** Announcement urgency, independent of action presence and timeout. */
+  /** Announcement urgency, independent of data and timeout. */
   readonly priority: 'low' | 'high'
 }
 
 /** Commands and observable state, without a bound component. Events signal that state can be read. */
-export interface ToastManager<action = RemixNode> extends TypedEventTarget<{ change: Event }> {
+export interface ToastManager<data = unknown> extends TypedEventTarget<{ change: Event }> {
   /** Open toast items, newest first. Updating an existing identity preserves its position. */
-  readonly toastItems: readonly ToastItem<action>[]
-  /** Adds or merges a toast by identity, returning its identity. */
-  add(options: ToastOptions<action>): string
-  /** Updates an open toast. Only an explicit timeout restarts its timer. */
-  update(id: string, options: Partial<Omit<ToastOptions<action>, 'id'>>): void
+  readonly toastItems: readonly ToastItem<data>[]
+  /** Adds or replaces a toast by identity. Omitted fields clear or use defaults. Returns its identity. */
+  add(options: ToastOptions<data>): string
   /** Closes one toast, or all toasts when no identity is supplied. */
   close(id?: string): void
   /** Pauses all timers for an opaque reason. New arrivals inherit active reasons. */
@@ -58,13 +58,13 @@ export interface ToastManager<action = RemixNode> extends TypedEventTarget<{ cha
 }
 
 /** Connects application-level state to consumer-owned markup. */
-export interface ToastContextProps<action = RemixNode> {
+export interface ToastContextProps<data = unknown> {
   /** Stable manager created outside the rendering component. */
-  manager: ToastManager<action>
+  manager: ToastManager<data>
   /** Maximum available toast items. Defaults to 3. Must be a positive integer. */
   limit?: number
   /** Renders every open toast item, including overflow, newest first. */
-  children: (toastItems: readonly ToastItem<action>[]) => RemixNode
+  children: (toastItems: readonly ToastItem<data>[]) => RemixNode
 }
 
 /** Region behavior. Author its element, translated label and positioning. */
@@ -83,8 +83,9 @@ export interface ToastItemContextProps {
   children?: RemixNode
 }
 
-type StoredToastItem<action> = {
-  options: ToastOptions<action>
+type StoredToastItem<data> = {
+  revision: number
+  options: ToastOptions<data>
   timeout: number | false
   remaining: number
   started: number | null
@@ -96,8 +97,8 @@ type StoredToastItem<action> = {
  * Creates retained toast state independently of rendering. Timers run only while presented.
  * @returns A manager with native EventTarget subscriptions.
  */
-export function createToastManager<action = RemixNode>(): ToastManager<action> {
-  let storedToastItems = new Map<string, StoredToastItem<action>>()
+export function createToastManager<data = unknown>(): ToastManager<data> {
+  let storedToastItems = new Map<string, StoredToastItem<data>>()
   let reasons = new Set<unknown>()
   let nextId = 0
 
@@ -105,7 +106,7 @@ export function createToastManager<action = RemixNode>(): ToastManager<action> {
     toastManager.dispatchEvent(new Event('change'))
   }
 
-  function remaining(toastItem: StoredToastItem<action>) {
+  function remaining(toastItem: StoredToastItem<data>) {
     return Math.max(
       0,
       toastItem.remaining -
@@ -113,35 +114,35 @@ export function createToastManager<action = RemixNode>(): ToastManager<action> {
     )
   }
 
-  function stop(toastItem: StoredToastItem<action>) {
+  function stop(toastItem: StoredToastItem<data>) {
     toastItem.remaining = remaining(toastItem)
     toastItem.started = null
     clearTimeout(toastItem.timer)
   }
 
-  function start(id: string, toastItem: StoredToastItem<action>) {
+  function start(id: string, toastItem: StoredToastItem<data>) {
     if (toastItem.timeout === false || toastItem.presentations.size === 0 || reasons.size > 0)
       return
     toastItem.started = performance.now()
     toastItem.timer = setTimeout(() => toastManager.close(id), toastItem.remaining)
   }
 
-  function timeout(options: ToastOptions<action>) {
-    let value = options.timeout ?? (options.action == null ? 5000 : false)
+  function validateTimeout(value: number | false) {
     if (value !== false && (!Number.isFinite(value) || value < 0))
       throw new RangeError('Toast timeout must be false or finite and non-negative')
     return value
   }
 
-  class ToastStore extends TypedEventTarget<{ change: Event }> implements ToastManager<action> {
-    get toastItems(): readonly ToastItem<action>[] {
+  class ToastStore extends TypedEventTarget<{ change: Event }> implements ToastManager<data> {
+    get toastItems(): readonly ToastItem<data>[] {
       return Object.freeze(
         [...storedToastItems].reverse().map(([id, toastItem]) =>
           Object.freeze({
             id,
+            revision: toastItem.revision,
             title: toastItem.options.title,
             description: toastItem.options.description,
-            action: toastItem.options.action,
+            data: toastItem.options.data,
             timeout: toastItem.timeout,
             remaining: remaining(toastItem),
             paused: toastItem.started === null,
@@ -151,15 +152,15 @@ export function createToastManager<action = RemixNode>(): ToastManager<action> {
         ),
       )
     }
-    add(options: ToastOptions<action>) {
+    add(options: ToastOptions<data>) {
       let id = options.id ?? `toast-${++nextId}`
       while (options.id === undefined && storedToastItems.has(id)) id = `toast-${++nextId}`
       let previous = storedToastItems.get(id)
-      let merged = { ...previous?.options, ...options }
-      let lifetime = timeout(merged)
+      let lifetime = validateTimeout(options.timeout ?? 5000)
       if (previous) stop(previous)
-      let toastItem: StoredToastItem<action> = {
-        options: merged,
+      let toastItem: StoredToastItem<data> = {
+        revision: previous ? previous.revision + 1 : 0,
+        options: { ...options },
         timeout: lifetime,
         remaining: lifetime === false ? 0 : lifetime,
         started: null,
@@ -169,20 +170,6 @@ export function createToastManager<action = RemixNode>(): ToastManager<action> {
       start(id, toastItem)
       changed()
       return id
-    }
-    update(id: string, options: Partial<Omit<ToastOptions<action>, 'id'>>) {
-      let toastItem = storedToastItems.get(id)
-      if (!toastItem) return
-      let merged = { ...toastItem.options, ...options }
-      let lifetime = timeout(merged)
-      if (options.timeout !== undefined) {
-        stop(toastItem)
-        toastItem.timeout = lifetime
-        toastItem.remaining = lifetime === false ? 0 : lifetime
-      }
-      toastItem.options = merged
-      if (options.timeout !== undefined) start(id, toastItem)
-      changed()
     }
     close(id?: string) {
       if (id === undefined) {
@@ -308,9 +295,7 @@ function focusElement(node: HTMLElement, visible = false) {
  * @param handle Component lifetime and typed manager props.
  * @returns A reactive renderer for the collection and high-priority announcements.
  */
-export function Context<action = RemixNode>(
-  handle: Handle<ToastContextProps<action>>,
-): () => RemixNode {
+export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>): () => RemixNode {
   let toastManager = handle.props.manager
   let limit = handle.props.limit ?? 3
   let region: HTMLElement | undefined

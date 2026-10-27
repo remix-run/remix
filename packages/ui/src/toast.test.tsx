@@ -20,7 +20,7 @@ function clock(t: TestContext) {
   }
 }
 
-function first<action>(toastManager: ToastManager<action>): ToastItem<action> {
+function first<data>(toastManager: ToastManager<data>): ToastItem<data> {
   let toastItem = toastManager.toastItems[0]
   assert.ok(toastItem)
   return toastItem
@@ -49,7 +49,7 @@ describe('toast manager', () => {
     presentation.abort()
   })
 
-  it('merges duplicates in place and restarts the lifetime without losing presentation', (t) => {
+  it('replaces duplicates in place and restarts the lifetime without losing presentation', (t) => {
     let time = clock(t)
     let toastManager = createToastManager()
     toastManager.add({ id: 'save', title: 'Saving', description: 'Settings', timeout: 1000 })
@@ -62,33 +62,86 @@ describe('toast manager', () => {
       toastManager.toastItems.map((toastItem) => toastItem.id),
       ['other', 'save'],
     )
-    assert.equal(
-      toastManager.toastItems.find((toastItem) => toastItem.id === 'save')?.title,
-      'Saved',
-    )
-    assert.equal(
-      toastManager.toastItems.find((toastItem) => toastItem.id === 'save')?.description,
-      'Settings',
-    )
-    assert.equal(
-      toastManager.toastItems.find((toastItem) => toastItem.id === 'save')?.remaining,
-      1000,
-    )
-    assert.equal(
-      toastManager.toastItems.find((toastItem) => toastItem.id === 'save')?.presented,
-      true,
-    )
+    let replacement = toastManager.toastItems.find((toastItem) => toastItem.id === 'save')
+    assert.ok(replacement)
+    assert.equal(replacement.title, 'Saved')
+    assert.equal(replacement.description, undefined)
+    assert.equal(replacement.remaining, 5000)
+    assert.equal(replacement.presented, true)
+    assert.equal(replacement.revision, 1)
     time.advance(900)
     assert.equal(
       toastManager.toastItems.find((toastItem) => toastItem.id === 'save')?.remaining,
-      100,
+      4100,
     )
     presentation.abort()
     time.advance(1000)
     assert.equal(
       toastManager.toastItems.find((toastItem) => toastItem.id === 'save')?.remaining,
-      100,
+      4100,
     )
+    toastManager.close()
+  })
+
+  it('uses the same content and defaults whether the previous toast is open or dismissed', () => {
+    let toastManager = createToastManager<{ label: string }>()
+    toastManager.add({
+      id: 'save',
+      title: 'Failed',
+      description: 'Try again',
+      data: { label: 'Retry' },
+      timeout: false,
+      priority: 'high',
+    })
+    toastManager.add({ id: 'save', description: 'Ready' })
+    let replacement = first(toastManager)
+    assert.equal(replacement.title, undefined)
+    assert.equal(replacement.description, 'Ready')
+    assert.equal(replacement.data, undefined)
+    assert.equal(replacement.timeout, 5000)
+    assert.equal(replacement.priority, 'low')
+    assert.equal(replacement.revision, 1)
+    toastManager.close('save')
+    toastManager.add({ id: 'save', description: 'Ready' })
+    assert.deepEqual({ ...replacement, revision: 0 }, first(toastManager))
+  })
+
+  it('increments revision for duplicate publications, including unchanged content', () => {
+    let toastManager = createToastManager()
+    toastManager.add({ id: 'save', title: 'Saved', timeout: false })
+    let initial = first(toastManager)
+    assert.equal(initial.revision, 0)
+    toastManager.add({ id: 'save', title: 'Saved' })
+    assert.equal(first(toastManager).revision, 1)
+    toastManager.add({ id: 'save', title: 'Saved' })
+    assert.equal(first(toastManager).revision, 2)
+    toastManager.add({ id: 'save' })
+    assert.equal(first(toastManager).revision, 3)
+    assert.equal(initial.revision, 0)
+    assert.throws(() => toastManager.add({ id: 'save', timeout: -1 }), RangeError)
+    assert.equal(first(toastManager).revision, 3)
+    toastManager.close('save')
+    toastManager.add({ id: 'save', title: 'Saved', timeout: false })
+    assert.equal(first(toastManager).revision, 0)
+  })
+
+  it('keeps revision unchanged through timer and presentation changes', (t) => {
+    let time = clock(t)
+    let toastManager = createToastManager()
+    let id = toastManager.add({ title: 'Saved', timeout: 1000 })
+    let presentation = new AbortController()
+    toastManager.present(id, presentation.signal)
+    time.advance(200)
+    assert.equal(first(toastManager).remaining, 800)
+    assert.equal(first(toastManager).revision, 0)
+    toastManager.pause('application')
+    assert.equal(first(toastManager).revision, 0)
+    toastManager.resume('application')
+    assert.equal(first(toastManager).revision, 0)
+    presentation.abort()
+    assert.equal(first(toastManager).revision, 0)
+    toastManager.add({ title: 'Other toast', timeout: false })
+    assert.equal(toastManager.toastItems.find((toastItem) => toastItem.id === id)?.revision, 0)
     toastManager.close()
   })
 
@@ -154,35 +207,30 @@ describe('toast manager', () => {
     assert.equal(first(toastManager).presented, false)
   })
 
-  it('updates content without extending the deadline', (t) => {
+  it('uses the same default timeout regardless of data', (t) => {
     let time = clock(t)
-    let toastManager = createToastManager<{ label: string }>()
-    let id = toastManager.add({ title: 'Uploading', timeout: 1000 })
-    let presentation = new AbortController()
-    toastManager.present(id, presentation.signal)
-    time.advance(800)
-    toastManager.update(id, { title: 'Uploaded', description: 'Ready', action: { label: 'Open' } })
-    assert.equal(first(toastManager).description, 'Ready')
-    assert.equal(first(toastManager).priority, 'low')
-    assert.equal(first(toastManager).remaining, 200)
-    toastManager.update(id, { action: { label: 'View' } })
-    assert.equal(first(toastManager).action?.label, 'View')
-    time.advance(200)
-    assert.equal(toastManager.toastItems.length, 0)
-    presentation.abort()
-  })
-
-  it('persists actions by default without inspecting arbitrary action values', () => {
-    let toastManager = createToastManager<unknown>()
+    let toastManager = createToastManager()
     toastManager.add({ title: 'Text' })
-    toastManager.add({ title: 'Empty string action', action: '' })
-    toastManager.add({ title: 'False action', action: false })
-    toastManager.add({ title: 'Null action', action: null })
-    toastManager.add({ title: 'Explicit timeout', action: {}, timeout: 1000 })
+    toastManager.add({ title: 'Empty string data', data: '' })
+    toastManager.add({ title: 'False data', data: false })
+    toastManager.add({ title: 'Null data', data: null })
+    toastManager.add({ title: 'Explicit timeout', data: {}, timeout: 1000 })
+    toastManager.add({ title: 'Action data', data: { label: 'Undo', run() {} } })
+    toastManager.add({ title: 'Persistent data', data: {}, timeout: false })
     assert.deepEqual(
       toastManager.toastItems.map((toastItem) => toastItem.timeout),
-      [1000, 5000, false, false, 5000],
+      [false, 5000, 1000, 5000, 5000, 5000, 5000],
     )
+    let presentation = new AbortController()
+    for (let toastItem of toastManager.toastItems) {
+      toastManager.present(toastItem.id, presentation.signal)
+    }
+    time.advance(5000)
+    assert.deepEqual(
+      toastManager.toastItems.map((toastItem) => toastItem.title),
+      ['Persistent data'],
+    )
+    presentation.abort()
   })
 
   it('keeps explicitly persistent items open until their timeout is enabled', (t) => {
@@ -195,7 +243,7 @@ describe('toast manager', () => {
     assert.equal(first(toastManager).timeout, false)
     assert.equal(first(toastManager).paused, true)
     assert.equal(first(toastManager).remaining, 0)
-    toastManager.update(id, { timeout: 1000 })
+    toastManager.add({ id, title: 'Saved', timeout: 1000 })
     time.advance(1000)
     assert.equal(toastManager.toastItems.length, 0)
     presentation.abort()
@@ -221,7 +269,7 @@ describe('toast manager', () => {
     toastManager.addEventListener('change', () => count++, { signal: subscription.signal })
     toastManager.add({ id: 'save', title: 'Saving' })
     let snapshot = first(toastManager)
-    toastManager.update('save', { title: 'Saved' })
+    toastManager.add({ id: 'save', title: 'Saved' })
     assert.equal(snapshot.title, 'Saving')
     assert.equal(Object.isFrozen(snapshot), true)
     assert.equal(count, 2)
@@ -234,30 +282,30 @@ describe('toast manager', () => {
     let toastManager = createToastManager()
     toastManager.add({ id: 'save', title: 'Saved' })
     assert.throws(() => toastManager.add({ id: 'save', title: 'Invalid', timeout: -1 }), RangeError)
-    assert.throws(() => toastManager.update('save', { timeout: Infinity }), RangeError)
-    assert.throws(() => toastManager.update('save', { timeout: NaN }), RangeError)
+    assert.throws(() => toastManager.add({ id: 'save', timeout: Infinity }), RangeError)
+    assert.throws(() => toastManager.add({ id: 'save', timeout: NaN }), RangeError)
     assert.equal(first(toastManager).title, 'Saved')
   })
 })
 
 describe('toast.root()', () => {
-  it('preserves custom and array action inference in the context render callback', async () => {
+  it('preserves array data inference in the context render callback', async () => {
     interface Action {
       label: string
       run(): void
     }
     let toastManager = createToastManager<Action[]>()
-    function publish<action>(toastManager: ToastManager<action>, options: ToastOptions<action>) {
+    function publish<data>(toastManager: ToastManager<data>, options: ToastOptions<data>) {
       return toastManager.add(options)
     }
-    publish(toastManager, { title: 'Saved', action: [{ label: 'Undo', run() {} }] })
+    publish(toastManager, { title: 'Saved', data: [{ label: 'Undo', run() {} }] })
     let html = await renderToString(
       <Context manager={toastManager}>
         {(toastItems) => (
           <section mix={root({ label: 'Notifications' })}>
             {toastItems.map((toastItem) => (
               <div>
-                {toastItem.action?.map((action) => (
+                {toastItem.data?.map((action) => (
                   <button mix={on('click', action.run)}>{action.label}</button>
                 ))}
               </div>
@@ -272,7 +320,7 @@ describe('toast.root()', () => {
 
   it('presents buffered content, announces it, enters on F6, and restores focus on close', async (t) => {
     let toastManager = createToastManager<{ label: string }>()
-    let id = toastManager.add({ title: 'File deleted', action: { label: 'Undo' } })
+    let id = toastManager.add({ title: 'File deleted', data: { label: 'Undo' } })
     let result = render(
       <>
         <button>Publish</button>
@@ -284,7 +332,7 @@ describe('toast.root()', () => {
                   <div key={toastItem.id} data-id={toastItem.id} mix={item()}>
                     <strong>{toastItem.title}</strong>
                     <button mix={on('click', () => toastManager.close(toastItem.id))}>
-                      {toastItem.action?.label}
+                      {toastItem.data?.label}
                     </button>
                   </div>
                 </ItemContext>
@@ -472,10 +520,10 @@ describe('toast gestures and clocks', () => {
     await result.act(() => toastManager.resume('manual'))
     assert.equal(bar.getAnimations().length, 1)
     assert.equal(bar.getAnimations()[0].playState, 'running')
-    await result.act(() => toastManager.update(id, { timeout: 20000 }))
+    await result.act(() => toastManager.add({ id, title: 'Saved', timeout: 20000 }))
     assert.equal(bar.getAnimations().length, 1)
     assert.ok(Number(bar.getAnimations()[0].effect?.getTiming().duration) > 19000)
-    await result.act(() => toastManager.update(id, { timeout: false }))
+    await result.act(() => toastManager.add({ id, title: 'Saved', timeout: false }))
     assert.equal(bar.hidden, true)
     assert.equal(bar.getAttribute('aria-hidden'), 'true')
     assert.equal(bar.getAnimations().length, 0)

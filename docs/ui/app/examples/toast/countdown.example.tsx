@@ -103,9 +103,6 @@ export function ToastRegion() {
                         {toastItem.description}
                       </span>
                     </div>
-                    {toastItem.action != null && (
-                      <div mix={styles.hideWhenCovered}>{toastItem.action}</div>
-                    )}
                     <button
                       type="button"
                       aria-label="Dismiss notification"

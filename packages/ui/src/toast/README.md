@@ -36,7 +36,6 @@ export function Notifications() {
               >
                 <h2 mix={toast.title()}>{toastItem.title}</h2>
                 <p mix={toast.description()}>{toastItem.description}</p>
-                {toastItem.action}
                 <button mix={toast.close()}>Dismiss</button>
               </article>
             </toast.ItemContext>
@@ -52,7 +51,7 @@ Supply the region label and control labels. Mount one `Context` per manager, out
 
 ## `@remix-run/ui/toast`
 
-- `createToastManager<action = RemixNode>()`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
+- `createToastManager<data = unknown>()`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
 - `Context`: accepts a stable `manager`, an optional `limit` (default 3), and a typed collection callback. Render every item, including overflow.
 - `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and polite announcements. A non-empty `label` is required.
 - `ItemContext`: accepts the toast item ID as `value` and scopes its markup. Key the provider and animated host by the item ID.
@@ -60,10 +59,10 @@ Supply the region label and control labels. Mount one `Context` per manager, out
 - `title()` and `description()`: connect authored heading and supporting elements through `aria-labelledby` and `aria-describedby`. They generate IDs unless you supply them, and remove relationships when a part is empty or removed. They supply no elements or content.
 - `close()`: dismisses the scoped toast from a native button. Supply translated text or an accessible label for an icon button. It defaults to `type="button"` and excludes the control from passive announcements while the collection is collapsed.
 - `countdown(toastItem)`: animates the inherited `--toast-countdown` CSS property from 1 to 0 using the item's clock. Its host is decorative (`aria-hidden`) and hidden for persistent items.
-- `ToastOptions<action>`: optional renderable `title` and `description`, generic `action`, `id`, `timeout` and `priority`.
-- `ToastItem<action>`: immutable content, resolved `priority`, and sampled clock state: `presented`, `paused`, `remaining` and `timeout`.
-- `ToastManager<action>`: `add`, `update`, `close`, `pause`, `resume`, `present` and `toastItems`. Native `change` subscriptions support `AbortSignal` cleanup.
-- `ToastContextProps<action>`, `ToastItemContextProps` and `ToastRootOptions`: configuration types.
+- `ToastOptions<data>`: optional renderable `title` and `description`, generic `data`, `id`, `timeout` and `priority`.
+- `ToastItem<data>`: immutable content, an update `revision`, resolved `priority`, and sampled clock state: `presented`, `paused`, `remaining` and `timeout`.
+- `ToastManager<data>`: `add`, `close`, `pause`, `resume`, `present` and `toastItems`. Native `change` subscriptions support `AbortSignal` cleanup.
+- `ToastContextProps<data>`, `ToastItemContextProps` and `ToastRootOptions`: configuration types.
 
 ## Announcements and keyboard access
 
@@ -75,11 +74,13 @@ Set `priority: 'high'` for urgent announcements. A separate assertive alert cont
 
 F6 enters the collection and F6 again returns to the previous element. Tab visits each available notification before its controls. Shift+Tab from the collection, or Tab past either boundary, returns to the previous element. Escape dismisses the focused notification. Closing it moves focus to a neighbouring mounted, available notification or returns to the previous element. Focus is not deferred to a future mount. Make the shortcut discoverable in your application; change or disable `hotkey` for secondary managers.
 
-Use native buttons and links for actions. Generic action data may describe one or multiple controls; actions do not implicitly dismiss. Provide a visible dismiss button so swiping is not the only dismissal method. Essential information and decisions should also be available in the page. Evaluate speech with the assistive technologies your application supports, and test placement and focus alongside modal dialogs.
+Supply a type to `createToastManager<data>()` for custom values and behavior. The context callback infers `toastItem.data`. Use native buttons and links for actions. Consumer-defined `data` may describe one or multiple controls; actions do not implicitly dismiss. Provide a visible dismiss button so swiping is not the only dismissal method. Essential information and decisions should also be available in the page. Evaluate speech with the assistive technologies your application supports, and test placement and focus alongside modal dialogs.
 
 ## Timers and motion
 
-Plain notifications default to 5000 milliseconds. Actions default to persistent; only `null` and `undefined` mean no action. An explicit `timeout` overrides that policy: finite, non-negative milliseconds, or `false` to disable automatic dismissal. Zero dismisses as soon as the toast is presented. `add()` merges duplicate IDs and restarts their lifetime. `update()` restarts only when it supplies `timeout`.
+Notifications default to 5000 milliseconds, independently of their content. Set `timeout` to finite, non-negative milliseconds, or `false` to disable automatic dismissal. Zero dismisses as soon as the toast is presented. `add()` replaces the full content and options for duplicate IDs and restarts their lifetime. Omitted titles, descriptions and data are cleared; omitted timeout and priority use their defaults.
+
+Each item starts with `revision: 0`. Duplicate `add()` calls increment it, including when content is unchanged. Renderers can use the revision to replay feedback without remounting the toast. Timer and presentation changes leave it unchanged.
 
 Timers run while `item()` presents the item, including limited items. Publications before mounting retain their full lifetime; unmounting pauses without discarding them. Hover, keyboard focus, touch engagement, document visibility, window blur and manual `pause(reason)` calls compose. `resume(reason)` removes only its own reason.
 

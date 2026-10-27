@@ -16,7 +16,7 @@ type Action =
   | { kind: 'button'; label: string; run(): void }
   | { kind: 'link'; label: string; href: string }
 
-const toastManager = toast.createToastManager<Action[]>()
+const toastManager = toast.createToastManager<{ actions: Action[] }>()
 
 export default function ExampleToastActions() {
   return () => (
@@ -30,16 +30,18 @@ export default function ExampleToastActions() {
               id: 'example',
               title: 'Toast title',
               description: 'This toast has a link and an action.',
-              action: [
-                { kind: 'link', label: 'View docs', href: '/animation/entrance-exit/' },
-                {
-                  kind: 'button',
-                  label: 'Dismiss',
-                  run() {
-                    toastManager.close('example')
+              data: {
+                actions: [
+                  { kind: 'link', label: 'View docs', href: '/animation/entrance-exit/' },
+                  {
+                    kind: 'button',
+                    label: 'Dismiss',
+                    run() {
+                      toastManager.close('example')
+                    },
                   },
-                },
-              ],
+                ],
+              },
             })
           }),
         ]}
@@ -107,7 +109,7 @@ export function ToastRegion() {
                         {toastItem.description}
                       </span>
                       <div mix={styles.actions}>
-                        {toastItem.action?.map((action) =>
+                        {toastItem.data?.actions.map((action) =>
                           action.kind === 'link' ? (
                             <a href={action.href} mix={styles.link}>
                               {action.label}

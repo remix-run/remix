@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
 import { on } from '@remix-run/component'
-import type { Handle } from '@remix-run/component'
+import type { Handle, RemixNode } from '@remix-run/component'
 import { render } from '@remix-run/component/test'
 import { describe, it } from '@remix-run/test'
 import * as toast from './toast.tsx'
@@ -18,7 +18,12 @@ function key(target: EventTarget, value: string, shiftKey = false) {
   )
 }
 
-function Notifications(handle: Handle<{ manager: ToastManager }>) {
+function Notifications<data>(
+  handle: Handle<{
+    manager: ToastManager<data>
+    renderData?: (data: data | undefined) => RemixNode
+  }>,
+) {
   return () => (
     <>
       <button data-origin>Publish</button>
@@ -32,7 +37,7 @@ function Notifications(handle: Handle<{ manager: ToastManager }>) {
                   {toastItem.description != null && (
                     <p mix={toast.description()}>{toastItem.description}</p>
                   )}
-                  {toastItem.action}
+                  {handle.props.renderData?.(toastItem.data)}
                   <button mix={toast.close()}>Schliessen</button>
                 </article>
               </toast.ItemContext>
@@ -81,7 +86,9 @@ describe('toast accessibility', () => {
     let item = element(result.container, 'article')
     assert.equal(item.getAttribute('role'), 'dialog')
     assert.equal(item.inert, false)
-    await result.act(() => toastManager.update('saved', { priority: 'high' }))
+    await result.act(() =>
+      toastManager.add({ id: 'saved', title: 'Saved', timeout: false, priority: 'high' }),
+    )
     assert.equal(item.getAttribute('role'), 'alertdialog')
     await result.act(() => element(item, 'button').click())
     assert.deepEqual(
@@ -195,9 +202,10 @@ describe('toast accessibility', () => {
     assert.equal(result.container.querySelector('[role="status"]'), null)
     assert.equal(result.container.querySelector('[role="alert"]'), null)
     await result.act(() =>
-      toastManager.update(toastManager.toastItems[0].id, {
+      toastManager.add({
+        id: toastManager.toastItems[0].id,
         title: 'Restored',
-        description: undefined,
+        timeout: false,
       }),
     )
     assert.equal(element(item, 'h2').textContent, 'Restored')
@@ -278,7 +286,7 @@ describe('toast accessibility', () => {
   })
 
   it('announces urgent published content separately until the collection gains keyboard focus', async (t) => {
-    let toastManager = toast.createToastManager()
+    let toastManager = toast.createToastManager<{ action: RemixNode }>()
     toastManager.add({
       id: 'urgent',
       title: (
@@ -288,10 +296,12 @@ describe('toast accessibility', () => {
       ),
       description: 'Try again.',
       priority: 'high',
-      action: <button>Retry</button>,
+      data: { action: <button>Retry</button> },
     })
     toastManager.add({ id: 'ordinary', title: 'Saved', timeout: false })
-    let result = render(<Notifications manager={toastManager} />)
+    let result = render(
+      <Notifications manager={toastManager} renderData={(data) => data?.action} />,
+    )
     t.after(result.cleanup)
     let urgent = element(result.container, '[data-id="urgent"]')
     assert.equal(urgent.getAttribute('role'), 'alertdialog')
@@ -300,7 +310,19 @@ describe('toast accessibility', () => {
     let alert = element(result.container, '[role="alert"]')
     assert.equal(alert.textContent, 'Connection lostTry again.')
     assert.equal(alert.querySelector('button'), null)
-    await result.act(() => toastManager.update('urgent', { description: 'Reconnecting.' }))
+    await result.act(() =>
+      toastManager.add({
+        id: 'urgent',
+        title: (
+          <>
+            Connection <strong>lost</strong>
+          </>
+        ),
+        description: 'Reconnecting.',
+        priority: 'high',
+        data: { action: <button>Retry</button> },
+      }),
+    )
     assert.match(alert.textContent ?? '', /Reconnecting/)
     element(result.container, '[data-origin]').focus()
     await result.act(() => key(document, 'F6'))
@@ -313,7 +335,19 @@ describe('toast accessibility', () => {
     await result.act(() => key(element(result.container, 'section'), 'F6'))
     assert.ok(result.container.querySelector('[role="alert"]'))
     assert.equal(urgent.getAttribute('aria-hidden'), 'true')
-    await result.act(() => toastManager.update('urgent', { priority: 'low' }))
+    await result.act(() =>
+      toastManager.add({
+        id: 'urgent',
+        title: (
+          <>
+            Connection <strong>lost</strong>
+          </>
+        ),
+        description: 'Reconnecting.',
+        priority: 'low',
+        data: { action: <button>Retry</button> },
+      }),
+    )
     assert.equal(result.container.querySelector('[role="alert"]'), null)
     assert.equal(urgent.getAttribute('role'), 'dialog')
     assert.equal(urgent.getAttribute('aria-hidden'), null)
