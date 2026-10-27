@@ -803,6 +803,6 @@ Now when you submit the form, the button is disabled and the button text changes
 
 ![Submit button saying "Saving..." while being disabled](/images/app/actions/docs/chapters/01-start-here/pending-submit.png)
 
-There is a lot more we could do here to [submit the form without a full page navigation](/interactivity/#enhancing-forms-with-fetch-and-navigation), but that involves handling cancellations, error states, and more.
+The form still submits with a full page navigation. You can also [submit it with `fetch()` and stay on the page](/interactivity/#enhancing-forms-with-fetch-and-navigation), which brings its own cancellation and error handling, so we'll leave that for when you dig into interactivity.
 
 Next, take a closer look at the [route maps](/routing-and-controllers/#routes-as-the-url-contract) and [controllers](/routing-and-controllers/#controllers-and-actions) we started using here.
