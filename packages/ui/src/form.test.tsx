@@ -11,6 +11,22 @@ import type { FieldBinding } from './form.ts'
 import { renderForm, input, edit, blur } from './test/form.tsx'
 
 describe('form.Context', () => {
+  it('omits form errors when none exist and renders submitted form errors', (t) => {
+    let schema = fd.object({ name: fd.text(s.string()) })
+    let view = renderForm(schema, ({ fields, errors }) => (
+      <form mix={form.root()}>
+        {errors.form && <p role="alert">{errors.form.join(' ')}</p>}
+        <input mix={form.control(fields.name)} />
+      </form>
+    ))
+    t.after(view.cleanup)
+    expect(view.container.querySelector('p')).toBe(null)
+    view.rerender({ values: {}, errors: { fields: {}, form: ['Try again'] } })
+    expect(view.container.querySelector('p')?.textContent).toBe('Try again')
+    view.rerender({ values: {}, errors: { fields: {}, form: [] } })
+    expect(view.container.querySelector('p')).toBe(null)
+  })
+
   it('renders a form schema parseSafe failure with restored values and projected errors', (t) => {
     let schema = fd.object({
       email: fd.text(s.string().pipe(email())),

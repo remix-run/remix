@@ -18,7 +18,7 @@ export const AccountFields = clientEntry(
 
     return () => (
       <form.Context id={handle.id} schema={AccountForm} submission={handle.props.submission}>
-        {({ fields }) => (
+        {({ fields, errors }) => (
           <section aria-labelledby="account-title" mix={styles.panel}>
             <div mix={styles.panelHeader}>
               <div>
@@ -34,9 +34,9 @@ export const AccountFields = clientEntry(
               method="post"
               mix={[form.root(), styles.form]}
             >
-              {handle.props.submission?.errors.form.length ? (
+              {errors.form ? (
                 <p role="alert" mix={styles.formError}>
-                  {handle.props.submission.errors.form.join(' ')}
+                  {errors.form.join(' ')}
                 </p>
               ) : null}
               <div mix={styles.fieldGrid}>

@@ -22,7 +22,7 @@ export const RegistrationFields = clientEntry(
 
       return (
         <form.Context id={handle.id} schema={RegistrationForm} submission={submission}>
-          {({ fields }) => (
+          {({ fields, errors }) => (
             <section aria-labelledby="registration-title" mix={styles.panel}>
               <div mix={styles.panelHeader}>
                 <div>
@@ -34,9 +34,9 @@ export const RegistrationFields = clientEntry(
                 <p mix={styles.requiredNote}>Required fields are marked in their labels.</p>
               </div>
 
-              {submission?.errors.form.length ? (
+              {errors.form ? (
                 <div role="alert" mix={styles.formError}>
-                  {submission.errors.form.join(' ')}
+                  {errors.form.join(' ')}
                 </div>
               ) : null}
 

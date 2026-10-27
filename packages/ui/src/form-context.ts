@@ -160,9 +160,14 @@ export function Context<entries extends FormEntries>(
   return () => {
     if (handle.props.schema !== schema)
       throw new Error('Changing form schemas requires a new keyed Context')
+    let submissionErrors = handle.props.submission?.errors
+    let formErrors = submissionErrors?.form
     return handle.props.children({
       fields,
-      errors: handle.props.submission?.errors ?? { fields: {}, form: [] },
+      errors: {
+        fields: submissionErrors?.fields ?? {},
+        ...(formErrors?.length ? { form: formErrors } : {}),
+      },
     })
   }
 }

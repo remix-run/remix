@@ -65,7 +65,7 @@ function getLoginSubmission(submission: FormSubmission): LoginSubmission {
       fields: Object.fromEntries(
         Object.entries(submission.errors.fields).map(([field, errors]) => [field, [...errors]]),
       ),
-      form: [...submission.errors.form],
+      ...(submission.errors.form?.length ? { form: [...submission.errors.form] } : {}),
     },
   }
 }

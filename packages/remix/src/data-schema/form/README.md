@@ -18,7 +18,7 @@ let result = Signup.parseSafe(await request.formData())
 if (result.success) await createAccount(result.value)
 ```
 
-`Signup.parse(data)` returns validated output or throws `ValidationError`. `Signup.parseSafe(data)` returns `{ success: true, value }` or a failure with `success: false`, `issues`, `values`, and grouped `errors.fields` / `errors.form`. Both accept ordinary parse options and preserve error-map precedence and inferred transforms. Validation runs once, after form decoding.
+`Signup.parse(data)` returns validated output or throws `ValidationError`. `Signup.parseSafe(data)` returns `{ success: true, value }` or a failure with `success: false`, `issues`, `values`, and grouped errors. `errors.fields` contains only fields with messages, and `errors.form` is absent when there are no form-level messages. Both methods accept ordinary parse options and preserve error-map precedence and inferred transforms. Validation runs once, after form decoding.
 
 On failure, `values` retains raw text, number text, checkbox states, and repeated text for restoration. Passwords and files are omitted. Issues retain messages and logical paths; raw inputs and arbitrary metadata are omitted. Application-authored messages must avoid embedding secrets. Invalid source inputs produce a form-level failure with empty restoration values.
 

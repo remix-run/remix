@@ -60,8 +60,8 @@ export type FormRawValue = string | boolean | ReadonlyArray<string>
 export interface FormErrors {
   /** Messages keyed by logical field name. */
   fields: Readonly<Record<string, ReadonlyArray<string>>>
-  /** Messages not associated with a configured field. */
-  form: ReadonlyArray<string>
+  /** Messages not associated with a configured field; absent when there are none. */
+  form?: ReadonlyArray<string>
 }
 
 /** Serializable state for rendering a failed submission. */
@@ -335,7 +335,7 @@ export function parseSafe<entries extends FormEntries>(
     success: false,
     issues,
     values: Object.fromEntries(values),
-    errors: { fields: Object.fromEntries(grouped), form },
+    errors: { fields: Object.fromEntries(grouped), ...(form.length > 0 ? { form } : {}) },
   }
 }
 

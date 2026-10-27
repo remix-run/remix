@@ -21,7 +21,7 @@ function SignupForm(handle: Handle<{ submission?: FormSubmission }>) {
     <form.Context id={handle.id} schema={Signup} submission={handle.props.submission}>
       {({ fields, errors }) => (
         <form method="post" mix={form.root()}>
-          {errors.form.length > 0 && <p role="alert">{errors.form.join(' ')}</p>}
+          {errors.form && <p role="alert">{errors.form.join(' ')}</p>}
           <label mix={form.label(fields.email)}>Email</label>
           <input type="email" autoComplete="email" mix={form.control(fields.email)} />
           {fields.email.errors.length > 0 && (
@@ -65,13 +65,13 @@ if (!submission.success) {
 await createAccount(submission.value)
 ```
 
-`Signup.parseSafe` is server-safe and delegates to the shared schema parser once. The equivalent functional API is `fd.parseSafe(Signup, data)`. Success contains typed, transformed `value`. Failure contains `values`, grouped `errors.fields` / `errors.form`, and issues projected to messages and logical paths. Failed values preserve raw text, number text, checkbox states, and repeated text. Passwords, files, and arbitrary issue metadata are omitted. Keep secrets out of application-authored messages.
+`Signup.parseSafe` is server-safe and delegates to the shared schema parser once. The equivalent functional API is `fd.parseSafe(Signup, data)`. Success contains typed, transformed `value`. Failure contains `values`, grouped `errors.fields` and optional `errors.form`, and issues projected to messages and logical paths. Failed values preserve raw text, number text, checkbox states, and repeated text. Passwords, files, and arbitrary issue metadata are omitted. Keep secrets out of application-authored messages.
 
 `FormSubmission` and the result types belong to `remix/data-schema/form`. Context consumes failed results directly, including application-authored business failures using the same values/errors shape. `Signup.parse` and `fd.parse` return validated output or throw; core `s.parseSafe` keeps its ordinary issues-only failure contract. Handlers own business checks, generated values, persistence, authentication, and request handling.
 
 ## Context and role mixins
 
-`Context` owns one form instance and supplies stable typed `fields` and current grouped errors. A separate domain schema is optional: reuse `Account.shape.email` inside `fd.text()` or define validations inline. Changing the schema requires a new keyed Context.
+`Context` owns one form instance and supplies stable typed `fields` and current grouped errors. Its render prop always receives `errors`; `errors.form` is absent when there are no form-level messages. A separate domain schema is optional: reuse `Account.shape.email` inside `fd.text()` or define validations inline. Changing the schema requires a new keyed Context.
 
 - `root()` coordinates native invalid feedback for unmanaged controls. It leaves valid submissions to the browser and application.
 - `control(field)` provides constraints, restored defaults, native validity, touched state, and ARIA. It defaults the input type from the form kind. Text fields allow authored `email`, `url`, `search`, and `tel` types; incompatible types fail clearly. Scalar text also supports select and textarea. Repeated/file entries are parser-only in this release.

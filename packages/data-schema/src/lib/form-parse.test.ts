@@ -53,7 +53,7 @@ describe('form parseSafe', () => {
     assert.deepEqual(result.values, { name: 'A', age: ' 0012 ', bio: 'raw bio', terms: false })
     assert.deepEqual(Object.keys(result.errors.fields), ['name', 'age', 'terms'])
     assert.equal(JSON.stringify(result).includes('private-secret'), false)
-    assert.deepEqual(result.errors.form, [])
+    assert.equal(Object.hasOwn(result.errors, 'form'), false)
     data.set('password', '')
     let passwordFailure = fd.parseSafe(Profile, data)
     if (passwordFailure.success) throw new Error('Expected failure')
@@ -191,7 +191,7 @@ describe('form schema parsing methods', () => {
     assert.equal(calls, 1)
     assert.deepEqual(result.issues, [{ message: 'Try again', path: ['name'] }])
     assert.deepEqual(result.values, { name: 'Ada', age: 'invalid' })
-    assert.deepEqual(result.errors, { fields: { name: ['Try again'] }, form: [] })
+    assert.deepEqual(result.errors, { fields: { name: ['Try again'] } })
     try {
       Signup.parse(new URLSearchParams({ name: 'Ada' }), {
         errorMap() {

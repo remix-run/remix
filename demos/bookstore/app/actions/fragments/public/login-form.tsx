@@ -15,7 +15,7 @@ export const LoginFields = clientEntry(
         <form.Context id={handle.id} schema={LoginForm} submission={submission}>
           {({ fields, errors }) => (
             <>
-              {errors.form.length > 0 ? (
+              {errors.form ? (
                 <div class="alert alert-error" role="alert" mix={css({ marginBottom: '1.5rem' })}>
                   {errors.form.join(' ')}
                 </div>

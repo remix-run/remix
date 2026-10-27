@@ -12,7 +12,7 @@ Readonly `.entries` preserves original scalar schemas and decoding metadata for 
 
 ## Form-aware safe parsing carries failed submissions
 
-We chose `Signup.parseSafe(data)` as the handler's safe parsing API. It keeps the familiar `success`, `value`, and `issues` result shape, while failures also contain raw restorable `values` and grouped `errors.fields` / `errors.form`. `fd.parseSafe(Signup, data)` uses the same implementation. `Signup.parse(data)` and `fd.parse(Signup, data)` retain ordinary throwing behavior.
+We chose `Signup.parseSafe(data)` as the handler's safe parsing API. It keeps the familiar `success`, `value`, and `issues` result shape, while failures also contain raw restorable `values` and grouped errors. `errors.fields` includes only fields with messages, and `errors.form` is absent without form-level messages. `fd.parseSafe(Signup, data)` uses the same implementation. `Signup.parse(data)` and `fd.parse(Signup, data)` retain ordinary throwing behavior.
 
 We considered a separate `ui/form.parseSubmission(Signup, data)` adapter. That would make handlers choose between two safe parsing calls for the same schema and split submission handling across packages. The `fd.object` schema already knows logical and submitted names, control kinds, and which values are passwords or files. `packages/data-schema/src/lib/form.ts` now validates once and constructs the failure result there; `ui/form` imports that plain-data contract for rendering. Dependencies continue to flow from UI to data-schema.
 

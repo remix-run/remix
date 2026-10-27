@@ -53,7 +53,7 @@ export const AccountFields = clientEntry(
               method="post"
               mix={[form.root(), styles.form]}
             >
-              {errors.form.length > 0 && (
+              {errors.form && (
                 <p role="alert" mix={styles.formError}>
                   {errors.form.join(' ')}
                 </p>
