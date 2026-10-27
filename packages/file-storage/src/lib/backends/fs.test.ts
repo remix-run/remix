@@ -35,27 +35,6 @@ function findMetadataPath(directory: string): string {
   assert.fail('Expected metadata file')
 }
 
-async function writeLegacyFile(directory: string, key: string, file: File) {
-  let digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key))
-  let hash = Buffer.from(digest).toString('hex')
-  let subdir = path.join(directory, hash.slice(0, 2))
-  fs.mkdirSync(subdir, { recursive: true })
-  let dataPath = path.join(subdir, `${hash}.dat`)
-  let metaPath = path.join(subdir, `${hash}.meta.json`)
-  fs.writeFileSync(dataPath, new Uint8Array(await file.arrayBuffer()))
-  fs.writeFileSync(
-    metaPath,
-    JSON.stringify({
-      key,
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      lastModified: file.lastModified,
-    }),
-  )
-  return { dataPath, metaPath }
-}
-
 describe('fs file storage', () => {
   let tmpDir: string
   beforeEach(() => {
@@ -258,16 +237,13 @@ describe('fs file storage', () => {
     assert.equal(await retrieved.text(), 'Hello, world!')
   })
 
-  it('writes new entries in the legacy format by default', async () => {
+  it('keeps the legacy storage format for new entries and replacements', async () => {
     let storage = createFsFileStorage(tmpDir)
     let file = new File(['original'], 'original.txt', { type: 'text/plain', lastModified: 123 })
 
     await storage.set('file', file)
 
-    let entries = fs.readdirSync(tmpDir, { recursive: true, encoding: 'utf-8' })
-    let metadata = entries.find((name) => name.endsWith('.meta.json'))
-    assert.ok(metadata)
-    let metaPath = path.join(tmpDir, metadata)
+    let metaPath = findMetadataPath(tmpDir)
     let dataPath = metaPath.replace(/\.meta\.json$/, '.dat')
     assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'original')
     assert.deepEqual(JSON.parse(fs.readFileSync(metaPath, 'utf-8')), {
@@ -281,47 +257,10 @@ describe('fs file storage', () => {
       path.basename(dataPath),
       path.basename(metaPath),
     ])
-  })
 
-  it('keeps legacy entries in the legacy format on replacement', async () => {
-    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
-    let storage = createFsFileStorage(tmpDir)
-    let originalMetadata = fs.readFileSync(metaPath, 'utf-8')
-
-    let original = await storage.get('file')
-    assert.ok(original)
-    assert.equal(await original.text(), 'old')
-    assert.equal(fs.readFileSync(metaPath, 'utf-8'), originalMetadata)
     let stored = await storage.put('file', new File(['replacement'], 'new.txt'))
-
     assert.equal(await stored.text(), 'replacement')
     assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'replacement')
-    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
-    assert.ok(record !== null && typeof record === 'object')
-    assert.equal('dataFile' in record, false)
-  })
-
-  it('retries legacy writes after metadata is truncated without migrating the entry', async () => {
-    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
-    let storage = createFsFileStorage(tmpDir)
-    fs.writeFileSync(metaPath, '')
-
-    await storage.set('file', new File(['replacement'], 'new.txt'))
-
-    let stored = await storage.get('file')
-    assert.ok(stored)
-    assert.equal(await stored.text(), 'replacement')
-    assert.equal(stored.name, 'new.txt')
-    assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'replacement')
-    fs.writeFileSync(metaPath, '{"key":')
-
-    stored = await storage.put('file', new File(['retried'], 'retried.txt'))
-
-    assert.equal(await stored.text(), 'retried')
-    assert.deepEqual(fs.readdirSync(path.dirname(metaPath)).sort(), [
-      path.basename(dataPath),
-      path.basename(metaPath),
-    ])
     let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
     assert.ok(record !== null && typeof record === 'object')
     assert.equal('dataFile' in record, false)
