@@ -39,11 +39,15 @@ Map `/assets/*path` to an action that calls `assets.fetch(request)`. It resolves
 
 Treat `allowFiles`, `allowPackages`, and `denyFiles` as a security boundary, not merely compilation configuration. Put browser source in colocated `public/` directories beside its narrowest owner, keep its local dependencies inside the same directory, and explain why `app/routes.ts` is allowed separately for type-safe hrefs.
 
-For npm packages:
+### Use npm packages in browser code
+
+Browser code can import npm packages through the `/assets/npm` mount:
 
 - List each package used by browser code in `allowPackages`. Its dependencies are allowed automatically, but peer dependencies must be listed explicitly.
 - Only ES modules can be served. CommonJS packages are rejected.
 - Use `scripts.external` to leave specific import specifiers untouched.
+
+### Debug asset URLs with remix assets
 
 When an asset doesn't load, run `remix assets` to list browser-reachable files and `remix assets inspect <url-or-file>` to see one mapping and its access decision. Explain the compilation errors readers will hit, such as `IMPORT_NOT_ALLOWED`, `IMPORT_OUTSIDE_MOUNTS`, and `IMPORT_NOT_SUPPORTED`. [CLI and Tooling](/cli-and-tooling/) covers sharing this configuration through `remix.json`.
 
@@ -67,7 +71,7 @@ Browser modules can only import scripts, so CSS and images are referenced by URL
 
 Cover `<link rel="stylesheet">` for stylesheet assets, font preloads, and `files.extensions` for serving leaf files such as images and fonts. Relative CSS `@import` and `url()` references are rewritten to asset URLs.
 
-## Transform images and other files
+### Transform images and other files
 
 Define request-selected transforms with `defineFileTransform()`, including transforms that take a parameter, and request them with `getHref(path, { transform })` or `?transform=` in hand-written URLs. Cover global transforms that run for every matching file and `maxRequestTransforms`.
 
@@ -89,9 +93,19 @@ There is no build step: assets compile on first request and are cached in memory
 
 Forms that upload files need `enctype="multipart/form-data"` and an `<input type="file">`, optionally with `accept` and `multiple`. Put `formData()` from [`remix/middleware/form-data`](../src/form-data-middleware/README.md) on the upload action instead of the whole router so other requests skip multipart parsing.
 
-The middleware parses the body once and passes each file to your `uploadHandler`, which stores it under a server-generated key and returns that key as the form value. The stable parser reads each file into memory before calling the handler. Set `maxFileSize` (default 2 MiB), `maxFiles` (default 20), `maxParts` (default 1000), `maxTotalSize`, and `maxHeaderSize`, then turn limit errors from [`remix/form-data-parser`](../src/form-data-parser/README.md) into `400` or `413` responses.
+The middleware parses the body once and passes each file to your `uploadHandler`, which stores it under a server-generated key and returns that key as the form value.
+
+### Limit upload size
+
+The stable parser reads each file into memory before calling the handler. Set `maxFileSize` (default 2 MiB), `maxFiles` (default 20), `maxParts` (default 1000), `maxTotalSize`, and `maxHeaderSize`, then turn limit errors from [`remix/form-data-parser`](../src/form-data-parser/README.md) into `400` or `413` responses.
+
+### Stream large uploads
 
 To avoid buffering large uploads in memory, try `formData()` from [`remix/middleware/form-data/future`](../src/form-data-middleware/README.md). It takes the same options, but each upload streams from the request body and must be read inside `uploadHandler`, for example by passing it to `storage.set()`. Future entrypoints are not stable and may change in any release.
+
+### Parse multipart and tar streams directly
+
+For custom part processing or non-form multipart formats, use [`remix/multipart-parser`](../src/multipart-parser/README.md) directly. [`remix/tar-parser`](../src/tar-parser/README.md) reads tar archives as streams.
 
 ## Validate uploads
 
@@ -106,12 +120,18 @@ The upload handler stores each file before your action runs, so:
 
 Use the `FileStorage` API from [`remix/file-storage`](../src/file-storage/README.md): `get()`, `set()`, `has()`, `list()`, `put()`, and `remove()`. Use [`remix/file-storage/memory`](../src/file-storage/README.md) in tests, [`remix/file-storage/fs`](../src/file-storage/README.md) for a single server, and [`remix/file-storage/s3`](../src/file-storage-s3/README.md) for AWS S3 or S3-compatible providers.
 
-For S3, use `set()` for large files because `put()` holds the whole file in memory, set `endpoint` and `forcePathStyle` for MinIO or LocalStack, and add a lifecycle rule that removes incomplete multipart uploads. [Production](/production/#process-safe-storage) covers storage shared across replicas.
+### Store files in S3
+
+Use `set()` for large files in S3 because `put()` holds the whole file in memory, set `endpoint` and `forcePathStyle` for MinIO or LocalStack, and add a lifecycle rule that removes incomplete multipart uploads. [Production](/production/#process-safe-storage) covers storage shared across replicas.
 
 ## Send stored and on-disk files
 
+`createFileResponse()` from [`remix/response/file`](../src/response/README.md) handles content length, ETags, conditional requests, `HEAD`, and ranges for any `File`, whether it comes from storage or disk. It only enables ranges for non-compressible types so [`remix/middleware/compression`](../src/compression-middleware/README.md) can still compress text.
+
+### Serve uploaded files
+
 Serve uploads from a route that checks authorization, calls `storage.get(key)`, and returns `createFileResponse()` from [`remix/response/file`](../src/response/README.md). `staticFiles()` can't serve the storage directory because the filesystem backend stores files under hashed names. Choose private or public caching per route, and either serve uploads as downloads with `Content-Disposition: attachment` or validate their contents before serving HTML or SVG inline.
 
-For files on disk, use `openLazyFile()` from [`remix/fs`](../src/fs/README.md), which detects the media type from the file extension. Register unknown extensions with `defineMimeType()` from [`remix/mime`](../src/mime/README.md) and build download headers with `ContentDisposition` from [`remix/headers`](../src/headers/README.md). `createFileResponse()` handles content length, ETags, conditional requests, `HEAD`, and ranges, and only enables ranges for non-compressible types so [`remix/middleware/compression`](../src/compression-middleware/README.md) can still compress text.
+### Send files from disk
 
-For custom part processing or non-form multipart formats, use [`remix/multipart-parser`](../src/multipart-parser/README.md) directly. [`remix/tar-parser`](../src/tar-parser/README.md) reads tar archives as streams.
+Open files with `openLazyFile()` from [`remix/fs`](../src/fs/README.md), which detects the media type from the file extension. Register unknown extensions with `defineMimeType()` from [`remix/mime`](../src/mime/README.md) and build download headers with `ContentDisposition` from [`remix/headers`](../src/headers/README.md).
