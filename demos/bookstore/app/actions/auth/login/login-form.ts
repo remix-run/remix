@@ -1,11 +1,7 @@
-import { createForm } from '@remix-run/ui/form'
-
+import * as fd from 'remix/data-schema/form'
 import { loginSchema } from './login-schema.ts'
 
-export const LoginForm = createForm({
-  schema: loginSchema,
-  fields: {
-    email: { label: 'Email', type: 'email' },
-    password: { label: 'Password', type: 'password' },
-  },
+export const LoginForm = fd.object({
+  email: fd.text(loginSchema.shape.email),
+  password: fd.password(loginSchema.shape.password),
 })

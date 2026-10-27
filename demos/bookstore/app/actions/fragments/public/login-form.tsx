@@ -1,64 +1,57 @@
-import type { FormRawValue } from '@remix-run/ui/form'
+import type { FormSubmission } from 'remix/data-schema/form'
 import { clientEntry, css } from 'remix/component'
 import type { Handle } from 'remix/component'
-import { createFormMixins } from '@remix-run/ui/form'
+import * as form from '@remix-run/ui/form'
 
 import { LoginForm } from '../../auth/login/login-form.ts'
 
 export const LoginFields = clientEntry(
   import.meta.url,
   function LoginFields(handle: Handle<{ formAction: string; submission?: LoginSubmission }>) {
-    let { form, field, label, error, fields } = createFormMixins(LoginForm, {
-      getSubmission: () => handle.props.submission,
-      onChange: () => handle.update(),
-    })
-
     return () => {
       let { formAction, submission } = handle.props
 
       return (
-        <>
-          {submission?.errors.form.length ? (
-            <div class="alert alert-error" role="alert" mix={css({ marginBottom: '1.5rem' })}>
-              {submission.errors.form.join(' ')}
-            </div>
-          ) : null}
-
-          <form method="POST" action={formAction} mix={form()}>
-            <div class="form-group">
-              <label mix={label('email')}>{LoginForm.fields.email.label}</label>
-              <input autoComplete="email" mix={field('email')} />
-              {fields.email.errors.length > 0 ? (
-                <p mix={error('email')} role="alert">
-                  {fields.email.errors.join(' ')}
-                </p>
+        <form.Context id={handle.id} schema={LoginForm} submission={submission}>
+          {({ fields }) => (
+            <>
+              {submission?.errors.form.length ? (
+                <div class="alert alert-error" role="alert" mix={css({ marginBottom: '1.5rem' })}>
+                  {submission.errors.form.join(' ')}
+                </div>
               ) : null}
-            </div>
 
-            <div class="form-group">
-              <label mix={label('password')}>{LoginForm.fields.password.label}</label>
-              <input autoComplete="current-password" mix={field('password')} />
-              {fields.password.errors.length > 0 ? (
-                <p mix={error('password')} role="alert">
-                  {fields.password.errors.join(' ')}
-                </p>
-              ) : null}
-            </div>
+              <form method="POST" action={formAction} mix={form.root()}>
+                <div class="form-group">
+                  <label mix={form.label(fields.email)}>Email</label>
+                  <input type="email" autoComplete="email" mix={form.control(fields.email)} />
+                  {fields.email.errors.length > 0 ? (
+                    <p mix={form.error(fields.email)} role="alert">
+                      {fields.email.errors.join(' ')}
+                    </p>
+                  ) : null}
+                </div>
 
-            <button type="submit" class="btn">
-              Login
-            </button>
-          </form>
-        </>
+                <div class="form-group">
+                  <label mix={form.label(fields.password)}>Password</label>
+                  <input autoComplete="current-password" mix={form.control(fields.password)} />
+                  {fields.password.errors.length > 0 ? (
+                    <p mix={form.error(fields.password)} role="alert">
+                      {fields.password.errors.join(' ')}
+                    </p>
+                  ) : null}
+                </div>
+
+                <button type="submit" class="btn">
+                  Login
+                </button>
+              </form>
+            </>
+          )}
+        </form.Context>
       )
     }
   },
 )
 
-export type LoginSubmission = {
-  values: Record<string, FormRawValue>
-  errors: {
-    fields: Record<string, string[]>
-    form: string[]
-  }
-}
+export type LoginSubmission = FormSubmission

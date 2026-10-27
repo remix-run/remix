@@ -111,7 +111,7 @@ let metadata = getSchemaMetadata(Account.shape.username)
 
 Metadata also reports known undefined handling from schema wrappers. It does not describe arbitrary refinements or replace validation.
 
-For schema-backed field definitions, typed form parsing, HTML constraints, and browser feedback, see the [UI form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). Those APIs live in `@remix-run/ui/form` and can also be used in server handlers.
+For form kinds, blank-value normalization, and reusable submission schemas, see the [form schema guide](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md). For native constraints and browser feedback, see the [UI form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). The UI adapter lives in `@remix-run/ui/form`; schema validation stays in `data-schema`.
 
 ## Per-parse messages
 

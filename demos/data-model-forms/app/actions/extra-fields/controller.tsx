@@ -16,7 +16,7 @@ export default createController(routes['extra-fields'], {
       })
     },
     async action({ db, formData, render }) {
-      let submission = RegistrationForm.parse(formData)
+      let submission = RegistrationForm.parseSafe(formData)
 
       if (!submission.success) {
         let storedAccounts = await db.findMany(accounts, { orderBy: ['displayName', 'asc'] })

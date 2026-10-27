@@ -1,54 +1,33 @@
-# Schema-backed fields with native validation and mixin-owned feedback
+# Form schemas with native validation and context-scoped feedback
 
-We chose schema-backed field definitions and setup-scoped mixins rather than components that prescribe form markup. Definitions connect parsing and native constraints; mixins coordinate browser feedback while applications own DOM structure and error UI.
+One inspectable form schema connects transport decoding, ordinary validation, and native UI behavior. `data-schema/form` owns the submission contract; `ui/form` consumes it through a Context and small role mixins. Applications keep control over markup and request handling.
 
-HTML constraints, field configuration, parsing, and mixins live together in `ui/form`. This keeps a field's configuration in one place without adding browser concepts to `data-schema`, which owns validation and generic `getSchemaMetadata()` introspection. Definitions and parsing remain server-safe.
+## Form schemas describe submissions
 
-## A form describes an operation, not a database record
+`fd.object({ email: fd.text(Account.shape.email) })` reuses domain rules without another UI definition. A separate domain schema is optional; inline rules and fields from multiple models work the same way. Only configured fields are parsed. Handlers supply generated values, run business checks, and select values for persistence.
 
-`createForm({ schema: Account, fields })` selects model fields and adds UI metadata outside the model, allowing one schema to support different forms. Selected fields inherit their schemas; request-only fields supply their own. Omitting `schema` requires a schema on every field. `createField()` defines a reusable field for standalone use or form composition; object schemas expose `.shape` for reuse across models. The [guide][form-docs] shows all four configurations.
+Explicit `text`, `password`, `number`, and `checkbox` descriptions identify transport semantics without inspecting DOM input types or changing ordinary `s.object` parsing. They normalize absence and blanks before running the original schema. The schema exposes `parse` and form-aware `parseSafe` methods that reuse core validation, options, messages, and inferred transforms. The existing `data-schema/form-data` adapter retains its lower-level extraction behavior.
 
-Parsing validates only configured fields, not a complete database record. Handlers supply generated values, run business checks, and select values for persistence. The [demo handler][registration-action] assembles an account; the [table validation hook][account-table] validates the complete record before writing it.
+Readonly `.entries` preserves original scalar schemas and decoding metadata for adapters. Form kinds and sensitivity belong here; labels, IDs, ARIA, feedback, and browser validity flags remain in UI. Package dependencies flow from UI to data-schema.
 
 ## Native constraints remain primary
 
-We chose the browser's [Constraint Validation API][constraint-validation] over a replacement submission-validation engine. `getConstraints()` derives supported attributes, and field definitions expose requiredness for labels. Control mixins emit SSR attributes, check native validity first, and run synchronous field-schema validation when native checks pass. Schema failures use `setCustomValidity()` to preserve native submission blocking.
+The browser's Constraint Validation API owns native submission blocking. `control(field)` derives SSR constraints and checks native validity before running the shared scalar decoder and schema. Schema failures use `setCustomValidity`. `getConstraints()` remains available for custom integrations.
 
-Without JavaScript, native constraints and server validation still work; failed responses restore non-password values and render errors. We chose functional parity, not identical timing or tooltips.
+Without JavaScript, native constraints and server validation still work. `Signup.parseSafe()` and `fd.parseSafe(Signup, data)` delegate shared parsing once and extend failed results with restorable values and grouped errors, omitting password/file values and arbitrary issue metadata. The result types and their construction belong to `data-schema/form`. UI consumes this plain-data contract. Core `s.parseSafe` retains its ordinary issues-only failure contract.
 
-## Bindings own feedback, applications own markup
+## Context owns feedback; applications own markup
 
-`createFieldMixins()` binds one control; `createFormMixins()` composes bindings for a form. Both provide control, label, and error mixins with live errors and touched state. Independent bindings can share a native form, with the application combining their server results.
+`form.Context` scopes one rendered instance and supplies stable typed bindings. `root`, `control`, `label`, and `error` follow the same role-mixin pattern as other UI primitives. Field bindings pass through ordinary component props. Context updates rerender descendant feedback without setup factories, subscriptions, notification callbacks, or an internal emitter.
 
-We chose setup-scoped bindings over separately wiring attributes, validators, and feedback tracking. `getSubmission` reads current props during rendering or state access; a new submission identity resets feedback. `onChange` requests a render when visible state changes. This avoids rebinding on each render while keeping prop changes explicit.
+The component runtime preserves client-entry handle IDs across hydration, while nested local components receive new IDs. Context accepts an initial `id` scope so an entry can pass `handle.id` and retain exact server associations without new runtime infrastructure.
 
-Controls validate while typing, but client feedback appears only after blur or a native invalid event. Server errors appear immediately and persist until editing. Mixins manage error accessibility; applications choose content, styles, and announcement roles. Attribute-only `label()` and `error()` mixins keep composition consistent without adding behavior.
+Client errors become visible after blur or native invalid submission. Server errors appear immediately and are replaced on editing. Non-canceled native reset clears feedback after defaults restore. A new submission identity refreshes failed values; ordinary rerenders preserve edits. Changing schemas requires a keyed remount.
 
-## One field-level map customizes messages
+## Shared messages and application checks
 
-We chose field-level `errorMap` over a mixin-only hook, a separate native-message map, or message arguments on each schema helper. Schema/domain codes let server parsing and browser feedback share wording without exposing browser validity flags in `data-schema`. Required empty-value failures use `value.required`; existing schema message precedence is unchanged. Explicit refinement messages and uncoded checks bypass mapping; refinements without messages use `refine.failed`.
+Field-level `errorMap` uses schema/domain codes on server and client. Native-only constraints keep browser messages. Explicit schema messages retain precedence. `setCustomErrors()` adds current-value supplemental messages while applications retain async orchestration, cancellation, stale-result handling, and authoritative server checks.
 
-The browser adapter maps supported native failures to those codes and synchronously sets the primary message, aligning tooltips and inline feedback. Native-only constraints and no-JavaScript tooltips keep browser wording. Message overrides add no validation: an email input still needs a server-side email check.
+Root refinements/transforms do not retain the inspectable form contract. Cross-field business checks remain explicit in handlers; scalar refinements and transforms work normally. Revisit root-rule preservation, standalone validation, custom widgets, and field arrays when concrete workflows establish their contracts.
 
-## Applications orchestrate asynchronous checks
-
-`setCustomErrors(messages)` adds errors for the current control value without replacing native/schema errors or marking the field touched. They survive revalidation and clear on value changes, non-canceled reset, or a new submission.
-
-We chose this bridge over a `validations` API that would own debouncing, cancellation, stale-result protection, and pending/failure state. Applications retain that orchestration without duplicating validation or accessibility behavior. Pending checks do not delay submission; server checks and database uniqueness remain authoritative.
-
-## Cross-field validation stays explicit
-
-Running a backing object schema could reject valid partial submissions. Requiring every model field would be unnecessarily restrictive when a refinement uses only some, but arbitrary predicates do not declare their dependencies.
-
-For now, the backing schema must expose `.shape`; an object-level `.refine()` returns a general schema that does not satisfy that contract. Handlers run cross-field checks separately and return form or field errors. Field-level refinements remain supported.
-
-## When to revisit
-
-1. Add opt-in object-level validation when concrete workflows establish a dependency or missing-value policy.
-2. Add asynchronous orchestration if application-owned checks plus `setCustomErrors()` prove insufficient.
-3. Add higher-level field components when repeated markup establishes defaults without constraining DOM structure.
-
-[form-docs]: ../packages/ui/src/form/README.md#form-definitions
-[registration-action]: ../demos/data-model-forms/app/actions/extra-fields/controller.tsx
-[account-table]: ../demos/data-model-forms/app/data/account.ts
-[constraint-validation]: https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
+See the [form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md) and [form demo](https://github.com/remix-run/remix/tree/main/demos/data-model-forms).

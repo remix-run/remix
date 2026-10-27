@@ -15,7 +15,7 @@ export default createController(routes.schema, {
       })
     },
     async action({ db, formData, render }) {
-      let submission = AccountForm.parse(formData)
+      let submission = AccountForm.parseSafe(formData)
 
       if (!submission.success) {
         let storedAccounts = await db.findMany(accounts, { orderBy: ['displayName', 'asc'] })

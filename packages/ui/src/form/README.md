@@ -1,308 +1,102 @@
-# form
+# Form
 
-Define schema-backed fields, parse submissions on the server, and bind native controls with progressive browser feedback. Applications own markup, styles, and error UI.
-
-## Usage
-
-Install with `npm i remix @remix-run/ui`. Create the definition once and bind it per component instance:
+Native form validation with application-owned markup. Define one schema with [`remix/data-schema/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md), then use `Context` and role mixins to connect controls, labels, and errors.
 
 ```tsx
 import * as s from 'remix/data-schema'
-import { email } from 'remix/data-schema/checks'
-import type { FormSubmission } from '@remix-run/ui/form'
+import * as fd from 'remix/data-schema/form'
+import { email, minLength } from 'remix/data-schema/checks'
+import * as form from '@remix-run/ui/form'
+import type { FieldBinding } from '@remix-run/ui/form'
+import type { FormSubmission } from 'remix/data-schema/form'
 import type { Handle } from 'remix/component'
-import { createField, createForm, createFormMixins } from '@remix-run/ui/form'
 
-let Email = createField({
-  schema: s.string().pipe(email()),
-  label: 'Email',
-  type: 'email',
+export const Signup = fd.object({
+  email: fd.text(s.string().pipe(email())),
+  password: fd.password(s.string().pipe(minLength(8))),
 })
-let Signup = createForm({ fields: { email: Email } })
 
-function SignupPage(handle: Handle<{ submission?: FormSubmission }>) {
-  let { form, field, label, error, fields } = createFormMixins(Signup, {
-    getSubmission: () => handle.props.submission,
-    onChange: () => handle.update(),
-  })
-
+function SignupForm(handle: Handle<{ submission?: FormSubmission }>) {
   return () => (
-    <form method="post" mix={form()}>
-      <label mix={label('email')}>{Signup.fields.email.label}</label>
-      <input autoComplete="email" mix={field('email')} />
-      {fields.email.errors.length > 0 ? (
-        <p mix={error('email')} role="alert">
-          {fields.email.errors.join(' ')}
-        </p>
-      ) : null}
-      <button type="submit">Create account</button>
-    </form>
+    <form.Context id={handle.id} schema={Signup} submission={handle.props.submission}>
+      {({ fields, errors }) => (
+        <form method="post" mix={form.root()}>
+          {errors.form.length > 0 && <p role="alert">{errors.form.join(' ')}</p>}
+          <label mix={form.label(fields.email)}>Email</label>
+          <input type="email" autoComplete="email" mix={form.control(fields.email)} />
+          {fields.email.errors.length > 0 && (
+            <p role="alert" mix={form.error(fields.email)}>
+              {fields.email.errors.join(' ')}
+            </p>
+          )}
+          <PasswordField field={fields.password} />
+          <button type="submit">Sign up</button>
+        </form>
+      )}
+    </form.Context>
   )
 }
-```
 
-Mount or hydrate the component through your app's [client-entry setup](https://github.com/remix-run/remix/blob/main/packages/component/README.md#client-entry-loading) to enable browser behavior.
-
-## Form definitions
-
-`createForm({ schema?, fields })` selects model fields or supplies inline schemas. All variations use the same parsing and mixin APIs.
-
-```ts
-let Account = s.object({ id: s.string(), email: s.string().pipe(email()) })
-let Address = s.object({ postalCode: s.string() })
-
-// Single schema: select fields without repeating their validation rules.
-let Profile = createForm({
-  schema: Account,
-  fields: { email: { label: 'Email', type: 'email' } },
-})
-
-// Partial inline: add request-only fields alongside model fields.
-let Registration = createForm({
-  schema: Account,
-  fields: {
-    email: { label: 'Email', type: 'email' },
-    terms: { label: 'Accept terms', type: 'checkbox', schema: s.literal(true) },
-  },
-})
-
-// Multiple schemas: compose existing field rules into one operation.
-let Checkout = createForm({
-  schema: s.object({ email: Account.shape.email, postalCode: Address.shape.postalCode }),
-  fields: {
-    email: { label: 'Email', type: 'email' },
-    postalCode: { label: 'Postal code', type: 'text' },
-  },
-})
-
-// Entirely inline: every field supplies its own schema.
-let Search = createForm({
-  fields: { query: { label: 'Search', type: 'text', schema: s.string() } },
-})
-```
-
-Model-backed fields cannot override their schemas; fields absent from the model must supply one. `Form.fields` contains resolved definitions, including `label` and schema-derived `required`. Logical field names key parsed values and errors; optional `name` and `id` settings change HTML attributes without changing those keys.
-
-### Server parsing
-
-Definitions and parsing are server-safe and do not require a DOM:
-
-```tsx
-let submission = Registration.parse(await request.formData())
-
-if (!submission.success) {
-  return render(<RegistrationPage submission={submission} />, { status: 400 })
+function PasswordField(handle: Handle<{ field: FieldBinding<'password'> }>) {
+  return () => {
+    let field = handle.props.field
+    return (
+      <>
+        <label mix={form.label(field)}>Password</label>
+        <input autoComplete="new-password" mix={form.control(field)} />
+        {field.errors.length > 0 && (
+          <p role="alert" mix={form.error(field)}>
+            {field.errors.join(' ')}
+          </p>
+        )}
+      </>
+    )
+  }
 }
-
-let { email } = submission.value
-await createAccount({ id: crypto.randomUUID(), email })
 ```
 
-Parsing runs only the configured field schemas. The backing schema must expose `.shape`; an object-level `.refine()` returns a general schema that cannot be passed directly. Run cross-field/business checks separately, then supply generated values and select fields for persistence. A form spanning multiple tables still parses once.
-
-Empty text and number values decode to `undefined`, numbers use `Number()`, and checkboxes decode to booleans. Use `optional()` or `defaulted()` in the field schema to accept empty values.
-
-Results are `{ success: true, value }` or `{ success: false, issues, values, errors }`. Failures retain raw values and group messages in `errors.fields` and `errors.form`; password values are omitted.
-
-### Native constraints and low-level helpers
-
-`getConstraints(schema, { type })` derives `required`, `minLength`, `maxLength`, `min`, and `max` from schema metadata and input context. Number inputs also receive `step="any"`. Arbitrary refinements, patterns, and numeric increments are not converted to attributes.
-
-Definitions expose `getInputAttrs()`, `getLabelAttrs()`, `getErrorAttrs()`, `getFieldErrors()`, and `createInputValidator()` for custom integrations. Prefer the mixins for automatic SSR attributes, feedback, and accessibility.
-
-## A standalone field
-
-For a single control, bind `Email` directly in component setup:
+## Parse submissions
 
 ```tsx
-import { createFieldMixins } from '@remix-run/ui/form'
-
-let emailField = createFieldMixins(Email, {
-  name: 'email',
-  getSubmission: () => handle.props.submission,
-  onChange: () => handle.update(),
-})
-
-// Use emailField.field(), emailField.label(), and emailField.error() in markup.
-// Read emailField.errors and emailField.touched during rendering.
+let submission = Signup.parseSafe(await request.formData())
+if (!submission.success) {
+  return render(<SignupForm submission={submission} />, { status: 400 })
+}
+await createAccount(submission.value)
 ```
 
-Independent bindings can share an ordinary `<form>` without a form mixin. Native submission collects their values and checks validity. Parse each definition with `Email.parse(formData, 'email')`, combining failures in the handler, or compose them into `createForm()` for combined parsing.
+`Signup.parseSafe` is server-safe and delegates to the shared schema parser once. The equivalent functional API is `fd.parseSafe(Signup, data)`. Success contains typed, transformed `value`. Failure contains `values`, grouped `errors.fields` / `errors.form`, and issues projected to messages and logical paths. Failed values preserve raw text, number text, checkbox states, and repeated text. Passwords, files, and arbitrary issue metadata are omitted. Keep secrets out of application-authored messages.
 
-## `createFormMixins(formDefinition, { getSubmission, onChange }?)`
+`FormSubmission` and the result types belong to `remix/data-schema/form`. Context consumes failed results directly, including application-authored business failures using the same values/errors shape. `Signup.parse` and `fd.parse` return validated output or throw; core `s.parseSafe` keeps its ordinary issues-only failure contract. Handlers own business checks, generated values, persistence, authentication, and request handling.
 
-The factories provide `form()` for unmanaged controls, `field(name)` for a configured control, `label(name)` for its label association, and `error(name)` for its error-element id. `input(name)` aliases `field(name)`; `errors.name` aliases `fields.name.errors`.
+## Context and role mixins
 
-`getSubmission` reads current server state during rendering or state access, including SSR. It is not a subscription: update props or request a render after changing a local submission. Return the same submission object until a new submission arrives; a new object resets feedback without firing `onChange`.
+`Context` owns one form instance and supplies stable typed `fields` and current grouped errors. A separate domain schema is optional: reuse `Account.shape.email` inside `fd.text()` or define validations inline. Changing the schema requires a new keyed Context.
 
-## Live field state
+- `root()` coordinates native invalid feedback for unmanaged controls. It leaves valid submissions to the browser and application.
+- `control(field)` provides constraints, restored defaults, native validity, touched state, and ARIA. It defaults the input type from the form kind. Text fields allow authored `email`, `url`, `search`, and `tel` types; incompatible types fail clearly. Scalar text also supports select and textarea. Repeated/file entries are parser-only in this release.
+- `label(field)` supplies `htmlFor`; `error(field)` supplies an error ID. Content, visibility, roles, and styling remain in JSX.
 
-Standalone bindings expose these properties directly; form bindings expose them through `fields.name`:
+Bindings belong to their Context and cannot be shared between form instances. IDs default to the Context's instance scope. The component runtime only preserves a client entry's own handle ID during hydration: pass that entry's `handle.id` as Context's `id`, as above, when exact SSR IDs must persist. Explicit scopes must be unique. Authored props win; an explicit control ID needs matching label/error associations. Existing help-text IDs in `aria-describedby` are retained.
 
-- `errors`: visible client messages or server errors; empty for pristine client fields
-- `touched`: revealed by blur, a native invalid event, or editing a server error; stays true until reset or a new submission
+`getConstraints(schema, { type })` exposes recognized native constraints for custom integrations: `required`, `minLength`, `maxLength`, `min`, and `max`, plus `step="any"` for numeric fields. Arbitrary refinements are checked with `setCustomValidity` after native constraints pass. Requiredness may evaluate schemas when metadata cannot determine it.
 
-Server errors are visible immediately, even while `touched` is false. State objects are stable and properties are read-only: read them during rendering, since destructuring a boolean or array in setup captures a snapshot. `onChange` requests a render when errors or touched state change. Without it, native validity and ARIA still update, but error markup needs another render trigger.
+## Live state and component props
 
-A non-canceled native form reset clears touched state and displayed errors. Programmatic value changes require an `input` or `change` event to refresh validation.
+Pass `FieldBinding<'text'>`, `FieldBinding<'password'>`, or another scalar kind through ordinary props. Read `field.errors`, `field.touched`, and `handle.props` during rendering. Setup-time destructuring captures a snapshot. Context updates rerender child fields even when binding identity is unchanged; no subscriptions or update callbacks are needed.
 
-## Shared error messages
+Client errors appear after blur or blocked submission, then update while editing. Server errors appear immediately; editing replaces them with current client feedback. A non-canceled native reset clears touched state and custom errors after native defaults restore. Programmatic edits need an `input` or `change` event.
 
-Configure `errorMap` on `createField()` or a `createForm({ fields })` entry. It customizes schema failures during parsing and supported native failures in the browser. Return a string to replace a message or `undefined` to keep the default.
+A new submission object refreshes feedback and restored values. Reuse its identity until another submission arrives so unrelated renders preserve user edits. Applications own fetching, navigation, and pending state.
 
-```ts
-import * as s from 'remix/data-schema'
-import { email } from 'remix/data-schema/checks'
-import { createField } from '@remix-run/ui/form'
+## Shared messages and supplemental errors
 
-let Email = createField({
-  schema: s
-    .string()
-    .pipe(email())
-    .refine((value) => value.endsWith('@example.com')),
-  label: 'Email',
-  type: 'email',
-  errorMap({ code }) {
-    if (code === 'value.required') return 'Enter your email'
-    if (code === 'string.email') return 'Use a valid email address'
-    if (code === 'refine.failed') return 'Use your example.com email'
-  },
-})
-```
+Configure `errorMap` on an `fd.text`, `fd.password`, `fd.number`, or `fd.checkbox` descriptor. It customizes schema messages and supported native messages using domain codes such as `value.required`, `type.number`, `string.email`, `string.url`, `string.min_length`, `string.max_length`, `number.min`, and `number.max`. Explicit refinement messages retain precedence; refinements without messages use `refine.failed`. Native-only pattern and step failures keep browser wording.
 
-Explicit refinement messages bypass the map: `.refine(predicate, 'Specific message')` keeps that message. Omit it to map `refine.failed`, as above. Uncoded checks also bypass mapping; coded checks use the normal schema `errorMap` behavior.
+`field.setCustomErrors(['Already in use'])` adds supplemental errors for the current control value without replacing native/schema errors or marking the field touched. Errors block native submission immediately. They survive same-value revalidation and clear on changed value, non-canceled reset, or a new submission. Applications own async requests, debouncing, cancellation, stale-result checks, and server enforcement.
 
-The native adapter uses this priority when multiple flags fail:
+`InputValidationEvent` and `onInputValidation(handler)` expose bubbling feedback notifications for integrations. Context handles its own updates.
 
-| Native failure                             | Domain code                   | `values`  |
-| ------------------------------------------ | ----------------------------- | --------- |
-| Missing required value                     | `value.required`              | —         |
-| Unparseable number                         | `type.number`                 | —         |
-| Email or URL type mismatch                 | `string.email` / `string.url` | —         |
-| Pattern mismatch                           | Browser fallback              | —         |
-| Too long                                   | `string.max_length`           | `{ max }` |
-| Too short                                  | `string.min_length`           | `{ min }` |
-| Numeric range underflow                    | `number.min`                  | `{ min }` |
-| Numeric range overflow                     | `number.max`                  | `{ max }` |
-| Step mismatch or other native-only failure | Browser fallback              | —         |
+## Without JavaScript
 
-Only the first failure is mapped. If it has no mapping or the callback returns `undefined`, browser wording remains. Schema validation runs only after native checks pass. The map receives decoded `input`, a logical field `path`, and any constraint `values`. Resolved messages drive tooltips and inline feedback without revealing pristine fields.
-
-`value.required` normalizes required empty-value failures; other mapped codes come from data-schema. Authored `pattern` and `step` constraints keep browser wording. Message overrides add no server rules; include `email()` in the schema to validate email format. Without JavaScript, native tooltips remain unchanged.
-
-## `setCustomErrors(messages)`
-
-Call `fields.username.setCustomErrors(messages)` or a standalone binding's `setCustomErrors(messages)` to replace supplemental messages. Pass `[]` to clear them. Arrays are copied, empty strings ignored, and messages are not passed through `errorMap`.
-
-For mounted controls, messages synchronously update native validity and accessibility without marking the field touched. They block native submission but follow normal feedback visibility. Native/schema errors remain primary, with custom messages appended. Existing server errors remain visible until editing.
-
-Messages belong to the current value, including checkbox state. They survive revalidation and same-value checks, but clear on a changed value, non-canceled reset, or new submission. Before mounting, they attach to the first mounted value.
-
-### Custom async validation
-
-An availability check can use ordinary event mixins. In component setup, bind a form definition that includes a `username` field:
-
-```tsx
-import { on } from 'remix/component'
-import { createFormMixins } from '@remix-run/ui/form'
-
-// In component setup; SignupForm includes a username field.
-let { form, field, label, error, fields } = createFormMixins(SignupForm, {
-  getSubmission: () => handle.props.submission,
-  onChange: () => handle.update(),
-})
-let resetVersion = 0
-
-return () => (
-  <form
-    method="post"
-    mix={[
-      form(),
-      on('reset', () => {
-        resetVersion++
-      }),
-    ]}
-  >
-    <label mix={label('username')}>Username</label>
-    <input
-      autoComplete="username"
-      mix={[
-        field('username'),
-        on('input', async (event, signal) => {
-          let control = event.currentTarget
-          let username = control.value
-          let submission = handle.props.submission
-          let version = resetVersion
-          let isCurrent = () =>
-            !signal.aborted &&
-            control.value === username &&
-            handle.props.submission === submission &&
-            resetVersion === version
-
-          if (!username) return
-
-          try {
-            let response = await fetch(
-              `/username-available?username=${encodeURIComponent(username)}`,
-              { signal },
-            )
-            if (!response.ok) throw new Error('Availability check failed')
-            let available: unknown = await response.json()
-            if (typeof available !== 'boolean') throw new Error('Invalid availability response')
-            if (!isCurrent()) return
-
-            fields.username.setCustomErrors(
-              available ? [] : ['This username is already registered'],
-            )
-          } catch (error) {
-            if (isCurrent()) console.error('Could not check username availability', error)
-          }
-        }),
-      ]}
-    />
-    {fields.username.errors.length > 0 ? (
-      <p mix={error('username')} role="alert">
-        {fields.username.errors.join(' ')}
-      </p>
-    ) : null}
-    <button type="submit">Register</button>
-  </form>
-)
-```
-
-The endpoint returns a JSON boolean. `on()` aborts the signal on the next input event or control removal; the extra guards reject stale results even if cancellation is ignored. Existing errors survive same-value rechecks until replaced.
-
-Applications own debouncing, caching, pending indicators, and request-failure UI. A failed lookup is not an invalid username. Pending work does not delay submission: repeat business checks and enforce uniqueness on the server. Without JavaScript, validation happens on submission.
-
-## Control behavior
-
-Each `field()` mixin:
-
-- applies generated ids, names, types, native constraints, restored values, and server error attributes during SSR
-- validates initially and on `input`, `change`, and blur using native constraints first and synchronous schema validation through `setCustomValidity()` when native constraints pass
-- reveals errors after the first blur or native `invalid` event, and updates feedback as the user types
-- preserves server errors until the field is edited, then replaces them with current client feedback
-- sets `data-touched`, `aria-invalid`, and error-description linkage, preserving other `aria-describedby` ids
-- preserves explicit host props, so authored attributes such as `autoComplete`, `aria-invalid`, or an intentional `type` override win
-
-Apply it to every configured control, even when all its constraints are native.
-
-Use `type: 'text'` for string-valued select/textarea definitions; the mixin omits the input-only `type` attribute on these elements. Single-value native selects are supported. Applications own option markup, including `selected` attributes when restoring a server-rendered selection. Multi-select arrays and radio groups are not modeled by this scalar field API.
-
-## `label(field)`
-
-Associates a `<label>` with the field's configured id during SSR and client rendering. Standalone bindings use `label()`. Applications own text, required markers, and styles. Explicit `htmlFor` overrides the association; configure the field's `id` to change both label and control together. This is not a legend or radio-group binding.
-
-## `error(field)`
-
-Applies the error-element id during SSR and client rendering. It does not choose content, visibility, styles, or announcement roles. Explicit host props win; keep the generated id to preserve automatic error linkage.
-
-## `onInputValidation(handler)`
-
-Observe bubbling `rmx:input-validation` events on a control or ancestor. Events snapshot the logical `field`, `errorId`, visible `errors`, and `touched` state. Prefer live field state and `onChange` for ordinary rendering; observing does not disable default behavior.
-
-## `form()`
-
-The standalone export and the form-binding method enhance unmanaged inputs, selects, and textareas. They synchronize touched/ARIA state after blur or a native invalid event and clear stale server-error linkage after editing. Managed controls are skipped to avoid duplicate handling.
-
-Without JavaScript, native constraints still prevent invalid submissions and server-rendered errors remain accessible. Do not add `noValidate` unless the application intentionally opts out of native constraint validation.
+SSR provides native constraints, values, labels, errors, and accessibility associations. Native validation and server validation remain correct without JavaScript. JavaScript adds schema validation before submission and interactive feedback; no-JavaScript timing and tooltips follow browser behavior.

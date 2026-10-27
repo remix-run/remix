@@ -1,4 +1,4 @@
-import type { FormSubmission } from '@remix-run/ui/form'
+import type { FormSubmission } from 'remix/data-schema/form'
 import type { TableRow } from 'remix/data-table'
 import type { Handle } from 'remix/component'
 
@@ -15,23 +15,13 @@ export function FieldsPage(
   return () => (
     <ExamplePage
       active="fields"
-      title="Independent fields."
-      description="Bind individual field schemas without createForm. Native HTML combines the controls; the handler parses each field and combines failed values and errors."
-      code={`const Email = createField({
-  schema: EmailSchema,
-  label: 'Email',
-  type: 'email',
-})
-
-// Component setup:
-let email = createFieldMixins(Email, {
-  name: 'email',
-  getSubmission: () => handle.props.submission,
-  onChange: () => handle.update(),
-})
-
-// Handler:
-let result = Email.parse(formData, 'email')`}
+      title="Field components."
+      description="Pass stable bindings through props to ordinary child components. One form schema validates the complete submission."
+      code={`<form.Context id={handle.id} schema={AccountForm} submission={submission}>
+  {({ fields }) => (
+    <EmailField field={fields.email} />
+  )}
+</form.Context>`}
       storedAccounts={handle.props.storedAccounts}
     >
       <AccountFields submission={handle.props.submission} />

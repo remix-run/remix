@@ -1,11 +1,10 @@
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
-import type { FormSubmission } from '@remix-run/ui/form'
 
 import { accounts } from '../../data/account.ts'
 import { routes } from '../../routes.ts'
 import { FieldsPage } from './page.tsx'
-import { DisplayName, Email } from './public/fields.ts'
+import { AccountForm } from './public/fields.ts'
 
 export default createController(routes.fields, {
   actions: {
@@ -16,26 +15,9 @@ export default createController(routes.fields, {
       })
     },
     async action({ db, formData, render }) {
-      let displayName = DisplayName.parse(formData, 'displayName')
-      let email = Email.parse(formData, 'email')
+      let submission = AccountForm.parseSafe(formData)
 
-      if (!displayName.success || !email.success) {
-        let submission: FormSubmission = {
-          values: {
-            ...(displayName.success ? { displayName: displayName.value } : displayName.values),
-            ...(email.success ? { email: email.value } : email.values),
-          },
-          errors: {
-            fields: {
-              ...(!displayName.success ? displayName.errors.fields : {}),
-              ...(!email.success ? email.errors.fields : {}),
-            },
-            form: [
-              ...(!displayName.success ? displayName.errors.form : []),
-              ...(!email.success ? email.errors.form : []),
-            ],
-          },
-        }
+      if (!submission.success) {
         let storedAccounts = await db.findMany(accounts, { orderBy: ['displayName', 'asc'] })
         return render(<FieldsPage storedAccounts={storedAccounts} submission={submission} />, {
           document: { title: 'Independent fields | Form examples' },
@@ -45,8 +27,8 @@ export default createController(routes.fields, {
 
       await db.create(accounts, {
         id: crypto.randomUUID(),
-        displayName: displayName.value,
-        email: email.value,
+        displayName: submission.value.displayName,
+        email: submission.value.email,
       })
       return redirect(routes.fields.index.href(), 303)
     },

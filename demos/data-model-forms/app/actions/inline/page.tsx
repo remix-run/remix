@@ -1,4 +1,4 @@
-import type { FormFailure } from '@remix-run/ui/form'
+import type { FormFailure } from 'remix/data-schema/form'
 import type { TableRow } from 'remix/data-table'
 import type { Handle } from 'remix/component'
 
@@ -18,20 +18,10 @@ export function InlinePage(
       <ExamplePage
         active="inline"
         title="All inline schemas."
-        description="No backing object schema is needed. Define each schema alongside its UI metadata, then parse the whole submission with createForm."
-        code={`createForm({
-  fields: {
-    displayName: {
-      label: 'Name',
-      type: 'text',
-      schema: s.string().pipe(minLength(2)),
-    },
-    email: {
-      label: 'Email',
-      type: 'email',
-      schema: s.string().pipe(email()),
-    },
-  },
+        description="No backing object schema is needed. Define validation inline in one form schema, then use it for parsing and UI."
+        code={`fd.object({
+  displayName: fd.text(s.string().pipe(minLength(2))),
+  email: fd.text(s.string().pipe(email())),
 })`}
         storedAccounts={storedAccounts}
       >

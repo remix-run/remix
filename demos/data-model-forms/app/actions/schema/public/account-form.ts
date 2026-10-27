@@ -1,13 +1,9 @@
-import { createForm } from '@remix-run/ui/form'
-
+import * as fd from 'remix/data-schema/form'
 import { Account } from '../../../data/public/account-schema.ts'
 
-export const AccountForm = createForm({
-  schema: Account,
-  fields: {
-    displayName: { label: 'Display name', type: 'text' },
-    email: { label: 'Email address', type: 'email' },
-    age: { label: 'Age', type: 'number' },
-    website: { label: 'Website', type: 'url' },
-  },
+export const AccountForm = fd.object({
+  displayName: fd.text(Account.shape.displayName),
+  email: fd.text(Account.shape.email),
+  age: fd.number(Account.shape.age),
+  website: fd.text(Account.shape.website),
 })

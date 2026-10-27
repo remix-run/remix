@@ -1,4 +1,4 @@
-import type { FormFailure } from '@remix-run/ui/form'
+import type { FormFailure } from 'remix/data-schema/form'
 import type { TableRow } from 'remix/data-table'
 import type { Handle } from 'remix/component'
 
@@ -20,17 +20,10 @@ export function RegistrationPage(handle: Handle<RegistrationPageProps>) {
         active="extra-fields"
         title="Schema + extra fields."
         description="Reuse account fields and add request-only password and terms fields. Only the account data is saved."
-        code={`createForm({
-  schema: Account,
-  fields: {
-    email: { label: 'Email', type: 'email' },
-    password: Password,
-    terms: {
-      label: 'Accept terms',
-      type: 'checkbox',
-      schema: s.literal(true),
-    },
-  },
+        code={`fd.object({
+  email: fd.text(Account.shape.email),
+  password: fd.password(s.string().pipe(minLength(8))),
+  terms: fd.checkbox(s.literal(true)),
 })`}
         storedAccounts={storedAccounts}
       >

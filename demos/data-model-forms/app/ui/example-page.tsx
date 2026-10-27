@@ -35,7 +35,7 @@ export function ExamplePage(handle: Handle<ExamplePageProps>) {
               href={routes.fields.index.href()}
               aria-current={active === 'fields' ? 'page' : undefined}
             >
-              2. Independent fields
+              2. Field components
             </a>
             <a
               href={routes['extra-fields'].index.href()}

@@ -1,4 +1,4 @@
-import type { FormFailure } from '@remix-run/ui/form'
+import type { FormFailure } from 'remix/data-schema/form'
 import type { TableRow } from 'remix/data-table'
 import type { Handle } from 'remix/component'
 
@@ -18,15 +18,12 @@ export function SchemaPage(
       <ExamplePage
         active="schema"
         title="One object schema."
-        description="Select fields from the account schema and add UI metadata. Validation rules stay in the model; the server supplies the omitted id."
-        code={`createForm({
-  schema: Account,
-  fields: {
-    displayName: { label: 'Name', type: 'text' },
-    email: { label: 'Email', type: 'email' },
-    age: { label: 'Age', type: 'number' },
-    website: { label: 'Website', type: 'url' },
-  },
+        description="Reuse account field rules in a form schema. Validation rules stay in the model; the server supplies the omitted id."
+        code={`fd.object({
+  displayName: fd.text(Account.shape.displayName),
+  email: fd.text(Account.shape.email),
+  age: fd.number(Account.shape.age),
+  website: fd.text(Account.shape.website),
 })`}
         storedAccounts={storedAccounts}
       >

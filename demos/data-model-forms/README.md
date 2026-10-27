@@ -15,14 +15,14 @@ Open <http://localhost:44100>. The root redirects to `/schema`.
 
 ## Examples
 
-Definitions, parsing, and mixins come from `@remix-run/ui/form`; shared schemas come from `remix/data-schema`. See the [form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md) for API examples, including multi-schema composition.
+Form schemas come from `remix/data-schema/form`; `@remix-run/ui/form` supplies Context, role mixins, and safe failed-submission parsing. Domain rules come from `remix/data-schema`. See the [form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md) for API examples, including multi-schema composition.
 
 | Route                                                                                                           | What it demonstrates                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`/schema`](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/schema)             | `createForm({ schema: Account, fields })` reuses model rules and omits the server-owned id.                                                   |
-| [`/fields`](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/fields)             | Independent `createField()` / `createFieldMixins()` bindings share a native form. The handler parses each field and combines failures.        |
+| [`/schema`](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/schema)             | `fd.object()` reuses `Account.shape` rules and omits the server-owned id.                                                                     |
+| [`/fields`](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/fields)             | Stable typed field bindings pass through props to child components, which render live feedback.                                               |
 | [`/extra-fields`](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/extra-fields) | Model fields plus reusable password and inline terms fields. Password and terms are validated but never stored; failed values omit passwords. |
-| [`/inline`](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/inline)             | `createForm({ fields })` with a schema on every field and no backing object schema.                                                           |
+| [`/inline`](https://github.com/remix-run/remix/tree/main/demos/data-model-forms/app/actions/inline)             | `fd.object()` with inline validations and no separate domain schema.                                                                          |
 
 The extra-fields example maps requiredness and minimum-length messages with `errorMap`, while its whitespace refinement keeps an explicit schema message. The inline example omits that refinement message and maps `refine.failed` instead.
 
@@ -47,4 +47,4 @@ Successful submissions redirect back to their example. Saved accounts appear on 
 pnpm -C demos/data-model-forms typecheck
 ```
 
-This POC intentionally has no committed test suite.
+Browser behavior is covered by the UI package tests; verify the demo through native and server submissions.

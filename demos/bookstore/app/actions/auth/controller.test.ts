@@ -70,16 +70,19 @@ describe('auth handlers', () => {
     assert.equal(response.status, 400)
 
     let html = await response.text()
-    assertContains(html, 'type="email" required')
+    let emailInput = html.match(/<input\b[^>]*name="email"[^>]*>/)?.[0]
+    assert.ok(emailInput, 'Expected an email input')
+    assertContains(emailInput, 'type="email"')
+    assert.ok(/\brequired(?:\s|>|=)/.test(emailInput), 'Expected a required email input')
     assertContains(html, 'value="not-an-email"')
     assertContains(html, 'aria-invalid="true"')
-    assertContains(html, 'aria-describedby="email-error"')
+    assert.ok(/aria-describedby="[^"]+-error-email"/.test(html))
 
-    let emailError = html.match(/<p\b[^>]*\bid="email-error"[^>]*>/)?.[0]
+    let emailError = html.match(/<p\b[^>]*\bid="[^"]+-error-email"[^>]*>/)?.[0]
     assert.ok(emailError, 'Expected an email error element')
     assertContains(emailError, 'role="alert"')
 
-    let passwordError = html.match(/<p\b[^>]*\bid="password-error"[^>]*>/)?.[0]
+    let passwordError = html.match(/<p\b[^>]*\bid="[^"]+-error-password"[^>]*>/)?.[0]
     assert.ok(passwordError, 'Expected a password error element')
     assertContains(passwordError, 'role="alert"')
   })
