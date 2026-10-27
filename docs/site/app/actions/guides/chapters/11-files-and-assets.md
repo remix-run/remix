@@ -3,27 +3,28 @@ title: Files and Assets
 description: How Remix serves static files and source assets, accepts bounded uploads, stores files, and returns HTTP file responses.
 ---
 
-This chapter is unfinished. The sections below outline what it will cover. For working API examples, see these READMEs:
+This chapter is unfinished. The sections below outline what it will cover. For working API examples, see the [`remix/assets`](https://docs.remix.run/assets/), [`remix/middleware/form-data`](https://docs.remix.run/middleware/form-data/), [`remix/file-storage`](https://docs.remix.run/file-storage/), and [`remix/response/file`](https://docs.remix.run/response/file/) overviews.
 
-- [Assets](https://github.com/remix-run/remix/blob/main/packages/assets/README.md)
-- [Form data middleware](https://github.com/remix-run/remix/blob/main/packages/form-data-middleware/README.md)
-- [File storage](https://github.com/remix-run/remix/blob/main/packages/file-storage/README.md)
-- [File responses](https://github.com/remix-run/remix/blob/main/packages/response/README.md)
+Remix serves files through three paths. Choose the path before configuring caches or storage:
 
-Remix has separate paths for files that already exist in public form, browser source that needs compilation, and user uploads that must cross a trust boundary. Choose that path before configuring caches or storage.
+| Where the file lives                                  | What serves it                                                                                                                          |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Root `public/`, served exactly as it is               | `staticFiles()` from [`remix/middleware/static`](https://docs.remix.run/middleware/static/)                                             |
+| `app/**/public/`, browser source that needs compiling | `createAssetServer()` from [`remix/assets`](https://docs.remix.run/assets/)                                                             |
+| User uploads                                          | `formData()` from [`remix/middleware/form-data`](https://docs.remix.run/middleware/form-data/), then storage and `createFileResponse()` |
 
-## Static files and source-served assets {#static-files-vs-source-served-assets}
+## Serve files as-is with staticFiles()
 
-Use `staticFiles()` for files served from the root `public/` directory as-is. Use `createAssetServer()` for TypeScript, JavaScript, CSS, images, or fonts that need compilation, dependency resolution, transforms, preloads, or fingerprinted URLs. Source assets live in separate, colocated `public/` directories under `app/`; the shared name communicates browser reachability, while the serving mechanism remains different.
+`staticFiles()` from [`remix/middleware/static`](https://docs.remix.run/middleware/static/) answers `GET` and `HEAD` requests for files under the directory you pass it, such as `./public` for a favicon or `robots.txt`. Requests for missing files fall through to the router. Cover `index: false` as used by the template, `filter` for hiding files, cache options shared with `createFileResponse()`, and multiple directories.
 
-## Configure the asset server boundary {#remix-s-unbundled-asset-server}
+## Serve browser source with the asset server
 
-Define `rootDir` and the public `basePath`. The default directory mounts serve `app` beneath `/assets/app` and `node_modules` beneath `/assets/npm`, preserving the path below each directory. Allow `app/routes.ts` for type-safe hrefs and `app/**/public/**` for browser source, then deny test files so they can remain beside the modules they exercise:
+Walk through the template's asset server:
 
 ```ts filename=app/assets.ts
 import { createAssetServer } from "remix/assets";
 
-export const assetServer = createAssetServer({
+export const assets = createAssetServer({
   basePath: "/assets",
   rootDir: process.cwd(),
   allowFiles: ["app/routes.ts", "app/**/public/**"],
@@ -32,69 +33,85 @@ export const assetServer = createAssetServer({
 });
 ```
 
-Map the asset namespace to a controller action that calls `assetServer.fetch(request)`. Treat `allowFiles`, `allowPackages`, and `denyFiles` as a security boundary, not merely compilation configuration.
+Map `/assets/*path` to an action that calls `assets.fetch(request)`. It resolves to `null` when the request doesn't match a servable asset, so the action returns its own `404`. Pass the same server to `render({ assets })` from [`remix/middleware/render`](https://docs.remix.run/middleware/render/) so client entries resolve to asset URLs. Explain the default mounts: `app` is served beneath `/assets/app` and `node_modules` beneath `/assets/npm`, preserving the path below each directory.
 
-## Browser modules, CSS, and file assets {#browser-modules-asset-roots-and-package-mounts}
+## Control what the browser can reach
 
-Put browser source beside its narrowest owner, such as `app/actions/cart/public/` or `app/ui/public/`. Every local dependency in that browser module graph must also match `allowFiles`, so keep the graph inside the colocated `public/` directory. Package dependencies are allowed separately with `allowPackages`.
+Treat `allowFiles`, `allowPackages`, and `denyFiles` as a security boundary, not merely compilation configuration. Put browser source in colocated `public/` directories beside its narrowest owner, keep its local dependencies inside the same directory, and explain why `app/routes.ts` is allowed separately for type-safe hrefs.
 
-The asset server compiles TypeScript and JavaScript on demand, generates preloads and import maps, follows and rewrites CSS `@import` and `url()` references, and can serve explicitly configured leaf-file extensions. This keeps the whole browser graph visible without exposing the rest of the app.
+For npm packages:
 
-## Asset hrefs, client entries, import maps and preloads {#client-entry-hrefs-import-maps-and-module-preloads}
+- List each package used by browser code in `allowPackages`. Its dependencies are allowed automatically, but peer dependencies must be listed explicitly.
+- Only ES modules can be served. CommonJS packages are rejected.
+- Use `scripts.external` to leave specific import specifiers untouched.
 
-Use `getScriptEntry()` for rendered script entries because scripts need a public URL, modulepreload hints, and an import map. Use `getHref()` for styles and files, and `getPreloads()` when you need lower-level preload control. Resolve stable root entry metadata once in `app/assets.ts`:
+When an asset doesn't load, run `remix assets` to list browser-reachable files and `remix assets inspect <url-or-file>` to see one mapping and its access decision. Explain the compilation errors readers will hit, such as `IMPORT_NOT_ALLOWED`, `IMPORT_OUTSIDE_MOUNTS`, and `IMPORT_NOT_SUPPORTED`. [CLI and Tooling](/cli-and-tooling/) covers sharing this configuration through `remix.json`.
+
+## Load browser scripts
+
+Use `getScriptEntry()` for rendered script entries because scripts need a public URL, modulepreload hints, and an import map. Resolve stable root entry metadata once in `app/assets.ts`:
 
 ```ts filename=app/assets.ts
 const entry = "app/actions/public/entry.ts";
 
-export const scriptEntry = await assetServer.getScriptEntry(entry);
+export const scriptEntry = await assets.getScriptEntry(entry);
 ```
 
-Render the script entry's import map with `<ImportMap>` before its modulepreload links and module script. This combines its mappings with import maps from blocking client entries.
+Render the import map with `<ImportMap>` from [`remix/component/server`](https://docs.remix.run/component/server/) before the modulepreload links and module script. It combines the entry's mappings with import maps from blocking client entries, and frame responses can add more. When targeting browsers without native support for multiple import maps, use [`remix/multiple-import-maps-polyfill`](https://docs.remix.run/multiple-import-maps-polyfill/) as shown in [Interactivity](/interactivity/#browser-entry-with-run).
 
-Named imports through eligible barrel files are rewritten to their resolved implementation modules. This avoids intermediary requests and removes side-effect-free dependency branches that are no longer reachable. Every removed module must be declared side-effect-free by its nearest `package.json` with `sideEffects: false` or a non-matching `sideEffects` pattern; missing or invalid metadata preserves the original graph.
-Resolve `clientEntry(import.meta.url, ...)` IDs to `href`, `importMap`, and `preloads` through the asset server in the shared renderer instead of hard-coding deployment URLs in components. Frame responses can introduce additional mappings. When targeting browsers without native support for multiple import maps, configure the browser entry with `remix/multiple-import-maps-polyfill` as shown in [Interactivity](/interactivity/#browser-entry-with-run).
+Close with one short paragraph on barrel files: named imports through eligible barrel files are rewritten to their implementation modules when every removed module is declared side-effect-free in its `package.json`.
 
-## File transforms and transformed-output caches {#asset-file-transforms}
+## Reference styles, images, and fonts
 
-Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits.
+Browser modules can only import scripts, so CSS and images are referenced by URL. `getHref()` runs on the server, so resolve URLs in an action or middleware and pass them to components as props. It accepts a `file://` URL, which pairs well with `new URL("./public/cover.svg", import.meta.url)`.
 
-To cache transformed outputs on disk, add a cache to your asset server:
+Cover `<link rel="stylesheet">` for stylesheet assets, font preloads, and `files.extensions` for serving leaf files such as images and fonts. Relative CSS `@import` and `url()` references are rewritten to asset URLs.
 
-```ts filename=app/assets.ts
-import { createAssetServer, createFsFileCache } from "remix/assets";
+## Transform images and other files
 
-export const assetServer = createAssetServer({
-  basePath: "/assets",
-  allowFiles: ["app/**/public/**"],
-  files: {
-    extensions: [".svg", ".png"],
-    cache: createFsFileCache(),
-    // ...existing transforms
-  },
-});
-```
+Define request-selected transforms with `defineFileTransform()`, including transforms that take a parameter, and request them with `getHref(path, { transform })` or `?transform=` in hand-written URLs. Cover global transforms that run for every matching file and `maxRequestTransforms`.
 
-Caching is disabled by default. See the [assets README](https://github.com/remix-run/remix/tree/main/packages/assets#file-transform-caching) for cache options and reuse across server restarts.
+Transformed outputs are recomputed per request unless you configure `files.cache`. Use `createFsFileCache()` for the built-in disk cache and set `files.cacheKey` to a stable value such as a commit SHA to reuse outputs across restarts.
 
-## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
+## Hot reloading in development
 
-Choose one development watcher. A long-lived asset server may watch source files itself, while the generated app sets `watch: false` and lets Node's `--watch` restart the process. Close asset-owned watchers during shutdown. In production, disable watching, choose browser targets, source-map and minification policy, and enable content-based fingerprinting for long-lived immutable asset caching.
+The template's `dev` script restarts the server process with Node's `--watch`, and its asset server sets `watch: isDevelopment` so browser source changes are recompiled without a restart. Its `hmr` script runs the app through [`remix/node-hmr`](https://docs.remix.run/node-hmr/) instead, with the asset server's `hmr` option using `createBrowserHmrChannel()` from [`remix/node-hmr/runtime`](https://docs.remix.run/node-hmr/runtime/) and `componentHmr()` from [`remix/component-hmr/assets`](https://docs.remix.run/component-hmr/assets/) as a script loader.
 
-## Parse bounded form uploads {#file-uploads}
+Cover the basics of `import.meta.hot` (`accept()`, `dispose()`, `invalidate()`), typing it with [`remix/assets/types/hmr`](https://docs.remix.run/assets/types/hmr/), and the `server:update` event the template's browser entry uses to reload the top frame.
 
-Configure `formData({ uploadHandler, ...limits })` to parse multipart bodies once and stream file parts to storage. Set limits for headers, files, individual file size, part count, and total size, then translate known parser or storage failures into useful `400` or `413` responses.
+## Production asset settings
 
-To avoid buffering large uploads in memory, try `formData()` from `remix/middleware/form-data/future`. It takes the same options, but each upload streams from the request body and must be read inside `uploadHandler`, for example by passing it to `storage.set()`. Future entrypoints are not stable and may change in any release.
+In production, the template disables watching, enables minification, and sets `fingerprint: isProduction` so assets get content-based URLs with long-lived immutable caching. Its shutdown handler calls `assets.close()` after the HTTP server closes. Cover `target`, `sourceMaps`, `scripts.define` for values like `process.env.NODE_ENV`, and the asset server's `onError`.
 
-## Store files by app-owned keys {#file-storage-memory-filesystem-s3}
+There is no build step: assets compile on first request and are cached in memory. [Production](/production/) covers cache policy and compression.
 
-Use the common `FileStorage` API with memory, filesystem, or S3-compatible backends. Generate storage keys on the server, validate media type and size, keep original names as metadata rather than trusted paths, and authorize both writes and reads.
+## Accept file uploads
 
-## Use the low-level multipart parser only when needed {#multipart-parsing}
+Forms that upload files need `enctype="multipart/form-data"` and an `<input type="file">`, optionally with `accept` and `multiple`. Put `formData()` from [`remix/middleware/form-data`](https://docs.remix.run/middleware/form-data/) on the upload action instead of the whole router so other requests skip multipart parsing.
 
-`remix/form-data-parser` is the normal streaming upload layer. Reach for `remix/multipart-parser` directly for non-form multipart formats, runtime-specific streams, or custom part processing, and preserve its header, part, and aggregate limits.
+The middleware parses the body once and passes each file to your `uploadHandler`, which stores it under a server-generated key and returns that key as the form value. The stable parser reads each file into memory before calling the handler. Set `maxFileSize` (default 2 MiB), `maxFiles` (default 20), `maxParts` (default 1000), `maxTotalSize`, and `maxHeaderSize`, then turn limit errors from [`remix/form-data-parser`](https://docs.remix.run/form-data-parser/) into `400` or `413` responses.
 
-## Stream downloads with correct HTTP semantics {#file-downloads-lazy-files-mime-types-and-range-responses}
+To avoid buffering large uploads in memory, try `formData()` from [`remix/middleware/form-data/future`](https://docs.remix.run/middleware/form-data/future/). It takes the same options, but each upload streams from the request body and must be read inside `uploadHandler`, for example by passing it to `storage.set()`. Future entrypoints are not stable and may change in any release.
 
-Open filesystem data as a `LazyFile` or read it from `FileStorage`, then use `createFileResponse()` for content length, MIME type, ETags, conditional requests, HEAD, and ranges. Add `Content-Disposition` for downloads, use `remix/mime` for content types, and avoid buffering large files into native `File` objects.
+## Validate uploads
+
+The upload handler stores each file before your action runs, so:
+
+- When the handler returns a storage key, the parsed form contains a string. Validate it with `f.field()`, not `f.file()`, from [`remix/data-schema/form-data`](https://docs.remix.run/data-schema/form-data/).
+- Treat the submitted file name and type as untrusted. Never use the name as a path, and don't derive the stored extension from it.
+- Remove stored files when the rest of the form fails validation.
+- Run authentication and [`remix/middleware/cop`](https://docs.remix.run/middleware/cop/) before `formData()` so unauthorized requests are rejected before their files are stored.
+
+## Store files
+
+Use the `FileStorage` API from [`remix/file-storage`](https://docs.remix.run/file-storage/): `get()`, `set()`, `has()`, `list()`, `put()`, and `remove()`. Use [`remix/file-storage/memory`](https://docs.remix.run/file-storage/memory/) in tests, [`remix/file-storage/fs`](https://docs.remix.run/file-storage/fs/) for a single server, and [`remix/file-storage/s3`](https://docs.remix.run/file-storage/s3/) for AWS S3 or S3-compatible providers.
+
+For S3, use `set()` for large files because `put()` holds the whole file in memory, set `endpoint` and `forcePathStyle` for MinIO or LocalStack, and add a lifecycle rule that removes incomplete multipart uploads. [Production](/production/#process-safe-storage) covers storage shared across replicas.
+
+## Send stored and on-disk files
+
+Serve uploads from a route that checks authorization, calls `storage.get(key)`, and returns `createFileResponse()` from [`remix/response/file`](https://docs.remix.run/response/file/). `staticFiles()` can't serve the storage directory because the filesystem backend stores files under hashed names. Choose private or public caching per route, and either serve uploads as downloads with `Content-Disposition: attachment` or validate their contents before serving HTML or SVG inline.
+
+For files on disk, use `openLazyFile()` from [`remix/fs`](https://docs.remix.run/fs/), which detects the media type from the file extension. Register unknown extensions with `defineMimeType()` from [`remix/mime`](https://docs.remix.run/mime/) and build download headers with `ContentDisposition` from [`remix/headers`](https://docs.remix.run/headers/). `createFileResponse()` handles content length, ETags, conditional requests, `HEAD`, and ranges, and only enables ranges for non-compressible types so [`remix/middleware/compression`](https://docs.remix.run/middleware/compression/) can still compress text.
+
+For custom part processing or non-form multipart formats, use [`remix/multipart-parser`](https://docs.remix.run/multipart-parser/) directly. [`remix/tar-parser`](https://docs.remix.run/tar-parser/) reads tar archives as streams.
