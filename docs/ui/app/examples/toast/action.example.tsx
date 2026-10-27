@@ -29,13 +29,14 @@ export default function ExampleToastAction() {
           on('click', () => {
             toastManager.add({
               id: 'example',
-              title: 'Toast title',
-              description: 'This toast has an action.',
+              title: 'Action performed',
+              description: 'You can undo this action.',
               data: {
                 action: {
-                  label: 'Action',
+                  label: 'Undo',
                   run() {
                     toastManager.close('example')
+                    toastManager.add({ title: 'Action undone' })
                   },
                 },
               },
@@ -80,7 +81,7 @@ export function ToastRegion() {
                     easing: 'ease-out',
                   }),
                   animateExit({
-                    position: 'var(--stack-position)',
+                    position: index === 0 ? 'absolute' : 'var(--stack-position)',
                     zIndex: index === 0 ? 101 : 100 - index,
                     opacity: 0,
                     gridTemplateRows: '0fr',

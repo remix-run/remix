@@ -86,7 +86,7 @@ Timers run while `item()` presents the item, including limited items. Publicatio
 
 A primary touch inside the collection expands it and pauses dismissal until a primary touch outside. Releasing or cancelling a gesture keeps it expanded. Touching outside clears hover and blurs focus inside; native controls retain normal activation.
 
-`root()` exposes `data-expanded`; `item()` exposes `data-limited`. CSS chooses the stack, offsets and expanded presentation. The primitive does not measure elements or own animation styles. Keep overflow mounted and inert for transitions. Compose `animateLayout()`, `animateEntrance()` and `animateExit()` with your styles, respecting reduced motion. Keep decorative depth transforms on a separate surface from the host animated by layout. Closing removes the item immediately; exit animation may retain its inert DOM.
+`root()` exposes `data-expanded`; `item()` exposes `data-limited`. CSS chooses the stack, offsets and expanded presentation. Compose `drag()` from `@remix-run/ui/animation` with your dismissal logic to customize swipe gestures. The primitive does not measure elements or own animation styles. Keep overflow mounted and inert for transitions. Compose `animateLayout()`, `animateEntrance()` and `animateExit()` with your styles, respecting reduced motion. Keep decorative depth transforms on a separate surface from the host animated by layout. Closing removes the item immediately; exit animation may retain its inert DOM.
 
 ## Countdown indicators
 

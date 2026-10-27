@@ -69,7 +69,7 @@ export function ToastRegion() {
                     easing: 'ease-out',
                   }),
                   animateExit({
-                    position: 'var(--stack-position)',
+                    position: index === 0 ? 'absolute' : 'var(--stack-position)',
                     zIndex: index === 0 ? 101 : 100 - index,
                     opacity: 0,
                     gridTemplateRows: '0fr',

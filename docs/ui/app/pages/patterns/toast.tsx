@@ -17,6 +17,8 @@ export const meta = {
 const defaultTimeout = await loadExample('toast/default-timeout', { outlet: 'ToastRegion' })
 const dynamicTimeout = await loadExample('toast/dynamic-timeout', { outlet: 'ToastRegion' })
 const timeout = await loadExample('toast/timeout', { outlet: 'ToastRegion' })
+const customPosition = await loadExample('toast/position', { outlet: 'ToastRegion' })
+const limit = await loadExample('toast/limit', { outlet: 'ToastRegion' })
 const basic = await loadExample('toast/basic', { outlet: 'ToastRegion' })
 const action = await loadExample('toast/action', { outlet: 'ToastRegion' })
 const actions = await loadExample('toast/actions', { outlet: 'ToastRegion' })
@@ -101,20 +103,6 @@ const timing = await highlightSource(`
   toastManager.resume(pauseReason)
 `)
 
-const position = await highlightSource(`
-  const element = <section mix={[
-    toast.root({ label: 'Notifications' }),
-    css({
-      position: 'fixed',
-      insetInlineEnd: '16px',
-      width: 'min(380px, calc(100vw - 32px))',
-      bottom: 'max(16px, env(safe-area-inset-bottom))',
-    }),
-  ]}>
-    {toastItems.map(renderToastItem)}
-  </section>
-`)
-
 const typeDefinitions = {
   ToastManagerOptions: await highlightSource(`
 interface ToastManagerOptions<data = unknown> {
@@ -182,16 +170,20 @@ export default function ToastPage(handle: Handle<PageProps>) {
       page={meta}
       pages={handle.props.pages}
       outlet={
-        <div class="ui-toast-demo-outlets">
-          {basic.Outlet && <basic.Outlet />}
-          {action.Outlet && <action.Outlet />}
-          {actions.Outlet && <actions.Outlet />}
-          {stack.Outlet && <stack.Outlet />}
-          {timeout.Outlet && <timeout.Outlet />}
-          {defaultTimeout.Outlet && <defaultTimeout.Outlet />}
-          {dynamicTimeout.Outlet && <dynamicTimeout.Outlet />}
-          {countdown.Outlet && <countdown.Outlet />}
-        </div>
+        <>
+          <div class="ui-toast-demo-outlets">
+            {basic.Outlet && <basic.Outlet />}
+            {limit.Outlet && <limit.Outlet />}
+            {action.Outlet && <action.Outlet />}
+            {actions.Outlet && <actions.Outlet />}
+            {stack.Outlet && <stack.Outlet />}
+            {timeout.Outlet && <timeout.Outlet />}
+            {defaultTimeout.Outlet && <defaultTimeout.Outlet />}
+            {dynamicTimeout.Outlet && <dynamicTimeout.Outlet />}
+            {countdown.Outlet && <countdown.Outlet />}
+          </div>
+          {customPosition.Outlet && <customPosition.Outlet />}
+        </>
       }
     >
       <p>
@@ -201,29 +193,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
       </p>
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
-        <p>
-          Create a manager to publish, replace and close notifications. Mount one{' '}
-          <code>toast.Context</code> for that manager and render its collection, newest first. Apply{' '}
-          <code>root({`{ label }`})</code> to the region and wrap each notification in
-          <code>ItemContext</code>. Connect its elements with <code>item()</code>,{' '}
-          <code>title()</code>,<code>description()</code> and <code>close()</code>. You supply the
-          markup, styles and translated labels.
-        </p>
         <CodeBlock html={anatomy} />
-        <p id="motion">
-          Toast manages timers, announcements and focus. CSS defines the stack and responds to{' '}
-          <code>data-expanded</code> during hover, focus or touch. The examples compose{' '}
-          <a href="/animation/drag/">drag</a>, <a href="/animation/layout/">layout</a> and{' '}
-          <a href="/animation/entrance-exit/">entrance and exit</a> mixins on the toast host. Swipe
-          handling calls <code>close()</code> when dismissal commits. CSS owns card sizes and
-          positions, including where the region appears.
-        </p>
-        <CodeBlock html={position} />
-        <p>
-          Mount the region near the application root. It uses ordinary document stacking and does
-          not create a portal or enter the browser's top layer. A clipping ancestor or modal dialog
-          can affect its visibility and availability.
-        </p>
       </Section>
       <Section id="publishing" title="Managing toasts">
         <p>
@@ -237,6 +207,25 @@ export default function ToastPage(handle: Handle<PageProps>) {
           item presents them. Unmounting the region pauses those timers without discarding
           notifications. Remounting resumes them with their remaining time.
         </p>
+      </Section>
+      <Section id="custom-position" title="Custom position">
+        <p>
+          Your CSS and render logic define styles and gestures, allowing you to customize where
+          toasts are rendered and how to dismiss them.
+        </p>
+        <Example id="position" example={customPosition} />
+      </Section>
+      <Section id="limiting-toasts" title="Limiting toasts">
+        <p>
+          Set <code>limit</code> on <code>toast.Context</code> to control how many toasts are
+          available at once. The default is three.
+        </p>
+        <p>
+          Overflow toasts stay mounted with <code>data-limited</code> and are excluded from
+          interaction and assistive technology. Keep rendering them so your CSS can fade and move
+          them back into view when newer toasts close. Their timers continue running.
+        </p>
+        <Example id="limit" example={limit} />
       </Section>
       <Section id="auto-dismiss" title="Timeout">
         <p>
@@ -322,14 +311,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           feedback without remounting the toast.
         </p>
         <Example id="stack" example={stack} />
-        <p>
-          Configure <code>limit</code> on <code>toast.Context</code>. The default is three. Overflow
-          remains in the collection and in the DOM with <code>data-limited</code>, native inertness
-          and <code>aria-hidden</code>. Keep rendering it so your CSS can fade and move it back into
-          view. Limited timers continue running.
-        </p>
       </Section>
-
       <Section id="accessibility" title="Accessibility">
         <p>
           Supply the region's accessible name with <code>root({`{ label }`})</code>. Each

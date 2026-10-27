@@ -4,6 +4,61 @@ import { describe, it } from 'remix/test'
 import { router } from './router.ts'
 
 describe('Live examples in the docs site', () => {
+  it('positions custom toasts at the top center on desktop and narrow screens', async (t) => {
+    let page = await t.serve(await createTestServer(router.fetch))
+    page.setDefaultTimeout(5000)
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' })
+    await page.goto('/patterns/toast/#custom-position')
+    let trigger = page.getByRole('button', { name: 'Show top-center toast', exact: true })
+    await trigger.click()
+    let toastItem = page.getByRole('dialog', { name: 'Toast title', exact: true })
+    await toastItem.waitFor()
+    let bounds = await toastItem.boundingBox()
+    assert.ok(bounds)
+    assert.ok(Math.abs(bounds.y - 16) < 1)
+    assert.ok(Math.abs(bounds.x + bounds.width / 2 - 640) < 1)
+    assert.equal(await trigger.evaluate((el) => el === document.activeElement), true)
+
+    await page.setViewportSize({ width: 390, height: 720 })
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' })
+    bounds = await toastItem.boundingBox()
+    assert.ok(bounds)
+    assert.ok(Math.abs(bounds.y - 16) < 1)
+    assert.ok(Math.abs(bounds.x - 16) < 1)
+    assert.ok(Math.abs(bounds.width - 358) < 1)
+    assert.equal(
+      await toastItem.evaluate((el) => {
+        let rect = el.getBoundingClientRect()
+        return el.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + 20))
+      }),
+      true,
+    )
+    let dismiss = toastItem.locator('button[aria-label="Dismiss notification"]')
+    await dismiss.focus()
+    await dismiss.press('Enter')
+    await toastItem.waitFor({ state: 'hidden' })
+
+    await trigger.click()
+    await toastItem.waitFor()
+    bounds = await toastItem.boundingBox()
+    assert.ok(bounds)
+    let x = bounds.x + bounds.width / 2
+    let y = bounds.y + bounds.height - 12
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x, y + 40, { steps: 5 })
+    assert.equal(
+      await toastItem.evaluate((el) =>
+        Number.parseFloat(getComputedStyle(el).translate.split(' ')[1]),
+      ),
+      4,
+    )
+    await page.mouse.move(x, y - 55, { steps: 10 })
+    await page.mouse.up()
+    await toastItem.waitFor({ state: 'hidden' })
+  })
+
   it('tracks swipe movement, resists left drags and hands a right dismissal to toast', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
     page.setDefaultTimeout(5000)
