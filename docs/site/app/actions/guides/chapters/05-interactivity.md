@@ -157,7 +157,7 @@ await app.ready();
 
 `loadModule` imports the named component for every client entry discovered in the document. Browsers
 with multiple import map support use native imports and preloads. Browsers without that support use
-the [`remix/multiple-import-maps-polyfill`](/multiple-import-maps-polyfill/)
+the [`remix/multiple-import-maps-polyfill`](/api/multiple-import-maps-polyfill/)
 shim when later frame responses introduce new mappings. If you only target browsers with native
 support, `loadModule` can call `import(moduleUrl)` directly and you can drop
 `processClientEntryPreloads`.
@@ -981,5 +981,5 @@ Consume the semantic event with `on(...)` like any other DOM event:
 ```
 
 Namespace custom event names to avoid collisions, and keep one-off behavior in the component that
-uses it. The [`remix/component` API overview](/component/) covers the full
+uses it. The [`remix/component` API overview](/api/component/) covers the full
 mixin API.

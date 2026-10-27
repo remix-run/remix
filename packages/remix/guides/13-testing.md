@@ -13,12 +13,12 @@ This chapter starts at that boundary, then moves outward to browser component te
 
 Choose the smallest boundary that includes the behavior you want to prove:
 
-| Test boundary          | Use it for                                                           | How to test it                                                                       | Runner type |
-| ---------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------- |
-| Unit test              | A data helper, schema, utility, or other isolated module             | Import it, call it, and assert on the result                                         | `server`    |
-| Router test            | An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                                           | `server`    |
+| Test boundary          | Use it for                                                           | How to test it                                                                           | Runner type |
+| ---------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------- |
+| Unit test              | A data helper, schema, utility, or other isolated module             | Import it, call it, and assert on the result                                             | `server`    |
+| Router test            | An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                                               | `server`    |
 | Browser component test | A component event, DOM update, or browser API                        | Render the component with `render()` from [`remix/component/test`](../src/component/test/README.md) | `browser`   |
-| End-to-end test        | Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright                     | `e2e`       |
+| End-to-end test        | Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright                         | `e2e`       |
 
 A controller that returns the wrong status belongs in a router test. A submit button that does not enter its pending state belongs in a browser component test. Use an end-to-end test when browser and server behavior must work together, such as submitting a form and following its redirect to the updated page.
 
@@ -284,7 +284,7 @@ The button has no request behavior to prove, so this test stays at the browser c
 
 An end-to-end test runs the router behind a real local HTTP server and drives the app through a Playwright `Page`. Use this boundary for a small number of flows where navigation, browser behavior, server rendering, and persistence must work together.
 
-[`createTestServer(...)`](/node-fetch-server/test/function/createTestServer/) from [`remix/node-fetch-server/test`](../src/node-fetch-server/README.md) adapts the router to a server on an available local port. [`t.serve(...)`](/test/interface/TestContext/) gives the Playwright page that server as its base URL and closes both after the test. This example uses a [`createTestRouter()` helper](#isolate-stateful-app-tests) so the edit doesn't touch shared state:
+[`createTestServer(...)`](/api/node-fetch-server/test/function/createTestServer/) from [`remix/node-fetch-server/test`](../src/node-fetch-server/README.md) adapts the router to a server on an available local port. [`t.serve(...)`](/api/test/interface/TestContext/) gives the Playwright page that server as its base URL and closes both after the test. This example uses a [`createTestRouter()` helper](#isolate-stateful-app-tests) so the edit doesn't touch shared state:
 
 ```ts filename=app/app.test.e2e.ts
 import * as assert from "remix/assert";
