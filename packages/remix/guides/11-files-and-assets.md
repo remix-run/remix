@@ -11,7 +11,7 @@ A Remix app serves three kinds of files, and each one takes a different path thr
 
 ## Serve files as-is with staticFiles()
 
-Files that never change between your source and the browser, such as `favicon.svg` or `robots.txt`, belong in the root `public/` directory. The template serves them with `staticFiles()` from [`remix/middleware/static`](../src/static-middleware/README.md) at the front of the router middleware:
+Files that never change between your source and the browser, such as `favicon.svg` or `robots.txt`, belong in the root `public/` directory. Serve them with `staticFiles()` from [`remix/middleware/static`](../src/static-middleware/README.md) near the front of the router middleware:
 
 ```ts filename=app/router.ts
 import { render } from "remix/middleware/render";
@@ -25,7 +25,7 @@ export const router = createRouter({
 });
 ```
 
-A request for `/favicon.svg` returns `public/favicon.svg` with a `Content-Type`, an ETag, and support for conditional and range requests. `staticFiles()` only answers `GET` and `HEAD` requests, and when no file matches, the request falls through to the rest of the router. The template sets `index: false` so a request for `/` reaches the home route instead of looking for `public/index.html`.
+A request for `/favicon.svg` returns `public/favicon.svg` with a `Content-Type`, an ETag, and support for conditional and range requests. `staticFiles()` only answers `GET` and `HEAD` requests, and when no file matches, the request falls through to the rest of the router. Set `index: false` when `/` should reach your home route instead of looking for `public/index.html`.
 
 The other options control which files are visible and how they're cached:
 
@@ -53,7 +53,7 @@ The trade-off is that the browser downloads many small modules instead of a few 
 
 ## Serve browser source with the asset server
 
-The template creates its asset server in `app/assets.ts`. At its core is this configuration:
+Create the asset server in its own module, such as `app/assets.ts`, so the router, controllers, and document can share one instance:
 
 ```ts filename=app/assets.ts
 import { createAssetServer } from "remix/assets";
@@ -72,7 +72,7 @@ export const assets = createAssetServer({
 - `app/actions/public/entry.ts` is served at `/assets/app/actions/public/entry.ts`.
 - `node_modules/remix/...` is served beneath `/assets/npm/remix/...`.
 
-The asset server only answers requests that reach it, so the template gives it a route and an action:
+The asset server only answers requests that reach it, so give it a route and an action:
 
 ```ts filename=app/routes.ts
 import { get, route } from "remix/routes";
@@ -107,14 +107,14 @@ The same server is passed to `render({ assets })` from [`remix/middleware/render
 
 `allowFiles`, `allowPackages`, and `denyFiles` decide which files on your server the browser can download. Treat them as a security boundary, not as build configuration. Anything they allow can be requested by anyone who knows the URL.
 
-The template's rules allow two things from your app:
+The configuration above allows two things from your app:
 
 - `app/**/public/**` allows any file inside a `public/` directory under `app/`. Put browser code beside its narrowest owner, such as `app/actions/albums/edit/public/` or `app/ui/public/`, so you, a reviewer, or an agent can tell from a file's path whether the browser can reach it.
 - `app/routes.ts` is allowed on its own so browser code can import `routes` and build links with `routes.albums.show.href(...)`.
 
 Every local import in a browser module must also be allowed. Keep a browser module's local dependencies inside the same `public/` directory, or in another `public/` directory. If a browser module imports a server-only file, the asset server refuses to compile it rather than exposing that file.
 
-`denyFiles` takes precedence over both allow lists. The template denies `app/**/*.test.*` so tests can sit beside the browser modules they exercise without becoming downloadable.
+`denyFiles` takes precedence over both allow lists. Denying `app/**/*.test.*` lets tests sit beside the browser modules they exercise without becoming downloadable.
 
 ### Use npm packages in browser code
 
@@ -157,7 +157,7 @@ The `remix assets` command prints the same information from the terminal. `remix
 
 ## Load browser scripts
 
-A page that runs browser code needs three things from the asset server: the entry module's URL, the URLs of every module it depends on, and an import map for bare specifiers. `getScriptEntry()` returns all three. The template resolves its browser entry once in `app/assets.ts`:
+A page that runs browser code needs three things from the asset server: the entry module's URL, the URLs of every module it depends on, and an import map for bare specifiers. `getScriptEntry()` returns all three. For an entry every page loads, resolve it once in `app/assets.ts`:
 
 ```ts filename=app/assets.ts
 const entry = "app/actions/public/entry.ts";
@@ -197,9 +197,9 @@ export function Document(handle: Handle<{ children?: RemixNode; title?: string }
 
 `preloads` lists every module the entry depends on. Without those `<link rel="modulepreload">` tags, the browser would download the entry, discover its imports, download those, and repeat one level at a time. With them, it requests the whole graph at once.
 
-That's also the answer to "isn't that a lot of files?" Many small modules download in parallel over HTTP/2. The template's `node:http` server speaks HTTP/1.1, so production deployments usually get HTTP/2 from the proxy or CDN in front of the app.
+That's also the answer to "isn't that a lot of files?" Many small modules download in parallel over HTTP/2. A plain `node:http` server speaks HTTP/1.1, so production deployments usually get HTTP/2 from the proxy or CDN in front of the app.
 
-`<ImportMap>` from [`remix/component/server`](../src/component/server/README.md) renders the entry's import map merged with the import maps of hydrated components on the page, so the document contains one complete map. Frame responses can add mappings later. Browsers without native support for multiple import maps need [`remix/multiple-import-maps-polyfill`](../src/multiple-import-maps-polyfill/README.md), which the template's browser entry loads as shown in [Interactivity](/interactivity/#browser-entry-with-run).
+`<ImportMap>` from [`remix/component/server`](../src/component/server/README.md) renders the entry's import map merged with the import maps of hydrated components on the page, so the document contains one complete map. Frame responses can add mappings later. Browsers without native support for multiple import maps need [`remix/multiple-import-maps-polyfill`](../src/multiple-import-maps-polyfill/README.md), which a browser entry can load as shown in [Interactivity](/interactivity/#browser-entry-with-run).
 
 ### How client entries find their scripts
 
@@ -329,9 +329,12 @@ Image transforms usually depend on a third-party library such as Sharp, which yo
 
 ## Hot reloading in development
 
-The template has two development scripts. `npm run dev` runs the server with Node's `--watch`, which restarts the process when server code changes, and the asset server sets `watch: isDevelopment` so browser source is recompiled when it changes. `npm run hmr` adds hot module replacement, updating the page without a reload.
+There are two ways to pick up changes while you work, and they trade simplicity for speed:
 
-`hmr.ts` runs the app through [`remix/node-hmr`](../src/node-hmr/README.md), and the asset server opts in when that runner is active:
+- **Restart on change.** Run the server with Node's `--watch` so it restarts when server code changes, and set the asset server's `watch` option so browser source is recompiled when it changes. You refresh the page to see updates. There are no extra moving parts, but every change loses client state.
+- **Hot module replacement.** Run the server through [`remix/node-hmr`](../src/node-hmr/README.md), which reloads changed server modules without restarting the process, and enable the asset server's `hmr` option so the page updates in place. Updates are faster and keep client state, at the cost of a separate runner process and a few more options.
+
+For HMR, the asset server opts in when the runner is active:
 
 ```ts filename=app/assets.ts
 import { createAssetServer } from "remix/assets";
@@ -355,7 +358,7 @@ export const assets = createAssetServer({
 
 `createBrowserHmrChannel()` from [`remix/node-hmr/runtime`](../src/node-hmr/README.md) connects the asset server to the browser. `componentHmr()` from [`remix/component-hmr/assets`](../src/component-hmr/README.md) is a script loader that lets hydrated Remix components swap in new code in place, remounting only when a component's setup code changes.
 
-Server-rendered components update too. When server code changes, the template's browser entry listens for the `server:update` event and reloads the top frame, which fetches fresh HTML from the server and reconciles it into the page:
+Server-rendered components update too. When server code changes, a browser entry can listen for the `server:update` event and reload the top frame, which fetches fresh HTML from the server and reconciles it into the page:
 
 ```ts filename=app/actions/public/entry.ts
 if (import.meta.hot) {
@@ -377,11 +380,11 @@ if (import.meta.hot) {
 }
 ```
 
-The template's `tsconfig.json` includes [`remix/assets/types/hmr`](../src/assets/README.md), which types `import.meta.hot`. Write `import.meta.hot.accept(...)` calls directly rather than through an alias, because the asset server finds them by reading the source.
+Add [`remix/assets/types/hmr`](../src/assets/README.md) to `types` in `tsconfig.json` to type `import.meta.hot`. Write `import.meta.hot.accept(...)` calls directly rather than through an alias, because the asset server finds them by reading the source.
 
 ## Production asset settings
 
-The template's asset server changes a few settings by environment:
+Development and production want different asset server settings:
 
 ```ts filename=app/assets.ts
 const nodeEnv = process.env.NODE_ENV ?? "development";
@@ -432,11 +435,11 @@ export const assets = createAssetServer({
 ```
 
 - `target` lowers modern syntax for the browsers you support. It accepts `chrome`, `firefox`, `safari`, `edge`, `opera`, `ios`, `samsung`, and `es`.
-- `sourceMaps` can be `"external"` or `"inline"`. The template only enables them in development, so decide whether production users should be able to download your source.
+- `sourceMaps` can be `"external"` or `"inline"`. Enabling them in production makes debugging easier but lets anyone download your original source, so decide which matters more for your app.
 - `scripts.define` replaces global identifiers with constant expressions. Values are inserted as code, so strings need their own quotes.
 - `onError` receives unexpected compilation failures. Report them to your error tracker and return a response, or return nothing for the default `500`.
 
-The template's shutdown handler calls `assets.close()` after the HTTP server closes, which stops the file watcher in development:
+Call `assets.close()` during shutdown, after the HTTP server closes, so a watching asset server doesn't keep the process alive:
 
 ```ts filename=server.ts
 server.close(() => assets.close().finally(() => process.exit(0)));

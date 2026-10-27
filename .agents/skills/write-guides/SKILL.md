@@ -22,6 +22,8 @@ Every other chapter is a guide: general advice about how Remix handles one topic
 - Use albums, artists, tracks, and covers as example names, but do not narrate a build. Avoid phrases like "next we'll add uploads to our app," "back in the albums controller we wrote earlier," or "now that our app has a form."
 - Explain how the feature works and how to accomplish the task, then show a focused snippet. A snippet may be a partial file when the surrounding code is obvious.
 - Steps are fine inside a section when a task genuinely has an order, such as configuring middleware before reading `context.formData`. Keep them local to the task.
+- Assume an app shaped like the one `remix new` generates, but don't keep pointing at it. Avoid phrases like "the template does X" or "the template's asset server." Explain good ways to use Remix directly, such as "Serve them with `staticFiles()`" or "Create the asset server in its own module."
+- When there is more than one reasonable approach, name the options and explain the trade-off instead of presenting one setup as the only way. For example, restarting on change is simpler, while hot module replacement is faster and keeps client state at the cost of more moving parts.
 
 ## Read First
 
@@ -195,6 +197,7 @@ Use `pnpm exec oxfmt --write <path-to-chapter.md>` only when formatting changes 
 
 - Does the chapter match the tone of `01-start-here.md`?
 - If it isn't chapter 1, does it read as a standalone guide rather than the next step of a tutorial?
+- Does it explain good ways to use Remix and their trade-offs, rather than describing what "the template" does?
 - Does the first paragraph start with useful context instead of a generic thesis?
 - Did you remove repeated “write once / stay in sync / TypeScript catches it” takeaways unless each one adds new information?
 - Are all code snippets internally consistent?
