@@ -4,6 +4,7 @@ import type { Handle } from 'remix/component'
 import * as form from '@remix-run/ui/form'
 
 import { LoginForm } from '../../auth/login/login-form.ts'
+import { Field } from '../../../ui/public/field.tsx'
 
 export const LoginFields = clientEntry(
   import.meta.url,
@@ -22,25 +23,17 @@ export const LoginFields = clientEntry(
               ) : null}
 
               <form method="POST" action={formAction} mix={form.root()}>
-                <div class="form-group">
-                  <label mix={form.label(fields.email)}>Email</label>
-                  <input type="email" autoComplete="email" mix={form.control(fields.email)} />
-                  {fields.email.errors.length > 0 ? (
-                    <p mix={form.error(fields.email)} role="alert">
-                      {fields.email.errors.join(' ')}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div class="form-group">
-                  <label mix={form.label(fields.password)}>Password</label>
-                  <input autoComplete="current-password" mix={form.control(fields.password)} />
-                  {fields.password.errors.length > 0 ? (
-                    <p mix={form.error(fields.password)} role="alert">
-                      {fields.password.errors.join(' ')}
-                    </p>
-                  ) : null}
-                </div>
+                <Field
+                  field={fields.email}
+                  label="Email"
+                  type="email"
+                  input={{ autoComplete: 'email' }}
+                />
+                <Field
+                  field={fields.password}
+                  label="Password"
+                  input={{ autoComplete: 'current-password' }}
+                />
 
                 <button type="submit" class="btn">
                   Login

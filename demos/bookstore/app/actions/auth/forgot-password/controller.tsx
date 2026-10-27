@@ -1,9 +1,8 @@
 import { createController } from 'remix/router'
-import * as s from 'remix/data-schema'
 
 import { passwordResetTokens, users } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
-import { forgotPasswordSchema, normalizeEmail } from '../schemas.ts'
+import { ForgotPasswordForm, normalizeEmail } from '../schemas.ts'
 import { ForgotPasswordPage, ForgotPasswordSuccessPage } from './page.tsx'
 
 export default createController(routes.auth.forgotPassword, {
@@ -13,7 +12,11 @@ export default createController(routes.auth.forgotPassword, {
     },
 
     async action({ db, formData, render }) {
-      let { email } = s.parse(forgotPasswordSchema, formData)
+      let submission = ForgotPasswordForm.parseSafe(formData)
+      if (!submission.success) {
+        return render(<ForgotPasswordPage submission={submission} />, { status: 400 })
+      }
+      let { email } = submission.value
       let normalizedEmail = normalizeEmail(email)
       let user = await db.findOne(users, { where: { email: normalizedEmail } })
       let token = undefined as string | undefined

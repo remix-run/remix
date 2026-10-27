@@ -1,40 +1,18 @@
 import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
+import type { FormSubmission } from 'remix/data-schema/form'
 
 import { routes } from '../../../routes.ts'
 import { Document } from '../../../ui/document.tsx'
 import { authCardStyle } from '../schemas.ts'
+import { RegisterFields } from './public/register-form.tsx'
 
-export function RegisterPage() {
+export function RegisterPage(handle: Handle<{ submission?: FormSubmission }>) {
   return () => (
     <Document>
       <div class="card" mix={authCardStyle}>
         <h1>Register</h1>
-        <form method="POST" action={routes.auth.register.action.href()}>
-          <div class="form-group">
-            <label for="name">Name</label>
-            <input type="text" id="name" name="name" required autoComplete="name" />
-          </div>
-
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required autoComplete="email" />
-          </div>
-
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              required
-              autoComplete="new-password"
-            />
-          </div>
-
-          <button type="submit" class="btn">
-            Register
-          </button>
-        </form>
+        <RegisterFields submission={handle.props.submission} />
 
         <p mix={css({ marginTop: '1.5rem' })}>
           Already have an account? <a href={routes.auth.login.index.href()}>Login here</a>

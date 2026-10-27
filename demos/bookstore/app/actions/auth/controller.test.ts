@@ -107,6 +107,20 @@ describe('auth handlers', () => {
     assert.ok(sessionId, 'Expected session cookie to be set')
   })
 
+  it('POST /register returns errors without restoring a short password', async () => {
+    let response = await router.fetch('https://remix.run/register', {
+      method: 'POST',
+      body: new URLSearchParams({ name: 'Ada', email: 'ada@example.com', password: 'short' }),
+    })
+
+    assert.equal(response.status, 400)
+    let html = await response.text()
+    assertContains(html, 'value="Ada"')
+    assertContains(html, 'value="ada@example.com"')
+    assertContains(html, 'aria-invalid="true"')
+    assert.ok(!html.includes('value="short"'))
+  })
+
   it('accessing protected route redirects to login with returnTo parameter', async () => {
     let response = await router.fetch('https://remix.run/checkout', {
       redirect: 'manual',

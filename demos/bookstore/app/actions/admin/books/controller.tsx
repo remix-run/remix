@@ -1,7 +1,4 @@
 import { createController } from 'remix/router'
-import * as s from 'remix/data-schema'
-import * as f from 'remix/data-schema/form-data'
-import * as coerce from 'remix/data-schema/coerce'
 import { redirect } from 'remix/response/redirect'
 
 import { books } from '../../../data/schema.ts'
@@ -12,29 +9,8 @@ import { resolveBookCover } from '../../../utils/book-images.ts'
 import { parseId } from '../../../utils/ids.ts'
 import { AdminBookFormPage } from './form.tsx'
 import { AdminBooksIndexPage } from './index-page.tsx'
+import { AdminBookForm } from './public/schema.ts'
 import { AdminBookNotFoundPage, AdminBookShowPage } from './show-page.tsx'
-
-const textField = f.field(s.defaulted(s.string(), ''))
-const optionalTextField = f.field(s.optional(s.string()))
-const priceField = f.field(s.defaulted(s.string(), '0'))
-const publishedYearField = f.field(s.defaulted(s.string(), '2024'), {
-  name: 'publishedYear',
-})
-const inStockField = f.field(s.defaulted(coerce.boolean(), false), {
-  name: 'inStock',
-})
-const bookSchema = f.object({
-  slug: textField,
-  title: textField,
-  author: textField,
-  description: textField,
-  price: priceField,
-  genre: textField,
-  cover: optionalTextField,
-  isbn: textField,
-  publishedYear: publishedYearField,
-  inStock: inStockField,
-})
 
 export default createController(routes.admin.books, {
   middleware: [requireAuth(), requireAdmin()],
@@ -67,21 +43,34 @@ export default createController(routes.admin.books, {
       )
     },
 
-    async create({ db, formData }) {
+    async create({ db, formData, render }) {
+      let submission = AdminBookForm.parseSafe(formData)
+      if (!submission.success) {
+        return render(
+          <AdminBookFormPage
+            title="Add New Book"
+            action={routes.admin.books.create.href()}
+            cancelHref={routes.admin.books.index.href()}
+            submitLabel="Create Book"
+            submission={submission}
+          />,
+          { status: 400 },
+        )
+      }
       let { author, cover, description, genre, inStock, isbn, price, publishedYear, slug, title } =
-        s.parse(bookSchema, formData)
+        submission.value
 
       await db.create(books, {
         slug,
         title,
         author,
         description,
-        price: parseFloat(price),
+        price,
         genre,
         cover_url: cover ?? '/images/placeholder.jpg',
         image_urls: JSON.stringify([]),
         isbn,
-        published_year: parseInt(publishedYear, 10),
+        published_year: publishedYear,
         in_stock: inStock,
       })
 
@@ -110,15 +99,31 @@ export default createController(routes.admin.books, {
       )
     },
 
-    async update({ db, formData, params }) {
+    async update({ db, formData, params, render }) {
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
       if (!book) {
         return new Response('Book not found', { status: 404 })
       }
 
+      let submission = AdminBookForm.parseSafe(formData)
+      if (!submission.success) {
+        book = await resolveBookCover(book)
+        return render(
+          <AdminBookFormPage
+            title="Edit Book"
+            action={routes.admin.books.update.href({ bookId: book.id })}
+            cancelHref={routes.admin.books.index.href()}
+            submitLabel="Update Book"
+            method="PUT"
+            book={book}
+            submission={submission}
+          />,
+          { status: 400 },
+        )
+      }
       let { author, cover, description, genre, inStock, isbn, price, publishedYear, slug, title } =
-        s.parse(bookSchema, formData)
+        submission.value
       let cover_url = cover || book.cover_url
 
       await db.update(books, book.id, {
@@ -126,11 +131,11 @@ export default createController(routes.admin.books, {
         title,
         author,
         description,
-        price: parseFloat(price),
+        price,
         genre,
         cover_url,
         isbn,
-        published_year: parseInt(publishedYear, 10),
+        published_year: publishedYear,
         in_stock: inStock,
       })
 

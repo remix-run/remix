@@ -23,4 +23,17 @@ describe('contact controller', () => {
     let html = await response.text()
     assertContains(html, 'Thank you for your message')
   })
+
+  it('POST /contact returns field errors and restores submitted text', async () => {
+    let response = await router.fetch('https://remix.run/contact', {
+      method: 'POST',
+      body: new URLSearchParams({ name: 'Ada', email: 'ada@example.com', message: '' }),
+    })
+
+    assert.equal(response.status, 400)
+    let html = await response.text()
+    assertContains(html, 'value="Ada"')
+    assertContains(html, 'name="message"')
+    assertContains(html, 'aria-invalid="true"')
+  })
 })
