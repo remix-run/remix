@@ -36,40 +36,40 @@ Each feature is its own module, imported from `remix/*`. Use them together or ad
 
 Route standard Web Requests through typed middleware and controllers, then return standard Responses for HTML, JSON, redirects, files and streams.
 
-Guides: [Routing and Controllers](/routing-and-controllers/) and [Request Handling](/request-handling/). API: [`router`](/router/), [`routes`](/routes/) and [`middleware`](/middleware/).
+Guides: [Routing and Controllers](/routing-and-controllers/) and [Request Handling](/request-handling/). API: [`router`](/api/router/), [`routes`](/api/routes/) and [`middleware`](/api/middleware/).
 
 ### Data
 
 Connect to SQLite, PostgreSQL or MySQL. Define schemas, run migrations, compose queries and validate input with one type-safe set of tools.
 
-Guides: [Data and Validation](/data-and-validation/) and [Forms and Mutations](/forms-and-mutations/). API: [`data-table`](/data-table/) and [`data-schema`](/data-schema/).
+Guides: [Data and Validation](/data-and-validation/) and [Forms and Mutations](/forms-and-mutations/). API: [`data-table`](/api/data-table/) and [`data-schema`](/api/data-schema/).
 
 ### Auth and sessions
 
 Authenticate users with credentials or external providers, resolve each request to a typed identity, protect routes with middleware and keep session data on the server behind a signed cookie.
 
-Guides: [Auth, Sessions, and Security](/auth-sessions-security/). API: [`auth`](/auth/) and [`session`](/session/).
+Guides: [Auth, Sessions, and Security](/auth-sessions-security/). API: [`auth`](/api/auth/) and [`session`](/api/session/).
 
 ### Files and assets
 
 Serve static files, accept bounded uploads and store files on disk, in memory or in S3. Compile TypeScript, JavaScript and CSS on demand and serve them as native browser modules, with hot reloading in development.
 
-Guides: [Files and Assets](/files-and-assets/). API: [`assets`](/assets/), [`file-storage`](/file-storage/) and [`form-data-parser`](/form-data-parser/).
+Guides: [Files and Assets](/files-and-assets/). API: [`assets`](/api/assets/), [`file-storage`](/api/file-storage/) and [`form-data-parser`](/api/form-data-parser/).
 
 ### Components
 
 Render JSX components on the server and hydrate the ones you mark as client entries. Update independent regions of a page with `Frame`, or run your whole UI in the browser.
 
-Guides: [Rendering UI](/rendering-ui/), [Interactivity](/interactivity/) and [Streaming UI with Frames](/streaming-ui-with-frames/). API: [`component`](/component/).
+Guides: [Rendering UI](/rendering-ui/), [Interactivity](/interactivity/) and [Streaming UI with Frames](/streaming-ui-with-frames/). API: [`component`](/api/component/).
 
 ### UI and animation
 
 Compose unstyled, accessible primitives with your own markup and CSS. `@remix-run/ui` handles focus, keyboard navigation, selection, dismissal and ARIA, and ships mixins for animating elements as they enter, exit, move and resize.
 
-Guides: [Animation](/animation/). API: [`ui`](/ui/). Remix UI is versioned separately and imported from `@remix-run/ui/*`.
+Guides: [Animation](/animation/). API: [`ui`](/api/ui/). Remix UI is versioned separately and imported from `@remix-run/ui/*`.
 
 ### Testing and tooling
 
 Run tests, assert with `node:assert`-compatible helpers and an `expect` API, and drive it all from the `remix` command.
 
-Guides: [Testing](/testing/) and [CLI and Tooling](/cli-and-tooling/). API: [`test`](/test/) and [`cli`](/cli/).
+Guides: [Testing](/testing/) and [CLI and Tooling](/cli-and-tooling/). API: [`test`](/api/test/) and [`cli`](/api/cli/).

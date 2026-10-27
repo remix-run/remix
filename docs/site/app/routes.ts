@@ -6,7 +6,7 @@ export const routes = route({
   home: '/',
   api: '/api/',
   lookup: '/api.json',
-  // Guides live at the URL root (`/start-here/`); unknown chapters fall through to the reference.
+  // Guides live at the URL root (`/start-here/`).
   guides: route({
     examples: route('examples', {
       show: get(':chapter/:example(/)'),
@@ -14,20 +14,21 @@ export const routes = route({
     markdown: get(':chapter.md'),
     chapter: get(':chapter(/)'),
   }),
-  reference: route({
+  // API reference pages live under `/api/` (`/api/router/`), next to the `/api/` index.
+  reference: route('api', {
     document: '*slug/',
     markdown: '*slug.md',
   }),
 })
 
-// Docs files live under their import path (`remix/router/...`, `remix-run/ui/...`), but URLs drop
-// the scope: `/router/...`, `/ui/...`. The bare `remix` package stays at `/remix/`.
+// Docs files live under their import path (`remix/router/...`, `remix-run/ui/...`), but URL slugs
+// drop the scope: `router/...`, `ui/...`. The bare `remix` package stays at `remix`.
 export function getDocsUrlPath(docsPath: string): string {
   return docsPath.replace(/^@?remix(?:-run)?\/(?=.)/, '')
 }
 
-// Matches import-path links like `/remix/router/type/Route` and `/remix-run/ui/tabs/`.
-const docsPathnamePattern = /^\/(remix(?:-run)?\/.+)$/
+// Matches import-path links like `/remix/`, `/remix/router/type/Route`, and `/remix-run/ui/tabs/`.
+const docsPathnamePattern = /^\/(remix(?:-run)?\/.*)$/
 
 export function getApiRouteHref(href: string): string | undefined {
   if (!href.startsWith('/') || href.startsWith('//')) return undefined
@@ -35,7 +36,7 @@ export function getApiRouteHref(href: string): string | undefined {
   let url = new URL(href, 'http://localhost')
   let pathname = url.pathname
   let match = docsPathnamePattern.exec(pathname)
-  if (match) pathname = `/${getDocsUrlPath(match[1])}`
+  if (match) pathname = `${routes.api.href()}${getDocsUrlPath(match[1])}`
   // Pages end in a slash; files like `.md` and `api.json` don't.
   if (!/\.\w+$/.test(pathname)) {
     pathname = pathname.replace(/\/?$/, '/')

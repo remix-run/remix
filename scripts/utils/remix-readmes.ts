@@ -82,14 +82,15 @@ export function rewriteLinksToRemixReadmes(
   let readmePaths = getReadmePathsByUrlPath(mappings)
 
   return rewriteMarkdownLinkDestinations(markdown, (href) => {
-    // Guides link to API pages on the same docs site with root-relative paths like `/router/`.
+    // Guides link to API pages on the same docs site with root-relative paths like `/api/router/`.
     let isRootRelative = href.startsWith('/') && !href.startsWith('//')
     let url = isRootRelative ? parseUrl(href, 'https://docs.remix.run') : parseUrl(href)
     if (!url || url.protocol !== 'https:' || url.port) return
 
     let readmePath: string | undefined
     if (url.hostname === 'docs.remix.run') {
-      readmePath = readmePaths.api.get(withoutTrailingSlash(url.pathname))
+      let apiPath = url.pathname.replace(/^\/api(?=\/)/, '')
+      readmePath = readmePaths.api.get(withoutTrailingSlash(apiPath))
     } else if (url.hostname === 'github.com') {
       readmePath = readmePaths.github.get(withoutTrailingSlash(url.pathname))
     }
@@ -110,7 +111,7 @@ function getReadmePathsByUrlPath(mappings: RemixReadmeCopy[]): {
   let github = new Map<string, string>()
 
   for (let mapping of mappings) {
-    // API docs URLs drop the `remix/` scope: `remix/router` is at `/router/`.
+    // API docs URLs drop the `remix/` scope: `remix/router` is at `/api/router/`.
     api.set(`/${mapping.remixPath.replace(/^remix\//, '')}`, mapping.remixReadmePath)
 
     let sourcePath = toPosixPath(path.relative(packagesDir, mapping.sourceReadmePath))

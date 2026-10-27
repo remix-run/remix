@@ -161,7 +161,7 @@ Examples in `docs/site/app/actions/guides/chapters/` should follow the local cha
 - Link the relevant words in the sentence instead of quoting a section or chapter title. Write "the same options [`createFileResponse()` accepts](#send-stored-and-on-disk-files)," not "covered in [Send Stored and On-Disk Files](#send-stored-and-on-disk-files)." If you must name a section, write it in sentence case without capitalizing words mid-sentence.
 - Point cross-chapter links at the most specific heading anchor that covers the topic, such as `/production/#caching`, rather than the top of the chapter.
 - Cross-chapter docs links use the chapter slug without its number prefix, such as `/interactivity/#browser-entry-with-run`.
-- Link every prose reference to a `remix/*` package or subpath to its API overview. The guides and API reference share one docs site, so use a root-relative path without the `remix/` prefix, for example [`remix/middleware/form-data/future`](/middleware/form-data/future/). Don't use absolute `https://docs.remix.run/...` URLs. Link each occurrence, not just the first. Do not add links inside code blocks or headings. `pnpm run generate-remix` rewrites these links to the installed package READMEs in `packages/remix/guides/`.
+- Link every prose reference to a `remix/*` package or subpath to its API overview. The guides and API reference share one docs site, so use a root-relative path under `/api/` without the `remix/` prefix, for example [`remix/middleware/form-data/future`](/api/middleware/form-data/future/). Don't use absolute `https://docs.remix.run/...` URLs. Link each occurrence, not just the first. Do not add links inside code blocks or headings. `pnpm run generate-remix` rewrites these links to the installed package READMEs in `packages/remix/guides/`.
 - Do not add link-heavy “for more information” endings to every section.
 - Link to API overviews when the guide intentionally skips exhaustive syntax, options, or package surface area.
 
@@ -207,7 +207,7 @@ Use `pnpm exec oxfmt --write <path-to-chapter.md>` only when formatting changes 
 - Does the chapter avoid duplicating API overview material while still showing why the lower-level API is useful?
 - Are route names, params, imports, and file paths consistent across the chapter?
 - Did you preserve anchors that other docs link to?
-- Is every prose reference to a `remix/*` package linked to its API overview with a root-relative path?
+- Is every prose reference to a `remix/*` package linked to its API overview with a root-relative `/api/...` path?
 - Are links used for real next steps instead of filler endings?
 - Do links wrap relevant words in the sentence rather than quoting capitalized section or chapter titles?
 - Did Oxfmt pass for the changed Markdown?

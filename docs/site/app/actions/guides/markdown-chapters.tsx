@@ -59,7 +59,6 @@ const chaptersDir = new URL('./chapters/', import.meta.url)
 export async function docsChapterHandler(
   context: DocsChapterRouteContext,
   getDocsContext: DocsContextLoader,
-  fallback: (slug: string) => Response | Promise<Response> = notFound,
 ) {
   let [chapter, docsContext] = await Promise.all([
     loadDocsChapter(context.params.chapter),
@@ -67,7 +66,7 @@ export async function docsChapterHandler(
   ])
 
   if (!chapter) {
-    return fallback(context.params.chapter)
+    return notFound()
   }
 
   return context.render(<MarkdownChapterPage {...chapter} registry={docsContext.registry} />)
@@ -77,15 +76,12 @@ function notFound() {
   return new Response('Not Found', { status: 404 })
 }
 
-export async function docsChapterMarkdownHandler(
-  context: DocsChapterRouteContext,
-  fallback: (slug: string) => Response | Promise<Response> = notFound,
-) {
+export async function docsChapterMarkdownHandler(context: DocsChapterRouteContext) {
   let summaries = await loadChapterSummaries()
   let summary = summaries.find((summary) => summary.slug === context.params.chapter)
 
   if (!summary) {
-    return fallback(context.params.chapter)
+    return notFound()
   }
 
   let markdown = await readFile(summary.fileUrl, 'utf8')
