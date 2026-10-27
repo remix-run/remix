@@ -77,37 +77,47 @@ The middleware forwards request credentials and session headers to internal fram
 
 ### Content Security Policy
 
-Pass a per-response `nonce` to `context.render(node, init)` to apply it to generated import maps, module preloads, and CSS mixin styles. Use the same value in the response's Content Security Policy header.
+Install `csp()` to generate a nonce and make it available to `render()` automatically. The render response options remain standard `ResponseInit`.
 
 ```tsx
+import { csp, getCspNonce } from 'remix/middleware/csp'
 import { css, Frame } from 'remix/component'
 
-router.get('/', (context) => {
-  let nonce = crypto.getRandomValues(new Uint8Array(16)).toBase64()
-  return context.render(
+let router = createRouter({
+  middleware: [
+    csp({
+      policy({ nonce }) {
+        return {
+          scriptSrc: [`'nonce-${nonce}'`],
+          styleSrc: [`'nonce-${nonce}'`],
+        }
+      },
+    }),
+    render(),
+  ],
+})
+
+router.get('/', (context) =>
+  context.render(
     <html>
-      <head />
+      <head>
+        <script type="module" src="/app.js" nonce={getCspNonce(context)} />
+      </head>
       <body>
         <Frame src="/activity" />
       </body>
     </html>,
-    {
-      nonce,
-      headers: {
-        'Content-Security-Policy': `script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'`,
-      },
-    },
-  )
-})
+  ),
+)
 
 router.get('/activity', (context) =>
   context.render(<p mix={[css({ color: 'rebeccapurple' })]}>Recent activity</p>),
 )
 ```
 
-The middleware automatically forwards the nonce through internal frame requests and redirects, including nested blocking and non-blocking frames. The enclosing render's nonce takes precedence over a nonce supplied by a child handler. Blocking-frame styles therefore use the document's nonce before hydration. Independently requested frames use their own render options.
+`render()` applies the context nonce to generated import maps, module preloads, and CSS mixin styles. Internal frame requests and redirects inherit the document nonce before child CSP middleware and handlers run, so authored tags and blocking-frame styles use the same value. This also works for nested and non-blocking frames and for child routes without their own CSP middleware. Independent browser requests establish their own nonce.
 
-The option does not set the CSP header or add nonce attributes to authored script and style tags. Those remain part of your document. `RenderResponseInit` extends `ResponseInit` with this option and is exported from `remix/middleware/render`.
+Authored script and style tags use `getCspNonce(context)` explicitly. See [csp-middleware](https://github.com/remix-run/remix/tree/main/packages/csp-middleware) for policy configuration and response scope. Direct users of `renderToStream()` and `renderToString()` can still supply their `nonce` option.
 
 ## Custom renderers
 

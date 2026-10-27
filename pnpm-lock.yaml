@@ -1024,6 +1024,28 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  packages/csp-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
   packages/csrf-middleware:
     dependencies:
       '@remix-run/fetch-router':
@@ -1849,6 +1871,9 @@ importers:
       '@remix-run/cors-middleware':
         specifier: workspace:^
         version: link:../cors-middleware
+      '@remix-run/csp-middleware':
+        specifier: workspace:^
+        version: link:../csp-middleware
       '@remix-run/csrf-middleware':
         specifier: workspace:^
         version: link:../csrf-middleware
@@ -1988,6 +2013,9 @@ importers:
       '@remix-run/component':
         specifier: workspace:^
         version: link:../component
+      '@remix-run/csp-middleware':
+        specifier: workspace:^
+        version: link:../csp-middleware
       '@remix-run/fetch-router':
         specifier: workspace:^
         version: link:../fetch-router
@@ -1998,6 +2026,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test

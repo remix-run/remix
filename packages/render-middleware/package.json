@@ -15,7 +15,8 @@
     "README.md",
     "dist",
     "src",
-    "!src/**/*.test.ts"
+    "!src/**/*.test.ts",
+    "!src/**/*.test.e2e.ts"
   ],
   "type": "module",
   "sideEffects": false,
@@ -37,13 +38,15 @@
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@remix-run/node-fetch-server": "workspace:^"
   },
   "dependencies": {
     "@remix-run/assets": "workspace:^",
     "@remix-run/component": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/response": "workspace:^"
+    "@remix-run/response": "workspace:^",
+    "@remix-run/csp-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

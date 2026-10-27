@@ -2,6 +2,8 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createRouter, type MiddlewareContext } from '@remix-run/fetch-router'
+import { csp, getCspNonce } from '@remix-run/csp-middleware'
+import { jsx } from '@remix-run/component/jsx-runtime'
 import {
   clientEntry,
   createElement,
@@ -11,7 +13,7 @@ import {
   type RemixNode,
 } from '@remix-run/component'
 
-import { render, type RenderResponseInit } from '../index.ts'
+import { render } from '../index.ts'
 
 type IsEqual<left, right> =
   (<type>() => type extends left ? 1 : 2) extends <type>() => type extends right ? 1 : 2
@@ -21,6 +23,53 @@ type IsEqual<left, right> =
 function expectTypeEquality<_check extends true>() {}
 
 describe('render', () => {
+  it('shares the CSP nonce with authored elements through multiple frame redirects', async () => {
+    let seen: string[] = []
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            seen.push(nonce)
+            return { scriptSrc: [`'nonce-${nonce}'`], styleSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+        render(),
+      ] as const,
+    })
+    router.get('/', (context) => context.render(createElement(Frame, { src: '/first' })))
+    router.get('/first', () => Response.redirect('https://remix.run/second'))
+    router.get('/second', () => Response.redirect('https://remix.run/child'))
+    router.get('/child', (context) =>
+      context.render(
+        createElement(
+          'section',
+          {},
+          jsx('script', { nonce: getCspNonce(context), children: 'globalThis.child = true' }),
+          createElement('p', { mix: css({ color: 'red' }) }, 'Child'),
+          createElement(Frame, { src: '/grandchild' }),
+        ),
+      ),
+    )
+    router.get('/grandchild', (context) =>
+      context.render(createElement('p', { mix: css({ color: 'blue' }) }, 'Grandchild')),
+    )
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+    let nonce = seen[0]
+    assert.ok(nonce)
+    assert.equal(seen.length, 5)
+    assert.deepEqual(new Set(seen), new Set([nonce]))
+    assert.equal(
+      response.headers.get('Content-Security-Policy'),
+      `script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'`,
+    )
+    assert.ok(html.includes(`<script nonce="${nonce}">globalThis.child = true</script>`))
+    let styles = html.match(/<style\b[^>]*>/g) ?? []
+    assert.equal(styles.length, 2)
+    assert.ok(styles.every((style) => style.includes(`nonce="${nonce}"`)))
+  })
+
   it('adds a typed Remix component renderer to request context', async () => {
     let middleware = render()
     type AppContext = MiddlewareContext<[typeof middleware]>
@@ -28,7 +77,7 @@ describe('render', () => {
 
     router.get('/', (context) => {
       expectTypeEquality<
-        IsEqual<typeof context.render, (node: RemixNode, init?: RenderResponseInit) => Response>
+        IsEqual<typeof context.render, (node: RemixNode, init?: ResponseInit) => Response>
       >()
 
       return context.render(createElement('h1', {}, 'Hello'), {
@@ -45,9 +94,51 @@ describe('render', () => {
     assert.match(await response.text(), /^<!DOCTYPE html><h1>Hello<\/h1>/)
   })
 
-  it('applies the render nonce to generated styles, import maps, and preloads', async () => {
+  it('makes the inherited nonce available to children outside the CSP middleware scope', async () => {
+    let childNonce: string | undefined
+    let router = createRouter({ middleware: [render()] as const })
+    router.get('/', {
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            return { scriptSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+      ],
+      handler: (context) => context.render(createElement(Frame, { src: '/redirect' })),
+    })
+    router.get('/redirect', () => Response.redirect('https://remix.run/child'))
+    router.get('/child', (context) => {
+      childNonce = getCspNonce(context)
+      return context.render(
+        jsx('script', { nonce: childNonce, children: 'globalThis.child = true' }),
+      )
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+    assert.ok(childNonce)
+    assert.equal(
+      response.headers.get('Content-Security-Policy'),
+      `script-src 'nonce-${childNonce}'`,
+    )
+    assert.ok(html.includes(`<script nonce="${childNonce}">`))
+
+    let independent = await router.fetch('https://remix.run/child')
+    let independentHtml = await independent.text()
+    assert.equal(childNonce, undefined)
+    assert.equal(independent.headers.get('Content-Security-Policy'), null)
+    assert.doesNotMatch(independentHtml, /nonce=/)
+  })
+
+  it('applies the CSP nonce to generated styles, import maps, and preloads', async () => {
     let router = createRouter({
       middleware: [
+        csp({
+          policy({ nonce }) {
+            return { scriptSrc: [`'nonce-${nonce}'`], styleSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
         render({
           assets: {
             async getScriptEntry() {
@@ -73,37 +164,46 @@ describe('render', () => {
           createElement('body', {}, createElement(Island)),
         ),
         {
-          nonce: 'document-nonce',
           status: 201,
-          headers: {
-            'Content-Security-Policy':
-              "script-src 'nonce-document-nonce'; style-src 'nonce-document-nonce'",
-          },
+          headers: { 'X-Test': 'preserved' },
         },
       ),
     )
 
     let response = await router.fetch('https://remix.run/')
     let html = await response.text()
+    let nonce = response.headers.get('Content-Security-Policy')?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(nonce)
 
     assert.equal(response.status, 201)
     assert.equal(
       response.headers.get('Content-Security-Policy'),
-      "script-src 'nonce-document-nonce'; style-src 'nonce-document-nonce'",
+      `script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'`,
     )
-    assert.match(html, /<style data-rmx-style="[^"]+" nonce="document-nonce">/)
-    assert.match(html, /<script data-rmx-import-map type="importmap" nonce="document-nonce">/)
-    assert.match(
-      html,
-      /<link data-rmx-module-preload rel="modulepreload" href="\/assets\/island.js" nonce="document-nonce" \/>/,
+    assert.equal(response.headers.get('X-Test'), 'preserved')
+    let styles = html.match(/<style\b[^>]*>/g) ?? []
+    assert.equal(styles.length, 1)
+    assert.ok(styles.every((tag) => tag.includes(`nonce="${nonce}"`)))
+    assert.ok(html.includes(`<script data-rmx-import-map type="importmap" nonce="${nonce}">`))
+    assert.ok(
+      html.includes(
+        `<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" nonce="${nonce}" />`,
+      ),
     )
   })
 
   it('propagates the document nonce through redirects and nested blocking frames', async () => {
-    let router = createRouter({ middleware: [render()] as const })
-    router.get('/', (context) =>
-      context.render(createElement(Frame, { src: '/redirect' }), { nonce: 'document-nonce' }),
-    )
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            return { styleSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+        render(),
+      ] as const,
+    })
+    router.get('/', (context) => context.render(createElement(Frame, { src: '/redirect' })))
     router.get('/redirect', () => Response.redirect('https://remix.run/child'))
     router.get('/child', (context) =>
       context.render(
@@ -113,7 +213,6 @@ describe('render', () => {
           createElement('p', { mix: css({ color: 'red' }) }, 'Child'),
           createElement(Frame, { src: '/grandchild' }),
         ),
-        { nonce: 'child-nonce' },
       ),
     )
     router.get('/grandchild', (context) =>
@@ -123,9 +222,11 @@ describe('render', () => {
     let response = await router.fetch('https://remix.run/')
     let html = await response.text()
     let styles = html.match(/<style\b[^>]*>/g) ?? []
+    let nonce = response.headers.get('Content-Security-Policy')?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(nonce)
 
     assert.equal(styles.length, 2)
-    assert.ok(styles.every((style) => style.includes('nonce="document-nonce"')))
+    assert.ok(styles.every((style) => style.includes(`nonce="${nonce}"`)))
     assert.match(html, />Child<\/p>/)
     assert.match(html, />Grandchild<\/p>/)
     assert.doesNotMatch(html, /<template/)
@@ -135,35 +236,56 @@ describe('render', () => {
     })
     let frameHtml = await frameResponse.text()
     let frameStyles = frameHtml.match(/<style\b[^>]*>/g) ?? []
+    let frameNonce = frameResponse.headers
+      .get('Content-Security-Policy')
+      ?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(frameNonce)
+    assert.notEqual(frameNonce, nonce)
 
     assert.equal(frameStyles.length, 2)
-    assert.ok(frameStyles.every((style) => style.includes('nonce="child-nonce"')))
-    assert.doesNotMatch(frameHtml, /nonce="document-nonce"/)
+    assert.ok(frameStyles.every((style) => style.includes(`nonce="${frameNonce}"`)))
+    assert.ok(!frameHtml.includes(`nonce="${nonce}"`))
   })
 
-  it('propagates the document nonce to non-blocking frames', async () => {
-    let router = createRouter({ middleware: [render()] as const })
+  it('propagates the document nonce through redirects to non-blocking frames', async () => {
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            return { styleSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+        render(),
+      ] as const,
+    })
     router.get('/', (context) =>
       context.render(
-        createElement(Frame, { src: '/child', fallback: createElement('p', {}, 'Loading') }),
-        { nonce: 'document-nonce' },
+        createElement(Frame, { src: '/redirect', fallback: createElement('p', {}, 'Loading') }),
       ),
     )
+    router.get('/redirect', () => Response.redirect('https://remix.run/child'))
     router.get('/child', (context) =>
-      context.render(createElement('p', { mix: css({ color: 'red' }) }, 'Child'), {
-        nonce: 'child-nonce',
-      }),
+      context.render(
+        createElement(
+          'section',
+          {},
+          createElement('p', { mix: css({ color: 'red' }) }, 'Child'),
+          jsx('script', { nonce: getCspNonce(context), children: 'globalThis.child = true' }),
+        ),
+      ),
     )
 
     let response = await router.fetch('https://remix.run/')
     let html = await response.text()
+    let nonce = response.headers.get('Content-Security-Policy')?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(nonce)
 
     assert.match(html, /<p>Loading<\/p>/)
-    assert.match(
-      html,
-      /<template\b[^>]*>[\s\S]*?<style data-rmx-style="[^"]+" nonce="document-nonce">/,
-    )
-    assert.doesNotMatch(html, /nonce="child-nonce"/)
+    assert.match(html, /<template\b[^>]*>[\s\S]*?<style data-rmx-style=/)
+    let styles = html.match(/<style\b[^>]*>/g) ?? []
+    assert.equal(styles.length, 1)
+    assert.ok(styles.every((tag) => tag.includes(`nonce="${nonce}"`)))
+    assert.ok(html.includes(`<script nonce="${nonce}">globalThis.child = true</script>`))
   })
 
   it('resolves nested and targeted frames through the current router', async () => {

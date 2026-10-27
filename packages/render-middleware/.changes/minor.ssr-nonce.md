@@ -1,15 +1,3 @@
-`context.render(node, { nonce })` now applies a per-response CSP nonce to generated import maps, module preloads, and CSS mixin styles. The middleware carries that nonce through internal frame requests and redirects, including nested blocking frames, so their styles can apply before hydration (see #11926).
+`render()` now reads the CSP nonce from request context and applies it to generated import maps, module preloads, and CSS mixin styles (see #11926). Install `csp()` alongside `render()` to generate a per-request nonce and its matching policy header.
 
-```tsx
-router.get('/', (context) => {
-  let nonce = crypto.getRandomValues(new Uint8Array(16)).toBase64()
-  return context.render(<App />, {
-    nonce,
-    headers: {
-      'Content-Security-Policy': `script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'`,
-    },
-  })
-})
-```
-
-Internal frame renders use the enclosing nonce even if a child handler supplies a different value. Independently requested frames use their own render options. The exported `RenderResponseInit` type extends `ResponseInit` with `nonce`, preserving existing status and header options.
+Internal frame requests and every redirect inherit the document nonce before child middleware and handlers run. Authored tags can read the same value with `getCspNonce(context)`, including on child routes without their own CSP middleware. Independent browser requests receive fresh nonces. `context.render(node, init)` continues to accept standard `ResponseInit` options.

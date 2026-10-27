@@ -1,0 +1,7 @@
+Generate Content Security Policies and request nonces with `csp({ policy, reportOnly, reportingEndpoints, filter })` (see #11926). The required `policy` accepts static rules, a serialized policy, a `ContentSecurityPolicy` instance, or a per-request factory. A factory receives `{ nonce, context }` so the header and rendered markup can use the same nonce.
+
+Handlers can read `getCspNonce(context)` for authored script and style tags. The middleware generates fresh cryptographic nonces for independent requests, reuses inherited nonces for internal frame renders, and preserves existing CSP headers as separate policies. It adds the policy to every downstream response in its middleware scope by default without consuming the body. Supply `filter(response)` to select responses; returning `false` leaves the response unchanged while keeping the nonce available to downstream handlers.
+
+Set `{ reportOnly: true }` to send `Content-Security-Policy-Report-Only`. Enforced and report-only middleware instances can coexist and share the request nonce while preserving existing headers.
+
+Configure `reportingEndpoints: { csp: '/csp-reports' }` alongside `reportTo: ['csp']` in the policy to emit `Reporting-Endpoints`. Endpoint names map to absolute or relative URLs. Existing endpoints are preserved unless configured with the same name, and the response filter controls both headers. Applications provide the route that receives reports.
