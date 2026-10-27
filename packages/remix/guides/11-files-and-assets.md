@@ -37,7 +37,7 @@ staticFiles("./public", {
 });
 ```
 
-`filter` receives the requested path relative to the directory, so this one hides dotfiles. `cacheControl`, `etag`, and `lastModified` are the same options `createFileResponse()` accepts, covered in [Send stored and on-disk files](#send-stored-and-on-disk-files). To serve more than one directory, add another `staticFiles()` call with its own options.
+`filter` receives the requested path relative to the directory, so this one hides dotfiles. `cacheControl`, `etag`, and `lastModified` are the same options [`createFileResponse()` accepts](#send-stored-and-on-disk-files). To serve more than one directory, add another `staticFiles()` call with its own options.
 
 ## How the asset server works
 
@@ -101,7 +101,7 @@ export default createController(routes, {
 
 `assets.fetch()` resolves to `null` for anything it can't serve, including denied files and stale fingerprints, so the action supplies the `404`.
 
-The same server is passed to `render({ assets })` from [`remix/middleware/render`](../src/render-middleware/README.md) in `app/router.ts`. That's how the renderer turns hydrated components into script URLs, covered in [Load browser scripts](#load-browser-scripts).
+The same server is passed to `render({ assets })` from [`remix/middleware/render`](../src/render-middleware/README.md) in `app/router.ts`. That's how the renderer [turns hydrated components into script URLs](#how-client-entries-find-their-scripts).
 
 ## Control what the browser can reach
 
@@ -140,7 +140,7 @@ When a browser module fails to load, the asset server reports a compilation erro
 
 - `IMPORT_NOT_ALLOWED`: the import resolved to a file that no allow rule matches, or that a deny rule matches.
 - `IMPORT_OUTSIDE_MOUNTS`: the file exists but has no public URL because no mount covers it.
-- `IMPORT_NOT_SUPPORTED`: the import isn't a script, such as `import "./styles.css"`. See [Reference styles, images, and fonts](#reference-styles-images-and-fonts).
+- `IMPORT_NOT_SUPPORTED`: the import isn't a script, such as `import "./styles.css"`. Stylesheets and images are [referenced by URL](#reference-styles-images-and-fonts) instead.
 
 To see what the browser can reach, ask the asset server directly:
 
@@ -153,7 +153,7 @@ console.log(details.status, details.access?.deniedBy);
 
 `getAssetDetails()` accepts a URL or a file path and reports whether it's `reachable`, `denied`, `not-allowed`, `missing`, `unmapped`, or `unsupported`, along with the rule responsible. `getAssets()` lists every reachable file and its URL.
 
-The `remix assets` command prints the same information from the terminal. `remix assets` lists every reachable file as `URL -> file`, and `remix assets inspect <url-or-file>` explains one mapping. The CLI reads its configuration from the `assets` section of `remix.json` rather than from `app/assets.ts`. [CLI and Tooling](/cli-and-tooling/) covers moving the configuration there so the server and CLI share it.
+The `remix assets` command prints the same information from the terminal. `remix assets` lists every reachable file as `URL -> file`, and `remix assets inspect <url-or-file>` explains one mapping. The CLI reads its configuration from the `assets` section of `remix.json` rather than from `app/assets.ts`. You can [move the configuration into `remix.json`](/cli-and-tooling/) so the server and CLI share it.
 
 ## Load browser scripts
 
@@ -199,7 +199,7 @@ export function Document(handle: Handle<{ children?: RemixNode; title?: string }
 
 That's also the answer to "isn't that a lot of files?" Many small modules download in parallel over HTTP/2. A plain `node:http` server speaks HTTP/1.1, so production deployments usually get HTTP/2 from the proxy or CDN in front of the app.
 
-`<ImportMap>` from [`remix/component/server`](../src/component/server/README.md) renders the entry's import map merged with the import maps of hydrated components on the page, so the document contains one complete map. Frame responses can add mappings later. Browsers without native support for multiple import maps need [`remix/multiple-import-maps-polyfill`](../src/multiple-import-maps-polyfill/README.md), which a browser entry can load as shown in [Interactivity](/interactivity/#browser-entry-with-run).
+`<ImportMap>` from [`remix/component/server`](../src/component/server/README.md) renders the entry's import map merged with the import maps of hydrated components on the page, so the document contains one complete map. Frame responses can add mappings later. Browsers without native support for multiple import maps need [`remix/multiple-import-maps-polyfill`](../src/multiple-import-maps-polyfill/README.md), which a [browser entry can load](/interactivity/#browser-entry-with-run).
 
 ### How client entries find their scripts
 
@@ -445,7 +445,7 @@ Call `assets.close()` during shutdown, after the HTTP server closes, so a watchi
 server.close(() => assets.close().finally(() => process.exit(0)));
 ```
 
-There is no build step to run before starting the server. Each asset is compiled the first time it's requested and kept in memory. [Production](/production/#caching) covers cache policy for the rest of your responses, and compression.
+There is no build step to run before starting the server. Each asset is compiled the first time it's requested and kept in memory. The rest of your responses need their own [cache policy](/production/#caching) and [compression](/production/#compression-and-streams) settings.
 
 ## Accept file uploads
 
@@ -506,7 +506,7 @@ This handler:
 - Checks the file's first bytes instead of trusting the submitted `type` or file name extension, then stores the file with the media type it detected.
 - Stores the file under a key the server generates. The submitted name is kept only as metadata on the stored `File`.
 
-Put `formData()` on the action that accepts the upload rather than on the whole router, so other requests skip multipart parsing. [Routing and Controllers](/routing-and-controllers/) covers action middleware:
+Put `formData()` on the action that accepts the upload rather than on the whole router, using [action middleware](/routing-and-controllers/#controllers-and-actions), so other requests skip multipart parsing:
 
 ```tsx filename=app/actions/albums/edit-cover/controller.tsx
 import { formData } from "remix/middleware/form-data";
@@ -588,7 +588,7 @@ export const uploadErrors: Middleware = async (context, next) => {
 };
 ```
 
-Errors thrown by your `uploadHandler`, like `InvalidCoverError`, reach this middleware unchanged. Anything else is rethrown so the router's normal error handling applies. [Forms and Mutations](/forms-and-mutations/) covers re-rendering a form with an error message instead of returning plain text.
+Errors thrown by your `uploadHandler`, like `InvalidCoverError`, reach this middleware unchanged. Anything else is rethrown so the router's normal error handling applies. In a real form, you'll usually [re-render the form with the error](/forms-and-mutations/#return-validation-failures-with-the-form) instead of returning plain text.
 
 ### Stream large uploads
 
@@ -677,7 +677,7 @@ export default createController(routes.albums.editCover, {
 });
 ```
 
-`requireAuth()` needs `auth()` earlier in the router middleware, which [Auth, Sessions, and Security](/auth-sessions-security/) covers. When an album already has a cover, remove the previous key after saving the new one so replaced files don't accumulate.
+`requireAuth()` needs [`auth()` earlier in the router middleware](/auth-sessions-security/#request-auth-schemes). When an album already has a cover, remove the previous key after saving the new one so replaced files don't accumulate.
 
 ## Store files
 
@@ -698,9 +698,9 @@ The interface works like a `Map` of files:
 
 Choose a backend by where the app runs:
 
-- [`remix/file-storage/memory`](../src/file-storage/README.md) keeps files in the process. Use it in tests, as shown in [Testing](/testing/).
+- [`remix/file-storage/memory`](../src/file-storage/README.md) keeps files in the process. Use it to [isolate upload tests](/testing/#isolate-stateful-app-tests).
 - [`remix/file-storage/fs`](../src/file-storage/README.md) writes to a directory on one server. Give it a directory dedicated to that storage. Files from `get()` are lazy, so they stream from disk instead of loading into memory.
-- [`remix/file-storage/s3`](../src/file-storage-s3/README.md) stores files in AWS S3 or an S3-compatible service. Use it when the app runs on more than one server. [Production](/production/#process-safe-storage) covers storage shared across replicas.
+- [`remix/file-storage/s3`](../src/file-storage-s3/README.md) stores files in AWS S3 or an S3-compatible service. Use it when the app runs on more than one server, since [every replica needs the same storage](/production/#process-safe-storage).
 
 Because every backend implements the same interface, upload handlers and file routes don't change when the backend does.
 

@@ -158,6 +158,8 @@ Examples in `docs/site/app/actions/guides/chapters/` should follow the local cha
 - Before changing or removing a heading anchor, search for incoming links with `rg "#anchor-name" docs packages`.
 - Preserve old anchors when another chapter links to them, even if you simplify the heading text.
 - Same-document anchors can stay relative.
+- Link the relevant words in the sentence instead of quoting a section or chapter title. Write "the same options [`createFileResponse()` accepts](#send-stored-and-on-disk-files)," not "covered in [Send Stored and On-Disk Files](#send-stored-and-on-disk-files)." If you must name a section, write it in sentence case without capitalizing words mid-sentence.
+- Point cross-chapter links at the most specific heading anchor that covers the topic, such as `/production/#caching`, rather than the top of the chapter.
 - Cross-chapter docs links use the chapter slug without its number prefix, such as `/interactivity/#browser-entry-with-run`.
 - Link every prose reference to a `remix/*` package or subpath to its API overview at `https://docs.remix.run/<path-after-remix>/`, for example [`remix/middleware/form-data/future`](https://docs.remix.run/middleware/form-data/future/). Link each occurrence, not just the first. Do not add links inside code blocks or headings.
 - Do not add link-heavy “for more information” endings to every section.
@@ -207,4 +209,5 @@ Use `pnpm exec oxfmt --write <path-to-chapter.md>` only when formatting changes 
 - Did you preserve anchors that other docs link to?
 - Is every prose reference to a `remix/*` package linked to its `docs.remix.run` overview?
 - Are links used for real next steps instead of filler endings?
+- Do links wrap relevant words in the sentence rather than quoting capitalized section or chapter titles?
 - Did Oxfmt pass for the changed Markdown?
