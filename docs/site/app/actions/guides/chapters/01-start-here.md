@@ -62,7 +62,7 @@ The server prints the local URL when it starts. By default, the dev server liste
 
 ![Default Remix home page](/images/app/actions/docs/chapters/01-start-here/remix-template.png)
 
-Your new app includes an Agent Skill and a home page with prompts you can copy into an agentic coding environment. Try one if you want to explore on your own. When you are ready, come back here and we'll take a tour of the files.
+Your new app includes an Agent Skill and a home page with prompts you can copy into an agentic coding environment. The `remix` package also ships its documentation: `node_modules/remix/INDEX.md` indexes these guides and every package README for the version you installed, so you and your agent read docs that match your code. Try one of the prompts if you want to explore on your own. When you are ready, come back here and we'll take a tour of the files.
 
 ## Project tour: where code lives {#project-tour}
 

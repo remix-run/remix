@@ -50,7 +50,7 @@ By default, the runner maps each runner type to a file pattern and execution mod
 
 The `server` runner type covers both unit tests and router tests. It describes the execution model, not the test boundary.
 
-All three use the same `describe(...)` and `it(...)` API from [`remix/test`](https://docs.remix.run/test/), which also provides lifecycle hooks, test context, mocks, fake timers, and runner configuration. Assertion functions and `expect(...)` matchers come from [`remix/assert`](https://docs.remix.run/assert/). Both work in every test environment:
+All three use the same `describe(...)` and `it(...)` API from [`remix/test`](https://docs.remix.run/test/), which also provides lifecycle hooks, test context, mocks, fake timers, and runner configuration. Assertion functions and `expect(...)` matchers come from [`remix/assert`](https://docs.remix.run/assert/). Both work in every test environment. Tests written for Node's built-in runner port with few changes: the `describe`, `it`, hook, and `t.mock` APIs follow the shape of `node:test`, and [`remix/assert`](https://docs.remix.run/assert/) is a compatible subset of `node:assert/strict`:
 
 ```ts filename=app/actions/albums/data.test.ts
 import * as assert from "remix/assert";
@@ -317,7 +317,7 @@ Keep validation statuses, redirects, and middleware branches in router tests. On
 
 ### End to end tests for a SPA
 
-A client-only SPA has no server router for `createTestServer(...)` to wrap. Instead, pass `t.serve(...)` your own server object with a `baseUrl` and an async `close()` method. This example builds the app and serves it with Vite's preview server:
+A client-only SPA, including one that [runs the router in the browser](/streaming-ui-with-frames/#resolve-frames-without-a-server), has no server router for `createTestServer(...)` to wrap. Instead, pass `t.serve(...)` your own server object with a `baseUrl` and an async `close()` method. This example builds the app and serves it with Vite's preview server:
 
 ```ts filename=app/app.test.e2e.ts
 import { fileURLToPath } from "node:url";

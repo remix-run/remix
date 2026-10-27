@@ -98,8 +98,15 @@ export const AlbumEditForm = clientEntry(
 );
 ```
 
-On the server, this still renders like an ordinary component. In the browser, Remix loads the same
-component module and starts it with the props from the server-rendered page.
+On the server, this still renders like an ordinary component. The server wraps its output in a pair
+of HTML comments, `<!-- rmx:h:... -->` and `<!-- /rmx:h -->`, and serializes its props into the page.
+The comments mark a range of the document rather than adding a wrapper element, so the hydrated output
+can be any markup. In the browser, `run()` finds each range, loads the component's module with a
+normal `import()`, and hydrates the existing DOM in place with the serialized props.
+
+Each client entry hydrates on its own. Two client entries on the same page don't share component
+context, so pass each one the data it needs as props, or connect them through an ordinary TypeScript
+module, as shown in [keeping application logic outside components](#saving-a-client-owned-document).
 
 Client-entry props cross from the server to the browser, so they must be serializable. They may
 contain strings, numbers, booleans, `null`, `undefined`, plain objects and arrays, and JSX elements.
@@ -224,6 +231,12 @@ function Counter(handle: Handle<{ initialCount: number }>) {
 
 `count` lives in setup scope, so it survives each render without becoming part of the component's
 props.
+
+Remix doesn't own your state. It's a plain variable, and you change it directly. `handle.update()` is
+the only signal that the component should render again. If you forget it, the component visibly
+doesn't change, which is usually easy to spot. Because a component only needs state and a way to
+request a render, you can build other patterns on top, such as a store or signals that call
+`handle.update()` when they change.
 
 Call `handle.update()` from an event handler, queued task, subscription, timer, or other work that
 runs after the component commits. Calling it during setup warns and skips the extra render because
@@ -524,6 +537,15 @@ The core mixins serve different host-level jobs:
 - `attrs(...)` provides default attributes without replacing explicit element props.
 - `link(...)` adds client navigation behavior and link semantics.
 - `css(...)` applies static generated CSS.
+
+Components and mixins compose along different axes. Components compose the tree: a component
+renders other components and host elements inside it. Mixins compose behavior and styles on one host
+element. To add a tooltip, a menu trigger, and a click handler to a button, keep the button where you
+render it and add a mixin for each behavior, rather than wrapping it in a component for each one.
+
+Mixins apply in array order. A later `css(...)` overrides styles from an earlier one, and `on(...)`
+handlers for the same event run in order, so calling `event.stopImmediatePropagation()` in one
+handler stops the handlers after it.
 
 [Animation mixins](/animation/#entrance-and-exit-animations) use the same prop. Put frequently
 changing values in normal props such as `style`, `value`, `checked`, and ARIA attributes rather than
@@ -826,7 +848,10 @@ and `"true"` / `"false"` attribute values still work: `true` corresponds to `"af
 `false` to `"manual"`.
 
 The top frame follows the browser URL. If `data-rmx-target` is omitted, an intercepted navigation
-reloads the top frame from the link or form destination. If a specified target does not match a
+reloads the top frame from the link or form destination. Remix reconciles the new page into the
+current document, so a client entry that the new page renders in the same place keeps its local
+state while receiving the new server props. If a server
+render shows a section collapsed but the user expanded it in a client entry, it stays expanded. If a specified target does not match a
 mounted frame, the browser performs a document navigation. Native form navigation preserves its
 method, body, files, and submitter overrides. Back and forward traversal reloads the destination
 document instead of reconciling stale frame content.
