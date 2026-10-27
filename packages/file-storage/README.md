@@ -70,6 +70,8 @@ Both `set()` and `put()` stream content to a new versioned `.dat` file, then ato
 
 The process needs read and write access to both content and metadata files, and permission to create, rename, and remove files in the storage directory. Atomic replacements preserve existing POSIX content and metadata permission modes.
 
+Atomic replacements create new content and metadata files. They preserve POSIX permission mode bits but do not copy the previous files’ owner, group, or ACLs. Ownership and inherited permissions follow the filesystem’s rules for newly created files. If your deployment relies on custom ownership or ACLs, verify that newly created files grant access to the intended users and groups before adopting this backend.
+
 If every upload uses a fresh key, you can also preserve the previous file by updating your application's reference only after the new upload succeeds, then removing the old entry.
 
 ### Upgrading Existing Storage
