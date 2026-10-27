@@ -1,8 +1,14 @@
 import * as http from 'node:http'
+import * as process from 'node:process'
 
 import { createFetchProxy } from 'remix/fetch-proxy'
 import { createHmrReadyFetch, run } from 'remix/node-hmr'
 import { createRequestListener } from 'remix/node-fetch-server'
+
+// Force development mode here rather than with an inline `NODE_ENV=development` shell
+// variable in package.json, which cmd.exe on Windows cannot parse. Assigning it keeps an
+// inherited NODE_ENV (such as `production`) from overriding it in the app process below.
+process.env.NODE_ENV = 'development'
 
 const hmrProxyPort = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 44100
 const hmrEventPort = process.env.HMR_PORT

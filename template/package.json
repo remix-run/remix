@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch --import remix/node-tsx server.ts",
+    "dev": "node --watch --import remix/node-tsx dev.ts",
     "hmr": "node hmr.ts",
     "start": "node --import remix/node-tsx start.ts",
-    "test": "remix test",
+    "test": "node --import remix/node-tsx test.ts",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

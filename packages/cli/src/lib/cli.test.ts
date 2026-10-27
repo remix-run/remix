@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -548,6 +549,61 @@ describe('run', () => {
       // Production still opts into NODE_ENV=production, just portably.
       let startScript = await fs.readFile(path.join(appDir, 'start.ts'), 'utf8')
       assert.match(startScript, /process\.env\.NODE_ENV\s*=\s*['"]production['"]/)
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('forces each script mode even when NODE_ENV is inherited', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-node-env-'))
+    try {
+      let appDir = path.join(tmpDir, 'my-app')
+      let result = await captureOutput(() => run(['new', appDir, '--app-name', 'My App']))
+      assert.equal(result.exitCode, 0, result.stderr)
+
+      let packageJson = JSON.parse(
+        await fs.readFile(path.join(appDir, 'package.json'), 'utf8'),
+      ) as { scripts: Record<string, string> }
+
+      // Replace the app's server and the remix CLI with stubs that report the
+      // NODE_ENV they observe, then run the real generated entry scripts.
+      await fs.writeFile(
+        path.join(appDir, 'server.ts'),
+        'console.log(`NODE_ENV=${process.env.NODE_ENV}`)\n',
+      )
+      let remixDir = path.join(appDir, 'node_modules', 'remix')
+      await fs.mkdir(remixDir, { recursive: true })
+      await fs.writeFile(
+        path.join(remixDir, 'package.json'),
+        JSON.stringify({ name: 'remix', type: 'module', exports: { './cli': './cli.js' } }),
+      )
+      await fs.writeFile(
+        path.join(remixDir, 'cli.js'),
+        'export async function runRemix(argv) {\n' +
+          '  console.log(`NODE_ENV=${process.env.NODE_ENV} argv=${argv.join(" ")}`)\n' +
+          '  return 0\n' +
+          '}\n',
+      )
+
+      let env = { ...process.env, NODE_ENV: 'production' }
+      let runEntry = (entry: string) =>
+        execFileSync(process.execPath, [entry, '--flag'], { cwd: appDir, env, encoding: 'utf8' })
+
+      assert.match(packageJson.scripts.dev, /\bdev\.ts\b/)
+      assert.match(packageJson.scripts.start, /\bstart\.ts\b/)
+      assert.match(packageJson.scripts.test, /\btest\.ts\b/)
+
+      assert.match(runEntry('dev.ts'), /NODE_ENV=development/)
+      assert.match(runEntry('start.ts'), /NODE_ENV=production/)
+      assert.match(runEntry('test.ts'), /NODE_ENV=test argv=test --flag/)
+
+      // hmr.ts starts servers, so check statically that it assigns the mode
+      // before it reads process.env to build the app process environment.
+      assert.equal(packageJson.scripts.hmr, 'node hmr.ts')
+      let hmrScript = await fs.readFile(path.join(appDir, 'hmr.ts'), 'utf8')
+      let assignment = hmrScript.search(/process\.env\.NODE_ENV\s*=\s*['"]development['"]/)
+      assert.ok(assignment >= 0, 'hmr.ts must assign NODE_ENV=development')
+      assert.ok(assignment < hmrScript.indexOf('...process.env'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
