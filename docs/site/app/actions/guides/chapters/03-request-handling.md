@@ -107,7 +107,7 @@ const requestListener = createRequestListener((request, client) => {
 });
 ```
 
-If an existing Node integration needs lower-level control, [`remix/node-fetch-server`](https://docs.remix.run/node-fetch-server/) also exports `createRequest(...)` and `sendResponse(...)`. Prefer `createRequestListener(...)` until you need to work between those two operations.
+If an existing Node integration needs lower-level control, [`remix/node-fetch-server`](/node-fetch-server/) also exports `createRequest(...)` and `sendResponse(...)`. Prefer `createRequestListener(...)` until you need to work between those two operations.
 
 ## Alternate runtimes: Bun, Deno, Workers {#alternate-runtimes-bun-deno-workers}
 
@@ -246,19 +246,19 @@ The module augmentation is useful because controllers are created in separate fi
 
 When a reusable middleware chain must be stored in a variable, `createMiddleware(...)` preserves its tuple type and `MiddlewareContext<typeof middleware>` derives the resulting context. Inline middleware arrays and `RouterContext<typeof router>` are the simpler default.
 
-Request context is still an explicit per-request value, not a global. If a helper outside middleware or an action must reach it, add `asyncContext()` from [`remix/middleware/async-context`](https://docs.remix.run/middleware/async-context/) and call `getContext()` inside that helper. That middleware uses Node's async context support, so passing the needed value as a function argument remains the portable option.
+Request context is still an explicit per-request value, not a global. If a helper outside middleware or an action must reach it, add `asyncContext()` from [`remix/middleware/async-context`](/middleware/async-context/) and call `getContext()` inside that helper. That middleware uses Node's async context support, so passing the needed value as a function argument remains the portable option.
 
 ## Common middleware: form-data, render, static files, compression, logging {#common-middleware}
 
 A server-rendered app usually needs at least static-file and render middleware. Add the others when the request path needs them:
 
-| Middleware      | Import                                                                           | What it does                                                                                                                | Placement                                                                                       |
-| --------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `formData()`    | [`remix/middleware/form-data`](https://docs.remix.run/middleware/form-data/)     | Parses URL-encoded and multipart bodies once, then provides `context.formData`. Non-form requests receive empty `FormData`. | Before CSRF form-field checks or actions that read parsed form data.                            |
-| `render()`      | [`remix/middleware/render`](https://docs.remix.run/middleware/render/)           | Installs the standard Remix component `context.render(...)` function.                                                       | After middleware that may answer without rendering.                                             |
-| `staticFiles()` | [`remix/middleware/static`](https://docs.remix.run/middleware/static/)           | Serves `GET` and `HEAD` requests from a directory, with conditional and range request support.                              | Early, before request enrichment that static files do not need.                                 |
-| `compression()` | [`remix/middleware/compression`](https://docs.remix.run/middleware/compression/) | Negotiates Brotli, gzip, or deflate for suitable downstream responses.                                                      | Before every response it should wrap, including `staticFiles()` when static text is compressed. |
-| `logger()`      | [`remix/middleware/logger`](https://docs.remix.run/middleware/logger/)           | Logs the request and downstream response and provides `context.logger(...)`.                                                | Usually first so early responses and `404`s are logged.                                         |
+| Middleware      | Import                                                     | What it does                                                                                                                | Placement                                                                                       |
+| --------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `formData()`    | [`remix/middleware/form-data`](/middleware/form-data/)     | Parses URL-encoded and multipart bodies once, then provides `context.formData`. Non-form requests receive empty `FormData`. | Before CSRF form-field checks or actions that read parsed form data.                            |
+| `render()`      | [`remix/middleware/render`](/middleware/render/)           | Installs the standard Remix component `context.render(...)` function.                                                       | After middleware that may answer without rendering.                                             |
+| `staticFiles()` | [`remix/middleware/static`](/middleware/static/)           | Serves `GET` and `HEAD` requests from a directory, with conditional and range request support.                              | Early, before request enrichment that static files do not need.                                 |
+| `compression()` | [`remix/middleware/compression`](/middleware/compression/) | Negotiates Brotli, gzip, or deflate for suitable downstream responses.                                                      | Before every response it should wrap, including `staticFiles()` when static text is compressed. |
+| `logger()`      | [`remix/middleware/logger`](/middleware/logger/)           | Logs the request and downstream response and provides `context.logger(...)`.                                                | Usually first so early responses and `404`s are logged.                                         |
 
 A server-rendered app that accepts HTML forms might use all five:
 
@@ -285,9 +285,9 @@ export const router = createRouter({
 
 Global middleware is convenient when most routes use it. If only one action accepts a form or upload, put `formData()` on that action instead so other requests skip body parsing.
 
-`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by [`remix/assets`](https://docs.remix.run/assets/) lives in colocated `public/` directories under `app/` and goes through a separate [source-served asset pipeline](/files-and-assets/).
+`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by [`remix/assets`](/assets/) lives in colocated `public/` directories under `app/` and goes through a separate [source-served asset pipeline](/files-and-assets/).
 
-`render()` from [`remix/middleware/render`](https://docs.remix.run/middleware/render/) is what lets actions [render component pages](/rendering-ui/#rendering-pages-through-request-context) with `context.render(...)`, backed by the [streaming renderer](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring).
+`render()` from [`remix/middleware/render`](/middleware/render/) is what lets actions [render component pages](/rendering-ui/#rendering-pages-through-request-context) with `context.render(...)`, backed by the [streaming renderer](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring).
 
 ## Custom middleware {#custom-middleware}
 

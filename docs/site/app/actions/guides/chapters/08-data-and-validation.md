@@ -3,11 +3,11 @@ title: Data and Validation
 description: How Remix validates inputs, defines relational data, queries databases, and runs SQL migrations.
 ---
 
-Remix handles persistent data with [`remix/data-table`](https://docs.remix.run/data-table/) and untrusted input with [`remix/data-schema`](https://docs.remix.run/data-schema/). This guide covers table definitions, SQL migrations, putting the database on request context, reading rows in actions, and parsing form and query-string values. Later sections cover relations, table-level validation hooks, transactions, and PostgreSQL or MySQL. The examples use SQLite and a record store's albums and tracks.
+Remix handles persistent data with [`remix/data-table`](/data-table/) and untrusted input with [`remix/data-schema`](/data-schema/). This guide covers table definitions, SQL migrations, putting the database on request context, reading rows in actions, and parsing form and query-string values. Later sections cover relations, table-level validation hooks, transactions, and PostgreSQL or MySQL. The examples use SQLite and a record store's albums and tracks.
 
 ## Describe the stored rows
 
-`table()` from [`remix/data-table`](https://docs.remix.run/data-table/) describes a table's name and columns. Remix uses that metadata for typed queries, column references, and encoding values for the database. This module describes an albums table and a tracks table whose rows belong to an album:
+`table()` from [`remix/data-table`](/data-table/) describes a table's name and columns. Remix uses that metadata for typed queries, column references, and encoding values for the database. This module describes an albums table and a tracks table whose rows belong to an album:
 
 ```ts filename=app/data/tables.ts
 import { column as c, table } from "remix/data-table";
@@ -82,7 +82,7 @@ drop table tracks;
 drop table albums;
 ```
 
-To apply migrations, open the database with [`remix/data-table/sqlite`](https://docs.remix.run/data-table/sqlite/), load the migration files with [`remix/data-table/migrations/node`](https://docs.remix.run/data-table/migrations/node/), and pass them to `db.migrate(...)`:
+To apply migrations, open the database with [`remix/data-table/sqlite`](/data-table/sqlite/), load the migration files with [`remix/data-table/migrations/node`](/data-table/migrations/node/), and pass them to `db.migrate(...)`:
 
 ```ts filename=app/db.ts
 import { fileURLToPath } from "node:url";
@@ -108,7 +108,7 @@ In a single-process app, call `await migrateDatabase()` in `server.ts` before th
 
 The migration runner records applied migrations in a journal and checks their checksums on later runs. Add a new migration when the schema changes instead of editing an applied migration, and keep the table definitions in `app/data/tables.ts` aligned with the resulting SQL schema.
 
-`db.migrate(...)` also supports dry-run plans, bounded rollbacks, and migration targets. The [`remix/data-table`](https://docs.remix.run/data-table/) overview covers those options and CLI configuration for `remix db`.
+`db.migrate(...)` also supports dry-run plans, bounded rollbacks, and migration targets. The [`remix/data-table`](/data-table/) overview covers those options and CLI configuration for `remix db`.
 
 ## Give actions access to the database
 
@@ -212,7 +212,7 @@ A request to `/albums/thriller` now reads the seeded row from the SQLite file, s
 
 ## Define the input schema
 
-Form fields arrive as text, even when the year input has `type="number"`. A form schema built with [`remix/data-schema/form-data`](https://docs.remix.run/data-schema/form-data/) can convert the year and reject blank titles and artists. Keeping it beside the edit controller puts it next to the action that parses the form:
+Form fields arrive as text, even when the year input has `type="number"`. A form schema built with [`remix/data-schema/form-data`](/data-schema/form-data/) can convert the year and reject blank titles and artists. Keeping it beside the edit controller puts it next to the action that parses the form:
 
 ```ts filename=app/actions/albums/edit/schema.ts
 import * as s from "remix/data-schema";
@@ -241,7 +241,7 @@ export const albumForm = f.object({
 
 `f.field(...)` reads the first value for each name, rejects files, and passes missing values to the field schema as `undefined`. `f.object(...)` selects only the declared fields, so an extra `id` in the submission won't become part of the update.
 
-For parsing plain objects or individual values, using `parse()` to throw on validation failure, and other schema options, see the [`remix/data-schema`](https://docs.remix.run/data-schema/) overview.
+For parsing plain objects or individual values, using `parse()` to throw on validation failure, and other schema options, see the [`remix/data-schema`](/data-schema/) overview.
 
 To use a schema like `albumForm` in an action, [parse and save the submitted form](/forms-and-mutations/#parse-and-save-the-submitted-form), then [return validation failures with the form](/forms-and-mutations/#return-validation-failures-with-the-form) so the user can fix them.
 
@@ -251,7 +251,7 @@ These sections cover query-string and repeated-field parsing, composed queries a
 
 ### Parse query strings and repeated fields
 
-The schema helpers in [`remix/data-schema/form-data`](https://docs.remix.run/data-schema/form-data/) also accept `URLSearchParams`. For example, a catalog search can read a query, a page number, and several selected genres:
+The schema helpers in [`remix/data-schema/form-data`](/data-schema/form-data/) also accept `URLSearchParams`. For example, a catalog search can read a query, a page number, and several selected genres:
 
 ```ts filename=app/actions/albums/search-schema.ts
 import * as s from "remix/data-schema";
@@ -340,7 +340,7 @@ let result = await context.db.exec(sql`
 
 ### Enforce rules across writes
 
-A seed script or import job can write albums without parsing a browser form. If every write through [`remix/data-table`](https://docs.remix.run/data-table/) should reject a blank title, add a table-level `validate` hook:
+A seed script or import job can write albums without parsing a browser form. If every write through [`remix/data-table`](/data-table/) should reject a blank title, add a table-level `validate` hook:
 
 ```ts filename=app/data/tables.ts
 import { column as c, fail, table } from "remix/data-table";
@@ -419,7 +419,7 @@ Transactions do not undo work outside the database, such as sending email or cal
 
 The query and table APIs also work with PostgreSQL and MySQL. Replace the SQLite factory with the matching adapter and write migrations in that SQL dialect.
 
-For PostgreSQL, install `pg` with `npm i pg` and create the database with [`remix/data-table/postgres`](https://docs.remix.run/data-table/postgres/) and its connection configuration:
+For PostgreSQL, install `pg` with `npm i pg` and create the database with [`remix/data-table/postgres`](/data-table/postgres/) and its connection configuration:
 
 ```ts filename=app/db.ts
 import { createPostgresDatabase } from "remix/data-table/postgres";
@@ -431,7 +431,7 @@ export const db = createPostgresDatabase({
 
 The PostgreSQL adapter supports transaction options such as `{ isolationLevel: "serializable" }` as the second argument to `db.transaction(...)`.
 
-For MySQL, install `mysql2` with `npm i mysql2` and use [`remix/data-table/mysql`](https://docs.remix.run/data-table/mysql/):
+For MySQL, install `mysql2` with `npm i mysql2` and use [`remix/data-table/mysql`](/data-table/mysql/):
 
 ```ts filename=app/db.ts
 import { createMysqlDatabase } from "remix/data-table/mysql";

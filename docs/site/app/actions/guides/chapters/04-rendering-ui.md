@@ -5,7 +5,7 @@ description: How to build pages from Remix components, props, context, document 
 
 Remix pages are component trees. An action passes a tree to `context.render(...)`, and the render
 middleware turns it into an HTML `Response`. This guide covers components from
-[`remix/component`](https://docs.remix.run/component/), props, local state and context, the shared
+[`remix/component`](/component/), props, local state and context, the shared
 document shell, styling with `css(...)` and cascade layers, headless primitives from
 `@remix-run/ui`, and HTML responses that skip the component runtime.
 
@@ -15,7 +15,7 @@ JavaScript unless part of it handles events or uses browser APIs. Those componen
 
 ## The Remix component model {#the-remix-component-model}
 
-A Remix component, imported from [`remix/component`](https://docs.remix.run/component/), is a setup
+A Remix component, imported from [`remix/component`](/component/), is a setup
 function that returns a render function. Setup runs once when Remix creates the component. Render
 runs immediately after setup and again whenever the component updates.
 
@@ -209,7 +209,7 @@ export default createController(routes.albums, {
 ```
 
 `context.render(...)` comes from `render()` in
-[`remix/middleware/render`](https://docs.remix.run/middleware/render/). Install it once in the
+[`remix/middleware/render`](/middleware/render/). Install it once in the
 [router's middleware](/request-handling/#common-middleware), and every action can call
 `context.render(...)` without importing a renderer. It also accepts a `ResponseInit` when a rendered
 page needs a status or headers:
@@ -270,7 +270,7 @@ export function Document(handle: Handle<DocumentProps>) {
 }
 ```
 
-`<ImportMap>` from [`remix/component/server`](https://docs.remix.run/component/server/) combines
+`<ImportMap>` from [`remix/component/server`](/component/server/) combines
 the script entry's map with mappings from blocking client entries so the initial document contains
 one complete import map.
 
@@ -280,7 +280,7 @@ global stylesheets, module preloads, icons, and the browser entry script. Resolv
 once in `app/assets.ts` instead of constructing an asset URL in the component.
 
 The renderer passes this tree to `createHtmlResponse()` from
-[`remix/response/html`](https://docs.remix.run/response/html/). That helper preserves an existing doctype or
+[`remix/response/html`](/response/html/). That helper preserves an existing doctype or
 prepends `<!DOCTYPE html>`, sets `Content-Type: text/html; charset=UTF-8` unless the action supplied
 one, and returns a normal Web `Response`.
 
@@ -411,7 +411,7 @@ Raw strings are rejected on `innerHTML` and iframe `srcDoc` props so untrusted p
 ## Rendering HTML without the component runtime {#rendering-html-without-the-component-runtime}
 
 Not every HTML response needs a component tree.
-[`remix/html-template`](https://docs.remix.run/html-template/) produces escaped `SafeHtml`
+[`remix/html-template`](/html-template/) produces escaped `SafeHtml`
 values for feeds, email bodies, small fragments, and other string-oriented output:
 
 ```ts filename=app/actions/albums/feed.ts

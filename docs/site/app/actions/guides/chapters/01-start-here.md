@@ -235,7 +235,7 @@ export function AlbumPage(handle: Handle<{ id: string }>) {
 }
 ```
 
-To use this component we need to [render it through the request context](/rendering-ui/#rendering-pages-through-request-context) and return the response from our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. `context.render(...)` comes from the `render()` middleware in [`remix/middleware/render`](https://docs.remix.run/middleware/render/), which [streams the component tree as HTML](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring).
+To use this component we need to [render it through the request context](/rendering-ui/#rendering-pages-through-request-context) and return the response from our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. `context.render(...)` comes from the `render()` middleware in [`remix/middleware/render`](/middleware/render/), which [streams the component tree as HTML](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring).
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[4,9]
 import { createController } from "remix/router";
@@ -535,7 +535,7 @@ Open [http://localhost:44100/albums/thriller/edit](http://localhost:44100/albums
 
 ![Album edit page with information for Thriller by Michael Jackson](/images/app/actions/docs/chapters/01-start-here/album-edit-page.png)
 
-Before handling the `POST` request, add the `formData()` middleware from [`remix/middleware/form-data`](https://docs.remix.run/middleware/form-data/) in `app/router.ts`. It parses browser form bodies once and makes the `FormData` available to route actions.
+Before handling the `POST` request, add the `formData()` middleware from [`remix/middleware/form-data`](/middleware/form-data/) in `app/router.ts`. It parses browser form bodies once and makes the `FormData` available to route actions.
 
 ```ts filename=app/router.ts lines=[2,9]
 import { createRouter, type RouterContext } from "remix/router";
@@ -560,7 +560,7 @@ declare module "remix" {
 // ...
 ```
 
-We'll also use [`remix/data-schema/form-data`](https://docs.remix.run/data-schema/form-data/) to turn the raw `FormData` into typed values before updating the album. [`remix/data-schema`](https://docs.remix.run/data-schema/) is a built-in Remix library for validating and parsing all sorts of data, from form fields to [query strings](/data-and-validation/#parse-query-strings-and-repeated-fields).
+We'll also use [`remix/data-schema/form-data`](/data-schema/form-data/) to turn the raw `FormData` into typed values before updating the album. [`remix/data-schema`](/data-schema/) is a built-in Remix library for validating and parsing all sorts of data, from form fields to [query strings](/data-and-validation/#parse-query-strings-and-repeated-fields).
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[2-5,8,11-15,28-41]
 import { createController } from "remix/router";

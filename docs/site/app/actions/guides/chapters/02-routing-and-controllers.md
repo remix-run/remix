@@ -46,7 +46,7 @@ Path variables are one part of Remix's route pattern syntax. Patterns can also i
 // matches /docs/v2/guides/routing/route-maps.html?preview=1
 ```
 
-You do not need to memorize Remix's route pattern syntax to follow this guide. [`remix/route-pattern`](https://docs.remix.run/route-pattern/) documents the full grammar and the lower-level [`remix/route-pattern/href`](https://docs.remix.run/route-pattern/href/) and [`remix/route-pattern/match`](https://docs.remix.run/route-pattern/match/) APIs.
+You do not need to memorize Remix's route pattern syntax to follow this guide. [`remix/route-pattern`](/route-pattern/) documents the full grammar and the lower-level [`remix/route-pattern/href`](/route-pattern/href/) and [`remix/route-pattern/match`](/route-pattern/match/) APIs.
 
 In the route map above, the `edit` branch has two leaves at the same URL: `index` handles `GET` and `action` handles `POST`.
 
@@ -59,7 +59,7 @@ The difference between leaves and nested maps decides which controller handles e
 
 ## Route builders: route, get, post, put, del, form, resources {#route-builders}
 
-Route helpers from [`remix/routes`](https://docs.remix.run/routes/) replace `{ method, pattern }` objects with calls that name a route's HTTP method or conventional shape. Each helper produces the same route leaves and route maps as the object form.
+Route helpers from [`remix/routes`](/routes/) replace `{ method, pattern }` objects with calls that name a route's HTTP method or conventional shape. Each helper produces the same route leaves and route maps as the object form.
 
 ```ts filename=app/routes.ts
 import { del, get, post, route } from "remix/routes";
@@ -148,7 +148,7 @@ export const routes = route({
 // routes.albums.create -> POST   /albums
 ```
 
-These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The [`remix/router` overview](https://docs.remix.run/router/) covers the full route builder API.
+These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The [`remix/router` overview](/router/) covers the full route builder API.
 
 ## Controllers and actions
 
@@ -217,7 +217,7 @@ Router middleware runs first, then controller middleware, then action middleware
 
 ## Responses, redirects, headers, and errors
 
-Actions return Web `Response` objects. To render pages, add `render()` from [`remix/middleware/render`](https://docs.remix.run/middleware/render/) to the router. That middleware provides `context.render(...)`, which [turns a Remix component tree into an HTML response](/rendering-ui/#rendering-pages-through-request-context) with the [streaming renderer](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring). Once the middleware is installed, use it in an action:
+Actions return Web `Response` objects. To render pages, add `render()` from [`remix/middleware/render`](/middleware/render/) to the router. That middleware provides `context.render(...)`, which [turns a Remix component tree into an HTML response](/rendering-ui/#rendering-pages-through-request-context) with the [streaming renderer](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring). Once the middleware is installed, use it in an action:
 
 ```tsx filename=app/actions/albums/controller.tsx
 // inside the show action:
@@ -266,7 +266,7 @@ return Response.json(album, {
 });
 ```
 
-`context.headers` represents the request headers, not the headers sent with the response. Controllers do not have a separate response-header API because their actions return standard Web responses. Use Web [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) directly, or [`remix/headers`](https://docs.remix.run/headers/) when typed accessors for values such as `Cache-Control` and `Set-Cookie` make header handling clearer.
+`context.headers` represents the request headers, not the headers sent with the response. Controllers do not have a separate response-header API because their actions return standard Web responses. Use Web [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) directly, or [`remix/headers`](/headers/) when typed accessors for values such as `Cache-Control` and `Set-Cookie` make header handling clearer.
 
 ## Mapping controllers
 

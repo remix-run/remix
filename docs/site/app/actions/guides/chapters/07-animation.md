@@ -4,12 +4,12 @@ description: The CSS-first animation model and Remix component helpers for motio
 ---
 
 Motion in a Remix app starts in CSS. Styles from `css(...)` in
-[`remix/component`](https://docs.remix.run/component/) handle hover, focus, and other browser-owned
+[`remix/component`](/component/) handle hover, focus, and other browser-owned
 states. When motion depends on what a component renders, such as a node entering, leaving, or moving
 in a keyed list, the mixins and timing helpers in
-[`@remix-run/ui/animation`](https://docs.remix.run/ui/animation/) take over.
+[`@remix-run/ui/animation`](/ui/animation/) take over.
 
-[`@remix-run/ui`](https://docs.remix.run/ui/) is currently unstable and versioned independently. It
+[`@remix-run/ui`](/ui/) is currently unstable and versioned independently. It
 is not available through the `remix` package, so install it separately:
 
 ```sh
@@ -53,7 +53,7 @@ const cardStyle = css({
 });
 ```
 
-Use the animation helpers from [`@remix-run/ui/animation`](https://docs.remix.run/ui/animation/) when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
+Use the animation helpers from [`@remix-run/ui/animation`](/ui/animation/) when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
 
 ::frame{src="/examples/07-animation/press-state/"}
 
@@ -343,6 +343,6 @@ export function prefersReducedMotion() {
 }
 ```
 
-[`@remix-run/ui/animation`](https://docs.remix.run/ui/animation/) exports the same check as `prefersReducedMotion()`. It also returns `false` when `matchMedia` is unavailable, so it is safe to call during server rendering.
+[`@remix-run/ui/animation`](/ui/animation/) exports the same check as `prefersReducedMotion()`. It also returns `false` when `matchMedia` is unavailable, so it is safe to call during server rendering.
 
 Reduced motion does not have to mean no feedback. Prefer shorter fades, instant layout changes, or non-motion state changes when movement is not essential.

@@ -122,7 +122,7 @@ when the request fails.
 ## Render the response as a stream {#server-rendering-with-rendertostream-and-rendertostring}
 
 Frames resolve on the server through the `render()` middleware from
-[`remix/middleware/render`](https://docs.remix.run/middleware/render/). Add it to your router. It
+[`remix/middleware/render`](/middleware/render/). Add it to your router. It
 gives actions `context.render(...)`, streams their component trees, and sends frame requests back
 through the same router:
 
@@ -149,11 +149,11 @@ transport headers from its internal `GET` requests, follows redirects, and cance
 work when the outer request is canceled. It also uses the asset server to resolve hydrated client
 entries and their module preloads.
 
-Use `renderWith(...)` from [`remix/middleware/render`](https://docs.remix.run/middleware/render/)
+Use `renderWith(...)` from [`remix/middleware/render`](/middleware/render/)
 when an app needs a different renderer or response type. Normal HTML actions should use the standard
 `render()` middleware.
 
-`renderToString()` from [`remix/component/server`](https://docs.remix.run/component/server/) is the
+`renderToString()` from [`remix/component/server`](/component/server/) is the
 smaller alternative when code needs the complete HTML value before it can continue, such as an email
 preview or a small embedded fragment:
 
@@ -182,7 +182,7 @@ Pass your own `resolveFrame` function in the `run()` options when your app needs
 or response handling, such as another body encoding or a header that keeps frame requests on the same
 deployment during a rolling deploy. The default resolver is a short `fetch()` call, so a custom one
 can start from a copy of it. The
-[`remix/component`](https://docs.remix.run/component/) API overview documents the callback's
+[`remix/component`](/component/) API overview documents the callback's
 arguments and return values.
 
 Remix does not sanitize returned HTML before reconciling it into the current document, and
@@ -343,7 +343,7 @@ Start with whole-page navigation and move a region into its own frame when it ne
 
 ## Resolve frames without a server
 
-The router doesn't have to run on a server. Routes, controllers, and middleware are built on `Request` and `Response`, so the same router can run in the browser for a client-rendered app. [`remix/spa`](https://docs.remix.run/spa/) connects it to the browser runtime:
+The router doesn't have to run on a server. Routes, controllers, and middleware are built on `Request` and `Response`, so the same router can run in the browser for a client-rendered app. [`remix/spa`](/spa/) connects it to the browser runtime:
 
 ```tsx filename=app/main.tsx
 import { createRouter } from "remix/router";
@@ -364,8 +364,8 @@ await app.ready();
 
 Two pieces change compared to a server-rendered app:
 
-- `render()` from [`remix/spa`](https://docs.remix.run/spa/) replaces the render middleware. Actions still call `context.render(...)` and return a `Response`, so redirects, status codes, and middleware work as before, but the rendered component tree goes straight to the browser runtime instead of being serialized to HTML. Pass `render()` a function to wrap every route in a shared layout.
-- `run(router)` from [`remix/spa`](https://docs.remix.run/spa/) resolves the current URL and every later frame navigation by calling `router.fetch(...)` in the page. No request reaches the network unless an action makes one.
+- `render()` from [`remix/spa`](/spa/) replaces the render middleware. Actions still call `context.render(...)` and return a `Response`, so redirects, status codes, and middleware work as before, but the rendered component tree goes straight to the browser runtime instead of being serialized to HTML. Pass `render()` a function to wrap every route in a shared layout.
+- `run(router)` from [`remix/spa`](/spa/) resolves the current URL and every later frame navigation by calling `router.fetch(...)` in the page. No request reaches the network unless an action makes one.
 
 Controllers and routes can be shared unchanged between the two setups. What changes is the infrastructure around them: a browser can't open a database, so actions read from a browser-side store or call an API instead.
 

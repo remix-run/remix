@@ -9,7 +9,7 @@ A mutation in Remix starts as a native HTML form that posts to a route action. T
 
 A `form("/albums/:albumId/edit")` route pairs two actions at the same URL. The GET `index` action loads the album for editing, and the POST `action` handler parses and saves a submission. Map both with one controller, such as `router.map(routes.albums.edit, albumsEditController)`.
 
-Render a native `<form method="post">` with named inputs and a submit button. With JavaScript disabled, the browser still sends those fields to the action and displays its response. The [`formData()` middleware](/request-handling/#common-middleware) from [`remix/middleware/form-data`](https://docs.remix.run/middleware/form-data/) parses the body before the action runs and makes it available as `context.formData`.
+Render a native `<form method="post">` with named inputs and a submit button. With JavaScript disabled, the browser still sends those fields to the action and displays its response. The [`formData()` middleware](/request-handling/#common-middleware) from [`remix/middleware/form-data`](/middleware/form-data/) parses the body before the action runs and makes it available as `context.formData`.
 
 ## Load the edit form
 
@@ -107,7 +107,7 @@ The inputs use the stored album initially and preserve submitted `values` after 
 
 ## Parse and save the submitted form
 
-Describe the fields the form may submit with a form-data schema from [`remix/data-schema/form-data`](https://docs.remix.run/data-schema/form-data/). This one trims the title and artist, rejects blank values, and converts the year to a positive whole number:
+Describe the fields the form may submit with a form-data schema from [`remix/data-schema/form-data`](/data-schema/form-data/). This one trims the title and artist, rejects blank values, and converts the year to a positive whole number:
 
 ```ts filename=app/actions/albums/edit/schema.ts
 import * as s from "remix/data-schema";
@@ -197,7 +197,7 @@ Validation only checks the shape of the input. Before saving, also check that th
 
 ## Redirect after saving
 
-After parsing succeeds, `db.update(...)` saves `parsed.value` to the album selected by the route's `albumId`. If the update fails, the action logs the error on the server and returns `500` without exposing database details to the browser. The [`remix/data-table`](https://docs.remix.run/data-table/) overview covers the other read and write helpers and their error behavior.
+After parsing succeeds, `db.update(...)` saves `parsed.value` to the album selected by the route's `albumId`. If the update fails, the action logs the error on the server and returns `500` without exposing database details to the browser. The [`remix/data-table`](/data-table/) overview covers the other read and write helpers and their error behavior.
 
 After a successful save, the action returns `303 See Other` with the album page's URL. The browser follows that redirect with a GET:
 
@@ -281,7 +281,7 @@ For a PATCH edit route, set the action method with `form("/albums/:albumId/edit"
 <input type="hidden" name="_method" value="PATCH" />
 ```
 
-Install `methodOverride()` from [`remix/middleware/method-override`](https://docs.remix.run/middleware/method-override/) in the router's middleware stack, immediately after form parsing:
+Install `methodOverride()` from [`remix/middleware/method-override`](/middleware/method-override/) in the router's middleware stack, immediately after form parsing:
 
 ```ts lines=[2,10]
 // In app/router.ts:
