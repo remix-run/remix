@@ -13,11 +13,11 @@ export const LoginFields = clientEntry(
 
       return (
         <form.Context id={handle.id} schema={LoginForm} submission={submission}>
-          {({ fields }) => (
+          {({ fields, errors }) => (
             <>
-              {submission?.errors.form.length ? (
+              {errors.form.length > 0 ? (
                 <div class="alert alert-error" role="alert" mix={css({ marginBottom: '1.5rem' })}>
-                  {submission.errors.form.join(' ')}
+                  {errors.form.join(' ')}
                 </div>
               ) : null}
 
