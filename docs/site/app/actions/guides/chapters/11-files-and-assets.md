@@ -49,7 +49,13 @@ Browser code needs more than a static directory. It's written in TypeScript and 
 - **Development and production work the same way.** Watching, minification, and fingerprinting are settings. The architecture doesn't change when you deploy.
 - **It's a fetch handler.** `assets.fetch(request)` returns a `Response`, or `null` when the request isn't for a servable asset. Nothing ties it to Remix internals, so it can serve browser code for any frontend.
 
-The trade-off is that the browser downloads many small modules instead of a few large bundles. Preloads and HTTP/2 let those downloads happen in parallel, and most apps, especially new ones, never need more than that. A very large app may eventually benefit from a bundler, but treat it as an optimization you add when you measure a need for it, not as a prerequisite for starting.
+Serving modules unbundled is a deliberate choice, and it pays off in two ways.
+
+**Nothing runs between your code and the runtime.** There's no build to wait for, no bundler configuration to maintain, and no framework plugin rewriting your modules behind the scenes. Starting the server doesn't compile the whole app, because each module is compiled the first time it's requested. The browser runs one module per source file with your imports intact, so the network panel, stack traces, and source maps point at code you recognize. This follows Remix's [religiously runtime](/start-here/#what-is-remix) principle: the code you write runs in development and production without a bundling step in between.
+
+**Caching is per module.** With a bundler, each output file's hash is written into every file that imports it. Change one shared module and the hashes cascade up the tree, so returning visitors re-download most of the app. With fingerprinting enabled, the asset server keeps imports pointing at stable URLs and lets the import map supply each module's current fingerprint. Upgrading a dependency used everywhere, such as [`remix/component`](https://docs.remix.run/component/), means returning visitors download only the files that changed inside it. Everything else, including your app code that imports it, stays cached. Fingerprinting is one of the [production settings](#production-asset-settings), where the import map behind it is shown in full.
+
+The cost is more requests: the browser downloads many small modules instead of a few large bundles. Preloads let it request the whole module graph at once, and HTTP/2 downloads those modules in parallel, so for most apps, especially new ones, this is fast enough. A very large app may eventually benefit from a bundler. Treat it as an optimization you add when you measure a need for it, not as a prerequisite for starting.
 
 ## Serve browser source with the asset server
 
