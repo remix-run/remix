@@ -15,7 +15,7 @@ Open <http://localhost:44100>. The root redirects to `/schema`.
 
 ## Examples
 
-Form schemas come from `remix/data-schema/form`; `@remix-run/ui/form` supplies Context, role mixins, and safe failed-submission parsing. Domain rules come from `remix/data-schema`. See the [form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md) for API examples, including multi-schema composition.
+Form schemas and safe failed-submission parsing come from `remix/data-schema/form`; `@remix-run/ui/form` supplies Context and role mixins. Domain rules come from `remix/data-schema`. See the [form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md) for a schema-to-markup example.
 
 | Route                                                                                                           | What it demonstrates                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |

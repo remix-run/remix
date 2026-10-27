@@ -1,3 +1,1 @@
-Added `package.json` `exports`:
-
-- `remix/data-schema/form` to re-export APIs from `@remix-run/data-schema/form`
+Validate native form submissions with the new `remix/data-schema/form` export (see #11630). Form schemas describe input kinds and expose `schema.parse()` and `schema.parseSafe()` for `FormData` or `URLSearchParams`. Safe failures include restorable values and grouped errors for rendering form feedback; ordinary `remix/data-schema` parsing keeps its existing result shape.

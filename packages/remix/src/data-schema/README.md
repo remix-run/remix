@@ -71,7 +71,7 @@ if (!result.success) {
 
 Both `parse` and `parseSafe` accept any [Standard Schema](https://standardschema.dev/) v1 schema, not just data-schema's own schemas. You can pass a Zod, Valibot, or ArkType schema and they'll work.
 
-For `FormData` and `URLSearchParams`, use the `remix/data-schema/form-data` helpers to build schemas that plug into the same `parse()` / `parseSafe()` flow:
+For native form submissions, [`remix/data-schema/form`](./form/README.md) describes input kinds and provides `schema.parse()` / `schema.parseSafe()`. Safe failures include restorable values and grouped errors for UI rendering. For explicit extraction without form kinds or restoration, the lower-level `remix/data-schema/form-data` helpers plug into the ordinary `parse()` / `parseSafe()` flow:
 
 ```ts
 import * as s from 'remix/data-schema'
