@@ -1,4 +1,4 @@
-Preserve the previous file when a replacement upload fails with `createFsFileStorage` from the new `remix/file-storage/fs/future` entrypoint (see #11909). This future API is unstable and may change in any release. The stable filesystem export keeps its existing behavior and storage format.
+Atomic writes in the new `remix/file-storage/fs/future` backend preserve the previous file when a replacement upload fails (see #11909). This future API is unstable and may change in any release. The stable filesystem export keeps its existing behavior and storage format.
 
 ```ts
 import { createFsFileStorage } from 'remix/file-storage/fs/future'
