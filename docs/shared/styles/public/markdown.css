@@ -101,6 +101,35 @@
   color: var(--rmx-color-text-secondary);
 }
 
+.docs-markdown .docs-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rmx-space-md);
+  margin: var(--rmx-space-xl) 0;
+  padding: 20px 24px;
+  border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  border-radius: var(--rmx-radius-lg);
+  background: var(--rmx-surface-lvl2);
+}
+
+.docs-markdown .docs-notice-icon {
+  flex-shrink: 0;
+  margin-top: 4px;
+  color: var(--rmx-color-accent);
+}
+
+.docs-markdown .docs-notice:is([data-kind='warning'], [data-kind='caution']) .docs-notice-icon {
+  color: var(--rmx-color-warning);
+}
+
+.docs-markdown .docs-notice-body {
+  min-width: 0;
+}
+
+.docs-markdown .docs-notice-body > :last-child {
+  margin-bottom: 0;
+}
+
 .docs-markdown hr {
   margin: var(--rmx-space-xl) 0;
   border: 0;

@@ -44,6 +44,27 @@ describe('renderMarkdownHtml', () => {
     assert.match(html, /^<div class="docs-table-scroll"><table>.*<\/table><\/div>$/s)
   })
 
+  it('renders GitHub-style alerts as notices', async () => {
+    let { root } = parseMarkdownDocument('> [!TIP]\n> **Heads up**\n>\n> Details.\n')
+
+    let html = await renderMarkdownHtml(root)
+
+    assert.match(html, /^<aside class="docs-notice" data-kind="tip" aria-label="Tip"><svg /)
+    assert.match(
+      html,
+      /<div class="docs-notice-body">\n<p><strong>Heads up<\/strong><\/p>\n<p>Details\.<\/p>\n<\/div><\/aside>$/,
+    )
+    assert.doesNotMatch(html, /\[!TIP\]/)
+  })
+
+  it('keeps plain blockquotes', async () => {
+    let { root } = parseMarkdownDocument('> Quoted.\n')
+
+    let html = await renderMarkdownHtml(root)
+
+    assert.match(html, /^<blockquote>\n<p>Quoted\.<\/p>\n<\/blockquote>$/)
+  })
+
   it('wraps each h2 and its content in a section when enabled', async () => {
     let { root } = parseMarkdownDocument(
       '# Title\n\nIntro.\n\n## First\n\nOne.\n\n### Detail\n\nTwo.\n\n## Second\n\nThree.\n',

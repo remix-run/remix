@@ -17,6 +17,7 @@ export async function renderMarkdownHtml(
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeWrapSections, { sections: options.sections ?? false })
     .use(rehypeWrapTables)
+    .use(rehypeNotices)
     .use(rehypeLinkHeadings)
     .use(rehypeHighlightCode, options.highlightCode ?? {})
     .use(rehypeTransformLinks, { transformLink: options.transformLink })
@@ -40,6 +41,119 @@ function rehypeWrapTables() {
       }
       return SKIP
     })
+  }
+}
+
+const noticeKinds = {
+  note: 'Note',
+  tip: 'Tip',
+  important: 'Important',
+  warning: 'Warning',
+  caution: 'Caution',
+} as const
+
+type NoticeKind = keyof typeof noticeKinds
+
+const noticeMarkerPattern = /^\[!(note|tip|important|warning|caution)\][ \t]*(?:\r?\n|$)/i
+
+// Renders GitHub-style alerts (`> [!TIP]`) as notices, so the Markdown source still reads as an
+// alert on GitHub and anywhere else the raw files are viewed.
+function rehypeNotices() {
+  return function transform(tree: HastRoot): void {
+    visit(tree, 'element', (node, index, parent) => {
+      if (node.tagName !== 'blockquote' || index === undefined || parent === undefined) {
+        return
+      }
+
+      let kind = removeNoticeMarker(node)
+      if (kind === null) {
+        return
+      }
+
+      parent.children[index] = {
+        type: 'element',
+        tagName: 'aside',
+        properties: { class: 'docs-notice', dataKind: kind, ariaLabel: noticeKinds[kind] },
+        children: [
+          createNoticeIcon(),
+          {
+            type: 'element',
+            tagName: 'div',
+            properties: { class: 'docs-notice-body' },
+            children: node.children,
+          },
+        ],
+      }
+      return SKIP
+    })
+  }
+}
+
+function removeNoticeMarker(blockquote: Element): NoticeKind | null {
+  let firstParagraphIndex = blockquote.children.findIndex((child) => child.type === 'element')
+  let firstParagraph = blockquote.children[firstParagraphIndex]
+  if (firstParagraph?.type !== 'element' || firstParagraph.tagName !== 'p') {
+    return null
+  }
+
+  let firstText = firstParagraph.children[0]
+  if (firstText?.type !== 'text') {
+    return null
+  }
+
+  let match = noticeMarkerPattern.exec(firstText.value)
+  if (match === null) {
+    return null
+  }
+
+  firstText.value = firstText.value.slice(match[0].length)
+  if (firstText.value === '') {
+    firstParagraph.children.shift()
+  }
+  if (firstParagraph.children.length === 0) {
+    blockquote.children.splice(firstParagraphIndex, 1)
+  }
+
+  return match[1].toLowerCase() as NoticeKind
+}
+
+function createNoticeIcon(): Element {
+  return {
+    type: 'element',
+    tagName: 'svg',
+    properties: {
+      class: 'docs-notice-icon',
+      ariaHidden: 'true',
+      width: '18',
+      height: '18',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+    },
+    children: [
+      {
+        type: 'element',
+        tagName: 'circle',
+        properties: { cx: '12', cy: '12', r: '9', stroke: 'currentColor', strokeWidth: '1.5' },
+        children: [],
+      },
+      {
+        type: 'element',
+        tagName: 'path',
+        properties: {
+          d: 'M12 7.5v5',
+          stroke: 'currentColor',
+          strokeWidth: '1.5',
+          strokeLinecap: 'round',
+        },
+        children: [],
+      },
+      {
+        type: 'element',
+        tagName: 'circle',
+        properties: { cx: '12', cy: '16', r: '1', fill: 'currentColor' },
+        children: [],
+      },
+    ],
   }
 }
 
