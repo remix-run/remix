@@ -1,15 +1,23 @@
-Opt into failure-safe replacement with `createFsFileStorage(directory, { atomicWrites: true })`. This preserves the previous file if a replacement upload fails, such as when reusing a user's avatar key (see #11909).
+Preserve the previous file when a replacement upload fails with `createFsFileStorage` from the new `remix/file-storage/fs/future` entrypoint (see #11909). This future API is unstable and may change in any release. The stable filesystem export keeps its existing behavior and storage format.
 
 ```ts
-import { createFsFileStorage } from 'remix/file-storage/fs'
+import { createFsFileStorage } from 'remix/file-storage/fs/future'
 
-let storage = createFsFileStorage('./uploads', { atomicWrites: true })
+let storage = createFsFileStorage('./uploads')
+await storage.set(`user-${userId}-avatar`, avatar)
 ```
 
-Legacy writes remain the default. All instances can read both formats; enabling the option writes versioned content and migrates legacy entries when they are successfully replaced. Already migrated entries continue to use atomic writes even if the option is later omitted or disabled. Upgrade every process sharing a directory before enabling the option. Older releases cannot reliably read versioned entries, and disabling the option does not convert them back for rollback.
+The future backend always writes versioned content before publishing it through an atomic metadata rename. It reads legacy entries without modifying them and migrates them only on successful replacement, so no bulk migration is required. Existing POSIX content and metadata permission modes are preserved.
 
-Atomic replacements preserve the existing content and metadata permission modes instead of making restricted files more widely accessible.
+Before switching an existing directory, stop all access through the stable backend and switch every instance together:
 
-Entries with corrupt metadata can be replaced without following invalid content pointers. Existing versioned content keeps recovery writes atomic, and `remove()` can clean up partial legacy uploads even when no metadata was written.
+```diff
+-import { createFsFileStorage } from 'remix/file-storage/fs'
++import { createFsFileStorage } from 'remix/file-storage/fs/future'
+
+ let storage = createFsFileStorage('./uploads')
+```
+
+The process needs read and write access to content and metadata, and permission to create, rename, and remove files in the directory. Stable backends cannot read versioned entries, including those shipped in this release. Rollback requires restoring a backup or converting those entries back to the legacy format while all operations are stopped.
 
 Callers must still coordinate overlapping operations, including consumption of returned lazy files. Cleanup is best-effort, interrupted processes can leave unused files, and power-loss durability is not guaranteed.

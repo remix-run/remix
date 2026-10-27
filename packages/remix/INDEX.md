@@ -42,7 +42,7 @@ Exports covered by the same README are grouped together.
 | `remix/data-table/postgres` | PostgreSQL database implementation for remix/data-table | [README](src/data-table-postgres/README.md) |
 | `remix/data-table/sqlite` | SQLite database implementation for remix/data-table | [README](src/data-table-sqlite/README.md) |
 | `remix/fetch-proxy` | An HTTP proxy for the web Fetch API | [README](src/fetch-proxy/README.md) |
-| `remix/file-storage`<br>`remix/file-storage/fs`<br>`remix/file-storage/memory` | Key/value storage for JavaScript File objects | [README](src/file-storage/README.md) |
+| `remix/file-storage`<br>`remix/file-storage/fs`<br>`remix/file-storage/fs/future`<br>`remix/file-storage/memory` | Key/value storage for JavaScript File objects | [README](src/file-storage/README.md) |
 | `remix/file-storage/s3` | S3 backend for remix/file-storage | [README](src/file-storage-s3/README.md) |
 | `remix/form-data-parser`<br>`remix/form-data-parser/future` | A request.formData() wrapper with streaming file upload handling | [README](src/form-data-parser/README.md) |
 | `remix/fs` | Filesystem utilities using the Web File API | [README](src/fs/README.md) |

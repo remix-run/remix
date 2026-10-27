@@ -19,12 +19,10 @@ npm i remix
 
 ### File System
 
-The examples below enable `atomicWrites` to preserve existing content if a replacement fails. For an existing storage directory, first follow the [upgrade guidance](#upgrading-existing-storage).
-
 ```ts
 import { createFsFileStorage } from 'remix/file-storage/fs'
 
-let storage = createFsFileStorage('./user/files', { atomicWrites: true })
+let storage = createFsFileStorage('./user/files')
 
 let file = new File(['hello world'], 'hello.txt', { type: 'text/plain' })
 let key = 'hello-key'
@@ -48,44 +46,55 @@ if (fileFromStorage != null) {
 await storage.remove(key)
 ```
 
+The stable filesystem backend writes directly to the content file. A failed replacement can leave the previous content partially overwritten. Use the [future API](#future-api) when a failed replacement must preserve the previous file.
+
+## Future API
+
+**Future APIs are not stable.** The `remix/file-storage/fs/future` entrypoint may change in any release, but it is a good indication of where this package will land in its next major release. The stable `remix/file-storage/fs` entrypoint keeps its existing behavior and storage format.
+
 ### Atomic Writes
 
-When `atomicWrites` is omitted or `false`, new files and existing legacy entries are written directly to their content files. If you replace a file under the same key and the upload fails or the process is interrupted, the previous content can be lost or partially overwritten. This can happen even when only one operation is running.
-
-Enable `atomicWrites` when a failed replacement must preserve the previous file. For example, an avatar upload usually reuses a key for each user:
+The future backend always writes atomically. For example, an avatar upload usually reuses a key for each user:
 
 ```ts
-import { createFsFileStorage } from 'remix/file-storage/fs'
+import { createFsFileStorage } from 'remix/file-storage/fs/future'
 
-let avatarStorage = createFsFileStorage('./uploads/user-avatars', {
-  atomicWrites: true,
-})
+let avatarStorage = createFsFileStorage('./uploads/user-avatars')
 
 async function saveAvatar(userId: string, avatar: File) {
   await avatarStorage.set(`user-${userId}-avatar`, avatar)
 }
 ```
 
-With `atomicWrites: true`, both `set()` and `put()` stream content to a new versioned `.dat` file, then atomically replace the `.meta.json` file to point to it. Failures before publication leave the previous entry intact. This requires a filesystem that supports atomic rename within a directory; it does not guarantee persistence across power loss.
+Both `set()` and `put()` stream content to a new versioned `.dat` file, then atomically replace the `.meta.json` file to point to it. Failures before publication leave the previous entry intact. This requires a filesystem that supports atomic rename within a directory; it does not guarantee persistence across power loss.
 
-If every upload uses a fresh key, you can instead preserve the previous file by updating your application's reference only after the new upload succeeds, then removing the old entry.
+The process needs read and write access to both content and metadata files, and permission to create, rename, and remove files in the storage directory. Atomic replacements preserve existing POSIX content and metadata permission modes.
+
+If every upload uses a fresh key, you can also preserve the previous file by updating your application's reference only after the new upload succeeds, then removing the old entry.
+
+### Upgrading Existing Storage
+
+The future backend reads both legacy and versioned entries. Reading or listing an entry never migrates it. New entries use the versioned format, and legacy entries migrate when successfully replaced. No bulk migration is required.
+
+To adopt it for an existing directory:
+
+1. Stop all processes and readers accessing the directory through the stable backend.
+2. Switch every instance that accesses the directory to the future import, ensure the required permissions, then resume operations.
+
+```diff
+-import { createFsFileStorage } from 'remix/file-storage/fs'
++import { createFsFileStorage } from 'remix/file-storage/fs/future'
+
+ let storage = createFsFileStorage('./uploads')
+```
+
+Stable and future backends must not share the directory once future writes start. The stable backend cannot read versioned entries, even in this release. Switching the import back does not undo migration; rollback requires restoring a backup or converting versioned entries back to the legacy format while all operations are stopped.
 
 ### Coordinating Operations
 
 Callers are responsible for coordinating overlapping reads, writes, removals, and listings across all instances and processes sharing the directory. The returned `LazyFile` reads content on demand, so coordination must cover consuming the file or finishing/canceling its stream, not just the `get()` or `put()` call. Replacing or removing a key can delete content referenced by an earlier `LazyFile`.
 
-`atomicWrites` does not provide locking or coordinate concurrent requests. These responsibilities apply with either setting.
-
-### Upgrading Existing Storage
-
-`atomicWrites` defaults to `false`. This release reads both legacy and versioned entries with either setting. Reading or listing an entry never migrates it. New and legacy entries keep the legacy write format until you opt in; with `atomicWrites: true`, new entries use the versioned format and legacy entries migrate when successfully replaced. No bulk migration is required.
-
-Before enabling the option for a shared directory:
-
-1. Upgrade every process that accesses the directory to a release that understands both formats, leaving `atomicWrites` disabled.
-2. Once all processes are upgraded, enable `atomicWrites` consistently across them.
-
-Migrated entries continue to use atomic writes even if the option is later omitted or set to `false`. Disabling the option does not convert those entries back to the legacy format. Older releases cannot reliably read versioned entries, so rolling back to one requires restoring or converting those entries first.
+Atomic writes do not provide locking or coordinate concurrent requests.
 
 ### Cleanup
 

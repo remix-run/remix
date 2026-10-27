@@ -126,12 +126,12 @@ try {
 If you're looking for a more flexible storage solution for `FileUpload` objects, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/main/packages/file-storage) for keeping files in various storage backends.
 
 ```ts
-import { createFsFileStorage } from 'remix/file-storage/fs'
+import { createFsFileStorage } from 'remix/file-storage/fs/future'
 import type { FileUpload } from 'remix/form-data-parser'
 import { parseFormData } from 'remix/form-data-parser'
 
 // Preserve the previous avatar if a replacement upload fails.
-let fileStorage = createFsFileStorage('/uploads/user-avatars', { atomicWrites: true })
+let fileStorage = createFsFileStorage('/uploads/user-avatars')
 
 // Define how to handle incoming file uploads
 async function uploadHandler(fileUpload: FileUpload) {
@@ -148,7 +148,7 @@ async function uploadHandler(fileUpload: FileUpload) {
 }
 ```
 
-This example reuses each user's avatar key, so `atomicWrites: true` keeps their previous avatar intact if a replacement upload fails. The returned storage key becomes the field's value in the parsed `FormData`. Applications must still coordinate overlapping operations, including consuming stored files. Before enabling atomic writes on an existing shared directory, upgrade every process that accesses it; see [filesystem storage's upgrade guidance](https://github.com/remix-run/remix/tree/main/packages/file-storage#upgrading-existing-storage).
+This example reuses each user's avatar key, so the future filesystem backend keeps their previous avatar intact if a replacement upload fails. This storage API is unstable; the stable filesystem export keeps its existing behavior. The returned storage key becomes the field's value in the parsed `FormData`. Applications must still coordinate overlapping operations, including consuming stored files. Before using the future backend on an existing directory, stop access through the stable backend and switch all instances together; see [filesystem storage's upgrade guidance](https://github.com/remix-run/remix/tree/main/packages/file-storage#upgrading-existing-storage).
 
 ## Future API
 

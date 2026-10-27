@@ -7,27 +7,10 @@ import type { LazyFile } from '@remix-run/lazy-file'
 import type {
   FileStorage,
   FileLike,
-  FileKey,
   FileMetadata,
   ListOptions,
   ListResult,
 } from '../file-storage.ts'
-
-/**
- * Options for filesystem-backed file storage.
- */
-export interface FsFileStorageOptions {
-  /**
-   * Preserves the previous entry if a replacement write fails. Enable this when reusing keys for
-   * uploads whose existing content must survive an interrupted upload. Defaults to `false`.
-   *
-   * Writes use a versioned storage format that older package versions cannot read. Upgrade all
-   * processes sharing the directory before enabling this option. Migrated entries continue to use
-   * atomic writes even if the option is later omitted or disabled; reads never migrate entries.
-   * Callers must still coordinate overlapping operations. Power-loss durability is not guaranteed.
-   */
-  atomicWrites?: boolean
-}
 
 /**
  * Creates a {@link FileStorage} that is backed by a filesystem directory using `node:fs`.
@@ -35,27 +18,16 @@ export interface FsFileStorageOptions {
  * Important: No attempt is made to avoid overwriting existing files, so the directory used should
  * be a new directory solely dedicated to this storage object.
  *
- * By default, replacing a legacy entry writes directly to its content file, so a failed write can
- * damage the previous content. Set `atomicWrites: true` to preserve the previous entry on failure.
- * Callers must coordinate overlapping reads, writes, removals, and listings across all instances
- * and processes sharing the directory. This includes consuming files returned by `get()` or
- * `put()` before allowing replacement or removal.
- *
  * Note: Keys have no correlation to file names on disk, so they may be any string including
  * characters that are not valid in file names. Additionally, individual `File` names have no
  * correlation to names of files on disk, so multiple files with the same name may be stored in the
  * same storage object.
  *
  * @param directory The directory where files are stored
- * @param options Storage options (defaults to non-atomic writes for new and legacy entries)
  * @returns A new {@link FileStorage} backed by a filesystem directory
  */
-export function createFsFileStorage(
-  directory: string,
-  options: FsFileStorageOptions = {},
-): FileStorage<LazyFile> {
+export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
   let rootDir = path.resolve(directory)
-  let { atomicWrites = false } = options
 
   try {
     let stats = fs.statSync(rootDir)
@@ -84,116 +56,41 @@ export function createFsFileStorage(
     }
   }
 
-  async function putFile<result>(
+  async function putFile(
     key: string,
     file: FileLike,
-    prepareResult: (filePath: string, meta: FileMetadata) => result,
-  ): Promise<result> {
+  ): Promise<{ filePath: string; meta: FileMetadata }> {
     let { directory, filePath, metaPath } = await getPaths(key)
-    let previousDataPaths: string[]
-    let writeAtomically = atomicWrites
-    try {
-      let previous = await readMetadata(metaPath)
-      previousDataPaths = previous === null ? [] : [getDataPath(metaPath, previous.dataFile)]
-      writeAtomically ||= previous?.dataFile !== undefined
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) throw error
-      previousDataPaths = await findDataPaths(filePath)
-      // Without usable metadata, existing content versions keep recovery writes atomic.
-      writeAtomically ||= previousDataPaths.some((dataPath) => dataPath !== filePath)
-    }
 
+    // Ensure directory exists
     await fsp.mkdir(directory, { recursive: true })
 
-    if (!writeAtomically) {
-      await writeFile(filePath, file)
-      let metadata: FileMetadata = {
-        key,
-        lastModified: file.lastModified,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-      }
-      await fsp.writeFile(metaPath, JSON.stringify(metadata))
-      return prepareResult(filePath, metadata)
+    await writeFile(filePath, file)
+
+    let meta: FileMetadata = {
+      key,
+      lastModified: file.lastModified,
+      name: file.name,
+      size: file.size,
+      type: file.type,
     }
+    await fsp.writeFile(metaPath, JSON.stringify(meta))
 
-    let metaMode = await readFileMode(metaPath)
-    let dataMode: number | undefined
-    // Corrupt metadata may leave multiple versions. Retain only permissions allowed by all of them.
-    for (let previousDataPath of previousDataPaths) {
-      let mode = await readFileMode(previousDataPath)
-      if (mode !== undefined) dataMode = (dataMode ?? 0o777) & mode
-    }
-    dataMode ??= metaMode
-
-    let version = crypto.randomUUID()
-    let dataPath = filePath.replace(/\.dat$/, `.${version}.dat`)
-    let tempMetaPath = `${metaPath}.${version}.tmp`
-
-    let handle = await fsp.open(dataPath, 'wx', dataMode)
-    let tempMetadataCreated = false
-    let published = false
-
-    try {
-      let metadata: FileMetadata & { dataFile: string }
-      try {
-        // Restore the existing mode even if the process umask has changed since the last write.
-        if (dataMode !== undefined) await handle.chmod(dataMode)
-        for await (let chunk of file.stream()) {
-          await handle.writeFile(chunk)
-        }
-        // FileUpload metadata can change while its stream is consumed.
-        metadata = {
-          key,
-          lastModified: file.lastModified,
-          name: file.name,
-          size: (await handle.stat()).size,
-          type: file.type,
-          dataFile: path.basename(dataPath),
-        }
-      } finally {
-        await handle.close()
-      }
-
-      // Prepare the return value before publication so preparation errors preserve the old entry.
-      let result = prepareResult(dataPath, metadata)
-      let metaHandle = await fsp.open(tempMetaPath, 'wx', metaMode)
-      tempMetadataCreated = true
-      try {
-        if (metaMode !== undefined) await metaHandle.chmod(metaMode)
-        await metaHandle.writeFile(JSON.stringify(metadata))
-      } finally {
-        await metaHandle.close()
-      }
-
-      // Only the metadata rename publishes the replacement. Until then the old entry is intact.
-      await fsp.rename(tempMetaPath, metaPath)
-      published = true
-
-      // Cleanup must not turn a committed replacement into a reported failure.
-      for (let previousDataPath of previousDataPaths) {
-        await fsp.rm(previousDataPath, { force: true }).catch(() => {})
-      }
-      return result
-    } finally {
-      if (!published) {
-        await fsp.rm(dataPath, { force: true }).catch(() => {})
-        if (tempMetadataCreated) {
-          await fsp.rm(tempMetaPath, { force: true }).catch(() => {})
-        }
-      }
-    }
+    return { filePath, meta }
   }
 
   return {
     async get(key: string): Promise<LazyFile | null> {
-      let { metaPath } = await getPaths(key)
+      let { filePath, metaPath } = await getPaths(key)
 
       try {
         let meta = await readMetadata(metaPath)
 
-        return meta === null ? null : openLazyFile(getDataPath(metaPath, meta.dataFile), meta)
+        return openLazyFile(filePath, {
+          lastModified: meta.lastModified,
+          name: meta.name,
+          type: meta.type,
+        })
       } catch (error) {
         if (!isNoEntityError(error)) {
           throw error
@@ -215,7 +112,7 @@ export function createFsFileStorage(
     async list<opts extends ListOptions>(options?: opts): Promise<ListResult<opts>> {
       let { cursor, includeMetadata = false, limit = 32, prefix } = options ?? {}
 
-      let files: (FileKey | FileMetadata)[] = []
+      let files: any[] = []
       let foundCursor = cursor === undefined
       let nextCursor: string | undefined
       let lastHash: string | undefined
@@ -229,10 +126,7 @@ export function createFsFileStorage(
           let hash = file.name.slice(0, -10) // Remove ".meta.json"
 
           if (foundCursor) {
-            let metaPath = path.join(rootDir, subdir.name, file.name)
-            let record = await readMetadata(metaPath)
-            if (record === null) continue
-            let { dataFile, ...meta } = record
+            let meta = await readMetadata(path.join(rootDir, subdir.name, file.name))
 
             if (prefix != null && !meta.key.startsWith(prefix)) {
               continue
@@ -244,11 +138,7 @@ export function createFsFileStorage(
             }
 
             if (includeMetadata) {
-              // Older entries did not store their size in metadata.
-              files.push({
-                ...meta,
-                size: meta.size ?? (await fsp.stat(getDataPath(metaPath, dataFile))).size,
-              })
+              files.push(meta)
             } else {
               files.push({ key: meta.key })
             }
@@ -262,122 +152,42 @@ export function createFsFileStorage(
 
       return {
         cursor: nextCursor,
-        files: files as ListResult<opts>['files'],
+        files,
       }
     },
-    put(key: string, file: FileLike): Promise<LazyFile> {
-      return putFile(key, file, openLazyFile)
+    async put(key: string, file: FileLike): Promise<LazyFile> {
+      let { filePath, meta } = await putFile(key, file)
+      return openLazyFile(filePath, {
+        lastModified: meta.lastModified,
+        name: meta.name,
+        type: meta.type,
+      })
     },
     async remove(key: string): Promise<void> {
       let { directory, filePath, metaPath } = await getPaths(key)
-      let dataPaths: string[]
-      try {
-        let metadata = await readMetadata(metaPath)
-        dataPaths = [getDataPath(metaPath, metadata?.dataFile)]
-      } catch (error) {
-        if (!(error instanceof SyntaxError)) throw error
-        // Corrupt metadata cannot identify the current version. Callers serialize removal, so
-        // all content versions belonging to this key can be removed without following its pointer.
-        dataPaths = await findDataPaths(filePath)
-      }
 
-      await fsp.rm(metaPath, { force: true })
-      for (let dataPath of dataPaths) {
-        await fsp.rm(dataPath, { force: true })
-      }
       try {
-        await fsp.rmdir(directory)
+        await Promise.all([fsp.unlink(filePath), fsp.unlink(metaPath)])
+
+        // Check if directory is empty and remove it if so
+        let files = await fsp.readdir(directory)
+        if (files.length === 0) {
+          await fsp.rmdir(directory)
+        }
       } catch (error) {
-        if (
-          !isNoEntityError(error) &&
-          !hasErrorCode(error, 'ENOTEMPTY') &&
-          !hasErrorCode(error, 'EEXIST')
-        ) {
+        if (!isNoEntityError(error)) {
           throw error
         }
       }
     },
     async set(key: string, file: FileLike): Promise<void> {
-      await putFile(key, file, () => {})
+      await putFile(key, file)
     },
   }
 }
 
-interface StoredMetadata extends Omit<FileMetadata, 'size'> {
-  size?: number
-  dataFile?: string
-}
-
-function getDataPath(metaPath: string, dataFile?: string): string {
-  return dataFile === undefined
-    ? metaPath.replace(/\.meta\.json$/, '.dat')
-    : path.join(path.dirname(metaPath), dataFile)
-}
-
-function isVersionedDataFile(name: string, hash: string): boolean {
-  return /^[a-f0-9]{64}\.[a-f0-9-]{36}\.dat$/.test(name) && name.startsWith(`${hash}.`)
-}
-
-async function findDataPaths(filePath: string): Promise<string[]> {
-  let directory = path.dirname(filePath)
-  let hash = path.basename(filePath, '.dat')
-  return (await fsp.readdir(directory))
-    .filter((name) => name === `${hash}.dat` || isVersionedDataFile(name, hash))
-    .map((name) => path.join(directory, name))
-}
-
-async function readFileMode(filePath: string): Promise<number | undefined> {
-  try {
-    return (await fsp.stat(filePath)).mode & 0o777
-  } catch (error) {
-    if (isNoEntityError(error)) return undefined
-    throw error
-  }
-}
-
-async function readMetadata(metaPath: string): Promise<StoredMetadata | null> {
-  let json: string
-  try {
-    json = await fsp.readFile(metaPath, 'utf-8')
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
-  }
-  let value: unknown = JSON.parse(json)
-  if (
-    value === null ||
-    typeof value !== 'object' ||
-    !('key' in value) ||
-    typeof value.key !== 'string' ||
-    !('name' in value) ||
-    typeof value.name !== 'string' ||
-    !('type' in value) ||
-    typeof value.type !== 'string' ||
-    !('lastModified' in value) ||
-    typeof value.lastModified !== 'number'
-  ) {
-    throw new SyntaxError('Invalid stored file metadata')
-  }
-  let dataFile = 'dataFile' in value ? value.dataFile : undefined
-  if (
-    dataFile !== undefined &&
-    (typeof dataFile !== 'string' ||
-      !isVersionedDataFile(dataFile, path.basename(metaPath, '.meta.json')))
-  ) {
-    throw new SyntaxError('Invalid stored file content path')
-  }
-  let size = 'size' in value ? value.size : undefined
-  if (size !== undefined && typeof size !== 'number') {
-    throw new SyntaxError('Invalid stored file metadata')
-  }
-  return {
-    key: value.key,
-    name: value.name,
-    type: value.type,
-    size,
-    lastModified: value.lastModified,
-    dataFile,
-  }
+async function readMetadata(metaPath: string): Promise<FileMetadata> {
+  return JSON.parse(await fsp.readFile(metaPath, 'utf-8'))
 }
 
 async function computeHash(key: string, algorithm = 'SHA-256'): Promise<string> {
@@ -387,10 +197,6 @@ async function computeHash(key: string, algorithm = 'SHA-256'): Promise<string> 
     .join('')
 }
 
-function hasErrorCode(error: unknown, code: string): boolean {
-  return error instanceof Error && 'code' in error && error.code === code
-}
-
-function isNoEntityError(error: unknown): boolean {
-  return hasErrorCode(error, 'ENOENT')
+function isNoEntityError(obj: unknown): obj is NodeJS.ErrnoException & { code: 'ENOENT' } {
+  return obj instanceof Error && 'code' in obj && (obj as NodeJS.ErrnoException).code === 'ENOENT'
 }
