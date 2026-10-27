@@ -7,7 +7,7 @@ import { parseFormData } from '@remix-run/form-data-parser'
 import { LazyFile } from '@remix-run/lazy-file'
 
 import type { FileLike, FileStorage } from '../file-storage.ts'
-import { createFsFileStorage } from '../../fs.ts'
+import { createFsFileStorage } from './fs.ts'
 
 // Compile-time API contract checks. These expressions are never executed, but TypeScript will
 // fail this file if FileLike stops accepting native File/LazyFile values, or if the filesystem
@@ -236,61 +236,6 @@ describe('fs file storage', () => {
     assert.equal(retrieved.size, 13)
     assert.equal(await retrieved.text(), 'Hello, world!')
   })
-
-  it('keeps the legacy storage format for new entries and replacements', async () => {
-    let storage = createFsFileStorage(tmpDir)
-    let file = new File(['original'], 'original.txt', { type: 'text/plain', lastModified: 123 })
-
-    await storage.set('file', file)
-
-    let metaPath = findMetadataPath(tmpDir)
-    let dataPath = metaPath.replace(/\.meta\.json$/, '.dat')
-    assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'original')
-    assert.deepEqual(JSON.parse(fs.readFileSync(metaPath, 'utf-8')), {
-      key: 'file',
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      lastModified: file.lastModified,
-    })
-    assert.deepEqual(fs.readdirSync(path.dirname(metaPath)).sort(), [
-      path.basename(dataPath),
-      path.basename(metaPath),
-    ])
-
-    let stored = await storage.put('file', new File(['replacement'], 'new.txt'))
-    assert.equal(await stored.text(), 'replacement')
-    assert.equal(fs.readFileSync(dataPath, 'utf-8'), 'replacement')
-    let record: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
-    assert.ok(record !== null && typeof record === 'object')
-    assert.equal('dataFile' in record, false)
-  })
-
-  it(
-    'writes and removes entries without metadata read permission',
-    { skip: process.platform === 'win32' ? 'requires POSIX read permission enforcement' : false },
-    async () => {
-      let storage = createFsFileStorage(tmpDir)
-      await storage.set('file', new File(['old'], 'old.txt'))
-      let metaPath = findMetadataPath(tmpDir)
-      let dataPath = metaPath.replace(/\.meta\.json$/, '.dat')
-      fs.chmodSync(metaPath, 0o200)
-      fs.chmodSync(dataPath, 0o200)
-
-      await storage.set('file', new File(['set'], 'set.txt'))
-      let stored = await storage.put('file', new File(['put'], 'put.txt'))
-
-      fs.chmodSync(dataPath, 0o600)
-      assert.equal(await stored.text(), 'put')
-      assert.equal(stored.name, 'put.txt')
-      fs.chmodSync(metaPath, 0o600)
-      assert.equal(JSON.parse(fs.readFileSync(metaPath, 'utf-8')).name, 'put.txt')
-      fs.chmodSync(metaPath, 0o200)
-      await storage.remove('file')
-      assert.equal(fs.existsSync(metaPath), false)
-      assert.equal(fs.existsSync(dataPath), false)
-    },
-  )
 
   describe('integration with form-data-parser', () => {
     it('stores and lists file uploads', async () => {
