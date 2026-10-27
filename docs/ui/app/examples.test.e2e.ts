@@ -532,20 +532,23 @@ describe('Live examples in the docs site', () => {
     let trigger = page.locator('#basic').getByRole('button', { name: 'Show toast', exact: true })
     await trigger.click()
     let outlets = page.locator('body > .ui-toast-demo-outlets')
-    let saved = outlets.getByRole('dialog', { name: 'Changes saved', exact: true })
-    await saved.waitFor()
+    let toastItem = outlets.getByRole('dialog', { name: 'Toast title', exact: true })
+    await toastItem.waitFor()
     assert.equal(
-      await saved
+      await toastItem
         .locator(':scope > div > div')
         .evaluate((el) => getComputedStyle(el).backgroundColor),
       'rgb(255, 255, 255)',
     )
     await trigger.press('F6')
-    assert.equal(await saved.locator('..').evaluate((el) => el === document.activeElement), true)
-    await saved.evaluate((el) =>
+    assert.equal(
+      await toastItem.locator('..').evaluate((el) => el === document.activeElement),
+      true,
+    )
+    await toastItem.evaluate((el) =>
       Promise.all(el.getAnimations().map((animation) => animation.finished)),
     )
-    let geometry = await saved.evaluate((el) => {
+    let geometry = await toastItem.evaluate((el) => {
       let rect = el.getBoundingClientRect()
       return {
         bottom: innerHeight - rect.bottom,
@@ -560,31 +563,31 @@ describe('Live examples in the docs site', () => {
     assert.ok(Math.abs(geometry.right - 16) < 1)
     assert.equal(geometry.reachable, true)
     assert.equal(geometry.inPreview, false)
-    await saved.getByRole('button', { name: 'Dismiss notification' }).press('Enter')
-    await saved.waitFor({ state: 'hidden' })
+    await toastItem.getByRole('button', { name: 'Dismiss notification' }).press('Enter')
+    await toastItem.waitFor({ state: 'hidden' })
     assert.equal(await trigger.evaluate((el) => el === document.activeElement), true)
 
     await page.setViewportSize({ width: 390, height: 720 })
     await page.emulateMedia({ colorScheme: 'dark' })
     await page.getByRole('button', { name: 'Show toast with link', exact: true }).click()
-    let notification = outlets.getByRole('dialog', { name: 'Documentation updated', exact: true })
-    await notification.waitFor()
+    let actionToastItem = outlets.getByRole('dialog', { name: 'Toast title', exact: true })
+    await actionToastItem.waitFor()
     assert.equal(
-      await notification
+      await actionToastItem
         .locator(':scope > div > div')
         .evaluate((el) => getComputedStyle(el).backgroundColor),
       'rgb(34, 34, 40)',
     )
-    let size = await notification.boundingBox()
+    let size = await actionToastItem.boundingBox()
     assert.ok(size && size.x >= 0 && size.x + size.width <= 390)
     let navigation = page.getByRole('button', { name: 'Toast', exact: true })
     await navigation.click()
     assert.equal(await navigation.getAttribute('aria-expanded'), 'true')
     await navigation.click()
-    await notification.getByRole('button', { name: 'Dismiss', exact: true }).click()
-    await notification.waitFor({ state: 'hidden' })
+    await actionToastItem.getByRole('button', { name: 'Dismiss', exact: true }).click()
+    await actionToastItem.waitFor({ state: 'hidden' })
     await page.getByRole('button', { name: 'Show toast with link', exact: true }).click()
-    await notification.getByRole('link', { name: 'Read more', exact: true }).press('Enter')
+    await actionToastItem.getByRole('link', { name: 'View docs', exact: true }).press('Enter')
     await page.waitForURL('**/animation/entrance-exit/')
     await page.getByRole('heading', { name: 'Entrance and exit', exact: true }).waitFor()
     assert.deepEqual(errors, [], errors.join('\n'))

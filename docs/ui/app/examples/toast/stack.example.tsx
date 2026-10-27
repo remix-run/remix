@@ -14,34 +14,29 @@ import type { ElementProps } from 'remix/component'
 
 const toastManager = toast.createToastManager()
 
-const messages = [
-  { id: 'saved', title: 'Changes saved', trigger: 'Show saved toast' },
-  { id: 'copied', title: 'Link copied', trigger: 'Show copied toast' },
-  { id: 'exported', title: 'Export ready', trigger: 'Show export toast' },
-]
+const toastIds = ['1', '2', '3']
 
 export default function ExampleToastStack() {
   let counts = new Map<string, number>()
   return () => (
     <div mix={[styles.root, styles.controls]}>
-      {messages.map((message) => (
+      {toastIds.map((id) => (
         <button
           type="button"
           mix={[
             styles.button,
             on('click', () => {
-              let count = (counts.get(message.id) ?? 0) + 1
-              counts.set(message.id, count)
+              let count = (counts.get(id) ?? 0) + 1
+              counts.set(id, count)
               toastManager.add({
-                id: message.id,
-                title: message.title,
+                id,
+                title: `Toast ID ${id}`,
                 description: `Published ${count} ${count === 1 ? 'time' : 'times'}.`,
-                timeout: false,
               })
             }),
           ]}
         >
-          {message.trigger}
+          Toast ID {id}
         </button>
       ))}
     </div>
@@ -60,7 +55,7 @@ export function ToastRegion() {
               <article
                 key={toastItem.id}
                 data-toast-index={index}
-                data-notification={toastItem.id}
+                data-toast-id={toastItem.id}
                 style={{ '--toast-index': index }}
                 mix={[
                   toast.item(),

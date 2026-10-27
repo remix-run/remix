@@ -27,7 +27,7 @@ export default function ExampleToastUpdates(handle: Handle) {
     () => {
       if (
         status === 'uploading' &&
-        !toastManager.toastItems.some((record) => record.id === 'upload')
+        !toastManager.toastItems.some((toastItem) => toastItem.id === 'upload')
       ) {
         status = 'idle'
         void handle.update()

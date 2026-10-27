@@ -14,12 +14,13 @@ export const meta = {
   importPath: '@remix-run/ui/toast',
 } satisfies PageMeta
 
+const timeout = await loadExample('toast/timeout', { outlet: 'ToastRegion' })
 const basic = await loadExample('toast/basic', { outlet: 'ToastRegion' })
-const undo = await loadExample('toast/undo', { outlet: 'ToastRegion' })
+const action = await loadExample('toast/action', { outlet: 'ToastRegion' })
 const updates = await loadExample('toast/updates', { outlet: 'ToastRegion' })
 const actions = await loadExample('toast/actions', { outlet: 'ToastRegion' })
 const stack = await loadExample('toast/stack', { outlet: 'ToastRegion' })
-const timed = await loadExample('toast/timed', { outlet: 'ToastRegion' })
+const countdown = await loadExample('toast/countdown', { outlet: 'ToastRegion' })
 
 const anatomy = await highlightSource(`
   import * as toast from '@remix-run/ui/toast'
@@ -62,7 +63,7 @@ const anatomy = await highlightSource(`
 `)
 
 const countdownCode = await highlightSource(`
-  // Inside the toast.Context callback, for each notification:
+  // Inside the toast.Context callback, for each toastItem:
   const bar = <div mix={[
     css({
       height: '2px',
@@ -80,7 +81,7 @@ const publishers = await highlightSource(`
   // Share this manager with your region and notification publishers.
   export const toastManager = toast.createToastManager()
 
-  toastManager.add({ title: 'Settings saved' })
+  toastManager.add({ title: 'Toast title' })
 `)
 
 const subscribe = await highlightSource(`
@@ -101,8 +102,9 @@ const typed = await highlightSource(`
   const toastManager = toast.createToastManager<Action>()
 
   toastManager.add({
-    title: 'Note archived',
-    action: { label: 'Undo', run: restoreNote },
+    id: 'example',
+    title: 'Toast title',
+    action: { label: 'Dismiss', run() { toastManager.close('example') } },
   })
 
   const element = <toast.Context manager={toastManager}>
@@ -213,11 +215,12 @@ export default function ToastPage(handle: Handle<PageProps>) {
       outlet={
         <div class="ui-toast-demo-outlets">
           {basic.Outlet && <basic.Outlet />}
-          {undo.Outlet && <undo.Outlet />}
+          {action.Outlet && <action.Outlet />}
           {actions.Outlet && <actions.Outlet />}
           {updates.Outlet && <updates.Outlet />}
           {stack.Outlet && <stack.Outlet />}
-          {timed.Outlet && <timed.Outlet />}
+          {timeout.Outlet && <timeout.Outlet />}
+          {countdown.Outlet && <countdown.Outlet />}
         </div>
       }
     >
@@ -229,7 +232,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>
-          Create a manager to publish, update and close toastManager. Mount one{' '}
+          Create a manager to publish, update and close notifications. Mount one{' '}
           <code>toast.Context</code> for that manager and render its collection, newest first. Apply{' '}
           <code>root({`{ label }`})</code> to the region and wrap each notification in
           <code>ItemContext</code>. Connect its elements with <code>item()</code>,{' '}
@@ -252,9 +255,9 @@ export default function ToastPage(handle: Handle<PageProps>) {
           can affect its visibility and availability.
         </p>
       </Section>
-      <Section id="publishing" title="Publishing from anywhere">
+      <Section id="publishing" title="Managing toasts">
         <p>
-          Share a stable manager with any component or utility that publishes toastManager. Mount
+          Share a stable manager with any component or utility that publishes notifications. Mount
           its context near the application root so notifications remain available across page
           changes. Keep server-side managers scoped to an application instance or request.
         </p>
@@ -262,18 +265,53 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <p>
           Notifications published before the region mounts are retained. Their timers start when an
           item presents them. Unmounting the region pauses those timers without discarding
-          toastManager. Remounting resumes them with their remaining time.
+          notifications. Remounting resumes them with their remaining time.
         </p>
       </Section>
-      <Section id="undo" title="Actions">
+      <Section id="auto-dismiss" title="Timeout">
+        <p>
+          Notifications dismiss after five seconds by default. Toasts with actions stay open. Set{' '}
+          <code>timeout</code> in milliseconds to choose a lifetime, or use{' '}
+          <code>timeout: false</code> to keep a toast open until explicitly closed.
+        </p>
+        <Example id="timeout" example={timeout} />
+        <p id="timers">
+          Hover, focus and touch engagement pause timers. So do a hidden document or an unfocused
+          window. Add an application pause with <code>pause(reason)</code> and remove it with{' '}
+          <code>resume(reason)</code>. Each reason is independent. Resuming one does not override
+          another.
+        </p>
+        <CodeBlock html={timing} />
+      </Section>
+      <Section id="countdown-indicators" title="Countdown indicators">
+        <p>
+          Apply <code>toast.countdown(toastItem)</code> to a decorative indicator or its wrapper. It
+          animates <code>--toast-countdown</code> from 1 to 0. The value inherits into descendants,
+          so CSS can use it for a transform, an SVG stroke or a gradient. You supply the shape,
+          dimensions, color and placement.
+        </p>
+        <Example id="countdown-example" example={countdown} />
+        <CodeBlock html={countdownCode} />
+        <p>
+          The indicator follows the toast's timer, including pauses and restarts. For a five-second
+          toast with three seconds remaining, the value starts at 0.6 and reaches zero over three
+          seconds. The manager closes the toast when its timer expires.
+        </p>
+        <p>
+          The mixin hides persistent countdowns and marks indicators <code>aria-hidden</code>. Keep
+          the wrapper's content decorative. CSS controls its appearance without the mixin setting
+          its transform.
+        </p>
+      </Section>
+      <Section id="action" title="Actions">
         <p>
           Pass a button, link or other renderable content as <code>action</code>. Actions remain
           native controls. Attach handlers with <code>on()</code> and call <code>close()</code>
           when appropriate. An action makes the toast persistent unless you supply a timeout.
         </p>
-        <Example id="undo-example" example={undo} />
+        <Example id="action-example" example={action} />
       </Section>
-      <Section id="actions" title="Typed actions and links">
+      <Section id="actions" title="Typed actions">
         <p>
           The default action type is <code>RemixNode</code>. For a design system, supply your own
           type to <code>createToastManager()</code> and render that data in the context callback.
@@ -310,39 +348,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
           timed confirmation. Failure updates it with a persistent Retry action.
         </p>
         <Example id="upload" example={updates} />
-      </Section>
-      <Section id="auto-dismiss" title="Timeout and countdown">
-        <p>
-          Notifications dismiss after five seconds by default. Toasts with actions stay open. Set{' '}
-          <code>timeout</code> in milliseconds to choose a lifetime, or use{' '}
-          <code>timeout: false</code> to keep a toast open until explicitly closed.
-        </p>
-        <Example id="timed" example={timed} />
-        <p id="timers">
-          Hover, focus and touch engagement pause timers. So do a hidden document or an unfocused
-          window. Add an application pause with <code>pause(reason)</code> and remove it with{' '}
-          <code>resume(reason)</code>. Each reason is independent. Resuming one does not override
-          another.
-        </p>
-        <CodeBlock html={timing} />
-        <h3>Countdown indicators</h3>
-        <p>
-          Apply <code>toast.countdown(toastItem)</code> to a decorative indicator or its wrapper. It
-          animates <code>--toast-countdown</code> from 1 to 0. The value inherits into descendants,
-          so CSS can use it for a transform, an SVG stroke or a gradient. You supply the shape,
-          dimensions, color and placement.
-        </p>
-        <CodeBlock html={countdownCode} />
-        <p>
-          The indicator follows the toast's timer, including pauses and restarts. For a five-second
-          toast with three seconds remaining, the value starts at 0.6 and reaches zero over three
-          seconds. The manager closes the toast when its timer expires.
-        </p>
-        <p>
-          The mixin hides persistent countdowns and marks indicators <code>aria-hidden</code>. Keep
-          the wrapper's content decorative. CSS controls its appearance without the mixin setting
-          its transform.
-        </p>
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
@@ -440,12 +445,12 @@ export default function ToastPage(handle: Handle<PageProps>) {
             change timeout.
           </ApiEntry>
         </ApiTable>
-        <h3 id="item">ToastItem&lt;action = RemixNode&gt;</h3>
+        <h3 id="toast-item">ToastItem&lt;action = RemixNode&gt;</h3>
         <p>
           Readonly title, description and action fields match the published content. Other snapshot
           fields follow.
         </p>
-        <ApiTable id="toast-item" label="Field">
+        <ApiTable id="toast-item-fields" label="Field">
           <ApiEntry name="id" type="string">
             Stable identity for commands and the host's key.
           </ApiEntry>
@@ -459,7 +464,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             True while the timer is stopped, including persistent or unpresented items.
           </ApiEntry>
           <ApiEntry name="presented" type="boolean">
-            At least one item currently presents the item.
+            At least one mounted element presents the item.
           </ApiEntry>
           <ApiEntry name="priority" type="'low' | 'high'">
             Resolved announcement urgency.
@@ -471,7 +476,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Stable application-level manager. Mount one Context per manager.
           </ApiEntry>
           <ApiEntry name="limit" type="number">
-            Maximum available toastManager. Defaults to 3. Must be a positive integer; invalid
+            Maximum available notifications. Defaults to 3. Must be a positive integer; invalid
             values throw RangeError. Overflow remains mounted and inert, and its timers keep
             running.
           </ApiEntry>
@@ -480,7 +485,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             type="(toastItems: readonly ToastItem<action>[]) => RemixNode"
             required
           >
-            Complete reactive collection. Own the region element and map every item to a keyed item.
+            Complete reactive collection. Wrap each toast item in a keyed ItemContext.
           </ApiEntry>
         </ApiTable>
         <h3 id="root">root()</h3>
@@ -494,7 +499,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </ApiTable>
         <ApiTable id="root-attributes" label="Attribute">
           <ApiEntry name="aria-live" type="'polite'">
-            Announces ordinary rendered toastManager.
+            Announces ordinary rendered notifications.
           </ApiEntry>
           <ApiEntry name="aria-atomic" type="'false'">
             Announces changes without repeating the whole collection.
@@ -520,7 +525,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <h3 id="item-context">ItemContext</h3>
         <ApiTable id="item-context-props" label="Prop">
           <ApiEntry name="value" type="string" required>
-            Toast item identity. Key the provider and animated host by the same ID.
+            Toast item ID from the manager. Key the provider and animated host by the same ID.
           </ApiEntry>
           <ApiEntry name="children" type="RemixNode">
             Consumer-owned notification markup. Nested mixins share this item's scope.
@@ -544,7 +549,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
         <ApiTable id="item-attributes" label="Attribute">
           <ApiEntry name="role" type="'dialog' | 'alertdialog'">
-            Non-modal dialog, or alertdialog for high-priority toastManager.
+            Non-modal dialog, or alertdialog for high-priority notifications.
           </ApiEntry>
           <ApiEntry name="aria-labelledby" type="string">
             ID of the registered title element.
@@ -565,7 +570,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Applied while limited or logically closed. Retained exits remain unavailable.
           </ApiEntry>
           <ApiEntry name="aria-hidden" type="'true'">
-            Applied while limited or logically closed, and to unfocused high-priority toastManager.
+            Applied while limited or logically closed, and to unfocused high-priority notifications.
           </ApiEntry>
         </ApiTable>
         <ApiTable id="item-states" label="Attribute">

@@ -4,7 +4,7 @@ import Example, { ToastRegion } from './updates.example.tsx'
 import { button, element, mount, waitFor } from '../test-helpers.ts'
 
 describe('Toast update example', () => {
-  it('updates one upload record through failure, retry and timed success', async (t) => {
+  it('updates one upload item through failure, retry and timed success', async (t) => {
     let result = await mount(
       t,
       <>

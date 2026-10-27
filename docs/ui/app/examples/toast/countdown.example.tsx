@@ -14,10 +14,10 @@ import type { ElementProps } from 'remix/component'
 
 const toastManager = toast.createToastManager()
 
-export default function ExampleTimedToast() {
+export default function ExampleToastCountdown() {
   return () => (
     <div mix={[styles.root, styles.triggers]}>
-      {(['bar', 'ring', 'dial'] as const).map((treatment) => (
+      {(['bar', 'ring'] as const).map((treatment) => (
         <button
           type="button"
           mix={[
@@ -25,14 +25,13 @@ export default function ExampleTimedToast() {
             on('click', () => {
               toastManager.add({
                 id: treatment,
-                timeout: 5000,
-                title: 'Changes saved',
-                description: 'Your preferences are up to date.',
+                title: 'Toast title',
+                description: 'This is a toast description.',
               })
             }),
           ]}
         >
-          {treatment === 'bar' ? 'Bar' : treatment === 'ring' ? 'Ring' : 'Dial'}
+          {treatment === 'bar' ? 'Bar' : 'Ring'}
         </button>
       ))}
     </div>
@@ -92,14 +91,10 @@ export function ToastRegion() {
                   <div mix={[styles.surface]}>
                     {toastItem.id !== 'bar' && (
                       <div mix={[styles.timer, styles.hideWhenCovered, toast.countdown(toastItem)]}>
-                        {toastItem.id === 'ring' ? (
-                          <svg width="28" height="28" viewBox="0 0 28 28">
-                            <circle cx="14" cy="14" r="11" mix={styles.ringTrack} />
-                            <circle cx="14" cy="14" r="11" pathLength="100" mix={styles.ring} />
-                          </svg>
-                        ) : (
-                          <div mix={styles.dial} />
-                        )}
+                        <svg width="28" height="28" viewBox="0 0 28 28">
+                          <circle cx="14" cy="14" r="11" mix={styles.ringTrack} />
+                          <circle cx="14" cy="14" r="11" pathLength="100" mix={styles.ring} />
+                        </svg>
                       </div>
                     )}
                     <div mix={[styles.message, styles.hideWhenCovered]}>
@@ -374,13 +369,6 @@ const styles = {
     strokeDashoffset: 'calc((var(--toast-countdown, 1) - 1) * 100px)',
     transform: 'rotate(-90deg)',
     transformOrigin: 'center',
-  }),
-  dial: css({
-    width: '100%',
-    height: '100%',
-    borderRadius: '50%',
-    background:
-      'conic-gradient(var(--toast-border) calc((1 - var(--toast-countdown, 1)) * 1turn), currentColor 0)',
   }),
   bar: css({
     transform: 'scaleX(var(--toast-countdown, 1))',

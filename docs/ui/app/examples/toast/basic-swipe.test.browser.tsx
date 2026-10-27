@@ -106,7 +106,7 @@ describe('Toast swipe intent', () => {
 
   it('keeps intent independent for separate toasts and ignores cancelled gestures', async (t) => {
     let { result, card } = await showToast(t)
-    await result.act(() => toastManager.add({ title: 'Preferences synced', timeout: false }))
+    await result.act(() => toastManager.add({ title: 'Another toast title', timeout: false }))
     let other = element(result.container, 'article[data-toast-index="0"]')
     await finishAnimations(other)
     pointer(card, 'pointerdown', 100, 100)
@@ -119,7 +119,7 @@ describe('Toast swipe intent', () => {
     pointer(other, 'pointermove', 180, 100)
     await result.act(() => pointer(other, 'pointerup', 180, 100))
     assert.equal(toastManager.toastItems.length, 1)
-    assert.equal(toastManager.toastItems[0].title, 'Changes saved')
+    assert.equal(toastManager.toastItems[0].title, 'Toast title')
     assert.equal(card.inert, false)
   })
 

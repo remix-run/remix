@@ -1,9 +1,9 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import Example, { ToastRegion } from './timed.example.tsx'
+import Example, { ToastRegion } from './countdown.example.tsx'
 import { button, element, mount, waitFor } from '../test-helpers.ts'
 
-describe('Timed toast example', () => {
+describe('Toast countdown example', () => {
   it('pauses the countdown with focus and dismisses after the remaining lifetime', async (t) => {
     let result = await mount(
       t,
@@ -26,7 +26,7 @@ describe('Timed toast example', () => {
     await waitFor(() => assert.equal(toastItem.isConnected, false))
   })
 
-  it('renders a bar, SVG ring and dial from the same countdown fraction', async (t) => {
+  it('renders a bar and SVG ring from the same countdown fraction', async (t) => {
     let result = await mount(
       t,
       <>
@@ -36,12 +36,11 @@ describe('Timed toast example', () => {
     )
     await result.act(() => button(result.container, 'Bar').click())
     await result.act(() => button(result.container, 'Ring').click())
-    await result.act(() => button(result.container, 'Dial').click())
     await result.act(() => element(result.container, '[data-toast] button').focus())
     let indicators = result.container.querySelectorAll<HTMLElement>(
       '[data-toast] div[aria-hidden="true"]',
     )
-    assert.equal(indicators.length, 3)
+    assert.equal(indicators.length, 2)
     for (let indicator of indicators) {
       let animation = indicator.getAnimations()[0]
       assert.equal(animation.playState, 'paused')
@@ -54,10 +53,5 @@ describe('Timed toast example', () => {
     let ring = result.container.querySelector('circle[pathLength]')
     assert.ok(ring)
     assert.equal(Number.parseFloat(getComputedStyle(ring).strokeDashoffset), -25)
-    let dial = [...indicators].find(
-      (indicator) => !indicator.querySelector('svg') && indicator !== bar,
-    )
-    assert.ok(dial?.firstElementChild)
-    assert.match(getComputedStyle(dial.firstElementChild).backgroundImage, /90deg/)
   })
 })

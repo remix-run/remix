@@ -15,7 +15,7 @@ describe('Toast action array example', () => {
     await result.act(() => button(result.container, 'Show toast with link').click())
     let toastItem = element(result.container, '[data-toast]')
     let link = element(toastItem, 'a')
-    assert.equal(link.textContent?.trim(), 'Read more')
+    assert.equal(link.textContent?.trim(), 'View docs')
     assert.equal(link.getAttribute('href'), '/animation/entrance-exit/')
     assert.equal(toastItem.hasAttribute('inert'), false)
     await result.act(() => button(toastItem, 'Dismiss').click())

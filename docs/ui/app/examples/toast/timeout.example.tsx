@@ -1,45 +1,48 @@
-import * as toast from '@remix-run/ui/toast'
 import {
-  animateEntrance,
-  animateExit,
-  animateLayout,
   prefersReducedMotion,
   drag,
   onDragStart,
   onDrag,
   onDragEnd,
+  animateLayout,
+  animateEntrance,
+  animateExit,
 } from '@remix-run/ui/animation'
+import * as toast from '@remix-run/ui/toast'
 import { css, on, createMixin } from 'remix/component'
 import type { ElementProps } from 'remix/component'
 
 const toastManager = toast.createToastManager()
 
-export default function ExampleToastUndo() {
+const timeouts = [
+  { label: '3 seconds', value: 3000 },
+  { label: '10 seconds', value: 10000 },
+  { label: 'Until dismissed', value: false },
+] as const
+
+export default function ExampleToastTimeout() {
   return () => (
-    <div mix={styles.root}>
-      <button
-        type="button"
-        mix={[
-          styles.button,
-          on('click', () => {
-            toastManager.add({
-              id: 'archive',
-              title: 'Note archived',
-              description: 'You can undo this action.',
-              action: (
-                <button
-                  type="button"
-                  mix={[styles.button, on('click', () => toastManager.close('archive'))]}
-                >
-                  Undo
-                </button>
-              ),
-            })
-          }),
-        ]}
-      >
-        Show toast with action
-      </button>
+    <div mix={styles.triggers}>
+      {timeouts.map((timeout) => (
+        <button
+          type="button"
+          mix={[
+            styles.triggerButton,
+            on('click', () => {
+              toastManager.add({
+                title: 'Toast title',
+                description:
+                  timeout.value === false
+                    ? 'This toast stays open until dismissed.'
+                    : `This toast has a timeout of ${timeout.value / 1000} seconds.`,
+                timeout: timeout.value,
+              })
+            }),
+          ]}
+        >
+          {timeout.label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -48,9 +51,7 @@ export function ToastRegion() {
   return () => (
     <toast.Context manager={toastManager}>
       {(toastItems) => (
-        <section
-          mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.root, styles.region]}
-        >
+        <section mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.region]}>
           {toastItems.map((toastItem, index) => (
             <toast.ItemContext key={toastItem.id} value={toastItem.id}>
               <article
@@ -97,13 +98,8 @@ export function ToastRegion() {
                   <div mix={[styles.surface]}>
                     <div mix={[styles.message, styles.hideWhenCovered]}>
                       <strong mix={[toast.title(), styles.title]}>{toastItem.title}</strong>
-                      <span mix={[toast.description(), styles.description]}>
-                        {toastItem.description}
-                      </span>
+                      <p mix={[toast.description(), styles.description]}>{toastItem.description}</p>
                     </div>
-                    {toastItem.action != null && (
-                      <div mix={styles.hideWhenCovered}>{toastItem.action}</div>
-                    )}
                     <button
                       type="button"
                       aria-label="Dismiss notification"
@@ -165,51 +161,24 @@ const swipeToDismiss = createMixin<HTMLElement, [id: string], ElementProps>(() =
 })
 
 const styles = {
-  hideWhenCovered: css({
-    opacity: 'clamp(0, max(var(--stack-expanded), calc(1 - var(--toast-index))), 1)',
-    visibility: 'var(--stack-content-visibility)',
-    transition: 'opacity 90ms ease-out',
-    '@media (prefers-reduced-motion: reduce)': {
-      transition: 'none',
-    },
-  }),
-  root: css({
+  triggers: css({
     colorScheme: 'light dark',
-    maxWidth: '100%',
-    color: 'light-dark(#202027, #eeeef2)',
-    font: '14px/1.5 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-    '--toast-border': 'light-dark(#dedee5, #41414a)',
-    '--toast-surface': 'light-dark(#fff, #222228)',
-    '&, & *': {
-      boxSizing: 'border-box',
-    },
+    font: '14px/1.5 ui-sans-serif, system-ui, sans-serif',
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '8px',
   }),
-  title: css({
-    display: 'block',
-    fontSize: '13px',
-  }),
-
-  description: css({
-    display: 'block',
-    margin: '4px 0 0',
-    fontSize: '12px',
-    color: 'light-dark(#62626c, #b0b0bb)',
-  }),
-  button: css({
+  triggerButton: css({
     appearance: 'none',
-    flexShrink: 0,
     font: 'inherit',
-    color: 'inherit',
-    background: 'var(--toast-surface)',
-    border: '1px solid var(--toast-border)',
+    color: 'light-dark(#202027, #eeeef2)',
+    background: 'light-dark(#fff, #222228)',
+    border: '1px solid light-dark(#dedee5, #41414a)',
     borderRadius: '6px',
     padding: '7px 12px',
     cursor: 'pointer',
-    '&:disabled': {
-      color: 'light-dark(#95959f, #6c6c78)',
-      cursor: 'not-allowed',
-    },
-    '&:hover:not(:disabled)': {
+    '&:hover': {
       background: 'light-dark(#f0f0f5, #34343d)',
     },
     '&:focus-visible': {
@@ -281,7 +250,6 @@ const styles = {
       transition: 'none',
     },
   }),
-
   collapseSlot: css({
     // Keep the surface full-sized while its grid row collapses.
     minHeight: 0,
@@ -317,9 +285,26 @@ const styles = {
       height: '13px',
     },
   }),
+  hideWhenCovered: css({
+    opacity: 'clamp(0, max(var(--stack-expanded), calc(1 - var(--toast-index))), 1)',
+    visibility: 'var(--stack-content-visibility)',
+    transition: 'opacity 90ms ease-out',
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
   message: css({
     flex: 1,
     minWidth: 0,
+  }),
+  title: css({
+    display: 'block',
+    fontSize: '13px',
+  }),
+  description: css({
+    margin: '4px 0 0',
+    fontSize: '12px',
+    color: 'light-dark(#62626c, #b0b0bb)',
   }),
   dismissButton: css({
     appearance: 'none',

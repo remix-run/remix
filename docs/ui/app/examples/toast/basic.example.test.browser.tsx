@@ -26,12 +26,12 @@ describe('Toast stack', () => {
       </>,
     )
     t.after(() => toastManager.close())
-    let rearId = toastManager.add({ title: 'Saved', timeout: false })
+    let rearId = toastManager.add({ title: 'Toast title', timeout: false })
     await result.act(() =>
       toastManager.add({
-        title: 'Preferences synced',
+        title: 'Another toast title',
         description:
-          'Your display settings and notification preferences are saved. These changes are available on your other devices the next time they connect.',
+          'This is a longer toast description. It spans several lines to show how toasts with different amounts of content stack, expand and collapse together.',
         timeout: false,
       }),
     )
@@ -69,9 +69,9 @@ describe('Toast stack', () => {
     await settle(region)
     await result.act(() =>
       toastManager.add({
-        title: 'Preferences synced',
+        title: 'Another toast title',
         description:
-          'Your display settings and notification preferences are saved. These changes are available on your other devices the next time they connect.',
+          'This is a longer toast description. It spans several lines to show how toasts with different amounts of content stack, expand and collapse together.',
         timeout: false,
       }),
     )
@@ -107,18 +107,18 @@ describe('Toast stack', () => {
     await result.act(() => button(result.container, 'Show toast').click())
     await result.act(() =>
       toastManager.add({
-        title: 'Preferences synced',
+        title: 'Another toast title',
         description:
-          'Your display settings and notification preferences are saved. These changes are available on your other devices the next time they connect.',
+          'This is a longer toast description. It spans several lines to show how toasts with different amounts of content stack, expand and collapse together.',
         timeout: false,
       }),
     )
     await result.act(() => button(result.container, 'Show toast').click())
     await result.act(() =>
       toastManager.add({
-        title: 'Preferences synced',
+        title: 'Another toast title',
         description:
-          'Your display settings and notification preferences are saved. These changes are available on your other devices the next time they connect.',
+          'This is a longer toast description. It spans several lines to show how toasts with different amounts of content stack, expand and collapse together.',
         timeout: false,
       }),
     )

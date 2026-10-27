@@ -27,16 +27,16 @@ export default function ExampleToastActions() {
           styles.button,
           on('click', () => {
             toastManager.add({
-              id: 'docs',
-              title: 'Documentation updated',
-              description: 'Explore entrance and exit animations.',
+              id: 'example',
+              title: 'Toast title',
+              description: 'This toast has a link and an action.',
               action: [
-                { kind: 'link', label: 'Read more', href: '/animation/entrance-exit/' },
+                { kind: 'link', label: 'View docs', href: '/animation/entrance-exit/' },
                 {
                   kind: 'button',
                   label: 'Dismiss',
                   run() {
-                    toastManager.close('docs')
+                    toastManager.close('example')
                   },
                 },
               ],

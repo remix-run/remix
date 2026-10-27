@@ -23,9 +23,8 @@ export default function ExampleToast() {
           styles.triggerButton,
           on('click', () => {
             toastManager.add({
-              title: 'Changes saved',
-              description: 'Your preferences are up to date.',
-              timeout: false,
+              title: 'Toast title',
+              description: 'This is a toast description.',
             })
           }),
         ]}

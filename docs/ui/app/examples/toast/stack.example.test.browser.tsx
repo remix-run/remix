@@ -16,7 +16,7 @@ async function settle(target: Element) {
 }
 
 describe('Toast stack example', () => {
-  it('deduplicates three publishers and retains a dismissed toast until its exit finishes', async (t) => {
+  it('deduplicates three toast IDs and retains a dismissed toast until its exit finishes', async (t) => {
     let result = await mount(
       t,
       <>
@@ -24,27 +24,27 @@ describe('Toast stack example', () => {
         <ToastRegion />
       </>,
     )
-    await result.act(() => button(result.container, 'Show saved toast').click())
-    await result.act(() => button(result.container, 'Show copied toast').click())
-    await result.act(() => button(result.container, 'Show export toast').click())
+    await result.act(() => button(result.container, 'Toast ID 1').click())
+    await result.act(() => button(result.container, 'Toast ID 2').click())
+    await result.act(() => button(result.container, 'Toast ID 3').click())
     await settle(result.container)
-    let saved = element(result.container, '[data-toast][data-notification="saved"]')
-    let copied = element(result.container, '[data-toast][data-notification="copied"]')
-    await result.act(() => button(result.container, 'Show copied toast').click())
+    let first = element(result.container, '[data-toast][data-toast-id="1"]')
+    let second = element(result.container, '[data-toast][data-toast-id="2"]')
+    await result.act(() => button(result.container, 'Toast ID 2').click())
     assert.equal(result.container.querySelectorAll('[data-toast]').length, 3)
-    assert.equal(element(result.container, '[data-toast][data-notification="copied"]'), copied)
-    assert.match(copied.textContent ?? '', /Published 2 times/)
+    assert.equal(element(result.container, '[data-toast][data-toast-id="2"]'), second)
+    assert.match(second.textContent ?? '', /Published 2 times/)
     await result.act(() => element(result.container, '[role="region"]').focus())
     await settle(result.container)
-    let top = saved.getBoundingClientRect().top
-    await result.act(() => button(copied, 'Dismiss notification').click())
-    assert.equal(copied.inert, true)
-    assert.equal(copied.isConnected, true)
-    assert.ok(Math.abs(saved.getBoundingClientRect().top - top) < 1)
-    await waitFor(() => assert.equal(copied.isConnected, false))
+    let top = first.getBoundingClientRect().top
+    await result.act(() => button(second, 'Dismiss notification').click())
+    assert.equal(second.inert, true)
+    assert.equal(second.isConnected, true)
+    assert.ok(Math.abs(first.getBoundingClientRect().top - top) < 1)
+    await waitFor(() => assert.equal(second.isConnected, false))
     assert.equal(result.container.querySelectorAll('[data-toast]').length, 2)
-    assert.equal(element(result.container, '[data-toast][data-notification="saved"]'), saved)
+    assert.equal(element(result.container, '[data-toast][data-toast-id="1"]'), first)
     await settle(result.container)
-    assert.ok(saved.getBoundingClientRect().top > top + 50)
+    assert.ok(first.getBoundingClientRect().top > top + 50)
   })
 })
