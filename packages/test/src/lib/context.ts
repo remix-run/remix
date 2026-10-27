@@ -43,34 +43,23 @@ export interface TestContext {
 
   /**
    * Mock tracker for the current test using {@link mock}. Mirrors the shape of Node's
-   * `t.mock`. Method mocks created via `t.mock` are auto-restored on test completion.
+   * `t.mock`. Mock restoration and test cleanup callbacks run in registration order.
    */
   mock: {
+    /** Creates a function mock that is restored after the test. */
+    fn: typeof mock.fn
     /**
-     * Creates a mock function with an optional implementation.
-     *
-     * @template T - The function type to be mocked
-     * @param {T} [impl] - Optional custom implementation for the mock
-     * @returns {MockFunction<T>} A mock function instance
-     */
-    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
-
-    /**
-     * Replaces `obj[methodName]` with a mock and records every call. The
-     * original method is restored automatically after the test completes.
-     *
-     * @template T - The object type
-     * @template K - The method key of the object
-     * @param {T} obj - The object to mock
-     * @param {K} methodName - The method name to mock
-     * @param {Function} [impl] - Optional implementation override (must be a function)
-     * @returns {MockFunction} A mock function instance for the mocked method
+     * Creates a method spy that is restored after the test.
+     * @param obj The object whose method will be mocked.
+     * @param methodName The method to replace.
+     * @param impl Optional initial implementation, retaining support for overloaded methods.
+     * @returns A spy with permissive calls and replacement controls typed to the original method.
      */
     method<T extends object, K extends keyof T>(
       obj: T,
       methodName: K,
       impl?: Function,
-    ): MockFunction
+    ): ReturnType<typeof mock.method<T, K>>
   }
 
   /**
@@ -114,10 +103,19 @@ export function createTestContext(options?: CreateTestContextOptions): {
   let testContext: TestContext = {
     signal: options?.signal ?? new AbortController().signal,
     mock: {
-      fn: mock.fn,
+      fn(impl) {
+        let mockFn = mock.fn(impl)
+        cleanups.push(mockFn.mock.restore)
+        return mockFn
+      },
       method(obj, methodName, impl) {
-        let mockFn = mock.method(obj, methodName, impl as any)
-        if (mockFn.mock.restore) cleanups.push(mockFn.mock.restore)
+        // Keep the existing permissive initial override for overloaded methods.
+        let mockFn = mock.method(
+          obj,
+          methodName,
+          impl as Parameters<typeof mock.method<typeof obj, typeof methodName>>[2],
+        )
+        cleanups.push(mockFn.mock.restore)
         return mockFn
       },
     },
@@ -172,8 +170,24 @@ export function createTestContext(options?: CreateTestContextOptions): {
   return {
     testContext,
     async cleanup() {
-      for (let fn of cleanups) await fn()
+      let errors: unknown[] = []
+      for (let fn of cleanups) {
+        try {
+          await fn()
+        } catch (error) {
+          errors.push(error)
+        }
+      }
       cleanups.length = 0
+      if (errors.length === 1) throw errors[0]
+      if (errors.length > 1) {
+        throw new AggregateError(
+          errors,
+          errors
+            .map((error) => (error instanceof Error ? error.message : String(error)))
+            .join('\n'),
+        )
+      }
     },
   }
 }

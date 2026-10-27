@@ -1,0 +1,1 @@
+Control function mocks and method spies in `remix/test` with implementation replacements, indexed one-call overrides, call-history resets, call counts, and explicit restoration. TestContext mocks also restore when tests or cleanup callbacks fail.

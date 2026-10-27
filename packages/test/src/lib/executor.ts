@@ -148,6 +148,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
       }
       let testError: unknown
       let afterEachError: unknown
+      let cleanupError: Error | undefined
       let testFailed = false
       let afterEachFailed = false
 
@@ -173,7 +174,11 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
         testFailed = true
         testError = error
       } finally {
-        await cleanup()
+        try {
+          await cleanup()
+        } catch (error) {
+          cleanupError = createHookFailure('cleanup', error)
+        }
         if (suite.afterEach) {
           try {
             await runLifecycleHooks('afterEach', suite.afterEach, undefined, undefined, true)
@@ -183,10 +188,11 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
           }
         }
 
-        if (testFailed || afterEachFailed) {
+        if (testFailed || cleanupError || afterEachFailed) {
           result.status = 'failed'
           result.error = createTestError(
             testFailed ? testError : undefined,
+            cleanupError,
             afterEachFailed ? createHookFailure('afterEach', afterEachError) : undefined,
           )
           results.failed++
@@ -407,12 +413,13 @@ function createHookFailure(hookName: string, error: unknown): Error {
 
 function createTestError(
   primaryError: unknown,
-  secondaryError: Error | undefined = undefined,
+  ...secondaryErrors: Array<Error | undefined>
 ): TestResult['error'] {
   let message = primaryError !== undefined ? getErrorMessage(primaryError) : undefined
   let stack = primaryError instanceof Error ? primaryError.stack : undefined
 
-  if (secondaryError) {
+  for (let secondaryError of secondaryErrors) {
+    if (!secondaryError) continue
     message = message ? `${message}\n${secondaryError.message}` : secondaryError.message
     stack =
       stack && secondaryError.stack
