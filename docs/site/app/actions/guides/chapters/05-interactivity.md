@@ -3,7 +3,7 @@ title: Interactivity
 description: How server-rendered UI hydrates, handles events, connects components to application models, navigates, and cancels stale work.
 ---
 
-In [Getting Started](/guides/start-here/), the album page, edit form, validation, mutation, and redirect all
+In [Getting Started](/start-here/), the album page, edit form, validation, mutation, and redirect all
 worked before we added browser JavaScript. Then we marked the form as a client entry so its submit
 button could show pending state.
 
@@ -163,7 +163,7 @@ The returned app runtime has three lifecycle methods:
 `run()` hydrates the server-rendered page. It is not a second application router. Browser requests
 still go to the route actions that own the corresponding server behavior.
 
-[Streaming UI with Frames](/guides/streaming-ui-with-frames/) uses the default browser resolver for
+[Streaming UI with Frames](/streaming-ui-with-frames/) uses the default browser resolver for
 route-owned regions that load or reload independently.
 
 ## Mount client-only UI with createRoot {#client-only-roots}
@@ -223,7 +223,7 @@ function Counter(handle: Handle<{ initialCount: number }>) {
 `count` lives in setup scope, so it survives each render without becoming part of the component's
 props.
 
-::frame{src="/guides/examples/05-interactivity/basic-counter/"}
+::frame{src="/examples/05-interactivity/basic-counter/"}
 
 Calling `handle.update()` schedules work and returns a promise. Await it when the next step needs the
 updated DOM:
@@ -295,7 +295,7 @@ Keys matter whenever an update changes a list. Use a stable ID, not an array ind
 the list is sorted or a random value created during render. Matching keys let Remix move existing DOM
 and component instances instead of pairing state with the wrong item.
 
-::frame{src="/guides/examples/05-interactivity/keyed-list/"}
+::frame{src="/examples/05-interactivity/keyed-list/"}
 
 Setup-scope variables are a good home for UI state such as whether a menu is open, which field has
 focus, or whether a request is pending. Put business rules and shared application state in ordinary
@@ -394,7 +394,7 @@ Typing changes both inputs. Clicking the button resets the controlled input beca
 comes from `title`. The uncontrolled input keeps its DOM value because `defaultValue` only applies
 its initial value.
 
-::frame{src="/guides/examples/05-interactivity/controlled-uncontrolled-inputs/"}
+::frame{src="/examples/05-interactivity/controlled-uncontrolled-inputs/"}
 
 ## Composing behavior with mix {#the-mix-prop}
 
@@ -438,7 +438,7 @@ The core mixins serve different host-level jobs:
 - `link(...)` adds client navigation behavior and link semantics.
 - `css(...)` applies static generated CSS.
 
-Animation mixins use the same prop and are covered in [Animation](/guides/animation/). Put frequently
+Animation mixins use the same prop and are covered in [Animation](/animation/). Put frequently
 changing values in normal props such as `style`, `value`, `checked`, and ARIA attributes rather than
 recreating static mixins for every state change.
 
@@ -747,7 +747,7 @@ A supplied `data-rmx-src` must be a valid same-origin URL regardless of the targ
 cross-origin values disable interception and leave the navigation to the browser. These rules also
 apply to the `src` and `target` options of `link(...)` and `navigate(...)`.
 
-[Streaming UI with Frames](/guides/streaming-ui-with-frames/) shows these attributes with named frames and
+[Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames and
 explains when a form can submit directly through the frame resolver.
 
 ## Prefetch links before navigation
@@ -839,7 +839,7 @@ Choose the synchronization boundary that matches the UI:
 - Send JSON when a browser-side model owns the data and no server-rendered region needs to change.
 - Poll a small JSON endpoint when data changes independently of the current page.
 
-[Streaming UI with Frames](/guides/streaming-ui-with-frames/) covers the optional case where a mutation
+[Streaming UI with Frames](/streaming-ui-with-frames/) covers the optional case where a mutation
 reloads one route-owned region without navigating the whole document.
 
 ## Pending and optimistic UI {#optimistic-ui}
@@ -935,5 +935,5 @@ uses it. The [`remix/component` API overview](https://docs.remix.run/component/)
 mixin API.
 
 The next chapter uses the same server renderer and browser runtime to stream and reload route-owned
-UI with `<Frame>`. [Animation](/guides/animation/) then applies component state, `mix` composition, keys, and
+UI with `<Frame>`. [Animation](/animation/) then applies component state, `mix` composition, keys, and
 cancellation to entrance, exit, layout, spring, and tween motion.

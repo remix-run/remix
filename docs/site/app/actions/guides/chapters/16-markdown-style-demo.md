@@ -9,7 +9,7 @@ This page is a rendering fixture, not product documentation. Use it to review ho
 
 ## Inline text, links, and emphasis {#inline-text-links-and-emphasis}
 
-A paragraph can mix **strong text**, _emphasis_, `inline code`, and [links to another chapter](/guides/routing-and-controllers/). Inline code should stay compact enough to read in a sentence without looking like a full code block.
+A paragraph can mix **strong text**, _emphasis_, `inline code`, and [links to another chapter](/routing-and-controllers/). Inline code should stay compact enough to read in a sentence without looking like a full code block.
 
 ## Headings below the page title {#headings-below-the-page-title}
 
@@ -147,7 +147,7 @@ Use an explicit heading ID when a section needs a stable URL that should not cha
 The `::frame` directive is docs-specific Markdown. Inside a code fence it stays text:
 
 ````md filename=chapter.md
-::frame{src="/guides/examples/16-markdown-style-demo/callout/"}
+::frame{src="/examples/16-markdown-style-demo/callout/"}
 
 ```tsx filename=app/actions/guides/examples/16-markdown-style-demo/public/callout.demo.tsx
 export function CalloutDemo() {
@@ -164,8 +164,8 @@ A one-off frame can still share structure. These examples use normal `::frame` d
 
 The counter demo uses browser events, but the example itself does not call `clientEntry`. It assumes the parent frame handler will hydrate it.
 
-::frame{src="/guides/examples/16-markdown-style-demo/counter/"}
+::frame{src="/examples/16-markdown-style-demo/counter/"}
 
 The callout is a plain server-rendered frame: no hydration, no source display, just the markup the handler returns.
 
-::frame{src="/guides/examples/16-markdown-style-demo/callout/"}
+::frame{src="/examples/16-markdown-style-demo/callout/"}

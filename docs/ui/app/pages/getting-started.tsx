@@ -67,9 +67,9 @@ export default function GettingStarted() {
           <p>
             Render your UI as Remix components and hydrate it with <code>clientEntry</code> and{' '}
             <code>run</code> for browser interaction. Follow the{' '}
-            <a href="https://docs.remix.run/guides/rendering-ui/">rendering UI guide</a> and{' '}
-            <a href="https://docs.remix.run/guides/interactivity/">interactivity guide</a> for
-            application setup.
+            <a href="https://docs.remix.run/rendering-ui/">rendering UI guide</a> and{' '}
+            <a href="https://docs.remix.run/interactivity/">interactivity guide</a> for application
+            setup.
           </p>
           <p>
             The animation utilities also work with CSS transitions and the browser's Web Animations

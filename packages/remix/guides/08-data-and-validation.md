@@ -3,7 +3,7 @@ title: Data and Validation
 description: How Remix validates inputs, defines relational data, queries databases, and runs SQL migrations.
 ---
 
-In [Getting Started](/guides/start-here/), we kept the record store's albums in an array and used a schema to parse an edit form. That was enough to follow a request through the app, but changes disappeared when the server restarted.
+In [Getting Started](/start-here/), we kept the record store's albums in an array and used a schema to parse an edit form. That was enough to follow a request through the app, but changes disappeared when the server restarted.
 
 Let's replace that array with SQLite and load an album from the database. Then we'll define a schema for the values the album editor can submit.
 
@@ -171,7 +171,7 @@ declare module "remix" {
 // Keep the existing router.map(...) calls here.
 ```
 
-The `RouterTypes` declaration makes `context.db` (in addition to `context.formData` and `context.render`) available to controllers with their inferred types. The database can also be accessed via `context.get(databaseContext)`. [Request Handling](/guides/request-handling/) explains how the middleware stack supplies these context properties.
+The `RouterTypes` declaration makes `context.db` (in addition to `context.formData` and `context.render`) available to controllers with their inferred types. The database can also be accessed via `context.get(databaseContext)`. [Request Handling](/request-handling/) explains how the middleware stack supplies these context properties.
 
 ## Read an album
 
@@ -248,7 +248,7 @@ export const albumForm = f.object({
 
 For parsing plain objects or individual values, using `parse()` to throw on validation failure, and other schema options, see the [`data-schema` overview](../src/data-schema/README.md).
 
-The album page now reads from SQLite, and `albumForm` defines the values the editor can submit. [Forms and Mutations](/guides/forms-and-mutations/) connects the edit form: validating submissions, saving edits, showing field errors, and adding pending feedback.
+The album page now reads from SQLite, and `albumForm` defines the values the editor can submit. [Forms and Mutations](/forms-and-mutations/) connects the edit form: validating submissions, saving edits, showing field errors, and adding pending feedback.
 
 ## Advanced data and validation
 
@@ -281,7 +281,7 @@ A few browser conventions affect these schemas:
 
 - An unchecked checkbox is absent. For a checkbox with `value="yes"`, `s.optional(s.literal("yes")).transform((value) => value === "yes")` produces a boolean. `coerce.boolean()` accepts `"true"` and `"false"`, not the browser's default `"on"` value.
 - An empty text input is `""`, not `undefined`, so `optional()` and `defaulted()` do not make a blank string valid automatically.
-- Use `f.file(...)` or `f.files(...)` for file entries. The [Files and Assets](/guides/files-and-assets/) chapter covers multipart forms, upload limits, and storage.
+- Use `f.file(...)` or `f.files(...)` for file entries. The [Files and Assets](/files-and-assets/) chapter covers multipart forms, upload limits, and storage.
 
 ### Compose queries and load relations
 

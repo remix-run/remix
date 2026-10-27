@@ -10,7 +10,7 @@ import { replaceMarkdownFrames } from './frames.ts'
 
 const exampleMatcher = createMatcher(routes.guides.examples.show.pattern)
 
-// Converts a chapter's source into the markdown served at `/guides/<chapter>.md` and copied
+// Converts a chapter's source into the markdown served at `/<chapter>.md` and copied
 // into the `remix` package's `guides/` directory, so agents reading installed guides
 // see the same content as the website's markdown version.
 //

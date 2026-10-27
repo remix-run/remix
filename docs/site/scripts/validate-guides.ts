@@ -18,6 +18,7 @@ type DocsFrame = {
 }
 
 const chaptersDir = new URL('../app/actions/guides/chapters/', import.meta.url)
+const overviewUrl = new URL('../app/actions/overview.md', import.meta.url)
 const docsExampleMatcher = createMatcher(routes.guides.examples.show.pattern)
 
 const errors: string[] = []
@@ -38,6 +39,15 @@ for (let entry of await readdir(chaptersDir, { withFileTypes: true })) {
     })),
   )
 }
+
+// The docs overview isn't a chapter, but it embeds frames scoped to `examples/overview/`.
+frames.push(
+  ...readMarkdownFrameReferences(await readFile(overviewUrl, 'utf8')).map((frame) => ({
+    chapterFile: 'overview.md',
+    lineNumber: frame.lineNumber,
+    src: frame.src,
+  })),
+)
 
 for (let frame of frames) {
   await validateFrame(frame)
@@ -79,7 +89,7 @@ async function validateFrame(frame: DocsFrame): Promise<void> {
     report(
       frame.chapterFile,
       frame.lineNumber,
-      `Frame source must be scoped to /guides/examples/${expectedChapter}/..., received: ${frame.src}`,
+      `Frame source must be scoped to /examples/${expectedChapter}/..., received: ${frame.src}`,
     )
     return
   }
@@ -172,6 +182,10 @@ function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
 // The example directory mirrors the chapter file name (e.g. `16-markdown-style-demo`),
 // including the order prefix, so frames stay scoped to the chapter that references them.
 function readChapterDir(chapterFile: string): string {
+  if (chapterFile === 'overview.md') {
+    return 'overview'
+  }
+
   let match = /^(\d+-[a-z0-9][a-z0-9-]*)\.md$/.exec(chapterFile)
   if (!match?.[1]) {
     throw new Error(`Expected chapter file name to include a slug: ${chapterFile}`)

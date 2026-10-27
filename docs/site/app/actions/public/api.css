@@ -126,6 +126,11 @@ html {
   justify-content: space-between;
 }
 
+/* Sets the API reference row apart from the guides above it, spaced like a group heading. */
+.api-nav-section-break {
+  margin-top: calc(var(--docs-sidebar-group-gap) - var(--docs-nav-item-gap));
+}
+
 .api-nav-node svg,
 .api-nav-back svg {
   flex: none;
@@ -138,7 +143,6 @@ html {
 .api-nav-back {
   gap: 6px;
   margin-bottom: calc(8px - var(--docs-nav-item-gap));
-  color: var(--docs-sidebar-heading);
 }
 
 .api-nav-back svg {
@@ -149,15 +153,6 @@ html {
 .api-nav-title {
   display: flex;
   align-items: center;
-}
-
-/* Overview links use the same weight as other navigation items. */
-.docs-nav-item.api-nav-heading-link {
-  color: var(--docs-sidebar-heading);
-}
-
-a.docs-nav-item.api-nav-heading-link:is(:hover, [aria-current]) {
-  color: var(--rmx-color-text-primary);
 }
 
 .api-nav-path-segment {

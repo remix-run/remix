@@ -5,6 +5,7 @@ import type { DocsContext } from '../../data/docs.ts'
 import { loadDemoComponent, renderDemoSource } from '../../data/demos.tsx'
 import { renderMarkdownFile } from '../../data/markdown.ts'
 import { getDocPage, getNavChain } from '../../data/registry.ts'
+import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { ReferenceDocument } from '../../ui/document.tsx'
 import { fileResponse } from '../file-response.ts'
@@ -14,14 +15,16 @@ interface ReferenceControllerOptions {
   getDocsContext(): Promise<DocsContext>
 }
 
-export function createReferenceController(options: ReferenceControllerOptions) {
-  return createController(routes.reference, {
-    actions: {
-      async document({ params, render }) {
-        let docsContext = await options.getDocsContext()
-        let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
+type Render = AppContext['render']
+
+export async function renderReferenceDocument(
+  getDocsContext: ReferenceControllerOptions['getDocsContext'],
+  { slug, render }: { slug: string; render: Render },
+): Promise<Response> {
+        let docsContext = await getDocsContext()
+        let docFile = docsContext.docFiles.find((file) => file.urlPath === slug)
         let registry = docsContext.registry
-        let docProps = { registry, slug: params.slug }
+        let docProps = { registry, slug }
 
         if (docFile?.kind === 'demo') {
           let ExampleComponent = clientEntry(
@@ -52,7 +55,7 @@ export function createReferenceController(options: ReferenceControllerOptions) {
           )
         }
 
-        let node = getNavChain(registry, getDocPage(registry, params.slug)?.navId).at(-1)
+        let node = getNavChain(registry, getDocPage(registry, slug)?.navId).at(-1)
         if (node) {
           return render(
             <ReferenceDocument {...docProps}>
@@ -63,14 +66,18 @@ export function createReferenceController(options: ReferenceControllerOptions) {
 
         return render(
           <ReferenceDocument {...docProps}>
-            <NotFound slug={params.slug} />
+            <NotFound slug={slug} />
           </ReferenceDocument>,
           { status: 404 },
         )
-      },
-      async markdown({ request, params }) {
-        let docsContext = await options.getDocsContext()
-        let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
+}
+
+export async function serveReferenceMarkdown(
+  getDocsContext: ReferenceControllerOptions['getDocsContext'],
+  { request, slug }: { request: Request; slug: string },
+): Promise<Response> {
+        let docsContext = await getDocsContext()
+        let docFile = docsContext.docFiles.find((file) => file.urlPath === slug)
         if (!docFile) {
           return new Response('Not Found', { status: 404 })
         }
@@ -83,7 +90,14 @@ export function createReferenceController(options: ReferenceControllerOptions) {
         }
 
         return fileResponse(request, docFile.path)
-      },
+}
+
+export function createReferenceController(options: ReferenceControllerOptions) {
+  return createController(routes.reference, {
+    actions: {
+      document: ({ params, render }) => renderReferenceDocument(options.getDocsContext, { slug: params.slug, render }),
+      markdown: ({ request, params }) =>
+        serveReferenceMarkdown(options.getDocsContext, { request, slug: params.slug }),
     },
   })
 }

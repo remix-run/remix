@@ -9,7 +9,7 @@ adds a document shell, styles, and first-party UI.
 
 The component model is the same on the server and in the browser. A page does not need browser
 JavaScript unless part of it handles events or uses browser APIs. We'll add that layer in
-[Interactivity](/guides/interactivity/).
+[Interactivity](/interactivity/).
 
 ## The Remix component model {#the-remix-component-model}
 
@@ -63,7 +63,7 @@ export function AlbumByline(handle: Handle<{ artist: string; year: number }>) {
 The same component can render to HTML on the server, mount into a client-only root, or hydrate inside
 a server-rendered page. Only the last two cases execute it in the browser.
 
-::frame{src="/guides/examples/04-rendering-ui/component-model/"}
+::frame{src="/examples/04-rendering-ui/component-model/"}
 
 ## Props, local state, context, and updates {#handle-props-setup-render-and-updates}
 
@@ -128,7 +128,7 @@ export function AlbumList(handle: Handle<{ albums: Album[] }>) {
 The input handler changes `filter` and calls `handle.update()`. Updates are explicit: changing a
 variable does not render anything until the component requests an update. Stable `key` values tell
 Remix which list items are the same across renders, preserving their DOM and component state if the
-list changes order. [Interactivity](/guides/interactivity/) covers event handlers, updates, and hydration.
+list changes order. [Interactivity](/interactivity/) covers event handlers, updates, and hydration.
 
 `handle.id` is a stable identifier for the component instance. It is useful when a reusable control
 needs to connect a label, input, description, or ARIA relationship without requiring an `id` prop:
@@ -215,7 +215,7 @@ return context.render(<AlbumPage album={album} />, {
 ```
 
 Most components do not need to know how the middleware turns their tree into a response.
-[Streaming UI with Frames](/guides/streaming-ui-with-frames/) covers the underlying server renderer and the
+[Streaming UI with Frames](/streaming-ui-with-frames/) covers the underlying server renderer and the
 optional `<Frame>` API for pages that load route-owned regions independently.
 
 ## Document shells, head content, and HTML responses {#document-shells-and-head-content}
@@ -315,7 +315,7 @@ During server rendering, Remix collects generated rules, deduplicates them, and 
 `<style data-rmx-style>` tags into the document head. A server-rendered page does not wait for browser
 JavaScript to receive its component styles.
 
-::frame{src="/guides/examples/04-rendering-ui/styling-card/"}
+::frame{src="/examples/04-rendering-ui/styling-card/"}
 
 ## Cascade layers and app-owned design tokens {#theme-tokens-and-cascade-layers}
 
@@ -379,7 +379,7 @@ Preserve native elements when they fit, keep labels and ARIA relationships intac
 and keyboard behavior. A custom select, for example, still needs a provider, trigger, popover,
 list, options, and hidden input if it participates in a form.
 
-::frame{src="/guides/examples/04-rendering-ui/accordion-primitives/"}
+::frame{src="/examples/04-rendering-ui/accordion-primitives/"}
 
 ## Raw HTML with unsafeHTML {#raw-html-with-unsafehtml}
 

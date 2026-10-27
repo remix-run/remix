@@ -4,7 +4,10 @@ import * as path from 'node:path'
 import { createController } from 'remix/router'
 
 import type { DocsContext } from '../data/docs.ts'
+import { API_PAGE_ID } from '../data/registry.ts'
 import { renderMarkdownFile } from '../data/markdown.ts'
+import { parseMarkdown } from '../markdown.ts'
+import { renderMarkdownRoot } from './guides/markdown/render.tsx'
 import { routes } from '../routes.ts'
 import { ReferenceDocument } from '../ui/document.tsx'
 import type { DocsAssetServer } from '../assets.ts'
@@ -13,7 +16,8 @@ import { fileResponse } from './file-response.ts'
 
 const siteDir = path.resolve(import.meta.dirname, '..', '..')
 const markdownDir = path.join(siteDir, 'build', 'md')
-const gettingStartedPath = path.join(import.meta.dirname, 'getting-started.md')
+const overviewPath = path.join(import.meta.dirname, 'overview.md')
+const apiOverviewPath = path.join(import.meta.dirname, 'api-overview.md')
 const defaultPagefindAssetsDir = path.join(siteDir, 'build', 'site', '_assets', 'pagefind')
 
 interface RootControllerOptions {
@@ -38,13 +42,24 @@ export function createRootController(options: RootControllerOptions) {
       },
       async home({ render }) {
         let docsContext = await options.getDocsContext()
+        // The overview embeds frames, so it renders through the same pipeline as guide chapters.
+        let { root, headings } = parseMarkdown(await fs.readFile(overviewPath, 'utf8'))
+        let content = await renderMarkdownRoot(root, undefined)
+        return render(
+          <ReferenceDocument registry={docsContext.registry} headings={headings}>
+            {content}
+          </ReferenceDocument>,
+        )
+      },
+      async api({ render }) {
+        let docsContext = await options.getDocsContext()
         let { html, headings } = await renderMarkdownFile(
-          gettingStartedPath,
+          apiOverviewPath,
           docsContext.docFilesLookup,
           false,
         )
         return render(
-          <ReferenceDocument registry={docsContext.registry} headings={headings}>
+          <ReferenceDocument registry={docsContext.registry} slug={API_PAGE_ID} headings={headings}>
             <MarkdownContent html={html} />
           </ReferenceDocument>,
         )

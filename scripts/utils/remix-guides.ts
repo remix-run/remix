@@ -106,7 +106,7 @@ export async function syncRemixGuides({
   return copies
 }
 
-// Installed guides use the same markdown as the website's `/guides/<chapter>.md` routes, so
+// Installed guides use the same markdown as the website's `/<chapter>.md` routes, so
 // `::frame` directives are replaced with demo source (or omitted) rather than copied
 // verbatim. The renderer lives in the docs app and imports `.tsx` example modules.
 async function loadRenderChapterMarkdown(): Promise<(source: string) => Promise<string>> {

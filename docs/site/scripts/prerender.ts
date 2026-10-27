@@ -5,7 +5,7 @@ import { discoverPublicModuleHrefs } from 'remix-docs-shared/prerender/public-mo
 import { prerender } from 'remix-docs-shared/prerender/run'
 
 import { createDocsContextLoader } from '../app/data/docs.ts'
-import { HOME_PAGE_ID } from '../app/data/registry.ts'
+import { API_PAGE_ID, HOME_PAGE_ID } from '../app/data/registry.ts'
 import { loadDocsChapterSummaries } from '../app/actions/guides/markdown-chapters.tsx'
 import { createDocsRouter } from '../app/router.ts'
 import { routes } from '../app/routes.ts'
@@ -37,7 +37,7 @@ const publicModuleHrefs = await discoverPublicModuleHrefs(assetServer, [
 // List every docs page rather than relying on the crawl, which stops at nofollow package pages.
 const { registry } = await createDocsContextLoader()()
 const pagePaths = Object.values(registry.pages).flatMap((page) => {
-  if (page.id === HOME_PAGE_ID) return []
+  if (page.id === HOME_PAGE_ID || page.id === API_PAGE_ID) return []
   if (!page.docFile) return [page.path]
   return [page.path, routes.reference.markdown.href({ slug: page.id })]
 })
@@ -47,8 +47,10 @@ const guidePaths = (await loadDocsChapterSummaries('production')).flatMap((chapt
 ])
 const paths = [
   routes.home.href(),
+  routes.api.href(),
   routes.lookup.href(),
-  routes.guides.index.href(),
+  // The overview embeds this frame, and the crawl doesn't follow frame sources.
+  routes.guides.examples.show.href({ chapter: 'overview', example: 'install-command' }),
   ...publicModuleHrefs,
   ...pagePaths,
   ...guidePaths,

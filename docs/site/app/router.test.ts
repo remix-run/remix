@@ -39,29 +39,89 @@ describe('createDocsRouter()', () => {
     assert.equal(html.includes('/_assets/docs-shared/ui/public/code-block-copy.tsx'), true)
   })
 
-  it('lists guides between Overview and the API reference in the main navigation', async (t) => {
+  it('lists guides, then a separate API reference row, in the main navigation', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
+    let guides = await loadDocsNavigationItems()
     let router = createDocsRouter({
       assetServer,
-      docsContext: await getTestDocsContext(),
+      docsContext: {
+        docFiles: [],
+        docFilesLookup: new Map(),
+        registry: buildRegistry([packageFile('remix/data-table')], guides),
+      },
     })
 
     let response = await router.fetch(new Request('http://localhost/'))
     assert.equal(response.status, 200)
     let html = await response.text()
-    let overviewIndex = html.indexOf('>Overview</a>')
-    let guidesIndex = html.indexOf('>Guides</h2>')
-    let firstGuideIndex = html.indexOf('href="/guides/start-here/"')
-    let apiReferenceIndex = html.indexOf('>API Reference</h2>')
+    let firstGuideIndex = html.indexOf('href="/start-here/"')
+    let apiReferenceIndex = html.indexOf('>API Reference')
 
-    assert.equal(overviewIndex >= 0, true)
-    assert.equal(guidesIndex > overviewIndex, true)
-    assert.equal(firstGuideIndex > guidesIndex, true)
+    assert.match(html, /<title[^>]*>Introduction \| Remix Docs<\/title>/)
+    assert.match(html, /href="\/" aria-current="page"[^>]*>Introduction<\/a>/)
+    assert.doesNotMatch(html, />Guides<\/h2>/)
+    assert.doesNotMatch(html, />Packages<\/h2>/)
+    assert.equal(firstGuideIndex >= 0, true)
     assert.equal(apiReferenceIndex > firstGuideIndex, true)
+    assert.match(html, /href="\/api\/"[^>]*>API Reference/)
   })
 
-  it('keeps guides in the All modules panel on direct API reference requests', async (t) => {
+  it('serves the API overview at /api/ with the API reference menu open', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let guides = await loadDocsNavigationItems()
+    let router = createDocsRouter({
+      assetServer,
+      docsContext: {
+        docFiles: [],
+        docFilesLookup: new Map(),
+        registry: buildRegistry([packageFile('remix/data-table')], guides),
+      },
+    })
+
+    let response = await router.fetch(new Request('http://localhost/api/'))
+    assert.equal(response.status, 200)
+    let html = await response.text()
+
+    assert.match(html, /<title[^>]*>API Reference \| Remix Docs<\/title>/)
+    assert.match(html, /href="\/api\/" aria-current="page"[^>]*>API Reference<\/a>/)
+    assert.match(html, /data-api-nav-back[^>]*>.*Docs<\/a>/s)
+    assert.match(html, />Packages<\/h2>/)
+    assert.match(html, /href="\/data-table\/"[^>]*api-nav-node/)
+    assert.match(html, /<h2 id="installation">/)
+  })
+
+  it('serves guides at the root and still reaches package pages', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let guides = await loadDocsNavigationItems()
+    let router = createDocsRouter({
+      assetServer,
+      docsContext: {
+        docFiles: [],
+        docFilesLookup: new Map(),
+        registry: buildRegistry([packageFile('remix/data-table')], guides),
+      },
+    })
+
+    let chapter = await router.fetch(new Request('http://localhost/start-here/'))
+    assert.equal(chapter.status, 200)
+    assert.match(await chapter.text(), /<title[^>]*>Getting Started/)
+
+    let markdown = await router.fetch(new Request('http://localhost/start-here.md'))
+    assert.equal(markdown.status, 200)
+    assert.match(markdown.headers.get('Content-Type') ?? '', /text\/markdown/)
+
+    let unknown = await router.fetch(new Request('http://localhost/data-table/'))
+    assert.equal(unknown.status, 200)
+    assert.match(await unknown.text(), /API reference for remix\/data-table/)
+
+    let missing = await router.fetch(new Request('http://localhost/nope.md'))
+    assert.equal(missing.status, 404)
+  })
+
+  it('keeps guides in the root panel on direct API reference requests', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
     let guides = await loadDocsNavigationItems()
@@ -79,11 +139,11 @@ describe('createDocsRouter()', () => {
     let html = await response.text()
     let rootPanel = /<div data-api-nav-panel="before"[^>]*>(.*?)<\/div>/s.exec(html)?.[1] ?? ''
 
-    assert.match(html, /data-api-nav-back[^>]*>.*All modules<\/a>/s)
-    assert.match(html, /href="\/data-table\/" aria-current="page"[^>]*>Overview<\/a>/)
-    assert.match(rootPanel, />Guides<\/h2>/)
-    assert.match(rootPanel, /href="\/guides\/start-here\/"/)
-    assert.match(rootPanel, />API Reference<\/h2>/)
+    assert.match(html, /data-api-nav-back[^>]*>.*API Reference<\/a>/s)
+    assert.match(html, /href="\/data-table\/" aria-current="page"[^>]*>data-table<\/a>/)
+    assert.doesNotMatch(rootPanel, />Guides<\/h2>/)
+    assert.match(rootPanel, /href="\/start-here\/"/)
+    assert.match(rootPanel, /href="\/api\/"[^>]*>API Reference/)
   })
 
   it('uses one active Docs link in the primary navigation', async (t) => {
@@ -94,7 +154,7 @@ describe('createDocsRouter()', () => {
       docsContext: await getTestDocsContext(),
     })
 
-    let response = await router.fetch(new Request('http://localhost/guides/start-here/'))
+    let response = await router.fetch(new Request('http://localhost/start-here/'))
     assert.equal(response.status, 200)
     let html = await response.text()
     let primaryNavigation = /<nav aria-label="Primary".*?<\/nav>/s.exec(html)?.[0] ?? ''

@@ -3,8 +3,8 @@ title: Streaming UI with Frames
 description: How to stream and reload route-owned UI with Frame, fallbacks, and server and browser frame resolvers.
 ---
 
-The album page from [Rendering UI](/guides/rendering-ui/) returns one component tree, and the enhanced form
-from [Interactivity](/guides/interactivity/) navigates after it saves. Keep those simpler paths until one
+The album page from [Rendering UI](/rendering-ui/) returns one component tree, and the enhanced form
+from [Interactivity](/interactivity/) navigates after it saves. Keep those simpler paths until one
 region of a page benefits from its own request.
 
 This chapter moves album recommendations behind a `GET` route, streams them into the page with
@@ -306,7 +306,7 @@ the browser performs a document navigation. A supplied `data-rmx-src` must still
 URL regardless of the target. Invalid or cross-origin values also disable interception.
 
 Add `data-rmx-prefetch="intent"` or `data-rmx-prefetch="viewport"` to prefetch that same source and
-target before navigation. [Interactivity](/guides/interactivity/#prefetch-links-before-navigation) covers
+target before navigation. [Interactivity](/interactivity/#prefetch-links-before-navigation) covers
 both triggers and the imperative `prefetch()` API.
 
 Add `data-rmx-history="replace"` when it should replace the current history entry. Use
@@ -327,8 +327,8 @@ continue when that is safe.
 
 Pass `request.signal` through server frame work. The default browser resolver forwards its cancellation
 signal to `fetch()`; a custom resolver should do the same.
-[Errors and Cancellation](/guides/errors-and-cancellation/) covers reporting policy, while
-[Production](/guides/production/) covers disconnects, compression, and other deployment concerns.
+[Errors and Cancellation](/errors-and-cancellation/) covers reporting policy, while
+[Production](/production/) covers disconnects, compression, and other deployment concerns.
 
-The next chapter, [Animation](/guides/animation/), adds motion to component insertion, removal, and layout
+The next chapter, [Animation](/animation/), adds motion to component insertion, removal, and layout
 changes.

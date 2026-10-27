@@ -1,9 +1,4 @@
-Remix is a full-stack TypeScript framework for building fast, secure web applications using web standards.
-
-These docs have two parts:
-
-- The guides explain how Remix works and show how its pieces fit together in a complete app. If you are new to Remix, begin with [Getting Started](/guides/start-here/).
-- The API reference below documents individual modules, functions and types. Use it when you know what feature you want to look up.
+The API reference documents every Remix module, function and type. Use it when you know what you want to look up. To learn how the pieces fit together, start with the [guides](/start-here/).
 
 ## Installation
 
@@ -27,7 +22,7 @@ The API Reference uses the same module names without the `remix/` prefix. For ex
 
 Remix UI is versioned separately and imported from `@remix-run/ui/*`.
 
-## API reference
+## Modules
 
 ### Routing and requests
 

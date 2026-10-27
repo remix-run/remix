@@ -3,7 +3,7 @@ title: Request Handling
 description: How a Web Request becomes a Web Response across runtime adapters and the middleware pipeline.
 ---
 
-[Routing and Controllers](/guides/routing-and-controllers/) covered what happens after Remix finds a route. This chapter backs up to the server boundary: how a runtime hands the app a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), how middleware prepares request context, and how the resulting Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) gets back to the client.
+[Routing and Controllers](/routing-and-controllers/) covered what happens after Remix finds a route. This chapter backs up to the server boundary: how a runtime hands the app a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), how middleware prepares request context, and how the resulting Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) gets back to the client.
 
 The runtime-specific code stays in the server entry. The router, middleware, and actions work with the same Fetch API contract everywhere else.
 
@@ -184,7 +184,7 @@ Remix has three middleware scopes:
 2. **Controller middleware** runs for the direct actions owned by that controller.
 3. **Action middleware** runs for one action.
 
-The complete order is router middleware, controller middleware, action middleware, then the action handler. Controller and action middleware only run after a route matches. As covered in [Routing and Controllers](/guides/routing-and-controllers/), controller middleware does not flow into controllers mapped for nested route maps.
+The complete order is router middleware, controller middleware, action middleware, then the action handler. Controller and action middleware only run after a route matches. As covered in [Routing and Controllers](/routing-and-controllers/), controller middleware does not flow into controllers mapped for nested route maps.
 
 Choose middleware order by dependency and wrapping behavior:
 
@@ -285,7 +285,7 @@ export const router = createRouter({
 
 Global middleware is convenient when most routes use it. If only one action accepts a form or upload, put `formData()` on that action instead so other requests skip body parsing.
 
-`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by `remix/assets` lives in colocated `public/` directories under `app/`; [Files and Assets](/guides/files-and-assets/) covers that separate pipeline. The next chapter, [Rendering UI](/guides/rendering-ui/), uses `render()` from `remix/middleware/render` to build component pages. [Streaming UI with Frames](/guides/streaming-ui-with-frames/) covers the renderer behind it.
+`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by `remix/assets` lives in colocated `public/` directories under `app/`; [Files and Assets](/files-and-assets/) covers that separate pipeline. The next chapter, [Rendering UI](/rendering-ui/), uses `render()` from `remix/middleware/render` to build component pages. [Streaming UI with Frames](/streaming-ui-with-frames/) covers the renderer behind it.
 
 ## Custom middleware {#custom-middleware}
 
@@ -337,4 +337,4 @@ function requireJson(): Middleware {
 }
 ```
 
-Keep custom middleware focused on one request-lifecycle concern. Route-specific data loading or validation usually belongs in the action, while behavior shared across many routes—request IDs, sessions, authentication, security headers, and database access—fits the middleware pipeline. The next chapter, [Rendering UI](/guides/rendering-ui/), uses `context.render(...)` to build the app's document and component tree.
+Keep custom middleware focused on one request-lifecycle concern. Route-specific data loading or validation usually belongs in the action, while behavior shared across many routes—request IDs, sessions, authentication, security headers, and database access—fits the middleware pipeline. The next chapter, [Rendering UI](/rendering-ui/), uses `context.render(...)` to build the app's document and component tree.

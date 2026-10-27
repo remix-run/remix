@@ -10,19 +10,6 @@ import { loadDocsNavigationItems } from './markdown-chapters.tsx'
 const guideNavigation = await loadDocsNavigationItems()
 
 describe('docs responses', () => {
-  it('redirects the guides index to the docs overview', async (t) => {
-    let router = createTestRouter(t)
-    let [withSlash, withoutSlash] = await Promise.all([
-      router.fetch(new Request('http://localhost/guides/')),
-      router.fetch(new Request('http://localhost/guides')),
-    ])
-
-    assert.equal(withSlash.status, 308)
-    assert.equal(withSlash.headers.get('Location'), '/')
-    assert.equal(withoutSlash.status, 308)
-    assert.equal(withoutSlash.headers.get('Location'), '/')
-  })
-
   it('shows unfinished chapters with links to package READMEs', async (t) => {
     let router = createTestRouter(t)
     let response = await router.fetch(
@@ -85,10 +72,10 @@ describe('docs responses', () => {
     assert.equal(response.status, 200)
     let docsNavigation = getDocsNavigationHtml(html)
     assert.equal(docsNavigation.match(/aria-current="page"/g)?.length, 1)
-    assert.match(docsNavigation, /href="\/"[^>]*>Overview<\/a>/)
-    assert.match(docsNavigation, />Guides<\/h2>/)
-    assert.match(docsNavigation, /href="\/guides\/start-here\/" aria-current="page"/)
-    assert.match(docsNavigation, />API Reference<\/h2>/)
+    assert.match(docsNavigation, /href="\/"[^>]*>Introduction<\/a>/)
+    assert.doesNotMatch(docsNavigation, />Guides<\/h2>/)
+    assert.match(docsNavigation, /href="\/start-here\/" aria-current="page"/)
+    assert.match(docsNavigation, /href="\/api\/"[^>]*>API Reference/)
     assert.match(
       getOpeningTag(html, 'div', 'docs-layout'),
       /data-rmx-key="docs-chapter-start-here"/,
@@ -105,10 +92,7 @@ describe('docs responses', () => {
     )
     let html = await response.text()
 
-    assert.match(
-      html,
-      /<link rel="alternate" type="text\/markdown" href="\/guides\/start-here\.md"/,
-    )
+    assert.match(html, /<link rel="alternate" type="text\/markdown" href="\/start-here\.md"/)
   })
 
   it('serves chapter markdown source', async (t) => {
@@ -149,7 +133,7 @@ describe('docs responses', () => {
     let markdown = await response.text()
 
     assert.doesNotMatch(markdown, /^::frame/m)
-    assert.doesNotMatch(markdown, /\/guides\/examples\/05-interactivity\/basic-counter\//)
+    assert.doesNotMatch(markdown, /\/examples\/05-interactivity\/basic-counter\//)
   })
 
   it('returns 404 for unknown chapter markdown', async (t) => {

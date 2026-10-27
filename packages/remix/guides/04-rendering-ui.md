@@ -9,7 +9,7 @@ adds a document shell, styles, and first-party UI.
 
 The component model is the same on the server and in the browser. A page does not need browser
 JavaScript unless part of it handles events or uses browser APIs. We'll add that layer in
-[Interactivity](/guides/interactivity/).
+[Interactivity](/interactivity/).
 
 ## The Remix component model {#the-remix-component-model}
 
@@ -197,7 +197,7 @@ export function AlbumList(handle: Handle<{ albums: Album[] }>) {
 The input handler changes `filter` and calls `handle.update()`. Updates are explicit: changing a
 variable does not render anything until the component requests an update. Stable `key` values tell
 Remix which list items are the same across renders, preserving their DOM and component state if the
-list changes order. [Interactivity](/guides/interactivity/) covers event handlers, updates, and hydration.
+list changes order. [Interactivity](/interactivity/) covers event handlers, updates, and hydration.
 
 `handle.id` is a stable identifier for the component instance. It is useful when a reusable control
 needs to connect a label, input, description, or ARIA relationship without requiring an `id` prop:
@@ -284,7 +284,7 @@ return context.render(<AlbumPage album={album} />, {
 ```
 
 Most components do not need to know how the middleware turns their tree into a response.
-[Streaming UI with Frames](/guides/streaming-ui-with-frames/) covers the underlying server renderer and the
+[Streaming UI with Frames](/streaming-ui-with-frames/) covers the underlying server renderer and the
 optional `<Frame>` API for pages that load route-owned regions independently.
 
 ## Document shells, head content, and HTML responses {#document-shells-and-head-content}

@@ -12,19 +12,19 @@ describe('readMarkdownFrameReferences', () => {
       '',
       'Intro paragraph.',
       '',
-      '::frame{src="/guides/examples/04-rendering-ui/button-basic/"}',
+      '::frame{src="/examples/04-rendering-ui/button-basic/"}',
       '',
       'Between frames.',
       '',
-      '::frame{src="/guides/examples/05-interactivity/basic-counter/"}',
+      '::frame{src="/examples/05-interactivity/basic-counter/"}',
       '',
     ].join('\n')
 
     let refs = readMarkdownFrameReferences(source)
     assert.equal(refs.length, 2)
-    assert.equal(refs[0].src, '/guides/examples/04-rendering-ui/button-basic/')
+    assert.equal(refs[0].src, '/examples/04-rendering-ui/button-basic/')
     assert.equal(refs[0].lineNumber, 5)
-    assert.equal(refs[1].src, '/guides/examples/05-interactivity/basic-counter/')
+    assert.equal(refs[1].src, '/examples/05-interactivity/basic-counter/')
     assert.equal(refs[1].lineNumber, 9)
   })
 
@@ -113,7 +113,7 @@ describe('replaceMarkdownFrames', () => {
       '',
       'Intro with `::frame{src="/not/a/frame/"}` in code.',
       '',
-      '::frame{src="/guides/examples/a/b/"}',
+      '::frame{src="/examples/a/b/"}',
       '',
       '::note{src="/x/"}',
       '',
@@ -130,7 +130,7 @@ describe('replaceMarkdownFrames', () => {
         '',
         'Intro with `::frame{src="/not/a/frame/"}` in code.',
         '',
-        '</guides/examples/a/b/>',
+        '</examples/a/b/>',
         '',
         '::note{src="/x/"}',
         '',
@@ -139,9 +139,7 @@ describe('replaceMarkdownFrames', () => {
   })
 
   it('removes frames that resolve to an empty string', async () => {
-    let source = ['Before.', '', '::frame{src="/guides/examples/a/b/"}', '', 'After.', ''].join(
-      '\n',
-    )
+    let source = ['Before.', '', '::frame{src="/examples/a/b/"}', '', 'After.', ''].join('\n')
 
     let result = await replaceMarkdownFrames(source, async () => '')
 

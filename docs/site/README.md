@@ -1,12 +1,13 @@
 # Remix Docs
 
-The Remix docs and guides run as one Remix app. The API reference is mounted at `/`, and the hand-written guides are mounted at `/guides/`.
+The Remix docs and guides run as one Remix app. The docs overview is at `/`, the hand-written guides are mounted at the root (`/start-here/`), and the API reference starts at `/api/` with each package at `/<package>/`.
 
 ## Where things live
 
+- `app/actions/overview.md` is the docs overview at `/`, and `app/actions/api-overview.md` is the API reference overview at `/api/`.
 - `app/actions/reference/` contains API-only page content.
 - `app/actions/guides/chapters/` contains guide chapters.
-- `app/actions/guides/examples/` contains live guide examples.
+- `app/actions/examples/` contains live guide examples.
 - `app/actions/guides/markdown/` contains guide frame and frontmatter extensions.
 - `app/actions/public/` contains the shared browser entry and site styles.
 - `app/data/` builds one guide and API page registry.
@@ -24,12 +25,12 @@ Generated reference Markdown, copied demos, and static output are written under 
 Chapter files use an order prefix. The prefix controls their order and label; the rest of the file name is the URL slug:
 
 ```txt
-01-start-here.md -> Chapter 1 -> /guides/start-here/
+01-start-here.md -> Chapter 1 -> /start-here/
 ```
 
-Each chapter starts with YAML frontmatter. Level-2 headings build the page table of contents. Guide frames use URLs under `/guides/examples/:chapter/:example/` and must point to an example in the matching chapter directory.
+Each chapter starts with YAML frontmatter. Level-2 headings build the page table of contents. Guide frames use URLs under `/examples/:chapter/:example/` and must point to an example in the matching chapter directory.
 
-Published chapters are also served as Markdown at `/guides/:chapter.md` and copied into `packages/remix/guides/` by `pnpm run generate-remix`.
+Published chapters are also served as Markdown at `/:chapter.md` and copied into `packages/remix/guides/` by `pnpm run generate-remix`.
 
 ## Commands
 

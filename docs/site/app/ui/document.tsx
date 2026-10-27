@@ -22,7 +22,9 @@ import type {
   PageDefinition,
 } from '../data/registry.ts'
 import {
+  API_PAGE_ID,
   buildNotFoundPage,
+  getApiPage,
   getDocPage,
   getHomePage,
   getNavChain,
@@ -174,6 +176,9 @@ function getPageDescription(page: PageDefinition): string {
   if (page.id === HOME_PAGE_ID) {
     return 'Guides and API reference for Remix, a full-stack TypeScript framework for building web applications on web standards.'
   }
+  if (page.id === API_PAGE_ID) {
+    return 'API reference for every Remix module, function and type.'
+  }
   let { docFile } = page
   if (!docFile) return `API reference for ${page.title}.`
   if (docFile.kind === 'demo') return docFile.description
@@ -310,77 +315,112 @@ export function DocsNavigation(
   return () => {
     let { registry, page } = handle.props
     let homePage = getHomePage(registry)
+    let apiPage = getApiPage(registry)
     // One panel per menu from the API reference down to this page's import path.
     let chain = page ? getNavChain(registry, page.navId) : []
+    let inApiReference = page !== undefined && (page.id === API_PAGE_ID || chain.length > 0)
     let nestedPanels: ApiNavPanel[] = []
 
-    if (page) {
+    if (page && inApiReference) {
       let currentPage = page
-      nestedPanels = chain.map((node, index) => {
-        let parent = chain[index - 1]
-        let back = parent ? registry.pages[parent.homePageId] : homePage
-        let content: RemixNode[] = [
-          <a
-            key="back"
-            class="docs-nav-item api-nav-row api-nav-back"
-            href={back.path}
-            data-api-nav-back
-          >
-            <Icon name="chevron-r" />
-            {parent ? parent.label : 'All modules'}
-          </a>,
-          <HeadingLink
-            key="title"
-            class="api-nav-title"
-            page={registry.pages[node.homePageId]}
-            currentPath={currentPage.path}
-          >
-            Overview
-          </HeadingLink>,
-        ]
-
-        if (node.children.length > 0) {
-          content.push(
-            <h2 key="modules-heading" class="docs-nav-heading api-nav-heading">
-              Modules
+      nestedPanels = [
+        {
+          id: 'api-reference',
+          content: [
+            <a
+              key="back"
+              class="docs-nav-item api-nav-row api-nav-back"
+              href={homePage.path}
+              data-api-nav-back
+            >
+              <Icon name="chevron-r" />
+              Docs
+            </a>,
+            <HeadingLink
+              key="title"
+              class="api-nav-title"
+              page={apiPage}
+              currentPath={currentPage.path}
+            >
+              API Reference
+            </HeadingLink>,
+            <h2 key="packages-heading" class="docs-nav-heading api-nav-heading">
+              Packages
             </h2>,
             <NodeLinks
-              key="modules"
+              key="packages"
               registry={registry}
-              nodes={node.children}
-              open={chain[index + 1]}
+              nodes={registry.packages}
+              open={chain[0]}
             />,
-          )
-        }
+          ],
+        },
+        ...chain.map((node, index) => {
+          let parent = chain[index - 1]
+          let back = parent ? registry.pages[parent.homePageId] : apiPage
+          let content: RemixNode[] = [
+            <a
+              key="back"
+              class="docs-nav-item api-nav-row api-nav-back"
+              href={back.path}
+              data-api-nav-back
+            >
+              <Icon name="chevron-r" />
+              {parent ? parent.label : 'API Reference'}
+            </a>,
+            <HeadingLink
+              key="title"
+              class="api-nav-title"
+              page={registry.pages[node.homePageId]}
+              currentPath={currentPage.path}
+            >
+              {node.label}
+            </HeadingLink>,
+          ]
 
-        for (let section of navSections) {
-          let items = node.pageIds
-            .map((pageId) => registry.pages[pageId])
-            .filter((item) => item.navSection === section)
-          if (items.length === 0) continue
+          if (node.children.length > 0) {
+            content.push(
+              <h2 key="modules-heading" class="docs-nav-heading api-nav-heading">
+                Modules
+              </h2>,
+              <NodeLinks
+                key="modules"
+                registry={registry}
+                nodes={node.children}
+                open={chain[index + 1]}
+              />,
+            )
+          }
 
-          content.push(
-            <h2 key={`${section}-heading`} class="docs-nav-heading api-nav-heading">
-              {section}
-            </h2>,
-            <ul key={section} class="api-nav-list">
-              {items.map((item) => (
-                <li key={item.path}>
-                  <a
-                    class="docs-nav-item api-nav-row api-nav-symbol"
-                    href={item.path}
-                    aria-current={isPageActive(item, currentPage.path) ? 'page' : undefined}
-                  >
-                    {item.navLabel}
-                  </a>
-                </li>
-              ))}
-            </ul>,
-          )
-        }
+          for (let section of navSections) {
+            let items = node.pageIds
+              .map((pageId) => registry.pages[pageId])
+              .filter((item) => item.navSection === section)
+            if (items.length === 0) continue
 
-        return { id: node.id, content }
-      })
+            content.push(
+              <h2 key={`${section}-heading`} class="docs-nav-heading api-nav-heading">
+                {section}
+              </h2>,
+              <ul key={section} class="api-nav-list">
+                {items.map((item) => (
+                  <li key={item.path}>
+                    <a
+                      class="docs-nav-item api-nav-row api-nav-symbol"
+                      href={item.path}
+                      aria-current={isPageActive(item, currentPage.path) ? 'page' : undefined}
+                    >
+                      {item.navLabel}
+                    </a>
+                  </li>
+                ))}
+              </ul>,
+            )
+          }
+
+          return { id: node.id, content }
+        }),
+      ]
     }
 
     // Client entry props are serialized, and fragments don't survive that, so each panel's
@@ -397,23 +437,20 @@ export function DocsNavigation(
           >
             {homePage.navLabel}
           </a>,
-          <h2 key="guides-heading" class="docs-nav-heading api-nav-heading">
-            Guides
-          </h2>,
           <GuideLinks
             key="guides"
             chapters={registry.guides}
             currentSlug={handle.props.currentGuideSlug}
           />,
-          <h2 key="api-reference-heading" class="docs-nav-heading api-nav-heading">
-            API Reference
-          </h2>,
-          <NodeLinks
+          <a
             key="api-reference"
-            registry={registry}
-            nodes={registry.packages}
-            open={chain[0]}
-          />,
+            class="docs-nav-item api-nav-row api-nav-node api-nav-section-break"
+            href={apiPage.path}
+            aria-current={inApiReference ? 'true' : undefined}
+          >
+            API Reference
+            <Icon name="chevron-r" />
+          </a>,
         ],
       },
       ...nestedPanels,
@@ -478,7 +515,7 @@ function NodeLinks(handle: Handle<{ registry: DocsRegistry; nodes: NavNode[]; op
   }
 }
 
-// The overview link keeps the menu title style.
+// The package link at the top of an API menu.
 function HeadingLink(
   handle: Handle<{ class: string; page: PageDefinition; currentPath: string; children: RemixNode }>,
 ) {

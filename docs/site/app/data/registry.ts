@@ -14,6 +14,7 @@ const TYPE_EYEBROW: Record<ApiTypeKind, string> = {
 }
 
 export const HOME_PAGE_ID = '__home__'
+export const API_PAGE_ID = '__api__'
 export const NOT_FOUND_PAGE_ID = '__not-found__'
 
 export type PageDefinition = {
@@ -70,9 +71,18 @@ export function buildRegistry(
     id: HOME_PAGE_ID,
     description: '',
     eyebrow: '',
-    navLabel: 'Overview',
+    navLabel: 'Introduction',
     path: routes.home.href(),
-    title: 'Overview',
+    title: 'Introduction',
+  }
+
+  pages[API_PAGE_ID] = {
+    id: API_PAGE_ID,
+    description: '',
+    eyebrow: '',
+    navLabel: 'API Reference',
+    path: routes.api.href(),
+    title: 'API Reference',
   }
 
   let filesByPackage = new Map<string, DocFile[]>()
@@ -211,6 +221,10 @@ export function getHomePage(registry: DocsRegistry): PageDefinition {
   return registry.pages[HOME_PAGE_ID]
 }
 
+export function getApiPage(registry: DocsRegistry): PageDefinition {
+  return registry.pages[API_PAGE_ID]
+}
+
 export function getDocPage(registry: DocsRegistry, slug: string): PageDefinition | undefined {
   return registry.pages[slug]
 }
@@ -249,7 +263,7 @@ export function isPageActive(page: PageDefinition, currentPath: string) {
 }
 
 // `remix/data-table/mysql` -> `data-table`, `@remix-run/ui/tabs` -> `ui`. The bare `remix`
-// package isn't in the sidebar; Overview covers it.
+// package isn't in the sidebar; the API Reference page covers it.
 function getNavPackageId(pkg: string): string | undefined {
   let label = getImportLabel(pkg)
   return label === pkg ? undefined : label.split('/')[0]

@@ -18,7 +18,7 @@ describe('renderMarkdownChapter', () => {
       '',
       'Before the demo.',
       '',
-      '::frame{src="/guides/examples/demo/"}',
+      '::frame{src="/examples/demo/"}',
       '',
       'After the demo.',
       '',

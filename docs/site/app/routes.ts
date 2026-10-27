@@ -4,9 +4,10 @@ export const routes = route({
   // Underscored so no package (like `remix/assets`) can take the path.
   assets: '/_assets/*asset',
   home: '/',
+  api: '/api/',
   lookup: '/api.json',
-  guides: route('guides', {
-    index: get('(/)'),
+  // Guides live at the URL root (`/start-here/`); unknown chapters fall through to the reference.
+  guides: route({
     examples: route('examples', {
       show: get(':chapter/:example(/)'),
     }),

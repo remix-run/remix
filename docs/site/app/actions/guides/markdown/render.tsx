@@ -33,7 +33,7 @@ export function readMarkdownChapterSummary(
   }
 }
 
-async function renderMarkdownRoot(
+export async function renderMarkdownRoot(
   root: Root,
   disabledLinkPaths: ReadonlySet<string> | undefined,
 ): Promise<RemixNode[]> {
