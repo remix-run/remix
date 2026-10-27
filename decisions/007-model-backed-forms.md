@@ -10,11 +10,19 @@ Explicit `text`, `password`, `number`, and `checkbox` descriptions identify tran
 
 Readonly `.entries` preserves original scalar schemas and decoding metadata for adapters. Form kinds and sensitivity belong here; labels, IDs, ARIA, feedback, and browser validity flags remain in UI. Package dependencies flow from UI to data-schema.
 
+## Form-aware safe parsing carries failed submissions
+
+We chose `Signup.parseSafe(data)` as the handler's safe parsing API. It keeps the familiar `success`, `value`, and `issues` result shape, while failures also contain raw restorable `values` and grouped `errors.fields` / `errors.form`. `fd.parseSafe(Signup, data)` uses the same implementation. `Signup.parse(data)` and `fd.parse(Signup, data)` retain ordinary throwing behavior.
+
+We considered a separate `ui/form.parseSubmission(Signup, data)` adapter. That would make handlers choose between two safe parsing calls for the same schema and split submission handling across packages. The `fd.object` schema already knows logical and submitted names, control kinds, and which values are passwords or files. `packages/data-schema/src/lib/form.ts` now validates once and constructs the failure result there; `ui/form` imports that plain-data contract for rendering. Dependencies continue to flow from UI to data-schema.
+
+Core `s.parseSafe` remains generic Standard Schema parsing, including when it receives a form schema. It cannot infer whether a missing entry is an unchecked checkbox or which entries are sensitive; those rules come from `fd.object` descriptions. We did not add form restoration behavior to `s.parseSafe` or change ordinary `s.object` parsing. Form-aware failures deliberately differ: they omit password and file values and project issues to messages and logical paths without raw input metadata. Successful parsing still returns validated passwords. Failed results retain other submitted values, so applications must treat them as request data and avoid putting secrets into authored error messages.
+
 ## Native constraints remain primary
 
 The browser's Constraint Validation API owns native submission blocking. `control(field)` derives SSR constraints and checks native validity before running the shared scalar decoder and schema. Schema failures use `setCustomValidity`. `getConstraints()` remains available for custom integrations.
 
-Without JavaScript, native constraints and server validation still work. `Signup.parseSafe()` and `fd.parseSafe(Signup, data)` delegate shared parsing once and extend failed results with restorable values and grouped errors, omitting password/file values and arbitrary issue metadata. The result types and their construction belong to `data-schema/form`. UI consumes this plain-data contract. Core `s.parseSafe` retains its ordinary issues-only failure contract.
+Without JavaScript, native constraints and server validation still work. Failed responses render errors and restore supported values; feedback timing and browser tooltips may differ from hydrated forms.
 
 ## Context owns feedback; applications own markup
 
