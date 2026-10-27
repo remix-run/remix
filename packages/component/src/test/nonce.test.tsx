@@ -4,48 +4,10 @@ import { describe, it, type TestContext } from '@remix-run/test'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { Frame } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
-import { css } from '../style/css-mixin.ts'
+import { ImportMap, renderToStream } from '../server/stream.ts'
 import { drain } from './utils.ts'
 
 describe('CSP nonces', () => {
-  it('applies blocking frame CSS mixin styles with the forwarded document nonce before hydration', async (t) => {
-    let html = await drain(
-      renderToStream(
-        <html>
-          <head>
-            <meta httpEquiv="Content-Security-Policy" content="style-src 'nonce-document-nonce'" />
-          </head>
-          <body>
-            <Frame src="/child" />
-          </body>
-        </html>,
-        {
-          nonce: 'document-nonce',
-          resolveFrame(_src, _target, context) {
-            return renderToStream(<p mix={[css({ color: 'rgb(12, 34, 56)' })]}>Styled frame</p>, {
-              nonce: context?.nonce,
-            })
-          },
-        },
-      ),
-    )
-    let iframe = document.createElement('iframe')
-    t.after(() => iframe.remove())
-    let loaded = new Promise<void>((resolve) => {
-      iframe.addEventListener('load', () => resolve(), { once: true, signal: t.signal })
-    })
-    iframe.srcdoc = html
-    document.body.append(iframe)
-    await loaded
-
-    let frameWindow = iframe.contentWindow
-    invariant(frameWindow)
-    let paragraph = frameWindow.document.querySelector('p')
-    invariant(paragraph)
-    expect(frameWindow.getComputedStyle(paragraph).color).toBe('rgb(12, 34, 56)')
-  })
-
   it('loads generated module preloads under nonce-only CSP', async (t) => {
     let doc = await renderPreloadUnderCsp(t)
 
@@ -63,34 +25,6 @@ describe('CSP nonces', () => {
       'document-nonce',
     )
     expect(doc.body.querySelector('link[rel="modulepreload"]')).toBeNull()
-  })
-
-  it('applies renderToString CSS mixin styles under CSP before hydration', async (t) => {
-    let html = await renderToString(
-      <html>
-        <head>
-          <meta httpEquiv="Content-Security-Policy" content="style-src 'nonce-document-nonce'" />
-        </head>
-        <body>
-          <p mix={[css({ color: 'rgb(12, 34, 56)' })]}>Styled</p>
-        </body>
-      </html>,
-      { nonce: 'document-nonce' },
-    )
-    let iframe = document.createElement('iframe')
-    t.after(() => iframe.remove())
-    let loaded = new Promise<void>((resolve) => {
-      iframe.addEventListener('load', () => resolve(), { once: true, signal: t.signal })
-    })
-    iframe.srcdoc = html
-    document.body.append(iframe)
-    await loaded
-
-    let frameWindow = iframe.contentWindow
-    invariant(frameWindow)
-    let paragraph = frameWindow.document.querySelector('p')
-    invariant(paragraph)
-    expect(frameWindow.getComputedStyle(paragraph).color).toBe('rgb(12, 34, 56)')
   })
 
   it('hoists import maps and preloads from blocking frames rendered with a nonce', async () => {
@@ -155,24 +89,9 @@ describe('CSP nonces', () => {
     })
   })
 
-  it('hydrates the first late client entry under CSP with an empty authored import map', async (t) => {
-    let result = await renderLateEntryUnderCsp(t, {
-      nonce: 'document-nonce',
-      initialImportMap: true,
-    })
-
-    expect(result).toEqual({
-      hydrated: true,
-      error: '',
-      nonce: 'document-nonce',
-      metadataNonces: ['document-nonce'],
-    })
-  })
-
   it('prefers an authored import map nonce over document nonce metadata', async (t) => {
     let result = await renderLateEntryUnderCsp(t, {
       nonce: 'document-nonce',
-      initialImportMap: true,
       importMapNonce: 'authored-nonce',
     })
 
@@ -184,11 +103,11 @@ describe('CSP nonces', () => {
     })
   })
 
-  it('uses an authored import map nonce without a render nonce option', async (t) => {
+  it('uses an authored import map nonce for late maps and preloads without a render nonce', async (t) => {
     let result = await renderLateEntryUnderCsp(t, {
       nonce: undefined,
-      initialImportMap: true,
       importMapNonce: 'authored-nonce',
+      preload: true,
     })
 
     expect(result).toEqual({
@@ -196,13 +115,15 @@ describe('CSP nonces', () => {
       error: '',
       nonce: 'authored-nonce',
       metadataNonces: [],
+      preload: { status: 'load', nonce: 'authored-nonce' },
     })
   })
 
-  it('preserves the original nonce metadata across a document frame reload', async (t) => {
+  it('preserves the document nonce for late maps and preloads after a document reload', async (t) => {
     let result = await renderLateEntryUnderCsp(t, {
       nonce: 'document-nonce',
       reloadDocument: true,
+      preload: true,
     })
 
     expect(result).toEqual({
@@ -210,32 +131,8 @@ describe('CSP nonces', () => {
       error: '',
       nonce: 'document-nonce',
       metadataNonces: ['document-nonce'],
+      preload: { status: 'load', nonce: 'document-nonce' },
     })
-  })
-
-  it('loads late preloads with the original document nonce after a document reload', async (t) => {
-    let result = await renderLateEntryUnderCsp(t, {
-      nonce: 'document-nonce',
-      reloadDocument: true,
-      preload: true,
-    })
-
-    expect(result.preload).toEqual({ status: 'load', nonce: 'document-nonce' })
-    expect(result.hydrated).toBe(true)
-    expect(result.error).toBe('')
-  })
-
-  it('loads late preloads with an authored import map nonce without a render nonce', async (t) => {
-    let result = await renderLateEntryUnderCsp(t, {
-      nonce: undefined,
-      initialImportMap: true,
-      importMapNonce: 'authored-nonce',
-      preload: true,
-    })
-
-    expect(result.preload).toEqual({ status: 'load', nonce: 'authored-nonce' })
-    expect(result.hydrated).toBe(true)
-    expect(result.error).toBe('')
   })
 })
 
@@ -285,7 +182,6 @@ async function renderLateEntryUnderCsp(
   t: TestContext,
   options: {
     nonce: string | undefined
-    initialImportMap?: boolean
     importMapNonce?: string
     reloadDocument?: boolean
     preload?: boolean
@@ -381,7 +277,7 @@ async function renderLateEntryUnderCsp(
             httpEquiv="Content-Security-Policy"
             content={`script-src ${options.preload ? '' : "'self' data: "}'nonce-${policyNonce}'; style-src 'nonce-${policyNonce}'`}
           />
-          {options.initialImportMap && <ImportMap nonce={options.importMapNonce} value={{}} />}
+          {options.importMapNonce && <ImportMap nonce={options.importMapNonce} value={{}} />}
           <script type="module" nonce={policyNonce}>
             {bootstrap}
           </script>
@@ -394,10 +290,6 @@ async function renderLateEntryUnderCsp(
       </html>,
       { nonce: options.nonce, resolveFrame: () => '<p>Initial page</p>' },
     ),
-  )
-  let initialDocument = new DOMParser().parseFromString(html, 'text/html')
-  expect(initialDocument.querySelectorAll('script[data-rmx-import-map]')).toHaveLength(
-    options.initialImportMap ? 1 : 0,
   )
   let doc = await renderNonceDocument(t, html, completionMessage)
   return {

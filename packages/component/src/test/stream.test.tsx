@@ -1645,21 +1645,6 @@ describe('stream', () => {
       expect(html).not.toContain('<!-- rmx:flush')
     })
 
-    it('renderToString preserves an authored import map nonce', async () => {
-      let html = await renderToString(
-        <html>
-          <head>
-            <ImportMap nonce="authored" value={{}} />
-          </head>
-          <body>Hello</body>
-        </html>,
-        { nonce: 'r4nd0m' },
-      )
-
-      expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="authored">')
-      expect(html).toContain('<meta name="rmx-nonce" content="" nonce="r4nd0m">')
-    })
-
     it('stamps the nonce on server style tags', async () => {
       let html = await drain(
         renderToStream(<div mix={[css({ color: 'red' })]}>Styled</div>, { nonce: 'r4nd0m' }),

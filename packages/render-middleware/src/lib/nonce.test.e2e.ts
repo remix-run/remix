@@ -20,9 +20,6 @@ describe('CSP rendering', () => {
               styleSrc: [`'nonce-${nonce}'`],
             }
           },
-          filter(response) {
-            return response.headers.get('Content-Type')?.split(';')[0] === 'text/html'
-          },
         }),
         render(),
       ] as const,

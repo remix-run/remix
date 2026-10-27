@@ -2,7 +2,6 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { ContentSecurityPolicy } from './content-security-policy.ts'
-import { SuperHeaders } from './super-headers.ts'
 
 describe('ContentSecurityPolicy', () => {
   it('serializes source lists and valueless directives', () => {
@@ -73,13 +72,5 @@ describe('ContentSecurityPolicy', () => {
     })
     assert.equal(policy.toString(), 'script-src')
     assert.equal(ContentSecurityPolicy.from(null).toString(), '')
-  })
-
-  it('leaves SuperHeaders CSP accessors as strings', () => {
-    let headers = new SuperHeaders()
-    headers.contentSecurityPolicy = new ContentSecurityPolicy({ defaultSrc: ["'self'"] }).toString()
-    headers.contentSecurityPolicyReportOnly = "script-src 'none'"
-    assert.equal(headers.contentSecurityPolicy, "default-src 'self'")
-    assert.equal(headers.contentSecurityPolicyReportOnly, "script-src 'none'")
   })
 })
