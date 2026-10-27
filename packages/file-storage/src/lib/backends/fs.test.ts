@@ -349,6 +349,99 @@ describe('fs file storage', () => {
     assert.deepEqual(fs.readdirSync(tmpDir, { recursive: true }), entries)
   })
 
+  it('preserves restrictive permissions while migrating a legacy entry', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
+    fs.chmodSync(dataPath, 0o600)
+    fs.chmodSync(metaPath, 0o660)
+    let dataMode = fs.statSync(dataPath).mode & 0o777
+    let metaMode = fs.statSync(metaPath).mode & 0o777
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
+    let upload = new File(['replacement'], 'new.txt')
+    let stream = upload.stream.bind(upload)
+    upload.stream = function () {
+      let staged = fs
+        .readdirSync(path.dirname(dataPath))
+        .find((name) => name.endsWith('.dat') && name !== path.basename(dataPath))
+      assert.ok(staged)
+      assert.equal(fs.statSync(path.join(path.dirname(dataPath), staged)).mode & 0o777, dataMode)
+      return stream()
+    }
+
+    let stored = await storage.put('file', upload)
+
+    assert.equal(await stored.text(), 'replacement')
+    let content = fs.readdirSync(path.dirname(metaPath)).find((name) => name.endsWith('.dat'))
+    assert.ok(content)
+    assert.equal(fs.statSync(path.join(path.dirname(metaPath), content)).mode & 0o777, dataMode)
+    assert.equal(fs.statSync(metaPath).mode & 0o777, metaMode)
+  })
+
+  it('preserves separate content and metadata permissions when replacing a migrated entry', async () => {
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
+    await storage.set('file', new File(['original'], 'original.txt'))
+    let entries = fs.readdirSync(tmpDir, { recursive: true, encoding: 'utf-8' })
+    let content = entries.find((name) => name.endsWith('.dat'))
+    let metadata = entries.find((name) => name.endsWith('.meta.json'))
+    assert.ok(content)
+    assert.ok(metadata)
+    let metaPath = path.join(tmpDir, metadata)
+    fs.chmodSync(path.join(tmpDir, content), 0o640)
+    fs.chmodSync(metaPath, 0o600)
+    let dataMode = fs.statSync(path.join(tmpDir, content)).mode & 0o777
+    let metaMode = fs.statSync(metaPath).mode & 0o777
+
+    await createFsFileStorage(tmpDir, { atomicWrites: false }).set(
+      'file',
+      new File(['replacement'], 'new.txt'),
+    )
+
+    let replacement = fs.readdirSync(path.dirname(metaPath)).find((name) => name.endsWith('.dat'))
+    assert.ok(replacement)
+    assert.equal(fs.statSync(path.join(path.dirname(metaPath), replacement)).mode & 0o777, dataMode)
+    assert.equal(fs.statSync(metaPath).mode & 0o777, metaMode)
+    let stored = await storage.get('file')
+    assert.ok(stored)
+    assert.equal(await stored.text(), 'replacement')
+  })
+
+  it('preserves restrictive permissions when recovering corrupt metadata', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
+    let abandonedPath = dataPath.replace(/\.dat$/, `.${crypto.randomUUID()}.dat`)
+    fs.writeFileSync(abandonedPath, 'abandoned')
+    fs.writeFileSync(metaPath, '{')
+    fs.chmodSync(dataPath, 0o600)
+    fs.chmodSync(abandonedPath, 0o640)
+    fs.chmodSync(metaPath, 0o600)
+    let dataMode = fs.statSync(dataPath).mode & fs.statSync(abandonedPath).mode & 0o777
+    let metaMode = fs.statSync(metaPath).mode & 0o777
+
+    await createFsFileStorage(tmpDir, { atomicWrites: true }).set(
+      'file',
+      new File(['replacement'], 'new.txt'),
+    )
+
+    let content = fs.readdirSync(path.dirname(metaPath)).find((name) => name.endsWith('.dat'))
+    assert.ok(content)
+    assert.equal(fs.statSync(path.join(path.dirname(metaPath), content)).mode & 0o777, dataMode)
+    assert.equal(fs.statSync(metaPath).mode & 0o777, metaMode)
+  })
+
+  it('uses existing metadata permissions when replacing missing content', async () => {
+    let { dataPath, metaPath } = await writeLegacyFile(tmpDir, 'file', new File(['old'], 'old.txt'))
+    fs.unlinkSync(dataPath)
+    fs.chmodSync(metaPath, 0o600)
+    let metaMode = fs.statSync(metaPath).mode & 0o777
+    let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
+
+    let stored = await storage.put('file', new File(['replacement'], 'new.txt'))
+
+    assert.equal(await stored.text(), 'replacement')
+    let content = fs.readdirSync(path.dirname(metaPath)).find((name) => name.endsWith('.dat'))
+    assert.ok(content)
+    assert.equal(fs.statSync(path.join(path.dirname(metaPath), content)).mode & 0o777, metaMode)
+    assert.equal(fs.statSync(metaPath).mode & 0o777, metaMode)
+  })
+
   it('cleans up an unpublished upload when its stream fails', async () => {
     let storage = createFsFileStorage(tmpDir, { atomicWrites: true })
     let failure = new Error('Upload interrupted')

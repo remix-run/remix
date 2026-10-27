@@ -118,17 +118,28 @@ export function createFsFileStorage(
       return prepareResult(filePath, metadata)
     }
 
+    let metaMode = await readFileMode(metaPath)
+    let dataMode: number | undefined
+    // Corrupt metadata may leave multiple versions. Retain only permissions allowed by all of them.
+    for (let previousDataPath of previousDataPaths) {
+      let mode = await readFileMode(previousDataPath)
+      if (mode !== undefined) dataMode = (dataMode ?? 0o777) & mode
+    }
+    dataMode ??= metaMode
+
     let version = crypto.randomUUID()
     let dataPath = filePath.replace(/\.dat$/, `.${version}.dat`)
     let tempMetaPath = `${metaPath}.${version}.tmp`
 
-    let handle = await fsp.open(dataPath, 'wx')
+    let handle = await fsp.open(dataPath, 'wx', dataMode)
     let tempMetadataCreated = false
     let published = false
 
     try {
       let metadata: FileMetadata & { dataFile: string }
       try {
+        // Restore the existing mode even if the process umask has changed since the last write.
+        if (dataMode !== undefined) await handle.chmod(dataMode)
         for await (let chunk of file.stream()) {
           await handle.writeFile(chunk)
         }
@@ -147,9 +158,10 @@ export function createFsFileStorage(
 
       // Prepare the return value before publication so preparation errors preserve the old entry.
       let result = prepareResult(dataPath, metadata)
-      let metaHandle = await fsp.open(tempMetaPath, 'wx')
+      let metaHandle = await fsp.open(tempMetaPath, 'wx', metaMode)
       tempMetadataCreated = true
       try {
+        if (metaMode !== undefined) await metaHandle.chmod(metaMode)
         await metaHandle.writeFile(JSON.stringify(metadata))
       } finally {
         await metaHandle.close()
@@ -312,6 +324,15 @@ async function findDataPaths(filePath: string): Promise<string[]> {
   return (await fsp.readdir(directory))
     .filter((name) => name === `${hash}.dat` || isVersionedDataFile(name, hash))
     .map((name) => path.join(directory, name))
+}
+
+async function readFileMode(filePath: string): Promise<number | undefined> {
+  try {
+    return (await fsp.stat(filePath)).mode & 0o777
+  } catch (error) {
+    if (isNoEntityError(error)) return undefined
+    throw error
+  }
 }
 
 async function readMetadata(metaPath: string): Promise<StoredMetadata | null> {
