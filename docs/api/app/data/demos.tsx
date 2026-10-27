@@ -4,6 +4,7 @@ import * as url from 'node:url'
 import type { RemixNode } from 'remix/component'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
+import { getDocsUrlPath } from '../routes.ts'
 import { formatWithOxfmt } from '../utils/format.ts'
 import {
   getDocsPackagePath,
@@ -112,7 +113,7 @@ async function getDemoFile(filePath: string): Promise<DemoDocFile> {
     slug,
     source: formattedSource,
     sourceUrl: `${SOURCE_URL_BASE}/${relativePath}`,
-    urlPath: `${getDocsPackagePath(packageName)}/demos/${slug}`,
+    urlPath: getDocsUrlPath(`${getDocsPackagePath(packageName)}/demos/${slug}`),
   }
 }
 

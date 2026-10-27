@@ -7,7 +7,7 @@ import { createElement } from '../runtime/create-element.ts'
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
-import { Frame } from '../runtime/component.ts'
+import { Fragment, Frame } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
@@ -56,6 +56,138 @@ describe('stream', () => {
       expect(html).toBe('<div>Hello, world!</div>')
     })
 
+    it('removes the request abort listener after rendering finishes', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+
+      await drain(renderToStream(<p>Finished</p>, { signal: controller.signal }))
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+    })
+
+    it('removes the request abort listener when rendering fails', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+      function Broken(): never {
+        throw new Error('Render failed')
+      }
+
+      await expect(
+        drain(renderToStream(<Broken />, { signal: controller.signal, onError() {} })),
+      ).rejects.toThrow('Render failed')
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+    })
+
+    it('removes the request abort listener when the consumer cancels pending rendering', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+      let [frame, resolve] = withResolvers<string>()
+      let stream = renderToStream(<Frame src="/pending" fallback={<p>Loading</p>} />, {
+        signal: controller.signal,
+        resolveFrame() {
+          return frame
+        },
+      })
+      let reader = stream.getReader()
+      await reader.read()
+
+      expect(remove).toHaveBeenCalledTimes(0)
+      await reader.cancel()
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+      resolve('<p>Done</p>')
+    })
+
+    it('keeps earlier stream chunks intact while other renders finish', async () => {
+      let content = '日本語🙂'.repeat(1000)
+      let reader = renderToStream(<p>{content}</p>).getReader()
+      try {
+        let first = await reader.read()
+        invariant(!first.done)
+
+        await drain(renderToStream(<p>{'Other content'.repeat(3000)}</p>))
+
+        expect(new TextDecoder().decode(first.value)).toBe(
+          `<p>${content}</p><!-- rmx:flush fragment -->`,
+        )
+      } finally {
+        await reader.cancel()
+      }
+    })
+
+    it('encodes large ASCII output', async () => {
+      let content = 'Hello'.repeat(20_000)
+      let html = await drain(renderToStream(<p>{content}</p>))
+      expect(html).toBe(`<p>${content}</p>`)
+    })
+
+    it('encodes large multi-byte output', async () => {
+      let content = '日本語'.repeat(20_000) + '🙂'
+      let html = await drain(renderToStream(<p>{content}</p>))
+      expect(html).toBe(`<p>${content}</p>`)
+    })
+
+    it('encodes surrogate pairs across adjacent text nodes', async () => {
+      let html = await drain(renderToStream(<p>{['\ud83d', '\ude00', '\ud800', 'Å']}</p>))
+      expect(html).toBe('<p>😀�Å</p>')
+    })
+
+    it('inserts head resources and hydration data around a large Unicode body', async () => {
+      let content = '日本語🙂'.repeat(3000)
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>{content}</p>
+      })
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>日本語</title>
+            </head>
+            <body>
+              <Entry />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/entry.js',
+                exportName: 'Entry',
+                preloads: ['/entry.js'],
+                importMap: { imports: { entry: '/entry.js' } },
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html).toContain('<title>日本語</title>')
+      expect(html).toContain('href="/entry.js" /></head><body>')
+      expect(html).toContain(`<p>${content}</p><!-- /rmx:h --><script type="application/json"`)
+      expect(html).toContain('</script></body></html>')
+      let [, data] = getSingleEntry(parseRmxDataFromHtml(html).h)
+      expect(data).toEqual({ moduleUrl: '/entry.js', exportName: 'Entry', props: {} })
+    })
+
+    it('streams a large synchronous tree without yielding for every node', async () => {
+      let children = Array.from({ length: 1000 }, (_, index) => <span>{index}</span>)
+      let reader = renderToStream(<div>{children}</div>).getReader()
+      let ready = false
+      let firstChunk = reader.read().then((chunk) => {
+        ready = true
+        return chunk
+      })
+
+      for (let index = 0; index < 20; index++) await Promise.resolve()
+      expect(ready).toBe(true)
+      let chunk = await firstChunk
+      expect(new TextDecoder().decode(chunk.value)).toContain('<span>999</span>')
+      await reader.cancel()
+    })
+
     it('marks stream batches as documents or fragments', async () => {
       let fragmentChunks = readChunks(renderToStream(<div>Hello, world!</div>))
       let fragment = await fragmentChunks.next()
@@ -90,6 +222,20 @@ describe('stream', () => {
       let stream = renderToStream(<div>{'<script>alert(1)</script>'}</div>)
       let html = await drain(stream)
       expect(html).toBe('<div>&lt;script&gt;alert(1)&lt;/script&gt;</div>')
+    })
+
+    it('preserves Unicode and entity text while escaping text and attribute delimiters', async () => {
+      let value = `café 😀 "'<&> &amp; "'<&>`
+      let html = await drain(renderToStream(<p title={value}>{value}</p>))
+
+      expect(html).toBe(
+        '<p title="café 😀 &quot;&#39;&lt;&amp;&gt; &amp;amp; &quot;&#39;&lt;&amp;&gt;">' +
+          `café 😀 "'&lt;&amp;&gt; &amp;amp; "'&lt;&amp;&gt;</p>`,
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      expect(shelf.content.querySelector('p')?.getAttribute('title')).toBe(value)
+      expect(shelf.content.textContent).toBe(value)
     })
 
     it('renders script string children as raw text', async () => {
@@ -224,6 +370,19 @@ describe('stream', () => {
       let stream = renderToStream([<div>One</div>, <span>Two</span>])
       let html = await drain(stream)
       expect(html).toBe('<div>One</div><span>Two</span>')
+    })
+
+    it('renders sparse arrays without content for empty slots', async () => {
+      let nested: RemixNode[] = [<span>Second</span>]
+      nested[2] = 'Third'
+
+      let children: RemixNode[] = []
+      children.length = 5
+      children[1] = 'First'
+      children[3] = nested
+
+      let html = await drain(renderToStream(children))
+      expect(html).toBe('First<span>Second</span>Third')
     })
 
     it('renders mixed array of nodes', async () => {
@@ -374,6 +533,27 @@ describe('stream', () => {
       expect(html).toBe('<div><span>Count: 42</span><br /><span>Double: 84</span></div>')
     })
 
+    it('gives sibling components unique ids after nested components', async () => {
+      function Leaf(handle: Handle) {
+        return () => <i id={handle.id} />
+      }
+      function Mid() {
+        return () => <Leaf />
+      }
+
+      let html = await renderToString(
+        <div>
+          <Mid />
+          <Mid />
+          <Leaf />
+        </div>,
+      )
+
+      let ids = Array.from(html.matchAll(/id="([^"]+)"/g), (match) => match[1])
+      expect(ids.length).toBe(3)
+      expect(new Set(ids).size).toBe(3)
+    })
+
     it('exposes the current and top frame src during SSR', async () => {
       let seen:
         | {
@@ -429,7 +609,9 @@ describe('stream', () => {
         }),
       )
 
-      await expect(drain(stream)).rejects.toThrow('Invalid innerHTML prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects JSON-shaped innerHTML values', async () => {
@@ -439,7 +621,9 @@ describe('stream', () => {
         }),
       )
 
-      await expect(drain(stream)).rejects.toThrow('Invalid innerHTML prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('renders branded iframe srcDoc as escaped attribute markup', async () => {
@@ -461,31 +645,41 @@ describe('stream', () => {
     it('rejects unbranded iframe srcDoc values', async () => {
       let stream = renderToStream(createElement('iframe', { srcDoc: '<p>HTML</p>' }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid srcDoc prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcDoc prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects JSON-shaped iframe srcDoc values', async () => {
       let stream = renderToStream(createElement('iframe', { srcDoc: { value: '<p>HTML</p>' } }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid srcDoc prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcDoc prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects unbranded iframe srcdoc values', async () => {
       let stream = renderToStream(createElement('iframe', { srcdoc: '<p>HTML</p>' }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid srcdoc prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcdoc prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects JSON-shaped iframe srcdoc values', async () => {
       let stream = renderToStream(createElement('iframe', { srcdoc: { value: '<p>HTML</p>' } }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid srcdoc prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcdoc prop: expected a value created with unsafeHTML()',
+      )
     })
 
     it('rejects outerHTML values', async () => {
       let stream = renderToStream(createElement('div', { outerHTML: '<p>replacement</p>' }))
 
-      await expect(drain(stream)).rejects.toThrow('Invalid outerHTML prop')
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid outerHTML prop: outerHTML is not supported on host elements',
+      )
     })
 
     it('omits invalid and reserved host prop names', async () => {
@@ -579,6 +773,43 @@ describe('stream', () => {
       expect(html).toBe('<div class="test-class">Content</div>')
     })
 
+    it('merges class and className in order', async () => {
+      let html = await drain(renderToStream(<div class="first" className="second" />))
+      expect(html).toBe('<div class="first second"></div>')
+    })
+
+    it('does not render inherited attributes from props', async () => {
+      let element = <p className="plain">Child</p>
+      Object.setPrototypeOf(element.props, { title: 'inherited' })
+
+      let html = await drain(renderToStream(element))
+
+      expect(html).toBe('<p class="plain">Child</p>')
+    })
+
+    it('renders reused frozen props without changing classes or styles', async () => {
+      let plain = <p className="plain">Plain</p>
+      let style = Object.freeze({ marginTop: 2 })
+      let styled = (
+        <p class="first" className="second" style={style}>
+          Styled
+        </p>
+      )
+      Object.freeze(plain.props)
+      Object.freeze(styled.props)
+
+      let first = await drain(renderToStream([plain, styled]))
+      let second = await drain(renderToStream([plain, styled]))
+
+      expect(first).toBe(
+        '<p class="plain">Plain</p><p class="first second" style="margin-top: 2px;">Styled</p>',
+      )
+      expect(second).toBe(first)
+      expect(styled.props.class).toBe('first')
+      expect(styled.props.className).toBe('second')
+      expect(styled.props.style).toBe(style)
+    })
+
     it('changes htmlFor to for', async () => {
       let stream = renderToStream(
         <>
@@ -641,6 +872,26 @@ describe('stream', () => {
       let html = await drain(stream)
       expect(html).toBe(
         '<div contenteditable="false" draggable="false" spellcheck="false"><input value="false" /></div>',
+      )
+    })
+
+    it('preserves boolean and escaped values in HTML and SVG attributes', async () => {
+      let html = await drain(
+        renderToStream(
+          <>
+            <input disabled required={false} value={0} title={'A & "B"'} />
+            <div contentEditable draggable={false} title={undefined} />
+            <svg preserveAlpha={false} focusable>
+              <use xlinkHref="#safe" />
+            </svg>
+          </>,
+        ),
+      )
+
+      expect(html).toBe(
+        '<input disabled value="0" title="A &amp; &quot;B&quot;" />' +
+          '<div contenteditable="true" draggable="false"></div>' +
+          '<svg preserveAlpha="false" focusable="true"><use xlink:href="#safe"></use></svg>',
       )
     })
 
@@ -1964,6 +2215,41 @@ describe('stream', () => {
       }
     })
 
+    it('snapshots hydration props before resolving client entries and calls toJSON once', async () => {
+      let calls = 0
+      let value = {
+        count: 1,
+        toJSON() {
+          calls++
+          return { count: this.count, label: '</script>日本語🙂' }
+        },
+      }
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let html = await drain(
+        renderToStream(createElement(Entry, { value }), {
+          async resolveClientEntry() {
+            value.count = 2
+            return { href: '/entry.js', exportName: 'Entry' }
+          },
+        }),
+      )
+
+      let [, data] = getSingleEntry(parseRmxDataFromHtml(html).h)
+      expect(data.props.value).toEqual({ count: 1, label: '</script>日本語🙂' })
+      expect(calls).toBe(1)
+    })
+
+    it('rejects client entry props whose toJSON returns undefined', async () => {
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let stream = renderToStream(createElement(Entry, { toJSON() {} }), { onError() {} })
+
+      await expect(drain(stream)).rejects.toThrow('Client entry props must serialize to JSON')
+    })
+
     it('renders hydrated component with complex props', async () => {
       let Card = clientEntry(
         '/js/card.js#Card',
@@ -2163,6 +2449,136 @@ describe('stream', () => {
           },
         },
       })
+    })
+
+    it('serializes Fragment elements in entry props as fragment descriptors', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={
+              <>
+                <b>Bold</b>
+                <i>Italic</i>
+              </>
+            }
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(html).toContain('<div><b>Bold</b><i>Italic</i></div>')
+      expect(entry.props.content).toEqual({
+        $rmxFragment: true,
+        props: {
+          children: [
+            { $rmx: true, type: 'b', props: { children: 'Bold' } },
+            { $rmx: true, type: 'i', props: { children: 'Italic' } },
+          ],
+        },
+      })
+    })
+
+    it('serializes fragments rendered by virtual components in entry props', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      function Pair() {
+        return () => (
+          <>
+            <b>Bold</b>
+            <i>Italic</i>
+          </>
+        )
+      }
+
+      let html = await drain(renderToStream(<Slot content={<Pair />} />))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual({
+        $rmxFragment: true,
+        props: {
+          children: [
+            { $rmx: true, type: 'b', props: { children: 'Bold' } },
+            { $rmx: true, type: 'i', props: { children: 'Italic' } },
+          ],
+        },
+      })
+    })
+
+    it('serializes element and fragment keys in entry props', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={[
+              <b key="bold">Bold</b>,
+              <Fragment key={2}>
+                <i>Italic</i>
+              </Fragment>,
+            ]}
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual([
+        { $rmx: true, type: 'b', props: { children: 'Bold' }, key: 'bold' },
+        {
+          $rmxFragment: true,
+          props: { children: { $rmx: true, type: 'i', props: { children: 'Italic' } } },
+          key: 2,
+        },
+      ])
+    })
+
+    it('omits entry prop keys that cannot round-trip through JSON', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={[
+              <b key={1n}>Bold</b>,
+              <Fragment key={{ id: 'italic' }}>
+                <i>Italic</i>
+              </Fragment>,
+              <u key={Number.NaN}>Underline</u>,
+            ]}
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual([
+        { $rmx: true, type: 'b', props: { children: 'Bold' } },
+        {
+          $rmxFragment: true,
+          props: { children: { $rmx: true, type: 'i', props: { children: 'Italic' } } },
+        },
+        { $rmx: true, type: 'u', props: { children: 'Underline' } },
+      ])
     })
 
     it('nests hydrated components', async () => {
@@ -3713,6 +4129,54 @@ describe('stream', () => {
       // Should be done after first chunk
       let done = await chunks.next()
       expect(done.done).toBe(true)
+    })
+
+    it('keeps sibling order and nested frame boundaries across the first chunk', async () => {
+      let [pending, resolvePending] = withResolvers<string>()
+      let chunks = readChunks(
+        renderToStream(
+          <main>
+            {[
+              'before',
+              <Frame src="/blocking" />,
+              [
+                null,
+                <span>between</span>,
+                <Frame
+                  src="/pending"
+                  fallback={
+                    <>
+                      <i>Loading</i>
+                      <Frame src="/nested" />
+                    </>
+                  }
+                />,
+              ],
+              'after',
+            ]}
+          </main>,
+          {
+            resolveFrame(src) {
+              if (src === '/pending') return pending
+              return src === '/blocking' ? '<b>Blocking</b>' : '<em>Nested</em>'
+            },
+          },
+        ),
+      )
+
+      let first = await chunks.next()
+      invariant(!first.done)
+      expect(first.value.replace(/<!-- rmx:f:[^ ]+ -->/g, '<!-- frame -->')).toContain(
+        '<main>before<!-- frame --><b>Blocking</b><!-- /rmx:f --><span>between</span>' +
+          '<!-- frame --><i>Loading</i><!-- frame --><em>Nested</em><!-- /rmx:f -->' +
+          '<!-- /rmx:f -->after</main>',
+      )
+
+      resolvePending('<strong>Done</strong>')
+      let second = await chunks.next()
+      invariant(!second.done)
+      expect(second.value).toContain('<strong>Done</strong>')
+      expect((await chunks.next()).done).toBe(true)
     })
 
     it('assigns IDs for nested non-blocking frames', async () => {

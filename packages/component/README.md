@@ -46,6 +46,19 @@ function Counter(handle: Handle<{ initialCount?: number }>) {
 
 Use `createMixin(...)` to share host behavior, manage DOM resources, or provide default props. The [Mixins guide](https://github.com/remix-run/remix/blob/main/packages/component/docs/mixins.md) covers setup and render, `MixinHandle`, lifecycle events, and deferred removal with `beforeRemove` and `event.persistNode(...)`.
 
+For behavior that does not affect server HTML, pass `{ ssr: false }` to skip setup and render on the server:
+
+```tsx
+import { createMixin } from 'remix/component'
+
+const focusOnInsert = createMixin<HTMLElement>(
+  (handle) => {
+    handle.addEventListener('insert', ({ node }) => node.focus())
+  },
+  { ssr: false },
+)
+```
+
 ## Client Entry Loading
 
 `run()` hydrates client entries by calling `loadModule` for each component module:
@@ -197,7 +210,7 @@ This prevents Remix from intercepting Navigation API events. Explicit frame relo
 
 The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom `resolveFrame` may return a `Response` with any status when it wants the component runtime to render the response body.
 
-Forms remain ordinary HTML forms before the runtime starts. Add `data-rmx-target` to reload a named frame, or `data-rmx-document` to require a full-document submission:
+Links and forms remain ordinary HTML elements before the runtime starts. Use `data-rmx-target` to reload a named frame, `data-rmx-src` to fetch a different same-origin URL for that named frame while keeping `href` or `action` as the browser destination, or `data-rmx-document` to force a full-document navigation:
 
 ```tsx
 import { Frame } from 'remix/component'
@@ -235,6 +248,14 @@ await handle.frame.reload({
 `src` becomes the source for subsequent reloads. Pass `FormData` as `body` to submit fields. The method defaults to GET, which encodes the fields into the source query. POST defaults to `application/x-www-form-urlencoded`; use `encType` to select `multipart/form-data` or `text/plain`. Methods and encodings are case-insensitive; unsupported values use the defaults. See [Reload requests](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#reload-requests) for request and cancellation behavior.
 
 Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
+
+Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. Remix fetches its HTML to discover JavaScript, CSS, and explicit image and font preloads for asset prefetch hints. Navigation uses the default resolver and browser HTTP cache; even uncacheable HTML can reveal cacheable assets. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for trigger details, caching behavior, and custom strategies.
+
+Named-frame links with `data-rmx-target` are supported, including `data-rmx-src` overrides. Prefetching uses the selected frame's source and sends its target, matching the eventual frame request.
+
+Automatic link prefetching is skipped when the browser reports Save-Data or an effective connection type of `slow-2g` or `2g`. Imperative `prefetch()` calls remain available regardless of these settings.
+
+You can implement other prefetch triggers in userland with the imperative `prefetch()` API from `remix/component`, such as prefetching a search result as the visitor types. Call `prefetch(src, { target: 'details' })` to prefetch content for a named frame.
 
 ## Single-page Applications
 
@@ -283,6 +304,21 @@ Use `data-rmx-preserve-attrs` when client code owns only specific attributes, su
 ```
 
 On frame reloads, the space-separated attribute names in the incoming HTML keep their live values or absence. Other attributes and children reconcile normally. An empty or omitted list uses normal attribute reconciliation. This works on any matched element; it does not prevent removal or replacement. See [Preserving client-owned attributes](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#preserving-client-owned-attributes) for examples and ownership rules.
+
+## Raw HTML with unsafeHTML
+
+Host raw-HTML props (`innerHTML` and iframe `srcDoc` / `srcdoc`) require an explicit value created with `unsafeHTML(...)`:
+
+```tsx
+import { unsafeHTML } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+function ArticleBody(handle: Handle<{ html: string }>) {
+  return () => <article innerHTML={unsafeHTML(handle.props.html)} />
+}
+```
+
+When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` is an authorization boundary and does not sanitize input; only pass trusted or already-sanitized HTML.
 
 ## Cascade Layers
 

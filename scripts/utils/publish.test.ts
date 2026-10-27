@@ -1,7 +1,12 @@
+import * as cp from 'node:child_process'
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
 import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import {
   createPublishPlan,
+  getDocsReleaseTag,
   getReleaseNotes,
   isPackageVersionPublished,
   type PublishCandidate,
@@ -12,9 +17,81 @@ function makePackage(packageName: string): PublishCandidate {
   return {
     packageName,
     version: '1.0.0',
-    tag: `${packageName}@1.0.0`,
+    tag: `${packageName.replace('@remix-run/', '')}@1.0.0`,
   }
 }
+
+function withReleaseRepository(run: (cwd: string, git: (...args: string[]) => string) => void) {
+  let cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-docs-release-test-'))
+
+  function git(...args: string[]) {
+    return cp
+      .execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+      .trim()
+  }
+
+  try {
+    git('init')
+    git('config', 'user.name', 'Test Bot')
+    git('config', 'user.email', 'test@example.com')
+    git('commit', '--allow-empty', '-m', 'Initial release')
+    run(cwd, git)
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true })
+  }
+}
+
+describe('getDocsReleaseTag', () => {
+  it('uses any published package as the shared docs source', () => {
+    withReleaseRepository((cwd, git) => {
+      git('tag', 'component@1.0.0')
+      git('tag', 'ui@1.0.0')
+
+      assert.equal(getDocsReleaseTag([makePackage('@remix-run/component')], cwd), 'component@1.0.0')
+      assert.equal(getDocsReleaseTag([makePackage('@remix-run/ui')], cwd), 'ui@1.0.0')
+    })
+  })
+
+  it('prefers the Remix tag when packages share a release commit', () => {
+    withReleaseRepository((cwd, git) => {
+      git('tag', 'ui@1.0.0')
+      git('tag', 'remix@1.0.0')
+      let packages = [makePackage('@remix-run/ui'), makePackage('remix')]
+
+      assert.equal(getDocsReleaseTag(packages, cwd), 'remix@1.0.0')
+      assert.equal(getDocsReleaseTag(packages.toReversed(), cwd), 'remix@1.0.0')
+    })
+  })
+
+  it('keeps a completed newer release when a retry repairs only an older release', () => {
+    withReleaseRepository((cwd, git) => {
+      let olderCommit = git('rev-parse', 'HEAD')
+      git('commit', '--allow-empty', '-m', 'Newer UI release')
+      git('tag', 'ui@1.0.0')
+      let packages = [makePackage('remix'), makePackage('@remix-run/ui')]
+
+      assert.equal(getDocsReleaseTag(packages, cwd), 'ui@1.0.0')
+
+      // UI completed in a previous run. This retry repairs the older Remix tag.
+      git('tag', 'remix@1.0.0', olderCommit)
+
+      assert.equal(getDocsReleaseTag(packages, cwd), 'ui@1.0.0')
+      assert.equal(getDocsReleaseTag(packages.toReversed(), cwd), 'ui@1.0.0')
+    })
+  })
+
+  it('ignores current versions without a release tag', () => {
+    withReleaseRepository((cwd, git) => {
+      let packages = [makePackage('remix'), makePackage('@remix-run/ui')]
+
+      assert.equal(getDocsReleaseTag(packages, cwd), undefined)
+
+      git('tag', 'remix@1.0.0')
+
+      assert.equal(getDocsReleaseTag(packages, cwd), 'remix@1.0.0')
+    })
+  })
+})
 
 function createRegistryRequest(
   status: number,

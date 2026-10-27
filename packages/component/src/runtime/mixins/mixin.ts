@@ -338,20 +338,43 @@ export type MixinRuntimeState = {
 let mixinHandleId = 0
 
 /**
+ * Options for creating a mixin factory.
+ */
+export interface MixinOptions {
+  /**
+   * Whether setup and render run during server rendering (true by default).
+   * Set to `false` for behavior that does not contribute to the server HTML.
+   */
+  ssr?: boolean
+}
+
+/**
  * Creates a typed mixin factory that can be passed through the `mix` prop.
  *
  * @param type Mixin setup function.
+ * @param options Server rendering options.
  * @returns A function that captures mixin arguments and returns a descriptor.
  */
 export function createMixin<
   node extends EventTarget = Element,
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
->(type: MixinType<node, args, props>): MixinFactory<node, args, props> {
+>(type: MixinType<node, args, props>, options: MixinOptions = {}): MixinFactory<node, args, props> {
+  // Keep browser-only metadata local to this factory when setup is shared.
+  let mixinType =
+    options.ssr === false || '__rmxMixinSsr' in type
+      ? Object.assign(
+          function mixinSetup(handle: MixinHandle<node, props>, hostType: string) {
+            return type(handle, hostType)
+          },
+          { __rmxMixinSsr: options.ssr !== false },
+        )
+      : type
+
   return <boundNode extends node = node>(
     ...args: RebindTuple<args, node, boundNode>
   ): MixinDescriptor<boundNode, RebindTuple<args, node, boundNode>, props> => ({
-    type: type as unknown as MixinDescriptorType<
+    type: mixinType as unknown as MixinDescriptorType<
       RebindTuple<args, node, boundNode>,
       boundNode,
       props

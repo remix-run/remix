@@ -12,9 +12,6 @@ catalogs:
     '@types/node':
       specifier: ^24.6.0
       version: 24.10.4
-    '@typescript/native-preview':
-      specifier: 7.0.0-dev.20260707.2
-      version: 7.0.0-dev.20260707.2
     github-slugger:
       specifier: 2.0.0
       version: 2.0.0
@@ -296,9 +293,6 @@ importers:
       remix-docs-shared:
         specifier: workspace:*
         version: link:../shared
-      semver:
-        specifier: 7.7.4
-        version: 7.7.4
     devDependencies:
       '@types/dom-navigation':
         specifier: 1.0.7
@@ -309,9 +303,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@types/semver':
-        specifier: 7.5.8
-        version: 7.5.8
       pagefind:
         specifier: 'catalog:'
         version: 1.5.2
@@ -426,6 +417,34 @@ importers:
       vitest:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
+
+  docs/ui:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../../packages/component
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.51.0
+      remix:
+        specifier: workspace:^
+        version: link:../../packages/remix
+      remix-docs-shared:
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      pagefind:
+        specifier: 'catalog:'
+        version: 1.5.2
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
   packages/assert:
     devDependencies:
@@ -1703,12 +1722,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20260707.2
       playwright:
         specifier: 'catalog:'
         version: 1.60.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/node-fetch-server:
     devDependencies:
@@ -2205,9 +2224,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260707.2
+        version: 7.0.2
 
   packages/tar-parser:
     devDependencies:
@@ -4546,53 +4565,6 @@ packages:
 
   '@typescript/analyze-trace@0.10.1':
     resolution: {integrity: sha512-RnlSOPh14QbopGCApgkSx5UBgGda5MX1cHqp2fsqfiDyCwGL/m1jaeB9fzu7didVS81LQqGZZuxFBcg8YU8EVw==}
-    hasBin: true
-
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-wny2pgKjGbiZtnOIHVa3tXC1UfDqxNEFzyPGmiqybedG8hipG2Nfp0l5UxbaKCjkLacUpH/W5bP2hBOMVhCOzg==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-Afc7M5zOwo+GpfcYwz5Z8HMB2tPVsui7nNIqEuuFB73MPdVqNn/Wmpe4tP4MRri0AtJnJknoHBaTJ/VDAp/Jhw==}
-    engines: {node: '>=16.20.0'}
-    cpu: [x64]
-    os: [darwin]
-
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-iITBa2WjjTI5N9t5l7Z4KoOSI+2zBlhbvFzsD/f8qX8QoKjz/Y4DPyBDgezYi8nkqjjksbgSOJ3/ykzhwrB9cg==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm64]
-    os: [linux]
-
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-hJm/UOqZTr9FHmR7uNm8VGX4oKtfWk0Jem0zPeJFNC8ckGUfSBueyiEYMZB+XmRc1aG4x1E46y3CplP4CLHvGQ==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm]
-    os: [linux]
-
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-du0dzi6y97Po5vDNdPJTyyijHCpaS22JLRnKZEJXBDaO9gCIymOv/5QQokFRuOlQm0bWl3i9PF4OVdGP6uAOQA==}
-    engines: {node: '>=16.20.0'}
-    cpu: [x64]
-    os: [linux]
-
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-SsAwfhyHJ1akgBc+99z4+hwdbHsdWaKB8EwCNIMA6JfSLMeUjffrYvxu+vfMyxVtOVOz7RrRXRoiDiu4a2sCtg==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm64]
-    os: [win32]
-
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-DL4u27stv0fo71sVhOzHSwE+YMZsbBijVI+kg5dLDLilSH79WFTJ8RSQ46vJrCMt+Gjlv/JOZP1PuLJDfioYeQ==}
-    engines: {node: '>=16.20.0'}
-    cpu: [x64]
-    os: [win32]
-
-  '@typescript/native-preview@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-oUGp+Rep/hqMhPunyinsALUwSlzHINSxitifPiSaeqoKOKD2OlR9NE3TaPqwsl4NlGslsOSUXI1JotWQzpYCPg==}
-    engines: {node: '>=16.20.0'}
     hasBin: true
 
   '@typescript/typescript-aix-ppc64@7.0.2':
@@ -8002,37 +7974,6 @@ snapshots:
       split2: 3.2.2
       treeify: 1.1.0
       yargs: 16.2.0
-
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview@7.0.0-dev.20260707.2':
-    optionalDependencies:
-      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260707.2
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     optional: true

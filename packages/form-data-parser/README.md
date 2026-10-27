@@ -139,6 +139,7 @@ async function uploadHandler(fileUpload: FileUpload) {
   if (fileUpload.fieldName === 'user-avatar') {
     let storageKey = `user-${user.id}-avatar`
 
+    // Store the file and return its key to use in the FormData object
     await fileStorage.set(storageKey, fileUpload)
     return storageKey
   }
@@ -148,6 +149,36 @@ async function uploadHandler(fileUpload: FileUpload) {
 ```
 
 This example reuses each user's avatar key, so `atomicWrites: true` keeps their previous avatar intact if a replacement upload fails. The returned storage key becomes the field's value in the parsed `FormData`. Applications must still coordinate overlapping operations, including consuming stored files. Before enabling atomic writes on an existing shared directory, upgrade every process that accesses it; see [filesystem storage's upgrade guidance](https://github.com/remix-run/remix/tree/main/packages/file-storage#upgrading-existing-storage).
+
+## Future API
+
+**Future APIs are not stable.** The `remix/form-data-parser/future` entrypoint may change in any release, but it is a good indication of where this package will land in its next major release.
+
+`parseFormData()` from `remix/form-data-parser/future` streams file uploads to your upload handler instead of buffering them. Each `FileUpload` is passed to the handler as soon as its headers arrive, and its contents stream from the request body as you read them.
+
+Pair it with a storage backend that streams, like the filesystem and S3 backends of [`remix/file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage), and a large upload goes from the request to storage without being buffered:
+
+```ts
+import { createS3FileStorage } from 'remix/file-storage/s3'
+import { parseFormData } from 'remix/form-data-parser/future'
+
+let fileStorage = createS3FileStorage({ accessKeyId, secretAccessKey, bucket, region })
+
+let formData = await parseFormData(request, async (fileUpload) => {
+  let storageKey = `uploads/${crypto.randomUUID()}`
+  // Streams the upload to S3 without holding it in memory
+  await fileStorage.set(storageKey, fileUpload)
+  return storageKey
+})
+```
+
+The future `FileUpload` has the same shape as `File`, with a few differences:
+
+- Its contents can be read once, and only while the upload handler is running
+- `size` throws until the contents have been read
+- `slice()` is not supported
+
+If the upload handler returns the `FileUpload` without reading it, or you don't pass an upload handler, `parseFormData()` reads it into a regular `File` and puts that in the `FormData`.
 
 ## Demos
 

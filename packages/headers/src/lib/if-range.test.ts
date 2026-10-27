@@ -36,6 +36,29 @@ describe('IfRange', () => {
     assert.equal(header2.toString(), '"67ab43"')
   })
 
+  it('preserves the enumerable value field', () => {
+    let header = new IfRange('"abc"')
+
+    assert.deepEqual(Object.keys(header), ['value'])
+    assert.deepEqual({ ...header }, { value: '"abc"' })
+  })
+
+  it('keeps serialization and matching in sync after assigning value', () => {
+    let header = new IfRange()
+    header.value = '"abc"'
+
+    assert.equal(header.toString(), '"abc"')
+    assert.ok(header.matches({ etag: '"abc"' }))
+  })
+
+  it('matches unconditionally after assigning an empty value', () => {
+    let header = new IfRange('"abc"')
+    header.value = ''
+
+    assert.equal(header.toString(), '')
+    assert.ok(header.matches({}))
+  })
+
   describe('matches()', () => {
     describe('with HTTP dates', () => {
       it('matches when lastModified matches the date (timestamp)', () => {
@@ -75,9 +98,16 @@ describe('IfRange', () => {
         assert.ok(!header.matches({}))
       })
 
+      it('does not treat a date as an ETag when lastModified is missing', () => {
+        let header = new IfRange(testDateString)
+        assert.ok(!header.matches({ etag: testDateString }))
+        assert.ok(!header.matches({ etag: `"${testDateString}"` }))
+      })
+
       it('does not match invalid HTTP dates', () => {
         let header = new IfRange('not-a-date')
         assert.ok(!header.matches({ lastModified: testTimestamp }))
+        assert.ok(!header.matches({ etag: '"not-a-date"' }))
       })
     })
 
@@ -87,9 +117,15 @@ describe('IfRange', () => {
         assert.ok(header.matches({ etag: '"67ab43"' }))
       })
 
-      it('matches when etag matches (without quotes)', () => {
+      it('does not match a bare ETag', () => {
         let header = new IfRange('67ab43')
-        assert.ok(header.matches({ etag: '67ab43' }))
+        assert.ok(!header.matches({ etag: '67ab43' }))
+        assert.ok(!header.matches({ etag: '"67ab43"' }))
+      })
+
+      it('does not match a malformed quoted ETag', () => {
+        let header = new IfRange('"not valid"')
+        assert.ok(!header.matches({ etag: '"not valid"' }))
       })
 
       it('does not match when etag differs', () => {
@@ -146,11 +182,18 @@ describe('IfRange', () => {
     })
 
     describe('with empty value', () => {
-      it('matches unconditionally (condition passes when header is not present)', () => {
+      it('matches unconditionally when the header is explicitly empty', () => {
         let header = new IfRange('')
         assert.ok(header.matches({ etag: '"67ab43"' }))
         assert.ok(header.matches({ lastModified: testTimestamp }))
-        assert.ok(header.matches({ etag: '"67ab43"', lastModified: testTimestamp }))
+        assert.ok(header.matches({}))
+        assert.ok(IfRange.from('').matches({}))
+      })
+
+      it('matches unconditionally when the header is absent', () => {
+        let header = IfRange.from(null)
+        assert.ok(header.matches({ etag: '"67ab43"' }))
+        assert.ok(header.matches({ lastModified: testTimestamp }))
         assert.ok(header.matches({}))
       })
     })

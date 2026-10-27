@@ -2,6 +2,7 @@ import { css, type Handle } from 'remix/component'
 
 import { button } from './button.ts'
 import { Icon } from './icon.tsx'
+import { media } from './media.ts'
 
 export interface DocsNavigationLink {
   href: string
@@ -12,6 +13,7 @@ export interface DocsNavigationLink {
 export type DocsNavigationLinkId =
   | 'guides'
   | 'api'
+  | 'ui'
   | 'github'
   | 'blog'
   | 'newsletter'
@@ -21,7 +23,7 @@ export type DocsNavigationLinkId =
 export function createDocsNavigationLinks(): Map<DocsNavigationLinkId, DocsNavigationLink> {
   return new Map<DocsNavigationLinkId, DocsNavigationLink>()
     .set('guides', { href: 'https://guides.remix.run/', label: 'Guides' })
-    .set('api', { href: 'https://api.remix.run', label: 'API' })
+    .set('api', { href: 'https://docs.remix.run', label: 'Docs' })
     .set('github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' })
     .set('blog', { href: 'https://remix.run/blog', label: 'Blog' })
     .set('newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' })
@@ -138,33 +140,34 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
 }
 
 const docsHeaderCss = css({
-  position: 'fixed',
+  position: 'relative',
   inset: '0 0 auto',
   zIndex: 50,
   display: 'block',
   height: 'var(--site-header-height)',
   padding: 0,
   border: 0,
+  borderBottom: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
   background: 'var(--docs-shell-background)',
-  '@media (width < 900px)': {
-    position: 'relative',
-    borderBottom: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
+  [media.md]: {
+    position: 'fixed',
+    borderBottom: 0,
   },
 })
 
 const compactSearchButtonCss = css({
   position: 'fixed',
-  top: '16px',
-  left: '121px',
+  top: 'calc((var(--site-header-height) - 32px) / 2)',
+  left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
   zIndex: 51,
-  display: 'grid',
+  display: 'none',
   width: '32px',
   height: '32px',
   padding: '8px',
   visibility: 'hidden',
   placeItems: 'center',
   border: 0,
-  borderRadius: '8px',
+  borderRadius: 'var(--rmx-radius-md)',
   color: 'var(--rmx-color-text-secondary)',
   background: 'transparent',
   cursor: 'pointer',
@@ -183,27 +186,27 @@ const compactSearchButtonCss = css({
     opacity: 1,
     pointerEvents: 'auto',
   },
-  '@media (width < 900px)': {
-    display: 'none',
+  [media.md]: {
+    display: 'grid',
   },
 })
 
 const searchButtonCss = css({
-  position: 'fixed',
-  top: '64px',
-  left: '24px',
+  position: 'absolute',
+  top: '16px',
+  left: 'min(211px, calc(100% - 125px))',
   zIndex: 40,
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'space-between',
-  width: '240px',
+  justifyContent: 'center',
+  width: '32px',
   height: '32px',
   padding: '8px',
-  border: '1px solid var(--docs-nav-control-border)',
-  borderRadius: '8px',
+  border: 0,
+  borderRadius: 'var(--rmx-radius-md)',
   color: 'var(--rmx-color-text-secondary)',
   background: 'transparent',
-  fontSize: '14px',
+  fontSize: 'var(--docs-font-size-ui)',
   opacity: 1,
   cursor: 'pointer',
   '&:hover, &:focus-visible': {
@@ -214,25 +217,19 @@ const searchButtonCss = css({
     width: '16px',
     height: '16px',
   },
-  '@media (width < 900px)': {
-    '&, :root[data-docs-nav-collapsed] &': {
-      position: 'absolute',
-      top: '16px',
-      left: 'min(211px, calc(100% - 125px))',
-      justifyContent: 'center',
-      width: '32px',
-      padding: '8px',
-      border: 0,
-      visibility: 'visible',
-      opacity: 1,
-      transform: 'none',
-      pointerEvents: 'auto',
-    },
+  [media.md]: {
+    position: 'fixed',
+    top: 'var(--site-header-height)',
+    left: 'var(--docs-sidebar-inline-start)',
+    justifyContent: 'space-between',
+    // Ends at the collapse icon, which sits 8px inside its button at the column's edge.
+    width: 'calc(var(--docs-sidebar-content-width) - 8px)',
+    border: '1px solid var(--docs-nav-control-border)',
   },
 })
 
 const expandedOnlySearchButtonCss = css({
-  '@media (width >= 900px)': {
+  [media.md]: {
     ':root[data-docs-nav-collapsed] &': {
       visibility: 'hidden',
       opacity: 0,
@@ -243,10 +240,10 @@ const expandedOnlySearchButtonCss = css({
 })
 
 const collapsibleSearchButtonCss = css({
-  '@media (width >= 900px)': {
+  [media.md]: {
     ':root[data-docs-nav-collapsed] &': {
-      top: '16px',
-      left: '121px',
+      top: 'calc((var(--site-header-height) - 32px) / 2)',
+      left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
       justifyContent: 'center',
       width: '32px',
       padding: '8px',
@@ -258,9 +255,9 @@ const collapsibleSearchButtonCss = css({
 const searchButtonLabelCss = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '12px',
-  '@media (width < 900px)': {
-    gap: 0,
+  gap: 0,
+  [media.md]: {
+    gap: '12px',
   },
 })
 
@@ -271,23 +268,24 @@ const collapsibleSearchButtonLabelCss = css({
 })
 
 const searchButtonTextCss = css({
-  ':root[data-docs-nav-collapsed] &': {
-    display: 'none',
-  },
-  '@media (width < 900px)': {
-    display: 'none',
+  display: 'none',
+  [media.md]: {
+    display: 'inline',
+    ':root[data-docs-nav-collapsed] &': {
+      display: 'none',
+    },
   },
 })
 
 const searchButtonShortcutCss = css({
-  display: 'flex',
+  display: 'none',
   alignItems: 'center',
   gap: '4px',
-  ':root[data-docs-nav-collapsed] &': {
-    display: 'none',
-  },
-  '@media (width < 900px)': {
-    display: 'none',
+  [media.md]: {
+    display: 'flex',
+    ':root[data-docs-nav-collapsed] &': {
+      display: 'none',
+    },
   },
 })
 
@@ -297,30 +295,28 @@ const searchShortcutKeyCss = css({
   height: '16px',
   padding: 0,
   placeItems: 'center',
-  border: '1px solid rgb(0 0 0 / 2%)',
-  borderRadius: '4px',
-  color: '#9ca3b0',
+  border: '1px solid var(--docs-key-border)',
+  borderRadius: 'var(--rmx-radius-sm)',
+  color: 'var(--rmx-color-text-muted)',
   background: 'var(--rmx-surface-lvl0)',
   fontFamily: 'var(--rmx-font-family-mono)',
-  fontSize: '12px',
+  fontSize: 'var(--docs-font-size-label)',
   lineHeight: 1,
 })
 
 const brandCss = css({
   position: 'absolute',
-  top: '24px',
-  left: 'var(--docs-header-brand-inline-start, 24px)',
+  top: 'calc((var(--site-header-height) - 16px) / 2)',
+  left: '24px',
   display: 'block',
   width: '163px',
   height: '16px',
   color: 'var(--rmx-color-text-primary)',
   textDecoration: 'none',
-  ':root[data-docs-nav-collapsed] &': {
-    width: '37px',
-  },
-  '@media (width < 900px)': {
-    '&, :root[data-docs-nav-collapsed] &': {
-      width: '163px',
+  [media.md]: {
+    left: 'var(--docs-sidebar-inline-start)',
+    ':root[data-docs-nav-collapsed] &': {
+      width: '37px',
     },
   },
 })
@@ -333,202 +329,156 @@ const brandImageCss = css({
   height: '16px',
   maxHeight: 'none',
   pointerEvents: 'none',
-  transition: 'opacity var(--docs-nav-duration) var(--docs-nav-easing)',
   '@media (prefers-color-scheme: dark)': {
     filter: 'invert(1)',
-  },
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
   },
 })
 
 const logoMarkCss = css({
   opacity: 0,
-  ':root[data-docs-nav-collapsed] &': {
-    opacity: 1,
-  },
-  '@media (width < 900px)': {
-    '&, :root[data-docs-nav-collapsed] &': {
-      opacity: 0,
-    },
+  [media.md]: {
+    opacity: 'var(--docs-nav-collapse)',
   },
 })
 
 const wordmarkCss = css({
   opacity: 1,
-  ':root[data-docs-nav-collapsed] &': {
-    opacity: 0,
-  },
-  '@media (width < 900px)': {
-    '&, :root[data-docs-nav-collapsed] &': {
-      opacity: 1,
-    },
+  [media.md]: {
+    opacity: 'calc(1 - var(--docs-nav-collapse))',
   },
 })
 
 const menuToggleCss = css({
+  position: 'absolute',
+  top: '12px',
+  right: '16px',
   display: 'none',
-  '@media (width < 640px)': {
-    position: 'absolute',
-    top: '12px',
-    right: '16px',
-    alignItems: 'center',
-    gap: '8px',
-    minWidth: '44px',
-    minHeight: '40px',
-    padding: '8px 10px',
-    cursor: 'pointer',
-    '&:hover, &:focus-visible': {
-      background: 'var(--docs-nav-hover-background)',
-    },
-    '@supports selector(:popover-open)': {
-      display: 'inline-flex',
-    },
+  alignItems: 'center',
+  gap: '8px',
+  minWidth: '44px',
+  minHeight: '40px',
+  padding: '8px 10px',
+  cursor: 'pointer',
+  '&:hover, &:focus-visible': {
+    background: 'var(--docs-nav-hover-background)',
+  },
+  '@supports selector(:popover-open)': {
+    display: 'inline-flex',
+  },
+  [media.sm]: {
+    display: 'none',
   },
 })
 
 const menuIconCss = css({
-  '@media (width < 640px)': {
-    display: 'grid',
-    width: '16px',
-    gap: '3px',
-    '& span': {
-      display: 'block',
-      height: '1.5px',
-      borderRadius: 'var(--rmx-radius-full)',
-      background: 'currentColor',
-      transformOrigin: 'center',
-      transition: 'transform 150ms ease, opacity 150ms ease',
-    },
-    ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(1)': {
-      transform: 'translateY(4.5px) rotate(45deg)',
-    },
-    ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(2)': {
-      opacity: 0,
-    },
-    ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(3)': {
-      transform: 'translateY(-4.5px) rotate(-45deg)',
-    },
+  display: 'grid',
+  width: '16px',
+  gap: '3px',
+  '& span': {
+    display: 'block',
+    height: '1.5px',
+    borderRadius: 'var(--rmx-radius-full)',
+    background: 'currentColor',
+    transformOrigin: 'center',
   },
-  '@media (prefers-reduced-motion: reduce)': {
-    '& span': {
-      transition: 'none',
-    },
+  ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(1)': {
+    transform: 'translateY(4.5px) rotate(45deg)',
+  },
+  ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(2)': {
+    opacity: 0,
+  },
+  ':where(header:has(#site-primary-navigation:popover-open)) & span:nth-child(3)': {
+    transform: 'translateY(-4.5px) rotate(-45deg)',
   },
 })
 
 const navigationCss = css({
-  position: 'absolute',
-  top: 0,
-  right: '30px',
+  position: 'fixed',
+  inset: '64px 0 auto',
+  zIndex: 60,
   display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'flex-end',
-  width: 'auto',
-  height: 'var(--site-header-height)',
-  gap: '24px',
+  flexDirection: 'column',
+  alignItems: 'stretch',
+  justifyContent: 'flex-start',
+  width: '100%',
+  height: 'auto',
+  gap: 'var(--docs-nav-item-gap)',
+  margin: 0,
+  padding: '8px 16px 16px',
   overflow: 'visible',
-  fontSize: '16px',
+  border: 0,
+  borderBottom: '1px solid var(--rmx-color-border-subtle)',
+  background: 'var(--docs-shell-background)',
+  boxShadow: 'var(--docs-menu-shadow)',
+  fontSize: 'var(--rmx-font-size-md)',
   flexWrap: 'nowrap',
-  '@media (width < 900px)': {
-    left: '210px',
-    right: '24px',
-    justifyContent: 'flex-start',
-    gap: '20px',
-    overflowX: 'auto',
-    scrollbarWidth: 'none',
-    '&::-webkit-scrollbar': {
-      display: 'none',
-    },
-  },
-  '@media (width >= 640px) and (width < 900px)': {
-    left: 'auto',
-    right: '24px',
+  [media.sm]: {
+    position: 'absolute',
+    inset: '0 24px auto auto',
+    zIndex: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'flex-end',
-    overflow: 'visible',
-  },
-  '@media (width < 640px)': {
-    position: 'fixed',
-    inset: '64px 0 auto',
-    zIndex: 60,
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    width: '100%',
-    height: 'auto',
-    gap: '4px',
-    margin: 0,
-    padding: '8px 16px 16px',
-    overflow: 'visible',
+    width: 'auto',
+    height: 'var(--site-header-height)',
+    gap: '20px',
+    padding: 0,
     border: 0,
-    borderBottom: '1px solid var(--rmx-color-border-subtle)',
-    background: 'var(--docs-shell-background)',
-    boxShadow: '0 12px 24px rgb(0 0 0 / 12%)',
+    background: 'none',
+    boxShadow: 'none',
+  },
+  [media.md]: {
+    right: 'var(--docs-edge-inset)',
+    gap: '24px',
   },
 })
 
 const desktopNavigationCss = css({
-  '@media (width < 640px)': {
-    display: 'none',
+  display: 'none',
+  [media.sm]: {
+    display: 'flex',
   },
 })
 
 const mobileNavigationCss = css({
-  '@media (width >= 640px)': {
-    display: 'none',
-  },
-  '@media (width < 640px)': {
-    clipPath: 'inset(0 0 100% 0)',
-    transition:
-      'clip-path var(--docs-nav-duration) var(--docs-nav-easing), overlay var(--docs-nav-duration) var(--docs-nav-easing), display var(--docs-nav-duration) var(--docs-nav-easing)',
-    transitionBehavior: 'allow-discrete',
-    '& > *': {
-      transform: 'translateY(calc(-1 * var(--rmx-space-md)))',
-      transition: 'transform var(--docs-nav-duration) var(--docs-nav-easing)',
-    },
-    '@supports selector(:popover-open)': {
-      '&:not(:popover-open)': {
-        display: 'none',
-        pointerEvents: 'none',
-      },
-      '&:popover-open': {
-        clipPath: 'inset(0)',
-        '& > *': {
-          transform: 'none',
-        },
-      },
-      '@starting-style': {
-        '&:popover-open': {
-          clipPath: 'inset(0 0 100% 0)',
-          '& > *': {
-            transform: 'translateY(calc(-1 * var(--rmx-space-md)))',
-          },
-        },
-      },
+  display: 'none',
+  '@supports selector(:popover-open)': {
+    '&:popover-open': {
+      display: 'flex',
     },
   },
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
-    '& > *': {
-      transition: 'none',
+  [media.sm]: {
+    '&, &:popover-open': {
+      display: 'none',
     },
   },
 })
 
 const navigationLinkCss = css({
-  color: 'var(--docs-nav-link)',
+  color: 'var(--docs-header-link)',
+  opacity: 0.8,
   textDecoration: 'none',
   whiteSpace: 'nowrap',
-  '&:hover': {
-    color: 'var(--docs-nav-link-hover)',
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: '44px',
+  padding: '8px var(--docs-nav-item-inset)',
+  borderRadius: 'var(--rmx-radius-md)',
+  '&:hover, &:focus-visible, &[aria-current]': {
+    color: 'var(--docs-header-link-active)',
+    opacity: 1,
   },
-  '@media (width < 640px)': {
-    display: 'flex',
-    alignItems: 'center',
-    minHeight: '44px',
-    padding: '8px 12px',
-    borderRadius: '8px',
+  '&:hover, &:focus-visible': {
+    background: 'var(--docs-nav-hover-background)',
+  },
+  [media.sm]: {
+    display: 'inline',
+    alignItems: 'normal',
+    minHeight: 'auto',
+    padding: 0,
+    borderRadius: 0,
     '&:hover, &:focus-visible': {
-      background: 'var(--docs-nav-hover-background)',
+      background: 'none',
     },
   },
 })

@@ -82,9 +82,22 @@ function stubWindowScrollPosition(t: TestContext) {
   }
 }
 
+function stubAnimationFrames(t: TestContext) {
+  let callbacks: FrameRequestCallback[] = []
+  t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+    callbacks.push(callback)
+    return callbacks.length
+  })
+  return {
+    pending: () => callbacks.length,
+    next: () => callbacks.shift()?.(0),
+  }
+}
+
 type StubNavigationTransition = {
   runHandler(): Promise<void>
   succeed(): Promise<void>
+  fail(): Promise<void>
 }
 
 function startStubNavigationListener(
@@ -102,12 +115,14 @@ function startStubNavigationListener(
   let controller = new AbortController()
   startNavigationListenerImpl(controller.signal, options)
   t.after(() => controller.abort())
+  // Ends navigation workarounds that are still running, as the next navigation would.
+  t.after(() => stubNavigation.dispatchEvent(new Event('navigate')))
 
   return (event) => {
     let intercept = Reflect.get(event, 'intercept')
     if (typeof intercept !== 'function') throw new Error('Expected an intercept method')
 
-    let [finished, resolveFinished] = withResolvers<void>()
+    let [finished, resolveFinished, rejectFinished] = withResolvers<void>()
     let transition = { finished } as NavigationTransition
     let interceptOptions: NavigationInterceptOptions | undefined
     Reflect.set(event, 'intercept', (options?: NavigationInterceptOptions) => {
@@ -128,6 +143,12 @@ function startStubNavigationListener(
       async succeed() {
         resolveFinished()
         await finished
+        await Promise.resolve()
+        clearTransition()
+      },
+      async fail() {
+        rejectFinished(new Error('Navigation failed'))
+        await finished.catch(() => {})
         await Promise.resolve()
         clearTransition()
       },
@@ -435,11 +456,7 @@ describe('navigate', () => {
 
   it('suppresses Chromium scroll anchoring until after a push navigation paints', async (t) => {
     stubNavigatorUserAgent(t, 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36')
-    let animationFrameCallbacks: FrameRequestCallback[] = []
-    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
-      animationFrameCallbacks.push(callback)
-      return animationFrameCallbacks.length
-    })
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -469,13 +486,13 @@ describe('navigate', () => {
     await transition.runHandler()
     await transition.succeed()
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
-    expect(animationFrameCallbacks).toHaveLength(1)
+    expect(animationFrames.pending()).toBe(1)
 
-    animationFrameCallbacks.shift()?.(0)
+    animationFrames.next()
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
-    expect(animationFrameCallbacks).toHaveLength(1)
+    expect(animationFrames.pending()).toBe(1)
 
-    animationFrameCallbacks.shift()?.(0)
+    animationFrames.next()
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
   })
 
@@ -589,6 +606,142 @@ describe('navigate', () => {
     animationFrameCallback(0)
 
     expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
+
+  it('undoes an iOS restoration of the previous position after the scroll reset', async (t) => {
+    let page = setupWebKitScrollReset(t)
+    page.setScrollPosition(0, 2400)
+
+    let transition = page.navigate()
+    await transition.runHandler()
+    page.scroll(2400)
+
+    expect(window.scrollY).toBe(0)
+    await transition.succeed()
+  })
+
+  it('undoes an iOS restoration at the bottom the page had before it grew', async (t) => {
+    let page = setupWebKitScrollReset(t)
+    page.setPageHeight(3000)
+    let bottom = page.maxScrollY()
+    page.setScrollPosition(0, bottom + 1000)
+
+    let transition = page.navigate()
+    await transition.runHandler()
+    page.setPageHeight(3100)
+    page.scroll(bottom)
+
+    expect(window.scrollY).toBe(0)
+    await transition.succeed()
+  })
+
+  it('undoes an iOS restoration that is still in place when a frame redirect finishes', async (t) => {
+    let page = setupWebKitScrollReset(t)
+    page.setScrollPosition(0, 2400)
+
+    let transition = page.dispatchNavigation(
+      Object.assign(new Event('navigate'), {
+        canIntercept: true,
+        navigationType: 'replace',
+        signal: new AbortController().signal,
+        destination: { url: new URL('/redirected', window.location.origin).href },
+        info: {
+          type: 'frame-redirect',
+          resetScroll: 'after-transition',
+          resetFocus: 'after-transition',
+        },
+        intercept: mock.fn(),
+      }),
+    )
+    await transition.runHandler()
+    await transition.succeed()
+    page.animationFrames.next()
+
+    expect(window.scrollY).toBe(0)
+  })
+
+  it('leaves the previous page in place until the new page resets scroll', async (t) => {
+    let [reloaded, finishReload] = withResolvers<StubFrameReloadResult>()
+    let page = setupWebKitScrollReset(t, {
+      ...stubFrames,
+      reloadFrame: () => createReloadTransition(reloaded),
+    })
+    page.setScrollPosition(0, 2400)
+
+    let transition = page.navigate()
+    let handler = transition.runHandler()
+    await Promise.resolve()
+    page.scroll(2400)
+
+    expect(window.scrollY).toBe(2400)
+    finishReload({ signal: new AbortController().signal })
+    await handler
+    await transition.succeed()
+  })
+
+  it('leaves positions other code scrolls to after the scroll reset', async (t) => {
+    let page = setupWebKitScrollReset(t)
+    page.setScrollPosition(0, 2400)
+
+    let transition = page.navigate()
+    await transition.runHandler()
+    page.scroll(500)
+
+    expect(window.scrollY).toBe(500)
+    await transition.succeed()
+  })
+
+  it('stops undoing iOS restorations once the user interacts with the page', async (t) => {
+    let page = setupWebKitScrollReset(t)
+    page.setScrollPosition(0, 2400)
+
+    let transition = page.navigate()
+    await transition.runHandler()
+    window.dispatchEvent(new Event('pointerdown'))
+    page.scroll(2400)
+
+    expect(window.scrollY).toBe(2400)
+    await transition.succeed()
+  })
+
+  it('stops undoing iOS restorations when the next navigation starts', async (t) => {
+    let page = setupWebKitScrollReset(t)
+    page.setScrollPosition(0, 2400)
+
+    let transition = page.navigate()
+    await transition.runHandler()
+    await transition.succeed()
+    window.navigation.dispatchEvent(new Event('navigate'))
+    // A traversal back restores the previous page's position.
+    page.scroll(2400)
+
+    expect(window.scrollY).toBe(2400)
+  })
+
+  it('stops undoing iOS restorations shortly after the navigation finishes', async (t) => {
+    let page = setupWebKitScrollReset(t)
+    let timers = t.useFakeTimers()
+    page.setScrollPosition(0, 2400)
+
+    let transition = page.navigate()
+    await transition.runHandler()
+    await transition.succeed()
+    timers.advance(500)
+    page.scroll(2400)
+
+    expect(window.scrollY).toBe(2400)
+  })
+
+  it('stops undoing iOS restorations when the navigation fails', async (t) => {
+    let page = setupWebKitScrollReset(t)
+    page.setScrollPosition(0, 2400)
+
+    let transition = page.navigate()
+    await transition.runHandler()
+    await transition.fail()
+    page.scroll(2400)
+
+    expect(window.scrollY).toBe(2400)
   })
 
   it('does not resynchronize WebKit scroll state for fragment navigations', async (t) => {
@@ -771,7 +924,7 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
   })
 
-  it('preserves legacy boolean scroll and focus settings on traverse navigations', async (t) => {
+  it('ignores legacy boolean scroll and focus settings on traverse navigations', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
@@ -796,12 +949,12 @@ describe('navigate', () => {
     await transition.runHandler()
     await transition.succeed()
 
-    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
-    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
-    expect(event.scroll).not.toHaveBeenCalled()
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
+    expect(event.scroll).toHaveBeenCalledTimes(1)
   })
 
-  it('preserves canonical scroll and focus settings on traverse navigations', async (t) => {
+  it('ignores manual scroll and focus settings on traverse navigations', async (t) => {
     let dispatchNavigation = startStubNavigationListener(t)
     let event = createTraverseNavigateEvent({
       target: undefined,
@@ -812,13 +965,15 @@ describe('navigate', () => {
     })
     let intercept = event.intercept
 
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
     let transition = dispatchNavigation(event)
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
     await transition.runHandler()
     await transition.succeed()
 
-    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('manual')
-    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
-    expect(event.scroll).not.toHaveBeenCalled()
+    expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
+    expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
+    expect(event.scroll).toHaveBeenCalledTimes(1)
   })
 
   it('honors legacy true settings on traverse navigations', async (t) => {
@@ -876,7 +1031,7 @@ describe('navigate', () => {
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
   })
 
-  it('preserves legacy history state while normalizing frame redirect info', async (t) => {
+  it('preserves legacy history state while using default reset settings for traversal redirects', async (t) => {
     let redirectedTo = new URL('/redirected', window.location.origin).href
     let dispatchNavigation = startStubNavigationListener(t, {
       ...stubFrames,
@@ -903,7 +1058,11 @@ describe('navigate', () => {
     expect(navigateMock).toHaveBeenCalledWith(redirectedTo, {
       history: 'replace',
       state: { ...state, src: redirectedTo },
-      info: { type: 'frame-redirect', resetScroll: 'manual', resetFocus: 'manual' },
+      info: {
+        type: 'frame-redirect',
+        resetScroll: 'after-transition',
+        resetFocus: 'after-transition',
+      },
     })
     expect(state.resetScroll).toBe(false)
     expect(state.resetFocus).toBe(false)
@@ -960,6 +1119,7 @@ describe('navigate', () => {
       },
     })
 
+    let animationFrames = stubAnimationFrames(t)
     let scroll = mock.fn()
     let intercept = mock.fn()
     let eventController = new AbortController()
@@ -985,6 +1145,7 @@ describe('navigate', () => {
     let adoptedStyleSheetCount = document.adoptedStyleSheets.length
     let startingDocumentHeight = document.documentElement.scrollHeight
     let startingViewportHeight = document.documentElement.clientHeight
+    let startingMinHeight = getComputedStyle(document.documentElement).minHeight
     try {
       navigateListener?.(event)
       let interceptOptions = intercept.mock.calls[0]?.arguments[0]
@@ -1027,11 +1188,41 @@ describe('navigate', () => {
       resolveTransitionFinished()
       await transitionFinished
       await Promise.resolve()
+      // Scroll anchoring stays disabled while the page shrinks back to its own height.
+      expect(getComputedStyle(document.documentElement).minHeight).toBe(startingMinHeight)
+      expect(getComputedStyle(document.documentElement).overflowAnchor).toBe('none')
+      expect(getComputedStyle(document.body).overflowAnchor).toBe('none')
+
+      animationFrames.next()
+      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      animationFrames.next()
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
     } finally {
       eventController.abort()
       controller.abort()
     }
+  })
+
+  it('removes traversal scroll styles as soon as the navigation fails', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
+    let dispatchNavigation = startStubNavigationListener(t)
+    let adoptedStyleSheetCount = document.adoptedStyleSheets.length
+
+    let transition = dispatchNavigation(
+      createTraverseNavigateEvent({
+        target: undefined,
+        src: '/previous',
+        resetScroll: true,
+        $rmx: true,
+      }),
+    )
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+
+    await transition.runHandler()
+    await transition.fail()
+
+    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
+    expect(animationFrames.pending()).toBe(0)
   })
 
   it('does not intercept anchors marked for document navigation', (t) => {
@@ -1390,7 +1581,7 @@ describe('navigate', () => {
       input.focus()
 
       await window.navigation.forward().finished
-      expect(document.activeElement).toBe(input)
+      expect(document.activeElement).toBe(document.body)
       expect(window.navigation.currentEntry?.url).toBe(redirectedUrl.href)
       expect(topFrame.src).toBe(redirectedUrl.href)
       expect(reloadFrame).toHaveBeenCalledTimes(3)
@@ -2126,6 +2317,58 @@ describe('form navigation', () => {
     }
   })
 
+  it('reloads a targeted frame when a temporary submitter is removed during submission', async () => {
+    let topReload = mock.fn(async () => ({ signal: new AbortController().signal }))
+    let namedReload = mock.fn(async () => ({ signal: new AbortController().signal }))
+    let topFrame = { src: '' } as FrameHandle
+    let namedFrame = { src: '' } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame(name) {
+        expect(name).toBe('items')
+        return namedFrame
+      },
+      reloadFrame: (frame) =>
+        createReloadTransition(frame === namedFrame ? namedReload() : topReload()),
+    })
+
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'get'
+    form.setAttribute('data-rmx-target', 'items')
+    let input = document.createElement('input')
+    input.name = 'filter'
+    input.value = 'example'
+    form.append(input)
+    document.body.append(form)
+
+    let didNavigate = false
+    try {
+      let navigationSucceeded = waitForNavigationSuccess()
+      // Custom element libraries submit through a temporary native button, then remove it before
+      // the `navigate` event fires.
+      let submitter = document.createElement('button')
+      submitter.type = 'submit'
+      submitter.hidden = true
+      form.append(submitter)
+      submitter.click()
+      submitter.remove()
+      await navigationSucceeded
+      didNavigate = true
+
+      let entryAfterSubmission = getCurrentNavigationEntry()
+      expect(new URL(entryAfterSubmission.url ?? '').searchParams.get('filter')).toBe('example')
+      expect(topReload).not.toHaveBeenCalled()
+      expect(namedReload).toHaveBeenCalledTimes(1)
+      expect(namedFrame.src).toBe(entryAfterSubmission.url)
+    } finally {
+      form.remove()
+      if (didNavigate) await window.navigation.back().finished
+      controller.abort()
+    }
+  })
+
   it('replaces marked GET form history across frame redirects without submission metadata', async () => {
     expect(typeof Reflect.get(window, 'NavigationPrecommitController')).toBe('function')
 
@@ -2342,4 +2585,46 @@ function waitForNextNavigation(): Promise<void> {
   return new Promise((resolve) => {
     window.navigation.addEventListener('navigatesuccess', () => resolve(), { once: true })
   })
+}
+
+function setupWebKitScrollReset(t: TestContext, frames = stubFrames) {
+  stubNavigatorUserAgent(
+    t,
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1',
+  )
+  let dispatchNavigation = startStubNavigationListener(t, frames)
+  let setScrollPosition = stubWindowScrollPosition(t)
+  t.mock.method(window, 'scrollTo', (options: ScrollToOptions) =>
+    setScrollPosition(options.left ?? 0, options.top ?? 0),
+  )
+  let animationFrames = stubAnimationFrames(t)
+  let spacer = document.createElement('div')
+  document.body.append(spacer)
+  t.after(() => spacer.remove())
+
+  return {
+    animationFrames,
+    dispatchNavigation,
+    setScrollPosition,
+    setPageHeight(height: number) {
+      spacer.style.height = `${height}px`
+    },
+    maxScrollY: () => document.documentElement.scrollHeight - window.innerHeight,
+    // Moves the page as Safari's restoration or app code would, including the scroll event.
+    scroll(y: number) {
+      setScrollPosition(0, y)
+      window.dispatchEvent(new Event('scroll'))
+    },
+    navigate() {
+      let anchor = document.createElement('a')
+      anchor.href = '/products/tee'
+      return dispatchNavigation(
+        createAnchorNavigateEvent(anchor, {
+          intercept: mock.fn(),
+          destinationUrl: new URL('/products/tee', window.location.origin).href,
+          scroll: () => setScrollPosition(0, 0),
+        }),
+      )
+    },
+  }
 }

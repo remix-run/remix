@@ -28,7 +28,7 @@ const BOOLEANISH_STRING_ATTRIBUTES = new Set([
 ])
 
 const BLOCKED_HOST_PROP_NAMES = new Set(['__proto__', 'outerHTML'])
-const INVALID_HOST_PROP_NAME_CHARACTER = /[\u0000\t\n\f\r "'/>=]/
+const UNSAFE_HOST_PROP_NAME = /^on|[\u0000\t\n\f\r "'/>=]/i
 const EXECUTABLE_URL_ATTRIBUTES = new Set(['href', 'src', 'action', 'formaction', 'xlink:href'])
 // Browsers ignore leading C0 controls and spaces, plus tabs and newlines within URL schemes.
 const JAVASCRIPT_PROTOCOL =
@@ -60,10 +60,7 @@ export function isChildlessElement(name: string): boolean {
 }
 
 export function isAllowedHostPropName(name: string): boolean {
-  if (name.length === 0 || INVALID_HOST_PROP_NAME_CHARACTER.test(name)) return false
-
-  let normalizedName = name.toLowerCase()
-  return !normalizedName.startsWith('on') && !BLOCKED_HOST_PROP_NAMES.has(name)
+  return name.length > 0 && !UNSAFE_HOST_PROP_NAME.test(name) && !BLOCKED_HOST_PROP_NAMES.has(name)
 }
 
 export function sanitizeUrlAttribute(tagName: string, attrName: string, value: unknown): unknown {

@@ -19,6 +19,11 @@ and the
    - Since the change files have been deleted, it publishes all unpublished packages to npm
    - It then creates Git tags and GitHub releases for the packages that were published
 
+Each change-file entry links to the pull request that introduced the file, using the PR number in
+the introducing commit's subject. If there is no PR number, it links to that commit instead. Later
+edits to the file preserve its original attribution. Release generation requires full Git history;
+uncommitted change files appear without source links in local previews.
+
 ### Manual Versioning
 
 The Release pull request automates the `pnpm changes:version` command. If needed, run the command

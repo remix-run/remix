@@ -2,128 +2,177 @@ html {
   color-scheme: light dark;
 }
 
-.api-nav-sections,
-.api-nav-content,
-.api-nav-group,
-.api-nav-links {
+/* Package paths are long, so the API sidebar is wider than the other docs sites. */
+:root {
+  --docs-sidebar-content-width: 288px;
+  --docs-sidebar-offset: 348px;
+}
+
+/*
+  The menu stack (see `public/api-nav.tsx`). The current panel sets the stack's height; the others
+  overlay it, waiting off to the left or right, and the component slides them. Each panel scrolls
+  on its own, capped to the visible sidebar, so it keeps its place while hidden or sliding.
+*/
+.api-nav {
+  --api-nav-panel-height: calc(
+    100dvh - var(--docs-mobile-navigation-top, calc(var(--site-header-height) + 48px)) - 2 *
+      var(--rmx-space-lg)
+  );
+  position: relative;
+  /* Panels scroll, which clips; this room keeps focus rings visible without moving the items. */
+  margin: -4px -4px 0;
+  overflow-x: clip;
+}
+
+.api-nav-panel {
   display: flex;
   flex-direction: column;
+  gap: var(--docs-nav-item-gap);
+  box-sizing: border-box;
+  max-height: var(--api-nav-panel-height);
+  /* Room below the last item, so long menus don't end flush with the window. */
+  padding: 4px 4px calc(var(--docs-sidebar-group-gap) * 2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
-.api-nav-sections {
-  gap: 4px;
-  margin-top: 4px;
+.api-nav-panel > * {
+  flex-shrink: 0;
 }
 
-.api-nav-section {
-  margin: 0;
-}
-
-.api-nav-section > summary {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 8px 28px 8px 8px;
-  border-radius: var(--rmx-radius-md);
-  color: var(--rmx-color-text-primary);
-  font-size: 12px;
-  font-weight: var(--rmx-font-weight-bold);
-  line-height: normal;
-  letter-spacing: 0.6px;
-  list-style: none;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.api-nav-section > summary::-webkit-details-marker {
-  display: none;
-}
-
-.api-nav-section > summary::after {
+.api-nav-panel:not([data-api-nav-panel='current']) {
   position: absolute;
-  right: 10px;
-  width: 6px;
-  height: 6px;
-  border-right: 1px solid currentColor;
-  border-bottom: 1px solid currentColor;
-  content: '';
-  opacity: 0.55;
-  transform: rotate(45deg) translateY(-2px);
-  transition: transform 150ms ease;
+  inset: 0 0 auto;
+  visibility: hidden;
 }
 
-.api-nav-section:not([open]) > summary::after {
-  transform: rotate(-45deg);
+.api-nav-panel[data-api-nav-panel='before'] {
+  transform: translateX(calc(-100% + var(--api-nav-pad-end, 0px)));
 }
 
-.api-nav-section > summary:hover {
-  background: var(--docs-nav-hover-background);
+.api-nav-panel[data-api-nav-panel='after'] {
+  transform: translateX(calc(100% - var(--api-nav-pad-start, 0px)));
 }
 
-.api-nav-content {
-  gap: 8px;
-  padding: 4px 0 12px 8px;
+/*
+  Desktop panels pad out to the window's left edge and the page content on the right, so sliding
+  items keep their shape until they reach those edges.
+*/
+@media (width >= 900px) {
+  #docs-navigation {
+    --api-nav-pad-start: calc(var(--docs-sidebar-inline-start) - var(--docs-nav-item-inset));
+    --api-nav-pad-end: calc(
+      var(--docs-sidebar-offset) - var(--docs-sidebar-inline-start) -
+        var(--docs-sidebar-content-width)
+    );
+    /* Panels scroll themselves, so the sidebar doesn't need to clip or scroll. */
+    overflow: visible;
+  }
+
+  .api-nav {
+    /* The window below the header, minus the sidebar title and its gap. */
+    --api-nav-panel-height: calc(
+      100dvh - var(--site-header-height) - 44px - var(--docs-nav-item-height) - 8px
+    );
+    margin-inline: calc(-1 * var(--api-nav-pad-start)) calc(-1 * var(--api-nav-pad-end));
+  }
+
+  /*
+    The scrollbar takes its width from the right padding, which leaves room for a thin one. Items
+    have a fixed width, so they don't change whether the menu scrolls or not.
+  */
+  .api-nav-panel {
+    padding-inline: var(--api-nav-pad-start) calc(var(--api-nav-pad-end) - 16px);
+    scrollbar-gutter: auto;
+  }
+
+  .api-nav-panel > * {
+    max-width: calc(var(--docs-sidebar-content-width) + var(--docs-nav-item-inset));
+  }
 }
 
-.api-nav-group {
-  gap: 4px;
-}
-
-.api-nav-group__heading {
-  height: 24px;
+.api-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--docs-nav-item-gap);
   margin: 0;
-  padding: 6px 8px;
-  color: var(--rmx-color-text-secondary);
-  font-size: 10px;
-  font-weight: var(--rmx-font-weight-bold);
-  line-height: normal;
-  letter-spacing: var(--rmx-letter-spacing-meta);
-  text-transform: uppercase;
+  padding: 0;
+  list-style: none;
 }
 
-.api-nav-links {
-  gap: 4px;
+.api-nav-row {
+  flex: none;
+  gap: 10px;
+  min-height: var(--docs-nav-item-height);
+  font-size: var(--docs-font-size-ui);
+  line-height: 1.4;
 }
 
-.api-nav-links a {
-  position: relative;
+.api-nav-heading {
   display: flex;
   align-items: center;
-  width: 100%;
-  min-height: 32px;
-  padding: 7px 12px;
+  height: var(--docs-nav-item-height);
+  /* The panel's item gap already adds space above. */
+  margin: calc(var(--docs-sidebar-group-gap) - var(--docs-nav-item-gap)) 0 0;
+  font-size: var(--docs-font-size-label);
+}
+
+.api-nav-node {
+  justify-content: space-between;
+}
+
+.api-nav-node svg,
+.api-nav-back svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  opacity: 0.55;
+}
+
+/* Spaced like the UI site's version heading. */
+.api-nav-back {
+  gap: 6px;
+  margin-bottom: calc(8px - var(--docs-nav-item-gap));
+  color: var(--docs-sidebar-heading);
+}
+
+.api-nav-back svg {
+  margin-inline-start: -4px;
+  transform: rotate(180deg);
+}
+
+.api-nav-title {
+  display: flex;
+  align-items: center;
+}
+
+/* The menu title links to its overview but keeps the heading look until hovered or current. */
+.docs-nav-item.api-nav-heading-link {
+  color: var(--docs-sidebar-heading);
+  font-weight: var(--rmx-font-weight-semibold);
+}
+
+a.docs-nav-item.api-nav-heading-link:is(:hover, [aria-current]) {
+  color: var(--rmx-color-text-primary);
+  font-weight: var(--rmx-font-weight-semibold);
+}
+
+.api-nav-path-segment {
+  white-space: nowrap;
+}
+
+.api-nav-symbol {
+  display: block;
+  height: var(--docs-nav-item-height);
   overflow: hidden;
-  border-radius: var(--rmx-radius-md);
-  color: var(--docs-nav-link);
-  font-size: 14px;
-  line-height: 1.4;
-  text-decoration: none;
+  line-height: var(--docs-nav-item-height);
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition:
-    color 150ms ease-in-out,
-    background-color 150ms ease-in-out;
-}
-
-.api-nav-links a:hover {
-  color: var(--docs-nav-link-hover);
-  background: var(--docs-nav-hover-background);
 }
 
 .api-page-header {
-  margin-bottom: var(--rmx-space-lg);
-}
-
-.docs-chapter-eyebrow {
-  margin: 0;
-  color: var(--rmx-color-eyebrow);
-  font-family: var(--rmx-font-family-sans);
-  font-size: 12px;
-  font-weight: var(--rmx-font-weight-bold);
-  line-height: normal;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  margin-bottom: 12px;
 }
 
 .api-page-meta {
@@ -131,6 +180,10 @@ html {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--rmx-space-md);
+}
+
+.api-page-meta .docs-page-eyebrow {
+  margin: 0;
 }
 
 .api-page-source {
@@ -146,20 +199,9 @@ html {
   color: var(--rmx-color-text-primary);
 }
 
-.api-page-description {
-  max-width: 64ch;
-  margin: var(--rmx-space-lg) 0 0;
-  color: var(--rmx-color-text-secondary);
-}
-
-.api-page-content > h1:first-child,
 .api-page-content > div > h1:first-child {
-  margin: 0 0 40px;
+  margin: 0 0 var(--rmx-space-xxl);
   overflow-wrap: anywhere;
-}
-
-.api-page-content > ol:first-of-type {
-  margin-top: 0;
 }
 
 .api-demo {
@@ -179,44 +221,8 @@ html {
   margin: 0;
 }
 
-.api-demo__frame {
-  overflow: hidden;
-  border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
-  border-radius: var(--rmx-radius-lg);
-}
-
-.api-demo__preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 120px;
-  padding: var(--rmx-space-xxl);
-  border-bottom: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
-  background: var(--rmx-surface-lvl0);
-}
-
-.api-demo__source > pre.shiki {
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-}
-
-.api-demo__source .line {
-  position: relative;
-  display: block;
-  min-height: 1lh;
-  white-space: pre;
-}
-
-@media (width < 900px) {
-  .api-page-content > h1:first-child,
+@media (width >= 900px) {
   .api-page-content > div > h1:first-child {
-    margin-bottom: var(--rmx-space-xxl);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .api-nav-section > summary::after {
-    transition: none;
+    margin-bottom: 40px;
   }
 }

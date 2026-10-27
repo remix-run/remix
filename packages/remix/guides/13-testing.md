@@ -1,6 +1,6 @@
 ---
 title: Testing
-description: How to choose a test boundary and test Remix routes, stateful request flows, components, and end-to-end behavior.
+description: How to choose a test boundary and test Remix routes, stateful request flows, browser components, and end-to-end behavior.
 ---
 
 Remix includes `remix/test`, whose three runner types—`server`, `browser`, and `e2e`—determine how and where a test runs. They do not determine how much application code the test exercises. `remix/assert` provides assertions in all three.
@@ -205,6 +205,8 @@ Database state needs the same boundary. For SQLite, create a database backed by 
 
 The [`remix/file-storage/memory` overview](../src/file-storage/README.md) provides `createMemoryFileStorage()` for upload tests. A fresh temporary directory also works. Register cleanup with `t.after(...)` when a fixture opens a database connection, starts a server, or creates files that outlive the request.
 
+When a test needs a function spy or method override, use `t.mock.fn(...)` or `t.mock.method(object, "methodName", impl)` on the test context. Method spies created through `t.mock` are restored automatically when the test finishes, or early with `spy.mock.restore?.()`.
+
 ## Test Remix components in the browser
 
 Use a browser component test when the behavior depends on an event, a DOM property, or a component update. These tests run in isolated browser frames rather than a simulated DOM.
@@ -282,7 +284,7 @@ The button has no request behavior to prove, so this test stays at the browser c
 
 An end-to-end test runs the router behind a real local HTTP server and drives the app through a Playwright `Page`. Use this boundary for a small number of flows where navigation, browser behavior, server rendering, and persistence must work together.
 
-[`createTestServer(...)`](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/) adapts the router to a server on an available local port. [`t.serve(...)`](https://api.remix.run/api/remix/test/interface/TestContext/) gives the Playwright page that server as its base URL and closes both after the test:
+[`createTestServer(...)`](https://docs.remix.run/node-fetch-server/test/function/createTestServer/) adapts the router to a server on an available local port. [`t.serve(...)`](https://docs.remix.run/test/interface/TestContext/) gives the Playwright page that server as its base URL and closes both after the test:
 
 ```ts filename=app/app.test.e2e.ts
 import * as assert from "remix/assert";

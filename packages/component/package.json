@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/component",
-  "version": "1.0.0",
-  "description": "Component runtime with server rendering and browser hydration",
+  "version": "1.1.0",
+  "description": "Component runtime with server rendering, browser hydration, mixins, and frame navigation",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {

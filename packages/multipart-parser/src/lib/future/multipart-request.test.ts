@@ -1,0 +1,602 @@
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
+
+import { createMultipartMessage, getRandomBytes } from '../../../test/utils.ts'
+
+import type { MultipartParserOptions } from '../multipart.ts'
+import {
+  MultipartParseError,
+  MaxHeaderSizeExceededError,
+  MaxFileSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
+} from '../multipart.ts'
+import type { MultipartPart } from './multipart.ts'
+import { parseMultipartRequest } from './multipart-request.ts'
+
+const CRLF = '\r\n'
+const LARGE_FILE_SIZE = 128 * 1024
+
+interface ParsedPart {
+  name: string | undefined
+  filename: string | undefined
+  mediaType: string | undefined
+  headers: MultipartPart['headers']
+  bytes: Uint8Array
+  text: string
+}
+
+// Parses a request, reading each part's content as it arrives.
+async function parseParts(
+  request: Request,
+  options?: MultipartParserOptions,
+): Promise<ParsedPart[]> {
+  let parts: ParsedPart[] = []
+  for await (let part of parseMultipartRequest(request, options)) {
+    let bytes = await part.bytes()
+    parts.push({
+      name: part.name,
+      filename: part.filename,
+      mediaType: part.mediaType,
+      headers: part.headers,
+      bytes,
+      text: new TextDecoder().decode(bytes),
+    })
+  }
+  return parts
+}
+
+describe('parseMultipartRequest', async () => {
+  let boundary = '----WebKitFormBoundaryz8Zv2UxQ7f4a0Z3H'
+  let boundaryBytes = new TextEncoder().encode(`\r\n--${boundary}`)
+
+  function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, start = 0): number {
+    outer: for (let i = start; i <= haystack.length - needle.length; ++i) {
+      for (let j = 0; j < needle.length; ++j) {
+        if (haystack[i + j] !== needle[j]) {
+          continue outer
+        }
+      }
+      return i
+    }
+
+    return -1
+  }
+
+  function createChunkedRequest(body: Uint8Array, chunkSize: number): Request {
+    let stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let i = 0; i < body.length; i += chunkSize) {
+          controller.enqueue(body.subarray(i, i + chunkSize))
+        }
+        controller.close()
+      },
+    })
+
+    return new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: stream,
+      duplex: 'half',
+    } as RequestInit & { duplex: 'half' })
+  }
+
+  it('uses the boundary parameter after unrelated parameters', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; xboundary=other; note="value; boundary=other"; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, { field: 'value' }),
+    })
+
+    let parts = await parseParts(request)
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'field')
+    assert.equal(parts[0].text, 'value')
+  })
+
+  it('parses a request with an unterminated quoted boundary', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary="${boundary}`,
+      },
+      body: createMultipartMessage(boundary, { field: 'value' }),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'field')
+    assert.equal(parts[0].text, 'value')
+  })
+
+  it('rejects a boundary inside an unterminated quoted parameter', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; note="value; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, { field: 'value' }),
+    })
+
+    await assert.rejects(async () => {
+      for await (let _part of parseMultipartRequest(request)) {
+        assert.fail('Unexpected multipart part')
+      }
+    }, /Invalid Content-Type header: missing boundary/)
+  })
+
+  it('parses an empty multipart message', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: `--${boundary}--`,
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 0)
+  })
+
+  it('parses a simple multipart form', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        field1: 'value1',
+      }),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+  })
+
+  it('parses multiple parts correctly', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        field1: 'value1',
+        field2: 'value2',
+      }),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 2)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+    assert.equal(parts[1].name, 'field2')
+    assert.equal(parts[1].text, 'value2')
+  })
+
+  it('parses empty parts correctly', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        empty: '',
+      }),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'empty')
+    assert.equal(parts[0].bytes.byteLength, 0)
+  })
+
+  it('parses file uploads correctly', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        file1: {
+          filename: 'test.txt',
+          mediaType: 'text/plain',
+          content: 'File content',
+        },
+      }),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'file1')
+    assert.equal(parts[0].filename, 'test.txt')
+    assert.equal(parts[0].mediaType, 'text/plain')
+    assert.equal(parts[0].text, 'File content')
+  })
+
+  it('exposes decoded part headers as a plain object', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="test.txt"',
+        'Content-Type: text/plain',
+        'X-Custom: one',
+        'X-Custom: two',
+        '',
+        'File content',
+        `--${boundary}--`,
+      ].join(CRLF),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 1)
+    assert.equal(
+      parts[0].headers['content-disposition'],
+      'form-data; name="file"; filename="test.txt"',
+    )
+    assert.equal(parts[0].headers['content-type'], 'text/plain')
+    assert.equal(parts[0].headers['x-custom'], 'one, two')
+    assert.equal(parts[0].headers['Content-Type'], undefined)
+    assert.equal(Object.isFrozen(parts[0].headers), true)
+  })
+
+  it('preserves non-ASCII field names and filenames', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        名前: {
+          filename: 'テスト画像.png',
+          mediaType: 'image/png',
+          content: 'image content',
+        },
+      }),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, '名前')
+    assert.equal(parts[0].filename, 'テスト画像.png')
+    assert.equal(parts[0].mediaType, 'image/png')
+  })
+
+  it('preserves literal percent-encoded sequences in filenames', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        file: {
+          filename: '%2Fetc%2Fpasswd',
+          mediaType: 'text/plain',
+          content: 'File content',
+        },
+      }),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].filename, '%2Fetc%2Fpasswd')
+  })
+
+  it('parses multiple fields and a file upload', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        field1: 'value1',
+        field2: 'value2',
+        file1: {
+          filename: 'test.txt',
+          mediaType: 'text/plain',
+          content: 'File content',
+        },
+      }),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 3)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+    assert.equal(parts[1].name, 'field2')
+    assert.equal(parts[1].text, 'value2')
+    assert.equal(parts[2].name, 'file1')
+    assert.equal(parts[2].filename, 'test.txt')
+    assert.equal(parts[2].mediaType, 'text/plain')
+    assert.equal(parts[2].text, 'File content')
+  })
+
+  it('parses large file uploads correctly', async () => {
+    let maxFileSize = LARGE_FILE_SIZE
+    let content = getRandomBytes(maxFileSize)
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        file1: {
+          filename: 'random.dat',
+          mediaType: 'application/octet-stream',
+          content,
+        },
+      }),
+    })
+
+    let parts: { name?: string; filename?: string; mediaType?: string; content: Uint8Array }[] = []
+    for await (let part of parseMultipartRequest(request, { maxFileSize })) {
+      parts.push({
+        name: part.name,
+        filename: part.filename,
+        mediaType: part.mediaType,
+        content: await part.bytes(),
+      })
+    }
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].name, 'file1')
+    assert.equal(parts[0].filename, 'random.dat')
+    assert.equal(parts[0].mediaType, 'application/octet-stream')
+    assert.deepEqual(parts[0].content, content)
+  })
+
+  it('parses when boundary is split across chunks', async () => {
+    let body = createMultipartMessage(boundary, {
+      field1: 'value1',
+      field2: 'value2',
+    })
+    let boundaryIndex = indexOfBytes(body, boundaryBytes, 1)
+    assert.ok(boundaryIndex > 0)
+
+    let request = createChunkedRequest(body, boundaryIndex + 3)
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 2)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+    assert.equal(parts[1].name, 'field2')
+    assert.equal(parts[1].text, 'value2')
+  })
+
+  it('parses when a partial boundary tail is at chunk edge', async () => {
+    let body = createMultipartMessage(boundary, {
+      field1: 'value1',
+      field2: 'value2',
+    })
+    let boundaryIndex = indexOfBytes(body, boundaryBytes, 1)
+    assert.ok(boundaryIndex > 0)
+
+    // End first chunk with only '\r' from the '\r\n--boundary' marker.
+    let request = createChunkedRequest(body, boundaryIndex + 1)
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 2)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+    assert.equal(parts[1].name, 'field2')
+    assert.equal(parts[1].text, 'value2')
+  })
+
+  it('parses when boundary starts exactly at next chunk edge', async () => {
+    let body = createMultipartMessage(boundary, {
+      field1: 'value1',
+      field2: 'value2',
+    })
+    let boundaryIndex = indexOfBytes(body, boundaryBytes, 1)
+    assert.ok(boundaryIndex > 0)
+
+    // End first chunk right before '\r\n--boundary'.
+    let request = createChunkedRequest(body, boundaryIndex)
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 2)
+    assert.equal(parts[0].name, 'field1')
+    assert.equal(parts[0].text, 'value1')
+    assert.equal(parts[1].name, 'field2')
+    assert.equal(parts[1].text, 'value2')
+  })
+
+  it('throws when Content-Type is not multipart/form-data', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+    })
+
+    await assert.rejects(
+      async () => {
+        for await (let _ of parseMultipartRequest(request)) {
+          // ...
+        }
+      },
+      { name: 'MultipartParseError', message: 'Request is not a multipart request' },
+    )
+  })
+
+  it('throws when initial boundary is missing', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      body: 'Content-Disposition: form-data; name="field1"\r\n\r\nvalue1',
+    })
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request)) {
+        // ...
+      }
+    }, MultipartParseError)
+  })
+
+  it('throws when header exceeds maximum size', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="field1"',
+        'X-Large-Header: ' + 'X'.repeat(6 * 1024), // 6 KB header
+        '',
+        'value1',
+        `--${boundary}--`,
+      ].join(CRLF),
+    })
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request, { maxHeaderSize: 4 * 1024 })) {
+        // ...
+      }
+    }, MaxHeaderSizeExceededError)
+  })
+
+  it('throws when a file exceeds maximum size', async () => {
+    let maxFileSize = LARGE_FILE_SIZE
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        file1: {
+          filename: 'random.dat',
+          mediaType: 'application/octet-stream',
+          content: getRandomBytes(maxFileSize + 1),
+        },
+      }),
+    })
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request, { maxFileSize })) {
+        // ...
+      }
+    }, MaxFileSizeExceededError)
+  })
+
+  it('throws when the number of parts exceeds maxParts', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        field1: 'value1',
+        field2: 'value2',
+        field3: 'value3',
+      }),
+    })
+
+    let options: MultipartParserOptions = { maxParts: 2 }
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request, options)) {
+        // ...
+      }
+    }, MaxPartsExceededError)
+  })
+
+  it('throws when the aggregate content size exceeds maxTotalSize', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: createMultipartMessage(boundary, {
+        field1: 'hello',
+        field2: 'world',
+      }),
+    })
+
+    let options: MultipartParserOptions = { maxTotalSize: 9 }
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request, options)) {
+        // ...
+      }
+    }, MaxTotalSizeExceededError)
+  })
+
+  it('parses malformed parts', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [`--${boundary}`, 'Invalid-Header', '', 'Some content', `--${boundary}--`].join(CRLF),
+    })
+
+    let parts = await parseParts(request)
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].headers['invalid-header'], undefined)
+    assert.equal(parts[0].text, 'Some content')
+  })
+
+  it('throws error when final boundary is missing', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="field1"',
+        '',
+        'value1',
+        `--${boundary}`,
+      ].join(CRLF),
+    })
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request)) {
+        // ...
+      }
+    }, MultipartParseError)
+  })
+
+  it('throws error when request body is empty', async () => {
+    let request = new Request('https://example.com', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: null,
+    })
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request)) {
+        // ...
+      }
+    }, MultipartParseError)
+  })
+})

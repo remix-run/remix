@@ -42,7 +42,12 @@ import {
   getPackagePath,
 } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
-import { createPublishPlan, getReleaseNotes, isPackageVersionPublished } from './utils/publish.ts'
+import {
+  createPublishPlan,
+  getDocsReleaseTag,
+  getReleaseNotes,
+  isPackageVersionPublished,
+} from './utils/publish.ts'
 
 const rootDir = getRootDir()
 
@@ -654,9 +659,17 @@ async function main() {
     process.exit(1)
   }
 
-  let remixRelease = packagesNeedingTagsOrReleases.find((pkg) => pkg.packageName === 'remix')
-  if (remixRelease !== undefined && process.env.GITHUB_OUTPUT) {
-    fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=${remixRelease.tag}\n`)
+  if (process.env.GITHUB_OUTPUT) {
+    let docsTag = getDocsReleaseTag(
+      getLocalPackages().map((pkg) => ({
+        packageName: pkg.npmName,
+        version: pkg.localVersion,
+        tag: getGitTag(pkg.npmName, pkg.localVersion),
+      })),
+    )
+    if (docsTag !== undefined) {
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=${docsTag}\n`)
+    }
   }
 
   console.log('\n✅ Done.')
