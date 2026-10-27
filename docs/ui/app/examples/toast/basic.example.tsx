@@ -12,7 +12,7 @@ import * as toast from '@remix-run/ui/toast'
 import { css, on, createMixin } from 'remix/component'
 import type { ElementProps } from 'remix/component'
 
-export const notifications = toast.createToastManager()
+export const toastManager = toast.createToastManager()
 
 export default function ExampleToast() {
   return () => (
@@ -22,10 +22,10 @@ export default function ExampleToast() {
         mix={[
           styles.triggerButton,
           on('click', () => {
-            notifications.add({
+            toastManager.add({
               title: 'Changes saved',
               description: 'Your preferences are up to date.',
-              duration: 0,
+              timeout: false,
             })
           }),
         ]}
@@ -38,19 +38,19 @@ export default function ExampleToast() {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={notifications} limit={3}>
-      {(records) => (
+    <toast.Context manager={toastManager} limit={3}>
+      {(toastItems) => (
         <section mix={[toast.root({ label: 'Notifications' }), styles.region]}>
-          {records.map((notification, index) => (
-            <toast.ItemContext key={notification.id} toast={notification}>
+          {toastItems.map((toastItem, index) => (
+            <toast.ItemContext key={toastItem.id} value={toastItem.id}>
               <article
-                key={notification.id}
+                key={toastItem.id}
                 data-toast-index={index}
                 style={{ '--toast-index': index }}
                 mix={[
                   toast.item(),
                   styles.toastLayout,
-                  swipeToDismiss(notification.id),
+                  swipeToDismiss(toastItem.id),
                   animateLayout(
                     prefersReducedMotion()
                       ? false
@@ -86,10 +86,8 @@ export function ToastRegion() {
                 <div mix={styles.collapseSlot}>
                   <div mix={[styles.surface]}>
                     <div mix={[styles.message, styles.hideWhenCovered]}>
-                      <strong mix={[toast.title(), styles.title]}>{notification.title}</strong>
-                      <p mix={[toast.description(), styles.description]}>
-                        {notification.description}
-                      </p>
+                      <strong mix={[toast.title(), styles.title]}>{toastItem.title}</strong>
+                      <p mix={[toast.description(), styles.description]}>{toastItem.description}</p>
                     </div>
                     <button
                       type="button"
@@ -146,7 +144,7 @@ const swipeToDismiss = createMixin<HTMLElement, [id: string], ElementProps>(() =
       trackSwipe(event.offset.x)
       if (returning || event.offset.x <= 40) return
       event.preventDefault()
-      notifications.close(id)
+      toastManager.close(id)
     }),
   ]
 })

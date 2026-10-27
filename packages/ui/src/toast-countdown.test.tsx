@@ -2,10 +2,10 @@ import * as assert from '@remix-run/assert'
 import type { Handle } from '@remix-run/component'
 import { describe, it } from '@remix-run/test'
 import { createToastManager, Context, ItemContext, item, countdown } from './toast.tsx'
-import type { ToastRecord } from './toast.tsx'
+import type { ToastItem } from './toast.tsx'
 import { element, frame, mount } from './test/animation.ts'
 
-type Clock = Pick<ToastRecord, 'duration' | 'remaining' | 'paused'>
+type Clock = Pick<ToastItem, 'timeout' | 'remaining' | 'paused'>
 function Indicators({ props }: Handle<{ clock: Clock }>) {
   return () => (
     <div data-indicators mix={countdown(props.clock)}>
@@ -15,7 +15,7 @@ function Indicators({ props }: Handle<{ clock: Clock }>) {
           width: '100px',
           height: '4px',
           transformOrigin: 'left',
-          transform: 'scaleX(var(--toast-remaining))',
+          transform: 'scaleX(var(--toast-countdown))',
         }}
       />
       <svg width="40" height="40" viewBox="0 0 40 40">
@@ -29,7 +29,7 @@ function Indicators({ props }: Handle<{ clock: Clock }>) {
           stroke="currentColor"
           stroke-width="3"
           stroke-dasharray="100"
-          style={{ strokeDashoffset: 'calc((1 - var(--toast-remaining)) * 100px)' }}
+          style={{ strokeDashoffset: 'calc((1 - var(--toast-countdown)) * 100px)' }}
         />
       </svg>
     </div>
@@ -37,7 +37,7 @@ function Indicators({ props }: Handle<{ clock: Clock }>) {
 }
 
 function fraction(node: Element) {
-  return Number(getComputedStyle(node).getPropertyValue('--toast-remaining'))
+  return Number(getComputedStyle(node).getPropertyValue('--toast-countdown'))
 }
 
 function near(actual: number, expected: number) {
@@ -48,7 +48,7 @@ describe('Toast countdown indicators', () => {
   it('drives a bar and an SVG ring from the same sampled fraction without component updates', async (t) => {
     let result = await mount(
       t,
-      <Indicators clock={{ duration: 10000, remaining: 6000, paused: true }} />,
+      <Indicators clock={{ timeout: 10000, remaining: 6000, paused: true }} />,
     )
     let host = element(result.container, '[data-indicators]')
     let bar = element(result.container, '[data-bar]')
@@ -70,26 +70,26 @@ describe('Toast countdown indicators', () => {
   })
 
   it('uses the real manager clock for pause, resume, restart and persistent updates', async (t) => {
-    let notifications = createToastManager()
-    let id = notifications.add({ title: 'Saved', duration: 10000 })
+    let toastManager = createToastManager()
+    let id = toastManager.add({ title: 'Saved', timeout: 10000 })
     let result = await mount(
       t,
-      <Context manager={notifications}>
-        {(toasts) =>
-          toasts.map((notification) => (
-            <ItemContext key={notification.id} toast={notification}>
-              <article key={notification.id} data-id={notification.id} mix={item()}>
-                <Indicators clock={notification} />
+      <Context manager={toastManager}>
+        {(toastItems) =>
+          toastItems.map((toastItem) => (
+            <ItemContext key={toastItem.id} value={toastItem.id}>
+              <article key={toastItem.id} data-id={toastItem.id} mix={item()}>
+                <Indicators clock={toastItem} />
               </article>
             </ItemContext>
           ))
         }
       </Context>,
     )
-    t.after(() => notifications.close())
+    t.after(() => toastManager.close())
     let host = element(result.container, '[data-indicators]')
     let original = host.getAnimations()[0]
-    await result.act(() => notifications.pause('manual'))
+    await result.act(() => toastManager.pause('manual'))
     let paused = fraction(host)
     assert.ok(paused > 0.9 && paused <= 1)
     assert.equal(original.playState, 'idle')
@@ -97,17 +97,17 @@ describe('Toast countdown indicators', () => {
     await frame()
     await frame()
     near(fraction(host), paused)
-    await result.act(() => notifications.resume('manual'))
+    await result.act(() => toastManager.resume('manual'))
     assert.equal(host.getAnimations()[0].playState, 'running')
-    await result.act(() => notifications.update(id, { duration: 20000 }))
+    await result.act(() => toastManager.update(id, { timeout: 20000 }))
     assert.equal(host.getAnimations().length, 1)
     assert.equal(host.getAnimations()[0].effect?.getTiming().duration, 20000)
     assert.ok(fraction(host) > 0.99)
-    await result.act(() => notifications.update(id, { duration: 0 }))
+    await result.act(() => toastManager.update(id, { timeout: false }))
     assert.equal(host.hidden, true)
     assert.equal(host.getAnimations().length, 0)
     assert.equal(host.getAttribute('aria-hidden'), 'true')
-    await result.act(() => notifications.update(id, { duration: 10000 }))
+    await result.act(() => toastManager.update(id, { timeout: 10000 }))
     let last = host.getAnimations()[0]
     result.cleanup()
     assert.equal(last.playState, 'idle')

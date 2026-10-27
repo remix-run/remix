@@ -1,6 +1,6 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import Example, { notifications, ToastRegion } from './basic.example.tsx'
+import Example, { toastManager, ToastRegion } from './basic.example.tsx'
 import { button, element, frame, mount, waitFor } from '../test-helpers.ts'
 
 async function settle(target: Element) {
@@ -17,7 +17,7 @@ async function settle(target: Element) {
 
 describe('Toast stack', () => {
   it('keeps an exiting covered card behind the front at the collapsed stack height', async (t) => {
-    notifications.close()
+    toastManager.close()
     let result = await mount(
       t,
       <>
@@ -25,14 +25,14 @@ describe('Toast stack', () => {
         <ToastRegion />
       </>,
     )
-    t.after(() => notifications.close())
-    let rearId = notifications.add({ title: 'Saved', duration: 0 })
+    t.after(() => toastManager.close())
+    let rearId = toastManager.add({ title: 'Saved', timeout: false })
     await result.act(() =>
-      notifications.add({
+      toastManager.add({
         title: 'Preferences synced',
         description:
           'Your display settings and notification preferences are saved. These changes are available on your other devices the next time they connect.',
-        duration: 0,
+        timeout: false,
       }),
     )
     let region = element(result.container, '[role="region"]')
@@ -40,7 +40,7 @@ describe('Toast stack', () => {
     let front = element(region, '[data-toast-index="0"]')
     let rear = element(region, '[data-toast-index="1"]')
     let rearHeight = rear.offsetHeight
-    await result.act(() => notifications.close(rearId))
+    await result.act(() => toastManager.close(rearId))
     for (let animation of rear.getAnimations()) animation.pause()
     await frame()
     assert.equal(rear.isConnected, true)
@@ -54,7 +54,7 @@ describe('Toast stack', () => {
   })
 
   it('keeps the collapsed stack sized by the logical front during entry and retained exit', async (t) => {
-    notifications.close()
+    toastManager.close()
     let result = await mount(
       t,
       <>
@@ -62,17 +62,17 @@ describe('Toast stack', () => {
         <ToastRegion />
       </>,
     )
-    t.after(() => notifications.close())
+    t.after(() => toastManager.close())
     let region = element(result.container, '[role="region"]')
     await result.act(() => button(result.container, 'Show toast').click())
     await result.act(() => button(result.container, 'Show toast').click())
     await settle(region)
     await result.act(() =>
-      notifications.add({
+      toastManager.add({
         title: 'Preferences synced',
         description:
           'Your display settings and notification preferences are saved. These changes are available on your other devices the next time they connect.',
-        duration: 0,
+        timeout: false,
       }),
     )
     await frame()
@@ -95,7 +95,7 @@ describe('Toast stack', () => {
   })
 
   it('fans out natural mixed-height cards and promotes overflow without measuring them', async (t) => {
-    notifications.close()
+    toastManager.close()
     let result = await mount(
       t,
       <>
@@ -103,23 +103,23 @@ describe('Toast stack', () => {
         <ToastRegion />
       </>,
     )
-    t.after(() => notifications.close())
+    t.after(() => toastManager.close())
     await result.act(() => button(result.container, 'Show toast').click())
     await result.act(() =>
-      notifications.add({
+      toastManager.add({
         title: 'Preferences synced',
         description:
           'Your display settings and notification preferences are saved. These changes are available on your other devices the next time they connect.',
-        duration: 0,
+        timeout: false,
       }),
     )
     await result.act(() => button(result.container, 'Show toast').click())
     await result.act(() =>
-      notifications.add({
+      toastManager.add({
         title: 'Preferences synced',
         description:
           'Your display settings and notification preferences are saved. These changes are available on your other devices the next time they connect.',
-        duration: 0,
+        timeout: false,
       }),
     )
     let region = element(result.container, '[role="region"]')

@@ -16,7 +16,7 @@ type Action =
   | { kind: 'button'; label: string; run(): void }
   | { kind: 'link'; label: string; href: string }
 
-const notifications = toast.createToastManager<Action[]>()
+const toastManager = toast.createToastManager<Action[]>()
 
 export default function ExampleToastActions() {
   return () => (
@@ -26,7 +26,7 @@ export default function ExampleToastActions() {
         mix={[
           styles.button,
           on('click', () => {
-            notifications.add({
+            toastManager.add({
               id: 'docs',
               title: 'Documentation updated',
               description: 'Explore entrance and exit animations.',
@@ -36,7 +36,7 @@ export default function ExampleToastActions() {
                   kind: 'button',
                   label: 'Dismiss',
                   run() {
-                    notifications.close('docs')
+                    toastManager.close('docs')
                   },
                 },
               ],
@@ -52,21 +52,21 @@ export default function ExampleToastActions() {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={notifications}>
-      {(toasts) => (
+    <toast.Context manager={toastManager}>
+      {(toastItems) => (
         <section
           mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.root, styles.region]}
         >
-          {toasts.map((notification, index) => (
-            <toast.ItemContext key={notification.id} toast={notification}>
+          {toastItems.map((toastItem, index) => (
+            <toast.ItemContext key={toastItem.id} value={toastItem.id}>
               <article
-                key={notification.id}
+                key={toastItem.id}
                 data-toast-index={index}
                 style={{ '--toast-index': index }}
                 mix={[
                   toast.item(),
                   styles.toastLayout,
-                  swipeToDismiss(notification.id),
+                  swipeToDismiss(toastItem.id),
                   animateLayout(
                     prefersReducedMotion()
                       ? false
@@ -102,12 +102,12 @@ export function ToastRegion() {
                 <div mix={styles.collapseSlot}>
                   <div mix={[styles.surface]}>
                     <div mix={[styles.message, styles.hideWhenCovered]}>
-                      <strong mix={[toast.title(), styles.title]}>{notification.title}</strong>
+                      <strong mix={[toast.title(), styles.title]}>{toastItem.title}</strong>
                       <span mix={[toast.description(), styles.description]}>
-                        {notification.description}
+                        {toastItem.description}
                       </span>
                       <div mix={styles.actions}>
-                        {notification.action?.map((action) =>
+                        {toastItem.action?.map((action) =>
                           action.kind === 'link' ? (
                             <a href={action.href} mix={styles.link}>
                               {action.label}
@@ -168,7 +168,7 @@ const swipeToDismiss = createMixin<HTMLElement, [id: string], ElementProps>(() =
       trackSwipe(event.offset.x)
       if (returning || event.offset.x <= 40) return
       event.preventDefault()
-      notifications.close(id)
+      toastManager.close(id)
     }),
   ]
 })

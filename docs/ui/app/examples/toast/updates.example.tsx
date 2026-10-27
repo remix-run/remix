@@ -17,17 +17,17 @@ interface Action {
   run(): void
 }
 
-const notifications = toast.createToastManager<Action>()
+const toastManager = toast.createToastManager<Action>()
 
 export default function ExampleToastUpdates(handle: Handle) {
   let status: 'idle' | 'uploading' | 'complete' | 'failed' = 'idle'
 
-  notifications.addEventListener(
+  toastManager.addEventListener(
     'change',
     () => {
       if (
         status === 'uploading' &&
-        !notifications.toasts.some((record) => record.id === 'upload')
+        !toastManager.toastItems.some((record) => record.id === 'upload')
       ) {
         status = 'idle'
         void handle.update()
@@ -38,7 +38,7 @@ export default function ExampleToastUpdates(handle: Handle) {
 
   function start() {
     status = 'uploading'
-    notifications.add({
+    toastManager.add({
       id: 'upload',
       title: (
         <>
@@ -48,7 +48,7 @@ export default function ExampleToastUpdates(handle: Handle) {
       priority: 'low',
       description: 'Waiting for the simulated result.',
       action: undefined,
-      duration: 0,
+      timeout: false,
     })
     void handle.update()
   }
@@ -70,12 +70,12 @@ export default function ExampleToastUpdates(handle: Handle) {
             styles.button,
             on('click', () => {
               status = 'complete'
-              notifications.update('upload', {
+              toastManager.update('upload', {
                 title: 'Upload complete',
                 priority: 'low',
                 description: 'Notes.md is ready to share.',
                 action: undefined,
-                duration: 5000,
+                timeout: 5000,
               })
               void handle.update()
             }),
@@ -90,11 +90,11 @@ export default function ExampleToastUpdates(handle: Handle) {
             styles.button,
             on('click', () => {
               status = 'failed'
-              notifications.update('upload', {
+              toastManager.update('upload', {
                 title: 'Upload failed',
                 priority: 'high',
                 description: 'Your connection was interrupted.',
-                duration: 0,
+                timeout: false,
                 action: { label: 'Retry', run: start },
               })
               void handle.update()
@@ -110,21 +110,21 @@ export default function ExampleToastUpdates(handle: Handle) {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={notifications}>
-      {(toasts) => (
+    <toast.Context manager={toastManager}>
+      {(toastItems) => (
         <section
           mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.root, styles.region]}
         >
-          {toasts.map((notification, index) => (
-            <toast.ItemContext key={notification.id} toast={notification}>
+          {toastItems.map((toastItem, index) => (
+            <toast.ItemContext key={toastItem.id} value={toastItem.id}>
               <article
-                key={notification.id}
+                key={toastItem.id}
                 data-toast-index={index}
                 style={{ '--toast-index': index }}
                 mix={[
                   toast.item(),
                   styles.toastLayout,
-                  swipeToDismiss(notification.id),
+                  swipeToDismiss(toastItem.id),
                   animateLayout(
                     prefersReducedMotion()
                       ? false
@@ -160,21 +160,21 @@ export function ToastRegion() {
                 <div mix={styles.collapseSlot}>
                   <div mix={[styles.surface]}>
                     <div mix={[styles.message, styles.hideWhenCovered]}>
-                      <strong mix={[toast.title(), styles.title]}>{notification.title}</strong>
+                      <strong mix={[toast.title(), styles.title]}>{toastItem.title}</strong>
                       <span mix={[toast.description(), styles.description]}>
-                        {notification.description}
+                        {toastItem.description}
                       </span>
                     </div>
-                    {notification.action && (
+                    {toastItem.action && (
                       <button
                         type="button"
                         mix={[
                           styles.button,
                           styles.hideWhenCovered,
-                          on('click', notification.action.run),
+                          on('click', toastItem.action.run),
                         ]}
                       >
-                        {notification.action.label}
+                        {toastItem.action.label}
                       </button>
                     )}
                     <button
@@ -185,7 +185,7 @@ export function ToastRegion() {
                       ×
                     </button>
                     <div
-                      mix={[styles.progress, styles.hideWhenCovered, toast.countdown(notification)]}
+                      mix={[styles.progress, styles.hideWhenCovered, toast.countdown(toastItem)]}
                     />
                   </div>
                 </div>
@@ -235,7 +235,7 @@ const swipeToDismiss = createMixin<HTMLElement, [id: string], ElementProps>(() =
       trackSwipe(event.offset.x)
       if (returning || event.offset.x <= 40) return
       event.preventDefault()
-      notifications.close(id)
+      toastManager.close(id)
     }),
   ]
 })
@@ -425,7 +425,7 @@ const styles = {
     },
   }),
   progress: css({
-    transform: 'scaleX(var(--toast-remaining, 1))',
+    transform: 'scaleX(var(--toast-countdown, 1))',
     transformOrigin: 'left',
     borderRadius: '0 0 12px 12px',
     position: 'absolute',

@@ -11,14 +11,14 @@ export interface ToastOptions<action = RemixNode> {
   description?: RemixNode
   /** Consumer-defined action content. Any value except null or undefined counts as an action. */
   action?: action
-  /** Visible lifetime in milliseconds. Zero persists. Defaults to 5000, or zero with an action. */
-  duration?: number
+  /** Auto-dismiss timeout in milliseconds, or false to disable. Zero dismisses immediately. Defaults to 5000, or false with an action. */
+  timeout?: number | false
   /** Announcement urgency. Defaults to low (polite); high uses an assertive alert. */
   priority?: 'low' | 'high'
 }
 
-/** An immutable snapshot. Read the manager again to obtain the current remaining time. */
-export interface ToastRecord<action = RemixNode> {
+/** An immutable toast item snapshot. Read the manager again for the current remaining time. */
+export interface ToastItem<action = RemixNode> {
   /** Stable identity, including generated identities. */
   readonly id: string
   /** Visible heading. */
@@ -27,25 +27,25 @@ export interface ToastRecord<action = RemixNode> {
   readonly description?: RemixNode
   /** Content interpreted by the consumer's renderer. */
   readonly action?: action
-  /** Configured lifetime in milliseconds, or zero for a persistent toast. */
-  readonly duration: number
-  /** Remaining visible time in milliseconds, sampled when this snapshot was read. */
+  /** Configured timeout in milliseconds, or false for a persistent toast. */
+  readonly timeout: number | false
+  /** Remaining time in milliseconds, or zero when persistent. Sampled when this snapshot was read. */
   readonly remaining: number
   /** Whether the timer is stopped, including while no item presents the toast. */
   readonly paused: boolean
   /** Whether at least one mounted item presents this toast. */
   readonly presented: boolean
-  /** Announcement urgency, independent of action presence and duration. */
+  /** Announcement urgency, independent of action presence and timeout. */
   readonly priority: 'low' | 'high'
 }
 
 /** Commands and observable state, without a bound component. Events signal that state can be read. */
 export interface ToastManager<action = RemixNode> extends TypedEventTarget<{ change: Event }> {
-  /** Open toasts, newest first. Updating an existing identity preserves its position. */
-  readonly toasts: readonly ToastRecord<action>[]
+  /** Open toast items, newest first. Updating an existing identity preserves its position. */
+  readonly toastItems: readonly ToastItem<action>[]
   /** Adds or merges a toast by identity, returning its identity. */
   add(options: ToastOptions<action>): string
-  /** Updates an open toast. Only an explicit duration restarts its timer. */
+  /** Updates an open toast. Only an explicit timeout restarts its timer. */
   update(id: string, options: Partial<Omit<ToastOptions<action>, 'id'>>): void
   /** Closes one toast, or all toasts when no identity is supplied. */
   close(id?: string): void
@@ -61,10 +61,10 @@ export interface ToastManager<action = RemixNode> extends TypedEventTarget<{ cha
 export interface ToastContextProps<action = RemixNode> {
   /** Stable manager created outside the rendering component. */
   manager: ToastManager<action>
-  /** Maximum available toasts. Defaults to 3. Must be a positive integer. */
+  /** Maximum available toast items. Defaults to 3. Must be a positive integer. */
   limit?: number
-  /** Renders every open toast, including limited records, newest first. */
-  children: (toasts: readonly ToastRecord<action>[]) => RemixNode
+  /** Renders every open toast item, including overflow, newest first. */
+  children: (toastItems: readonly ToastItem<action>[]) => RemixNode
 }
 
 /** Region behavior. Author its element, translated label and positioning. */
@@ -76,16 +76,16 @@ export interface ToastRootOptions {
 }
 
 /** Scopes one notification's content and controls. */
-export interface ToastItemContextProps<action = RemixNode> {
-  /** Current notification from the manager's collection. Keep the provider keyed by its id. */
-  toast: ToastRecord<action>
+export interface ToastItemContextProps {
+  /** Toast item identity from the manager. Keep the provider keyed by the same identity. */
+  value: string
   /** Consumer-owned notification markup. */
   children?: RemixNode
 }
 
-type StoredToast<action> = {
+type StoredToastItem<action> = {
   options: ToastOptions<action>
-  duration: number
+  timeout: number | false
   remaining: number
   started: number | null
   timer?: ReturnType<typeof setTimeout>
@@ -97,125 +97,127 @@ type StoredToast<action> = {
  * @returns A manager with native EventTarget subscriptions.
  */
 export function createToastManager<action = RemixNode>(): ToastManager<action> {
-  let records = new Map<string, StoredToast<action>>()
+  let storedToastItems = new Map<string, StoredToastItem<action>>()
   let reasons = new Set<unknown>()
   let nextId = 0
 
   function changed() {
-    manager.dispatchEvent(new Event('change'))
+    toastManager.dispatchEvent(new Event('change'))
   }
 
-  function remaining(record: StoredToast<action>) {
+  function remaining(toastItem: StoredToastItem<action>) {
     return Math.max(
       0,
-      record.remaining - (record.started === null ? 0 : performance.now() - record.started),
+      toastItem.remaining -
+        (toastItem.started === null ? 0 : performance.now() - toastItem.started),
     )
   }
 
-  function stop(record: StoredToast<action>) {
-    record.remaining = remaining(record)
-    record.started = null
-    clearTimeout(record.timer)
+  function stop(toastItem: StoredToastItem<action>) {
+    toastItem.remaining = remaining(toastItem)
+    toastItem.started = null
+    clearTimeout(toastItem.timer)
   }
 
-  function start(id: string, record: StoredToast<action>) {
-    if (record.duration === 0 || record.presentations.size === 0 || reasons.size > 0) return
-    record.started = performance.now()
-    record.timer = setTimeout(() => manager.close(id), record.remaining)
+  function start(id: string, toastItem: StoredToastItem<action>) {
+    if (toastItem.timeout === false || toastItem.presentations.size === 0 || reasons.size > 0)
+      return
+    toastItem.started = performance.now()
+    toastItem.timer = setTimeout(() => toastManager.close(id), toastItem.remaining)
   }
 
-  function duration(options: ToastOptions<action>) {
-    let value = options.duration ?? (options.action == null ? 5000 : 0)
-    if (!Number.isFinite(value) || value < 0)
-      throw new RangeError('Toast duration must be finite and non-negative')
+  function timeout(options: ToastOptions<action>) {
+    let value = options.timeout ?? (options.action == null ? 5000 : false)
+    if (value !== false && (!Number.isFinite(value) || value < 0))
+      throw new RangeError('Toast timeout must be false or finite and non-negative')
     return value
   }
 
   class ToastStore extends TypedEventTarget<{ change: Event }> implements ToastManager<action> {
-    get toasts(): readonly ToastRecord<action>[] {
+    get toastItems(): readonly ToastItem<action>[] {
       return Object.freeze(
-        [...records].reverse().map(([id, record]) =>
+        [...storedToastItems].reverse().map(([id, toastItem]) =>
           Object.freeze({
             id,
-            title: record.options.title,
-            description: record.options.description,
-            action: record.options.action,
-            duration: record.duration,
-            remaining: remaining(record),
-            paused: record.started === null,
-            presented: record.presentations.size > 0,
-            priority: record.options.priority ?? 'low',
+            title: toastItem.options.title,
+            description: toastItem.options.description,
+            action: toastItem.options.action,
+            timeout: toastItem.timeout,
+            remaining: remaining(toastItem),
+            paused: toastItem.started === null,
+            presented: toastItem.presentations.size > 0,
+            priority: toastItem.options.priority ?? 'low',
           }),
         ),
       )
     }
     add(options: ToastOptions<action>) {
       let id = options.id ?? `toast-${++nextId}`
-      while (options.id === undefined && records.has(id)) id = `toast-${++nextId}`
-      let previous = records.get(id)
+      while (options.id === undefined && storedToastItems.has(id)) id = `toast-${++nextId}`
+      let previous = storedToastItems.get(id)
       let merged = { ...previous?.options, ...options }
-      let lifetime = duration(merged)
+      let lifetime = timeout(merged)
       if (previous) stop(previous)
-      let record: StoredToast<action> = {
+      let toastItem: StoredToastItem<action> = {
         options: merged,
-        duration: lifetime,
-        remaining: lifetime,
+        timeout: lifetime,
+        remaining: lifetime === false ? 0 : lifetime,
         started: null,
         presentations: previous?.presentations ?? new Set(),
       }
-      records.set(id, record)
-      start(id, record)
+      storedToastItems.set(id, toastItem)
+      start(id, toastItem)
       changed()
       return id
     }
     update(id: string, options: Partial<Omit<ToastOptions<action>, 'id'>>) {
-      let record = records.get(id)
-      if (!record) return
-      let merged = { ...record.options, ...options }
-      let lifetime = duration(merged)
-      if (options.duration !== undefined) {
-        stop(record)
-        record.duration = lifetime
-        record.remaining = lifetime
+      let toastItem = storedToastItems.get(id)
+      if (!toastItem) return
+      let merged = { ...toastItem.options, ...options }
+      let lifetime = timeout(merged)
+      if (options.timeout !== undefined) {
+        stop(toastItem)
+        toastItem.timeout = lifetime
+        toastItem.remaining = lifetime === false ? 0 : lifetime
       }
-      record.options = merged
-      if (options.duration !== undefined) start(id, record)
+      toastItem.options = merged
+      if (options.timeout !== undefined) start(id, toastItem)
       changed()
     }
     close(id?: string) {
       if (id === undefined) {
-        for (let record of records.values()) stop(record)
-        records.clear()
+        for (let toastItem of storedToastItems.values()) stop(toastItem)
+        storedToastItems.clear()
       } else {
-        let record = records.get(id)
-        if (!record) return
-        stop(record)
-        records.delete(id)
+        let toastItem = storedToastItems.get(id)
+        if (!toastItem) return
+        stop(toastItem)
+        storedToastItems.delete(id)
       }
       changed()
     }
     pause(reason: unknown) {
       if (reasons.has(reason)) return
-      for (let record of records.values()) stop(record)
+      for (let toastItem of storedToastItems.values()) stop(toastItem)
       reasons.add(reason)
       changed()
     }
     resume(reason: unknown) {
       if (!reasons.delete(reason)) return
-      if (reasons.size === 0) for (let [id, record] of records) start(id, record)
+      if (reasons.size === 0) for (let [id, toastItem] of storedToastItems) start(id, toastItem)
       changed()
     }
     present(id: string, signal: AbortSignal) {
-      let record = records.get(id)
-      if (!record || signal.aborted) return
+      let toastItem = storedToastItems.get(id)
+      if (!toastItem || signal.aborted) return
       let token = Symbol()
-      record.presentations.add(token)
-      if (record.presentations.size === 1) start(id, record)
+      toastItem.presentations.add(token)
+      if (toastItem.presentations.size === 1) start(id, toastItem)
       signal.addEventListener(
         'abort',
         () => {
-          // An add with the same id replaces the stored record but retains its presentations.
-          let current = records.get(id)
+          // An add with the same id replaces the stored toast item but retains its presentations.
+          let current = storedToastItems.get(id)
           if (!current || !current.presentations.delete(token)) return
           if (current.presentations.size === 0) stop(current)
           changed()
@@ -225,13 +227,13 @@ export function createToastManager<action = RemixNode>(): ToastManager<action> {
       changed()
     }
   }
-  let manager = new ToastStore()
-  return manager
+  let toastManager = new ToastStore()
+  return toastManager
 }
 
 type RootState = {
   readonly limit: number
-  manager: Pick<ToastManager<unknown>, 'present' | 'close' | 'toasts' | 'pause' | 'resume'>
+  toastManager: Pick<ToastManager<unknown>, 'present' | 'close' | 'toastItems' | 'pause' | 'resume'>
   registerRoot(node: HTMLElement, options: () => ToastRootOptions, signal: AbortSignal): void
   registerItem(id: string, node: HTMLElement): void
   unregisterItem(id: string, node: HTMLElement): void
@@ -309,7 +311,7 @@ function focusElement(node: HTMLElement, visible = false) {
 export function Context<action = RemixNode>(
   handle: Handle<ToastContextProps<action>>,
 ): () => RemixNode {
-  let manager = handle.props.manager
+  let toastManager = handle.props.manager
   let limit = handle.props.limit ?? 3
   let region: HTMLElement | undefined
   let returnTo: HTMLElement | undefined
@@ -324,7 +326,7 @@ export function Context<action = RemixNode>(
   let entering = false
   let collapseAfterExit = false
   let presentations = new Map<string, HTMLElement>()
-  let previous = manager.toasts.map((toast) => toast.id)
+  let previous = toastManager.toastItems.map((toastItem) => toastItem.id)
 
   function restoreFocus(): boolean {
     if (!region || !returnTo) return false
@@ -337,8 +339,8 @@ export function Context<action = RemixNode>(
   }
 
   function refresh() {
-    let toasts = manager.toasts
-    let available = new Set(toasts.slice(0, limit).map((toast) => toast.id))
+    let toastItems = toastManager.toastItems
+    let available = new Set(toastItems.slice(0, limit).map((toastItem) => toastItem.id))
     let active = region && activeElement(region.ownerDocument)
     if (region && !available.size && active && contains(region, active)) {
       if (!restoreFocus()) active.blur()
@@ -361,29 +363,29 @@ export function Context<action = RemixNode>(
       }
     }
     // Focusing a neighbour may run consumer handlers that close more notifications.
-    toasts = manager.toasts
-    available = new Set(toasts.slice(0, limit).map((toast) => toast.id))
-    previous = toasts.map((toast) => toast.id)
+    toastItems = toastManager.toastItems
+    available = new Set(toastItems.slice(0, limit).map((toastItem) => toastItem.id))
+    previous = toastItems.map((toastItem) => toastItem.id)
     for (let [id, node] of presentations) {
       let unavailable = !available.has(id)
       node.inert = unavailable
-      let high = toasts.find((toast) => toast.id === id)?.priority === 'high'
+      let high = toastItems.find((toastItem) => toastItem.id === id)?.priority === 'high'
       if (unavailable || (high && !focused)) node.setAttribute('aria-hidden', 'true')
       else node.removeAttribute('aria-hidden')
     }
   }
 
   let state: RootState = {
-    manager,
+    toastManager,
     get limit() {
       return limit
     },
     focusGuard(previous) {
       let target =
         previous === region
-          ? manager.toasts
+          ? toastManager.toastItems
               .slice(0, limit)
-              .map((toast) => presentations.get(toast.id))
+              .map((toastItem) => presentations.get(toastItem.id))
               .find((node) => node?.isConnected && !node.inert)
           : undefined
       if (target) focusElement(target, true)
@@ -407,17 +409,19 @@ export function Context<action = RemixNode>(
       presentations.delete(id)
       if (
         collapseAfterExit &&
-        ![...presentations.keys()].some((id) => !manager.toasts.some((toast) => toast.id === id))
+        ![...presentations.keys()].some(
+          (id) => !toastManager.toastItems.some((toastItem) => toastItem.id === id),
+        )
       ) {
         collapseAfterExit = false
         hovered = false
-        manager.resume(hover)
+        toastManager.resume(hover)
       }
-      if (!manager.toasts.length) {
+      if (!toastManager.toastItems.length) {
         collapseAfterExit = false
         touchEngaged = hovered = false
-        manager.resume(touch)
-        manager.resume(hover)
+        toastManager.resume(touch)
+        toastManager.resume(hover)
       }
       refresh()
     },
@@ -431,7 +435,7 @@ export function Context<action = RemixNode>(
         (event) => {
           if (event.pointerType !== 'touch' || !event.isPrimary || event.button !== 0) return
           touchEngaged = true
-          manager.pause(touch)
+          toastManager.pause(touch)
           void handle.update()
         },
         { signal },
@@ -450,8 +454,8 @@ export function Context<action = RemixNode>(
           touchEngaged = hovered = false
           let active = activeElement(doc)
           if (active && contains(node, active)) active.blur()
-          manager.resume(touch)
-          manager.resume(hover)
+          toastManager.resume(touch)
+          toastManager.resume(hover)
           void handle.update()
         },
         { capture: true, signal },
@@ -462,7 +466,7 @@ export function Context<action = RemixNode>(
           if (event.pointerType === 'touch') return
           hovered = true
           collapseAfterExit = false
-          manager.pause(hover)
+          toastManager.pause(hover)
           void handle.update()
         },
         { signal },
@@ -471,13 +475,15 @@ export function Context<action = RemixNode>(
         'pointerleave',
         () => {
           if (
-            [...presentations.keys()].some((id) => !manager.toasts.some((toast) => toast.id === id))
+            [...presentations.keys()].some(
+              (id) => !toastManager.toastItems.some((toastItem) => toastItem.id === id),
+            )
           ) {
             collapseAfterExit = true
             return
           }
           hovered = false
-          manager.resume(hover)
+          toastManager.resume(hover)
           void handle.update()
         },
         { signal },
@@ -490,7 +496,7 @@ export function Context<action = RemixNode>(
           if (!entering && isElement(event.relatedTarget) && !contains(node, event.relatedTarget))
             returnTo = event.relatedTarget
           focused = true
-          manager.pause(focus)
+          toastManager.pause(focus)
           refresh()
           void handle.update()
         },
@@ -501,7 +507,7 @@ export function Context<action = RemixNode>(
         (event) => {
           if (isElement(event.relatedTarget) && contains(node, event.relatedTarget)) return
           focused = false
-          manager.resume(focus)
+          toastManager.resume(focus)
           refresh()
           void handle.update()
         },
@@ -541,7 +547,7 @@ export function Context<action = RemixNode>(
             node.closest('[inert]')
           )
             return
-          if (!manager.toasts.length || contains(node, activeElement(doc))) return
+          if (!toastManager.toastItems.length || contains(node, activeElement(doc))) return
           returnTo = activeElement(doc) ?? doc.body
           entering = true
           focusElement(node, true)
@@ -551,21 +557,21 @@ export function Context<action = RemixNode>(
         { signal },
       )
       function onVisibility() {
-        if (doc.hidden) manager.pause(visibility)
-        else manager.resume(visibility)
+        if (doc.hidden) toastManager.pause(visibility)
+        else toastManager.resume(visibility)
       }
       doc.addEventListener('visibilitychange', onVisibility, { signal })
       win?.addEventListener(
         'blur',
         (event) => {
-          if (event.target === win) manager.pause(windowBlur)
+          if (event.target === win) toastManager.pause(windowBlur)
         },
         { signal },
       )
       win?.addEventListener(
         'focus',
         (event) => {
-          if (event.target === win) manager.resume(windowBlur)
+          if (event.target === win) toastManager.resume(windowBlur)
         },
         { signal },
       )
@@ -576,11 +582,11 @@ export function Context<action = RemixNode>(
           region = undefined
           returnTo = undefined
           touchEngaged = hovered = focused = false
-          manager.resume(touch)
-          manager.resume(hover)
-          manager.resume(focus)
-          manager.resume(visibility)
-          manager.resume(windowBlur)
+          toastManager.resume(touch)
+          toastManager.resume(hover)
+          toastManager.resume(focus)
+          toastManager.resume(visibility)
+          toastManager.resume(windowBlur)
         },
         { once: true },
       )
@@ -593,11 +599,14 @@ export function Context<action = RemixNode>(
     void handle.update()
   }
   handle.queueTask(() => {
-    if (mountedManagers.has(manager)) throw new Error('Mount only one toast.Context per manager')
-    mountedManagers.add(manager)
-    manager.addEventListener('change', sync, { signal: handle.signal })
+    if (mountedManagers.has(toastManager))
+      throw new Error('Mount only one toast.Context per manager')
+    mountedManagers.add(toastManager)
+    toastManager.addEventListener('change', sync, { signal: handle.signal })
     sync()
-    handle.signal.addEventListener('abort', () => mountedManagers.delete(manager), { once: true })
+    handle.signal.addEventListener('abort', () => mountedManagers.delete(toastManager), {
+      once: true,
+    })
   })
   return () => {
     let nextLimit = handle.props.limit ?? 3
@@ -609,15 +618,15 @@ export function Context<action = RemixNode>(
     }
     return (
       <ToastScope value={state}>
-        {handle.props.children(manager.toasts)}
+        {handle.props.children(toastManager.toastItems)}
         {!focused && (
           <div mix={hidden}>
-            {manager.toasts
-              .filter((toast) => toast.presented && toast.priority === 'high')
-              .map((toast) => (
-                <div key={toast.id} role="alert" aria-atomic="true">
-                  <div>{toast.title}</div>
-                  <div>{toast.description}</div>
+            {toastManager.toastItems
+              .filter((toastItem) => toastItem.presented && toastItem.priority === 'high')
+              .map((toastItem) => (
+                <div key={toastItem.id} role="alert" aria-atomic="true">
+                  <div>{toastItem.title}</div>
+                  <div>{toastItem.description}</div>
                 </div>
               ))}
           </div>
@@ -667,12 +676,10 @@ function FocusGuard(handle: Handle<{ active: boolean }>) {
 
 /**
  * Scopes a notification's content and controls and coordinates keyboard boundary guards.
- * @param handle Current notification and consumer-owned markup.
+ * @param handle Notification identity and consumer-owned markup.
  * @returns The notification's markup with shared item context.
  */
-export function ItemContext<action = RemixNode>(
-  handle: Handle<ToastItemContextProps<action>, ItemState>,
-): () => RemixNode {
+export function ItemContext(handle: Handle<ToastItemContextProps, ItemState>): () => RemixNode {
   let context = handle.context.get(ToastScope)
   if (!context) throw new Error('toast.ItemContext must be rendered inside toast.Context')
   let parts = new Map<'title' | 'description', { node: HTMLElement; id: string }>()
@@ -689,7 +696,7 @@ export function ItemContext<action = RemixNode>(
   }
   handle.context.set({
     get id() {
-      return handle.props.toast.id
+      return handle.props.value
     },
     get titleId() {
       return parts.get('title')?.id
@@ -726,9 +733,9 @@ export function ItemContext<action = RemixNode>(
     },
   })
   return () => {
-    let available = context.manager.toasts.slice(0, context.limit)
-    let first = available[0]?.id === handle.props.toast.id
-    let last = available.at(-1)?.id === handle.props.toast.id
+    let available = context.toastManager.toastItems.slice(0, context.limit)
+    let first = available[0]?.id === handle.props.value
+    let last = available.at(-1)?.id === handle.props.value
     return (
       <>
         <FocusGuard active={context.hasReturnTarget && first} />
@@ -754,7 +761,7 @@ export const item = createMixin<HTMLElement, [], ElementProps>((handle) => {
     presentation = new AbortController()
     host = node
     context.registerItem(scoped.id, node)
-    context.manager.present(scoped.id, presentation.signal)
+    context.toastManager.present(scoped.id, presentation.signal)
   }
   handle.addEventListener('insert', (event) => connect(event.node))
   handle.addEventListener('reclaimed', (event) => connect(event.node))
@@ -766,17 +773,19 @@ export const item = createMixin<HTMLElement, [], ElementProps>((handle) => {
   handle.addEventListener('remove', disconnect)
   handle.signal.addEventListener('abort', disconnect, { once: true })
   return () => {
-    let toasts = context.manager.toasts
-    let index = toasts.findIndex((toast) => toast.id === scoped.id)
-    let toast = toasts[index]
+    let toastItems = context.toastManager.toastItems
+    let index = toastItems.findIndex((toastItem) => toastItem.id === scoped.id)
+    let toastItem = toastItems[index]
     let limited = index >= context.limit
     return [
       attrs({
-        inert: limited || !toast ? true : undefined,
+        inert: limited || !toastItem ? true : undefined,
         'aria-hidden':
-          limited || !toast || (toast.priority === 'high' && !context.focused) ? 'true' : undefined,
+          limited || !toastItem || (toastItem.priority === 'high' && !context.focused)
+            ? 'true'
+            : undefined,
         'data-limited': limited ? '' : undefined,
-        role: toast?.priority === 'high' ? 'alertdialog' : 'dialog',
+        role: toastItem?.priority === 'high' ? 'alertdialog' : 'dialog',
         'aria-modal': 'false',
         'aria-labelledby': scoped.titleId,
         'aria-describedby': scoped.descriptionId,
@@ -791,7 +800,7 @@ export const item = createMixin<HTMLElement, [], ElementProps>((handle) => {
           !contains(host, activeElement(host.ownerDocument))
         )
           return
-        context.manager.close(scoped.id)
+        context.toastManager.close(scoped.id)
       }),
     ]
   }
@@ -837,7 +846,7 @@ export const close = createMixin<HTMLButtonElement, [], ElementProps>((handle) =
       void handle.update()
     }),
     on('click', (event) => {
-      if (!event.defaultPrevented) context.manager.close(scoped.id)
+      if (!event.defaultPrevented) context.toastManager.close(scoped.id)
     }),
   ]
 })
@@ -845,24 +854,24 @@ export const close = createMixin<HTMLButtonElement, [], ElementProps>((handle) =
 let countdownPropertyRegistered = false
 
 /**
- * Animates `--toast-remaining` from 1 to 0 using the manager's clock snapshot.
+ * Animates `--toast-countdown` from 1 to 0 using the manager's clock snapshot.
  * Style the host or its descendants to turn this fraction into a decorative countdown indicator.
  * @param clock Current timer state from the collection callback. Persistent toasts hide the indicator.
  * @returns A mixin that updates a native animation only when timer state changes.
  */
 export const countdown = createMixin<
   HTMLElement,
-  [clock: Pick<ToastRecord<unknown>, 'duration' | 'remaining' | 'paused'>],
+  [clock: Pick<ToastItem<unknown>, 'timeout' | 'remaining' | 'paused'>],
   ElementProps
 >((handle) => {
-  let clock: Pick<ToastRecord<unknown>, 'duration' | 'remaining' | 'paused'>
+  let clock: Pick<ToastItem<unknown>, 'timeout' | 'remaining' | 'paused'>
   let animation: Animation | undefined
   handle.addEventListener('remove', () => animation?.cancel())
   function synchronize() {
     handle.queueTask((node) => {
       if (!countdownPropertyRegistered) {
         CSS.registerProperty({
-          name: '--toast-remaining',
+          name: '--toast-countdown',
           syntax: '<number>',
           inherits: true,
           initialValue: '1',
@@ -870,19 +879,19 @@ export const countdown = createMixin<
         countdownPropertyRegistered = true
       }
       animation?.cancel()
-      if (clock.duration === 0) return
-      animation = node.animate([{ '--toast-remaining': '1' }, { '--toast-remaining': '0' }], {
-        duration: clock.duration,
+      if (clock.timeout === false) return
+      animation = node.animate([{ '--toast-countdown': '1' }, { '--toast-countdown': '0' }], {
+        duration: clock.timeout,
         fill: 'both',
         easing: 'linear',
       })
-      animation.currentTime = clock.duration - clock.remaining
+      animation.currentTime = clock.timeout - clock.remaining
       if (clock.paused) animation.pause()
     })
   }
   return (nextClock) => {
     clock = nextClock
     synchronize()
-    return attrs({ 'aria-hidden': 'true', hidden: clock.duration === 0 })
+    return attrs({ 'aria-hidden': 'true', hidden: clock.timeout === false })
   }
 })

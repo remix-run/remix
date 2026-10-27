@@ -12,7 +12,7 @@ import {
 import { css, on, createMixin } from 'remix/component'
 import type { ElementProps } from 'remix/component'
 
-const notifications = toast.createToastManager()
+const toastManager = toast.createToastManager()
 
 export default function ExampleToastUndo() {
   return () => (
@@ -22,14 +22,14 @@ export default function ExampleToastUndo() {
         mix={[
           styles.button,
           on('click', () => {
-            notifications.add({
+            toastManager.add({
               id: 'archive',
               title: 'Note archived',
               description: 'You can undo this action.',
               action: (
                 <button
                   type="button"
-                  mix={[styles.button, on('click', () => notifications.close('archive'))]}
+                  mix={[styles.button, on('click', () => toastManager.close('archive'))]}
                 >
                   Undo
                 </button>
@@ -46,21 +46,21 @@ export default function ExampleToastUndo() {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={notifications}>
-      {(toasts) => (
+    <toast.Context manager={toastManager}>
+      {(toastItems) => (
         <section
           mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.root, styles.region]}
         >
-          {toasts.map((notification, index) => (
-            <toast.ItemContext key={notification.id} toast={notification}>
+          {toastItems.map((toastItem, index) => (
+            <toast.ItemContext key={toastItem.id} value={toastItem.id}>
               <article
-                key={notification.id}
+                key={toastItem.id}
                 data-toast-index={index}
                 style={{ '--toast-index': index }}
                 mix={[
                   toast.item(),
                   styles.toastLayout,
-                  swipeToDismiss(notification.id),
+                  swipeToDismiss(toastItem.id),
                   animateLayout(
                     prefersReducedMotion()
                       ? false
@@ -96,13 +96,13 @@ export function ToastRegion() {
                 <div mix={styles.collapseSlot}>
                   <div mix={[styles.surface]}>
                     <div mix={[styles.message, styles.hideWhenCovered]}>
-                      <strong mix={[toast.title(), styles.title]}>{notification.title}</strong>
+                      <strong mix={[toast.title(), styles.title]}>{toastItem.title}</strong>
                       <span mix={[toast.description(), styles.description]}>
-                        {notification.description}
+                        {toastItem.description}
                       </span>
                     </div>
-                    {notification.action != null && (
-                      <div mix={styles.hideWhenCovered}>{notification.action}</div>
+                    {toastItem.action != null && (
+                      <div mix={styles.hideWhenCovered}>{toastItem.action}</div>
                     )}
                     <button
                       type="button"
@@ -159,7 +159,7 @@ const swipeToDismiss = createMixin<HTMLElement, [id: string], ElementProps>(() =
       trackSwipe(event.offset.x)
       if (returning || event.offset.x <= 40) return
       event.preventDefault()
-      notifications.close(id)
+      toastManager.close(id)
     }),
   ]
 })
