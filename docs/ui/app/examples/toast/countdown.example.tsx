@@ -12,7 +12,7 @@ import {
 import { css, on, createMixin } from 'remix/component'
 import type { ElementProps } from 'remix/component'
 
-const toastManager = toast.createToastManager()
+const toastManager = toast.createToastManager({ defaultTimeout: 5000 })
 
 export default function ExampleToastCountdown() {
   return () => (

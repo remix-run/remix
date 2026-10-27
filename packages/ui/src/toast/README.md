@@ -51,7 +51,7 @@ Supply the region label and control labels. Mount one `Context` per manager, out
 
 ## `@remix-run/ui/toast`
 
-- `createToastManager<data = unknown>()`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
+- `createToastManager<data = unknown>(options?)`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
 - `Context`: accepts a stable `manager`, an optional `limit` (default 3), and a typed collection callback. Render every item, including overflow.
 - `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and polite announcements. A non-empty `label` is required.
 - `ItemContext`: accepts the toast item ID as `value` and scopes its markup. Key the provider and animated host by the item ID.
@@ -62,7 +62,7 @@ Supply the region label and control labels. Mount one `Context` per manager, out
 - `ToastOptions<data>`: optional renderable `title` and `description`, generic `data`, `id`, `timeout` and `priority`.
 - `ToastItem<data>`: immutable content, an update `revision`, resolved `priority`, and sampled clock state: `presented`, `paused`, `remaining` and `timeout`.
 - `ToastManager<data>`: `add`, `close`, `pause`, `resume`, `present` and `toastItems`. Native `change` subscriptions support `AbortSignal` cleanup.
-- `ToastContextProps<data>`, `ToastItemContextProps` and `ToastRootOptions`: configuration types.
+- `ToastManagerOptions<data>`, `ToastContextProps<data>`, `ToastItemContextProps` and `ToastRootOptions`: configuration types.
 
 ## Announcements and keyboard access
 
@@ -78,7 +78,7 @@ Supply a type to `createToastManager<data>()` for custom values and behavior. Th
 
 ## Timers and motion
 
-Notifications default to 5000 milliseconds, independently of their content. Set `timeout` to finite, non-negative milliseconds, or `false` to disable automatic dismissal. Zero dismisses as soon as the toast is presented. `add()` replaces the full content and options for duplicate IDs and restarts their lifetime. Omitted titles, descriptions and data are cleared; omitted timeout and priority use their defaults.
+Toasts stay open until dismissed unless a timeout is supplied. Set `timeout` to finite, non-negative milliseconds, or `false` to disable automatic dismissal. Configure a shared `defaultTimeout` on the manager as a fixed value or a callback receiving the published options. An explicit toast timeout overrides it. The callback runs once per `add()` without an explicit timeout, including replacements. Zero dismisses as soon as the toast is presented. `add()` replaces the full content and options for duplicate IDs and restarts their lifetime. Omitted titles, descriptions and data are cleared; omitted timeout and priority use their defaults.
 
 Each item starts with `revision: 0`. Duplicate `add()` calls increment it, including when content is unchanged. Renderers can use the revision to replay feedback without remounting the toast. Timer and presentation changes leave it unchanged.
 

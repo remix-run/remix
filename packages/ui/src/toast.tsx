@@ -11,10 +11,16 @@ export interface ToastOptions<data = unknown> {
   description?: RemixNode
   /** Consumer-defined data interpreted by the renderer. */
   data?: data
-  /** Auto-dismiss timeout in milliseconds, or false to disable. Zero dismisses immediately. Defaults to 5000. */
+  /** Auto-dismiss timeout in milliseconds, or false to disable. Zero dismisses immediately. Falls back to the manager default, or false. */
   timeout?: number | false
   /** Announcement urgency. Defaults to low (polite); high uses an assertive alert. */
   priority?: 'low' | 'high'
+}
+
+/** Default policy for notifications published through a manager. */
+export interface ToastManagerOptions<data = unknown> {
+  /** Fallback timeout in milliseconds, or false to disable. A callback resolves it once per add without an explicit timeout. Defaults to false. */
+  defaultTimeout?: number | false | ((options: ToastOptions<data>) => number | false)
 }
 
 /** An immutable toast item snapshot. Read the manager again for the current remaining time. */
@@ -95,9 +101,14 @@ type StoredToastItem<data> = {
 
 /**
  * Creates retained toast state independently of rendering. Timers run only while presented.
+ * @param options Default notification policy.
  * @returns A manager with native EventTarget subscriptions.
  */
-export function createToastManager<data = unknown>(): ToastManager<data> {
+export function createToastManager<data = unknown>(
+  options: ToastManagerOptions<data> = {},
+): ToastManager<data> {
+  let defaultTimeout = options.defaultTimeout ?? false
+  if (typeof defaultTimeout !== 'function') validateTimeout(defaultTimeout)
   let storedToastItems = new Map<string, StoredToastItem<data>>()
   let reasons = new Set<unknown>()
   let nextId = 0
@@ -156,7 +167,10 @@ export function createToastManager<data = unknown>(): ToastManager<data> {
       let id = options.id ?? `toast-${++nextId}`
       while (options.id === undefined && storedToastItems.has(id)) id = `toast-${++nextId}`
       let previous = storedToastItems.get(id)
-      let lifetime = validateTimeout(options.timeout ?? 5000)
+      let lifetime = validateTimeout(
+        options.timeout ??
+          (typeof defaultTimeout === 'function' ? defaultTimeout(options) : defaultTimeout),
+      )
       if (previous) stop(previous)
       let toastItem: StoredToastItem<data> = {
         revision: previous ? previous.revision + 1 : 0,

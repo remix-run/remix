@@ -17,7 +17,6 @@ const toastManager = toast.createToastManager()
 const timeouts = [
   { label: '3 seconds', value: 3000 },
   { label: '10 seconds', value: 10000 },
-  { label: 'Until dismissed', value: false },
 ] as const
 
 export default function ExampleToastTimeout() {
@@ -31,10 +30,7 @@ export default function ExampleToastTimeout() {
             on('click', () => {
               toastManager.add({
                 title: 'Toast title',
-                description:
-                  timeout.value === false
-                    ? 'This toast stays open until dismissed.'
-                    : `This toast has a timeout of ${timeout.value / 1000} seconds.`,
+                description: `This toast has a timeout of ${timeout.value / 1000} seconds.`,
                 timeout: timeout.value,
               })
             }),
@@ -76,7 +72,7 @@ export function ToastRegion() {
                     easing: 'ease-out',
                   }),
                   animateExit({
-                    position: 'var(--stack-position)',
+                    position: index === 0 ? 'absolute' : 'var(--stack-position)',
                     zIndex: index === 0 ? 101 : 100 - index,
                     opacity: 0,
                     gridTemplateRows: '0fr',

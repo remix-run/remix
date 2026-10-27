@@ -51,7 +51,7 @@ describe('toast manager', () => {
 
   it('replaces duplicates in place and restarts the lifetime without losing presentation', (t) => {
     let time = clock(t)
-    let toastManager = createToastManager()
+    let toastManager = createToastManager({ defaultTimeout: 5000 })
     toastManager.add({ id: 'save', title: 'Saving', description: 'Settings', timeout: 1000 })
     toastManager.add({ id: 'other', title: 'Other', timeout: false })
     let presentation = new AbortController()
@@ -98,7 +98,7 @@ describe('toast manager', () => {
     assert.equal(replacement.title, undefined)
     assert.equal(replacement.description, 'Ready')
     assert.equal(replacement.data, undefined)
-    assert.equal(replacement.timeout, 5000)
+    assert.equal(replacement.timeout, false)
     assert.equal(replacement.priority, 'low')
     assert.equal(replacement.revision, 1)
     toastManager.close('save')
@@ -207,7 +207,7 @@ describe('toast manager', () => {
     assert.equal(first(toastManager).presented, false)
   })
 
-  it('uses the same default timeout regardless of data', (t) => {
+  it('keeps toasts open by default regardless of data', (t) => {
     let time = clock(t)
     let toastManager = createToastManager()
     toastManager.add({ title: 'Text' })
@@ -219,7 +219,7 @@ describe('toast manager', () => {
     toastManager.add({ title: 'Persistent data', data: {}, timeout: false })
     assert.deepEqual(
       toastManager.toastItems.map((toastItem) => toastItem.timeout),
-      [false, 5000, 1000, 5000, 5000, 5000, 5000],
+      [false, false, 1000, false, false, false, false],
     )
     let presentation = new AbortController()
     for (let toastItem of toastManager.toastItems) {
@@ -228,8 +228,103 @@ describe('toast manager', () => {
     time.advance(5000)
     assert.deepEqual(
       toastManager.toastItems.map((toastItem) => toastItem.title),
-      ['Persistent data'],
+      ['Persistent data', 'Action data', 'Null data', 'False data', 'Empty string data', 'Text'],
     )
+    presentation.abort()
+  })
+
+  it('uses a fixed manager timeout unless the toast overrides it', (t) => {
+    let time = clock(t)
+    let toastManager = createToastManager({ defaultTimeout: 5000 })
+    toastManager.add({ id: 'default', title: 'Default' })
+    toastManager.add({ id: 'persistent', timeout: false })
+    toastManager.add({ id: 'immediate', timeout: 0 })
+    toastManager.add({ id: 'short', timeout: 1000 })
+    assert.deepEqual(
+      toastManager.toastItems.map((toastItem) => toastItem.timeout),
+      [1000, 0, false, 5000],
+    )
+    let presentation = new AbortController()
+    for (let toastItem of toastManager.toastItems)
+      toastManager.present(toastItem.id, presentation.signal)
+    time.advance(1)
+    assert.deepEqual(
+      toastManager.toastItems.map((toastItem) => toastItem.id),
+      ['short', 'persistent', 'default'],
+    )
+    time.advance(999)
+    assert.deepEqual(
+      toastManager.toastItems.map((toastItem) => toastItem.id),
+      ['persistent', 'default'],
+    )
+    time.advance(4000)
+    assert.deepEqual(
+      toastManager.toastItems.map((toastItem) => toastItem.id),
+      ['persistent'],
+    )
+    presentation.abort()
+  })
+
+  it('resolves typed defaults once per publication and skips explicit timeouts', (t) => {
+    let time = clock(t)
+    let calls: ToastOptions<{ action?: string }>[] = []
+    let toastManager = createToastManager<{ action?: string }>({
+      defaultTimeout(options) {
+        calls.push(options)
+        return options.data?.action ? false : 5000
+      },
+    })
+    toastManager.add({ id: 'example', title: 'Undo', data: { action: 'undo' } })
+    assert.equal(first(toastManager).timeout, false)
+    let presentation = new AbortController()
+    toastManager.present('example', presentation.signal)
+    toastManager.pause('test')
+    toastManager.resume('test')
+    time.advance(1000)
+    assert.equal(first(toastManager).timeout, false)
+    assert.equal(calls.length, 1)
+    toastManager.add({ id: 'example', title: 'Done' })
+    assert.equal(calls.length, 2)
+    assert.equal(calls[1].data, undefined)
+    assert.equal(first(toastManager).timeout, 5000)
+    time.advance(1000)
+    assert.equal(first(toastManager).remaining, 4000)
+    toastManager.add({ timeout: false })
+    toastManager.add({ timeout: 0 })
+    toastManager.add({ timeout: 1000 })
+    assert.equal(calls.length, 2)
+    presentation.abort()
+    toastManager.close()
+  })
+
+  it('rejects invalid manager defaults', () => {
+    assert.throws(() => createToastManager({ defaultTimeout: -1 }), RangeError)
+    assert.throws(() => createToastManager({ defaultTimeout: Infinity }), RangeError)
+    assert.throws(() => createToastManager({ defaultTimeout: NaN }), RangeError)
+  })
+
+  it('preserves the current publication and timer when a default resolver fails', (t) => {
+    let time = clock(t)
+    let toastManager = createToastManager<string>({
+      defaultTimeout({ data }) {
+        if (data === 'throw') throw new Error('Cannot resolve timeout')
+        return data === 'invalid' ? NaN : 1000
+      },
+    })
+    toastManager.add({ id: 'example', title: 'Original' })
+    let presentation = new AbortController()
+    toastManager.present('example', presentation.signal)
+    time.advance(400)
+    assert.throws(() => toastManager.add({ id: 'example', data: 'invalid' }), RangeError)
+    assert.throws(
+      () => toastManager.add({ id: 'example', data: 'throw' }),
+      /Cannot resolve timeout/,
+    )
+    assert.equal(first(toastManager).title, 'Original')
+    assert.equal(first(toastManager).revision, 0)
+    assert.equal(first(toastManager).remaining, 600)
+    time.advance(600)
+    assert.equal(toastManager.toastItems.length, 0)
     presentation.abort()
   })
 
