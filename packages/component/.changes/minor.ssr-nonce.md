@@ -1,4 +1,4 @@
-`renderToStream()` and `renderToString()` now accept a `nonce` and stamp it on the elements they generate themselves: the import map script, module preload links, and the `<style>` tags the `css` mixin emits. Under a `Content-Security-Policy` that names a nonce, those elements were previously blocked — import maps and preloads could not load, and server-rendered styles did not apply until hydration adopted them (see #11926).
+`renderToStream()` and `renderToString()` now accept a `nonce` and stamp it on the elements they generate themselves: the import map script, module preload links, and the `<style>` tags the `css` mixin emits. Under a `Content-Security-Policy` that names a nonce, those elements were previously blocked — import maps and preloads could not load, and server-rendered styles did not apply until hydration adopted them.
 
 ```diff
 +let nonce = crypto.getRandomValues(new Uint8Array(16)).toBase64()
