@@ -11,7 +11,7 @@ import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-sh
 import type { MarkdownHeading } from 'remix-docs-shared/markdown/types'
 import { Icon } from 'remix-docs-shared/ui/icon'
 import { DocsSocialMeta } from 'remix-docs-shared/ui/social-meta'
-import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
+import { DocsTableOfContents, hasTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 
 import type {
@@ -82,7 +82,7 @@ export function ReferenceDocument(
         navigationLabel="API reference"
         mobileNavigationLabel={page.title || page.navLabel}
         navigationName="API navigation"
-        hasSecondaryNavigation={(headings?.length ?? 0) > 0}
+        hasSecondaryNavigation={hasTableOfContents(headings)}
       >
         <DocsPage
           pageKey={`api-page-${page.path}`}
@@ -292,7 +292,7 @@ export function DocsPage(
           <CodeBlockCopyButtons rootId={contentId} />
           {handle.props.afterContent}
         </article>
-        {headings.length > 0 ? (
+        {hasTableOfContents(headings) ? (
           <DocsSecondaryNavigation pagefindIgnore={handle.props.secondaryNavigationPagefindIgnore}>
             <h2 class="docs-nav-heading docs-toc__heading">On this page</h2>
             <DocsTableOfContents headings={headings} />

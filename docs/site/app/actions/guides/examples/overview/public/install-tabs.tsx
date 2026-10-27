@@ -83,6 +83,9 @@ function ChevronDownIcon() {
   );
 }
 
+// Strong enough to read against the header and menu surfaces in light and dark mode.
+const activeBackground = "color-mix(in srgb, var(--rmx-color-text-primary) 14%, transparent)";
+
 const styles = {
   root: css({
     overflow: "clip",
@@ -102,7 +105,8 @@ const styles = {
     gap: "var(--rmx-space-sm)",
     padding: "var(--rmx-space-sm) var(--rmx-space-md)",
     border: 0,
-    borderRadius: 0,
+    // Follows the frame's rounded top-left corner so the focus ring isn't clipped.
+    borderRadius: "calc(var(--rmx-radius-md) - 1px) 0 0 0",
     background: "none",
     color: "var(--rmx-color-text-primary)",
     font: "inherit",
@@ -110,7 +114,7 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
     "&:hover": {
-      background: "var(--rmx-color-code-background)",
+      background: activeBackground,
     },
     "&:focus-visible": {
       outline: "2px solid currentColor",
@@ -119,7 +123,8 @@ const styles = {
   }),
   surface: css({
     margin: 0,
-    padding: "var(--rmx-space-xs)",
+    padding: 0,
+    overflow: "clip",
     minWidth: "8rem",
     border: "1px solid var(--rmx-color-border-subtle)",
     borderRadius: "var(--rmx-radius-md)",
@@ -141,15 +146,15 @@ const styles = {
   }),
   list: css({
     display: "grid",
-    gap: "2px",
     outline: 0,
   }),
   option: css({
-    padding: "var(--rmx-space-xs) var(--rmx-space-sm)",
-    borderRadius: "var(--rmx-radius-sm)",
+    // The menu opens over the trigger, so match its inline padding to keep the label in place.
+    // Same padding as the trigger, so the selected option covers the trigger exactly.
+    padding: "var(--rmx-space-sm) var(--rmx-space-md)",
     cursor: "default",
     '&[data-highlighted="true"]': {
-      background: "var(--rmx-color-code-background)",
+      background: activeBackground,
     },
     '&[aria-selected="true"]': {
       fontWeight: 600,

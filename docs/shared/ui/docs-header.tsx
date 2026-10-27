@@ -156,7 +156,7 @@ const docsHeaderCss = css({
 const compactSearchButtonCss = css({
   position: 'fixed',
   top: 'calc((var(--site-header-height) - 32px) / 2)',
-  left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
+  left: 'calc(var(--docs-sidebar-inline-start) + 61px)',
   zIndex: 51,
   display: 'none',
   width: '32px',
@@ -241,7 +241,7 @@ const collapsibleSearchButtonCss = css({
   [media.md]: {
     ':root[data-docs-nav-collapsed] &': {
       top: 'calc((var(--site-header-height) - 32px) / 2)',
-      left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
+      left: 'calc(var(--docs-sidebar-inline-start) + 61px)',
       justifyContent: 'center',
       width: '32px',
       padding: '8px',

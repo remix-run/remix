@@ -38,6 +38,13 @@ export const initializeTableOfContentsScript = `
 }
 `
 
+const minTableOfContentsHeadings = 4
+
+/** "On this page" only helps when a page has more than three entries. */
+export function hasTableOfContents(headings: readonly unknown[] | undefined): boolean {
+  return (headings?.length ?? 0) >= minTableOfContentsHeadings
+}
+
 export function DocsTableOfContents(handle: Handle<{ headings: DocsHeadingLink[] }>) {
   return () => {
     let listId = `${handle.id}-list`

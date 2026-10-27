@@ -1,4 +1,5 @@
 import type { Handle, RemixNode } from 'remix/component'
+import { hasTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 
 import type { DocsRegistry } from '../../data/registry.ts'
@@ -72,7 +73,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
       description={handle.props.description}
       path={routes.guides.chapter.href({ chapter: handle.props.slug })}
       currentChapterSlug={handle.props.slug}
-      hasSecondaryNavigation
+      hasSecondaryNavigation={hasTableOfContents(handle.props.sections)}
       head={
         <link
           rel="alternate"
@@ -91,9 +92,6 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
           <header class="docs-page-header">
             <p class="docs-page-eyebrow">{handle.props.chapter}</p>
             <h1 class="rmx-page-title">{handle.props.title}</h1>
-            {handle.props.description ? (
-              <p class="docs-page-description">{handle.props.description}</p>
-            ) : null}
           </header>
         }
         afterContent={

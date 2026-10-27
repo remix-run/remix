@@ -20,7 +20,7 @@ export const skipLinkCss = css({
 
 const navigationToggleExpandedLeft =
   'calc(var(--docs-sidebar-inline-start) + var(--docs-sidebar-content-width) - 32px)'
-const navigationToggleCollapsedLeft = 'calc(var(--docs-sidebar-inline-start) + 61px)'
+const navigationToggleCollapsedLeft = 'calc(var(--docs-sidebar-inline-start) + 97px)'
 
 export const navigationToggleCss = css({
   position: 'fixed',
