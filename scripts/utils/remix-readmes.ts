@@ -82,7 +82,9 @@ export function rewriteLinksToRemixReadmes(
   let readmePaths = getReadmePathsByUrlPath(mappings)
 
   return rewriteMarkdownLinkDestinations(markdown, (href) => {
-    let url = parseUrl(href)
+    // Guides link to API pages on the same docs site with root-relative paths like `/router/`.
+    let isRootRelative = href.startsWith('/') && !href.startsWith('//')
+    let url = isRootRelative ? parseUrl(href, 'https://docs.remix.run') : parseUrl(href)
     if (!url || url.protocol !== 'https:' || url.port) return
 
     let readmePath: string | undefined
@@ -123,9 +125,9 @@ function getReadmePathsByUrlPath(mappings: RemixReadmeCopy[]): {
   return { api, github }
 }
 
-function parseUrl(href: string): URL | undefined {
+function parseUrl(href: string, base?: string): URL | undefined {
   try {
-    return new URL(href)
+    return new URL(href, base)
   } catch {
     return undefined
   }
