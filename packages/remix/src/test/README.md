@@ -276,17 +276,14 @@ interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
-  // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
+  // Function mocks and typed method spies, with automatic restoration
   mock: {
-    // Create a mock function with an optional implementation
-    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
-
-    // Mock an object method with an optional implementation override
+    fn: typeof import('remix/test').mock.fn
     method<T extends object, K extends keyof T>(
       obj: T,
       methodName: K,
       impl?: Function,
-    ): MockFunction
+    ): ReturnType<typeof import('remix/test').mock.method<T, K>>
   }
 
   // Replace global timer functions with controllable fakes
@@ -299,7 +296,7 @@ interface TestContext {
 
 #### Mocks and Spies
 
-Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. This is preferred over the standalone `mock` import because TestContext method mocks are automatically restored after the test runs.
+Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. Mock restoration and `t.after()` callbacks run in registration order, including when the test or an earlier cleanup callback fails.
 
 ```ts
 it('mocks and spies', (t) => {
@@ -316,7 +313,41 @@ it('mocks and spies', (t) => {
 })
 ```
 
-`t.mock` provides `fn()` and `method()`. Every spy created with `t.mock.method()` is restored automatically when the test finishes, or early via `spy.mock.restore?.()`.
+Every mock function and method spy exposes these controls on `.mock`:
+
+| Method                                            | Behavior                                                                                                                                                    |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mockImplementation(implementation)`              | Changes the default implementation, preserving pending overrides.                                                                                           |
+| `mockImplementationOnce(implementation, onCall?)` | Uses an implementation for one zero-based call index; defaults to the next call. Replaces any override already registered at that index.                    |
+| `resetCalls()`                                    | Installs an empty history array and resets call indices, preserving implementations and pending overrides.                                                  |
+| `callCount()`                                     | Returns the length of the current call history.                                                                                                             |
+| `restore()`                                       | Restores a method's original value and any own descriptor, or a standalone mock's original default implementation. Preserves history and pending overrides. |
+
+```ts
+import { it } from 'remix/test'
+
+it('changes a mock implementation', (t) => {
+  let price = t.mock.fn((quantity: number) => quantity * 10)
+  price.mock.mockImplementation((quantity) => quantity * 12)
+  price.mock.mockImplementationOnce((quantity) => quantity * 8, 1)
+
+  price(2) // 24
+  price(2) // 16
+  price(2) // 24
+  price.mock.callCount() // 3
+
+  price.mock.resetCalls()
+  price.mock.callCount() // 0
+  price.mock.restore()
+  price(2) // 20
+})
+```
+
+The replacement controls use the original function's parameter and return types, receive the caller's `this`, and retain synchronous errors and unawaited promise results in call records. Method spies retain their permissive call and history types, and the initial `t.mock.method(obj, name, implementation)` argument remains permissive for existing overloaded methods. If a property has no function type, its replacement controls are also permissive. Non-function replacements and call indices that are not safe integers or have already passed throw without changing the mock. All controls except `callCount()` return `undefined`.
+
+These controls follow the selected [Node `MockFunctionContext` APIs](https://github.com/nodejs/node/blob/v24.3.0/doc/api/test.md#class-mockfunctioncontext), including replacement rather than queuing when `mockImplementationOnce()` is called twice for the next call. Resetting history makes pending indices count from zero again; consumed overrides stay consumed.
+
+Remix retains its live `mock.calls` array and records calls before invoking the implementation. Node returns array snapshots and records completed synchronous calls. Reentrant inspection and override scheduling can therefore differ. This is not a complete replacement for Node's Proxy-backed mocks: function-construction overloads and `times` options are not supported. Method installation retains assignment behavior, including support for setter-backed functions and initially undefined methods. Each `restore()` call restores the captured method value, preserving an own property for inherited data methods and using setters for accessor-backed methods. A retained spy remains callable with its current implementation. Standalone `restore()` resets the default each time it is called.
 
 #### Cleanup
 
@@ -395,7 +426,7 @@ import { mock } from 'remix/test'
 
 let spy = mock.method(console, 'log')
 // ...
-spy.mock.restore?.()
+spy.mock.restore()
 ```
 
 ### Browser Testing
