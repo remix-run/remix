@@ -46,8 +46,13 @@ export interface TestContext {
    * Mock restoration and test cleanup callbacks run in registration order, even after failures.
    */
   mock: {
-    /** Creates a function mock that is restored after the test. */
-    fn: typeof mock.fn
+    /**
+     * Creates a function mock that is restored after the test.
+     * @param impl The implementation to call; omitted mocks return `undefined`.
+     * @returns A mock with call history and controls typed to the implementation.
+     */
+    fn<fn extends (...args: any[]) => any>(impl: fn): MockFunction<fn>
+    fn<fn extends (...args: any[]) => any>(impl?: fn): MockFunction<fn>
     /**
      * Creates a method spy that is restored after the test.
      * @param obj The object whose method will be mocked.
