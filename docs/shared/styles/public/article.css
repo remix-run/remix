@@ -18,9 +18,11 @@
 }
 
 .docs-page-eyebrow {
-  margin: 0 0 12px;
+  height: var(--docs-nav-item-height);
+  margin: 0;
   color: var(--rmx-color-text-secondary);
-  font: var(--rmx-font-weight-semibold) var(--docs-font-size-label) var(--rmx-font-family-mono);
+  font: var(--rmx-font-weight-semibold) var(--docs-font-size-label) / var(--docs-nav-item-height)
+    var(--rmx-font-family-mono);
   letter-spacing: var(--rmx-letter-spacing-meta);
   text-transform: uppercase;
 }
@@ -88,13 +90,12 @@
 }
 
 .docs-toc__heading {
-  height: 32px;
+  height: var(--docs-nav-item-height);
   margin: 0;
-  padding-block: 8px;
+  line-height: var(--docs-nav-item-height);
   font-family: var(--rmx-font-family-sans);
   font-size: var(--docs-font-size-label);
   font-weight: var(--rmx-font-weight-bold);
-  line-height: normal;
 }
 
 .docs-toc__list {
