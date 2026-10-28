@@ -1,3 +1,4 @@
+import { getRootResourceNonces } from './resource-nonce.ts'
 import type { FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
@@ -153,6 +154,7 @@ export function createRangeRoot(
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
+        _resourceNonces: getRootResourceNonces(root),
         _getContext: options.getContext,
         _rangeStart: start,
         _rangeEnd: end,
@@ -262,6 +264,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
+        _resourceNonces: getRootResourceNonces(root),
         _getContext: options.getContext,
       }
       scheduler.enqueueWork([

@@ -1,3 +1,8 @@
+import {
+  addRootResponseNonce,
+  addRootResourceNonces,
+  type ResourceNonces,
+} from './resource-nonce.ts'
 import { pendingPrefetchLinks } from './prefetch-links.ts'
 import { jsx } from './jsx.ts'
 import {
@@ -57,7 +62,7 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-type PendingClientEntries = Map<Comment, [Comment, RemixElement | undefined]>
+type PendingClientEntries = Map<Comment, [Comment, RemixElement | undefined, ResourceNonces?]>
 
 export class NamedFrameRegistry {
   #framesByName = new Map<string, FrameHandle[]>()
@@ -258,6 +263,7 @@ export function reloadFrameForNavigation(
 }
 
 export type FrameContext = {
+  nonce?: string
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
   errorTarget: EventTarget
@@ -283,6 +289,7 @@ export type FrameContext = {
 }
 
 type FrameInit = {
+  nonce?: string
   name?: string
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
@@ -417,6 +424,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   let context: FrameContext = {
+    nonce: init.nonce,
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
     errorTarget: init.errorTarget,
@@ -547,6 +555,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       mergeRmxDataFromDocument(responseData, parsed)
       let responseContext = {
         ...context,
+        nonce: options.nonce,
         data: responseData,
         reconciliationTracker: options.reconciliationTracker,
         blockingFrameTracker: options.blockingFrameTracker,
@@ -590,6 +599,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     mergeRmxDataFromFragment(responseData, fragment)
     let responseContext = {
       ...context,
+      nonce: options.nonce,
       data: responseData,
       reconciliationTracker: options.reconciliationTracker,
       blockingFrameTracker: options.blockingFrameTracker,
@@ -662,7 +672,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if ((await initialClientEntryResources) === false) return
     if (disposed || context.lifecycleSignal.aborted) return
     adoptFrameServerStyles(container, context.styleManager)
-    let subFramesReady = hydrateContainer(container, context, { reconciliationTracker })
+    let subFramesReady = hydrateContainer(container, context, {
+      reconciliationTracker,
+      nonce: context.nonce,
+    })
 
     try {
       await subFramesReady
@@ -670,7 +683,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (disposed || context.lifecycleSignal.aborted) return
 
       if (currentMarker?.status === 'pending') {
-        await watchPendingFrameTemplate(currentMarker, reconciliationTracker)
+        await watchPendingFrameTemplate(currentMarker, {
+          reconciliationTracker,
+          nonce: context.nonce,
+        })
       }
 
       reconciliationTracker.finalize()
@@ -739,8 +755,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (marker.status === 'pending') {
       await watchPendingFrameTemplate(
         marker,
-        options?.reconciliationTracker,
-        options?.signal,
+        options,
         isInheritedReload
           ? () => {
               completeInheritedReload()
@@ -1014,10 +1029,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   async function watchPendingFrameTemplate(
     marker: FrameMarkerData,
-    reconciliationTracker?: ReconciliationTracker,
-    signal?: AbortSignal,
+    options: RenderOptions = {},
     onResolved?: () => void,
   ): Promise<void> {
+    let { reconciliationTracker, signal, nonce } = options
     if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
     if (pendingTemplateMarkerId === marker.id) return
 
@@ -1027,7 +1042,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let early = consumeFrameTemplate(marker.id) ?? getEarlyFrameContent(marker.id)
     if (early) {
       clearPendingFrameTemplateWatch()
-      await render(early, { reconciliationTracker, signal, contentStatus: 'resolved' })
+      await render(early, { nonce, reconciliationTracker, signal, contentStatus: 'resolved' })
       if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
       return
     }
@@ -1042,7 +1057,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
       clearPendingFrameTemplateWatch()
-      await render(fragment, { signal, contentStatus: 'resolved' })
+      await render(fragment, { nonce, signal, contentStatus: 'resolved' })
       if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     })
     pendingTemplateUnsubscribe = unsubscribe
@@ -1060,7 +1075,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let buffered = consumeFrameTemplate(marker.id)
     if (buffered) {
       clearPendingFrameTemplateWatch()
-      await render(buffered, { reconciliationTracker, signal, contentStatus: 'resolved' })
+      await render(buffered, { nonce, reconciliationTracker, signal, contentStatus: 'resolved' })
       if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     }
   }
@@ -1360,7 +1375,7 @@ function scheduleHydrationMarker(
     let pending = context.pendingClientEntries.get(marker.start)
     let vElement = pending?.[1] ?? createElement(component, props)
     context.pendingClientEntries.set(marker.start, [marker.end, vElement])
-    hydrateRegion(vElement, marker.start, marker.end, identity, context, signal)
+    hydrateRegion(vElement, marker.start, marker.end, identity, context, signal, pending?.[2])
   }
 
   let parentHydration = marker.parent && pendingClientEntryHydrations.get(marker.parent)
@@ -1479,6 +1494,7 @@ function hydrateRegion(
   identity: ClientEntryIdentity,
   context: FrameContext,
   signal?: AbortSignal,
+  resourceNonces?: ResourceNonces,
 ): void {
   if (signal?.aborted) return
 
@@ -1488,6 +1504,12 @@ function hydrateRegion(
   // tracker to client frames created while this entry renders so blocking
   // frames keep the reload pending until their content arrives.
   let renderEntry = (root: Pick<VirtualRoot, 'render'>) => {
+    addRootResourceNonces(root, resourceNonces)
+    addRootResponseNonce(
+      root,
+      context.nonce,
+      getDocumentImportMapManager(start.ownerDocument).documentNonce,
+    )
     if (!signal) {
       root.render(vElement)
       return
@@ -1566,6 +1588,7 @@ async function createSubFrames(
         if (marker) {
           let frameMarker: FrameMarkerData = { ...marker, id }
           let subFrame = createFrame([node, end], {
+            nonce: context.nonce,
             src: frameMarker.src,
             marker: frameMarker,
             topFrame: context.topFrame,

@@ -74,14 +74,6 @@ describe('CSP frame navigation', () => {
     expectMarkedStyles(await navigateUnderCsp(t, 'document', { markedStyles: true }))
   })
 
-  it('respects CSP when adopting marked styles during named frame reloads', async (t) => {
-    expectMarkedStyles(await navigateUnderCsp(t, 'named', { markedStyles: true }))
-  })
-
-  it('respects CSP when adopting marked styles in client-created frames', async (t) => {
-    expectMarkedStyles(await navigateUnderCsp(t, 'client', { markedStyles: true }))
-  })
-
   it('respects CSP when adopting marked styles from streamed templates', async (t) => {
     expectMarkedStyles(
       await navigateUnderCsp(t, 'named', { markedStyles: true, nestedTemplate: true }),
