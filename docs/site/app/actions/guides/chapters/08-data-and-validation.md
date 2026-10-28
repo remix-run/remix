@@ -104,7 +104,7 @@ export async function migrateDatabase() {
 
 `createSqliteDatabase(...)` uses the SQLite client built into Node.js or Bun. SQLite leaves foreign key enforcement off by default, so `foreignKeys: true` turns it on and the database rejects a track whose album doesn't exist. The file path is relative to this module, so starting the server from another directory still references the proper database file.
 
-In a single-process app, call `await migrateDatabase()` in `server.ts` before the HTTP server starts listening, so every migration is applied before the first request. In a deployment with several server processes, run migrations once as a deployment step before those processes accept requests. Call `await db.close()` when the application [shuts down](/production/#startup-and-shutdown).
+In a single-process app, call `await migrateDatabase()` in `server.ts` before the HTTP server starts listening, so every migration is applied before the first request. In a deployment with several server processes, run migrations once as a deployment step before those processes accept requests. Call `await db.close()` when the application [shuts down](/production/#shutting-down).
 
 The migration runner records each applied migration in a journal, a table in the database named `data_table_migrations` by default. Each journal row stores a checksum, a hash of the migration's SQL files. On later runs, the runner recomputes the checksum and throws if an applied migration's files have changed. Add a new migration when the schema changes instead of editing an applied migration, and keep the table definitions in `app/data/tables.ts` aligned with the resulting SQL schema.
 

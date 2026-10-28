@@ -15,9 +15,9 @@ The starter's `start` script runs the server in production mode:
 npm start
 ```
 
-That runs `NODE_ENV=production node --import remix/node-tsx server.ts`. The [`remix/node-tsx`](https://docs.remix.run/node-tsx/) loader strips types and compiles JSX as modules load. It doesn't typecheck, so run `npm run typecheck` and your tests in CI before you deploy. The starter requires Node.js 24.3 or later, as the `engines` field in `package.json` says, so make sure the production machine or image runs a matching version.
+That runs `NODE_ENV=production node --import remix/node-tsx server.ts`. The [`remix/node-tsx`](/api/node-tsx/) loader strips types and compiles JSX as modules load. It doesn't typecheck, so run `npm run typecheck` and your tests in CI before you deploy. The starter requires Node.js 24.3 or later, as the `engines` field in `package.json` says, so make sure the production machine or image runs a matching version.
 
-`NODE_ENV` decides how the starter's `app/assets.ts` configures the asset server from [`remix/assets`](https://docs.remix.run/assets/):
+`NODE_ENV` decides how the starter's `app/assets.ts` configures the asset server from [`remix/assets`](/api/assets/):
 
 ```ts filename=app/assets.ts
 const nodeEnv = process.env.NODE_ENV ?? "development";
@@ -39,7 +39,7 @@ The asset server compiles each browser module the first time it's requested and 
 
 ### Install dependencies where the app runs
 
-The compilers behind [`remix/node-tsx`](https://docs.remix.run/node-tsx/) and [`remix/assets`](https://docs.remix.run/assets/) are native packages, built for one operating system, CPU, and C library. A `node_modules` directory installed on a Mac won't run on a Linux server, so install dependencies on the machine or in the image that runs the app:
+The compilers behind [`remix/node-tsx`](/api/node-tsx/) and [`remix/assets`](/api/assets/) are native packages, built for one operating system, CPU, and C library. A `node_modules` directory installed on a Mac won't run on a Linux server, so install dependencies on the machine or in the image that runs the app:
 
 ```sh
 npm ci --omit=dev
@@ -47,7 +47,7 @@ npm ci --omit=dev
 
 ## Configuration and secrets
 
-Production configuration usually comes from environment variables. It's a good idea to read them in one module and check them at startup, so a misconfigured deploy fails right away. A [`remix/data-schema`](https://docs.remix.run/data-schema/) schema can do the checking and parsing:
+Production configuration usually comes from environment variables. It's a good idea to read them in one module and check them at startup, so a misconfigured deploy fails right away. A [`remix/data-schema`](/api/data-schema/) schema can do the checking and parsing:
 
 ```ts filename=app/config.ts
 import * as s from "remix/data-schema";
@@ -91,7 +91,7 @@ Session secrets need particular care. Every instance has to use the same secrets
 
 ## A production server entry
 
-`server.ts` connects the router to Node's HTTP server with `createRequestListener()` from [`remix/node-fetch-server`](https://docs.remix.run/node-fetch-server/). In production, it's also where the app sets its public URL, reports errors, tunes timeouts, and shuts down cleanly. Here's a production `server.ts`, leaving out the starter's HMR code:
+`server.ts` connects the router to Node's HTTP server with `createRequestListener()` from [`remix/node-fetch-server`](/api/node-fetch-server/). In production, it's also where the app sets its public URL, reports errors, tunes timeouts, and shuts down cleanly. Here's a production `server.ts`, leaving out the starter's HMR code:
 
 ```ts filename=server.ts
 import * as http from "node:http";
@@ -148,7 +148,7 @@ The imports check the configuration and create the database client and asset ser
 
 ### The public URL
 
-Most production apps sit behind a proxy or load balancer that handles TLS and forwards plain HTTP. Without the `host` and `protocol` options, `request.url` would start with `http:` and use whatever `Host` header the proxy sent. Two parts of Remix depend on that URL. Session middleware from [`remix/middleware/session`](https://docs.remix.run/middleware/session/) marks cookies `Secure` only when the URL is `https:`, and CSRF middleware from [`remix/middleware/csrf`](https://docs.remix.run/middleware/csrf/) rejects form posts whose `Origin` doesn't match the URL's origin.
+Most production apps sit behind a proxy or load balancer that handles TLS and forwards plain HTTP. Without the `host` and `protocol` options, `request.url` would start with `http:` and use whatever `Host` header the proxy sent. Two parts of Remix depend on that URL. Session middleware from [`remix/middleware/session`](/api/middleware/session/) marks cookies `Secure` only when the URL is `https:`, and CSRF middleware from [`remix/middleware/csrf`](/api/middleware/csrf/) rejects form posts whose `Origin` doesn't match the URL's origin.
 
 Fixed `host` and `protocol` options give every request the app's public origin, here from the `appOrigin` in `app/config.ts`:
 
@@ -179,7 +179,7 @@ createRequestListener(router.fetch, {
 
 `onError` only sees errors thrown before a response starts. Errors elsewhere have their own hooks, so wire each one to the same reporting service:
 
-- **Streamed pages:** once HTML has started streaming, render errors go to the `onError` option of `render()` from [`remix/middleware/render`](https://docs.remix.run/middleware/render/).
+- **Streamed pages:** once HTML has started streaming, render errors go to the `onError` option of `render()` from [`remix/middleware/render`](/api/middleware/render/).
 - **Browser modules:** compilation errors in the asset server go to its `onError` option.
 - **The browser:** hydration and component errors are `error` events on the runtime returned by `run()`, as [Interactivity](/interactivity/#browser-entry-with-run) shows.
 
@@ -187,7 +187,7 @@ createRequestListener(router.fetch, {
 
 When a client disconnects, the listener aborts `request.signal`, and `render()` stops rendering. Pass `request.signal` to other slow work, such as `fetch()` calls to other services, so it stops too. The listener doesn't report these aborts to `onError`, and your own code should treat them the same way: as expected cancellation, not as errors to report.
 
-For a log line per request, add `logger()` from [`remix/middleware/logger`](https://docs.remix.run/middleware/logger/) at the top of the router's middleware. It writes to standard output, which is where most platforms collect logs. Remix doesn't include metrics or tracing. Middleware at the top of the stack sees every request and response, so it's a natural place to add them.
+For a log line per request, add `logger()` from [`remix/middleware/logger`](/api/middleware/logger/) at the top of the router's middleware. It writes to standard output, which is where most platforms collect logs. Remix doesn't include metrics or tracing. Middleware at the top of the stack sees every request and response, so it's a natural place to add them.
 
 ### Timeouts
 
@@ -265,7 +265,7 @@ npx remix db migrate
 npm start
 ```
 
-[Data and Validation](/data-and-validation/#create-the-tables-with-sql) runs migrations when the server starts, which works for a single process. Once several processes start at the same time, run migrations once per deploy, before the new processes take traffic. Most platforms have a release or pre-deploy command for this. [`remix db migrate`](https://docs.remix.run/cli/) reads the database and migrations directory from `remix.json`:
+[Data and Validation](/data-and-validation/#create-the-tables-with-sql) runs migrations when the server starts, which works for a single process. Once several processes start at the same time, run migrations once per deploy, before the new processes take traffic. Most platforms have a release or pre-deploy command for this. [`remix db migrate`](/api/cli/) reads the database and migrations directory from `remix.json`:
 
 ```jsonc filename=remix.json
 {
@@ -276,7 +276,7 @@ npm start
 }
 ```
 
-For PostgreSQL, the adapter reads the connection string from the environment with `{ "type": "postgres", "connectionString": { "env": "DATABASE_URL" } }`. The [Remix CLI docs](https://docs.remix.run/cli/) cover the other `remix db` commands.
+For PostgreSQL, the adapter reads the connection string from the environment with `{ "type": "postgres", "connectionString": { "env": "DATABASE_URL" } }`. The [Remix CLI docs](/api/cli/) cover the other `remix db` commands.
 
 ### Running in a container
 
@@ -309,7 +309,7 @@ Anything the app writes inside the container, including a SQLite file, disappear
 
 **Assets.** With fingerprinting, the asset server sends `Cache-Control: public, max-age=31536000, immutable`, so put a CDN in front of the app and most asset requests never reach the server.
 
-**Files in `public/`.** `staticFiles()` from [`remix/middleware/static`](https://docs.remix.run/middleware/static/) sends an ETag and `Last-Modified` but no `Cache-Control`, and without one, browsers guess how long to cache a file from its age. Set the policy yourself, with `CacheControl` from [`remix/headers`](https://docs.remix.run/headers/):
+**Files in `public/`.** `staticFiles()` from [`remix/middleware/static`](/api/middleware/static/) sends an ETag and `Last-Modified` but no `Cache-Control`, and without one, browsers guess how long to cache a file from its age. Set the policy yourself, with `CacheControl` from [`remix/headers`](/api/headers/):
 
 ```ts filename=app/router.ts
 import { CacheControl } from "remix/headers";
@@ -341,7 +341,7 @@ A page that's the same for every visitor can be cached by a CDN with `s-maxage`,
 
 When a response depends on a request header, such as `Accept-Language`, list that header in `Vary` so caches keep a separate copy for each value. `compression()` adds `Accept-Encoding` for you. Avoid `Vary: Cookie`, which gives every visitor their own copy and leaves little for a shared cache to reuse. For pages that rarely change, an `ETag` lets browsers revalidate cheaply: compare it with `IfNoneMatch` from `remix/headers` and return `304 Not Modified` when it matches.
 
-**Compression.** If a proxy, CDN, or platform in front of the app compresses responses, let it. Otherwise add `compression()` from [`remix/middleware/compression`](https://docs.remix.run/middleware/compression/) near the top of the middleware stack, before `staticFiles()`, so it wraps every response:
+**Compression.** If a proxy, CDN, or platform in front of the app compresses responses, let it. Otherwise add `compression()` from [`remix/middleware/compression`](/api/middleware/compression/) near the top of the middleware stack, before `staticFiles()`, so it wraps every response:
 
 ```ts filename=app/router.ts
 import zlib from "node:zlib";
@@ -362,11 +362,11 @@ Brotli's default quality is too slow to run on every response, so the example lo
 
 Several instances of the app don't share memory or local disk, and container platforms often start each deploy on a fresh filesystem. Anything kept in memory or on local disk is invisible to other instances and lost on the next deploy. Remix's storage packages offer options of both kinds. Memory storage is also lost whenever the process restarts:
 
-| Storage                                                                                                        | Local to one process or disk                                                                                   | Shared across instances                                                                                                                                                              |
-| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Database](/data-and-validation/), from [`remix/data-table`](https://docs.remix.run/data-table/)        | [`sqlite`](https://docs.remix.run/data-table/sqlite/)                                                          | [`postgres`](https://docs.remix.run/data-table/postgres/), [`mysql`](https://docs.remix.run/data-table/mysql/)                                                                       |
-| [Sessions](/auth-sessions-security/), from [`remix/session`](https://docs.remix.run/session/)           | [`memory`](https://docs.remix.run/session-storage/memory/), [`fs`](https://docs.remix.run/session-storage/fs/) | [`cookie`](https://docs.remix.run/session-storage/cookie/), [`redis`](https://docs.remix.run/session-storage/redis/), [`memcache`](https://docs.remix.run/session-storage/memcache/) |
-| [Uploaded files](/files-and-assets/), from [`remix/file-storage`](https://docs.remix.run/file-storage/) | [`memory`](https://docs.remix.run/file-storage/memory/), [`fs`](https://docs.remix.run/file-storage/fs/)       | [`s3`](https://docs.remix.run/file-storage/s3/)                                                                                                                                      |
+| Storage                                                                               | Local to one process or disk                                               | Shared across instances                                                                                                        |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [Database](/data-and-validation/), from [`remix/data-table`](/api/data-table/)        | [`sqlite`](/api/data-table/sqlite/)                                        | [`postgres`](/api/data-table/postgres/), [`mysql`](/api/data-table/mysql/)                                                     |
+| [Sessions](/auth-sessions-security/), from [`remix/session`](/api/session/)           | [`memory`](/api/session-storage/memory/), [`fs`](/api/session-storage/fs/) | [`cookie`](/api/session-storage/cookie/), [`redis`](/api/session-storage/redis/), [`memcache`](/api/session-storage/memcache/) |
+| [Uploaded files](/files-and-assets/), from [`remix/file-storage`](/api/file-storage/) | [`memory`](/api/file-storage/memory/), [`fs`](/api/file-storage/fs/)       | [`s3`](/api/file-storage/s3/)                                                                                                  |
 
 Local options still work when one process serves the app and its files live on a persistent volume. Once instances run on more than one machine, they need the shared options. Cookie session storage is shared because the browser carries the data, so a session can't grow past the browser's cookie size limit, typically 4 KB.
 
@@ -386,7 +386,7 @@ The router is a Fetch handler, so the server entry is the only file that changes
 
 <!-- VERIFY: tested with the template inside the monorepo (Bun 1.3.0, Deno 2.5.6, NODE_ENV=production): pages render, fingerprinted assets compile and serve. Not tested from a standalone install; Deno's minimal permission set is unconfirmed. -->
 
-Bun and Deno accept Fetch handlers directly and run TypeScript and JSX themselves, so they don't need [`remix/node-fetch-server`](https://docs.remix.run/node-fetch-server/) or [`remix/node-tsx`](https://docs.remix.run/node-tsx/):
+Bun and Deno accept Fetch handlers directly and run TypeScript and JSX themselves, so they don't need [`remix/node-fetch-server`](/api/node-fetch-server/) or [`remix/node-tsx`](/api/node-tsx/):
 
 ```ts filename=server.ts
 import { router } from "./app/router.ts";
@@ -424,11 +424,11 @@ The import of `server.ts` has to be dynamic, because static imports load before 
 > [!TIP]
 > **Deploying to Cloudflare Workers, Netlify, or Vercel Functions**
 >
-> These platforms bundle your code at deploy time and don't keep your source or `node_modules` on disk. The asset server from [`remix/assets`](https://docs.remix.run/assets/) can't run there, because it reads browser source from disk and compiles it with native packages when a request arrives. Instead, a bundler builds the browser code ahead of time and the platform serves the output as static files. Routes, controllers, and middleware stay the same.
+> These platforms bundle your code at deploy time and don't keep your source or `node_modules` on disk. The asset server from [`remix/assets`](/api/assets/) can't run there, because it reads browser source from disk and compiles it with native packages when a request arrives. Instead, a bundler builds the browser code ahead of time and the platform serves the output as static files. Routes, controllers, and middleware stay the same.
 >
 > Remix itself doesn't depend on a bundler. The community-maintained [Pitlane](https://pitlane.tools/guides) project provides a Vite plugin for Remix and deployment guides for [Cloudflare Workers](https://pitlane.tools/deploy/cloudflare), [Netlify](https://pitlane.tools/deploy/netlify), and [Vercel](https://pitlane.tools/deploy/vercel).
 >
-> With any bundler, the rest of the app has to fit the runtime too. `staticFiles()`, `loadMigrations(...)` from [`remix/data-table/migrations/node`](https://docs.remix.run/data-table/migrations/node/), and the `fs` storage options read local disk while the app runs, so use the platform's storage and run migrations as a deploy step. Configuration comes from platform bindings, such as `import { env } from "cloudflare:workers"`, instead of `process.env`.
+> With any bundler, the rest of the app has to fit the runtime too. `staticFiles()`, `loadMigrations(...)` from [`remix/data-table/migrations/node`](/api/data-table/migrations/node/), and the `fs` storage options read local disk while the app runs, so use the platform's storage and run migrations as a deploy step. Configuration comes from platform bindings, such as `import { env } from "cloudflare:workers"`, instead of `process.env`.
 
 ## Production checklist
 
