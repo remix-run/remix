@@ -320,7 +320,7 @@ Every mock function and method spy exposes these controls on `.mock`:
 | `mockImplementation(implementation)`              | Changes the default implementation, preserving pending overrides.                                                                                           |
 | `mockImplementationOnce(implementation, onCall?)` | Uses an implementation for one zero-based call index; defaults to the next call. Replaces any override already registered at that index.                    |
 | `resetCalls()`                                    | Installs an empty history array and resets call indices, preserving implementations and pending overrides.                                                  |
-| `callCount()`                                     | Returns the length of the current call history.                                                                                                             |
+| `callCount()`                                     | Counts calls that have returned or thrown since `resetCalls()`, without waiting for returned promises to settle.                                            |
 | `restore()`                                       | Restores a method's original value and any own descriptor, or a standalone mock's original default implementation. Preserves history and pending overrides. |
 
 ```ts
@@ -347,7 +347,9 @@ The replacement controls use the original function's parameter and return types,
 
 These controls follow the selected [Node `MockFunctionContext` APIs](https://github.com/nodejs/node/blob/v24.3.0/doc/api/test.md#class-mockfunctioncontext), including replacement rather than queuing when `mockImplementationOnce()` is called twice for the next call. Resetting history makes pending indices count from zero again; consumed overrides stay consumed.
 
-Remix retains its live `mock.calls` array and records calls before invoking the implementation. Node returns array snapshots and records completed synchronous calls. Reentrant inspection and override scheduling can therefore differ. This is not a complete replacement for Node's Proxy-backed mocks: function-construction overloads and `times` options are not supported. Method installation retains assignment behavior, including support for setter-backed functions and initially undefined methods. Each `restore()` call restores the captured method value, preserving an own property for inherited data methods and using setters for accessor-backed methods. A retained spy remains callable with its current implementation. Standalone `restore()` resets the default each time it is called.
+Like Node, `callCount()` counts each invocation when it returns or throws. Calling `resetCalls()` during an invocation clears the count, and that invocation is counted when it finishes. Mutating `mock.calls` does not change the count.
+
+Remix retains its live `mock.calls` array and records calls before invoking the implementation. Node returns array snapshots and records completed synchronous calls. The array length can therefore differ from `callCount()`, and reentrant history inspection and override scheduling can differ from Node. This is not a complete replacement for Node's Proxy-backed mocks: function-construction overloads and `times` options are not supported. Method installation retains assignment behavior, including support for setter-backed functions and initially undefined methods. Each `restore()` call restores the captured method value, preserving an own property for inherited data methods and using setters for accessor-backed methods. A retained spy remains callable with its current implementation. Standalone `restore()` resets the default each time it is called.
 
 #### Cleanup
 

@@ -54,6 +54,7 @@ describe('mock function controls', () => {
     let error = new Error('once failed')
     let fn = mock.fn(() => 'default')
     fn.mock.mockImplementationOnce(() => {
+      assert.equal(fn.mock.callCount(), 0)
       throw error
     })
     assert.throws(
@@ -87,7 +88,7 @@ describe('mock function controls', () => {
     let calls = fn.mock.calls
     fn.mock.mockImplementation((value) => {
       assert.equal(calls.length, 1)
-      assert.equal(fn.mock.callCount(), 1)
+      assert.equal(fn.mock.callCount(), 0)
       assert.deepEqual(calls[0], { arguments: [value] })
       fn.mock.mockImplementationOnce((next) => next * 2)
       return fn(value)
@@ -99,7 +100,62 @@ describe('mock function controls', () => {
       { arguments: [3], result: 6 },
     ])
     calls.length = 0
-    assert.equal(fn.mock.callCount(), 0)
+    assert.equal(fn.mock.callCount(), 2)
+  })
+
+  it('counts standalone calls only after the implementation returns', () => {
+    let fn = mock.fn(() => 0)
+    fn.mock.mockImplementation(() => fn.mock.callCount())
+    assert.equal(fn(), 0)
+    assert.equal(fn(), 1)
+    assert.equal(fn.mock.callCount(), 2)
+  })
+
+  it('counts completed recursive method calls while excluding active calls', (t) => {
+    let obj = {
+      value(depth: number): number {
+        return depth
+      },
+    }
+    let spy = t.mock.method(obj, 'value')
+    let counts: number[] = []
+    spy.mock.mockImplementation((depth) => {
+      counts.push(spy.mock.callCount())
+      if (depth > 0) obj.value(depth - 1)
+      counts.push(spy.mock.callCount())
+      return depth
+    })
+    assert.equal(obj.value(2), 2)
+    assert.deepEqual(counts, [0, 0, 0, 0, 1, 2])
+    assert.equal(spy.mock.callCount(), 3)
+  })
+
+  it('counts calls returning pending promises without waiting for settlement', async (t) => {
+    let { promise, resolve } = Promise.withResolvers<number>()
+    let fn = t.mock.fn(() => promise)
+    fn.mock.mockImplementation(() => {
+      assert.equal(fn.mock.callCount(), 0)
+      return promise
+    })
+    assert.equal(fn(), promise)
+    assert.equal(fn.mock.callCount(), 1)
+    resolve(42)
+    assert.equal(await promise, 42)
+    assert.equal(fn.mock.callCount(), 1)
+  })
+
+  it('counts an active call after its implementation resets the count', (t) => {
+    let fn = t.mock.fn(() => 1)
+    fn()
+    fn.mock.mockImplementationOnce(() => {
+      assert.equal(fn.mock.callCount(), 1)
+      fn.mock.resetCalls()
+      assert.equal(fn.mock.callCount(), 0)
+      return 2
+    })
+    assert.equal(fn(), 2)
+    assert.equal(fn.mock.callCount(), 1)
+    assert.deepEqual(fn.mock.calls, [])
   })
 
   it('records subsequent calls in the new history when reset inside an implementation', () => {
@@ -110,7 +166,7 @@ describe('mock function controls', () => {
       return fn()
     })
     assert.equal(fn(), 1)
-    assert.equal(fn.mock.callCount(), 1)
+    assert.equal(fn.mock.callCount(), 2)
     assert.deepEqual(fn.mock.calls, [{ arguments: [], result: 1 }])
     assert.deepEqual(calls, [{ arguments: [], result: 1 }])
     assert.notEqual(fn.mock.calls, calls)
