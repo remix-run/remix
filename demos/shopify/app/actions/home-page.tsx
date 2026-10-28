@@ -1,5 +1,5 @@
 import { images, logos } from '../data/images.ts'
-import { pages, signupHref } from '../data/pages.ts'
+import { signupHref } from '../data/pages.ts'
 import { videos } from '../data/videos.ts'
 import { routes } from '../routes.ts'
 import { CallToAction, Document } from '../ui/document.tsx'
@@ -93,7 +93,7 @@ export function HomePage() {
               <label htmlFor="merchants-global">Locally and globally.</label>
             </div>
             <div class="merchant-panel panel-everywhere">
-              <a href={pages.online.path} class="merchant-preview preview-store">
+              <a href={routes.marketing.online.href()} class="merchant-preview preview-store">
                 <img
                   {...images.online}
                   alt="An independent brand’s online storefront"
@@ -103,7 +103,7 @@ export function HomePage() {
                 />
                 <span>Make your mark online ↗</span>
               </a>
-              <a href={pages.pos.path} class="merchant-preview preview-retail">
+              <a href={routes.marketing.pos.href()} class="merchant-preview preview-retail">
                 <img
                   {...images.pos}
                   alt="Shopify retail business"
@@ -113,7 +113,7 @@ export function HomePage() {
                 />
                 <span>Bring your store to life ↗</span>
               </a>
-              <a href={pages.shop.path} class="merchant-preview preview-shop">
+              <a href={routes.marketing.shop.href()} class="merchant-preview preview-shop">
                 <img
                   {...images.shop}
                   alt="Products in the Shop shopping app"
@@ -140,7 +140,7 @@ export function HomePage() {
                     <br />
                     One business.
                   </h2>
-                  <a class="text-link" href={pages.pos.path}>
+                  <a class="text-link" href={routes.marketing.pos.href()}>
                     Explore Shopify POS →
                   </a>
                 </div>
@@ -184,7 +184,7 @@ export function HomePage() {
                     <br />
                     at home. Everywhere.
                   </h2>
-                  <a class="text-link" href={pages.international.path}>
+                  <a class="text-link" href={routes.marketing.international.href()}>
                     Explore international selling →
                   </a>
                 </div>
@@ -267,7 +267,7 @@ export function HomePage() {
                   />
                 </video>
               </div>
-              <a href={pages.online.path}>
+              <a href={routes.marketing.online.href()}>
                 <h3>
                   Get a store that’s built to sell <span aria-hidden="true">↗</span>
                 </h3>
@@ -278,7 +278,7 @@ export function HomePage() {
               </p>
             </article>
             <article>
-              <a href={pages.orders.path}>
+              <a href={routes.marketing.orders.href()}>
                 <div class="feature-image">
                   <img
                     {...images.analytics}
@@ -297,7 +297,7 @@ export function HomePage() {
               </p>
             </article>
             <article>
-              <a href={pages.channels.path}>
+              <a href={routes.marketing.channels.href()}>
                 <div class="feature-image">
                   <img
                     {...images.channels}
@@ -392,7 +392,7 @@ export function HomePage() {
                   Take the complexity out of international selling with Shopify Markets. Deliver
                   products faster and more affordably with built-in shipping tools.
                 </p>
-                <a class="text-link" href={pages.international.path}>
+                <a class="text-link" href={routes.marketing.international.href()}>
                   Explore international selling →
                 </a>
               </div>
@@ -405,7 +405,7 @@ export function HomePage() {
         <div class="container">
           <h2 class="section-title">For anyone from entrepreneurs to enterprise</h2>
           <div class="business-grid">
-            <a href={pages.start.path} class="business-card">
+            <a href={routes.marketing.start.href()} class="business-card">
               <img
                 src={images['home-guests-on-earth'].src}
                 alt="Guests on Earth natural cleaning products"
@@ -422,7 +422,7 @@ export function HomePage() {
                 </p>
               </div>
             </a>
-            <a href={pages.sell.path} class="business-card">
+            <a href={routes.marketing.sell.href()} class="business-card">
               <img
                 src={images['home-our-place'].src}
                 alt="Our Place cookware products"
@@ -438,7 +438,7 @@ export function HomePage() {
                 </p>
               </div>
             </a>
-            <a href={pages.enterprise.path} class="business-card">
+            <a href={routes.marketing.enterprise.href()} class="business-card">
               <img
                 src={images['home-mattel'].src}
                 alt="Mattel corporate headquarters"
@@ -500,7 +500,7 @@ export function HomePage() {
                   Work through ideas, get answers about your business, and make progress on the
                   tasks ahead.
                 </p>
-                <a href={pages.sidekick.path} class="text-link">
+                <a href={routes.marketing.sidekick.href()} class="text-link">
                   Meet your AI assistant →
                 </a>
               </div>
@@ -572,7 +572,7 @@ export function HomePage() {
                 Create a custom storefront, extend checkout, or build the next commerce tool with
                 Shopify APIs and developer resources.
               </p>
-              <a href={pages.ucp.path} class="text-link">
+              <a href={routes.marketing.ucp.href()} class="text-link">
                 Explore commerce for agents →
               </a>
               <a href="https://shopify.dev/" class="text-link">
@@ -610,7 +610,7 @@ export function HomePage() {
                 height="25"
                 loading="lazy"
               />
-              <a class="text-link" href={pages.checkout.path}>
+              <a class="text-link" href={routes.marketing.checkout.href()}>
                 Explore Shopify Checkout →
               </a>
             </div>
@@ -648,7 +648,7 @@ export function HomePage() {
               <p class="eyebrow">Built to keep up</p>
               <h3>Rock steady. Blazing fast.</h3>
               <p>Your Shopify store runs strong, even during your most epic product drops.</p>
-              <a href={pages.enterprise.path} class="text-link">
+              <a href={routes.marketing.enterprise.href()} class="text-link">
                 Build at scale →
               </a>
             </div>
@@ -665,7 +665,7 @@ export function HomePage() {
                 Keep business finances close to your commerce. Explore tools for managing money and
                 funding your next step.
               </p>
-              <a href={pages.finance.path} class="text-link">
+              <a href={routes.marketing.finance.href()} class="text-link">
                 Explore your finance tools →
               </a>
             </div>

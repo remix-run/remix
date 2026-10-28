@@ -8,7 +8,7 @@ import {
   whyCards,
   whyLinks,
 } from '../data/navigation.ts'
-import { pages, signupHref } from '../data/pages.ts'
+import { signupHref } from '../data/pages.ts'
 import { routes } from '../routes.ts'
 
 export interface DocumentProps {
@@ -119,7 +119,7 @@ function SiteHeader() {
             </div>
           </div>
           <a href={routes.pricing.href()}>Pricing</a>
-          <a href={pages.enterprise.path}>Enterprise</a>
+          <a href={routes.marketing.enterprise.href()}>Enterprise</a>
         </nav>
         <div class="header-actions">
           <a class="login-link" href="https://www.shopify.com/login">
@@ -168,7 +168,7 @@ function SiteHeader() {
                 </ul>
               </details>
               <a href={routes.pricing.href()}>Pricing</a>
-              <a href={pages.enterprise.path}>Enterprise</a>
+              <a href={routes.marketing.enterprise.href()}>Enterprise</a>
               <a href="https://www.shopify.com/login">Log in ↗</a>
             </nav>
           </div>

@@ -1,23 +1,44 @@
 import type { Handle } from 'remix/component'
 
-import { images } from '../data/images.ts'
-import { pageSummaries, pages, signupHref } from '../data/pages.ts'
-import type { MarketingPage, PageName } from '../data/pages.ts'
-import { routes } from '../routes.ts'
-import { CallToAction, Document } from '../ui/document.tsx'
+import { images } from '../../data/images.ts'
+import type { ImageName } from '../../data/images.ts'
+import { pageSummaries, signupHref } from '../../data/pages.ts'
+import type { MarketingPageName, PageName } from '../../data/pages.ts'
+import { routes } from '../../routes.ts'
+import { CallToAction, Document } from '../../ui/document.tsx'
 
-export function ProductPage(handle: Handle<{ page: MarketingPage }>) {
+// On shopify.com, each marketing page has its own layout built from shared sections such as
+// heroes, card grids, side-by-side features, testimonials, and FAQs. This demo renders every
+// marketing page through this one template with simplified copy; see the marketing controller for
+// how a production app would structure these pages instead.
+
+export interface Feature {
+  id?: string
+  title: string
+  description: string
+}
+
+export interface ProductTemplateProps {
+  name: MarketingPageName
+  title: string
+  image: ImageName
+  features: readonly Feature[]
+  related: readonly PageName[]
+}
+
+export function ProductTemplate(handle: Handle<ProductTemplateProps>) {
   return () => {
-    let { page } = handle.props
+    let { name, title, image, features, related } = handle.props
+    let { label, description, theme } = pageSummaries[name]
 
     return (
-      <Document title={page.label} description={page.description}>
-        <section class={`product-hero theme-${page.theme}`}>
+      <Document title={label} description={description}>
+        <section class={`product-hero theme-${theme}`}>
           <div class="container product-hero-grid">
             <div>
-              <p class="eyebrow">{page.label}</p>
-              <h1>{page.title}</h1>
-              <p class="product-intro">{page.description}</p>
+              <p class="eyebrow">{label}</p>
+              <h1>{title}</h1>
+              <p class="product-intro">{description}</p>
               <div class="product-hero-actions">
                 <a class="button button-black" href={signupHref}>
                   Start for free <span aria-hidden="true">↗</span>
@@ -27,10 +48,10 @@ export function ProductPage(handle: Handle<{ page: MarketingPage }>) {
                 </a>
               </div>
             </div>
-            <div class={`product-hero-image image-${page.theme}`}>
+            <div class={`product-hero-image image-${theme}`}>
               <img
-                {...images[page.image]}
-                alt={`${page.label} with Shopify`}
+                {...images[image]}
+                alt={`${label} with Shopify`}
                 sizes="(max-width: 600px) calc(100vw - 70px), (max-width: 900px) calc(90vw - 40px), (max-width: 1674px) 40vw, 660px"
                 fetchPriority="high"
                 decoding="async"
@@ -40,7 +61,7 @@ export function ProductPage(handle: Handle<{ page: MarketingPage }>) {
         </section>
         <div class="product-subnav">
           <div class="container">
-            <span>{page.label}</span>
+            <span>{label}</span>
             <a href="#explore">Overview</a>
             <a href="#connected">More to explore</a>
             <a href="#questions">FAQs</a>
@@ -57,17 +78,17 @@ export function ProductPage(handle: Handle<{ page: MarketingPage }>) {
               </h2>
               <p>Bring your ideas, your products, and your customers together on Shopify.</p>
             </div>
-            {page.features.map((feature, index) => (
+            {features.map((feature, index) => (
               <article
                 key={feature.title}
                 class={`product-feature-row ${index % 2 === 1 ? 'reversed' : ''}`}
                 id={feature.id}
               >
-                <div class={`feature-number-art art-${page.theme}`}>
+                <div class={`feature-number-art art-${theme}`}>
                   {index === 0 ? (
                     <img
-                      {...images[page.image]}
-                      alt={`${page.label} product preview`}
+                      {...images[image]}
+                      alt={`${label} product preview`}
                       sizes="(max-width: 600px) calc(100vw - 110px), (max-width: 1674px) 38vw, 600px"
                       loading="lazy"
                       decoding="async"
@@ -93,7 +114,7 @@ export function ProductPage(handle: Handle<{ page: MarketingPage }>) {
                 </div>
                 <div class="product-feature-copy">
                   <p class="eyebrow">
-                    0{index + 1} / {page.label}
+                    0{index + 1} / {label}
                   </p>
                   <h2>{feature.title}</h2>
                   <p>{feature.description}</p>
@@ -105,7 +126,7 @@ export function ProductPage(handle: Handle<{ page: MarketingPage }>) {
             ))}
           </div>
         </section>
-        <RelatedPages names={page.related} />
+        <RelatedPages names={related} />
         <section class="section-space faq-section" id="questions">
           <div class="container faq-grid">
             <div>
@@ -130,8 +151,8 @@ export function ProductPage(handle: Handle<{ page: MarketingPage }>) {
                 <summary>Can I use it with my existing store?</summary>
                 <p>
                   These tools connect to your Shopify business. If you are moving from another
-                  platform, explore <a href={pages.sell.path}>switching to Shopify</a> and choose
-                  the migration approach that fits your catalog and team.
+                  platform, explore <a href={routes.marketing.sell.href()}>switching to Shopify</a>{' '}
+                  and choose the migration approach that fits your catalog and team.
                 </p>
               </details>
               <details>
@@ -151,7 +172,7 @@ export function ProductPage(handle: Handle<{ page: MarketingPage }>) {
   }
 }
 
-export function RelatedPages(handle: Handle<{ names: readonly PageName[] }>) {
+function RelatedPages(handle: Handle<{ names: readonly PageName[] }>) {
   return () => (
     <section class="section-space related-section" id="connected">
       <div class="container">
