@@ -386,5 +386,5 @@ signal to `fetch()`, and a custom resolver should do the same.
 
 Decide how to [report streaming render failures](/errors-and-cancellation/#streaming-render-errors)
 and [frame-resolution failures](/errors-and-cancellation/#frame-resolution-errors). In production,
-make sure [aborts propagate through streaming work](/production/#streaming-and-aborts) and that
-[compression doesn't break streams](/production/#compression-and-streams).
+make sure [aborts propagate through streaming work](/production/#errors-and-logs) and that
+[compression doesn't break streams](/production/#caching-and-compression).
