@@ -276,14 +276,17 @@ interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
-  // Function mocks and typed method spies, with automatic restoration
+  // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
   mock: {
-    fn: typeof import('remix/test').mock.fn
+    // Create a mock function with an optional implementation
+    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
+
+    // Mock an object method with an optional implementation override
     method<T extends object, K extends keyof T>(
       obj: T,
       methodName: K,
       impl?: Function,
-    ): ReturnType<typeof import('remix/test').mock.method<T, K>>
+    ): MockFunction
   }
 
   // Replace global timer functions with controllable fakes
