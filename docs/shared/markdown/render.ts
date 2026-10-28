@@ -76,6 +76,9 @@ function rehypeAlerts() {
       let type = alertTypes.get(match[1].toUpperCase())
       if (type === undefined) return
 
+      // A marker followed by inline content on the same line, like `[!TIP] **text**`, isn't an alert
+      if (!match[0].endsWith('\n') && paragraph.children.length > 1) return
+
       marker.value = marker.value.slice(match[0].length)
       if (marker.value === '') paragraph.children.shift()
 
