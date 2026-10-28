@@ -154,7 +154,7 @@ console.log(details.status, details.access?.deniedBy);
 
 `getAssetDetails()` accepts a URL or a file path and reports whether it's `reachable`, `denied`, `not-allowed`, `missing`, `unmapped`, or `unsupported`, along with the rule responsible. `getAssets()` lists every reachable file and its URL.
 
-The `remix assets` command prints the same information from the terminal. `remix assets` lists every reachable file as `URL -> file`, and `remix assets inspect <url-or-file>` explains one mapping. The CLI reads its configuration from the `assets` section of `remix.json` rather than from `app/assets.ts`. You can [move the configuration into `remix.json`](/cli-and-tooling/) so the server and CLI share it.
+The `remix assets` command prints the same information from the terminal. `remix assets` lists every reachable file as `URL -> file`, and `remix assets inspect <url-or-file>` explains one mapping. The CLI reads its configuration from the `assets` section of `remix.json` rather than from `app/assets.ts`. You can [move the configuration into `remix.json`](/api/assets/#shared-configuration) so the server and CLI share it.
 
 ## Load browser scripts
 
@@ -256,6 +256,8 @@ It only skips modules that their package marks as free of side effects with the 
 Browser modules can only import other scripts, so stylesheets, images, and fonts are referenced by URL. `getHref()` returns the public URL for any allowed asset:
 
 ```ts filename=app/assets.ts
+import { createAssetServer } from "remix/assets";
+
 export const assets = createAssetServer({
   basePath: "/assets",
   rootDir: process.cwd(),
@@ -421,6 +423,7 @@ export const assets = createAssetServer({
 Server-rendered components update too. When server code changes, a browser entry can listen for the `server:update` event and reload the top frame, which fetches fresh HTML from the server and reconciles it into the page:
 
 ```ts filename=app/actions/public/entry.ts
+// app is the value returned by run()
 if (import.meta.hot) {
   import.meta.hot.on("server:update", async () => {
     await app.ready();
@@ -476,7 +479,7 @@ Fingerprints stay fine-grained because of the import map. With a bundler, a file
 
 Changing `cart.ts` changes one import map entry and one download. The modules that import it keep their URLs and stay cached. Stylesheets have no import maps, so a changed stylesheet does change the fingerprint of stylesheets that `@import` it.
 
-The asset server only serves current fingerprints. A page rendered before a deploy may request a fingerprint that no longer exists, so put a CDN in front of the asset routes that keeps immutable responses after a deploy.
+The asset server only serves current fingerprints. A page rendered before a deploy may request a fingerprint that no longer exists. A CDN that keeps immutable responses helps, but a module the CDN never cached still reaches the new server and gets a `404`, so expect open pages to need a reload after a deploy.
 
 A few more options are worth setting for production:
 
@@ -527,12 +530,10 @@ An HTML form uploads files when it uses `encType="multipart/form-data"` and cont
 
 `accept` filters the browser's file picker. It's a convenience for the user, not validation, since any client can send any file.
 
-On the server, `formData()` from [`remix/middleware/form-data`](/api/middleware/form-data/) parses the multipart body. Without options, it keeps each uploaded file in memory as a `File` in `context.formData`. For uploads you intend to keep, pass an `uploadHandler` that stores each file and returns a value to put in the form instead, usually a storage key:
+On the server, `formData()` from [`remix/middleware/form-data`](/api/middleware/form-data/) parses the multipart body. Without options, it keeps each uploaded file in memory as a `File` in `context.formData`. Pass an `uploadHandler` to check each file as it's parsed. It returns the value to put in the form, or nothing to leave the file out:
 
 ```ts filename=app/actions/albums/edit-cover/upload.ts
 import type { FileUpload } from "remix/form-data-parser";
-
-import { coverStorage } from "../../../storage.ts";
 
 export class InvalidCoverError extends Error {}
 
@@ -553,18 +554,14 @@ export async function uploadCover(upload: FileUpload) {
     throw new InvalidCoverError("Cover images must be PNG or JPEG files");
   }
 
-  let key = crypto.randomUUID();
-  await coverStorage.set(key, new File([upload], upload.name, { type: match.type }));
-
-  return key;
+  return new File([upload], upload.name, { type: match.type });
 }
 ```
 
 This handler:
 
 - Ignores fields it doesn't expect and empty file inputs. Returning nothing leaves the field out of the form.
-- Checks the file's first bytes instead of trusting the submitted `type` or file name extension, then stores the file with the media type it detected.
-- Stores the file under a key the server generates. The submitted name is kept only as metadata on the stored `File`.
+- Checks the file's first bytes instead of trusting the submitted `type` or file name extension, and returns the file with the media type it detected.
 
 Put `formData()` on the action that accepts the upload rather than on the whole router, using [action middleware](/routing-and-controllers/#controllers-and-actions), so other requests skip multipart parsing:
 
@@ -591,7 +588,7 @@ export default createController(routes.albums.editCover, {
         }),
       ],
       async handler(context) {
-        // validate context.formData and save the cover
+        // validate context.formData and store the cover
       },
     },
   },
@@ -669,7 +666,7 @@ async function uploadTrack(upload: FileUpload) {
 let parseTracks = formData({ uploadHandler: uploadTrack, maxFileSize: 500 * 1024 * 1024 });
 ```
 
-Paired with a storage backend that streams, such as the filesystem or S3 backends, a large upload goes from the request to storage without being buffered. The future `FileUpload` can only be read once, inside the handler, and doesn't support `slice()`, so check file contents after storing them and remove files that fail. Future entrypoints aren't stable and may change in any release.
+Paired with a storage backend that streams, such as the filesystem or S3 backends, a large upload goes from the request to storage without being buffered. The future `FileUpload` can only be read once, inside the handler, and doesn't support `slice()`, so check file contents after storing them and remove files that fail. The returned key reaches your action as a string, which a client could also send as a plain text field, so only accept keys this request stored. Future entrypoints aren't stable and may change in any release.
 
 ### Parse multipart and tar streams directly
 
@@ -680,9 +677,9 @@ Paired with a storage backend that streams, such as the filesystem or S3 backend
 The upload handler runs while the body is being parsed, which means each file is stored before your action runs and before later fields in the form have been read. Plan validation around that order:
 
 - **Reject unauthorized requests before parsing.** Put authentication, such as `requireAuth()` from [`remix/middleware/auth`](/api/middleware/auth/), and any check that the user may edit this album in middleware before `formData()`. [`remix/middleware/cop`](/api/middleware/cop/) rejects cross-origin form posts before they reach the parser. Otherwise, anyone can fill your storage.
-- **Validate the key, not a file.** When the handler returns a storage key, the parsed form contains a string. Validate it with `f.field()` from [`remix/data-schema/form-data`](/api/data-schema/form-data/). `f.file()` is for forms parsed without an upload handler, where the value is a `File`.
+- **Store files in the action, after validation.** Validate the file with `f.file()` from [`remix/data-schema/form-data`](/api/data-schema/form-data/), then store it under a key the server generates. If the handler stored files and returned their keys instead, a client could send any key as an ordinary text field, and the action couldn't tell the difference.
 - **Treat the submitted name and type as untrusted.** Never use a file name as a path or join it to a directory, and don't derive the stored extension or media type from it.
-- **Clean up after later failures.** If validation fails after a file is stored, remove it.
+- **Clean up after later failures.** If saving fails after a file is stored, remove it.
 
 The handler for the cover upload puts those rules together:
 
@@ -697,15 +694,16 @@ import { createController } from "remix/router";
 import { routes } from "../../../routes.ts";
 import { coverStorage } from "../../../storage.ts";
 import { updateAlbum } from "../data.ts";
+import { requireAlbumEditor } from "../permissions.ts";
 import { uploadCover } from "./upload.ts";
 import { uploadErrors } from "./upload-errors.ts";
 
 const coverForm = f.object({
-  cover: f.field(s.string()),
+  cover: f.file(s.instanceof_(File)),
 });
 
 export default createController(routes.albums.editCover, {
-  middleware: [requireAuth()],
+  middleware: [requireAuth(), requireAlbumEditor()],
   actions: {
     index(context) {
       // render the upload form
@@ -722,7 +720,9 @@ export default createController(routes.albums.editCover, {
           return new Response("Choose a cover image", { status: 400 });
         }
 
-        let coverKey = result.value.cover;
+        let coverKey = crypto.randomUUID();
+        await coverStorage.set(coverKey, result.value.cover);
+
         let album = await updateAlbum(params.albumId, { coverKey });
 
         if (album === undefined) {
@@ -737,7 +737,7 @@ export default createController(routes.albums.editCover, {
 });
 ```
 
-`requireAuth()` needs [`auth()` earlier in the router middleware](/auth-sessions-security/#request-auth-schemes). When an album already has a cover, remove the previous key after saving the new one so replaced files don't accumulate.
+`requireAuth()` needs [`auth()` earlier in the router middleware](/auth-sessions-security/#request-auth-schemes). `requireAlbumEditor()` stands for your own middleware that checks the signed-in user may edit `params.albumId`. When an album already has a cover, remove the previous key after saving the new one so replaced files don't accumulate.
 
 ## Store files
 
@@ -762,7 +762,7 @@ Choose a backend by where the app runs:
 - [`remix/file-storage/fs`](/api/file-storage/fs/) writes to a directory on one server. Give it a directory dedicated to that storage. Files from `get()` are lazy, so they stream from disk instead of loading into memory.
 - [`remix/file-storage/s3`](/api/file-storage/s3/) stores files in AWS S3 or an S3-compatible service. Use it when the app runs on more than one server, since [every replica needs the same storage](/production/#process-safe-storage).
 
-Because every backend implements the same interface, upload handlers and file routes don't change when the backend does.
+Because every backend implements the same interface, upload actions and file routes don't change when the backend does.
 
 ### Store files in S3
 
@@ -839,6 +839,6 @@ response.headers.set(
 return response;
 ```
 
-`openLazyFile()` detects the media type from the file extension. For extensions it doesn't know, register them with `defineMimeType()` from [`remix/mime`](/api/mime/). `ContentDisposition` from [`remix/headers`](/api/headers/) builds the header value, including an RFC 8187 `filenameSplat` for file names that aren't plain ASCII.
+`openLazyFile()` detects the media type from the file extension. For extensions it doesn't know, register them with `defineMimeType()` from [`remix/mime`](/api/mime/). `ContentDisposition` from [`remix/headers`](/api/headers/) builds the header value. For file names that aren't plain ASCII, pass an RFC 8187 encoded `filenameSplat` alongside an ASCII `filename`.
 
-Avoid reading large files into a native `File` or `ArrayBuffer` first. Lazy files and storage backends stream, so memory use stays flat no matter how large the file is.
+Avoid reading large files into a native `File` or `ArrayBuffer` first. Lazy files stream, so memory use stays flat no matter how large the file is. Filesystem storage returns lazy files, but S3 storage's `get()` reads the whole object into memory.
