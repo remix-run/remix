@@ -83,8 +83,12 @@ export function AgenticPage() {
     <Document
       title="Agentic Storefronts: Sell in AI chats"
       description="Reach new buyers in AI chats and manage it all in one place with Shopify Agentic Storefronts."
-      stylesheet="/agentic.css"
-      media
+      head={
+        <>
+          <link rel="stylesheet" href="/agentic.css" />
+          <script src="/media.js" defer />
+        </>
+      }
     >
       <div class="agentic-page">
         <section class="agentic-hero" aria-labelledby="agentic-title">

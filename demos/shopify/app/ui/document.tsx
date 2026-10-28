@@ -15,8 +15,7 @@ export interface DocumentProps {
   title: string
   description: string
   home?: boolean
-  stylesheet?: string
-  media?: boolean
+  head?: RemixNode
   children: RemixNode
 }
 
@@ -40,8 +39,7 @@ export function Document(handle: Handle<DocumentProps>) {
           crossOrigin="anonymous"
         />
         <link rel="stylesheet" href="/styles.css" />
-        {handle.props.stylesheet && <link rel="stylesheet" href={handle.props.stylesheet} />}
-        {handle.props.media && <script src="/media.js" defer />}
+        {handle.props.head}
       </head>
       <body class={handle.props.home ? 'home' : 'inner-page'}>
         <a class="skip-link" href="#main">

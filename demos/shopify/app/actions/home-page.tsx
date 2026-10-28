@@ -8,7 +8,7 @@ export function HomePage() {
   return () => (
     <Document
       home
-      media
+      head={<script src="/media.js" defer />}
       title="Be the next AI all-star"
       description="Dream big and build fast on Shopify. The world’s best commerce platform."
     >

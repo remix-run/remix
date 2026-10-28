@@ -379,7 +379,7 @@ export function PricingPage() {
     <Document
       title="Pricing"
       description="Compare Shopify plans for solo entrepreneurs, teams, and complex businesses."
-      stylesheet="/pricing.css"
+      head={<link rel="stylesheet" href="/pricing.css" />}
     >
       <div class="pricing-page">
         <section class="pricing-hero section-space">
