@@ -9,7 +9,7 @@ import {
   onDrag,
   onDragEnd,
 } from '@remix-run/ui/animation'
-import { css, on, createMixin } from 'remix/component'
+import { css, on, ref, createMixin } from 'remix/component'
 import type { ElementProps } from 'remix/component'
 
 interface Action {
@@ -20,8 +20,38 @@ interface Action {
 const toastManager = toast.createToastManager<{ action: Action }>()
 
 export default function ExampleToastAction() {
+  function onUndoKeyDown(event: KeyboardEvent) {
+    if (
+      event.defaultPrevented ||
+      event.repeat ||
+      event.altKey ||
+      event.shiftKey ||
+      !(event.ctrlKey || event.metaKey) ||
+      event.key.toLowerCase() !== 'z'
+    )
+      return
+    let target = event.target
+    if (
+      target instanceof HTMLElement &&
+      (target.isContentEditable || target.closest('input, textarea, select'))
+    )
+      return
+    let action = toastManager.toastItems.find((toastItem) => toastItem.id === 'example')?.data
+      ?.action
+    if (!action) return
+    event.preventDefault()
+    action.run()
+  }
+
   return () => (
-    <div mix={styles.root}>
+    <div
+      mix={[
+        styles.root,
+        ref((node, signal) => {
+          node.ownerDocument.addEventListener('keydown', onUndoKeyDown, { signal })
+        }),
+      ]}
+    >
       <button
         type="button"
         mix={[
@@ -30,7 +60,8 @@ export default function ExampleToastAction() {
             toastManager.add({
               id: 'example',
               title: 'Action performed',
-              description: 'You can undo this action.',
+              announcement:
+                'Action performed. Press Control Z or Command Z to undo while this notification is open.',
               data: {
                 action: {
                   label: 'Undo',
@@ -103,13 +134,11 @@ export function ToastRegion() {
                   <div mix={[styles.surface]}>
                     <div mix={[styles.message, styles.hideWhenCovered]}>
                       <strong mix={[toast.title(), styles.title]}>{toastItem.title}</strong>
-                      <span mix={[toast.description(), styles.description]}>
-                        {toastItem.description}
-                      </span>
                     </div>
                     {toastItem.data?.action != null && (
                       <button
                         type="button"
+                        aria-keyshortcuts="Control+Z Meta+Z"
                         mix={[
                           on('click', toastItem.data.action.run),
                           styles.button,
@@ -204,12 +233,6 @@ const styles = {
     fontSize: '13px',
   }),
 
-  description: css({
-    display: 'block',
-    margin: '4px 0 0',
-    fontSize: '12px',
-    color: 'light-dark(#62626c, #b0b0bb)',
-  }),
   button: css({
     appearance: 'none',
     flexShrink: 0,

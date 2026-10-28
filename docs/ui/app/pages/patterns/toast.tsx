@@ -287,13 +287,20 @@ export default function ToastPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="action" title="Actions and custom data">
         <p>
-          Supply a data type to <code>createToastManager()</code> and pass custom values through
+          Supply a data type to <code>createToastManager()</code> and pass custom values through{' '}
           <code>data</code>. The context callback infers that type. Your renderer decides how to
           display it.
         </p>
         <p>
           Use data to define custom actions, including their labels and handlers. Your render logic
           decides how to present them to the user.
+        </p>
+        <p>
+          Announcements use the published title and description, excluding controls and other markup
+          added by your renderer. Set <code>announcement</code> to replace the entire spoken
+          message. Screen reader users cannot activate a toast's actions directly from its
+          announcement. Where possible, include an alternative way to perform the action in that
+          message, such as a keyboard shortcut or a control elsewhere in your application.
         </p>
         <Example id="action-example" example={action} />
       </Section>
