@@ -14,6 +14,7 @@ interface DirectoryEntry {
 export async function generateDirectoryListing(
   dirPath: string,
   pathname: string,
+  displayPathname: string,
 ): Promise<Response> {
   let entries: DirectoryEntry[] = []
 
@@ -94,7 +95,8 @@ export async function generateDirectoryListing(
 
   for (let entry of entries) {
     let icon = entry.isDirectory ? folderIcon : fileIcon
-    let href = pathname.endsWith('/') ? pathname + entry.name : pathname + '/' + entry.name
+    let encodedName = encodeURIComponent(entry.name)
+    let href = pathname.endsWith('/') ? pathname + encodedName : pathname + '/' + encodedName
     let sizeDisplay = entry.isDirectory ? '' : formatFileSize(entry.size)
     let typeDisplay = entry.isDirectory ? 'Folder' : entry.type
 
@@ -114,7 +116,7 @@ export async function generateDirectoryListing(
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Index of ${pathname}</title>
+        <title>Index of ${displayPathname}</title>
         <style>
           * {
             box-sizing: border-box;
@@ -258,7 +260,7 @@ export async function generateDirectoryListing(
       </head>
       <body>
         <div class="container">
-          <h1>Index of ${pathname}</h1>
+          <h1>Index of ${displayPathname}</h1>
           <table>
             <thead>
               <tr>
