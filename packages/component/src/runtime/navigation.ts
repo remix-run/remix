@@ -174,16 +174,71 @@ export async function navigate(href: string, options?: NavigationOptions) {
 }
 
 /**
- * Replaces the current URL without fetching, rendering, or changing scroll and focus.
- * Keeps Remix history state and the top-frame source in sync. Call after any current navigation
- * finishes. Cross-origin URLs and calls during an active navigation throw a `DOMException`.
- *
- * @param href Same-origin destination URL, resolved against the document base URL.
+ * Options for replacing the current URL.
  */
-export function replaceUrl(href: string): void {
+export interface ReplaceUrlOptions {
+  /** Cancels a pending replacement without aborting the navigation it is waiting for. */
+  signal?: AbortSignal
+}
+
+/**
+ * Replaces the current URL without fetching, rendering, or changing scroll and focus.
+ * Waits for the current navigation, rejecting if it fails, is superseded, or changes destination.
+ * Keeps Remix history state and the top-frame source in sync. Cross-origin URLs reject with
+ * `SecurityError`; superseded or redirected replacements reject with `AbortError`.
+ * An aborted signal rejects with its reason without aborting the navigation.
+ * Do not await this inside the active navigation's own interception handler.
+ *
+ * @param href Same-origin URL, resolved against the document base URL when the replacement executes.
+ * @param options Cancellation options.
+ * @returns A promise that resolves after replacement, or rejects on cancellation or failure.
+ */
+export async function replaceUrl(href: string, options?: ReplaceUrlOptions): Promise<void> {
+  let signal = options?.signal
+  signal?.throwIfAborted()
   let navigation = window.navigation
-  if (navigation?.transition) {
-    throw new DOMException('Cannot replace the URL during a navigation', 'InvalidStateError')
+  let transition: (NavigationTransition & { to?: NavigationDestination }) | null | undefined =
+    navigation?.transition
+  if (navigation && transition) {
+    let entry = navigation.currentEntry
+    // Older browsers expose only the already committed entry, without transition.to/committed.
+    let destinationUrl = transition.to?.url ?? entry?.url
+    let superseded = false
+    let listeners = new AbortController()
+    function changedNavigation() {
+      return new DOMException('Navigation changed before URL replacement', 'AbortError')
+    }
+    try {
+      await new Promise<void>((resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(signal.reason), {
+          once: true,
+          signal: listeners.signal,
+        })
+        navigation.addEventListener(
+          'navigate',
+          () => {
+            superseded = true
+            reject(changedNavigation())
+          },
+          { signal: listeners.signal },
+        )
+        void transition.committed?.then(() => {
+          entry = navigation.currentEntry
+        }, reject)
+        void transition.finished.then(resolve, reject)
+      })
+      signal?.throwIfAborted()
+      if (
+        superseded ||
+        navigation.transition ||
+        navigation.currentEntry?.id !== entry?.id ||
+        navigation.currentEntry?.url !== destinationUrl
+      ) {
+        throw changedNavigation()
+      }
+    } finally {
+      listeners.abort()
+    }
   }
 
   let state = navigation?.currentEntry?.getState()

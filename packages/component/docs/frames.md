@@ -313,24 +313,29 @@ Every source override must resolve to the document origin, using `document.baseU
 
 ### Replacing the URL
 
-Use `replaceUrl(href)` to reflect state the page already displays, such as a selected product variant:
+Use `replaceUrl(href, options?)` to reflect state the page already displays, such as a selected product variant:
 
 ```ts
 import { replaceUrl } from 'remix/component'
 
-replaceUrl('/products/shirt?color=blue')
+await replaceUrl('/products/shirt?color=blue')
 ```
 
-The URL changes synchronously without fetching or rendering. The current history entry is replaced, and scroll position and focus stay where they are, including when only the fragment changes. `history.state` and Navigation API state are preserved; Remix's entry state is updated to reload the top frame from the replacement URL on Back/Forward. The mounted top-frame source also updates, so `handle.frames.top.reload()` uses the new URL. The URL must render the state the page already shows.
+When no navigation is active, the URL changes synchronously without fetching or rendering. Otherwise, replacement waits for the current Navigation API transition to finish. The returned promise resolves after replacement. The current history entry is replaced, and scroll position and focus stay where they are, including when only the fragment changes. `history.state` and Navigation API state are preserved; Remix's entry state is updated to reload the top frame from the replacement URL on Back/Forward. The mounted top-frame source also updates, so `handle.frames.top.reload()` uses the new URL. The URL must render the state the page already shows.
 
-Relative URLs resolve against `document.baseURI`. Cross-origin URLs throw a `SecurityError` instead of navigating away. Replacement works even when frame navigation is unavailable or `run()` hasn't started.
+Relative URLs resolve against `document.baseURI` when the replacement executes, after any wait. Cross-origin URLs reject with a `SecurityError` instead of navigating away. Replacement works even when frame navigation is unavailable or `run()` hasn't started.
 
-Calling `replaceUrl()` during an active Navigation API transition throws an `InvalidStateError` without aborting the transition. Wait until it finishes before replacing the URL:
+Pass an `AbortSignal` to cancel a pending replacement. For example, `handle.signal` aborts when the component disconnects:
 
 ```ts
-await window.navigation?.transition?.finished
-replaceUrl('/products/shirt?color=blue')
+await replaceUrl('/products/shirt?color=blue', { signal: handle.signal })
 ```
+
+You can also pass a render or event signal to cancel when that work becomes stale. An already aborted signal prevents replacement; aborting while waiting rejects promptly with `signal.reason`. Cancelling the replacement leaves the navigation running.
+
+The wait is bound to the captured navigation. Navigation failures reject with their original error. If another navigation supersedes it or its destination changes, the replacement rejects with an `AbortError` and leaves the destination URL intact. A component can stay mounted across navigation, so the destination check applies even when its signal has not aborted.
+
+Do not await `replaceUrl()` inside the active navigation's own interception handler: the replacement waits for that handler to finish.
 
 Like `history.replaceState()`, this still fires native Navigation API events in browsers that support them.
 
