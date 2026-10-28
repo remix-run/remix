@@ -42,6 +42,7 @@ export interface MockContext<
   callCount(): number
   /**
    * Restores a method's original value and any own descriptor, or a standalone mock's original default.
+   * Restoring a method spy skips previously restored spies on the same property.
    * Retains call history and pending overrides; retained method spies remain callable.
    */
   restore(): void
