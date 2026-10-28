@@ -33,11 +33,11 @@ export interface MockContext<
     implementation: (this: receiver, ...args: Args) => Result,
     onCall?: number,
   ): void
-  /** Clears call history and count without changing implementations or pending overrides. */
+  /** Clears call history and resets indices without changing implementations or pending overrides. */
   resetCalls(): void
   /**
-   * Counts invocations once they return or throw, without awaiting returned promises.
-   * @returns The number of completed synchronous invocations since `resetCalls()`.
+   * Counts calls in the live history, including invocations still executing.
+   * @returns The length of the current call history.
    */
   callCount(): number
   /**
@@ -59,7 +59,6 @@ function createMockFn<T extends (...args: any[]) => any>(impl?: T): MockFunction
     | ((this: ThisParameterType<T>, ...args: Parameters<T>) => ReturnType<T>)
     | undefined = impl
   let overrides = new Map<number, NonNullable<typeof implementation>>()
-  let completedCalls = 0
 
   let fn = function (this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> {
     let index = fn.mock.calls.length
@@ -67,19 +66,17 @@ function createMockFn<T extends (...args: any[]) => any>(impl?: T): MockFunction
     overrides.delete(index)
     let call: MockCall<Parameters<T>, ReturnType<T>> = { arguments: args }
     fn.mock.calls.push(call)
-    try {
-      if (current) {
+    if (current) {
+      try {
         let result = current.apply(this, args)
         call.result = result
         return result
+      } catch (error) {
+        call.error = error
+        throw error
       }
-      return undefined as ReturnType<T>
-    } catch (error) {
-      call.error = error
-      throw error
-    } finally {
-      completedCalls++
     }
+    return undefined as ReturnType<T>
   } as MockFunction<T>
 
   fn.mock = {
@@ -98,10 +95,9 @@ function createMockFn<T extends (...args: any[]) => any>(impl?: T): MockFunction
     },
     resetCalls() {
       fn.mock.calls = []
-      completedCalls = 0
     },
     callCount() {
-      return completedCalls
+      return fn.mock.calls.length
     },
     restore() {
       implementation = original
