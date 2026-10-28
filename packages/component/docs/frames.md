@@ -311,33 +311,38 @@ During navigation, the top frame's source stays in sync with the browser URL. `d
 
 Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 
-### Replacing the URL
+### Updating the URL
 
-Use `replaceUrl(href, options?)` to reflect state the page already displays, such as a selected product variant:
-
-```ts
-import { replaceUrl } from 'remix/component'
-
-await replaceUrl('/products/shirt?color=blue')
-```
-
-When no navigation is active, the URL changes synchronously without fetching or rendering. Otherwise, replacement waits for the current Navigation API transition to finish. The returned promise resolves after replacement. The current history entry is replaced, and scroll position and focus stay where they are, including when only the fragment changes. `history.state` and Navigation API state are preserved; Remix's entry state is updated to reload the top frame from the replacement URL on Back/Forward. The mounted top-frame source also updates, so `handle.frames.top.reload()` uses the new URL. The URL must render the state the page already shows.
-
-Relative URLs resolve against `document.baseURI` when the replacement executes, after any wait. Cross-origin URLs reject with a `SecurityError` instead of navigating away. Replacement works even when frame navigation is unavailable or `run()` hasn't started.
-
-Pass an `AbortSignal` to cancel a pending replacement. For example, `handle.signal` aborts when the component disconnects:
+Use `updateUrl(href, options?)` to reflect state the page already displays, such as a selected product variant:
 
 ```ts
-await replaceUrl('/products/shirt?color=blue', { signal: handle.signal })
+import { updateUrl } from 'remix/component'
+
+await updateUrl('/products/shirt?color=blue')
+
+// Preserve the previous URL for Back/Forward:
+await updateUrl('/products/shirt?color=red', { history: 'push' })
 ```
 
-You can also pass a render or event signal to cancel when that work becomes stale. An already aborted signal prevents replacement; aborting while waiting rejects promptly with `signal.reason`. Cancelling the replacement leaves the navigation running.
+When no navigation is active, the URL changes synchronously without fetching or rendering. Otherwise, the update waits for the current Navigation API transition to finish. The returned promise resolves after the URL update. `history` defaults to `'replace'`, which replaces the current entry. Use `'push'` to add an entry so Back returns to the previous URL. Scroll position and focus stay where they are in both modes, including when only the fragment changes.
 
-The wait is bound to the captured navigation. Navigation failures reject with their original error. If another navigation supersedes it or its destination changes, the replacement rejects with an `AbortError` and leaves the destination URL intact. A component can stay mounted across navigation, so the destination check applies even when its signal has not aborted.
+`history.state` and Navigation API state are carried into the updated entry; Remix's entry state reloads the top frame from the matching URL on Back/Forward. A push leaves the previous entry unchanged. Traversing between these entries performs normal frame navigation. The mounted top-frame source also updates, so `handle.frames.top.reload()` uses the new URL. Each URL must render the state the page displayed for that entry.
 
-Do not await `replaceUrl()` inside the active navigation's own interception handler: the replacement waits for that handler to finish.
+Relative URLs resolve against `document.baseURI` when the update executes, after any wait. Cross-origin URLs reject with a `SecurityError` instead of navigating away. Updates work even when frame navigation is unavailable or `run()` hasn't started.
 
-Like `history.replaceState()`, this still fires native Navigation API events in browsers that support them.
+Pass an `AbortSignal` to cancel a pending update. For example, `handle.signal` aborts when the component disconnects:
+
+```ts
+await updateUrl('/products/shirt?color=blue', { history: 'push', signal: handle.signal })
+```
+
+You can also pass a render or event signal to cancel when that work becomes stale. An already aborted signal prevents the update; aborting while waiting rejects promptly with `signal.reason`. Cancellation leaves the navigation running and does not add or replace a history entry.
+
+The wait is bound to the captured navigation. Navigation failures reject with their original error. If another navigation supersedes it or its destination changes, the update rejects with an `AbortError` and leaves the destination URL intact. A component can stay mounted across navigation, so the destination check applies even when its signal has not aborted.
+
+Do not await `updateUrl()` inside the active navigation's own interception handler: the update waits for that handler to finish.
+
+Like `history.pushState()` and `history.replaceState()`, this still fires native Navigation API events in browsers that support them.
 
 ### Disabling frame navigation
 

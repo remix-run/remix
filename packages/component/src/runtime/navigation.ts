@@ -174,26 +174,29 @@ export async function navigate(href: string, options?: NavigationOptions) {
 }
 
 /**
- * Options for replacing the current URL.
+ * Options for updating the current URL.
  */
-export interface ReplaceUrlOptions {
-  /** Cancels a pending replacement without aborting the navigation it is waiting for. */
+export interface UpdateUrlOptions {
+  /** How the URL updates browser history. (default: `"replace"`) */
+  history?: 'replace' | 'push'
+  /** Cancels a pending URL update without aborting the navigation it is waiting for. */
   signal?: AbortSignal
 }
 
 /**
- * Replaces the current URL without fetching, rendering, or changing scroll and focus.
+ * Updates the current URL without fetching, rendering, or changing scroll and focus.
+ * Replaces the current history entry by default; use `history: 'push'` to add an entry.
  * Waits for the current navigation, rejecting if it fails, is superseded, or changes destination.
  * Keeps Remix history state and the top-frame source in sync. Cross-origin URLs reject with
- * `SecurityError`; superseded or redirected replacements reject with `AbortError`.
+ * `SecurityError`; superseded or redirected updates reject with `AbortError`.
  * An aborted signal rejects with its reason without aborting the navigation.
  * Do not await this inside the active navigation's own interception handler.
  *
- * @param href Same-origin URL, resolved against the document base URL when the replacement executes.
- * @param options Cancellation options.
- * @returns A promise that resolves after replacement, or rejects on cancellation or failure.
+ * @param href Same-origin URL, resolved against the document base URL when the update executes.
+ * @param options History and cancellation options.
+ * @returns A promise that resolves after the URL update, or rejects on cancellation or failure.
  */
-export async function replaceUrl(href: string, options?: ReplaceUrlOptions): Promise<void> {
+export async function updateUrl(href: string, options?: UpdateUrlOptions): Promise<void> {
   let signal = options?.signal
   signal?.throwIfAborted()
   let navigation = window.navigation
@@ -206,7 +209,7 @@ export async function replaceUrl(href: string, options?: ReplaceUrlOptions): Pro
     let superseded = false
     let listeners = new AbortController()
     function changedNavigation() {
-      return new DOMException('Navigation changed before URL replacement', 'AbortError')
+      return new DOMException('Navigation changed before URL update', 'AbortError')
     }
     try {
       await new Promise<void>((resolve, reject) => {
@@ -242,7 +245,11 @@ export async function replaceUrl(href: string, options?: ReplaceUrlOptions): Pro
   }
 
   let state = navigation?.currentEntry?.getState()
-  window.history.replaceState(window.history.state, '', href)
+  if (options?.history === 'push') {
+    window.history.pushState(window.history.state, '', href)
+  } else {
+    window.history.replaceState(window.history.state, '', href)
+  }
   let src = window.location.href
   if (navigation && state !== undefined) {
     navigation.updateCurrentEntry({

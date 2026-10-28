@@ -197,15 +197,18 @@ Scroll and focus controls accept the Navigation API values `"after-transition"` 
 
 Existing boolean options and `"true"` / `"false"` attribute values remain supported: `true` corresponds to `"after-transition"` and `false` to `"manual"`.
 
-Use `replaceUrl()` to reflect state the page already displays, such as a selected product variant:
+Use `updateUrl()` to reflect state the page already displays, such as a selected product variant:
 
 ```ts
-import { replaceUrl } from 'remix/component'
+import { updateUrl } from 'remix/component'
 
-await replaceUrl('/products/shirt?color=blue')
+await updateUrl('/products/shirt?color=blue')
+
+// Keep the previous URL available through Back:
+await updateUrl('/products/shirt?color=red', { history: 'push' })
 ```
 
-This replaces the current history entry without fetching, rendering, or moving scroll and focus, including for fragment-only changes. Remix keeps the top-frame source and history state in sync, so later reloads and Back/Forward use the replacement URL. It also works without frame navigation support. The URL must be same-origin. If a navigation is active, replacement waits for it and rejects if it fails, is superseded, or changes destination. Pass `{ signal: handle.signal }` to cancel a pending replacement when the component unmounts. See [Replacing the URL](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#replacing-the-url) for details.
+This updates the URL without fetching, rendering, or moving scroll and focus, including for fragment-only changes. It replaces the current history entry by default; `history: 'push'` adds an entry. Remix keeps the top-frame source and history state in sync, so later reloads and Back/Forward use the matching URL. It also works without frame navigation support. The URL must be same-origin. If a navigation is active, the update waits for it and rejects if it fails, is superseded, or changes destination. Pass `{ signal: handle.signal }` to cancel a pending update when the component unmounts. See [Updating the URL](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#updating-the-url) for details.
 
 Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
 and forms as document navigations while still hydrating client entries and using explicit frames,
