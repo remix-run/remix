@@ -55,6 +55,7 @@ export type MockFunction<T extends (...args: any[]) => any = (...args: any[]) =>
 const createObject = Object.create
 const defineProperty = Object.defineProperty
 const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
+const isSafeInteger = Number.isSafeInteger
 const setProperty = Reflect.set
 
 // A required implementation preserves generic signatures during type inference.
@@ -94,7 +95,7 @@ function createMockFn<T extends (...args: any[]) => any>(impl?: T): MockFunction
       if (typeof value !== 'function') throw new TypeError('implementation must be a function')
       let index = onCall ?? fn.mock.calls.length
       if (typeof index !== 'number') throw new TypeError('onCall must be a number')
-      if (!Number.isSafeInteger(index) || index < fn.mock.calls.length) {
+      if (!isSafeInteger(index) || index < fn.mock.calls.length) {
         throw new RangeError('onCall must be a safe integer at or after the next call index')
       }
       overrides[index] = value

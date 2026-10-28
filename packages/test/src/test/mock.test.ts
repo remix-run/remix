@@ -47,6 +47,28 @@ describe('mock function controls', () => {
     assert.equal(spy.mock.callCount(), 0)
   })
 
+  it('schedules and validates overrides without calling a mocked integer validator', () => {
+    let original = Number.isSafeInteger
+    let spy = mock.method(Number, 'isSafeInteger')
+    try {
+      spy.mock.mockImplementationOnce(() => false)
+      assert.equal(spy.mock.callCount(), 0)
+      assert.equal(Number.isSafeInteger(3), false)
+      assert.equal(Number.isSafeInteger(3), true)
+
+      spy.mock.mockImplementation(() => true)
+      assert.throws(() => spy.mock.mockImplementationOnce(() => false, 2.5), RangeError)
+      assert.equal(spy.mock.callCount(), 2)
+      spy.mock.mockImplementationOnce(() => false, 3)
+      assert.equal(spy.mock.callCount(), 2)
+      assert.equal(Number.isSafeInteger(3), true)
+      assert.equal(Number.isSafeInteger(3), false)
+      assert.equal(Number.isSafeInteger(3), true)
+    } finally {
+      Number.isSafeInteger = original
+    }
+  })
+
   it('restores Object.defineProperty without calling its replacement', () => {
     let original = Object.defineProperty
     let spy = mock.method(Object, 'defineProperty', (target) => target)
