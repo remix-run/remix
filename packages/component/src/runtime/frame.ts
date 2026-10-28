@@ -1731,7 +1731,11 @@ function collectFrameTemplates(node: Node, collect: (template: HTMLTemplateEleme
   }
 }
 
-export function publishFrameTemplate(id: string, fragment: DocumentFragment): void {
+export function publishFrameTemplate(
+  id: string,
+  fragment: DocumentFragment,
+  options?: { inertScripts?: boolean },
+): void {
   let listeners = frameTemplateListeners.get(id)
   if (!listeners || listeners.size === 0) {
     let queue = bufferedFrameTemplates.get(id)
@@ -1746,7 +1750,31 @@ export function publishFrameTemplate(id: string, fragment: DocumentFragment): vo
   for (let listener of listeners) {
     let clone = fragment.cloneNode(true)
     invariant(isDocumentFragmentNode(clone), 'Expected cloned frame template fragment')
+    if (options?.inertScripts) makeSvgScriptsInert(clone)
     listener(clone)
+  }
+}
+
+function makeSvgScriptsInert(source: ParentNode): void {
+  // Work around browser bugs that make fragment-parsed SVG scripts executable after cloning.
+  // Recreate the script shell with the fragment parser after cloning to keep it inert.
+  // https://crbug.com/538197148
+  for (let script of source.querySelectorAll('script')) {
+    if (!(script instanceof SVGScriptElement)) continue
+    let doc = script.ownerDocument
+    let svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.innerHTML = '<script></script>'
+    let replacement = svg.firstElementChild
+    invariant(replacement, 'Missing SVG script')
+    for (let attribute of script.attributes) {
+      replacement.setAttributeNodeNS(doc.importNode(attribute, true))
+    }
+    if (script.hasAttribute('nonce')) replacement.setAttribute('nonce', script.nonce)
+    replacement.replaceChildren(...script.childNodes)
+    script.replaceWith(replacement)
+  }
+  for (let template of source.querySelectorAll('template')) {
+    makeSvgScriptsInert(template.content)
   }
 }
 
@@ -1866,7 +1894,7 @@ async function renderFrameStream(
 
   function rewriteAndPublishTemplate(id: string, fragment: DocumentFragment): void {
     rewriteResponseNonces(fragment, responseNonce, documentNonce)
-    publishFrameTemplate(id, fragment)
+    publishFrameTemplate(id, fragment, { inertScripts: true })
   }
 
   try {

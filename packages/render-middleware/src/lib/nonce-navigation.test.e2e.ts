@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import { render } from '../index.ts'
 
 describe('CSP navigation', () => {
-  it('updates authorized styles across named-frame and document reloads under an HTTP policy', async (t) => {
+  it('updates authorized styles and keeps scripts inert across frame reloads under an HTTP policy', async (t) => {
     let assets = createAssetServer({
       rootDir: fileURLToPath(new URL('../../../../', import.meta.url)),
       basePath: '/assets',
@@ -83,6 +83,18 @@ describe('CSP navigation', () => {
             nonce: getCspNonce(context),
             children: 'globalThis.navigationScriptRan = true',
           }),
+          createElement(
+            'svg',
+            {},
+            jsx('script', {
+              id: 'late-svg-script',
+              type: 'text/javascript',
+              nonce: getCspNonce(context),
+              children: 'globalThis.navigationScriptRan = true',
+            }),
+            jsx('script', { nonce: getCspNonce(context), href: '/script-probe' }),
+            jsx('script', { nonce: getCspNonce(context), 'xlink:href': '/script-probe' }),
+          ),
         ),
       )
     })
@@ -258,6 +270,27 @@ describe('CSP navigation', () => {
       'rgb(10, 20, 30)',
     )
     assert.equal(await page.locator('noscript').textContent(), '')
+    assert.deepEqual(
+      await page.locator('#late-svg-script').evaluate((script) => ({
+        namespace: script.namespaceURI,
+        nonce: script.nonce,
+        type: script.getAttribute('type'),
+        content: script.textContent,
+      })),
+      {
+        namespace: 'http://www.w3.org/2000/svg',
+        nonce: documentNonce,
+        type: 'text/javascript',
+        content: 'globalThis.navigationScriptRan = true',
+      },
+    )
+    assert.equal(
+      await page
+        .locator('svg script')
+        .last()
+        .evaluate((script) => script.getAttributeNS('http://www.w3.org/1999/xlink', 'href')),
+      '/script-probe',
+    )
     assert.equal(
       await page.evaluate(() => Reflect.get(globalThis, 'navigationScriptRan')),
       undefined,
