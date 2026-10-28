@@ -311,6 +311,31 @@ During navigation, the top frame's source stays in sync with the browser URL. `d
 
 Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 
+### Replacing the URL
+
+Use `replaceUrl(href)` to reflect state the page already displays, such as a selected product variant:
+
+```ts
+import { replaceUrl } from 'remix/component'
+
+replaceUrl('/products/shirt?color=blue')
+```
+
+The URL changes synchronously without fetching or rendering. The current history entry is replaced, and scroll position and focus stay where they are, including when only the fragment changes. `history.state` and Navigation API state are preserved; Remix's entry state is updated to reload the top frame from the replacement URL on Back/Forward. The mounted top-frame source also updates, so `handle.frames.top.reload()` uses the new URL. The URL must render the state the page already shows.
+
+Relative URLs resolve against `document.baseURI`. Cross-origin URLs throw a `SecurityError` instead of navigating away. Replacement works even when frame navigation is unavailable or `run()` hasn't started.
+
+Calling `replaceUrl()` during an active Navigation API transition throws an `InvalidStateError` without aborting the transition. Wait until it finishes before replacing the URL:
+
+```ts
+await window.navigation?.transition?.finished
+replaceUrl('/products/shirt?color=blue')
+```
+
+Like `history.replaceState()`, this still fires native Navigation API events in browsers that support them.
+
+### Disabling frame navigation
+
 To keep links/forms as a document navigations while still hydrating client entries and using explicit
 frames, you can cancel the built-in `navigate` event behavior with your own listener before calling
 `run()`:

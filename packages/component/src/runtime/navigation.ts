@@ -1,4 +1,4 @@
-import { getTopFrame, getNamedFrame } from './run.ts'
+import { getTopFrame, getNamedFrame, setTopFrameSource } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 import { isDocumentReload, reloadCurrentDocument } from './document-reload.ts'
@@ -171,6 +171,30 @@ export async function navigate(href: string, options?: NavigationOptions) {
 
   let transition = navigation.navigate(href, { state, history: options?.history })
   await transition.finished
+}
+
+/**
+ * Replaces the current URL without fetching, rendering, or changing scroll and focus.
+ * Keeps Remix history state and the top-frame source in sync. Call after any current navigation
+ * finishes. Cross-origin URLs and calls during an active navigation throw a `DOMException`.
+ *
+ * @param href Same-origin destination URL, resolved against the document base URL.
+ */
+export function replaceUrl(href: string): void {
+  let navigation = window.navigation
+  if (navigation?.transition) {
+    throw new DOMException('Cannot replace the URL during a navigation', 'InvalidStateError')
+  }
+
+  let state = navigation?.currentEntry?.getState()
+  window.history.replaceState(window.history.state, '', href)
+  let src = window.location.href
+  if (navigation && state !== undefined) {
+    navigation.updateCurrentEntry({
+      state: isRuntimeNavigation(state) ? { ...state, target: undefined, src } : state,
+    })
+  }
+  setTopFrameSource(src)
 }
 
 /**

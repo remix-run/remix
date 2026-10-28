@@ -197,6 +197,16 @@ Scroll and focus controls accept the Navigation API values `"after-transition"` 
 
 Existing boolean options and `"true"` / `"false"` attribute values remain supported: `true` corresponds to `"after-transition"` and `false` to `"manual"`.
 
+Use `replaceUrl()` to reflect state the page already displays, such as a selected product variant:
+
+```ts
+import { replaceUrl } from 'remix/component'
+
+replaceUrl('/products/shirt?color=blue')
+```
+
+This replaces the current history entry without fetching, rendering, or moving scroll and focus, including for fragment-only changes. Remix keeps the top-frame source and history state in sync, so later reloads and Back/Forward use the replacement URL. It also works without frame navigation support. The URL must be same-origin, and any active navigation must finish first. See [Replacing the URL](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#replacing-the-url) for details.
+
 Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
 and forms as document navigations while still hydrating client entries and using explicit frames,
 register a listener before calling `run()`:

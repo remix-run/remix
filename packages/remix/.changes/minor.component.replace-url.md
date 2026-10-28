@@ -1,0 +1,1 @@
+Use `replaceUrl(href)` from `remix/component` to reflect state the page already displays in the URL without fetching, rendering, adding a history entry, or moving scroll and focus. Remix keeps frame sources and history state in sync for later reloads and Back/Forward. Call after any active navigation finishes and pass a same-origin URL.
