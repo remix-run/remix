@@ -158,25 +158,32 @@ The `remix assets` command prints the same information from the terminal. `remix
 
 ## Load browser scripts
 
-A page that runs browser code needs three things from the asset server: the entry module's URL, the URLs of every module it depends on, and an import map for bare specifiers. `getScriptEntry()` returns all three. For an entry every page loads, resolve it once in `app/assets.ts`:
+A page that runs browser code needs three things from the asset server: the entry module's URL, the URLs of every module it depends on, and an import map for bare specifiers. `getScriptEntry()` returns all three. Call it for each request rather than once at startup. The result changes whenever files change during development, through `watch` or HMR, and `getScriptEntry()` caches it in between:
 
 ```ts filename=app/assets.ts
 const entry = "app/actions/public/entry.ts";
 
-export const scriptEntry = await assets.getScriptEntry(entry);
+export async function getMainScriptEntry() {
+  return await assets.getScriptEntry(entry);
+}
 ```
 
-The document renders them in `<head>`:
+The document takes the result as a prop and renders it in `<head>`:
 
 ```tsx filename=app/actions/document.tsx
+import type { ScriptEntry } from "remix/assets";
 import type { Handle, RemixNode } from "remix/component";
 import { ImportMap } from "remix/component/server";
 
-import { scriptEntry } from "../assets.ts";
+interface DocumentProps {
+  children?: RemixNode;
+  scriptEntry: ScriptEntry;
+  title?: string;
+}
 
-export function Document(handle: Handle<{ children?: RemixNode; title?: string }>) {
+export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { href, importMap, preloads } = scriptEntry;
+    let { href, importMap, preloads } = handle.props.scriptEntry;
 
     return (
       <html lang="en">
@@ -196,6 +203,17 @@ export function Document(handle: Handle<{ children?: RemixNode; title?: string }
 }
 ```
 
+Actions pass it in when they render:
+
+```tsx
+// inside an action:
+return context.render(
+  <Document scriptEntry={await getMainScriptEntry()} title="Albums">
+    <AlbumList albums={albums} />
+  </Document>,
+);
+```
+
 `preloads` lists every module the entry depends on. Without those `<link rel="modulepreload">` tags, the browser would download the entry, discover its imports, download those, and repeat one level at a time. With them, it requests the whole graph at once.
 
 That's also the answer to "isn't that a lot of files?" Many small modules download in parallel over HTTP/2. A plain `node:http` server speaks HTTP/1.1, so production deployments usually get HTTP/2 from the proxy or CDN in front of the app.
@@ -206,9 +224,32 @@ That's also the answer to "isn't that a lot of files?" Many small modules downlo
 
 A hydrated component declares where its code lives with `clientEntry(import.meta.url, ...)`. On the server, `import.meta.url` is a `file://` URL for the component's module, which is meaningless to a browser. When the page renders, `render({ assets })` passes that ID to `assets.getScriptEntry()` and gets back the public `href`, `preloads`, and import map for the component's module. This lookup is the part a bundler's build manifest would normally provide. Remix components don't depend on the asset server. They only need something that can resolve an entry ID to a URL.
 
+If you call `renderToStream()` from [`remix/component/server`](../src/component/server/README.md) yourself instead of using `render()`, pass that lookup as the `resolveClientEntry` option:
+
+```tsx
+// inside an action:
+let stream = renderToStream(<AlbumPage album={album} />, {
+  async resolveClientEntry(entryId, component) {
+    let { href, importMap, preloads } = await assets.getScriptEntry(entryId);
+    let exportName = entryId.split("#")[1] || component.name;
+    return { href, importMap, preloads, exportName };
+  },
+});
+
+return new Response(stream, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+```
+
 ### Barrel files
 
-Packages often re-export everything through an `index.js` barrel. When you import a named binding through one, such as `import { css } from "remix/component"`, the asset server rewrites the import to the module that defines `css`, so the browser skips the barrel and every unrelated module it re-exports. This is an optimization that doesn't change behavior: it only applies when every skipped module is declared side-effect free by its package's `sideEffects` field in `package.json`. Without that metadata, the import is served as written.
+Packages often re-export everything through an `index.js` barrel. When you import a named binding through one, such as `import { css } from "remix/component"`, the asset server rewrites the import to the module that defines `css`, so the browser skips the barrel and every unrelated module it re-exports.
+
+It only skips modules that their package marks as free of side effects with the [`sideEffects` field](https://webpack.js.org/guides/tree-shaking/#mark-the-file-as-side-effect-free) in `package.json`, the same field bundlers use for tree shaking. Otherwise the import is served as written. Set it to `false`, or to a list of the files that do have side effects:
+
+```json filename=package.json
+{
+  "sideEffects": false
+}
+```
 
 ## Reference styles, images, and fonts
 
@@ -328,14 +369,32 @@ Transformed files are recomputed on every request unless you configure `files.ca
 
 Image transforms usually depend on a third-party library such as Sharp, which you install separately with `npm i sharp`.
 
-## Hot reloading in development
+## Watching for changes
 
 There are two ways to pick up changes while you work, and they trade simplicity for speed:
 
 - **Restart on change.** Run the server with Node's `--watch` so it restarts when server code changes, and set the asset server's `watch` option so browser source is recompiled when it changes. You refresh the page to see updates. There are no extra moving parts, but every change loses client state.
 - **Hot module replacement.** Run the server through [`remix/node-hmr`](../src/node-hmr/README.md), which reloads changed server modules without restarting the process, and enable the asset server's `hmr` option so the page updates in place. Updates are faster and keep client state, at the cost of a separate runner process and a few more options.
 
-For HMR, the asset server opts in when the runner is active:
+For HMR, start the server through `run()` from `remix/node-hmr`. It runs `server.ts` in a child process with `REMIX_NODE_HMR` set:
+
+```ts filename=hmr.ts
+import { run } from "remix/node-hmr";
+
+run("server.ts", {
+  nodeArgs: ["--import", "remix/node-tsx", "--import", "remix/component-hmr/node"],
+});
+```
+
+```json filename=package.json
+{
+  "scripts": {
+    "hmr": "NODE_ENV=development node hmr.ts"
+  }
+}
+```
+
+The asset server opts in when `REMIX_NODE_HMR` is set:
 
 ```ts filename=app/assets.ts
 import { createAssetServer } from "remix/assets";
