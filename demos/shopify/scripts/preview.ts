@@ -26,8 +26,23 @@ const router = createRouter({
   },
 })
 const server = http.createServer(
-  createRequestListener((request) => serveAgentGuide(request, router.fetch)),
+  createRequestListener((request) => serveAgentGuide(request, fetchFile)),
 )
+
+// The export links fingerprinted assets as `styles.%40abc123.css` to avoid Cloudflare redirects
+// (see scripts/render-site.ts), while the files on disk are named `styles.@abc123.css`. Like
+// Cloudflare, decode the path before looking up the file; staticFiles uses it as written. Remove
+// this once staticFiles percent-decodes request paths itself.
+function fetchFile(request: Request) {
+  let url = new URL(request.url)
+  try {
+    url.pathname = decodeURIComponent(url.pathname)
+  } catch {
+    return router.fetch(request)
+  }
+  return router.fetch(new Request(url, request))
+}
+
 const port = Number(process.env.PORT ?? 44100)
 
 server.listen(port, () => {

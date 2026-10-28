@@ -1,20 +1,26 @@
-import {
-  cp,
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rename,
-  rm,
-  stat,
-  writeFile,
-} from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, rename, rm, stat, writeFile } from 'node:fs/promises'
 import * as path from 'node:path'
-import { transform } from 'esbuild'
 import { parse } from 'node-html-parser'
 
-import { publicDirectory, router } from '../app/router.ts'
 import { pagePaths } from '../app/data/pages.ts'
+import { publicDirectory, router } from '../app/router.ts'
+import { routes } from '../app/routes.ts'
+
+const assetBase = routes.assets.href({ path: '' })
+
+// Workaround: Cloudflare Workers Static Assets re-encodes each path segment with
+// `encodeURIComponent` and 307-redirects any request whose path changes. Fingerprinted asset URLs
+// from remix/assets contain `.@` (for example `styles.@abc123.css`), and `@` encodes to `%40`, so
+// every asset would cost an extra round trip and miss its `_headers` cache rule. The export writes
+// the already-encoded `.%40` form into its HTML, CSS, and `_headers` instead. The files keep their
+// `@` names because Cloudflare decodes the path before looking them up. Remove this once
+// https://github.com/remix-run/remix/pull/12112 lands; it switches remix/assets to `.~`, which
+// `encodeURIComponent` leaves unchanged (this rewrite only matches `.@`, so it becomes a no-op).
+const fingerprintSeparator = new RegExp(`(${assetBase}[^\\s"'()]*?)\\.@`, 'g')
+
+function encodeFingerprintSeparators(text: string): string {
+  return text.replace(fingerprintSeparator, '$1.%40')
+}
 
 export async function renderSite(
   outputDirectory: string,
@@ -28,15 +34,37 @@ export async function renderSite(
 
   try {
     await cp(publicDirectory, stagingDirectory, { recursive: true })
-    for (let filename of await readdir(stagingDirectory)) {
-      let extension = path.extname(filename)
-      if (extension !== '.css' && extension !== '.js') continue
-      let file = path.join(stagingDirectory, filename)
-      let { code } = await transform(await readFile(file, 'utf8'), {
-        loader: extension === '.css' ? 'css' : 'js',
-        minify: true,
-      })
-      await writeFile(file, code)
+
+    let assetCacheControl = new Map<string, string | null>()
+
+    function resolveOutput(pathname: string, referrer: string) {
+      let file = path.resolve(stagingDirectory, `.${decodeURIComponent(pathname)}`)
+      if (!file.startsWith(stagingDirectory + path.sep)) {
+        throw new Error(`Asset outside the output directory on ${referrer}: ${pathname}`)
+      }
+      return file
+    }
+
+    // Writes an asset server response to the export, along with the files its CSS references.
+    async function exportAsset(url: URL, referrer: string): Promise<void> {
+      if (assetCacheControl.has(url.pathname)) return
+      let response = await fetchPage(new Request(url))
+      if (response.status !== 200) {
+        throw new Error(`Missing local page or asset on ${referrer}: ${url.pathname}`)
+      }
+      assetCacheControl.set(url.pathname, response.headers.get('Cache-Control'))
+      let destination = resolveOutput(url.pathname, referrer)
+      await mkdir(path.dirname(destination), { recursive: true })
+      if (!response.headers.get('Content-Type')?.includes('text/css')) {
+        await writeFile(destination, new Uint8Array(await response.arrayBuffer()))
+        return
+      }
+      let css = await response.text()
+      await writeFile(destination, encodeFingerprintSeparators(css))
+      for (let match of css.matchAll(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g)) {
+        let reference = new URL(match[2], url)
+        if (reference.origin === origin) await exportAsset(reference, url.pathname)
+      }
     }
 
     for (let pathname of pagePaths) {
@@ -50,10 +78,18 @@ export async function renderSite(
       documents.set(pathname, parse(html))
       let destination = path.join(stagingDirectory, pathname.slice(1), 'index.html')
       await mkdir(path.dirname(destination), { recursive: true })
-      await writeFile(destination, html)
+      await writeFile(destination, encodeFingerprintSeparators(html))
     }
 
-    for (let [pathname, document] of documents) {
+    let notFound = await fetchPage(new Request(new URL('/__not-found__', origin)))
+    if (notFound.status !== 404) throw new Error('Expected a 404 response for the missing page')
+    let notFoundHtml = await notFound.text()
+    await writeFile(
+      path.join(stagingDirectory, '404.html'),
+      encodeFingerprintSeparators(notFoundHtml),
+    )
+
+    for (let [pathname, document] of [...documents, ['/404.html', parse(notFoundHtml)] as const]) {
       let references = document
         .querySelectorAll('a[href], link[href], [src], [srcset], [data-src], [poster]')
         .flatMap((element) => {
@@ -76,12 +112,10 @@ export async function renderSite(
           if (url.hash && !targetDocument.getElementById(decodeURIComponent(url.hash.slice(1)))) {
             throw new Error(`Broken fragment on ${pathname}: ${reference}`)
           }
+        } else if (url.pathname.startsWith(assetBase)) {
+          await exportAsset(url, pathname)
         } else {
-          let assetPath = path.resolve(stagingDirectory, `.${url.pathname}`)
-          if (!assetPath.startsWith(stagingDirectory + path.sep)) {
-            throw new Error(`Asset outside the output directory on ${pathname}: ${reference}`)
-          }
-          let file = await stat(assetPath).catch(() => undefined)
+          let file = await stat(resolveOutput(url.pathname, pathname)).catch(() => undefined)
           if (!file?.isFile()) {
             throw new Error(`Missing local page or asset on ${pathname}: ${reference}`)
           }
@@ -89,9 +123,18 @@ export async function renderSite(
       }
     }
 
-    let notFound = await fetchPage(new Request(new URL('/__not-found__', origin)))
-    if (notFound.status !== 404) throw new Error('Expected a 404 response for the missing page')
-    await writeFile(path.join(stagingDirectory, '404.html'), await notFound.text())
+    // Cloudflare Workers Static Assets reads cache rules from `_headers`, so fingerprinted assets
+    // keep the asset server's long-lived Cache-Control header after export.
+    let headerRules = [...assetCacheControl]
+      .filter(([, cacheControl]) => cacheControl)
+      .map(
+        ([pathname, cacheControl]) =>
+          `${encodeFingerprintSeparators(pathname)}\n  Cache-Control: ${cacheControl}\n`,
+      )
+    if (headerRules.length > 0) {
+      await writeFile(path.join(stagingDirectory, '_headers'), headerRules.join(''))
+    }
+
     // Publish only after every page and its local links have passed validation.
     await rm(outputDirectory, { recursive: true, force: true })
     await rename(stagingDirectory, outputDirectory)

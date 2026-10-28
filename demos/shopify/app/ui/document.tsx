@@ -1,5 +1,6 @@
 import type { Handle, RemixNode } from 'remix/component'
 
+import { assets } from '../assets.ts'
 import { images } from '../data/images.ts'
 import {
   editionLinks,
@@ -36,11 +37,11 @@ export function Document(handle: Handle<DocumentProps>) {
         <link
           rel="preload"
           as="font"
-          href="/assets/shopify.woff2"
+          href={assets.font}
           type="font/woff2"
           crossOrigin="anonymous"
         />
-        <link rel="stylesheet" href="/styles.css" />
+        <link rel="stylesheet" href={assets.styles} />
         {handle.props.head}
       </head>
       <body class={handle.props.home ? 'home' : 'inner-page'}>
@@ -60,7 +61,7 @@ function SiteHeader() {
     <header class="site-header">
       <div class="header-inner container">
         <a class="brand" href={routes.home.href()} aria-label="Shopify home">
-          <img src="/assets/logo.svg" alt="Shopify" width="125" height="36" />
+          <img src={assets.logo} alt="Shopify" width="125" height="36" />
         </a>
         <nav class="desktop-nav" aria-label="Main navigation">
           <button class="nav-trigger" type="button" popoverTarget="why-menu">
@@ -221,7 +222,7 @@ function SiteFooter() {
       <div class="container">
         <div class="footer-grid">
           <a href={routes.home.href()} class="footer-brand" aria-label="Back to Shopify home">
-            <img src="/assets/logo.svg" alt="Shopify" width="125" height="36" loading="lazy" />
+            <img src={assets.logo} alt="Shopify" width="125" height="36" loading="lazy" />
           </a>
           {footerGroups.map((group) => (
             <div key={group.label}>

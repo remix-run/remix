@@ -45,7 +45,7 @@ export interface AutoplayVideoProps {
 }
 
 /**
- * A muted, looping video that `public/media.js` starts after the page loads and while it is
+ * A muted, looping video that `app/ui/public/media.js` starts after the page loads and while it is
  * visible. Sources stay in `data-src` until then so they don't compete with the page's images.
  */
 export function AutoplayVideo(handle: Handle<AutoplayVideoProps>) {

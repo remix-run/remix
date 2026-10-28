@@ -24,7 +24,7 @@ pnpm -C demos/shopify preview
 
 The prerender script calls `router.fetch(new Request(...))` for every page. It consumes each full HTML response and writes 33 pages to `demos/shopify/dist/`, plus a `404.html` file. Nested routes use directory indexes, such as `dist/website/builder/index.html`.
 
-The script copies all public files, minifies CSS and JavaScript, checks local page links, fragments, and asset references (including the logo, font, and captions), and replaces the previous output only after rendering and validation succeed. Each successful run removes stale files from the previous export. Prerendering needs no running server, browser, or network connection. Run one export per output directory at a time.
+The script copies the root `public/` files, fetches every stylesheet, script, font, image, and caption file the pages reference from the asset server (minified, with content-fingerprinted URLs), writes a Cloudflare `_headers` file that keeps those assets' long-lived `Cache-Control`, checks local page links, fragments, and asset references, and replaces the previous output only after rendering and validation succeed. Each successful run removes stale files from the previous export. Prerendering needs no running server, browser, or network connection. Run one export per output directory at a time.
 
 The preview serves the exported files and negotiates the homepage format on [http://localhost:44100](http://localhost:44100). You can also deploy `dist/` to a static host that supports directory index files. Configure the host to use `404.html` for missing pages. A plain static host also needs request handling for the Markdown homepage negotiation described below. The site uses root-relative links, so serve it at the root of a domain.
 
@@ -90,7 +90,8 @@ The Worker name is `remix-shopify-demo`; change `name` in `wrangler.jsonc` to us
 - `app/data/images.ts` lists Shopify’s original images with their dimensions and builds responsive CDN sources for native `<img>` elements and video posters.
 - `app/router.ts` installs `staticFiles()`, the trailing-slash redirect in `app/middleware/trailing-slash.ts`, and `render()`, and maps the controllers. The router answers HEAD and unsupported methods.
 - `scripts/render-site.ts` writes and checks the static export.
-- `public/media.js` handles viewport playback and motion preferences for native videos.
+- `app/assets.ts` configures the `remix/assets` server from `remix.json` and resolves the URLs of the stylesheets, script, font, logo, posters, and captions. Browser files live in `app/ui/public/` and `app/actions/public/`; the root `public/` directory keeps only files with fixed URLs, such as the favicon and the agent guides.
+- `app/ui/public/media.js` handles viewport playback and motion preferences for native videos.
 - `scripts/preview.ts` serves the output with `staticFiles()`.
 - `app/utils/agent-response.ts` decides whether a request prefers Markdown, and negotiates the homepage for the static preview and Worker.
 - `worker.ts` applies that negotiation to the Cloudflare `ASSETS` binding.

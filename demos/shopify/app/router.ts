@@ -12,7 +12,11 @@ import { routes } from './routes.ts'
 
 export const publicDirectory = path.resolve(import.meta.dirname, '../public')
 
-const middleware = createMiddleware(staticFiles(publicDirectory), dropTrailingSlash(), render())
+const middleware = createMiddleware(
+  staticFiles(publicDirectory, { index: false }),
+  dropTrailingSlash(),
+  render(),
+)
 
 type AppContext = MiddlewareContext<typeof middleware>
 

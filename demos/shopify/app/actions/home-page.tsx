@@ -1,3 +1,4 @@
+import { assets } from '../assets.ts'
 import { images, logos } from '../data/images.ts'
 import { signupHref } from '../data/pages.ts'
 import { videos } from '../data/videos.ts'
@@ -9,7 +10,7 @@ export function HomePage() {
   return () => (
     <Document
       home
-      head={<script src="/media.js" defer />}
+      head={<script type="module" src={assets.mediaScript} />}
       title="Be the next AI all-star"
       description="Dream big and build fast on Shopify. The world’s best commerce platform."
     >
@@ -19,7 +20,7 @@ export function HomePage() {
         video's first frame. */}
         <img
           class="hero-image"
-          src="/media/hero-poster.webp"
+          src={assets.heroPoster}
           alt=""
           width="1600"
           height="900"
@@ -461,7 +462,7 @@ export function HomePage() {
                 />
                 <track
                   kind="captions"
-                  src="/media/testimonial.vtt"
+                  src={assets.testimonialCaptions}
                   srcLang="en"
                   label="English"
                   default

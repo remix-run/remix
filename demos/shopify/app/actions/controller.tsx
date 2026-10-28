@@ -3,10 +3,12 @@ import { openLazyFile } from 'remix/fs'
 import { createFileResponse } from 'remix/response/file'
 import { createController } from 'remix/router'
 
+import { assetServer } from '../assets.ts'
 import { routes } from '../routes.ts'
 import { agentGuideContentType, prefersMarkdown } from '../utils/agent-response.ts'
 import { AgenticPage } from './agentic-page.tsx'
 import { HomePage } from './home-page.tsx'
+import { notFound } from './not-found.tsx'
 import { PricingPage } from './pricing-page.tsx'
 import { SitemapPage } from './sitemap-page.tsx'
 
@@ -22,6 +24,9 @@ export default createController(routes, {
         return response
       }
       return render(<HomePage />, { headers: { Vary: 'Accept' } })
+    },
+    async assets(context) {
+      return (await assetServer.fetch(context.request)) ?? notFound(context)
     },
     agenticStorefronts({ render }) {
       return render(<AgenticPage />)

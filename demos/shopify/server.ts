@@ -1,6 +1,7 @@
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
+import { assetServer } from './app/assets.ts'
 import { router } from './app/router.ts'
 
 const server = http.createServer(createRequestListener(router.fetch))
@@ -10,9 +11,10 @@ server.listen(port, () => {
   console.log(`Shopify demo is running on http://localhost:${port}`)
 })
 
-function shutdown() {
+async function shutdown() {
   server.close()
   server.closeAllConnections()
+  await assetServer.close()
 }
 
 process.on('SIGINT', shutdown)

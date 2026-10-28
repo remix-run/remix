@@ -2,6 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { parse } from 'node-html-parser'
 
+import { assets } from './assets.ts'
 import { editionLinks, productGroups, whyCards, whyLinks } from './data/navigation.ts'
 import { pageSummaries } from './data/pages.ts'
 import { videos } from './data/videos.ts'
@@ -51,10 +52,12 @@ describe('Shopify demo', () => {
     let response = await router.fetch(new Request(origin + '/this-page-is-missing'))
     assert.equal(response.status, 404)
     assert.match(await response.text(), /Back to the homepage/)
-    let asset = await router.fetch(new Request(origin + '/styles.css'))
+    let asset = await router.fetch(new Request(origin + assets.styles))
     assert.equal(asset.status, 200)
     assert.match(asset.headers.get('Content-Type') ?? '', /text\/css/)
     assert.match(await asset.text(), /@font-face/)
+    let missingAsset = await router.fetch(new Request(origin + '/assets/app/ui/public/missing.css'))
+    assert.equal(missingAsset.status, 404)
   })
 
   it('handles query strings, methods, and missing paths', async () => {
@@ -110,11 +113,7 @@ describe('Shopify demo', () => {
   })
 
   it('serves images from Shopify’s CDN with their dimensions reserved', async () => {
-    let localImages = new Set([
-      '/assets/logo.svg',
-      '/media/hero-poster.webp',
-      '/media/agentic-hero-poster.webp',
-    ])
+    let localImages = new Set([assets.logo, assets.heroPoster, assets.agenticHeroPoster])
     for (let pathname of ['/', '/agentic-storefronts', routes.marketing.checkout.href()]) {
       let response = await router.fetch(new Request(origin + pathname))
       let document = parse(await response.text())

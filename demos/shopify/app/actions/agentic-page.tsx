@@ -1,3 +1,4 @@
+import { assets } from '../assets.ts'
 import { images, logos } from '../data/images.ts'
 import { videos } from '../data/videos.ts'
 import { Document } from '../ui/document.tsx'
@@ -86,8 +87,8 @@ export function AgenticPage() {
       description="Reach new buyers in AI chats and manage it all in one place with Shopify Agentic Storefronts."
       head={
         <>
-          <link rel="stylesheet" href="/agentic.css" />
-          <script src="/media.js" defer />
+          <link rel="stylesheet" href={assets.agenticStyles} />
+          <script type="module" src={assets.mediaScript} />
         </>
       }
     >
@@ -122,7 +123,7 @@ export function AgenticPage() {
               label="Phone screens showing AI chat shopping for a lamp, with product details and Shopify Checkout. Logos of OpenAI, Google, Microsoft and Meta."
               width={1440}
               height={1440}
-              poster="/media/agentic-hero-poster.webp"
+              poster={assets.agenticHeroPoster}
               sources={[
                 { src: videos['agentic-hero-av1.mp4'], type: 'video/mp4; codecs="av01.0.08M.08"' },
                 { src: videos['agentic-hero-h264.mp4'], type: 'video/mp4; codecs="avc1.640033"' },
