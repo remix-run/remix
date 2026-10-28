@@ -10,6 +10,7 @@ import {
 } from '../data/navigation.ts'
 import { signupHref } from '../data/pages.ts'
 import { routes } from '../routes.ts'
+import { CdnImage } from './media.tsx'
 
 export interface DocumentProps {
   title: string
@@ -68,12 +69,10 @@ function SiteHeader() {
             <div class="why-cards">
               {whyCards.map((link) => (
                 <a key={link.href} class="why-card" href={link.href}>
-                  <img
-                    {...images[link.image]}
+                  <CdnImage
+                    image={images[link.image]}
                     alt=""
                     sizes="(max-width: 1674px) 28vw, 466px"
-                    loading="lazy"
-                    decoding="async"
                   />
                   <strong>{link.label}</strong>
                   <span aria-hidden="true">↗</span>
@@ -199,19 +198,15 @@ export function CallToAction() {
           </a>
         </div>
         <div class="closing-images" aria-hidden="true">
-          <img
-            {...images['merchant-1']}
+          <CdnImage
+            image={images['merchant-1']}
             alt=""
             sizes="(max-width: 600px) 220px, (max-width: 1674px) 23vw, 340px"
-            loading="lazy"
-            decoding="async"
           />
-          <img
-            {...images['merchant-2']}
+          <CdnImage
+            image={images['merchant-2']}
             alt=""
             sizes="(max-width: 600px) 220px, (max-width: 1674px) 23vw, 340px"
-            loading="lazy"
-            decoding="async"
           />
         </div>
       </div>

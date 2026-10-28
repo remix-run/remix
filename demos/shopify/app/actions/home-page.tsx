@@ -3,6 +3,7 @@ import { signupHref } from '../data/pages.ts'
 import { videos } from '../data/videos.ts'
 import { routes } from '../routes.ts'
 import { CallToAction, Document } from '../ui/document.tsx'
+import { AutoplayVideo, CdnImage } from '../ui/media.tsx'
 
 export function HomePage() {
   return () => (
@@ -24,33 +25,27 @@ export function HomePage() {
           height="900"
           fetchPriority="high"
         />
-        <video
+        <AutoplayVideo
           class="hero-image hero-video"
-          data-video="hero"
-          aria-label="Footage of Shopify merchants making sales, managing their business, and celebrating their success."
-          width="1920"
-          height="1080"
-          preload="auto"
-          muted
-          loop
-          playsInline
-        >
-          <source
-            data-src={videos['hero-mobile.webm']}
-            type='video/webm; codecs="av01.0.04M.08"'
-            media="(max-width: 767px)"
-          />
-          <source
-            data-src={videos['hero-mobile.mp4']}
-            type='video/mp4; codecs="avc1.640020"'
-            media="(max-width: 767px)"
-          />
-          <source
-            data-src={videos['hero-desktop.webm']}
-            type='video/webm; codecs="av01.0.08M.08"'
-          />
-          <source data-src={videos['hero-desktop.mp4']} type='video/mp4; codecs="avc1.640033"' />
-        </video>
+          hero
+          label="Footage of Shopify merchants making sales, managing their business, and celebrating their success."
+          width={1920}
+          height={1080}
+          sources={[
+            {
+              src: videos['hero-mobile.webm'],
+              type: 'video/webm; codecs="av01.0.04M.08"',
+              media: '(max-width: 767px)',
+            },
+            {
+              src: videos['hero-mobile.mp4'],
+              type: 'video/mp4; codecs="avc1.640020"',
+              media: '(max-width: 767px)',
+            },
+            { src: videos['hero-desktop.webm'], type: 'video/webm; codecs="av01.0.08M.08"' },
+            { src: videos['hero-desktop.mp4'], type: 'video/mp4; codecs="avc1.640033"' },
+          ]}
+        />
         <div class="hero-shade" />
         <div class="container hero-content">
           <h1>
@@ -94,44 +89,36 @@ export function HomePage() {
             </div>
             <div class="merchant-panel panel-everywhere">
               <a href={routes.marketing.online.href()} class="merchant-preview preview-store">
-                <img
-                  {...images.online}
+                <CdnImage
+                  image={images.online}
                   alt="An independent brand’s online storefront"
                   sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 900px) 30vw, (max-width: 1674px) 28vw, 466px"
-                  loading="lazy"
-                  decoding="async"
                 />
                 <span>Make your mark online ↗</span>
               </a>
               <a href={routes.marketing.pos.href()} class="merchant-preview preview-retail">
-                <img
-                  {...images.pos}
+                <CdnImage
+                  image={images.pos}
                   alt="Shopify retail business"
                   sizes="(max-width: 600px) 320px, (max-width: 900px) 30vw, (max-width: 1674px) 28vw, 466px"
-                  loading="lazy"
-                  decoding="async"
                 />
                 <span>Bring your store to life ↗</span>
               </a>
               <a href={routes.marketing.shop.href()} class="merchant-preview preview-shop">
-                <img
-                  {...images.shop}
+                <CdnImage
+                  image={images.shop}
                   alt="Products in the Shop shopping app"
                   sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 900px) 30vw, (max-width: 1674px) 28vw, 466px"
-                  loading="lazy"
-                  decoding="async"
                 />
                 <span>Find your next customer ↗</span>
               </a>
             </div>
             <div class="merchant-panel panel-retail">
               <div class="channel-feature">
-                <img
-                  {...images.pos}
+                <CdnImage
+                  image={images.pos}
                   alt="A retail business using Shopify"
                   sizes="(max-width: 600px) calc(100vw - 88px), (max-width: 1674px) 44vw, 750px"
-                  loading="lazy"
-                  decoding="async"
                 />
                 <div>
                   <p class="eyebrow">Good things happen in store</p>
@@ -148,12 +135,10 @@ export function HomePage() {
             </div>
             <div class="merchant-panel panel-ai">
               <div class="channel-feature">
-                <img
-                  {...images['agentic-storefronts']}
+                <CdnImage
+                  image={images['agentic-storefronts']}
                   alt="A product buying experience in an AI chat"
                   sizes="(max-width: 600px) calc(100vw - 88px), (max-width: 1674px) 44vw, 750px"
-                  loading="lazy"
-                  decoding="async"
                 />
                 <div>
                   <p class="eyebrow">A new way to be discovered</p>
@@ -170,12 +155,10 @@ export function HomePage() {
             </div>
             <div class="merchant-panel panel-global">
               <div class="channel-feature">
-                <img
-                  {...images.international}
+                <CdnImage
+                  image={images.international}
                   alt="A storefront with localized prices and currencies"
                   sizes="(max-width: 600px) calc(100vw - 88px), (max-width: 1674px) 44vw, 750px"
-                  loading="lazy"
-                  decoding="async"
                 />
                 <div>
                   <p class="eyebrow">Your world is getting bigger</p>
@@ -212,24 +195,16 @@ export function HomePage() {
             </a>
           </div>
           <div class="ai-display">
-            <video
-              data-video="viewport"
-              width="2090"
-              height="1742"
+            <AutoplayVideo
+              label="Shopping with Agentic Storefronts"
+              width={2090}
+              height={1742}
               poster={images['home-agentic-poster'].src}
-              loading="lazy"
-              preload="none"
-              muted
-              loop
-              playsInline
-              aria-label="Shopping with Agentic Storefronts"
-            >
-              <source data-src={videos['home-agentic.webm']} type='video/webm; codecs="vp9"' />
-              <source
-                data-src={videos['home-agentic.mp4']}
-                type='video/mp4; codecs="hvc1.1.6.H150.B0"'
-              />
-            </video>
+              sources={[
+                { src: videos['home-agentic.webm'], type: 'video/webm; codecs="vp9"' },
+                { src: videos['home-agentic.mp4'], type: 'video/mp4; codecs="hvc1.1.6.H150.B0"' },
+              ]}
+            />
             <span class="ai-badge">Discovery. Conversation. Checkout.</span>
           </div>
         </div>
@@ -245,27 +220,16 @@ export function HomePage() {
           <div class="feature-grid home-features">
             <article>
               <div class="feature-image">
-                <video
-                  data-video="viewport"
-                  width="1134"
-                  height="680"
+                <AutoplayVideo
+                  label="Build a Shopify store with AI"
+                  width={1134}
+                  height={680}
                   poster={images['home-store-poster'].src}
-                  loading="lazy"
-                  preload="none"
-                  muted
-                  loop
-                  playsInline
-                  aria-label="Build a Shopify store with AI"
-                >
-                  <source
-                    data-src={videos['home-store.webm']}
-                    type='video/webm; codecs="av01.0.05M.08"'
-                  />
-                  <source
-                    data-src={videos['home-store.mp4']}
-                    type='video/mp4; codecs="avc1.640032"'
-                  />
-                </video>
+                  sources={[
+                    { src: videos['home-store.webm'], type: 'video/webm; codecs="av01.0.05M.08"' },
+                    { src: videos['home-store.mp4'], type: 'video/mp4; codecs="avc1.640032"' },
+                  ]}
+                />
               </div>
               <a href={routes.marketing.online.href()}>
                 <h3>
@@ -280,12 +244,10 @@ export function HomePage() {
             <article>
               <a href={routes.marketing.orders.href()}>
                 <div class="feature-image">
-                  <img
-                    {...images.analytics}
+                  <CdnImage
+                    image={images.analytics}
                     alt="The Shopify admin for managing a business"
                     sizes="(max-width: 600px) calc(157vw - 63px), (max-width: 1674px) 52vw, 850px"
-                    loading="lazy"
-                    decoding="async"
                   />
                 </div>
                 <h3>
@@ -299,12 +261,10 @@ export function HomePage() {
             <article>
               <a href={routes.marketing.channels.href()}>
                 <div class="feature-image">
-                  <img
-                    {...images.channels}
+                  <CdnImage
+                    image={images.channels}
                     alt="Products available across multiple shopping channels"
                     sizes="(max-width: 600px) calc(111vw - 44px), (max-width: 1674px) 37vw, 600px"
-                    loading="lazy"
-                    decoding="async"
                   />
                 </div>
                 <h3>
@@ -329,32 +289,26 @@ export function HomePage() {
           </h2>
           <div class="global-collage" aria-label="Products can reach customers around the world">
             <div class="global-product">
-              <img
-                {...images['global-customer-1']}
+              <CdnImage
+                image={images['global-customer-1']}
                 alt="A product ready for international shipping"
                 sizes="(max-width: 1674px) 30vw, 420px"
-                loading="lazy"
-                decoding="async"
               />
               <span>🇺🇸 Order received</span>
             </div>
             <div class="global-product">
-              <img
-                {...images['global-customer-2']}
+              <CdnImage
+                image={images['global-customer-2']}
                 alt="A product reaching a new market"
                 sizes="(max-width: 1674px) 30vw, 420px"
-                loading="lazy"
-                decoding="async"
               />
               <span>🇫🇷 Commande reçue</span>
             </div>
             <div class="global-product">
-              <img
-                {...images['global-customer-3']}
+              <CdnImage
+                image={images['global-customer-3']}
                 alt="A product sold across borders"
                 sizes="(max-width: 1674px) 30vw, 420px"
-                loading="lazy"
-                decoding="async"
               />
               <span>🇯🇵 ご注文ありがとうございます</span>
             </div>
@@ -367,24 +321,16 @@ export function HomePage() {
             </div>
           </div>
           <div class="international-demo">
-            <video
-              data-video="viewport"
-              width="1248"
-              height="1350"
+            <AutoplayVideo
+              label="International selling and shipping"
+              width={1248}
+              height={1350}
               poster={images['home-global-poster'].src}
-              loading="lazy"
-              preload="none"
-              muted
-              loop
-              playsInline
-              aria-label="International selling and shipping"
-            >
-              <source
-                data-src={videos['home-global.webm']}
-                type='video/webm; codecs="av01.0.08M.08"'
-              />
-              <source data-src={videos['home-global.mp4']} type='video/mp4; codecs="avc1.640032"' />
-            </video>
+              sources={[
+                { src: videos['home-global.webm'], type: 'video/webm; codecs="av01.0.08M.08"' },
+                { src: videos['home-global.mp4'], type: 'video/mp4; codecs="avc1.640032"' },
+              ]}
+            />
             <div class="split-caption">
               <h3>Sell across borders</h3>
               <div>
@@ -473,27 +419,16 @@ export function HomePage() {
           </h2>
           <div class="sidekick-grid">
             <article class="sidekick-main">
-              <video
-                data-video="viewport"
-                width="2016"
-                height="872"
+              <AutoplayVideo
+                label="Your very own commerce AI"
+                width={2016}
+                height={872}
                 poster={images['home-sidekick-reduced'].src}
-                loading="lazy"
-                preload="none"
-                muted
-                loop
-                playsInline
-                aria-label="Your very own commerce AI"
-              >
-                <source
-                  data-src={videos['home-sidekick.webm']}
-                  type='video/webm; codecs="av01.0.08M.08"'
-                />
-                <source
-                  data-src={videos['home-sidekick.mp4']}
-                  type='video/mp4; codecs="avc1.640033"'
-                />
-              </video>
+                sources={[
+                  { src: videos['home-sidekick.webm'], type: 'video/webm; codecs="av01.0.08M.08"' },
+                  { src: videos['home-sidekick.mp4'], type: 'video/mp4; codecs="avc1.640033"' },
+                ]}
+              />
               <div>
                 <h3>Your very own commerce AI</h3>
                 <p>
@@ -552,12 +487,10 @@ export function HomePage() {
                 Explore the App Store ↗
               </a>
             </div>
-            <img
-              {...images.apps}
+            <CdnImage
+              image={images.apps}
               alt="A collection of apps in the Shopify ecosystem"
               sizes="(max-width: 600px) max(490px, calc(100vw - 40px)), (max-width: 1674px) max(770px, 46vw), 800px"
-              loading="lazy"
-              decoding="async"
             />
           </div>
           <div class="developer-block">
@@ -579,12 +512,10 @@ export function HomePage() {
                 Visit Shopify.dev ↗
               </a>
             </div>
-            <img
-              {...images.developer}
+            <CdnImage
+              image={images.developer}
               alt="Examples of custom commerce experiences built with Shopify tools"
               sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 1674px) 48vw, 800px"
-              loading="lazy"
-              decoding="async"
             />
           </div>
         </div>
@@ -615,35 +546,28 @@ export function HomePage() {
               </a>
             </div>
             <div class="checkout-art">
-              <img
-                {...images.checkout}
+              <CdnImage
+                image={images.checkout}
                 alt="Shopify Checkout with customer information and payment options"
                 sizes="(max-width: 600px) calc(100vw - 100px), (max-width: 1674px) 38vw, 620px"
-                loading="lazy"
-                decoding="async"
               />
             </div>
           </div>
           <div class="reliability-block">
-            <video
+            <AutoplayVideo
               class="commerce-video"
-              data-video="viewport"
-              width="2736"
-              height="2736"
+              label="Shopify commerce around the world"
+              width={2736}
+              height={2736}
               poster={images['home-globe-poster'].src}
-              loading="lazy"
-              preload="none"
-              muted
-              loop
-              playsInline
-              aria-label="Shopify commerce around the world"
-            >
-              <source data-src={videos['home-globe.webm']} type='video/webm; codecs="vp9"' />
-              <source
-                data-src={videos['home-globe.mov']}
-                type='video/quicktime; codecs="hvc1.1.6.L153.B0"'
-              />
-            </video>
+              sources={[
+                { src: videos['home-globe.webm'], type: 'video/webm; codecs="vp9"' },
+                {
+                  src: videos['home-globe.mov'],
+                  type: 'video/quicktime; codecs="hvc1.1.6.L153.B0"',
+                },
+              ]}
+            />
             <div>
               <p class="eyebrow">Built to keep up</p>
               <h3>Rock steady. Blazing fast.</h3>
@@ -669,12 +593,10 @@ export function HomePage() {
                 Explore your finance tools →
               </a>
             </div>
-            <img
-              {...images.finance}
+            <CdnImage
+              image={images.finance}
               alt="Shopify tools for business finances"
               sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 1674px) 43vw, 700px"
-              loading="lazy"
-              decoding="async"
             />
           </div>
         </div>

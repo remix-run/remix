@@ -6,6 +6,7 @@ import { pageSummaries, signupHref } from '../../data/pages.ts'
 import type { MarketingPageName, PageName } from '../../data/pages.ts'
 import { routes } from '../../routes.ts'
 import { CallToAction, Document } from '../../ui/document.tsx'
+import { CdnImage } from '../../ui/media.tsx'
 
 // On shopify.com, each marketing page has its own layout built from shared sections such as
 // heroes, card grids, side-by-side features, testimonials, and FAQs. This demo renders every
@@ -49,12 +50,11 @@ export function ProductTemplate(handle: Handle<ProductTemplateProps>) {
               </div>
             </div>
             <div class={`product-hero-image image-${theme}`}>
-              <img
-                {...images[image]}
+              <CdnImage
+                image={images[image]}
                 alt={`${label} with Shopify`}
                 sizes="(max-width: 600px) calc(100vw - 70px), (max-width: 900px) calc(90vw - 40px), (max-width: 1674px) 40vw, 660px"
-                fetchPriority="high"
-                decoding="async"
+                priority
               />
             </div>
           </div>
@@ -86,12 +86,10 @@ export function ProductTemplate(handle: Handle<ProductTemplateProps>) {
               >
                 <div class={`feature-number-art art-${theme}`}>
                   {index === 0 ? (
-                    <img
-                      {...images[image]}
+                    <CdnImage
+                      image={images[image]}
                       alt={`${label} product preview`}
                       sizes="(max-width: 600px) calc(100vw - 110px), (max-width: 1674px) 38vw, 600px"
-                      loading="lazy"
-                      decoding="async"
                     />
                   ) : (
                     <div class="feature-illustration" aria-hidden="true">

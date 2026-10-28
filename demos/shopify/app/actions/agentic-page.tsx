@@ -1,6 +1,7 @@
 import { images, logos } from '../data/images.ts'
 import { videos } from '../data/videos.ts'
 import { Document } from '../ui/document.tsx'
+import { AutoplayVideo } from '../ui/media.tsx'
 
 const signupHref =
   'https://admin.shopify.com/signup?locale=en&language=en&signup_page=https%3A%2F%2Fwww.shopify.com%2Fagentic-storefronts&signup_types%5B%5D=paid_trial_experience'
@@ -115,27 +116,18 @@ export function AgenticPage() {
                 Pause animations
               </button>
             </div>
-            <video
+            <AutoplayVideo
               class="agentic-hero-video"
-              width="1440"
-              height="1440"
-              muted
-              loop
-              playsInline
-              preload="auto"
+              hero
+              label="Phone screens showing AI chat shopping for a lamp, with product details and Shopify Checkout. Logos of OpenAI, Google, Microsoft and Meta."
+              width={1440}
+              height={1440}
               poster="/media/agentic-hero-poster.webp"
-              data-video="hero"
-              aria-label="Phone screens showing AI chat shopping for a lamp, with product details and Shopify Checkout. Logos of OpenAI, Google, Microsoft and Meta."
-            >
-              <source
-                data-src={videos['agentic-hero-av1.mp4']}
-                type={'video/mp4; codecs="av01.0.08M.08"'}
-              />
-              <source
-                data-src={videos['agentic-hero-h264.mp4']}
-                type='video/mp4; codecs="avc1.640033"'
-              />
-            </video>
+              sources={[
+                { src: videos['agentic-hero-av1.mp4'], type: 'video/mp4; codecs="av01.0.08M.08"' },
+                { src: videos['agentic-hero-h264.mp4'], type: 'video/mp4; codecs="avc1.640033"' },
+              ]}
+            />
           </div>
         </section>
 
@@ -156,27 +148,22 @@ export function AgenticPage() {
             <div class="agentic-feature-grid">
               {features.map((feature) => (
                 <article key={feature.name}>
-                  <video
-                    width="1920"
-                    height="1080"
-                    loading="lazy"
-                    muted
-                    loop
-                    playsInline
-                    preload="none"
+                  <AutoplayVideo
+                    label={feature.title}
+                    width={1920}
+                    height={1080}
                     poster={images[`agentic-${feature.name}-poster`].src}
-                    data-video="viewport"
-                    aria-label={feature.title}
-                  >
-                    <source
-                      data-src={videos[`agentic-${feature.name}-av1.mp4`]}
-                      type={'video/mp4; codecs="av01.0.08M.08"'}
-                    />
-                    <source
-                      data-src={videos[`agentic-${feature.name}-h264.mp4`]}
-                      type='video/mp4; codecs="avc1.640033"'
-                    />
-                  </video>
+                    sources={[
+                      {
+                        src: videos[`agentic-${feature.name}-av1.mp4`],
+                        type: 'video/mp4; codecs="av01.0.08M.08"',
+                      },
+                      {
+                        src: videos[`agentic-${feature.name}-h264.mp4`],
+                        type: 'video/mp4; codecs="avc1.640033"',
+                      },
+                    ]}
+                  />
                   <h3>{feature.title}</h3>
                   <p>{feature.description}</p>
                 </article>
