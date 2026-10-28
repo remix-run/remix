@@ -3,6 +3,18 @@ import { describe, it } from 'remix/test'
 import Example, { ToastRegion } from './countdown.example.tsx'
 import { button, element, mount, waitFor } from '../test-helpers.ts'
 
+function countdownAnimation(host: HTMLElement): Animation {
+  let animation = host
+    .getAnimations()
+    .find(
+      (candidate) =>
+        candidate.effect instanceof KeyframeEffect &&
+        candidate.effect.getKeyframes().some((keyframe) => '--toast-countdown' in keyframe),
+    )
+  assert.ok(animation)
+  return animation
+}
+
 describe('Toast countdown example', () => {
   it('pauses the countdown with focus and dismisses after the remaining lifetime', async (t) => {
     let result = await mount(
@@ -15,13 +27,12 @@ describe('Toast countdown example', () => {
     let trigger = button(result.container, 'Bar')
     await result.act(() => trigger.click())
     let toastItem = element(result.container, '[data-toast]')
-    let countdown = element(toastItem, 'div[aria-hidden="true"]')
-    assert.equal(countdown.hidden, false)
-    await waitFor(() => assert.equal(countdown.getAnimations().length, 1))
+    assert.equal(toastItem.hidden, false)
+    await waitFor(() => assert.equal(countdownAnimation(toastItem).playState, 'running'))
     await result.act(() => button(toastItem, 'Dismiss notification').focus())
-    await waitFor(() => assert.equal(countdown.getAnimations()[0]?.playState, 'paused'))
+    await waitFor(() => assert.equal(countdownAnimation(toastItem).playState, 'paused'))
     await result.act(() => trigger.focus())
-    await waitFor(() => assert.equal(countdown.getAnimations()[0]?.playState, 'running'))
+    await waitFor(() => assert.equal(countdownAnimation(toastItem).playState, 'running'))
     await new Promise((resolve) => setTimeout(resolve, 5100))
     await waitFor(() => assert.equal(toastItem.isConnected, false))
   })
@@ -41,8 +52,8 @@ describe('Toast countdown example', () => {
       '[data-toast] div[aria-hidden="true"]',
     )
     assert.equal(indicators.length, 2)
-    for (let indicator of indicators) {
-      let animation = indicator.getAnimations()[0]
+    for (let host of result.container.querySelectorAll<HTMLElement>('[data-toast]')) {
+      let animation = countdownAnimation(host)
       assert.equal(animation.playState, 'paused')
       animation.currentTime = 1250
     }

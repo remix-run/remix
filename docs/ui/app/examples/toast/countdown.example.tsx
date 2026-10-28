@@ -52,7 +52,7 @@ export function ToastRegion() {
                 data-toast-index={index}
                 style={{ '--toast-index': index }}
                 mix={[
-                  toast.item(),
+                  toast.item({ countdown: true }),
                   styles.toastLayout,
                   swipeToDismiss(toastItem.id),
                   animateLayout(
@@ -89,8 +89,8 @@ export function ToastRegion() {
               >
                 <div mix={styles.collapseSlot}>
                   <div mix={[styles.surface]}>
-                    {toastItem.id !== 'bar' && (
-                      <div mix={[styles.timer, styles.hideWhenCovered, toast.countdown(toastItem)]}>
+                    {Boolean(toastItem.timeout) && toastItem.id !== 'bar' && (
+                      <div aria-hidden="true" mix={[styles.timer, styles.hideWhenCovered]}>
                         <svg width="28" height="28" viewBox="0 0 28 28">
                           <circle cx="14" cy="14" r="11" mix={styles.ringTrack} />
                           <circle cx="14" cy="14" r="11" pathLength="100" mix={styles.ring} />
@@ -110,8 +110,8 @@ export function ToastRegion() {
                     >
                       ×
                     </button>
-                    {toastItem.id === 'bar' && (
-                      <div mix={[styles.bar, styles.hideWhenCovered, toast.countdown(toastItem)]} />
+                    {Boolean(toastItem.timeout) && toastItem.id === 'bar' && (
+                      <div aria-hidden="true" mix={[styles.bar, styles.hideWhenCovered]} />
                     )}
                   </div>
                 </div>

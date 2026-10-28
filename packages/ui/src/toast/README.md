@@ -55,14 +55,13 @@ Supply the region label and control labels. Mount one `Context` per manager, out
 - `Context`: accepts a stable `manager`, an optional `limit` (unlimited by default), and a typed collection callback. Render every item, including overflow.
 - `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and polite announcements. A non-empty `label` is required.
 - `ItemContext`: accepts the toast item ID as `value` and scopes its markup. Key the provider and animated host by the item ID.
-- `item()`: applies non-modal dialog semantics, presentation lifetime, availability and focus recovery. It is a Tab stop before the controls.
+- `item({ countdown? })`: applies non-modal dialog semantics, presentation lifetime, availability and focus recovery. It is a Tab stop before the controls.
 - `title()` and `description()`: connect authored heading and supporting elements through `aria-labelledby` and `aria-describedby`. They generate IDs unless you supply them, and remove relationships when a part is empty or removed. They supply no elements or content.
 - `close()`: dismisses the scoped toast from a native button. Supply translated text or an accessible label for an icon button. It defaults to `type="button"` and excludes the control from passive announcements while the collection is collapsed.
-- `countdown(toastItem)`: animates the inherited `--toast-countdown` CSS property from 1 to 0 using the item's clock. Its host is decorative (`aria-hidden`) and hidden for persistent items.
 - `ToastOptions<data>`: optional renderable `title` and `description`, generic `data`, `id`, `timeout` and `priority`.
 - `ToastItem<data>`: immutable content, an update `revision`, resolved `priority`, and sampled clock state: `presented`, `paused`, `remaining` and `timeout`.
 - `ToastManager<data>`: `add`, `close`, `pause`, `resume`, `present` and `toastItems`. Native `change` subscriptions support `AbortSignal` cleanup.
-- `ToastManagerOptions<data>`, `ToastContextProps<data>`, `ToastItemContextProps` and `ToastRootOptions`: configuration types.
+- `ToastManagerOptions<data>`, `ToastContextProps<data>`, `ToastItemContextProps`, `ToastItemOptions` and `ToastRootOptions`: configuration types.
 
 ## Announcements and keyboard access
 
@@ -90,20 +89,23 @@ A primary touch inside the collection expands it and pauses dismissal until a pr
 
 ## Countdown indicators
 
-Apply `countdown(toastItem)` to a decorative wrapper and map its inherited value with CSS:
+Set `countdown: true` on `item()` to animate the inherited `--toast-countdown` fraction from 1 to 0. Map it to your indicator with CSS:
 
 ```tsx
-<div
-  mix={[
-    toast.countdown(toastItem),
-    css({
-      height: '2px',
-      background: 'currentColor',
-      transform: 'scaleX(var(--toast-countdown, 1))',
-      transformOrigin: 'left',
-    }),
-  ]}
-/>
+<article mix={toast.item({ countdown: true })}>
+  <strong mix={toast.title()}>{toastItem.title}</strong>
+  {Boolean(toastItem.timeout) && (
+    <div
+      aria-hidden="true"
+      mix={css({
+        height: '2px',
+        background: 'currentColor',
+        transform: 'scaleX(var(--toast-countdown, 1))',
+        transformOrigin: 'left',
+      })}
+    />
+  )}
+</article>
 ```
 
-For an SVG ring, use an HTML wrapper with the mixin and map the inherited fraction to `stroke-dashoffset`. Keep interactive content outside the wrapper because it is hidden from assistive technology. The manager closes the toast independently of the indicator. Clock snapshots synchronise pause, resume and lifetime changes without per-frame component updates; the inherited CSS property may still require browser style work each frame.
+For an SVG ring, map the inherited fraction to `stroke-dashoffset`. The manager closes the toast independently of the indicator. The native animation follows pause, resume and lifetime changes without per-frame component updates. Persistent items do not create a countdown animation.

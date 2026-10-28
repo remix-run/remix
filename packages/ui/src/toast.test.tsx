@@ -5,7 +5,7 @@ import { render } from '@remix-run/component/test'
 import type { TestContext } from '@remix-run/test'
 import { renderToString } from '@remix-run/component/server'
 import { animateExit } from './animation.ts'
-import { countdown, createToastManager, Context, root, ItemContext, item } from './toast.tsx'
+import { createToastManager, Context, root, ItemContext, item } from './toast.tsx'
 import type { ToastManager, ToastOptions, ToastItem } from './toast.tsx'
 
 function clock(t: TestContext) {
@@ -594,8 +594,8 @@ describe('toast gestures and clocks', () => {
           <section mix={root({ label: 'Notifications' })}>
             {toastItems.map((toastItem) => (
               <ItemContext key={toastItem.id} value={toastItem.id}>
-                <div key={toastItem.id} data-id={toastItem.id} mix={item()}>
-                  <div data-countdown mix={countdown(toastItem)} />
+                <div key={toastItem.id} data-id={toastItem.id} mix={item({ countdown: true })}>
+                  <div data-countdown aria-hidden="true" />
                 </div>
               </ItemContext>
             ))}
@@ -605,7 +605,7 @@ describe('toast gestures and clocks', () => {
     )
     t.after(result.cleanup)
     t.after(() => toastManager.close())
-    let bar = element(result.container, '[data-countdown]')
+    let bar = element(result.container, '[data-id]')
     assert.equal(bar.getAnimations().length, 1)
     let original = bar.getAnimations()[0]
     await result.act(() => toastManager.pause('manual'))
@@ -619,8 +619,8 @@ describe('toast gestures and clocks', () => {
     assert.equal(bar.getAnimations().length, 1)
     assert.ok(Number(bar.getAnimations()[0].effect?.getTiming().duration) > 19000)
     await result.act(() => toastManager.add({ id, title: 'Saved', timeout: false }))
-    assert.equal(bar.hidden, true)
-    assert.equal(bar.getAttribute('aria-hidden'), 'true')
+    assert.equal(bar.hidden, false)
+    assert.equal(bar.getAttribute('aria-hidden'), null)
     assert.equal(bar.getAnimations().length, 0)
   })
 

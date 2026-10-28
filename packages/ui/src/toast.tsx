@@ -745,65 +745,75 @@ export function ItemContext(handle: Handle<ToastItemContextProps, ItemState>): (
   }
 }
 
+/** Optional presentation behavior for a toast item. */
+export interface ToastItemOptions {
+  /** Animates the inherited `--toast-countdown` fraction from 1 to 0. Defaults to false. */
+  countdown?: boolean
+}
+
 /**
  * Gives the scoped toast dialog semantics, presentation lifetime and focus recovery.
  * Without a title, supply an accessible name on the host with aria-label or aria-labelledby.
  */
-export const item = createMixin<HTMLElement, [], ElementProps>((handle) => {
-  let context = handle.context.get(ToastScope)
-  let scoped = handle.context.get(ItemContext)
-  if (!context || !scoped) throw new Error('toast.item() must be rendered inside toast.ItemContext')
-  let presentation: AbortController | undefined
-  let host: HTMLElement | undefined
-  function connect(node: HTMLElement) {
-    presentation?.abort()
-    presentation = new AbortController()
-    host = node
-    context.registerItem(scoped.id, node)
-    context.toastManager.present(scoped.id, presentation.signal)
-  }
-  handle.addEventListener('insert', (event) => connect(event.node))
-  handle.addEventListener('reclaimed', (event) => connect(event.node))
-  handle.addEventListener('beforeRemove', () => presentation?.abort())
-  function disconnect() {
-    presentation?.abort()
-    if (host) context.unregisterItem(scoped.id, host)
-  }
-  handle.addEventListener('remove', disconnect)
-  handle.signal.addEventListener('abort', disconnect, { once: true })
-  return () => {
-    let toastItems = context.toastManager.toastItems
-    let index = toastItems.findIndex((toastItem) => toastItem.id === scoped.id)
-    let toastItem = toastItems[index]
-    let limited = index >= context.limit
-    return [
-      attrs({
-        inert: limited || !toastItem ? true : undefined,
-        'aria-hidden':
-          limited || !toastItem || (toastItem.priority === 'high' && !context.focused)
-            ? 'true'
-            : undefined,
-        'data-limited': limited ? '' : undefined,
-        role: toastItem?.priority === 'high' ? 'alertdialog' : 'dialog',
-        'aria-modal': 'false',
-        'aria-labelledby': scoped.titleId,
-        'aria-describedby': scoped.descriptionId,
-        tabIndex: 0,
-        'data-toast': '',
-      }),
-      on('keydown', (event) => {
-        if (
-          event.defaultPrevented ||
-          event.key !== 'Escape' ||
-          !host ||
-          !contains(host, activeElement(host.ownerDocument))
-        )
-          return
-        context.toastManager.close(scoped.id)
-      }),
-    ]
-  }
-})
+export const item = createMixin<HTMLElement, [options?: ToastItemOptions], ElementProps>(
+  (handle) => {
+    let context = handle.context.get(ToastScope)
+    let scoped = handle.context.get(ItemContext)
+    if (!context || !scoped)
+      throw new Error('toast.item() must be rendered inside toast.ItemContext')
+    let presentation: AbortController | undefined
+    let host: HTMLElement | undefined
+    function connect(node: HTMLElement) {
+      presentation?.abort()
+      presentation = new AbortController()
+      host = node
+      context.registerItem(scoped.id, node)
+      context.toastManager.present(scoped.id, presentation.signal)
+    }
+    handle.addEventListener('insert', (event) => connect(event.node))
+    handle.addEventListener('reclaimed', (event) => connect(event.node))
+    handle.addEventListener('beforeRemove', () => presentation?.abort())
+    function disconnect() {
+      presentation?.abort()
+      if (host) context.unregisterItem(scoped.id, host)
+    }
+    handle.addEventListener('remove', disconnect)
+    handle.signal.addEventListener('abort', disconnect, { once: true })
+    return (options = {}) => {
+      let toastItems = context.toastManager.toastItems
+      let index = toastItems.findIndex((toastItem) => toastItem.id === scoped.id)
+      let toastItem = toastItems[index]
+      let limited = index >= context.limit
+      return [
+        options.countdown && toastItem ? countdownAnimation(toastItem) : undefined,
+        attrs({
+          inert: limited || !toastItem ? true : undefined,
+          'aria-hidden':
+            limited || !toastItem || (toastItem.priority === 'high' && !context.focused)
+              ? 'true'
+              : undefined,
+          'data-limited': limited ? '' : undefined,
+          role: toastItem?.priority === 'high' ? 'alertdialog' : 'dialog',
+          'aria-modal': 'false',
+          'aria-labelledby': scoped.titleId,
+          'aria-describedby': scoped.descriptionId,
+          tabIndex: 0,
+          'data-toast': '',
+        }),
+        on('keydown', (event) => {
+          if (
+            event.defaultPrevented ||
+            event.key !== 'Escape' ||
+            !host ||
+            !contains(host, activeElement(host.ownerDocument))
+          )
+            return
+          context.toastManager.close(scoped.id)
+        }),
+      ]
+    }
+  },
+)
 
 function labelPart(part: 'title' | 'description') {
   return createMixin<HTMLElement, [], ElementProps>((handle) => {
@@ -852,13 +862,7 @@ export const close = createMixin<HTMLButtonElement, [], ElementProps>((handle) =
 
 let countdownPropertyRegistered = false
 
-/**
- * Animates `--toast-countdown` from 1 to 0 using the manager's clock snapshot.
- * Style the host or its descendants to turn this fraction into a decorative countdown indicator.
- * @param clock Current timer state from the collection callback. Persistent toasts hide the indicator.
- * @returns A mixin that updates a native animation only when timer state changes.
- */
-export const countdown = createMixin<
+const countdownAnimation = createMixin<
   HTMLElement,
   [clock: Pick<ToastItem<unknown>, 'timeout' | 'remaining' | 'paused'>],
   ElementProps
@@ -866,6 +870,7 @@ export const countdown = createMixin<
   let clock: Pick<ToastItem<unknown>, 'timeout' | 'remaining' | 'paused'>
   let animation: Animation | undefined
   handle.addEventListener('remove', () => animation?.cancel())
+  handle.signal.addEventListener('abort', () => animation?.cancel(), { once: true })
   function synchronize() {
     handle.queueTask((node) => {
       if (!countdownPropertyRegistered) {
@@ -891,6 +896,6 @@ export const countdown = createMixin<
   return (nextClock) => {
     clock = nextClock
     synchronize()
-    return attrs({ 'aria-hidden': 'true', hidden: clock.timeout === false })
+    return undefined
   }
 })

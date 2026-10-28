@@ -65,16 +65,17 @@ const anatomy = await highlightSource(`
 `)
 
 const countdownCode = await highlightSource(`
-  // Inside the toast.Context callback, for each toastItem:
-  const bar = <div mix={[
-    css({
-      height: '2px',
-      background: 'currentColor',
-      transform: 'scaleX(var(--toast-countdown, 1))',
-      transformOrigin: 'left',
-    }),
-    toast.countdown(toastItem),
-  ]} />
+  <article mix={toast.item({ countdown: true })}>
+    <strong mix={toast.title()}>{toastItem.title}</strong>
+    {Boolean(toastItem.timeout) && (
+      <div aria-hidden="true" mix={css({
+        height: '2px',
+        background: 'currentColor',
+        transform: 'scaleX(var(--toast-countdown, 1))',
+        transformOrigin: 'left',
+      })} />
+    )}
+  </article>
 `)
 
 const publishers = await highlightSource(`
@@ -148,6 +149,11 @@ interface ToastContextProps<data = unknown> {
   manager: ToastManager<data>
   limit?: number
   children: (toastItems: readonly ToastItem<data>[]) => RemixNode
+}
+`),
+  ToastItemOptions: await highlightSource(`
+interface ToastItemOptions {
+  countdown?: boolean
 }
 `),
   ToastRootOptions: await highlightSource(`
@@ -256,10 +262,12 @@ export default function ToastPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="countdown-indicators" title="Countdown indicators">
         <p>
-          Apply <code>toast.countdown(toastItem)</code> to a decorative indicator or its wrapper. It
-          animates <code>--toast-countdown</code> from 1 to 0. The value inherits into descendants,
-          so CSS can use it for a transform, an SVG stroke or a gradient. You supply the shape,
-          dimensions, color and placement.
+          Set <code>countdown: true</code> on <code>toast.item()</code> to enable countdown styling.
+          It animates <code>--toast-countdown</code> from 1 to 0. The value inherits into
+          descendants, so CSS can use it for a transform, an SVG stroke or a gradient. You supply
+          the shape, dimensions, color and placement. Mark decorative indicators with{' '}
+          <code>aria-hidden="true"</code> and only render them when <code>toastItem.timeout</code>{' '}
+          is truthy.
         </p>
         <Example id="countdown-example" example={countdown} />
         <CodeBlock html={countdownCode} />
@@ -267,11 +275,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
           The indicator follows the toast's timer, including pauses and restarts. For a five-second
           toast with three seconds remaining, the value starts at 0.6 and reaches zero over three
           seconds. The manager closes the toast when its timer expires.
-        </p>
-        <p>
-          The mixin hides persistent countdowns and marks indicators <code>aria-hidden</code>. Keep
-          the wrapper's content decorative. CSS controls its appearance without the mixin setting
-          its transform.
         </p>
       </Section>
       <Section id="action" title="Actions and custom data">
@@ -512,10 +515,23 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="item">item()</h3>
         <p>
-          Apply to the notification host inside ItemContext. It takes no options. If you omit the
-          title, supply an accessible name on the host with <code>aria-label</code> or
+          Apply to the notification host inside ItemContext. If you omit the title, supply an
+          accessible name on the host with <code>aria-label</code> or
           <code>aria-labelledby</code>.
         </p>
+        <ApiTable id="item-options" label="Option">
+          <ApiEntry name="countdown" type="boolean">
+            Animates the inherited <code>--toast-countdown</code> fraction from 1 to 0 while the
+            timer runs. Defaults to false. Persistent items do not create a countdown animation.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="item-css-variables" label="CSS variable">
+          <ApiEntry name="--toast-countdown" type="number">
+            Remaining timeout fraction when <code>countdown: true</code> is enabled. Consumer CSS
+            maps the fraction to a decorative indicator. The native animation follows timer changes
+            without per-frame component updates.
+          </ApiEntry>
+        </ApiTable>
         <ApiTable id="item-attributes" label="Attribute">
           <ApiEntry name="role" type="'dialog' | 'alertdialog'">
             Non-modal dialog, or alertdialog for high-priority notifications.
@@ -547,15 +563,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Notification is outside the context limit. It remains mounted and inert.
           </ApiEntry>
         </ApiTable>
-        <h3 id="countdown">countdown()</h3>
-        <p>
-          Accepts the item's <code>timeout</code>, <code>remaining</code> and <code>paused</code>.
-          Animates the inherited CSS custom property <code>--toast-countdown</code> linearly from 1
-          to 0, sets <code>aria-hidden="true"</code>, and sets <code>hidden</code> for persistent
-          items. Consumer CSS maps the fraction to a decorative indicator. Its native animation
-          follows timer changes without per-frame component updates. Animating an inherited custom
-          property can still require browser style work each frame.
-        </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable id="toast-types">
           <ApiEntry id="type-ToastManagerOptions" name="ToastManagerOptions" type="interface">
@@ -576,6 +583,9 @@ export default function ToastPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry id="type-ToastContextProps" name="ToastContextProps" type="interface">
             <CodeBlock html={typeDefinitions.ToastContextProps} />
+          </ApiEntry>
+          <ApiEntry id="type-ToastItemOptions" name="ToastItemOptions" type="interface">
+            <CodeBlock html={typeDefinitions.ToastItemOptions} />
           </ApiEntry>
           <ApiEntry id="type-ToastRootOptions" name="ToastRootOptions" type="interface">
             <CodeBlock html={typeDefinitions.ToastRootOptions} />
