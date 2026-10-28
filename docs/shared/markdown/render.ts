@@ -106,6 +106,12 @@ function removeNoticeMarker(blockquote: Element): NoticeKind | null {
     return null
   }
 
+  // A marker followed by inline content on the same line, like `[!TIP] **text**`, isn't an alert
+  let endsLine = /\n$/.test(match[0])
+  if (!endsLine && firstParagraph.children.length > 1) {
+    return null
+  }
+
   firstText.value = firstText.value.slice(match[0].length)
   if (firstText.value === '') {
     firstParagraph.children.shift()

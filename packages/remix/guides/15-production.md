@@ -35,7 +35,7 @@ export const assets = createAssetServer({
 
 In production, the asset server minifies modules, stops watching files, and fingerprints asset URLs with a hash of their content. The browser entry is served from a URL like `/assets/app/actions/public/entry.@vUxLei.ts` instead of `/assets/app/actions/public/entry.ts`. Changing a file changes its URL, so browsers and CDNs can cache each asset for a year without checking back. If `NODE_ENV` isn't set, the app runs as it does in development, watching files and serving assets that browsers have to revalidate.
 
-The asset server compiles each browser module the first time it's requested and keeps the result in memory, so there's nothing to build before a deploy. [Files and Assets](/files-and-assets/) covers the asset server's other options.
+The asset server compiles browser modules when they're first needed and keeps the results in memory, so there's nothing to build before a deploy. [Files and Assets](/files-and-assets/) covers the asset server's other options.
 
 ### Install dependencies where the app runs
 
@@ -61,7 +61,10 @@ const Origin = s
   .pipe(url())
   .transform((value) => new URL(value));
 // Comma-separated, newest first
-const Secrets = s.string().transform((value) => value.split(","));
+const Secrets = s
+  .string()
+  .transform((value) => value.split(",").map((secret) => secret.trim()))
+  .refine((secrets) => secrets.every((secret) => secret !== ""), "Expected non-empty secrets");
 
 // Only local development and tests get placeholder values.
 const isLocal = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
@@ -144,7 +147,7 @@ process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 ```
 
-The imports check the configuration and create the database client and asset server before `server.listen(...)` runs, so a bad deploy fails before it takes traffic. The sections below walk through each piece.
+The imports check the configuration and create the database client and asset server before `server.listen(...)` runs, so a misconfigured deploy fails before it takes traffic. A database client may not connect until its first query, which a [health check](#health-checks) can catch. The sections below walk through each piece.
 
 ### The public URL
 
@@ -177,7 +180,7 @@ createRequestListener(router.fetch, {
 });
 ```
 
-`onError` only sees errors thrown before a response starts. Errors elsewhere have their own hooks, so wire each one to the same reporting service:
+Some errors are handled before they reach the listener and have their own hooks, so wire each one to the same reporting service:
 
 - **Streamed pages:** once HTML has started streaming, render errors go to the `onError` option of `render()` from [`remix/middleware/render`](../src/render-middleware/README.md).
 - **Browser modules:** compilation errors in the asset server go to its `onError` option.
@@ -244,6 +247,7 @@ export const routes = route({
 ```
 
 ```tsx filename=app/actions/controller.tsx
+// inside the controller's actions:
 health() {
   return new Response("ok");
 },
@@ -313,6 +317,8 @@ Anything the app writes inside the container, including a SQLite file, disappear
 
 ```ts filename=app/router.ts
 import { CacheControl } from "remix/headers";
+import { staticFiles } from "remix/middleware/static";
+import { createRouter } from "remix/router";
 
 export const router = createRouter({
   middleware: [
@@ -346,6 +352,8 @@ When a response depends on a request header, such as `Accept-Language`, list tha
 ```ts filename=app/router.ts
 import zlib from "node:zlib";
 import { compression } from "remix/middleware/compression";
+import { staticFiles } from "remix/middleware/static";
+import { createRouter } from "remix/router";
 
 export const router = createRouter({
   middleware: [
@@ -388,13 +396,19 @@ The router is a Fetch handler, so the server entry is the only file that changes
 
 Bun and Deno accept Fetch handlers directly and run TypeScript and JSX themselves, so they don't need [`remix/node-fetch-server`](../src/node-fetch-server/README.md) or [`remix/node-tsx`](../src/node-tsx/README.md):
 
+In Bun, start it with `bun server.ts`:
+
 ```ts filename=server.ts
 import { router } from "./app/router.ts";
 
-// Bun: bun server.ts
 Bun.serve({ port: 44100, fetch: (request) => router.fetch(request) });
+```
 
-// Deno: deno run -A server.ts
+In Deno, start it with `deno run -A server.ts`:
+
+```ts filename=server.ts
+import { router } from "./app/router.ts";
+
 Deno.serve({ port: 44100 }, router.fetch);
 ```
 
@@ -424,11 +438,11 @@ The import of `server.ts` has to be dynamic, because static imports load before 
 > [!TIP]
 > **Deploying to Cloudflare Workers, Netlify, or Vercel Functions**
 >
-> These platforms bundle your code at deploy time and don't keep your source or `node_modules` on disk. The asset server from [`remix/assets`](../src/assets/README.md) can't run there, because it reads browser source from disk and compiles it with native packages when a request arrives. Instead, a bundler builds the browser code ahead of time and the platform serves the output as static files. Routes, controllers, and middleware stay the same.
+> The asset server from [`remix/assets`](../src/assets/README.md) reads browser source from disk and compiles it with native packages when a request arrives. Cloudflare Workers can't run it, and Netlify and Vercel Functions are usually deployed as bundles. On these platforms, a bundler builds the browser code ahead of time and the platform serves the output as static files. Routes, controllers, and middleware stay the same.
 >
 > Remix itself doesn't depend on a bundler. The community-maintained [Pitlane](https://pitlane.tools/guides) project provides a Vite plugin for Remix and deployment guides for [Cloudflare Workers](https://pitlane.tools/deploy/cloudflare), [Netlify](https://pitlane.tools/deploy/netlify), and [Vercel](https://pitlane.tools/deploy/vercel).
 >
-> With any bundler, the rest of the app has to fit the runtime too. `staticFiles()`, `loadMigrations(...)` from [`remix/data-table/migrations/node`](../src/data-table/README.md), and the `fs` storage options read local disk while the app runs, so use the platform's storage and run migrations as a deploy step. Configuration comes from platform bindings, such as `import { env } from "cloudflare:workers"`, instead of `process.env`.
+> With any bundler, the rest of the app has to fit the runtime too. `staticFiles()`, `loadMigrations(...)` from [`remix/data-table/migrations/node`](../src/data-table/README.md), and the `fs` storage options read local disk while the app runs, so use the platform's storage and run migrations as a deploy step. On Workers, configuration comes from platform bindings, such as `import { env } from "cloudflare:workers"`, instead of `process.env`.
 
 ## Production checklist
 
