@@ -1,5 +1,17 @@
-import { createSchema } from './schema.ts'
-import type { InferInput, InferOutput, Schema } from './schema.ts'
+import { createSchemaNode } from './schema.ts'
+import type {
+  BaseSchemaNode,
+  InferInput,
+  InferOutput,
+  Schema,
+  ValidationContext,
+} from './schema.ts'
+
+export type LazySchemaNode = BaseSchemaNode<'lazy'> & {
+  getter: () => Schema<any, any>
+  // Set the first time the schema is validated or resolved for inspection.
+  resolved: Schema<any, any> | undefined
+}
 
 /**
  * Create a lazily-evaluated schema.
@@ -12,13 +24,28 @@ import type { InferInput, InferOutput, Schema } from './schema.ts'
 export function lazy<schema extends Schema<any, any>>(
   getSchema: () => schema,
 ): Schema<InferInput<schema>, InferOutput<schema>> {
-  let cached: schema | undefined
+  let node = createSchemaNode<LazySchemaNode>('lazy', runLazy)
+  node.getter = getSchema
+  node.resolved = undefined
+  return node
+}
 
-  return createSchema(function validate(value, context) {
-    if (!cached) {
-      cached = getSchema()
-    }
+/**
+ * Returns the schema behind a lazy schema, calling its getter only once. Code that walks
+ * recursive schemas should track the lazy schemas it has already visited.
+ *
+ * @param node The lazy schema
+ * @returns The resolved schema
+ */
+export function resolveLazySchema(node: LazySchemaNode): Schema<any, any> {
+  if (node.resolved === undefined) {
+    let getter = node.getter
+    node.resolved = getter()
+  }
 
-    return cached['~run'](value, context)
-  })
+  return node.resolved
+}
+
+function runLazy(this: LazySchemaNode, value: unknown, context: ValidationContext) {
+  return resolveLazySchema(this)['~run'](value, context)
 }
