@@ -40,10 +40,8 @@ export const ImageCarousel = clientEntry(
               width: '100%',
               transition: 'transform 350ms cubic-bezier(0.22, 1, 0.36, 1)',
               willChange: 'transform',
-            })}
-            style={{
               transform: `translateX(-${index * 100}%)`,
-            }}
+            })}
           >
             {handle.props.images.map((src, i) => (
               <div

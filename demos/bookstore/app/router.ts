@@ -1,6 +1,7 @@
 import { createRouter, type MiddlewareContext } from 'remix/router'
 import { asyncContext } from 'remix/middleware/async-context'
 import { compression } from 'remix/middleware/compression'
+import { csp } from 'remix/middleware/csp'
 import { formData } from 'remix/middleware/form-data'
 import type { Cookie } from 'remix/cookie'
 import { logger } from 'remix/middleware/logger'
@@ -36,7 +37,7 @@ import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
-import { assets } from './utils/assets.ts'
+import { assets, browserHmrChannel } from './utils/assets.ts'
 
 type AppContext = MiddlewareContext<
   [
@@ -45,6 +46,7 @@ type AppContext = MiddlewareContext<
     ReturnType<typeof loadDatabase>,
     ReturnType<typeof loadAssetEntry>,
     ReturnType<typeof loadAuth>,
+    ReturnType<typeof csp>,
     ReturnType<typeof render>,
   ]
 >
@@ -84,6 +86,26 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   middleware.push(loadDatabase())
   middleware.push(loadAssetEntry())
   middleware.push(loadAuth())
+  middleware.push(
+    csp({
+      policy({ nonce }) {
+        return {
+          defaultSrc: ["'self'"],
+          // The import-map polyfill evaluates module graphs from blob URLs.
+          scriptSrc: ["'self'", `'nonce-${nonce}'`, 'blob:'],
+          styleSrc: ["'self'", `'nonce-${nonce}'`],
+          styleSrcAttr: ["'none'"],
+          connectSrc: browserHmrChannel
+            ? ["'self'", new URL(browserHmrChannel.url).origin]
+            : ["'self'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
+        }
+      },
+    }),
+  )
   middleware.push(render({ assets }))
 
   let router = createRouter<AppContext>({ middleware })
