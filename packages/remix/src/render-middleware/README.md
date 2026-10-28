@@ -97,7 +97,7 @@ let router = createRouter({
 
 Generated import maps, module preloads, and CSS mixin styles receive the context nonce. Authored tags use `getCspNonce(context)` from `remix/middleware/csp`. Internal frame requests, including redirects, inherit the nonce before child handlers run, even on routes without their own CSP middleware.
 
-Client navigation and frame reloads rewrite matching resource nonces when the response's enforcing CSP identifies one shared nonce. The original document policy remains active. See [client navigation](../component/server/README.md#client-navigation) for assumptions and custom-resolver requirements.
+Client navigation and frame reloads preserve the original document policy and rewrite matching resource nonces, including during island updates. See [client navigation](../component/server/README.md#client-navigation) for the required response headers and custom-resolver setup.
 
 See [csp-middleware](../csp-middleware/README.md) for policy configuration and response scope. Direct users of `renderToStream()` and `renderToString()` supply the `nonce` option themselves.
 

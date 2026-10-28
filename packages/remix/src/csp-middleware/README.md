@@ -60,11 +60,11 @@ router.get('/activity', (context) => context.render(<p>Recent activity</p>))
 
 The required `policy` may be static or a sync/async factory receiving `{ nonce, context }`. Before the factory or downstream handlers run, `csp()` establishes a base64-encoded nonce with 128 random bits from `crypto.getRandomValues()`.
 
-Inferred directive objects and factory returns reject unknown directive names using `ContentSecurityPolicyInit` from `remix/headers/content-security-policy`. Return-type annotations are optional. For shared factories, `satisfies CspPolicyFactory` preserves this check; annotations that erase extra keys prevent `csp()` from detecting them.
+Inferred directive objects and factory returns reject unknown directive names without annotations. For shared factories, `satisfies CspPolicyFactory` preserves this check; annotations that erase extra keys prevent `csp()` from detecting them.
 
 `render()` applies the nonce to generated import maps, module preloads, and CSS mixin styles. Internal frame requests, including redirects, share the enclosing nonce; independent requests generate fresh values. Authored script and style tags use `getCspNonce(context)`, which returns `undefined` before a nonce is established.
 
-Browser navigation retains the original document's CSP. Matching resource nonces are rewritten only when the response's enforcing CSP identifies one shared nonce across its script and style source lists. See [client navigation](../component/server/README.md#client-navigation) for assumptions and custom-resolver requirements.
+Browser navigation retains the original document's CSP. Matching resource nonces are rewritten only when the response's enforcing CSP identifies one shared nonce. See [client navigation](../component/server/README.md#client-navigation) for island updates, nonce requirements, and custom resolvers.
 
 ## Static policies
 
@@ -112,7 +112,7 @@ csp({
 })
 ```
 
-`filter: () => true` includes every response type except `304`. The synchronous filter runs after downstream handlers and controls both policy and reporting endpoint headers. Returning `false` preserves the response. Nonce generation and the policy factory still run before handlers, regardless of the filter's result. Response bodies are never consumed.
+`filter: () => true` includes every response type except `304`. The synchronous filter controls both policy and reporting headers. Nonce generation and the policy factory still run before handlers regardless of its result; response bodies are never consumed.
 
 ## Custom rendering integrations
 
