@@ -114,14 +114,14 @@
 }
 
 .docs-table-scroll table {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
   margin: 0;
   border-collapse: collapse;
   font-size: var(--rmx-font-size-sm);
 }
 
 .docs-markdown :is(th, td) {
+  min-width: 8rem;
   padding: var(--rmx-space-sm) var(--rmx-space-md);
   border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
   text-align: left;
