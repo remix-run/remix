@@ -73,6 +73,11 @@
   }
 }
 
+/* Set while a click on a table of contents entry scrolls the page. */
+.docs-selection-list[data-jumping]::before {
+  transition: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --docs-nav-duration: 0s;

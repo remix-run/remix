@@ -11,8 +11,7 @@ export interface DocsNavigationLink {
 }
 
 export type DocsNavigationLinkId =
-  | 'guides'
-  | 'api'
+  | 'docs'
   | 'ui'
   | 'github'
   | 'blog'
@@ -22,8 +21,7 @@ export type DocsNavigationLinkId =
 
 export function createDocsNavigationLinks(): Map<DocsNavigationLinkId, DocsNavigationLink> {
   return new Map<DocsNavigationLinkId, DocsNavigationLink>()
-    .set('guides', { href: 'https://guides.remix.run/', label: 'Guides' })
-    .set('api', { href: 'https://docs.remix.run', label: 'Docs' })
+    .set('docs', { href: 'https://docs.remix.run', label: 'Docs' })
     .set('github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' })
     .set('blog', { href: 'https://remix.run/blog', label: 'Blog' })
     .set('newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' })
@@ -158,7 +156,7 @@ const docsHeaderCss = css({
 const compactSearchButtonCss = css({
   position: 'fixed',
   top: 'calc((var(--site-header-height) - 32px) / 2)',
-  left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
+  left: 'calc(var(--docs-sidebar-inline-start) + 61px)',
   zIndex: 51,
   display: 'none',
   width: '32px',
@@ -243,7 +241,7 @@ const collapsibleSearchButtonCss = css({
   [media.md]: {
     ':root[data-docs-nav-collapsed] &': {
       top: 'calc((var(--site-header-height) - 32px) / 2)',
-      left: 'calc(var(--docs-sidebar-inline-start) + 97px)',
+      left: 'calc(var(--docs-sidebar-inline-start) + 61px)',
       justifyContent: 'center',
       width: '32px',
       padding: '8px',
