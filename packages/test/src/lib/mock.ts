@@ -27,7 +27,7 @@ export interface MockContext<
   /**
    * Replaces the implementation for one call, replacing any override at that index.
    * @param implementation A replacement preserving the original function's full signature.
-   * @param onCall Zero-based call index, which must not have passed (defaults to the next call).
+   * @param onCall Zero-based safe integer index at or after the next call (defaults to the next call).
    */
   mockImplementationOnce(implementation: implementation, onCall?: number): void
   /** Clears call history and resets indices without changing implementations or pending overrides. */
@@ -45,7 +45,7 @@ export interface MockContext<
   restore(): void
 }
 
-/** A function augmented with a `.mock` property for inspecting recorded calls. */
+/** A function with call history and implementation controls on its `.mock` property. */
 export type MockFunction<T extends (...args: any[]) => any = (...args: any[]) => any> = T & {
   /** Call history and implementation controls for this function. */
   mock: MockContext<Parameters<T>, ReturnType<T>, T>

@@ -42,8 +42,8 @@ export interface TestContext {
   after(fn: () => void): void
 
   /**
-   * Mock tracker for the current test using {@link mock}. Mirrors the shape of Node's
-   * `t.mock`. Mock restoration and test cleanup callbacks run in registration order.
+   * Function mocks and method spies using {@link mock}, restored automatically after the test.
+   * Mock restoration and test cleanup callbacks run in registration order, even after failures.
    */
   mock: {
     /** Creates a function mock that is restored after the test. */
