@@ -53,23 +53,23 @@ Supply the region label and control labels. Mount one `Context` per manager, out
 
 - `createToastManager<data = unknown>(options?)`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
 - `Context`: accepts a stable `manager`, an optional `limit` (unlimited by default), and a typed collection callback. Render every item, including overflow.
-- `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and polite announcements. A non-empty `label` is required.
+- `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and keyboard entry. A non-empty `label` is required.
 - `ItemContext`: accepts the toast item ID as `value` and scopes its markup. Key the provider and animated host by the item ID.
 - `item({ countdown? })`: applies non-modal dialog semantics, presentation lifetime, availability and focus recovery. It is a Tab stop before the controls.
 - `title()` and `description()`: connect authored heading and supporting elements through `aria-labelledby` and `aria-describedby`. They generate IDs unless you supply them, and remove relationships when a part is empty or removed. They supply no elements or content.
-- `close()`: dismisses the scoped toast from a native button. Supply translated text or an accessible label for an icon button. It defaults to `type="button"` and excludes the control from passive announcements while the collection is collapsed.
-- `ToastOptions<data>`: optional renderable `title` and `description`, generic `data`, `id`, `timeout` and `priority`.
-- `ToastItem<data>`: immutable content, an update `revision`, resolved `priority`, and sampled clock state: `presented`, `paused`, `remaining` and `timeout`.
+- `close()`: dismisses the scoped toast from a native button. Supply translated text or an accessible label for an icon button. It defaults to `type="button"`.
+- `ToastOptions<data>`: optional renderable `title` and `description`, generic `data`, `announcement`, `id` and `timeout`.
+- `ToastItem<data>`: immutable content, an update `revision` and sampled clock state: `presented`, `paused`, `remaining` and `timeout`.
 - `ToastManager<data>`: `add`, `close`, `pause`, `resume`, `present` and `toastItems`. Native `change` subscriptions support `AbortSignal` cleanup.
 - `ToastManagerOptions<data>`, `ToastContextProps<data>`, `ToastItemContextProps`, `ToastItemOptions` and `ToastRootOptions`: configuration types.
 
 ## Announcements and keyboard access
 
-Ordinary notifications use the collection's polite live region. Title and description accept JSX; render them inside elements with the corresponding mixins so their accessible relationships follow the actual content.
+Notifications announce the published title and description through a separate polite live region. Set `announcement` to replace the entire spoken message without changing visible content. Actions, dismiss controls and other markup added by the renderer are excluded. Title and description accept JSX; render them inside elements with the corresponding mixins so their accessible relationships follow the actual content.
 
 If you omit the title, supply an accessible name on the item with `aria-label` or `aria-labelledby`.
 
-Set `priority: 'high'` for urgent announcements. A separate assertive alert contains the published title and description. While the collection has keyboard focus, that copy is removed and the high-priority `alertdialog` is exposed for exploration. Extra authored content and actions are not copied into urgent announcements. Priority does not change timeout, visual styling or focus automatically.
+Screen reader users cannot activate a toast's actions directly from its announcement. Where possible, use `announcement` to explain an alternative way to perform the action, such as a keyboard shortcut or a control elsewhere in your application. Visible notifications and their controls remain available for exploration unless limited.
 
 F6 enters the collection and F6 again returns to the previous element. Tab visits each available notification before its controls. Shift+Tab from the collection, or Tab past either boundary, returns to the previous element. Escape dismisses the focused notification. Closing it moves focus to a neighbouring mounted, available notification or returns to the previous element. Focus is not deferred to a future mount. Make the shortcut discoverable in your application; change or disable `hotkey` for secondary managers.
 
@@ -77,7 +77,7 @@ Supply a type to `createToastManager<data>()` for custom values and behavior. Th
 
 ## Timers and motion
 
-Toasts stay open until dismissed unless a timeout is supplied. Set `timeout` to finite, non-negative milliseconds, or `false` to disable automatic dismissal. Configure a shared `defaultTimeout` on the manager as a fixed value or a callback receiving the published options. An explicit toast timeout overrides it. The callback runs once per `add()` without an explicit timeout, including replacements. Zero dismisses as soon as the toast is presented. `add()` replaces the full content and options for duplicate IDs and restarts their lifetime. Omitted titles, descriptions and data are cleared; omitted timeout and priority use their defaults.
+Toasts stay open until dismissed unless a timeout is supplied. Set `timeout` to finite, non-negative milliseconds, or `false` to disable automatic dismissal. Configure a shared `defaultTimeout` on the manager as a fixed value or a callback receiving the published options. An explicit toast timeout overrides it. The callback runs once per `add()` without an explicit timeout, including replacements. Zero dismisses as soon as the toast is presented. `add()` replaces the full content and options for duplicate IDs and restarts their lifetime. Omitted titles, descriptions and data are cleared; omitted timeout uses its default.
 
 Each item starts with `revision: 0`. Duplicate `add()` calls increment it, including when content is unchanged. Renderers can use the revision to replay feedback without remounting the toast. Timer and presentation changes leave it unchanged.
 

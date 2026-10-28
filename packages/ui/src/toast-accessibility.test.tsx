@@ -86,10 +86,8 @@ describe('toast accessibility', () => {
     let item = element(result.container, 'article')
     assert.equal(item.getAttribute('role'), 'dialog')
     assert.equal(item.inert, false)
-    await result.act(() =>
-      toastManager.add({ id: 'saved', title: 'Saved', timeout: false, priority: 'high' }),
-    )
-    assert.equal(item.getAttribute('role'), 'alertdialog')
+    await result.act(() => toastManager.add({ id: 'saved', title: 'Updated', timeout: false }))
+    assert.equal(item.getAttribute('role'), 'dialog')
     await result.act(() => element(item, 'button').click())
     assert.deepEqual(
       toastManager.toastItems.map((toastItem) => toastItem.id),
@@ -142,7 +140,7 @@ describe('toast accessibility', () => {
     await result.act(() => region.showPopover())
     assert.equal(region.matches(':popover-open'), true)
     assert.equal(document.activeElement, origin)
-    assert.equal(region.getAttribute('aria-live'), 'polite')
+    assert.equal(region.getAttribute('aria-live'), null)
     let bounds = region.getBoundingClientRect()
     let hit = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
     assert.ok(hit && region.contains(hit))
@@ -156,14 +154,14 @@ describe('toast accessibility', () => {
     assert.equal(document.activeElement, origin)
     assert.equal(toastManager.toastItems.length, 0)
 
-    await result.act(() => toastManager.add({ title: 'Urgent', priority: 'high', timeout: false }))
-    assert.equal(element(result.container, '[role="alert"]').textContent, 'Urgent')
-    let urgent = element(region, 'article')
-    assert.equal(urgent.getAttribute('aria-hidden'), 'true')
+    await result.act(() => toastManager.add({ title: 'Another toast', timeout: false }))
+    assert.equal(element(result.container, '[aria-live="polite"]').textContent, 'Another toast')
+    let next = element(region, 'article')
+    assert.equal(next.getAttribute('aria-hidden'), null)
     await result.act(() => key(document, 'F6'))
-    assert.equal(urgent.getAttribute('aria-hidden'), null)
-    await result.act(() => urgent.focus())
-    await result.act(() => key(urgent, 'Escape'))
+    assert.equal(next.getAttribute('aria-hidden'), null)
+    await result.act(() => next.focus())
+    await result.act(() => key(next, 'Escape'))
     assert.equal(toastManager.toastItems.length, 0)
     assert.equal(document.activeElement, origin)
     assert.equal(region.matches(':popover-open'), true)
@@ -198,9 +196,11 @@ describe('toast accessibility', () => {
     assert.equal(item.getAttribute('aria-labelledby'), title.id)
     assert.equal(item.getAttribute('aria-describedby'), description.id)
     assert.equal(element(item, 'h2 strong').textContent, 'Notes.md')
-    assert.equal(element(result.container, 'section').getAttribute('aria-live'), 'polite')
-    assert.equal(result.container.querySelector('[role="status"]'), null)
-    assert.equal(result.container.querySelector('[role="alert"]'), null)
+    assert.equal(element(result.container, 'section').getAttribute('aria-live'), null)
+    assert.equal(
+      element(result.container, '[aria-live="polite"]').textContent,
+      'Archived Notes.mdUse Undo to restore it.',
+    )
     await result.act(() =>
       toastManager.add({
         id: toastManager.toastItems[0].id,
@@ -285,82 +285,95 @@ describe('toast accessibility', () => {
     assert.equal(item.getAttribute('aria-describedby'), element(item, 'p').id)
   })
 
-  it('announces urgent published content separately until the collection gains keyboard focus', async (t) => {
-    let toastManager = toast.createToastManager<{ action: RemixNode }>()
-    toastManager.add({
-      id: 'urgent',
-      title: (
-        <>
-          Connection <strong>lost</strong>
-        </>
-      ),
-      description: 'Try again.',
-      priority: 'high',
-      data: { action: <button>Retry</button> },
-    })
-    toastManager.add({ id: 'ordinary', title: 'Saved', timeout: false })
+  it('mounts an empty live region before publishing and excludes rendered actions', async (t) => {
+    let toastManager = toast.createToastManager()
     let result = render(
-      <Notifications manager={toastManager} renderData={(data) => data?.action} />,
+      <Notifications manager={toastManager} renderData={() => <button>Undo</button>} />,
     )
     t.after(result.cleanup)
-    let urgent = element(result.container, '[data-id="urgent"]')
-    assert.equal(urgent.getAttribute('role'), 'alertdialog')
-    assert.equal(urgent.getAttribute('aria-hidden'), 'true')
-    assert.equal(urgent.inert, false)
-    let alert = element(result.container, '[role="alert"]')
-    assert.equal(alert.textContent, 'Connection lostTry again.')
-    assert.equal(alert.querySelector('button'), null)
+    let polite = element(result.container, '[aria-live="polite"]')
+    assert.equal(polite.textContent, '')
     await result.act(() =>
-      toastManager.add({
-        id: 'urgent',
-        title: (
-          <>
-            Connection <strong>lost</strong>
-          </>
-        ),
-        description: 'Reconnecting.',
-        priority: 'high',
-        data: { action: <button>Retry</button> },
-      }),
+      toastManager.add({ id: 'saved', title: 'Saved', description: 'All changes.' }),
     )
-    assert.match(alert.textContent ?? '', /Reconnecting/)
-    element(result.container, '[data-origin]').focus()
-    await result.act(() => key(document, 'F6'))
-    assert.equal(result.container.querySelector('[role="alert"]'), null)
-    assert.equal(urgent.getAttribute('aria-hidden'), null)
-    assert.equal(
-      toastManager.toastItems.find((toastItem) => toastItem.id === 'urgent')?.paused,
-      true,
-    )
-    await result.act(() => key(element(result.container, 'section'), 'F6'))
-    assert.ok(result.container.querySelector('[role="alert"]'))
-    assert.equal(urgent.getAttribute('aria-hidden'), 'true')
+    assert.equal(element(result.container, '[aria-live="polite"]'), polite)
+    assert.equal(polite.textContent, 'SavedAll changes.')
+    assert.equal(polite.querySelector('button'), null)
+    assert.equal(element(result.container, 'article button').getAttribute('aria-hidden'), null)
+    let message = element(polite, '[aria-atomic="true"]')
+    await result.act(() => toastManager.pause('test'))
+    assert.equal(element(polite, '[aria-atomic="true"]'), message)
     await result.act(() =>
-      toastManager.add({
-        id: 'urgent',
-        title: (
-          <>
-            Connection <strong>lost</strong>
-          </>
-        ),
-        description: 'Reconnecting.',
-        priority: 'low',
-        data: { action: <button>Retry</button> },
-      }),
+      toastManager.add({ id: 'saved', title: 'Saved', description: 'All changes.' }),
     )
-    assert.equal(result.container.querySelector('[role="alert"]'), null)
-    assert.equal(urgent.getAttribute('role'), 'dialog')
-    assert.equal(urgent.getAttribute('aria-hidden'), null)
+    assert.notEqual(element(polite, '[aria-atomic="true"]'), message)
+    await result.act(() => toastManager.close())
+    assert.equal(polite.textContent, '')
+    assert.equal(element(result.container, '[aria-live="polite"]'), polite)
   })
 
-  it('keeps close controls out of passive announcements and exposes them during interaction', async (t) => {
+  it('uses announcement overrides and clears them on replacement', async (t) => {
+    let toastManager = toast.createToastManager()
+    let result = render(<Notifications manager={toastManager} />)
+    t.after(result.cleanup)
+    await result.act(() =>
+      toastManager.add({ id: 'saved', title: 'Saved', announcement: 'Changes saved.' }),
+    )
+    let polite = element(result.container, '[aria-live="polite"]')
+    assert.equal(polite.textContent, 'Changes saved.')
+    assert.equal(element(result.container, 'article h2').textContent, 'Saved')
+    assert.equal(toastManager.toastItems[0].announcement, 'Changes saved.')
+    await result.act(() =>
+      toastManager.add({
+        id: 'saved',
+        title: 'Error',
+        announcement: 'Save failed.',
+      }),
+    )
+    assert.equal(polite.textContent, 'Save failed.')
+    await result.act(() => toastManager.add({ id: 'saved', title: 'Restored' }))
+    assert.equal(polite.textContent, 'Restored')
+    assert.equal(toastManager.toastItems[0].announcement, undefined)
+    await result.act(() => toastManager.add({ id: 'saved', title: 'Quiet', announcement: '' }))
+    assert.equal(polite.textContent, '')
+  })
+
+  it('announces limited items without exposing their controls', async (t) => {
+    let toastManager = toast.createToastManager()
+    let result = render(
+      <toast.Context manager={toastManager} limit={1}>
+        {(toastItems) => (
+          <section mix={toast.root({ label: 'Notifications' })}>
+            {toastItems.map((toastItem) => (
+              <toast.ItemContext key={toastItem.id} value={toastItem.id}>
+                <article data-id={toastItem.id} mix={toast.item()}>
+                  {toastItem.title}
+                </article>
+              </toast.ItemContext>
+            ))}
+          </section>
+        )}
+      </toast.Context>,
+    )
+    t.after(result.cleanup)
+    await result.act(() => toastManager.add({ id: 'old', title: 'First' }))
+    await result.act(() => toastManager.add({ id: 'new', title: 'Second' }))
+    let limited = element(result.container, '[data-id="old"]')
+    assert.equal(limited.inert, true)
+    assert.equal(limited.getAttribute('aria-hidden'), 'true')
+    let polite = element(result.container, '[aria-live="polite"]')
+    assert.match(polite.textContent ?? '', /First/)
+    assert.match(polite.textContent ?? '', /Second/)
+  })
+
+  it('keeps close controls accessible outside the announcement regions', async (t) => {
     let toastManager = toast.createToastManager()
     toastManager.add({ title: 'Saved', timeout: false })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let origin = element(result.container, '[data-origin]')
     let dismiss = element(result.container, 'article button')
-    assert.equal(dismiss.getAttribute('aria-hidden'), 'true')
+    assert.equal(dismiss.getAttribute('aria-hidden'), null)
     origin.focus()
     await result.act(() => key(document, 'F6'))
     assert.equal(dismiss.getAttribute('aria-hidden'), null)

@@ -9,12 +9,12 @@ export interface ToastOptions<data = unknown> {
   title?: RemixNode
   /** Renderable supporting content. Connect its element with `description()`. */
   description?: RemixNode
+  /** Spoken text overriding the published title and description. */
+  announcement?: string
   /** Consumer-defined data interpreted by the renderer. */
   data?: data
   /** Auto-dismiss timeout in milliseconds, or false to disable. Zero dismisses immediately. Falls back to the manager default, or false. */
   timeout?: number | false
-  /** Announcement urgency. Defaults to low (polite); high uses an assertive alert. */
-  priority?: 'low' | 'high'
 }
 
 /** Default policy for notifications published through a manager. */
@@ -33,6 +33,8 @@ export interface ToastItem<data = unknown> {
   readonly title?: RemixNode
   /** Supporting content. */
   readonly description?: RemixNode
+  /** Optional spoken text overriding the published title and description. */
+  readonly announcement?: string
   /** Content interpreted by the consumer's renderer. */
   readonly data?: data
   /** Configured timeout in milliseconds, or false for a persistent toast. */
@@ -43,8 +45,6 @@ export interface ToastItem<data = unknown> {
   readonly paused: boolean
   /** Whether at least one mounted item presents this toast. */
   readonly presented: boolean
-  /** Announcement urgency, independent of data and timeout. */
-  readonly priority: 'low' | 'high'
 }
 
 /** Commands and observable state, without a bound component. Events signal that state can be read. */
@@ -153,12 +153,12 @@ export function createToastManager<data = unknown>(
             revision: toastItem.revision,
             title: toastItem.options.title,
             description: toastItem.options.description,
+            announcement: toastItem.options.announcement,
             data: toastItem.options.data,
             timeout: toastItem.timeout,
             remaining: remaining(toastItem),
             paused: toastItem.started === null,
             presented: toastItem.presentations.size > 0,
-            priority: toastItem.options.priority ?? 'low',
           }),
         ),
       )
@@ -241,7 +241,6 @@ type RootState = {
   focusGuard(previous: EventTarget | null): void
   readonly hasReturnTarget: boolean
   readonly expanded: boolean
-  readonly focused: boolean
 }
 
 type ItemState = {
@@ -307,7 +306,7 @@ function focusElement(node: HTMLElement, visible = false) {
 /**
  * Connects retained notifications to consumer markup, announcements and focus coordination.
  * @param handle Component lifetime and typed manager props.
- * @returns A reactive renderer for the collection and high-priority announcements.
+ * @returns A reactive renderer for the collection and announcements.
  */
 export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>): () => RemixNode {
   let toastManager = handle.props.manager
@@ -368,8 +367,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     for (let [id, node] of presentations) {
       let unavailable = !available.has(id)
       node.inert = unavailable
-      let high = toastItems.find((toastItem) => toastItem.id === id)?.priority === 'high'
-      if (unavailable || (high && !focused)) node.setAttribute('aria-hidden', 'true')
+      if (unavailable) node.setAttribute('aria-hidden', 'true')
       else node.removeAttribute('aria-hidden')
     }
   }
@@ -395,9 +393,6 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     },
     get expanded() {
       return hovered || focused || touchEngaged
-    },
-    get focused() {
-      return focused
     },
     registerItem(id, node) {
       presentations.set(id, node)
@@ -618,24 +613,28 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     return (
       <ToastScope value={state}>
         {handle.props.children(toastManager.toastItems)}
-        {!focused && (
-          <div mix={hidden}>
-            {toastManager.toastItems
-              .filter((toastItem) => toastItem.presented && toastItem.priority === 'high')
-              .map((toastItem) => (
-                <div key={toastItem.id} role="alert" aria-atomic="true">
-                  <div>{toastItem.title}</div>
-                  <div>{toastItem.description}</div>
-                </div>
-              ))}
-          </div>
-        )}
+        <div aria-live="polite" aria-atomic="false" aria-relevant="additions text" mix={hidden}>
+          {toastManager.toastItems
+            .filter((toastItem) => toastItem.presented)
+            .map((toastItem) => (
+              <div key={JSON.stringify([toastItem.id, toastItem.revision])} aria-atomic="true">
+                {toastItem.announcement !== undefined ? (
+                  toastItem.announcement
+                ) : (
+                  <>
+                    <div>{toastItem.title}</div>
+                    <div>{toastItem.description}</div>
+                  </>
+                )}
+              </div>
+            ))}
+        </div>
       </ToastScope>
     )
   }
 }
 
-/** A named notification region with polite announcements and keyboard entry. */
+/** A named notification region with keyboard entry. */
 export const root = createMixin<HTMLElement, [options: ToastRootOptions], ElementProps>(
   (handle) => {
     let context = handle.context.get(ToastScope)
@@ -650,9 +649,6 @@ export const root = createMixin<HTMLElement, [options: ToastRootOptions], Elemen
           role: 'region',
           'aria-label': options.label,
           tabIndex: -1,
-          'aria-live': 'polite',
-          'aria-atomic': 'false',
-          'aria-relevant': 'additions text',
           'data-expanded': context.expanded ? '' : undefined,
         }),
         ref((node: HTMLElement, signal) => context.registerRoot(node, () => options, signal)),
@@ -788,12 +784,9 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
         options.countdown && toastItem ? countdownAnimation(toastItem) : undefined,
         attrs({
           inert: limited || !toastItem ? true : undefined,
-          'aria-hidden':
-            limited || !toastItem || (toastItem.priority === 'high' && !context.focused)
-              ? 'true'
-              : undefined,
+          'aria-hidden': limited || !toastItem ? 'true' : undefined,
           'data-limited': limited ? '' : undefined,
-          role: toastItem?.priority === 'high' ? 'alertdialog' : 'dialog',
+          role: 'dialog',
           'aria-modal': 'false',
           'aria-labelledby': scoped.titleId,
           'aria-describedby': scoped.descriptionId,
@@ -840,19 +833,9 @@ export const close = createMixin<HTMLButtonElement, [], ElementProps>((handle) =
   let context = handle.context.get(ToastScope)
   if (!scoped || !context)
     throw new Error('toast.close() must be rendered inside toast.ItemContext')
-  let focused = false
   return (props) => [
     attrs({
       type: props.type ?? 'button',
-      'aria-hidden': !context.expanded && !focused ? 'true' : undefined,
-    }),
-    on('focus', () => {
-      focused = true
-      void handle.update()
-    }),
-    on('blur', () => {
-      focused = false
-      void handle.update()
     }),
     on('click', (event) => {
       if (!event.defaultPrevented) context.toastManager.close(scoped.id)

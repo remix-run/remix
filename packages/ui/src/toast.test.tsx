@@ -91,7 +91,7 @@ describe('toast manager', () => {
       description: 'Try again',
       data: { label: 'Retry' },
       timeout: false,
-      priority: 'high',
+      announcement: 'Save failed.',
     })
     toastManager.add({ id: 'save', description: 'Ready' })
     let replacement = first(toastManager)
@@ -99,7 +99,7 @@ describe('toast manager', () => {
     assert.equal(replacement.description, 'Ready')
     assert.equal(replacement.data, undefined)
     assert.equal(replacement.timeout, false)
-    assert.equal(replacement.priority, 'low')
+    assert.equal(replacement.announcement, undefined)
     assert.equal(replacement.revision, 1)
     toastManager.close('save')
     toastManager.add({ id: 'save', description: 'Ready' })
@@ -449,7 +449,7 @@ describe('toast.root()', () => {
     let undo = element(result.container, '[data-toast] button')
     undo.focus()
     assert.equal(first(toastManager).paused, true)
-    assert.equal(element(result.container, '[role="region"]').getAttribute('aria-live'), 'polite')
+    assert.equal(element(result.container, '[role="region"]').getAttribute('aria-live'), null)
     await result.act(() => undo.click())
     assert.equal(document.activeElement, publish)
     assert.equal(toastManager.toastItems.length, 0)

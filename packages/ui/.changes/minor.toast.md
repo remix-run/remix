@@ -1,1 +1,1 @@
-Added `@remix-run/ui/toast` for retained notifications with typed data, pausable timers, deduplication and updates. Providers and mixins connect consumer-owned markup to announcements, keyboard navigation, focus recovery and dismissal. Toasts compose with drag and animation mixins for swipe dismissal and animated stacking.
+Added `@remix-run/ui/toast` for accessible toast notifications. A shared manager publishes notifications independently of rendering, with providers and mixins connecting them to your own markup.

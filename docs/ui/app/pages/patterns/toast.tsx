@@ -24,7 +24,6 @@ const action = await loadExample('toast/action', { outlet: 'ToastRegion' })
 const actions = await loadExample('toast/actions', { outlet: 'ToastRegion' })
 const stack = await loadExample('toast/stack', { outlet: 'ToastRegion' })
 const countdown = await loadExample('toast/countdown', { outlet: 'ToastRegion' })
-const priority = await loadExample('toast/priority', { outlet: 'ToastRegion' })
 const dismissal = await loadExample('toast/dismissal', { outlet: 'ToastRegion' })
 
 const anatomy = await highlightSource(`
@@ -117,9 +116,9 @@ interface ToastOptions<data = unknown> {
   id?: string
   title?: RemixNode
   description?: RemixNode
+  announcement?: string
   data?: data
   timeout?: number | false
-  priority?: 'low' | 'high'
 }
 `),
   ToastItem: await highlightSource(`
@@ -128,12 +127,12 @@ interface ToastItem<data = unknown> {
   readonly revision: number
   readonly title?: RemixNode
   readonly description?: RemixNode
+  readonly announcement?: string
   readonly data?: data
   readonly timeout: number | false
   readonly remaining: number
   readonly paused: boolean
   readonly presented: boolean
-  readonly priority: 'low' | 'high'
 }
 `),
   ToastManager: await highlightSource(`
@@ -189,7 +188,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
             {defaultTimeout.Outlet && <defaultTimeout.Outlet />}
             {dynamicTimeout.Outlet && <dynamicTimeout.Outlet />}
             {countdown.Outlet && <countdown.Outlet />}
-            {priority.Outlet && <priority.Outlet />}
             {dismissal.Outlet && <dismissal.Outlet />}
           </div>
           {customPosition.Outlet && <customPosition.Outlet />}
@@ -316,7 +314,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <p>
           Each call supplies the complete content and options. Omitted titles, descriptions and data
           are cleared. Omitted timeout uses the manager's default, or stays open until dismissed.
-          Omitted priority defaults to low.
         </p>
         <p>
           Each toast starts with <code>revision: 0</code>. Adding the same ID again increments its
@@ -325,28 +322,12 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
         <Example id="stack" example={stack} />
       </Section>
-      <Section id="priority" title="Priority">
-        <p>
-          Set <code>priority</code> to control announcement urgency. Low priority is the default and
-          requests a polite announcement when the screen reader is ready. Use <code>'high'</code>
-          for urgent notifications that should interrupt current speech. Priority does not move
-          keyboard focus.
-        </p>
-        <Example id="priority-example" example={priority} />
-        <p>
-          Low-priority announcements use the rendered content in the region. High-priority
-          announcements use a separate assertive alert containing the published title and
-          description. Keep meaningful announcement content in those fields. The alert does not
-          include arbitrary extra markup or actions. While the collection has keyboard focus, the
-          alert is removed and the notification itself is exposed for exploration.
-        </p>
-      </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
-          Supply the region's accessible name with <code>root({`{ label }`})</code>. Each
-          notification is a non-modal dialog. Its heading and supporting content are connected by{' '}
-          <code>title()</code> and <code>description()</code>. Both fields accept JSX; the mixins
-          belong on the elements you render.
+          Notifications use polite live announcements. Supply the region's accessible name with{' '}
+          <code>root({`{ label }`})</code>. Each notification is a non-modal dialog. Its heading and
+          supporting content are connected by <code>title()</code> and <code>description()</code>.
+          Both fields accept JSX; the mixins belong on the elements you render.
         </p>
         <p>
           New notifications preserve focus elsewhere on the page. F6 enters the collection, and Tab
@@ -417,6 +398,10 @@ export default function ToastPage(handle: Handle<PageProps>) {
           <ApiEntry name="description" type="RemixNode">
             Optional renderable supporting content. Apply description() to its element.
           </ApiEntry>
+          <ApiEntry name="announcement" type="string" defaultValue="title and description">
+            Spoken text. Overrides the published title and description without changing the visible
+            content. An empty string supplies no announcement content.
+          </ApiEntry>
           <ApiEntry name="data" type="data">
             Consumer-defined data interpreted by your renderer. Supply a type to
             createToastManager() for typed access.
@@ -426,15 +411,11 @@ export default function ToastPage(handle: Handle<PageProps>) {
             dismisses immediately once presented. Overrides the manager's defaultTimeout. Without
             either option, the toast stays open until dismissed. Invalid values throw RangeError.
           </ApiEntry>
-          <ApiEntry name="priority" type="'low' | 'high'" defaultValue="'low'">
-            Announcement urgency. High priority uses an assertive alert; it does not move focus or
-            change timeout.
-          </ApiEntry>
         </ApiTable>
         <h3 id="toast-item">ToastItem&lt;data = unknown&gt;</h3>
         <p>
-          Readonly title, description and data fields match the published content. Other snapshot
-          fields follow.
+          Readonly title, description, announcement and data fields match the published content.
+          Other snapshot fields follow.
         </p>
         <ApiTable id="toast-item-fields" label="Field">
           <ApiEntry name="id" type="string">
@@ -455,9 +436,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry name="presented" type="boolean">
             At least one mounted element presents the item.
-          </ApiEntry>
-          <ApiEntry name="priority" type="'low' | 'high'">
-            Resolved announcement urgency.
           </ApiEntry>
         </ApiTable>
         <h3 id="context">Context</h3>
@@ -488,15 +466,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
           </ApiEntry>
         </ApiTable>
         <ApiTable id="root-attributes" label="Attribute">
-          <ApiEntry name="aria-live" type="'polite'">
-            Announces ordinary rendered notifications.
-          </ApiEntry>
-          <ApiEntry name="aria-atomic" type="'false'">
-            Announces changes without repeating the whole collection.
-          </ApiEntry>
-          <ApiEntry name="aria-relevant" type="'additions text'">
-            Includes new notifications and text updates.
-          </ApiEntry>
           <ApiEntry name="role" type="'region'">
             Landmark for user-initiated keyboard entry.
           </ApiEntry>
@@ -527,8 +496,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           content. They register generated or authored IDs with the item and remove relationships
           when their content is empty or the elements disappear. They do not supply elements or
           content. Apply <code>close()</code> to a native button with your translated text or
-          accessible label. It dismisses the scoped notification and hides the dismiss control from
-          passive announcements while the collection is collapsed. Actions remain ordinary buttons
+          accessible label. It dismisses the scoped notification. Actions remain ordinary buttons
           and links and do not implicitly dismiss.
         </p>
         <h3 id="item">item()</h3>
@@ -551,8 +519,8 @@ export default function ToastPage(handle: Handle<PageProps>) {
           </ApiEntry>
         </ApiTable>
         <ApiTable id="item-attributes" label="Attribute">
-          <ApiEntry name="role" type="'dialog' | 'alertdialog'">
-            Non-modal dialog, or alertdialog for high-priority notifications.
+          <ApiEntry name="role" type="'dialog'">
+            Non-modal dialog.
           </ApiEntry>
           <ApiEntry name="aria-labelledby" type="string">
             ID of the registered title element.
@@ -573,7 +541,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Applied while limited or logically closed. Retained exits remain unavailable.
           </ApiEntry>
           <ApiEntry name="aria-hidden" type="'true'">
-            Applied while limited or logically closed, and to unfocused high-priority notifications.
+            Applied while limited or logically closed.
           </ApiEntry>
         </ApiTable>
         <ApiTable id="item-states" label="Attribute">
