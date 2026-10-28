@@ -202,10 +202,10 @@ Use `replaceUrl()` to reflect state the page already displays, such as a selecte
 ```ts
 import { replaceUrl } from 'remix/component'
 
-replaceUrl('/products/shirt?color=blue')
+await replaceUrl('/products/shirt?color=blue')
 ```
 
-This replaces the current history entry without fetching, rendering, or moving scroll and focus, including for fragment-only changes. Remix keeps the top-frame source and history state in sync, so later reloads and Back/Forward use the replacement URL. It also works without frame navigation support. The URL must be same-origin, and any active navigation must finish first. See [Replacing the URL](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#replacing-the-url) for details.
+This replaces the current history entry without fetching, rendering, or moving scroll and focus, including for fragment-only changes. Remix keeps the top-frame source and history state in sync, so later reloads and Back/Forward use the replacement URL. It also works without frame navigation support. The URL must be same-origin. If a navigation is active, replacement waits for it and rejects if it fails, is superseded, or changes destination. Pass `{ signal: handle.signal }` to cancel a pending replacement when the component unmounts. See [Replacing the URL](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#replacing-the-url) for details.
 
 Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
 and forms as document navigations while still hydrating client entries and using explicit frames,
