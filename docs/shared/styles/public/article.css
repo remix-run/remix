@@ -95,8 +95,6 @@
   font-size: var(--docs-font-size-label);
   font-weight: var(--rmx-font-weight-bold);
   line-height: normal;
-  letter-spacing: var(--docs-letter-spacing-label);
-  text-transform: uppercase;
 }
 
 .docs-toc__list {
