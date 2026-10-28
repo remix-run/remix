@@ -27,7 +27,7 @@ export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRan
   /**
    * Filter function to determine which files should be served.
    *
-   * @param path The relative path being requested
+   * @param path The percent-decoded relative path being requested, without a leading slash
    * @returns Whether to serve the file
    */
   filter?: (path: string) => boolean
@@ -80,7 +80,9 @@ export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRan
 /**
  * Creates a middleware that serves static files from the filesystem.
  *
- * Uses the URL pathname to resolve files, removing the leading slash to make it a relative path.
+ * Resolves files from the percent-decoded URL pathname relative to `root`, so `/my%20file.txt`
+ * serves `my file.txt`. Requests with malformed escapes, or with segments that decode to `/`,
+ * `\`, a null byte, `.`, or `..`, are not served.
  * The middleware always falls through to the handler if the file is not found or an error occurs.
  *
  * @param root The root directory to serve files from (absolute or relative to cwd)
@@ -108,7 +110,12 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return next()
     }
 
-    let relativePath = context.url.pathname.replace(/^\/+/, '')
+    let decodedPathname = decodePathname(context.url.pathname)
+    if (decodedPathname == null) {
+      return next()
+    }
+
+    let relativePath = decodedPathname.replace(/^\/+/, '')
 
     if (filter && !filter(relativePath)) {
       return next()
@@ -162,7 +169,11 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
 
         // If no index file found and listFiles is enabled, show directory listing
         if (!file && listFiles) {
-          return generateDirectoryListing(containedTargetPath, context.url.pathname)
+          return generateDirectoryListing(
+            containedTargetPath,
+            context.url.pathname,
+            decodedPathname,
+          )
         }
       }
     } catch {
@@ -191,6 +202,31 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
 
     return next()
   }
+}
+
+// Decodes each pathname segment independently. Returns null for malformed escapes and for
+// segments that decode to a path separator, a null byte, or a dot segment, since those would
+// address a different path than the URL's segments describe.
+function decodePathname(pathname: string): string | null {
+  let segments = pathname.split('/')
+  let decodedSegments: string[] = []
+
+  for (let segment of segments) {
+    let decodedSegment: string
+    try {
+      decodedSegment = decodeURIComponent(segment)
+    } catch {
+      return null
+    }
+
+    if (decodedSegment === '.' || decodedSegment === '..' || /[/\\\0]/.test(decodedSegment)) {
+      return null
+    }
+
+    decodedSegments.push(decodedSegment)
+  }
+
+  return decodedSegments.join('/')
 }
 
 async function resolveContainedPath(

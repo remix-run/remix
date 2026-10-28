@@ -485,6 +485,208 @@ describe('staticFiles middleware', () => {
     assert.equal(await response.text(), 'Fallback Handler')
   })
 
+  describe('percent-encoded paths', () => {
+    function createRouterForRoot(root: string) {
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(root)],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+      return router
+    }
+
+    it('serves files with spaces in their names', async () => {
+      createTestFile('my file.txt', 'Spaced')
+      let router = createRouterForRoot(tmpDir)
+
+      let response = await router.fetch('https://remix.run/my%20file.txt')
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'Spaced')
+    })
+
+    it('serves files with encoded reserved characters and uses the decoded name for MIME types', async () => {
+      createTestFile('styles.@abc.css', 'body {}')
+      let router = createRouterForRoot(tmpDir)
+
+      let response = await router.fetch('https://remix.run/styles.%40abc.css')
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'body {}')
+      assert.equal(response.headers.get('Content-Type'), 'text/css; charset=utf-8')
+    })
+
+    it('serves files with non-ASCII names', async () => {
+      createTestFile('café.txt', 'Café')
+      let router = createRouterForRoot(tmpDir)
+
+      let response = await router.fetch('https://remix.run/caf%C3%A9.txt')
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'Café')
+    })
+
+    it('serves files from directories with encoded names', async () => {
+      createTestFile('my dir/file.txt', 'Nested')
+      let router = createRouterForRoot(tmpDir)
+
+      let response = await router.fetch('https://remix.run/my%20dir/file.txt')
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'Nested')
+    })
+
+    it('serves index files from directories with encoded names', async () => {
+      createTestFile('my dir/index.html', '<h1>Index</h1>')
+      let router = createRouterForRoot(tmpDir)
+
+      let response = await router.fetch('https://remix.run/my%20dir/')
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '<h1>Index</h1>')
+    })
+
+    it('decodes each segment only once', async () => {
+      createTestFile('%41.txt', 'Literal escape')
+      let router = createRouterForRoot(tmpDir)
+
+      let encodedPercentResponse = await router.fetch('https://remix.run/%2541.txt')
+      assert.equal(encodedPercentResponse.status, 200)
+      assert.equal(await encodedPercentResponse.text(), 'Literal escape')
+
+      let escapeResponse = await router.fetch('https://remix.run/%41.txt')
+      assert.equal(escapeResponse.status, 404)
+      assert.equal(await escapeResponse.text(), 'Fallback Handler')
+    })
+
+    it('supports conditional and range requests for encoded paths', async () => {
+      createTestFile('my file.txt', 'Hello, World!', new Date('2025-01-01'))
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [staticFiles(tmpDir, { acceptRanges: true })],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let response = await router.fetch('https://remix.run/my%20file.txt')
+      let etag = response.headers.get('ETag')
+      assert.ok(etag)
+
+      let conditionalResponse = await router.fetch('https://remix.run/my%20file.txt', {
+        headers: { 'If-None-Match': etag },
+      })
+      assert.equal(conditionalResponse.status, 304)
+
+      let rangeResponse = await router.fetch('https://remix.run/my%20file.txt', {
+        headers: { Range: 'bytes=0-4' },
+      })
+      assert.equal(rangeResponse.status, 206)
+      assert.equal(await rangeResponse.text(), 'Hello')
+    })
+
+    it('falls through for malformed percent-encoding', async () => {
+      createTestFile('test.txt', 'Hello, World!')
+      let router = createRouter({
+        middleware: [staticFiles(tmpDir), () => new Response('Fallback Handler', { status: 404 })],
+      })
+
+      let response = await router.fetch('https://remix.run/%E0')
+
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback Handler')
+    })
+
+    it('falls through for segments containing an encoded slash', async () => {
+      createTestFile('dir/file.txt', 'Nested file')
+      let router = createRouterForRoot(tmpDir)
+
+      let response = await router.fetch('https://remix.run/dir%2Ffile.txt')
+
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback Handler')
+    })
+
+    it('does not escape the root with encoded slashes', async () => {
+      createTestFile('secret.txt', 'Secret content')
+      createTestFile('public/allowed.txt', 'Allowed content')
+      let router = createRouterForRoot(path.join(tmpDir, 'public'))
+
+      let response = await router.fetch('https://remix.run/..%2Fsecret.txt')
+
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback Handler')
+    })
+
+    it('does not escape the root with encoded backslashes', async () => {
+      createTestFile('secret.txt', 'Secret content')
+      createTestFile('public/allowed.txt', 'Allowed content')
+      let router = createRouterForRoot(path.join(tmpDir, 'public'))
+
+      let response = await router.fetch('https://remix.run/..%5Csecret.txt')
+
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback Handler')
+    })
+
+    it('does not escape the root with encoded dot segments', async () => {
+      createTestFile('secret.txt', 'Secret content')
+      createTestFile('public/allowed.txt', 'Allowed content')
+      let router = createRouterForRoot(path.join(tmpDir, 'public'))
+
+      let response = await router.fetch('https://remix.run/%2e%2e/secret.txt')
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback Handler')
+
+      let mixedResponse = await router.fetch('https://remix.run/.%2E%2Fsecret.txt')
+      assert.equal(mixedResponse.status, 404)
+      assert.equal(await mixedResponse.text(), 'Fallback Handler')
+    })
+
+    it('falls through for encoded null bytes', async () => {
+      createTestFile('test.txt', 'Hello, World!')
+      let router = createRouterForRoot(tmpDir)
+
+      let response = await router.fetch('https://remix.run/test.txt%00.html')
+
+      assert.equal(response.status, 404)
+      assert.equal(await response.text(), 'Fallback Handler')
+    })
+
+    it('passes the decoded path to the filter', async () => {
+      createTestFile('.env', 'SECRET=1')
+      createTestFile('my file.txt', 'Spaced')
+      let paths: string[] = []
+
+      let router = createRouter()
+      router.get('/*', {
+        middleware: [
+          staticFiles(tmpDir, {
+            filter(path) {
+              paths.push(path)
+              return !path.startsWith('.')
+            },
+          }),
+        ],
+        handler() {
+          return new Response('Fallback Handler', { status: 404 })
+        },
+      })
+
+      let hiddenResponse = await router.fetch('https://remix.run/%2Eenv')
+      assert.equal(hiddenResponse.status, 404)
+      assert.equal(await hiddenResponse.text(), 'Fallback Handler')
+
+      let spacedResponse = await router.fetch('https://remix.run/my%20file.txt')
+      assert.equal(spacedResponse.status, 200)
+      assert.equal(await spacedResponse.text(), 'Spaced')
+
+      assert.deepEqual(paths, ['.env', 'my file.txt'])
+    })
+  })
+
   describe('filter option', () => {
     it('filters files based on custom filter function', async () => {
       createTestFile('index.html', '<h1>Home</h1>')
@@ -763,6 +965,28 @@ describe('staticFiles middleware', () => {
           [rootPath, path.join(rootPath, 'readme.txt')],
         )
       }
+    })
+
+    it('encodes entry hrefs and escapes entry names in encoded directories', async () => {
+      createTestFile('my dir/a&b #1.txt', 'Special')
+      createTestFile('my dir/café.txt', 'Café')
+
+      let router = createRouter({
+        middleware: [staticFiles(tmpDir, { listFiles: true })],
+      })
+
+      let response = await router.fetch('https://remix.run/my%20dir/')
+      assert.equal(response.status, 200)
+
+      let body = await response.text()
+      assert.match(body, /<title>Index of \/my dir\/<\/title>/)
+      assert.match(body, /href="\/"/)
+      assert.match(body, /href="\/my%20dir\/a%26b%20%231\.txt"[\s\S]*?a&amp;b #1\.txt<\/a>/)
+      assert.match(body, /href="\/my%20dir\/caf%C3%A9\.txt"[\s\S]*?café\.txt<\/a>/)
+
+      let entryResponse = await router.fetch('https://remix.run/my%20dir/a%26b%20%231.txt')
+      assert.equal(entryResponse.status, 200)
+      assert.equal(await entryResponse.text(), 'Special')
     })
 
     it('serves index files before generating a listing', async () => {
