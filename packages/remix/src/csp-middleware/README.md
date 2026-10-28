@@ -61,6 +61,8 @@ router.get('/activity', (context) => context.render(<p>Recent activity</p>))
 
 `csp()` takes one configuration object with a required `policy` property. The middleware establishes the nonce before invoking the policy factory or downstream handlers. A factory receives `{ nonce, context }` and may return a promise. The nonce contains 128 bits from `crypto.getRandomValues()` and is base64 encoded.
 
+`csp()` checks inferred directive objects and sync or async factory returns for unknown directive names, using `ContentSecurityPolicyInit` from `remix/headers/content-security-policy` as the source of directive names and value types. Factory return-type annotations are optional. When extracting a shared factory, use `satisfies CspPolicyFactory` to preserve its inferred return type; annotating the variable as `CspPolicyFactory` can hide extra fields before `csp()` sees them. Objects already widened to `ContentSecurityPolicyInit` have the same limitation.
+
 `render()` reads the nonce automatically for generated import maps, module preloads, and CSS mixin styles. Internal frame requests and every redirect reuse the enclosing document's nonce, including blocking and non-blocking frames. Independently requested frames receive fresh nonces. Authored script and style tags use `getCspNonce(context)` explicitly.
 
 Read the nonce with `getCspNonce(context)`. It returns `undefined` when no nonce has been established and does not generate one itself.
@@ -110,9 +112,11 @@ Enforcement is the default. Install separate `csp()` instances to enforce one po
 
 ## Response scope
 
-By default, the policy is added to every response returned by downstream handlers, including JSON, redirects, and error responses. Not-modified (`304`) responses are returned unchanged, preserving the cached HTML's matching policy rather than replacing it with a fresh nonce. This exception applies to both enforcing and report-only policies and to reporting endpoints. Install the middleware on the router, controller, or action that owns those responses. Responses created outside the middleware, such as errors handled by an outer layer, are governed by that layer.
+By default, the policy and reporting endpoints are added only to downstream responses whose `Content-Type` is `text/html`, including HTML error responses. Media type matching is case-insensitive and ignores parameters such as `charset`. Other responses, including those without a `Content-Type`, are returned unchanged. Install the middleware on the router, controller, or action that owns those responses. Responses created outside the middleware, such as errors handled by an outer layer, are governed by that layer.
 
-Use `filter(response)` to select which responses receive the header. For example, apply a policy to HTML pages while leaving asset routes unchanged:
+Not-modified (`304`) responses are always returned unchanged, preserving the cached HTML's matching policy rather than replacing it with a fresh nonce. This applies to both enforcing and report-only policies and to reporting endpoints, even when a custom filter accepts the response.
+
+Use `filter(response)` to replace the HTML-only default. For example, include JavaScript responses to apply a policy to worker scripts as well as HTML pages:
 
 ```ts
 csp({
@@ -125,12 +129,12 @@ csp({
   },
   filter(response) {
     let mediaType = response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase()
-    return mediaType === 'text/html'
+    return mediaType === 'text/html' || mediaType === 'application/javascript'
   },
 })
 ```
 
-The synchronous filter runs after downstream handlers return a response and before this middleware adds its header. Returning `false` returns that response unchanged, including any existing CSP headers. The filter applies to both enforcing and report-only policies. Nonce generation and the policy factory still run before downstream handlers, so rendering can use the nonce regardless of the filter's result. The middleware does not consume response bodies.
+Use `filter: () => true` to include all response types except `304`. The synchronous filter runs after downstream handlers return a response and before this middleware adds its header. Returning `false` returns that response unchanged, including any existing CSP headers. The filter applies to both enforcing and report-only policies and their reporting endpoints. Nonce generation and the policy factory still run before downstream handlers, so rendering can use the nonce regardless of the filter's result. The middleware does not consume response bodies.
 
 Existing CSP headers are preserved, and the configured policy is appended to the header selected by `reportOnly`. Browsers enforce each enforcing policy and monitor each report-only policy. Multiple CSP middleware instances in one request share a nonce.
 

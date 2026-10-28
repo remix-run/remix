@@ -1,20 +1,161 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRouter } from '@remix-run/fetch-router'
-import { ContentSecurityPolicy } from '@remix-run/headers/content-security-policy'
+import {
+  ContentSecurityPolicy,
+  type ContentSecurityPolicyInit,
+} from '@remix-run/headers/content-security-policy'
 
-import { csp, CspNonce, getCspNonce, inheritCspNonce } from '../index.ts'
+import {
+  csp,
+  CspNonce,
+  getCspNonce,
+  inheritCspNonce,
+  type CspOptions,
+  type CspPolicyFactory,
+} from '../index.ts'
 
 describe('csp', () => {
+  it('checks directive names in inferred policy factories', () => {
+    csp({
+      // @ts-expect-error Inferred factory returns reject unknown directives alongside valid ones.
+      policy({ nonce }) {
+        return {
+          scriptSrc: [`'nonce-${nonce}'`],
+          frameAncestorsxss: ["'none'"],
+        }
+      },
+    })
+  })
+
+  it('checks directive names in inferred async policy factories', () => {
+    csp({
+      // @ts-expect-error Inferred async factory returns reject unknown directives.
+      async policy({ nonce }) {
+        return {
+          scriptSrc: [`'nonce-${nonce}'`],
+          frameAncestorsxss: ["'none'"],
+        }
+      },
+    })
+  })
+
+  it('checks directive names in static policies and extracted factories', () => {
+    csp({
+      policy: {
+        scriptSrc: ["'self'"],
+        // @ts-expect-error Static directive objects also reject unknown keys.
+        frameAncestorsxss: ["'none'"],
+      },
+    })
+
+    let policy = (({ nonce }) => ({
+      scriptSrc: [`'nonce-${nonce}'`],
+      frameAncestorsxss: ["'none'"],
+    })) satisfies CspPolicyFactory
+    // @ts-expect-error Extracted factories retain their inferred extra keys.
+    csp({ policy })
+  })
+
+  it('checks every branch of mixed policy factory returns', () => {
+    csp({
+      // @ts-expect-error A serialized-policy branch does not hide an invalid directive-object branch.
+      policy({ nonce }) {
+        if (nonce.length > 10) return "script-src 'self'"
+        return { scriptSrc: [`'nonce-${nonce}'`], frameAncestorsxss: ["'none'"] }
+      },
+    })
+    csp({
+      // @ts-expect-error Async factories returning mixed policy forms also check every branch.
+      async policy({ nonce }) {
+        if (nonce.length > 10) return new ContentSecurityPolicy({ scriptSrc: ["'self'"] })
+        return { scriptSrc: [`'nonce-${nonce}'`], frameAncestorsxss: ["'none'"] }
+      },
+    })
+  })
+
+  it('preserves inferred factory context and validates directive value types', () => {
+    csp({
+      policy({ nonce, context }) {
+        // @ts-expect-error Nonce inference must remain string rather than any.
+        let invalidNonce: number = nonce
+        // @ts-expect-error Factory request context inference must remain RequestContext rather than any.
+        let invalidContext: number = context
+        void invalidNonce
+        void invalidContext
+        return { scriptSrc: [`'nonce-${nonce}'`, context.url.origin] }
+      },
+      filter(response) {
+        // @ts-expect-error Response inference must remain Response rather than any.
+        let invalidResponse: number = response
+        void invalidResponse
+        return response.ok
+      },
+    })
+    csp({
+      // @ts-expect-error Source directives require arrays of strings.
+      policy: () => ({ scriptSrc: [123] }),
+    })
+    csp({
+      // @ts-expect-error Boolean directives require booleans.
+      policy: () => ({ upgradeInsecureRequests: 'yes' }),
+    })
+    csp({
+      // @ts-expect-error Async factories also require arrays of strings for source directives.
+      policy: async () => ({ scriptSrc: [123] }),
+    })
+    csp({
+      // @ts-expect-error Reporting directives require a single endpoint name.
+      policy: () => ({ reportTo: ['csp'] }),
+    })
+    csp({
+      // @ts-expect-error Factories must accept the actual policy context.
+      policy: ({ nonce }: { nonce: number }) => ({ scriptSrc: [String(nonce)] }),
+    })
+    csp({
+      // @ts-expect-error Null is not a supported policy result.
+      policy: () => null,
+    })
+  })
+
+  it('accepts supported static, sync, async, and mixed policy forms without annotations', () => {
+    let serialized = "script-src 'self'"
+    let instance = new ContentSecurityPolicy({ scriptSrc: ["'self'"] })
+    csp({ policy: { scriptSrc: ["'self'"], upgradeInsecureRequests: true } })
+    csp({ policy: { scriptSrc: ["'self'"] } as const })
+    csp({ policy: () => ({}) })
+    csp({ policy: () => serialized })
+    csp({ policy: async () => serialized })
+    csp({ policy: () => instance })
+    csp({ policy: async () => instance })
+    csp({
+      policy({ nonce }) {
+        return nonce.length > 10 ? serialized : { scriptSrc: [`'nonce-${nonce}'`] }
+      },
+    })
+    csp({
+      async policy({ nonce }) {
+        return nonce.length > 10 ? instance : { scriptSrc: [`'nonce-${nonce}'`] }
+      },
+    })
+
+    let init: ContentSecurityPolicyInit = { scriptSrc: ["'self'"] }
+    let factory: CspPolicyFactory = () => init
+    let options: CspOptions = { policy: factory }
+    csp({ policy: init })
+    csp({ policy: factory })
+    csp(options)
+  })
+
   it('accepts serialized policies and ContentSecurityPolicy instances in the policy option', async () => {
     let router = createRouter()
     router.get('/serialized', {
       middleware: [csp({ policy: "default-src 'self'" })],
-      handler: () => new Response('ok'),
+      handler: () => new Response('ok', { headers: { 'Content-Type': 'text/html' } }),
     })
     router.get('/instance', {
       middleware: [csp({ policy: new ContentSecurityPolicy({ scriptSrc: ["'none'"] }) })],
-      handler: () => new Response('ok'),
+      handler: () => new Response('ok', { headers: { 'Content-Type': 'text/html' } }),
     })
 
     let serialized = await router.fetch('https://example.com/serialized')
@@ -24,11 +165,12 @@ describe('csp', () => {
     assert.equal(instance.headers.get('Content-Security-Policy'), "script-src 'none'")
   })
 
-  it('applies static rules to every response type in its scope', async () => {
+  it('applies static rules to every response type when the filter accepts all responses', async () => {
     let router = createRouter({
       middleware: [
         csp({
           policy: { defaultSrc: ["'self'"] },
+          filter: () => true,
         }),
       ],
     })
@@ -49,10 +191,124 @@ describe('csp', () => {
     assert.equal(await error.text(), 'Unavailable')
   })
 
+  it('leaves non-HTML responses and their existing headers unchanged by default', async () => {
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy: { defaultSrc: ["'self'"] },
+          reportingEndpoints: { enforced: '/reports/enforced' },
+        }),
+        csp({
+          policy: { defaultSrc: ["'self'"] },
+          reportOnly: true,
+          reportingEndpoints: { preview: '/reports/preview' },
+        }),
+      ],
+    })
+    let responses = {
+      json: Response.json({ ok: true }),
+      redirect: Response.redirect('https://example.com/'),
+      error: new Response('Unavailable', { status: 503 }),
+      worker: new Response('postMessage("ready")', {
+        headers: {
+          'Content-Type': 'application/javascript',
+          'Content-Security-Policy': "connect-src 'none'",
+          'Content-Security-Policy-Report-Only': "script-src 'self'",
+          'Reporting-Endpoints': 'existing="/reports/existing"',
+          'Cache-Control': 'public, max-age=3600',
+        },
+      }),
+      missingType: new Response(null),
+      similarType: new Response('custom', { headers: { 'Content-Type': 'text/html-custom' } }),
+    }
+    for (let [name, response] of Object.entries(responses)) {
+      router.get(`/${name}`, () => response)
+    }
+
+    for (let [name, downstream] of Object.entries(responses)) {
+      let headers = new Headers(downstream.headers)
+      let response = await router.fetch(`https://example.com/${name}`)
+      assert.equal(response, downstream)
+      assert.deepEqual([...response.headers], [...headers])
+      assert.equal(response.bodyUsed, false)
+    }
+  })
+
+  it('applies policies and reporting endpoints to HTML errors with mixed-case media types', async () => {
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy: { defaultSrc: ["'self'"] },
+          reportingEndpoints: { enforced: '/reports/enforced' },
+        }),
+        csp({
+          policy: { scriptSrc: ["'self'"] },
+          reportOnly: true,
+          reportingEndpoints: { preview: '/reports/preview' },
+        }),
+      ],
+    })
+    router.get(
+      '/',
+      () =>
+        new Response('<h1>Unavailable</h1>', {
+          status: 503,
+          headers: { 'Content-Type': 'TeXt/HtMl ; charset=UTF-8' },
+        }),
+    )
+
+    let response = await router.fetch('https://example.com/')
+
+    assert.equal(response.status, 503)
+    assert.equal(response.headers.get('Content-Security-Policy'), "default-src 'self'")
+    assert.equal(response.headers.get('Content-Security-Policy-Report-Only'), "script-src 'self'")
+    assert.equal(
+      response.headers.get('Reporting-Endpoints'),
+      'preview="/reports/preview", enforced="/reports/enforced"',
+    )
+    assert.equal(await response.text(), '<h1>Unavailable</h1>')
+  })
+
+  it('allows custom filters to include worker responses alongside HTML', async () => {
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy: { defaultSrc: ["'self'"] },
+          filter(response) {
+            let mediaType = response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase()
+            return mediaType === 'text/html' || mediaType === 'application/javascript'
+          },
+        }),
+      ],
+    })
+    router.get(
+      '/',
+      () => new Response('<h1>Page</h1>', { headers: { 'Content-Type': 'text/html' } }),
+    )
+    router.get(
+      '/worker.js',
+      () =>
+        new Response('postMessage("ready")', {
+          headers: { 'Content-Type': 'application/javascript' },
+        }),
+    )
+    router.get('/api', () => Response.json({ ok: true }))
+
+    let page = await router.fetch('https://example.com/')
+    let worker = await router.fetch('https://example.com/worker.js')
+    let json = await router.fetch('https://example.com/api')
+
+    assert.equal(page.headers.get('Content-Security-Policy'), "default-src 'self'")
+    assert.equal(worker.headers.get('Content-Security-Policy'), "default-src 'self'")
+    assert.equal(await worker.text(), 'postMessage("ready")')
+    assert.equal(json.headers.get('Content-Security-Policy'), null)
+  })
+
   it('preserves downstream policies and reporting endpoints on 304 responses', async () => {
     let downstream = new Response(null, {
       status: 304,
       headers: {
+        'Content-Type': 'text/html',
         'Content-Security-Policy': "script-src 'nonce-cached'",
         'Content-Security-Policy-Report-Only': "style-src 'nonce-cached'",
         'Reporting-Endpoints': 'cached="/reports/cached"',
@@ -64,11 +320,13 @@ describe('csp', () => {
         csp({
           policy: ({ nonce }) => ({ scriptSrc: [`'nonce-${nonce}'`] }),
           reportingEndpoints: { enforced: '/reports/enforced' },
+          filter: () => true,
         }),
         csp({
           policy: ({ nonce }) => ({ styleSrc: [`'nonce-${nonce}'`] }),
           reportOnly: true,
           reportingEndpoints: { preview: '/reports/preview' },
+          filter: () => true,
         }),
       ],
     })
@@ -100,7 +358,10 @@ describe('csp', () => {
         }),
       ],
     })
-    router.get('/', () => new Response(null, { status: 304 }))
+    router.get(
+      '/',
+      () => new Response(null, { status: 304, headers: { 'Content-Type': 'text/html' } }),
+    )
 
     let response = await router.fetch('https://example.com/')
 
@@ -111,7 +372,7 @@ describe('csp', () => {
     assert.equal(response.headers.get('Reporting-Endpoints'), null)
   })
 
-  it('filters downstream responses so HTML pages receive CSP and asset routes do not', async () => {
+  it('adds CSP to HTML pages and leaves asset routes unchanged by default', async () => {
     let pageResponse = new Response('<h1>Page</h1>', {
       headers: { 'Content-Type': 'text/html; charset=UTF-8' },
     })
@@ -122,13 +383,6 @@ describe('csp', () => {
       middleware: [
         csp({
           policy: { defaultSrc: ["'self'"] },
-          filter(response) {
-            assert.equal(response.headers.get('Content-Security-Policy'), null)
-            return (
-              response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() ===
-              'text/html'
-            )
-          },
         }),
       ],
     })
@@ -200,7 +454,7 @@ describe('csp', () => {
     router.get('/', (context) => {
       let nonce: string = context.get(CspNonce)
       assert.equal(getCspNonce(context), nonce)
-      return new Response(nonce)
+      return new Response(nonce, { headers: { 'Content-Type': 'text/html' } })
     })
 
     let response = await router.fetch('https://example.com/')
@@ -236,6 +490,7 @@ describe('csp', () => {
       (context) =>
         new Response(getCspNonce(context), {
           headers: {
+            'Content-Type': 'text/html',
             'Content-Security-Policy': "object-src 'none'",
             'Content-Security-Policy-Report-Only': 'img-src https:',
             'Reporting-Endpoints': 'csp="/reports"',
@@ -278,7 +533,10 @@ describe('csp', () => {
       '/',
       (context) =>
         new Response(getCspNonce(context), {
-          headers: { 'Reporting-Endpoints': 'default="/reports/default", enforced="/reports/old"' },
+          headers: {
+            'Content-Type': 'text/html',
+            'Reporting-Endpoints': 'default="/reports/default", enforced="/reports/old"',
+          },
         }),
     )
 
@@ -345,7 +603,11 @@ describe('csp', () => {
         }),
       ],
     })
-    router.get('/', () => new Response('ok', { headers: { 'Reporting-Endpoints': '' } }))
+    router.get(
+      '/',
+      () =>
+        new Response('ok', { headers: { 'Content-Type': 'text/html', 'Reporting-Endpoints': '' } }),
+    )
 
     let response = await router.fetch('https://example.com/')
 
@@ -414,7 +676,7 @@ describe('csp', () => {
           policy: { reportTo: 'csp' },
         }),
       ],
-      handler: () => new Response('ok'),
+      handler: () => new Response('ok', { headers: { 'Content-Type': 'text/html' } }),
     })
     router.get('/empty', {
       middleware: [
@@ -423,7 +685,7 @@ describe('csp', () => {
           reportingEndpoints: {},
         }),
       ],
-      handler: () => new Response('ok'),
+      handler: () => new Response('ok', { headers: { 'Content-Type': 'text/html' } }),
     })
     router.get('/configured', {
       middleware: [
@@ -432,7 +694,7 @@ describe('csp', () => {
           reportingEndpoints: { csp: '/reports' },
         }),
       ],
-      handler: () => new Response('ok'),
+      handler: () => new Response('ok', { headers: { 'Content-Type': 'text/html' } }),
     })
 
     let unconfigured = await router.fetch('https://example.com/unconfigured')
@@ -456,7 +718,10 @@ describe('csp', () => {
         }),
       ] as const,
     })
-    router.get('/', (context) => new Response(getCspNonce(context)))
+    router.get(
+      '/',
+      (context) => new Response(getCspNonce(context), { headers: { 'Content-Type': 'text/html' } }),
+    )
     let [first, second] = await Promise.all([
       router.fetch('https://example.com/', {
         headers: { 'X-Remix-Frame': 'true' },
@@ -480,7 +745,10 @@ describe('csp', () => {
         }),
       ] as const,
     })
-    router.get('/', (context) => new Response(getCspNonce(context)))
+    router.get(
+      '/',
+      (context) => new Response(getCspNonce(context), { headers: { 'Content-Type': 'text/html' } }),
+    )
     let request = new Request('https://example.com/')
     inheritCspNonce(request, 'document-nonce')
     let internal = await router.fetch(request)
@@ -507,11 +775,15 @@ describe('csp', () => {
         }),
       ],
     })
-    router.get('/', () => new Response(body, { status: 201 }))
+    router.get(
+      '/',
+      () => new Response(body, { status: 201, headers: { 'Content-Type': 'text/html' } }),
+    )
     let response = await router.fetch('https://example.com/')
     assert.equal(response.status, 201)
     assert.equal(response.body, body)
     assert.equal(response.bodyUsed, false)
+    assert.equal(response.headers.get('Content-Security-Policy'), "default-src 'self'")
     writer?.enqueue(new TextEncoder().encode('streamed'))
     writer?.close()
     assert.equal(await response.text(), 'streamed')

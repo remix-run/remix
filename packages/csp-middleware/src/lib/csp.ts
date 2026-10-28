@@ -34,7 +34,8 @@ export interface CspOptions {
    */
   reportingEndpoints?: Readonly<Record<string, string>>
   /**
-   * Select responses that receive this policy (default all responses except 304).
+   * Select responses that receive this policy (default `text/html` responses).
+   * Overrides the default HTML filter; 304 responses are always returned unchanged.
    * Runs after downstream handlers, before adding policy and reporting endpoint headers.
    * Returning false preserves the original response. The nonce and policy are still
    * established before downstream handlers run.
@@ -42,15 +43,34 @@ export interface CspOptions {
   filter?: (response: Response) => boolean
 }
 
+type CheckedPolicy<policy> = policy extends (...args: never[]) => infer result
+  ? (
+      context: CspPolicyContext,
+    ) => CheckedPolicy<Awaited<result>> | Promise<CheckedPolicy<Awaited<result>>>
+  : policy extends string | ContentSecurityPolicy
+    ? policy
+    : policy extends ContentSecurityPolicyInit
+      ? policy & Record<Exclude<keyof policy, keyof ContentSecurityPolicyInit>, never>
+      : never
+
+// Keep valid options unchanged so callback return values retain their contextual checks.
+type CheckedOptions<policy extends CspOptions['policy']> = Omit<CspOptions, 'policy'> & {
+  policy: policy
+} & ([policy] extends [CheckedPolicy<policy>] ? unknown : { policy: CheckedPolicy<policy> })
+
 /**
- * Establishes a request nonce and appends a CSP to responses accepted by the optional filter.
+ * Establishes a request nonce and appends a CSP to HTML responses by default.
+ * Inferred directive objects and factory returns are checked for unknown directive keys.
+ * Supply `filter` to select other response types, such as worker scripts.
  * Not-modified (304) responses are returned unchanged to preserve cached nonce policies.
  * Existing policies retain their enforcement or reporting mode. No default directives are added.
  * @param options The required policy and optional response configuration.
  * @returns Middleware providing the nonce read by `getCspNonce()` and the CSP response header.
  */
-export function csp(options: CspOptions): Middleware<{ key: typeof CspNonce; value: string }> {
-  let { policy, filter } = options
+export function csp<policy extends CspOptions['policy']>(
+  options: CheckedOptions<policy>,
+): Middleware<{ key: typeof CspNonce; value: string }> {
+  let { policy, filter = isHtmlResponse }: CspOptions = options
   let reportingEndpoints = serializeReportingEndpoints(options.reportingEndpoints ?? {})
   let headerName = options.reportOnly
     ? 'Content-Security-Policy-Report-Only'
@@ -66,7 +86,7 @@ export function csp(options: CspOptions): Middleware<{ key: typeof CspNonce; val
         ? ContentSecurityPolicy.from(await policy({ nonce, context })).toString()
         : staticPolicy
     let response = await next()
-    if (filter && !filter(response)) return response
+    if (!filter(response)) return response
     // A 304 updates cached headers while reusing the body; a fresh CSP nonce would mismatch it.
     // https://www.rfc-editor.org/rfc/rfc9111.html#section-4.3.4
     if (response.status === 304) return response
@@ -88,6 +108,12 @@ export function csp(options: CspOptions): Middleware<{ key: typeof CspNonce; val
       headers,
     })
   }
+}
+
+function isHtmlResponse(response: Response): boolean {
+  return (
+    response.headers.get('Content-Type')?.split(';', 1)[0]?.trim().toLowerCase() === 'text/html'
+  )
 }
 
 function serializeReportingEndpoints(endpoints: Readonly<Record<string, string>>): string {
