@@ -221,7 +221,7 @@ To show that a save is in progress, hydrate only the submit button and follow th
 
 Setting pending state from a hydrated form's `submit` handler, as the [hydrated album form](/start-here/#add-your-first-hydrated-component) does, only resets when the page replaces the form. A validation response can re-render the same form component in place, leaving it stuck on "Saving…". Use a `submit` handler when you [send the request yourself with `fetch()`](/interactivity/#enhancing-forms-with-fetch-and-navigation) and can reset the state when the response arrives.
 
-Put the button in the edit action's `public/` directory so the [asset server can serve it to the browser](/files-and-assets/#remix-s-unbundled-asset-server):
+Put the button in the edit action's `public/` directory so the [asset server can serve it to the browser](/files-and-assets/#control-what-the-browser-can-reach):
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
 import { clientEntry } from "remix/component";
