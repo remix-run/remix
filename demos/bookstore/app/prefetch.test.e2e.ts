@@ -49,7 +49,7 @@ describe('bookstore prefetching', () => {
     })
     let cover = page.getByRole('img', { name: 'Ash & Smoke', exact: true })
     let coverHref = await cover.getAttribute('src')
-    assert.ok(coverHref?.match(/^\/assets\/app\/images\/bbq-1\.@[\w-]+\.png$/))
+    assert.ok(coverHref?.match(/^\/assets\/app\/images\/bbq-1\.~[\w-]+\.png$/))
     page.on('requestfailed', (request) => {
       let pathname = new URL(request.url()).pathname
       // Firefox can cancel lazy images during hydration; only the cover was prefetched.

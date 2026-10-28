@@ -2662,10 +2662,10 @@ describe('stream', () => {
                 data-source="document"
                 value={{
                   imports: {
-                    '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+                    '/assets/app/entry.tsx': '/assets/app/entry.~abc123.tsx',
                   },
                   integrity: {
-                    '/assets/app/entry.@abc123.tsx': 'sha256-entry',
+                    '/assets/app/entry.~abc123.tsx': 'sha256-entry',
                   },
                 }}
               />
@@ -2687,15 +2687,15 @@ describe('stream', () => {
               importMap: {
                 imports: {
                   '/assets/app/components/counter.tsx':
-                    '/assets/app/components/counter.@def456.tsx',
+                    '/assets/app/components/counter.~def456.tsx',
                 },
                 scopes: {
                   '/assets/app/components/': {
-                    pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
+                    pkg: '/assets/app/node_modules/pkg/index.~fedcba.ts',
                   },
                 },
                 integrity: {
-                  '/assets/app/components/counter.@def456.tsx': 'sha256-counter',
+                  '/assets/app/components/counter.~def456.tsx': 'sha256-counter',
                 },
               },
             }
@@ -2710,17 +2710,17 @@ describe('stream', () => {
       expect(script?.dataset.source).toBe('document')
       expect(JSON.parse(script?.textContent ?? '{}')).toEqual({
         imports: {
-          '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
-          '/assets/app/components/counter.tsx': '/assets/app/components/counter.@def456.tsx',
+          '/assets/app/entry.tsx': '/assets/app/entry.~abc123.tsx',
+          '/assets/app/components/counter.tsx': '/assets/app/components/counter.~def456.tsx',
         },
         scopes: {
           '/assets/app/components/': {
-            pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
+            pkg: '/assets/app/node_modules/pkg/index.~fedcba.ts',
           },
         },
         integrity: {
-          '/assets/app/entry.@abc123.tsx': 'sha256-entry',
-          '/assets/app/components/counter.@def456.tsx': 'sha256-counter',
+          '/assets/app/entry.~abc123.tsx': 'sha256-entry',
+          '/assets/app/components/counter.~def456.tsx': 'sha256-counter',
         },
       })
       expect(html.indexOf('<meta')).toBeLessThan(html.indexOf('id="app-import-map"'))
@@ -2750,7 +2750,7 @@ describe('stream', () => {
       let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
         return () => <div>Count</div>
       })
-      let authoredMap = { imports: { pkg: '/assets/pkg.@abc.ts' } }
+      let authoredMap = { imports: { pkg: '/assets/pkg.~abc.ts' } }
 
       let html = await drain(
         renderToStream(
@@ -2767,7 +2767,7 @@ describe('stream', () => {
               return {
                 href: '/assets/app/components/counter.tsx',
                 exportName: 'Counter',
-                importMap: { imports: { added: '/assets/added.@abc.ts' } },
+                importMap: { imports: { added: '/assets/added.~abc.ts' } },
               }
             },
           },
@@ -2780,7 +2780,7 @@ describe('stream', () => {
       expect(scripts).toHaveLength(2)
       expect(JSON.parse(scripts[0]?.textContent ?? '{}')).toEqual(authoredMap)
       expect(JSON.parse(scripts[1]?.textContent ?? '{}')).toEqual({
-        imports: { added: '/assets/added.@abc.ts' },
+        imports: { added: '/assets/added.~abc.ts' },
       })
     })
 
@@ -2801,8 +2801,8 @@ describe('stream', () => {
               importMap: {
                 imports: {
                   '/assets/app/components/counter.tsx':
-                    '/assets/app/components/counter.@abc123.tsx',
-                  '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                    '/assets/app/components/counter.~abc123.tsx',
+                  '/assets/app/shared.ts': '/assets/app/shared.~def456.ts',
                 },
               },
             }
@@ -2814,7 +2814,7 @@ describe('stream', () => {
       shelf.innerHTML = html
       let importMapScript = shelf.content.querySelector('script[type="importmap"]')
       expect(importMapScript?.textContent).toBe(
-        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}',
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.~abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.~def456.ts"}}',
       )
       expect(importMapScript?.hasAttribute('data-rmx-import-map')).toBe(true)
       expect(html).toMatch(/^<head><script data-rmx-import-map type="importmap">/)
@@ -2978,14 +2978,14 @@ describe('stream', () => {
                 href: '/assets/app/components/counter.tsx',
                 exportName: 'Counter',
                 preloads: [
-                  '/assets/app/components/counter.@abc123.tsx',
-                  '/assets/app/shared.@def456.ts',
+                  '/assets/app/components/counter.~abc123.tsx',
+                  '/assets/app/shared.~def456.ts',
                 ],
                 importMap: {
                   imports: {
                     '/assets/app/components/counter.tsx':
-                      '/assets/app/components/counter.@abc123.tsx',
-                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                      '/assets/app/components/counter.~abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.~def456.ts',
                   },
                 },
               }
@@ -2997,13 +2997,13 @@ describe('stream', () => {
       let head = html.match(/<head>(.*?)<\/head>/s)?.[1]
       invariant(head)
       expect(head).toContain(
-        '<link data-rmx-module-preload rel="modulepreload" href="/assets/app/components/counter.@abc123.tsx" />',
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/app/components/counter.~abc123.tsx" />',
       )
       expect(head).toContain(
-        '<link data-rmx-module-preload rel="modulepreload" href="/assets/app/shared.@def456.ts" />',
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/app/shared.~def456.ts" />',
       )
       expect(head).toContain(
-        '<script data-rmx-import-map type="importmap">{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}</script>',
+        '<script data-rmx-import-map type="importmap">{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.~abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.~def456.ts"}}</script>',
       )
       expect(head.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
         head.indexOf('<link data-rmx-module-preload rel="modulepreload"'),
@@ -3034,8 +3034,8 @@ describe('stream', () => {
                 importMap: {
                   imports: {
                     '/assets/app/components/counter.tsx':
-                      '/assets/app/components/counter.@abc123.tsx',
-                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                      '/assets/app/components/counter.~abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.~def456.ts',
                   },
                 },
               }
@@ -3064,7 +3064,7 @@ describe('stream', () => {
           <html>
             <body>
               <Counter />
-              <script type="module" src="/assets/app/entry.@abc123.tsx" />
+              <script type="module" src="/assets/app/entry.~abc123.tsx" />
             </body>
           </html>,
           {
@@ -3075,7 +3075,7 @@ describe('stream', () => {
                 importMap: {
                   imports: {
                     '/assets/app/components/counter.tsx':
-                      '/assets/app/components/counter.@abc123.tsx',
+                      '/assets/app/components/counter.~abc123.tsx',
                   },
                 },
               }
@@ -3101,13 +3101,13 @@ describe('stream', () => {
               <script type="importmap">
                 {JSON.stringify({
                   imports: {
-                    '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
-                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                    '/assets/app/entry.tsx': '/assets/app/entry.~abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.~def456.ts',
                   },
                 })}
               </script>
-              <link rel="modulepreload" href="/assets/app/shared.@def456.ts" />
-              <script type="module" src="/assets/app/entry.@abc123.tsx" />
+              <link rel="modulepreload" href="/assets/app/shared.~def456.ts" />
+              <script type="module" src="/assets/app/entry.~abc123.tsx" />
             </head>
             <body>App</body>
           </html>,
@@ -3136,15 +3136,15 @@ describe('stream', () => {
               <script type="importmap">
                 {JSON.stringify({
                   imports: {
-                    '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
-                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                    '/assets/app/entry.tsx': '/assets/app/entry.~abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.~def456.ts',
                   },
                   integrity: {
-                    '/assets/app/shared.@def456.ts': 'sha256-shared',
+                    '/assets/app/shared.~def456.ts': 'sha256-shared',
                   },
                 })}
               </script>
-              <link rel="modulepreload" href="/assets/app/shared.@def456.ts" />
+              <link rel="modulepreload" href="/assets/app/shared.~def456.ts" />
             </head>
             <body>
               <Counter />
@@ -3157,18 +3157,18 @@ describe('stream', () => {
                 exportName: 'Counter',
                 importMap: {
                   imports: {
-                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                    '/assets/app/shared.ts': '/assets/app/shared.~def456.ts',
                     '/assets/app/components/counter.tsx':
-                      '/assets/app/components/counter.@def456.tsx',
+                      '/assets/app/components/counter.~def456.tsx',
                   },
                   scopes: {
                     '/assets/app/components/': {
-                      pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
+                      pkg: '/assets/app/node_modules/pkg/index.~fedcba.ts',
                     },
                   },
                   integrity: {
-                    '/assets/app/shared.@def456.ts': 'sha256-shared',
-                    '/assets/app/components/counter.@def456.tsx': 'sha256-counter',
+                    '/assets/app/shared.~def456.ts': 'sha256-shared',
+                    '/assets/app/components/counter.~def456.tsx': 'sha256-counter',
                   },
                 },
               }
@@ -3182,11 +3182,11 @@ describe('stream', () => {
       let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
       expect(importMapScripts).toHaveLength(2)
       expect(importMapScripts[0]?.textContent).toBe(
-        '{"imports":{"/assets/app/entry.tsx":"/assets/app/entry.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"},"integrity":{"/assets/app/shared.@def456.ts":"sha256-shared"}}',
+        '{"imports":{"/assets/app/entry.tsx":"/assets/app/entry.~abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.~def456.ts"},"integrity":{"/assets/app/shared.~def456.ts":"sha256-shared"}}',
       )
       expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(false)
       expect(importMapScripts[1]?.textContent).toBe(
-        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@def456.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.@fedcba.ts"}},"integrity":{"/assets/app/components/counter.@def456.tsx":"sha256-counter"}}',
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.~def456.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.~fedcba.ts"}},"integrity":{"/assets/app/components/counter.~def456.tsx":"sha256-counter"}}',
       )
       expect(importMapScripts[1]?.hasAttribute('data-rmx-import-map')).toBe(true)
     })
@@ -3204,7 +3204,7 @@ describe('stream', () => {
                 type="importmap"
                 innerHTML={unsafeHTML(
                   JSON.stringify({
-                    imports: { pkg: '/assets/pkg.@abc.ts' },
+                    imports: { pkg: '/assets/pkg.~abc.ts' },
                   }),
                 )}
               />
@@ -3220,8 +3220,8 @@ describe('stream', () => {
                 exportName: 'Counter',
                 importMap: {
                   imports: {
-                    pkg: '/assets/pkg.@abc.ts',
-                    added: '/assets/added.@abc.ts',
+                    pkg: '/assets/pkg.~abc.ts',
+                    added: '/assets/added.~abc.ts',
                   },
                 },
               }
@@ -3235,12 +3235,12 @@ describe('stream', () => {
       let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
       expect(importMapScripts).toHaveLength(2)
       expect(JSON.parse(importMapScripts[0]?.textContent ?? '{}')).toEqual({
-        imports: { pkg: '/assets/pkg.@abc.ts' },
+        imports: { pkg: '/assets/pkg.~abc.ts' },
       })
       expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
         imports: {
-          pkg: '/assets/pkg.@abc.ts',
-          added: '/assets/added.@abc.ts',
+          pkg: '/assets/pkg.~abc.ts',
+          added: '/assets/added.~abc.ts',
         },
       })
     })
@@ -3255,7 +3255,7 @@ describe('stream', () => {
           <html>
             <head>
               <script type="importmap" src="/import-map.json">
-                {JSON.stringify({ imports: { pkg: '/assets/pkg.@abc.ts' } })}
+                {JSON.stringify({ imports: { pkg: '/assets/pkg.~abc.ts' } })}
               </script>
             </head>
             <body>
@@ -3269,8 +3269,8 @@ describe('stream', () => {
                 exportName: 'Counter',
                 importMap: {
                   imports: {
-                    pkg: '/assets/pkg.@abc.ts',
-                    added: '/assets/added.@abc.ts',
+                    pkg: '/assets/pkg.~abc.ts',
+                    added: '/assets/added.~abc.ts',
                   },
                 },
               }
@@ -3287,8 +3287,8 @@ describe('stream', () => {
       expect(importMapScripts).toHaveLength(2)
       expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
         imports: {
-          pkg: '/assets/pkg.@abc.ts',
-          added: '/assets/added.@abc.ts',
+          pkg: '/assets/pkg.~abc.ts',
+          added: '/assets/added.~abc.ts',
         },
       })
     })
@@ -3303,7 +3303,7 @@ describe('stream', () => {
           <html>
             <head>
               <script type="IMPORTMAP">
-                {JSON.stringify({ imports: { pkg: '/assets/pkg.@abc.ts' } })}
+                {JSON.stringify({ imports: { pkg: '/assets/pkg.~abc.ts' } })}
               </script>
             </head>
             <body>
@@ -3317,8 +3317,8 @@ describe('stream', () => {
                 exportName: 'Counter',
                 importMap: {
                   imports: {
-                    pkg: '/assets/pkg.@abc.ts',
-                    added: '/assets/added.@abc.ts',
+                    pkg: '/assets/pkg.~abc.ts',
+                    added: '/assets/added.~abc.ts',
                   },
                 },
               }
@@ -3334,7 +3334,7 @@ describe('stream', () => {
       )
       expect(importMapScripts).toHaveLength(2)
       expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
-        imports: { added: '/assets/added.@abc.ts' },
+        imports: { added: '/assets/added.~abc.ts' },
       })
     })
 
@@ -3350,13 +3350,13 @@ describe('stream', () => {
               <script type="importmap">
                 {JSON.stringify({
                   imports: {
-                    '/assets/shared.ts': '/assets/shared.@abc.ts',
+                    '/assets/shared.ts': '/assets/shared.~abc.ts',
                     blocked: null,
                     invalidAddress: 'https://[',
                     invalidType: true,
                   },
                   scopes: {
-                    '/assets/features/': { pkg: '/assets/pkg.@abc.ts' },
+                    '/assets/features/': { pkg: '/assets/pkg.~abc.ts' },
                   },
                 })}
               </script>
@@ -3372,16 +3372,16 @@ describe('stream', () => {
                 exportName: 'Counter',
                 importMap: {
                   imports: {
-                    '/assets/shared.ts': '/assets/shared.@abc.ts',
+                    '/assets/shared.ts': '/assets/shared.~abc.ts',
                     blocked: null,
                     invalidAddress: 'https://[',
                     invalidType: null,
-                    added: '/assets/added.@abc.ts',
+                    added: '/assets/added.~abc.ts',
                   },
                   scopes: {
                     '/assets/features/': {
-                      pkg: '/assets/pkg.@abc.ts',
-                      other: '/assets/other.@abc.ts',
+                      pkg: '/assets/pkg.~abc.ts',
+                      other: '/assets/other.~abc.ts',
                     },
                   },
                 },
@@ -3396,9 +3396,9 @@ describe('stream', () => {
       let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
       expect(importMapScripts).toHaveLength(2)
       expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
-        imports: { added: '/assets/added.@abc.ts' },
+        imports: { added: '/assets/added.~abc.ts' },
         scopes: {
-          '/assets/features/': { other: '/assets/other.@abc.ts' },
+          '/assets/features/': { other: '/assets/other.~abc.ts' },
         },
       })
     })
@@ -3414,7 +3414,7 @@ describe('stream', () => {
             <head />
             <body>
               <script type="importmap">
-                {JSON.stringify({ imports: { pkg: '/assets/pkg.@abc.ts' } })}
+                {JSON.stringify({ imports: { pkg: '/assets/pkg.~abc.ts' } })}
               </script>
               <Counter />
             </body>
@@ -3424,7 +3424,7 @@ describe('stream', () => {
               return {
                 href: '/assets/app/components/counter.tsx',
                 exportName: 'Counter',
-                importMap: { imports: { pkg: '/assets/pkg.@abc.ts' } },
+                importMap: { imports: { pkg: '/assets/pkg.~abc.ts' } },
               }
             },
           },
@@ -3462,15 +3462,15 @@ describe('stream', () => {
                 exportName: 'Counter',
                 importMap: {
                   imports: {
-                    'https://example.com/app/shared.ts': 'https://example.com/app/shared.@abc.ts',
+                    'https://example.com/app/shared.ts': 'https://example.com/app/shared.~abc.ts',
                     blocked: null,
                     invalidAddress: null,
-                    added: '/assets/added.@abc.ts',
+                    added: '/assets/added.~abc.ts',
                   },
                   scopes: {
                     'https://example.com/app/features/': {
-                      pkg: 'https://example.com/pkg.@abc.ts',
-                      other: '/assets/other.@abc.ts',
+                      pkg: 'https://example.com/pkg.~abc.ts',
+                      other: '/assets/other.~abc.ts',
                     },
                     'https://[': { ignored: '/ignored.ts' },
                   },
@@ -3489,15 +3489,15 @@ describe('stream', () => {
       expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(false)
       expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
         imports: {
-          'https://example.com/app/shared.ts': 'https://example.com/app/shared.@abc.ts',
+          'https://example.com/app/shared.ts': 'https://example.com/app/shared.~abc.ts',
           blocked: null,
           invalidAddress: null,
-          added: '/assets/added.@abc.ts',
+          added: '/assets/added.~abc.ts',
         },
         scopes: {
           'https://example.com/app/features/': {
-            pkg: 'https://example.com/pkg.@abc.ts',
-            other: '/assets/other.@abc.ts',
+            pkg: 'https://example.com/pkg.~abc.ts',
+            other: '/assets/other.~abc.ts',
           },
           'https://[': { ignored: '/ignored.ts' },
         },
@@ -3517,10 +3517,10 @@ describe('stream', () => {
               <script type="importmap">
                 {JSON.stringify({
                   imports: {
-                    '/assets/app/shared.ts': '/assets/app/shared.@old.ts',
+                    '/assets/app/shared.ts': '/assets/app/shared.~old.ts',
                   },
                   integrity: {
-                    '/assets/app/shared.@old.ts': 'sha256-old',
+                    '/assets/app/shared.~old.ts': 'sha256-old',
                   },
                 })}
               </script>
@@ -3536,12 +3536,12 @@ describe('stream', () => {
                 exportName: 'Counter',
                 importMap: {
                   imports: {
-                    '/assets/app/shared.ts': '/assets/app/shared.@new.ts',
-                    '/assets/app/added.ts': '/assets/app/added.@new.ts',
+                    '/assets/app/shared.ts': '/assets/app/shared.~new.ts',
+                    '/assets/app/added.ts': '/assets/app/added.~new.ts',
                   },
                   integrity: {
-                    '/assets/app/shared.@old.ts': 'sha256-new',
-                    '/assets/app/added.@new.ts': 'sha256-added',
+                    '/assets/app/shared.~old.ts': 'sha256-new',
+                    '/assets/app/added.~new.ts': 'sha256-added',
                   },
                 },
               }
@@ -3553,10 +3553,10 @@ describe('stream', () => {
       expect(warn).toHaveBeenCalledTimes(2)
       expect(warn.mock.calls[0]?.arguments[0]).toBe(
         '[remix] Ignoring conflicting import map entry for "/assets/app/shared.ts": ' +
-          '"/assets/app/shared.@old.ts" is already authored, but the discovered map points to "/assets/app/shared.@new.ts"',
+          '"/assets/app/shared.~old.ts" is already authored, but the discovered map points to "/assets/app/shared.~new.ts"',
       )
       expect(warn.mock.calls[1]?.arguments[0]).toBe(
-        '[remix] Ignoring conflicting import map integrity entry for "/assets/app/shared.@old.ts": ' +
+        '[remix] Ignoring conflicting import map integrity entry for "/assets/app/shared.~old.ts": ' +
           '"sha256-old" is already authored, but the discovered map points to "sha256-new"',
       )
       let shelf = document.createElement('template')
@@ -3565,10 +3565,10 @@ describe('stream', () => {
       expect(importMapScripts).toHaveLength(2)
       expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
         imports: {
-          '/assets/app/added.ts': '/assets/app/added.@new.ts',
+          '/assets/app/added.ts': '/assets/app/added.~new.ts',
         },
         integrity: {
-          '/assets/app/added.@new.ts': 'sha256-added',
+          '/assets/app/added.~new.ts': 'sha256-added',
         },
       })
     })
@@ -3587,11 +3587,11 @@ describe('stream', () => {
               importMap: {
                 imports: {
                   '/assets/app/components/counter.tsx':
-                    '/assets/app/components/counter.@abc123.tsx',
+                    '/assets/app/components/counter.~abc123.tsx',
                 },
                 scopes: {
                   '/assets/app/components/': {
-                    pkg: '/assets/app/node_modules/pkg/index.@def456.ts',
+                    pkg: '/assets/app/node_modules/pkg/index.~def456.ts',
                   },
                 },
               },
@@ -3604,7 +3604,7 @@ describe('stream', () => {
       shelf.innerHTML = html
       let importMapScript = shelf.content.querySelector('script[type="importmap"]')
       expect(importMapScript?.textContent).toBe(
-        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.@def456.ts"}}}',
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.~abc123.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.~def456.ts"}}}',
       )
     })
 
@@ -3956,7 +3956,7 @@ describe('stream', () => {
             <head>
               <ImportMap
                 value={{
-                  imports: { '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx' },
+                  imports: { '/assets/app/entry.tsx': '/assets/app/entry.~abc123.tsx' },
                 }}
               />
               <title>Frame import map</title>
@@ -3973,8 +3973,8 @@ describe('stream', () => {
                 exportName: 'Outer',
                 importMap: {
                   imports: {
-                    '/assets/app/outer.tsx': '/assets/app/outer.@abc123.tsx',
-                    '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
+                    '/assets/app/outer.tsx': '/assets/app/outer.~abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.~abc123.ts',
                   },
                 },
               }
@@ -3994,8 +3994,8 @@ describe('stream', () => {
                         importMap: {
                           imports: {
                             '/assets/app/components/counter.tsx':
-                              '/assets/app/components/counter.@abc123.tsx',
-                            '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
+                              '/assets/app/components/counter.~abc123.tsx',
+                            '/assets/app/shared.ts': '/assets/app/shared.~abc123.ts',
                           },
                         },
                       }
@@ -4012,10 +4012,10 @@ describe('stream', () => {
       let importMapScript = shelf.content.querySelector('script[type="importmap"]')
       expect(JSON.parse(importMapScript?.textContent ?? '{}')).toEqual({
         imports: {
-          '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
-          '/assets/app/components/counter.tsx': '/assets/app/components/counter.@abc123.tsx',
-          '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
-          '/assets/app/outer.tsx': '/assets/app/outer.@abc123.tsx',
+          '/assets/app/entry.tsx': '/assets/app/entry.~abc123.tsx',
+          '/assets/app/components/counter.tsx': '/assets/app/components/counter.~abc123.tsx',
+          '/assets/app/shared.ts': '/assets/app/shared.~abc123.ts',
+          '/assets/app/outer.tsx': '/assets/app/outer.~abc123.tsx',
         },
       })
       expect(importMapScript?.hasAttribute('data-rmx-import-map')).toBe(true)
@@ -4084,7 +4084,7 @@ describe('stream', () => {
                 importMap: {
                   imports: {
                     '/assets/app/components/counter.tsx':
-                      '/assets/app/components/counter.@abc123.tsx',
+                      '/assets/app/components/counter.~abc123.tsx',
                   },
                 },
               }
@@ -4099,7 +4099,7 @@ describe('stream', () => {
       expect(secondChunk.value).toContain(
         '<head><script data-rmx-import-map type="importmap">' +
           '{"imports":{"/assets/app/components/counter.tsx":' +
-          '"/assets/app/components/counter.@abc123.tsx"}}' +
+          '"/assets/app/components/counter.~abc123.tsx"}}' +
           '</script></head>',
       )
     })

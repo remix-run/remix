@@ -465,14 +465,14 @@ export const assets = createAssetServer({
 
 Production turns off watching, minifies scripts, and enables fingerprinting.
 
-Without fingerprints, assets are served at stable URLs with ETags and `Cache-Control: no-cache`. That's correct, but a repeat visit still sends one revalidation request per module and receives a `304` for each. With `fingerprint: true`, every asset URL includes a hash of its contents, such as `/assets/app/ui/public/cart.@k3x9f2.ts`, and is served with `Cache-Control: public, max-age=31536000, immutable`. Repeat visits load unchanged modules from the browser cache without touching the network. Fingerprints are computed from files on disk, so they require `watch: false`.
+Without fingerprints, assets are served at stable URLs with ETags and `Cache-Control: no-cache`. That's correct, but a repeat visit still sends one revalidation request per module and receives a `304` for each. With `fingerprint: true`, every asset URL includes a hash of its contents, such as `/assets/app/ui/public/cart.~k3x9f2.ts`, and is served with `Cache-Control: public, max-age=31536000, immutable`. Repeat visits load unchanged modules from the browser cache without touching the network. Fingerprints are computed from files on disk, so they require `watch: false`.
 
 Fingerprints stay fine-grained because of the import map. With a bundler, a file's hash is written into every file that imports it, so changing one shared module changes the hash of everything above it and invalidates most of the app's cache. Here, scripts keep importing stable URLs, and the import map points each stable URL at its current fingerprint:
 
 ```json
 {
   "imports": {
-    "/assets/app/ui/public/cart.ts": "/assets/app/ui/public/cart.@k3x9f2.ts"
+    "/assets/app/ui/public/cart.ts": "/assets/app/ui/public/cart.~k3x9f2.ts"
   }
 }
 ```

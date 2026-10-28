@@ -115,9 +115,9 @@ async function assertFingerprintRuntime(t: TestContext): Promise<void> {
     ),
   )
   assert.equal(preloadPaths.length, 2)
-  assert.ok(preloadPaths.some((pathname) => /\/entry\.@[A-Za-z0-9_-]+\.ts$/.test(pathname)))
-  assert.ok(preloadPaths.some((pathname) => /\/value\.@[A-Za-z0-9_-]+\.ts$/.test(pathname)))
-  assert.ok(server.requestedAssetPaths.some((pathname) => /\/value\.@/.test(pathname)))
+  assert.ok(preloadPaths.some((pathname) => /\/entry\.~[A-Za-z0-9_-]+\.ts$/.test(pathname)))
+  assert.ok(preloadPaths.some((pathname) => /\/value\.~[A-Za-z0-9_-]+\.ts$/.test(pathname)))
+  assert.ok(server.requestedAssetPaths.some((pathname) => /\/value\.~/.test(pathname)))
   assert.ok(!server.requestedAssetPaths.some((pathname) => /barrel|unused/.test(pathname)))
   assert.equal(await page.locator('script[type="importmap"]').count(), 1)
 }
