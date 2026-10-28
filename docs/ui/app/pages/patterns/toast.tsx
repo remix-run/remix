@@ -24,6 +24,7 @@ const action = await loadExample('toast/action', { outlet: 'ToastRegion' })
 const actions = await loadExample('toast/actions', { outlet: 'ToastRegion' })
 const stack = await loadExample('toast/stack', { outlet: 'ToastRegion' })
 const countdown = await loadExample('toast/countdown', { outlet: 'ToastRegion' })
+const priority = await loadExample('toast/priority', { outlet: 'ToastRegion' })
 
 const anatomy = await highlightSource(`
   import * as toast from '@remix-run/ui/toast'
@@ -187,6 +188,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             {defaultTimeout.Outlet && <defaultTimeout.Outlet />}
             {dynamicTimeout.Outlet && <dynamicTimeout.Outlet />}
             {countdown.Outlet && <countdown.Outlet />}
+            {priority.Outlet && <priority.Outlet />}
           </div>
           {customPosition.Outlet && <customPosition.Outlet />}
         </>
@@ -315,20 +317,28 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
         <Example id="stack" example={stack} />
       </Section>
+      <Section id="priority" title="Priority">
+        <p>
+          Set <code>priority</code> to control announcement urgency. Low priority is the default and
+          requests a polite announcement when the screen reader is ready. Use <code>'high'</code>
+          for urgent notifications that should interrupt current speech. Priority does not move
+          keyboard focus.
+        </p>
+        <Example id="priority-example" example={priority} />
+        <p>
+          Low-priority announcements use the rendered content in the region. High-priority
+          announcements use a separate assertive alert containing the published title and
+          description. Keep meaningful announcement content in those fields. The alert does not
+          include arbitrary extra markup or actions. While the collection has keyboard focus, the
+          alert is removed and the notification itself is exposed for exploration.
+        </p>
+      </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
           Supply the region's accessible name with <code>root({`{ label }`})</code>. Each
           notification is a non-modal dialog. Its heading and supporting content are connected by{' '}
           <code>title()</code> and <code>description()</code>. Both fields accept JSX; the mixins
           belong on the elements you render.
-        </p>
-        <p>
-          Notifications use polite announcements by default. Set <code>priority: 'high'</code>
-          for an urgent notification: a separate assertive alert announces its published title and
-          description. While the collection has keyboard focus, that copy is removed and the
-          notification itself becomes exposed for exploration. Keep meaningful announcement content
-          in the published fields; high-priority copies do not include arbitrary extra markup or
-          actions.
         </p>
         <p>
           New notifications preserve focus elsewhere on the page. F6 enters the collection, and Tab
