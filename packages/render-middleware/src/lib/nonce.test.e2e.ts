@@ -9,6 +9,105 @@ import { createTestServer } from '@remix-run/node-fetch-server/test'
 import { render } from '../index.ts'
 
 describe('CSP rendering', () => {
+  it('blocks inline scripts with missing or incorrect nonces while allowing a matching nonce', async (t) => {
+    let router = createNonceScriptRouter()
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          'html',
+          {},
+          createElement(
+            'head',
+            {},
+            jsx('script', {
+              children: "document.documentElement.dataset.missing = 'executed'",
+            }),
+            jsx('script', {
+              nonce: 'incorrect-nonce',
+              children: "document.documentElement.dataset.incorrect = 'executed'",
+            }),
+            jsx('script', {
+              nonce: getCspNonce(context),
+              children: "document.documentElement.dataset.allowed = 'executed'",
+            }),
+          ),
+          createElement('body'),
+        ),
+      ),
+    )
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.addInitScript(() => {
+      let violations: string[] = []
+      Reflect.set(window, 'cspViolations', violations)
+      document.addEventListener('securitypolicyviolation', (event) => {
+        violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+      })
+    })
+
+    await page.goto('/')
+
+    assert.equal(await page.locator('html').getAttribute('data-allowed'), 'executed')
+    assert.equal(await page.locator('html').getAttribute('data-missing'), null)
+    assert.equal(await page.locator('html').getAttribute('data-incorrect'), null)
+    await page.waitForFunction(() => Reflect.get(window, 'cspViolations').length >= 2)
+    assert.deepEqual(await page.evaluate(() => Reflect.get(window, 'cspViolations')), [
+      'script-src-elem: inline',
+      'script-src-elem: inline',
+    ])
+  })
+
+  it('blocks same-origin src scripts with missing or incorrect nonces while allowing a matching nonce', async (t) => {
+    let router = createNonceScriptRouter()
+    let requests: (string | null)[] = []
+    router.get('/script.js', (context) => {
+      requests.push(context.url.searchParams.get('nonce'))
+      return new Response("document.documentElement.dataset.allowed = 'executed'", {
+        headers: { 'Content-Type': 'text/javascript' },
+      })
+    })
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          'html',
+          {},
+          createElement(
+            'head',
+            {},
+            jsx('script', { src: '/script.js?nonce=missing' }),
+            jsx('script', {
+              src: '/script.js?nonce=incorrect',
+              nonce: 'incorrect-nonce',
+            }),
+            jsx('script', {
+              src: '/script.js?nonce=allowed',
+              nonce: getCspNonce(context),
+            }),
+          ),
+          createElement('body'),
+        ),
+      ),
+    )
+    let page = await t.serve(await createTestServer(router.fetch))
+    await page.addInitScript(() => {
+      let violations: string[] = []
+      Reflect.set(window, 'cspViolations', violations)
+      document.addEventListener('securitypolicyviolation', (event) => {
+        violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+      })
+    })
+
+    await page.goto('/')
+
+    assert.equal(await page.locator('html').getAttribute('data-allowed'), 'executed')
+    assert.deepEqual(requests, ['allowed'])
+    await page.waitForFunction(() => Reflect.get(window, 'cspViolations').length >= 2)
+    let violations: string[] = await page.evaluate(() => Reflect.get(window, 'cspViolations'))
+    assert.deepEqual(violations.sort(), [
+      `script-src-elem: ${new URL('/script.js?nonce=incorrect', page.url()).href}`,
+      `script-src-elem: ${new URL('/script.js?nonce=missing', page.url()).href}`,
+    ])
+  })
+
   it('allows authored scripts and blocking frame styles through redirects under an enforced CSP', async (t) => {
     let router = createRouter({
       middleware: [
@@ -78,3 +177,16 @@ describe('CSP rendering', () => {
     )
   })
 })
+
+function createNonceScriptRouter() {
+  return createRouter({
+    middleware: [
+      csp({
+        policy: ({ nonce }) => ({
+          scriptSrc: [`'nonce-${nonce}'`],
+        }),
+      }),
+      render(),
+    ] as const,
+  })
+}
