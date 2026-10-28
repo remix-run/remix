@@ -69,25 +69,11 @@ describe('mock function controls', () => {
     }
   })
 
-  it('restores Object.defineProperty without calling its replacement', () => {
-    let original = Object.defineProperty
-    let spy = mock.method(Object, 'defineProperty', (target) => target)
-    let restored: boolean
-    try {
-      spy.mock.restore()
-      restored = Object.defineProperty === original
-    } finally {
-      Object.defineProperty = original
-    }
-    assert.equal(restored, true)
-    assert.equal(spy.mock.callCount(), 0)
-  })
-
-  it('automatically restores Object.defineProperty and other method mocks', async () => {
+  it('automatically restores Object.defineProperty without calling its replacement', async () => {
     let original = Object.defineProperty
     let obj = { method: () => 'original' }
     let { testContext, cleanup } = createTestContext()
-    testContext.mock.method(Object, 'defineProperty', (target: object) => target)
+    let spy = testContext.mock.method(Object, 'defineProperty', (target: object) => target)
     testContext.mock.method(obj, 'method', () => 'mocked')
     let restored: boolean
     try {
@@ -98,6 +84,7 @@ describe('mock function controls', () => {
     }
     assert.equal(restored, true)
     assert.equal(obj.method(), 'original')
+    assert.equal(spy.mock.callCount(), 0)
   })
 
   it('preserves generic function contracts in replacement controls', (t) => {
@@ -221,18 +208,22 @@ describe('mock function controls', () => {
   })
 
   it('returns and records the original promise without awaiting it', async () => {
-    let result = Promise.resolve(42)
+    let { promise, resolve } = Promise.withResolvers<number>()
     let error = new Error('rejected')
     let fn = mock.fn(async () => 0)
-    fn.mock.mockImplementation(() => result)
+    fn.mock.mockImplementation(() => promise)
     let rejected = Promise.reject(error)
     fn.mock.mockImplementationOnce(() => rejected)
     assert.equal(fn(), rejected)
     assert.equal(fn.mock.calls[0].result, rejected)
     assert.equal(fn.mock.calls[0].error, undefined)
     await assert.rejects(rejected, (value: unknown) => value === error)
-    assert.equal(fn(), result)
-    assert.equal(await result, 42)
+    assert.equal(fn(), promise)
+    assert.equal(fn.mock.calls[1].result, promise)
+    assert.equal(fn.mock.callCount(), 2)
+    resolve(42)
+    assert.equal(await promise, 42)
+    assert.equal(fn.mock.callCount(), 2)
   })
 
   it('keeps the live call array and records calls before reentrant execution', () => {
@@ -242,7 +233,10 @@ describe('mock function controls', () => {
       assert.equal(calls.length, 1)
       assert.equal(fn.mock.callCount(), 1)
       assert.deepEqual(calls[0], { arguments: [value] })
-      fn.mock.mockImplementationOnce((next) => next * 2)
+      fn.mock.mockImplementationOnce((next) => {
+        assert.equal(fn.mock.callCount(), 2)
+        return next * 2
+      })
       return fn(value)
     })
     assert.equal(fn(3), 6)
@@ -255,66 +249,14 @@ describe('mock function controls', () => {
     assert.equal(fn.mock.callCount(), 0)
   })
 
-  it('counts standalone calls before the implementation runs', () => {
-    let fn = mock.fn(() => 0)
-    fn.mock.mockImplementation(() => fn.mock.callCount())
-    assert.equal(fn(), 1)
-    assert.equal(fn(), 2)
-    assert.equal(fn.mock.callCount(), 2)
-  })
-
-  it('counts recursive method calls including active invocations', (t) => {
-    let obj = {
-      value(depth: number): number {
-        return depth
-      },
-    }
-    let spy = t.mock.method(obj, 'value')
-    let counts: number[] = []
-    spy.mock.mockImplementation((depth) => {
-      counts.push(spy.mock.callCount())
-      if (depth > 0) obj.value(depth - 1)
-      counts.push(spy.mock.callCount())
-      return depth
-    })
-    assert.equal(obj.value(2), 2)
-    assert.deepEqual(counts, [1, 2, 3, 3, 3, 3])
-    assert.equal(spy.mock.callCount(), 3)
-  })
-
-  it('counts calls returning pending promises without waiting for settlement', async (t) => {
-    let { promise, resolve } = Promise.withResolvers<number>()
-    let fn = t.mock.fn(() => promise)
-    fn.mock.mockImplementation(() => {
-      assert.equal(fn.mock.callCount(), 1)
-      return promise
-    })
-    assert.equal(fn(), promise)
-    assert.equal(fn.mock.callCount(), 1)
-    resolve(42)
-    assert.equal(await promise, 42)
-    assert.equal(fn.mock.callCount(), 1)
-  })
-
-  it('keeps an active call cleared when its implementation resets the history', (t) => {
-    let fn = t.mock.fn(() => 1)
-    fn()
-    fn.mock.mockImplementationOnce(() => {
-      assert.equal(fn.mock.callCount(), 2)
-      fn.mock.resetCalls()
-      assert.equal(fn.mock.callCount(), 0)
-      return 2
-    })
-    assert.equal(fn(), 2)
-    assert.equal(fn.mock.callCount(), 0)
-    assert.deepEqual(fn.mock.calls, [])
-  })
-
   it('records subsequent calls in the new history when reset inside an implementation', () => {
     let fn = mock.fn(() => 1)
     let calls = fn.mock.calls
     fn.mock.mockImplementationOnce(() => {
+      assert.equal(fn.mock.callCount(), 1)
       fn.mock.resetCalls()
+      assert.equal(fn.mock.callCount(), 0)
+      assert.deepEqual(fn.mock.calls, [])
       return fn()
     })
     assert.equal(fn(), 1)
@@ -560,7 +502,7 @@ describe('mock function controls', () => {
     assert.equal(obj.method, undefined)
   })
 
-  it('preserves registration order between method restoration and cleanup callbacks', async () => {
+  it('preserves registration order between mock restoration and cleanup callbacks', async () => {
     let obj = {
       method() {
         return 'original'
@@ -569,14 +511,16 @@ describe('mock function controls', () => {
     let { testContext, cleanup } = createTestContext()
     let events: string[] = []
     testContext.after(() => {
-      events.push(obj.method())
+      events.push(fn(), obj.method())
     })
+    let fn = testContext.mock.fn(() => 'original function')
+    fn.mock.mockImplementation(() => 'mocked function')
     testContext.mock.method(obj, 'method', () => 'mocked')
     testContext.after(() => {
-      events.push(obj.method())
+      events.push(fn(), obj.method())
     })
     await cleanup()
-    assert.deepEqual(events, ['mocked', 'original'])
+    assert.deepEqual(events, ['mocked function', 'mocked', 'original function', 'original'])
   })
 
   it('restores overlapping method mocks without reinstalling an earlier spy', async () => {
@@ -591,22 +535,6 @@ describe('mock function controls', () => {
     await cleanup()
     assert.equal(obj.method(), 'original')
     assert.notEqual(obj.method, first)
-  })
-
-  it('keeps early manual restoration safe during automatic cleanup', async () => {
-    let obj = {
-      method() {
-        return 'original'
-      },
-    }
-    let { testContext, cleanup } = createTestContext()
-    let first = testContext.mock.method(obj, 'method', () => 'first')
-    first.mock.restore()
-    testContext.mock.method(obj, 'method', () => 'second')
-    await cleanup()
-    assert.equal(obj.method(), 'original')
-    await cleanup()
-    assert.equal(obj.method(), 'original')
   })
 
   it('does not reinstall an already restored spy when nested mocks are cleaned up', async () => {

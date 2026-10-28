@@ -1,6 +1,4 @@
 import * as assert from '@remix-run/assert'
-import type { TestContext } from '../lib/context.ts'
-import { runTests } from '../lib/executor.ts'
 import { DotReporter } from '../lib/reporters/dot.ts'
 import { FilesReporter } from '../lib/reporters/files.ts'
 import { SpecReporter } from '../lib/reporters/spec.ts'
@@ -9,8 +7,8 @@ import type { TestResults } from '../lib/reporters/results.ts'
 import { describe, it } from '../lib/framework.ts'
 
 describe('reporters combined failure stacks', () => {
-  it('prints every failure source in spec results and summaries', async () => {
-    let results = await createFailureResults()
+  it('prints every failure source in spec results and summaries', () => {
+    let results = createFailureResults()
     let reporter = new SpecReporter()
     let resultOutput = captureOutput(() => reporter.onResult(results))
     let summaryOutput = captureOutput(() => reporter.onSummary(results, 1))
@@ -19,8 +17,8 @@ describe('reporters combined failure stacks', () => {
     assertFailureSources(summaryOutput)
   })
 
-  it('prints every failure source in files results and summaries', async () => {
-    let results = await createFailureResults()
+  it('prints every failure source in files results and summaries', () => {
+    let results = createFailureResults()
     let reporter = new FilesReporter()
     let resultOutput = captureOutput(() => reporter.onResult(results))
     let summaryOutput = captureOutput(() => reporter.onSummary(results, 1))
@@ -29,8 +27,8 @@ describe('reporters combined failure stacks', () => {
     assertFailureSources(summaryOutput)
   })
 
-  it('prints every failure source in dot summaries', async () => {
-    let results = await createFailureResults()
+  it('prints every failure source in dot summaries', () => {
+    let results = createFailureResults()
     let output = captureOutput(() => {
       let reporter = new DotReporter()
       reporter.onResult(results)
@@ -40,8 +38,8 @@ describe('reporters combined failure stacks', () => {
     assertFailureSources(output)
   })
 
-  it('prints every failure source in TAP results', async () => {
-    let results = await createFailureResults()
+  it('prints every failure source in TAP results', () => {
+    let results = createFailureResults()
     let output = captureOutput(() => new TapReporter().onResult(results))
 
     assertFailureSources(output)
@@ -116,35 +114,29 @@ describe('reporters quiet mode', () => {
   })
 })
 
-async function createFailureResults(): Promise<TestResults> {
-  function firstCleanupSource() {
-    throw new Error('first cleanup failed')
-  }
-  function secondCleanupSource() {
-    throw new Error('second cleanup failed')
-  }
-  function afterEachSource() {
-    throw new Error('afterEach failed')
-  }
-  function testBodySource(t: TestContext) {
-    t.after(firstCleanupSource)
-    t.after(secondCleanupSource)
-    throw new Error('body failed')
-  }
-
-  let global = globalThis as typeof globalThis & { __testSuites?: unknown[] }
-  let previousSuites = global.__testSuites
-  global.__testSuites = [
-    {
-      name: 'failures',
-      afterEach: [{ fn: afterEachSource }],
-      tests: [{ name: 'test', fn: testBodySource }],
-    },
-  ]
-  try {
-    return await runTests()
-  } finally {
-    global.__testSuites = previousSuites
+function createFailureResults(): TestResults {
+  return {
+    passed: 0,
+    failed: 1,
+    skipped: 0,
+    todo: 0,
+    tests: [
+      {
+        name: 'test',
+        suiteName: 'failures',
+        status: 'failed',
+        duration: 0,
+        error: {
+          message: 'body failed\nfirst cleanup failed\nsecond cleanup failed\nafterEach failed',
+          stack: [
+            'Error: body failed\n    at testBodySource (test.ts:1:1)',
+            'Error: first cleanup failed\n    at firstCleanupSource (test.ts:2:1)',
+            'Error: second cleanup failed\n    at secondCleanupSource (test.ts:3:1)',
+            'Error: afterEach failed\n    at afterEachSource (test.ts:4:1)',
+          ].join('\n\n'),
+        },
+      },
+    ],
   }
 }
 

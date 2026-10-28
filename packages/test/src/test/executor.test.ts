@@ -62,31 +62,6 @@ describe('runTests lifecycle hook failures', () => {
     assert.ok(results.tests[0].error?.stack?.includes(error.stack))
   })
 
-  it('retains the original stack for a cleanup failure', async () => {
-    let cleanupError: Error | undefined
-    function failedCleanup() {
-      cleanupError = new Error('cleanup failed')
-      throw cleanupError
-    }
-    let results = await runWithSuites([
-      {
-        name: 'suite',
-        tests: [
-          {
-            name: 'test',
-            fn(t) {
-              t.after(failedCleanup)
-            },
-          },
-        ],
-      },
-    ])
-
-    assert.equal(results.failed, 1)
-    assert.ok(cleanupError?.stack)
-    assert.ok(results.tests[0].error?.stack?.includes(cleanupError.stack))
-  })
-
   it('retains all cleanup stacks alongside body and afterEach failures', async () => {
     let bodyError: Error | undefined
     let firstCleanupError: Error | undefined
