@@ -1,4 +1,4 @@
-import { getDocumentImportMapManager } from './import-map-manager.ts'
+import { getNonceManager } from './nonce.ts'
 
 const SERVER_MODULE_PRELOAD_SELECTOR = 'link[data-rmx-module-preload][rel~="modulepreload" i][href]'
 
@@ -23,7 +23,7 @@ export function getDocumentModulePreloader(doc: Document): ModulePreloader {
 }
 
 function createModulePreloader(doc: Document): ModulePreloader {
-  let nonce = getDocumentImportMapManager(doc).nonce
+  let nonce = getNonceManager().moduleNonce
   let requestedUrls = new Set<string>()
   let activeLinks = new WeakSet<HTMLLinkElement>()
   let activeLinkCount = 0

@@ -14,6 +14,7 @@ import {
 } from '../runtime/frame.ts'
 import { jsx } from '../runtime/jsx.ts'
 import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
+import { resetNonceManager } from '../runtime/nonce.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
@@ -48,6 +49,7 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
 describe('frames', () => {
   afterEach(() => {
     resetDocumentImportMapManager(document)
+    resetNonceManager()
     document.documentElement.innerHTML = '<head></head><body></body>'
   })
 

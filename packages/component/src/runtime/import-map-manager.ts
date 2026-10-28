@@ -1,4 +1,4 @@
-import { DOCUMENT_NONCE_META_NAME } from './stream-protocol.ts'
+import { getNonceManager } from './nonce.ts'
 
 type ImportMap = {
   imports?: ImportMapImports
@@ -17,8 +17,6 @@ type InstalledImportMap = {
 }
 
 interface ImportMapManager {
-  readonly nonce: string | undefined
-  readonly documentNonce: string | undefined
   consumeImportMaps(source: ParentNode): 'ready' | 'conflict' | 'blocked'
   disconnect(): void
   shouldPreserveHeadNode(node: Node): boolean
@@ -26,7 +24,6 @@ interface ImportMapManager {
 
 const MANAGED_IMPORT_MAP_SELECTOR = 'script[data-rmx-import-map][type="importmap"]'
 const IMPORT_MAP_SELECTOR = 'script[type="importmap"]'
-const DOCUMENT_NONCE_META_SELECTOR = `meta[name="${DOCUMENT_NONCE_META_NAME}"]`
 const importMapManagers = new WeakMap<Document, ImportMapManager>()
 
 class ImportMapConflictError extends Error {}
@@ -46,10 +43,7 @@ export function resetDocumentImportMapManager(doc: Document): void {
 }
 
 function createImportMapManager(doc: Document): ImportMapManager {
-  let nonceMeta = doc.head.querySelector<HTMLMetaElement>(DOCUMENT_NONCE_META_SELECTOR)
-  let nonce =
-    doc.head.querySelector<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)?.nonce ??
-    nonceMeta?.nonce
+  let nonce = getNonceManager().moduleNonce
   let installedImportMap = createInstalledImportMap()
   let processedScripts = new WeakSet<HTMLScriptElement>()
   let conflicted = false
@@ -85,14 +79,8 @@ function createImportMapManager(doc: Document): ImportMapManager {
   processImportMaps()
 
   return {
-    nonce,
-    documentNonce: nonceMeta?.nonce || nonce,
     consumeImportMaps(source) {
       if (conflicted) return 'blocked'
-      // Later responses cannot replace the nonce established by the original document.
-      for (let meta of source.querySelectorAll(DOCUMENT_NONCE_META_SELECTOR)) {
-        if (meta !== nonceMeta) meta.remove()
-      }
       processMutations(observer.takeRecords())
       processImportMaps()
       let scripts = Array.from(
@@ -140,8 +128,8 @@ function createImportMapManager(doc: Document): ImportMapManager {
     shouldPreserveHeadNode(node) {
       return (
         node.isConnected &&
-        (node === nonceMeta ||
-          (node instanceof HTMLScriptElement && node.matches(MANAGED_IMPORT_MAP_SELECTOR)))
+        node instanceof HTMLScriptElement &&
+        node.matches(MANAGED_IMPORT_MAP_SELECTOR)
       )
     },
   }

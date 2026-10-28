@@ -4,7 +4,7 @@ import { describe, it, type TestContext } from '@remix-run/test'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { Frame, type Handle } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { renderToStream, renderToString } from '../server/stream.ts'
+import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { drain, readChunks } from './utils.ts'
 
 describe('island response nonces', () => {
@@ -63,6 +63,24 @@ describe('island response nonces', () => {
     expect(doc.documentElement.dataset.finalColor).toBe('rgb(21, 43, 65)')
   })
 
+  it('keeps a missing startup nonce missing for frames created later', async (t) => {
+    let doc = await exerciseIsland(t, { startup: 'missing-nonce' })
+    expect(doc.querySelector<HTMLStyleElement>('#island-style')?.nonce).toBe('response-nonce')
+    expect(doc.documentElement.dataset.finalColor).toBe('rgb(0, 0, 0)')
+  })
+
+  it('keeps the startup nonce across standalone roots', async (t) => {
+    let doc = await exerciseIsland(t, { startup: 'standalone' })
+    expect(doc.querySelector<HTMLStyleElement>('#island-style')?.nonce).toBe('document-nonce')
+    expect(doc.documentElement.dataset.finalColor).toBe('rgb(21, 43, 65)')
+  })
+
+  it('does not use an authored import map nonce as the document render nonce', async (t) => {
+    let doc = await exerciseIsland(t, { startup: 'import-map-only' })
+    expect(doc.querySelector<HTMLStyleElement>('#island-style')?.nonce).toBe('response-nonce')
+    expect(doc.documentElement.dataset.finalColor).toBe('rgb(0, 0, 0)')
+  })
+
   it('does not trust response metadata without an enforcing CSP header', async (t) => {
     let doc = await exerciseIsland(t, { enforceResponseCsp: false })
     expect(doc.querySelector<HTMLStyleElement>('#island-style')?.nonce).toBe('response-nonce')
@@ -78,6 +96,7 @@ async function exerciseIsland(
     bufferedTemplates?: boolean
     nestedFrame?: 'resolved' | 'streamed'
     enforceResponseCsp?: boolean
+    startup?: 'missing-nonce' | 'standalone' | 'import-map-only'
   } = {},
 ): Promise<Document> {
   let Island = clientEntry(
@@ -115,17 +134,23 @@ async function exerciseIsland(
   if (options.reloadAgain) responses.push(await renderResponse('second-nonce'))
   let runHref = new URL('../runtime/run.ts', import.meta.url).href
   let jsxHref = new URL('../runtime/jsx.ts', import.meta.url).href
+  let vdomHref = new URL('../runtime/vdom.ts', import.meta.url).href
+  let componentHref = new URL('../runtime/component.ts', import.meta.url).href
   let mixinHref = new URL('../runtime/mixins/mixin.ts', import.meta.url).href
   let message = crypto.randomUUID()
   let bootstrap = `
     import { run } from ${JSON.stringify(runHref)}
     import { jsx } from ${JSON.stringify(jsxHref)}
+    import { createRoot } from ${JSON.stringify(vdomHref)}
+    import { Frame } from ${JSON.stringify(componentHref)}
     import { createMixin } from ${JSON.stringify(mixinHref)}
     let responses = ${JSON.stringify(responses).replace(/</g, '\\u003c')}
     let options = ${JSON.stringify(options)}
     let snapshots = []
     let setups = 0
     let responseIndex = 0
+    let { promise: islandReady, resolve: markIslandReady } = Promise.withResolvers()
+    let frame
     let change, changeMixin
     function read() {
       let style = document.querySelector('#island-style')
@@ -137,7 +162,7 @@ async function exerciseIsland(
       changeMixin = async value => { nonce = value; await handle.update() }
       return (initial, props) => jsx(handle.element, { ...props, nonce: nonce ?? initial })
     })
-    let app = run({
+    let runtimeOptions = {
       resolveFrame() {
         let nonce = responseIndex === 0 ? 'response-nonce' : 'second-nonce'
         let chunks = responses[responseIndex++].values()
@@ -160,6 +185,7 @@ async function exerciseIsland(
         await Promise.resolve()
         return function Island(handle) {
           setups++
+          handle.queueTask(markIslandReady)
           let capturedNonce = handle.props.nonce
           let step = 0
           change = async next => { step = next; await handle.update() }
@@ -181,12 +207,32 @@ async function exerciseIsland(
           }
         }
       },
-    })
+    }
     try {
-      await app.ready()
-      let frame = options.documentReload ? app.frames.top : app.frames.get('child')
-      frame.src = '/next'
-      await frame.reload()
+      if (options.startup === 'standalone') {
+        document.body.replaceChildren()
+        let root = createRoot(document.body, { frameInit: runtimeOptions })
+        document.querySelector('meta[name="rmx-nonce"]').nonce = 'forged-nonce'
+        root.dispose()
+        root = createRoot(document.body, { frameInit: runtimeOptions })
+        root.render(jsx(Frame, { src: '/next' }))
+        await islandReady
+      } else {
+        let app = run(runtimeOptions)
+        await app.ready()
+        frame = options.documentReload ? app.frames.top : app.frames.get('child')
+        if (options.startup === 'missing-nonce') {
+          let meta = document.createElement('meta')
+          meta.name = 'rmx-nonce'
+          meta.nonce = 'document-nonce'
+          document.head.append(meta)
+          await app.frames.top.replace(jsx(Frame, { src: '/next' }))
+          await islandReady
+        } else {
+          frame.src = '/next'
+          await frame.reload()
+        }
+      }
       snapshots.push(read())
       await change(1)
       snapshots.push(read())
@@ -218,6 +264,9 @@ async function exerciseIsland(
             httpEquiv="Content-Security-Policy"
             content="script-src 'self' 'nonce-document-nonce'; style-src 'nonce-document-nonce'"
           />
+          {options.startup === 'import-map-only' ? (
+            <ImportMap nonce="document-nonce" value={{}} />
+          ) : null}
           <script type="module" nonce="document-nonce">
             {bootstrap}
           </script>
@@ -226,7 +275,13 @@ async function exerciseIsland(
           <Frame name="child" src="/child" />
         </body>
       </html>,
-      { nonce: 'document-nonce', resolveFrame: () => 'Initial' },
+      {
+        nonce:
+          options.startup === 'missing-nonce' || options.startup === 'import-map-only'
+            ? undefined
+            : 'document-nonce',
+        resolveFrame: () => 'Initial',
+      },
     ),
   )
   let iframe = document.createElement('iframe')

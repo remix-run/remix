@@ -1,4 +1,4 @@
-import type { ResourceNonces } from './resource-nonce.ts'
+import type { ResourceNonces } from './nonce.ts'
 import type { ComponentHandle, Fragment, Frame, FrameHandle, FrameProps } from './component.ts'
 import { isRemixElement } from './core/vnode.ts'
 import type { Frame as FrameInstance } from './frame.ts'

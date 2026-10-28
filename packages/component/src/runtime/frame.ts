@@ -1,8 +1,4 @@
-import {
-  addRootResponseNonce,
-  addRootResourceNonces,
-  type ResourceNonces,
-} from './resource-nonce.ts'
+import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import { pendingPrefetchLinks } from './prefetch-links.ts'
 import { jsx } from './jsx.ts'
 import {
@@ -350,6 +346,7 @@ type ActiveRenderOptions = RenderOptions & {
 
 export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let container = createContainer(root)
+  let nonceManager = getNonceManager()
   let contentRoot: VirtualRoot | undefined
   let reloadController: AbortController | undefined
   // The style registry is document-level and shared by every frame; only the
@@ -373,7 +370,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function consumeClientEntryResources(
     source: ParentNode,
     documentHref?: string,
+    responseNonce?: string,
   ): Promise<boolean> {
+    nonceManager.prepareResponse(source, responseNonce)
     let importMapStatus = importMapManager.consumeImportMaps(source)
     if (importMapStatus !== 'ready') {
       lifecycleController.abort()
@@ -388,6 +387,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   function shouldPreserveManagedHeadNode(node: Node): boolean {
     return (
       pendingPrefetchLinks.has(node) ||
+      nonceManager.shouldPreserveHeadNode(node) ||
       importMapManager.shouldPreserveHeadNode(node) ||
       (modulePreloader.hasActivePreloads() && modulePreloader.isActivePreload(node))
     )
@@ -477,7 +477,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
             await render(html, { ...options, flushKind })
           },
           options.nonce,
-          importMapManager.documentNonce,
           linkedAbort.controller.signal,
         )
       } finally {
@@ -548,8 +547,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let head = parsed.querySelector('head')
       let body = parsed.querySelector('body')
       invariant(head && body, 'Missing document head or body')
-      rewriteResponseNonces(parsed, options.nonce, importMapManager.documentNonce)
-      if (!(await consumeClientEntryResources(parsed, options.documentHref))) return
+      if (!(await consumeClientEntryResources(parsed, options.documentHref, options.nonce))) return
       if (isRenderAborted(options.signal)) return
       let responseData = options.data
       mergeRmxDataFromDocument(responseData, parsed)
@@ -590,8 +588,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
-    rewriteResponseNonces(fragment, options.nonce, importMapManager.documentNonce)
-    if (!(await consumeClientEntryResources(fragment, options.documentHref))) return
+    if (!(await consumeClientEntryResources(fragment, options.documentHref, options.nonce))) return
     if (isRenderAborted(options.signal)) return
     adoptFrameServerStyles(createElementContainer(fragment), context.styleManager)
     removeEmptyHeads(fragment)
@@ -1504,12 +1501,9 @@ function hydrateRegion(
   // tracker to client frames created while this entry renders so blocking
   // frames keep the reload pending until their content arrives.
   let renderEntry = (root: Pick<VirtualRoot, 'render'>) => {
-    addRootResourceNonces(root, resourceNonces)
-    addRootResponseNonce(
-      root,
-      context.nonce,
-      getDocumentImportMapManager(start.ownerDocument).documentNonce,
-    )
+    let nonceManager = getNonceManager()
+    nonceManager.addRootResourceNonces(root, resourceNonces)
+    nonceManager.addRootResponseNonce(root, context.nonce)
     if (!signal) {
       root.render(vElement)
       return
@@ -1907,7 +1901,6 @@ async function renderFrameStream(
   doc: Document,
   applyHtml: (html: string, flushKind: FlushKind) => Promise<void>,
   responseNonce: string | undefined,
-  documentNonce: string | undefined,
   signal?: AbortSignal,
 ): Promise<void> {
   let reader = stream.getReader()
@@ -1926,7 +1919,7 @@ async function renderFrameStream(
   signal?.addEventListener('abort', abort, { once: true })
 
   function rewriteAndPublishTemplate(id: string, fragment: DocumentFragment): void {
-    rewriteResponseNonces(fragment, responseNonce, documentNonce)
+    getNonceManager().prepareResponse(fragment, responseNonce)
     publishFrameTemplate(id, fragment, { inertScripts: true })
   }
 
@@ -2174,22 +2167,4 @@ function isDocumentFragmentNode(value: unknown): value is DocumentFragment {
     value !== null &&
     Reflect.get(value, 'nodeType') === Node.DOCUMENT_FRAGMENT_NODE
   )
-}
-
-function rewriteResponseNonces(
-  source: ParentNode,
-  responseNonce: string | undefined,
-  documentNonce: string | undefined,
-): void {
-  if (!responseNonce || !documentNonce || responseNonce === documentNonce) return
-  // Only the enforcing CSP response header identifies the nonce; incoming HTML metadata cannot.
-  for (let element of source.querySelectorAll('style[nonce],script[nonce],link[nonce]')) {
-    // Firefox clones the attribute rather than the nonce property in inert fragments.
-    if ('nonce' in element && element.nonce === responseNonce) {
-      element.setAttribute('nonce', documentNonce)
-    }
-  }
-  for (let template of source.querySelectorAll('template')) {
-    rewriteResponseNonces(template.content, responseNonce, documentNonce)
-  }
 }

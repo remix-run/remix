@@ -1,3 +1,4 @@
+import { getNonceManager } from './nonce.ts'
 import { createFrame, NamedFrameRegistry, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
@@ -156,6 +157,7 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
+  getNonceManager()
   let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
   let scheduler = createScheduler(document, errorTarget, styleManager)

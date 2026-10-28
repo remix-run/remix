@@ -1,4 +1,4 @@
-import { addRootResourceNonces, getResourceNonces, resolveResourceNonce } from './resource-nonce.ts'
+import { getNonceManager } from './nonce.ts'
 import type { Component, ComponentHandle, FrameContent, FrameHandle } from './component.ts'
 import { createComponent } from './component.ts'
 import type { FrameRuntime } from './frame.ts'
@@ -280,11 +280,14 @@ function resolveNodeMixProps(
   let directEventDescriptors = resolveDirectEventDescriptors(mix)
   if (directEventDescriptors) {
     if (state) teardownMixins(state)
-    return { props: resolveResourceNonce(node.type, node.props, parent), directEventDescriptors }
+    return {
+      props: getNonceManager().resolveResourceNonce(node.type, node.props, parent),
+      directEventDescriptors,
+    }
   }
 
   if (state == null && (mix == null || (Array.isArray(mix) && mix.length === 0))) {
-    return { props: resolveResourceNonce(node.type, node.props, parent) }
+    return { props: getNonceManager().resolveResourceNonce(node.type, node.props, parent) }
   }
 
   let resolved = resolveMixedProps({
@@ -302,7 +305,7 @@ function resolveNodeMixProps(
     state,
   })
   return {
-    props: resolveResourceNonce(node.type, resolved.props, parent),
+    props: getNonceManager().resolveResourceNonce(node.type, resolved.props, parent),
     mixState: resolved.state,
   }
 }
@@ -1112,7 +1115,7 @@ function diffFrame(
   }
 
   if (!committed._state.resolved && committed._state.fallbackRoot) {
-    addRootResourceNonces(committed._state.fallbackRoot, getResourceNonces(vParent))
+    getNonceManager().inheritRootResourceNonces(committed._state.fallbackRoot, vParent)
     committed._state.fallbackRoot.render(committed.props.fallback ?? null)
   }
   return committed
@@ -1199,7 +1202,7 @@ function insertFrame(
     getContext: (type) => findContextFromAncestry(vParent, type),
     styleManager: styles,
   })
-  addRootResourceNonces(fallbackRoot, getResourceNonces(vParent))
+  getNonceManager().inheritRootResourceNonces(fallbackRoot, vParent)
   fallbackRoot.render(node.props.fallback ?? null)
 
   let instance = createFrame([start, end], {
@@ -1540,7 +1543,7 @@ function updateClientEntryBoundary(
   let element = jsx(node.type, node.props, node.key)
   let owner = getClientEntryBoundaryOwner(node._rangeStart)
   if (owner) {
-    addRootResourceNonces(owner.root, getResourceNonces(node._parent))
+    getNonceManager().inheritRootResourceNonces(owner.root, node._parent)
     owner.root.render(element)
     return
   }
@@ -1551,7 +1554,7 @@ function updateClientEntryBoundary(
   runtime.pendingClientEntries.set(node._rangeStart, [
     node._rangeEnd,
     element,
-    getResourceNonces(node._parent),
+    getNonceManager().getResourceNonces(node._parent),
   ])
 }
 

@@ -1,4 +1,4 @@
-import { getRootResourceNonces } from './resource-nonce.ts'
+import { getNonceManager } from './nonce.ts'
 import type { FrameHandle } from './component.ts'
 import { createFrameHandle } from './component.ts'
 import { invariant } from './invariant.ts'
@@ -95,6 +95,7 @@ export function createRangeRoot(
   boundaries: [Node, Node],
   options: VirtualRootOptions = {},
 ): VirtualRoot {
+  let nonceManager = getNonceManager()
   let [start, end] = boundaries
   let vroot: CommittedVNode | null = null
   let currentElement: RemixNode | undefined
@@ -154,7 +155,7 @@ export function createRangeRoot(
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
-        _resourceNonces: getRootResourceNonces(root),
+        _resourceNonces: nonceManager.getRootResourceNonces(root),
         _getContext: options.getContext,
         _rangeStart: start,
         _rangeEnd: end,
@@ -206,6 +207,7 @@ export function createRangeRoot(
  * @returns A virtual root controller.
  */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
+  let nonceManager = getNonceManager()
   let vroot: CommittedVNode | null = null
   let currentElement: RemixNode | undefined
   let styles = options.styleManager ?? defaultStyleManager
@@ -264,7 +266,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
-        _resourceNonces: getRootResourceNonces(root),
+        _resourceNonces: nonceManager.getRootResourceNonces(root),
         _getContext: options.getContext,
       }
       scheduler.enqueueWork([
