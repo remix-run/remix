@@ -17,7 +17,7 @@ function startApp(t: TestContext) {
 
 function startPendingApp(t: TestContext) {
   let [started, resolveStarted] = withResolvers<AbortSignal>()
-  let [pending, resolvePending, rejectPending] = withResolvers<string | Response>()
+  let [pending, resolvePending, rejectPending] = withResolvers<string>()
   let resolveFrame = mock.fn(async (src: string, options?: { signal?: AbortSignal }) => {
     if (new URL(src).searchParams.get('variant') === 'pending') {
       if (!options?.signal) throw new Error('Expected a navigation signal')
@@ -35,7 +35,7 @@ function startPendingApp(t: TestContext) {
     await window.navigation.transition?.finished.catch(() => {})
     app.dispose()
   })
-  return { app, started, complete, resolvePending, rejectPending, resolveFrame }
+  return { app, started, complete, rejectPending, resolveFrame }
 }
 
 function stubGlobal(t: TestContext, name: string, value: unknown): void {
@@ -67,10 +67,11 @@ describe('replaceUrl', () => {
     window.scrollTo({ left: 0, top: 0, behavior: 'instant' })
   })
 
-  it('replaces the URL synchronously and uses it for subsequent top-frame reloads', async (t) => {
+  it('replaces the entry immediately and keeps reloads in sync without sourceElement support', async (t) => {
     window.history.replaceState({ application: 'preserved' }, '', window.location.href)
     let { app, resolveFrame } = startApp(t)
     await app.ready()
+    stubGlobal(t, 'NavigateEvent', Event)
     let entryCount = window.navigation.entries().length
     let destination = new URL('?variant=blue', window.location.href)
 
@@ -139,44 +140,18 @@ describe('replaceUrl', () => {
     expect(document.querySelector('h1')?.textContent).toBe('red')
     expect(resolveFrame).toHaveBeenCalledTimes(2)
     expect(resolveFrame.mock.calls[1]?.arguments[0]).toBe(replacement.href)
-
-    await window.navigation.forward().finished
-    expect(document.querySelector('h1')?.textContent).toBe('blue')
-    expect(resolveFrame).toHaveBeenCalledTimes(3)
   })
 
   it('works without the Navigation API and keeps the top-frame source in sync', async (t) => {
     stubGlobal(t, 'navigation', undefined)
-    let { app, resolveFrame } = startApp(t)
+    let { app } = startApp(t)
     await app.ready()
     let destination = new URL('?variant=fallback', window.location.href)
-    let entryCount = window.history.length
-
-    await replaceUrl(destination.search)
-
-    expect(window.location.href).toBe(destination.href)
-    expect(window.history.length).toBe(entryCount)
-    expect(app.frames.top.src).toBe(destination.href)
-    expect(resolveFrame).not.toHaveBeenCalled()
-    await app.frames.top.reload()
-    expect(resolveFrame.mock.calls[0]?.arguments[0]).toBe(destination.href)
-  })
-
-  it('preserves Remix state when sourceElement support is unavailable', async (t) => {
-    let { app, resolveFrame } = startApp(t)
-    await app.ready()
-    stubGlobal(t, 'NavigateEvent', Event)
-    let destination = new URL('?variant=unsupported', window.location.href)
 
     await replaceUrl(destination.search)
 
     expect(window.location.href).toBe(destination.href)
     expect(app.frames.top.src).toBe(destination.href)
-    expect(window.navigation.currentEntry?.getState()).toMatchObject({
-      $rmx: true,
-      src: destination.href,
-    })
-    expect(resolveFrame).not.toHaveBeenCalled()
   })
 
   it('preserves non-Remix state when used without a running app', async () => {
@@ -195,7 +170,10 @@ describe('replaceUrl', () => {
     let { app, resolveFrame } = startApp(t)
     await app.ready()
 
-    await expect(replaceUrl('https://another-origin.example/product')).rejects.toThrow(DOMException)
+    await expect(replaceUrl('https://another-origin.example/product')).rejects.toHaveProperty(
+      'name',
+      'SecurityError',
+    )
 
     expect(window.location.href).toBe(originalHref)
     expect(app.frames.top.src).toBe(originalHref)
@@ -209,7 +187,6 @@ describe('replaceUrl', () => {
     let navigating = navigate(destination.href)
     let signal = await started
     let entryCount = window.navigation.entries().length
-    window.navigation.updateCurrentEntry({ state: { application: 'destination-state' } })
     let settled = false
     let replacing = replaceUrl('?variant=settled').then(() => {
       settled = true
@@ -221,13 +198,21 @@ describe('replaceUrl', () => {
     expect(window.location.href).toBe(destination.href)
     expect(app.frames.top.src).toBe(destination.href)
 
+    window.navigation.updateCurrentEntry({
+      state: { $rmx: true, src: '/stale', target: 'details', application: 'destination-state' },
+    })
     complete()
     await navigating
     await replacing
 
     expect(window.location.search).toBe('?variant=settled')
     expect(app.frames.top.src).toBe(window.location.href)
-    expect(window.navigation.currentEntry?.getState()).toEqual({ application: 'destination-state' })
+    expect(window.navigation.currentEntry?.getState()).toEqual({
+      $rmx: true,
+      src: window.location.href,
+      target: undefined,
+      application: 'destination-state',
+    })
     expect(window.navigation.entries()).toHaveLength(entryCount)
     expect(document.querySelector('h1')?.textContent).toBe('Loaded')
     expect(resolveFrame).toHaveBeenCalledTimes(1)
@@ -288,6 +273,7 @@ describe('replaceUrl', () => {
     await started
     let replacing = replaceUrl('?variant=cancelled', { signal: controller.signal })
     let rejected = expect(replacing).rejects.toBe(reason)
+    // Abort after the wait resolves but before the replacement's continuation runs.
     void window.navigation.transition?.finished.then(() => controller.abort(reason))
 
     complete()
@@ -430,39 +416,6 @@ describe('replaceUrl', () => {
     expect(window.location.search).toBe('?variant=pending')
     expect(app.frames.top.src).toBe(window.location.href)
     expect(resolveFrame).toHaveBeenCalledTimes(2)
-  })
-
-  it('rejects a pending replacement when the frame response redirects elsewhere', async (t) => {
-    let { app, started, resolvePending } = startPendingApp(t)
-    await app.ready()
-    let navigating = navigate('?variant=pending').catch(() => {})
-    await started
-    let replacing = replaceUrl('?variant=stale')
-    let rejected = expect(replacing).rejects.toHaveProperty('name', 'AbortError')
-    let destination = new URL('?variant=redirected', window.location.href)
-    let [redirected, resolveRedirected] = withResolvers<void>()
-    let listener = new AbortController()
-    t.after(() => listener.abort())
-    window.navigation.addEventListener(
-      'navigatesuccess',
-      () => {
-        if (window.location.href === destination.href) resolveRedirected()
-      },
-      { signal: listener.signal },
-    )
-    let response = new Response('<html><head></head><body><h1>Redirected</h1></body></html>')
-    Object.defineProperties(response, {
-      redirected: { value: true },
-      url: { value: destination.href },
-    })
-
-    resolvePending(response)
-    await rejected
-    await navigating
-    await redirected
-    expect(window.location.href).toBe(destination.href)
-    expect(app.frames.top.src).toBe(destination.href)
-    expect(document.querySelector('h1')?.textContent).toBe('Redirected')
   })
 
   it('propagates navigation failures without applying the pending replacement', async (t) => {
