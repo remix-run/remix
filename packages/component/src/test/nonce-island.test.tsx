@@ -5,11 +5,11 @@ import { clientEntry } from '../runtime/client-entries.ts'
 import { Frame, type Handle } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
-import { drain, readChunks } from './utils.ts'
+import { drain, readChunks, renderNonceDocument } from './utils.ts'
 
 describe('island response nonces', () => {
   it('keeps resource nonces correct through hydration, updates, and replacement', async (t) => {
-    let doc = await exerciseIsland(t)
+    let doc = await exerciseIsland(t, { lifecycle: true })
     expect(JSON.parse(doc.documentElement.dataset.snapshots ?? 'null')).toEqual([
       { nonce: 'document-nonce', color: 'rgb(12, 34, 56)', note: 'response-nonce' },
       { nonce: 'document-nonce', color: 'rgb(12, 34, 56)', note: 'response-nonce' },
@@ -91,6 +91,7 @@ describe('island response nonces', () => {
 async function exerciseIsland(
   t: TestContext,
   options: {
+    lifecycle?: boolean
     reloadAgain?: boolean
     documentReload?: boolean
     bufferedTemplates?: boolean
@@ -146,7 +147,7 @@ async function exerciseIsland(
     import { createMixin } from ${JSON.stringify(mixinHref)}
     let responses = ${JSON.stringify(responses).replace(/</g, '\\u003c')}
     let options = ${JSON.stringify(options)}
-    let snapshots = []
+    let snapshots = options.lifecycle ? [] : undefined
     let setups = 0
     let responseIndex = 0
     let { promise: islandReady, resolve: markIslandReady } = Promise.withResolvers()
@@ -157,7 +158,7 @@ async function exerciseIsland(
       let target = document.querySelector('#island-target')
       return { nonce: style.nonce, color: getComputedStyle(target).color, note: target.dataset.note }
     }
-    let withNonce = createMixin(handle => {
+    let withNonce = options.lifecycle && createMixin(handle => {
       let nonce
       changeMixin = async value => { nonce = value; await handle.update() }
       return (initial, props) => jsx(handle.element, { ...props, nonce: nonce ?? initial })
@@ -181,7 +182,7 @@ async function exerciseIsland(
         })
       },
       async loadModule() {
-        snapshots.push(read())
+        snapshots?.push(read())
         await Promise.resolve()
         return function Island(handle) {
           setups++
@@ -198,11 +199,13 @@ async function exerciseIsland(
               }, step >= 2 ? 'replacement' : 'original'),
               jsx('p', { id: 'island-target', nonce: handle.props.nonce, 'data-note': handle.props.nonce, children: 'Island' }),
               jsx('style', { id: 'current-style', nonce: handle.props.nonce, children: '#island-target { outline-color: ' + color + '; }' }),
-              jsx('style', { id: 'forged-style', nonce: 'forged-nonce', children: '#island-target { background: red; }' }),
-              jsx('style', { id: 'missing-style', children: '#island-target { border: 10px solid red; }' }),
-              jsx('script', { id: 'island-data', type: 'application/json', nonce: handle.props.nonce, children: handle.props.nonce }),
-              jsx('link', { id: 'island-link', rel: 'author', nonce: handle.props.nonce }),
-              jsx('style', { id: 'mixed-style', mix: [withNonce(capturedNonce)] }),
+              ...(options.lifecycle ? [
+                jsx('style', { id: 'forged-style', nonce: 'forged-nonce', children: '#island-target { background: red; }' }),
+                jsx('style', { id: 'missing-style', children: '#island-target { border: 10px solid red; }' }),
+                jsx('script', { id: 'island-data', type: 'application/json', nonce: handle.props.nonce, children: handle.props.nonce }),
+                jsx('link', { id: 'island-link', rel: 'author', nonce: handle.props.nonce }),
+                jsx('style', { id: 'mixed-style', mix: [withNonce(capturedNonce)] }),
+              ] : []),
             ] })
           }
         }
@@ -233,22 +236,24 @@ async function exerciseIsland(
           await frame.reload()
         }
       }
-      snapshots.push(read())
+      snapshots?.push(read())
       await change(1)
-      snapshots.push(read())
+      snapshots?.push(read())
       await change(2)
-      snapshots.push(read())
+      snapshots?.push(read())
       if (options.reloadAgain) {
         await frame.reload()
         await change(3)
       }
-      let mixinNonces = [document.querySelector('#mixed-style').nonce]
-      await changeMixin('forged-nonce')
-      mixinNonces.push(document.querySelector('#mixed-style').nonce)
-      await changeMixin('response-nonce')
-      mixinNonces.push(document.querySelector('#mixed-style').nonce)
-      document.documentElement.dataset.mixinNonces = JSON.stringify(mixinNonces)
-      document.documentElement.dataset.snapshots = JSON.stringify(snapshots)
+      if (options.lifecycle) {
+        let mixinNonces = [document.querySelector('#mixed-style').nonce]
+        await changeMixin('forged-nonce')
+        mixinNonces.push(document.querySelector('#mixed-style').nonce)
+        await changeMixin('response-nonce')
+        mixinNonces.push(document.querySelector('#mixed-style').nonce)
+        document.documentElement.dataset.mixinNonces = JSON.stringify(mixinNonces)
+        document.documentElement.dataset.snapshots = JSON.stringify(snapshots)
+      }
       document.documentElement.dataset.finalColor = read().color
       document.documentElement.dataset.setups = setups
     } catch (error) {
@@ -284,24 +289,7 @@ async function exerciseIsland(
       },
     ),
   )
-  let iframe = document.createElement('iframe')
-  t.after(() => iframe.remove())
-  let completed = new Promise<void>((resolve) => {
-    window.addEventListener(
-      'message',
-      function onMessage(event: MessageEvent) {
-        if (event.source !== iframe.contentWindow || event.data !== message) return
-        window.removeEventListener('message', onMessage)
-        resolve()
-      },
-      { signal: t.signal },
-    )
-  })
-  iframe.srcdoc = html
-  document.body.append(iframe)
-  await completed
-  let doc = iframe.contentDocument
-  invariant(doc)
+  let doc = await renderNonceDocument(t, html, message)
   expect(doc.documentElement.dataset.error).toBeUndefined()
   return doc
 }

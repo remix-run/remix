@@ -4,7 +4,7 @@ import { describe, it, type TestContext } from '@remix-run/test'
 import { Frame } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
-import { drain } from './utils.ts'
+import { drain, renderNonceDocument } from './utils.ts'
 
 describe('CSP frame navigation', () => {
   it('keeps authored styles working across document navigation', async (t) => {
@@ -251,24 +251,7 @@ async function navigateUnderCsp(
       },
     ),
   )
-  let iframe = document.createElement('iframe')
-  t.after(() => iframe.remove())
-  let completed = new Promise<void>((resolve) => {
-    window.addEventListener(
-      'message',
-      function onMessage(event: MessageEvent) {
-        if (event.source !== iframe.contentWindow || event.data !== message) return
-        window.removeEventListener('message', onMessage)
-        resolve()
-      },
-      { signal: t.signal },
-    )
-  })
-  iframe.srcdoc = html
-  document.body.append(iframe)
-  await completed
-  let doc = iframe.contentDocument
-  invariant(doc)
+  let doc = await renderNonceDocument(t, html, message)
   expect(doc.documentElement.dataset.error).toBeUndefined()
   return doc
 }

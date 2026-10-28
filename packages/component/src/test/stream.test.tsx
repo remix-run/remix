@@ -1646,18 +1646,18 @@ describe('stream', () => {
       expect(html).not.toContain('<!-- rmx:flush')
     })
 
-    it('stamps the nonce on streamed styles, generated import maps, preloads, and metadata', async () => {
+    it('stamps streamed resources when a nonce is provided and omits it otherwise', async () => {
+      let node = (
+        <html>
+          <head />
+          <body>
+            <div mix={[css({ color: 'red' })]}>Styled</div>
+            <NonceIsland />
+          </body>
+        </html>
+      )
       let html = await drain(
-        renderToStream(
-          <html>
-            <head />
-            <body>
-              <div mix={[css({ color: 'red' })]}>Styled</div>
-              <NonceIsland />
-            </body>
-          </html>,
-          { nonce: 'r4nd0m', resolveClientEntry: resolveNonceIsland },
-        ),
+        renderToStream(node, { nonce: 'r4nd0m', resolveClientEntry: resolveNonceIsland }),
       )
 
       let doc = new DOMParser().parseFromString(html, 'text/html')
@@ -1667,6 +1667,13 @@ describe('stream', () => {
         'r4nd0m',
       )
       expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="r4nd0m">')
+
+      let withoutNonce = await drain(
+        renderToStream(node, { resolveClientEntry: resolveNonceIsland }),
+      )
+      expect(withoutNonce).toContain('<style data-rmx-style=')
+      expect(withoutNonce).toContain('<script data-rmx-import-map type="importmap">')
+      expect(withoutNonce).not.toContain('nonce=')
     })
 
     it('emits nonce metadata only for documents without adding an empty import map', async () => {
@@ -1701,25 +1708,6 @@ describe('stream', () => {
 
       expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="authored">')
       expect(html).toContain('<meta name="rmx-nonce" content="" nonce="r4nd0m">')
-    })
-
-    it('omits the attribute when no nonce is given', async () => {
-      let html = await drain(
-        renderToStream(
-          <html>
-            <head />
-            <body>
-              <div mix={[css({ color: 'red' })]}>Styled</div>
-              <NonceIsland />
-            </body>
-          </html>,
-          { resolveClientEntry: resolveNonceIsland },
-        ),
-      )
-
-      expect(html).toContain('<style data-rmx-style=')
-      expect(html).toContain('<script data-rmx-import-map type="importmap">')
-      expect(html).not.toContain('nonce=')
     })
   })
 

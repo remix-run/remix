@@ -3,9 +3,8 @@ import { describe, it, type TestContext } from '@remix-run/test'
 
 import { clientEntry } from '../runtime/client-entries.ts'
 import { Frame } from '../runtime/component.ts'
-import { invariant } from '../runtime/invariant.ts'
 import { ImportMap, renderToStream } from '../server/stream.ts'
-import { drain } from './utils.ts'
+import { drain, renderNonceDocument } from './utils.ts'
 
 describe('CSP nonces', () => {
   it('loads generated module preloads under nonce-only CSP', async (t) => {
@@ -309,25 +308,4 @@ async function renderLateEntryUnderCsp(
         }
       : {}),
   }
-}
-
-async function renderNonceDocument(t: TestContext, html: string, completionMessage: string) {
-  // Each document needs fresh CSP and import-map state, including real script execution.
-  let iframe = document.createElement('iframe')
-  t.after(() => iframe.remove())
-  let completed = new Promise<void>((resolve) => {
-    function onMessage(event: MessageEvent) {
-      if (event.source !== iframe.contentWindow || event.data !== completionMessage) return
-      window.removeEventListener('message', onMessage)
-      resolve()
-    }
-    window.addEventListener('message', onMessage, { signal: t.signal })
-  })
-  iframe.srcdoc = html
-  document.body.append(iframe)
-  await completed
-
-  let doc = iframe.contentDocument
-  invariant(doc)
-  return doc
 }

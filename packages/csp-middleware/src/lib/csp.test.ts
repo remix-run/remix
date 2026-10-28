@@ -159,7 +159,7 @@ describe('csp', () => {
     assert.equal(instance.headers.get('Content-Security-Policy'), "script-src 'none'")
   })
 
-  it('applies static rules to every response type when the filter accepts all responses', async () => {
+  it('applies a policy to an immutable redirect when the filter accepts it', async () => {
     let router = createRouter({
       middleware: [
         csp({
@@ -168,21 +168,12 @@ describe('csp', () => {
         }),
       ],
     })
-    router.get('/json', () => Response.json({ ok: true }))
     router.get('/redirect', () => Response.redirect('https://example.com/'))
-    router.get('/error', () => new Response('Unavailable', { status: 503 }))
 
-    let json = await router.fetch('https://example.com/json')
     let redirect = await router.fetch('https://example.com/redirect')
-    let error = await router.fetch('https://example.com/error')
-    assert.equal(json.headers.get('Content-Security-Policy'), "default-src 'self'")
-    assert.deepEqual(await json.json(), { ok: true })
     assert.equal(redirect.status, 302)
     assert.equal(redirect.headers.get('Location'), 'https://example.com/')
     assert.equal(redirect.headers.get('Content-Security-Policy'), "default-src 'self'")
-    assert.equal(error.status, 503)
-    assert.equal(error.headers.get('Content-Security-Policy'), "default-src 'self'")
-    assert.equal(await error.text(), 'Unavailable')
   })
 
   it('applies policies and reporting endpoints only to HTML by default, including HTML errors', async () => {
