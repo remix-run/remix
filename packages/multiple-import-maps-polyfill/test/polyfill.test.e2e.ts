@@ -6,7 +6,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const lexerPath = fileURLToPath(import.meta.resolve('es-module-lexer'))
+const lexerPath = fileURLToPath(import.meta.resolve('es-module-lexer/js'))
 
 declare global {
   interface Window {
@@ -32,7 +32,7 @@ describe('multiple import map polyfill', () => {
           return html(`<!doctype html><html><head>
         <base href="/app/">
         <script type="importmap">${JSON.stringify({
-          imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' },
+          imports: { 'es-module-lexer/js': '/vendor/es-module-lexer.js' },
           scopes: {
             '/app/': { shared: '/app/shared.js' },
             '/feature/': { shared: '/feature/shared.js' },
@@ -243,7 +243,7 @@ describe('multiple import map polyfill', () => {
           return html(trustedTypesDocument, {
             headers: {
               'Content-Security-Policy':
-                "script-src 'self' 'nonce-n0nce' blob: 'wasm-unsafe-eval'; connect-src 'self' blob:; require-trusted-types-for 'script'; trusted-types remix/multiple-import-maps-polyfill",
+                "script-src 'self' 'nonce-n0nce' blob:; connect-src 'self' blob:; require-trusted-types-for 'script'; trusted-types remix/multiple-import-maps-polyfill",
             },
           })
         }
@@ -253,12 +253,22 @@ describe('multiple import map polyfill', () => {
           return javascript(await fs.readFile(lexerPath, 'utf8'))
         }
         if (url.pathname === '/csp-module.js') {
+          return javascript("export { value } from '/csp-dependency.js'")
+        }
+        if (url.pathname === '/csp-dependency.js') {
           return javascript("export let value = 'csp'")
         }
         return new Response('Not Found', { status: 404 })
       }),
     )
 
+    await page.addInitScript(() => {
+      let violations: string[] = []
+      Reflect.set(window, 'cspViolations', violations)
+      document.addEventListener('securitypolicyviolation', (event) => {
+        violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+      })
+    })
     await page.goto('/')
     await page.locator('#support, #error').waitFor({ state: 'attached' })
 
@@ -267,6 +277,7 @@ describe('multiple import map polyfill', () => {
       await page.locator('#support, #error').textContent(),
       `${String(browserName !== 'firefox')}:csp`,
     )
+    assert.deepEqual(await page.evaluate(() => Reflect.get(window, 'cspViolations')), [])
   })
 
   it('rejects non-JavaScript module responses', async (t) => {
@@ -405,7 +416,7 @@ describe('multiple import map polyfill', () => {
 
 const initialImportMap = {
   imports: {
-    'es-module-lexer': '/vendor/es-module-lexer.js',
+    'es-module-lexer/js': '/vendor/es-module-lexer.js',
     '/shared.js': '/shared.hash.js',
   },
   scopes: {
@@ -455,7 +466,7 @@ const preloadFailureDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -595,7 +606,7 @@ const helperDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -632,7 +643,7 @@ const detectionDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -649,7 +660,7 @@ const trustedTypesDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap" nonce="n0nce">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap" nonce="n0nce">${JSON.stringify({ imports: { 'es-module-lexer/js': '/vendor/es-module-lexer.js' } })}</script>
   <script type="importmap" nonce="n0nce">${JSON.stringify({ imports: { 'csp-module': '/csp-module.js' } })}</script>
 </head>
 <body>
@@ -677,7 +688,7 @@ const nonJavaScriptDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -702,7 +713,7 @@ const nativeModuleTypesDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -739,7 +750,7 @@ const wasmSourceDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -786,7 +797,7 @@ const integrityDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">

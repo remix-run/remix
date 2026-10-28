@@ -19,7 +19,7 @@ import {
   supportsImportMaps,
   supportsMultipleImportMaps,
 } from './features.ts'
-import * as lexer from 'es-module-lexer'
+import * as lexer from 'es-module-lexer/js'
 import type { ExportSpecifier, ImportSpecifier } from 'es-module-lexer'
 
 // This source is adapted from ES Module Shims 2.8.4.

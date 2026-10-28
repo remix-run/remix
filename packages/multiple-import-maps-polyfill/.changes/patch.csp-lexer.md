@@ -1,0 +1,1 @@
+Load polyfilled module graphs under Content Security Policies that disable JavaScript eval and Wasm compilation. Import parsing now uses the CSP-compatible JavaScript build of `es-module-lexer`; policies still need to allow `blob:` module scripts.
