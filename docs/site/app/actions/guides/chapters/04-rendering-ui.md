@@ -16,7 +16,7 @@ JavaScript unless part of it handles events or uses browser APIs. Those componen
 
 ## The Remix component model {#the-remix-component-model}
 
-A Remix component, imported from [`remix/component`](/api/component/), is a setup
+A Remix component is a setup
 function that returns a render function. Setup runs once when Remix creates the component. Render
 runs immediately after setup and again whenever the component updates.
 

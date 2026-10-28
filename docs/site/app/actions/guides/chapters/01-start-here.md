@@ -803,6 +803,6 @@ Now when you submit the form, the button is disabled and the button text changes
 
 ![Submit button saying "Saving..." while being disabled](/images/app/actions/docs/chapters/01-start-here/pending-submit.png)
 
-The form still submits with a full page navigation. You can also [submit it with `fetch()` and stay on the page](/interactivity/#enhancing-forms-with-fetch-and-navigation), which brings its own cancellation and error handling, so we'll leave that for when you dig into interactivity.
+Because `entry.ts` [boots the browser runtime with `run()`](/interactivity/#browser-entry-with-run), Remix already submits this form without a full page reload. It posts the form, follows the redirect, and updates the page in place, with no submit handler of your own. If you later render validation errors back into the form, [follow the frame's reload events](/forms-and-mutations/#add-pending-feedback) instead so the pending state resets when the response renders.
 
 Next, take a closer look at the [route maps](/routing-and-controllers/#routes-as-the-url-contract) and [controllers](/routing-and-controllers/#controllers-and-actions) we started using here.

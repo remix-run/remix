@@ -104,9 +104,9 @@ The comments mark a range of the document rather than adding a wrapper element, 
 can be any markup. In the browser, `run()` finds each range, loads the component's module with a
 normal `import()`, and hydrates the existing DOM in place with the serialized props.
 
-Each client entry hydrates on its own. Two client entries on the same page don't share component
-context, so pass each one the data it needs as props, or connect them through an ordinary TypeScript
-module, as shown in [keeping application logic outside components](#saving-a-client-owned-document).
+Each client entry hydrates on its own. A client entry rendered inside another one can read its
+ancestor's context, but sibling client entries don't share component context. Pass each sibling the
+data it needs as props, or connect them through an ordinary TypeScript module, as shown in [keeping application logic outside components](#saving-a-client-owned-document).
 
 Client-entry props cross from the server to the browser, so they must be serializable. They may
 contain strings, numbers, booleans, `null`, `undefined`, plain objects and arrays, and JSX elements.
@@ -550,8 +550,7 @@ renders other components and host elements inside it. Mixins compose behavior an
 element. To add a tooltip, a menu trigger, and a click handler to a button, keep the button where you
 render it and add a mixin for each behavior, rather than wrapping it in a component for each one.
 
-Mixins apply in array order. A later `css(...)` overrides styles from an earlier one, and `on(...)`
-handlers for the same event run in order, so calling `event.stopImmediatePropagation()` in one
+Mixins apply in array order. `on(...)` handlers for the same event run in that order, so calling `event.stopImmediatePropagation()` in one
 handler stops the handlers after it.
 
 [Animation mixins](/animation/#entrance-and-exit-animations) use the same prop. Put frequently
@@ -903,8 +902,13 @@ Only prefetch links whose GET requests are safe to make speculatively. See the [
 
 ## Enhancing forms with fetch and navigation
 
-You can enhance a form without adding a second mutation API. The submit handler sends the form's
-existing action, method, and `FormData`, then follows the action's redirect:
+Once [`run()`](#browser-entry-with-run) boots the runtime, Remix already submits forms as
+[frame navigations](/streaming-ui-with-frames/#navigate-a-frame-with-a-form) without a full page
+reload. Write your own submit handler when you need behavior that doesn't provide, such as handling
+an error response inside the component.
+
+You can do that without adding a second mutation API. The submit handler sends the form's existing
+action, method, and `FormData`, then follows the action's redirect:
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
 import { clientEntry, navigate, on } from "remix/component";
@@ -912,9 +916,16 @@ import type { Handle } from "remix/component";
 
 import { routes } from "../../../../routes.ts";
 
+interface Album {
+  artist: string;
+  id: string;
+  title: string;
+  year: number;
+}
+
 export const AlbumEditForm = clientEntry(
   import.meta.url,
-  function AlbumEditForm(handle: Handle<{ album: { id: string; title: string } }>) {
+  function AlbumEditForm(handle: Handle<{ album: Album }>) {
     let error: string | undefined;
     let pending = false;
 
@@ -960,6 +971,14 @@ export const AlbumEditForm = clientEntry(
           <label>
             Title
             <input defaultValue={album.title} name="title" required />
+          </label>
+          <label>
+            Artist
+            <input defaultValue={album.artist} name="artist" required />
+          </label>
+          <label>
+            Year
+            <input defaultValue={album.year} name="year" required type="number" />
           </label>
           <button disabled={pending} type="submit">
             {pending ? "Saving…" : "Save album"}

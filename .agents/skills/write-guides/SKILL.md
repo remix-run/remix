@@ -85,6 +85,8 @@ Don't assume the reader already knows every term. Before relying on a concept th
 - Link Remix APIs to their API overview, and Remix concepts to the guide section that explains them.
 - When the reader needs to write configuration or code to use the concept, show a short snippet of what it looks like, such as a `package.json` field.
 
+Check every explanation you add against the package source or README, especially absolute claims such as "doesn't share", "overrides", "always", or "still submits". A confident explanation that is wrong costs the reader more than a missing one.
+
 For example, don't write "it only applies when every skipped module is declared side-effect free by its package's `sideEffects` field" without first explaining what the `sideEffects` field is, linking to its documentation, and showing an example.
 
 ## Avoid AI-Sounding Patterns
@@ -96,7 +98,7 @@ Cut or rewrite prose that has these tells:
 - “One source of truth” unless the paragraph immediately shows the exact typed value and what breaks when it changes.
 - Repeating the same idea before and after an example.
 - Staccato explanation where several short sentences define obvious neighboring parts in a row. Combine related clauses when it reads more naturally.
-- Colons, semicolons, and em dashes joining clauses inside a sentence, such as "This is an optimization: it only applies when…" Split the sentence or rewrite it with a period or comma instead. A colon that ends a sentence introducing a code block or list is fine. This does not apply to code snippets, which follow the local formatter config.
+- Colons, semicolons, and em dashes joining clauses inside a sentence, such as "This is an optimization: it only applies when…" Split the sentence or rewrite it with a period or comma instead, keeping the relationship between the clauses. If the second clause explains or causes the first, say so with "because", "so", or "such as" rather than leaving two disconnected sentences. A colon that ends a sentence introducing a code block or list is fine. This does not apply to code snippets, which follow the local formatter config.
 - Soft transitions such as “Additionally,” “Furthermore,” “It is important to note,” “A few things to keep in mind,” or “This is where X comes in.”
 - Placeholder nouns such as “thing,” “stuff,” “pieces,” or “functionality” when a precise noun exists.
 - Overconfident reassurance such as “TypeScript tells you every place” or “the failure is loud.” Say what actually happens.
@@ -142,7 +144,7 @@ For the chapter 1 tutorial:
 For guides (every other chapter):
 
 1. Start from the concrete app surface: files, imports, functions, route maps, responses.
-2. Draw examples from the shared albums domain, but keep each snippet self-contained and do not depend on code from earlier chapters or sections.
+2. Draw examples from the shared albums domain, but don't depend on code from earlier chapters. A snippet can be [explicitly partial](#code-examples) instead of repeating a whole file.
 3. Prefer the most explicit form before helpers, aliases, or generated shortcuts.
 4. Teach the common case directly, then summarize advanced cases in a compact list or one expressive example.
 5. Name the rule, then show the consequence in code.
@@ -161,6 +163,7 @@ Examples in `docs/site/app/actions/guides/chapters/` should follow the local cha
 - Return explicit Web `Response` objects from actions.
 - Keep examples realistic enough to copy into a project, but short enough that the point is visible.
 - If a snippet omits surrounding code, mark it with a short comment such as `// inside an action:` rather than pretending it is a complete file.
+- When you expand a partial snippet into a complete one, keep its behavior consistent with the code around it. A form must still send every field the action it posts to validates, and types must match the data the chapter uses elsewhere.
 
 ## Anchors And Links
 
@@ -172,7 +175,7 @@ Examples in `docs/site/app/actions/guides/chapters/` should follow the local cha
 - Link the relevant words in the sentence instead of quoting a section or chapter title. Write "the same options [`createFileResponse()` accepts](#send-stored-and-on-disk-files)," not "covered in [Send Stored and On-Disk Files](#send-stored-and-on-disk-files)." If you must name a section, write it in sentence case without capitalizing words mid-sentence.
 - Point cross-chapter links at the most specific heading anchor that covers the topic, such as `/production/#caching`, rather than the top of the chapter.
 - Cross-chapter docs links use the chapter slug without its number prefix, such as `/interactivity/#browser-entry-with-run`.
-- Link every prose reference to a `remix/*` package or subpath to its API overview. The guides and API reference share one docs site, so use a root-relative path under `/api/` without the `remix/` prefix, for example [`remix/middleware/form-data/future`](/api/middleware/form-data/future/). Don't use absolute `https://docs.remix.run/...` URLs. Link each occurrence, not just the first. Do not add links inside code blocks or headings. `pnpm run generate-remix` rewrites these links to the installed package READMEs in `packages/remix/guides/`.
+- Link prose references to `remix/*` packages and subpaths to their API overview. The guides and API reference share one docs site, so use a root-relative path under `/api/` without the `remix/` prefix, for example [`remix/middleware/form-data/future`](/api/middleware/form-data/future/). Don't use absolute `https://docs.remix.run/...` URLs. Link the first prose mention in each section, not every occurrence. Don't add a package name to a sentence only to create a link. Do not add links inside code blocks or headings. `pnpm run generate-remix` rewrites these links to the installed package READMEs in `packages/remix/guides/`.
 - Do not add link-heavy “for more information” endings to every section.
 - Link to API overviews when the guide intentionally skips exhaustive syntax, options, or package surface area.
 
@@ -214,13 +217,14 @@ Use `pnpm exec oxfmt --write <path-to-chapter.md>` only when formatting changes 
 - Does the first paragraph start with useful context instead of a generic thesis?
 - Are colons, semicolons, and em dashes kept out of the middle of sentences?
 - Is every unfamiliar concept introduced, linked, or shown before the guide relies on it?
+- Did you check new explanations and rationale against the source?
 - Did you remove repeated “write once / stay in sync / TypeScript catches it” takeaways unless each one adds new information?
-- Are all code snippets internally consistent?
+- Are all code snippets internally consistent, and do expanded snippets still match the actions and data they use?
 - Does the order teach the underlying shape before helper shortcuts and edge cases?
 - Does the chapter avoid duplicating API overview material while still showing why the lower-level API is useful?
 - Are route names, params, imports, and file paths consistent across the chapter?
 - Did you preserve anchors that other docs link to?
-- Is every prose reference to a `remix/*` package linked to its API overview with a root-relative `/api/...` path?
+- Is the first prose reference to a `remix/*` package in each section linked to its API overview with a root-relative `/api/...` path?
 - Are links used for real next steps instead of filler endings?
 - Do links wrap relevant words in the sentence rather than quoting capitalized section or chapter titles?
 - Did Oxfmt pass for the changed Markdown?
