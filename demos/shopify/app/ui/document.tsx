@@ -30,7 +30,8 @@ export function Document(handle: Handle<DocumentProps>) {
         <meta name="theme-color" content="#000000" />
         <meta name="robots" content="noindex, nofollow" />
         <title>{handle.props.title} — Shopify demo</title>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="preconnect" href="https://cdn.shopify.com" />
         <link
           rel="preload"
