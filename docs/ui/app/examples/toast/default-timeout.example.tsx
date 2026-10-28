@@ -35,7 +35,7 @@ export default function ExampleToastDefaultTimeout() {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={toastManager}>
+    <toast.Context manager={toastManager} limit={3}>
       {(toastItems) => (
         <section mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.region]}>
           {toastItems.map((toastItem, index) => (

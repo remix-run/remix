@@ -52,7 +52,7 @@ Supply the region label and control labels. Mount one `Context` per manager, out
 ## `@remix-run/ui/toast`
 
 - `createToastManager<data = unknown>(options?)`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
-- `Context`: accepts a stable `manager`, an optional `limit` (default 3), and a typed collection callback. Render every item, including overflow.
+- `Context`: accepts a stable `manager`, an optional `limit` (unlimited by default), and a typed collection callback. Render every item, including overflow.
 - `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and polite announcements. A non-empty `label` is required.
 - `ItemContext`: accepts the toast item ID as `value` and scopes its markup. Key the provider and animated host by the item ID.
 - `item()`: applies non-modal dialog semantics, presentation lifetime, availability and focus recovery. It is a Tab stop before the controls.

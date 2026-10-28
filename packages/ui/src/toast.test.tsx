@@ -697,7 +697,7 @@ describe('toast gestures and clocks', () => {
 })
 
 describe('toast availability', () => {
-  it('applies the context limit and promotes retained overflow without reordering updates', async (t) => {
+  it('limits availability only when configured and promotes retained overflow without reordering updates', async (t) => {
     let toastManager = createToastManager()
     toastManager.add({ id: 'first', title: 'First', timeout: false })
     toastManager.add({ id: 'second', title: 'Second', timeout: false })
@@ -724,6 +724,14 @@ describe('toast availability', () => {
     t.after(result.cleanup)
     let firstNode = element(result.container, '[data-id="first"]')
     let secondNode = element(result.container, '[data-id="second"]')
+    assert.equal(result.$$('[data-toast]').length, 4)
+    assert.equal(result.$$('[data-limited]').length, 0)
+    for (let node of result.$$('[data-toast]')) {
+      assert.equal(node.inert, false)
+      assert.equal(node.getAttribute('aria-hidden'), null)
+    }
+
+    await result.act(() => result.root.render(view(3)))
     assert.equal(firstNode.inert, true)
     assert.equal(firstNode.hasAttribute('data-limited'), true)
     assert.equal(secondNode.inert, false)
@@ -756,6 +764,9 @@ describe('toast availability', () => {
     assert.equal(firstNode.inert, true)
     await result.act(() => result.root.render(view()))
     assert.equal(firstNode.inert, false)
+    assert.equal(secondNode.inert, false)
+    assert.equal(firstNode.getAttribute('aria-hidden'), null)
+    assert.equal(secondNode.getAttribute('aria-hidden'), null)
     assert.equal(result.$$('[data-limited]').length, 0)
   })
 

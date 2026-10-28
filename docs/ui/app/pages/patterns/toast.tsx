@@ -215,10 +215,10 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
         <Example id="position" example={customPosition} />
       </Section>
-      <Section id="limiting-toasts" title="Limiting toasts">
+      <Section id="limiting-toasts" title="Limit">
         <p>
           Set <code>limit</code> on <code>toast.Context</code> to control how many toasts are
-          available at once. The default is three.
+          available at once. There is no limit by default.
         </p>
         <p>
           Overflow toasts stay mounted with <code>data-limited</code> and are excluded from
@@ -445,8 +445,8 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Stable application-level manager. Mount one Context per manager.
           </ApiEntry>
           <ApiEntry name="limit" type="number">
-            Maximum available notifications. Defaults to 3. Must be a positive integer; invalid
-            values throw RangeError. Overflow remains mounted and inert, and its timers keep
+            Maximum available notifications. Unlimited by default. Must be a positive integer;
+            invalid values throw RangeError. Overflow remains mounted and inert, and its timers keep
             running.
           </ApiEntry>
           <ApiEntry

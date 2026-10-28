@@ -67,7 +67,7 @@ export interface ToastManager<data = unknown> extends TypedEventTarget<{ change:
 export interface ToastContextProps<data = unknown> {
   /** Stable manager created outside the rendering component. */
   manager: ToastManager<data>
-  /** Maximum available toast items. Defaults to 3. Must be a positive integer. */
+  /** Maximum available toast items. Unlimited by default. Must be a positive integer. */
   limit?: number
   /** Renders every open toast item, including overflow, newest first. */
   children: (toastItems: readonly ToastItem<data>[]) => RemixNode
@@ -311,7 +311,7 @@ function focusElement(node: HTMLElement, visible = false) {
  */
 export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>): () => RemixNode {
   let toastManager = handle.props.manager
-  let limit = handle.props.limit ?? 3
+  let limit = handle.props.limit ?? Infinity
   let region: HTMLElement | undefined
   let returnTo: HTMLElement | undefined
   let touch = Symbol('touch')
@@ -608,8 +608,8 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     })
   })
   return () => {
-    let nextLimit = handle.props.limit ?? 3
-    if (!Number.isInteger(nextLimit) || nextLimit < 1)
+    let nextLimit = handle.props.limit ?? Infinity
+    if (handle.props.limit !== undefined && (!Number.isInteger(nextLimit) || nextLimit < 1))
       throw new RangeError('Toast limit must be a positive integer')
     if (limit !== nextLimit) {
       limit = nextLimit
