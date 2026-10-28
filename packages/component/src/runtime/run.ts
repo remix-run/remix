@@ -29,7 +29,9 @@ export interface RunInit {
    * and abort signal. All requests send `X-Remix-Frame: true`, plus `X-Remix-Target` when named.
    * The default resolver only fetches from the document origin, including
    * redirects, but does not sanitize the returned HTML. Custom resolvers own their request,
-   * redirect, and content trust policies.
+   * redirect, and content trust policies. Preserve the Response's `Content-Security-Policy`
+   * header to translate matching resource nonces to the active document nonce when the policy
+   * identifies a single shared nonce for script and style elements.
    */
   resolveFrame?: ResolveFrame
 

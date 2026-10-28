@@ -670,7 +670,7 @@ parsed.set('img-src', ["'self'", 'https://images.example.com'])
 parsed.delete('upgrade-insecure-requests')
 ```
 
-The initializer uses camel-cased directive names. `get`, `set`, and `delete` use case-insensitive, hyphenated names; `set` also supports extension directives. Arrays contain individual tokens without whitespace, commas, or semicolons. An empty array emits a valueless directive, such as `sandbox` or an empty source list. `upgradeInsecureRequests: false` omits that directive.
+The initializer uses camel-cased directive names. `get`, `set`, and `delete` use case-insensitive, hyphenated names; `set` also supports extension directives. Arrays contain individual tokens without whitespace, commas, or semicolons. An empty array emits a valueless directive, such as `sandbox` or an empty source list. `upgradeInsecureRequests: false` omits that directive. `reportTo` takes a string naming one reporting endpoint, such as `'csp'`. It must be a nonempty HTTP token. The generic `get` and `set` methods still use token arrays; `set('report-to', values)` and parsing require exactly one valid endpoint name.
 
 Parsing retains the first duplicate directive. Comma-separated policy lists are rejected because each policy must remain independently enforced. Append separate policies with `headers.append()` instead of merging their directives. This utility does not generate nonces or choose a policy; [CSP middleware](../csp-middleware/README.md) handles request-scoped nonce generation.
 

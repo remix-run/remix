@@ -44,8 +44,8 @@ export interface ContentSecurityPolicyInit {
   sandbox?: readonly string[]
   /** Upgrade insecure resource requests to HTTPS. */
   upgradeInsecureRequests?: boolean
-  /** Reporting endpoint group names. */
-  reportTo?: readonly string[]
+  /** A single reporting endpoint name, expressed as an HTTP token. */
+  reportTo?: string
   /** Legacy violation reporting URLs. */
   reportUri?: readonly string[]
   /** Trusted Types policy names and keywords. */
@@ -78,7 +78,7 @@ export class ContentSecurityPolicy implements HeaderValue {
       for (let [name, values] of Object.entries(init)) {
         if (values === undefined || values === false) continue
         let directive = name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-        this.set(directive, values === true ? [] : values)
+        this.set(directive, typeof values === 'string' ? [values] : values === true ? [] : values)
       }
     }
   }
@@ -95,17 +95,25 @@ export class ContentSecurityPolicy implements HeaderValue {
 
   /**
    * Sets a directive, including extension directives. Tokens cannot contain whitespace or delimiters.
+   * `report-to` requires exactly one HTTP token naming a reporting endpoint.
    * @param name Case-insensitive, hyphenated directive name.
    * @param values Individual CSP tokens; an empty array emits a valueless directive.
    */
   set(name: string, values: readonly string[]): void {
     if (!/^[a-zA-Z0-9-]+$/.test(name)) throw new TypeError(`Invalid CSP directive: ${name}`)
+    name = name.toLowerCase()
+    if (name === 'report-to') {
+      if (values.length !== 1) throw new TypeError('CSP report-to requires exactly one endpoint')
+      if (!/^[!#$%&'*+.^_`|~a-zA-Z0-9-]+$/.test(values[0])) {
+        throw new TypeError(`Invalid CSP report-to endpoint: ${values[0]}`)
+      }
+    }
     for (let value of values) {
       if (!/^[\x21-\x2b\x2d-\x3a\x3c-\x7e]+$/.test(value)) {
         throw new TypeError(`Invalid CSP directive token: ${value}`)
       }
     }
-    this.#directives.set(name.toLowerCase(), [...values])
+    this.#directives.set(name, [...values])
   }
 
   /**

@@ -325,6 +325,7 @@ export type Frame = {
 }
 
 type RenderOptions = {
+  nonce?: string
   documentHref?: string
   flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
@@ -466,6 +467,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
             if (isRenderAborted(options.signal)) return
             await render(html, { ...options, flushKind })
           },
+          options.nonce,
+          importMapManager.documentNonce,
           linkedAbort.controller.signal,
         )
       } finally {
@@ -533,6 +536,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
+      rewriteResponseNonces(parsed, options.nonce, importMapManager.documentNonce)
       if (!(await consumeClientEntryResources(parsed, options.documentHref))) return
       if (isRenderAborted(options.signal)) return
       let responseData = options.data
@@ -575,6 +579,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
+    rewriteResponseNonces(fragment, options.nonce, importMapManager.documentNonce)
     if (!(await consumeClientEntryResources(fragment, options.documentHref))) return
     if (isRenderAborted(options.signal)) return
     context.styleManager.adoptServerStyles(
@@ -899,7 +904,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (reloadController !== controller || controller.signal.aborted) {
         return { signal: controller.signal }
       }
-      let { content, redirectedTo } = await unwrapFrameResolution(resolution)
+      let { content, redirectedTo, nonce } = await unwrapFrameResolution(resolution)
       if (reloadController !== controller || controller.signal.aborted) {
         return { signal: controller.signal }
       }
@@ -907,6 +912,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let blockingFrameTracker = createReconciliationTracker()
       let commitStarted = false
       await render(content, {
+        nonce,
         documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
         signal: controller.signal,
         reconciliationTracker,
@@ -1835,6 +1841,8 @@ async function renderFrameStream(
   stream: ReadableStream<Uint8Array>,
   doc: Document,
   applyHtml: (html: string, flushKind: FlushKind) => Promise<void>,
+  responseNonce: string | undefined,
+  documentNonce: string | undefined,
   signal?: AbortSignal,
 ): Promise<void> {
   let reader = stream.getReader()
@@ -1852,13 +1860,18 @@ async function renderFrameStream(
   }
   signal?.addEventListener('abort', abort, { once: true })
 
+  function rewriteAndPublishTemplate(id: string, fragment: DocumentFragment): void {
+    rewriteResponseNonces(fragment, responseNonce, documentNonce)
+    publishFrameTemplate(id, fragment)
+  }
+
   try {
     while (true) {
       let { done, value } = await reader.read()
       if (done) break
 
       buffer += decoder.decode(value, { stream: true })
-      let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
+      let parsed = extractTemplatesFromBuffer(doc, buffer, rewriteAndPublishTemplate)
       buffer = parsed.remainder
 
       if (parsed.html !== '') {
@@ -1870,7 +1883,7 @@ async function renderFrameStream(
     }
 
     buffer += decoder.decode()
-    let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
+    let parsed = extractTemplatesFromBuffer(doc, buffer, rewriteAndPublishTemplate)
     html += parsed.html
     buffer = parsed.remainder
     if (buffer !== '') {
@@ -2095,4 +2108,19 @@ function isDocumentFragmentNode(value: unknown): value is DocumentFragment {
     value !== null &&
     Reflect.get(value, 'nodeType') === Node.DOCUMENT_FRAGMENT_NODE
   )
+}
+
+function rewriteResponseNonces(
+  source: ParentNode,
+  responseNonce: string | undefined,
+  documentNonce: string | undefined,
+): void {
+  if (!responseNonce || !documentNonce || responseNonce === documentNonce) return
+  // Only the enforcing CSP response header identifies the nonce; incoming HTML metadata cannot.
+  for (let element of source.querySelectorAll('style[nonce],script[nonce],link[nonce]')) {
+    if ('nonce' in element && element.nonce === responseNonce) element.nonce = documentNonce
+  }
+  for (let template of source.querySelectorAll('template')) {
+    rewriteResponseNonces(template.content, responseNonce, documentNonce)
+  }
 }

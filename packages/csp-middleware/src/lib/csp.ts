@@ -34,7 +34,7 @@ export interface CspOptions {
    */
   reportingEndpoints?: Readonly<Record<string, string>>
   /**
-   * Select responses that receive this policy (default all responses).
+   * Select responses that receive this policy (default all responses except 304).
    * Runs after downstream handlers, before adding policy and reporting endpoint headers.
    * Returning false preserves the original response. The nonce and policy are still
    * established before downstream handlers run.
@@ -44,6 +44,7 @@ export interface CspOptions {
 
 /**
  * Establishes a request nonce and appends a CSP to responses accepted by the optional filter.
+ * Not-modified (304) responses are returned unchanged to preserve cached nonce policies.
  * Existing policies retain their enforcement or reporting mode. No default directives are added.
  * @param options The required policy and optional response configuration.
  * @returns Middleware providing the nonce read by `getCspNonce()` and the CSP response header.
@@ -66,6 +67,9 @@ export function csp(options: CspOptions): Middleware<{ key: typeof CspNonce; val
         : staticPolicy
     let response = await next()
     if (filter && !filter(response)) return response
+    // A 304 updates cached headers while reusing the body; a fresh CSP nonce would mismatch it.
+    // https://www.rfc-editor.org/rfc/rfc9111.html#section-4.3.4
+    if (response.status === 304) return response
 
     let headers = new Headers(response.headers)
     if (header) headers.append(headerName, header)

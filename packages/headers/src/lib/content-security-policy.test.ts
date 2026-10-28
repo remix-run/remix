@@ -64,6 +64,42 @@ describe('ContentSecurityPolicy', () => {
     assert.throws(() => policy.set('script-src', ['https:\n*']), /Invalid CSP directive token/)
   })
 
+  it('serializes a report-to endpoint string and reads it as tokens', () => {
+    let policy = new ContentSecurityPolicy({ reportTo: 'csp' })
+    assert.equal(policy.toString(), 'report-to csp')
+    assert.deepEqual(policy.get('report-to'), ['csp'])
+    assert.equal(ContentSecurityPolicy.from(policy).toString(), 'report-to csp')
+    assert.deepEqual(ContentSecurityPolicy.from('REPORT-TO csp').get('report-to'), ['csp'])
+  })
+
+  it('rejects empty and multiple report-to endpoints', () => {
+    let policy = new ContentSecurityPolicy()
+    assert.throws(() => policy.set('report-to', []), /exactly one endpoint/)
+    assert.throws(() => policy.set('REPORT-TO', ['one', 'two']), /exactly one endpoint/)
+    assert.throws(() => ContentSecurityPolicy.from('report-to'), /exactly one endpoint/)
+    assert.throws(() => ContentSecurityPolicy.from('report-to one two'), /exactly one endpoint/)
+  })
+
+  it('rejects empty and multiple endpoint names in reportTo strings', () => {
+    assert.throws(
+      () => new ContentSecurityPolicy({ reportTo: '' }),
+      /Invalid CSP report-to endpoint/,
+    )
+    assert.throws(
+      () => new ContentSecurityPolicy({ reportTo: 'one two' }),
+      /Invalid CSP report-to endpoint/,
+    )
+  })
+
+  it('rejects report-to endpoints that are not HTTP tokens', () => {
+    let policy = new ContentSecurityPolicy()
+    assert.throws(() => policy.set('report-to', ['/reports']), /Invalid CSP report-to endpoint/)
+    assert.throws(
+      () => ContentSecurityPolicy.from('report-to https://example.com'),
+      /Invalid CSP report-to endpoint/,
+    )
+  })
+
   it('omits disabled directives and preserves an explicit empty source list', () => {
     let policy = new ContentSecurityPolicy({
       scriptSrc: [],

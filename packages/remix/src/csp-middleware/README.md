@@ -86,7 +86,7 @@ csp({
       defaultSrc: ["'self'"],
       scriptSrc: [`'nonce-${nonce}'`],
       styleSrc: [`'nonce-${nonce}'`],
-      reportTo: ['csp'],
+      reportTo: 'csp',
     }
   },
   reportOnly: true,
@@ -100,7 +100,7 @@ The `reportingEndpoints` option adds the corresponding response header:
 Reporting-Endpoints: csp="/csp-reports"
 ```
 
-Map endpoint names to absolute or relative URLs. Include the matching name in `reportTo`; the middleware does not infer that directive. The option works with enforcing and report-only policies, and `filter(response)` controls both the policy header and reporting endpoints. When omitted or empty, it leaves any existing `Reporting-Endpoints` header unchanged.
+Map endpoint names to absolute or relative URLs. Include exactly one matching name in `reportTo`, such as `'csp'`; the middleware does not infer that directive. The option works with enforcing and report-only policies, and `filter(response)` controls both the policy header and reporting endpoints. When omitted or empty, it leaves any existing `Reporting-Endpoints` header unchanged.
 
 Existing endpoint definitions are retained. Configured entries are appended, so a configured name takes precedence over the same name in a downstream header. Names must start with a lowercase letter or `*` and otherwise contain only lowercase letters, digits, `_`, `-`, `.`, or `*`. URL strings must use printable ASCII; percent-encode other characters. The browser resolves relative URLs against the response URL and ignores insecure endpoints. See the [Reporting API specification](https://www.w3.org/TR/reporting-1/#header).
 
@@ -110,7 +110,7 @@ Enforcement is the default. Install separate `csp()` instances to enforce one po
 
 ## Response scope
 
-By default, the policy is added to every response returned by downstream handlers, including JSON, redirects, and error responses. Install the middleware on the router, controller, or action that owns those responses. Responses created outside the middleware, such as errors handled by an outer layer, are governed by that layer.
+By default, the policy is added to every response returned by downstream handlers, including JSON, redirects, and error responses. Not-modified (`304`) responses are returned unchanged, preserving the cached HTML's matching policy rather than replacing it with a fresh nonce. This exception applies to both enforcing and report-only policies and to reporting endpoints. Install the middleware on the router, controller, or action that owns those responses. Responses created outside the middleware, such as errors handled by an outer layer, are governed by that layer.
 
 Use `filter(response)` to select which responses receive the header. For example, apply a policy to HTML pages while leaving asset routes unchanged:
 

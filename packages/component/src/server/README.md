@@ -78,7 +78,11 @@ return new Response(stream, {
 - An `<ImportMap nonce="...">` you author keeps its own value; `nonce` only fills in the attribute when you leave it off.
 - Document renders retain the nonce in a `<meta name="rmx-nonce" content="" nonce="...">` tag so client entries introduced by later frames work even when there is no initial import map.
 - The `#rmx-data` script does not take a nonce. It is a `application/json` data block, which the browser never executes, so `script-src` does not apply to it.
-- Frame navigations do not need a matching nonce. The client uses the original document's import map nonce, falling back to its nonce metadata, for import maps and module preloads it installs later. Later responses do not replace that metadata, so a value that changes with every response is fine.
+- Generated import maps and module preloads from frame navigations do not need a matching nonce. The client uses the original document's import map nonce, falling back to its nonce metadata, for import maps and module preloads it installs later. Later responses do not replace that metadata, so a value that changes with every response is fine.
+
+For authored nonce-bearing styles, scripts, and links in browser-loaded frame responses, return a `Response` with a `Content-Security-Policy` header containing the render's nonce. The client reads the effective script and style source lists and translates only matching element nonces to the original document render nonce before insertion, including streamed frame templates. This supports the single shared nonce supplied by `csp()` from `remix/middleware/csp`. If those source lists contain multiple distinct nonces, or no enforcing policy header is present, translation is skipped. Report-only policies and nonce metadata in incoming HTML cannot authorize translation. Unnonced elements and different nonces stay unchanged.
+
+Custom browser resolvers must preserve the response's `Content-Security-Policy` header; returning only its HTML string or body stream loses that nonce association. The active document's policy continues to govern inserted resources; the fetched policy is only used to identify the response nonce.
 
 When you render nested frame responses with `renderToStream()` inside `resolveFrame()`, carry `nonce` and `topFrameSrc` forward from the parent context and pass `frameSrc` for the frame being rendered. That gives generated styles the document's nonce and preserves `handle.frames.top.src` across the SSR frame tree.
 

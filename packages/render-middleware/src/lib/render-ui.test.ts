@@ -44,6 +44,7 @@ describe('render', () => {
     assert.equal(response.status, 201)
     assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
     assert.equal(response.headers.get('X-Test'), 'render')
+    assert.equal(response.headers.get('X-Remix-Nonce'), null)
     assert.match(await response.text(), /^<!DOCTYPE html><h1>Hello<\/h1>/)
   })
 
@@ -71,6 +72,7 @@ describe('render', () => {
     let response = await router.fetch('https://remix.run/')
     let html = await response.text()
     assert.ok(childNonce)
+    assert.equal(response.headers.get('X-Remix-Nonce'), null)
     assert.equal(
       response.headers.get('Content-Security-Policy'),
       `script-src 'nonce-${childNonce}'`,

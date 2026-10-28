@@ -18,6 +18,7 @@ type InstalledImportMap = {
 
 interface ImportMapManager {
   readonly nonce: string | undefined
+  readonly documentNonce: string | undefined
   consumeImportMaps(source: ParentNode): 'ready' | 'conflict' | 'blocked'
   disconnect(): void
   shouldPreserveHeadNode(node: Node): boolean
@@ -85,6 +86,7 @@ function createImportMapManager(doc: Document): ImportMapManager {
 
   return {
     nonce,
+    documentNonce: nonceMeta?.nonce || nonce,
     consumeImportMaps(source) {
       if (conflicted) return 'blocked'
       // Later responses cannot replace the nonce established by the original document.

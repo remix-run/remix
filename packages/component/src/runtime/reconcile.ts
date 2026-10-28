@@ -1264,12 +1264,13 @@ function resolveClientFrame(
     )
     .then(async (resolution) => {
       if (state.resolveToken !== token || resolveController.signal.aborted) return
-      let { content } = await unwrapFrameResolution(resolution)
+      let { content, nonce } = await unwrapFrameResolution(resolution)
       if (state.resolveToken !== token || resolveController.signal.aborted) return
       state.fallbackRoot?.dispose()
       state.fallbackRoot = undefined
       let nextContent = asAbortableFrameContent(content, resolveController.signal)
       await instance.render(nextContent, {
+        nonce,
         signal: resolveController.signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,

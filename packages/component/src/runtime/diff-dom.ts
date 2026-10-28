@@ -161,8 +161,10 @@ export function diffElementAttributes(current: Element, next: Element): void {
   // Additions/updates
   for (let name of nextAttrNames) {
     if (preservedNames?.includes(name)) continue
-    let prevVal = current.getAttribute(name)
-    let nextVal = next.getAttribute(name)
+    // Header CSP hides nonce attributes, but their IDL properties retain the value.
+    let prevVal =
+      name === 'nonce' && 'nonce' in current ? current.nonce : current.getAttribute(name)
+    let nextVal = name === 'nonce' && 'nonce' in next ? next.nonce : next.getAttribute(name)
     if (prevVal !== nextVal) {
       if (shouldPreserveLiveAttribute(current, next, name)) continue
       current.setAttribute(name, nextVal == null ? '' : String(nextVal))

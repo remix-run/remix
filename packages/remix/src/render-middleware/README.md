@@ -117,6 +117,8 @@ router.get('/activity', (context) =>
 
 `render()` applies the context nonce to generated import maps, module preloads, and CSS mixin styles. Internal frame requests and redirects inherit the document nonce before child CSP middleware and handlers run, so authored tags and blocking-frame styles use the same value. This also works for nested and non-blocking frames and for child routes without their own CSP middleware. Independent browser requests establish their own nonce.
 
+During client navigation and frame reloads, the runtime reads the response's `Content-Security-Policy` header. When the effective script and style source lists contain a single distinct nonce, matching nonce-bearing styles, scripts, and links are translated to the original document nonce before insertion, so authored styles remain compatible with the active CSP. Missing or ambiguous nonces skip translation; report-only policies do not authorize it. Elements with no nonce or a different nonce are left unchanged.
+
 Authored script and style tags use `getCspNonce(context)` explicitly. See [csp-middleware](../csp-middleware/README.md) for policy configuration and response scope. Direct users of `renderToStream()` and `renderToString()` can still supply their `nonce` option.
 
 ## Custom renderers

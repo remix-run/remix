@@ -14,7 +14,7 @@ A `nonce` authored on `<ImportMap>` keeps its own value; the option only fills i
 
 Import maps and preloads from blocking frames are merged into the document head. Hoisted preloads use the enclosing render's nonce, and an authored document import map keeps its own nonce. Document renders retain the nonce in metadata so client entries introduced by later frames work even when there is no initial import map.
 
-`resolveFrame()` receives the enclosing render's nonce as `context.nonce`. Forward it to nested renderers so CSS mixin styles in blocking frames satisfy the document's CSP before hydration. Returned frame HTML is not rewritten to change style nonces.
+`resolveFrame()` receives the enclosing render's nonce as `context.nonce`. Forward it to nested renderers so CSS mixin styles in blocking frames satisfy the document's CSP before hydration. The enclosing server renderer does not rewrite returned frame HTML.
 
 ```diff
  let stream = renderToStream(<App />, {
@@ -26,3 +26,5 @@ Import maps and preloads from blocking frames are merged into the document head.
    },
  })
 ```
+
+For browser frame loads and document navigation, return the rendered HTML in a `Response` with its `Content-Security-Policy` header intact. When the effective script and style source lists identify one shared nonce, the client translates matching nonce-bearing styles, scripts, and links to the original document render nonce, including resources inside streamed frame templates. Authored styles therefore continue working when independent responses have fresh nonces. Missing or ambiguous nonces skip translation. Unnonced elements and elements with a different nonce remain unchanged; report-only policies and incoming nonce metadata cannot authorize translation.

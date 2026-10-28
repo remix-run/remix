@@ -49,6 +49,68 @@ describe('csp', () => {
     assert.equal(await error.text(), 'Unavailable')
   })
 
+  it('preserves downstream policies and reporting endpoints on 304 responses', async () => {
+    let downstream = new Response(null, {
+      status: 304,
+      headers: {
+        'Content-Security-Policy': "script-src 'nonce-cached'",
+        'Content-Security-Policy-Report-Only': "style-src 'nonce-cached'",
+        'Reporting-Endpoints': 'cached="/reports/cached"',
+        ETag: 'W/"page-v1"',
+      },
+    })
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy: ({ nonce }) => ({ scriptSrc: [`'nonce-${nonce}'`] }),
+          reportingEndpoints: { enforced: '/reports/enforced' },
+        }),
+        csp({
+          policy: ({ nonce }) => ({ styleSrc: [`'nonce-${nonce}'`] }),
+          reportOnly: true,
+          reportingEndpoints: { preview: '/reports/preview' },
+        }),
+      ],
+    })
+    router.get('/', () => downstream)
+
+    let response = await router.fetch('https://example.com/')
+
+    assert.equal(response.headers.get('Content-Security-Policy'), "script-src 'nonce-cached'")
+    assert.equal(
+      response.headers.get('Content-Security-Policy-Report-Only'),
+      "style-src 'nonce-cached'",
+    )
+    assert.equal(response.headers.get('Reporting-Endpoints'), 'cached="/reports/cached"')
+    assert.equal(response.headers.get('ETag'), 'W/"page-v1"')
+    assert.equal(response, downstream)
+  })
+
+  it('does not add policies or reporting endpoints to 304 responses', async () => {
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy: ({ nonce }) => ({ scriptSrc: [`'nonce-${nonce}'`] }),
+          reportingEndpoints: { enforced: '/reports/enforced' },
+        }),
+        csp({
+          policy: ({ nonce }) => ({ styleSrc: [`'nonce-${nonce}'`] }),
+          reportOnly: true,
+          reportingEndpoints: { preview: '/reports/preview' },
+        }),
+      ],
+    })
+    router.get('/', () => new Response(null, { status: 304 }))
+
+    let response = await router.fetch('https://example.com/')
+
+    assert.equal(response.status, 304)
+    assert.equal(response.body, null)
+    assert.equal(response.headers.get('Content-Security-Policy'), null)
+    assert.equal(response.headers.get('Content-Security-Policy-Report-Only'), null)
+    assert.equal(response.headers.get('Reporting-Endpoints'), null)
+  })
+
   it('filters downstream responses so HTML pages receive CSP and asset routes do not', async () => {
     let pageResponse = new Response('<h1>Page</h1>', {
       headers: { 'Content-Type': 'text/html; charset=UTF-8' },
@@ -163,7 +225,7 @@ describe('csp', () => {
         }),
         csp({
           policy({ nonce }) {
-            return { scriptSrc: [`'nonce-${nonce}'`], reportTo: ['csp'] }
+            return { scriptSrc: [`'nonce-${nonce}'`], reportTo: 'csp' }
           },
           reportOnly: true,
         }),
@@ -201,12 +263,12 @@ describe('csp', () => {
       middleware: [
         csp({
           policy({ nonce }) {
-            return { scriptSrc: [`'nonce-${nonce}'`], reportTo: ['enforced'] }
+            return { scriptSrc: [`'nonce-${nonce}'`], reportTo: 'enforced' }
           },
           reportingEndpoints: { enforced: '/reports/enforced' },
         }),
         csp({
-          policy: { defaultSrc: ["'self'"], reportTo: ['preview'] },
+          policy: { defaultSrc: ["'self'"], reportTo: 'preview' },
           reportOnly: true,
           reportingEndpoints: { preview: 'https://reports.example.com/csp' },
         }),
@@ -244,7 +306,7 @@ describe('csp', () => {
     let router = createRouter({
       middleware: [
         csp({
-          policy: { defaultSrc: ["'self'"], reportTo: ['csp'] },
+          policy: { defaultSrc: ["'self'"], reportTo: 'csp' },
           reportOnly: true,
           reportingEndpoints: { csp: '/reports/csp' },
           filter: (response) => response.status === 201,
@@ -275,7 +337,7 @@ describe('csp', () => {
     let router = createRouter({
       middleware: [
         csp({
-          policy: { reportTo: ['csp'] },
+          policy: { reportTo: 'csp' },
           reportingEndpoints: {
             csp: String.raw`/reports?label="csp",path=\test`,
             'other_1.*-': '/reports/other',
@@ -349,7 +411,7 @@ describe('csp', () => {
     router.get('/unconfigured', {
       middleware: [
         csp({
-          policy: { reportTo: ['csp'] },
+          policy: { reportTo: 'csp' },
         }),
       ],
       handler: () => new Response('ok'),
