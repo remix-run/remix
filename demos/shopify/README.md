@@ -78,24 +78,25 @@ The Worker name is `remix-shopify-demo`; change `name` in `wrangler.jsonc` to us
 
 ## Code
 
-- `app/routes.ts` defines home, Agentic Storefronts, pricing, sitemap, and one marketing fallback route.
-- `app/data/pages.ts` owns the page URLs, content, images, feature anchors, and the static export inventory.
+- `app/routes.ts` defines every page URL, including the 29 marketing pages under `routes.marketing`.
+- `app/data/pages.ts` summarizes each page for navigation cards, related links, and the sitemap, and lists the pages for the static export.
 - `app/data/navigation.ts` owns the navigation and service links.
-- `app/actions/controller.tsx` looks up the 29 shared marketing pages by pathname, renders the 404 page for unknown paths, and redirects trailing slashes. The router answers HEAD and unsupported methods.
+- `app/actions/controller.tsx` renders home, Agentic Storefronts, pricing, and the sitemap. The `home` action returns `agents.md` to requests that prefer Markdown.
+- `app/actions/marketing/controller.tsx` renders each marketing page's content through the shared `product-template.tsx`.
 - `app/actions/agentic-page.tsx` and `app/actions/pricing-page.tsx` own their distinct page layouts.
-- `app/actions/not-found.tsx` renders the 404 page.
+- `app/actions/not-found.tsx` renders the 404 page for URLs that match no route.
 - `app/ui/document.tsx` provides the document, shared navigation, footer, and closing section.
 - `app/data/videos.ts` maps each video file to its original URL on Shopify’s CDN.
 - `app/data/images.ts` lists Shopify’s original images with their dimensions and builds responsive CDN sources for native `<img>` elements and video posters.
-- `app/router.ts` installs `render()` and `staticFiles()` and maps the controller.
+- `app/router.ts` installs `staticFiles()`, the trailing-slash redirect in `app/middleware/trailing-slash.ts`, and `render()`, and maps the controllers. The router answers HEAD and unsupported methods.
 - `scripts/render-site.ts` writes and checks the static export.
 - `public/media.js` handles viewport playback and motion preferences for native videos.
 - `scripts/preview.ts` serves the output with `staticFiles()`.
-- `app/utils/agent-response.ts` negotiates the homepage representation for all three servers.
+- `app/utils/agent-response.ts` decides whether a request prefers Markdown, and negotiates the homepage for the static preview and Worker.
 - `worker.ts` applies that negotiation to the Cloudflare `ASSETS` binding.
 - `wrangler.jsonc` configures static assets and homepage Worker routing for Cloudflare.
 
-To add a shared marketing page, add its URL and content in `app/data/pages.ts`. Link to it in the navigation; the sitemap and exporter read the page data and include it automatically. Pages with distinct layouts have their own routes and actions.
+To add a shared marketing page, add its route to `routes.marketing`, its summary to `app/data/pages.ts`, and its action to `app/actions/marketing/controller.tsx`. Link to it in the navigation; the sitemap and exporter read the page summaries and include it automatically. Pages with distinct layouts have their own routes and actions.
 
 ## Check
 
