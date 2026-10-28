@@ -39,38 +39,116 @@ describe('formatFingerprintedPathname', () => {
   it('inserts the fingerprint before the file extension', () => {
     assert.equal(
       formatFingerprintedPathname('/assets/app/entry.ts', 'abc123'),
-      '/assets/app/entry.@abc123.ts',
+      '/assets/app/entry.~abc123.ts',
     )
     assert.equal(
       formatFingerprintedPathname('/assets/app/styles.css.js', 'abc123'),
-      '/assets/app/styles.css.@abc123.js',
+      '/assets/app/styles.css.~abc123.js',
     )
   })
 
   it('appends the fingerprint when there is no file extension', () => {
     assert.equal(
       formatFingerprintedPathname('/assets/app/entry', 'abc123'),
-      '/assets/app/entry.@abc123',
+      '/assets/app/entry.~abc123',
+    )
+  })
+
+  it('emits pathnames that are unchanged by per-segment encodeURIComponent canonicalization', () => {
+    let pathname = formatFingerprintedPathname(
+      '/assets/app/node_modules/%40remix-run/ui/styles.css',
+      '-NI2nv',
+    )
+
+    assert.equal(pathname, '/assets/app/node_modules/%40remix-run/ui/styles.~-NI2nv.css')
+    assert.equal(
+      pathname
+        .split('/')
+        .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
+        .join('/'),
+      pathname,
     )
   })
 })
 
 describe('parseFingerprintSuffix', () => {
   it('parses fingerprints inserted before the file extension', () => {
-    assert.deepEqual(parseFingerprintSuffix('/assets/app/entry.@abc123.ts'), {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/entry.~abc123.ts'), {
       pathname: '/assets/app/entry.ts',
       requestedFingerprint: 'abc123',
     })
-    assert.deepEqual(parseFingerprintSuffix('/assets/app/styles.css.@abc123.js'), {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/styles.css.~abc123.js'), {
       pathname: '/assets/app/styles.css.js',
       requestedFingerprint: 'abc123',
     })
   })
 
   it('parses fingerprints appended to extensionless paths', () => {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/entry.~abc123'), {
+      pathname: '/assets/app/entry',
+      requestedFingerprint: 'abc123',
+    })
+  })
+
+  it('parses legacy .@ fingerprints', () => {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/entry.@abc123.ts'), {
+      pathname: '/assets/app/entry.ts',
+      requestedFingerprint: 'abc123',
+    })
     assert.deepEqual(parseFingerprintSuffix('/assets/app/entry.@abc123'), {
       pathname: '/assets/app/entry',
       requestedFingerprint: 'abc123',
+    })
+  })
+
+  it('parses percent-encoded fingerprint separators', () => {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/styles.%40-NI2nv.css'), {
+      pathname: '/assets/app/styles.css',
+      requestedFingerprint: '-NI2nv',
+    })
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/styles.%7E-NI2nv.css'), {
+      pathname: '/assets/app/styles.css',
+      requestedFingerprint: '-NI2nv',
+    })
+  })
+
+  it('keeps the stable pathname encoded per segment', () => {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/%40scope/my%20file.@abc123.ts'), {
+      pathname: '/assets/app/%40scope/my%20file.ts',
+      requestedFingerprint: 'abc123',
+    })
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/..%2Fsecret.%40abc123.ts'), {
+      pathname: '/assets/app/..%2Fsecret.ts',
+      requestedFingerprint: 'abc123',
+    })
+  })
+
+  it('ignores suffixes that would leave a dot segment', () => {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/...~abc123'), {
+      pathname: '/assets/app/...~abc123',
+      requestedFingerprint: null,
+    })
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/..%2E%40abc123'), {
+      pathname: '/assets/app/..%2E%40abc123',
+      requestedFingerprint: null,
+    })
+  })
+
+  it('ignores malformed percent-encoding', () => {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/entry.%E0%A4%A.~abc123.ts'), {
+      pathname: '/assets/app/entry.%E0%A4%A.~abc123.ts',
+      requestedFingerprint: null,
+    })
+  })
+
+  it('does not treat other separators as fingerprints', () => {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/entry.-abc123.ts'), {
+      pathname: '/assets/app/entry.-abc123.ts',
+      requestedFingerprint: null,
+    })
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/entry.ts~'), {
+      pathname: '/assets/app/entry.ts~',
+      requestedFingerprint: null,
     })
   })
 })
