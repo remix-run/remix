@@ -121,8 +121,13 @@ accept.weights // [1, 0.9]
 accept.accepts('text/html') // true
 accept.accepts('text/plain') // true (matches text/*)
 accept.accepts('image/jpeg') // false
-accept.getWeight('text/plain') // 1 (matches text/*)
+accept.getWeight('text/plain') // 0.9 (matches text/*)
 accept.getPreferred(['text/html', 'text/plain']) // 'text/html'
+
+// The most specific matching range wins, regardless of order or weight
+let excludesHtml = Accept.from('text/html;q=0, */*')
+excludesHtml.accepts('text/html') // false
+excludesHtml.getPreferred(['text/html', 'text/markdown']) // 'text/markdown'
 
 // Iterate
 for (let [mediaType, quality] of accept) {
@@ -199,7 +204,7 @@ acceptLanguage.languages // ['en-us', 'en']
 acceptLanguage.weights // [1, 0.9]
 acceptLanguage.accepts('en-US') // true
 acceptLanguage.accepts('en-GB') // true (matches en)
-acceptLanguage.getWeight('en-GB') // 1 (matches en)
+acceptLanguage.getWeight('en-GB') // 0.9 (matches en)
 acceptLanguage.getPreferred(['en-US', 'en-GB', 'fr']) // 'en-US'
 
 // Modify and set header
