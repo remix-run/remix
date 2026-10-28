@@ -27,18 +27,15 @@ export interface CspOptions {
   /** Send Content-Security-Policy-Report-Only instead of an enforcing header (default false). */
   reportOnly?: boolean
   /**
-   * Named URLs to add to `Reporting-Endpoints` on responses accepted by `filter`.
-   * Reference a name with the policy's `reportTo` directive. Relative URLs are supported.
-   * Existing endpoint names are preserved unless configured here with a different URL.
+   * Named absolute or relative URLs for `Reporting-Endpoints`, referenced by `reportTo`.
+   * Configured names override matching downstream entries; other entries are preserved.
    * Names must be structured field keys; URLs must contain only printable ASCII characters.
    */
   reportingEndpoints?: Readonly<Record<string, string>>
   /**
-   * Select responses that receive this policy (default `text/html` responses).
-   * Overrides the default HTML filter; 304 responses are always returned unchanged.
-   * Runs after downstream handlers, before adding policy and reporting endpoint headers.
-   * Returning false preserves the original response. The nonce and policy are still
-   * established before downstream handlers run.
+   * Select responses for policy and reporting headers (default `text/html` responses).
+   * Runs after downstream handlers; returning false preserves the response.
+   * Nonce and policy creation still run before handlers. 304 responses are always unchanged.
    */
   filter?: (response: Response) => boolean
 }
@@ -59,11 +56,9 @@ type CheckedOptions<policy extends CspOptions['policy']> = Omit<CspOptions, 'pol
 } & ([policy] extends [CheckedPolicy<policy>] ? unknown : { policy: CheckedPolicy<policy> })
 
 /**
- * Establishes a request nonce and appends a CSP to HTML responses by default.
- * Inferred directive objects and factory returns are checked for unknown directive keys.
- * Supply `filter` to select other response types, such as worker scripts.
- * Not-modified (304) responses are returned unchanged to preserve cached nonce policies.
- * Existing policies retain their enforcement or reporting mode. No default directives are added.
+ * Establishes a request nonce and appends the configured CSP to HTML responses by default.
+ * Override `filter` for other response types; 304 responses are always unchanged.
+ * Existing policies are preserved separately. Inferred policies reject unknown directive keys.
  * @param options The required policy and optional response configuration.
  * @returns Middleware providing the nonce read by `getCspNonce()` and the CSP response header.
  */

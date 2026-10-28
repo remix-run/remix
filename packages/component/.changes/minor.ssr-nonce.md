@@ -1,4 +1,4 @@
-`renderToStream()` and `renderToString()` now accept a `nonce` and stamp it on the elements they generate themselves: the import map script, module preload links, and the `<style>` tags the `css` mixin emits. Under a `Content-Security-Policy` that names a nonce, those elements were previously blocked — import maps and preloads could not load, and server-rendered styles did not apply until hydration adopted them.
+Render under a nonce-based Content Security Policy with the `nonce` option on `renderToStream()` and `renderToString()`. Generated import maps, module preloads, and CSS mixin styles receive the nonce; explicitly authored `<ImportMap>` nonces are preserved.
 
 ```diff
 +let nonce = crypto.getRandomValues(new Uint8Array(16)).toBase64()
@@ -10,21 +10,4 @@
  })
 ```
 
-A `nonce` authored on `<ImportMap>` keeps its own value; the option only fills in the attribute when it is absent. The `#rmx-data` script is left alone because it is an `application/json` data block the browser never executes, so `script-src` does not apply to it. A nonce that changes with every response stays compatible with frame navigation, because the client uses the original document's import map nonce, falling back to its nonce metadata, for import maps and module preloads it installs later.
-
-Import maps and preloads from blocking frames are merged into the document head. Hoisted preloads use the enclosing render's nonce, and an authored document import map keeps its own nonce. Document renders retain the nonce in metadata so client entries introduced by later frames work even when there is no initial import map.
-
-`resolveFrame()` receives the enclosing render's nonce as `context.nonce`. Forward it to nested renderers so CSS mixin styles in blocking frames satisfy the document's CSP before hydration. The enclosing server renderer does not rewrite returned frame HTML.
-
-```diff
- let stream = renderToStream(<App />, {
-   nonce,
--  resolveFrame(src) {
--    return renderToStream(<FrameContent src={src} />)
-+  resolveFrame(src, _target, context) {
-+    return renderToStream(<FrameContent src={src} />, { nonce: context?.nonce })
-   },
- })
-```
-
-For browser frame loads and document navigation, return the rendered HTML in a `Response` with its `Content-Security-Policy` header intact. When the effective script and style source lists identify one shared nonce, the client translates matching nonce-bearing styles, scripts, and links to the original document render nonce, including resources inside streamed frame templates. Authored styles therefore continue working when independent responses have fresh nonces. Missing or ambiguous nonces skip translation. Unnonced elements and elements with a different nonce remain unchanged; report-only policies and incoming nonce metadata cannot authorize translation.
+Server frame resolvers receive `context.nonce` for nested renders. During client navigation and frame reloads, the original document nonce remains active. When a response's enforcing CSP identifies one shared nonce, matching resource nonces are rewritten before insertion, including streamed templates. Missing, ambiguous, and report-only nonces do not trigger rewriting. See [CSP integration](https://github.com/remix-run/remix/tree/main/packages/component/src/server#content-security-policy) for resolver requirements.

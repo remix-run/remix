@@ -670,9 +670,11 @@ parsed.set('img-src', ["'self'", 'https://images.example.com'])
 parsed.delete('upgrade-insecure-requests')
 ```
 
-The initializer uses camel-cased directive names. `get`, `set`, and `delete` use case-insensitive, hyphenated names; `set` also supports extension directives. Arrays contain individual tokens without whitespace, commas, or semicolons. An empty array emits a valueless directive, such as `sandbox` or an empty source list. `upgradeInsecureRequests: false` omits that directive. `reportTo` takes a string naming one reporting endpoint, such as `'csp'`. It must be a nonempty HTTP token. The generic `get` and `set` methods still use token arrays; `set('report-to', values)` and parsing require exactly one valid endpoint name.
+Initializers use camel-cased directives; `get`, `set`, and `delete` use case-insensitive, hyphenated names. `set` also supports extension directives. Tokens cannot contain whitespace, commas, or semicolons. Empty arrays emit valueless directives; `upgradeInsecureRequests: false` omits that directive.
 
-Parsing retains the first duplicate directive. Comma-separated policy lists are rejected because each policy must remain independently enforced. Append separate policies with `headers.append()` instead of merging their directives. This utility does not generate nonces or choose a policy; [CSP middleware](https://github.com/remix-run/remix/tree/main/packages/csp-middleware) handles request-scoped nonce generation.
+`reportTo` takes one endpoint string, such as `'csp'`. Parsing and `set('report-to', values)` require exactly one HTTP token, as specified by [CSP's `report-to` directive](https://www.w3.org/TR/CSP3/#directive-report-to).
+
+Parsing retains the first duplicate directive and rejects policy lists. Append separate policies with `headers.append()` instead of merging directives. The utility validates directive and token syntax; browsers interpret policy values. [CSP middleware](https://github.com/remix-run/remix/tree/main/packages/csp-middleware) handles nonce generation and policy headers.
 
 `SuperHeaders.contentSecurityPolicy` and `SuperHeaders.contentSecurityPolicyReportOnly` retain their string API. Assign `policy.toString()` to either property.
 
@@ -684,9 +686,7 @@ The same utility can serialize an enforced policy into a user-authored meta tag:
 </head>
 ```
 
-Place it before scripts, styles, and resource links in the document head; it only applies to content that follows it. Nonce-based rules must use the same nonce supplied to the renderer. For a meta-only policy, use this utility directly; `csp()` middleware delivers a response header.
-
-Meta policies do not support report-only mode or the `frame-ancestors`, `sandbox`, and `report-uri` directives. A meta policy is enforced alongside any header policies. See the [CSP meta element specification](https://www.w3.org/TR/CSP3/#meta-element).
+Place it before resources it should govern and use the same nonce as the renderer. Meta policies apply alongside header policies and do not support report-only mode, `frame-ancestors`, `sandbox`, or `report-uri`. See the [CSP meta element specification](https://www.w3.org/TR/CSP3/#meta-element).
 
 ## Related Packages
 

@@ -1,15 +1,5 @@
-`remix/component/server` can now render under a Content Security Policy that names a nonce. Pass `nonce` to `renderToStream()` or `renderToString()` and it is stamped on the import map script, module preload links, and the server-rendered `<style>` tags the framework emits.
+Render with a nonce-based Content Security Policy using `csp()` from `remix/middleware/csp` alongside `render()`. The middleware generates the nonce and policy together; generated import maps, module preloads, and CSS mixin styles receive the nonce automatically. Authored tags use `getCspNonce(context)`.
 
-Frame resolvers receive the enclosing nonce in `context.nonce` for forwarding to nested server renders, so blocking-frame CSS mixin styles can satisfy the document's CSP before hydration.
+Policies apply to HTML responses by default, support report-only mode and named reporting endpoints, and leave `304` responses unchanged. Internal frame renders share the document nonce; browser navigation rewrites matching resource nonces when the response's enforcing CSP identifies one shared nonce.
 
-Use `csp({ policy, reportOnly, reportingEndpoints, filter })` from `remix/middleware/csp` with `render()` to generate the policy and nonce together. The required `policy` accepts static configuration or a per-request factory. `context.render()` reads the nonce automatically, and internal frame requests and redirects share it before child handlers run. Authored tags can use `getCspNonce(context)`.
-
-Inferred policy objects and factory returns catch misspelled directive names without a return-type annotation, including async factories.
-
-Set `reportOnly: true` to monitor a policy with `Content-Security-Policy-Report-Only`. Enforced and report-only policies can share the same request nonce. Configure `reportingEndpoints: { csp: '/csp-reports' }` with `reportTo: 'csp'` in the policy to send the matching `Reporting-Endpoints` header.
-
-Policy and reporting endpoint headers apply only to responses with a `text/html` content type by default. Use `filter(response)` to include other response types, such as worker scripts. Responses rejected by the filter are returned unchanged, and `304 Not Modified` responses are always left unchanged.
-
-`ContentSecurityPolicy` from `remix/headers/content-security-policy` builds and parses individual policies independently of the middleware.
-
-Authored nonce-bearing styles remain compatible with the original document CSP during client navigation and frame reloads. The client reads a single shared nonce from the response's enforcing CSP header and translates only matching resource nonces. CSP middleware leaves `304 Not Modified` responses unchanged so cached HTML retains its matching policy. The `reportTo` directive accepts exactly one endpoint name.
+Custom integrations can pass `nonce` directly to `remix/component/server` and build policies with `ContentSecurityPolicy` from `remix/headers/content-security-policy`. See the [middleware guide](https://github.com/remix-run/remix/tree/main/packages/csp-middleware#usage) for configuration.
