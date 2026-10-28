@@ -38,6 +38,106 @@ interface TestFixture extends RunnableOptions {
 type TestSuitesGlobal = typeof globalThis & { __testSuites?: SuiteFixture[] }
 
 describe('runTests lifecycle hook failures', () => {
+  it('reports cleanup errors with cyclic causes without recursing indefinitely', async () => {
+    let error = new Error('cyclic cleanup failure')
+    error.cause = error
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'test',
+            fn(t) {
+              t.after(() => {
+                throw error
+              })
+            },
+          },
+        ],
+      },
+    ])
+
+    assert.equal(results.failed, 1)
+    assert.ok(error.stack)
+    assert.ok(results.tests[0].error?.stack?.includes(error.stack))
+  })
+
+  it('retains the original stack for a cleanup failure', async () => {
+    let cleanupError: Error | undefined
+    function failedCleanup() {
+      cleanupError = new Error('cleanup failed')
+      throw cleanupError
+    }
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'test',
+            fn(t) {
+              t.after(failedCleanup)
+            },
+          },
+        ],
+      },
+    ])
+
+    assert.equal(results.failed, 1)
+    assert.ok(cleanupError?.stack)
+    assert.ok(results.tests[0].error?.stack?.includes(cleanupError.stack))
+  })
+
+  it('retains all cleanup stacks alongside body and afterEach failures', async () => {
+    let bodyError: Error | undefined
+    let firstCleanupError: Error | undefined
+    let secondCleanupError: Error | undefined
+    let afterEachError: Error | undefined
+    function firstCleanup() {
+      firstCleanupError = new Error('first cleanup failed')
+      throw firstCleanupError
+    }
+    function secondCleanup() {
+      secondCleanupError = new Error('second cleanup failed')
+      throw secondCleanupError
+    }
+    function afterEachFailure() {
+      afterEachError = new Error('afterEach failed')
+      throw afterEachError
+    }
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        afterEach: [{ fn: afterEachFailure }],
+        tests: [
+          {
+            name: 'test',
+            fn(t) {
+              t.after(firstCleanup)
+              t.after(secondCleanup)
+              bodyError = new Error('body failed')
+              throw bodyError
+            },
+          },
+        ],
+      },
+    ])
+
+    assert.equal(results.failed, 1)
+    let failure = results.tests[0].error
+    assert.match(failure?.message ?? '', /body failed/)
+    assert.match(failure?.message ?? '', /first cleanup failed/)
+    assert.match(failure?.message ?? '', /second cleanup failed/)
+    assert.match(failure?.message ?? '', /afterEach failed/)
+    assert.ok(bodyError?.stack)
+    assert.ok(firstCleanupError?.stack)
+    assert.ok(secondCleanupError?.stack)
+    assert.ok(afterEachError?.stack)
+    assert.ok(failure?.stack?.includes(bodyError.stack))
+    assert.ok(failure?.stack?.includes(firstCleanupError.stack))
+    assert.ok(failure?.stack?.includes(secondCleanupError.stack))
+    assert.ok(failure?.stack?.includes(afterEachError.stack))
+  })
+
   it('reports beforeAll failures as failed results', async () => {
     let testRan = false
 

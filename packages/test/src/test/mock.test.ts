@@ -4,6 +4,136 @@ import { createTestContext, type TestContext } from '../lib/context.ts'
 import { runTests } from '../lib/executor.ts'
 
 describe('mock function controls', () => {
+  it('calls Map.get spies without recursing into mock bookkeeping', () => {
+    let original = Map.prototype.get
+    let spy = mock.method(Map.prototype, 'get', () => 123)
+    let result: unknown
+    try {
+      result = new Map().get('key')
+    } finally {
+      Map.prototype.get = original
+    }
+    assert.equal(result, 123)
+    assert.equal(spy.mock.callCount(), 1)
+  })
+
+  it('calls Map.delete spies without recursing into mock bookkeeping', () => {
+    let original = Map.prototype.delete
+    let spy = mock.method(Map.prototype, 'delete', () => false)
+    let result: unknown
+    try {
+      result = new Map().delete('key')
+    } finally {
+      Map.prototype.delete = original
+    }
+    assert.equal(result, false)
+    assert.equal(spy.mock.callCount(), 1)
+  })
+
+  it('schedules one-call overrides while Map.set is mocked', () => {
+    let original = Map.prototype.set
+    let fn = mock.fn(() => 'default')
+    let spy = mock.method(Map.prototype, 'set', function (this: Map<unknown, unknown>) {
+      return this
+    })
+    let results: string[]
+    try {
+      fn.mock.mockImplementationOnce(() => 'once')
+      results = [fn(), fn()]
+    } finally {
+      Map.prototype.set = original
+    }
+    assert.deepEqual(results, ['once', 'default'])
+    assert.equal(spy.mock.callCount(), 0)
+  })
+
+  it('restores Object.defineProperty without calling its replacement', () => {
+    let original = Object.defineProperty
+    let spy = mock.method(Object, 'defineProperty', (target) => target)
+    let restored: boolean
+    try {
+      spy.mock.restore()
+      restored = Object.defineProperty === original
+    } finally {
+      Object.defineProperty = original
+    }
+    assert.equal(restored, true)
+    assert.equal(spy.mock.callCount(), 0)
+  })
+
+  it('automatically restores Object.defineProperty and other method mocks', async () => {
+    let original = Object.defineProperty
+    let obj = { method: () => 'original' }
+    let { testContext, cleanup } = createTestContext()
+    testContext.mock.method(Object, 'defineProperty', (target: object) => target)
+    testContext.mock.method(obj, 'method', () => 'mocked')
+    let restored: boolean
+    try {
+      await cleanup()
+      restored = Object.defineProperty === original
+    } finally {
+      Object.defineProperty = original
+    }
+    assert.equal(restored, true)
+    assert.equal(obj.method(), 'original')
+  })
+
+  it('preserves generic function contracts in replacement controls', (t) => {
+    function identity<value>(value: value): value {
+      return value
+    }
+    let fn = mock.fn(identity)
+    let contextFn = t.mock.fn(identity)
+    let obj = { identity }
+    let spy = t.mock.method(obj, 'identity')
+
+    type DefaultReplacement = Parameters<typeof fn.mock.mockImplementation>[0]
+    type ContextReplacement = Parameters<typeof contextFn.mock.mockImplementation>[0]
+    type OnceReplacement = Parameters<typeof spy.mock.mockImplementationOnce>[0]
+    let invalidDefault: (() => string) extends DefaultReplacement ? true : false = false
+    let invalidContext: (() => string) extends ContextReplacement ? true : false = false
+    let invalidOnce: (() => string) extends OnceReplacement ? true : false = false
+    assert.equal(invalidDefault, false)
+    assert.equal(invalidContext, false)
+    assert.equal(invalidOnce, false)
+
+    fn.mock.mockImplementation((value) => value)
+    contextFn.mock.mockImplementation((value) => value)
+    spy.mock.mockImplementationOnce((value) => value)
+    let number: number = fn(123)
+    let contextNumber: number = contextFn(123)
+    let text: string = obj.identity('value')
+    assert.equal(number, 123)
+    assert.equal(contextNumber, 123)
+    assert.equal(text, 'value')
+  })
+
+  it('preserves every overload in replacement controls', (t) => {
+    function value(input: string): string
+    function value(input: number): number
+    function value(input: string | number): string | number {
+      return input
+    }
+    let fn = mock.fn(value)
+    let obj = { value }
+    let spy = t.mock.method(obj, 'value')
+
+    type OnceReplacement = Parameters<typeof fn.mock.mockImplementationOnce>[0]
+    type DefaultReplacement = Parameters<typeof spy.mock.mockImplementation>[0]
+    let invalidOnce: ((input: number) => number) extends OnceReplacement ? true : false = false
+    let invalidDefault: ((input: number) => number) extends DefaultReplacement ? true : false =
+      false
+    assert.equal(invalidOnce, false)
+    assert.equal(invalidDefault, false)
+
+    fn.mock.mockImplementationOnce(value)
+    spy.mock.mockImplementation(value)
+    let text: string = fn('value')
+    let number: number = obj.value(123)
+    assert.equal(text, 'value')
+    assert.equal(number, 123)
+  })
+
   it('changes the default without clearing indexed overrides', (t) => {
     let fn = t.mock.fn((value: number) => value * 2)
     assert.equal(

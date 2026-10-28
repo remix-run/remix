@@ -416,21 +416,32 @@ function createTestError(
   ...secondaryErrors: Array<Error | undefined>
 ): TestResult['error'] {
   let message = primaryError !== undefined ? getErrorMessage(primaryError) : undefined
-  let stack = primaryError instanceof Error ? primaryError.stack : undefined
+  let stack = getErrorStack(primaryError)
 
   for (let secondaryError of secondaryErrors) {
     if (!secondaryError) continue
     message = message ? `${message}\n${secondaryError.message}` : secondaryError.message
-    stack =
-      stack && secondaryError.stack
-        ? `${stack}\n${secondaryError.stack}`
-        : (stack ?? secondaryError.stack)
+    let secondaryStack = getErrorStack(secondaryError)
+    stack = stack && secondaryStack ? `${stack}\n\n${secondaryStack}` : (stack ?? secondaryStack)
   }
 
   return {
     message: message ?? 'Test failed',
     stack,
   }
+}
+
+function getErrorStack(error: unknown, seen = new Set<Error>()): string | undefined {
+  if (!(error instanceof Error) || seen.has(error)) return undefined
+  seen.add(error)
+
+  let stack = error.stack
+  let causes = error instanceof AggregateError ? [error.cause, ...error.errors] : [error.cause]
+  for (let cause of causes) {
+    let causeStack = getErrorStack(cause, seen)
+    if (causeStack) stack = stack ? `${stack}\n\n${causeStack}` : causeStack
+  }
+  return stack
 }
 
 function getErrorMessage(error: unknown): string {

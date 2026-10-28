@@ -5,3 +5,5 @@ Add new APIs to the mock function context:
 - `resetCalls()` clears the call history.
 - `callCount()` returns the number of recorded invocations, including calls still executing.
 - `restore()` restores a standalone mock's original implementation.
+
+Replacement controls preserve generic and overloaded function signatures. Test context mocks restore even when tests or cleanup callbacks fail, and cleanup failures retain their original stack traces.

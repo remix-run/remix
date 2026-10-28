@@ -1,10 +1,52 @@
 import * as assert from '@remix-run/assert'
+import type { TestContext } from '../lib/context.ts'
+import { runTests } from '../lib/executor.ts'
 import { DotReporter } from '../lib/reporters/dot.ts'
 import { FilesReporter } from '../lib/reporters/files.ts'
 import { SpecReporter } from '../lib/reporters/spec.ts'
 import { TapReporter } from '../lib/reporters/tap.ts'
 import type { TestResults } from '../lib/reporters/results.ts'
 import { describe, it } from '../lib/framework.ts'
+
+describe('reporters combined failure stacks', () => {
+  it('prints every failure source in spec results and summaries', async () => {
+    let results = await createFailureResults()
+    let reporter = new SpecReporter()
+    let resultOutput = captureOutput(() => reporter.onResult(results))
+    let summaryOutput = captureOutput(() => reporter.onSummary(results, 1))
+
+    assertFailureSources(resultOutput)
+    assertFailureSources(summaryOutput)
+  })
+
+  it('prints every failure source in files results and summaries', async () => {
+    let results = await createFailureResults()
+    let reporter = new FilesReporter()
+    let resultOutput = captureOutput(() => reporter.onResult(results))
+    let summaryOutput = captureOutput(() => reporter.onSummary(results, 1))
+
+    assertFailureSources(resultOutput)
+    assertFailureSources(summaryOutput)
+  })
+
+  it('prints every failure source in dot summaries', async () => {
+    let results = await createFailureResults()
+    let output = captureOutput(() => {
+      let reporter = new DotReporter()
+      reporter.onResult(results)
+      reporter.onSummary(results, 1)
+    })
+
+    assertFailureSources(output)
+  })
+
+  it('prints every failure source in TAP results', async () => {
+    let results = await createFailureResults()
+    let output = captureOutput(() => new TapReporter().onResult(results))
+
+    assertFailureSources(output)
+  })
+})
 
 describe('reporters skip and todo reasons', () => {
   it('prints reasons in the spec reporter', () => {
@@ -73,6 +115,45 @@ describe('reporters quiet mode', () => {
     assert.match(output, /skipped 1/)
   })
 })
+
+async function createFailureResults(): Promise<TestResults> {
+  function firstCleanupSource() {
+    throw new Error('first cleanup failed')
+  }
+  function secondCleanupSource() {
+    throw new Error('second cleanup failed')
+  }
+  function afterEachSource() {
+    throw new Error('afterEach failed')
+  }
+  function testBodySource(t: TestContext) {
+    t.after(firstCleanupSource)
+    t.after(secondCleanupSource)
+    throw new Error('body failed')
+  }
+
+  let global = globalThis as typeof globalThis & { __testSuites?: unknown[] }
+  let previousSuites = global.__testSuites
+  global.__testSuites = [
+    {
+      name: 'failures',
+      afterEach: [{ fn: afterEachSource }],
+      tests: [{ name: 'test', fn: testBodySource }],
+    },
+  ]
+  try {
+    return await runTests()
+  } finally {
+    global.__testSuites = previousSuites
+  }
+}
+
+function assertFailureSources(output: string): void {
+  assert.match(output, /at (?:Object\.)?testBodySource/)
+  assert.match(output, /at firstCleanupSource/)
+  assert.match(output, /at secondCleanupSource/)
+  assert.match(output, /at (?:Object\.)?afterEachSource/)
+}
 
 function createPendingResults(): TestResults {
   return {

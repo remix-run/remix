@@ -15,24 +15,21 @@ export interface MockCall<Args extends unknown[] = unknown[], Result = unknown> 
 export interface MockContext<
   Args extends unknown[] = unknown[],
   Result = unknown,
-  receiver = unknown,
+  implementation extends (...args: never[]) => unknown = (...args: Args) => Result,
 > {
   /** Live call history. `resetCalls()` replaces this array with a fresh one. */
   calls: MockCall<Args, Result>[]
   /**
    * Changes the default implementation without clearing scheduled overrides.
-   * @param implementation The replacement implementation.
+   * @param implementation A replacement preserving the original function's full signature.
    */
-  mockImplementation(implementation: (this: receiver, ...args: Args) => Result): void
+  mockImplementation(implementation: implementation): void
   /**
    * Replaces the implementation for one call, replacing any override at that index.
-   * @param implementation The replacement implementation.
+   * @param implementation A replacement preserving the original function's full signature.
    * @param onCall Zero-based call index, which must not have passed (defaults to the next call).
    */
-  mockImplementationOnce(
-    implementation: (this: receiver, ...args: Args) => Result,
-    onCall?: number,
-  ): void
+  mockImplementationOnce(implementation: implementation, onCall?: number): void
   /** Clears call history and resets indices without changing implementations or pending overrides. */
   resetCalls(): void
   /**
@@ -51,20 +48,27 @@ export interface MockContext<
 /** A function augmented with a `.mock` property for inspecting recorded calls. */
 export type MockFunction<T extends (...args: any[]) => any = (...args: any[]) => any> = T & {
   /** Call history and implementation controls for this function. */
-  mock: MockContext<Parameters<T>, ReturnType<T>, ThisParameterType<T>>
+  mock: MockContext<Parameters<T>, ReturnType<T>, T>
 }
 
+// Mocks may replace the built-ins used to create, install, and restore other mocks.
+const createObject = Object.create
+const defineProperty = Object.defineProperty
+const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
+const setProperty = Reflect.set
+
+// A required implementation preserves generic signatures during type inference.
+function createMockFn<T extends (...args: any[]) => any>(impl: T): MockFunction<T>
+function createMockFn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
 function createMockFn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T> {
   let original = impl
-  let implementation:
-    | ((this: ThisParameterType<T>, ...args: Parameters<T>) => ReturnType<T>)
-    | undefined = impl
-  let overrides = new Map<number, NonNullable<typeof implementation>>()
+  let implementation = impl
+  let overrides: { [index: number]: T | undefined } = createObject(null)
 
   let fn = function (this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> {
     let index = fn.mock.calls.length
-    let current = overrides.get(index) ?? implementation
-    overrides.delete(index)
+    let current = overrides[index] ?? implementation
+    delete overrides[index]
     let call: MockCall<Parameters<T>, ReturnType<T>> = { arguments: args }
     fn.mock.calls.push(call)
     if (current) {
@@ -93,7 +97,7 @@ function createMockFn<T extends (...args: any[]) => any>(impl?: T): MockFunction
       if (!Number.isSafeInteger(index) || index < fn.mock.calls.length) {
         throw new RangeError('onCall must be a safe integer at or after the next call index')
       }
-      overrides.set(index, value)
+      overrides[index] = value
     },
     resetCalls() {
       fn.mock.calls = []
@@ -117,7 +121,7 @@ type Method<target, key extends keyof target> = [
 type MethodMock<method extends (...args: any[]) => any> = ((...args: any[]) => any) & {
   mock: Omit<MockFunction['mock'], 'mockImplementation' | 'mockImplementationOnce'> &
     Pick<
-      MockContext<Parameters<method>, ReturnType<method>, ThisParameterType<method>>,
+      MockContext<Parameters<method>, ReturnType<method>, method>,
       'mockImplementation' | 'mockImplementationOnce'
     >
 }
@@ -131,6 +135,8 @@ interface MethodRestoration {
 }
 
 const methodRestorations = new WeakMap<object, MethodRestoration>()
+const getMethodRestoration = methodRestorations.get.bind(methodRestorations)
+const setMethodRestoration = methodRestorations.set.bind(methodRestorations)
 
 function createMethodMock<T extends object, K extends keyof T>(
   obj: T,
@@ -138,10 +144,10 @@ function createMethodMock<T extends object, K extends keyof T>(
   impl?: T[K] extends (...args: any[]) => any ? (...args: Parameters<T[K]>) => any : never,
 ): MethodMock<Method<T, K>> {
   let original = obj[method]
-  let descriptor = Object.getOwnPropertyDescriptor(obj, method)
+  let descriptor = getOwnPropertyDescriptor(obj, method)
   // Initial overrides retain the existing permissive behavior, including absent methods.
   let mockFn = createMockFn((impl ?? original) as Method<T, K>)
-  if (!Reflect.set(obj, method, mockFn)) throw new TypeError('Unable to mock the method')
+  if (!setProperty(obj, method, mockFn)) throw new TypeError('Unable to mock the method')
   let restoration: MethodRestoration = {
     object: obj,
     method,
@@ -149,20 +155,20 @@ function createMethodMock<T extends object, K extends keyof T>(
     descriptor,
     restored: false,
   }
-  methodRestorations.set(mockFn, restoration)
+  setMethodRestoration(mockFn, restoration)
   mockFn.mock.restore = () => {
     let target = restoration
     // A nested mock must not reinstall a spy that was manually restored earlier.
     while (typeof target.original === 'function') {
-      let previous = methodRestorations.get(target.original)
+      let previous = getMethodRestoration(target.original)
       if (!previous?.restored || previous.object !== obj || previous.method !== method) break
       target = previous
     }
     if (target.descriptor) {
-      Object.defineProperty(obj, method, target.descriptor)
+      defineProperty(obj, method, target.descriptor)
     }
     if (!target.descriptor || !('value' in target.descriptor)) {
-      if (!Reflect.set(obj, method, target.original)) {
+      if (!setProperty(obj, method, target.original)) {
         throw new TypeError('Unable to restore the method')
       }
     }
