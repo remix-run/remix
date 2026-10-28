@@ -58,21 +58,26 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * Gets the weight an encoding. Performs wildcard matching so `*` matches all encodings.
+   * Gets the weight of an encoding. Performs wildcard matching so `*` matches all encodings.
+   *
+   * An encoding listed explicitly in the header takes precedence over `*`, regardless of their
+   * order or weights in the header. For example, `gzip;q=0, *` gives `gzip` a weight of `0`.
    *
    * @param encoding The encoding to get
    * @returns The weight of the encoding, or `0` if it is not in the header
    */
   getWeight(encoding: string): number {
     let lower = encoding.toLowerCase()
+    if (lower === '*') return Math.max(0, ...this.weights)
+
+    let wildcardWeight = 0
 
     for (let [enc, weight] of this) {
-      if (enc === lower || enc === '*' || lower === '*') {
-        return weight
-      }
+      if (enc === lower) return weight
+      if (enc === '*') wildcardWeight = weight
     }
 
-    return 0
+    return wildcardWeight
   }
 
   /**

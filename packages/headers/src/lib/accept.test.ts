@@ -86,6 +86,51 @@ describe('Accept', () => {
     assert.equal(header.getPreferred(['image/jpeg']), null)
   })
 
+  it('uses the most specific matching range for a weight', () => {
+    let header = new Accept('text/markdown;q=0, text/*;q=0.5, */*')
+    assert.equal(header.getWeight('text/markdown'), 0)
+    assert.equal(header.getWeight('text/plain'), 0.5)
+    assert.equal(header.getWeight('image/png'), 1)
+  })
+
+  it('lets an exact media type override a full wildcard with a higher weight', () => {
+    let header = new Accept('text/html;q=0, */*')
+    assert.equal(header.getWeight('text/html'), 0)
+    assert.equal(header.accepts('text/html'), false)
+    assert.equal(header.accepts('text/markdown'), true)
+  })
+
+  it('lets an exact media type override a subtype wildcard with a higher weight', () => {
+    let header = new Accept('text/html;q=0, text/*')
+    assert.equal(header.getWeight('text/html'), 0)
+    assert.equal(header.getWeight('text/plain'), 1)
+  })
+
+  it('lets an exact media type with a lower weight override a wildcard', () => {
+    let header = new Accept('text/html;q=0.5, */*')
+    assert.equal(header.getWeight('text/html'), 0.5)
+    assert.equal(header.getWeight('application/json'), 1)
+  })
+
+  it('gets the highest weight any matching media type could receive for wildcard queries', () => {
+    let header = new Accept('text/html;q=0, text/*;q=0.5, application/json;q=0.8')
+    assert.equal(header.getWeight('text/*'), 0.5)
+    assert.equal(header.getWeight('*/*'), 0.8)
+    assert.equal(header.getWeight('image/*'), 0)
+  })
+
+  it('gets the weight of a narrower range for wildcard queries', () => {
+    let header = new Accept('text/html;q=0.9, */*;q=0.1')
+    assert.equal(header.getWeight('text/*'), 0.9)
+    assert.equal(header.getWeight('image/*'), 0.1)
+  })
+
+  it('skips media types excluded by a more specific range when choosing a preferred type', () => {
+    let header = new Accept('text/html;q=0, */*')
+    assert.equal(header.getPreferred(['text/html', 'text/markdown']), 'text/markdown')
+    assert.equal(header.getPreferred(['text/html']), null)
+  })
+
   it('sets and gets media types', () => {
     let header = new Accept()
     header.set('application/json', 0.9)

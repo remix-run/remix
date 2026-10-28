@@ -87,6 +87,33 @@ describe('Accept-Language', () => {
     assert.equal(header.getPreferred(['fi', 'ja']), null)
   })
 
+  it('uses the most specific matching range for a weight', () => {
+    let header = new AcceptLanguage('en-US;q=0, en;q=0.5, *')
+    assert.equal(header.getWeight('en-US'), 0)
+    assert.equal(header.getWeight('en-GB'), 0.5)
+    assert.equal(header.getWeight('fr'), 1)
+  })
+
+  it('lets a language override a wildcard with a higher weight', () => {
+    let header = new AcceptLanguage('en;q=0, *')
+    assert.equal(header.getWeight('en-US'), 0)
+    assert.equal(header.accepts('en'), false)
+    assert.equal(header.accepts('fr'), true)
+  })
+
+  it('gets the highest weight of a narrower range for queries without a subtag', () => {
+    let header = new AcceptLanguage('en-US;q=0.9, *;q=0.1')
+    assert.equal(header.getWeight('en'), 0.9)
+    assert.equal(header.getWeight('fr'), 0.1)
+    assert.equal(header.getWeight('*'), 0.9)
+  })
+
+  it('skips languages excluded by a more specific range when choosing a preferred language', () => {
+    let header = new AcceptLanguage('en;q=0, *')
+    assert.equal(header.getPreferred(['en-US', 'fr']), 'fr')
+    assert.equal(header.getPreferred(['en-US']), null)
+  })
+
   it('sets and gets languages', () => {
     let header = new AcceptLanguage()
     header.set('en', 0.9)

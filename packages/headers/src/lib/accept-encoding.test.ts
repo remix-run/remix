@@ -82,6 +82,29 @@ describe('Accept-Encoding', () => {
     assert.equal(header.getPreferred(['deflate', 'br']), 'deflate')
   })
 
+  it('lets an explicit encoding override a wildcard with a higher weight', () => {
+    let header = new AcceptEncoding('gzip;q=0, *')
+    assert.equal(header.getWeight('gzip'), 0)
+    assert.equal(header.getWeight('br'), 1)
+    assert.equal(header.accepts('gzip'), false)
+  })
+
+  it('lets an explicit encoding with a lower weight override a wildcard', () => {
+    let header = new AcceptEncoding('gzip;q=0.5, *')
+    assert.equal(header.getWeight('gzip'), 0.5)
+  })
+
+  it('gets the highest weight for a wildcard query', () => {
+    let header = new AcceptEncoding('gzip, *;q=0.5')
+    assert.equal(header.getWeight('*'), 1)
+  })
+
+  it('skips encodings excluded by an explicit entry when choosing a preferred encoding', () => {
+    let header = new AcceptEncoding('gzip;q=0, *')
+    assert.equal(header.getPreferred(['gzip', 'br']), 'br')
+    assert.equal(header.getPreferred(['gzip']), null)
+  })
+
   it('sets and gets encodings', () => {
     let header = new AcceptEncoding()
     header.set('gzip', 1)

@@ -61,23 +61,35 @@ export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
    * Gets the weight of a language with the given locale identifier. Performs wildcard and subtype
    * matching, so `en` matches `en-US` and `en-GB`, and `*` matches all languages.
    *
+   * When several language ranges in the header match, the most specific one wins: `en-US` takes
+   * precedence over `en`, which takes precedence over `*`, regardless of their order or weights in
+   * the header. For example, `en;q=0, *` gives `en-US` a weight of `0`.
+   *
    * @param language The locale identifier of the language to get
    * @returns The weight of the language, or `0` if it is not in the header
    */
   getWeight(language: string): number {
     let [base, subtype] = language.toLowerCase().split('-')
+    let matchWeight = 0
+    let matchSpecificity = -1
+    let narrowerWeight = 0
 
-    for (let [key, value] of this) {
+    for (let [key, weight] of this) {
       let [b, s] = key.split('-')
-      if (
-        (b === base || b === '*' || base === '*') &&
-        (s === subtype || s === undefined || subtype === undefined)
-      ) {
-        return value
+
+      if ((b === base || b === '*') && (s === subtype || s === undefined)) {
+        let specificity = b === '*' ? 0 : s === undefined ? 1 : 2
+        if (specificity > matchSpecificity) {
+          matchWeight = weight
+          matchSpecificity = specificity
+        }
+      } else if ((base === '*' || b === base) && subtype === undefined) {
+        // A range that is narrower than the query, e.g. `en-US` for `en`
+        narrowerWeight = Math.max(narrowerWeight, weight)
       }
     }
 
-    return 0
+    return Math.max(matchWeight, narrowerWeight)
   }
 
   /**
