@@ -1,9 +1,16 @@
 {
   "$schema": "node_modules/remix/schema/remix.json",
   "assets": {
+    "rootDir": "../..",
     "basePath": "/assets",
-    "allowFiles": ["app/**/public/**"],
-    "denyFiles": ["app/**/*.test.*"],
+    "mounts": {
+      "app": "demos/shopify/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": ["demos/shopify/app/**/public/**"],
+    "allowPackages": ["remix"],
+    "denyFiles": ["demos/shopify/app/**/*.test.*"],
     "files": {
       "extensions": [".svg", ".webp", ".woff2", ".vtt"]
     }

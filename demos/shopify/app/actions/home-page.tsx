@@ -4,13 +4,14 @@ import { signupHref } from '../data/pages.ts'
 import { videos } from '../data/videos.ts'
 import { routes } from '../routes.ts'
 import { CallToAction, Document } from '../ui/document.tsx'
-import { AutoplayVideo, CdnImage } from '../ui/media.tsx'
+import { CdnImage } from '../ui/media.tsx'
+import { AutoplayVideo } from '../ui/public/autoplay-video.tsx'
+import { PauseAnimationsButton } from '../ui/public/pause-animations-button.tsx'
 
 export function HomePage() {
   return () => (
     <Document
       home
-      head={<script type="module" src={assets.mediaScript} />}
       title="Be the next AI all-star"
       description="Dream big and build fast on Shopify. The world’s best commerce platform."
     >
@@ -61,9 +62,7 @@ export function HomePage() {
                 Start for free
               </a>
             </div>
-            <button class="button button-outline" type="button" data-pause-videos hidden>
-              Pause animations
-            </button>
+            <PauseAnimationsButton class="button button-outline" />
           </div>
         </div>
       </section>

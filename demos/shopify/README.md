@@ -24,11 +24,11 @@ pnpm -C demos/shopify preview
 
 The prerender script calls `router.fetch(new Request(...))` for every page. It consumes each full HTML response and writes 33 pages to `demos/shopify/dist/`, plus a `404.html` file. Nested routes use directory indexes, such as `dist/website/builder/index.html`.
 
-The script copies the root `public/` files, fetches every stylesheet, script, font, image, and caption file the pages reference from the asset server (minified, with content-fingerprinted URLs), writes a Cloudflare `_headers` file that keeps those assets' long-lived `Cache-Control`, checks local page links, fragments, and asset references, and replaces the previous output only after rendering and validation succeed. Each successful run removes stale files from the previous export. Prerendering needs no running server, browser, or network connection. Run one export per output directory at a time.
+The script copies the root `public/` files, fetches every stylesheet, script, font, image, and caption file the pages reference from the asset server (minified, with content-fingerprinted URLs), writes a Cloudflare `_headers` file that keeps those assets' `Content-Type` and long-lived `Cache-Control`, checks local page links, fragments, and asset references, and replaces the previous output only after rendering and validation succeed. Each successful run removes stale files from the previous export. Prerendering needs no running server, browser, or network connection. Run one export per output directory at a time.
 
 The preview serves the exported files and negotiates the homepage format on [http://localhost:44100](http://localhost:44100). You can also deploy `dist/` to a static host that supports directory index files. Configure the host to use `404.html` for missing pages. A plain static host also needs request handling for the Markdown homepage negotiation described below. The site uses root-relative links, so serve it at the root of a domain.
 
-Navigation, merchant panels, billing controls, carousels, and FAQ disclosures use native HTML and CSS. The homepage and Agentic Storefronts load a small `media.js` script to start visible videos once the page has loaded, pause offscreen videos and hidden tabs, and honor reduced motion. A pause button controls decorative motion. Without JavaScript, posters and native testimonial controls remain available. Below-fold videos use native `loading="lazy"` for their posters; older browsers may load those posters sooner. Videos stream from Shopify’s CDN; images, posters, captions, and fonts are served locally.
+Navigation, merchant panels, billing controls, carousels, and FAQ disclosures use native HTML and CSS. Every page loads the Remix component runtime (about 44 KB compressed). On the homepage and Agentic Storefronts, the `AutoplayVideo` and `PauseAnimationsButton` client entries hydrate to start visible videos once the page has loaded, pause offscreen videos and hidden tabs, and honor reduced motion. The pause button controls decorative motion. The site has no Frames or client navigation, so the browser entry uses native `import()` without the multiple-import-maps polyfill. Without JavaScript, posters and native testimonial controls remain available. Below-fold videos use native `loading="lazy"` for their posters; older browsers may load those posters sooner. Videos stream from Shopify’s CDN; images, posters, captions, and fonts are served locally.
 
 ## Agent access
 
@@ -91,8 +91,9 @@ The Worker name is `remix-shopify-demo`; change `name` in `wrangler.jsonc` to us
 - `app/router.ts` installs `staticFiles()`, the trailing-slash redirect in `app/middleware/trailing-slash.ts`, and `render()`, and maps the controllers. The router answers HEAD and unsupported methods.
 - `scripts/render-site.ts` writes and checks the static export.
 - `app/assets.ts` configures the `remix/assets` server from `remix.json` and resolves the URLs of the stylesheets, script, font, logo, posters, and captions. Browser files live in `app/ui/public/` and `app/actions/public/`; the root `public/` directory keeps only files with fixed URLs, such as the favicon and the agent guides.
-- `app/ui/public/media.js` handles viewport playback and motion preferences for native videos.
-- `scripts/preview.ts` serves the output with `staticFiles()`.
+- `app/actions/public/entry.ts` starts the Remix component runtime, which hydrates the client entries.
+- `app/ui/public/autoplay-video.tsx` and `app/ui/public/pause-animations-button.tsx` are the client entries for video playback; `app/ui/public/motion.ts` holds the page-wide pause, visibility, and reduced-motion state they share.
+- `scripts/preview.ts` serves the output with `staticFiles()` and applies the exported `_headers` rules, as Cloudflare does.
 - `app/utils/agent-response.ts` decides whether a request prefers Markdown, and negotiates the homepage for the static preview and Worker.
 - `worker.ts` applies that negotiation to the Cloudflare `ASSETS` binding.
 - `wrangler.jsonc` configures static assets and homepage Worker routing for Cloudflare.

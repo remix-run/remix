@@ -4,7 +4,7 @@ import { access, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promise
 import * as os from 'node:os'
 import * as path from 'node:path'
 
-import { assets } from '../app/assets.ts'
+import { assets, scriptEntry } from '../app/assets.ts'
 import { pagePaths } from '../app/data/pages.ts'
 import { router } from '../app/router.ts'
 import { renderSite } from './render-site.ts'
@@ -33,9 +33,11 @@ describe('static export', () => {
       assert.match(await readFile(path.join(output, '404.html'), 'utf8'), /404/)
       assert.match(await readFile(path.join(output, assets.styles.slice(1)), 'utf8'), /@font-face/)
       await access(path.join(output, assets.font.slice(1)))
+      let headers = await readFile(path.join(output, '_headers'), 'utf8')
+      assert.match(headers, new RegExp(`^${assets.styles}\\n  Content-Type: text/css`, 'm'))
       assert.match(
-        await readFile(path.join(output, '_headers'), 'utf8'),
-        new RegExp(`^${assets.styles}\\n  Cache-Control: `, 'm'),
+        headers,
+        new RegExp(`^${scriptEntry.href}\\n  Content-Type: application/javascript`, 'm'),
       )
       for (let filename of ['llms.txt', 'llms-full.txt', 'agents.md']) {
         assert.equal(
@@ -180,9 +182,18 @@ describe('static export', () => {
       let headers = await readFile(path.join(output, '_headers'), 'utf8')
       assert.match(
         headers,
-        new RegExp(`^${encodedStylesheet}\\n  Cache-Control: ${immutable}$`, 'm'),
+        new RegExp(
+          `^${encodedStylesheet}\\n  Content-Type: text/css\\n  Cache-Control: ${immutable}$`,
+          'm',
+        ),
       )
-      assert.match(headers, new RegExp(`^${encodedFont}\\n  Cache-Control: ${immutable}$`, 'm'))
+      assert.match(
+        headers,
+        new RegExp(
+          `^${encodedFont}\\n  Content-Type: font/woff2\\n  Cache-Control: ${immutable}$`,
+          'm',
+        ),
+      )
     } finally {
       await rm(directory, { recursive: true, force: true })
     }

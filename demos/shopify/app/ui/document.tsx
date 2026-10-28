@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/component'
+import { ImportMap } from 'remix/component/server'
 
-import { assets } from '../assets.ts'
+import { assets, scriptEntry } from '../assets.ts'
 import { images } from '../data/images.ts'
 import {
   editionLinks,
@@ -43,6 +44,11 @@ export function Document(handle: Handle<DocumentProps>) {
         />
         <link rel="stylesheet" href={assets.styles} />
         {handle.props.head}
+        <ImportMap value={scriptEntry.importMap} />
+        {scriptEntry.preloads.map((href) => (
+          <link key={href} rel="modulepreload" href={href} />
+        ))}
+        <script type="module" src={scriptEntry.href} />
       </head>
       <body class={handle.props.home ? 'home' : 'inner-page'}>
         <a class="skip-link" href="#main">

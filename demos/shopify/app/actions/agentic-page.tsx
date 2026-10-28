@@ -2,7 +2,8 @@ import { assets } from '../assets.ts'
 import { images, logos } from '../data/images.ts'
 import { videos } from '../data/videos.ts'
 import { Document } from '../ui/document.tsx'
-import { AutoplayVideo } from '../ui/media.tsx'
+import { AutoplayVideo } from '../ui/public/autoplay-video.tsx'
+import { PauseAnimationsButton } from '../ui/public/pause-animations-button.tsx'
 
 const signupHref =
   'https://admin.shopify.com/signup?locale=en&language=en&signup_page=https%3A%2F%2Fwww.shopify.com%2Fagentic-storefronts&signup_types%5B%5D=paid_trial_experience'
@@ -85,12 +86,7 @@ export function AgenticPage() {
     <Document
       title="Agentic Storefronts: Sell in AI chats"
       description="Reach new buyers in AI chats and manage it all in one place with Shopify Agentic Storefronts."
-      head={
-        <>
-          <link rel="stylesheet" href={assets.agenticStyles} />
-          <script type="module" src={assets.mediaScript} />
-        </>
-      }
+      head={<link rel="stylesheet" href={assets.agenticStyles} />}
     >
       <div class="agentic-page">
         <section class="agentic-hero" aria-labelledby="agentic-title">
@@ -113,9 +109,7 @@ export function AgenticPage() {
                   Talk to sales on Shopify
                 </a>
               </div>
-              <button class="agentic-motion" type="button" data-pause-videos hidden>
-                Pause animations
-              </button>
+              <PauseAnimationsButton class="agentic-motion" />
             </div>
             <AutoplayVideo
               class="agentic-hero-video"

@@ -1,5 +1,8 @@
 # Performance brief: Remix 3 demo vs. shopify.com
 
+> [!NOTE]
+> These measurements predate the switch from a 1 KB `media.js` script to Remix client entries, which load the Remix component runtime (about 44 KB compressed, in 43 modules) on every page. The script figures below describe the earlier version. Re-measure after deploying the current demo.
+
 Measured October 14, 2026, with the demo deployed to Cloudflare Workers. This compares an **incomplete demo** with the production site. The demo has the homepage, Agentic Storefronts, pricing, and shared product pages, with Shopify's original video and images. It does not have analytics, consent, experiments, personalization, a CMS, or full content parity. The results are lab measurements, not field data, so treat them as a direction to test rather than a forecast.
 
 ## Bottom line

@@ -35,7 +35,7 @@ export async function renderSite(
   try {
     await cp(publicDirectory, stagingDirectory, { recursive: true })
 
-    let assetCacheControl = new Map<string, string | null>()
+    let assetHeaders = new Map<string, Headers>()
 
     function resolveOutput(pathname: string, referrer: string) {
       let file = path.resolve(stagingDirectory, `.${decodeURIComponent(pathname)}`)
@@ -47,12 +47,12 @@ export async function renderSite(
 
     // Writes an asset server response to the export, along with the files its CSS references.
     async function exportAsset(url: URL, referrer: string): Promise<void> {
-      if (assetCacheControl.has(url.pathname)) return
+      if (assetHeaders.has(url.pathname)) return
       let response = await fetchPage(new Request(url))
       if (response.status !== 200) {
         throw new Error(`Missing local page or asset on ${referrer}: ${url.pathname}`)
       }
-      assetCacheControl.set(url.pathname, response.headers.get('Cache-Control'))
+      assetHeaders.set(url.pathname, response.headers)
       let destination = resolveOutput(url.pathname, referrer)
       await mkdir(path.dirname(destination), { recursive: true })
       if (!response.headers.get('Content-Type')?.includes('text/css')) {
@@ -123,14 +123,23 @@ export async function renderSite(
       }
     }
 
-    // Cloudflare Workers Static Assets reads cache rules from `_headers`, so fingerprinted assets
-    // keep the asset server's long-lived Cache-Control header after export.
-    let headerRules = [...assetCacheControl]
-      .filter(([, cacheControl]) => cacheControl)
-      .map(
-        ([pathname, cacheControl]) =>
-          `${encodeFingerprintSeparators(pathname)}\n  Cache-Control: ${cacheControl}\n`,
+    // Cloudflare Workers Static Assets reads response headers from `_headers`. Copying the asset
+    // server's headers keeps fingerprinted assets' long-lived Cache-Control after export. It also
+    // keeps their Content-Type: compiled scripts keep their source extensions (`entry.ts`,
+    // `autoplay-video.tsx`), which a static host would otherwise serve as `video/mp2t` or
+    // `application/octet-stream`, and browsers refuse to run module scripts with those types.
+    let headerRules = [...assetHeaders].map(([pathname, headers]) => {
+      let lines = ['Content-Type', 'Cache-Control'].flatMap((name) => {
+        let value = headers.get(name)
+        return value ? [`  ${name}: ${value}\n`] : []
+      })
+      return `${encodeFingerprintSeparators(pathname)}\n${lines.join('')}`
+    })
+    if (headerRules.length > 100) {
+      throw new Error(
+        `The export needs ${headerRules.length} _headers rules, but Cloudflare allows at most 100`,
       )
+    }
     if (headerRules.length > 0) {
       await writeFile(path.join(stagingDirectory, '_headers'), headerRules.join(''))
     }

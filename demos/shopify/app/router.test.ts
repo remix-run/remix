@@ -37,9 +37,11 @@ describe('Shopify demo', () => {
       assert.match(html, /^<!doctype html>/i)
       assert.equal(document.querySelectorAll('h1').length, 1, pathname)
       assert.equal(document.querySelector('html')?.getAttribute('lang'), 'en')
+      assert.equal(document.querySelectorAll('script[type="module"]').length, 1, pathname)
       assert.equal(
-        document.querySelectorAll('script').length,
-        pathname === '/' || pathname === '/agentic-storefronts' ? 1 : 0,
+        document.querySelector('#rmx-data') !== null,
+        pathname === '/' || pathname === '/agentic-storefronts',
+        pathname,
       )
       let page = Object.values(pageSummaries).find((page) => page.path === pathname)
       if (page && marketingPaths.has(pathname)) {

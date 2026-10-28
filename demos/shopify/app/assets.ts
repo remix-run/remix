@@ -19,13 +19,14 @@ function getHref(file: string) {
   return assetServer.getHref(path.resolve(import.meta.dirname, file))
 }
 
+export const scriptEntry = await assetServer.getScriptEntry(
+  path.resolve(import.meta.dirname, 'actions/public/entry.ts'),
+)
+
 export const assets = {
   styles: await getHref('ui/public/styles.css'),
   font: await getHref('ui/public/shopify.woff2'),
   logo: await getHref('ui/public/logo.svg'),
-  mediaScript: (
-    await assetServer.getScriptEntry(path.resolve(import.meta.dirname, 'ui/public/media.js'))
-  ).href,
   pricingStyles: await getHref('actions/public/pricing.css'),
   agenticStyles: await getHref('actions/public/agentic.css'),
   heroPoster: await getHref('actions/public/hero-poster.webp'),
