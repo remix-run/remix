@@ -2,10 +2,12 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { parse } from 'node-html-parser'
 
+import { assets } from './assets.ts'
 import { editionLinks, productGroups, whyCards, whyLinks } from './data/navigation.ts'
-import { pageSummaries, pages } from './data/pages.ts'
+import { pageSummaries } from './data/pages.ts'
 import { videos } from './data/videos.ts'
 import { router } from './router.ts'
+import { routes } from './routes.ts'
 
 const origin = 'http://shopify-demo.local'
 const cdn = 'https://cdn.shopify.com/'
@@ -25,6 +27,7 @@ describe('Shopify demo', () => {
     )
     localPaths.add('/pricing')
     assert.equal(localPaths.size, Object.values(pageSummaries).length)
+    let marketingPaths = new Set(Object.values(routes.marketing).map((route) => route.href()))
     for (let pathname of ['/', '/sitemap', ...localPaths]) {
       let response = await router.fetch(new Request(origin + pathname))
       assert.equal(response.status, 200, pathname)
@@ -34,13 +37,15 @@ describe('Shopify demo', () => {
       assert.match(html, /^<!doctype html>/i)
       assert.equal(document.querySelectorAll('h1').length, 1, pathname)
       assert.equal(document.querySelector('html')?.getAttribute('lang'), 'en')
+      assert.equal(document.querySelectorAll('script[type="module"]').length, 1, pathname)
       assert.equal(
-        document.querySelectorAll('script').length,
-        pathname === '/' || pathname === '/agentic-storefronts' ? 1 : 0,
+        document.querySelector('#rmx-data') !== null,
+        pathname === '/' || pathname === '/agentic-storefronts',
+        pathname,
       )
-      let page = Object.values(pages).find((page) => page.path === pathname)
-      if (page) {
-        assert.equal(document.querySelector('h1')?.textContent, page.title, pathname)
+      let page = Object.values(pageSummaries).find((page) => page.path === pathname)
+      if (page && marketingPaths.has(pathname)) {
+        assert.equal(document.querySelector('title')?.textContent, `${page.label} — Shopify demo`)
       }
     }
   })
@@ -49,10 +54,12 @@ describe('Shopify demo', () => {
     let response = await router.fetch(new Request(origin + '/this-page-is-missing'))
     assert.equal(response.status, 404)
     assert.match(await response.text(), /Back to the homepage/)
-    let asset = await router.fetch(new Request(origin + '/styles.css'))
+    let asset = await router.fetch(new Request(origin + assets.styles))
     assert.equal(asset.status, 200)
     assert.match(asset.headers.get('Content-Type') ?? '', /text\/css/)
     assert.match(await asset.text(), /@font-face/)
+    let missingAsset = await router.fetch(new Request(origin + '/assets/app/ui/public/missing.css'))
+    assert.equal(missingAsset.status, 404)
   })
 
   it('handles query strings, methods, and missing paths', async () => {
@@ -81,6 +88,9 @@ describe('Shopify demo', () => {
     assert.equal(missing.status, 404)
     assert.match(await missing.text(), /Back to the homepage/)
 
+    let missingPost = await router.fetch(new Request(origin + '/nope', { method: 'POST' }))
+    assert.equal(missingPost.status, 404)
+
     let missingHead = await router.fetch(
       new Request(origin + '/this-page-is-missing', { method: 'HEAD' }),
     )
@@ -105,12 +115,8 @@ describe('Shopify demo', () => {
   })
 
   it('serves images from Shopify’s CDN with their dimensions reserved', async () => {
-    let localImages = new Set([
-      '/assets/logo.svg',
-      '/media/hero-poster.webp',
-      '/media/agentic-hero-poster.webp',
-    ])
-    for (let pathname of ['/', '/agentic-storefronts', pages.checkout.path]) {
+    let localImages = new Set([assets.logo, assets.heroPoster, assets.agenticHeroPoster])
+    for (let pathname of ['/', '/agentic-storefronts', routes.marketing.checkout.href()]) {
       let response = await router.fetch(new Request(origin + pathname))
       let document = parse(await response.text())
       let images = document.querySelectorAll('img')
@@ -134,12 +140,12 @@ describe('Shopify demo', () => {
   it('redirects trailing slashes to the canonical URL and keeps query parameters', async () => {
     for (let pathname of ['/pricing', '/website/builder', '/editions/spring2026', '/sitemap']) {
       let response = await router.fetch(new Request(`${origin}${pathname}/?from=nav`))
-      assert.equal(response.status, 308, pathname)
+      assert.equal(response.status, 301, pathname)
       assert.equal(response.headers.get('Location'), `${pathname}?from=nav`)
     }
 
     let head = await router.fetch(new Request(origin + '/pricing/', { method: 'HEAD' }))
-    assert.equal(head.status, 308)
+    assert.equal(head.status, 301)
     assert.equal(head.headers.get('Location'), '/pricing')
     assert.equal(await head.text(), '')
   })

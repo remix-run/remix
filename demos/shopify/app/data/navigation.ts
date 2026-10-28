@@ -1,6 +1,5 @@
 import { routes } from '../routes.ts'
 import type { ImageName } from './images.ts'
-import { pages } from './pages.ts'
 
 export interface NavigationLink {
   label: string
@@ -17,75 +16,75 @@ export interface NavigationCard extends NavigationLink {
 }
 
 export const whyCards: NavigationCard[] = [
-  { label: 'Get started fast', href: pages.start.path, image: 'start' },
-  { label: 'Switch to Shopify', href: pages.sell.path, image: 'hero' },
+  { label: 'Get started fast', href: routes.marketing.start.href(), image: 'start' },
+  { label: 'Switch to Shopify', href: routes.marketing.sell.href(), image: 'hero' },
   {
     label: 'Trusted by enterprise brands',
-    href: pages.enterprise.path,
+    href: routes.marketing.enterprise.href(),
     image: 'enterprise',
   },
 ]
 
 export const whyLinks: NavigationLink[] = [
-  { label: 'World’s best checkout', href: pages.checkout.path },
-  { label: 'Sidekick', href: pages.sidekick.path },
+  { label: 'World’s best checkout', href: routes.marketing.checkout.href() },
+  { label: 'Sidekick', href: routes.marketing.sidekick.href() },
 ]
 
 export const productGroups: NavigationGroup[] = [
   {
     label: 'Build your website',
     links: [
-      { label: 'Website Builder', href: pages.websiteBuilder.path },
+      { label: 'Website Builder', href: routes.marketing.websiteBuilder.href() },
       { label: 'Themes', href: 'https://themes.shopify.com/' },
-      { label: 'Domains', href: pages.domains.path },
-      { label: 'Customer Accounts', href: pages.customerAccounts.path },
-      { label: 'Sidekick', href: pages.sidekick.path },
+      { label: 'Domains', href: routes.marketing.domains.href() },
+      { label: 'Customer Accounts', href: routes.marketing.customerAccounts.href() },
+      { label: 'Sidekick', href: routes.marketing.sidekick.href() },
     ],
   },
   {
     label: 'Sell anywhere',
     links: [
-      { label: 'Online', href: pages.online.path },
+      { label: 'Online', href: routes.marketing.online.href() },
       { label: 'AI Chats', href: routes.agenticStorefronts.href() },
-      { label: 'Point of Sale', href: pages.pos.path },
-      { label: 'Shop App', href: pages.shop.path },
-      { label: 'Social & Marketplaces', href: pages.channels.path },
-      { label: 'Global', href: pages.international.path },
-      { label: 'B2B', href: pages.b2bEnterprise.path },
-      { label: 'Across Markets', href: pages.markets.path },
+      { label: 'Point of Sale', href: routes.marketing.pos.href() },
+      { label: 'Shop App', href: routes.marketing.shop.href() },
+      { label: 'Social & Marketplaces', href: routes.marketing.channels.href() },
+      { label: 'Global', href: routes.marketing.international.href() },
+      { label: 'B2B', href: routes.marketing.b2bEnterprise.href() },
+      { label: 'Across Markets', href: routes.marketing.markets.href() },
     ],
   },
   {
     label: 'Marketing & analytics',
     links: [
-      { label: 'Advertising & Campaigns', href: pages.marketing.path },
-      { label: 'Email & Customer Chat', href: pages.marketingAutomationTools.path },
-      { label: 'Discounts', href: pages.discounts.path },
-      { label: 'Analytics', href: pages.analytics.path },
-      { label: 'Test & Launch', href: pages.testAndLaunch.path },
+      { label: 'Advertising & Campaigns', href: routes.marketing.marketing.href() },
+      { label: 'Email & Customer Chat', href: routes.marketing.marketingAutomationTools.href() },
+      { label: 'Discounts', href: routes.marketing.discounts.href() },
+      { label: 'Analytics', href: routes.marketing.analytics.href() },
+      { label: 'Test & Launch', href: routes.marketing.testAndLaunch.href() },
     ],
   },
   {
     label: 'Run your business',
     links: [
-      { label: 'Orders & Inventory', href: pages.orders.path },
-      { label: 'Shipping', href: pages.shipping.path },
-      { label: 'Finances & Funding', href: pages.finance.path },
-      { label: 'Workflow Automation', href: pages.flow.path },
+      { label: 'Orders & Inventory', href: routes.marketing.orders.href() },
+      { label: 'Shipping', href: routes.marketing.shipping.href() },
+      { label: 'Finances & Funding', href: routes.marketing.finance.href() },
+      { label: 'Workflow Automation', href: routes.marketing.flow.href() },
     ],
   },
   {
     label: 'Get paid',
     links: [
-      { label: 'Checkout', href: pages.checkout.path },
-      { label: 'Payments', href: pages.payments.path },
-      { label: 'Taxes', href: pages.tax.path },
+      { label: 'Checkout', href: routes.marketing.checkout.href() },
+      { label: 'Payments', href: routes.marketing.payments.href() },
+      { label: 'Taxes', href: routes.marketing.tax.href() },
     ],
   },
   {
     label: 'Customize & extend Shopify',
     links: [
-      { label: 'Commerce for Agents', href: pages.ucp.path },
+      { label: 'Commerce for Agents', href: routes.marketing.ucp.href() },
       { label: 'Shopify App Store ↗', href: 'https://apps.shopify.com/' },
       { label: 'Shopify.dev ↗', href: 'https://shopify.dev/' },
     ],
@@ -93,13 +92,16 @@ export const productGroups: NavigationGroup[] = [
 ]
 
 export const editionLinks: NavigationLink[] = [
-  { label: 'Shopify Editions', href: pages.editions.path },
-  { label: 'Spring 2026 Edition', href: pages.spring2026.path },
-  { label: 'Agentic Storefronts', href: `${pages.spring2026.path}#agentic-storefronts` },
-  { label: 'Campaign Autopilot', href: `${pages.spring2026.path}#campaign-autopilot` },
+  { label: 'Shopify Editions', href: routes.marketing.editions.href() },
+  { label: 'Spring 2026 Edition', href: routes.marketing.spring2026.href() },
+  {
+    label: 'Agentic Storefronts',
+    href: `${routes.marketing.spring2026.href()}#agentic-storefronts`,
+  },
+  { label: 'Campaign Autopilot', href: `${routes.marketing.spring2026.href()}#campaign-autopilot` },
   {
     label: 'Shopify AI Toolkit for devs',
-    href: `${pages.spring2026.path}#shopify-ai-toolkit-for-devs`,
+    href: `${routes.marketing.spring2026.href()}#shopify-ai-toolkit-for-devs`,
   },
 ]
 
@@ -108,7 +110,7 @@ export const footerGroups: NavigationGroup[] = [
     label: 'Shopify',
     links: [
       { label: 'What is Shopify?', href: 'https://www.shopify.com/blog/what-is-shopify' },
-      { label: 'Shopify Editions', href: pages.editions.path },
+      { label: 'Shopify Editions', href: routes.marketing.editions.href() },
       { label: 'Careers', href: 'https://www.shopify.com/careers' },
       { label: 'Investors', href: 'https://www.shopify.com/investors' },
       { label: 'Newsroom', href: 'https://www.shopify.com/news' },

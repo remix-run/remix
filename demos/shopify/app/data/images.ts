@@ -2,14 +2,14 @@
 // requested `width` and returns the best format the browser accepts.
 const cdn = 'https://cdn.shopify.com/b/shopify-brochure2-assets'
 
-interface Image {
+export interface ResponsiveImage {
   src: string
   width: number
   height: number
   srcSet: string
 }
 
-function cdnImage(source: string, width: number, height: number): Image {
+function cdnImage(source: string, width: number, height: number): ResponsiveImage {
   let widths = [...new Set([400, 800, width])].filter((size) => size <= width)
   return {
     src: resize(source, width),

@@ -3,8 +3,14 @@ import type { RouterTypes } from 'remix/router'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 
-export function notFound({ render }: RouterTypes['context']): Response {
-  return render(
+export function notFound({ method, render }: RouterTypes['context']): Response {
+  let response = render(<NotFoundPage />, { status: 404 })
+  // The router strips HEAD bodies for matched GET routes, but not for its default handler.
+  return method === 'HEAD' ? new Response(null, response) : response
+}
+
+function NotFoundPage() {
+  return () => (
     <Document title="Page not found" description="This page is not part of the Shopify demo.">
       <section class="not-found section-space container">
         <p class="eyebrow">404 / A little off the map</p>
@@ -18,7 +24,6 @@ export function notFound({ render }: RouterTypes['context']): Response {
           Back to the homepage →
         </a>
       </section>
-    </Document>,
-    { status: 404 },
+    </Document>
   )
 }

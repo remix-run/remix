@@ -1,24 +1,32 @@
-import { redirect } from 'remix/response/redirect'
+import * as path from 'node:path'
+import { openLazyFile } from 'remix/fs'
+import { createFileResponse } from 'remix/response/file'
 import { createController } from 'remix/router'
 
-import { pagePaths, pages } from '../data/pages.ts'
-import type { MarketingPage } from '../data/pages.ts'
+import { assetServer } from '../assets.ts'
 import { routes } from '../routes.ts'
+import { agentGuideContentType, prefersMarkdown } from '../utils/agent-response.ts'
 import { AgenticPage } from './agentic-page.tsx'
 import { HomePage } from './home-page.tsx'
-import { ProductPage } from './marketing-page.tsx'
 import { notFound } from './not-found.tsx'
 import { PricingPage } from './pricing-page.tsx'
 import { SitemapPage } from './sitemap-page.tsx'
 
-const marketingPages = new Map<string, MarketingPage>(
-  Object.values(pages).map((page) => [page.path, page]),
-)
+const agentGuidePath = path.resolve(import.meta.dirname, '../../public/agents.md')
 
 export default createController(routes, {
   actions: {
-    home({ render }) {
-      return render(<HomePage />)
+    async home({ headers, render, request }) {
+      if (prefersMarkdown(headers)) {
+        let guide = openLazyFile(agentGuidePath, { type: agentGuideContentType })
+        let response = await createFileResponse(guide, request)
+        response.headers.set('Vary', 'Accept')
+        return response
+      }
+      return render(<HomePage />, { headers: { Vary: 'Accept' } })
+    },
+    async assets(context) {
+      return (await assetServer.fetch(context.request)) ?? notFound(context)
     },
     agenticStorefronts({ render }) {
       return render(<AgenticPage />)
@@ -28,17 +36,6 @@ export default createController(routes, {
     },
     sitemap({ render }) {
       return render(<SitemapPage />)
-    },
-    marketing(context) {
-      let { url, render } = context
-
-      let canonicalPath = url.pathname.replace(/\/+$/, '')
-      if (canonicalPath !== url.pathname && pagePaths.includes(canonicalPath)) {
-        return redirect(`${canonicalPath}${url.search}`, 308)
-      }
-
-      let page = marketingPages.get(url.pathname)
-      return page ? render(<ProductPage page={page} />) : notFound(context)
     },
   },
 })

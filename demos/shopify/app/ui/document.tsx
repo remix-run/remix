@@ -1,5 +1,7 @@
 import type { Handle, RemixNode } from 'remix/component'
+import { ImportMap } from 'remix/component/server'
 
+import { assets, scriptEntry } from '../assets.ts'
 import { images } from '../data/images.ts'
 import {
   editionLinks,
@@ -8,15 +10,15 @@ import {
   whyCards,
   whyLinks,
 } from '../data/navigation.ts'
-import { pages, signupHref } from '../data/pages.ts'
+import { signupHref } from '../data/pages.ts'
 import { routes } from '../routes.ts'
+import { CdnImage } from './media.tsx'
 
 export interface DocumentProps {
   title: string
   description: string
   home?: boolean
-  stylesheet?: string
-  media?: boolean
+  head?: RemixNode
   children: RemixNode
 }
 
@@ -30,18 +32,23 @@ export function Document(handle: Handle<DocumentProps>) {
         <meta name="theme-color" content="#000000" />
         <meta name="robots" content="noindex, nofollow" />
         <title>{handle.props.title} — Shopify demo</title>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="preconnect" href="https://cdn.shopify.com" />
         <link
           rel="preload"
           as="font"
-          href="/assets/shopify.woff2"
+          href={assets.font}
           type="font/woff2"
           crossOrigin="anonymous"
         />
-        <link rel="stylesheet" href="/styles.css" />
-        {handle.props.stylesheet && <link rel="stylesheet" href={handle.props.stylesheet} />}
-        {handle.props.media && <script src="/media.js" defer />}
+        <link rel="stylesheet" href={assets.styles} />
+        {handle.props.head}
+        <ImportMap value={scriptEntry.importMap} />
+        {scriptEntry.preloads.map((href) => (
+          <link key={href} rel="modulepreload" href={href} />
+        ))}
+        <script type="module" src={scriptEntry.href} />
       </head>
       <body class={handle.props.home ? 'home' : 'inner-page'}>
         <a class="skip-link" href="#main">
@@ -60,7 +67,7 @@ function SiteHeader() {
     <header class="site-header">
       <div class="header-inner container">
         <a class="brand" href={routes.home.href()} aria-label="Shopify home">
-          <img src="/assets/logo.svg" alt="Shopify" width="125" height="36" />
+          <img src={assets.logo} alt="Shopify" width="125" height="36" />
         </a>
         <nav class="desktop-nav" aria-label="Main navigation">
           <button class="nav-trigger" type="button" popoverTarget="why-menu">
@@ -70,12 +77,10 @@ function SiteHeader() {
             <div class="why-cards">
               {whyCards.map((link) => (
                 <a key={link.href} class="why-card" href={link.href}>
-                  <img
-                    {...images[link.image]}
+                  <CdnImage
+                    image={images[link.image]}
                     alt=""
                     sizes="(max-width: 1674px) 28vw, 466px"
-                    loading="lazy"
-                    decoding="async"
                   />
                   <strong>{link.label}</strong>
                   <span aria-hidden="true">↗</span>
@@ -119,7 +124,7 @@ function SiteHeader() {
             </div>
           </div>
           <a href={routes.pricing.href()}>Pricing</a>
-          <a href={pages.enterprise.path}>Enterprise</a>
+          <a href={routes.marketing.enterprise.href()}>Enterprise</a>
         </nav>
         <div class="header-actions">
           <a class="login-link" href="https://www.shopify.com/login">
@@ -168,7 +173,7 @@ function SiteHeader() {
                 </ul>
               </details>
               <a href={routes.pricing.href()}>Pricing</a>
-              <a href={pages.enterprise.path}>Enterprise</a>
+              <a href={routes.marketing.enterprise.href()}>Enterprise</a>
               <a href="https://www.shopify.com/login">Log in ↗</a>
             </nav>
           </div>
@@ -201,19 +206,15 @@ export function CallToAction() {
           </a>
         </div>
         <div class="closing-images" aria-hidden="true">
-          <img
-            {...images['merchant-1']}
+          <CdnImage
+            image={images['merchant-1']}
             alt=""
             sizes="(max-width: 600px) 220px, (max-width: 1674px) 23vw, 340px"
-            loading="lazy"
-            decoding="async"
           />
-          <img
-            {...images['merchant-2']}
+          <CdnImage
+            image={images['merchant-2']}
             alt=""
             sizes="(max-width: 600px) 220px, (max-width: 1674px) 23vw, 340px"
-            loading="lazy"
-            decoding="async"
           />
         </div>
       </div>
@@ -227,7 +228,7 @@ function SiteFooter() {
       <div class="container">
         <div class="footer-grid">
           <a href={routes.home.href()} class="footer-brand" aria-label="Back to Shopify home">
-            <img src="/assets/logo.svg" alt="Shopify" width="125" height="36" loading="lazy" />
+            <img src={assets.logo} alt="Shopify" width="125" height="36" loading="lazy" />
           </a>
           {footerGroups.map((group) => (
             <div key={group.label}>

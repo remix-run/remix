@@ -1,6 +1,9 @@
+import { assets } from '../assets.ts'
 import { images, logos } from '../data/images.ts'
 import { videos } from '../data/videos.ts'
 import { Document } from '../ui/document.tsx'
+import { AutoplayVideo } from '../ui/public/autoplay-video.tsx'
+import { PauseAnimationsButton } from '../ui/public/pause-animations-button.tsx'
 
 const signupHref =
   'https://admin.shopify.com/signup?locale=en&language=en&signup_page=https%3A%2F%2Fwww.shopify.com%2Fagentic-storefronts&signup_types%5B%5D=paid_trial_experience'
@@ -83,8 +86,7 @@ export function AgenticPage() {
     <Document
       title="Agentic Storefronts: Sell in AI chats"
       description="Reach new buyers in AI chats and manage it all in one place with Shopify Agentic Storefronts."
-      stylesheet="/agentic.css"
-      media
+      head={<link rel="stylesheet" href={assets.agenticStyles} />}
     >
       <div class="agentic-page">
         <section class="agentic-hero" aria-labelledby="agentic-title">
@@ -107,31 +109,20 @@ export function AgenticPage() {
                   Talk to sales on Shopify
                 </a>
               </div>
-              <button class="agentic-motion" type="button" data-pause-videos hidden>
-                Pause animations
-              </button>
+              <PauseAnimationsButton class="agentic-motion" />
             </div>
-            <video
+            <AutoplayVideo
               class="agentic-hero-video"
-              width="1440"
-              height="1440"
-              muted
-              loop
-              playsInline
-              preload="auto"
-              poster="/media/agentic-hero-poster.webp"
-              data-video="hero"
-              aria-label="Phone screens showing AI chat shopping for a lamp, with product details and Shopify Checkout. Logos of OpenAI, Google, Microsoft and Meta."
-            >
-              <source
-                data-src={videos['agentic-hero-av1.mp4']}
-                type={'video/mp4; codecs="av01.0.08M.08"'}
-              />
-              <source
-                data-src={videos['agentic-hero-h264.mp4']}
-                type='video/mp4; codecs="avc1.640033"'
-              />
-            </video>
+              hero
+              label="Phone screens showing AI chat shopping for a lamp, with product details and Shopify Checkout. Logos of OpenAI, Google, Microsoft and Meta."
+              width={1440}
+              height={1440}
+              poster={assets.agenticHeroPoster}
+              sources={[
+                { src: videos['agentic-hero-av1.mp4'], type: 'video/mp4; codecs="av01.0.08M.08"' },
+                { src: videos['agentic-hero-h264.mp4'], type: 'video/mp4; codecs="avc1.640033"' },
+              ]}
+            />
           </div>
         </section>
 
@@ -152,27 +143,22 @@ export function AgenticPage() {
             <div class="agentic-feature-grid">
               {features.map((feature) => (
                 <article key={feature.name}>
-                  <video
-                    width="1920"
-                    height="1080"
-                    loading="lazy"
-                    muted
-                    loop
-                    playsInline
-                    preload="none"
+                  <AutoplayVideo
+                    label={feature.title}
+                    width={1920}
+                    height={1080}
                     poster={images[`agentic-${feature.name}-poster`].src}
-                    data-video="viewport"
-                    aria-label={feature.title}
-                  >
-                    <source
-                      data-src={videos[`agentic-${feature.name}-av1.mp4`]}
-                      type={'video/mp4; codecs="av01.0.08M.08"'}
-                    />
-                    <source
-                      data-src={videos[`agentic-${feature.name}-h264.mp4`]}
-                      type='video/mp4; codecs="avc1.640033"'
-                    />
-                  </video>
+                    sources={[
+                      {
+                        src: videos[`agentic-${feature.name}-av1.mp4`],
+                        type: 'video/mp4; codecs="av01.0.08M.08"',
+                      },
+                      {
+                        src: videos[`agentic-${feature.name}-h264.mp4`],
+                        type: 'video/mp4; codecs="avc1.640033"',
+                      },
+                    ]}
+                  />
                   <h3>{feature.title}</h3>
                   <p>{feature.description}</p>
                 </article>

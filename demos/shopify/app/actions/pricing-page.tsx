@@ -1,3 +1,4 @@
+import { assets } from '../assets.ts'
 import { signupHref } from '../data/pages.ts'
 import { Document } from '../ui/document.tsx'
 
@@ -379,7 +380,7 @@ export function PricingPage() {
     <Document
       title="Pricing"
       description="Compare Shopify plans for solo entrepreneurs, teams, and complex businesses."
-      stylesheet="/pricing.css"
+      head={<link rel="stylesheet" href={assets.pricingStyles} />}
     >
       <div class="pricing-page">
         <section class="pricing-hero section-space">
