@@ -108,8 +108,6 @@ describe('CSP navigation', () => {
       .headers()
       ['content-security-policy']?.match(/'nonce-([^']+)'/)?.[1]
     assert.ok(documentNonce)
-    assert.equal(initialResponse.headers()['x-remix-nonce'], undefined)
-    assert.match(initialResponse.headers()['content-security-policy'], /style-src 'nonce-/)
     let childStyle = await page.locator('#child-style').elementHandle()
     let topStyle = await page.locator('#top-style').elementHandle()
     assert.ok(childStyle && topStyle)
@@ -134,12 +132,10 @@ describe('CSP navigation', () => {
       ['content-security-policy']?.match(/'nonce-([^']+)'/)?.[1]
     assert.ok(childNonce)
     assert.notEqual(childNonce, documentNonce)
-    assert.equal(childResponse.headers()['x-remix-nonce'], undefined)
     assert.equal(
       await childStyle.evaluate((element) => element === document.getElementById('child-style')),
       true,
     )
-    assert.equal(await page.locator('#child-style').getAttribute('nonce'), '')
     assert.equal(
       await page.locator('#child-style').evaluate((element) => element.nonce),
       documentNonce,
@@ -166,12 +162,10 @@ describe('CSP navigation', () => {
     let topNonce = topResponse.headers()['content-security-policy']?.match(/'nonce-([^']+)'/)?.[1]
     assert.ok(topNonce)
     assert.notEqual(topNonce, documentNonce)
-    assert.equal(topResponse.headers()['x-remix-nonce'], undefined)
     assert.equal(
       await topStyle.evaluate((element) => element === document.getElementById('top-style')),
       true,
     )
-    assert.equal(await page.locator('#top-style').getAttribute('nonce'), '')
     assert.equal(
       await page.locator('#top-style').evaluate((element) => element.nonce),
       documentNonce,

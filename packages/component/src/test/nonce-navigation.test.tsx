@@ -19,13 +19,19 @@ describe('CSP frame navigation', () => {
     )
   })
 
-  it('keeps authored styles working across named frame reloads', async (t) => {
-    let doc = await navigateUnderCsp(t, 'named')
-
+  it('uses the render nonce on named frame reloads and leaves unauthorized styles blocked', async (t) => {
+    let doc = await navigateUnderCsp(t, 'named', { separateImportMapNonce: true })
     let styled = doc.querySelector('#styled')
-    invariant(styled)
+    let unnonced = doc.querySelector('#unnonced')
+    let forged = doc.querySelector('#forged')
+    invariant(styled && unnonced && forged)
+
     expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
     expect(doc.querySelector<HTMLStyleElement>('#authorized-style')?.nonce).toBe('document-nonce')
+    expect(doc.defaultView?.getComputedStyle(unnonced).color).toBe('rgb(0, 0, 0)')
+    expect(doc.defaultView?.getComputedStyle(forged).color).toBe('rgb(0, 0, 0)')
+    expect(doc.querySelector<HTMLStyleElement>('#forged-style')?.nonce).toBe('forged-nonce')
+    expect(doc.querySelector('#unnonced-style')?.hasAttribute('nonce')).toBe(false)
   })
 
   it('keeps authored styles working in client-created frames', async (t) => {
@@ -35,15 +41,8 @@ describe('CSP frame navigation', () => {
     expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
   })
 
-  it('rebases styles inside streamed non-blocking frame templates', async (t) => {
+  it('rewrites styles inside streamed non-blocking frame templates', async (t) => {
     let doc = await navigateUnderCsp(t, 'named', { nestedTemplate: true })
-    let styled = doc.querySelector('#styled')
-    invariant(styled)
-    expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
-  })
-
-  it('uses the original render nonce when an import map has its own nonce', async (t) => {
-    let doc = await navigateUnderCsp(t, 'named', { separateImportMapNonce: true })
     let styled = doc.querySelector('#styled')
     invariant(styled)
     expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
@@ -65,18 +64,6 @@ describe('CSP frame navigation', () => {
     invariant(styled)
     expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(0, 0, 0)')
     expect(doc.querySelector<HTMLStyleElement>('#authorized-style')?.nonce).toBe('response-nonce')
-  })
-
-  it('leaves unnonced styles and styles with a different nonce blocked', async (t) => {
-    let doc = await navigateUnderCsp(t, 'named')
-    let unnonced = doc.querySelector('#unnonced')
-    let forged = doc.querySelector('#forged')
-    invariant(unnonced && forged)
-
-    expect(doc.defaultView?.getComputedStyle(unnonced).color).toBe('rgb(0, 0, 0)')
-    expect(doc.defaultView?.getComputedStyle(forged).color).toBe('rgb(0, 0, 0)')
-    expect(doc.querySelector<HTMLStyleElement>('#forged-style')?.nonce).toBe('forged-nonce')
-    expect(doc.querySelector('#unnonced-style')?.hasAttribute('nonce')).toBe(false)
   })
 })
 

@@ -16,7 +16,7 @@ import {
 } from '../index.ts'
 
 describe('csp', () => {
-  it('checks directive names in inferred policy factories', () => {
+  it('rejects unknown directives in static, inferred, extracted, and mixed policy forms', () => {
     csp({
       // @ts-expect-error Inferred factory returns reject unknown directives alongside valid ones.
       policy({ nonce }) {
@@ -26,9 +26,7 @@ describe('csp', () => {
         }
       },
     })
-  })
 
-  it('checks directive names in inferred async policy factories', () => {
     csp({
       // @ts-expect-error Inferred async factory returns reject unknown directives.
       async policy({ nonce }) {
@@ -38,9 +36,7 @@ describe('csp', () => {
         }
       },
     })
-  })
 
-  it('checks directive names in static policies and extracted factories', () => {
     csp({
       policy: {
         scriptSrc: ["'self'"],
@@ -55,9 +51,7 @@ describe('csp', () => {
     })) satisfies CspPolicyFactory
     // @ts-expect-error Extracted factories retain their inferred extra keys.
     csp({ policy })
-  })
 
-  it('checks every branch of mixed policy factory returns', () => {
     csp({
       // @ts-expect-error A serialized-policy branch does not hide an invalid directive-object branch.
       policy({ nonce }) {
@@ -191,7 +185,7 @@ describe('csp', () => {
     assert.equal(await error.text(), 'Unavailable')
   })
 
-  it('leaves non-HTML responses and their existing headers unchanged by default', async () => {
+  it('applies policies and reporting endpoints only to HTML by default, including HTML errors', async () => {
     let router = createRouter({
       middleware: [
         csp({
@@ -199,7 +193,7 @@ describe('csp', () => {
           reportingEndpoints: { enforced: '/reports/enforced' },
         }),
         csp({
-          policy: { defaultSrc: ["'self'"] },
+          policy: { scriptSrc: ["'self'"] },
           reportOnly: true,
           reportingEndpoints: { preview: '/reports/preview' },
         }),
@@ -232,22 +226,7 @@ describe('csp', () => {
       assert.deepEqual([...response.headers], [...headers])
       assert.equal(response.bodyUsed, false)
     }
-  })
 
-  it('applies policies and reporting endpoints to HTML errors with mixed-case media types', async () => {
-    let router = createRouter({
-      middleware: [
-        csp({
-          policy: { defaultSrc: ["'self'"] },
-          reportingEndpoints: { enforced: '/reports/enforced' },
-        }),
-        csp({
-          policy: { scriptSrc: ["'self'"] },
-          reportOnly: true,
-          reportingEndpoints: { preview: '/reports/preview' },
-        }),
-      ],
-    })
     router.get(
       '/',
       () =>
@@ -269,42 +248,64 @@ describe('csp', () => {
     assert.equal(await response.text(), '<h1>Unavailable</h1>')
   })
 
-  it('allows custom filters to include worker responses alongside HTML', async () => {
+  it('replaces the HTML filter and filters policies and reporting endpoints together', async () => {
+    let policyNonce: string | undefined
+    let downstream: Response | undefined
     let router = createRouter({
       middleware: [
         csp({
-          policy: { defaultSrc: ["'self'"] },
-          filter(response) {
-            let mediaType = response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase()
-            return mediaType === 'text/html' || mediaType === 'application/javascript'
+          policy({ nonce }) {
+            policyNonce = nonce
+            return { scriptSrc: [`'nonce-${nonce}'`], reportTo: 'csp' }
           },
+          reportOnly: true,
+          reportingEndpoints: { csp: '/reports/csp' },
+          filter: (response) => response.status === 201,
         }),
-      ],
+      ] as const,
     })
-    router.get(
-      '/',
-      () => new Response('<h1>Page</h1>', { headers: { 'Content-Type': 'text/html' } }),
-    )
     router.get(
       '/worker.js',
       () =>
         new Response('postMessage("ready")', {
+          status: 201,
           headers: { 'Content-Type': 'application/javascript' },
         }),
     )
-    router.get('/api', () => Response.json({ ok: true }))
+    router.get('/', (context) => {
+      let nonce = getCspNonce(context)
+      assert.ok(nonce)
+      assert.equal(nonce, policyNonce)
+      downstream = new Response(nonce, {
+        headers: {
+          'Content-Type': 'text/html',
+          'Content-Security-Policy': "object-src 'none'",
+          'Content-Security-Policy-Report-Only': 'img-src https:',
+          'Reporting-Endpoints': 'existing="/reports/existing"',
+        },
+      })
+      return downstream
+    })
 
-    let page = await router.fetch('https://example.com/')
     let worker = await router.fetch('https://example.com/worker.js')
-    let json = await router.fetch('https://example.com/api')
-
-    assert.equal(page.headers.get('Content-Security-Policy'), "default-src 'self'")
-    assert.equal(worker.headers.get('Content-Security-Policy'), "default-src 'self'")
+    assert.equal(worker.headers.get('Content-Security-Policy'), null)
+    assert.equal(
+      worker.headers.get('Content-Security-Policy-Report-Only'),
+      `script-src 'nonce-${policyNonce}'; report-to csp`,
+    )
+    assert.equal(worker.headers.get('Reporting-Endpoints'), 'csp="/reports/csp"')
     assert.equal(await worker.text(), 'postMessage("ready")')
-    assert.equal(json.headers.get('Content-Security-Policy'), null)
+
+    let rejected = await router.fetch('https://example.com/')
+    assert.equal(rejected, downstream)
+    assert.equal(rejected.headers.get('Content-Security-Policy'), "object-src 'none'")
+    assert.equal(rejected.headers.get('Content-Security-Policy-Report-Only'), 'img-src https:')
+    assert.equal(rejected.headers.get('Reporting-Endpoints'), 'existing="/reports/existing"')
+    assert.equal(rejected.bodyUsed, false)
+    assert.equal(await rejected.text(), policyNonce)
   })
 
-  it('preserves downstream policies and reporting endpoints on 304 responses', async () => {
+  it('leaves 304 responses unchanged even when a custom filter accepts them', async () => {
     let downstream = new Response(null, {
       status: 304,
       headers: {
@@ -330,9 +331,13 @@ describe('csp', () => {
         }),
       ],
     })
-    router.get('/', () => downstream)
+    router.get('/cached', () => downstream)
+    router.get(
+      '/empty',
+      () => new Response(null, { status: 304, headers: { 'Content-Type': 'text/html' } }),
+    )
 
-    let response = await router.fetch('https://example.com/')
+    let response = await router.fetch('https://example.com/cached')
 
     assert.equal(response.headers.get('Content-Security-Policy'), "script-src 'nonce-cached'")
     assert.equal(
@@ -342,104 +347,17 @@ describe('csp', () => {
     assert.equal(response.headers.get('Reporting-Endpoints'), 'cached="/reports/cached"')
     assert.equal(response.headers.get('ETag'), 'W/"page-v1"')
     assert.equal(response, downstream)
+
+    let empty = await router.fetch('https://example.com/empty')
+
+    assert.equal(empty.status, 304)
+    assert.equal(empty.body, null)
+    assert.equal(empty.headers.get('Content-Security-Policy'), null)
+    assert.equal(empty.headers.get('Content-Security-Policy-Report-Only'), null)
+    assert.equal(empty.headers.get('Reporting-Endpoints'), null)
   })
 
-  it('does not add policies or reporting endpoints to 304 responses', async () => {
-    let router = createRouter({
-      middleware: [
-        csp({
-          policy: ({ nonce }) => ({ scriptSrc: [`'nonce-${nonce}'`] }),
-          reportingEndpoints: { enforced: '/reports/enforced' },
-        }),
-        csp({
-          policy: ({ nonce }) => ({ styleSrc: [`'nonce-${nonce}'`] }),
-          reportOnly: true,
-          reportingEndpoints: { preview: '/reports/preview' },
-        }),
-      ],
-    })
-    router.get(
-      '/',
-      () => new Response(null, { status: 304, headers: { 'Content-Type': 'text/html' } }),
-    )
-
-    let response = await router.fetch('https://example.com/')
-
-    assert.equal(response.status, 304)
-    assert.equal(response.body, null)
-    assert.equal(response.headers.get('Content-Security-Policy'), null)
-    assert.equal(response.headers.get('Content-Security-Policy-Report-Only'), null)
-    assert.equal(response.headers.get('Reporting-Endpoints'), null)
-  })
-
-  it('adds CSP to HTML pages and leaves asset routes unchanged by default', async () => {
-    let pageResponse = new Response('<h1>Page</h1>', {
-      headers: { 'Content-Type': 'text/html; charset=UTF-8' },
-    })
-    let assetResponse = new Response('export default 1', {
-      headers: { 'Content-Type': 'text/javascript', 'Cache-Control': 'public, max-age=3600' },
-    })
-    let router = createRouter({
-      middleware: [
-        csp({
-          policy: { defaultSrc: ["'self'"] },
-        }),
-      ],
-    })
-    router.get('/', () => pageResponse)
-    router.get('/assets/app.js', () => assetResponse)
-
-    let page = await router.fetch('https://example.com/')
-    let asset = await router.fetch('https://example.com/assets/app.js')
-
-    assert.equal(page.headers.get('Content-Security-Policy'), "default-src 'self'")
-    assert.equal(await page.text(), '<h1>Page</h1>')
-    assert.equal(asset, assetResponse)
-    assert.equal(asset.headers.get('Content-Security-Policy'), null)
-    assert.equal(asset.headers.get('Cache-Control'), 'public, max-age=3600')
-    assert.equal(await asset.text(), 'export default 1')
-  })
-
-  it('preserves existing policies on filtered responses and establishes the nonce before rendering', async () => {
-    let policyNonce: string | undefined
-    let downstream: Response | undefined
-    let router = createRouter({
-      middleware: [
-        csp({
-          policy({ nonce }) {
-            policyNonce = nonce
-            return { scriptSrc: [`'nonce-${nonce}'`] }
-          },
-          reportOnly: true,
-          filter: () => false,
-        }),
-      ] as const,
-    })
-    router.get('/', (context) => {
-      let nonce = getCspNonce(context)
-      assert.ok(nonce)
-      assert.equal(nonce, policyNonce)
-      downstream = new Response(nonce, {
-        status: 202,
-        headers: {
-          'Content-Security-Policy': "object-src 'none'",
-          'Content-Security-Policy-Report-Only': 'img-src https:',
-        },
-      })
-      return downstream
-    })
-
-    let response = await router.fetch('https://example.com/')
-
-    assert.equal(response, downstream)
-    assert.equal(response.status, 202)
-    assert.equal(response.headers.get('Content-Security-Policy'), "object-src 'none'")
-    assert.equal(response.headers.get('Content-Security-Policy-Report-Only'), 'img-src https:')
-    assert.equal(response.bodyUsed, false)
-    assert.equal(await response.text(), policyNonce)
-  })
-
-  it('makes the nonce available to an async policy factory and downstream handlers', async () => {
+  it('provides fresh request nonces to async factories and concurrent document and frame handlers', async () => {
     let router = createRouter({
       middleware: [
         csp({
@@ -457,63 +375,24 @@ describe('csp', () => {
       return new Response(nonce, { headers: { 'Content-Type': 'text/html' } })
     })
 
-    let response = await router.fetch('https://example.com/')
-    let nonce = await response.text()
-    assert.match(nonce, /^[A-Za-z0-9+/]{22}==$/)
-    assert.equal(atob(nonce).length, 16)
-    assert.equal(response.headers.get('Content-Security-Policy'), `script-src 'nonce-${nonce}'`)
+    let [frame, document] = await Promise.all([
+      router.fetch('https://example.com/', { headers: { 'X-Remix-Frame': 'true' } }),
+      router.fetch('https://example.com/'),
+    ])
+    let frameNonce = await frame.text()
+    let documentNonce = await document.text()
+    assert.notEqual(frameNonce, documentNonce)
+    for (let [response, nonce] of [
+      [frame, frameNonce],
+      [document, documentNonce],
+    ] as const) {
+      assert.match(nonce, /^[A-Za-z0-9+/]{22}==$/)
+      assert.equal(atob(nonce).length, 16)
+      assert.equal(response.headers.get('Content-Security-Policy'), `script-src 'nonce-${nonce}'`)
+    }
   })
 
-  it('appends enforced and report-only policies while sharing a nonce', async () => {
-    let router = createRouter({
-      middleware: [
-        csp({
-          policy({ nonce }) {
-            return { scriptSrc: [`'nonce-${nonce}'`] }
-          },
-        }),
-        csp({
-          policy({ nonce }) {
-            return { styleSrc: [`'nonce-${nonce}'`] }
-          },
-        }),
-        csp({
-          policy({ nonce }) {
-            return { scriptSrc: [`'nonce-${nonce}'`], reportTo: 'csp' }
-          },
-          reportOnly: true,
-        }),
-      ] as const,
-    })
-    router.get(
-      '/',
-      (context) =>
-        new Response(getCspNonce(context), {
-          headers: {
-            'Content-Type': 'text/html',
-            'Content-Security-Policy': "object-src 'none'",
-            'Content-Security-Policy-Report-Only': 'img-src https:',
-            'Reporting-Endpoints': 'csp="/reports"',
-          },
-        }),
-    )
-
-    let response = await router.fetch('https://example.com/')
-    let nonce = await response.text()
-
-    assert.ok(nonce)
-    assert.equal(
-      response.headers.get('Content-Security-Policy'),
-      `object-src 'none', style-src 'nonce-${nonce}', script-src 'nonce-${nonce}'`,
-    )
-    assert.equal(
-      response.headers.get('Content-Security-Policy-Report-Only'),
-      `img-src https:, script-src 'nonce-${nonce}'; report-to csp`,
-    )
-    assert.equal(response.headers.get('Reporting-Endpoints'), 'csp="/reports"')
-  })
-
-  it('adds reporting endpoints for enforced and report-only policies without removing existing endpoints', async () => {
+  it('appends enforced and report-only policies and reporting endpoints while sharing a nonce', async () => {
     let router = createRouter({
       middleware: [
         csp({
@@ -523,7 +402,14 @@ describe('csp', () => {
           reportingEndpoints: { enforced: '/reports/enforced' },
         }),
         csp({
-          policy: { defaultSrc: ["'self'"], reportTo: 'preview' },
+          policy({ nonce }) {
+            return { styleSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+        csp({
+          policy({ nonce }) {
+            return { scriptSrc: [`'nonce-${nonce}'`], reportTo: 'preview' }
+          },
           reportOnly: true,
           reportingEndpoints: { preview: 'https://reports.example.com/csp' },
         }),
@@ -535,6 +421,8 @@ describe('csp', () => {
         new Response(getCspNonce(context), {
           headers: {
             'Content-Type': 'text/html',
+            'Content-Security-Policy': "object-src 'none'",
+            'Content-Security-Policy-Report-Only': 'img-src https:',
             'Reporting-Endpoints': 'default="/reports/default", enforced="/reports/old"',
           },
         }),
@@ -543,52 +431,19 @@ describe('csp', () => {
     let response = await router.fetch('https://example.com/')
     let nonce = await response.text()
 
+    assert.ok(nonce)
     assert.equal(
       response.headers.get('Content-Security-Policy'),
-      `script-src 'nonce-${nonce}'; report-to enforced`,
+      `object-src 'none', style-src 'nonce-${nonce}', script-src 'nonce-${nonce}'; report-to enforced`,
     )
     assert.equal(
       response.headers.get('Content-Security-Policy-Report-Only'),
-      "default-src 'self'; report-to preview",
+      `img-src https:, script-src 'nonce-${nonce}'; report-to preview`,
     )
     assert.equal(
       response.headers.get('Reporting-Endpoints'),
       'default="/reports/default", enforced="/reports/old", preview="https://reports.example.com/csp", enforced="/reports/enforced"',
     )
-  })
-
-  it('filters reporting endpoints together with the policy and preserves rejected responses', async () => {
-    let downstream = new Response('asset', {
-      headers: { 'Reporting-Endpoints': 'default="/reports/default"' },
-    })
-    let router = createRouter({
-      middleware: [
-        csp({
-          policy: { defaultSrc: ["'self'"], reportTo: 'csp' },
-          reportOnly: true,
-          reportingEndpoints: { csp: '/reports/csp' },
-          filter: (response) => response.status === 201,
-        }),
-      ],
-    })
-    router.get('/', () => new Response('created', { status: 201 }))
-    router.get('/asset', () => downstream)
-
-    let accepted = await router.fetch('https://example.com/')
-    let rejected = await router.fetch('https://example.com/asset')
-
-    assert.equal(accepted.headers.get('Content-Security-Policy'), null)
-    assert.equal(
-      accepted.headers.get('Content-Security-Policy-Report-Only'),
-      "default-src 'self'; report-to csp",
-    )
-    assert.equal(accepted.headers.get('Reporting-Endpoints'), 'csp="/reports/csp"')
-    assert.equal(await accepted.text(), 'created')
-    assert.equal(rejected, downstream)
-    assert.equal(rejected.headers.get('Content-Security-Policy'), null)
-    assert.equal(rejected.headers.get('Content-Security-Policy-Report-Only'), null)
-    assert.equal(rejected.headers.get('Reporting-Endpoints'), 'default="/reports/default"')
-    assert.equal(await rejected.text(), 'asset')
   })
 
   it('quotes reporting endpoint URLs and replaces an empty downstream header', async () => {
@@ -618,54 +473,18 @@ describe('csp', () => {
   })
 
   it('rejects reporting endpoint names and URLs that cannot be serialized as structured fields', () => {
-    assert.throws(
-      () =>
-        csp({
-          policy: {},
-          reportingEndpoints: { CSP: '/reports' },
-        }),
-      /Invalid reporting endpoint name/,
-    )
-    assert.throws(
-      () =>
-        csp({
-          policy: {},
-          reportingEndpoints: { '': '/reports' },
-        }),
-      /Invalid reporting endpoint name/,
-    )
-    assert.throws(
-      () =>
-        csp({
-          policy: {},
-          reportingEndpoints: { 'csp,other': '/reports' },
-        }),
-      /Invalid reporting endpoint name/,
-    )
-    assert.throws(
-      () =>
-        csp({
-          policy: {},
-          reportingEndpoints: { 'csp\n': '/reports' },
-        }),
-      /Invalid reporting endpoint name/,
-    )
-    assert.throws(
-      () =>
-        csp({
-          policy: {},
-          reportingEndpoints: { csp: '/reports\r\nX-Injected: true' },
-        }),
-      /Invalid reporting endpoint URL/,
-    )
-    assert.throws(
-      () =>
-        csp({
-          policy: {},
-          reportingEndpoints: { csp: '/r\u00e9ports' },
-        }),
-      /Invalid reporting endpoint URL/,
-    )
+    for (let name of ['CSP', '', 'csp,other', 'csp\n']) {
+      assert.throws(
+        () => csp({ policy: {}, reportingEndpoints: { [name]: '/reports' } }),
+        /Invalid reporting endpoint name/,
+      )
+    }
+    for (let url of ['/reports\r\nX-Injected: true', '/réports']) {
+      assert.throws(
+        () => csp({ policy: {}, reportingEndpoints: { csp: url } }),
+        /Invalid reporting endpoint URL/,
+      )
+    }
   })
 
   it('omits reporting endpoints when unconfigured or empty without inferring a report-to directive', async () => {
@@ -705,34 +524,6 @@ describe('csp', () => {
     assert.equal(empty.headers.get('Reporting-Endpoints'), null)
     assert.equal(configured.headers.get('Reporting-Endpoints'), 'csp="/reports"')
     assert.equal(configured.headers.get('Content-Security-Policy'), "default-src 'self'")
-  })
-
-  it('creates distinct nonces for concurrent document and frame requests', async () => {
-    let router = createRouter({
-      middleware: [
-        csp({
-          async policy({ nonce }) {
-            await Promise.resolve()
-            return { styleSrc: [`'nonce-${nonce}'`] }
-          },
-        }),
-      ] as const,
-    })
-    router.get(
-      '/',
-      (context) => new Response(getCspNonce(context), { headers: { 'Content-Type': 'text/html' } }),
-    )
-    let [first, second] = await Promise.all([
-      router.fetch('https://example.com/', {
-        headers: { 'X-Remix-Frame': 'true' },
-      }),
-      router.fetch('https://example.com/'),
-    ])
-    let firstNonce = await first.text()
-    let secondNonce = await second.text()
-    assert.notEqual(firstNonce, secondNonce)
-    assert.equal(first.headers.get('Content-Security-Policy'), `style-src 'nonce-${firstNonce}'`)
-    assert.equal(second.headers.get('Content-Security-Policy'), `style-src 'nonce-${secondNonce}'`)
   })
 
   it('inherits nonces only on marked Request objects', async () => {
