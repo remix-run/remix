@@ -186,9 +186,21 @@ describe('mock function controls', () => {
         TypeError,
       )
     }
-    for (let onCall of [-1, 0, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '1', true]) {
-      assert.throws(() =>
-        Reflect.apply(fn.mock.mockImplementationOnce, fn.mock, [() => 'invalid', onCall]),
+    for (let onCall of [-1, 0, 1.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      assert.throws(() => fn.mock.mockImplementationOnce(() => 'invalid', onCall), RangeError)
+    }
+    assert.equal(fn.mock.callCount(), 1)
+    assert.deepEqual([fn(), fn()], ['once', 'default'])
+  })
+
+  it('rejects non-number call indices with TypeError without changing mock state', () => {
+    let fn = mock.fn(() => 'default')
+    fn()
+    fn.mock.mockImplementationOnce(() => 'once')
+    for (let onCall of ['1', true, {}, [], 1n, Symbol('index')]) {
+      assert.throws(
+        () => Reflect.apply(fn.mock.mockImplementationOnce, fn.mock, [() => 'invalid', onCall]),
+        TypeError,
       )
     }
     assert.equal(fn.mock.callCount(), 1)

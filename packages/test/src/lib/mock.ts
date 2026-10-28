@@ -88,6 +88,7 @@ function createMockFn<T extends (...args: any[]) => any>(impl?: T): MockFunction
     mockImplementationOnce(value, onCall) {
       if (typeof value !== 'function') throw new TypeError('implementation must be a function')
       let index = onCall ?? fn.mock.calls.length
+      if (typeof index !== 'number') throw new TypeError('onCall must be a number')
       if (!Number.isSafeInteger(index) || index < fn.mock.calls.length) {
         throw new RangeError('onCall must be a safe integer at or after the next call index')
       }

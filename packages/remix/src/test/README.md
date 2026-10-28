@@ -343,7 +343,7 @@ it('changes a mock implementation', (t) => {
 })
 ```
 
-The replacement controls use the original function's parameter and return types, receive the caller's `this`, and retain synchronous errors and unawaited promise results in call records. Method spies retain their permissive call and history types, and the initial `t.mock.method(obj, name, implementation)` argument remains permissive for existing overloaded methods. If a property has no function type, its replacement controls are also permissive. Non-function replacements and call indices that are not safe integers or have already passed throw without changing the mock. All controls except `callCount()` return `undefined`.
+The replacement controls use the original function's parameter and return types, receive the caller's `this`, and retain synchronous errors and unawaited promise results in call records. Method spies retain their permissive call and history types, and the initial `t.mock.method(obj, name, implementation)` argument remains permissive for existing overloaded methods. If a property has no function type, its replacement controls are also permissive. Non-function replacements and non-number call indices throw `TypeError`. Numeric call indices that are not safe integers or have already passed throw `RangeError`. These errors leave the mock unchanged. All controls except `callCount()` return `undefined`.
 
 These controls follow the selected [Node `MockFunctionContext` APIs](https://github.com/nodejs/node/blob/v24.3.0/doc/api/test.md#class-mockfunctioncontext), including replacement rather than queuing when `mockImplementationOnce()` is called twice for the next call. Resetting history makes pending indices count from zero again; consumed overrides stay consumed.
 
