@@ -3,9 +3,9 @@ title: Routing and Controllers
 description: How route maps, route helpers, controllers, actions, and responses define Remix request handling.
 ---
 
-In [Chapter 1](/start-here/), we built one end-to-end request flow: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) containing HTML rendered from a Remix component.
+When a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) reaches a Remix router, Remix matches it against a route, runs the controller action that owns that route, and sends back the Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) the action returns.
 
-Full-stack Remix apps are built around that route/controller boundary. `app/routes.ts` names URLs and methods your app accepts, controllers in `app/actions/` implement them, and each action returns the response that becomes the page, redirect, JSON payload, file, or error the browser receives.
+This guide covers that route/controller boundary. `app/routes.ts` names the URLs and methods your app accepts, controllers in `app/actions/` implement them, and each action returns the response that becomes the page, redirect, JSON payload, file, or error the browser receives.
 
 ## Routes as the URL contract
 
@@ -46,20 +46,20 @@ Path variables are one part of Remix's route pattern syntax. Patterns can also i
 // matches /docs/v2/guides/routing/route-maps.html?preview=1
 ```
 
-You do not need to memorize Remix's route pattern syntax to follow this guide. The [`route-pattern` overview](https://docs.remix.run/route-pattern/) covers the full grammar and the lower-level `remix/route-pattern/href` and `remix/route-pattern/match` APIs.
+You do not need to memorize Remix's route pattern syntax to follow this guide. [`remix/route-pattern`](/api/route-pattern/) documents the full grammar and the lower-level [`remix/route-pattern/href`](/api/route-pattern/href/) and [`remix/route-pattern/match`](/api/route-pattern/match/) APIs.
 
-Finally, the `edit` branch has two leaves at the same URL: `index` handles `GET` and `action` handles `POST`.
+In the route map above, the `edit` branch has two leaves at the same URL. `index` handles `GET` and `action` handles `POST`.
 
 ```ts
 routes.albums.edit.index.href({ albumId: "thriller" }); // GET /albums/thriller/edit
 routes.albums.edit.action.href({ albumId: "thriller" }); // POST /albums/thriller/edit
 ```
 
-This difference between leaves and nested maps matters once we start mapping controllers.
+The difference between leaves and nested maps decides which controller handles each route when you [map controllers](#mapping-controllers).
 
 ## Route builders: route, get, post, put, del, form, resources {#route-builders}
 
-Route helpers replace `{ method, pattern }` objects with calls that name a route's HTTP method or conventional shape. Each helper produces the same route leaves and route maps we saw above.
+Route helpers from [`remix/routes`](/api/routes/) replace `{ method, pattern }` objects with calls that name a route's HTTP method or conventional shape. Each helper produces the same route leaves and route maps as the object form.
 
 ```ts filename=app/routes.ts
 import { del, get, post, route } from "remix/routes";
@@ -127,9 +127,9 @@ export const routes = route({
 // routes.albums.edit.action -> POST /albums/:albumId/edit
 ```
 
-The [Forms and Mutations](/forms-and-mutations/) chapter builds on this route shape for validation, redirects, and progressive enhancement.
+With this route shape, the `POST` action can [return validation failures](/forms-and-mutations/#return-validation-failures-with-the-form) with the form or [redirect after saving](/forms-and-mutations/#redirect-after-saving).
 
-`resources(...)` creates seven conventional routes for a collection: `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy`. `resource(...)` creates routes for a singleton and omits `index` because there is no collection page.
+`resources(...)` creates seven conventional routes for a collection, named `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy`. `resource(...)` creates routes for a singleton, a single resource with no ID in its URL such as `/profile`, and omits `index` because there is no collection page.
 
 `only` keeps part of the conventional shape, and `param` changes the path variable name from the default `id`:
 
@@ -148,13 +148,13 @@ export const routes = route({
 // routes.albums.create -> POST   /albums
 ```
 
-These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The [`remix/router` overview](https://docs.remix.run/router/) covers the full route builder API.
+These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The [`remix/router` overview](/api/router/) covers the full route builder API.
 
 ## Controllers and actions
 
-A controller owns request handling for the direct leaves in one route map. It can run middleware shared by those actions, and its `actions` object supplies one handler per leaf. `createController(...)` uses the map to type each action name and its params while keeping request-handling behavior out of the route map.
+A controller owns request handling for the direct leaves in one route map. It can run [middleware](/request-handling/#middleware-ordering) shared by those actions, and its `actions` object supplies one handler per leaf. `createController(...)` uses the map to type each action name and its params while keeping request-handling behavior out of the route map.
 
-For `routes.albums`, the controller owns the `show` leaf:
+Given a `routes.albums` map with a `show: get("/albums/:albumId")` leaf, the controller for that map provides a `show` action:
 
 ```tsx filename=app/actions/albums/controller.tsx
 import { createController } from "remix/router";
@@ -186,9 +186,9 @@ Every action receives these built-in request context properties and methods:
 | `context.get(key)`        | A request-scoped value stored under a context key.                                                           |
 | `context.has(key)`        | Whether a value has been stored for a context key.                                                           |
 
-Middleware can extend this base context with typed properties such as `context.formData` or `context.render`. Those properties depend on the app's middleware stack, so they do not form a fixed list. The built-in `methodOverride()` middleware deliberately changes one base value: it updates `context.method` before route matching so a `POST` form with a `_method` field can target a `PUT`, `PATCH`, or `DELETE` route. `context.request.method` remains the original method.
+Middleware can extend this base context with typed properties such as `context.formData` or `context.render`. Those properties depend on the app's middleware stack, so they do not form a fixed list. The built-in `methodOverride()` middleware from [`remix/middleware/method-override`](/api/middleware/method-override/) deliberately changes one base value. It updates `context.method` before route matching so a `POST` form with a `_method` field can target a `PUT`, `PATCH`, or `DELETE` route. `context.request.method` remains the original method.
 
-Controllers can have their own middleware that applies to every action it owns. When middleware is needed for only one route, define that action as an object with `middleware` and a `handler`. Here, only the `POST` action parses `FormData`; the `index` page skips that work.
+Controllers can have their own middleware that applies to every action it owns. When middleware is needed for only one route, define that action as an object with `middleware` and a `handler`. Here, only the `POST` action parses `FormData`, and the `index` page skips that work.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx
 import { formData } from "remix/middleware/form-data";
@@ -213,11 +213,11 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-Router middleware runs first, then controller middleware, then action middleware, then the action handler. The [Request Handling](/request-handling/) chapter covers middleware scopes and typed context in more detail.
+Router middleware runs first, then controller middleware, then action middleware, then the action handler. Router middleware runs before route matching, so it sees every request. You can read more about [ordering middleware](/request-handling/#middleware-ordering) and how middleware adds [typed request context](/request-handling/#typed-request-context).
 
 ## Responses, redirects, headers, and errors
 
-Actions return Web `Response` objects. To render pages, add `render()` from `remix/middleware/render` to the router. That middleware provides `context.render(...)`, which turns a Remix component tree into an HTML response. [Rendering UI](/rendering-ui/) covers the component tree, while [Streaming UI with Frames](/streaming-ui-with-frames/) covers the renderer behind it. Once the middleware is installed, use it in an action:
+Actions return Web `Response` objects. To render pages, add `render()` from [`remix/middleware/render`](/api/middleware/render/) to the router. That middleware provides `context.render(...)`, which [turns a Remix component tree into an HTML response](/rendering-ui/#rendering-pages-through-request-context) with the [streaming renderer](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring). Once the middleware is installed, use it in an action:
 
 ```tsx filename=app/actions/albums/controller.tsx
 // inside the show action:
@@ -226,7 +226,7 @@ return context.render(<AlbumPage album={album} />);
 
 The result is still an ordinary Web `Response`. An action can render a page, return text or JSON, redirect the browser, send a file, or return an error response.
 
-Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The [Errors and Cancellation](/errors-and-cancellation/) chapter covers that path in detail.
+Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and [return a `500` response](/errors-and-cancellation/#uncaught-server-errors).
 
 A text response can be as simple as:
 
@@ -234,7 +234,7 @@ A text response can be as simple as:
 return new Response("Album not found", { status: 404 });
 ```
 
-`redirect(...)` creates redirect responses. An edit action might use `303 See Other` for a POST-redirect-GET flow:
+`redirect(...)` creates redirect responses. An edit action might use [`303 See Other`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/303) for a POST-redirect-GET flow. The browser follows the redirect with a `GET`, so refreshing the destination page does not resubmit the form:
 
 ```ts filename=app/actions/albums/edit/controller.tsx
 import { redirect } from "remix/response/redirect";
@@ -245,7 +245,7 @@ import { routes } from "../../../routes.ts";
 return redirect(routes.albums.show.href({ albumId: context.params.albumId }), 303);
 ```
 
-For HTML outside the Remix component render pipeline, the `html` template tag escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:
+For HTML outside the Remix component render pipeline, the `html` template tag from [`remix/html-template`](/api/html-template/) escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:
 
 ```ts
 import { html } from "remix/html-template";
@@ -255,7 +255,7 @@ import { createHtmlResponse } from "remix/response/html";
 return createHtmlResponse(html`<p>${album.title}</p>`);
 ```
 
-Remix's `redirect(...)` and `createHtmlResponse(...)`, like `new Response(...)` and [`Response.json(...)`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static), accept a standard `ResponseInit` when you need to set a status or headers. The numeric `303` above is a shorthand supported by `redirect(...)`.
+Remix's `redirect(...)` and `createHtmlResponse(...)`, like `new Response(...)` and [`Response.json(...)`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static), accept a standard [`ResponseInit`](https://developer.mozilla.org/en-US/docs/Web/API/Response/Response#options) options object when you need to set a status or headers. The numeric `303` above is a shorthand supported by `redirect(...)`.
 
 ```ts
 // inside an action:
@@ -266,7 +266,7 @@ return Response.json(album, {
 });
 ```
 
-Note: `context.headers` represents the request headers, not the headers sent with the response. Controllers do not have a separate response-header API because their actions return standard Web responses. Use Web [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) directly, or `remix/headers` when typed accessors for values such as `Cache-Control` and `Set-Cookie` make header handling clearer.
+`context.headers` represents the request headers, not the headers sent with the response. Controllers do not have a separate response-header API because their actions return standard Web responses. Use Web [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) directly, or [`remix/headers`](/api/headers/) when typed accessors for values such as `Cache-Control` and `Set-Cookie` make header handling clearer.
 
 ## Mapping controllers
 
@@ -321,6 +321,4 @@ app/actions/
 
 When a route branch has its own nested routes, a matching directory and controller keep the parent controller smaller and make each route owner visible from the file path.
 
-Keep route-local UI next to the controller that renders it, so the page and form for `albums.edit` belong in `actions/albums/edit/`. Components shared by multiple route areas belong in `ui/`. The [Rendering UI](/rendering-ui/) chapter covers the component model.
-
-With the route map and controllers connected, [Request Handling](/request-handling/) backs up to the server entry and follows the middleware that runs before and after those actions.
+Keep route-local UI next to the controller that renders it, so the page and form for `albums.edit` belong in `actions/albums/edit/`. Components shared by multiple route areas belong in `ui/`. Both follow the same [component model](/rendering-ui/#the-remix-component-model).

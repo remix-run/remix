@@ -73,7 +73,7 @@ describe('renderMarkdownFile()', () => {
       '[Route docs](/remix/router/type/Route.md?raw=true#details)\n',
     )
 
-    assert.match(result.html, /href="\/router\/type\/Route.md\?raw=true#details"/)
+    assert.match(result.html, /href="\/api\/router\/type\/Route.md\?raw=true#details"/)
   })
 
   it('links API symbols inside highlighted code', async (t) => {
@@ -90,7 +90,7 @@ describe('renderMarkdownFile()', () => {
       docFilesLookup: new Map([['Route', routeDoc]]),
     })
 
-    assert.match(result.html, /href="\/router\/type\/Route\/"/)
+    assert.match(result.html, /href="\/api\/router\/type\/Route\/"/)
   })
 })
 

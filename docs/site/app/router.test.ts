@@ -88,11 +88,11 @@ describe('createDocsRouter()', () => {
     assert.match(html, /href="\/api\/" aria-current="page"[^>]*>API Reference<\/a>/)
     assert.match(html, /data-api-nav-back[^>]*>.*Docs<\/a>/s)
     assert.match(html, />Packages<\/h2>/)
-    assert.match(html, /href="\/data-table\/"[^>]*api-nav-node/)
+    assert.match(html, /href="\/api\/data-table\/"[^>]*api-nav-node/)
     assert.match(html, /<h2 id="installation">/)
   })
 
-  it('serves guides at the root and still reaches package pages', async (t) => {
+  it('serves guides at the root and package pages under /api/', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
     let guides = await loadDocsNavigationItems()
@@ -113,9 +113,12 @@ describe('createDocsRouter()', () => {
     assert.equal(markdown.status, 200)
     assert.match(markdown.headers.get('Content-Type') ?? '', /text\/markdown/)
 
-    let unknown = await router.fetch(new Request('http://localhost/data-table/'))
-    assert.equal(unknown.status, 200)
-    assert.match(await unknown.text(), /API reference for remix\/data-table/)
+    let reference = await router.fetch(new Request('http://localhost/api/data-table/'))
+    assert.equal(reference.status, 200)
+    assert.match(await reference.text(), /API reference for remix\/data-table/)
+
+    let rootPackage = await router.fetch(new Request('http://localhost/data-table/'))
+    assert.equal(rootPackage.status, 404)
 
     let missing = await router.fetch(new Request('http://localhost/nope.md'))
     assert.equal(missing.status, 404)
@@ -134,13 +137,13 @@ describe('createDocsRouter()', () => {
       },
     })
 
-    let response = await router.fetch(new Request('http://localhost/data-table/'))
+    let response = await router.fetch(new Request('http://localhost/api/data-table/'))
     assert.equal(response.status, 200)
     let html = await response.text()
     let rootPanel = /<div data-api-nav-panel="before"[^>]*>(.*?)<\/div>/s.exec(html)?.[1] ?? ''
 
     assert.match(html, /data-api-nav-back[^>]*>.*API Reference<\/a>/s)
-    assert.match(html, /href="\/data-table\/" aria-current="page"[^>]*>data-table<\/a>/)
+    assert.match(html, /href="\/api\/data-table\/" aria-current="page"[^>]*>data-table<\/a>/)
     assert.doesNotMatch(rootPanel, />Guides<\/h2>/)
     assert.match(rootPanel, /href="\/start-here\/"/)
     assert.match(rootPanel, /href="\/api\/"[^>]*>API Reference/)
@@ -218,7 +221,7 @@ describe('createDocsRouter()', () => {
     assert.match(await sharedResponse.text(), /<svg width="144"/)
   })
 
-  it('maps API document actions at root paths', async (t) => {
+  it('maps API document actions under /api/', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
     let router = createDocsRouter({
@@ -226,7 +229,7 @@ describe('createDocsRouter()', () => {
       docsContext: await getTestDocsContext(),
     })
 
-    let response = await router.fetch(new Request('http://localhost/missing/'))
+    let response = await router.fetch(new Request('http://localhost/api/missing/'))
 
     assert.equal(response.status, 404)
     assert.match(await response.text(), /Could not find a document at:/)
@@ -297,23 +300,26 @@ describe('getApiRouteHref()', () => {
 
   it('preserves docs hrefs with files, queries and hashes', () => {
     assert.equal(
-      getApiRouteHref('/headers/accept/class/Accept.md?tab=docs#example'),
-      '/headers/accept/class/Accept.md?tab=docs#example',
+      getApiRouteHref('/api/headers/accept/class/Accept.md?tab=docs#example'),
+      '/api/headers/accept/class/Accept.md?tab=docs#example',
     )
   })
 
   it('adds a trailing slash to docs page hrefs', () => {
-    assert.equal(getApiRouteHref('/ui/tabs'), '/ui/tabs/')
+    assert.equal(getApiRouteHref('/api/ui/tabs'), '/api/ui/tabs/')
   })
 
-  it('drops the scope from import-path hrefs', () => {
-    assert.equal(getApiRouteHref('/remix/router/type/Route'), '/router/type/Route/')
-    assert.equal(getApiRouteHref('/remix-run/ui/tabs/'), '/ui/tabs/')
-    assert.equal(getApiRouteHref('/remix/'), '/remix/')
+  it('maps import-path hrefs to API reference pages', () => {
+    assert.equal(getApiRouteHref('/remix/router/type/Route'), '/api/router/type/Route/')
+    assert.equal(getApiRouteHref('/remix-run/ui/tabs/'), '/api/ui/tabs/')
+    assert.equal(getApiRouteHref('/remix/'), '/api/remix/')
   })
 
   it('keeps overview segments in current docs hrefs', () => {
-    assert.equal(getApiRouteHref('/remix/example/function/overview'), '/example/function/overview/')
+    assert.equal(
+      getApiRouteHref('/remix/example/function/overview'),
+      '/api/example/function/overview/',
+    )
   })
 })
 
@@ -364,7 +370,7 @@ describe('buildRegistry()', () => {
         children: [{ label: 'middleware/cors', home: 'middleware/cors', pages: [], children: [] }],
       },
     ])
-    assert.equal(registry.pages.middleware.path, '/middleware/')
+    assert.equal(registry.pages.middleware.path, '/api/middleware/')
     assert.deepEqual(
       getNavChain(registry, registry.pages['data-table/migrations/node'].navId).map(
         (node) => node.label,

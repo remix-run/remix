@@ -17,7 +17,7 @@ interface ReferenceControllerOptions {
 
 type Render = AppContext['render']
 
-export async function renderReferenceDocument(
+async function renderReferenceDocument(
   getDocsContext: ReferenceControllerOptions['getDocsContext'],
   { slug, render }: { slug: string; render: Render },
 ): Promise<Response> {
@@ -72,7 +72,7 @@ export async function renderReferenceDocument(
         )
 }
 
-export async function serveReferenceMarkdown(
+async function serveReferenceMarkdown(
   getDocsContext: ReferenceControllerOptions['getDocsContext'],
   { request, slug }: { request: Request; slug: string },
 ): Promise<Response> {

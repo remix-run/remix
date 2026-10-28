@@ -3,6 +3,19 @@ title: Animation
 description: The CSS-first animation model and Remix component helpers for motion that respects rendering state.
 ---
 
+Motion in a Remix app starts in CSS. Styles from `css(...)` in
+[`remix/component`](/api/component/) handle hover, focus, and other browser-owned
+states. When motion depends on what a component renders, such as a node entering, leaving, or moving
+in a keyed list, the [mixins](/interactivity/#the-mix-prop) and timing helpers in
+[`@remix-run/ui/animation`](/api/ui/animation/) take over.
+
+[`@remix-run/ui`](/api/ui/) is currently unstable and versioned independently. It
+is not available through the `remix` package, so install it separately:
+
+```sh
+npm i remix @remix-run/ui
+```
+
 ## CSS-first visual states {#css-first-visual-states}
 
 Start with CSS when the browser already owns the state. Hover, focus, active, checked, open, selected, and reduced-motion states do not need JavaScript state unless your render output also depends on them.
@@ -40,19 +53,13 @@ const cardStyle = css({
 });
 ```
 
-Use Remix animation helpers when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
-
-The animation helpers are provided by `@remix-run/ui`. This package is currently unstable and versioned independently. It is not available through the `remix` package, so install it separately:
-
-```sh
-npm i remix @remix-run/ui
-```
+Use the animation helpers from [`@remix-run/ui/animation`](/api/ui/animation/) when the motion depends on rendering state, such as a node entering, a node exiting, a keyed item moving, or an event that needs an interruptible animation.
 
 ::frame{src="/examples/07-animation/press-state/"}
 
 ## Entrance and exit animations {#entrance-and-exit-animations}
 
-`animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
+These mixins attach to host nodes, the DOM elements such as `<p>` or `<li>` that a component renders, not to components themselves. `animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
 
 ```tsx filename=app/ui/public/notice.tsx
 import { clientEntry, css, on } from "remix/component";
@@ -115,7 +122,7 @@ Pass `true` for the default opacity animation or `false` to disable a mixin with
 
 ## Layout animations {#layout-animations}
 
-`animateLayout(...)` measures a host node before and after a render, then animates the visual delta. This is the right tool for sorted lists, expanding cards, and elements that move because layout changed.
+`animateLayout(...)` measures a host node before and after a render, then animates the visual delta. Use it for sorted lists, expanding cards, and elements that move because layout changed.
 
 ```tsx filename=app/ui/public/reorder-list.tsx
 import { clientEntry, css, on } from "remix/component";
@@ -167,13 +174,13 @@ const itemStyle = css({
 
 `key` is not optional for layout animation in lists. Without stable keys, the runtime cannot know whether an item moved or a different item replaced it.
 
-Layout animation includes size projection by default. Pass `size: false` when only position should animate and scaling the element's contents would look wrong.
+Layout animation includes size projection by default, which animates a change in size by scaling the element with a transform. Pass `size: false` when only position should animate and scaling the element's contents would look wrong.
 
 ::frame{src="/examples/07-animation/reordering/"}
 
 ## Springs, tweens, and easing {#springs-tweens-and-easing}
 
-`spring()` returns an iterator decorated for CSS transitions and Web Animations. Stringify it in CSS, spread it into animation options, or iterate it for custom JavaScript animation.
+`spring()` returns an iterator decorated for CSS transitions and the [Web Animations API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Animations_API) (WAAPI), the browser API behind `element.animate()`. Stringify it in CSS, spread it into animation options, or iterate it for custom JavaScript animation.
 
 ```tsx filename=app/ui/public/bouncy-switch.tsx
 import { clientEntry, css, on } from "remix/component";
@@ -252,15 +259,15 @@ Prefer CSS transitions and animation mixins for ordinary UI. Use `tween` for can
 
 ::frame{src="/examples/07-animation/bouncy-switch/"}
 
-The UI package also keeps a gallery of smaller motion experiments. Keep this kind of broad demo in a bounded frame so it does not take over the surrounding guide page.
+The gallery below collects smaller motion experiments built with the same helpers.
 
 ::frame{src="/examples/07-animation/animation-gallery/"}
 
 ## Interruptible interactions {#interruptible-interactions}
 
-Event handlers receive abort signals, and animation mixins cancel or replace in-flight work when the DOM changes again. That makes interruption the default path instead of an edge case.
+Event handlers receive an [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) that aborts when the same event fires again or the element is removed, and animation mixins cancel or replace in-flight work when the DOM changes again. If a user toggles a notice twice quickly, the notice animates back toward its rendered styles from wherever its exit had reached, instead of finishing the exit first.
 
-For custom imperative animations, keep the current animation in setup scope and cancel it before starting the next one:
+For custom imperative animations, keep the current animation in [setup scope](/rendering-ui/#handle-props-setup-render-and-updates) and cancel it before starting the next one:
 
 ```tsx filename=app/ui/public/ripple-button.tsx
 import { clientEntry, css, on, ref } from "remix/component";
@@ -303,11 +310,11 @@ const buttonStyle = css({
 });
 ```
 
-CSS transitions are also interruptible: changing the target value while a transition is running makes the browser animate from the current visual state to the new one.
+CSS transitions are also interruptible. Changing the target value while a transition is running makes the browser animate from the current visual state to the new one.
 
 ## Reduced-motion behavior {#reduced-motion-behavior}
 
-Respect `prefers-reduced-motion` at the CSS boundary first. It works before JavaScript loads, applies to server-rendered frames, and covers static transitions.
+The [`prefers-reduced-motion`](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion) media query reports whether the user has asked their operating system to minimize motion. Respect it at the CSS boundary first. It works before JavaScript loads, applies to server-rendered frames, and covers static transitions.
 
 ```tsx filename=app/ui/motion-safe-panel.tsx
 import { css } from "remix/component";
@@ -335,5 +342,7 @@ export function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 ```
+
+[`@remix-run/ui/animation`](/api/ui/animation/) exports the same check as `prefersReducedMotion()`. It also returns `false` when `matchMedia` is unavailable, so it is safe to call during server rendering.
 
 Reduced motion does not have to mean no feedback. Prefer shorter fades, instant layout changes, or non-motion state changes when movement is not essential.
