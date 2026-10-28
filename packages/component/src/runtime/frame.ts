@@ -28,6 +28,7 @@ import {
 } from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
 import { reloadDocument } from './document-reload.ts'
+import { parseDocument, removeNoscriptContents } from './parse-document.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -534,8 +535,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       rawHtml !== undefined &&
       (options.flushKind ?? inferFlushKind(rawHtml)) === 'document'
 
-    if (isFullDocumentReload && htmlContent !== undefined) {
-      let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
+    if (isFullDocumentReload && rawHtml !== undefined) {
+      let parsed = parseDocument(container.doc, rawHtml)
+      let head = parsed.querySelector('head')
+      let body = parsed.querySelector('body')
+      invariant(head && body, 'Missing document head or body')
       rewriteResponseNonces(parsed, options.nonce, importMapManager.documentNonce)
       if (!(await consumeClientEntryResources(parsed, options.documentHref))) return
       if (isRenderAborted(options.signal)) return
@@ -551,16 +555,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
 
-      diffElementAttributes(container.doc.documentElement, parsed.documentElement)
+      diffElementAttributes(container.doc.documentElement, parsed)
 
-      diffNodes([container.doc.head], [parsed.head], {
+      diffNodes([container.doc.head], [head], {
         ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
         signal: options.signal,
         shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
       })
-      diffNodes([container.doc.body], [parsed.body], {
+      diffNodes([container.doc.body], [body], {
         ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
@@ -1163,7 +1167,7 @@ function createReconciliationTracker(): ReconciliationTracker {
   }
 }
 
-function mergeRmxDataFromDocument(into: RmxData, doc: Document): void {
+function mergeRmxDataFromDocument(into: RmxData, doc: Document | HTMLElement): void {
   let scripts = Array.from(doc.querySelectorAll('script#rmx-data'))
   for (let script of scripts) {
     if (!(script instanceof HTMLScriptElement)) continue
@@ -1981,6 +1985,7 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
 function createFragmentFromString(doc: Document, content: string): DocumentFragment {
   let template = doc.createElement('template')
   template.innerHTML = stripDoctypeMarkup(content).trim()
+  removeNoscriptContents(template.content)
   return template.content
 }
 
@@ -2118,7 +2123,10 @@ function rewriteResponseNonces(
   if (!responseNonce || !documentNonce || responseNonce === documentNonce) return
   // Only the enforcing CSP response header identifies the nonce; incoming HTML metadata cannot.
   for (let element of source.querySelectorAll('style[nonce],script[nonce],link[nonce]')) {
-    if ('nonce' in element && element.nonce === responseNonce) element.nonce = documentNonce
+    // Firefox clones the attribute rather than the nonce property in inert fragments.
+    if ('nonce' in element && element.nonce === responseNonce) {
+      element.setAttribute('nonce', documentNonce)
+    }
   }
   for (let template of source.querySelectorAll('template')) {
     rewriteResponseNonces(template.content, responseNonce, documentNonce)

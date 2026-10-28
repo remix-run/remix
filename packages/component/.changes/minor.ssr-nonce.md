@@ -11,3 +11,5 @@ Render under a nonce-based Content Security Policy with the `nonce` option on `r
 ```
 
 Server frame resolvers receive `context.nonce` for nested renders. During client navigation and frame reloads, the original document nonce remains active. When a response's enforcing CSP identifies one shared nonce, matching resource nonces are rewritten before insertion, including streamed templates. Missing, ambiguous, and report-only nonces do not trigger rewriting. See [CSP integration](https://github.com/remix-run/remix/tree/main/packages/component/src/server#content-security-policy) for resolver requirements.
+
+Document navigation avoids premature CSP style reports while preserving document attributes, head updates, and inert scripts. Frame navigation discards `<noscript>` fallback content.

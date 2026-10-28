@@ -99,6 +99,8 @@ For other nonce-bearing styles, scripts, and links, the runtime rewrites matchin
 
 Custom browser resolvers must return a trusted `Response` with its `Content-Security-Policy` header intact to enable rewriting. Returning only HTML or a body stream loses the response nonce. The fetched header identifies that nonce; it does not replace the active document's policy or change whether inserted scripts execute.
 
+Document navigation parses HTML in a detached element so styles do not produce premature CSP reports. Scripts remain inert, and frame navigation discards `<noscript>` fallback content because scripting is enabled.
+
 ### Streaming behavior
 
 When the stream encounters a `<Frame>` component:
