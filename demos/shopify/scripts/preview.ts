@@ -32,7 +32,7 @@ const server = http.createServer(
 // The export links fingerprinted assets as `styles.%40abc123.css` to avoid Cloudflare redirects
 // (see scripts/render-site.ts), while the files on disk are named `styles.@abc123.css`. Like
 // Cloudflare, decode the path before looking up the file; staticFiles uses it as written. Remove
-// this once staticFiles percent-decodes request paths itself.
+// this once https://github.com/remix-run/remix/pull/12113 lands and staticFiles decodes paths.
 function fetchFile(request: Request) {
   let url = new URL(request.url)
   try {
