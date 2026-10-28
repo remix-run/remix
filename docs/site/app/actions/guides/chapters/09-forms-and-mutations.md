@@ -103,7 +103,7 @@ export function AlbumEditPage(handle: Handle<AlbumEditPageProps>) {
 }
 ```
 
-The inputs use the stored album initially and preserve submitted `values` after validation fails. Each field displays its first validation issue, linked to the input with `aria-describedby`.
+The inputs use the stored album initially and preserve submitted `values` after validation fails. Each field displays its first validation issue, linked to the input with [`aria-describedby`](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-describedby) so screen readers announce the message with the field.
 
 ## Parse and save the submitted form
 
@@ -199,7 +199,7 @@ Validation only checks the shape of the input. Before saving, also check that th
 
 After parsing succeeds, `db.update(...)` saves `parsed.value` to the album selected by the route's `albumId`. If the update fails, the action logs the error on the server and returns `500` without exposing database details to the browser. The [`remix/data-table`](/api/data-table/) overview covers the other read and write helpers and their error behavior.
 
-After a successful save, the action returns `303 See Other` with the album page's URL. The browser follows that redirect with a GET:
+After a successful save, the action returns [`303 See Other`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/303) with the album page's URL. A `303` tells the browser to request the `Location` URL with GET, whatever method the original request used. This pattern is often called POST-redirect-GET:
 
 ```txt
 POST /albums/thriller/edit
@@ -222,7 +222,7 @@ You have two ways to show that a save is in progress:
 - Hydrate the whole form with `clientEntry(...)` and set pending state from its `submit` handler, as the [hydrated album form](/start-here/#add-your-first-hydrated-component) does. This fits when the form already needs browser state, or when you intercept the submission with [`fetch()`](/interactivity/#enhancing-forms-with-fetch-and-navigation).
 - Hydrate only the submit button and follow the containing frame's `reloadStart` and `reloadComplete` events. The rest of the form stays server-rendered, and the button needs no knowledge of how the form submits.
 
-The second option looks like this. Put the button in the edit action's `public/` directory so it can load in the browser:
+The second option looks like this. Put the button in the edit action's `public/` directory so the [asset server can serve it to the browser](/files-and-assets/#control-what-the-browser-can-reach):
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
 import { clientEntry } from "remix/component";
@@ -269,7 +269,7 @@ import { SaveButton } from "./public/save-button.tsx";
 </form>;
 ```
 
-`reloadStart` disables the button and shows "Saving…", and `reloadComplete` restores it after the navigation settles, including a validation response or request failure. Passing `handle.signal` removes the listeners when the component is removed.
+`reloadStart` disables the button and shows "Saving…", and `reloadComplete` restores it after the navigation settles, including a validation response or request failure. `handle.signal` is an [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) that aborts when the component is removed, which also removes the listeners.
 
 ## Use other HTTP methods when the route calls for them
 

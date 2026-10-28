@@ -76,6 +76,17 @@ Avoid in guides:
 Now that our album app can list records, let's let users upload cover art.
 ```
 
+## Introduce Unfamiliar Concepts
+
+Don't assume the reader already knows every term. Before relying on a concept that a working web developer might not know, introduce it:
+
+- Say what it is in a sentence, then why it matters for this task.
+- Link web platform features to MDN on first mention, such as import maps, the Navigation API, `AbortSignal`, or cascade layers.
+- Link Remix APIs to their API overview, and Remix concepts to the guide section that explains them.
+- When the reader needs to write configuration or code to use the concept, show a short snippet of what it looks like, such as a `package.json` field.
+
+For example, don't write "it only applies when every skipped module is declared side-effect free by its package's `sideEffects` field" without first explaining what the `sideEffects` field is, linking to its documentation, and showing an example.
+
 ## Avoid AI-Sounding Patterns
 
 Cut or rewrite prose that has these tells:
@@ -85,7 +96,7 @@ Cut or rewrite prose that has these tells:
 - “One source of truth” unless the paragraph immediately shows the exact typed value and what breaks when it changes.
 - Repeating the same idea before and after an example.
 - Staccato explanation where several short sentences define obvious neighboring parts in a row. Combine related clauses when it reads more naturally.
-- Semicolons used as prose punctuation when a period, comma, colon, or split sentence would read more naturally. This does not apply to code snippets, which should follow the local Prettier config.
+- Colons, semicolons, and em dashes joining clauses inside a sentence, such as "This is an optimization: it only applies when…" Split the sentence or rewrite it with a period or comma instead. A colon that ends a sentence introducing a code block or list is fine. This does not apply to code snippets, which follow the local formatter config.
 - Soft transitions such as “Additionally,” “Furthermore,” “It is important to note,” “A few things to keep in mind,” or “This is where X comes in.”
 - Placeholder nouns such as “thing,” “stuff,” “pieces,” or “functionality” when a precise noun exists.
 - Overconfident reassurance such as “TypeScript tells you every place” or “the failure is loud.” Say what actually happens.
@@ -201,6 +212,8 @@ Use `pnpm exec oxfmt --write <path-to-chapter.md>` only when formatting changes 
 - If it isn't chapter 1, does it read as a standalone guide rather than the next step of a tutorial?
 - Does it explain good ways to use Remix and their trade-offs, rather than describing what "the template" does?
 - Does the first paragraph start with useful context instead of a generic thesis?
+- Are colons, semicolons, and em dashes kept out of the middle of sentences?
+- Is every unfamiliar concept introduced, linked, or shown before the guide relies on it?
 - Did you remove repeated “write once / stay in sync / TypeScript catches it” takeaways unless each one adds new information?
 - Are all code snippets internally consistent?
 - Does the order teach the underlying shape before helper shortcuts and edge cases?

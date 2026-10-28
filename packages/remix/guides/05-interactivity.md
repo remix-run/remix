@@ -155,8 +155,11 @@ app.addEventListener("error", (event) => {
 await app.ready();
 ```
 
-`loadModule` imports the named component for every client entry discovered in the document. Browsers
-with multiple import map support use native imports and preloads. Browsers without that support use
+`loadModule` imports the named component for every client entry discovered in the document. An
+[import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap)
+tells the browser which URL each bare module specifier resolves to, and Remix adds more of them as
+[client entries and frames load](/files-and-assets/#load-browser-scripts).
+Browsers that support multiple import maps on one page use native imports and preloads. Browsers without that support use
 the [`remix/multiple-import-maps-polyfill`](../src/multiple-import-maps-polyfill/README.md)
 shim when later frame responses introduce new mappings. If you only target browsers with native
 support, `loadModule` can call `import(moduleUrl)` directly and you can drop
@@ -177,7 +180,7 @@ the route-owned regions that load or reload independently.
 
 ## Mount client-only UI with createRoot {#client-only-roots}
 
-Use `createRoot(container)` when there is no server-rendered component to hydrate: for example, an
+Use `createRoot(container)` when there is no server-rendered component to hydrate, such as an
 imperative widget mounted into a container created by another application.
 
 ```tsx filename=app/actions/public/support-widget.tsx
@@ -200,12 +203,13 @@ if (container) {
 
 The root owns that container. `root.render(node)` schedules a tree, `root.flush()` applies pending
 work synchronously, and `root.dispose()` removes the tree and runs cleanup. Normal page UI should
-start on the server and use `clientEntry(...)`; otherwise users wait for JavaScript before they see
+start on the server and use `clientEntry(...)`. Otherwise users wait for JavaScript before they see
 content the server could have rendered.
 
 ## State, updates, and post-render tasks {#state-updates-and-post-render-tasks}
 
-Component-local UI state lives in setup scope. Change it in an event handler, then call
+Component-local UI state lives in [setup scope](/rendering-ui/#handle-props-setup-render-and-updates),
+the body of the component function that runs once before it returns its render function. Change it in an event handler, then call
 `handle.update()`:
 
 ```tsx
@@ -239,7 +243,8 @@ request a render, you can build other patterns on top, such as a store or signal
 `handle.update()` when they change.
 
 Call `handle.update()` from an event handler, queued task, subscription, timer, or other work that
-runs after the component commits. Calling it during setup warns and skips the extra render because
+runs after the component commits, meaning its rendered output has been applied to the DOM. Calling
+it during setup warns and skips the extra render because
 the initial render follows setup. Calling it during rendering, or before the initial commit from
 outside setup, throws an error. If rendering discovers work that should run after the commit,
 schedule that work with `handle.queueTask()`.
@@ -273,7 +278,9 @@ function RenameButton(handle: Handle) {
 }
 ```
 
-The promise resolves to an `AbortSignal`, but capture it only if work continues across another async
+The promise resolves to an
+[`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal), an object that
+reports when work should stop and that APIs such as `fetch()` accept for cancellation. Capture it only if work continues across another async
 boundary after the update. The runtime cannot abort the signal between `await handle.update()` and
 the next synchronous statement, so `input.focus()` does not need a signal check. When more async
 work follows, pass the signal to that work when possible and check it after the later `await` before
@@ -538,7 +545,7 @@ The core mixins serve different host-level jobs:
 - `link(...)` adds client navigation behavior and link semantics.
 - `css(...)` applies static generated CSS.
 
-Components and mixins compose along different axes. Components compose the tree: a component
+Components and mixins compose along different axes. Components compose the tree, so a component
 renders other components and host elements inside it. Mixins compose behavior and styles on one host
 element. To add a tooltip, a menu trigger, and a click handler to a button, keep the button where you
 render it and add a mixin for each behavior, rather than wrapping it in a component for each one.
@@ -694,7 +701,7 @@ cannot replace the newer results.
 ## Keep application logic outside components {#saving-a-client-owned-document}
 
 Setup-scope variables make component state easy, but they do not make the component the right owner
-for every rule. Keep state in the component when it describes the current UI: whether a panel is
+for every rule. Keep state in the component when it describes the current UI, such as whether a panel is
 open, which element should receive focus, or whether a request is pending. Put application data and
 operations in ordinary TypeScript that the component calls.
 
@@ -777,7 +784,7 @@ export const Cart = clientEntry(import.meta.url, function Cart(handle: Handle<Ca
 
 `cart.addEventListener()` connects model changes to `handle.update()`, and `handle.signal` removes the
 subscription when the component disconnects. If several components use the same model, create it at
-their nearest shared client boundary and provide it through component context. Do not pass a class
+their nearest shared client boundary and provide it through [component context](/rendering-ui/#handle-props-setup-render-and-updates). Do not pass a class
 instance through `clientEntry(...)` props because those props are serialized.
 
 With this split, you can test cart rules without a DOM and save
@@ -787,7 +794,9 @@ item count, which depend on the component and DOM.
 ## Client navigation {#client-navigation}
 
 Keep using real anchors for links. After `run()` starts, the runtime can enhance same-origin
-navigations through the browser's Navigation API. Cross-origin links, downloads, and navigations the
+navigations through the browser's
+[Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_API), which lets
+scripts intercept a navigation and handle it without a full page load. Cross-origin links, downloads, and navigations the
 browser cannot intercept continue as normal document requests.
 
 ```tsx filename=app/ui/album-link.tsx
@@ -844,7 +853,7 @@ the `link(...)` and `navigate(...)` options:
 
 Use `resetScroll: "manual"` or `resetFocus: "manual"` for the same behavior in `link(...)` and
 `navigate(...)`. Both controls also accept `"after-transition"`, the default. Existing boolean options
-and `"true"` / `"false"` attribute values still work: `true` corresponds to `"after-transition"` and
+and `"true"` / `"false"` attribute values still work. `true` corresponds to `"after-transition"` and
 `false` to `"manual"`.
 
 The top frame follows the browser URL. If `data-rmx-target` is omitted, an intercepted navigation

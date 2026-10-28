@@ -48,7 +48,7 @@ Path variables are one part of Remix's route pattern syntax. Patterns can also i
 
 You do not need to memorize Remix's route pattern syntax to follow this guide. [`remix/route-pattern`](../src/route-pattern/README.md) documents the full grammar and the lower-level [`remix/route-pattern/href`](../src/route-pattern/README.md) and [`remix/route-pattern/match`](../src/route-pattern/README.md) APIs.
 
-In the route map above, the `edit` branch has two leaves at the same URL: `index` handles `GET` and `action` handles `POST`.
+In the route map above, the `edit` branch has two leaves at the same URL. `index` handles `GET` and `action` handles `POST`.
 
 ```ts
 routes.albums.edit.index.href({ albumId: "thriller" }); // GET /albums/thriller/edit
@@ -129,7 +129,7 @@ export const routes = route({
 
 With this route shape, the `POST` action can [return validation failures](/forms-and-mutations/#return-validation-failures-with-the-form) with the form or [redirect after saving](/forms-and-mutations/#redirect-after-saving).
 
-`resources(...)` creates seven conventional routes for a collection: `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy`. `resource(...)` creates routes for a singleton and omits `index` because there is no collection page.
+`resources(...)` creates seven conventional routes for a collection, named `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy`. `resource(...)` creates routes for a singleton, a single resource with no ID in its URL such as `/profile`, and omits `index` because there is no collection page.
 
 `only` keeps part of the conventional shape, and `param` changes the path variable name from the default `id`:
 
@@ -152,7 +152,7 @@ These helpers produce ordinary route maps and leaves, so you can nest them with 
 
 ## Controllers and actions
 
-A controller owns request handling for the direct leaves in one route map. It can run middleware shared by those actions, and its `actions` object supplies one handler per leaf. `createController(...)` uses the map to type each action name and its params while keeping request-handling behavior out of the route map.
+A controller owns request handling for the direct leaves in one route map. It can run [middleware](/request-handling/#middleware-ordering) shared by those actions, and its `actions` object supplies one handler per leaf. `createController(...)` uses the map to type each action name and its params while keeping request-handling behavior out of the route map.
 
 Given a `routes.albums` map with a `show: get("/albums/:albumId")` leaf, the controller for that map provides a `show` action:
 
@@ -186,9 +186,9 @@ Every action receives these built-in request context properties and methods:
 | `context.get(key)`        | A request-scoped value stored under a context key.                                                           |
 | `context.has(key)`        | Whether a value has been stored for a context key.                                                           |
 
-Middleware can extend this base context with typed properties such as `context.formData` or `context.render`. Those properties depend on the app's middleware stack, so they do not form a fixed list. The built-in `methodOverride()` middleware deliberately changes one base value: it updates `context.method` before route matching so a `POST` form with a `_method` field can target a `PUT`, `PATCH`, or `DELETE` route. `context.request.method` remains the original method.
+Middleware can extend this base context with typed properties such as `context.formData` or `context.render`. Those properties depend on the app's middleware stack, so they do not form a fixed list. The built-in `methodOverride()` middleware from [`remix/middleware/method-override`](../src/method-override-middleware/README.md) deliberately changes one base value. It updates `context.method` before route matching so a `POST` form with a `_method` field can target a `PUT`, `PATCH`, or `DELETE` route. `context.request.method` remains the original method.
 
-Controllers can have their own middleware that applies to every action it owns. When middleware is needed for only one route, define that action as an object with `middleware` and a `handler`. Here, only the `POST` action parses `FormData`; the `index` page skips that work.
+Controllers can have their own middleware that applies to every action it owns. When middleware is needed for only one route, define that action as an object with `middleware` and a `handler`. Here, only the `POST` action parses `FormData`, and the `index` page skips that work.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx
 import { formData } from "remix/middleware/form-data";
@@ -234,7 +234,7 @@ A text response can be as simple as:
 return new Response("Album not found", { status: 404 });
 ```
 
-`redirect(...)` creates redirect responses. An edit action might use `303 See Other` for a POST-redirect-GET flow:
+`redirect(...)` creates redirect responses. An edit action might use [`303 See Other`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/303) for a POST-redirect-GET flow. The browser follows the redirect with a `GET`, so refreshing the destination page does not resubmit the form:
 
 ```ts filename=app/actions/albums/edit/controller.tsx
 import { redirect } from "remix/response/redirect";
@@ -245,7 +245,7 @@ import { routes } from "../../../routes.ts";
 return redirect(routes.albums.show.href({ albumId: context.params.albumId }), 303);
 ```
 
-For HTML outside the Remix component render pipeline, the `html` template tag escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:
+For HTML outside the Remix component render pipeline, the `html` template tag from [`remix/html-template`](../src/html-template/README.md) escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:
 
 ```ts
 import { html } from "remix/html-template";
@@ -255,7 +255,7 @@ import { createHtmlResponse } from "remix/response/html";
 return createHtmlResponse(html`<p>${album.title}</p>`);
 ```
 
-Remix's `redirect(...)` and `createHtmlResponse(...)`, like `new Response(...)` and [`Response.json(...)`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static), accept a standard `ResponseInit` when you need to set a status or headers. The numeric `303` above is a shorthand supported by `redirect(...)`.
+Remix's `redirect(...)` and `createHtmlResponse(...)`, like `new Response(...)` and [`Response.json(...)`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static), accept a standard [`ResponseInit`](https://developer.mozilla.org/en-US/docs/Web/API/Response/Response#options) options object when you need to set a status or headers. The numeric `303` above is a shorthand supported by `redirect(...)`.
 
 ```ts
 // inside an action:

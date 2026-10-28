@@ -6,7 +6,8 @@ description: How to build pages from Remix components, props, context, document 
 Remix pages are component trees. An action passes a tree to `context.render(...)`, and the render
 middleware turns it into an HTML `Response`. This guide covers components from
 [`remix/component`](/api/component/), props, local state and context, the shared
-document shell, styling with `css(...)` and cascade layers, headless primitives from
+document shell, styling with `css(...)` and
+[cascade layers](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer), headless primitives from
 `@remix-run/ui`, and HTML responses that skip the component runtime.
 
 The component model is the same on the server and in the browser. A page does not need browser
@@ -128,7 +129,7 @@ export function AlbumList(handle: Handle<{ albums: Album[] }>) {
 }
 ```
 
-The input handler changes `filter` and calls `handle.update()`. Updates are explicit: changing a
+The input handler changes `filter` and calls `handle.update()`. Updates are explicit. Changing a
 variable does not render anything until the component requests an update. Stable `key` values tell
 Remix which list items are the same across renders, preserving their DOM and component state if the
 list changes order. In the browser, these updates come from [event handlers](/interactivity/#events-with-on)
@@ -179,8 +180,10 @@ export function AlbumPrice(handle: Handle<{ amount: number }>) {
 ```
 
 Calling `handle.context.set(...)` stores a value but does not schedule an update. For context that
-changes in the browser, update the provider or use a `TypedEventTarget` so only consumers that listen
-for the change need to update.
+changes in the browser, update the provider or share a
+[`TypedEventTarget`](/interactivity/#saving-a-client-owned-document), a typed version of the DOM's
+[`EventTarget`](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) exported from
+[`remix/component`](/api/component/). Then only consumers that listen for the change need to update.
 
 ## Rendering pages through request context {#rendering-pages-through-request-context}
 
@@ -272,11 +275,13 @@ export function Document(handle: Handle<DocumentProps>) {
 
 `<ImportMap>` from [`remix/component/server`](/api/component/server/) combines
 the script entry's map with mappings from blocking client entries so the initial document contains
-one complete import map.
+one complete [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap).
+An import map is a `<script type="importmap">` tag that tells the browser which URL to load for each
+bare module specifier, such as [`remix/component`](/api/component/).
 
 Put `title`, `meta`, `link`, and `style` elements inside the document's explicit `<head>`, along with
 global stylesheets, module preloads, icons, and the browser entry script. Resolve the
-[entry href and its module graph](/files-and-assets/)
+[entry href and its module graph](/files-and-assets/#load-browser-scripts)
 once in `app/assets.ts` instead of constructing an asset URL in the component.
 
 The renderer passes this tree to `createHtmlResponse()` from
@@ -319,7 +324,8 @@ export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
 }
 ```
 
-The `css(...)` call creates a generated class and static rule. The `style` prop is better for values
+The `css(...)` call creates a generated class and static rule, and the element's
+[`mix` prop](/interactivity/#the-mix-prop) applies it. The `style` prop is better for values
 such as progress, coordinates, opacity, or transforms that can change on every update. Putting those
 values in `css(...)` would create another generated rule for each value.
 
@@ -331,7 +337,9 @@ JavaScript to receive its component styles.
 
 ## Cascade layers and app-owned design tokens {#theme-tokens-and-cascade-layers}
 
-Generated `css(...)` rules live in the native `rmx` cascade layer. If your app uses its own layers,
+A [cascade layer](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer) is a named group of CSS
+rules declared with `@layer`. The order of layers decides which rules win, before selector
+specificity is compared. Generated `css(...)` rules live in the `rmx` layer. If your app uses its own layers,
 declare the complete order once:
 
 ```css filename=app/actions/public/app.css

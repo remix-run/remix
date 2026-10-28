@@ -7,7 +7,7 @@ A `<Frame>` renders the HTML from another route inside the current page. Remix c
 route before it sends the page, stream it in behind a fallback, or reload it later in the browser
 without navigating the whole document.
 
-A frame works like an [`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe): it has a `src` URL, and the route at that URL returns HTML. Unlike an iframe, the HTML becomes part of the current document. Remix reconciles it into the live DOM instead of replacing it wholesale, so focus, input values, and the state of hydrated components inside the frame survive a reload. Because the response is plain HTML, you can read it in the browser's network panel, and a frame can load any route that returns HTML, including one that serves a static file.
+A frame works like an [`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe). It has a `src` URL, and the route at that URL returns HTML. Unlike an iframe, the HTML becomes part of the current document. Remix reconciles it into the live DOM, comparing the new HTML with the existing nodes and updating only what changed instead of replacing the region wholesale. That way focus, input values, and the state of [hydrated components](/interactivity/#cliententry) inside the frame survive a reload. Because the response is plain HTML, you can read it in the browser's network panel, and a frame can load any route that returns HTML, including one that serves a static file.
 
 This guide uses an album page with a recommendations region to cover the frame route, the render
 middleware that resolves frames on the server, the browser resolver, and the links, forms, and
@@ -116,8 +116,8 @@ its rendered HTML and replaces the fallback.
 
 Use a fallback for a region that may arrive later without making the surrounding page confusing.
 Keep a frame blocking when the initial page does not make sense without it. A fallback is loading UI,
-not a generic error boundary. The frame resolver and app error handling still decide what happens
-when the request fails.
+not a generic error boundary. The frame resolver, the function that fetches a frame's `src` and
+returns its HTML, decides what happens when the request fails, along with your app's error handling.
 
 ## Render the response as a stream {#server-rendering-with-rendertostream-and-rendertostring}
 
@@ -146,8 +146,8 @@ export const router = createRouter({
 
 The middleware forwards same-origin request headers needed by frame routes, strips body and
 transport headers from its internal `GET` requests, follows redirects, and cancels pending frame
-work when the outer request is canceled. It also uses the asset server to resolve hydrated client
-entries and their module preloads.
+work when the outer request is canceled. It also uses the asset server to resolve hydrated
+[client entries](/interactivity/#cliententry) and their module preloads.
 
 Use `renderWith(...)` from [`remix/middleware/render`](../src/render-middleware/README.md)
 when an app needs a different renderer or response type. Normal HTML actions should use the standard
@@ -229,8 +229,9 @@ This GET form reloads the recommendations frame without a client entry or submit
 </form>
 ```
 
-The form remains a normal document navigation before the runtime starts. Native constraint
-validation and the form's `submit` event run before Remix intercepts it. A submit button's values
+The form remains a normal document navigation before the runtime starts. Native
+[constraint validation](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation),
+such as `required` and `pattern` checks, and the form's `submit` event run before Remix intercepts it. A submit button's values
 take precedence over its form's values. These attributes control the navigation:
 
 - `data-rmx-target` chooses a named frame.
@@ -317,8 +318,9 @@ A link can keep its public destination in `href` while loading a smaller route i
 ```
 
 `data-rmx-target` chooses a mounted named frame, while `data-rmx-src` chooses the request used to fill it.
-The address bar still moves to `href`. If the target is omitted, Remix uses `href` as the top frame's
-source to keep it in sync with the browser URL. If a specified target does not match a mounted frame,
+The address bar still moves to `href`. If the target is omitted, Remix uses `href` as the source of
+the top frame, the implicit frame that holds the whole document, to keep it in sync with the browser
+URL. If a specified target does not match a mounted frame,
 the browser performs a document navigation. A supplied `data-rmx-src` must still be a valid same-origin
 URL regardless of the target. Invalid or cross-origin values also disable interception.
 
@@ -337,7 +339,7 @@ They cannot retain focus if the update removes the focused element.
 Once `run()` starts, every intercepted link and form already reloads the top frame, which is the whole document. Remix reconciles the new page into the current one, so client entries keep their local state and the browser keeps its scroll and focus behavior. Named frames are an addition on top of that, not a requirement. Choose between two shapes:
 
 - **Whole-page navigation.** Render regions as ordinary components inside the page, and let links and forms reload the top frame. Each action returns a complete document, so a route's code stays in one place and doesn't need to distinguish frame requests from document requests. The cost is that every interaction renders the whole page on the server, which works best when that render is fast.
-- **Per-region frames.** Give a region its own route and target it with `data-rmx-target` or `handle.frames.get(name)?.reload()`. Only that region renders and reloads. The cost is indirection: to see what a region renders, you follow its `src` to another route, and a route that serves both a full page and a named frame has to check the request. The default resolver sends `X-Remix-Frame: true` on every frame request and adds `X-Remix-Target` for named frames.
+- **Per-region frames.** Give a region its own route and target it with `data-rmx-target` or `handle.frames.get(name)?.reload()`. Only that region renders and reloads. The cost is indirection. To see what a region renders, you follow its `src` to another route, and a route that serves both a full page and a named frame has to check the request. The default resolver sends `X-Remix-Frame: true` on every frame request and adds `X-Remix-Target` for named frames.
 
 Start with whole-page navigation and move a region into its own frame when it needs to stream after the page, reload on its own, or be shared by several pages.
 
@@ -367,7 +369,7 @@ Two pieces change compared to a server-rendered app:
 - `render()` from [`remix/spa`](../src/spa/README.md) replaces the render middleware. Actions still call `context.render(...)` and return a `Response`, so redirects, status codes, and middleware work as before, but the rendered component tree goes straight to the browser runtime instead of being serialized to HTML. Pass `render()` a function to wrap every route in a shared layout.
 - `run(router)` from [`remix/spa`](../src/spa/README.md) resolves the current URL and every later frame navigation by calling `router.fetch(...)` in the page. No request reaches the network unless an action makes one.
 
-Controllers and routes can be shared unchanged between the two setups. What changes is the infrastructure around them: a browser can't open a database, so actions read from a browser-side store or call an API instead.
+Controllers and routes can be shared unchanged between the two setups. What changes is the infrastructure around them. A browser can't open a database, so actions read from a browser-side store or call an API instead.
 
 ## Handle failures and cancellation
 

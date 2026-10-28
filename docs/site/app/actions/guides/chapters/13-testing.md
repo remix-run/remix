@@ -50,7 +50,9 @@ By default, the runner maps each runner type to a file pattern and execution mod
 
 The `server` runner type covers both unit tests and router tests. It describes the execution model, not the test boundary.
 
-All three use the same `describe(...)` and `it(...)` API from [`remix/test`](/api/test/), which also provides lifecycle hooks, test context, mocks, fake timers, and runner configuration. Assertion functions and `expect(...)` matchers come from [`remix/assert`](/api/assert/). Both work in every test environment. Tests written for Node's built-in runner port with few changes: the `describe`, `it`, hook, and `t.mock` APIs follow the shape of `node:test`, and [`remix/assert`](/api/assert/) is a compatible subset of `node:assert/strict`:
+All three use the same `describe(...)` and `it(...)` API from [`remix/test`](/api/test/), which also provides lifecycle hooks, test context, mocks, fake timers, and runner configuration. Assertion functions and `expect(...)` matchers come from [`remix/assert`](/api/assert/). Both work in every test environment. Tests written for Node's built-in runner port with few changes. The `describe`, `it`, hook, and `t.mock` APIs follow the shape of [`node:test`](https://nodejs.org/api/test.html), and [`remix/assert`](/api/assert/) is a compatible subset of `node:assert/strict`.
+
+Each `it(...)` callback receives a [test context](/api/test/interface/TestContext/), usually named `t`, as its first argument. It holds per-test helpers such as `t.mock` for spies, `t.after(...)` for cleanup, and `t.serve(...)` for end-to-end tests, and it undoes their effects when the test finishes. A test that doesn't need them can omit the argument:
 
 ```ts filename=app/actions/albums/data.test.ts
 import * as assert from "remix/assert";
@@ -152,7 +154,7 @@ formData.set("cover", new File(["fake image bytes"], "cover.jpg", { type: "image
 
 Pass that form directly as the request body. Do not set `Content-Type` yourself because `Request` adds the multipart boundary when it serializes the `FormData`.
 
-Middleware does not need a separate app test harness. Send a request through the router and assert on the middleware's observable result: a rejection status, a response header, a persisted session value, or a context value used by the action. A reusable middleware package may use a small router with one test route, but app middleware should usually run in the same stack as the app's controllers.
+Middleware does not need a separate app test harness. Send a request through the router and assert on the middleware's observable result, such as a rejection status, a response header, a persisted session value, or a context value used by the action. A reusable middleware package may use a small router with one test route, but app middleware should usually run in the same stack as the app's controllers.
 
 ## Isolate stateful app tests
 
@@ -211,7 +213,7 @@ When a test needs a function spy or method override, use `t.mock.fn(...)` or `t.
 
 Use a browser component test when the behavior depends on an event, a DOM property, or a component update. These tests run in isolated browser frames rather than a simulated DOM.
 
-Browser and end-to-end tests require Playwright and its browser binaries:
+Browser and end-to-end tests require [Playwright](https://playwright.dev/), a library that launches and controls real browsers such as Chromium and Firefox, plus its browser binaries:
 
 ```sh
 npm i -D playwright
@@ -282,7 +284,7 @@ The button has no request behavior to prove, so this test stays at the browser c
 
 ## Test complete flows end to end
 
-An end-to-end test runs the router behind a real local HTTP server and drives the app through a Playwright `Page`. Use this boundary for a small number of flows where navigation, browser behavior, server rendering, and persistence must work together.
+An end-to-end test runs the router behind a real local HTTP server and drives the app through a Playwright [`Page`](https://playwright.dev/docs/api/class-page), an object representing one browser tab that can navigate, find elements, and click or type into them. Use this boundary for a small number of flows where navigation, browser behavior, server rendering, and persistence must work together.
 
 [`createTestServer(...)`](/api/node-fetch-server/test/function/createTestServer/) from [`remix/node-fetch-server/test`](/api/node-fetch-server/test/) adapts the router to a server on an available local port. [`t.serve(...)`](/api/test/interface/TestContext/) gives the Playwright page that server as its base URL and closes both after the test. This example uses a [`createTestRouter()` helper](#isolate-stateful-app-tests) so the edit doesn't touch shared state:
 
@@ -395,7 +397,9 @@ The default discovery rules cover the `.test`, `.test.browser`, and `.test.e2e` 
 }
 ```
 
-Keep Playwright's executable settings in its own config and reference that file from `remix.json`:
+The `playwright.projects` list names which [Playwright projects](https://playwright.dev/docs/test-projects) to run. A project is a named group of browser settings, usually one per browser, so browser and end-to-end tests run once in each listed project. The `setup` module can export `globalSetup()` and `globalTeardown()` functions that run once before and after the whole test run, such as migrating a test database. The `statements`, `lines`, `branches`, and `functions` values are minimum coverage percentages. When coverage is enabled and any of them isn't met, the test run fails.
+
+Keep Playwright's executable settings in its own config and define the projects there, then reference that file from `remix.json`:
 
 ```ts filename=playwright.config.ts
 import { defineConfig } from "playwright/test";
@@ -432,7 +436,7 @@ npm run typecheck
 ```
 
 Use `remix test --config ./config/remix.ci.json` when CI needs a completely separate static config.
-Both the `--config` path and the default `remix.json` are selected by the Remix CLI; relative paths
+Both the `--config` path and the default `remix.json` are selected by the Remix CLI. Relative paths
 inside either file resolve from that file's directory.
 
 Keep type checking as a separate command. The test runner executes TypeScript, but it does not replace the compiler's project-wide checks. The CLI guide lists the [`remix test` flags](/cli-and-tooling/#remix-test) alongside the other Remix commands.

@@ -6,7 +6,7 @@ description: The CSS-first animation model and Remix component helpers for motio
 Motion in a Remix app starts in CSS. Styles from `css(...)` in
 [`remix/component`](../src/component/README.md) handle hover, focus, and other browser-owned
 states. When motion depends on what a component renders, such as a node entering, leaving, or moving
-in a keyed list, the mixins and timing helpers in
+in a keyed list, the [mixins](/interactivity/#the-mix-prop) and timing helpers in
 [`@remix-run/ui/animation`](/api/ui/animation/) take over.
 
 [`@remix-run/ui`](/api/ui/) is currently unstable and versioned independently. It
@@ -53,7 +53,7 @@ const cardStyle = css({
 });
 ```
 
-Use the animation helpers from [`@remix-run/ui/animation`](/api/ui/animation/) when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
+Use the animation helpers from [`@remix-run/ui/animation`](/api/ui/animation/) when the motion depends on rendering state, such as a node entering, a node exiting, a keyed item moving, or an event that needs an interruptible animation.
 
 ```tsx
 import { createMixin, css, on } from "remix/component";
@@ -133,7 +133,7 @@ const pressableStyles = css({
 
 ## Entrance and exit animations {#entrance-and-exit-animations}
 
-`animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
+These mixins attach to host nodes, the DOM elements such as `<p>` or `<li>` that a component renders, not to components themselves. `animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
 
 ```tsx filename=app/ui/public/notice.tsx
 import { clientEntry, css, on } from "remix/component";
@@ -319,7 +319,7 @@ const itemStyle = css({
 
 `key` is not optional for layout animation in lists. Without stable keys, the runtime cannot know whether an item moved or a different item replaced it.
 
-Layout animation includes size projection by default. Pass `size: false` when only position should animate and scaling the element's contents would look wrong.
+Layout animation includes size projection by default, which animates a change in size by scaling the element with a transform. Pass `size: false` when only position should animate and scaling the element's contents would look wrong.
 
 ```tsx
 import { css } from "remix/component";
@@ -398,7 +398,7 @@ const itemStyles = css({
 
 ## Springs, tweens, and easing {#springs-tweens-and-easing}
 
-`spring()` returns an iterator decorated for CSS transitions and Web Animations. Stringify it in CSS, spread it into animation options, or iterate it for custom JavaScript animation.
+`spring()` returns an iterator decorated for CSS transitions and the [Web Animations API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Animations_API) (WAAPI), the browser API behind `element.animate()`. Stringify it in CSS, spread it into animation options, or iterate it for custom JavaScript animation.
 
 ```tsx filename=app/ui/public/bouncy-switch.tsx
 import { clientEntry, css, on } from "remix/component";
@@ -945,9 +945,9 @@ export function AnimationGallery() {
 
 ## Interruptible interactions {#interruptible-interactions}
 
-Event handlers receive abort signals, and animation mixins cancel or replace in-flight work when the DOM changes again. If a user toggles a notice twice quickly, the notice animates back toward its rendered styles from wherever its exit had reached, instead of finishing the exit first.
+Event handlers receive an [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) that aborts when the same event fires again or the element is removed, and animation mixins cancel or replace in-flight work when the DOM changes again. If a user toggles a notice twice quickly, the notice animates back toward its rendered styles from wherever its exit had reached, instead of finishing the exit first.
 
-For custom imperative animations, keep the current animation in setup scope and cancel it before starting the next one:
+For custom imperative animations, keep the current animation in [setup scope](/rendering-ui/#handle-props-setup-render-and-updates) and cancel it before starting the next one:
 
 ```tsx filename=app/ui/public/ripple-button.tsx
 import { clientEntry, css, on, ref } from "remix/component";
@@ -990,11 +990,11 @@ const buttonStyle = css({
 });
 ```
 
-CSS transitions are also interruptible: changing the target value while a transition is running makes the browser animate from the current visual state to the new one.
+CSS transitions are also interruptible. Changing the target value while a transition is running makes the browser animate from the current visual state to the new one.
 
 ## Reduced-motion behavior {#reduced-motion-behavior}
 
-Respect `prefers-reduced-motion` at the CSS boundary first. It works before JavaScript loads, applies to server-rendered frames, and covers static transitions.
+The [`prefers-reduced-motion`](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion) media query reports whether the user has asked their operating system to minimize motion. Respect it at the CSS boundary first. It works before JavaScript loads, applies to server-rendered frames, and covers static transitions.
 
 ```tsx filename=app/ui/motion-safe-panel.tsx
 import { css } from "remix/component";

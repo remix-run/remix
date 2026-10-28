@@ -102,11 +102,11 @@ export async function migrateDatabase() {
 }
 ```
 
-`createSqliteDatabase(...)` uses the SQLite client built into Node.js or Bun, and `foreignKeys: true` enables enforcement of the track's reference to its album. The file path is relative to this module, so starting the server from another directory still references the proper database file.
+`createSqliteDatabase(...)` uses the SQLite client built into Node.js or Bun. SQLite leaves foreign key enforcement off by default, so `foreignKeys: true` turns it on and the database rejects a track whose album doesn't exist. The file path is relative to this module, so starting the server from another directory still references the proper database file.
 
 In a single-process app, call `await migrateDatabase()` in `server.ts` before the HTTP server starts listening, so every migration is applied before the first request. In a deployment with several server processes, run migrations once as a deployment step before those processes accept requests. Call `await db.close()` when the application [shuts down](/production/#startup-and-shutdown).
 
-The migration runner records applied migrations in a journal and checks their checksums on later runs. Add a new migration when the schema changes instead of editing an applied migration, and keep the table definitions in `app/data/tables.ts` aligned with the resulting SQL schema.
+The migration runner records each applied migration in a journal, a table in the database named `data_table_migrations` by default. Each journal row stores a checksum, a hash of the migration's SQL files. On later runs, the runner recomputes the checksum and throws if an applied migration's files have changed. Add a new migration when the schema changes instead of editing an applied migration, and keep the table definitions in `app/data/tables.ts` aligned with the resulting SQL schema.
 
 `db.migrate(...)` also supports dry-run plans, bounded rollbacks, and migration targets. The [`remix/data-table`](/api/data-table/) overview covers those options and CLI configuration for `remix db`.
 
@@ -212,7 +212,7 @@ A request to `/albums/thriller` now reads the seeded row from the SQLite file, s
 
 ## Define the input schema
 
-Form fields arrive as text, even when the year input has `type="number"`. A form schema built with [`remix/data-schema/form-data`](/api/data-schema/form-data/) can convert the year and reject blank titles and artists. Keeping it beside the edit controller puts it next to the action that parses the form:
+Form fields arrive as text, even when the year input has `type="number"`. A form schema built with [`remix/data-schema/form-data`](/api/data-schema/form-data/) can coerce the year, converting the text `"1982"` into the number `1982`, and reject blank titles and artists. Keeping it beside the edit controller puts it next to the action that parses the form:
 
 ```ts filename=app/actions/albums/edit/schema.ts
 import * as s from "remix/data-schema";
@@ -251,7 +251,7 @@ These sections cover query-string and repeated-field parsing, composed queries a
 
 ### Parse query strings and repeated fields
 
-The schema helpers in [`remix/data-schema/form-data`](/api/data-schema/form-data/) also accept `URLSearchParams`. For example, a catalog search can read a query, a page number, and several selected genres:
+The schema helpers in [`remix/data-schema/form-data`](/api/data-schema/form-data/) also accept [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams), the parsed query string you get from `context.url.searchParams`. For example, a catalog search can read a query, a page number, and several selected genres:
 
 ```ts filename=app/actions/albums/search-schema.ts
 import * as s from "remix/data-schema";
@@ -276,7 +276,7 @@ Browser form encoding changes what these schemas receive:
 
 - An unchecked checkbox is absent. For a checkbox with `value="yes"`, `s.optional(s.literal("yes")).transform((value) => value === "yes")` produces a boolean. `coerce.boolean()` accepts `"true"` and `"false"`, not the browser's default `"on"` value.
 - An empty text input is `""`, not `undefined`, so `optional()` and `defaulted()` do not make a blank string valid automatically.
-- Use `f.file(...)` or `f.files(...)` for file entries, and [parse multipart uploads with limits](/files-and-assets/) before the schema sees them.
+- Use `f.file(...)` or `f.files(...)` for file entries, and [parse multipart uploads with limits](/files-and-assets/#limit-upload-size) before the schema sees them.
 
 ### Compose queries and load relations
 
@@ -336,7 +336,7 @@ let result = await context.db.exec(sql`
 `);
 ```
 
-`${artist}` becomes a bound value, not SQL text. Keep table names, column names, and SQL syntax in application code. Raw SQL does not run table lifecycle hooks or infer the result shape from a table definition.
+`${artist}` becomes a bound value, not SQL text. Keep table names, column names, and SQL syntax in application code. Raw SQL does not run [table lifecycle hooks](#enforce-rules-across-writes) or infer the result shape from a table definition.
 
 ### Enforce rules across writes
 
@@ -442,6 +442,6 @@ export const db = createMysqlDatabase({
 });
 ```
 
-`multipleStatements: true` allows the migration runner to send each SQL file as one script. MySQL does not support SQL `RETURNING`, so query operations that request it, including bulk inserts with `{ returnRows: true }`, are unavailable. Single-row CRUD helpers can retrieve a row with a follow-up query. MySQL also does not support transactional DDL, so a failed migration may need repair before it can run again.
+`multipleStatements: true` allows the migration runner to send each SQL file as one script. MySQL does not support the SQL `RETURNING` clause, which sends written rows back from an insert or update, so query operations that request it, including bulk inserts with `{ returnRows: true }`, are unavailable. Single-row CRUD helpers can retrieve a row with a follow-up query. MySQL also does not support transactional DDL, meaning schema changes such as `create table` take effect immediately and can't be rolled back. A failed migration may need repair before it can run again.
 
 The database instance owns the pool when created from configuration. Close it during application shutdown with `await db.close()`. You can instead pass an existing compatible client or pool when your application already manages its lifecycle.
