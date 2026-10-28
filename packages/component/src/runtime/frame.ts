@@ -551,9 +551,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         reconciliationTracker: options.reconciliationTracker,
         blockingFrameTracker: options.blockingFrameTracker,
       }
-      context.styleManager.adoptServerStyles(
-        collectFrameServerStyleTags(createElementContainer(parsed)),
-      )
+      adoptFrameServerStyles(createElementContainer(parsed), context.styleManager)
 
       diffElementAttributes(container.doc.documentElement, parsed)
 
@@ -586,9 +584,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     rewriteResponseNonces(fragment, options.nonce, importMapManager.documentNonce)
     if (!(await consumeClientEntryResources(fragment, options.documentHref))) return
     if (isRenderAborted(options.signal)) return
-    context.styleManager.adoptServerStyles(
-      collectFrameServerStyleTags(createElementContainer(fragment)),
-    )
+    adoptFrameServerStyles(createElementContainer(fragment), context.styleManager)
     removeEmptyHeads(fragment)
     let responseData = options.data
     mergeRmxDataFromFragment(responseData, fragment)
@@ -665,7 +661,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if ((await initialClientEntryResources) === false) return
     if (disposed || context.lifecycleSignal.aborted) return
-    context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
+    adoptFrameServerStyles(container, context.styleManager)
     let subFramesReady = hydrateContainer(container, context, { reconciliationTracker })
 
     try {
@@ -1199,7 +1195,7 @@ function removeEmptyHeads(fragment: DocumentFragment): void {
   }
 }
 
-function collectFrameServerStyleTags(container: FrameContainer): HTMLStyleElement[] {
+function adoptFrameServerStyles(container: FrameContainer, styleManager: StyleManager): void {
   let styles: HTMLStyleElement[] = []
   let nodes =
     container.root instanceof Document
@@ -1207,7 +1203,21 @@ function collectFrameServerStyleTags(container: FrameContainer): HTMLStyleElemen
       : container.childNodes
 
   collectOwnedServerStyleTags(nodes, styles)
-  return styles
+  for (let style of styles) {
+    let parent = style.parentNode
+    let nextSibling = style.nextSibling
+    let wasConnected = style.isConnected
+
+    // Let the active document enforce CSP before copying rules into a constructed
+    // sheet. Keep this synchronous with the DOM diff so no intermediate state paints.
+    if (!wasConnected) document.head.append(style)
+    try {
+      styleManager.adoptServerStyles([style])
+    } finally {
+      // Blocked styles and failed adoptions retain their original DOM position.
+      if (!wasConnected && style.parentNode) parent?.insertBefore(style, nextSibling)
+    }
+  }
 }
 
 function collectOwnedServerStyleTags(nodes: Node[], styles: HTMLStyleElement[]): void {
