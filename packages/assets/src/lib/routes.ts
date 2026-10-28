@@ -5,6 +5,7 @@ import {
   normalizeFilePath,
   normalizePathname,
   resolveFilePath,
+  safeDecodeURIComponent,
 } from './paths.ts'
 
 interface MountConfig {
@@ -66,7 +67,9 @@ export function compileRoutes(
     for (let mount of compiledMounts) {
       let relativePathname = getPathWithinRoot(mount.urlRoot, normalizedPathname)
       if (relativePathname === null) continue
-      let filePath = resolveFilePath(mount.fileRoot, decodeURIComponent(relativePathname))
+      let decodedPathname = safeDecodeURIComponent(relativePathname)
+      if (decodedPathname === null) return null
+      let filePath = resolveFilePath(mount.fileRoot, decodedPathname)
       if (getPathWithinRoot(mount.fileRoot, filePath) === null) return null
 
       return {

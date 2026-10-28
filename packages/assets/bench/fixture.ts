@@ -53,9 +53,9 @@ async function readBasicFixture(): Promise<BenchFixture> {
     entryPointFile: 'app/entry.tsx',
     entryPointUrl: '/assets/app/entry.tsx',
     expectedEntryImportMapUrlSubstrings: [
-      '/assets/app/summary.@',
-      '/assets/bench-packages/shared/strings.@',
-      '/assets/bench-packages/ui/panel.@',
+      '/assets/app/summary.~',
+      '/assets/bench-packages/shared/strings.~',
+      '/assets/bench-packages/ui/panel.~',
       '/assets/packages/component/',
     ],
     expectedEntrySourceSubstrings: [
@@ -65,8 +65,8 @@ async function readBasicFixture(): Promise<BenchFixture> {
       './summary.ts',
     ],
     expectedPreloadUrlSubstrings: [
-      '/assets/bench-packages/shared/strings.@',
-      '/assets/bench-packages/ui/panel.@',
+      '/assets/bench-packages/shared/strings.~',
+      '/assets/bench-packages/ui/panel.~',
       '/assets/packages/component/',
     ],
     createStats: async () => [
