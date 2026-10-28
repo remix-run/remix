@@ -25,6 +25,7 @@ const actions = await loadExample('toast/actions', { outlet: 'ToastRegion' })
 const stack = await loadExample('toast/stack', { outlet: 'ToastRegion' })
 const countdown = await loadExample('toast/countdown', { outlet: 'ToastRegion' })
 const priority = await loadExample('toast/priority', { outlet: 'ToastRegion' })
+const dismissal = await loadExample('toast/dismissal', { outlet: 'ToastRegion' })
 
 const anatomy = await highlightSource(`
   import * as toast from '@remix-run/ui/toast'
@@ -189,6 +190,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             {dynamicTimeout.Outlet && <dynamicTimeout.Outlet />}
             {countdown.Outlet && <countdown.Outlet />}
             {priority.Outlet && <priority.Outlet />}
+            {dismissal.Outlet && <dismissal.Outlet />}
           </div>
           {customPosition.Outlet && <customPosition.Outlet />}
         </>
@@ -215,6 +217,12 @@ export default function ToastPage(handle: Handle<PageProps>) {
           item presents them. Unmounting the region pauses those timers without discarding
           notifications. Remounting resumes them with their remaining time.
         </p>
+        <p>
+          Call <code>close(id)</code> to dismiss a toast programmatically, or <code>close()</code>
+          to dismiss all toasts. Use the ID returned by <code>add()</code> or read it from{' '}
+          <code>toastItems</code>.
+        </p>
+        <Example id="programmatic-dismissal" example={dismissal} />
       </Section>
       <Section id="custom-position" title="Custom position">
         <p>
