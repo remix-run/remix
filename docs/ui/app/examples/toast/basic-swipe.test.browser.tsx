@@ -119,7 +119,7 @@ describe('Toast swipe intent', () => {
     pointer(other, 'pointermove', 180, 100)
     await result.act(() => pointer(other, 'pointerup', 180, 100))
     assert.equal(toastManager.toastItems.length, 1)
-    assert.equal(toastManager.toastItems[0].title, 'Toast title')
+    assert.equal(toastManager.toastItems[0].title, 'Toast 1 created')
     assert.equal(card.inert, false)
   })
 

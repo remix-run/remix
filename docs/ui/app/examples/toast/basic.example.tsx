@@ -15,6 +15,7 @@ import type { ElementProps } from 'remix/component'
 export const toastManager = toast.createToastManager()
 
 export default function ExampleToast() {
+  let count = 0
   return () => (
     <div mix={styles.triggers}>
       <button
@@ -22,8 +23,9 @@ export default function ExampleToast() {
         mix={[
           styles.triggerButton,
           on('click', () => {
+            count += 1
             toastManager.add({
-              title: 'Toast title',
+              title: `Toast ${count} created`,
               description: 'This is a toast description.',
             })
           }),

@@ -587,7 +587,7 @@ describe('Live examples in the docs site', () => {
     let trigger = page.locator('#basic').getByRole('button', { name: 'Show toast', exact: true })
     await trigger.click()
     let outlets = page.locator('body > .ui-toast-demo-outlets')
-    let toastItem = outlets.getByRole('dialog', { name: 'Toast title', exact: true })
+    let toastItem = outlets.getByRole('dialog', { name: 'Toast 1 created', exact: true })
     await toastItem.waitFor()
     assert.equal(
       await toastItem

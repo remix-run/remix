@@ -448,5 +448,6 @@
   pointer-events: auto;
 }
 .ui-toast-demo-outlets [role='region']:empty {
-  display: none;
+  /* Keep empty live regions exposed without reserving space between demos. */
+  position: absolute;
 }
