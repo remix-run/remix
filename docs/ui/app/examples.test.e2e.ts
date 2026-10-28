@@ -570,7 +570,7 @@ describe('Live examples in the docs site', () => {
     assert.equal(await region.evaluate((el) => el.contains(document.activeElement)), false)
   })
 
-  it('renders toast examples at the document root and follows native action links', async (t) => {
+  it('renders toast examples at the document root on desktop and narrow screens', async (t) => {
     let nodeEnv = process.env.NODE_ENV
     process.env.NODE_ENV = 'development'
     t.after(() => {
@@ -624,8 +624,11 @@ describe('Live examples in the docs site', () => {
 
     await page.setViewportSize({ width: 390, height: 720 })
     await page.emulateMedia({ colorScheme: 'dark' })
-    await page.getByRole('button', { name: 'Show toast with link', exact: true }).click()
-    let actionToastItem = outlets.getByRole('dialog', { name: 'Toast title', exact: true })
+    await page
+      .locator('#action-example')
+      .getByRole('button', { name: 'Show toast with action', exact: true })
+      .click()
+    let actionToastItem = outlets.getByRole('dialog', { name: 'Action performed', exact: true })
     await actionToastItem.waitFor()
     assert.equal(
       await actionToastItem
@@ -639,12 +642,12 @@ describe('Live examples in the docs site', () => {
     await navigation.click()
     assert.equal(await navigation.getAttribute('aria-expanded'), 'true')
     await navigation.click()
-    await actionToastItem.getByRole('button', { name: 'Dismiss', exact: true }).click()
+    await actionToastItem.getByRole('button', { name: 'Undo', exact: true }).click()
     await actionToastItem.waitFor({ state: 'hidden' })
-    await page.getByRole('button', { name: 'Show toast with link', exact: true }).click()
-    await actionToastItem.getByRole('link', { name: 'View docs', exact: true }).press('Enter')
-    await page.waitForURL('**/animation/entrance-exit/')
-    await page.getByRole('heading', { name: 'Entrance and exit', exact: true }).waitFor()
+    let confirmation = outlets.getByRole('dialog', { name: 'Action undone', exact: true })
+    await confirmation.waitFor()
+    await confirmation.getByRole('button', { name: 'Dismiss notification' }).click()
+    await confirmation.waitFor({ state: 'hidden' })
     assert.deepEqual(errors, [], errors.join('\n'))
   })
 

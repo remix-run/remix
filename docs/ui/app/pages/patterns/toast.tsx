@@ -21,7 +21,6 @@ const customPosition = await loadExample('toast/position', { outlet: 'ToastRegio
 const limit = await loadExample('toast/limit', { outlet: 'ToastRegion' })
 const basic = await loadExample('toast/basic', { outlet: 'ToastRegion' })
 const action = await loadExample('toast/action', { outlet: 'ToastRegion' })
-const actions = await loadExample('toast/actions', { outlet: 'ToastRegion' })
 const stack = await loadExample('toast/stack', { outlet: 'ToastRegion' })
 const countdown = await loadExample('toast/countdown', { outlet: 'ToastRegion' })
 const dismissal = await loadExample('toast/dismissal', { outlet: 'ToastRegion' })
@@ -182,7 +181,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
             {basic.Outlet && <basic.Outlet />}
             {limit.Outlet && <limit.Outlet />}
             {action.Outlet && <action.Outlet />}
-            {actions.Outlet && <actions.Outlet />}
             {stack.Outlet && <stack.Outlet />}
             {timeout.Outlet && <timeout.Outlet />}
             {defaultTimeout.Outlet && <defaultTimeout.Outlet />}
@@ -303,14 +301,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
           message, such as a keyboard shortcut or a control elsewhere in your application.
         </p>
         <Example id="action-example" example={action} />
-      </Section>
-      <Section id="actions" title="Multiple actions">
-        <p>
-          Custom data can describe multiple actions. Use a discriminated union to give each action
-          its own fields and behavior. Your render logic decides how to present each action and
-          whether it dismisses the toast.
-        </p>
-        <Example id="multiple-actions" example={actions} />
       </Section>
       <Section id="deduplication" title="Replacing a toast">
         <p>
