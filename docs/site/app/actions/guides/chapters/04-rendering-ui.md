@@ -281,7 +281,7 @@ bare module specifier, such as [`remix/component`](/api/component/).
 
 Put `title`, `meta`, `link`, and `style` elements inside the document's explicit `<head>`, along with
 global stylesheets, module preloads, icons, and the browser entry script. Resolve the
-[entry href and its module graph](/files-and-assets/#load-browser-scripts)
+[entry href and its module graph](/files-and-assets/#client-entry-hrefs-import-maps-and-module-preloads)
 once in `app/assets.ts` instead of constructing an asset URL in the component.
 
 The renderer passes this tree to `createHtmlResponse()` from

@@ -630,7 +630,7 @@ mkdir -p app/actions/albums/edit/public
 touch app/actions/albums/edit/public/album-edit-form.tsx
 ```
 
-The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory. `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which [starts the Remix component client runtime](/interactivity/#browser-entry-with-run). You can [configure the asset server boundary](/files-and-assets/#control-what-the-browser-can-reach) if your app needs different rules.
+The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory. `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which [starts the Remix component client runtime](/interactivity/#browser-entry-with-run). You can [configure the asset server boundary](/files-and-assets/#remix-s-unbundled-asset-server) if your app needs different rules.
 
 Now that we have a place for the form to live, let's pull it into its own component.
 

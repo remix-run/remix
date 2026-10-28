@@ -158,7 +158,7 @@ await app.ready();
 `loadModule` imports the named component for every client entry discovered in the document. An
 [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap)
 tells the browser which URL each bare module specifier resolves to, and Remix adds more of them as
-[client entries and frames load](/files-and-assets/#load-browser-scripts).
+[client entries and frames load](/files-and-assets/#client-entry-hrefs-import-maps-and-module-preloads).
 Browsers that support multiple import maps on one page use native imports and preloads. Browsers without that support use
 the [`remix/multiple-import-maps-polyfill`](/api/multiple-import-maps-polyfill/)
 shim when later frame responses introduce new mappings. If you only target browsers with native
