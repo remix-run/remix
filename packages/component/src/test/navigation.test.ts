@@ -1764,6 +1764,231 @@ describe('navigate', () => {
       controller.abort()
     }
   })
+
+  it('uses the updated URL for top-frame reloads after a URL-only replacement', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'reload-source')
+    let resolveFrame = mock.fn(
+      async (_src: string) => '<html><head></head><body><h1>Product</h1></body></html>',
+    )
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+
+    try {
+      await app.ready()
+      await navigate(destination.search, { history: 'replace', reload: false })
+
+      expect(window.location.href).toBe(destination.href)
+      expect(app.frames.top.src).toBe(destination.href)
+      expect(resolveFrame).not.toHaveBeenCalled()
+
+      await app.frames.top.reload()
+      expect(resolveFrame).toHaveBeenCalledTimes(1)
+      expect(resolveFrame.mock.calls[0]?.arguments[0]).toBe(destination.href)
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('uses the updated URL for top-frame reloads after a URL-only history fallback', async (t) => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'fallback-reload-source')
+    let resolveFrame = mock.fn(
+      async (_src: string) => '<html><head></head><body><h1>Product</h1></body></html>',
+    )
+    stubGlobalField(t, 'navigation', undefined)
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+
+    try {
+      await app.ready()
+      await navigate(destination.search, { history: 'replace', reload: false })
+
+      expect(window.location.href).toBe(destination.href)
+      expect(app.frames.top.src).toBe(destination.href)
+      expect(resolveFrame).not.toHaveBeenCalled()
+
+      await app.frames.top.reload()
+      expect(resolveFrame).toHaveBeenCalledTimes(1)
+      expect(resolveFrame.mock.calls[0]?.arguments[0]).toBe(destination.href)
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('preserves scroll and focus for URL-only fragment updates', async () => {
+    let originalUrl = window.location.href
+    let input = document.createElement('input')
+    let spacer = document.createElement('div')
+    spacer.style.height = '3000px'
+    let target = document.createElement('button')
+    target.id = 'url-only-fragment'
+    document.body.append(input, spacer, target)
+    let resolveFrame = mock.fn(
+      async (_src: string) => '<html><head></head><body><h1>Product</h1></body></html>',
+    )
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+
+    try {
+      await app.ready()
+      input.focus()
+      window.scrollTo({ left: 0, top: 100, behavior: 'instant' })
+      let scrollY = window.scrollY
+      expect(scrollY).toBe(100)
+
+      await navigate(`#${target.id}`, { history: 'replace', reload: false })
+
+      expect(window.location.hash).toBe(`#${target.id}`)
+      expect(document.activeElement).toBe(input)
+      expect(window.scrollY).toBe(scrollY)
+      expect(app.frames.top.src).toBe(window.location.href)
+      expect(resolveFrame).not.toHaveBeenCalled()
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+      window.scrollTo({ left: 0, top: 0, behavior: 'instant' })
+    }
+  })
+
+  it('reloads the top frame on back and forward after a URL-only push', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'pushed')
+    let resolveFrame = mock.fn(
+      async (_src: string) => '<html><head></head><body><h1>Product</h1></body></html>',
+    )
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+
+    try {
+      await app.ready()
+      await navigate(destination.search, { history: 'push', reload: false })
+
+      expect(app.frames.top.src).toBe(destination.href)
+      expect(resolveFrame).not.toHaveBeenCalled()
+
+      await window.navigation.back().finished
+      expect(app.frames.top.src).toBe(originalUrl)
+      expect(resolveFrame.mock.calls[0]?.arguments[0]).toBe(originalUrl)
+
+      await window.navigation.forward().finished
+      expect(app.frames.top.src).toBe(destination.href)
+      expect(resolveFrame.mock.calls[1]?.arguments[0]).toBe(destination.href)
+      expect(resolveFrame).toHaveBeenCalledTimes(2)
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+    }
+  })
+
+  it('honors explicit scroll resets for URL-only fragment updates', async () => {
+    let originalUrl = window.location.href
+    let input = document.createElement('input')
+    let spacer = document.createElement('div')
+    spacer.style.height = '3000px'
+    let target = document.createElement('button')
+    target.id = 'url-only-scroll-target'
+    document.body.append(input, spacer, target)
+    let resolveFrame = mock.fn(
+      async (_src: string) => '<html><head></head><body><h1>Product</h1></body></html>',
+    )
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+
+    try {
+      await app.ready()
+      input.focus()
+      window.scrollTo({ left: 0, top: 100, behavior: 'instant' })
+
+      await navigate(`#${target.id}`, {
+        history: 'replace',
+        reload: false,
+        resetScroll: 'after-transition',
+      })
+
+      expect(window.location.hash).toBe(`#${target.id}`)
+      expect(window.scrollY).toBeGreaterThan(100)
+      expect(target.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight)
+      // Native fragment scrolling focuses a focusable target even with manual focus reset.
+      expect(document.activeElement).toBe(target)
+      expect(resolveFrame).not.toHaveBeenCalled()
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+      window.scrollTo({ left: 0, top: 0, behavior: 'instant' })
+    }
+  })
+
+  it('honors explicit focus resets without scrolling for URL-only updates', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'focus-reset')
+    let input = document.createElement('input')
+    let spacer = document.createElement('div')
+    spacer.style.height = '3000px'
+    document.body.append(input, spacer)
+    let resolveFrame = mock.fn(
+      async (_src: string) => '<html><head></head><body><h1>Product</h1></body></html>',
+    )
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+
+    try {
+      await app.ready()
+      input.focus()
+      window.scrollTo({ left: 0, top: 100, behavior: 'instant' })
+
+      await navigate(destination.search, {
+        history: 'replace',
+        reload: false,
+        resetFocus: 'after-transition',
+      })
+
+      expect(window.location.href).toBe(destination.href)
+      expect(document.activeElement).toBe(document.body)
+      expect(window.scrollY).toBe(100)
+      expect(resolveFrame).not.toHaveBeenCalled()
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+      window.scrollTo({ left: 0, top: 0, behavior: 'instant' })
+    }
+  })
+
+  it('accepts boolean scroll and focus options for URL-only updates', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('variant', 'boolean-resets')
+    let input = document.createElement('input')
+    let spacer = document.createElement('div')
+    spacer.style.height = '3000px'
+    document.body.append(input, spacer)
+    let resolveFrame = mock.fn(
+      async (_src: string) => '<html><head></head><body><h1>Product</h1></body></html>',
+    )
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+
+    try {
+      await app.ready()
+      input.focus()
+      window.scrollTo({ left: 0, top: 100, behavior: 'instant' })
+
+      await navigate(destination.search, {
+        history: 'replace',
+        reload: false,
+        resetScroll: true,
+        resetFocus: false,
+      })
+
+      expect(window.location.href).toBe(destination.href)
+      expect(window.scrollY).toBe(0)
+      expect(document.activeElement).toBe(input)
+      expect(resolveFrame).not.toHaveBeenCalled()
+    } finally {
+      app.dispose()
+      window.history.replaceState(window.history.state, '', originalUrl)
+      window.scrollTo({ left: 0, top: 0, behavior: 'instant' })
+    }
+  })
 })
 
 describe('navigation.settled', () => {

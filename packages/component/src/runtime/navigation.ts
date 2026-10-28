@@ -1,4 +1,4 @@
-import { getTopFrame, getNamedFrame } from './run.ts'
+import { getTopFrame, getNamedFrame, setTopFrameSource } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 import { isDocumentReload, reloadCurrentDocument } from './document-reload.ts'
@@ -38,8 +38,8 @@ interface ReplacedFormNavigationInfo {
   submission: FormSubmission
 }
 
-interface FrameRedirectNavigationInfo {
-  type: typeof frameRedirectNavigationInfoType
+interface UrlUpdateNavigationInfo {
+  type: typeof frameRedirectNavigationInfoType | typeof urlOnlyNavigationInfoType
   resetScroll: NonNullable<NavigationInterceptOptions['scroll']>
   resetFocus: NonNullable<NavigationInterceptOptions['focusReset']>
 }
@@ -47,6 +47,7 @@ interface FrameRedirectNavigationInfo {
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const replacedFormNavigationInfoType = Symbol('replaced-form-navigation')
 const frameRedirectNavigationInfoType = 'frame-redirect'
+const urlOnlyNavigationInfoType = Symbol('url-only-navigation')
 
 // Lets the navigation handler tell the WebKit workaround once it has reset scroll.
 const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
@@ -143,21 +144,22 @@ export type NavigationOptions = {
   history?: 'push' | 'replace'
   /**
    * Scroll behavior. `true` aliases `"after-transition"` and `false` aliases `"manual"`.
-   * (default: `"after-transition"`)
+   * Defaults to `"manual"` when `reload` is `false`, otherwise `"after-transition"`.
    */
   resetScroll?: NavigationInterceptOptions['scroll'] | boolean
   /**
    * Focus reset behavior. `true` aliases `"after-transition"` and `false` aliases `"manual"`.
-   * (default: `"after-transition"`)
+   * Defaults to `"manual"` when `reload` is `false`, otherwise `"after-transition"`.
+   * Scrolling to a fragment can still focus its target when focus reset is `"manual"`.
    */
   resetFocus?: NavigationInterceptOptions['focusReset'] | boolean
   /**
    * Whether to reload frame content. Set to `false` to update the browser URL and history without
-   * fetching or rendering anything, leaving scroll position and focus untouched. `src`, `target`,
-   * `resetScroll`, and `resetFocus` are ignored. Back and forward traversal to the new entry
-   * reloads the top frame like any other entry. Without frame navigation, `history: 'replace'`
-   * replaces the URL in place, and other updates fall back to document navigation like other
-   * `navigate()` calls. If a frame navigation is still loading,
+   * fetching or rendering anything. Scroll position and focus stay untouched by default; use
+   * `resetScroll` and `resetFocus` to override this. `src` and `target` are ignored. Back and forward
+   * traversal to the new entry reloads the top frame like any other entry. Without frame navigation,
+   * `history: 'replace'` replaces the URL in place and preserves scroll and focus regardless of reset
+   * options; other updates fall back to document navigation. If a frame navigation is still loading,
    * the top frame reloads instead, so await `navigation.settled()` first. (default: `true`)
    */
   reload?: boolean
@@ -185,6 +187,7 @@ export async function navigate(href: string, options?: NavigationOptions) {
     // only the URL needs to change. A pushed entry would change the URL on back without rendering.
     if (options?.reload === false && options.history === 'replace' && isSameOriginUrl(href)) {
       window.history.replaceState(window.history.state, '', href)
+      setTopFrameSource(window.location.href)
     } else if (options?.history === 'replace') {
       window.location.replace(href)
     } else {
@@ -198,10 +201,10 @@ export async function navigate(href: string, options?: NavigationOptions) {
       state: { ...state, target: undefined, src: href },
       history: options.history,
       info: {
-        type: frameRedirectNavigationInfoType,
-        resetScroll: 'manual',
-        resetFocus: 'manual',
-      } satisfies FrameRedirectNavigationInfo,
+        type: urlOnlyNavigationInfoType,
+        resetScroll: normalizeResetBehavior(options.resetScroll ?? 'manual'),
+        resetFocus: normalizeResetBehavior(options.resetFocus ?? 'manual'),
+      } satisfies UrlUpdateNavigationInfo,
     })
     await transition.finished
     return
@@ -431,7 +434,7 @@ export function startNavigationListenerImpl(
     (event) => {
       if (
         isDocumentReload(event.info) ||
-        (event.hashChange && !needsFrameReload) ||
+        (event.hashChange && !needsFrameReload && !isUrlUpdateNavigationInfo(event.info)) ||
         event.downloadRequest != null ||
         !event.canIntercept ||
         // Safari seems to incorrectly set canIntercept to true for sub-domain navigations, so
@@ -445,10 +448,13 @@ export function startNavigationListenerImpl(
 
       // Like hash changes, a URL-only navigate() that interrupts frame work falls through to a
       // top-frame reload so the page content still matches the URL.
-      if (isFrameRedirectNavigationInfo(event.info) && !needsFrameReload) {
+      if (isUrlUpdateNavigationInfo(event.info) && !needsFrameReload) {
         interceptNavigation(navigation, event, event.info.resetScroll !== 'manual', {
-          async handler() {},
-          scroll: 'manual',
+          async handler() {
+            if (!event.signal.aborted) options.getTopFrame().src = event.destination.url
+          },
+          // Frame redirects already scrolled before synchronizing the URL.
+          scroll: event.info.type === urlOnlyNavigationInfoType ? event.info.resetScroll : 'manual',
           focusReset: event.info.resetFocus,
         })
         return
@@ -546,7 +552,7 @@ export function startNavigationListenerImpl(
               type: frameRedirectNavigationInfoType,
               resetScroll: scroll,
               resetFocus: focusReset,
-            } satisfies FrameRedirectNavigationInfo,
+            } satisfies UrlUpdateNavigationInfo,
           })
           // The redirect aborts this navigation's transition, but the navigation carries on as the
           // redirect until it finishes.
@@ -666,12 +672,12 @@ function isReplacedFormNavigationInfo(value: unknown): value is ReplacedFormNavi
   )
 }
 
-function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNavigationInfo {
+function isUrlUpdateNavigationInfo(value: unknown): value is UrlUpdateNavigationInfo {
   return (
     typeof value === 'object' &&
     value != null &&
     'type' in value &&
-    value.type === frameRedirectNavigationInfoType &&
+    (value.type === frameRedirectNavigationInfoType || value.type === urlOnlyNavigationInfoType) &&
     'resetScroll' in value &&
     (value.resetScroll === 'after-transition' || value.resetScroll === 'manual') &&
     'resetFocus' in value &&

@@ -68,6 +68,10 @@ export function getTopFrame(): FrameHandle {
   return topFrame.handle
 }
 
+export function setTopFrameSource(src: string): void {
+  if (topFrame) topFrame.handle.src = src
+}
+
 const namedFrames = new NamedFrameRegistry()
 /**
  * Returns a named frame handle.
