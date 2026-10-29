@@ -287,6 +287,10 @@ function RenameButton(handle: Handle) {
 }
 ```
 
+When an update removes the element that has focus, such as a dialog's close button, move focus back
+to the control that opened it the same way, so keyboard and screen reader users don't lose their
+place.
+
 The promise resolves to an
 [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal), an object that
 reports when work should stop and that APIs such as `fetch()` accept for cancellation. Capture it only if work continues across another async
@@ -420,6 +424,12 @@ function TitleInputs(handle: Handle) {
 Typing changes both inputs. Clicking the button resets the controlled input because its `value`
 comes from `title`. The uncontrolled input keeps its DOM value because `defaultValue` only applies
 its initial value.
+
+Prefer uncontrolled inputs. Control an input only when something besides the user's typing changes
+its value, such as a reset button, a generated value, or formatting applied as the user types.
+Otherwise read the value from the event, or from
+[`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) on submit, so the component
+only stores state it renders.
 
 ::frame{src="/examples/05-interactivity/controlled-uncontrolled-inputs/"}
 

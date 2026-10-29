@@ -237,7 +237,7 @@ The built-in presets are:
 | `snappy` | 0      | 200ms    | Quick, no overshoot      |
 | `bouncy` | 0.3    | 400ms    | Underdamped bounce       |
 
-Override preset duration or velocity with the second argument.
+Override preset duration or velocity with the second argument. `velocity` is the initial speed in progress per second, where progress runs from `0` to `1`. Positive values start faster and overshoot more. Negative values start slower, and large ones move away from the target first. To continue a gesture, divide its speed toward the target, in pixels per second, by the remaining distance in pixels.
 
 ```ts
 spring('bouncy', { duration: 300 })

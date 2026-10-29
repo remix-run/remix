@@ -166,6 +166,8 @@ function UserCard(handle: Handle<{ userId: string }>) {
 
 When `userId` changes, the next render aborts the previous request and queues one for the new ID. Any other render while a request is in flight also aborts it, and that render queues it again, so only the latest request for the current `userId` completes. Catch errors inside async tasks. Remix doesn't handle a rejected task, and aborting a `fetch()` rejects it.
 
+For a one-time load that should ignore later prop changes, queue the task from setup instead of render, and pass `handle.signal` to `fetch()`. A task queued from setup runs once after the first render, and `handle.signal` is only aborted when the component is removed, so later renders don't cancel the request.
+
 ### Abort Signals
 
 Each signal covers a different lifetime. Pass the narrowest one to `fetch()` and other cancellable work:
@@ -640,7 +642,7 @@ const observeSize = createMixin<HTMLElement>((handle) => {
 
 ### Deferring Removal with `persistNode`
 
-For ordinary exit animations, use [`animateExit`](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) from `remix/ui/animation`. Custom mixins can use the same underlying lifecycle API when they need control over teardown:
+For ordinary exit animations, use [`animateExit`](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) from `@remix-run/ui/animation`. Custom mixins can use the same underlying lifecycle API when they need control over teardown:
 
 ```tsx
 import { createMixin } from 'remix/component'
@@ -740,7 +742,8 @@ export const dragRelease = createMixin<HTMLElement>((handle) => {
         }),
         on('pointermove', (event) => {
           if (!tracking) return
-          let elapsed = Math.max(1, event.timeStamp - lastTime)
+          // Velocity in pixels per second
+          let elapsed = Math.max(1, event.timeStamp - lastTime) / 1000
           velocityX = (event.clientX - lastX) / elapsed
           velocityY = (event.clientY - lastY) / elapsed
           lastX = event.clientX
