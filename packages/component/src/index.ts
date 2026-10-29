@@ -73,7 +73,7 @@ export { css } from './style/css-mixin.ts'
 export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 
 // -- Navigation --
-export { navigate } from './runtime/navigation.ts'
-export type { NavigationOptions } from './runtime/navigation.ts'
+export { navigate, updateUrl } from './runtime/navigation.ts'
+export type { NavigationOptions, UpdateUrlOptions } from './runtime/navigation.ts'
 export { prefetch } from './runtime/prefetch.ts'
 export type { PrefetchFrame, PrefetchOptions } from './runtime/prefetch.ts'

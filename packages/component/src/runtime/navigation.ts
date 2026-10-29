@@ -1,4 +1,4 @@
-import { getTopFrame, getNamedFrame } from './run.ts'
+import { getTopFrame, getNamedFrame, setTopFrameSource } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 import { isDocumentReload, reloadCurrentDocument } from './document-reload.ts'
@@ -171,6 +171,92 @@ export async function navigate(href: string, options?: NavigationOptions) {
 
   let transition = navigation.navigate(href, { state, history: options?.history })
   await transition.finished
+}
+
+/**
+ * Options for updating the current URL.
+ */
+export interface UpdateUrlOptions {
+  /** How the URL updates browser history. (default: `"replace"`) */
+  history?: 'replace' | 'push'
+  /** Cancels a pending URL update without aborting the navigation it is waiting for. */
+  signal?: AbortSignal
+}
+
+/**
+ * Updates the current URL without fetching, rendering, or changing scroll and focus.
+ * Replaces the current history entry by default; use `history: 'push'` to add an entry.
+ * Waits for the current navigation, rejecting if it fails, is superseded, or changes destination.
+ * Keeps Remix history state and the top-frame source in sync. Cross-origin URLs reject with
+ * `SecurityError`; superseded or redirected updates reject with `AbortError`.
+ * An aborted signal rejects with its reason without aborting the navigation.
+ * Do not await this inside the active navigation's own interception handler.
+ *
+ * @param href Same-origin URL, resolved against the document base URL when the update executes.
+ * @param options History and cancellation options.
+ * @returns A promise that resolves after the URL update, or rejects on cancellation or failure.
+ */
+export async function updateUrl(href: string, options?: UpdateUrlOptions): Promise<void> {
+  let signal = options?.signal
+  signal?.throwIfAborted()
+  let navigation = window.navigation
+  let transition: (NavigationTransition & { to?: NavigationDestination }) | null | undefined =
+    navigation?.transition
+  if (navigation && transition) {
+    let entry = navigation.currentEntry
+    // Older browsers expose only the already committed entry, without transition.to/committed.
+    let destinationUrl = transition.to?.url ?? entry?.url
+    let superseded = false
+    let listeners = new AbortController()
+    function changedNavigation() {
+      return new DOMException('Navigation changed before URL update', 'AbortError')
+    }
+    try {
+      await new Promise<void>((resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(signal.reason), {
+          once: true,
+          signal: listeners.signal,
+        })
+        navigation.addEventListener(
+          'navigate',
+          () => {
+            superseded = true
+            reject(changedNavigation())
+          },
+          { signal: listeners.signal },
+        )
+        void transition.committed?.then(() => {
+          entry = navigation.currentEntry
+        }, reject)
+        void transition.finished.then(resolve, reject)
+      })
+      signal?.throwIfAborted()
+      if (
+        superseded ||
+        navigation.transition ||
+        navigation.currentEntry?.id !== entry?.id ||
+        navigation.currentEntry?.url !== destinationUrl
+      ) {
+        throw changedNavigation()
+      }
+    } finally {
+      listeners.abort()
+    }
+  }
+
+  let state = navigation?.currentEntry?.getState()
+  if (options?.history === 'push') {
+    window.history.pushState(window.history.state, '', href)
+  } else {
+    window.history.replaceState(window.history.state, '', href)
+  }
+  let src = window.location.href
+  if (navigation && state !== undefined) {
+    navigation.updateCurrentEntry({
+      state: isRuntimeNavigation(state) ? { ...state, target: undefined, src } : state,
+    })
+  }
+  setTopFrameSource(src)
 }
 
 /**
