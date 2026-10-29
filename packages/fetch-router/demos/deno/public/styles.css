@@ -1,0 +1,60 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 40rem;
+  padding: 1rem;
+}
+
+nav {
+  align-items: baseline;
+  border-bottom: 1px solid currentColor;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+nav div {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75rem;
+}
+
+nav form {
+  display: inline;
+}
+
+article {
+  border-bottom: 1px solid currentColor;
+  padding-block: 1rem;
+}
+
+article h2 {
+  margin-block: 0 0.5rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 24rem;
+}
+
+form div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+button {
+  align-self: start;
+}
+
+textarea {
+  min-height: 8rem;
+}
