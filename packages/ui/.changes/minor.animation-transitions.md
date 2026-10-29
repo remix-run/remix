@@ -1,0 +1,1 @@
+`animateEntrance()` and `animateExit()` now support per-property timing overrides through `transition`, including separate spring timing. Overrides inherit the existing top-level timing and compositing settings. Zero-duration exit properties apply immediately unless delayed, and elements remain mounted until all exit transitions finish.

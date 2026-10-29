@@ -427,3 +427,27 @@
     --ui-anchor-offset: calc(var(--site-header-height) + 24px);
   }
 }
+
+/* Toast examples explicitly mount their regions outside the docs shell. */
+.ui-toast-demo-outlets {
+  position: fixed;
+  z-index: 45;
+  inset-inline-end: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: grid;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.ui-toast-demo-outlets [role='region'] {
+  position: relative;
+  inset: auto;
+  width: auto;
+}
+.ui-toast-demo-outlets [data-toast]:not([inert]) {
+  pointer-events: auto;
+}
+.ui-toast-demo-outlets [role='region']:empty {
+  /* Keep empty live regions exposed without reserving space between demos. */
+  position: absolute;
+}

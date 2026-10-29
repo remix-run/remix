@@ -1,0 +1,1 @@
+Elements retained by `animateExit()` are now inert while their exit animation runs, preventing focus and interaction with removed content. If a keyed element returns before its exit finishes, its authored inertness is restored.

@@ -1,0 +1,111 @@
+# toast
+
+Publish retained notifications from components or utilities and render them near the application root. The manager retains notification state. Providers and mixins connect your markup to announcements, focus and dismissal.
+
+## Usage
+
+```tsx
+import * as toast from '@remix-run/ui/toast'
+import { css, on } from 'remix/component'
+
+export const toastManager = toast.createToastManager()
+
+export function SaveButton() {
+  return () => (
+    <button type="button" mix={on('click', () => toastManager.add({ title: 'Changes saved' }))}>
+      Save
+    </button>
+  )
+}
+
+export function Notifications() {
+  return () => (
+    <toast.Context manager={toastManager} limit={3}>
+      {(toastItems) => (
+        <section
+          mix={[
+            toast.root({ label: 'Notifications' }),
+            css({ position: 'fixed', insetInlineEnd: '16px', bottom: '16px' }),
+          ]}
+        >
+          {toastItems.map((toastItem) => (
+            <toast.ItemContext key={toastItem.id} value={toastItem.id}>
+              <article
+                key={toastItem.id}
+                mix={[toast.item(), css({ '&[data-limited]': { display: 'none' } })]}
+              >
+                <h2 mix={toast.title()}>{toastItem.title}</h2>
+                <p mix={toast.description()}>{toastItem.description}</p>
+                <button mix={toast.close()}>Dismiss</button>
+              </article>
+            </toast.ItemContext>
+          ))}
+        </section>
+      )}
+    </toast.Context>
+  )
+}
+```
+
+Supply the region label and control labels. Mount one `Context` per manager, outside clipping containers. It uses ordinary document rendering without a portal or top layer. Scope server-side managers to an application instance or request.
+
+## `@remix-run/ui/toast`
+
+- `createToastManager<data = unknown>(options?)`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
+- `Context`: accepts a stable `manager`, an optional `limit` (unlimited by default), and a typed collection callback. Render every item, including overflow.
+- `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and keyboard entry. A non-empty `label` is required.
+- `ItemContext`: accepts the toast item ID as `value` and scopes its markup. Key the provider and animated host by the item ID.
+- `item({ countdown? })`: applies non-modal dialog semantics, presentation lifetime, availability and focus recovery. It is a Tab stop before the controls.
+- `title()` and `description()`: connect authored heading and supporting elements through `aria-labelledby` and `aria-describedby`. They generate IDs unless you supply them, and remove relationships when a part is empty or removed. They supply no elements or content.
+- `close()`: dismisses the scoped toast from a native button. Supply translated text or an accessible label for an icon button. It defaults to `type="button"`.
+- `ToastOptions<data>`: optional renderable `title` and `description`, generic `data`, `announcement`, `id` and `timeout`.
+- `ToastItem<data>`: immutable content, an update `revision` and sampled clock state: `presented`, `paused`, `remaining` and `timeout`.
+- `ToastManager<data>`: `add`, `close`, `pause`, `resume`, `present` and `toastItems`. Native `change` subscriptions support `AbortSignal` cleanup.
+- `ToastManagerOptions<data>`, `ToastContextProps<data>`, `ToastItemContextProps`, `ToastItemOptions` and `ToastRootOptions`: configuration types.
+
+## Announcements and keyboard access
+
+Notifications announce the published title and description through a separate polite live region. Set `announcement` to replace the entire spoken message without changing visible content. Actions, dismiss controls and other markup added by the renderer are excluded. Title and description accept JSX; render them inside elements with the corresponding mixins so their accessible relationships follow the actual content.
+
+If you omit the title, supply an accessible name on the item with `aria-label` or `aria-labelledby`.
+
+Screen reader users cannot activate a toast's actions directly from its announcement. Where possible, use `announcement` to explain an alternative way to perform the action, such as a keyboard shortcut or a control elsewhere in your application. Visible notifications and their controls remain available for exploration unless limited.
+
+F6 enters the collection and F6 again returns to the previous element. Tab visits each available notification before its controls. Shift+Tab from the collection, or Tab past either boundary, returns to the previous element. Escape dismisses the focused notification. Closing it moves focus to a neighbouring mounted, available notification or returns to the previous element. Focus is not deferred to a future mount. Make the shortcut discoverable in your application; change or disable `hotkey` for secondary managers.
+
+Supply a type to `createToastManager<data>()` for custom values and behavior. The context callback infers `toastItem.data`. Use native buttons and links for actions. Consumer-defined `data` may describe one or multiple controls; actions do not implicitly dismiss. Provide a visible dismiss button so swiping is not the only dismissal method. Essential information and decisions should also be available in the page. Evaluate speech with the assistive technologies your application supports, and test placement and focus alongside modal dialogs.
+
+## Timers and motion
+
+Toasts stay open until dismissed unless a timeout is supplied. Set `timeout` to finite, non-negative milliseconds, or `false` to disable automatic dismissal. Configure a shared `defaultTimeout` on the manager as a fixed value or a callback receiving the published options. An explicit toast timeout overrides it. The callback runs once per `add()` without an explicit timeout, including replacements. Zero dismisses as soon as the toast is presented. `add()` replaces the full content and options for duplicate IDs and restarts their lifetime. Omitted titles, descriptions and data are cleared; omitted timeout uses its default.
+
+Each item starts with `revision: 0`. Duplicate `add()` calls increment it, including when content is unchanged. Renderers can use the revision to replay feedback without remounting the toast. Timer and presentation changes leave it unchanged.
+
+Timers run while `item()` presents the item, including limited items. Publications before mounting retain their full lifetime; unmounting pauses without discarding them. Hover, keyboard focus, touch engagement, document visibility, window blur and manual `pause(reason)` calls compose. `resume(reason)` removes only its own reason.
+
+A primary touch inside the collection expands it and pauses dismissal until a primary touch outside. Releasing or cancelling a gesture keeps it expanded. Touching outside clears hover and blurs focus inside; native controls retain normal activation.
+
+`root()` exposes `data-expanded`; `item()` exposes `data-limited`. CSS chooses the stack, offsets and expanded presentation. Compose `drag()` from `@remix-run/ui/animation` with your dismissal logic to customize swipe gestures. The primitive does not measure elements or own animation styles. Keep overflow mounted and inert for transitions. Compose `animateLayout()`, `animateEntrance()` and `animateExit()` with your styles, respecting reduced motion. Keep decorative depth transforms on a separate surface from the host animated by layout. Closing removes the item immediately; exit animation may retain its inert DOM.
+
+## Countdown indicators
+
+Set `countdown: true` on `item()` to animate the inherited `--toast-countdown` fraction from 1 to 0. Map it to your indicator with CSS:
+
+```tsx
+<article mix={toast.item({ countdown: true })}>
+  <strong mix={toast.title()}>{toastItem.title}</strong>
+  {Boolean(toastItem.timeout) && (
+    <div
+      aria-hidden="true"
+      mix={css({
+        height: '2px',
+        background: 'currentColor',
+        transform: 'scaleX(var(--toast-countdown, 1))',
+        transformOrigin: 'left',
+      })}
+    />
+  )}
+</article>
+```
+
+For an SVG ring, map the inherited fraction to `stroke-dashoffset`. The manager closes the toast independently of the indicator. The native animation follows pause, resume and lifetime changes without per-frame component updates. Persistent items do not create a countdown animation.

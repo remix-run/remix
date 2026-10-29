@@ -71,8 +71,22 @@ export async function expectAnimation(target: Element, property = 'transform'): 
     animations = target.getAnimations().filter((animation) => {
       let effect = animation.effect
       if (!(effect instanceof KeyframeEffect) || effect.target !== target) return false
-      let values = effect.getKeyframes().map((frame) => frame[property])
-      return values.some((value) => value !== undefined) && new Set(values).size > 1
+      let frames = effect.getKeyframes()
+      let properties =
+        property === 'transform'
+          ? [
+              property,
+              '--rmx-animation-base-transform',
+              '--rmx-animation-layout-x',
+              '--rmx-animation-layout-y',
+              '--rmx-animation-layout-scale-x',
+              '--rmx-animation-layout-scale-y',
+            ]
+          : [property]
+      return properties.some((name) => {
+        let values = frames.map((frame) => frame[name])
+        return values.some((value) => value !== undefined) && new Set(values).size > 1
+      })
     })
     assert.ok(animations.length > 0, `${property} animates on the expected element`)
   })

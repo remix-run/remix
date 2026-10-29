@@ -11,6 +11,7 @@ import EntranceExitPage, {
   meta as entranceExit,
   preview as entranceExitPreview,
 } from '../pages/animation/entrance-exit.tsx'
+import DragPage, { meta as drag } from '../pages/animation/drag.tsx'
 import LayoutPage, { meta as layout } from '../pages/animation/layout.tsx'
 import ReducedMotionPage, { meta as reducedMotion } from '../pages/animation/reduced-motion.tsx'
 import SpringPage, { meta as spring } from '../pages/animation/spring.tsx'
@@ -21,6 +22,7 @@ import MenuPage, { meta as menu } from '../pages/patterns/menu.tsx'
 import PopoverPage, { meta as popover } from '../pages/patterns/popover.tsx'
 import SelectPage, { meta as select } from '../pages/patterns/select.tsx'
 import TabsPage, { meta as tabs } from '../pages/patterns/tabs.tsx'
+import ToastPage, { meta as toast } from '../pages/patterns/toast.tsx'
 import TogglePage, { meta as toggle } from '../pages/patterns/toggle.tsx'
 
 export interface PageMeta {
@@ -44,6 +46,7 @@ export const pages: UiPage[] = [
   { ...accordion, Component: AccordionPage, preview: accordionPreview },
   { ...anchor, Component: AnchorPage },
   { ...entranceExit, Component: EntranceExitPage, preview: entranceExitPreview },
+  { ...drag, Component: DragPage },
   { ...layout, Component: LayoutPage },
   { ...reducedMotion, Component: ReducedMotionPage },
   { ...spring, Component: SpringPage },
@@ -54,6 +57,7 @@ export const pages: UiPage[] = [
   { ...popover, Component: PopoverPage },
   { ...select, Component: SelectPage },
   { ...tabs, Component: TabsPage },
+  { ...toast, Component: ToastPage },
   { ...toggle, Component: TogglePage },
 ].sort(
   (a, b) =>

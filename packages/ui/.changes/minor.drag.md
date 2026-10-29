@@ -1,0 +1,1 @@
+Added `drag()` to `@remix-run/ui/animation`, with axis locking, constraints, elasticity, momentum and snapping. It composes with entrance, exit and layout animations on the same element. Drag events expose gesture measurements and support custom release behaviour such as swipe dismissal.

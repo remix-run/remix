@@ -1,0 +1,1 @@
+Animation mixins now coordinate position playback on the same element. Picking up an entering or settling element continues from its visible position, while unrelated properties keep animating. Layout changes during a drag preserve the held position, and keyed list moves no longer interrupt pointer tracking.

@@ -769,8 +769,8 @@ export function getMixinRuntimeSignal(state: MixinRuntimeState): AbortSignal {
   return controller.signal
 }
 
-export function dispatchMixinBeforeUpdate(state?: MixinRuntimeState) {
-  dispatchMixinUpdateEvent(state, 'beforeUpdate')
+export function dispatchMixinBeforeUpdate(state?: MixinRuntimeState, node?: Element) {
+  dispatchMixinUpdateEvent(state, 'beforeUpdate', node)
 }
 
 export function dispatchMixinCommit(state?: MixinRuntimeState) {
@@ -875,8 +875,8 @@ function finalizeMixinTeardown(state: MixinRuntimeState) {
 function dispatchMixinUpdateEvent(
   state: MixinRuntimeState | undefined,
   type: 'beforeUpdate' | 'commit',
+  node: Element | undefined = state?.binding?.node,
 ) {
-  let node = state?.binding?.node
   if (!node) return
   let runners = state?.runners
   if (!runners?.length) return

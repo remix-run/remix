@@ -67,7 +67,7 @@ describe('UI docs', () => {
       pages.map((page) => routes.docs.page.href({ category: page.category, slug: page.slug })),
     )
     assert.equal(visited.at(-1), '/animation/tween/')
-    assert.equal(visited[visited.indexOf('/patterns/toggle/') + 1], '/animation/entrance-exit/')
+    assert.equal(visited[visited.indexOf('/patterns/toggle/') + 1], '/animation/drag/')
   })
 
   it('renders live examples and sections on the pattern page', async () => {

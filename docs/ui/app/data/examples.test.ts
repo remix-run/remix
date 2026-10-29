@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import { renderMarkdownHtml } from 'remix-docs-shared/markdown/render'
-import { highlightSource } from './examples.tsx'
+import { highlightSource, loadExample } from './examples.tsx'
 
 describe('highlightSource', () => {
   it('removes outer whitespace and shared indentation while keeping inner formatting', async () => {
@@ -99,3 +99,21 @@ handle.update();},label: "Filters"})`)
 function renderSource(value: string, lang = 'tsx') {
   return renderMarkdownHtml({ type: 'root', children: [{ type: 'code', lang, value }] })
 }
+
+describe('loadExample', () => {
+  it('loads an independently mounted named outlet with the complete example source', async () => {
+    let example = await loadExample('toast/basic', { outlet: 'ToastRegion' })
+    assert.equal(typeof example.Component, 'function')
+    assert.equal(typeof example.Outlet, 'function')
+    assert.match(example.sourceHtml, /ToastRegion/)
+    let ordinary = await loadExample('accordion/basic')
+    assert.equal(ordinary.Outlet, undefined)
+  })
+
+  it('rejects a missing named outlet', async () => {
+    await assert.rejects(
+      () => loadExample('toast/basic', { outlet: 'MissingViewport' }),
+      /Missing example outlet: MissingViewport/,
+    )
+  })
+})

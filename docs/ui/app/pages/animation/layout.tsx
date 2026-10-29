@@ -19,9 +19,9 @@ const selection = await loadExample('animation/layout/selection')
 const anatomyCode = await highlightSource(`
   import { animateLayout } from '@remix-run/ui/animation'
 
-  {items.map((item) => (
+  const elements = items.map((item) => (
     <div key={item.id} mix={animateLayout()}>Item content</div>
-  ))}
+  ))
 `)
 
 const optionsCode = await highlightSource(`
@@ -78,10 +78,10 @@ export default function LayoutPage(handle: Handle<PageProps>) {
 
         <Example id="selection" example={selection} />
       </Section>
-      <Section id="transforms" title="Composing transforms">
+      <Section id="transforms" title="Custom transforms">
         <p>
-          The mixin animates <code>transform</code> and sets <code>transform-origin</code>. Use a
-          wrapper when the content needs its own transform.
+          The mixin animates <code>transform</code> and sets <code>transform-origin</code>. Apply
+          custom CSS transforms to a separate wrapper or child element.
         </p>
 
         <CodeBlock html={transformsCode} />
