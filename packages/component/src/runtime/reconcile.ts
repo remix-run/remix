@@ -7,6 +7,7 @@ import {
   getFrameRuntime,
   type FrameMountState,
 } from './frame-runtime.ts'
+import { ignoreAbortedRejection } from './ignore-aborted-rejection.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps, setSelectDefaultValue, setSelectValue } from './core/props.ts'
 import { isMixinDescriptor } from './core/mix.ts'
@@ -1082,7 +1083,8 @@ function disposeDirectEventListeners(node: CommittedHostNode, detach: boolean): 
 function invokeDirectEventBinding(binding: DirectEventBinding, event: Event): void {
   binding.reentry?.abort(new DOMException('', 'EventReentry'))
   binding.reentry = new AbortController()
-  void binding.handler(event, binding.reentry.signal)
+  let signal = binding.reentry.signal
+  ignoreAbortedRejection(binding.handler(event, signal), signal)
 }
 
 function diffText(
