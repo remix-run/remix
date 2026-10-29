@@ -1094,6 +1094,8 @@ function diffFrame(
   let frameInstance = committed._state.instance
   let serverFrameReload = frameRuntime?.serverFrameReload
 
+  frameInstance?.setReloadFallback(next.props.fallbackOnReloads ? next.props.fallback : undefined)
+
   if (currSrc !== nextSrc) {
     if (frameInstance) {
       frameInstance.handle.src = nextSrc
@@ -1163,6 +1165,8 @@ function insertFrame(
         if (instanceRuntime) instanceRuntime.getContext = getContext
       }
 
+      instance.setReloadFallback(node.props.fallbackOnReloads ? node.props.fallback : undefined)
+
       cursor.current = end.nextSibling
       return Object.assign(node as unknown as CommittedFrameNode, {
         _rangeStart: start,
@@ -1213,6 +1217,7 @@ function insertFrame(
     namedFrames: runtime.namedFrames,
     processClientEntryPreloads: runtime.processClientEntryPreloads,
   })
+  instance.setReloadFallback(node.props.fallbackOnReloads ? node.props.fallback : undefined)
   runtime.frameInstances.set(start, instance)
 
   let committed = Object.assign(node as unknown as CommittedFrameNode, {
