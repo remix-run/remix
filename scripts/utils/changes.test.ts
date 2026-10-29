@@ -55,7 +55,20 @@ function withTemporaryPackage(
 }
 
 describe('parsePackageChanges', () => {
-  it('links to the introducing PR even after a change file is edited and renamed', () => {
+  it('validates change files without a git checkout', () => {
+    withTemporaryPackage('1.0.0', (packageDirName, packagePath) => {
+      fs.mkdirSync(path.join(packagePath, '.changes'))
+      fs.writeFileSync(path.join(packagePath, '.changes/patch.fix.md'), 'Fix the bug')
+
+      assert.deepEqual(parsePackageChanges(packageDirName, packagePath), {
+        valid: true,
+        changes: [{ file: 'patch.fix.md', bump: 'patch', content: 'Fix the bug' }],
+        changesConfig: null,
+      })
+    })
+  })
+
+  it('resolves introduction commits only when generating the changelog', () => {
     withTemporaryPackage('1.0.0', (packageDirName, packagePath) => {
       function git(args: string[]) {
         return cp
@@ -98,18 +111,28 @@ describe('parsePackageChanges', () => {
           file: 'patch.direct.md',
           bump: 'patch',
           content: 'Direct commit change',
-          gitSha: directCommit,
         },
         {
           file: 'patch.renamed.md',
           bump: 'patch',
           content: 'Clarify the bug fix',
-          gitSha: introducingCommit,
-          prNumber: 123,
         },
         { file: 'patch.staged.md', bump: 'patch', content: 'Staged change' },
         { file: 'patch.untracked.md', bump: 'patch', content: 'Uncommitted change' },
       ])
+
+      let content = generateChangelogContent(
+        makeRelease({ packageDirName: packagePath, changes: result.changes }),
+      )
+      assert.match(
+        content,
+        /Clarify the bug fix \(\[#123\]\(https:\/\/github.com\/remix-run\/remix\/pull\/123\)\)/,
+      )
+      assert.ok(content.includes(`/commit/${directCommit}`))
+      assert.ok(!content.includes(`/commit/${introducingCommit}`))
+      assert.ok(!content.includes('/pull/456'))
+      assert.match(content, /- Staged change\n/)
+      assert.match(content, /- Uncommitted change\n/)
     })
   })
 
