@@ -261,14 +261,11 @@ function isShallowRepository(): boolean {
 }
 
 function ensureGitHistoryForVersionLookup() {
-  if (isShallowRepository()) {
-    console.log('\nRepository is shallow, fetching full history for release tag anchoring...')
-    logAndExec('git', ['fetch', '--unshallow', '--tags', 'origin'])
-    return
-  }
+  if (!isShallowRepository()) return
 
-  console.log('\nFetching tags from origin...')
-  logAndExec('git', ['fetch', '--tags', 'origin'])
+  console.log('\nRepository is shallow, fetching source history for release tag anchoring...')
+  let sha = logAndExec('git', ['rev-parse', 'HEAD'], true)
+  logAndExec('git', ['fetch', '--no-tags', '--unshallow', 'origin', sha])
 }
 
 function resolveTagPlans(packages: PublishedPackage[]): TagPlan[] {

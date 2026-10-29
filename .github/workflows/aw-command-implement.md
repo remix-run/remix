@@ -35,7 +35,8 @@ permissions:
   issues: read
   pull-requests: read
 checkout:
-  fetch-depth: 0
+  ref: main
+  fetch-depth: 1
 model: gpt-5.6-sol
 engine:
   id: copilot
@@ -58,6 +59,12 @@ tools:
 network:
   allowed: [defaults, github, node, playwright]
 steps:
+  - name: Fetch source history for change attribution
+    env:
+      GH_TOKEN: ${{ github.token }}
+    run: |
+      header=$(printf "x-access-token:%s" "$GH_TOKEN" | base64 -w 0)
+      git -c "http.extraheader=Authorization: Basic $header" fetch --no-tags --unshallow origin "$(git rev-parse HEAD)"
   - name: Enable pnpm with Corepack
     run: corepack enable pnpm
   - name: Install dependencies
