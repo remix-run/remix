@@ -14,10 +14,12 @@
  * Usage: `node pr-preview.ts <command> <pr-number>`
  */
 
+import { readFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 
 import { createPrComment, deletePrComment, getPrComments, updatePrComment } from './utils/github.ts'
 import { logAndExec } from './utils/process.ts'
+import { getPreviewTarballUrl } from './utils/preview.ts'
 
 const STICKY_MARKER = '<!-- pr-preview-comment-sticky -->'
 const CLEANUP_MARKER = '<!-- pr-preview-comment-cleanup -->'
@@ -58,6 +60,13 @@ function printUsage() {
 }
 
 async function comment() {
+  let preview: { branch: string; sha: string } = JSON.parse(
+    await readFile('tarballs/preview.json', 'utf-8'),
+  )
+  if (preview.branch !== branch) {
+    throw new Error(`Preview metadata is for ${preview.branch}, not ${branch}`)
+  }
+  let url = getPreviewTarballUrl(branch, preview.sha, 'remix', process.env.GITHUB_REPOSITORY)
   let commentBody = `\
 ${STICKY_MARKER}
 ### Preview Build Available
@@ -65,10 +74,12 @@ ${STICKY_MARKER}
 A preview build has been created for this PR. You can install it using:
 
 \`\`\`sh
-pnpm install "remix-run/remix#${branch}&path:packages/remix"
+pnpm add "${url}"
 \`\`\`
 
-This preview build will be updated automatically as you push new commits.`
+Each push creates a new build URL and updates this comment. Use the new URL to update your install; older build URLs are removed when the preview branch is replaced.
+
+If your pnpm version blocks transitive Git or tarball dependencies, set \`blockExoticSubdeps: false\` in your \`pnpm-workspace.yaml\`.`
 
   // Get existing comments
   let comments = await getPrComments(prNumber)

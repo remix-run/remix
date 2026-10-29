@@ -1,10 +1,13 @@
-# Create "installable" preview branches
+# Create preview branches containing prebuilt package tarballs.
 #
 # Commits to `main` push builds to a `preview/main` branch:
-#   pnpm install "remix-run/remix#preview/main&path:packages/remix"
+#   pnpm add "https://raw.githubusercontent.com/remix-run/remix/refs/heads/preview/main/tarballs/<source-sha>/remix.tgz"
 #
 # Pull Requests create `preview/pr-{number}` branches:
-#   pnpm install "remix-run/remix#preview/pr-12345&path:packages/remix"
+#   pnpm add "https://raw.githubusercontent.com/remix-run/remix/refs/heads/preview/pr-12345/tarballs/<source-sha>/remix.tgz"
+#
+# The script prints the exact install URL and writes tarballs/preview.json.
+# Each build replaces the branch; older build URLs are no longer available.
 #
 # Can also be dispatched manually with base/installable branches to provide
 # `experimental` branches from PRs or otherwise.
@@ -92,9 +95,11 @@ jobs:
       # pushes over remote branches in case of a branch name collision
       - name: Build/push branch (workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
+        env:
+          INSTALLABLE_BRANCH: ${{ inputs.installableBranch }}
         run: |
-          pnpm run setup-installable-branch ${{ inputs.installableBranch }}
-          git push --set-upstream origin ${{ inputs.installableBranch }}
+          pnpm run setup-installable-branch "$INSTALLABLE_BRANCH"
+          git push --set-upstream origin "$INSTALLABLE_BRANCH"
           echo "💿 pushed installable branch: https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
 
       # Cleanup PR preview/pr-{number} branches when the PR is closed
