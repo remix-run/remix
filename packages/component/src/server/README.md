@@ -93,7 +93,7 @@ function ProductPage() {
 
 ## CSS
 
-Components using the `css(...)` mixin through `mix` have their styles collected during rendering and emitted as a single `<style>` tag in the `<head>`. No client-side style injection is needed for server-rendered content.
+Components using the `css(...)` mixin through `mix` have their styles collected and deduplicated during rendering, then emitted as `<style data-rmx-style>` tags in the `<head>`, one per generated class. No client-side style injection is needed for server-rendered content.
 
 ### Import maps
 
