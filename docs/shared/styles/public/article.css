@@ -114,7 +114,9 @@
   margin: 0;
 }
 
+/* Inline layout keeps heading text and inline code wrapping together. */
 .docs-toc__list a {
+  display: block;
   width: 100%;
   min-height: 32px;
   padding-block: 8px;
