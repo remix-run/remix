@@ -15,6 +15,8 @@ export default defineConfig({
     '**/public/assets/',
     '**/test/fixtures/',
     '**/worker-configuration.d.ts',
+    'packages/uwebsockets-js/src/index.d.ts',
+    'packages/uwebsockets-js/src/index.mjs',
     'pnpm-lock.yaml',
     '.github/workflows/*.lock.yml',
     'packages/remix/guides/',

@@ -128,6 +128,7 @@ async function scanPackages(): Promise<RemixRunPackage[]> {
 
     let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
     if (packageJson.private === true) continue
+    if (packageJson.remix?.internal === true) continue
     let packageName = packageJson.name as string
     if (!packageName.startsWith('@remix-run/')) continue
 
