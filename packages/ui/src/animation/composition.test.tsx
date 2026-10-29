@@ -1,7 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { on, ref } from '@remix-run/component'
-import type { Handle } from '@remix-run/component'
+import { createMixin, on, ref } from '@remix-run/component'
+import type { ElementProps, Handle } from '@remix-run/component'
 import { animateEntrance, animateExit } from './animate-mixins.ts'
 import type { AnimateMixinConfig } from './animate-mixins.ts'
 import { animateLayout } from './animate-layout-mixin.ts'
@@ -502,32 +502,111 @@ describe('Animation mixin composition', () => {
     playback.stop()
   })
 
-  it('applies layout projection before host tasks queued ahead of the update', async (t) => {
+  it('prepares layout projection before focusing after an awaited update', async (t) => {
+    let move: (() => Promise<void>) | undefined
+    let target: HTMLElement | undefined
+    function Fixture(handle: Handle) {
+      let moved = false
+      move = async () => {
+        moved = true
+        await handle.update()
+        target?.focus()
+      }
+      return () => (
+        <section style={{ height: '160px', overflow: 'auto', width: '240px' }}>
+          <div style={{ height: '900px', paddingTop: moved ? '400px' : '20px' }}>
+            <button mix={animateLayout({ duration: 10000, easing: 'linear' })}>Focus target</button>
+          </div>
+        </section>
+      )
+    }
+    let result = await mount(t, <Fixture />)
+    let scroll = element(result.container, 'section')
+    target = element(result.container, 'button')
+    await result.act(() => move?.())
+    assert.equal(document.activeElement, target)
+    assert.equal(scroll.scrollTop, 0)
+    assert.ok(target.getAnimations().length > 0)
+  })
+
+  it('projects parents before children when the parent mixin is attached later', async (t) => {
+    let enable: (() => void) | undefined
     let move: (() => void) | undefined
-    let observed = 0
-    let node: HTMLElement | undefined
+    function Fixture(handle: Handle) {
+      let parentAnimated = false
+      let moved = false
+      enable = () => {
+        parentAnimated = true
+        handle.update()
+      }
+      move = () => {
+        moved = true
+        handle.update()
+      }
+      return () => (
+        <section
+          style={{ marginLeft: moved ? '100px' : '0', width: '300px' }}
+          mix={parentAnimated ? animateLayout({ duration: 1000, easing: 'linear' }) : undefined}
+        >
+          <article
+            style={{ marginLeft: moved ? '50px' : '0', width: '40px', height: '40px' }}
+            mix={animateLayout({ duration: 1000, easing: 'linear' })}
+          />
+        </section>
+      )
+    }
+    let result = await mount(t, <Fixture />)
+    await result.act(() => enable?.())
+    let parent = element(result.container, 'section')
+    let child = element(result.container, 'article')
+    let initial = child.getBoundingClientRect().left
+    await result.act(() => move?.())
+    pause(parent, 0)
+    pause(child, 0)
+    near(child.getBoundingClientRect().left, initial)
+    finish(parent)
+    finish(child)
+    await frame()
+    near(child.getBoundingClientRect().left, initial + 150)
+  })
+
+  it('measures layout after other mixins finish their commit listeners', async (t) => {
+    let move: (() => void) | undefined
+    let positionOnCommit = createMixin<HTMLElement, [offset: number], ElementProps>((handle) => {
+      let offset = 0
+      handle.addEventListener('commit', ({ node }) => {
+        node.style.marginLeft = `${offset}px`
+      })
+      return (nextOffset) => {
+        offset = nextOffset
+        return handle.element
+      }
+    })
     function Fixture(handle: Handle) {
       let moved = false
       move = () => {
-        handle.queueTask(() => {
-          observed = node?.getBoundingClientRect().left ?? 0
-        })
         moved = true
         handle.update()
       }
       return () => (
         <article
-          style={{ width: '60px', height: '60px', marginLeft: moved ? '100px' : '0' }}
-          mix={animateLayout({ duration: 10000, easing: 'linear' })}
+          style={{ width: '40px', height: '40px' }}
+          mix={[
+            animateLayout({ duration: 1000, easing: 'linear' }),
+            positionOnCommit(moved ? 100 : 0),
+          ]}
         />
       )
     }
     let result = await mount(t, <Fixture />)
-    node = element(result.container, 'article')
+    let node = element(result.container, 'article')
     let initial = node.getBoundingClientRect().left
     await result.act(() => move?.())
-    near(observed, initial)
-    assert.ok(node.getAnimations().length > 0)
+    pause(node, 0)
+    near(node.getBoundingClientRect().left, initial)
+    finish(node)
+    await frame()
+    near(node.getBoundingClientRect().left, initial + 100)
   })
 
   it('resolves additive exit targets once after a previous drag', async (t) => {

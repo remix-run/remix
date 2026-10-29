@@ -21,7 +21,6 @@ export interface Scheduler {
   enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
   enqueueWork(newTasks: EmptyFn[]): void
   enqueueCommitPhase(newTasks: EmptyFn[]): void
-  queueCommitTask(task: EmptyFn): void
   enqueueTasks(newTasks: EmptyFn[]): void
   addEventListener(
     type: SchedulerPhaseType,
@@ -41,7 +40,6 @@ const MAX_CASCADING_COMPONENT_UPDATES = 50
 
 export type SchedulerPhaseEvent = Event & {
   parents: ParentNode[]
-  afterDispatch(task: EmptyFn): void
 }
 
 function getComponentName(vnode: CommittedComponentNode): string {
@@ -200,15 +198,8 @@ export function createScheduler(
 
   function dispatchPhaseEvent(type: SchedulerPhaseType, parents: ParentNode[]) {
     if (phaseListenerCounts[type] === 0) return
-    let tasks: EmptyFn[] = []
-    let event: SchedulerPhaseEvent = Object.assign(new Event(type), {
-      parents,
-      afterDispatch(task: EmptyFn) {
-        tasks.push(task)
-      },
-    })
+    let event: SchedulerPhaseEvent = Object.assign(new Event(type), { parents })
     phaseEvents.dispatchEvent(event)
-    flushTaskQueue(tasks)
   }
 
   function flushTaskQueue(queue: EmptyFn[]) {
@@ -271,11 +262,6 @@ export function createScheduler(
 
     enqueueCommitPhase(newTasks: EmptyFn[]): void {
       commitPhaseTasks.push(...newTasks)
-      scheduleFlush()
-    },
-
-    queueCommitTask(task: EmptyFn): void {
-      commitPhaseTasks.push(task)
       scheduleFlush()
     },
 

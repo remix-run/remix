@@ -75,14 +75,6 @@ export type MixinReclaimedEvent<node extends EventTarget = Element> = Event & {
 export type MixinUpdateEvent<node extends EventTarget = Element> = Event & {
   /** The host node being measured or updated. */
   node: node
-  /**
-   * Queues work after this lifecycle batch's listeners, before the next phase.
-   * Register synchronously during the listener. Before-update tasks run before DOM changes.
-   * Commit tasks run before ordinary `handle.queueTask` work.
-   *
-   * @param task Work to run before the next lifecycle phase.
-   */
-  afterDispatch(task: () => void): void
 }
 
 /**
@@ -565,7 +557,6 @@ class MixinHandleImpl
   context: MixinContext
   frame: FrameHandle
   element: MixinElement<Element, ElementProps>
-  queueCommitTask: (task: () => void) => void
   #options: MixinHandleFactoryOptions
   #phaseListenerCounts: Record<'beforeUpdate' | 'commit', number> = {
     beforeUpdate: 0,
@@ -585,7 +576,6 @@ class MixinHandleImpl
   constructor(options: MixinHandleFactoryOptions) {
     super()
     this.#options = options
-    this.queueCommitTask = options.scheduler.queueCommitTask
     this.id = options.id
     this.context = {
       get: options.getContext,
@@ -690,6 +680,10 @@ class MixinHandleImpl
     ])
   }
 
+  queueCommitTask(task: () => void): void {
+    this.#options.scheduler.enqueueCommitPhase([task])
+  }
+
   setActiveScope(scope?: symbol): void {
     this.#activeScope = scope
     if (!scope) return
@@ -730,7 +724,6 @@ class MixinHandleImpl
     for (let [, target] of this.#scopeTargets) {
       let updateEvent = new Event(type) as MixinUpdateEvent<Element>
       updateEvent.node = binding.node
-      updateEvent.afterDispatch = event.afterDispatch
       target.dispatchEvent(updateEvent)
     }
   }
@@ -889,16 +882,11 @@ function dispatchMixinUpdateEvent(
   if (!runners?.length) return
   let handle = state?.handle as ScopedAnyMixinHandle | undefined
   if (!handle) return
-  let tasks: Array<() => void> = []
-  let afterDispatch =
-    type === 'commit' ? handle.queueCommitTask : (task: () => void) => tasks.push(task)
   for (let entry of runners) {
     let event = new Event(type) as MixinUpdateEvent<Element>
     event.node = node
-    event.afterDispatch = afterDispatch
     handle.dispatchScopedEvent(entry.scope, event)
   }
-  for (let task of tasks) task()
 }
 
 function isSchedulerPhaseType(type: string): type is 'beforeUpdate' | 'commit' {

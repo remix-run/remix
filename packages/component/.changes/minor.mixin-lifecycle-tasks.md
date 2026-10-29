@@ -1,1 +1,0 @@
-Mixin `beforeUpdate` and `commit` events now provide `afterDispatch(callback)` for coordinating work after the lifecycle batch's listeners. Before-update callbacks run before DOM changes, and commit callbacks run before ordinary queued host tasks.

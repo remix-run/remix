@@ -107,10 +107,7 @@ interface LayoutMeasurement {
   node: HTMLElement
   read(rect: DOMRect): () => void
 }
-const pendingMeasurements = new WeakMap<
-  (task: () => void) => void,
-  Map<symbol, LayoutMeasurement>
->()
+const pendingMeasurements = new WeakMap<Document, Map<symbol, LayoutMeasurement>>()
 
 function flushLayoutMeasurements(pending: Map<symbol, LayoutMeasurement>) {
   let byNode = new Map<HTMLElement, LayoutMeasurement[]>()
@@ -213,13 +210,14 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
       registration ??= retainAnimationHost(htmlNode)
       let layoutConfig = resolveLayoutConfig(currentConfig)
       cancelMeasurement?.()
-      let pending = pendingMeasurements.get(event.afterDispatch)
+      let document = htmlNode.ownerDocument
+      let pending = pendingMeasurements.get(document)
       if (!pending) {
         pending = new Map()
-        pendingMeasurements.set(event.afterDispatch, pending)
+        pendingMeasurements.set(document, pending)
         let batch = pending
-        event.afterDispatch(() => {
-          pendingMeasurements.delete(event.afterDispatch)
+        handle.queueTask(() => {
+          pendingMeasurements.delete(document)
           flushLayoutMeasurements(batch)
         })
       }
