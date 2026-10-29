@@ -42,6 +42,274 @@ function Counter(handle: Handle<{ initialCount?: number }>) {
 }
 ```
 
+## Components
+
+A component is a function that receives a `handle` and returns a render function. The outer function is the setup scope. It runs once per component instance, so variables declared there persist for the instance's lifetime. The render function runs on the first render and again on every update:
+
+```tsx
+import type { Handle } from 'remix/component'
+
+function Price(handle: Handle<{ amount: number; currency: string }>) {
+  // Setup: runs once per instance
+  let format = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: handle.props.currency,
+  })
+
+  // Render: runs on the first render and on every update
+  return () => <span>{format.format(handle.props.amount)}</span>
+}
+```
+
+Values read from `handle.props` during setup are the initial props. `Price` keeps its first `currency` even if the parent later passes a different one, while `amount` updates because render reads it. Read props inside render, or inside callbacks, whenever the component should follow changes.
+
+### Lifecycle
+
+1. **First render:** The runtime calls the component function with a handle whose `props` are already set, then calls the returned render function. After the result is committed to the DOM, tasks queued with `handle.queueTask()` run.
+2. **Updates:** The runtime replaces the values on `handle.props` and calls the render function again. Setup does not run again. Tasks queued during the update run after the commit.
+3. **Removal:** `handle.signal` is aborted, so listeners registered with `{ signal: handle.signal }` are removed. Queued tasks that haven't run yet still run, with an aborted signal.
+
+During server rendering, setup and render run, but `handle.update()` throws and `handle.queueTask()` does nothing. Start timers, read the DOM, and do other browser-only work in queued tasks, event handlers, or mixin lifecycle events.
+
+## Handle
+
+| Member                   | Use                                                                                                                                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `handle.props`           | The current props. The object stays the same across renders, and its values are replaced before each render.                                                                                   |
+| `handle.update()`        | Schedules a render. Returns a promise that resolves with an `AbortSignal` after the update commits. The signal is aborted when the component renders again or is removed.                      |
+| `handle.queueTask(task)` | Runs `task` after the next commit. The task receives an `AbortSignal` that is aborted when the component renders again or is removed.                                                          |
+| `handle.signal`          | Aborted when the component is removed. Use it to clean up work started in setup.                                                                                                               |
+| `handle.id`              | A stable ID for the instance, for `htmlFor`, `aria-controls`, and similar attributes.                                                                                                          |
+| `handle.context`         | Provides values to descendants and reads values from ancestors. See [Context](#context).                                                                                                       |
+| `handle.frame`           | The nearest [frame](#frame-navigation). Call `handle.frame.reload()` to fetch its content again.                                                                                               |
+| `handle.frames`          | `handle.frames.top` is the root frame of the runtime tree. `handle.frames.get(name)` finds a mounted frame by its `name` prop, or returns `undefined` when no frame with that name is mounted. |
+
+### Updates
+
+Call `handle.update()` from event handlers, queued tasks, timers, and subscriptions. Calling it during setup warns and skips the extra render, because the first render follows setup anyway. Calling it during render throws. When render discovers work that should happen after the commit, queue it with [`handle.queueTask()`](#queued-tasks).
+
+Await `handle.update()` when the next step needs the updated DOM:
+
+```tsx
+import { on, ref } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+function Disclosure(handle: Handle) {
+  let open = false
+  let closeButton: HTMLButtonElement
+
+  return () => (
+    <div>
+      <button
+        type="button"
+        mix={on('click', async () => {
+          open = true
+          await handle.update()
+          closeButton.focus()
+        })}
+      >
+        Show details
+      </button>
+      {open && (
+        <div role="region">
+          <button type="button" mix={ref((node) => (closeButton = node))}>
+            Close
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+### Queued Tasks
+
+`handle.queueTask(task)` runs `task` after the next commit, once the rendered output is in the DOM. Use it for work that render discovers but can't do itself, such as loading data for a prop, measuring layout, or moving focus. Queued tasks never run during server rendering.
+
+The task receives an `AbortSignal` that is aborted when the component renders again or is removed. A task queued from render is queued again on every render, so guard it with the prop value it depends on. Otherwise the task's own `handle.update()` renders again and queues the work again:
+
+```tsx
+import type { Handle } from 'remix/component'
+
+function UserCard(handle: Handle<{ userId: string }>) {
+  let user: { name: string } | undefined
+  let error: string | undefined
+  let loadedId: string | undefined
+
+  return () => {
+    let { userId } = handle.props
+    let loading = userId !== loadedId
+
+    if (loading) {
+      handle.queueTask(async (signal) => {
+        try {
+          let response = await fetch(`/api/users/${userId}`, { signal })
+          let data = await response.json()
+          if (signal.aborted) return
+          user = data
+          error = undefined
+        } catch (caught) {
+          if (signal.aborted) return
+          error = caught instanceof Error ? caught.message : 'Failed to load user'
+        }
+        loadedId = userId
+        handle.update()
+      })
+    }
+
+    if (loading) return <p>Loading…</p>
+    if (error) return <p role="alert">{error}</p>
+    return <p>{user?.name}</p>
+  }
+}
+```
+
+When `userId` changes, the next render aborts the previous request and queues one for the new ID. Any other render while a request is in flight also aborts it, and that render queues it again, so only the latest request for the current `userId` completes. Catch errors inside async tasks. Remix doesn't handle a rejected task, and aborting a `fetch()` rejects it.
+
+### Abort Signals
+
+Each signal covers a different lifetime. Pass the narrowest one to `fetch()` and other cancellable work:
+
+| Signal                                   | Aborted when                                           |
+| ---------------------------------------- | ------------------------------------------------------ |
+| The second argument to an `on()` handler | The same handler runs again, or its element is removed |
+| The argument to a queued task            | The component renders again, or is removed             |
+| The signal resolved by `handle.update()` | The component renders again, or is removed             |
+| `handle.signal`                          | The component is removed                               |
+
+### Context
+
+A provider declares its context type as the second `Handle` type parameter and calls `handle.context.set(value)`. Descendants read the value with `handle.context.get(Provider)`:
+
+```tsx
+import { on } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
+
+function Settings(handle: Handle<{ children?: RemixNode }, { compact: boolean }>) {
+  let compact = false
+  handle.context.set({ compact })
+
+  return () => (
+    <div>
+      <button
+        type="button"
+        mix={on('click', () => {
+          compact = !compact
+          handle.context.set({ compact })
+          handle.update()
+        })}
+      >
+        Toggle density
+      </button>
+      {handle.props.children}
+    </div>
+  )
+}
+
+function Row(handle: Handle<{ label: string }>) {
+  return () => {
+    let { compact } = handle.context.get(Settings)
+    return <li style={{ padding: compact ? '2px' : '8px' }}>{handle.props.label}</li>
+  }
+}
+```
+
+- Context is keyed by the provider component itself. `get(Settings)` reads the nearest ancestor rendered by exactly `Settings`, so a nested `Settings` shadows an outer one, and different providers never collide.
+- `set()` replaces the value but doesn't schedule a render. Call `handle.update()` on the provider when descendants should render with the new value.
+- Read context inside render when the provider replaces its value. A value read during setup stays the value from that setup call. A stable object that the provider never replaces, such as a `TypedEventTarget` from `remix/component`, can be read once in setup and subscribed to.
+- At runtime, `get()` returns `undefined` when no matching provider is an ancestor.
+
+When several public components should provide the same logical scope, render one shared provider from each of them, so descendants read a single provider type regardless of which component wraps them:
+
+```tsx
+import type { Handle, RemixNode } from 'remix/component'
+
+function MenuScope(handle: Handle<{ children?: RemixNode }, { id: string }>) {
+  handle.context.set({ id: handle.id })
+  return () => handle.props.children
+}
+
+function MenuRoot(handle: Handle<{ children?: RemixNode }>) {
+  return () => <MenuScope>{handle.props.children}</MenuScope>
+}
+
+function MenuGroup(handle: Handle<{ children?: RemixNode }>) {
+  return () => <MenuScope>{handle.props.children}</MenuScope>
+}
+
+function MenuTrigger(handle: Handle) {
+  let scope = handle.context.get(MenuScope)
+  return () => <button aria-controls={scope.id}>Open</button>
+}
+```
+
+### Frames From Components
+
+`handle.frame` is the frame that contains the component. Use `handle.frames.top` when a nested component needs to reload the whole page instead of only its nearest frame:
+
+```tsx
+import { on } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+function RefreshAllButton(handle: Handle) {
+  return () => (
+    <button
+      type="button"
+      mix={on('click', async () => {
+        await handle.frames.top.reload()
+      })}
+    >
+      Refresh everything
+    </button>
+  )
+}
+```
+
+`handle.frames.get(name)` finds a mounted frame by name. If several mounted frames share a name, it returns the most recently mounted one.
+
+## Keys
+
+Give list items a `key` when a list can be reordered, filtered, or added to. Elements and components with matching keys are moved instead of recreated, so they keep:
+
+- their DOM nodes
+- component state in setup scope
+- focus and text selection
+- input values the user has typed
+
+```tsx
+import { on } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+function ReorderableList(handle: Handle) {
+  let items = [
+    { id: 'a', label: 'Item A' },
+    { id: 'b', label: 'Item B' },
+    { id: 'c', label: 'Item C' },
+  ]
+
+  return () => (
+    <div>
+      <button
+        type="button"
+        mix={on('click', () => {
+          items = [...items].reverse()
+          handle.update()
+        })}
+      >
+        Reverse list
+      </button>
+      {items.map((item) => (
+        <div key={item.id}>
+          <input type="text" defaultValue={item.label} />
+        </div>
+      ))}
+    </div>
+  )
+}
+```
+
+Keys can be strings, numbers, or bigints, and must be unique among siblings. Use stable IDs from your data. An array index works only if the list never reorders, and a value created during render, such as `Math.random()`, makes every render look like a new item.
+
 ## Custom Mixins
 
 Use `createMixin(...)` to share host behavior, manage DOM resources, or provide default props. The [Mixins guide](https://github.com/remix-run/remix/blob/main/packages/component/docs/mixins.md) covers setup and render, `MixinHandle`, lifecycle events, and deferred removal with `beforeRemove` and `event.persistNode(...)`.

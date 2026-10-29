@@ -2,37 +2,6 @@
 
 This guide provides a comprehensive overview of the component runtime API, its behavior, and practical use cases for building interactive UIs.
 
-## Component Factory and Runtime Behavior
-
-### Runtime Behavior
-
-When a component is rendered:
-
-1. **First Render**:
-   - The component function is called with `handle`
-   - The returned render function is stored
-   - The render function is called after `handle.props` is populated
-   - Any tasks queued via `handle.queueTask()` are executed after rendering
-
-2. **Subsequent Updates**:
-   - Only the render function is called
-   - Setup phase is skipped, and the closure persists for the lifetime of the component instance
-   - `handle.props` is updated before the render function is called
-   - Tasks queued during the update are executed after rendering
-
-3. **Component Removal**:
-   - `handle.signal` is aborted
-   - Event listeners registered with `{ signal: handle.signal }` are removed automatically
-   - Any queued tasks are executed with an aborted signal
-
-## Handle API
-
-### `handle.queueTask(task)`
-
-**Use `queueTask` for work that needs to be reactive to prop changes:**
-
-When you need to perform async work (like data fetching) that should respond to prop changes, use `queueTask` in the render function. The task's signal is aborted when the component renders again (for any reason, not only prop changes) or is removed, so guard the queued work with the prop value it depends on rather than queueing it on every render.
-
 ## Rendering and Composition
 
 ### State Management Best Practices
@@ -459,60 +428,6 @@ This example demonstrates:
 - **Styles on elements themselves**: Each element (`img`, `.content`, `.title`, `.price`, `button`) has its own `css(...)` mixin
 - **Element's own states**: Button's `:active` state styled directly on the button
 - **Media queries**: Responsive adjustments applied directly to elements that need them
-
-### Key Prop
-
-When you reorder, add, or remove items, keys ensure:
-
-- **Focus and selection are maintained** - Input focus stays with the same element
-- **Input values are preserved** - Form values remain with their elements
-
-```tsx
-function ReorderableList(handle: Handle) {
-  let items = [
-    { id: 'a', label: 'Item A' },
-    { id: 'b', label: 'Item B' },
-    { id: 'c', label: 'Item C' },
-  ]
-
-  function reverse() {
-    items = [...items].reverse()
-    handle.update()
-  }
-
-  return () => (
-    <div>
-      <button mix={[on('click', reverse)]}>Reverse List</button>
-      {items.map((item) => (
-        <div key={item.id}>
-          <input type="text" defaultValue={item.label} />
-        </div>
-      ))}
-    </div>
-  )
-}
-```
-
-Even when the list order changes, each input maintains its value and focus state because the `key` prop identifies which DOM node corresponds to which item.
-
-Keys should be stable and unique within the list:
-
-```tsx
-// Good: stable, unique IDs
-{
-  items.map((item) => <Item key={item.id} item={item} />)
-}
-
-// Good: index can work if list never reorders
-{
-  items.map((item, index) => <Item key={index} item={item} />)
-}
-
-// Bad: don't use random values or values that change
-{
-  items.map((item) => <Item key={Math.random()} item={item} />)
-}
-```
 
 ## Common Patterns and Use Cases
 

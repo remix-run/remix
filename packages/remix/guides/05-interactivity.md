@@ -249,6 +249,10 @@ the initial render follows setup. Calling it during rendering, or before the ini
 outside setup, throws an error. If rendering discovers work that should run after the commit,
 schedule that work with `handle.queueTask()`.
 
+Components rendered on the server run their setup and render functions there too. On the server,
+`handle.update()` throws and queued tasks never run. Start timers, read the DOM, and use browser
+globals such as `window` in event handlers or queued tasks, which only run in the browser.
+
 `handle.update()` schedules work and returns a promise. Await it when the next step needs the updated
 DOM:
 
