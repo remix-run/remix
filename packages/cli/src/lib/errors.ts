@@ -43,6 +43,16 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Destructive database command requires --force',
     fix: 'Re-run with --force to confirm.',
   },
+  dbModuleFactoryRequired: {
+    code: 'RMX_DB_MODULE_FACTORY_REQUIRED',
+    title: 'Database module does not export a factory',
+    fix: 'Export a function that returns a Database, or name another export with db.adapter.export.',
+  },
+  dbModuleNotFound: {
+    code: 'RMX_DB_MODULE_NOT_FOUND',
+    title: 'Could not import the database module',
+    fix: 'Check db.adapter.module and make sure the module is installed.',
+  },
   remixVersionUnavailable: {
     code: 'RMX_REMIX_VERSION_UNAVAILABLE',
     title: 'Could not determine the Remix version',
@@ -216,6 +226,21 @@ export function dbForceRequired(command: string): UsageError {
   return createUsageError(CLI_ERROR_DEFINITIONS.dbForceRequired, {
     context: { command },
     message: `\`remix db ${command}\` destroys data in the current app database.`,
+  })
+}
+
+export function dbModuleFactoryRequired(specifier: string, exportName: string): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.dbModuleFactoryRequired, {
+    context: { export: exportName, module: specifier },
+    message: `Database module ${specifier} does not export "${exportName}" as a function.`,
+  })
+}
+
+export function dbModuleNotFound(specifier: string, cause: unknown): CliError {
+  let details = cause instanceof Error ? cause.message : String(cause)
+  return createCliError(CLI_ERROR_DEFINITIONS.dbModuleNotFound, {
+    context: { details, module: specifier },
+    message: `Could not import database module ${specifier}: ${details}`,
   })
 }
 
