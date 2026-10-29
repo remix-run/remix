@@ -1,4 +1,4 @@
-export { createElement, css, run } from '@remix-run/component'
+export { createElement, run } from '@remix-run/component'
 export {
   detectMultipleImportMapSupport,
   importModule,

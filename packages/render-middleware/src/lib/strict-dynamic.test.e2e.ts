@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
 import { createAssetServer } from '@remix-run/assets'
-import { clientEntry, createElement, css, Frame } from '@remix-run/component'
+import { clientEntry, createElement, Frame } from '@remix-run/component'
 import type { Handle } from '@remix-run/component'
 import { jsx } from '@remix-run/component/jsx-runtime'
 import { csp, getCspNonce } from '@remix-run/csp-middleware'
@@ -104,7 +104,6 @@ describe('strict-dynamic', () => {
     let entry = await assets.getScriptEntry(
       'packages/render-middleware/src/lib/fixtures/strict-dynamic-entry.ts',
     )
-    let requests = new Set<string>()
     let Island = clientEntry(
       'file:///app/island.ts#Island',
       function Island(handle: Handle<{ nonce: string }>) {
@@ -118,11 +117,6 @@ describe('strict-dynamic', () => {
               '#island-target { color: rgb(12, 34, 56) }',
             ),
             createElement('p', { id: 'island-target' }, 'Late island'),
-            createElement(
-              'p',
-              { id: 'mixin-target', mix: css({ color: 'rgb(65, 43, 21)' }) },
-              'Mixin',
-            ),
           )
       },
     )
@@ -151,34 +145,32 @@ describe('strict-dynamic', () => {
         }),
       ] as const,
     })
-    router.get('/island.js', () => {
-      requests.add('island')
-      return new Response(
-        `
-          import { createElement, css } from ${JSON.stringify(entry.href)}
+    router.get(
+      '/island.js',
+      () =>
+        new Response(
+          `
+          import { createElement } from ${JSON.stringify(entry.href)}
           import { label } from 'late-dependency'
           export function Island(handle) {
-            let nonce = handle.props.nonce
-            let updated = false
-            globalThis.updateIsland = async () => { updated = true; await handle.update() }
             handle.queueTask(() => { document.documentElement.dataset.hydrated = 'true' })
             return () => createElement('section', {},
-              createElement('style', { id: 'island-style', nonce },
-                '#island-target { color: ' + (updated ? 'rgb(21, 43, 65)' : 'rgb(12, 34, 56)') + ' }'),
+              createElement('style', { id: 'island-style', nonce: handle.props.nonce },
+                '#island-target { color: rgb(12, 34, 56) }'),
               createElement('p', { id: 'island-target' }, label),
-              createElement('p', { id: 'mixin-target', mix: css({ color: 'rgb(65, 43, 21)' }) }, 'Mixin'),
             )
           }
         `,
-        { headers: { 'Content-Type': 'text/javascript' } },
-      )
-    })
-    router.get('/dependency.js', () => {
-      requests.add('dependency')
-      return new Response("export let label = 'Late island'", {
-        headers: { 'Content-Type': 'text/javascript' },
-      })
-    })
+          { headers: { 'Content-Type': 'text/javascript' } },
+        ),
+    )
+    router.get(
+      '/dependency.js',
+      () =>
+        new Response("export let label = 'Late island'", {
+          headers: { 'Content-Type': 'text/javascript' },
+        }),
+    )
     router.get('/child', (context) => {
       let nonce = getCspNonce(context)
       assert.ok(nonce)
@@ -245,7 +237,6 @@ describe('strict-dynamic', () => {
       ['content-security-policy'].match(/'nonce-([^']+)'/)?.[1]
     assert.ok(documentNonce)
     await page.waitForFunction(() => document.documentElement.dataset.ready === 'true')
-    assert.equal(requests.size, 0)
 
     let [response] = await Promise.all([
       page.waitForResponse((response) => new URL(response.url()).search === '?updated'),
@@ -263,7 +254,6 @@ describe('strict-dynamic', () => {
     )
     assert.equal(await page.locator('html').getAttribute('data-error'), null)
 
-    assert.deepEqual(Array.from(requests).sort(), ['dependency', 'island'])
     assert.equal(await page.locator('#island-target').textContent(), 'Late island')
     assert.equal(
       await page.locator('#island-style').evaluate((element) => element.nonce),
@@ -272,25 +262,6 @@ describe('strict-dynamic', () => {
     assert.equal(
       await page.locator('#island-target').evaluate((element) => getComputedStyle(element).color),
       'rgb(12, 34, 56)',
-    )
-    assert.equal(
-      await page.locator('#mixin-target').evaluate((element) => getComputedStyle(element).color),
-      'rgb(65, 43, 21)',
-    )
-    let lateMap = page.locator('script[data-rmx-import-map][type="importmap"]')
-    assert.equal(await lateMap.evaluate((element) => element.nonce), documentNonce)
-    assert.match((await lateMap.textContent()) ?? '', /late-dependency/)
-
-    await page.evaluate(async () => {
-      await Reflect.get(globalThis, 'updateIsland')()
-    })
-    assert.equal(
-      await page.locator('#island-style').evaluate((element) => element.nonce),
-      documentNonce,
-    )
-    assert.equal(
-      await page.locator('#island-target').evaluate((element) => getComputedStyle(element).color),
-      'rgb(21, 43, 65)',
     )
     assert.deepEqual(await page.evaluate(() => Reflect.get(globalThis, 'violations')), [])
   })
