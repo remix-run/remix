@@ -937,7 +937,9 @@ function insert(
     // Check for matching mixin-persisted node that can be reclaimed
     let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
     if (persistedNode) {
-      return reclaimPersistedMixinNode(persistedNode, node, vParent, context)
+      let reclaimed = reclaimPersistedMixinNode(persistedNode, node, vParent, context)
+      doInsert(reclaimed._dom)
+      return reclaimed
     }
 
     if (hydrationNode instanceof Element) {
