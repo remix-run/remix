@@ -165,7 +165,6 @@ const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 const pendingClientEntryHydrations = new WeakMap<Comment, Promise<void>>()
 const frameClientEntryParents = new WeakMap<Comment, Comment>()
-const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 
 function createLinkedAbortController(
   first: AbortSignal,
@@ -191,10 +190,6 @@ function createLinkedAbortController(
       }
     },
   }
-}
-
-function stripDoctypeMarkup(html: string): string {
-  return html.replace(DOCTYPE_PATTERN, '')
 }
 
 // Marker-less HTML is a whole document when it starts with a doctype or `<html>`.
@@ -534,16 +529,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       }
     }
 
-    let rawHtml = typeof content === 'string' ? content : undefined
-    let htmlContent = rawHtml === undefined ? undefined : stripDoctypeMarkup(rawHtml)
+    let htmlContent = typeof content === 'string' ? content : undefined
 
     let isFullDocumentReload =
       container.root instanceof Document &&
-      rawHtml !== undefined &&
-      (options.flushKind ?? inferFlushKind(rawHtml)) === 'document'
+      htmlContent !== undefined &&
+      (options.flushKind ?? inferFlushKind(htmlContent)) === 'document'
 
-    if (isFullDocumentReload && rawHtml !== undefined) {
-      let parsed = parseDocument(container.doc, rawHtml)
+    if (isFullDocumentReload && htmlContent !== undefined) {
+      let parsed = parseDocument(container.doc, htmlContent)
       let head = parsed.querySelector('head')
       let body = parsed.querySelector('body')
       invariant(head && body, 'Missing document head or body')
@@ -2038,7 +2032,7 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
 
 function createFragmentFromString(doc: Document, content: string): DocumentFragment {
   let template = doc.createElement('template')
-  template.innerHTML = stripDoctypeMarkup(content).trim()
+  template.innerHTML = content.trim()
   removeNoscriptContents(template.content)
   return template.content
 }

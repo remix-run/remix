@@ -53,6 +53,21 @@ describe('frames', () => {
     document.documentElement.innerHTML = '<head></head><body></body>'
   })
 
+  it('preserves doctype-looking text in frame script data', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    let json = '{"example":"<!doctype html>"}'
+    let frame = createTestFrame(root, {
+      resolveFrame: () => `<!DOCTYPE html><script type="application/json">${json}</script>`,
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+
+    expect(root.querySelector('script')?.textContent).toBe(json)
+  })
+
   it('preserves named html and body attributes across top frame reloads', async () => {
     let doc = document.implementation.createHTMLDocument('Initial')
     let nextHtml = [

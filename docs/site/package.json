@@ -1,0 +1,37 @@
+{
+  "name": "remix-docs",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@remix-run/ui": "workspace:^",
+    "mdast-util-directive": "3.1.0",
+    "remix": "workspace:*",
+    "remix-docs-shared": "workspace:*",
+    "shiki": "catalog:",
+    "unist-util-visit": "5.1.0"
+  },
+  "devDependencies": {
+    "@types/dom-navigation": "1.0.7",
+    "@types/hast": "catalog:",
+    "@types/mdast": "4.0.4",
+    "@types/node": "catalog:",
+    "oxfmt": "catalog:",
+    "pagefind": "catalog:",
+    "typedoc": "0.28.19",
+    "typescript": "6.0.3"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "build:demos": "node --import remix/node-tsx scripts/build-demos.ts",
+    "predev": "pnpm run docs && pnpm run build:demos",
+    "dev": "NODE_ENV=development node ../shared/hmr/run.ts",
+    "docs": "node scripts/generate/index.ts",
+    "docs:debug": "DEBUG=1 node scripts/generate/index.ts",
+    "prerender": "pnpm run validate && NODE_ENV=production node --import remix/node-tsx scripts/prerender.ts",
+    "prerender:serve": "npx http-server -p 44100 build/site",
+    "start": "node --import remix/node-tsx server.ts",
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "pnpm -w exec tsc --noEmit -p docs/site/tsconfig.json",
+    "validate": "node --import remix/node-tsx scripts/validate-guides.ts"
+  }
+}
