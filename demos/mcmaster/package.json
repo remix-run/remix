@@ -1,0 +1,25 @@
+{
+  "name": "mcmaster-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "remix": "workspace:*",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
+    "@types/node": "catalog:",
+    "playwright": "catalog:",
+    "typescript": "catalog:"
+  },
+  "scripts": {
+    "images:generate": "node --import remix/node-tsx scripts/generate-product-images.ts",
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "start": "NODE_ENV=production node --import remix/node-tsx server.ts",
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "tsc --noEmit"
+  }
+}
