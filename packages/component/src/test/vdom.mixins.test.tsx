@@ -749,6 +749,182 @@ describe('vnode mixins', () => {
     expect(items[2]).toBe(originalC)
   })
 
+  it('does not move reclaimed keyed items when their order is unchanged', (t) => {
+    let removal = Promise.withResolvers<void>()
+    let retained = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => {
+        event.persistNode(() => removal.promise)
+      })
+      return () => handle.element
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    let observer = new MutationObserver(() => {})
+    t.after(() => {
+      observer.disconnect()
+      root.dispose()
+      removal.resolve()
+    })
+    function list(items: string[]) {
+      return (
+        <ul>
+          {items.map((item) => (
+            <li key={item} mix={retained()}>
+              {item}
+            </li>
+          ))}
+        </ul>
+      )
+    }
+    root.render(list(['B', 'C']))
+    root.flush()
+    let listNode = container.querySelector('ul')
+    invariant(listNode)
+    let originalItems = [...listNode.children]
+    root.render(list([]))
+    root.flush()
+    observer.observe(listNode, { childList: true })
+
+    root.render(list(['B', 'C']))
+    root.flush()
+
+    expect([...listNode.children]).toEqual(originalItems)
+    expect(observer.takeRecords()).toEqual([])
+  })
+
+  it('places new siblings without moving correctly ordered reclaimed keyed items', (t) => {
+    let removal = Promise.withResolvers<void>()
+    let retained = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => {
+        event.persistNode(() => removal.promise)
+      })
+      return () => handle.element
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    let observer = new MutationObserver(() => {})
+    t.after(() => {
+      observer.disconnect()
+      root.dispose()
+      removal.resolve()
+    })
+    function list(items: string[]) {
+      return (
+        <ul>
+          {items.map((item) => (
+            <li key={item} mix={retained()}>
+              {item}
+            </li>
+          ))}
+        </ul>
+      )
+    }
+    root.render(list(['B', 'C']))
+    root.flush()
+    let listNode = container.querySelector('ul')
+    invariant(listNode)
+    let originalItems = [...listNode.children]
+    root.render(list([]))
+    root.flush()
+    observer.observe(listNode, { childList: true })
+
+    root.render(list(['A', 'B', 'C']))
+    root.flush()
+
+    expect([...listNode.children].map((item) => item.textContent)).toEqual(['A', 'B', 'C'])
+    let removedNodes = observer.takeRecords().flatMap((record) => [...record.removedNodes])
+    let originalItemSet = new Set<Node>(originalItems)
+    expect(removedNodes.filter((node) => originalItemSet.has(node))).toEqual([])
+    expect(listNode.children[1]).toBe(originalItems[0])
+    expect(listNode.children[2]).toBe(originalItems[1])
+  })
+
+  it('does not move a reclaimed keyed item past siblings still awaiting removal', (t) => {
+    let removal = Promise.withResolvers<void>()
+    let retained = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => {
+        event.persistNode(() => removal.promise)
+      })
+      return () => handle.element
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    let observer = new MutationObserver(() => {})
+    t.after(() => {
+      observer.disconnect()
+      root.dispose()
+      removal.resolve()
+    })
+    function list(items: string[]) {
+      return (
+        <ul>
+          {items.map((item) => (
+            <li key={item} mix={retained()}>
+              {item}
+            </li>
+          ))}
+        </ul>
+      )
+    }
+    root.render(list(['A', 'B', 'C']))
+    root.flush()
+    let listNode = container.querySelector('ul')
+    invariant(listNode)
+    let originalItems = [...listNode.children]
+    root.render(list([]))
+    root.flush()
+    observer.observe(listNode, { childList: true })
+
+    root.render(list(['A']))
+    root.flush()
+
+    expect([...listNode.children]).toEqual(originalItems)
+    expect(observer.takeRecords()).toEqual([])
+  })
+
+  it('does not move a reclaimed keyed item already between its requested siblings', (t) => {
+    let removal = Promise.withResolvers<void>()
+    let retained = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => {
+        event.persistNode(() => removal.promise)
+      })
+      return () => handle.element
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    let observer = new MutationObserver(() => {})
+    t.after(() => {
+      observer.disconnect()
+      root.dispose()
+      removal.resolve()
+    })
+    function list(items: string[]) {
+      return (
+        <ul>
+          {items.map((item) => (
+            <li key={item} mix={retained()}>
+              {item}
+            </li>
+          ))}
+        </ul>
+      )
+    }
+    root.render(list(['A', 'B', 'C']))
+    root.flush()
+    let listNode = container.querySelector('ul')
+    invariant(listNode)
+    let originalItems = [...listNode.children]
+    root.render(list(['A', 'C']))
+    root.flush()
+    observer.observe(listNode, { childList: true })
+
+    root.render(list(['A', 'B', 'C']))
+    root.flush()
+
+    expect([...listNode.children]).toEqual(originalItems)
+    expect(observer.takeRecords()).toEqual([])
+  })
+
   it('defers host removal when beforeRemove.persistNode is used', async () => {
     let removal = Promise.withResolvers<void>()
     let beforeRemoveCalls = 0
