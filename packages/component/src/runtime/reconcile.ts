@@ -2233,16 +2233,23 @@ function reclaimPersistedMixinNode(
   context: ReconcileContext,
 ): CommittedHostNode {
   let { frame, scheduler, styles } = context
+  let mixState = persistedNode._mixState
   // Persisted hosts are unbound, so notify their existing mixins explicitly
   // before resolving replacements and patching the returning host's props.
-  dispatchMixinBeforeUpdate(persistedNode._mixState, persistedNode._dom)
+  dispatchMixinBeforeUpdate(mixState, persistedNode._dom)
+  cancelPendingMixinRemoval(mixState)
   unmarkNodePersistedByMixins(persistedNode)
 
   let prevProps = getHostProps(persistedNode)
   let childInputs = newNode._children
-  let resolved = resolveNodeMixProps(newNode, vParent, frame, scheduler, persistedNode._mixState)
+  let resolved: ResolvedHostProps
   // Keep removal prepared while dropping old mixins so teardown does not restart it.
-  cancelPendingMixinRemoval(persistedNode._mixState)
+  if (mixState) mixState.removePrepared = true
+  try {
+    resolved = resolveNodeMixProps(newNode, vParent, frame, scheduler, mixState)
+  } finally {
+    if (mixState) mixState.removePrepared = false
+  }
   let nextProps = resolved.props
   let committed = commitHostNode(
     newNode,

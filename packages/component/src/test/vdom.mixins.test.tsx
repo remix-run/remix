@@ -750,6 +750,148 @@ describe('vnode mixins', () => {
     expect(host.hasAttribute('inert')).toBe(true)
   })
 
+  it('does not restart retained removal when the returning host drops its mixins', async (t) => {
+    let beforeRemoves = 0
+    let removes = 0
+    let started = Promise.withResolvers<AbortSignal>()
+    let retained = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => {
+        beforeRemoves++
+        event.persistNode((signal) => started.resolve(signal))
+      })
+      handle.addEventListener('remove', () => removes++)
+      return () => handle.element
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    root.render(<div key="item" mix={retained()} />)
+    let host = container.firstElementChild
+    root.render(null)
+    root.render(<div key="item" title="Returned" />)
+    let signal = await started.promise
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    expect(signal.aborted).toBe(true)
+    expect(beforeRemoves).toBe(1)
+    expect(removes).toBe(1)
+    expect(container.firstElementChild).toBe(host)
+    expect(host?.getAttribute('title')).toBe('Returned')
+  })
+
+  it('ignores an earlier removal completing after a reclaimed host is removed again', async (t) => {
+    let removals: Array<{ signal: AbortSignal; finish(): void }> = []
+    let started = Promise.withResolvers<void>()
+    let removes = 0
+    let retained = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => {
+        event.persistNode(
+          (signal) =>
+            new Promise<void>((resolve) => {
+              removals.push({ signal, finish: resolve })
+              started.resolve()
+            }),
+        )
+      })
+      handle.addEventListener('remove', () => removes++)
+      return () => handle.element
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    root.render(<div key="item" mix={retained()} />)
+    let host = container.firstElementChild
+    root.render(null)
+    await started.promise
+    root.render(<div key="item" mix={retained()} />)
+    expect(removals[0].signal.aborted).toBe(true)
+    started = Promise.withResolvers<void>()
+    root.render(null)
+    await started.promise
+    removals[0].finish()
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    expect(container.firstElementChild).toBe(host)
+    expect(removals[1].signal.aborted).toBe(false)
+    expect(removes).toBe(0)
+    removals[1].finish()
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    expect(container.firstElementChild).toBe(null)
+    expect(removes).toBe(1)
+  })
+
+  it('cancels retained removal before passing new arguments to the mixin', async (t) => {
+    let started = Promise.withResolvers<void>()
+    let observed: string | undefined
+    let retained = createMixin<Element, [label: string]>((handle) => {
+      let current = ''
+      handle.addEventListener('beforeRemove', (event) => {
+        event.persistNode(
+          (signal) =>
+            new Promise<void>((resolve) => {
+              signal.addEventListener(
+                'abort',
+                () => {
+                  observed = current
+                  resolve()
+                },
+                { once: true },
+              )
+              started.resolve()
+            }),
+        )
+      })
+      return (label: string) => {
+        current = label
+        return handle.element
+      }
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    root.render(<div key="item" mix={retained('Before')} />)
+    root.render(null)
+    await started.promise
+    root.render(<div key="item" mix={retained('After')} />)
+    expect(observed).toBe('Before')
+  })
+
+  it('cancels retained removal when the returning mixin render throws', async (t) => {
+    t.mock.method(console, 'error', () => {})
+    let started = Promise.withResolvers<void>()
+    let finished = Promise.withResolvers<void>()
+    let removalSignal: AbortSignal | undefined
+    let error = new Error('Returning mixin failed')
+    let errors: unknown[] = []
+    let retained = createMixin<Element, [fail: boolean]>((handle) => {
+      let inserted = false
+      handle.addEventListener('insert', () => {
+        inserted = true
+      })
+      handle.addEventListener('beforeRemove', (event) => {
+        event.persistNode((signal) => {
+          removalSignal = signal
+          signal.addEventListener('abort', () => finished.resolve(), { once: true })
+          started.resolve()
+          return finished.promise
+        })
+      })
+      return (fail: boolean) => {
+        if (inserted && fail) throw error
+        return handle.element
+      }
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => root.dispose())
+    root.render(<div key="item" mix={retained(false)} />)
+    root.render(null)
+    await started.promise
+    root.render(<div key="item" mix={retained(true)} />)
+    expect(errors).toEqual([error])
+    invariant(removalSignal)
+    expect(removalSignal.aborted).toBe(true)
+  })
+
   it('defers host removal when beforeRemove.persistNode is used', async () => {
     let removal = Promise.withResolvers<void>()
     let beforeRemoveCalls = 0
