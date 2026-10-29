@@ -98,6 +98,9 @@ export const AlbumEditForm = clientEntry(
 );
 ```
 
+The first argument identifies the component's module. With `import.meta.url`, Remix uses the
+function's name as the export name, so name the function the same as its export.
+
 On the server, this still renders like an ordinary component. The server wraps its output in a pair
 of HTML comments, `<!-- rmx:h:... -->` and `<!-- /rmx:h -->`, and serializes its props into the page.
 The comments mark a range of the document rather than adding a wrapper element, so the hydrated output

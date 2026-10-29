@@ -775,9 +775,53 @@ Consumers listen for it like any DOM event:
 - Put the data consumers need on the event object.
 - Keep state the gesture needs in setup scope, and clean up timers and global listeners in a `remove` listener.
 
-## Client Entry Loading
+## Client Entries
 
-`run()` hydrates client entries by calling `loadModule` for each component module:
+`clientEntry(entryId, component)` marks a component that hydrates in the browser. On the server it renders like any other component. Remix wraps its output in `<!-- rmx:h:... -->` comments and serializes its props into a `<script type="application/json" id="rmx-data">` tag. In the browser, `run()` loads the component's module and hydrates the existing DOM in place:
+
+```tsx
+import { clientEntry, on } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+export const LikeButton = clientEntry(
+  import.meta.url,
+  function LikeButton(handle: Handle<{ initialLikes: number }>) {
+    let likes = handle.props.initialLikes
+
+    return () => (
+      <button
+        type="button"
+        mix={on('click', () => {
+          likes++
+          handle.update()
+        })}
+      >
+        {likes} likes
+      </button>
+    )
+  },
+)
+```
+
+### Entry IDs
+
+An entry ID has the form `moduleUrl#ExportName`. When it has no `#ExportName`, as with `import.meta.url`, Remix uses the component function's name, so give the function the same name as its export. Rendering throws when it can't determine an export name.
+
+The `render()` middleware and `renderToStream()` resolve entry IDs to the public module URLs the browser loads. Pass `resolveClientEntry` to map source modules to built assets. See [`remix/component/server`](./server/README.md).
+
+### Serializable Props
+
+Client entry props cross from the server to the browser, so they must be serializable:
+
+- strings, numbers, booleans, `null`, and `undefined`
+- plain objects and arrays of serializable values
+- JSX elements, including `<Frame>` elements, which are serialized as frame descriptors
+
+Functions and class instances are rejected by the types. Pass plain data, route URLs, and other browser-safe values instead of database records or request objects.
+
+### Booting with run()
+
+`run()` hydrates every client entry in the document by calling `loadModule` for each component module:
 
 ```tsx
 import { run } from 'remix/component'
@@ -789,12 +833,30 @@ let app = run({
   },
 })
 
+app.addEventListener('error', (event) => {
+  console.error(event.error)
+})
+
 await app.ready()
 ```
 
-Client entries introduced after the initial document may depend on import maps added at runtime.
-When targeting browsers without native support for multiple import maps, use
-`remix/multiple-import-maps-polyfill` to load these modules and process their preloads:
+| Option                       | Use                                                                                                                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `loadModule`                 | Required. Loads a client entry's module and returns the named export. Remix passes each module specifier unchanged.                                                            |
+| `processClientEntryPreloads` | Receives module preloads discovered in frame responses before they're added to the document. Return the URLs that should stay as native `<link rel="modulepreload">` elements. |
+| `resolveFrame`               | Fetches frame content for navigations and reloads. See [Frame Navigation](#frame-navigation).                                                                                  |
+| `prefetch`                   | Replaces the default prefetch for `data-rmx-prefetch` links and `prefetch()` calls. See [Frame Navigation](#frame-navigation).                                                 |
+
+The returned runtime emits `error` events for component errors, and has these members:
+
+| Member          | Use                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------- |
+| `app.ready()`   | Resolves after the document finishes hydrating.                                     |
+| `app.flush()`   | Applies pending component updates synchronously, mainly for tests and integrations. |
+| `app.dispose()` | Stops the runtime's listeners and disposes the top-level frame.                     |
+| `app.frames`    | The top-level and named frames, like [`handle.frames`](#frames-from-components).    |
+
+Client entries introduced after the initial document may depend on import maps added at runtime. When targeting browsers without native support for multiple import maps, use `remix/multiple-import-maps-polyfill` to load these modules and process their preloads:
 
 ```tsx
 import {
@@ -802,6 +864,7 @@ import {
   importModule,
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
+import { run } from 'remix/component'
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
@@ -820,6 +883,18 @@ let app = run({
   },
 })
 ```
+
+### How Hydration Works
+
+- Each client entry hydrates on its own. A client entry inside another one can read its ancestor's context, but sibling client entries don't share context.
+- Remix adopts the server-rendered DOM in place. It patches mismatched attributes and adds missing ones, but leaves extra attributes alone. When an element's type doesn't match, Remix skips one node to look for a match, then recreates the element.
+- Client entries inside a [`data-rmx-preserve-dom`](#preserving-client-owned-dom) element hydrate during the initial boot, but later frame reloads don't patch new server props through the preserved element.
+
+### Trusted Content and Module Loading
+
+The initial document and HTML returned by `resolveFrame` are trusted application content. They can select client-entry modules and contribute import maps, styles, and nested frames. Only return HTML from sources the application trusts to run code in the current page. The default resolver restricts requests and redirects to the document origin, but Remix does not sanitize the returned HTML and same-origin user-generated content is not implicitly safe.
+
+Remix passes each serialized module specifier unchanged to `loadModule`. The loader controls how it resolves that specifier, so client entries can use CDN URLs, development server URLs, or bare specifiers resolved through import maps or a custom loader. With `import(moduleUrl)`, relative specifiers resolve from the module containing that import, subject to the document's import map. Applications that restrict module sources should enforce that policy in their loader before importing code. The runtime's check that the returned export is a function happens after loading; it checks the component shape, not whether the module is trusted.
 
 ## Frame Navigation
 
