@@ -102,7 +102,7 @@ jobs:
           script: |
             let ref = '${{ needs.publish.outputs.tag }}';
             let deploys = [
-              ['remix-api-docs', 'update-docs'],
+              ['remix-docs', 'update-docs'],
               ['remix-ui-docs', 'update-ui'],
             ];
             for (let [repo, event_type] of deploys) {
