@@ -6,6 +6,7 @@ import type { SchedulerPhaseEvent } from '../scheduler.ts'
 import { jsx } from '../core/vnode.ts'
 import { TypedEventTarget } from '../component.ts'
 import { invariant } from '../invariant.ts'
+import { ignoreAbortedRejection } from '../ignore-aborted-rejection.ts'
 import { composeMixedProps, isMixinElementFunction } from '../core/mix.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (
@@ -639,7 +640,8 @@ class MixinHandleImpl
       () => {
         let binding = this.#state.binding
         invariant(binding)
-        task(binding.node, getMixinRuntimeSignal(this.#state))
+        let signal = getMixinRuntimeSignal(this.#state)
+        ignoreAbortedRejection(task(binding.node, signal), signal)
       },
     ])
   }
