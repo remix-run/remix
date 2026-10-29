@@ -401,6 +401,12 @@ The `css(...)` call creates a generated class and static rule, and the element's
 such as progress, coordinates, opacity, or transforms that can change on every update. Putting those
 values in `css(...)` would create another generated rule for each value.
 
+Prefer state selectors such as `"&:hover .title"` or `'&[aria-expanded="true"]'` over tracking hover
+or focus in JavaScript. The browser applies them without a render, and they work before the page
+hydrates. When two `css(...)` styles on one element set the same property, their order in `mix`
+doesn't decide which one wins, so put variants behind a selector in a single style. See
+[combining styles](../src/component/README.md#combining-styles) for details.
+
 During server rendering, Remix collects generated rules, deduplicates them, and inserts their
 `<style data-rmx-style>` tags into the document head. A server-rendered page does not wait for browser
 JavaScript to receive its component styles.

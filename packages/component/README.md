@@ -310,6 +310,156 @@ function ReorderableList(handle: Handle) {
 
 Keys can be strings, numbers, or bigints, and must be unique among siblings. Use stable IDs from your data. An array index works only if the list never reorders, and a value created during render, such as `Math.random()`, makes every render look like a new item.
 
+## Styling
+
+`css(...)` turns a style object into a generated class and applies it through `mix`. The object mirrors CSS nesting:
+
+```tsx
+import { css, on } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+const toggleStyle = css({
+  display: 'inline-flex',
+  gap: '6px',
+  padding: '8px 12px',
+  border: '1px solid #d6d6d6',
+  borderRadius: '6px',
+  background: 'white',
+  '&:hover': {
+    borderColor: '#6d28d9',
+  },
+  '&[aria-pressed="true"]': {
+    background: '#6d28d9',
+    color: 'white',
+  },
+  '&::after': {
+    content: '"✓"',
+    visibility: 'hidden',
+  },
+  '&[aria-pressed="true"]::after': {
+    visibility: 'visible',
+  },
+  '.label': {
+    fontWeight: 600,
+  },
+  '@media (max-width: 40rem)': {
+    padding: '12px 16px',
+  },
+})
+
+function FavoriteToggle(handle: Handle) {
+  let pressed = false
+
+  return () => (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      mix={[
+        toggleStyle,
+        on('click', () => {
+          pressed = !pressed
+          handle.update()
+        }),
+      ]}
+    >
+      <span class="label">Favorite</span>
+    </button>
+  )
+}
+```
+
+### Nested Selectors
+
+- `&` refers to the element itself, as in `'&:hover'`, `'&::before'`, `'&[aria-pressed="true"]'`, and `'& h2'`.
+- Class names nest directly. `'.label'` styles descendants with the `label` class.
+- Nested keys must start with `&`, `.`, `:`, `[`, or `@`. A bare element selector such as `h2` isn't treated as a selector, so write `'& h2'`.
+- `@media`, `@supports`, and other at-rules can nest at any level.
+
+Prefer state selectors such as `'&:hover .label'` or `'&[aria-expanded="true"]'` over tracking hover or focus in JavaScript and rendering again. The browser applies them without a render, and they work before the page hydrates.
+
+### Dynamic Values
+
+Each distinct style object becomes its own class and rule. Use `css(...)` for styles that come from a small set of states, and the `style` prop for values that change continuously, such as progress, coordinates, or transforms:
+
+```tsx
+import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+const barStyle = css({ height: '4px', background: '#6d28d9', transformOrigin: 'left' })
+
+function ProgressBar(handle: Handle<{ value: number }>) {
+  return () => <div mix={barStyle} style={{ transform: `scaleX(${handle.props.value})` }} />
+}
+```
+
+During server rendering, Remix collects the generated rules, deduplicates them, and puts them in `<style data-rmx-style>` tags in the document head, so server-rendered pages are styled before any JavaScript loads.
+
+### Combining Styles
+
+`mix` can hold several `css(...)` styles, and each one keeps its own class. When two of them set the same property, their order in `mix` does not decide which one wins. Each class takes its place in the cascade the first time it's added to the page, so the winner depends on which style rendered first:
+
+```tsx
+import { css } from 'remix/component'
+
+const buttonStyle = css({ background: 'gray' })
+const dangerStyle = css({ background: 'red' })
+
+function DeleteButton() {
+  // The background depends on which style the page inserted first, not on this order
+  return () => <button mix={[buttonStyle, dangerStyle]}>Delete</button>
+}
+```
+
+Combine styles that set different properties, such as layout and appearance. For variants, put the variant in one style behind a selector, or pass different values to a single `css(...)` call:
+
+```tsx
+import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+const buttonStyle = css({
+  background: 'gray',
+  '&[data-variant="danger"]': {
+    background: 'red',
+  },
+})
+
+function Button(handle: Handle<{ label: string; variant?: 'danger' }>) {
+  return () => (
+    <button data-variant={handle.props.variant} mix={buttonStyle}>
+      {handle.props.label}
+    </button>
+  )
+}
+```
+
+### Cascade Layers
+
+The component runtime emits generated `css(...)` rules under the `rmx` cascade layer. Each generated class gets its own sublayer, so a class such as `rmxc-k4a9f` is emitted as `@layer rmx.rmxc-k4a9f { ... }`. That keeps each class's place in the cascade the same across every root and frame on the page.
+
+Unlayered CSS outranks layered CSS, so use explicit layer order when mixing generated styles with global styles. Put layers that should lose to generated styles before `rmx`:
+
+```css
+@layer base, rmx;
+
+@layer base {
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    margin: 0;
+    padding: 0;
+  }
+}
+```
+
+For imported stylesheets, assign the layer in the import when your build supports it:
+
+```css
+@layer base, rmx;
+@import './base.css' layer(base);
+```
+
 ## Custom Mixins
 
 Use `createMixin(...)` to share host behavior, manage DOM resources, or provide default props. The [Mixins guide](https://github.com/remix-run/remix/blob/main/packages/component/docs/mixins.md) covers setup and render, `MixinHandle`, lifecycle events, and deferred removal with `beforeRemove` and `event.persistNode(...)`.
@@ -587,27 +737,6 @@ function ArticleBody(handle: Handle<{ html: string }>) {
 ```
 
 When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` is an authorization boundary and does not sanitize input; only pass trusted or already-sanitized HTML.
-
-## Cascade Layers
-
-The component runtime emits generated `css(...)` rules under the `rmx` cascade layer. Unlayered CSS outranks layered CSS, so use explicit layer order when mixing generated styles with global styles.
-
-Put layers that should lose to generated styles before `rmx`:
-
-```css
-@layer base, rmx;
-
-@layer base {
-  button,
-  input,
-  textarea,
-  select {
-    font: inherit;
-    margin: 0;
-    padding: 0;
-  }
-}
-```
 
 ## License
 
