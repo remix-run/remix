@@ -28,26 +28,20 @@
     "node": ">=24.3.0"
   },
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/assets": "workspace:^",
-    "@remix-run/data-table": "workspace:^",
-    "@remix-run/data-table-mysql": "workspace:^",
-    "@remix-run/data-table-postgres": "workspace:^",
-    "@remix-run/data-table-sqlite": "workspace:^",
-    "@remix-run/terminal": "workspace:^",
-    "@remix-run/test": "workspace:^",
+    "@remix-run/assets": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/assets.tgz",
+    "@remix-run/data-table": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/data-table.tgz",
+    "@remix-run/data-table-mysql": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/data-table-mysql.tgz",
+    "@remix-run/data-table-postgres": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/data-table-postgres.tgz",
+    "@remix-run/data-table-sqlite": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/data-table-sqlite.tgz",
+    "@remix-run/terminal": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/terminal.tgz",
+    "@remix-run/test": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/test.tgz",
     "jsonc-parser": "^3.3.1",
     "semver": "^7.7.4"
   },
@@ -60,8 +54,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
-    "postpack": "node ../../scripts/sync-cli-template.ts --clean",
-    "prepack": "node ../../scripts/sync-cli-template.ts",
     "prepublishOnly": "pnpm run build",
     "test": "remix test --concurrency 1",
     "typecheck": "tsc --noEmit"

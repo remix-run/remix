@@ -20,17 +20,11 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:^",
@@ -44,11 +38,11 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/fs": "workspace:^",
-    "@remix-run/html-template": "workspace:^",
-    "@remix-run/mime": "workspace:^",
-    "@remix-run/response": "workspace:^"
+    "@remix-run/fetch-router": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/fetch-router.tgz",
+    "@remix-run/fs": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/fs.tgz",
+    "@remix-run/html-template": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/html-template.tgz",
+    "@remix-run/mime": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/mime.tgz",
+    "@remix-run/response": "https://raw.githubusercontent.com/remix-run/remix/refs/heads/brophdawg11/codex-preview-tarballs-build/tarballs/1b9c1242/response.tgz"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
