@@ -117,7 +117,7 @@ To try the latest `main` build, copy the `remix` tarball URL from the [preview m
 pnpm add "<tarball-url>"
 ```
 
-The manifest also lists URLs for individual packages, such as `@remix-run/fetch-router`. Each build has a new URL. When updating a preview, copy its new URL from the manifest. Main builds remain available for seven days, and the latest build is always kept. A daily cleanup removes expired builds. PR builds remain available until the PR is merged or closed, when its preview branch is deleted. Installs using expired or deleted builds need a newer preview URL and an updated lockfile.
+The manifest also lists URLs for individual packages, such as `@remix-run/fetch-router`. Each build has a new URL. When updating a preview, copy its new URL from the manifest. Main builds older than seven days are removed when `preview/main` next updates, and the latest build is always kept. PR builds remain available until the PR is merged or closed, when its preview branch is deleted. Installs using expired or deleted builds need a newer preview URL and an updated lockfile.
 
 If your pnpm version blocks transitive Git or tarball dependencies, add this to your `pnpm-workspace.yaml`:
 

@@ -7,8 +7,8 @@
 #   pnpm add "https://raw.githubusercontent.com/remix-run/remix/refs/heads/preview/pr-12345/tarballs/<source-sha>/remix.tgz"
 #
 # The script prints the exact install URL and writes tarballs/preview.json.
-# PR builds remain until the PR closes. Main builds remain for seven days,
-# with the latest main build always retained.
+# PR builds remain until the PR closes. Main builds older than seven days are
+# pruned on the next update, with the latest main build always retained.
 #
 # Can also be dispatched manually with base/installable branches to provide
 # `experimental` branches from PRs or otherwise.
@@ -34,7 +34,7 @@ concurrency:
   # Include `event_name` here because when a pull_request is merged (closed), the
   # `github.ref` goes back to `ref/heads/main` which will conflict with the run on
   # `main` from the merged PR
-  group: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.installableBranch == 'preview/main')) && 'preview-main' || format('{0}-{1}-{2}', github.workflow, github.event_name, github.ref) }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

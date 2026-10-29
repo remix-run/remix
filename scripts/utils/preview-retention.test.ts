@@ -158,7 +158,7 @@ describe('preview retention', () => {
     }
   })
 
-  it('prunes main builds during generation and daily cleanup while retaining the latest snapshot', () => {
+  it('prunes main builds on updates and preserves exact tarballs when reusing an old latest build', () => {
     let fixture = createFixture()
     try {
       let firstSha = fixture.git('rev-parse', 'HEAD')
@@ -176,54 +176,28 @@ describe('preview retention', () => {
         [secondSha],
       )
       assert.equal(fs.existsSync(path.join(fixture.cwd, 'tarballs', firstSha.slice(0, 8))), false)
-      fixture.git('push', '--force-with-lease', 'origin', 'HEAD:refs/heads/preview/main')
-      fixture.git('checkout', 'main')
-      fs.writeFileSync(path.join(fixture.cwd, 'change.txt'), 'third source commit')
-      fixture.git('add', '.')
-      fixture.git('commit', '-m', 'third source')
-      let thirdSha = fixture.git('rev-parse', 'HEAD')
-      fixture.build('preview/main', 'third')
-      fixture.ageBuild(secondSha)
-      fixture.ageBuild(thirdSha)
-      let beforeCleanup = fixture.git('rev-parse', 'HEAD')
-      let latestTarball = fs.readFileSync(
-        path.join(fixture.cwd, 'tarballs', thirdSha.slice(0, 8), 'remix.tgz'),
-      )
-      let latestPackage = fs.readFileSync(path.join(fixture.cwd, 'packages/remix/package.json'))
-      fixture.git('push', '--force-with-lease', 'origin', 'HEAD:refs/heads/preview/main')
-      fixture.git('checkout', 'main')
-      fixture.cleanup()
-      assert.deepEqual(
-        fixture.manifest().builds.map((build) => build.sha),
-        [thirdSha],
-      )
-      assert.equal(fs.existsSync(path.join(fixture.cwd, 'tarballs', secondSha.slice(0, 8))), false)
       assert.doesNotMatch(
         fixture.git('rev-list', '--objects', 'HEAD'),
-        new RegExp(`tarballs/${secondSha.slice(0, 8)}`),
+        new RegExp(`tarballs/${firstSha.slice(0, 8)}`),
       )
+      assert.equal(fixture.git('rev-parse', 'HEAD^'), secondSha)
+
+      let latestTarball = fs.readFileSync(
+        path.join(fixture.cwd, 'tarballs', secondSha.slice(0, 8), 'remix.tgz'),
+      )
+      fixture.ageBuild(secondSha)
+      let originalBuildTime = fixture.manifest().builds[0].createdAt
+      fixture.git('push', '--force-with-lease', 'origin', 'HEAD:refs/heads/preview/main')
+      fixture.git('checkout', 'main')
+      fixture.build('preview/main', 'must not repack')
+      assert.deepEqual(fixture.manifest().builds, [
+        { sha: secondSha, createdAt: originalBuildTime },
+      ])
       assert.deepEqual(
-        fs.readFileSync(path.join(fixture.cwd, 'tarballs', thirdSha.slice(0, 8), 'remix.tgz')),
+        fs.readFileSync(path.join(fixture.cwd, 'tarballs', secondSha.slice(0, 8), 'remix.tgz')),
         latestTarball,
       )
-      assert.deepEqual(
-        fs.readFileSync(path.join(fixture.cwd, 'packages/remix/package.json')),
-        latestPackage,
-      )
-      assert.equal(fixture.git('rev-parse', 'HEAD^'), thirdSha)
-      assert.notEqual(fixture.git('rev-parse', 'HEAD^'), beforeCleanup)
-      assert.equal(
-        fixture.git('ls-remote', 'origin', 'refs/heads/preview/main').split(/\s+/)[0],
-        fixture.git('rev-parse', 'HEAD'),
-      )
-      let cleanedCommit = fixture.git('rev-parse', 'HEAD')
-      fixture.git('checkout', 'main')
-      fixture.cleanup()
-      assert.equal(fixture.git('rev-parse', 'HEAD'), thirdSha)
-      assert.equal(
-        fixture.git('ls-remote', 'origin', 'refs/heads/preview/main').split(/\s+/)[0],
-        cleanedCommit,
-      )
+      assert.equal(fixture.git('rev-parse', 'HEAD^'), secondSha)
     } finally {
       fixture.dispose()
     }
@@ -284,9 +258,6 @@ if (process.argv.includes('pack')) {
     manifest,
     build(branch: string, content: string) {
       runScript('setup-installable-branch.ts', [branch], content)
-    },
-    cleanup() {
-      runScript('cleanup-preview-branch.ts')
     },
     ageBuild(sha: string) {
       let value = manifest()
