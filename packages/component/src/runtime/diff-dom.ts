@@ -337,14 +337,20 @@ function diffSiblingUnits(
       currentUnit.kind !== 'node' ||
       nextUnit.kind !== 'node' ||
       getSiblingUnitKey(currentUnit) !== undefined ||
-      getSiblingUnitKey(nextUnit) !== undefined ||
-      !siblingUnitsComparable(currentUnit, nextUnit)
+      getSiblingUnitKey(nextUnit) !== undefined
     ) {
       continue
     }
 
+    let identity = getUnkeyedNodeIdentity(currentUnit.node)
+    if (identity === undefined || identity !== getUnkeyedNodeIdentity(nextUnit.node)) continue
+
     used[currentIndex] = true
     matchIndexForNext[nextIndex] = currentIndex
+  }
+
+  if (isDocumentHead(parent)) {
+    pairShiftedHeadUnits(currentUnits, nextUnits, used, matchIndexForNext)
   }
 
   let committed = new Array<SiblingUnit>(nextUnits.length)
@@ -400,6 +406,10 @@ function diffSiblingUnits(
     if (!used[i]) removeSiblingUnit(currentUnits[i], parent, context)
   }
 
+  // Moving a node detaches it, which reloads stylesheets, restarts iframes and
+  // drops focus, so keep the longest run of reused units that are already in
+  // order where they are and only move the rest around them.
+  let stable = getStableCommittedIndexes(committed, currentUnits, matchIndexForNext, parent)
   let anchor: Node | null = regionTailRef
   for (let i = committed.length - 1; i >= 0; i--) {
     let unit = committed[i]
@@ -407,16 +417,137 @@ function diffSiblingUnits(
     let ref = anchor?.parentNode === parent ? anchor : null
 
     if (
-      unit.kind === 'node' &&
-      isPreservedDomElement(unit.node) &&
-      unit.node.parentNode === parent
+      (stable.has(i) || (unit.kind === 'node' && isPreservedDomElement(unit.node))) &&
+      first.parentNode === parent
     ) {
-      anchor = unit.node
+      anchor = first
       continue
     }
 
     placeSiblingUnitBefore(unit, parent, ref)
     if (first.parentNode === parent) anchor = first
+  }
+}
+
+// Head resources are routinely added or removed ahead of shared ones, which
+// shifts the shared ones out of positional pairing. Pair what is left in order
+// within each identity so they are reused instead of recreated. Outside the
+// head this could hand one element's live state, like typed input, to another.
+function pairShiftedHeadUnits(
+  currentUnits: SiblingUnit[],
+  nextUnits: SiblingUnit[],
+  used: boolean[],
+  matchIndexForNext: number[],
+): void {
+  let currentIndexesByIdentity = new Map<string, number[]>()
+  for (let i = 0; i < currentUnits.length; i++) {
+    let currentUnit = currentUnits[i]
+    if (used[i] || currentUnit.kind !== 'node' || getSiblingUnitKey(currentUnit) !== undefined) {
+      continue
+    }
+    let identity = getUnkeyedNodeIdentity(currentUnit.node)
+    if (identity === undefined) continue
+    let indexes = currentIndexesByIdentity.get(identity)
+    if (indexes) indexes.push(i)
+    else currentIndexesByIdentity.set(identity, [i])
+  }
+
+  for (let i = 0; i < nextUnits.length; i++) {
+    let nextUnit = nextUnits[i]
+    if (
+      matchIndexForNext[i] !== -1 ||
+      nextUnit.kind !== 'node' ||
+      getSiblingUnitKey(nextUnit) !== undefined
+    ) {
+      continue
+    }
+    let identity = getUnkeyedNodeIdentity(nextUnit.node)
+    if (identity === undefined) continue
+    let currentIndex = currentIndexesByIdentity.get(identity)?.shift()
+    if (currentIndex === undefined) continue
+    used[currentIndex] = true
+    matchIndexForNext[i] = currentIndex
+  }
+}
+
+function isDocumentHead(node: ParentNode): boolean {
+  return isElement(node) && node === node.ownerDocument.head
+}
+
+function getStableCommittedIndexes(
+  committed: SiblingUnit[],
+  currentUnits: SiblingUnit[],
+  matchIndexForNext: number[],
+  parent: ParentNode,
+): Set<number> {
+  let committedIndexes: number[] = []
+  let currentIndexes: number[] = []
+  for (let i = 0; i < committed.length; i++) {
+    let matchIndex = matchIndexForNext[i]
+    if (matchIndex === -1 || committed[i] !== currentUnits[matchIndex]) continue
+    let first = getSiblingUnitFirstNode(committed[i])
+    if (first.parentNode !== parent) continue
+    committedIndexes.push(i)
+    currentIndexes.push(matchIndex)
+  }
+
+  let stable = new Set<number>()
+  for (let index of getLongestIncreasingSubsequence(currentIndexes)) {
+    stable.add(committedIndexes[index])
+  }
+  return stable
+}
+
+// Returns the positions in `values` that form one longest strictly increasing
+// subsequence, in O(n log n).
+function getLongestIncreasingSubsequence(values: number[]): number[] {
+  let tails: number[] = []
+  let previous = new Array<number>(values.length).fill(-1)
+
+  for (let i = 0; i < values.length; i++) {
+    let low = 0
+    let high = tails.length
+    while (low < high) {
+      let middle = (low + high) >> 1
+      if (values[tails[middle]] < values[i]) low = middle + 1
+      else high = middle
+    }
+    if (low > 0) previous[i] = tails[low - 1]
+    tails[low] = i
+  }
+
+  let result = new Array<number>(tails.length)
+  let index = tails.length > 0 ? tails[tails.length - 1] : -1
+  for (let i = tails.length - 1; i >= 0; i--) {
+    result[i] = index
+    index = previous[index]
+  }
+  return result
+}
+
+function getUnkeyedNodeIdentity(node: Node): string | undefined {
+  if (isTextNode(node)) return '#text'
+  if (isCommentNode(node)) return `#comment:${getMarkerKind(node) ?? ''}`
+  if (!isElement(node)) return undefined
+
+  // A link's rel and href identify the resource it loads, and a meta tag's name
+  // identifies what it describes. Morphing one into another would swap
+  // stylesheets or start unrelated requests, so they are never paired.
+  switch (node.tagName) {
+    case 'LINK': {
+      let rel = node.getAttribute('rel')?.trim().toLowerCase() ?? ''
+      return `LINK:${rel}:${node.getAttribute('href') ?? ''}`
+    }
+    case 'META': {
+      let name =
+        node.getAttribute('name') ??
+        node.getAttribute('property') ??
+        node.getAttribute('http-equiv') ??
+        (node.hasAttribute('charset') ? 'charset' : '')
+      return `META:${name.toLowerCase()}`
+    }
+    default:
+      return node.tagName
   }
 }
 
