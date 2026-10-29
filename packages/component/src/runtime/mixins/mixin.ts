@@ -729,8 +729,8 @@ export function getMixinRuntimeSignal(state: MixinRuntimeState): AbortSignal {
   return controller.signal
 }
 
-export function dispatchMixinBeforeUpdate(state?: MixinRuntimeState) {
-  dispatchMixinUpdateEvent(state, 'beforeUpdate')
+export function dispatchMixinBeforeUpdate(state?: MixinRuntimeState, node?: Element) {
+  dispatchMixinUpdateEvent(state, 'beforeUpdate', node)
 }
 
 export function dispatchMixinCommit(state?: MixinRuntimeState) {
@@ -784,8 +784,11 @@ function finalizeMixinTeardown(state: MixinRuntimeState) {
   state.handle = undefined
 }
 
-function dispatchMixinUpdateEvent(state: MixinRuntimeState | undefined, type: SchedulerPhaseType) {
-  let node = state?.binding?.node
+function dispatchMixinUpdateEvent(
+  state: MixinRuntimeState | undefined,
+  type: SchedulerPhaseType,
+  node: Element | undefined = state?.binding?.node,
+) {
   let handle = state?.handle as ScopedAnyMixinHandle | undefined
   if (!node || !handle?.hasPhaseListeners(type)) return
   dispatchMixinEvent(state, () => {

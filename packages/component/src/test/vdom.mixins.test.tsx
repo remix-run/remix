@@ -725,6 +725,100 @@ describe('vnode mixins', () => {
     pending.resolve()
   })
 
+  it('dispatches beforeUpdate with old inputs and DOM props when a keyed element returns', (t) => {
+    let pending = Promise.withResolvers<void>()
+    let calls: string[] = []
+    let retained = createMixin<Element, [label: string]>((handle) => {
+      let current = ''
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => pending.promise))
+      handle.addEventListener('beforeUpdate', ({ node }) => {
+        calls.push(`beforeUpdate:${current}:${node.getAttribute('title')}`)
+      })
+      handle.addEventListener('reclaimed', () => calls.push('reclaimed'))
+      handle.addEventListener('commit', ({ node }) => {
+        calls.push(`commit:${current}:${node.getAttribute('title')}`)
+      })
+      return (label) => {
+        current = label
+        return handle.element
+      }
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => {
+      root.dispose()
+      pending.resolve()
+    })
+    root.render(<div key="item" title="Old DOM" mix={retained('Old input')} />)
+    let host = container.firstElementChild
+    root.render(null)
+    calls = []
+    root.render(<div key="item" title="New DOM" mix={retained('New input')} />)
+    expect(container.firstElementChild).toBe(host)
+    expect(calls).toEqual([
+      'beforeUpdate:Old input:Old DOM',
+      'reclaimed',
+      'commit:New input:New DOM',
+    ])
+  })
+
+  it('dispatches beforeUpdate once when a component restores a keyed element', async (t) => {
+    let pending = Promise.withResolvers<void>()
+    let visible = true
+    let appHandle: Handle | undefined
+    let calls: string[] = []
+    let retained = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => pending.promise))
+      handle.addEventListener('beforeUpdate', () => calls.push('beforeUpdate'))
+      handle.addEventListener('reclaimed', () => calls.push('reclaimed'))
+      handle.addEventListener('commit', () => calls.push('commit'))
+      return () => handle.element
+    })
+    function App(handle: Handle) {
+      appHandle = handle
+      return () => <section>{visible && <div key="item" mix={retained()} />}</section>
+    }
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => {
+      root.dispose()
+      pending.resolve()
+    })
+    root.render(<App />)
+    invariant(appHandle)
+    let host = container.querySelector('div')
+    visible = false
+    await appHandle.update()
+    calls = []
+    visible = true
+    await appHandle.update()
+    expect(container.querySelector('div')).toBe(host)
+    expect(calls).toEqual(['beforeUpdate', 'reclaimed', 'commit'])
+  })
+
+  it('dispatches beforeUpdate to a mixin dropped by a returning keyed element', (t) => {
+    let pending = Promise.withResolvers<void>()
+    let titles: Array<string | null> = []
+    let retained = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => pending.promise))
+      handle.addEventListener('beforeUpdate', ({ node }) => titles.push(node.getAttribute('title')))
+      return () => handle.element
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => {
+      root.dispose()
+      pending.resolve()
+    })
+    root.render(<div key="item" title="Before" mix={retained()} />)
+    let host = container.firstElementChild
+    root.render(null)
+    root.render(<div key="item" title="After" />)
+    expect(container.firstElementChild).toBe(host)
+    expect(titles).toEqual(['Before'])
+    expect(host?.getAttribute('title')).toBe('After')
+  })
+
   it('defers host removal when beforeRemove.persistNode is used', async () => {
     let removal = Promise.withResolvers<void>()
     let beforeRemoveCalls = 0
