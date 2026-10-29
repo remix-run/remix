@@ -37,26 +37,65 @@ function camelToKebab(str: string): string {
   return cached
 }
 
-// Properties that should remain unitless (numeric values without px)
+// Properties that should remain unitless (numeric values without px). Matched
+// after stripping any vendor prefix, so `WebkitLineClamp` (`-webkit-line-clamp`)
+// and `msFlex` (`ms-flex`) are covered by `line-clamp` and `flex`.
 const NUMERIC_CSS_PROPS = new Set([
+  'animation-iteration-count',
   'aspect-ratio',
-  'z-index',
-  'opacity',
+  'border-image-outset',
+  'border-image-slice',
+  'border-image-width',
+  'box-flex',
+  'box-flex-group',
+  'box-ordinal-group',
+  'column-count',
+  'columns',
+  'flex',
   'flex-grow',
-  'flex-shrink',
+  'flex-negative',
   'flex-order',
-  'grid-area',
-  'grid-row',
-  'grid-column',
+  'flex-positive',
+  'flex-shrink',
+  'font-size-adjust',
   'font-weight',
+  'grid-area',
+  'grid-column',
+  'grid-column-end',
+  'grid-column-span',
+  'grid-column-start',
+  'grid-row',
+  'grid-row-end',
+  'grid-row-span',
+  'grid-row-start',
+  'initial-letter',
+  'line-clamp',
   'line-height',
+  'math-depth',
+  'opacity',
   'order',
   'orphans',
+  'scale',
+  'tab-size',
   'widows',
+  'z-index',
   'zoom',
-  'columns',
-  'column-count',
+  // SVG
+  'fill-opacity',
+  'flood-opacity',
+  'stop-opacity',
+  'stroke-dasharray',
+  'stroke-dashoffset',
+  'stroke-miterlimit',
+  'stroke-opacity',
+  'stroke-width',
 ])
+
+const VENDOR_PREFIX_RE = /^-?(?:webkit|moz|ms|o)-/
+
+function isUnitlessCssProp(cssKey: string): boolean {
+  return NUMERIC_CSS_PROPS.has(cssKey.replace(VENDOR_PREFIX_RE, ''))
+}
 
 // Normalize numeric CSS values: append 'px' for properties that need units
 // In Standards Mode, browsers drop numeric values without units when multiple properties
@@ -65,7 +104,7 @@ export function normalizeCssValue(key: string, value: unknown): string {
   if (value == null) return String(value)
   if (typeof value === 'number' && value !== 0) {
     let cssKey = camelToKebab(key)
-    if (!NUMERIC_CSS_PROPS.has(cssKey) && !cssKey.startsWith('--')) {
+    if (!cssKey.startsWith('--') && !isUnitlessCssProp(cssKey)) {
       return `${value}px`
     }
   }
