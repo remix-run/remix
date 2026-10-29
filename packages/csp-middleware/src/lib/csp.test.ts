@@ -66,6 +66,46 @@ describe('csp', () => {
         return { scriptSrc: [`'nonce-${nonce}'`], frameAncestorsxss: ["'none'"] }
       },
     })
+
+    csp({
+      policy: { scriptSrc: ["'self'"] },
+      // @ts-expect-error Async report-only factories reject unknown directives too.
+      async reportOnlyPolicy({ nonce }) {
+        return { scriptSrc: [`'nonce-${nonce}'`], frameAncestorsxss: ["'none'"] }
+      },
+    })
+
+    csp({
+      reportOnlyPolicy: {
+        scriptSrc: ["'self'"],
+        // @ts-expect-error Static report-only directive objects reject unknown keys.
+        frameAncestorsxss: ["'none'"],
+      },
+    })
+  })
+
+  it('requires an enforced or report-only policy', () => {
+    // @ts-expect-error At least one defined policy is required.
+    assert.throws(() => csp({}), TypeError)
+    // @ts-expect-error An undefined enforced policy does not satisfy the requirement.
+    assert.throws(() => csp({ policy: undefined }), TypeError)
+    // @ts-expect-error An undefined report-only policy does not satisfy the requirement.
+    assert.throws(() => csp({ reportOnlyPolicy: undefined }), TypeError)
+    // @ts-expect-error Both policy values cannot be undefined.
+    assert.throws(() => csp({ policy: undefined, reportOnlyPolicy: undefined }), TypeError)
+
+    function checkOptionalPolicy(policy: CspPolicyFactory | undefined): void {
+      // @ts-expect-error A possibly undefined policy needs another defined policy.
+      csp({ policy })
+      // @ts-expect-error A possibly undefined report-only policy needs another defined policy.
+      csp({ reportOnlyPolicy: policy })
+      csp({ policy, reportOnlyPolicy: "default-src 'self'" })
+      csp({ policy: "default-src 'self'", reportOnlyPolicy: policy })
+    }
+    checkOptionalPolicy(() => ({}))
+
+    // @ts-expect-error reportOnlyPolicy is a policy, not a mode switch.
+    csp({ policy: { scriptSrc: ["'self'"] }, reportOnlyPolicy: true })
   })
 
   it('preserves inferred factory context and validates directive value types', () => {
@@ -74,6 +114,15 @@ describe('csp', () => {
         // @ts-expect-error Nonce inference must remain string rather than any.
         let invalidNonce: number = nonce
         // @ts-expect-error Factory request context inference must remain RequestContext rather than any.
+        let invalidContext: number = context
+        void invalidNonce
+        void invalidContext
+        return { scriptSrc: [`'nonce-${nonce}'`, context.url.origin] }
+      },
+      reportOnlyPolicy({ nonce, context }) {
+        // @ts-expect-error Report-only nonce inference must remain string rather than any.
+        let invalidNonce: number = nonce
+        // @ts-expect-error Report-only context inference must remain RequestContext rather than any.
         let invalidContext: number = context
         void invalidNonce
         void invalidContext
@@ -135,20 +184,29 @@ describe('csp', () => {
 
     let init: ContentSecurityPolicyInit = { scriptSrc: ["'self'"] }
     let factory: CspPolicyFactory = () => init
-    let options: CspOptions = { policy: factory }
     csp({ policy: init })
     csp({ policy: factory })
-    csp(options)
+    csp({ policy: undefined, reportOnlyPolicy: factory })
+    csp({ policy: factory, reportOnlyPolicy: undefined })
+    csp({ reportOnlyPolicy: serialized })
+    csp({ reportOnlyPolicy: instance })
+    csp({ reportOnlyPolicy: async () => instance })
+
+    function configure(options: CspOptions): void {
+      csp(options)
+    }
+    configure({ policy: factory })
+    configure({ reportOnlyPolicy: factory })
   })
 
-  it('accepts serialized policies and ContentSecurityPolicy instances in the policy option', async () => {
+  it('serializes static policies for either header', async () => {
     let router = createRouter()
     router.get('/serialized', {
       middleware: [csp({ policy: "default-src 'self'" })],
       handler: () => new Response('ok', { headers: { 'Content-Type': 'text/html' } }),
     })
     router.get('/instance', {
-      middleware: [csp({ policy: new ContentSecurityPolicy({ scriptSrc: ["'none'"] }) })],
+      middleware: [csp({ reportOnlyPolicy: new ContentSecurityPolicy({ scriptSrc: ["'none'"] }) })],
       handler: () => new Response('ok', { headers: { 'Content-Type': 'text/html' } }),
     })
 
@@ -156,7 +214,8 @@ describe('csp', () => {
     let instance = await router.fetch('https://example.com/instance')
 
     assert.equal(serialized.headers.get('Content-Security-Policy'), "default-src 'self'")
-    assert.equal(instance.headers.get('Content-Security-Policy'), "script-src 'none'")
+    assert.equal(instance.headers.get('Content-Security-Policy'), null)
+    assert.equal(instance.headers.get('Content-Security-Policy-Report-Only'), "script-src 'none'")
   })
 
   it('applies a policy to an immutable redirect when the filter accepts it', async () => {
@@ -184,8 +243,7 @@ describe('csp', () => {
           reportingEndpoints: { enforced: '/reports/enforced' },
         }),
         csp({
-          policy: { scriptSrc: ["'self'"] },
-          reportOnly: true,
+          reportOnlyPolicy: { scriptSrc: ["'self'"] },
           reportingEndpoints: { preview: '/reports/preview' },
         }),
       ],
@@ -245,11 +303,10 @@ describe('csp', () => {
     let router = createRouter({
       middleware: [
         csp({
-          policy({ nonce }) {
+          reportOnlyPolicy({ nonce }) {
             policyNonce = nonce
             return { scriptSrc: [`'nonce-${nonce}'`], reportTo: 'csp' }
           },
-          reportOnly: true,
           reportingEndpoints: { csp: '/reports/csp' },
           filter: (response) => response.status === 201,
         }),
@@ -315,8 +372,7 @@ describe('csp', () => {
           filter: () => true,
         }),
         csp({
-          policy: ({ nonce }) => ({ styleSrc: [`'nonce-${nonce}'`] }),
-          reportOnly: true,
+          reportOnlyPolicy: ({ nonce }) => ({ styleSrc: [`'nonce-${nonce}'`] }),
           reportingEndpoints: { preview: '/reports/preview' },
           filter: () => true,
         }),
@@ -383,6 +439,44 @@ describe('csp', () => {
     }
   })
 
+  it('enforces one policy while monitoring another from a single middleware', async () => {
+    let factoryNonces: string[] = []
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            factoryNonces.push(nonce)
+            return { scriptSrc: [`'nonce-${nonce}'`], styleSrc: ["'self'", "'unsafe-inline'"] }
+          },
+          async reportOnlyPolicy({ nonce }) {
+            factoryNonces.push(nonce)
+            await Promise.resolve()
+            return { styleSrc: [`'nonce-${nonce}'`], reportTo: 'csp' }
+          },
+          reportingEndpoints: { csp: '/csp-reports' },
+        }),
+      ] as const,
+    })
+    router.get('/', (context) => {
+      let nonce = getCspNonce(context)
+      assert.deepEqual(factoryNonces, [nonce, nonce])
+      return new Response(nonce, { headers: { 'Content-Type': 'text/html' } })
+    })
+
+    let response = await router.fetch('https://example.com/')
+    let nonce = await response.text()
+
+    assert.equal(
+      response.headers.get('Content-Security-Policy'),
+      `script-src 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'`,
+    )
+    assert.equal(
+      response.headers.get('Content-Security-Policy-Report-Only'),
+      `style-src 'nonce-${nonce}'; report-to csp`,
+    )
+    assert.equal(response.headers.get('Reporting-Endpoints'), 'csp="/csp-reports"')
+  })
+
   it('appends enforced and report-only policies and reporting endpoints while sharing a nonce', async () => {
     let router = createRouter({
       middleware: [
@@ -398,10 +492,9 @@ describe('csp', () => {
           },
         }),
         csp({
-          policy({ nonce }) {
+          reportOnlyPolicy({ nonce }) {
             return { scriptSrc: [`'nonce-${nonce}'`], reportTo: 'preview' }
           },
-          reportOnly: true,
           reportingEndpoints: { preview: 'https://reports.example.com/csp' },
         }),
       ] as const,
