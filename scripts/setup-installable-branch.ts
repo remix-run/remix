@@ -27,7 +27,7 @@ if (logAndExec('git', ['status', '--porcelain'], true)) {
 
 const sha = logAndExec('git', ['rev-parse', 'HEAD'], true)
 const repository = process.env.GITHUB_REPOSITORY ?? 'remix-run/remix'
-const tarballsDir = path.resolve('tarballs', sha)
+const tarballsDir = path.resolve('tarballs', sha.slice(0, 8))
 const packages = await readPackages()
 const tarballUrls = new Map(
   packages.map(({ dirName, manifest }) => [

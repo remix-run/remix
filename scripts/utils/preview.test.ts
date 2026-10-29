@@ -4,10 +4,10 @@ import { describe, it } from '@remix-run/test'
 import { getPreviewTarballUrl, preparePreviewPackage } from './preview.ts'
 
 describe('preview packages', () => {
-  it('uses a distinct URL for each source commit on a moving branch', () => {
+  it('uses the first eight characters of the source SHA in tarball URLs', () => {
     assert.equal(
-      getPreviewTarballUrl('preview/pr-123', 'abc123', 'remix'),
-      'https://raw.githubusercontent.com/remix-run/remix/refs/heads/preview/pr-123/tarballs/abc123/remix.tgz',
+      getPreviewTarballUrl('preview/pr-123', '0123456789abcdef0123456789abcdef01234567', 'remix'),
+      'https://raw.githubusercontent.com/remix-run/remix/refs/heads/preview/pr-123/tarballs/01234567/remix.tgz',
     )
     assert.notEqual(
       getPreviewTarballUrl('preview/pr-123', 'abc123', 'remix'),

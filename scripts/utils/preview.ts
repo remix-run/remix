@@ -14,7 +14,7 @@ export function getPreviewTarballUrl(
   repository = 'remix-run/remix',
 ): string {
   let ref = branch.split('/').map(encodeURIComponent).join('/')
-  return `https://raw.githubusercontent.com/${repository}/refs/heads/${ref}/tarballs/${sha}/${packageDirName}.tgz`
+  return `https://raw.githubusercontent.com/${repository}/refs/heads/${ref}/tarballs/${sha.slice(0, 8)}/${packageDirName}.tgz`
 }
 
 export function preparePreviewPackage(
