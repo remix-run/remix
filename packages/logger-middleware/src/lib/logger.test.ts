@@ -52,6 +52,35 @@ describe('logger', () => {
     assert.match(message, /\[\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} [+-]\d{4}\] GET \/ \d+ \d+/)
   })
 
+  it('formats the request with a callback', async () => {
+    let { message } = await logRequest({
+      loggerOptions: {
+        format({ request, response, start, end, duration }) {
+          let url = new URL(request.url)
+          return JSON.stringify({
+            timestamp: start.toISOString(),
+            method: request.method,
+            path: url.pathname + url.search,
+            status: response.status,
+            duration,
+            end: end.toISOString(),
+          })
+        },
+      },
+      requestInit: {
+        method: 'POST',
+      },
+      response: new Response(null, { status: 201 }),
+    })
+
+    let data = JSON.parse(message)
+    assert.equal(data.method, 'POST')
+    assert.equal(data.path, '/')
+    assert.equal(data.status, 201)
+    assert.equal(typeof data.duration, 'number')
+    assert.equal(new Date(data.timestamp).getTime() + data.duration, new Date(data.end).getTime())
+  })
+
   it('colorizes high-signal tokens when colors are enabled', async () => {
     await withNoColor(undefined, async () => {
       let { message } = await logRequest({
