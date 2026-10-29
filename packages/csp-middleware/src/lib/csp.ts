@@ -25,10 +25,9 @@ interface CspOptionFields {
   policy?: CspPolicy | CspPolicyFactory
   /**
    * Policy sent as `Content-Security-Policy-Report-Only`, static or a factory run before handlers.
-   * Browsers monitor it alongside `policy`, so stricter directives can be trialled while the
-   * enforced policy stays in place. Both policies share the request nonce.
+   * Both policies share the request nonce.
    */
-  reportOnly?: CspPolicy | CspPolicyFactory
+  reportOnlyPolicy?: CspPolicy | CspPolicyFactory
   /**
    * Named absolute or relative URLs for `Reporting-Endpoints`, referenced by `reportTo`.
    * Configured names override matching downstream entries; other entries are preserved.
@@ -45,12 +44,12 @@ interface CspOptionFields {
 
 type CspPolicyOption = CspPolicy | CspPolicyFactory
 
-/** Policy and response configuration for CSP middleware. Provide `policy`, `reportOnly`, or both. */
+/** Policy and response configuration for CSP middleware. Provide `policy`, `reportOnlyPolicy`, or both. */
 export type CspOptions = CspOptionFields &
-  ({ policy: CspPolicyOption } | { reportOnly: CspPolicyOption })
+  ({ policy: CspPolicyOption } | { reportOnlyPolicy: CspPolicyOption })
 
-// Only require the key here: typed members would change the contextual type of factory returns.
-type RequiredPolicy = { policy: unknown } | { reportOnly: unknown }
+// Require a defined value without changing the contextual type of factory returns.
+type RequiredPolicy = { policy: NonNullable<unknown> } | { reportOnlyPolicy: NonNullable<unknown> }
 
 type CheckedPolicy<policy> = policy extends undefined
   ? undefined
@@ -67,19 +66,19 @@ type CheckedPolicy<policy> = policy extends undefined
 // Keep valid options unchanged so callback return values retain their contextual checks.
 type CheckedOptions<
   policy extends CspPolicyOption | undefined,
-  reportOnly extends CspPolicyOption | undefined,
-> = Omit<CspOptionFields, 'policy' | 'reportOnly'> & {
+  reportOnlyPolicy extends CspPolicyOption | undefined,
+> = Omit<CspOptionFields, 'policy' | 'reportOnlyPolicy'> & {
   policy?: policy
-  reportOnly?: reportOnly
+  reportOnlyPolicy?: reportOnlyPolicy
 } & ([policy] extends [CheckedPolicy<policy>] ? unknown : { policy: CheckedPolicy<policy> }) &
-  ([reportOnly] extends [CheckedPolicy<reportOnly>]
+  ([reportOnlyPolicy] extends [CheckedPolicy<reportOnlyPolicy>]
     ? unknown
-    : { reportOnly: CheckedPolicy<reportOnly> }) &
+    : { reportOnlyPolicy: CheckedPolicy<reportOnlyPolicy> }) &
   RequiredPolicy
 
 /**
  * Establishes a request nonce and appends the configured CSPs to HTML responses by default.
- * `policy` is enforced and `reportOnly` is monitored; either or both may be given.
+ * `policy` is enforced and `reportOnlyPolicy` is monitored; either or both may be given.
  * Override `filter` for other response types; 304 responses are always unchanged.
  * Existing policies are preserved separately. Inferred policies reject unknown directive keys.
  * @param options The enforced and/or report-only policy and optional response configuration.
@@ -87,16 +86,16 @@ type CheckedOptions<
  */
 export function csp<
   policy extends CspPolicyOption | undefined,
-  reportOnly extends CspPolicyOption | undefined,
+  reportOnlyPolicy extends CspPolicyOption | undefined,
 >(
-  options: CheckedOptions<policy, reportOnly>,
+  options: CheckedOptions<policy, reportOnlyPolicy>,
 ): Middleware<{ key: typeof CspNonce; value: string }> {
   let { filter = isHtmlResponse }: CspOptionFields = options
-  if (options.policy === undefined && options.reportOnly === undefined) {
-    throw new TypeError('csp() requires a policy, a reportOnly policy, or both')
+  if (options.policy === undefined && options.reportOnlyPolicy === undefined) {
+    throw new TypeError('csp() requires policy, reportOnlyPolicy, or both')
   }
   let enforced = createPolicySerializer(options.policy)
-  let reportOnly = createPolicySerializer(options.reportOnly)
+  let reportOnly = createPolicySerializer(options.reportOnlyPolicy)
   let reportingEndpoints = serializeReportingEndpoints(options.reportingEndpoints ?? {})
 
   return async (context, next) => {

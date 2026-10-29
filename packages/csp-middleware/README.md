@@ -58,7 +58,7 @@ router.get('/', (context) =>
 router.get('/activity', (context) => context.render(<p>Recent activity</p>))
 ```
 
-`policy` may be static or a sync/async factory receiving `{ nonce, context }`; `reportOnly` takes the same forms (see [Report-only policies](#report-only-policies)). At least one of them is required. Before the factory or downstream handlers run, `csp()` establishes a base64-encoded nonce with 128 random bits from `crypto.getRandomValues()`.
+`policy` may be static or a sync/async factory receiving `{ nonce, context }`; `reportOnlyPolicy` takes the same forms (see [Report-only policies](#report-only-policies)). At least one of them is required. Before the factory or downstream handlers run, `csp()` establishes a base64-encoded nonce with 128 random bits from `crypto.getRandomValues()`.
 
 Inferred directive objects and factory returns reject unknown directive names without annotations. For shared factories, `satisfies CspPolicyFactory` preserves this check; annotations that erase extra keys prevent `csp()` from detecting them.
 
@@ -74,11 +74,11 @@ csp({
 })
 ```
 
-The `policy` and `reportOnly` options also accept a `ContentSecurityPolicy` instance or a serialized single-policy string. The middleware adds no default directives and does not automatically insert nonce sources into your rules. Include them in the factory when your policy requires them.
+The `policy` and `reportOnlyPolicy` options also accept a `ContentSecurityPolicy` instance or a serialized single-policy string. The middleware adds no default directives and does not automatically insert nonce sources into your rules. Include them in the factory when your policy requires them.
 
 ## Report-only policies
 
-`reportOnly` is a policy, not a mode switch. It is sent as `Content-Security-Policy-Report-Only` alongside the enforced `policy`, so you can keep enforcing what already works while trialling stricter directives. Pair `reportTo` with a named `Reporting-Endpoints` entry to receive violation reports:
+Use `reportOnlyPolicy` to monitor a policy through `Content-Security-Policy-Report-Only`. Combine it with `policy` to try stricter directives while keeping the current policy enforced:
 
 ```ts
 csp({
@@ -89,14 +89,14 @@ csp({
       styleSrc: ["'self'", "'unsafe-inline'"],
     }
   },
-  reportOnly({ nonce }) {
+  reportOnlyPolicy({ nonce }) {
     return { styleSrc: [`'nonce-${nonce}'`], reportTo: 'csp' }
   },
   reportingEndpoints: { csp: '/csp-reports' },
 })
 ```
 
-Here scripts are restricted to the nonce, while the stricter nonce-only `style-src` is monitored first. Both factories receive the same request nonce. To monitor a whole policy before enforcing anything, pass only `reportOnly`.
+Here scripts are restricted to the nonce, while the stricter nonce-only `style-src` is monitored first. Both factories receive the same request nonce. To monitor a whole policy before enforcing anything, pass only `reportOnlyPolicy`.
 
 `reportingEndpoints` maps names to absolute or relative URLs. The example emits `Reporting-Endpoints: csp="/csp-reports"`. `reportTo` names one endpoint; the application provides the receiving route. The `reportUri` directive supports legacy reporting.
 
