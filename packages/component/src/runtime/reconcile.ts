@@ -1467,7 +1467,7 @@ export function renderComponent(
   let reclamationVersion = mixinReclamationVersions.get(domParent)
   let content = diffVNodes(currContent, toVNode(element), domParent, next, context, anchor, cursor)
   let needsPlacement =
-    (isCommittedComponentNode(next) || next._parent.kind === 'root') &&
+    ('_content' in next || next._parent.kind === 'root') &&
     mixinReclamationVersions.get(domParent) !== reclamationVersion
   let committed = commitComponentNode(next, content)
   if (needsPlacement) {
@@ -2368,15 +2368,31 @@ function queueReclaimedComponent(
   node: CommittedComponentNode,
   domParent: ParentNode,
 ): void {
-  let owner: VNodeParent = node._parent
-  while (owner.kind === 'component' || owner.kind === 'fragment') owner = owner._parent
+  let owner = findPlacementOwner(node)
   let group = placements.get(owner)
   // Multiple returning components share one repair of the completed sibling list.
   if (group) group.node = undefined
   else placements.set(owner, { domParent, node })
 }
 
-export function placeReclaimedComponents(placements: PlacementBatch): void {
+function findPlacementOwner(
+  node: CommittedComponentNode,
+): Extract<VNodeParent, { kind: 'root' | 'host' }> {
+  let owner: VNodeParent = node._parent
+  while (owner.kind === 'component' || owner.kind === 'fragment') owner = owner._parent
+  return owner
+}
+
+export function placeReclaimedComponents(
+  placements: PlacementBatch,
+  updates: ReadonlyMap<CommittedComponentNode, ParentNode>,
+): void {
+  if (placements.size === 0) return
+  // Other updated siblings can invalidate local bounds without reclaiming a node.
+  for (let node of updates.keys()) {
+    let group = placements.get(findPlacementOwner(node))
+    if (group && group.node !== node) group.node = undefined
+  }
   for (let [owner, { domParent, node }] of placements) {
     if (node)
       placeReclaimedChildren(

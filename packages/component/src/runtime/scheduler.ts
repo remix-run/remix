@@ -190,7 +190,7 @@ export function createScheduler(
               }
             }
           } finally {
-            placeReclaimedComponents(placements)
+            placeReclaimedComponents(placements, batch)
           }
         }
 

@@ -1053,6 +1053,46 @@ describe('vnode mixins', () => {
     expect(restored[1]).toBe(originalB)
   })
 
+  it('keeps returning items ordered when another component adds a sibling', (t) => {
+    let { root, container, items } = createRetainedListFixture(t)
+    let keys: Record<string, string[]> = { A: ['A1', 'A2'], B: ['B1'], C: ['C2'] }
+    let handles = new Map<string, Handle<{ id: string }>>()
+    function Item(handle: Handle<{ id: string }>) {
+      handles.set(handle.props.id, handle)
+      return () => <>{items(keys[handle.props.id])}</>
+    }
+    function list(order: string[]) {
+      return (
+        <ul>
+          {order.map((id) => (
+            <Item key={id} id={id} />
+          ))}
+        </ul>
+      )
+    }
+    root.render(list(['A', 'B', 'C']))
+    root.flush()
+    let originalItems = [...container.querySelectorAll('li')]
+    let a = handles.get('A')
+    let c = handles.get('C')
+    invariant(a && c)
+    keys.A = []
+    a.update()
+    root.flush()
+    root.render(list(['C', 'A', 'B']))
+    root.flush()
+
+    keys.A = ['A1', 'A2']
+    keys.C = ['C2', 'C3']
+    a.update()
+    c.update()
+    root.flush()
+
+    let actual = [...container.querySelectorAll('li')]
+    expect(actual.map((node) => node.textContent)).toEqual(['C2', 'C3', 'A1', 'A2', 'B1'])
+    expect([actual[2], actual[3], actual[4], actual[0]]).toEqual(originalItems)
+  })
+
   it('places returning components together without extra DOM moves', (t) => {
     let { root, container, observer, items } = createRetainedListFixture(t)
     let visible = true
