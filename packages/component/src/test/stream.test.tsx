@@ -2581,6 +2581,47 @@ describe('stream', () => {
       ])
     })
 
+    it('serializes css() mixins in entry props as mixin descriptors', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={
+              <p mix={[css({ color: 'red' }), css({ '&:hover': { color: 'blue' } })]}>
+                <b mix={css({ fontWeight: 700 })}>Bold</b>
+              </p>
+            }
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual({
+        $rmx: true,
+        type: 'p',
+        props: {
+          children: {
+            $rmx: true,
+            type: 'b',
+            props: {
+              children: 'Bold',
+              mix: [{ $rmxMixin: 'css', args: [{ fontWeight: 700 }] }],
+            },
+          },
+          mix: [
+            { $rmxMixin: 'css', args: [{ color: 'red' }] },
+            { $rmxMixin: 'css', args: [{ '&:hover': { color: 'blue' } }] },
+          ],
+        },
+      })
+    })
+
     it('nests hydrated components', async () => {
       let Card = clientEntry(
         '/card.js#Card',

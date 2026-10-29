@@ -2344,6 +2344,115 @@ describe('run', () => {
     expect(document.querySelector('dl')?.textContent).toBe('BSecondAFirst')
   })
 
+  it('hydrates css() mixins in element props', async (t) => {
+    let Tabs = clientEntry(
+      '/js/tabs.js#Tabs',
+      function Tabs(handle: Handle<{ panels: RemixNode[] }>) {
+        let selected = 0
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                selected = (selected + 1) % handle.props.panels.length
+                handle.update()
+              })}
+            >
+              Next
+            </button>
+            <section>{handle.props.panels[selected]}</section>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Tabs
+          panels={[
+            <p mix={css({ color: 'rgb(1, 2, 3)' })}>One</p>,
+            <p mix={css({ color: 'rgb(4, 5, 6)' })}>Two</p>,
+          ]}
+        />,
+      ),
+    )
+    let serverPanel = document.querySelector('p')
+    invariant(serverPanel)
+
+    let errors: unknown[] = []
+    let app = run({ loadModule: () => Tabs })
+    app.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => app.dispose())
+    await app.ready()
+
+    expect(errors).toEqual([])
+    expect(document.querySelector('p')).toBe(serverPanel)
+    expect(getComputedStyle(serverPanel).color).toBe('rgb(1, 2, 3)')
+
+    document.querySelector('button')?.click()
+    app.flush()
+
+    let clientPanel = document.querySelector('p')
+    invariant(clientPanel)
+    expect(clientPanel.textContent).toBe('Two')
+    expect(getComputedStyle(clientPanel).color).toBe('rgb(4, 5, 6)')
+  })
+
+  it('hydrates nested elements with multiple css() mixins in props', async (t) => {
+    let Disclosure = clientEntry(
+      '/js/disclosure.js#Disclosure',
+      function Disclosure(handle: Handle<{ content: RemixNode }>) {
+        let open = true
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                open = !open
+                handle.update()
+              })}
+            >
+              Toggle
+            </button>
+            <section>{open ? handle.props.content : null}</section>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Disclosure
+          content={
+            <article mix={[css({ color: 'rgb(1, 2, 3)' }), css({ paddingTop: 7 })]}>
+              <span mix={css({ fontWeight: 700 })}>Nested</span>
+            </article>
+          }
+        />,
+      ),
+    )
+
+    let errors: unknown[] = []
+    let app = run({ loadModule: () => Disclosure })
+    app.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => app.dispose())
+    await app.ready()
+    expect(errors).toEqual([])
+
+    let button = document.querySelector('button')
+    invariant(button)
+    button.click()
+    app.flush()
+    expect(document.querySelector('article')).toBe(null)
+
+    button.click()
+    app.flush()
+    let article = document.querySelector('article')
+    let span = document.querySelector('article > span')
+    invariant(article && span)
+    expect(getComputedStyle(article).color).toBe('rgb(1, 2, 3)')
+    expect(getComputedStyle(article).paddingTop).toBe('7px')
+    expect(getComputedStyle(span).fontWeight).toBe('700')
+  })
+
   it('ready() does not wait for hydration markers from later frame templates', async () => {
     let Initial = clientEntry('/js/initial.js#Initial', function Initial(handle: Handle) {
       let clicked = false

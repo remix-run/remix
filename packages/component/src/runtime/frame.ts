@@ -16,6 +16,8 @@ import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffElementAttributes, diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
+import { css } from '../style/css-mixin.ts'
+import type { CSSProps } from '../style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './frame-resolution.ts'
@@ -1420,6 +1422,11 @@ function reviveSerializedValue(value: unknown): unknown {
     let props = reviveSerializedObject(record.props)
     let key = reviveSerializedValue(record.key)
     return jsx(Fragment, props, key)
+  }
+
+  if (record.$rmxMixin === 'css' && Array.isArray(record.args)) {
+    let [styles] = record.args
+    return css(isRecord(styles) ? (styles as CSSProps) : {})
   }
 
   if (record.$rmx === true && typeof record.type === 'string') {
