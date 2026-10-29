@@ -969,6 +969,133 @@ describe('vnode mixins', () => {
     expect(restored).toEqual([originalItems[1], originalItems[0]])
   })
 
+  it('does not move static siblings while rotating retained items in a fragment', (t) => {
+    let { root, container, observer, items } = createRetainedListFixture(t)
+    function list(keys: string[]) {
+      return (
+        <ul>
+          <span>Head</span>
+          <Fragment key="items">{items(keys)}</Fragment>
+          <span>Tail</span>
+        </ul>
+      )
+    }
+    root.render(list(['A', 'B', 'C']))
+    root.flush()
+    let listNode = container.querySelector('ul')
+    invariant(listNode)
+    let originalItems = [...container.querySelectorAll('li')]
+    root.render(list([]))
+    root.flush()
+    observer.observe(listNode, { childList: true })
+
+    root.render(list(['B', 'C', 'A']))
+    root.flush()
+
+    expect(container.textContent).toBe('HeadBCATail')
+    expect([...container.querySelectorAll('li')]).toEqual([
+      originalItems[1],
+      originalItems[2],
+      originalItems[0],
+    ])
+    expect(observer.takeRecords().flatMap((record) => [...record.removedNodes])).toEqual([
+      originalItems[0],
+    ])
+  })
+
+  it('places a returning item when its next sibling is removed in the same update batch', (t) => {
+    let { root, container, items } = createRetainedListFixture(t)
+    let targetVisible = true
+    let neighbourVisible = true
+    let targetHandle: Handle<{ id: string }> | undefined
+    let neighbourHandle: Handle<{ id: string }> | undefined
+    function Target(handle: Handle<{ id: string }>) {
+      targetHandle = handle
+      return () => (targetVisible ? items([handle.props.id])[0] : null)
+    }
+    function Neighbour(handle: Handle<{ id: string }>) {
+      neighbourHandle = handle
+      return () => (neighbourVisible ? <li>{handle.props.id}</li> : null)
+    }
+    root.render(
+      <ul>
+        <Target key="target" id="B" />
+        <li key="a">A</li>
+        <Neighbour key="neighbour" id="C" />
+        <li key="tail">Tail</li>
+      </ul>,
+    )
+    root.flush()
+    invariant(targetHandle)
+    invariant(neighbourHandle)
+    let originalB = container.querySelector('li')
+    targetVisible = false
+    targetHandle.update()
+    root.flush()
+    root.render(
+      <ul>
+        <li key="a">A</li>
+        <Target key="target" id="B" />
+        <Neighbour key="neighbour" id="C" />
+        <li key="tail">Tail</li>
+      </ul>,
+    )
+    root.flush()
+
+    targetVisible = true
+    neighbourVisible = false
+    targetHandle.update()
+    neighbourHandle.update()
+    root.flush()
+
+    let restored = [...container.querySelectorAll('li')]
+    expect(restored.map((item) => item.textContent)).toEqual(['A', 'B', 'Tail'])
+    expect(restored[1]).toBe(originalB)
+  })
+
+  it('places returning components together without extra DOM moves', (t) => {
+    let { root, container, observer, items } = createRetainedListFixture(t)
+    let visible = true
+    let handles = new Map<string, Handle<{ id: string }>>()
+    function Item(handle: Handle<{ id: string }>) {
+      handles.set(handle.props.id, handle)
+      return () => (visible ? items([handle.props.id])[0] : null)
+    }
+    function list(keys: string[]) {
+      return (
+        <ul>
+          {keys.map((id) => (
+            <Item key={id} id={id} />
+          ))}
+        </ul>
+      )
+    }
+    root.render(list(['A', 'B', 'C']))
+    root.flush()
+    let listNode = container.querySelector('ul')
+    invariant(listNode)
+    let originalItems = [...listNode.children]
+    visible = false
+    for (let handle of handles.values()) handle.update()
+    root.flush()
+    root.render(list(['B', 'C', 'A']))
+    root.flush()
+    observer.observe(listNode, { childList: true })
+
+    visible = true
+    for (let id of ['A', 'B', 'C']) {
+      let handle = handles.get(id)
+      invariant(handle)
+      handle.update()
+    }
+    root.flush()
+
+    expect([...listNode.children]).toEqual([originalItems[1], originalItems[2], originalItems[0]])
+    expect(observer.takeRecords().flatMap((record) => [...record.removedNodes])).toEqual([
+      originalItems[0],
+    ])
+  })
+
   it('defers host removal when beforeRemove.persistNode is used', async () => {
     let removal = Promise.withResolvers<void>()
     let beforeRemoveCalls = 0

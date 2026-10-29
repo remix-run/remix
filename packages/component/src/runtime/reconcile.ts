@@ -1454,6 +1454,7 @@ export function renderComponent(
   context: ReconcileContext,
   anchor?: Node,
   cursor?: HydrationCursor,
+  placements?: PlacementBatch,
 ): CommittedComponentNode {
   let { scheduler } = context
   let handle = next._handle
@@ -1465,10 +1466,14 @@ export function renderComponent(
   let [element, tasks] = handle.render(next.props)
   let reclamationVersion = mixinReclamationVersions.get(domParent)
   let content = diffVNodes(currContent, toVNode(element), domParent, next, context, anchor, cursor)
-  if (mixinReclamationVersions.get(domParent) !== reclamationVersion) {
-    placeReclaimedChildren([content], domParent, next, anchor)
-  }
+  let needsPlacement =
+    (isCommittedComponentNode(next) || next._parent.kind === 'root') &&
+    mixinReclamationVersions.get(domParent) !== reclamationVersion
   let committed = commitComponentNode(next, content)
+  if (needsPlacement) {
+    if (placements) queueReclaimedComponent(placements, committed, domParent)
+    else placeReclaimedChildren([content], domParent, committed, anchor)
+  }
   handle.setScheduleUpdate(scheduler, committed, domParent)
 
   scheduler.enqueueTasks(tasks)
@@ -1768,7 +1773,10 @@ function diffChildren(
   }
 
   let committedChildren = committed as CommittedVNode[]
-  if (mixinReclamationVersions.get(domParent) !== reclamationVersion) {
+  if (
+    (vParent.kind !== 'fragment' || vParent._parent.kind === 'root') &&
+    mixinReclamationVersions.get(domParent) !== reclamationVersion
+  ) {
     placeReclaimedChildren(committedChildren, domParent, vParent, anchor)
   }
   return committedChildren
@@ -2124,38 +2132,35 @@ function placeReclaimedChildren(
   vParent: VNodeParent,
   anchor?: Node,
 ): void {
-  let domIndexes = new Map<Node, number>()
-  let index = 0
-  for (let child of domParent.childNodes) {
-    domIndexes.set(child, index++)
-  }
   let previous =
     vParent.kind === 'root'
       ? vParent._rangeStart
       : vParent.kind === 'component' || vParent.kind === 'fragment'
         ? findPreviousSiblingDomAnchor(vParent)
         : null
-  let startIndex = previous ? (domIndexes.get(previous) ?? -1) : -1
-  let endIndex = anchor ? (domIndexes.get(anchor) ?? Infinity) : Infinity
-  // Retained hosts can interleave fragment/component ranges. Place their DOM
-  // children individually instead of assuming each range is already contiguous.
+  // Flatten transparent wrappers so retained DOM ranges can be interleaved correctly.
   let placementChildren: CommittedVNode[] = []
   function collect(node: CommittedVNode): void {
-    if (isCommittedComponentNode(node)) {
-      collect(node._content)
-    } else if (isFragmentNode(node)) {
-      for (let child of node._children) collect(child)
-    } else {
-      placementChildren.push(node)
-    }
+    if (isCommittedComponentNode(node)) collect(node._content)
+    else if (isFragmentNode(node)) for (let child of node._children) collect(child)
+    else placementChildren.push(node)
   }
   for (let child of children) collect(child)
+  let indexes = new Map<Node, number>(),
+    index = 0,
+    current = previous ? previous.nextSibling : domParent.firstChild
+  while (current && current !== anchor) {
+    indexes.set(current, index++)
+    current = current.nextSibling
+  }
+  if (anchor && current !== anchor) indexes.clear()
   let matches = placementChildren.map((child) => {
     let dom = findFirstDomAnchor(child)
-    let domIndex = dom ? (domIndexes.get(dom) ?? -1) : -1
-    return domIndex > startIndex && domIndex < endIndex ? domIndex : -1
+    return dom ? (indexes.get(dom) ?? -1) : -1
   })
-  placeChildren(placementChildren, matches, domParent, anchor)
+  let analysis = analyzeKeyedChildMatches(matches.length, matches)
+  if (analysis.hasRemovals || !analysis.canSkipPlacement)
+    placeChildren(placementChildren, matches, domParent, anchor)
 }
 
 function placeChildren(
@@ -2351,4 +2356,41 @@ function reclaimPersistedMixinNode(
     scheduler.enqueueCommitPhase([() => dispatchMixinCommit(committed._mixState)])
   }
   return committed
+}
+
+export type PlacementBatch = Map<
+  Extract<VNodeParent, { kind: 'root' | 'host' }>,
+  { domParent: ParentNode; node: CommittedComponentNode | undefined }
+>
+
+function queueReclaimedComponent(
+  placements: PlacementBatch,
+  node: CommittedComponentNode,
+  domParent: ParentNode,
+): void {
+  let owner: VNodeParent = node._parent
+  while (owner.kind === 'component' || owner.kind === 'fragment') owner = owner._parent
+  let group = placements.get(owner)
+  // Multiple returning components share one repair of the completed sibling list.
+  if (group) group.node = undefined
+  else placements.set(owner, { domParent, node })
+}
+
+export function placeReclaimedComponents(placements: PlacementBatch): void {
+  for (let [owner, { domParent, node }] of placements) {
+    if (node)
+      placeReclaimedChildren(
+        [node._content],
+        domParent,
+        node,
+        findNextSiblingDomAnchor(node) ?? undefined,
+      )
+    else
+      placeReclaimedChildren(
+        owner._children,
+        domParent,
+        owner,
+        owner.kind === 'root' ? owner._rangeEnd : undefined,
+      )
+  }
 }
