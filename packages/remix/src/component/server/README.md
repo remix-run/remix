@@ -119,5 +119,5 @@ function Document(handle: Handle<{ children: RemixNode }>) {
 
 ## See Also
 
-- [Hydration](https://github.com/remix-run/remix/blob/main/packages/component/docs/hydration.md) - Making server-rendered components interactive on the client
-- [Frames](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md) - Streaming partial server UI with `<Frame>`
+- [Hydration boundaries with clientEntry](https://docs.remix.run/interactivity/#cliententry) - Making server-rendered components interactive on the client
+- [Streaming UI with Frames](https://docs.remix.run/streaming-ui-with-frames/) - Streaming partial server UI with `<Frame>`

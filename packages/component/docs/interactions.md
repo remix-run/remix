@@ -2,21 +2,6 @@
 
 Build reusable event behavior with mixins that compose normal DOM events into semantic custom events.
 
-> **Note:** Most app code should stick with `on('click', ...)` and other native events. Reach for custom event mixins when the behavior is complex and reused in multiple places.
-
-## When to Create an Event Mixin
-
-Create one when:
-
-- You combine multiple low-level events into one semantic event.
-- The pattern is reused across components.
-- You want one place for timing/gesture state.
-
-Skip it when:
-
-- Native events are already clear enough.
-- The behavior is used once.
-
 ## Example: Drag Release Mixin
 
 ```tsx
@@ -170,12 +155,5 @@ export let tempo = createMixin<HTMLElement>((handle) => {
 
 ## Best Practices
 
-1. Namespace custom event names (`myapp:*`) to avoid collisions.
-2. Keep state in the mixin setup scope, not in globals.
-3. Dispatch typed custom events with the data consumers need.
-4. Use `handle.addEventListener('remove', ...)` for timer/listener cleanup (GC will take care of scoped variables).
-
-## See Also
-
-- [Events](./events.md)
-- [Mixins](./mixins.md)
+- Dispatch typed custom events with the data consumers need.
+- Use `handle.addEventListener('remove', ...)` for timer/listener cleanup (GC will take care of scoped variables).

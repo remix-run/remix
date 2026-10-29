@@ -1,7 +1,5 @@
 # Mixins
 
-Mixins attach reusable behavior and props to the host element you render. Use `createMixin` for behavior that needs its own state, DOM lifecycle, or composition with other mixins.
-
 ## Setup and render
 
 ```tsx
@@ -31,56 +29,21 @@ function SaveButton() {
 }
 ```
 
-The setup function runs once for each mixin slot on a host. Its second argument is the host tag name, such as `'button'`. The returned render function receives the arguments passed to the factory, followed by the current host props. Calling `handle.update()` reruns the host's mixins without rerendering its owner component.
+Use `<handle.element {...props} />` to return host props, with your overrides after the spread.
 
-Use `<handle.element {...props} />` to return host props, with your overrides after the spread. Return `handle.element` when no props need changing, or return other mixin descriptors to compose their behavior. A mixin cannot replace the host's children or raw HTML props.
+Mixins run in order, so each one sees the props produced by earlier mixins. Keep setup functions at module scope and keep mixin ordering stable: changing the setup function at a slot disposes that mixin and sets up its replacement.
 
-Mixins run in order, so each one sees the props produced by earlier mixins. `mix` accepts a descriptor, nested arrays, and falsy entries such as `enabled && behavior()`. The runtime flattens arrays and ignores falsy entries. Keep setup functions at module scope and keep mixin ordering stable: changing the setup function at a slot disposes that mixin and sets up its replacement.
-
-By default, setup and render also run during server rendering. Put DOM access in lifecycle listeners or queued tasks, which run in the browser.
+Setup and render run during server rendering by default, so put DOM access in lifecycle listeners or queued tasks, which run in the browser.
 
 ## Browser-only mixins
 
-Pass `{ ssr: false }` as the second argument to `createMixin` when a mixin only adds browser behavior:
-
-```tsx
-import { createMixin } from 'remix/component'
-
-const focusOnInsert = createMixin<HTMLElement>(
-  (handle) => {
-    handle.addEventListener('insert', ({ node }) => node.focus())
-  },
-  { ssr: false },
-)
-
-function SearchField() {
-  return () => <input type="search" mix={focusOnInsert()} />
-}
-```
-
-The server skips both setup and render for this mixin. The browser initializes it as usual, including during hydration. Options are read when the factory is created. Omitting `ssr`, or setting it to `true`, keeps server rendering enabled.
+With `{ ssr: false }`, the browser initializes the mixin as usual, including during hydration. Options are read when the factory is created.
 
 Only use this option when skipping the mixin leaves correct server HTML. Keep server rendering enabled for mixins that supply initial attributes, ARIA props, styles, or nested mixins that affect the HTML. A server-rendered mixin can still return browser-only mixins; the server skips those nested mixins too.
 
 The module containing the mixin and the arguments passed to its factory still run on the server. `ssr: false` skips mixin setup and render; it does not remove the module from the server bundle.
 
 The built-in `on` and `ref` mixins use this option because their work only runs in the browser.
-
-## The mixin handle
-
-`MixinHandle` is available as a type from `remix/component`. It differs from the handle passed to a component:
-
-| Member                   | Use                                                                                                                                                         |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `element`                | Forward or patch host props and compose nested `mix` values.                                                                                                |
-| `update()`               | Schedule a host update. The returned promise resolves after the update with the host runtime's lifetime signal.                                             |
-| `queueTask(callback)`    | Run work after pending DOM updates and commit callbacks. The callback receives the bound node and its runtime lifetime signal.                              |
-| `signal`                 | Clean up work when this mixin slot is disposed, including when the host remains mounted. Read it during setup or render and capture it for later callbacks. |
-| `context.get(Component)` | Read context provided by an ancestor component.                                                                                                             |
-| `frame`                  | Access the containing frame.                                                                                                                                |
-| `id`                     | Identify the host's mixin runtime. Mixins on the same host share this ID.                                                                                   |
-
-The signals passed to `queueTask` and returned by `update` belong to the host runtime. `handle.signal` belongs to the individual mixin slot, and the signal passed to `persistNode` belongs to a pending removal. Use the signal for the lifetime of the work you are doing.
 
 ## Lifecycle events
 
@@ -163,20 +126,15 @@ function Notice() {
 }
 ```
 
-When a later render removes the paragraph, `beforeRemove` fires while the node is still present. Call `event.persistNode(callback)` synchronously inside that listener. Remix runs the callback asynchronously and keeps the node until every registered callback settles. Returning `void` finishes that callback immediately. A thrown error or rejected promise also finishes that callback, and does not prevent the other callbacks from running or hold the node forever. Handle or report errors inside your callback if they matter to your application.
+When a later render removes the paragraph, `beforeRemove` fires while the node is still present. A thrown error or rejected promise from one callback does not prevent the other callbacks from running. Handle or report errors inside your callback if they matter to your application.
 
 The event only accepts a callback. Making the `beforeRemove` listener itself `async`, returning a promise from it, or calling `preventDefault()` does not defer removal.
 
-If the same keyed host type returns under the same DOM parent before teardown finishes, Remix can reuse the persisted DOM node. It aborts the teardown signal and emits `reclaimed`, without another `insert` or a `remove` event for the retained mixin. The old callback may still settle later, but it cannot remove the reclaimed node. Check `signal.aborted` before starting work and listen for `abort` to cancel work already in progress. An abort signal does not cancel a promise or animation by itself.
+If the same keyed host type returns under the same DOM parent before teardown finishes, Remix can reuse the persisted DOM node. An abort signal does not cancel a promise or animation by itself.
 
 Without reclamation, `beforeRemove` runs first, then the teardown callbacks settle, and Remix finishes host removal and dispatches `remove` for cleanup. Persistence does not require a key, but reclamation does. Persist the outermost element being removed: persisting a descendant does not keep a removed ancestor's subtree mounted. Ancestor teardown can abort a descendant's pending removal work.
 
 ## Built-in mixins
 
-- `on(type, listener, options?)` attaches an event listener with an abort signal for interrupted work.
-- `ref(callback)` provides the host after insertion and an abort signal for cleanup. The callback does not rerun on every render or keyed reclamation.
+- `ref(callback)` does not rerun the callback on every render or keyed reclamation.
 - `attrs(defaults)` supplies defaults only for props whose current value is `undefined`.
-- `link(href, options?)` adds navigation behavior and link semantics.
-- `css(styles)` applies generated styles through `mix`.
-
-See [Event Mixins](https://github.com/remix-run/remix/blob/main/packages/component/docs/interactions.md) for custom event composition and [Animation](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for entrance, exit, and layout helpers.

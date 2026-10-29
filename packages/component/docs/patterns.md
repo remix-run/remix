@@ -6,46 +6,6 @@ Common patterns and best practices for building components.
 
 ### Use Minimal Component State
 
-Only store state that's needed for rendering. Derive computed values instead of storing them, and avoid storing input state that you don't need.
-
-**Derive computed values:**
-
-```tsx
-// ❌ Avoid: Storing computed values
-function TodoList(handle: Handle) {
-  let todos: string[] = []
-  let completedCount = 0 // Unnecessary state
-
-  return () => (
-    <div>
-      {todos.map((todo, i) => (
-        <div key={i}>{todo}</div>
-      ))}
-      <div>Completed: {completedCount}</div>
-    </div>
-  )
-}
-
-// ✅ Prefer: Derive computed values in render
-function TodoList(handle: Handle) {
-  let todos: Array<{ text: string; completed: boolean }> = []
-
-  return () => {
-    // Derive computed value in render
-    let completedCount = todos.filter((t) => t.completed).length
-
-    return (
-      <div>
-        {todos.map((todo, i) => (
-          <div key={i}>{todo.text}</div>
-        ))}
-        <div>Completed: {completedCount}</div>
-      </div>
-    )
-  }
-}
-```
-
 **Don't store input state you don't need:**
 
 ```tsx
@@ -94,29 +54,6 @@ function SearchForm(handle: Handle) {
 
 Do as much work as possible in event handlers with minimal component state. Use the event handler scope for transient event state, and only capture to component state if it's used for rendering.
 
-```tsx
-// ✅ Good: Store state that affects rendering
-function Toggle(handle: Handle) {
-  let isOpen = false // Needed for rendering conditional content
-
-  return () => (
-    <div>
-      <button
-        mix={[
-          on('click', () => {
-            isOpen = !isOpen
-            handle.update()
-          }),
-        ]}
-      >
-        Toggle
-      </button>
-      {isOpen && <div>Content</div>}
-    </div>
-  )
-}
-```
-
 ## Setup Scope Use Cases
 
 The setup scope is perfect for one-time initialization:
@@ -137,7 +74,7 @@ function CacheExample(handle: Handle<{ cacheSize: number; key: string; value: an
     cache.set(handle.props.key, handle.props.value)
     if (cache.size > maxSize) {
       let firstKey = cache.keys().next().value
-      cache.delete(firstKey)
+      if (firstKey !== undefined) cache.delete(firstKey)
     }
     return <div>New: {handle.props.value}</div>
   }
@@ -163,70 +100,13 @@ function Analytics(handle: Handle<{ apiKey: string; event: string; data?: any }>
 }
 ```
 
-### EventEmitters
-
-```tsx
-import { TypedEventTarget } from 'remix/component'
-
-class DataEvent extends Event {
-  constructor(public value: string) {
-    super('data')
-  }
-}
-
-class DataEmitter extends TypedEventTarget<{ data: DataEvent }> {
-  emitData(value: string) {
-    this.dispatchEvent(new DataEvent(value))
-  }
-}
-
-function EventListener(handle: Handle<{ emitter: DataEmitter }>) {
-  // Set up listeners once with automatic cleanup
-  handle.props.emitter.addEventListener(
-    'data',
-    (event) => {
-      // Handle data
-      handle.update()
-    },
-    { signal: handle.signal },
-  )
-
-  return () => <div>Listening for events...</div>
-}
-```
-
-### Window Resize Events
-
-A resize event applies to the whole viewport, so register it on `window` after the first client render. Pass `handle.signal` so the listener is removed when the component disconnects:
-
-```tsx
-function ViewportWidth(handle: Handle) {
-  let width: number | undefined
-
-  handle.queueTask(() => {
-    width = window.innerWidth
-    window.addEventListener(
-      'resize',
-      () => {
-        width = window.innerWidth
-        handle.update()
-      },
-      { signal: handle.signal },
-    )
-    handle.update()
-  })
-
-  return () => <div>{width === undefined ? 'Measuring…' : `${width}px`}</div>
-}
-```
-
 ### Initializing State from Props
 
 ```tsx
 function Timer(handle: Handle<{ initialSeconds: number; paused?: boolean }>) {
   // Initialize from props
   let seconds = handle.props.initialSeconds
-  let interval: number | null = null
+  let interval: ReturnType<typeof setInterval> | null = null
 
   function start() {
     if (interval) return
@@ -250,22 +130,21 @@ function Timer(handle: Handle<{ initialSeconds: number; paused?: boolean }>) {
   handle.signal.addEventListener('abort', stop)
 
   return () => {
-    if (!handle.props.paused && !interval) {
-      start()
-    } else if (handle.props.paused && interval) {
-      stop()
-    }
+    // Start or stop after the commit so the interval only runs in the browser
+    handle.queueTask(() => {
+      if (!handle.props.paused && !interval && seconds > 0) {
+        start()
+      } else if (handle.props.paused && interval) {
+        stop()
+      }
+    })
 
     return <div>Time remaining: {seconds}s</div>
   }
 }
 ```
 
-## Focus and Scroll Management
-
-Use `handle.queueTask()` in event handlers for DOM operations that need to happen after the DOM has changed from the next update.
-
-### Focus Management
+## Focus Management
 
 ```tsx
 function Modal(handle: Handle) {
@@ -310,53 +189,6 @@ function Modal(handle: Handle) {
           </button>
         </div>
       )}
-    </div>
-  )
-}
-```
-
-### Scroll Management
-
-```tsx
-function ScrollableList(handle: Handle) {
-  let items: string[] = []
-  let newItemInput: HTMLInputElement
-  let listContainer: HTMLElement
-
-  return () => (
-    <div>
-      <input
-        mix={[
-          ref((node) => (newItemInput = node)),
-          on('keydown', (event) => {
-            if (event.key === 'Enter') {
-              let text = event.currentTarget.value
-              if (text.trim()) {
-                items.push(text)
-                event.currentTarget.value = ''
-                handle.update()
-                // Queue scroll operation after new item renders
-                handle.queueTask(() => {
-                  listContainer.scrollTop = listContainer.scrollHeight
-                })
-              }
-            }
-          }),
-        ]}
-      />
-      <div
-        mix={[
-          ref((node) => (listContainer = node)),
-          css({
-            maxHeight: '300px',
-            overflowY: 'auto',
-          }),
-        ]}
-      >
-        {items.map((item, i) => (
-          <div key={i}>{item}</div>
-        ))}
-      </div>
     </div>
   )
 }
@@ -447,48 +279,6 @@ function SlugForm(handle: Handle) {
 
 ## Data Loading
 
-### Using Event Handler Signals
-
-Event handlers receive an `AbortSignal` that's aborted when the handler is re-entered:
-
-```tsx
-function SearchInput(handle: Handle) {
-  let results: string[] = []
-  let loading = false
-
-  return () => (
-    <div>
-      <input
-        type="text"
-        mix={[
-          on('input', async (event, signal) => {
-            let query = event.currentTarget.value
-            loading = true
-            handle.update()
-
-            let response = await fetch(`/search?q=${query}`, { signal })
-            let data = await response.json()
-            if (signal.aborted) return
-
-            results = data.results
-            loading = false
-            handle.update()
-          }),
-        ]}
-      />
-      {loading && <div>Loading...</div>}
-      {!loading && results.length > 0 && (
-        <ul>
-          {results.map((result, i) => (
-            <li key={i}>{result}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-```
-
 ### Using queueTask for Reactive Data Loading
 
 Use `handle.queueTask()` in the render function for reactive data loading that responds to prop changes:
@@ -496,23 +286,31 @@ Use `handle.queueTask()` in the render function for reactive data loading that r
 ```tsx
 function DataLoader(handle: Handle<{ url: string }>) {
   let data: any = null
-  let loading = false
   let error: Error | null = null
+  let loadedUrl: string | undefined
 
   return () => {
-    // Queue data loading task that responds to prop changes
-    handle.queueTask(async (signal) => {
-      loading = true
-      error = null
-      handle.update()
+    let url = handle.props.url
+    let loading = url !== loadedUrl
 
-      let response = await fetch(handle.props.url, { signal })
-      let json = await response.json()
-      if (signal.aborted) return
-      data = json
-      loading = false
-      handle.update()
-    })
+    // Queue a load only while `url` hasn't loaded yet. Queuing on every render
+    // would loop, because the task's `handle.update()` renders again.
+    if (loading) {
+      handle.queueTask(async (signal) => {
+        try {
+          let response = await fetch(url, { signal })
+          let json = await response.json()
+          if (signal.aborted) return
+          data = json
+          error = null
+        } catch (caught) {
+          if (signal.aborted) return
+          error = caught as Error
+        }
+        loadedUrl = url
+        handle.update()
+      })
+    }
 
     if (loading) return <div>Loading...</div>
     if (error) return <div>Error: {error.message}</div>
@@ -523,6 +321,8 @@ function DataLoader(handle: Handle<{ url: string }>) {
 }
 ```
 
+The task's signal is aborted when the component renders again or is removed. If `url` changes while a request is in flight, the next render aborts it and queues a request for the new `url`. A re-render for any other reason also aborts the request, and that render queues it again, so only the latest request for the current `url` completes.
+
 ### Using Setup Scope for Initial Data
 
 Load initial data in the setup scope:
@@ -530,20 +330,19 @@ Load initial data in the setup scope:
 ```tsx
 function UserProfile(handle: Handle<{ userId: string; showEmail?: boolean }>) {
   let user: User | null = null
-  let loading = true
 
-  // Load initial data in setup scope using queueTask
-  handle.queueTask(async (signal) => {
-    let response = await fetch(`/api/users/${handle.props.userId}`, { signal })
+  // Load initial data in setup scope using queueTask. Use `handle.signal`, not the
+  // task signal: the task signal aborts on the next render, such as a parent update.
+  handle.queueTask(async () => {
+    let response = await fetch(`/api/users/${handle.props.userId}`, { signal: handle.signal })
     let data = await response.json()
-    if (signal.aborted) return
+    if (handle.signal.aborted) return
     user = data
-    loading = false
     handle.update()
   })
 
   return () => {
-    if (loading) return <div>Loading user...</div>
+    if (!user) return <div>Loading user...</div>
 
     return (
       <div>
@@ -556,9 +355,3 @@ function UserProfile(handle: Handle<{ userId: string; showEmail?: boolean }>) {
 ```
 
 Note that by fetching this data in the setup scope, parent updates that change `userId` will not restart the request unless you add that behavior yourself.
-
-## See Also
-
-- [Handle API](./handle.md) - `handle.queueTask()` and `handle.signal`
-- [Events](./events.md) - Event handler signals
-- [Components](./components.md) - Component vs render phases

@@ -1,181 +1,16 @@
 # Styling
 
-The `css(...)` mixin provides inline styling with support for pseudo-selectors, pseudo-elements, attribute selectors, descendant selectors, and media queries. It follows modern CSS nesting selector rules.
-
-## Basic CSS Mixin
-
-```tsx
-function Button() {
-  return () => (
-    <button
-      mix={[
-        css({
-          color: 'white',
-          backgroundColor: 'blue',
-          padding: '12px 24px',
-          borderRadius: '4px',
-          border: 'none',
-          cursor: 'pointer',
-        }),
-      ]}
-    >
-      Click me
-    </button>
-  )
-}
-```
-
-## CSS Mixin vs Style Prop
-
-The `css(...)` mixin produces static styles that are inserted into the document as CSS rules, while the `style` prop applies styles directly to the element. For **dynamic styles** that change frequently, use the `style` prop for better performance:
-
-```tsx
-// ❌ Avoid: Using css(...) for dynamic styles
-function ProgressBar(handle: Handle) {
-  let progress = 0
-
-  return () => (
-    <div
-      mix={[
-        css({
-          width: `${progress}%`, // Creates new CSS rule on every update
-          backgroundColor: 'blue',
-        }),
-      ]}
-    >
-      {progress}%
-    </div>
-  )
-}
-
-// ✅ Prefer: Using style prop for dynamic styles
-function ProgressBar(handle: Handle) {
-  let progress = 0
-
-  return () => (
-    <div
-      mix={[
-        css({
-          backgroundColor: 'blue', // Static styles in css(...)
-        }),
-      ]}
-      style={{
-        width: `${progress}%`, // Dynamic styles in style prop
-      }}
-    >
-      {progress}%
-    </div>
-  )
-}
-```
-
-**Use the `css(...)` mixin for:**
-
-- Static styles that don't change
-- Styles that need pseudo-selectors (`:hover`, `:focus`, etc.)
-- Styles that need media queries
-
-**Use the `style` prop for:**
-
-- Dynamic styles that change based on state or props
-- Computed values that update frequently
-
 ## Cascade Layers
 
-Generated `css(...)` rules are emitted in native CSS cascade layers under the stable parent layer `rmx`. Each generated class gets its own sublayer, so a class such as `rmxc-k4a9f` is emitted as `@layer rmx.rmxc-k4a9f { ... }`. This keeps mix ordering stable across roots and frames.
+Each generated class gets its own sublayer under `rmx`, so a class such as `rmxc-k4a9f` is emitted as `@layer rmx.rmxc-k4a9f { ... }`. This keeps mix ordering stable across roots and frames.
 
-Unlayered author CSS outranks normal layered CSS. That means global styles can override generated component styles even when the component runtime inserts its rules later.
-
-No extra layer setup is needed unless the app adds layers that should sit before or after the generated component styles. Put layers that should provide defaults before `rmx`. The layer can use any app-owned name; `base` is a common choice:
-
-```css
-@layer base, rmx;
-
-@layer base {
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-size: inherit;
-    font-weight: inherit;
-  }
-
-  button,
-  input,
-  select,
-  textarea {
-    font: inherit;
-    margin: 0;
-    padding: 0;
-  }
-
-  code,
-  pre {
-    font-size: 1em;
-  }
-}
-```
-
-Put layers that should override generated component styles after `rmx`:
-
-```css
-@layer base, rmx, app;
-
-@layer app {
-  .marketing-heading {
-    font-size: clamp(2rem, 6vw, 4rem);
-  }
-}
-```
+No extra layer setup is needed unless the app adds layers that should sit before or after the generated component styles.
 
 For imported styles, use an import layer when your build supports it:
 
 ```css
 @layer base, rmx;
 @import './base.css' layer(base);
-```
-
-## Pseudo-Selectors
-
-Use `&` to reference the current element in pseudo-selectors:
-
-```tsx
-function Button() {
-  return () => (
-    <button
-      mix={[
-        css({
-          color: 'white',
-          backgroundColor: 'blue',
-          padding: '12px 24px',
-          borderRadius: '4px',
-          border: 'none',
-          cursor: 'pointer',
-          '&:hover': {
-            backgroundColor: 'darkblue',
-            transform: 'translateY(-1px)',
-          },
-          '&:active': {
-            backgroundColor: 'navy',
-            transform: 'translateY(0)',
-          },
-          '&:focus': {
-            outline: '2px solid yellow',
-            outlineOffset: '2px',
-          },
-          '&:disabled': {
-            opacity: 0.5,
-            cursor: 'not-allowed',
-          },
-        }),
-      ]}
-    >
-      Click me
-    </button>
-  )
-}
 ```
 
 ## Pseudo-Elements
@@ -233,48 +68,6 @@ function Input(handle: Handle<{ required?: boolean }>) {
         }),
       ]}
     />
-  )
-}
-```
-
-## Descendant Selectors
-
-Use class names or element selectors directly for descendant selectors:
-
-```tsx
-function Card(handle: Handle<{ children: RemixNode }>) {
-  return () => (
-    <div
-      mix={[
-        css({
-          padding: '20px',
-          border: '1px solid #ddd',
-          borderRadius: '8px',
-          backgroundColor: 'white',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          // Style descendants
-          '& h2': {
-            marginTop: 0,
-            fontSize: '24px',
-            fontWeight: 'bold',
-          },
-          '& p': {
-            color: '#666',
-            lineHeight: 1.6,
-          },
-          '& .icon': {
-            width: '24px',
-            height: '24px',
-            marginRight: '8px',
-          },
-          '& button': {
-            marginTop: '16px',
-          },
-        }),
-      ]}
-    >
-      {handle.props.children}
-    </div>
   )
 }
 ```
@@ -575,7 +368,3 @@ This example demonstrates:
 - **Styles on elements themselves**: Each element has its own `css(...)` mixin
 - **Element's own states**: Button's `:active` state styled directly on the button
 - **Media queries**: Responsive adjustments applied directly to elements
-
-## See Also
-
-- [Spring API](https://github.com/remix-run/remix/blob/main/packages/ui/docs/spring.md) - Physics-based animation easing
