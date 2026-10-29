@@ -1,0 +1,118 @@
+:root {
+  color-scheme: light dark;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  display: grid;
+  gap: 32px;
+}
+
+h1,
+h2 {
+  margin: 0 0 8px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #673ab8;
+}
+
+code {
+  font-size: 0.95em;
+}
+
+form {
+  display: grid;
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+
+label {
+  font-weight: 600;
+}
+
+input,
+textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 6px;
+}
+
+input[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: #c0392b;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, currentColor 65%, transparent);
+}
+
+.error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #c0392b;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  justify-self: start;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #673ab8;
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.entries li {
+  padding: 12px 16px;
+  border-left: 3px solid #673ab8;
+}
+
+.entries a {
+  font-weight: 600;
+}
+
+.entries p {
+  margin: 4px 0 0;
+}
