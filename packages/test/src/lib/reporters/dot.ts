@@ -1,5 +1,5 @@
 import { colors } from '../colors.ts'
-import { normalizeLine } from '../normalize.ts'
+import { formatStack } from './stack.ts'
 import type { Reporter, ReporterOptions } from './index.ts'
 import type { Counts, TestResult, TestResults } from './results.ts'
 
@@ -63,10 +63,8 @@ export class DotReporter implements Reporter {
       if (error) {
         console.log(`     ${colors.red(error.message)}`)
         if (error.stack) {
-          let frames = error.stack
-            .split('\n')
-            .slice(1, 4)
-            .map((l) => `     ${normalizeLine(l).trim()}`)
+          let frames = formatStack(error.stack, 3)
+            .map((line) => `     ${line.trim()}`)
             .join('\n')
           console.log(frames)
         }

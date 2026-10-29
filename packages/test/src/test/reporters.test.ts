@@ -6,6 +6,46 @@ import { TapReporter } from '../lib/reporters/tap.ts'
 import type { TestResults } from '../lib/reporters/results.ts'
 import { describe, it } from '../lib/framework.ts'
 
+describe('reporters combined failure stacks', () => {
+  it('prints every failure source in spec results and summaries', () => {
+    let results = createFailureResults()
+    let reporter = new SpecReporter()
+    let resultOutput = captureOutput(() => reporter.onResult(results))
+    let summaryOutput = captureOutput(() => reporter.onSummary(results, 1))
+
+    assertFailureSources(resultOutput)
+    assertFailureSources(summaryOutput)
+  })
+
+  it('prints every failure source in files results and summaries', () => {
+    let results = createFailureResults()
+    let reporter = new FilesReporter()
+    let resultOutput = captureOutput(() => reporter.onResult(results))
+    let summaryOutput = captureOutput(() => reporter.onSummary(results, 1))
+
+    assertFailureSources(resultOutput)
+    assertFailureSources(summaryOutput)
+  })
+
+  it('prints every failure source in dot summaries', () => {
+    let results = createFailureResults()
+    let output = captureOutput(() => {
+      let reporter = new DotReporter()
+      reporter.onResult(results)
+      reporter.onSummary(results, 1)
+    })
+
+    assertFailureSources(output)
+  })
+
+  it('prints every failure source in TAP results', () => {
+    let results = createFailureResults()
+    let output = captureOutput(() => new TapReporter().onResult(results))
+
+    assertFailureSources(output)
+  })
+})
+
 describe('reporters skip and todo reasons', () => {
   it('prints reasons in the spec reporter', () => {
     let output = captureOutput(() => new SpecReporter().onResult(createPendingResults()))
@@ -73,6 +113,39 @@ describe('reporters quiet mode', () => {
     assert.match(output, /skipped 1/)
   })
 })
+
+function createFailureResults(): TestResults {
+  return {
+    passed: 0,
+    failed: 1,
+    skipped: 0,
+    todo: 0,
+    tests: [
+      {
+        name: 'test',
+        suiteName: 'failures',
+        status: 'failed',
+        duration: 0,
+        error: {
+          message: 'body failed\nfirst cleanup failed\nsecond cleanup failed\nafterEach failed',
+          stack: [
+            'Error: body failed\n    at testBodySource (test.ts:1:1)',
+            'Error: first cleanup failed\n    at firstCleanupSource (test.ts:2:1)',
+            'Error: second cleanup failed\n    at secondCleanupSource (test.ts:3:1)',
+            'Error: afterEach failed\n    at afterEachSource (test.ts:4:1)',
+          ].join('\n\n'),
+        },
+      },
+    ],
+  }
+}
+
+function assertFailureSources(output: string): void {
+  assert.match(output, /at (?:Object\.)?testBodySource/)
+  assert.match(output, /at firstCleanupSource/)
+  assert.match(output, /at secondCleanupSource/)
+  assert.match(output, /at (?:Object\.)?afterEachSource/)
+}
 
 function createPendingResults(): TestResults {
   return {
