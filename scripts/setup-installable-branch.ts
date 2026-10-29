@@ -4,6 +4,12 @@ import * as util from 'node:util'
 
 import { getPreviewTarballUrl, preparePreviewPackage } from './utils/preview.ts'
 import type { PreviewPackageManifest } from './utils/preview.ts'
+import {
+  getRetainedPreviewBuilds,
+  loadPreviousPreview,
+  restorePreviewTarballs,
+  writePreviewManifest,
+} from './utils/preview-retention.ts'
 import { logAndExec } from './utils/process.ts'
 
 /**
@@ -27,6 +33,12 @@ if (logAndExec('git', ['status', '--porcelain'], true)) {
 
 const sha = logAndExec('git', ['rev-parse', 'HEAD'], true)
 const repository = process.env.GITHUB_REPOSITORY ?? 'remix-run/remix'
+const previous = loadPreviousPreview(installableBranch)
+const builds = getRetainedPreviewBuilds(installableBranch, previous?.manifest.builds ?? [], sha)
+const existingBuild = builds.find((build) => build.sha === sha)
+if (builds.some((build) => build.sha !== sha && build.sha.slice(0, 8) === sha.slice(0, 8))) {
+  throw new Error(`Preview SHA prefix collision for ${sha}`)
+}
 const tarballsDir = path.resolve('tarballs', sha.slice(0, 8))
 const packages = await readPackages()
 const tarballUrls = new Map(
@@ -39,13 +51,17 @@ const remixUrl = tarballUrls.get('remix')
 if (!remixUrl) throw new Error('Missing remix package')
 
 console.log(`Preparing installable branch \`${installableBranch}\` from sha ${sha}`)
+// Copy retained artifacts onto source without chaining generated preview commits.
 logAndExec('git', ['checkout', '-B', installableBranch])
-logAndExec('pnpm', ['--filter', './packages/*', 'run', 'build'])
+if (previous) restorePreviewTarballs(previous, builds)
+if (!existingBuild) {
+  logAndExec('pnpm', ['--filter', './packages/*', 'run', 'build'])
 
-// Prepare generated files while the workspace manifests still point to source.
-for (let { manifest } of packages) {
-  if (manifest.scripts?.prepack) {
-    logAndExec('pnpm', ['--filter', manifest.name, 'run', 'prepack'])
+  // Prepare generated files while the workspace manifests still point to source.
+  for (let { manifest } of packages) {
+    if (manifest.scripts?.prepack) {
+      logAndExec('pnpm', ['--filter', manifest.name, 'run', 'prepack'])
+    }
   }
 }
 
@@ -55,24 +71,25 @@ for (let { dirName, manifest } of packages) {
   await fsp.writeFile(`packages/${dirName}/package.json`, JSON.stringify(pkg, null, 2) + '\n')
 }
 
-for (let { dirName } of packages) {
-  logAndExec('pnpm', [
-    '--dir',
-    `packages/${dirName}`,
-    'pack',
-    '--out',
-    path.join(tarballsDir, `${dirName}.tgz`),
-  ])
+if (!existingBuild) {
+  for (let { dirName } of packages) {
+    logAndExec('pnpm', [
+      '--dir',
+      `packages/${dirName}`,
+      'pack',
+      '--out',
+      path.join(tarballsDir, `${dirName}.tgz`),
+    ])
+  }
+  builds.push({ sha, createdAt: new Date().toISOString() })
 }
 
-await fsp.writeFile(
-  'tarballs/preview.json',
-  JSON.stringify(
-    { branch: installableBranch, sha, packages: Object.fromEntries(tarballUrls) },
-    null,
-    2,
-  ) + '\n',
-)
+await writePreviewManifest({
+  branch: installableBranch,
+  sha,
+  packages: Object.fromEntries(tarballUrls),
+  builds,
+})
 
 // Built files and generated templates remain ignored; only the packed artifacts
 // and rewritten manifests are needed on the preview branch.

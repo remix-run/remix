@@ -1,0 +1,34 @@
+name: Cleanup Preview Builds
+
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: preview-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Setup git
+        run: |
+          git config user.email "hello@remix.run"
+          git config user.name "Remix Run Bot"
+
+      - name: Remove expired main preview builds
+        run: node scripts/cleanup-preview-branch.ts
