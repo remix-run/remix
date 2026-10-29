@@ -109,7 +109,7 @@ Pass `initial: false` to skip only the first keyed entrance for an element withi
 
 Exit animations can reclaim a removed keyed node if the same keyed element is rendered again before the exit finishes. The reclaimed node retargets toward its natural styles instead of simply reversing the exit animation.
 
-For custom teardown, `createMixin` exposes `event.persistNode(callback)` in its `beforeRemove` event. It keeps the host in the DOM until the callback settles and supplies an abort signal for cancellation when a keyed node is reclaimed. See [Deferring removal](https://github.com/remix-run/remix/blob/main/packages/component/docs/mixins.md#deferring-removal-with-persistnode) for a complete example and lifecycle ordering.
+For custom teardown, `createMixin` exposes `event.persistNode(callback)` in its `beforeRemove` event. It keeps the host in the DOM until the callback settles and supplies an abort signal for cancellation when a keyed node is reclaimed. See [Deferring removal](https://github.com/remix-run/remix/blob/main/packages/component/README.md#deferring-removal-with-persistnode) for a complete example and lifecycle ordering.
 
 ## Layout Animation
 
@@ -237,7 +237,7 @@ The built-in presets are:
 | `snappy` | 0      | 200ms    | Quick, no overshoot      |
 | `bouncy` | 0.3    | 400ms    | Underdamped bounce       |
 
-Override preset duration or velocity with the second argument.
+Override preset duration or velocity with the second argument. `velocity` is the initial speed in progress per second, where progress runs from `0` to `1`. Positive values start faster and overshoot more. Negative values start slower, and large ones move away from the target first. To continue a gesture, divide its speed toward the target, in pixels per second, by the remaining distance in pixels.
 
 ```ts
 spring('bouncy', { duration: 300 })

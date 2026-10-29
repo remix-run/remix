@@ -131,8 +131,8 @@ export function AlbumList(handle: Handle<{ albums: Album[] }>) {
 
 The input handler changes `filter` and calls `handle.update()`. Updates are explicit. Changing a
 variable does not render anything until the component requests an update. Stable `key` values tell
-Remix which list items are the same across renders, preserving their DOM and component state if the
-list changes order. In the browser, these updates come from [event handlers](/interactivity/#events-with-on)
+Remix which list items are the same across renders, preserving their DOM, component state, focus,
+and typed input values if the list changes order. In the browser, these updates come from [event handlers](/interactivity/#events-with-on)
 and the [update lifecycle](/interactivity/#state-updates-and-post-render-tasks) of hydrated
 components.
 
@@ -184,6 +184,9 @@ changes in the browser, update the provider or share a
 [`TypedEventTarget`](/interactivity/#saving-a-client-owned-document), a typed version of the DOM's
 [`EventTarget`](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) exported from
 [`remix/component`](/api/component/). Then only consumers that listen for the change need to update.
+
+When a provider sets a new value and updates, consumers must read the context inside their render
+function to see it. A value read in setup stays the one from the first render.
 
 ## Rendering pages through request context {#rendering-pages-through-request-context}
 
@@ -328,6 +331,12 @@ The `css(...)` call creates a generated class and static rule, and the element's
 [`mix` prop](/interactivity/#the-mix-prop) applies it. The `style` prop is better for values
 such as progress, coordinates, opacity, or transforms that can change on every update. Putting those
 values in `css(...)` would create another generated rule for each value.
+
+Prefer state selectors such as `"&:hover .title"` or `'&[aria-expanded="true"]'` over tracking hover
+or focus in JavaScript. The browser applies them without a render, and they work before the page
+hydrates. When two `css(...)` styles on one element set the same property, their order in `mix`
+doesn't decide which one wins, so put variants behind a selector in a single style. See
+[combining styles](/api/component/#combining-styles) for details.
 
 During server rendering, Remix collects generated rules, deduplicates them, and inserts their
 `<style data-rmx-style>` tags into the document head. A server-rendered page does not wait for browser

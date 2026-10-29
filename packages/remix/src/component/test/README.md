@@ -194,5 +194,5 @@ expect(container.textContent).toBe('Expected data')
 
 ## See Also
 
-- [Getting Started](https://github.com/remix-run/remix/blob/main/packages/component/docs/getting-started.md) - Root methods reference
-- [Handle API](https://github.com/remix-run/remix/blob/main/packages/component/docs/handle.md) - `handle.queueTask()` behavior
+- [Mount client-only UI with createRoot](https://docs.remix.run/interactivity/#client-only-roots) - Root methods reference
+- [State, updates, and post-render tasks](https://docs.remix.run/interactivity/#state-updates-and-post-render-tasks) - `handle.queueTask()` behavior
