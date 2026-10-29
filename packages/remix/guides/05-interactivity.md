@@ -905,7 +905,7 @@ import { routes } from "../routes.ts";
 prefetch(routes.albums.show.href({ albumId: "thriller" }));
 ```
 
-Only prefetch links whose GET requests are safe to make speculatively. See the [prefetching reference](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for more information.
+Only prefetch links whose GET requests are safe to make speculatively. See the [prefetching reference](../src/component/README.md#prefetching) for more information.
 
 ## Enhancing forms with fetch and navigation
 

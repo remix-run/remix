@@ -81,7 +81,7 @@ During server rendering, setup and render run, but `handle.update()` throws and 
 | `handle.signal`          | Aborted when the component is removed. Use it to clean up work started in setup.                                                                                                               |
 | `handle.id`              | A stable ID for the instance, for `htmlFor`, `aria-controls`, and similar attributes.                                                                                                          |
 | `handle.context`         | Provides values to descendants and reads values from ancestors. See [Context](#context).                                                                                                       |
-| `handle.frame`           | The nearest [frame](#frame-navigation). Call `handle.frame.reload()` to fetch its content again.                                                                                               |
+| `handle.frame`           | The nearest [frame](#frames). Call `handle.frame.reload()` to fetch its content again.                                                                                                         |
 | `handle.frames`          | `handle.frames.top` is the root frame of the runtime tree. `handle.frames.get(name)` finds a mounted frame by its `name` prop, or returns `undefined` when no frame with that name is mounted. |
 
 ### Updates
@@ -844,8 +844,8 @@ await app.ready()
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `loadModule`                 | Required. Loads a client entry's module and returns the named export. Remix passes each module specifier unchanged.                                                            |
 | `processClientEntryPreloads` | Receives module preloads discovered in frame responses before they're added to the document. Return the URLs that should stay as native `<link rel="modulepreload">` elements. |
-| `resolveFrame`               | Fetches frame content for navigations and reloads. See [Frame Navigation](#frame-navigation).                                                                                  |
-| `prefetch`                   | Replaces the default prefetch for `data-rmx-prefetch` links and `prefetch()` calls. See [Frame Navigation](#frame-navigation).                                                 |
+| `resolveFrame`               | Fetches frame content for navigations and reloads. See [Frame Navigation](#frames).                                                                                            |
+| `prefetch`                   | Replaces the default prefetch for `data-rmx-prefetch` links and `prefetch()` calls. See [Frame Navigation](#frames).                                                           |
 
 The returned runtime emits `error` events for component errors, and has these members:
 
@@ -896,21 +896,78 @@ The initial document and HTML returned by `resolveFrame` are trusted application
 
 Remix passes each serialized module specifier unchanged to `loadModule`. The loader controls how it resolves that specifier, so client entries can use CDN URLs, development server URLs, or bare specifiers resolved through import maps or a custom loader. With `import(moduleUrl)`, relative specifiers resolve from the module containing that import, subject to the document's import map. Applications that restrict module sources should enforce that policy in their loader before importing code. The runtime's check that the returned export is a function happens after loading; it checks the component shape, not whether the module is trusted.
 
-## Frame Navigation
+## Frames
 
-The same runtime represents the current document as `app.frames.top` and intercepts eligible
-same-origin links and forms through the browser's Navigation API. Those navigations fetch HTML with
-the frame resolver and update the existing document in place instead of loading a new document.
-This soft-navigation behavior applies even when the page only uses `clientEntry()` and does not
-render an explicit `<Frame>`.
+`<Frame>` renders the HTML of another route into the current page. Without a `fallback`, the frame blocks until its content resolves. With one, the fallback renders first and the frame's content streams in when it's ready:
 
-Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElement`. Browsers
-missing either capability use document navigation for links, forms, and `navigate()`. Hydration and
-explicit frame reloads still work.
+```tsx
+import { Frame } from 'remix/component'
+import type { Handle } from 'remix/component'
 
-The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`; top-frame and unnamed frame requests omit the target. It only fetches same-origin sources and follows same-origin redirects.
+function AlbumPage(handle: Handle<{ albumId: string }>) {
+  return () => (
+    <main>
+      <h1>Album</h1>
+      <Frame
+        name="recommendations"
+        src={`/albums/${handle.props.albumId}/recommendations`}
+        fallback={<p>Loading recommendations…</p>}
+      />
+    </main>
+  )
+}
+```
 
-The default browser resolver omits `X-Remix-Top-Frame-Src`. When `render()` middleware handles these requests, the server-rendered `handle.frames.top.src` defaults to the requested frame's URL.
+| Prop       | Use                                                                               |
+| ---------- | --------------------------------------------------------------------------------- |
+| `src`      | Required. The URL whose HTML the frame renders and reloads.                       |
+| `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                |
+| `fallback` | Content to render while the frame is pending.                                     |
+| `on`       | Event handlers for events dispatched from the frame element, keyed by event type. |
+
+Frame content is itself rendered with `renderToStream`, so frames can contain other frames and client entries. The hydration data from nested frames is merged into the parent response automatically.
+
+Components reach frames through [`handle.frame` and `handle.frames`](#frames-from-components). Each frame handle has these members:
+
+| Member                   | Use                                                                                                                                       |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `frame.src`              | The source the next reload uses. Assigning it alone doesn't load content or change history.                                               |
+| `frame.reload(options?)` | Fetches the frame's source through the resolver and reconciles the result. See [Reloading Frames](#reloading-frames).                     |
+| `frame.replace(content)` | Renders trusted HTML, a byte stream, or a Remix node directly, without calling the resolver or changing the source. HTML isn't sanitized. |
+| `reloadStart` event      | Dispatched when a direct or ancestor-driven reload starts.                                                                                |
+| `reloadComplete` event   | Dispatched when reload processing ends, including after cancellation or failure.                                                          |
+
+### Nested Frames
+
+Frames can nest. Each frame owns its own region of the DOM and hydrates its client entries independently:
+
+```tsx
+import { Frame } from 'remix/component'
+
+function App() {
+  return () => <Frame src="/outer" fallback={<div>Loading outer...</div>} />
+}
+
+// The /outer route renders:
+function OuterFrame() {
+  return () => (
+    <div>
+      <h2>Outer</h2>
+      <Frame src="/inner" fallback={<div>Loading inner...</div>} />
+    </div>
+  )
+}
+```
+
+Nested frames stream independently. The outer frame can resolve and render while the inner frame is still loading.
+
+### Resolving Frames in the Browser
+
+`run()` installs a default frame resolver. It's used for `<Frame>` elements first rendered in the browser, `frame.reload()` calls, link navigations, and form navigations. Pending frames from the server response are filled in by the streamed HTML, not the resolver. A normal browser document load doesn't use the resolver either.
+
+The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`. Top-frame and unnamed frame requests omit the target, so give a frame a name when its route needs to tell it apart. The route decides whether to return a full document or a fragment.
+
+The default resolver omits `X-Remix-Top-Frame-Src`. When `render()` middleware handles these requests, the server-rendered `handle.frames.top.src` defaults to the requested frame's URL. Same-origin subrequests created by a `render()` middleware render carry its top-frame source to nested renders. If frame content depends on the containing page, include that context explicitly in the frame's `src`.
 
 The default resolver is equivalent to:
 
@@ -972,36 +1029,29 @@ function normalizeLineBreaks(value) {
 }
 ```
 
-The default resolver requests HTML. GET form values are already encoded in `src`;
-`application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use
-CRLF-delimited text, and `multipart/form-data` submissions use `FormData`. Pass a custom
-`resolveFrame` when the server requires additional headers, another body encoding, or a different
-response policy.
+- GET form values are already encoded in `src`. `application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use CRLF-delimited text, and `multipart/form-data` submissions use `FormData`.
+- It accepts `2xx` responses, and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text.
+- It uses the `same-origin` Fetch mode, so cross-origin sources and redirects fail, even when the destination allows CORS.
 
-Scroll and focus controls accept the Navigation API values `"after-transition"` (the default) and `"manual"`. Set `data-rmx-reset-scroll="manual"` or `data-rmx-reset-focus="manual"` on a link or form to disable the corresponding automatic behavior. The equivalent options for `navigate()` and `link()` are `resetScroll: 'manual'` and `resetFocus: 'manual'`:
+Pass a custom `resolveFrame` to `run()` when the server requires additional headers, another body encoding, or a different response policy. A custom resolver can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it. When `fetch()` followed a redirect, frames other than the top frame render the response without changing either URL.
 
-```tsx
-<a href="/search?page=2" data-rmx-reset-scroll="manual" data-rmx-reset-focus="manual">
-  Next page
-</a>
-```
+### Link and Form Navigation
 
-Existing boolean options and `"true"` / `"false"` attribute values remain supported: `true` corresponds to `"after-transition"` and `false` to `"manual"`.
+The runtime represents the current document as `app.frames.top` and intercepts eligible same-origin links and forms through the browser's Navigation API. Those navigations fetch HTML with the frame resolver and update the existing document in place instead of loading a new document. This applies even when the page only uses `clientEntry()` and doesn't render an explicit `<Frame>`.
 
-Add `data-rmx-document` to a link or form to leave that navigation to the browser. To keep all links
-and forms as document navigations while still hydrating client entries and using explicit frames,
-register a listener before calling `run()`:
+Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElement`. Browsers missing either capability use document navigation for links, forms, and `navigate()`. Hydration and explicit frame reloads still work.
 
-```ts
-window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagation())
-```
+Links and forms remain ordinary HTML elements before the runtime starts. These attributes change how the runtime handles them:
 
-This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as
-`handle.frame.reload()` continue to use the frame resolver.
-
-The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom `resolveFrame` may return a `Response` with any status when it wants the component runtime to render the response body.
-
-Links and forms remain ordinary HTML elements before the runtime starts. Use `data-rmx-target` to reload a named frame, `data-rmx-src` to fetch a different same-origin URL for that named frame while keeping `href` or `action` as the browser destination, or `data-rmx-document` to force a full-document navigation:
+| Attribute                        | Effect                                                                                                                                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `data-rmx-target="name"`         | Reloads the named frame instead of navigating the page.                                                                                                            |
+| `data-rmx-src="url"`             | Fetches a different same-origin URL for the targeted frame, while `href` or `action` stays the browser destination.                                                |
+| `data-rmx-document`              | Leaves the navigation to the browser as a full document load.                                                                                                      |
+| `data-rmx-history`               | `push` or `replace`. Controls how the navigation updates history, and can override the automatic replacement used for non-GET form submissions to the current URL. |
+| `data-rmx-reset-scroll="manual"` | Disables the automatic scroll reset.                                                                                                                               |
+| `data-rmx-reset-focus="manual"`  | Disables the automatic focus reset.                                                                                                                                |
+| `data-rmx-prefetch`              | `intent` or `viewport`. Starts loading the destination early. See [Prefetching](#prefetching).                                                                     |
 
 ```tsx
 import { Frame } from 'remix/component'
@@ -1020,9 +1070,29 @@ function AccountPage() {
 }
 ```
 
-Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
+- Every `data-rmx-src` override must resolve to the document origin, using `document.baseURI` for relative URLs.
+- Browsers ignore `data-rmx-history` without the client runtime and use their normal history behavior.
+- Scroll and focus controls accept the Navigation API values `"after-transition"` (the default) and `"manual"`. The equivalent options for `navigate()` and `link()` are `resetScroll: 'manual'` and `resetFocus: 'manual'`. Boolean options and `"true"`/`"false"` attribute values are still supported, where `true` means `"after-transition"` and `false` means `"manual"`.
 
-Reload another source or send a request body without changing browser history:
+Forms keep native behavior:
+
+- Constraint validation still runs before submission.
+- Submitter overrides such as `formmethod`, `formenctype`, and `formtarget` take precedence over the form's attributes.
+- Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.
+- GET form values arrive in `src`. Non-GET forms pass `formData`, `method`, and `encType` to the resolver.
+- Non-GET `FormData` is used only for the active request and isn't kept in history.
+
+To keep every link and form as a document navigation while still hydrating client entries and using explicit frames, register a listener before calling `run()`:
+
+```ts
+window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagation())
+```
+
+This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as `handle.frame.reload()` still use the frame resolver.
+
+### Reloading Frames
+
+`frame.reload()` fetches the frame's source again. Pass options to reload another source or send a request body without changing browser history:
 
 ```tsx
 await handle.frame.reload({ src: '/account/edit' })
@@ -1036,17 +1106,126 @@ await handle.frame.reload({
 })
 ```
 
-`src` becomes the source for subsequent reloads. Pass `FormData` as `body` to submit fields. The method defaults to GET, which encodes the fields into the source query. POST defaults to `application/x-www-form-urlencoded`; use `encType` to select `multipart/form-data` or `text/plain`. Methods and encodings are case-insensitive; unsupported values use the defaults. See [Reload requests](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#reload-requests) for request and cancellation behavior.
+- `src` becomes the source for later reloads.
+- Pass `FormData` as `body` to submit fields. Omitting `body` sends no request body, including on later reloads after a POST.
+- The method defaults to GET. For GET reloads, the fields replace the source's query. Repeated fields and the URL fragment are preserved, and the resulting URL becomes the source for later reloads.
+- POST defaults to `application/x-www-form-urlencoded`. Use `encType` to select `multipart/form-data` or `text/plain`. For `multipart/form-data`, Fetch generates the boundary. URL-encoded and plain-text submissions use file names in place of file contents and normalize line breaks to CRLF.
+- Methods and encodings are case-insensitive, and unsupported values use the defaults.
+- Each reload makes one resolver request. Custom resolvers receive the requested `src`, `method`, and `signal`, plus `formData` and a normalized `encType` for POST.
+- Redirect responses render their final content without changing the frame's requested source or the browser URL.
+- A newer reload cancels earlier client work for that frame, including pending requests and streamed content. Cancelling client work can't undo a mutation the server has already performed.
 
-Use `data-rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
+Reloads don't run constraint validation or dispatch a submit event. To reload with a form's values, validate and build the form data yourself:
 
-Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. Remix fetches its HTML to discover JavaScript, CSS, and explicit image and font preloads for asset prefetch hints. Navigation uses the default resolver and browser HTTP cache; even uncacheable HTML can reveal cacheable assets. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for trigger details, caching behavior, and custom strategies.
+```tsx
+if (form.reportValidity()) {
+  await handle.frame.reload({
+    src: form.action,
+    method: form.method,
+    encType: form.enctype,
+    body: new FormData(form, saveButton),
+  })
+}
+```
 
-Named-frame links with `data-rmx-target` are supported, including `data-rmx-src` overrides. Prefetching uses the selected frame's source and sends its target, matching the eventual frame request.
+### Prefetching
 
-Automatic link prefetching is skipped when the browser reports Save-Data or an effective connection type of `slow-2g` or `2g`. Imperative `prefetch()` calls remain available regardless of these settings.
+Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. Remix fetches the page's HTML to discover JavaScript, CSS, and explicit image and font preloads, and adds prefetch hints for those assets. Navigation uses the default resolver and the browser HTTP cache, and even uncacheable HTML can reveal cacheable assets.
 
-You can implement other prefetch triggers in userland with the imperative `prefetch()` API from `remix/component`, such as prefetching a search result as the visitor types. Call `prefetch(src, { target: 'details' })` to prefetch content for a named frame.
+Use the imperative `prefetch()` API from `remix/component` for other triggers, such as prefetching a search result as the visitor types. Call `prefetch(src, { target: 'details' })` to prefetch content for a named frame.
+
+**When prefetching starts:**
+
+- Intent prefetching starts when the visitor rests the pointer or keyboard focus on the link for 100ms, or presses it. A press starts prefetching immediately, including touch and pen presses.
+- Hover and focus are tracked independently. Moving between children of a link, pressing it after its prefetch starts, or focusing it while it's hovered doesn't repeat the prefetch. Leaving the link with both the pointer and focus ends that interaction, and returning can prefetch again.
+- Viewport links prefetch once while mounted with the same normalized frame source and target. Leaving and reentering the viewport, hovering, focusing, or pressing them doesn't repeat the prefetch. Changing the requested source or target makes a link eligible again. Changing only a fragment, or changing `href` while a named frame's source override stays the same, doesn't. Removing and later mounting a link also makes it eligible again.
+- Remix uses one `IntersectionObserver` and one `MutationObserver` to track links, including links added by streaming, frame navigation, or client rendering. Disposing the runtime disconnects both. Browsers without `IntersectionObserver` skip viewport prefetching but keep intent and imperative prefetching.
+
+**What's skipped:**
+
+- Links with `data-rmx-document`, `download`, or a `target` other than `_self`. Both the destination and any `data-rmx-src` override must resolve to the document origin.
+- Automatic prefetching when the browser reports Save-Data or an effective connection type of `slow-2g` or `2g`. This check runs when a trigger fires and doesn't cancel prefetches already in progress. Browsers without `navigator.connection` prefetch normally. Imperative `prefetch()` calls ignore these settings.
+- Named-frame links whose frame isn't mounted. Prefetching uses the selected frame's source and sends its target, matching the eventual frame request. Without a nonempty target, a `data-rmx-src` override is ignored and `href` is prefetched.
+
+**What's fetched:**
+
+By default, Remix fetches the frame source with GET, a `priority: 'low'` hint, and the same `Accept: text/html` and `X-Remix-Frame: true` headers as a frame navigation, plus `X-Remix-Target` for named frames. It reads the response into an inert template and discovers explicit JavaScript and CSS URLs and `<link rel="preload" as="image|font" href="…">` declarations, including resources inside nested frame templates. It adds ordinary `<link rel="prefetch" as="script|style|image|font">` hints for assets that aren't already active in the document. These hints don't run scripts, apply styles, install import maps, or follow module dependencies. They stay connected through frame navigation and are removed on load, error, or runtime disposal.
+
+Declare important destination images and fonts with preload links to include them in discovery:
+
+```html
+<link rel="preload" as="image" href="/images/product-hero.jpg" />
+<link rel="preload" as="font" href="/fonts/body.woff2" type="font/woff2" crossorigin />
+```
+
+Image and font preload links must have an explicit `href` and a matching `media` condition, if specified. Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix keeps that setting on the prefetch hint. It skips image declarations with `imagesrcset`, because ordinary prefetch hints can't select a responsive image candidate. It doesn't scan `<img>` elements or parse CSS `@font-face` rules.
+
+**Caching:**
+
+The fetched HTML is discarded. Navigation uses the normal frame resolver and browser HTTP cache. Matching fresh responses can be reused, `no-cache` responses revalidate, and `no-store` responses are fetched again. Asset discovery still works for `no-store` HTML because assets have their own cache policies. Reusing responses requires appropriate HTTP caching headers, such as `Cache-Control: private, max-age=30`, and matching request variants selected by `Vary`.
+
+Remix deduplicates pending HTML discovery by source and target, and asset hints across frame requests, but keeps no cache of completed responses. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary` when making those responses cacheable. An early navigation starts its normal fetch independently of discovery, and request sharing is up to the browser. Asset prefetches are hints and may be deferred or ignored. Browsers without link-prefetch support skip asset hints but still fetch HTML. Discovery waits for the full HTML body and doesn't follow JavaScript imports, CSS imports, or CSS images and fonts.
+
+To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next GET request with the same source and target. The app provides `fetchFrame(src, options)` to handle frame headers, submissions, cancellation, and response handling, and owns the lifetime and invalidation of any responses it keeps:
+
+```ts
+import { run } from 'remix/component'
+
+let prefetched = new Map<string, Promise<Response>>()
+
+function frameKey(src: string, target?: string) {
+  let url = new URL(src, document.baseURI)
+  url.hash = ''
+  return JSON.stringify([url.href, target])
+}
+
+run({
+  loadModule,
+  prefetch(src, options) {
+    prefetched.set(frameKey(src, options?.target), fetchFrame(src, options))
+  },
+  resolveFrame(src, options) {
+    let isGet = !options?.method || options.method.toUpperCase() === 'GET'
+    let response = isGet ? prefetched.get(frameKey(src, options?.target)) : undefined
+    prefetched.clear()
+    return response ?? fetchFrame(src, options)
+  },
+})
+```
+
+### Preserving Client-Owned DOM
+
+Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong to client code after the initial render, such as a custom element or third-party widget:
+
+```tsx
+<pagefind-ui data-rmx-key="search" data-rmx-preserve-dom>
+  <button type="button">Search</button>
+</pagefind-ui>
+```
+
+- The runtime still renders the element's children during server rendering and hydrates any initial client entries inside it. The attribute only affects later frame reloads. When incoming frame HTML has `data-rmx-preserve-dom` on a matched element, the runtime keeps that element's current attributes and children instead of applying incoming changes below it.
+- Add `data-rmx-key` when the element can move among siblings, so reloads match the same live element before falling back to matching by position.
+- Avoid wrapping Remix-owned UI that should keep receiving server-driven frame updates. A client entry inside `data-rmx-preserve-dom` hydrates from the initial HTML, but later frame reloads won't patch new server-rendered children or props through the preserved element. Put the client entry outside the preserved element when it needs future frame data, or put `data-rmx-preserve-dom` inside the client entry around only the imperative DOM.
+
+### Preserving Client-Owned Attributes
+
+Use `data-rmx-preserve-attrs` when client code owns only specific attributes, such as a theme set on `<html>`:
+
+```html
+<html lang="en" data-rmx-preserve-attrs="data-theme"></html>
+```
+
+- On frame reloads, the space-separated attribute names in the incoming HTML keep their live values, or their absence. Other attributes and children reconcile normally.
+- Each listed attribute is preserved as a whole, so listing `class` keeps all of its current tokens without merging server classes.
+- Removing a name from the incoming list returns that attribute to normal reconciliation immediately. An empty or omitted list uses normal reconciliation.
+- It works on any matched element, but doesn't prevent removal or replacement, and doesn't preserve descendants. Initial rendering and hydration are unchanged.
+
+### Frame Lifecycle
+
+1. **Server render:** Frame content is resolved through `renderToStream`'s `resolveFrame` option and streamed into the HTML. Frame metadata is stored in the `rmx-data` script.
+2. **Client boot:** `run()` discovers frame boundaries, hydrates the client entries inside them, and watches any frames still streaming.
+3. **Reload:** `frame.reload()` fetches the frame's `src`, reconciles the new content into the DOM, and passes updated props to the client entries inside it.
+4. **Dispose:** When a frame is removed, such as by a parent render, its client entries are cleaned up and nested frames are disposed recursively.
 
 ## Single-page Applications
 
@@ -1075,26 +1254,6 @@ The optional `fallback` is a live Remix node displayed while the initial route l
 `app.ready()` resolves after the initial URL has replaced it with the routed node. The runtime then
 reuses frame navigation for same-origin links, forms, history traversal, redirects, cancellation,
 and `rmx-target`.
-
-## Preserving Client-Owned DOM
-
-Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong to client code after initial render, such as a custom element or third-party widget:
-
-```tsx
-<pagefind-ui data-rmx-key="search" data-rmx-preserve-dom>
-  <button type="button">Search</button>
-</pagefind-ui>
-```
-
-The component runtime still renders the element's children during SSR and still hydrates any initial client entries inside it. On later frame reloads, matched `data-rmx-preserve-dom` elements keep their current attributes and children instead of accepting incoming DOM updates. See [Preserving client-owned DOM](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#preserving-client-owned-dom) for guidance and caveats.
-
-Use `data-rmx-preserve-attrs` when client code owns only specific attributes, such as a theme set on `<html>`:
-
-```html
-<html lang="en" data-rmx-preserve-attrs="data-theme"></html>
-```
-
-On frame reloads, the space-separated attribute names in the incoming HTML keep their live values or absence. Other attributes and children reconcile normally. An empty or omitted list uses normal attribute reconciliation. This works on any matched element; it does not prevent removal or replacement. See [Preserving client-owned attributes](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#preserving-client-owned-attributes) for examples and ownership rules.
 
 ## Raw HTML with unsafeHTML
 
