@@ -1100,5 +1100,5 @@ Consume the semantic event with `on(...)` like any other DOM event:
 ```
 
 Namespace custom event names to avoid collisions, and keep one-off behavior in the component that
-uses it. The [`remix/component` API overview](../src/component/README.md) covers the full
+uses it. The [`remix/component` mixins reference](../src/component/README.md#mixins) covers the full
 mixin API.

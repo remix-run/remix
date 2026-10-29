@@ -310,6 +310,60 @@ function ReorderableList(handle: Handle) {
 
 Keys can be strings, numbers, or bigints, and must be unique among siblings. Use stable IDs from your data. An array index works only if the list never reorders, and a value created during render, such as `Math.random()`, makes every render look like a new item.
 
+## Events
+
+`on(type, handler, capture?)` is a mixin that attaches a DOM event listener to its host. The event type is checked against the host element, and `event.currentTarget` is typed as that element:
+
+```tsx
+import { on } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+function AlbumSearch(handle: Handle<{ searchHref: string }>) {
+  let results: string[] = []
+  let error: string | undefined
+
+  return () => (
+    <div>
+      <input
+        type="search"
+        aria-label="Search albums"
+        mix={on('input', async (event, signal) => {
+          let url = new URL(handle.props.searchHref, window.location.href)
+          url.searchParams.set('query', event.currentTarget.value)
+
+          try {
+            let response = await fetch(url, { signal })
+            let data: { results: string[] } = await response.json()
+            if (signal.aborted) return
+            results = data.results
+            error = undefined
+          } catch {
+            if (signal.aborted) return
+            error = 'Search failed'
+          }
+          handle.update()
+        })}
+      />
+      {error ? <p role="alert">{error}</p> : null}
+      <ul>
+        {results.map((result) => (
+          <li key={result}>{result}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+- The handler's second argument is an `AbortSignal` that is aborted when the same handler runs again or its element is removed. Pass it to `fetch()` so a newer event cancels the older work.
+- Remix doesn't handle a rejected async handler, and aborting a `fetch()` rejects it. Catch errors inside async handlers and check `signal.aborted` before using the result.
+- Passing a new handler function on every render doesn't re-add the listener. Remix calls the latest handler and only rebinds when the event type or capture flag changes.
+- Pass `true` as the third argument to listen during the capture phase.
+- Several `on()` mixins for the same event run in `mix` order, so `event.stopImmediatePropagation()` in one handler skips the handlers after it.
+- `on()` does nothing during server rendering.
+
+To listen for your own events with full types, declare them on `HTMLElementEventMap`. See [Custom Events](#custom-events).
+
 ## Styling
 
 `css(...)` turns a style object into a generated class and applies it through `mix`. The object mirrors CSS nesting:
@@ -460,11 +514,77 @@ For imported stylesheets, assign the layer in the import when your build support
 @import './base.css' layer(base);
 ```
 
-## Custom Mixins
+## Mixins
 
-Use `createMixin(...)` to share host behavior, manage DOM resources, or provide default props. The [Mixins guide](https://github.com/remix-run/remix/blob/main/packages/component/docs/mixins.md) covers setup and render, `MixinHandle`, lifecycle events, and deferred removal with `beforeRemove` and `event.persistNode(...)`.
+Mixins add behavior, attributes, and styles to a single host element through the `mix` prop. Pass one mixin, or an array that runs in order:
 
-For behavior that does not affect server HTML, pass `{ ssr: false }` to skip setup and render on the server:
+```tsx
+<button type="button" mix={[buttonStyle, on('click', save)]}>
+  Save
+</button>
+```
+
+Remix includes these mixins, and [`createMixin()`](#custom-mixins) creates your own:
+
+| Mixin                         | Use                                                                                                                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `on(type, handler, capture?)` | Attaches an event listener. See [Events](#events).                                                                                                                                                      |
+| `ref(callback)`               | Calls `callback(node, signal)` when the element is inserted and aborts `signal` when it's removed. It doesn't run again on later renders, or when a keyed element is reclaimed before removal finishes. |
+| `attrs(defaults)`             | Supplies default props. Each default applies only while the element's own value for that prop is `undefined`.                                                                                           |
+| `link(href, options?)`        | Adds client navigation to an element, with link semantics for elements that aren't anchors.                                                                                                             |
+| `css(styles)`                 | Applies a generated class. See [Styling](#styling).                                                                                                                                                     |
+
+### Custom Mixins
+
+`createMixin(setup, options?)` creates a mixin factory. `setup` runs once per mixin slot on a host, and can return a render function that receives the factory's arguments followed by the host's current props:
+
+```tsx
+import { createMixin, on } from 'remix/component'
+
+const clickCount = createMixin<HTMLElement, [label: string]>((handle) => {
+  let count = 0
+
+  return (label) => (
+    <handle.element
+      aria-label={`${label}: ${count} clicks`}
+      mix={on('click', () => {
+        count++
+        handle.update()
+      })}
+    />
+  )
+})
+
+function SaveButton() {
+  return () => (
+    <button type="button" mix={clickCount('Save')}>
+      Save
+    </button>
+  )
+}
+```
+
+- Return `<handle.element />` with the props to add or override. They're merged over the host's current props, so there's no need to spread them. Return `handle.element` itself to leave the props unchanged.
+- Mixins run in order, and each one sees the props produced by the mixins before it.
+- Create mixin factories at module scope, and keep the order of mixins stable. Changing the setup function in a slot disposes that mixin and sets up its replacement.
+- Setup and render run during server rendering by default. Put DOM access in lifecycle listeners or `handle.queueTask()`, which only run in the browser.
+
+The mixin handle has its own API:
+
+| Member                    | Use                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `handle.element`          | The host element to return from render, to forward props, patch attributes, or add nested mixins. |
+| `handle.update()`         | Renders the host's mixins again without rendering the owner component.                            |
+| `handle.queueTask(task)`  | Runs `task(node, signal)` after pending DOM updates and commit callbacks.                         |
+| `handle.signal`           | Aborted when this mixin slot is disposed, even if the host stays mounted.                         |
+| `handle.id`               | An ID shared by the mixins bound to this host.                                                    |
+| `handle.context`          | Reads context provided by an ancestor component.                                                  |
+| `handle.frame`            | The frame containing the host.                                                                    |
+| `handle.addEventListener` | Registers [lifecycle event](#lifecycle-events) listeners.                                         |
+
+### Browser-Only Mixins
+
+For behavior that doesn't affect server HTML, pass `{ ssr: false }` to skip setup and render on the server. The browser still initializes the mixin as usual, including during hydration:
 
 ```tsx
 import { createMixin } from 'remix/component'
@@ -476,6 +596,184 @@ const focusOnInsert = createMixin<HTMLElement>(
   { ssr: false },
 )
 ```
+
+- Only use `ssr: false` when skipping the mixin still leaves correct server HTML. Keep server rendering for mixins that supply initial attributes, ARIA props, styles, or nested mixins that affect the HTML. A server-rendered mixin can still return browser-only mixins, and the server skips those too.
+- Options are read when the factory is created.
+- The module containing the mixin, and the arguments passed to its factory, still run on the server. `ssr: false` skips setup and render, not the module.
+- The built-in `on` and `ref` mixins use this option, because their work only runs in the browser.
+
+### Lifecycle Events
+
+Register lifecycle listeners in the setup function:
+
+```tsx
+import { createMixin } from 'remix/component'
+
+const observeSize = createMixin<HTMLElement>((handle) => {
+  let observer: ResizeObserver | undefined
+
+  handle.addEventListener('insert', (event) => {
+    observer = new ResizeObserver(([entry]) => {
+      console.log(entry.contentRect.width, entry.contentRect.height)
+    })
+    observer.observe(event.node)
+  })
+
+  handle.addEventListener('remove', () => {
+    observer?.disconnect()
+  })
+})
+```
+
+| Event          | When it fires                                                                                                          | Event fields                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `insert`       | After the mixin binds to its host, in the commit phase. This also runs when adding a mixin to an already-mounted host. | `node`, `parent`, optional `key` |
+| `beforeUpdate` | Before DOM changes in the host's update scope. Use it to measure the previous layout.                                  | `node`                           |
+| `commit`       | After DOM changes in the host's update scope. Use it to measure the new layout.                                        | `node`                           |
+| `beforeRemove` | When host removal begins, while a mixin can still defer it.                                                            | `persistNode(callback)`          |
+| `reclaimed`    | When a persisted keyed host returns before removal completes.                                                          | `node`, `parent`, optional `key` |
+| `remove`       | When the mixin is disposed. This also runs when the mixin is removed or replaced while its host stays mounted.         | Standard `Event` fields          |
+
+`beforeUpdate` and `commit` concern the containing update scope, so they can run when another element's update affects this host's layout. They are not a notification that this mixin's arguments changed.
+
+`beforeRemove` and `remove` have different jobs. Register work that delays host removal in `beforeRemove`. Release resources in `remove`, which marks final disposal of the mixin slot. It is a cleanup notification, not a guarantee that the host has already been detached. Removing only a mixin from `mix` does not remove its host or provide a `persistNode` opportunity.
+
+### Deferring Removal with `persistNode`
+
+For ordinary exit animations, use [`animateExit`](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) from `remix/ui/animation`. Custom mixins can use the same underlying lifecycle API when they need control over teardown:
+
+```tsx
+import { createMixin } from 'remix/component'
+
+const fadeOut = createMixin<HTMLElement>((handle) => {
+  let node: HTMLElement
+
+  handle.addEventListener('insert', (event) => {
+    node = event.node
+  })
+
+  handle.addEventListener('beforeRemove', (event) => {
+    event.persistNode(async (signal) => {
+      if (signal.aborted) return
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+      let animation = node.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: 150,
+        fill: 'forwards',
+      })
+      let cancel = () => animation.cancel()
+      signal.addEventListener('abort', cancel, { once: true })
+
+      try {
+        await animation.finished
+      } finally {
+        signal.removeEventListener('abort', cancel)
+        animation.cancel()
+      }
+    })
+  })
+})
+
+function Notice() {
+  return () => (
+    <p key="notice" mix={fadeOut()}>
+      Settings saved.
+    </p>
+  )
+}
+```
+
+When a later render removes the paragraph, `beforeRemove` fires while the node is still present. A thrown error or rejected promise from one callback does not prevent the other callbacks from running. Handle or report errors inside your callback if they matter to your application.
+
+The event only accepts a callback. Making the `beforeRemove` listener itself `async`, returning a promise from it, or calling `preventDefault()` does not defer removal.
+
+If the same keyed host type returns under the same DOM parent before teardown finishes, Remix can reuse the persisted DOM node. An abort signal does not cancel a promise or animation by itself.
+
+Without reclamation, `beforeRemove` runs first, then the teardown callbacks settle, and Remix finishes host removal and dispatches `remove` for cleanup. Persistence does not require a key, but reclamation does. Persist the outermost element being removed: persisting a descendant does not keep a removed ancestor's subtree mounted. Ancestor teardown can abort a descendant's pending removal work.
+
+### Custom Events
+
+An event mixin turns several low-level events into one semantic event. Define an event class, declare its type on `HTMLElementEventMap` so `on()` can type it, and dispatch it from the host:
+
+```tsx
+import { createMixin, on } from 'remix/component'
+
+export const dragReleaseType = 'myapp:drag-release' as const
+
+declare global {
+  interface HTMLElementEventMap {
+    [dragReleaseType]: DragReleaseEvent
+  }
+}
+
+export class DragReleaseEvent extends Event {
+  velocityX: number
+  velocityY: number
+
+  constructor(init: { velocityX: number; velocityY: number }) {
+    super(dragReleaseType, { bubbles: true })
+    this.velocityX = init.velocityX
+    this.velocityY = init.velocityY
+  }
+}
+
+export const dragRelease = createMixin<HTMLElement>((handle) => {
+  let tracking = false
+  let velocityX = 0
+  let velocityY = 0
+  let lastX = 0
+  let lastY = 0
+  let lastTime = 0
+
+  return () => (
+    <handle.element
+      mix={[
+        on('pointerdown', (event) => {
+          if (!event.isPrimary) return
+          tracking = true
+          lastX = event.clientX
+          lastY = event.clientY
+          lastTime = event.timeStamp
+          velocityX = 0
+          velocityY = 0
+          event.currentTarget.setPointerCapture(event.pointerId)
+        }),
+        on('pointermove', (event) => {
+          if (!tracking) return
+          let elapsed = Math.max(1, event.timeStamp - lastTime)
+          velocityX = (event.clientX - lastX) / elapsed
+          velocityY = (event.clientY - lastY) / elapsed
+          lastX = event.clientX
+          lastY = event.clientY
+          lastTime = event.timeStamp
+        }),
+        on('pointerup', (event) => {
+          if (!tracking) return
+          tracking = false
+          event.currentTarget.dispatchEvent(new DragReleaseEvent({ velocityX, velocityY }))
+        }),
+      ]}
+    />
+  )
+})
+```
+
+Consumers listen for it like any DOM event:
+
+```tsx
+<div
+  mix={[
+    dragRelease(),
+    on(dragReleaseType, (event) => {
+      console.log(event.velocityX, event.velocityY)
+    }),
+  ]}
+/>
+```
+
+- Namespace event names, such as `myapp:drag-release`, to avoid collisions.
+- Put the data consumers need on the event object.
+- Keep state the gesture needs in setup scope, and clean up timers and global listeners in a `remove` listener.
 
 ## Client Entry Loading
 
