@@ -709,46 +709,6 @@ describe('vnode mixins', () => {
     pending.resolve()
   })
 
-  it('places reclaimed keyed items in their requested order alongside new items', (t) => {
-    let retained = createMixin((handle) => {
-      handle.addEventListener('beforeRemove', (event) => {
-        event.persistNode(
-          (signal) =>
-            new Promise<void>((resolve) => {
-              signal.addEventListener('abort', () => resolve(), { once: true })
-            }),
-        )
-      })
-      return () => handle.element
-    })
-    let container = document.createElement('div')
-    let root = createRoot(container)
-    t.after(() => root.dispose())
-    function list(items: string[]) {
-      return (
-        <ul>
-          {items.map((item) => (
-            <li key={item} mix={retained()}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      )
-    }
-    root.render(list(['B', 'C']))
-    root.flush()
-    let originalB = container.querySelector('li')
-    let originalC = container.querySelector('li:last-child')
-    root.render(list([]))
-    root.flush()
-    root.render(list(['A', 'B', 'C']))
-    root.flush()
-    let items = [...container.querySelectorAll('li')]
-    expect(items.map((item) => item.textContent)).toEqual(['A', 'B', 'C'])
-    expect(items[1]).toBe(originalB)
-    expect(items[2]).toBe(originalC)
-  })
-
   it('notifies retained mixins before patching props on a reclaimed host', (t) => {
     let exiting = false
     let updates = 0

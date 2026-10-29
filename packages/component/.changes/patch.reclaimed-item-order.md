@@ -1,1 +1,0 @@
-Returning keyed elements retained by `persistNode()` now appear in their requested DOM order alongside newly inserted siblings. Previously, restoring a list during exit animations could leave returning items ahead of new items, even when the rendered order placed them later.
