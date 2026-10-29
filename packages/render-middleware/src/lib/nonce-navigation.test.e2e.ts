@@ -6,12 +6,21 @@ import { csp, getCspNonce } from '@remix-run/csp-middleware'
 import { createRouter } from '@remix-run/fetch-router'
 import { createTestServer } from '@remix-run/node-fetch-server/test'
 import { describe, it } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 import { fileURLToPath } from 'node:url'
 
 import { render } from '../index.ts'
 
 describe('CSP navigation', () => {
   it('updates authorized styles and keeps scripts inert across frame reloads under an HTTP policy', async (t) => {
+    await exerciseNavigation(t, false)
+  })
+
+  it('updates authorized styles and keeps scripts inert across frame reloads with strict-dynamic', async (t) => {
+    await exerciseNavigation(t, true)
+  })
+
+  async function exerciseNavigation(t: TestContext, strictDynamic: boolean) {
     let assets = createAssetServer({
       rootDir: fileURLToPath(new URL('../../../../', import.meta.url)),
       basePath: '/assets',
@@ -43,7 +52,7 @@ describe('CSP navigation', () => {
             defaultSrc: ["'none'"],
             connectSrc: ["'self'"],
             imgSrc: ["'self'"],
-            scriptSrc: ["'self'", `'nonce-${nonce}'`],
+            scriptSrc: [strictDynamic ? "'strict-dynamic'" : "'self'", `'nonce-${nonce}'`],
             styleSrc: [`'nonce-${nonce}'`, "'report-sample'"],
             reportUri: ['/csp-report'],
           }),
@@ -322,5 +331,5 @@ describe('CSP navigation', () => {
     let violations: string[] = await page.evaluate(() => Reflect.get(globalThis, 'styleViolations'))
     assert.equal(violations.length, 2)
     assert.ok(reports > 0)
-  })
+  }
 })

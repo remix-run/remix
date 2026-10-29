@@ -39,7 +39,8 @@
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",
-    "@remix-run/node-fetch-server": "workspace:^"
+    "@remix-run/node-fetch-server": "workspace:^",
+    "@remix-run/multiple-import-maps-polyfill": "workspace:^"
   },
   "dependencies": {
     "@remix-run/assets": "workspace:^",

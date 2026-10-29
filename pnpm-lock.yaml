@@ -2001,6 +2001,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/multiple-import-maps-polyfill':
+        specifier: workspace:^
+        version: link:../multiple-import-maps-polyfill
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../node-fetch-server
