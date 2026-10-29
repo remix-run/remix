@@ -5,7 +5,7 @@ Content Security Policy middleware for Remix. It generates a request nonce for h
 ## Features
 
 - Static policies or a per-request policy factory
-- Enforced or report-only policy headers
+- Enforced and report-only policies side by side, sharing one nonce
 - Named reporting endpoints for policy violation reports
 - HTML-only default with custom response filtering
 - Cryptographically random nonces shared with internal frame renders
@@ -58,7 +58,7 @@ router.get('/', (context) =>
 router.get('/activity', (context) => context.render(<p>Recent activity</p>))
 ```
 
-The required `policy` may be static or a sync/async factory receiving `{ nonce, context }`. Before the factory or downstream handlers run, `csp()` establishes a base64-encoded nonce with 128 random bits from `crypto.getRandomValues()`.
+`policy` may be static or a sync/async factory receiving `{ nonce, context }`; `reportOnly` takes the same forms (see [Report-only policies](#report-only-policies)). At least one of them is required. Before the factory or downstream handlers run, `csp()` establishes a base64-encoded nonce with 128 random bits from `crypto.getRandomValues()`.
 
 Inferred directive objects and factory returns reject unknown directive names without annotations. For shared factories, `satisfies CspPolicyFactory` preserves this check; annotations that erase extra keys prevent `csp()` from detecting them.
 
@@ -74,25 +74,35 @@ csp({
 })
 ```
 
-The `policy` option also accepts a `ContentSecurityPolicy` instance or a serialized single-policy string. The middleware adds no default directives and does not automatically insert nonce sources into your rules. Include them in the factory when your policy requires them.
+The `policy` and `reportOnly` options also accept a `ContentSecurityPolicy` instance or a serialized single-policy string. The middleware adds no default directives and does not automatically insert nonce sources into your rules. Include them in the factory when your policy requires them.
 
 ## Report-only policies
 
-Set `reportOnly: true` to monitor violations using `Content-Security-Policy-Report-Only`, and pair `reportTo` with a named `Reporting-Endpoints` entry:
+`reportOnly` is a policy, not a mode switch. It is sent as `Content-Security-Policy-Report-Only` alongside the enforced `policy`, so you can keep enforcing what already works while trialling stricter directives. Pair `reportTo` with a named `Reporting-Endpoints` entry to receive violation reports:
 
 ```ts
 csp({
-  policy: { defaultSrc: ["'self'"], reportTo: 'csp' },
-  reportOnly: true,
+  policy({ nonce }) {
+    return {
+      defaultSrc: ["'self'"],
+      scriptSrc: [`'nonce-${nonce}'`],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    }
+  },
+  reportOnly({ nonce }) {
+    return { styleSrc: [`'nonce-${nonce}'`], reportTo: 'csp' }
+  },
   reportingEndpoints: { csp: '/csp-reports' },
 })
 ```
+
+Here scripts are restricted to the nonce, while the stricter nonce-only `style-src` is monitored first. Both factories receive the same request nonce. To monitor a whole policy before enforcing anything, pass only `reportOnly`.
 
 `reportingEndpoints` maps names to absolute or relative URLs. The example emits `Reporting-Endpoints: csp="/csp-reports"`. `reportTo` names one endpoint; the application provides the receiving route. The `reportUri` directive supports legacy reporting.
 
 Configured endpoint names override matching downstream entries; other entries are retained. Names must be structured field keys, and URLs must use printable ASCII. Browsers resolve relative URLs against the response URL and require potentially trustworthy endpoints. See the [Reporting API specification](https://www.w3.org/TR/reporting-1/#header).
 
-Enforcement is the default. Separate `csp()` instances can enforce one policy and monitor another while sharing a nonce. Existing CSP headers are preserved as separate policies; browsers apply each policy independently.
+Separate `csp()` instances also share the request nonce, so policies can be split across middleware layers. Existing CSP headers are preserved as separate policies; browsers apply each policy independently.
 
 ## Response scope
 

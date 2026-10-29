@@ -20,12 +20,15 @@ export interface CspPolicyContext {
 /** Creates a policy using the current request's nonce and context. */
 export type CspPolicyFactory = (context: CspPolicyContext) => CspPolicy | Promise<CspPolicy>
 
-/** Policy and response configuration for CSP middleware. */
-export interface CspOptions {
-  /** A static policy or a factory evaluated before downstream handlers run. */
-  policy: CspPolicy | CspPolicyFactory
-  /** Send Content-Security-Policy-Report-Only instead of an enforcing header (default false). */
-  reportOnly?: boolean
+interface CspOptionFields {
+  /** Enforced policy sent as `Content-Security-Policy`, static or a factory run before handlers. */
+  policy?: CspPolicy | CspPolicyFactory
+  /**
+   * Policy sent as `Content-Security-Policy-Report-Only`, static or a factory run before handlers.
+   * Browsers monitor it alongside `policy`, so stricter directives can be trialled while the
+   * enforced policy stays in place. Both policies share the request nonce.
+   */
+  reportOnly?: CspPolicy | CspPolicyFactory
   /**
    * Named absolute or relative URLs for `Reporting-Endpoints`, referenced by `reportTo`.
    * Configured names override matching downstream entries; other entries are preserved.
@@ -40,46 +43,67 @@ export interface CspOptions {
   filter?: (response: Response) => boolean
 }
 
-type CheckedPolicy<policy> = policy extends (...args: never[]) => infer result
-  ? (
-      context: CspPolicyContext,
-    ) => CheckedPolicy<Awaited<result>> | Promise<CheckedPolicy<Awaited<result>>>
-  : policy extends string | ContentSecurityPolicy
-    ? policy
-    : policy extends ContentSecurityPolicyInit
-      ? policy & Record<Exclude<keyof policy, keyof ContentSecurityPolicyInit>, never>
-      : never
+type CspPolicyOption = CspPolicy | CspPolicyFactory
+
+/** Policy and response configuration for CSP middleware. Provide `policy`, `reportOnly`, or both. */
+export type CspOptions = CspOptionFields &
+  ({ policy: CspPolicyOption } | { reportOnly: CspPolicyOption })
+
+// Only require the key here: typed members would change the contextual type of factory returns.
+type RequiredPolicy = { policy: unknown } | { reportOnly: unknown }
+
+type CheckedPolicy<policy> = policy extends undefined
+  ? undefined
+  : policy extends (...args: never[]) => infer result
+    ? (
+        context: CspPolicyContext,
+      ) => CheckedPolicy<Awaited<result>> | Promise<CheckedPolicy<Awaited<result>>>
+    : policy extends string | ContentSecurityPolicy
+      ? policy
+      : policy extends ContentSecurityPolicyInit
+        ? policy & Record<Exclude<keyof policy, keyof ContentSecurityPolicyInit>, never>
+        : never
 
 // Keep valid options unchanged so callback return values retain their contextual checks.
-type CheckedOptions<policy extends CspOptions['policy']> = Omit<CspOptions, 'policy'> & {
-  policy: policy
-} & ([policy] extends [CheckedPolicy<policy>] ? unknown : { policy: CheckedPolicy<policy> })
+type CheckedOptions<
+  policy extends CspPolicyOption | undefined,
+  reportOnly extends CspPolicyOption | undefined,
+> = Omit<CspOptionFields, 'policy' | 'reportOnly'> & {
+  policy?: policy
+  reportOnly?: reportOnly
+} & ([policy] extends [CheckedPolicy<policy>] ? unknown : { policy: CheckedPolicy<policy> }) &
+  ([reportOnly] extends [CheckedPolicy<reportOnly>]
+    ? unknown
+    : { reportOnly: CheckedPolicy<reportOnly> }) &
+  RequiredPolicy
 
 /**
- * Establishes a request nonce and appends the configured CSP to HTML responses by default.
+ * Establishes a request nonce and appends the configured CSPs to HTML responses by default.
+ * `policy` is enforced and `reportOnly` is monitored; either or both may be given.
  * Override `filter` for other response types; 304 responses are always unchanged.
  * Existing policies are preserved separately. Inferred policies reject unknown directive keys.
- * @param options The required policy and optional response configuration.
- * @returns Middleware providing the nonce read by `getCspNonce()` and the CSP response header.
+ * @param options The enforced and/or report-only policy and optional response configuration.
+ * @returns Middleware providing the nonce read by `getCspNonce()` and the CSP response headers.
  */
-export function csp<policy extends CspOptions['policy']>(
-  options: CheckedOptions<policy>,
+export function csp<
+  policy extends CspPolicyOption | undefined,
+  reportOnly extends CspPolicyOption | undefined,
+>(
+  options: CheckedOptions<policy, reportOnly>,
 ): Middleware<{ key: typeof CspNonce; value: string }> {
-  let { policy, filter = isHtmlResponse }: CspOptions = options
+  let { filter = isHtmlResponse }: CspOptionFields = options
+  if (options.policy === undefined && options.reportOnly === undefined) {
+    throw new TypeError('csp() requires a policy, a reportOnly policy, or both')
+  }
+  let enforced = createPolicySerializer(options.policy)
+  let reportOnly = createPolicySerializer(options.reportOnly)
   let reportingEndpoints = serializeReportingEndpoints(options.reportingEndpoints ?? {})
-  let headerName = options.reportOnly
-    ? 'Content-Security-Policy-Report-Only'
-    : 'Content-Security-Policy'
-  let staticPolicy =
-    typeof policy === 'function' ? undefined : ContentSecurityPolicy.from(policy).toString()
 
   return async (context, next) => {
     let nonce = getCspNonce(context) ?? createNonce()
     context.set(CspNonce, nonce)
-    let header =
-      typeof policy === 'function'
-        ? ContentSecurityPolicy.from(await policy({ nonce, context })).toString()
-        : staticPolicy
+    let enforcedHeader = await enforced?.({ nonce, context })
+    let reportOnlyHeader = await reportOnly?.({ nonce, context })
     let response = await next()
     if (!filter(response)) return response
     // A 304 updates cached headers while reusing the body; a fresh CSP nonce would mismatch it.
@@ -87,7 +111,8 @@ export function csp<policy extends CspOptions['policy']>(
     if (response.status === 304) return response
 
     let headers = new Headers(response.headers)
-    if (header) headers.append(headerName, header)
+    if (enforcedHeader) headers.append('Content-Security-Policy', enforcedHeader)
+    if (reportOnlyHeader) headers.append('Content-Security-Policy-Report-Only', reportOnlyHeader)
     if (reportingEndpoints) {
       let existing = headers.get('Reporting-Endpoints')?.trim()
       // Structured field dictionaries use the last value for duplicate endpoint names.
@@ -103,6 +128,17 @@ export function csp<policy extends CspOptions['policy']>(
       headers,
     })
   }
+}
+
+function createPolicySerializer(
+  policy: CspPolicyOption | undefined,
+): ((context: CspPolicyContext) => string | Promise<string>) | undefined {
+  if (policy === undefined) return undefined
+  if (typeof policy === 'function') {
+    return async (context) => ContentSecurityPolicy.from(await policy(context)).toString()
+  }
+  let serialized = ContentSecurityPolicy.from(policy).toString()
+  return () => serialized
 }
 
 function isHtmlResponse(response: Response): boolean {

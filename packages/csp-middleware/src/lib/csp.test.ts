@@ -66,6 +66,29 @@ describe('csp', () => {
         return { scriptSrc: [`'nonce-${nonce}'`], frameAncestorsxss: ["'none'"] }
       },
     })
+
+    csp({
+      policy: { scriptSrc: ["'self'"] },
+      // @ts-expect-error Report-only factories reject unknown directives too.
+      reportOnly({ nonce }) {
+        return { scriptSrc: [`'nonce-${nonce}'`], frameAncestorsxss: ["'none'"] }
+      },
+    })
+
+    csp({
+      reportOnly: {
+        scriptSrc: ["'self'"],
+        // @ts-expect-error Static report-only directive objects reject unknown keys.
+        frameAncestorsxss: ["'none'"],
+      },
+    })
+  })
+
+  it('requires an enforced or report-only policy', () => {
+    // @ts-expect-error At least one of policy and reportOnly is required.
+    assert.throws(() => csp({}), TypeError)
+    // @ts-expect-error reportOnly is a policy, not a mode switch.
+    csp({ policy: { scriptSrc: ["'self'"] }, reportOnly: true })
   })
 
   it('preserves inferred factory context and validates directive value types', () => {
@@ -184,8 +207,7 @@ describe('csp', () => {
           reportingEndpoints: { enforced: '/reports/enforced' },
         }),
         csp({
-          policy: { scriptSrc: ["'self'"] },
-          reportOnly: true,
+          reportOnly: { scriptSrc: ["'self'"] },
           reportingEndpoints: { preview: '/reports/preview' },
         }),
       ],
@@ -245,11 +267,10 @@ describe('csp', () => {
     let router = createRouter({
       middleware: [
         csp({
-          policy({ nonce }) {
+          reportOnly({ nonce }) {
             policyNonce = nonce
             return { scriptSrc: [`'nonce-${nonce}'`], reportTo: 'csp' }
           },
-          reportOnly: true,
           reportingEndpoints: { csp: '/reports/csp' },
           filter: (response) => response.status === 201,
         }),
@@ -315,8 +336,7 @@ describe('csp', () => {
           filter: () => true,
         }),
         csp({
-          policy: ({ nonce }) => ({ styleSrc: [`'nonce-${nonce}'`] }),
-          reportOnly: true,
+          reportOnly: ({ nonce }) => ({ styleSrc: [`'nonce-${nonce}'`] }),
           reportingEndpoints: { preview: '/reports/preview' },
           filter: () => true,
         }),
@@ -383,6 +403,55 @@ describe('csp', () => {
     }
   })
 
+  it('enforces one policy while monitoring another from a single middleware', async () => {
+    let factoryNonces: string[] = []
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            factoryNonces.push(nonce)
+            return { scriptSrc: [`'nonce-${nonce}'`], styleSrc: ["'self'", "'unsafe-inline'"] }
+          },
+          reportOnly({ nonce }) {
+            factoryNonces.push(nonce)
+            return { styleSrc: [`'nonce-${nonce}'`], reportTo: 'csp' }
+          },
+          reportingEndpoints: { csp: '/csp-reports' },
+        }),
+      ] as const,
+    })
+    router.get(
+      '/',
+      (context) => new Response(getCspNonce(context), { headers: { 'Content-Type': 'text/html' } }),
+    )
+
+    let response = await router.fetch('https://example.com/')
+    let nonce = await response.text()
+
+    assert.deepEqual(factoryNonces, [nonce, nonce])
+    assert.equal(
+      response.headers.get('Content-Security-Policy'),
+      `script-src 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'`,
+    )
+    assert.equal(
+      response.headers.get('Content-Security-Policy-Report-Only'),
+      `style-src 'nonce-${nonce}'; report-to csp`,
+    )
+    assert.equal(response.headers.get('Reporting-Endpoints'), 'csp="/csp-reports"')
+  })
+
+  it('sends only a report-only policy when no enforced policy is given', async () => {
+    let router = createRouter({
+      middleware: [csp({ reportOnly: { defaultSrc: ["'self'"] } })],
+    })
+    router.get('/', () => new Response('ok', { headers: { 'Content-Type': 'text/html' } }))
+
+    let response = await router.fetch('https://example.com/')
+
+    assert.equal(response.headers.get('Content-Security-Policy'), null)
+    assert.equal(response.headers.get('Content-Security-Policy-Report-Only'), "default-src 'self'")
+  })
+
   it('appends enforced and report-only policies and reporting endpoints while sharing a nonce', async () => {
     let router = createRouter({
       middleware: [
@@ -398,10 +467,9 @@ describe('csp', () => {
           },
         }),
         csp({
-          policy({ nonce }) {
+          reportOnly({ nonce }) {
             return { scriptSrc: [`'nonce-${nonce}'`], reportTo: 'preview' }
           },
-          reportOnly: true,
           reportingEndpoints: { preview: 'https://reports.example.com/csp' },
         }),
       ] as const,
