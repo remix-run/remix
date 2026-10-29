@@ -1,5 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
+import { Fragment } from '../jsx-runtime.ts'
 import { createElement } from '../runtime/create-element.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { createMixin, on, ref, unsafeHTML } from '../index.ts'
@@ -710,31 +712,7 @@ describe('vnode mixins', () => {
   })
 
   it('places reclaimed keyed items in their requested order alongside new items', (t) => {
-    let retained = createMixin((handle) => {
-      handle.addEventListener('beforeRemove', (event) => {
-        event.persistNode(
-          (signal) =>
-            new Promise<void>((resolve) => {
-              signal.addEventListener('abort', () => resolve(), { once: true })
-            }),
-        )
-      })
-      return () => handle.element
-    })
-    let container = document.createElement('div')
-    let root = createRoot(container)
-    t.after(() => root.dispose())
-    function list(items: string[]) {
-      return (
-        <ul>
-          {items.map((item) => (
-            <li key={item} mix={retained()}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      )
-    }
+    let { root, container, list } = createRetainedListFixture(t)
     root.render(list(['B', 'C']))
     root.flush()
     let originalB = container.querySelector('li')
@@ -750,32 +728,7 @@ describe('vnode mixins', () => {
   })
 
   it('does not move reclaimed keyed items when their order is unchanged', (t) => {
-    let removal = Promise.withResolvers<void>()
-    let retained = createMixin((handle) => {
-      handle.addEventListener('beforeRemove', (event) => {
-        event.persistNode(() => removal.promise)
-      })
-      return () => handle.element
-    })
-    let container = document.createElement('div')
-    let root = createRoot(container)
-    let observer = new MutationObserver(() => {})
-    t.after(() => {
-      observer.disconnect()
-      root.dispose()
-      removal.resolve()
-    })
-    function list(items: string[]) {
-      return (
-        <ul>
-          {items.map((item) => (
-            <li key={item} mix={retained()}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      )
-    }
+    let { root, container, observer, list } = createRetainedListFixture(t)
     root.render(list(['B', 'C']))
     root.flush()
     let listNode = container.querySelector('ul')
@@ -793,32 +746,7 @@ describe('vnode mixins', () => {
   })
 
   it('places new siblings without moving correctly ordered reclaimed keyed items', (t) => {
-    let removal = Promise.withResolvers<void>()
-    let retained = createMixin((handle) => {
-      handle.addEventListener('beforeRemove', (event) => {
-        event.persistNode(() => removal.promise)
-      })
-      return () => handle.element
-    })
-    let container = document.createElement('div')
-    let root = createRoot(container)
-    let observer = new MutationObserver(() => {})
-    t.after(() => {
-      observer.disconnect()
-      root.dispose()
-      removal.resolve()
-    })
-    function list(items: string[]) {
-      return (
-        <ul>
-          {items.map((item) => (
-            <li key={item} mix={retained()}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      )
-    }
+    let { root, container, observer, list } = createRetainedListFixture(t)
     root.render(list(['B', 'C']))
     root.flush()
     let listNode = container.querySelector('ul')
@@ -840,32 +768,7 @@ describe('vnode mixins', () => {
   })
 
   it('does not move a reclaimed keyed item past siblings still awaiting removal', (t) => {
-    let removal = Promise.withResolvers<void>()
-    let retained = createMixin((handle) => {
-      handle.addEventListener('beforeRemove', (event) => {
-        event.persistNode(() => removal.promise)
-      })
-      return () => handle.element
-    })
-    let container = document.createElement('div')
-    let root = createRoot(container)
-    let observer = new MutationObserver(() => {})
-    t.after(() => {
-      observer.disconnect()
-      root.dispose()
-      removal.resolve()
-    })
-    function list(items: string[]) {
-      return (
-        <ul>
-          {items.map((item) => (
-            <li key={item} mix={retained()}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      )
-    }
+    let { root, container, observer, list } = createRetainedListFixture(t)
     root.render(list(['A', 'B', 'C']))
     root.flush()
     let listNode = container.querySelector('ul')
@@ -883,32 +786,7 @@ describe('vnode mixins', () => {
   })
 
   it('does not move a reclaimed keyed item already between its requested siblings', (t) => {
-    let removal = Promise.withResolvers<void>()
-    let retained = createMixin((handle) => {
-      handle.addEventListener('beforeRemove', (event) => {
-        event.persistNode(() => removal.promise)
-      })
-      return () => handle.element
-    })
-    let container = document.createElement('div')
-    let root = createRoot(container)
-    let observer = new MutationObserver(() => {})
-    t.after(() => {
-      observer.disconnect()
-      root.dispose()
-      removal.resolve()
-    })
-    function list(items: string[]) {
-      return (
-        <ul>
-          {items.map((item) => (
-            <li key={item} mix={retained()}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      )
-    }
+    let { root, container, observer, list } = createRetainedListFixture(t)
     root.render(list(['A', 'B', 'C']))
     root.flush()
     let listNode = container.querySelector('ul')
@@ -923,6 +801,172 @@ describe('vnode mixins', () => {
 
     expect([...listNode.children]).toEqual(originalItems)
     expect(observer.takeRecords()).toEqual([])
+  })
+
+  it('orders reclaimed keyed items inside a newly inserted fragment', (t) => {
+    let { root, container, items } = createRetainedListFixture(t)
+    function list(keys: string[]) {
+      return <ul>{keys.length > 0 ? <Fragment key="items">{items(keys)}</Fragment> : null}</ul>
+    }
+    root.render(list(['B', 'C']))
+    root.flush()
+    let originalItems = [...container.querySelectorAll('li')]
+    root.render(list([]))
+    root.flush()
+
+    root.render(list(['A', 'B', 'C']))
+    root.flush()
+
+    let restored = [...container.querySelectorAll('li')]
+    expect(restored.map((item) => item.textContent)).toEqual(['A', 'B', 'C'])
+    expect(restored[1]).toBe(originalItems[0])
+    expect(restored[2]).toBe(originalItems[1])
+  })
+
+  it('keeps reclaimed items and text inside their requested fragment groups', (t) => {
+    let { root, container, items } = createRetainedListFixture(t)
+    function list(left: string[]) {
+      return (
+        <ul>
+          <Fragment key="left">
+            {'['}
+            {items(left)}
+            {']'}
+          </Fragment>
+          <Fragment key="right">
+            {'('}
+            {items(['D', 'E'])}
+            {')'}
+          </Fragment>
+        </ul>
+      )
+    }
+    root.render(list(['B', 'C']))
+    root.flush()
+    let originalItems = [...container.querySelectorAll('li')]
+    root.render(<ul />)
+    root.flush()
+
+    root.render(list(['A', 'B', 'C']))
+    root.flush()
+
+    expect(container.textContent).toBe('[ABC](DE)')
+    let restored = [...container.querySelectorAll('li')]
+    expect(restored.slice(1)).toEqual(originalItems)
+  })
+
+  it('orders reclaimed keyed items when a component returns from null to a fragment', (t) => {
+    let { root, container, items } = createRetainedListFixture(t)
+    let keys = ['B', 'C']
+    let listHandle: Handle | undefined
+    function List(handle: Handle) {
+      listHandle = handle
+      return () => (keys.length > 0 ? <>{items(keys)}</> : null)
+    }
+    root.render(
+      <ul>
+        <List />
+        <li>Tail</li>
+      </ul>,
+    )
+    root.flush()
+    invariant(listHandle)
+    let originalItems = [...container.querySelectorAll('li')]
+    keys = []
+    listHandle.update()
+    root.flush()
+
+    keys = ['A', 'B', 'C']
+    listHandle.update()
+    root.flush()
+
+    let restored = [...container.querySelectorAll('li')]
+    expect(restored.map((item) => item.textContent)).toEqual(['A', 'B', 'C', 'Tail'])
+    expect(restored[1]).toBe(originalItems[0])
+    expect(restored[2]).toBe(originalItems[1])
+    expect(restored[3]).toBe(originalItems[2])
+  })
+
+  it('restores retained children at the new position of a hidden component', (t) => {
+    let { root, container, items } = createRetainedListFixture(t)
+    let visible = true
+    let listHandle: Handle | undefined
+    function List(handle: Handle) {
+      listHandle = handle
+      return () => (visible ? <>{items(['B', 'C'])}</> : null)
+    }
+    root.render(
+      <ul>
+        <Fragment key="list">
+          <List />
+        </Fragment>
+        <li key="tail">Tail</li>
+      </ul>,
+    )
+    root.flush()
+    invariant(listHandle)
+    let originalItems = [...container.querySelectorAll('li')]
+    visible = false
+    listHandle.update()
+    root.flush()
+    root.render(
+      <ul>
+        <li key="tail">Tail</li>
+        <Fragment key="list">
+          <List />
+        </Fragment>
+      </ul>,
+    )
+    root.flush()
+
+    visible = true
+    listHandle.update()
+    root.flush()
+
+    let restored = [...container.querySelectorAll('li')]
+    expect(restored.map((item) => item.textContent)).toEqual(['Tail', 'B', 'C'])
+    expect(restored).toEqual([originalItems[2], originalItems[0], originalItems[1]])
+  })
+
+  it('restores a retained element at the new position of a hidden component', (t) => {
+    let { root, container, items } = createRetainedListFixture(t)
+    let visible = true
+    let listHandle: Handle | undefined
+    function List(handle: Handle) {
+      listHandle = handle
+      return () => (visible ? items(['B'])[0] : null)
+    }
+    root.render(
+      <ul>
+        <Fragment key="list">
+          <List />
+        </Fragment>
+        <li key="tail">Tail</li>
+      </ul>,
+    )
+    root.flush()
+    invariant(listHandle)
+    let originalItems = [...container.querySelectorAll('li')]
+    visible = false
+    listHandle.update()
+    root.flush()
+    root.render(
+      <ul>
+        <li key="tail">Tail</li>
+        <Fragment key="list">
+          <List />
+        </Fragment>
+      </ul>,
+    )
+    root.flush()
+
+    visible = true
+    listHandle.update()
+    root.flush()
+
+    let restored = [...container.querySelectorAll('li')]
+    expect(restored.map((item) => item.textContent)).toEqual(['Tail', 'B'])
+    expect(restored).toEqual([originalItems[1], originalItems[0]])
   })
 
   it('defers host removal when beforeRemove.persistNode is used', async () => {
@@ -961,3 +1005,35 @@ describe('vnode mixins', () => {
     expect(container.querySelector('#deferred-remove')).toBe(null)
   })
 })
+
+function createRetainedListFixture(t: TestContext) {
+  let removal = Promise.withResolvers<void>()
+  let retained = createMixin((handle) => {
+    handle.addEventListener('beforeRemove', (event) => {
+      event.persistNode(() => removal.promise)
+    })
+    return () => handle.element
+  })
+  let container = document.createElement('div')
+  let root = createRoot(container)
+  let observer = new MutationObserver(() => {})
+  t.after(() => {
+    observer.disconnect()
+    root.dispose()
+    removal.resolve()
+  })
+
+  function items(keys: string[]) {
+    return keys.map((key) => (
+      <li key={key} mix={retained()}>
+        {key}
+      </li>
+    ))
+  }
+
+  function list(keys: string[]) {
+    return <ul>{items(keys)}</ul>
+  }
+
+  return { root, container, observer, items, list }
+}

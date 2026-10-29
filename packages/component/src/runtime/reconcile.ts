@@ -1034,12 +1034,15 @@ function insert(
   if (node.kind === 'fragment') {
     let childInputs = node._children
     let committed = beginFragmentNode(node, vParent, svg)
-    let children: Array<VNodeInput | CommittedVNode> = childInputs
-    // Insert fragment children in order before the same anchor
-    for (let i = 0; i < childInputs.length; i++) {
-      children[i] = insert(childInputs[i], domParent, committed, context, anchor, cursor)
-    }
-    committed._children = children as CommittedVNode[]
+    committed._children = diffChildren(
+      null,
+      childInputs,
+      domParent,
+      committed,
+      context,
+      cursor,
+      anchor,
+    )
     return committed
   }
 
@@ -1460,7 +1463,11 @@ export function renderComponent(
   }
 
   let [element, tasks] = handle.render(next.props)
+  let reclamationVersion = mixinReclamationVersions.get(domParent)
   let content = diffVNodes(currContent, toVNode(element), domParent, next, context, anchor, cursor)
+  if (mixinReclamationVersions.get(domParent) !== reclamationVersion) {
+    placeReclaimedChildren([content], domParent, next, anchor)
+  }
   let committed = commitComponentNode(next, content)
   handle.setScheduleUpdate(scheduler, committed, domParent)
 
@@ -1762,7 +1769,7 @@ function diffChildren(
 
   let committedChildren = committed as CommittedVNode[]
   if (mixinReclamationVersions.get(domParent) !== reclamationVersion) {
-    placeReclaimedChildren(committedChildren, domParent, anchor)
+    placeReclaimedChildren(committedChildren, domParent, vParent, anchor)
   }
   return committedChildren
 }
@@ -2114,6 +2121,7 @@ function lisMatches(matches: readonly number[]): number[] {
 function placeReclaimedChildren(
   children: CommittedVNode[],
   domParent: ParentNode,
+  vParent: VNodeParent,
   anchor?: Node,
 ): void {
   let domIndexes = new Map<Node, number>()
@@ -2121,11 +2129,33 @@ function placeReclaimedChildren(
   for (let child of domParent.childNodes) {
     domIndexes.set(child, index++)
   }
-  let matches = children.map((child) => {
+  let previous =
+    vParent.kind === 'root'
+      ? vParent._rangeStart
+      : vParent.kind === 'component' || vParent.kind === 'fragment'
+        ? findPreviousSiblingDomAnchor(vParent)
+        : null
+  let startIndex = previous ? (domIndexes.get(previous) ?? -1) : -1
+  let endIndex = anchor ? (domIndexes.get(anchor) ?? Infinity) : Infinity
+  // Retained hosts can interleave fragment/component ranges. Place their DOM
+  // children individually instead of assuming each range is already contiguous.
+  let placementChildren: CommittedVNode[] = []
+  function collect(node: CommittedVNode): void {
+    if (isCommittedComponentNode(node)) {
+      collect(node._content)
+    } else if (isFragmentNode(node)) {
+      for (let child of node._children) collect(child)
+    } else {
+      placementChildren.push(node)
+    }
+  }
+  for (let child of children) collect(child)
+  let matches = placementChildren.map((child) => {
     let dom = findFirstDomAnchor(child)
-    return dom ? (domIndexes.get(dom) ?? -1) : -1
+    let domIndex = dom ? (domIndexes.get(dom) ?? -1) : -1
+    return domIndex > startIndex && domIndex < endIndex ? domIndex : -1
   })
-  placeChildren(children, matches, domParent, anchor)
+  placeChildren(placementChildren, matches, domParent, anchor)
 }
 
 function placeChildren(
@@ -2232,6 +2262,21 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
     if (parentNode.contains(node)) return false
   }
   return true
+}
+
+function findPreviousSiblingDomAnchor(curr: CommittedVNode | MountingComponentNode): Node | null {
+  let parent = curr._parent
+  if (parent.kind === 'component') return findPreviousSiblingDomAnchor(parent)
+  let index = parent._children.indexOf(curr as CommittedVNode)
+  // Newly mounting ancestors are not in their parent's committed children yet.
+  // Their enclosing reconciliation pass will place the complete sibling list.
+  if (index === -1) return null
+  for (let i = index - 1; i >= 0; i--) {
+    let dom = findLastDomAnchor(parent._children[i])
+    if (dom) return dom
+  }
+  if (parent.kind === 'fragment') return findPreviousSiblingDomAnchor(parent)
+  return parent.kind === 'root' ? (parent._rangeStart ?? null) : null
 }
 
 export function findNextSiblingDomAnchor(
