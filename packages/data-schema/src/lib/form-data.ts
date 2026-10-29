@@ -121,7 +121,12 @@ export function object<schema extends FormDataSchema>(
         continue
       }
 
-      output[key] = result.value
+      Object.defineProperty(output, key, {
+        value: result.value,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      })
     }
 
     if (issues.length > 0) {

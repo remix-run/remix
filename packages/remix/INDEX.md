@@ -37,6 +37,7 @@ Exports covered by the same README are grouped together.
 | `remix/component/test` | Component runtime with server rendering, browser hydration, mixins, and frame navigation | [README](src/component/test/README.md) |
 | `remix/cookie` | A toolkit for working with cookies in JavaScript | [README](src/cookie/README.md) |
 | `remix/data-schema`<br>`remix/data-schema/checks`<br>`remix/data-schema/coerce`<br>`remix/data-schema/form-data`<br>`remix/data-schema/lazy` | Tiny, standards-aligned schema validation | [README](src/data-schema/README.md) |
+| `remix/data-schema/form` | Tiny, standards-aligned schema validation | [README](src/data-schema/form/README.md) |
 | `remix/data-table`<br>`remix/data-table/cli`<br>`remix/data-table/migrations`<br>`remix/data-table/migrations/node`<br>`remix/data-table/operators`<br>`remix/data-table/sql-helpers` | A typed, relational query toolkit for JavaScript | [README](src/data-table/README.md) |
 | `remix/data-table/mysql` | MySQL database implementation for remix/data-table | [README](src/data-table-mysql/README.md) |
 | `remix/data-table/postgres` | PostgreSQL database implementation for remix/data-table | [README](src/data-table-postgres/README.md) |

@@ -30,6 +30,7 @@ The home, books, genre, search, about, contact, and registration pages use `Cach
 - Follow the storefront through [`app/actions/books`](app/actions/books), [`app/actions/cart`](app/actions/cart), and [`app/actions/checkout`](app/actions/checkout). These flows work on the server first, then add richer browser behavior where it helps.
 - Look in [`app/actions/auth`](app/actions/auth), [`app/actions/account`](app/actions/account), and [`app/actions/admin`](app/actions/admin) for nested controllers, sessions, authorization, CRUD, and file uploads.
 - [`app/ui`](app/ui) contains the shared document and layout pieces. Colocated `public` directories contain the browser code for cart fragments and the image carousel.
+- Data-entry forms define inspectable schemas with `remix/data-schema/form` and parse server submissions with `schema.parseSafe()`. Each browser form uses `form.Context` from `@remix-run/ui/form` and the shared `app/ui/public/field.tsx` component for labels, controls, and errors. The controller passes a failed submission back to the form so typed values and validation messages survive a server round trip.
 - [`app/data/schema.ts`](app/data/schema.ts), [`db/migrations`](db/migrations), and [`remix.json`](remix.json) show the typed SQLite schema and the `remix db` workflow.
 
 ## Database Commands

@@ -32,6 +32,27 @@ describe('account handlers', () => {
     assertContains(html, 'John Doe')
   })
 
+  it('PUT /account/settings returns field errors without echoing a short password', async () => {
+    let sessionId = await loginAsCustomer(router)
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/account/settings', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({
+          name: 'Changed Name',
+          email: 'new@example.com',
+          password: 'short',
+        }),
+      }),
+    )
+
+    assert.equal(response.status, 400)
+    let html = await response.text()
+    assertContains(html, 'value="Changed Name"')
+    assertContains(html, 'value="new@example.com"')
+    assertContains(html, 'aria-invalid="true"')
+    assert.ok(!html.includes('value="short"'))
+  })
+
   it('GET /account/orders/:orderId shows order for authenticated user', async () => {
     let sessionId = await loginAsCustomer(router)
 

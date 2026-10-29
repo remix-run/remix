@@ -78,7 +78,7 @@ async function requestHandler(request: Request) {
 }
 ```
 
-To validate the resulting `FormData` object with `remix/data-schema`, use the `remix/data-schema/form-data` helpers.
+To validate the resulting `FormData` object, use [`remix/data-schema/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md) for native form kinds and restorable failures, or `remix/data-schema/form-data` for lower-level extraction.
 
 To limit the overall shape of multipart requests, use the `maxHeaderSize`, `maxFileSize`, `maxFiles`, `maxParts`, and `maxTotalSize` options. For `application/x-www-form-urlencoded` requests, `maxParts` limits the number of form fields and `maxTotalSize` limits the raw request body size. By default, `parseFormData()` uses `maxFiles = 20`, `maxParts = 1000`, and `maxTotalSize = maxFiles * maxFileSize + 1 MiB`.
 

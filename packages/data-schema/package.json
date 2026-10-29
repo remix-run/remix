@@ -25,7 +25,8 @@
     "./coerce": "./src/coerce.ts",
     "./form-data": "./src/form-data.ts",
     "./lazy": "./src/lazy.ts",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./form": "./src/form.ts"
   },
   "publishConfig": {
     "exports": {
@@ -49,7 +50,11 @@
         "types": "./dist/lazy.d.ts",
         "default": "./dist/lazy.js"
       },
-      "./package.json": "./package.json"
+      "./package.json": "./package.json",
+      "./form": {
+        "types": "./dist/form.d.ts",
+        "default": "./dist/form.js"
+      }
     }
   },
   "devDependencies": {

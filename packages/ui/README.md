@@ -75,6 +75,7 @@ function ViewOptions(handle: Handle) {
 - [`@remix-run/ui/accordion`](https://github.com/remix-run/remix/blob/main/packages/ui/src/accordion/README.md)
 - [`@remix-run/ui/anchor`](https://github.com/remix-run/remix/blob/main/packages/ui/src/anchor/README.md)
 - [`@remix-run/ui/combobox`](https://github.com/remix-run/remix/blob/main/packages/ui/src/combobox/README.md)
+- [`@remix-run/ui/form`](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md)
 - [`@remix-run/ui/listbox`](https://github.com/remix-run/remix/blob/main/packages/ui/src/listbox/README.md)
 - [`@remix-run/ui/menu`](https://github.com/remix-run/remix/blob/main/packages/ui/src/menu/README.md)
 - [`@remix-run/ui/popover`](https://github.com/remix-run/remix/blob/main/packages/ui/src/popover/README.md)

@@ -1,6 +1,4 @@
 import { createController } from 'remix/router'
-import * as s from 'remix/data-schema'
-import * as f from 'remix/data-schema/form-data'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../../../data/schema.ts'
@@ -11,17 +9,8 @@ import { getCurrentUser } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 import { AdminUserFormPage } from './form.tsx'
 import { AdminUsersIndexPage } from './index-page.tsx'
+import { AdminUserForm } from './public/schema.ts'
 import { AdminUserNotFoundPage, AdminUserShowPage } from './show-page.tsx'
-
-const textField = f.field(s.defaulted(s.string(), ''))
-const roleField = f.field(
-  s.defaulted(s.union([s.literal('customer'), s.literal('admin')]), 'customer'),
-)
-const userSchema = f.object({
-  name: textField,
-  email: textField,
-  role: roleField,
-})
 
 export default createController(routes.admin.users, {
   middleware: [requireAuth(), requireAdmin()],
@@ -63,12 +52,26 @@ export default createController(routes.admin.users, {
       )
     },
 
-    async update({ db, formData, params }) {
+    async update({ db, formData, params, render }) {
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
-      let { email, name, role } = s.parse(userSchema, formData)
+      let submission = AdminUserForm.parseSafe(formData)
+      if (!submission.success && targetUser) {
+        return render(
+          <AdminUserFormPage
+            title="Edit User"
+            action={routes.admin.users.update.href({ userId: targetUser.id })}
+            cancelHref={routes.admin.users.index.href()}
+            submitLabel="Update User"
+            user={targetUser}
+            submission={submission}
+          />,
+          { status: 400 },
+        )
+      }
 
-      if (targetUser) {
+      if (targetUser && submission.success) {
+        let { email, name, role } = submission.value
         await db.update(users, targetUser.id, {
           name,
           email,

@@ -1,6 +1,4 @@
 import { createController } from 'remix/router'
-import * as s from 'remix/data-schema'
-import * as f from 'remix/data-schema/form-data'
 import { redirect } from 'remix/response/redirect'
 
 import { itemsByOrder, orders, orderItemsWithBook } from '../../data/schema.ts'
@@ -11,14 +9,7 @@ import { getCurrentUser, getCurrentCart } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
 import { CheckoutConfirmationPage, CheckoutOrderNotFoundPage } from './confirmation-page.tsx'
 import { CheckoutPage, EmptyCheckoutPage } from './checkout-page.tsx'
-
-const textField = f.field(s.defaulted(s.string(), ''))
-const shippingAddressSchema = f.object({
-  street: textField,
-  city: textField,
-  state: textField,
-  zip: textField,
-})
+import { ShippingAddressForm } from './public/schema.ts'
 
 export default createController(routes.checkout, {
   middleware: [requireAuth()],
@@ -34,7 +25,7 @@ export default createController(routes.checkout, {
       return render(<CheckoutPage cart={cart} total={total} />)
     },
 
-    async action({ auth, db, formData, session }) {
+    async action({ auth, db, formData, render, session }) {
       let user = getCurrentUser(auth)
       let cart = getCurrentCart(session)
 
@@ -42,7 +33,14 @@ export default createController(routes.checkout, {
         return redirect(routes.cart.index.href())
       }
 
-      let shippingAddress = s.parse(shippingAddressSchema, formData)
+      let submission = ShippingAddressForm.parseSafe(formData)
+      if (!submission.success) {
+        return render(
+          <CheckoutPage cart={cart} total={getCartTotal(cart)} submission={submission} />,
+          { status: 400 },
+        )
+      }
+      let shippingAddress = submission.value
       let total = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
       let order = await db.transaction(async (tx) => {

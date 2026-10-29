@@ -1,12 +1,11 @@
 import { createController } from 'remix/router'
-import * as s from 'remix/data-schema'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 import { browsingResponseInit } from '../../browsing-response.ts'
-import { normalizeEmail, registrationSchema } from '../schemas.ts'
+import { normalizeEmail, RegistrationForm } from '../schemas.ts'
 import { ExistingAccountPage, RegisterPage } from './page.tsx'
 
 export default createController(routes.auth.register, {
@@ -16,7 +15,11 @@ export default createController(routes.auth.register, {
     },
 
     async action({ db, formData, render, session }) {
-      let { email, name, password } = s.parse(registrationSchema, formData)
+      let submission = RegistrationForm.parseSafe(formData)
+      if (!submission.success) {
+        return render(<RegisterPage submission={submission} />, { status: 400 })
+      }
+      let { email, name, password } = submission.value
       let normalizedEmail = normalizeEmail(email)
 
       if (await db.findOne(users, { where: { email: normalizedEmail } })) {

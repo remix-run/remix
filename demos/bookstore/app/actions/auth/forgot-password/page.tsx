@@ -1,27 +1,20 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
+import type { FormSubmission } from 'remix/data-schema/form'
 
 import { routes } from '../../../routes.ts'
 import { Document } from '../../../ui/document.tsx'
 import { authCardStyle } from '../schemas.ts'
+import { ForgotPasswordFields } from './public/forgot-password-form.tsx'
 
-export function ForgotPasswordPage() {
+export function ForgotPasswordPage(handle: Handle<{ submission?: FormSubmission }>) {
   return () => (
     <Document>
       <div class="card" mix={authCardStyle}>
         <h1>Forgot Password</h1>
         <p>Enter your email address and we'll send you a link to reset your password.</p>
 
-        <form method="POST" action={routes.auth.forgotPassword.action.href()}>
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required autoComplete="email" />
-          </div>
-
-          <button type="submit" class="btn">
-            Send Reset Link
-          </button>
-        </form>
+        <ForgotPasswordFields submission={handle.props.submission} />
 
         <p mix={css({ marginTop: '1.5rem' })}>
           <a href={routes.auth.login.index.href()}>Back to Login</a>

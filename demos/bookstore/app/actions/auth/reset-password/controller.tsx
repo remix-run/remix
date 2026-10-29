@@ -1,11 +1,10 @@
 import { createController } from 'remix/router'
-import * as s from 'remix/data-schema'
 import { redirect } from 'remix/response/redirect'
 
 import { passwordResetTokens, users } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
-import { resetPasswordSchema } from '../schemas.ts'
+import { ResetPasswordForm } from '../schemas.ts'
 import { ResetPasswordPage, ResetPasswordSuccessPage } from './page.tsx'
 
 export default createController(routes.auth.resetPassword, {
@@ -20,8 +19,12 @@ export default createController(routes.auth.resetPassword, {
     },
 
     async action({ db, formData, params, render, session }) {
-      let { confirmPassword, password } = s.parse(resetPasswordSchema, formData)
       let token = params.token
+      let submission = ResetPasswordForm.parseSafe(formData)
+      if (!submission.success) {
+        return render(<ResetPasswordPage token={token} submission={submission} />, { status: 400 })
+      }
+      let { confirmPassword, password } = submission.value
 
       if (!token) {
         session.flash('error', 'Invalid or expired reset token.')
