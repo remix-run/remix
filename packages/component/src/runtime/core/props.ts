@@ -3,10 +3,11 @@ import {
   canUseProperty,
   getMergedClassName,
   isAllowedHostPropName,
-  isBooleanishStringAttribute,
+  isRemixBooleanAttribute,
   normalizeAttributeName,
   sanitizeUrlAttribute,
   serializeStyleObject,
+  shouldStringifyBooleanAttribute,
   toKebabCase,
 } from './attributes.ts'
 import { normalizeCssValue } from '../../style/style.ts'
@@ -129,10 +130,9 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
 
   if (typeof value === 'function') return
 
-  let isAriaOrData = name.startsWith('aria-') || name.startsWith('data-')
-  let isBooleanishString = isBooleanishStringAttribute(attr)
-  if (value != null && (value !== false || isAriaOrData || isBooleanishString)) {
-    let attrValue = name === 'popover' && value === true ? '' : String(value)
+  if (value != null && (value !== false || shouldStringifyBooleanAttribute(attr))) {
+    let attrValue =
+      value === true && (name === 'popover' || isRemixBooleanAttribute(attr)) ? '' : String(value)
     if (ns) dom.setAttributeNS(ns, attr, attrValue)
     else dom.setAttribute(attr, attrValue)
   } else {
