@@ -1100,6 +1100,20 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     if (Array.isArray(value)) {
       return value.map((v) => unwrapNode(v))
     }
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      ('$rmxMixin' in value || '$rmxObject' in value)
+    ) {
+      // Escape application data that would otherwise be revived as a descriptor.
+      // Entry arrays also escape the wrapper itself without reserving another key.
+      return {
+        $rmxObject: Object.entries(value).filter(
+          ([, item]) =>
+            item !== undefined && typeof item !== 'function' && typeof item !== 'symbol',
+        ),
+      }
+    }
     return value
   }
 }

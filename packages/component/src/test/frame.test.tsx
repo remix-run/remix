@@ -2401,6 +2401,87 @@ describe('run', () => {
     expect(getComputedStyle(span).fontWeight).toBe('700')
   })
 
+  it('preserves css() precedence when entry props contain undefined styles', async (t) => {
+    let Slot = clientEntry(
+      '/js/slot.js#Slot',
+      function Slot(handle: Handle<{ content: RemixNode }>) {
+        return () => <div>{handle.props.content}</div>
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Slot
+          content={
+            <p mix={[css({ color: 'red', '&:hover': undefined }), css({ color: 'blue' })]}>
+              Styled
+            </p>
+          }
+        />,
+      ),
+    )
+    let paragraph = document.querySelector('p')
+    invariant(paragraph)
+    let serverClassName = paragraph.className
+    expect(getComputedStyle(paragraph).color).toBe('rgb(0, 0, 255)')
+
+    let app = run({ loadModule: () => Slot })
+    t.after(() => app.dispose())
+    await app.ready()
+
+    expect(document.querySelector('p')).toBe(paragraph)
+    expect(getComputedStyle(paragraph).color).toBe('rgb(0, 0, 255)')
+    expect(paragraph.className).toBe(serverClassName)
+  })
+
+  it('preserves plain objects with mixin serialization keys in entry props', async (t) => {
+    let records = [
+      { $rmxMixin: 'css', args: [{ color: 'red' }], label: 'style data' },
+      { $rmxMixin: null, label: 'null data', omitted: undefined },
+      { $rmxObject: [['$rmxMixin', 'css']], label: 'escaped data' },
+      { $rmxMixin: 'custom', ['__proto__']: { label: 'own property' } },
+    ]
+    let Slot = clientEntry(
+      '/js/slot.js#Slot',
+      function Slot(
+        handle: Handle<{ $rmxMixin: string; records: typeof records; content: RemixNode }>,
+      ) {
+        return () => (
+          <section>
+            <pre>
+              {JSON.stringify({ kind: handle.props.$rmxMixin, records: handle.props.records })}
+            </pre>
+            {handle.props.content}
+          </section>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Slot
+          $rmxMixin="css"
+          records={records}
+          content={<p mix={css({ color: 'rgb(1, 2, 3)' })}>Styled</p>}
+        />,
+      ),
+    )
+    let expected = JSON.stringify({ kind: 'css', records })
+    expect(document.querySelector('pre')?.textContent).toBe(expected)
+
+    let errors: unknown[] = []
+    let app = run({ loadModule: () => Slot })
+    app.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => app.dispose())
+    await app.ready()
+
+    expect(errors).toEqual([])
+    expect(document.querySelector('pre')?.textContent).toBe(expected)
+    let paragraph = document.querySelector('p')
+    invariant(paragraph)
+    expect(getComputedStyle(paragraph).color).toBe('rgb(1, 2, 3)')
+  })
+
   it('reports a clear error for mixins in element props that cannot be serialized', async (t) => {
     let Slot = clientEntry(
       '/js/slot.js#Slot',

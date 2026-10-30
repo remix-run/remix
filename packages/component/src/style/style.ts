@@ -100,9 +100,12 @@ function isKeyframesAtRule(key: string): boolean {
 // styles — so use two independent 32-bit FNV-1a passes (~64 bits of hash
 // space) rather than a single 32-bit hash. Must be deterministic across
 // server and client.
-function hashStyle(obj: any): string {
-  // Sort keys to ensure consistent hashing, but include values in the string
-  let sortedEntries = Object.entries(obj).sort(([a], [b]) => a.localeCompare(b))
+function hashStyle(obj: CSSProps): string {
+  // JSON drops undefined properties from client entry props. Omit them here too
+  // so hydration reuses the server's class and its position in the CSS cascade.
+  let sortedEntries = Object.entries(obj)
+    .filter(([, value]) => value !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b))
   let str = JSON.stringify(sortedEntries)
   let h1 = 0x811c9dc5
   let h2 = 0xcbf29ce4
