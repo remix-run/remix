@@ -1273,7 +1273,10 @@ function resolveClientFrame(
     )
     .then(async (resolution) => {
       if (state.resolveToken !== token || resolveController.signal.aborted) return
-      let { content, nonce } = await unwrapFrameResolution(resolution)
+      let { content, nonce } = await unwrapFrameResolution(
+        resolution,
+        getNonceManager().reportOnlyCsp,
+      )
       if (state.resolveToken !== token || resolveController.signal.aborted) return
       state.fallbackRoot?.dispose()
       state.fallbackRoot = undefined

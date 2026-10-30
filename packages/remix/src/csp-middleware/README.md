@@ -64,7 +64,7 @@ Inferred directive objects and factory returns reject unknown directive names wi
 
 `render()` applies the nonce to generated import maps, module preloads, and CSS mixin styles. Internal frame requests, including redirects, share the enclosing nonce; independent requests generate fresh values. Authored script and style tags use `getCspNonce(context)`, which returns `undefined` before a nonce is established.
 
-Browser navigation retains the original document's CSP. Matching resource nonces are rewritten only when the response's enforcing CSP identifies one shared nonce. See [client navigation](../component/server/README.md#client-navigation) for island updates, nonce requirements, and custom resolvers.
+Browser navigation retains the original document's CSP. Matching resource nonces are rewritten when the response's enforcing CSP identifies one shared nonce. Deployments with only report-only CSP can opt in as described below. See [client navigation](../component/server/README.md#client-navigation) for island updates, nonce requirements, and custom resolvers.
 
 ## Static policies
 
@@ -97,6 +97,21 @@ csp({
 ```
 
 Here scripts are restricted to the nonce, while the stricter nonce-only `style-src` is monitored first. Both factories receive the same request nonce. To monitor a whole policy before enforcing anything, pass only `reportOnlyPolicy`.
+
+For a document with only report-only CSP, enable `reportOnlyCsp` when starting the client runtime to avoid false nonce reports during frame and document navigation:
+
+```ts
+import { run } from 'remix/component'
+
+run({
+  reportOnlyCsp: true,
+  async loadModule(moduleUrl, exportName) {
+    return (await import(moduleUrl))[exportName]
+  },
+})
+```
+
+This option defaults to `false` and is captured once for the document. Enable it only when no enforcing policy applies to the initial document, including policies added by other middleware, proxies, or meta tags. An enforcing header on a fetched response always takes precedence; report-only nonces are used only when that header is absent. Server middleware cannot determine every policy applied by the deployment, so `reportOnlyPolicy` does not enable this client option automatically.
 
 `reportingEndpoints` maps names to absolute or relative URLs. The example emits `Reporting-Endpoints: csp="/csp-reports"`. `reportTo` names one endpoint; the application provides the receiving route. The `reportUri` directive supports legacy reporting.
 

@@ -39,6 +39,28 @@ describe('island response nonces', () => {
     expect(doc.documentElement.dataset.finalColor).toBe('rgb(21, 43, 65)')
   })
 
+  it('preserves report-only nonce aliases through island updates, replacement, and later responses', async (t) => {
+    let doc = await exerciseIsland(t, {
+      reportOnlyCsp: true,
+      lifecycle: true,
+      nestedFrame: 'resolved',
+      reloadAgain: true,
+    })
+    expect(JSON.parse(doc.documentElement.dataset.snapshots ?? 'null')).toEqual([
+      { nonce: 'document-nonce', color: 'rgb(12, 34, 56)', note: 'response-nonce' },
+      { nonce: 'document-nonce', color: 'rgb(12, 34, 56)', note: 'response-nonce' },
+      { nonce: 'document-nonce', color: 'rgb(65, 43, 21)', note: 'response-nonce' },
+      { nonce: 'document-nonce', color: 'rgb(21, 43, 65)', note: 'response-nonce' },
+    ])
+    expect(doc.documentElement.dataset.setups).toBe('1')
+    expect(doc.querySelector<HTMLStyleElement>('#island-style')?.nonce).toBe('document-nonce')
+    expect(doc.querySelector<HTMLStyleElement>('#current-style')?.nonce).toBe('document-nonce')
+    expect(doc.querySelector<HTMLScriptElement>('#island-data')?.nonce).toBe('document-nonce')
+    expect(doc.querySelector<HTMLLinkElement>('#island-link')?.nonce).toBe('document-nonce')
+    expect(doc.querySelector('#island-target')?.getAttribute('data-note')).toBe('second-nonce')
+    expect(doc.documentElement.dataset.finalColor).toBe('rgb(98, 76, 54)')
+  })
+
   it('retains earlier nonce aliases when a cached island is preserved inside a nested frame', async (t) => {
     let doc = await exerciseIsland(t, { nestedFrame: 'resolved', reloadAgain: true })
     expect(doc.documentElement.dataset.setups).toBe('1')
@@ -97,6 +119,7 @@ async function exerciseIsland(
     bufferedTemplates?: boolean
     nestedFrame?: 'resolved' | 'streamed'
     enforceResponseCsp?: boolean
+    reportOnlyCsp?: boolean
     startup?: 'missing-nonce' | 'standalone' | 'import-map-only'
   } = {},
 ): Promise<Document> {
@@ -164,6 +187,7 @@ async function exerciseIsland(
       return (initial, props) => jsx(handle.element, { ...props, nonce: nonce ?? initial })
     })
     let runtimeOptions = {
+      reportOnlyCsp: options.reportOnlyCsp,
       resolveFrame() {
         let nonce = responseIndex === 0 ? 'response-nonce' : 'second-nonce'
         let chunks = responses[responseIndex++].values()
@@ -177,7 +201,7 @@ async function exerciseIsland(
         })
         return new Response(body, {
           headers: options.enforceResponseCsp === false ? {} : {
-            'Content-Security-Policy': "script-src 'nonce-" + nonce + "'; style-src 'nonce-" + nonce + "'",
+            [options.reportOnlyCsp ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy']: "script-src 'nonce-" + nonce + "'; style-src 'nonce-" + nonce + "'",
           },
         })
       },
@@ -265,10 +289,12 @@ async function exerciseIsland(
     renderToStream(
       <html>
         <head>
-          <meta
-            httpEquiv="Content-Security-Policy"
-            content="script-src 'self' 'nonce-document-nonce'; style-src 'nonce-document-nonce'"
-          />
+          {options.reportOnlyCsp ? null : (
+            <meta
+              httpEquiv="Content-Security-Policy"
+              content="script-src 'self' 'nonce-document-nonce'; style-src 'nonce-document-nonce'"
+            />
+          )}
           {options.startup === 'import-map-only' ? (
             <ImportMap nonce="document-nonce" value={{}} />
           ) : null}

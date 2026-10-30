@@ -10,8 +10,8 @@ const state: { manager: NonceManager | undefined } = {
 
 const DOCUMENT_NONCE_META_SELECTOR = `meta[name="${DOCUMENT_NONCE_META_NAME}"]`
 
-export function getNonceManager(): NonceManager {
-  return (state.manager ??= createNonceManager(document))
+export function getNonceManager(reportOnlyCsp = false): NonceManager {
+  return (state.manager ??= createNonceManager(document, reportOnlyCsp))
 }
 
 // For tests that simulate independent document loads in the same browser realm.
@@ -19,7 +19,7 @@ export function resetNonceManager(): void {
   state.manager = undefined
 }
 
-function createNonceManager(doc: Document) {
+function createNonceManager(doc: Document, reportOnlyCsp: boolean) {
   let nonceMeta = doc.head?.querySelector<HTMLMetaElement>(DOCUMENT_NONCE_META_SELECTOR)
   // Capture once, including an absent nonce; incoming metadata cannot establish a new one.
   let documentNonce = nonceMeta?.nonce
@@ -34,7 +34,7 @@ function createNonceManager(doc: Document) {
     }
 
     if (responseNonce && documentNonce && responseNonce !== documentNonce) {
-      // Only the enforcing CSP response header identifies the nonce; incoming metadata cannot.
+      // The selected CSP response header identifies the nonce; incoming metadata cannot.
       for (let element of source.querySelectorAll('style[nonce],script[nonce],link[nonce]')) {
         // Firefox clones the attribute rather than the nonce property in inert fragments.
         if ('nonce' in element && element.nonce === responseNonce) {
@@ -70,6 +70,9 @@ function createNonceManager(doc: Document) {
   }
 
   return {
+    get reportOnlyCsp() {
+      return reportOnlyCsp
+    },
     get moduleNonce() {
       return moduleNonce
     },
@@ -99,8 +102,11 @@ function createNonceManager(doc: Document) {
   }
 }
 
-export function getResponseNonce(response: Response): string | undefined {
+export function getResponseNonce(response: Response, reportOnlyCsp = false): string | undefined {
   let header = response.headers.get('Content-Security-Policy')
+  if (header === null && reportOnlyCsp) {
+    header = response.headers.get('Content-Security-Policy-Report-Only')
+  }
   let nonce: string | undefined
   for (let policy of header?.split(',') ?? []) {
     let directives = new Map<string, string[]>()

@@ -32,9 +32,19 @@ export interface RunInit {
    * redirects, but does not sanitize the returned HTML. Custom resolvers own their request,
    * redirect, and content trust policies. Preserve the Response's `Content-Security-Policy`
    * header to translate matching resource nonces to the active document nonce when the policy
-   * identifies a single shared nonce for script and style elements.
+   * identifies a single shared nonce for script and style elements. With `reportOnlyCsp`, preserve
+   * `Content-Security-Policy-Report-Only` as well.
    */
   resolveFrame?: ResolveFrame
+
+  /**
+   * Allows report-only response policies to identify resource nonces during client navigation
+   * when the response has no enforcing `Content-Security-Policy` header. Defaults to `false`.
+   *
+   * Enable only when no enforcing CSP applies to the initial document, including policies added
+   * by middleware, proxies, or meta tags. This setting is captured once at startup for the document.
+   */
+  reportOnlyCsp?: boolean
 
   /** Processes module preloads discovered in late client entry responses before activation. */
   processClientEntryPreloads?: ProcessClientEntryPreloads
@@ -157,7 +167,7 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
-  getNonceManager()
+  getNonceManager(init.reportOnlyCsp === true)
   let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
   let scheduler = createScheduler(document, errorTarget, styleManager)

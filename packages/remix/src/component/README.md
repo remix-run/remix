@@ -76,6 +76,8 @@ let app = run({
 await app.ready()
 ```
 
+For documents with only report-only Content Security Policy, set `reportOnlyCsp: true` in the initial `run()` options to preserve resource nonces during client navigation without false reports. Leave it disabled if any enforcing policy applies to the initial document. See [CSP integration](./server/README.md#client-navigation) for nonce and response-header requirements.
+
 Client entries introduced after the initial document may depend on import maps added at runtime.
 When targeting browsers without native support for multiple import maps, use
 `remix/multiple-import-maps-polyfill` to load these modules and process their preloads:
