@@ -70,6 +70,8 @@ router.get('/missing', (context) =>
 
 The middleware forwards request credentials and session headers to internal frame requests, converts them to safe `GET` requests, follows redirects, preserves application error bodies, propagates frame targets and top-frame URLs, and cancels frame rendering when the original request is aborted.
 
+Responses from `context.render()` wait for the shell to render before the middleware returns them. The shell is the first chunk of HTML: the whole node tree, including blocking frames and the fallbacks of non-blocking frames. If a component throws while rendering the shell, `router.fetch()` rejects with that error, so the server's error handling (for example, the `onError` option of `createRequestListener()`) can respond with a `500`. Errors in non-blocking frame content streamed after the shell are reported to `onError`, but the response status has already been sent and the fallback remains in place.
+
 ### Options
 
 - **`assets`** - An asset server that resolves source-based client entry IDs to browser module URLs, import maps, and preload URLs. Omit it when client entries already use public URLs or the app has no client entries.
