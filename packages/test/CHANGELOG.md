@@ -1,3 +1,9 @@
+## v1.0.1
+
+### Patch Changes
+
+- Fix syntax errors in browser tests that dynamically import modules by preserving quotes around rewritten module URLs. ([#12102](https://github.com/remix-run/remix/pull/12102))
+
 ## v1.0.0
 
 ### Major Changes

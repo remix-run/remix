@@ -2,6 +2,23 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.1.1
+
+### Patch Changes
+
+- Hydration boundaries now update when adding or removing `clientEntry` during HMR (see #11982). ([#11982](https://github.com/remix-run/remix/pull/11982))
+
+- Updated links in the installed guides for the consolidated docs site and fixed the Motion link in animation examples. ([#12077](https://github.com/remix-run/remix/pull/12077))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cli@1.0.2`](https://github.com/remix-run/remix/releases/tag/cli@1.0.2)
+  - [`component@1.1.1`](https://github.com/remix-run/remix/releases/tag/component@1.1.1)
+  - [`component-hmr@1.0.1`](https://github.com/remix-run/remix/releases/tag/component-hmr@1.0.1)
+  - [`multiple-import-maps-polyfill@1.0.1`](https://github.com/remix-run/remix/releases/tag/multiple-import-maps-polyfill@1.0.1)
+  - [`render-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/render-middleware@1.0.2)
+  - [`spa@1.0.2`](https://github.com/remix-run/remix/releases/tag/spa@1.0.2)
+  - [`test@1.0.1`](https://github.com/remix-run/remix/releases/tag/test@1.0.1)
+
 ## v3.1.0
 
 ### Minor Changes
