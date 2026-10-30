@@ -582,13 +582,8 @@ class MixinHandleImpl
     }
     this.frame = options.frame
 
-    let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) =>
-      (props: ElementProps) => ({
-        $rmx: true as const,
-        type: options.hostType,
-        key: null,
-        props,
-      })) as unknown as MixinElement<Element, ElementProps>
+    let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) =>
+      jsx(options.hostType, props, null)) as unknown as MixinElement<Element, ElementProps>
     element.__rmxMixinElementType = options.hostType
     this.element = element
   }

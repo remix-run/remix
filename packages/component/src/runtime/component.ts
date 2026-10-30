@@ -520,13 +520,22 @@ let sharedAbortedSignal: AbortSignal | undefined
 
 function syncProps(target: ElementProps, next: ElementProps): void {
   for (let key in target) {
-    if (!(key in next)) {
+    if (!Object.hasOwn(next, key)) {
       delete target[key]
     }
   }
 
   for (let key in next) {
-    target[key] = next[key]
+    if (key === '__proto__') {
+      Object.defineProperty(target, key, {
+        value: next[key],
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
+    } else {
+      target[key] = next[key]
+    }
   }
 }
 

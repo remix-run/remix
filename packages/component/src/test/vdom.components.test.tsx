@@ -13,6 +13,29 @@ describe('vnode rendering', () => {
   })
 
   describe('components', () => {
+    it('updates and removes an own __proto__ prop without changing the props prototype', () => {
+      let container = document.createElement('div')
+      let received: Record<string, unknown> = {}
+      function App(handle: Handle<{ __proto__?: { label: string } }>) {
+        received = handle.props
+        return () => <p>Content</p>
+      }
+      let root = createRoot(container)
+      root.render(<App {...{ ['__proto__']: { label: 'first' } }} />)
+      expect(Object.hasOwn(received, '__proto__')).toBe(true)
+      expect(received.__proto__).toEqual({ label: 'first' })
+      expect(Object.getPrototypeOf(received)).toBe(Object.prototype)
+
+      root.render(<App {...{ ['__proto__']: { label: 'second' } }} />)
+      expect(received.__proto__).toEqual({ label: 'second' })
+      expect(Object.getPrototypeOf(received)).toBe(Object.prototype)
+
+      root.render(<App />)
+      expect(Object.hasOwn(received, '__proto__')).toBe(false)
+      expect(Object.getPrototypeOf(received)).toBe(Object.prototype)
+      root.dispose()
+    })
+
     it.todo('warns when render is called after component is removed')
 
     it('updates from a task queued during the initial render', () => {

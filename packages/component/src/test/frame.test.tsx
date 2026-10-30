@@ -10,6 +10,7 @@ import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on } from '../index.ts'
+import { jsx } from '../runtime/jsx.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
 async function setupReloadBodyTest(t: TestContext) {
@@ -47,6 +48,24 @@ function streamFromChunks(chunks: Array<string | Promise<string>>): ReadableStre
       controller.close()
     },
   })
+}
+
+async function hydrateDataProps(t: TestContext, props: Record<string, unknown>) {
+  let received: Record<string, unknown> | undefined
+  let Entry = clientEntry('/data.js#Entry', function Entry(handle: Handle) {
+    received = handle.props
+    return () => <p>Data</p>
+  })
+  document.body.innerHTML = await drain(renderToStream(jsx(Entry, props)))
+  received = undefined
+  let errors: unknown[] = []
+  let app = run({ loadModule: () => Entry })
+  app.addEventListener('error', (event) => errors.push(event.error))
+  t.after(() => app.dispose())
+  await app.ready()
+  expect(errors).toEqual([])
+  invariant(received, 'Expected hydrated props')
+  return received
 }
 
 async function drainWithProtocol(stream: ReadableStream<Uint8Array>): Promise<string> {
@@ -2342,6 +2361,194 @@ describe('run', () => {
     expect(third).toBe(dtA)
     expect(fourth).toBe(ddA)
     expect(document.querySelector('dl')?.textContent).toBe('BSecondAFirst')
+  })
+
+  it('preserves plain data containing every hydration descriptor tag', async (t) => {
+    let props = {
+      element: { $rmx: true, type: 'div', props: { innerHTML: '<b>Data</b>' }, key: 'data' },
+      values: [
+        { $rmx: false },
+        { $rmx: null },
+        { $rmx: 'unknown', type: 'article', props: { children: 'Data' } },
+        { $rmxFrame: true, props: { src: '/data' }, key: 'frame' },
+        { $rmxFragment: true, props: { children: 'Data' }, key: 'fragment' },
+        { $rmxMixin: 'css', args: [{ color: 'red' }] },
+        { $rmxMixin: null },
+        { $rmxMixin: 'unknown', args: [1] },
+        { $rmxFrame: false, $rmxFragment: 'unknown' },
+        { $rmx: true, $rmxFrame: true, $rmxFragment: true, $rmxMixin: 'css' },
+      ],
+      ordinary: { type: 'span', props: { innerHTML: 'Data' }, args: [], key: { id: 1 } },
+    }
+
+    expect(await hydrateDataProps(t, props)).toEqual(props)
+    expect(document.querySelector('b')).toBeNull()
+  })
+
+  it('preserves descriptor tags on the top-level client entry props', async (t) => {
+    let cases = [
+      { $rmx: true, type: 'div', props: { innerHTML: '<b>Data</b>' } },
+      { $rmx: 0 },
+      { $rmxFrame: true, props: { src: '/data' } },
+      { $rmxFragment: true, props: { children: 'Data' } },
+      { $rmxMixin: 'css', args: [{ color: 'red' }] },
+      { $rmxMixin: null },
+      { $rmxObject: { $rmxMixin: 'css', args: [] } },
+    ]
+
+    for (let props of cases) {
+      expect(await hydrateDataProps(t, props)).toEqual(props)
+    }
+  })
+
+  it('preserves plain data shaped exactly like nested escape wrappers', async (t) => {
+    let props = {
+      $rmxObject: { $rmx: true, type: 'div', props: {} },
+      nested: [
+        { $rmxObject: { $rmxObject: { $rmxMixin: null } } },
+        {
+          $rmxObject: [
+            ['$rmxMixin', 'css'],
+            ['args', []],
+          ],
+        },
+        { $rmxObject: null },
+        { $rmxObject: true, $rmxFrame: true, props: { src: '/data' } },
+      ],
+    }
+
+    expect(await hydrateDataProps(t, props)).toEqual(props)
+  })
+
+  it('preserves JSON omission and toJSON behavior in escaped data', async (t) => {
+    let calls: string[] = []
+    let props = {
+      $rmx: undefined,
+      data: {
+        $rmxMixin: 'css',
+        missing: undefined,
+        callback() {},
+        symbol: Symbol('data'),
+        omitted: { toJSON() {} },
+        omittedFunction: { toJSON: () => function ignored() {} },
+        omittedSymbol: { toJSON: () => Symbol('ignored') },
+        array: [undefined, () => {}, Symbol('data'), { toJSON() {} }],
+        date: new Date('2026-01-01T00:00:00.000Z'),
+        value: {
+          $rmx: 'data',
+          toJSON(key: string) {
+            calls.push(key)
+            return this
+          },
+        },
+        converted: { toJSON: () => ({ $rmxFragment: true, props: {} }) },
+      },
+    }
+    let expected = JSON.parse(JSON.stringify(props))
+    calls = []
+
+    expect(await hydrateDataProps(t, props)).toEqual(expected)
+    expect(calls).toEqual(['value'])
+  })
+
+  it('preserves own __proto__ properties without changing data prototypes', async (t) => {
+    let props = {
+      $rmxFragment: true,
+      ['__proto__']: { label: 'top' },
+      ordinary: { ['__proto__']: { label: 'ordinary' } },
+      escaped: { $rmxMixin: null, ['__proto__']: { $rmx: 'data' } },
+    }
+    let received = await hydrateDataProps(t, props)
+
+    expect(received).toEqual(props)
+    for (let value of [received, received.ordinary, received.escaped]) {
+      expect(Object.hasOwn(value, '__proto__')).toBe(true)
+      expect(Object.getPrototypeOf(value)).toBe(Object.prototype)
+    }
+  })
+
+  it('serializes repeated escaped objects separately after each toJSON call', async (t) => {
+    let value = {
+      $rmxMixin: 'data',
+      calls: 0,
+      toJSON() {
+        this.calls++
+        return this
+      },
+    }
+
+    expect(await hydrateDataProps(t, { values: [value, value] })).toEqual({
+      values: [
+        { $rmxMixin: 'data', calls: 1 },
+        { $rmxMixin: 'data', calls: 2 },
+      ],
+    })
+  })
+
+  it('hydrates real elements alongside escaped data and preserves element copies', async (t) => {
+    let data = { $rmx: true, type: 'div', props: { innerHTML: '<b>Data</b>' } }
+    let received: unknown
+    let Entry = clientEntry(
+      '/mixed.js#Entry',
+      function Entry(
+        handle: Handle<{ bundle: { $rmxFrame: true; data: typeof data; content: RemixNode } }>,
+      ) {
+        received = handle.props.bundle.data
+        let visible = false
+        return () => (
+          <section>
+            <button
+              mix={on('click', () => {
+                visible = true
+                handle.update()
+              })}
+            >
+              Show
+            </button>
+            {visible ? handle.props.bundle.content : null}
+          </section>
+        )
+      },
+    )
+    let element = <p mix={css({ color: 'rgb(1, 2, 3)' })}>Styled</p>
+    let content = (
+      <Fragment key="content">
+        {{ ...element }}
+        {Object.assign({}, <span>Copied</span>)}
+        <Frame src="/real-frame" />
+      </Fragment>
+    )
+    document.body.innerHTML = await drain(
+      renderToStream(<Entry bundle={{ $rmxFrame: true, data, content }} />),
+    )
+    received = undefined
+    let requests: string[] = []
+    let errors: unknown[] = []
+    let app = run({
+      loadModule: () => Entry,
+      resolveFrame(src) {
+        requests.push(src)
+        return '<i>Frame content</i>'
+      },
+    })
+    app.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => app.dispose())
+    await app.ready()
+    expect(received).toEqual(data)
+
+    document.querySelector('button')?.click()
+    app.flush()
+    await waitForElement('i', (element) => element.textContent === 'Frame content')
+
+    let paragraph = document.querySelector('p')
+    invariant(paragraph)
+    expect(paragraph.textContent).toBe('Styled')
+    expect(getComputedStyle(paragraph).color).toBe('rgb(1, 2, 3)')
+    expect(document.querySelector('span')?.textContent).toBe('Copied')
+    expect(document.querySelector('i')?.textContent).toBe('Frame content')
+    expect(document.querySelector('b')).toBeNull()
+    expect(requests).toEqual(['/real-frame'])
+    expect(errors).toEqual([])
   })
 
   it('hydrates css() mixins in element props', async (t) => {
