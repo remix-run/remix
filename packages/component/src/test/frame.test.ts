@@ -394,6 +394,63 @@ describe('frames', () => {
     }
   })
 
+  it('does not move head nodes after a leading server-rendered import map on reload', async () => {
+    let importMap = { imports: { '/entry.js': '/entry.hash.js' } }
+    let stylesheet = '<link data-rmx-key="styles" rel="stylesheet" href="data:text/css,">'
+    document.documentElement.innerHTML = [
+      '<head>',
+      remixImportMapScript(importMap),
+      '<title>Initial</title>',
+      stylesheet,
+      '</head>',
+      '<body><main>Initial</main></body>',
+    ].join('')
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([
+          appendFlushMarker(
+            [
+              '<!doctype html><html><head>',
+              remixImportMapScript(importMap),
+              '<title>Next</title>',
+              stylesheet,
+              '</head><body><main>Next</main></body></html>',
+            ].join(''),
+            'document',
+          ),
+        ])
+      },
+    })
+
+    try {
+      await frame.ready()
+      let importMapScript = document.head.firstElementChild
+      let stylesheetLink = document.head.querySelector('link[data-rmx-key="styles"]')
+      let removedNodes: Node[] = []
+      let observer = new MutationObserver((records) => {
+        for (let record of records) removedNodes.push(...record.removedNodes)
+      })
+      observer.observe(document.head, { childList: true })
+
+      await frame.handle.reload()
+      for (let record of observer.takeRecords()) removedNodes.push(...record.removedNodes)
+      observer.disconnect()
+
+      expect(removedNodes).not.toContain(stylesheetLink)
+      expect(removedNodes).not.toContain(importMapScript)
+      expect(document.title).toBe('Next')
+      expect(Array.from(document.head.children)).toEqual([
+        importMapScript,
+        document.querySelector('title'),
+        stylesheetLink,
+      ])
+      expect(importMapScript?.matches('script[data-rmx-import-map][type="importmap"]')).toBe(true)
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('resolves after committing reload content', async () => {
     let root = document.createElement('div')
     root.innerHTML = '<p id="initial">Initial</p>'

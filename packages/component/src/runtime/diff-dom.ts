@@ -248,14 +248,17 @@ function isPopoverOpen(element: Element): boolean {
 
 function diffElementChildren(current: Element, next: Element, context: FrameContext): void {
   let shouldPreserveHeadNode = context.shouldPreserveHeadNode
-  let preservedHeadNodes: ChildNode[] = []
+  let regionTailRef: ChildNode | null = null
   let currentChildren = Array.from(current.childNodes)
   if (current === current.ownerDocument.head && shouldPreserveHeadNode) {
-    preservedHeadNodes = currentChildren.filter(shouldPreserveHeadNode)
+    // Only preserved nodes after every diffed child can anchor the diff. Using a
+    // leading one would move every diffed node in front of it.
+    let lastDiffedIndex = currentChildren.findLastIndex((node) => !shouldPreserveHeadNode(node))
+    regionTailRef = currentChildren[lastDiffedIndex + 1] ?? null
     currentChildren = currentChildren.filter((node) => !shouldPreserveHeadNode(node))
   }
   let nextChildren = Array.from(next.childNodes)
-  diffSiblingUnits(currentChildren, nextChildren, current, preservedHeadNodes[0] ?? null, context)
+  diffSiblingUnits(currentChildren, nextChildren, current, regionTailRef, context)
 }
 
 function diffSiblingUnits(
