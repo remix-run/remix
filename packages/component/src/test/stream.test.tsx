@@ -875,6 +875,24 @@ describe('stream', () => {
       )
     })
 
+    it('renders aria and data boolean values as strings', async () => {
+      let stream = renderToStream(
+        <button
+          aria-pressed={true}
+          aria-hidden={false}
+          data-active={true}
+          data-open={false}
+          disabled
+        >
+          Toggle
+        </button>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<button aria-pressed="true" aria-hidden="false" data-active="true" data-open="false" disabled>Toggle</button>',
+      )
+    })
+
     it('preserves boolean and escaped values in HTML and SVG attributes', async () => {
       let html = await drain(
         renderToStream(
