@@ -254,7 +254,8 @@ schedule that work with `handle.queueTask()`.
 
 Components rendered on the server run their setup and render functions there too. On the server,
 `handle.update()` throws and queued tasks never run. Start timers, read the DOM, and use browser
-globals such as `window` in event handlers or queued tasks, which only run in the browser.
+globals such as `window` in event handlers or queued tasks, which only run in the browser. The
+Rendering UI guide shows [what each part of the handle does on the server and in the browser](/rendering-ui/#server-and-browser-work).
 
 `handle.update()` schedules work and returns a promise. Await it when the next step needs the updated
 DOM:
