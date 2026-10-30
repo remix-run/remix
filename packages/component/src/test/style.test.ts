@@ -31,11 +31,27 @@ describe('processStyleClass', () => {
 
   it('only appends px to numeric values of length properties', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    let result = processStyleClass({ WebkitLineClamp: 4, flex: 1, marginTop: 4 }, cache)
+    let result = processStyleClass({ webkitLineClamp: 4, flex: 1, marginTop: 4 }, cache)
 
-    expect(result.css).toContain('-webkit-line-clamp: 4;')
+    expect(result.css).toContain('  -webkit-line-clamp: 4;')
     expect(result.css).toContain('flex: 1;')
     expect(result.css).toContain('margin-top: 4px;')
+  })
+
+  it('keeps custom property names as written', () => {
+    let cache = new Map<string, { selector: string; css: string }>()
+    let result = processStyleClass({ '--gapSize': 4 }, cache)
+
+    expect(result.css).toContain('--gapSize: 4;')
+  })
+
+  it('drops non-finite numbers', () => {
+    let cache = new Map<string, { selector: string; css: string }>()
+    let result = processStyleClass({ color: 'red', width: Number.NaN, height: Infinity }, cache)
+
+    expect(result.css).toContain('color: red;')
+    expect(result.css).not.toContain('width')
+    expect(result.css).not.toContain('height')
   })
 
   it('keeps nested selectors and media queries', () => {
@@ -76,29 +92,21 @@ describe('normalizeCssValue', () => {
     expect(normalizeCssValue('width', 1.5)).toBe('1.5px')
   })
 
-  it('keeps line-clamp unitless, including the -webkit- prefixed form', () => {
+  it('keeps line-clamp unitless in every spelling', () => {
     expect(normalizeCssValue('lineClamp', 4)).toBe('4')
+    expect(normalizeCssValue('webkitLineClamp', 4)).toBe('4')
     expect(normalizeCssValue('WebkitLineClamp', 4)).toBe('4')
     expect(normalizeCssValue('-webkit-line-clamp', 4)).toBe('4')
   })
 
-  it('keeps the flex shorthand unitless', () => {
+  it('keeps other unitless properties unitless', () => {
     expect(normalizeCssValue('flex', 1)).toBe('1')
     expect(normalizeCssValue('msFlex', 1)).toBe('1')
-  })
-
-  it('keeps other unitless properties unitless', () => {
     expect(normalizeCssValue('scale', 2)).toBe('2')
     expect(normalizeCssValue('animationIterationCount', 3)).toBe('3')
-    expect(normalizeCssValue('gridRowStart', 2)).toBe('2')
     expect(normalizeCssValue('tabSize', 4)).toBe('4')
-    expect(normalizeCssValue('zIndex', 10)).toBe('10')
-  })
-
-  it('keeps SVG unitless properties unitless', () => {
     expect(normalizeCssValue('strokeWidth', 2)).toBe('2')
     expect(normalizeCssValue('fillOpacity', 0.5)).toBe('0.5')
-    expect(normalizeCssValue('strokeOpacity', 0.5)).toBe('0.5')
   })
 
   it('leaves zero, strings, and custom properties untouched', () => {

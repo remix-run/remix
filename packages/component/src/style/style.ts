@@ -18,16 +18,21 @@ export interface CSSProps extends DOMStyleProperties {
 
 type StyleObject = Record<string, unknown>
 
-// Convert camelCase CSS properties to kebab-case
+// Convert camelCase CSS properties to kebab-case, restoring the leading dash on
+// vendor prefixes (`webkitLineClamp`, `msFlex` -> `-webkit-line-clamp`, `-ms-flex`).
+// Custom properties are case-sensitive, so they're returned as written.
 // Property names repeat constantly across renders; cache conversions instead
 // of running a regex each time.
 const CAMEL_TO_KEBAB_CACHE_LIMIT = 256
 const camelToKebabCache = new Map<string, string>()
 
-function camelToKebab(str: string): string {
+export function camelToKebab(str: string): string {
+  if (str.startsWith('--')) return str
   let cached = camelToKebabCache.get(str)
   if (cached === undefined) {
-    cached = str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    cached = str
+      .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+      .replace(/^(webkit|moz|ms|o)-/, '-$1-')
     if (camelToKebabCache.size >= CAMEL_TO_KEBAB_CACHE_LIMIT) {
       let oldest = camelToKebabCache.keys().next()
       if (!oldest.done) camelToKebabCache.delete(oldest.value)
@@ -39,7 +44,7 @@ function camelToKebab(str: string): string {
 
 // Properties that should remain unitless (numeric values without px). Matched
 // after stripping any vendor prefix, so `WebkitLineClamp` (`-webkit-line-clamp`)
-// and `msFlex` (`ms-flex`) are covered by `line-clamp` and `flex`.
+// and `msFlex` (`-ms-flex`) are covered by `line-clamp` and `flex`.
 const NUMERIC_CSS_PROPS = new Set([
   'animation-iteration-count',
   'aspect-ratio',
@@ -91,7 +96,7 @@ const NUMERIC_CSS_PROPS = new Set([
   'stroke-width',
 ])
 
-const VENDOR_PREFIX_RE = /^-?(?:webkit|moz|ms|o)-/
+const VENDOR_PREFIX_RE = /^-(?:webkit|moz|ms|o)-/
 
 function isUnitlessCssProp(cssKey: string): boolean {
   return NUMERIC_CSS_PROPS.has(cssKey.replace(VENDOR_PREFIX_RE, ''))
@@ -100,11 +105,12 @@ function isUnitlessCssProp(cssKey: string): boolean {
 // Normalize numeric CSS values: append 'px' for properties that need units
 // In Standards Mode, browsers drop numeric values without units when multiple properties
 // are present in insertRule(). We must normalize them ourselves.
-export function normalizeCssValue(key: string, value: unknown): string {
-  if (value == null) return String(value)
-  if (typeof value === 'number' && value !== 0) {
-    let cssKey = camelToKebab(key)
-    if (!cssKey.startsWith('--') && !isUnitlessCssProp(cssKey)) {
+// Returns undefined for values that shouldn't be emitted (nullish and non-finite numbers).
+export function normalizeCssValue(key: string, value: unknown): string | undefined {
+  if (value == null) return undefined
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return undefined
+    if (value !== 0 && !key.startsWith('--') && !isUnitlessCssProp(camelToKebab(key))) {
       return `${value}px`
     }
   }
@@ -211,8 +217,8 @@ function styleToCss(styles: StyleObject, selector: string = ''): string {
       }
     } else {
       // Base declaration
-      if (value != null) {
-        let normalizedValue = normalizeCssValue(key, value)
+      let normalizedValue = normalizeCssValue(key, value)
+      if (normalizedValue !== undefined) {
         baseDeclarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
       }
     }
@@ -257,9 +263,11 @@ function nestedStyleBodyToCss(styles: StyleObject, spaces: number): string {
       if (nestedContent.trim().length > 0) {
         nestedBlocks.push(`${pad}${key} {\n${nestedContent}\n${pad}}`)
       }
-    } else if (value != null) {
+    } else {
       let normalizedValue = normalizeCssValue(key, value)
-      declarations.push(`${pad}${camelToKebab(key)}: ${normalizedValue};`)
+      if (normalizedValue !== undefined) {
+        declarations.push(`${pad}${camelToKebab(key)}: ${normalizedValue};`)
+      }
     }
   }
 
@@ -295,10 +303,10 @@ function keyframesBodyToCss(frames: StyleObject): string {
 
     let declarations: string[] = []
     for (let [prop, propValue] of Object.entries(frameValue)) {
-      if (propValue == null) continue
       // Ignore nested selectors/at-rules inside keyframe steps
       if (isComplexSelector(prop)) continue
       let normalizedValue = normalizeCssValue(prop, propValue)
+      if (normalizedValue === undefined) continue
       declarations.push(`  ${camelToKebab(prop)}: ${normalizedValue};`)
     }
 
@@ -335,8 +343,8 @@ function atRuleBodyToCss(styles: StyleObject): string {
         continue
       }
     } else {
-      if (value != null) {
-        let normalizedValue = normalizeCssValue(key, value)
+      let normalizedValue = normalizeCssValue(key, value)
+      if (normalizedValue !== undefined) {
         declarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
       }
     }

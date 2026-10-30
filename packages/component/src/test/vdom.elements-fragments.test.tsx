@@ -49,7 +49,7 @@ describe('vnode rendering', () => {
             marginTop: 12,
             display: 'block',
             lineHeight: Number.NaN,
-            '--size': 10,
+            '--sizeLg': 10,
           }}
         >
           X
@@ -59,7 +59,7 @@ describe('vnode rendering', () => {
       invariant(div instanceof HTMLDivElement)
       expect(div.style.marginTop).toBe('12px')
       expect(div.style.display).toBe('block')
-      expect(div.getAttribute('style') || '').toContain('--size: 10')
+      expect(div.getAttribute('style') || '').toContain('--sizeLg: 10')
       expect(div.style.lineHeight).toBe('')
 
       let container2 = document.createElement('div')
