@@ -21,8 +21,8 @@ describe('preview retention', () => {
     assert.deepEqual(getRetainedPreviewBuilds('preview/pr-123', builds, latestSha, now), builds)
   })
 
-  it('reserves room for a new PR build and keeps the newest nineteen previous builds', () => {
-    let builds = Array.from({ length: 20 }, (_, index) => ({
+  it('reserves room for a new PR build and keeps the newest two previous builds', () => {
+    let builds = Array.from({ length: 3 }, (_, index) => ({
       sha: index.toString(16).padStart(40, '0'),
       createdAt: new Date(now + index * 1000).toISOString(),
     }))
@@ -32,8 +32,8 @@ describe('preview retention', () => {
     )
   })
 
-  it('keeps twenty PR builds on a rerun without evicting the active SHA', () => {
-    let builds = Array.from({ length: 21 }, (_, index) => ({
+  it('keeps three PR builds on a rerun without evicting the active SHA', () => {
+    let builds = Array.from({ length: 4 }, (_, index) => ({
       sha: index.toString(16).padStart(40, '0'),
       createdAt: new Date(now + index * 1000).toISOString(),
     }))
@@ -44,7 +44,7 @@ describe('preview retention', () => {
   })
 
   it('does not apply the PR count cap to custom preview branches', () => {
-    let builds = Array.from({ length: 21 }, (_, index) => ({
+    let builds = Array.from({ length: 4 }, (_, index) => ({
       sha: index.toString(16).padStart(40, '0'),
       createdAt: '2020-01-01T00:00:00Z',
     }))
@@ -142,13 +142,13 @@ describe('preview retention', () => {
     }
   })
 
-  it('prunes PR artifacts beyond twenty builds from the snapshot and reachable history', () => {
+  it('prunes PR artifacts beyond three builds from the snapshot and reachable history', () => {
     let fixture = createFixture()
     try {
       let sourceSha = fixture.git('rev-parse', 'HEAD')
       fixture.build('preview/pr-123', 'initial')
       let manifest = fixture.manifest()
-      let previousBuilds = Array.from({ length: 20 }, (_, index) => ({
+      let previousBuilds = Array.from({ length: 3 }, (_, index) => ({
         sha: index.toString(16).padStart(8, '0') + '0'.repeat(32),
         createdAt: new Date(now + index * 1000).toISOString(),
       }))
@@ -158,7 +158,7 @@ describe('preview retention', () => {
         fs.writeFileSync(path.join(directory, 'remix.tgz'), build.sha)
       }
       fs.rmSync(path.join(fixture.cwd, 'tarballs', sourceSha.slice(0, 8)), { recursive: true })
-      manifest.sha = previousBuilds[19].sha
+      manifest.sha = previousBuilds[2].sha
       manifest.builds = previousBuilds
       fs.writeFileSync(path.join(fixture.cwd, 'tarballs/preview.json'), JSON.stringify(manifest))
       fixture.git('add', '.')

@@ -30,7 +30,7 @@ export function getRetainedPreviewBuilds(
       builds
         .filter((build) => build.sha !== latestSha)
         .toSorted((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
-        .slice(-19),
+        .slice(-2),
     )
     return builds.filter((build) => build.sha === latestSha || recentBuilds.has(build))
   }

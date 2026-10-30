@@ -77,7 +77,7 @@ A preview build has been created for this PR. You can install it using:
 pnpm add "${url}"
 \`\`\`
 
-Each push creates a new build URL and updates this comment. The latest 20 SHA builds remain installable; older builds are removed on each update. Merging or closing this PR deletes the preview branch.
+Each push creates a new build URL and updates this comment. The latest 3 SHA builds remain installable; older builds are removed on each update. Merging or closing this PR deletes the preview branch.
 
 If your pnpm version blocks transitive Git or tarball dependencies, set \`blockExoticSubdeps: false\` in your \`pnpm-workspace.yaml\`.`
 
