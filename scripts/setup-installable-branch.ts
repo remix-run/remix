@@ -39,7 +39,7 @@ const existingBuild = builds.find((build) => build.sha === sha)
 if (builds.some((build) => build.sha !== sha && build.sha.slice(0, 8) === sha.slice(0, 8))) {
   throw new Error(`Preview SHA prefix collision for ${sha}`)
 }
-const tarballsDir = path.resolve('tarballs', sha.slice(0, 8))
+const tarballsDir = path.resolve('t', sha.slice(0, 8))
 const packages = await readPackages()
 const tarballUrls = new Map(
   packages.map(({ dirName, manifest }) => [
@@ -95,7 +95,7 @@ await writePreviewManifest({
 // and rewritten manifests are needed on the preview branch.
 logAndExec('git', [
   'add',
-  'tarballs',
+  't',
   ...packages.map(({ dirName }) => `packages/${dirName}/package.json`),
 ])
 logAndExec('git', ['commit', '-m', `installable tarballs from ${sha}`])

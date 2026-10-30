@@ -7,7 +7,7 @@ describe('preview packages', () => {
   it('uses the first eight characters of the source SHA in tarball URLs', () => {
     assert.equal(
       getPreviewTarballUrl('preview/pr-123', '0123456789abcdef0123456789abcdef01234567', 'remix'),
-      'https://raw.githubusercontent.com/remix-run/remix/refs/heads/preview/pr-123/tarballs/01234567/remix.tgz',
+      'https://raw.githubusercontent.com/remix-run/remix/preview/pr-123/t/01234567/remix.tgz',
     )
     assert.notEqual(
       getPreviewTarballUrl('preview/pr-123', 'abc123', 'remix'),

@@ -106,9 +106,7 @@ describe('preview retention', () => {
       let firstSha = fixture.git('rev-parse', 'HEAD')
       fixture.build('preview/pr-123', 'first')
       let firstPreview = fixture.git('rev-parse', 'HEAD')
-      let tarball = fs.readFileSync(
-        path.join(fixture.cwd, 'tarballs', firstSha.slice(0, 8), 'remix.tgz'),
-      )
+      let tarball = fs.readFileSync(path.join(fixture.cwd, 't', firstSha.slice(0, 8), 'remix.tgz'))
       fixture.git('push', 'origin', 'HEAD:refs/heads/preview/pr-123')
       fixture.git('checkout', 'main')
       fs.writeFileSync(path.join(fixture.cwd, 'change.txt'), 'second source commit')
@@ -121,19 +119,19 @@ describe('preview retention', () => {
         [firstSha, secondSha],
       )
       assert.deepEqual(
-        fs.readFileSync(path.join(fixture.cwd, 'tarballs', firstSha.slice(0, 8), 'remix.tgz')),
+        fs.readFileSync(path.join(fixture.cwd, 't', firstSha.slice(0, 8), 'remix.tgz')),
         tarball,
       )
       assert.equal(fixture.git('rev-parse', 'HEAD^'), secondSha)
       assert.notEqual(fixture.git('rev-parse', 'HEAD^'), firstPreview)
       fixture.git('push', '--force-with-lease', 'origin', 'HEAD:refs/heads/preview/pr-123')
       let currentTarball = fs.readFileSync(
-        path.join(fixture.cwd, 'tarballs', secondSha.slice(0, 8), 'remix.tgz'),
+        path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz'),
       )
       fixture.git('checkout', 'main')
       fixture.build('preview/pr-123', 'must not repack')
       assert.deepEqual(
-        fs.readFileSync(path.join(fixture.cwd, 'tarballs', secondSha.slice(0, 8), 'remix.tgz')),
+        fs.readFileSync(path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz')),
         currentTarball,
       )
       assert.equal(fixture.manifest().builds.length, 2)
@@ -153,14 +151,14 @@ describe('preview retention', () => {
         createdAt: new Date(now + index * 1000).toISOString(),
       }))
       for (let build of previousBuilds) {
-        let directory = path.join(fixture.cwd, 'tarballs', build.sha.slice(0, 8))
+        let directory = path.join(fixture.cwd, 't', build.sha.slice(0, 8))
         fs.mkdirSync(directory)
         fs.writeFileSync(path.join(directory, 'remix.tgz'), build.sha)
       }
-      fs.rmSync(path.join(fixture.cwd, 'tarballs', sourceSha.slice(0, 8)), { recursive: true })
+      fs.rmSync(path.join(fixture.cwd, 't', sourceSha.slice(0, 8)), { recursive: true })
       manifest.sha = previousBuilds[2].sha
       manifest.builds = previousBuilds
-      fs.writeFileSync(path.join(fixture.cwd, 'tarballs/preview.json'), JSON.stringify(manifest))
+      fs.writeFileSync(path.join(fixture.cwd, 't/preview.json'), JSON.stringify(manifest))
       fixture.git('add', '.')
       fixture.git('commit', '-m', 'seed retained builds')
       fixture.git('push', 'origin', 'HEAD:refs/heads/preview/pr-123')
@@ -171,10 +169,10 @@ describe('preview retention', () => {
         fixture.manifest().builds.map((build) => build.sha),
         [...previousBuilds.slice(1).map((build) => build.sha), sourceSha],
       )
-      assert.equal(fs.existsSync(path.join(fixture.cwd, 'tarballs/00000000')), false)
-      assert.doesNotMatch(fixture.git('rev-list', '--objects', 'HEAD'), /tarballs\/00000000/)
+      assert.equal(fs.existsSync(path.join(fixture.cwd, 't/00000000')), false)
+      assert.doesNotMatch(fixture.git('rev-list', '--objects', 'HEAD'), /t\/00000000/)
       assert.equal(
-        fs.readFileSync(path.join(fixture.cwd, 'tarballs/00000001/remix.tgz'), 'utf8'),
+        fs.readFileSync(path.join(fixture.cwd, 't/00000001/remix.tgz'), 'utf8'),
         previousBuilds[1].sha,
       )
     } finally {
@@ -182,12 +180,14 @@ describe('preview retention', () => {
     }
   })
 
-  it('migrates an existing Git preview without tarballs', () => {
+  it('replaces previews using the old artifact layout without retaining old paths', () => {
     let fixture = createFixture()
     try {
       let sourceSha = fixture.git('rev-parse', 'HEAD')
       fixture.git('checkout', '-b', 'preview/pr-123')
       fs.writeFileSync(path.join(fixture.cwd, 'old-build.js'), 'old preview output')
+      fs.mkdirSync(path.join(fixture.cwd, 'tarballs'))
+      fs.writeFileSync(path.join(fixture.cwd, 'tarballs/preview.json'), '{}')
       fixture.git('add', '.')
       fixture.git('commit', '-m', 'legacy preview')
       fixture.git('push', 'origin', 'HEAD:refs/heads/preview/pr-123')
@@ -198,6 +198,7 @@ describe('preview retention', () => {
         [sourceSha],
       )
       assert.equal(fs.existsSync(path.join(fixture.cwd, 'old-build.js')), false)
+      assert.equal(fs.existsSync(path.join(fixture.cwd, 'tarballs')), false)
       fixture.git('push', '--force-with-lease', 'origin', 'HEAD:refs/heads/preview/pr-123')
     } finally {
       fixture.dispose()
@@ -245,15 +246,15 @@ describe('preview retention', () => {
         fixture.manifest().builds.map((build) => build.sha),
         [secondSha],
       )
-      assert.equal(fs.existsSync(path.join(fixture.cwd, 'tarballs', firstSha.slice(0, 8))), false)
+      assert.equal(fs.existsSync(path.join(fixture.cwd, 't', firstSha.slice(0, 8))), false)
       assert.doesNotMatch(
         fixture.git('rev-list', '--objects', 'HEAD'),
-        new RegExp(`tarballs/${firstSha.slice(0, 8)}`),
+        new RegExp(`t/${firstSha.slice(0, 8)}`),
       )
       assert.equal(fixture.git('rev-parse', 'HEAD^'), secondSha)
 
       let latestTarball = fs.readFileSync(
-        path.join(fixture.cwd, 'tarballs', secondSha.slice(0, 8), 'remix.tgz'),
+        path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz'),
       )
       fixture.ageBuild(secondSha)
       let originalBuildTime = fixture.manifest().builds[0].createdAt
@@ -264,7 +265,7 @@ describe('preview retention', () => {
         { sha: secondSha, createdAt: originalBuildTime },
       ])
       assert.deepEqual(
-        fs.readFileSync(path.join(fixture.cwd, 'tarballs', secondSha.slice(0, 8), 'remix.tgz')),
+        fs.readFileSync(path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz')),
         latestTarball,
       )
       assert.equal(fixture.git('rev-parse', 'HEAD^'), secondSha)
@@ -320,7 +321,7 @@ if (process.argv.includes('pack')) {
     })
   }
   function manifest() {
-    return readPreviewManifest(fs.readFileSync(path.join(cwd, 'tarballs/preview.json'), 'utf8'), '')
+    return readPreviewManifest(fs.readFileSync(path.join(cwd, 't/preview.json'), 'utf8'), '')
   }
   return {
     cwd,
@@ -333,7 +334,7 @@ if (process.argv.includes('pack')) {
       let value = manifest()
       for (let build of value.builds)
         if (build.sha === sha) build.createdAt = '2020-01-01T00:00:00Z'
-      fs.writeFileSync(path.join(cwd, 'tarballs/preview.json'), JSON.stringify(value))
+      fs.writeFileSync(path.join(cwd, 't/preview.json'), JSON.stringify(value))
       git('add', '.')
       git('commit', '-m', 'age fixture build')
     },

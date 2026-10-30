@@ -111,7 +111,7 @@ To create a new Remix app with the CLI, use `npx remix new`:
 npx remix new my-remix-app
 ```
 
-To try the latest `main` build, copy the `remix` tarball URL from the [preview manifest](https://github.com/remix-run/remix/blob/preview/main/tarballs/preview.json) and install it with pnpm:
+To try the latest `main` build, copy the `remix` tarball URL from the [preview manifest](https://github.com/remix-run/remix/blob/preview/main/t/preview.json) and install it with pnpm:
 
 ```sh
 pnpm add "<tarball-url>"

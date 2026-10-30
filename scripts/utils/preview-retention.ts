@@ -106,12 +106,12 @@ export function loadPreviousPreview(branch: string): PreviousPreview | null {
   if (remote.status !== 0) throw new Error(`Could not look up preview branch: ${remote.stderr}`)
   let commit = remote.stdout.trim().split(/\s+/)[0]
   git(['fetch', '--no-tags', '--depth=1', 'origin', `+${commit}:refs/remotes/origin/${branch}`])
-  let metadata = cp.spawnSync('git', ['show', `${commit}:tarballs/preview.json`], {
+  let metadata = cp.spawnSync('git', ['show', `${commit}:t/preview.json`], {
     encoding: 'utf8',
   })
   if (metadata.status !== 0) {
-    // Existing previews from before tarball builds have no manifest to retain.
-    if (git(['ls-tree', '--name-only', commit, 'tarballs']).length === 0) return null
+    // Previews using an earlier artifact layout start with a fresh build.
+    if (git(['ls-tree', '--name-only', commit, 't']).length === 0) return null
     throw new Error(`Could not read preview manifest: ${metadata.stderr}`)
   }
   let manifest = readPreviewManifest(metadata.stdout, git(['show', '-s', '--format=%cI', commit]))
@@ -128,13 +128,13 @@ export function restorePreviewTarballs(previous: PreviousPreview, builds: Previe
     previous.commit,
     '--worktree',
     '--',
-    ...builds.map((build) => `tarballs/${build.sha.slice(0, 8)}`),
+    ...builds.map((build) => `t/${build.sha.slice(0, 8)}`),
   ])
 }
 
 export async function writePreviewManifest(manifest: PreviewManifest): Promise<void> {
-  await fsp.mkdir('tarballs', { recursive: true })
-  await fsp.writeFile('tarballs/preview.json', JSON.stringify(manifest, null, 2) + '\n')
+  await fsp.mkdir('t', { recursive: true })
+  await fsp.writeFile('t/preview.json', JSON.stringify(manifest, null, 2) + '\n')
 }
 
 function git(args: string[]): string {

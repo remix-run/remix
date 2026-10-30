@@ -61,7 +61,7 @@ function printUsage() {
 
 async function comment() {
   let preview: { branch: string; sha: string } = JSON.parse(
-    await readFile('tarballs/preview.json', 'utf-8'),
+    await readFile('t/preview.json', 'utf-8'),
   )
   if (preview.branch !== branch) {
     throw new Error(`Preview metadata is for ${preview.branch}, not ${branch}`)
