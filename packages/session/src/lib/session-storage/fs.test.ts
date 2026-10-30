@@ -231,7 +231,9 @@ describe('fs session storage', () => {
 
     let sessions = await Promise.all(Array.from({ length: 50 }, () => storage.read(cookie)))
     let saving = true
-    let saves = Promise.all(
+    // Settled rather than all, so a failed save fails this test instead of rejecting unhandled
+    // while the reads below run.
+    let saves = Promise.allSettled(
       sessions.map((concurrent, index) => {
         concurrent.set('value', 'x'.repeat((sessions.length - index) * 1000))
         return storage.save(concurrent)
@@ -240,13 +242,19 @@ describe('fs session storage', () => {
       saving = false
     })
 
-    // Read for as long as saves are in progress, so reads land while files are being written.
-    while (saving) {
-      let read = await storage.read(cookie)
-      assert.equal(read.id, session.id)
-      assert.match(String(read.get('value')), /^x*$/)
-    }
-    await saves
+    // Read for as long as saves are in progress, so reads land while files are being written. Several
+    // readers keep the file open almost constantly, like a visitor's parallel requests.
+    await Promise.all(
+      Array.from({ length: 4 }, async () => {
+        while (saving) {
+          let read = await storage.read(cookie)
+          assert.equal(read.id, session.id)
+          assert.match(String(read.get('value')), /^x*$/)
+        }
+      }),
+    )
+    let failures = (await saves).filter((result) => result.status === 'rejected')
+    assert.deepEqual(failures, [])
   })
 
   it('saves while another handle has the session file open', async () => {

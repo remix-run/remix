@@ -64,6 +64,42 @@ export function createFsSessionStorage(
     }
   }
 
+  // Writing in place lets overlapping saves of one session interleave into invalid JSON, and lets
+  // reads see a truncated file. Renaming a complete file over the old one replaces it in one step.
+  async function writeFileAtomically(file: string, content: string): Promise<void> {
+    // The same directory keeps the rename on one filesystem, where it is atomic.
+    let tempFile = `${file}.${crypto.randomUUID()}.tmp`
+
+    try {
+      await fsp.writeFile(tempFile, content, 'utf-8')
+      await replaceFile(tempFile, file)
+    } catch (error) {
+      await fsp.rm(tempFile, { force: true }).catch(() => undefined)
+      throw error
+    }
+  }
+
+  // Windows refuses to replace a file while it is open, and a visitor's overlapping requests keep
+  // their session file open with reads and replaces. So in this process a replace waits for the
+  // replaces of that file before it, and reads that start meanwhile wait for the replaces. Reads
+  // already open when a replace starts close within milliseconds, which its retries outlast.
+  let replacing = new Map<string, Promise<void>>()
+
+  function replaceFile(source: string, destination: string): Promise<void> {
+    let replace = (replacing.get(destination) ?? Promise.resolve()).then(() =>
+      renameWithRetries(source, destination),
+    )
+    let settled = replace.then(release, release)
+    replacing.set(destination, settled)
+    return replace
+
+    function release() {
+      if (replacing.get(destination) === settled) {
+        replacing.delete(destination)
+      }
+    }
+  }
+
   return {
     async read(cookie) {
       let id = cookie
@@ -71,6 +107,7 @@ export function createFsSessionStorage(
       if (id) {
         try {
           let file = await getFilePath(id)
+          await replacing.get(file)
           let content = await fsp.readFile(file, 'utf-8')
           let data = JSON.parse(content) as SessionData
           return createSession(id, data)
@@ -108,24 +145,9 @@ export function createFsSessionStorage(
   }
 }
 
-// Writing in place lets overlapping saves of one session interleave into invalid JSON, and lets
-// reads see a truncated file. Renaming a complete file over the old one replaces it in one step.
-async function writeFileAtomically(file: string, content: string): Promise<void> {
-  // The same directory keeps the rename on one filesystem, where it is atomic.
-  let tempFile = `${file}.${crypto.randomUUID()}.tmp`
-
-  try {
-    await fsp.writeFile(tempFile, content, 'utf-8')
-    await replaceFile(tempFile, file)
-  } catch (error) {
-    await fsp.rm(tempFile, { force: true }).catch(() => undefined)
-    throw error
-  }
-}
-
-// Windows can refuse to replace a file that another handle has open, such as a virus scanner's or
-// an overlapping save's, so it retries for about a second before failing the save.
-async function replaceFile(source: string, destination: string): Promise<void> {
+// On Windows, a replace can still meet a file that another handle has open, such as a virus
+// scanner's or another process's, so it retries for about a second before failing the save.
+async function renameWithRetries(source: string, destination: string): Promise<void> {
   for (let delay = 10; ; delay *= 2) {
     try {
       return await fsp.rename(source, destination)
