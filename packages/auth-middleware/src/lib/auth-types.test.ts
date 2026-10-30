@@ -174,6 +174,28 @@ router.get(routes.private, privateAction)
 
 router.map(routes.admin, adminController)
 
+router.map(
+  { public: routes.public, private: routes.private },
+  {
+    actions: {
+      public(context) {
+        let currentAuth = context.get(Auth)
+        expectTypeEquality<IsEqual<typeof currentAuth, AuthState<APIIdentity>>>()
+        return new Response('Public')
+      },
+      private: {
+        middleware: [requireAuth<APIIdentity>()],
+        handler(context) {
+          let currentAuth = context.get(Auth)
+          expectTypeEquality<IsEqual<typeof currentAuth, GoodAuth<APIIdentity>>>()
+          expectTypeEquality<IsEqual<typeof context.auth, GoodAuth<APIIdentity>>>()
+          return new Response(context.auth.method)
+        },
+      },
+    },
+  },
+)
+
 if (false as boolean) {
   router.get(routes.private, (context) => {
     // @ts-expect-error - router-global auth() alone does not guarantee a good auth state
