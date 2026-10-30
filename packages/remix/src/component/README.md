@@ -976,6 +976,8 @@ Client entry props cross from the server to the browser, so they must be seriali
 
 Functions and class instances are rejected by the types. Pass plain data and URLs instead of database records or request objects.
 
+Plain objects keep their data meaning even when they contain keys such as `$rmx`, `$rmxFrame`, `$rmxFragment`, or `$rmxMixin`. Create elements with JSX or `createElement()`; an object with the same fields as an element is still data. Object properties whose values are `undefined` are omitted during serialization, and `undefined` array entries become `null`, following JSON behavior.
+
 Elements in props may use `css()` mixins. Other mixins, such as `on()`, `ref()`, animation mixins, and custom mixins from `createMixin()` (even ones that return `css()`), can't be serialized, and the client entry reports an error when it renders them. Render those elements inside the client entry instead.
 
 ### Client Runtime
