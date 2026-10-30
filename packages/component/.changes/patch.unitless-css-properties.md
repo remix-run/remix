@@ -14,4 +14,6 @@ Fix how `css()` and the `style` prop serialize property names and numeric values
   +css({ '--gap-size': '8px', gap: 'var(--gap-size)' })
   ```
 
-- To match React, `flex: 1` now renders `flex: 1` instead of `flex: 1px` (a `1px` flex basis), `tabSize: 4` means four spaces instead of `4px`, and `borderImageWidth` / `borderImageOutset` numbers multiply the border width instead of being pixels. Use a string such as `'1px'` to keep the old value.
+- `css()` adds `px` to plain numbers, but it also added it to `flex`, where a number means a grow factor. `flex: 2` rendered as `flex: 2px`, which grows like `flex: 1` with a `2px` basis, so numbers other than `1` had no effect on growth. `flex` numbers are now grow factors, and `flex: 1` renders `1 1 0%` instead of `1 1 1px`.
+- To match React, `tabSize: 4` now means four spaces instead of `4px`, and `borderImageWidth` / `borderImageOutset` numbers multiply the border width instead of being pixels.
+- Use a string such as `'1px'` to keep any old value.
