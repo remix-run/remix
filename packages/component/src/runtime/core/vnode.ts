@@ -1,11 +1,15 @@
 import type { ElementProps, ElementType, RemixElement } from '../jsx.ts'
 
+// Shared across module instances, and enumerable so element spreads retain their identity.
+export const REMIX_ELEMENT = Symbol.for('remix.element')
+
 export function createRemixElement(
   type: ElementType,
   props: ElementProps | null | undefined,
   key?: any,
 ): RemixElement {
   return {
+    [REMIX_ELEMENT]: true,
     $rmx: true,
     key,
     props: normalizeElementProps(props),
@@ -15,10 +19,10 @@ export function createRemixElement(
 
 export function isRemixElement(node: unknown): node is RemixElement {
   if (typeof node !== 'object' || node === null) return false
+  if (Reflect.get(node, REMIX_ELEMENT) !== true) return false
   let type = Reflect.get(node, 'type')
   let props = Reflect.get(node, 'props')
   return (
-    Reflect.get(node, '$rmx') === true &&
     (typeof type === 'string' || typeof type === 'function') &&
     typeof props === 'object' &&
     props !== null

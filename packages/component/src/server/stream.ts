@@ -34,6 +34,8 @@ import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
+import { createRemixElement, isRemixElement } from '../runtime/core/vnode.ts'
+import { ESCAPED_OBJECT, SERIALIZATION_TAGS } from '../runtime/props-serialization.ts'
 
 interface VNode {
   type: ElementType
@@ -494,10 +496,6 @@ async function resolveFrameHtml(
   return splitFirstChunk(input)
 }
 
-function isRemixElement(node: unknown): node is RemixElement {
-  return typeof node === 'object' && node !== null && '$rmx' in node
-}
-
 function buildSegment(
   node: RemixNode,
   context: RenderContext,
@@ -876,12 +874,8 @@ function createSsrMixinHandle(
 ) {
   // Context lookups read the shared render context, so capture the parent before it moves on.
   let parentVNode = context.parentVNode
-  let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () => ({
-    $rmx: true as const,
-    type: hostType,
-    key: null,
-    props: handle.props,
-  })) as ((handle: {
+  let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () =>
+    createRemixElement(hostType, handle.props, null)) as ((handle: {
     props: ElementProps
     update(): Promise<AbortSignal>
   }) => () => RemixElement) & {
@@ -983,19 +977,8 @@ function buildComponentSegment(
 }
 
 function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
-  function unwrapNode(node: RemixNode): unknown {
-    if (node === null || node === undefined || typeof node === 'boolean') return node
-    if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
-      return node
-    }
-    if (Array.isArray(node)) {
-      return node.map((child) => unwrapNode(child))
-    }
-    if (isRemixElement(node)) {
-      return unwrapElement(node)
-    }
-    return node
-  }
+  let escapedObjects = new WeakMap<object, { [ESCAPED_OBJECT]: Record<string, unknown> }>()
+  let escapedContents = new WeakSet<object>()
 
   function unwrapElement(element: RemixElement): unknown {
     let type = element.type
@@ -1006,7 +989,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     if (type === Frame) {
       return {
         $rmxFrame: true,
-        props: transformProps(props),
+        props,
         key: element.key,
       }
     }
@@ -1016,14 +999,14 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     if (type === Fragment) {
       return {
         $rmxFragment: true,
-        props: transformProps(props),
+        props,
         key: serializeKey(element.key),
       }
     }
 
-    // If it's a DOM tag, return a serializable shape with transformed props
+    // JSON visits the descriptor's props next, transforming each nested value once.
     if (typeof type === 'string') {
-      return { $rmx: true, type, props: transformProps(props), key: serializeKey(element.key) }
+      return { $rmx: true, type, props, key: serializeKey(element.key) }
     }
 
     // Component function: render synchronously, then unwrap its result
@@ -1061,32 +1044,14 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
 
       vnode._handle = handle
       let [renderedNode] = handle.render(props)
-      return unwrapNode(renderedNode)
+      return replacer('', renderedNode)
     }
 
     return null
   }
 
-  function transformProps(input: ElementProps): Record<string, unknown> {
-    let out: Record<string, unknown> = {}
-    for (let key in input) {
-      let value = input[key]
-      if (key === 'children') {
-        out[key] = unwrapNode(value)
-      } else {
-        if (isRemixElement(value)) {
-          out[key] = unwrapNode(value)
-        } else if (Array.isArray(value)) {
-          out[key] = value.map((v) => unwrapNode(v))
-        } else {
-          out[key] = value
-        }
-      }
-    }
-    return out
-  }
-
-  return function replacer(_key: string, value: unknown) {
+  function replacer(_key: string, value: unknown): unknown {
+    if (typeof value !== 'object' || value === null || escapedContents.has(value)) return value
     // Mixin descriptors hold their setup function, which JSON drops. `css()`
     // only holds style data, so it's revived in the browser by name.
     if (isMixinDescriptor(value)) {
@@ -1097,11 +1062,26 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     if (isRemixElement(value)) {
       return unwrapElement(value)
     }
-    if (Array.isArray(value)) {
-      return value.map((v) => unwrapNode(v))
+    if (!Array.isArray(value) && SERIALIZATION_TAGS.some((tag) => Object.hasOwn(value, tag))) {
+      // Keep values in object properties so JSON still omits undefined, functions,
+      // symbols, and values whose toJSON returns them. JSON already called toJSON
+      // on this object, so don't copy that method into the wrapper's contents.
+      let contents = Object.fromEntries(
+        Object.entries(value).filter(
+          ([key, item]) => key !== 'toJSON' || typeof item !== 'function',
+        ),
+      )
+      let escaped = escapedObjects.get(value) ?? { [ESCAPED_OBJECT]: contents }
+      escaped[ESCAPED_OBJECT] = contents
+      // Reuse wrappers so circular input still triggers JSON's circular-reference error.
+      escapedObjects.set(value, escaped)
+      escapedContents.add(contents)
+      return escaped
     }
     return value
   }
+
+  return replacer
 }
 
 // Other key types don't survive JSON: bigints throw, and objects are revived

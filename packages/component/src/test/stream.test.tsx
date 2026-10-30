@@ -6,6 +6,7 @@ import { createElement } from '../runtime/create-element.ts'
 
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
+import type { SerializableObject } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 import { Fragment, Frame } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -2317,6 +2318,75 @@ describe('stream', () => {
         items: ['one', 'two', 'three'],
         nested: { value: 99 },
       })
+    })
+
+    it('escapes plain element-shaped data without rendering it on the server', async () => {
+      let Entry = clientEntry(
+        '/entry.js#Entry',
+        function Entry(_handle: Handle<{ data: SerializableObject }>) {
+          return () => <p>Content</p>
+        },
+      )
+      let data = { $rmx: 'data', type: 'div', props: { innerHTML: '<b>Data</b>' }, key: {} }
+      let html = await drain(renderToStream(<Entry data={data} />))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.data).toEqual({ $rmxObject: data })
+      expect(html).not.toContain('<b>Data</b>')
+    })
+
+    it('keeps genuine wire descriptors distinct from escaped application props', async () => {
+      let Entry = clientEntry(
+        '/entry.js#Entry',
+        function Entry(_handle: Handle<{ data: SerializableObject; content: RemixNode }>) {
+          return () => <p>Content</p>
+        },
+      )
+      function Content() {
+        return () => <span>Real</span>
+      }
+      let data = { $rmxMixin: 'css', args: [{ color: 'red' }] }
+      let html = await drain(renderToStream(<Entry data={data} content={<Content />} />))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props).toEqual({
+        data: { $rmxObject: data },
+        content: { $rmx: true, type: 'span', props: { children: 'Real' } },
+      })
+    })
+
+    it('still rejects circular escaped data', async () => {
+      let Entry = clientEntry(
+        '/entry.js#Entry',
+        function Entry(_handle: Handle<{ data: SerializableObject }>) {
+          return () => <p>Content</p>
+        },
+      )
+      let data: SerializableObject = { $rmxMixin: 'css' }
+      data.self = data
+
+      await expect(drain(renderToStream(<Entry data={data} />, { onError() {} }))).rejects.toThrow(
+        /circular|cyclic/i,
+      )
+    })
+
+    it('reads plain data props only during JSON serialization', async () => {
+      let reads = 0
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let data = {
+        $rmx: 'data',
+        get props() {
+          reads++
+          return { label: 'Data' }
+        },
+      }
+      let html = await drain(renderToStream(createElement(Entry, { data })))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(reads).toBe(1)
+      expect(entry.props.data).toEqual({ $rmxObject: { $rmx: 'data', props: { label: 'Data' } } })
     })
 
     it('serializes virtual host elements', async () => {

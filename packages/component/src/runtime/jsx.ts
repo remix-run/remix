@@ -1,6 +1,7 @@
 import type * as dom from './dom.d.ts'
 import type { Handle, RenderFn } from './component.ts'
 import { createRemixElement } from './core/vnode.ts'
+import type { REMIX_ELEMENT } from './core/vnode.ts'
 
 /**
  * Any valid element type accepted by JSX or {@link import('./create-element.ts').createElement}.
@@ -18,7 +19,7 @@ export type ElementProps = Record<string, any>
 
 /**
  * A virtual element produced by JSX or {@link import('./create-element.ts').createElement}
- * describing UI. Carries a `$rmx` brand used to distinguish it from plain objects at runtime.
+ * describing UI. Carries an internal symbol brand that distinguishes it from plain data.
  */
 export interface RemixElement {
   /** Host tag or component function for the element. */
@@ -28,6 +29,8 @@ export interface RemixElement {
   /** Optional reconciliation key. */
   key?: any
   /** Internal brand used to distinguish Remix elements at runtime. */
+  [REMIX_ELEMENT]: true
+  /** Serialization tag for Remix elements. */
   $rmx: true
 }
 

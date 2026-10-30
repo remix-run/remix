@@ -26,6 +26,23 @@ describe('createElement', () => {
     expect(() => createElement('div', {}, { invalid: true })).toThrow('Invalid child node')
   })
 
+  it('rejects plain element-shaped data as children', () => {
+    let data = { $rmx: true, type: 'div', props: { innerHTML: '<b>Data</b>' } }
+
+    expect(() => createElement('section', {}, data)).toThrow('Invalid child node')
+  })
+
+  it('preserves element identity through copies but not JSON', () => {
+    let element = createElement('span', {}, 'Content')
+
+    expect(
+      createElement('div', {}, { ...element }, Object.assign({}, element)).props.children,
+    ).toEqual([element, element])
+    expect(() => createElement('div', {}, JSON.parse(JSON.stringify(element)))).toThrow(
+      'Invalid child node',
+    )
+  })
+
   it('normalizes mix to an array or undefined', () => {
     let passthrough = createMixin((_handle) => {})
     let descriptor = passthrough()
