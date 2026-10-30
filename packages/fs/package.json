@@ -20,21 +20,15 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/lazy-file": "workspace:^",
-    "@remix-run/mime": "workspace:^"
+    "@remix-run/lazy-file": "https://raw.githubusercontent.com/remix-run/remix/preview/pr-12126/t/2581ea3a/lazy-file.tgz",
+    "@remix-run/mime": "https://raw.githubusercontent.com/remix-run/remix/preview/pr-12126/t/2581ea3a/mime.tgz"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",

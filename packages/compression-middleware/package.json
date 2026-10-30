@@ -20,17 +20,11 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
@@ -42,9 +36,9 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/mime": "workspace:^",
-    "@remix-run/response": "workspace:^"
+    "@remix-run/fetch-router": "https://raw.githubusercontent.com/remix-run/remix/preview/pr-12126/t/2581ea3a/fetch-router.tgz",
+    "@remix-run/mime": "https://raw.githubusercontent.com/remix-run/remix/preview/pr-12126/t/2581ea3a/mime.tgz",
+    "@remix-run/response": "https://raw.githubusercontent.com/remix-run/remix/preview/pr-12126/t/2581ea3a/response.tgz"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -20,26 +20,19 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./future": "./src/future.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./future": {
+      "types": "./dist/future.d.ts",
+      "default": "./dist/future.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./future": {
-        "types": "./dist/future.d.ts",
-        "default": "./dist/future.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/headers": "workspace:^",
-    "@remix-run/multipart-parser": "workspace:^"
+    "@remix-run/headers": "https://raw.githubusercontent.com/remix-run/remix/preview/pr-12126/t/2581ea3a/headers.tgz",
+    "@remix-run/multipart-parser": "https://raw.githubusercontent.com/remix-run/remix/preview/pr-12126/t/2581ea3a/multipart-parser.tgz"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
