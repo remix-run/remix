@@ -75,10 +75,13 @@ export function createFsSessionStorage(
           let data = JSON.parse(content) as SessionData
           return createSession(id, data)
         } catch (error) {
-          if (!isNoEntityError(error)) {
+          // A crash during a save, or an earlier version's overlapping saves, can leave a file
+          // that isn't valid JSON. Its data is gone, so treat it as missing rather than failing
+          // every request that sends this cookie.
+          if (!isNoEntityError(error) && !(error instanceof SyntaxError)) {
             throw error
           }
-          // File doesn't exist, fall through to create new session
+          // Fall through to create new session
         }
       }
 

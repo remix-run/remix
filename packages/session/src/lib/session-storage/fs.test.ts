@@ -283,6 +283,40 @@ describe('fs session storage', () => {
     assert.deepEqual(await listEntries(tmpDir), [file])
   })
 
+  it('starts a new session when the session file is not valid JSON', async () => {
+    let storage = createFsSessionStorage(tmpDir)
+    let session = await storage.read(null)
+    session.set('count', 1)
+    let cookie = await storage.save(session)
+    let [file] = await listEntries(tmpDir)
+
+    // What overlapping saves left behind when they wrote in place.
+    await fsp.writeFile(file, '{"count":1}t":2}')
+
+    let recovered = await storage.read(cookie)
+    assert.notEqual(recovered.id, session.id)
+    assert.equal(recovered.get('count'), undefined)
+  })
+
+  it('replaces an invalid session file when unknown IDs are reused', async () => {
+    let storage = createFsSessionStorage(tmpDir, { useUnknownIds: true })
+    let session = await storage.read(null)
+    session.set('count', 1)
+    let cookie = await storage.save(session)
+    let [file] = await listEntries(tmpDir)
+
+    // A crash during a save can leave an empty file.
+    await fsp.writeFile(file, '')
+
+    let recovered = await storage.read(cookie)
+    assert.equal(recovered.id, session.id)
+    assert.equal(recovered.get('count'), undefined)
+
+    recovered.set('count', 2)
+    await storage.save(recovered)
+    assert.equal((await storage.read(cookie)).get('count'), 2)
+  })
+
   it('throws error if session directory is a file', async () => {
     let filePath = path.join(tmpDir, 'not-a-directory')
     await fsp.writeFile(filePath, 'I am a file, not a directory.')
