@@ -166,20 +166,23 @@ describe('hydration', () => {
       expect(existingDiv.getAttribute('data-value')).toBe('42')
     })
 
-    it('hydrates data-rmx-preserve-dom as a boolean attribute', async () => {
-      let html = await renderToString(<div data-rmx-preserve-dom />)
-      expect(html).toBe('<div data-rmx-preserve-dom></div>')
+    it('hydrates data-rmx-document and data-rmx-preserve-dom as boolean attributes', async () => {
+      let html = await renderToString(
+        <a href="/login" data-rmx-preserve-dom={true} data-rmx-document={false} />,
+      )
+      expect(html).toBe('<a href="/login" data-rmx-preserve-dom></a>')
       container.innerHTML = html
+      let serverHtml = container.innerHTML
 
-      let existingDiv = container.querySelector('div')
-      invariant(existingDiv)
+      let existingAnchor = container.querySelector('a')
+      invariant(existingAnchor)
 
       let root = createRoot(container)
-      root.render(<div data-rmx-preserve-dom />)
+      root.render(<a href="/login" data-rmx-preserve-dom={true} data-rmx-document={false} />)
       root.flush()
 
-      expect(container.querySelector('div')).toBe(existingDiv)
-      expect(existingDiv.hasAttribute('data-rmx-preserve-dom')).toBe(true)
+      expect(container.querySelector('a')).toBe(existingAnchor)
+      expect(container.innerHTML).toBe(serverHtml)
     })
 
     it('hydrates SVG xlinkHref as xlink:href', async () => {
