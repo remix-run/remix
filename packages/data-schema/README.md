@@ -359,7 +359,7 @@ type UserOutput = InferOutput<typeof User> // { name: string; age: number }
 
 ## Extending data-schema
 
-Build custom schemas using `createSchema`, `createIssue`, and `fail`. These are the same primitives used internally by every built-in schema.
+Build custom schemas using `createSchema`, `createIssue`, and `fail`. A custom schema can be nested, chained with `.pipe()`, `.refine()`, and `.transform()`, and parsed like any built-in schema. Its validator is a plain function, so tools that read how a schema was built can only see that it is a custom schema, not the rules inside it.
 
 ```ts
 import { createSchema, createIssue, fail } from 'remix/data-schema'
