@@ -1,0 +1,1 @@
+`createFsSessionStorage` now starts a new session when a session file isn't valid JSON, as it does when the file is missing, instead of throwing on every request that sends that session's cookie. Visitors whose session files were corrupted by overlapping saves in earlier versions, or by a crash during a save, get a fresh session instead of an error until their cookie expires.

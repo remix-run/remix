@@ -64,6 +64,50 @@ export function createFsSessionStorage(
     }
   }
 
+  // Writing in place lets overlapping saves of one session interleave into invalid JSON, and lets
+  // reads see a truncated file. Renaming a complete file over the old one replaces it in one step.
+  async function writeFileAtomically(file: string, content: string): Promise<void> {
+    let mode = await readFileMode(file)
+    // The same directory keeps the rename on one filesystem, where it is atomic.
+    let tempFile = `${file}.${crypto.randomUUID()}.tmp`
+    let handle = await fsp.open(tempFile, 'wx', mode)
+
+    try {
+      try {
+        // Restore the existing mode even if the process umask has changed since the last write.
+        if (mode !== undefined) await handle.chmod(mode)
+        await handle.writeFile(content, 'utf-8')
+      } finally {
+        await handle.close()
+      }
+      await replaceFile(tempFile, file)
+    } catch (error) {
+      await fsp.rm(tempFile, { force: true }).catch(() => {})
+      throw error
+    }
+  }
+
+  // Windows refuses to replace a file while it is open, and a visitor's overlapping requests keep
+  // their session file open with reads and replaces. So in this process a replace waits for the
+  // replaces of that file before it, and reads that start meanwhile wait for the replaces. Reads
+  // already open when a replace starts close within milliseconds, which its retries outlast.
+  let replacing = new Map<string, Promise<void>>()
+
+  function replaceFile(source: string, destination: string): Promise<void> {
+    let replace = (replacing.get(destination) ?? Promise.resolve()).then(() =>
+      renameWithRetries(source, destination),
+    )
+    let settled = replace.then(release, release)
+    replacing.set(destination, settled)
+    return replace
+
+    function release() {
+      if (replacing.get(destination) === settled) {
+        replacing.delete(destination)
+      }
+    }
+  }
+
   return {
     async read(cookie) {
       let id = cookie
@@ -71,14 +115,18 @@ export function createFsSessionStorage(
       if (id) {
         try {
           let file = await getFilePath(id)
+          await replacing.get(file)
           let content = await fsp.readFile(file, 'utf-8')
           let data = JSON.parse(content) as SessionData
           return createSession(id, data)
         } catch (error) {
-          if (!isNoEntityError(error)) {
+          // A crash during a save, or an earlier version's overlapping saves, can leave a file
+          // that isn't valid JSON. Its data is gone, so treat it as missing rather than failing
+          // every request that sends this cookie.
+          if (!isNoEntityError(error) && !(error instanceof SyntaxError)) {
             throw error
           }
-          // File doesn't exist, fall through to create new session
+          // Fall through to create new session
         }
       }
 
@@ -96,13 +144,42 @@ export function createFsSessionStorage(
       if (session.dirty) {
         let file = await getFilePath(session.id)
         await fsp.mkdir(path.dirname(file), { recursive: true })
-        await fsp.writeFile(file, JSON.stringify(session.data), 'utf-8')
+        await writeFileAtomically(file, JSON.stringify(session.data))
         return session.id
       }
 
       return null
     },
   }
+}
+
+// On Windows, a replace can still meet a file that another handle has open, such as a virus
+// scanner's or another process's, so it retries for about a second before failing the save.
+async function renameWithRetries(source: string, destination: string): Promise<void> {
+  for (let delay = 10; ; delay *= 2) {
+    try {
+      return await fsp.rename(source, destination)
+    } catch (error) {
+      if (process.platform !== 'win32' || delay > 640 || !isFileInUseError(error)) {
+        throw error
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+  }
+}
+
+async function readFileMode(file: string): Promise<number | undefined> {
+  try {
+    return (await fsp.stat(file)).mode & 0o777
+  } catch (error) {
+    if (isNoEntityError(error)) return undefined
+    throw error
+  }
+}
+
+function isFileInUseError(error: unknown): boolean {
+  let code = error instanceof Error && 'code' in error ? error.code : undefined
+  return code === 'EACCES' || code === 'EBUSY' || code === 'EPERM'
 }
 
 function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
