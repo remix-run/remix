@@ -97,8 +97,6 @@ export type ControlledReflectionState = {
   disposed: boolean
   listenersAttached: boolean
   pendingRestoreVersion: number
-  managesValue: boolean
-  managesChecked: boolean
   hasControlledValue: boolean
   controlledValue: unknown
   hasControlledChecked: boolean
@@ -111,7 +109,7 @@ export type DirectEventBinding = {
   type: string
   handler: (event: Event, signal: AbortSignal) => void | Promise<void>
   capture: boolean
-  stableHandler: ((event: Event) => void) | null
+  stableHandler: (event: Event) => void
   reentry: AbortController | null
 }
 
@@ -216,30 +214,12 @@ export function isFragmentNode(node: VNode): node is FragmentNode | CommittedFra
   return node.kind === 'fragment'
 }
 
-export function isTextNode(node: VNode): node is TextNode | CommittedTextNode {
-  return node.kind === 'text'
-}
-
-export function isNonRenderNode(node: VNode): node is NonRenderNode | CommittedNonRenderNode {
-  return node.kind === 'empty'
-}
-
 export function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
   return node.kind === 'text'
 }
 
-export function isHostNode(node: VNode): node is HostNode | CommittedHostNode {
-  return node.kind === 'host'
-}
-
 export function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
   return node.kind === 'host'
-}
-
-export function isComponentNode(
-  node: VNode,
-): node is ComponentNode | MountingComponentNode | CommittedComponentNode {
-  return node.kind === 'component'
 }
 
 export function isCommittedComponentNode(node: VNode): node is CommittedComponentNode {
@@ -248,14 +228,6 @@ export function isCommittedComponentNode(node: VNode): node is CommittedComponen
 
 export function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClientEntryNode {
   return node.kind === 'client-entry'
-}
-
-export function isFrameNode(node: VNode): node is FrameNode | CommittedFrameNode {
-  return node.kind === 'frame'
-}
-
-export function isCommittedFrameNode(node: CommittedVNode): node is CommittedFrameNode {
-  return node.kind === 'frame'
 }
 
 export function findContextFromAncestry(node: VNodeParent, type: ElementFunction): unknown {
