@@ -4,9 +4,30 @@ import { createFileMatcher } from './file-matcher.ts'
 import { isInjectedPackageFilePath } from './injected-packages.ts'
 import { normalizeFilePath } from './paths.ts'
 
-type AccessPolicy = {
+/** Access-policy result for an inspected asset file. */
+export interface AssetAccessDetails {
+  /** Whether the asset server may serve the file. */
+  allowed: boolean
+  /** The first configured rule that allowed the file, when one matched. */
+  allowedBy?: AssetAccessRule
+  /** The first matching `denyFiles` pattern, when access was denied. */
+  deniedBy?: string
+}
+
+/** Rule that allows an inspected asset file to be served. */
+export type AssetAccessRule =
+  /** A matching `allowFiles` entry. */
+  | { kind: 'file'; value: string }
+  /** A runtime file provided internally by the asset server. */
+  | { kind: 'injected'; value: string }
+  /** A matching `allowPackages` entry. */
+  | { kind: 'package'; value: string }
+
+export type AccessPolicy = {
+  getAllowedPackageRoots(): readonly string[]
   getPackageWatchDirectories(): readonly string[]
   handleFileEvent(filePath: string): void
+  inspect(filePath: string): AssetAccessDetails
   isAllowed(filePath: string): boolean
 }
 
@@ -29,13 +50,15 @@ export function createAccessPolicy(options: {
   packageSearchRoots?: readonly string[]
   rootDir: string
 }): AccessPolicy {
-  let allowMatchers = options.allowFiles.map((pattern) =>
-    createFileMatcher(pattern, options.rootDir),
-  )
+  let allowMatchers = options.allowFiles.map((pattern) => ({
+    matcher: createFileMatcher(pattern, options.rootDir),
+    pattern,
+  }))
   let allowPackageNames = normalizePackageNames(options.allowPackages, 'allowPackages')
-  let denyMatchers = (options.denyFiles ?? []).map((pattern) =>
-    createFileMatcher(pattern, options.rootDir),
-  )
+  let denyMatchers = (options.denyFiles ?? []).map((pattern) => ({
+    matcher: createFileMatcher(pattern, options.rootDir),
+    pattern,
+  }))
   let packageSearchRoots = [options.rootDir, ...(options.packageSearchRoots ?? [])]
   let packageRootPaths = createPackageRootPaths({
     allowPackageNames,
@@ -57,14 +80,44 @@ export function createAccessPolicy(options: {
     packageRootsDirty = false
   }
 
-  function isAllowedPackage(filePath: string): boolean {
-    if (allowPackageNames.size === 0) return false
+  function getAllowedPackageName(filePath: string): string | undefined {
+    if (allowPackageNames.size === 0) return undefined
     refreshPackageRootPathTries()
 
-    return isPathInPackageRootPathTrie(filePath, allowPackageRootPathTrie)
+    return getPackageNameFromRootPathTrie(filePath, allowPackageRootPathTrie)
+  }
+
+  function inspect(filePath: string): AssetAccessDetails {
+    if (isInjectedPackageFilePath(filePath)) {
+      return { allowed: true, allowedBy: { kind: 'injected', value: '@remix-run/assets' } }
+    }
+
+    let allowedBy: AssetAccessRule | undefined
+    let allowMatch = allowMatchers.find(({ matcher }) => matcher(filePath))
+    if (allowMatch) {
+      allowedBy = { kind: 'file', value: allowMatch.pattern }
+    } else {
+      let packageName = getAllowedPackageName(filePath)
+      if (packageName !== undefined) {
+        allowedBy = { kind: 'package', value: packageName }
+      }
+    }
+
+    if (!allowedBy) return { allowed: false }
+
+    let denyMatch = denyMatchers.find(({ matcher }) => matcher(filePath))
+    if (denyMatch) {
+      return { allowed: false, allowedBy, deniedBy: denyMatch.pattern }
+    }
+
+    return { allowed: true, allowedBy }
   }
 
   return {
+    getAllowedPackageRoots() {
+      refreshPackageRootPathTries()
+      return [...packageRootPaths.keys()]
+    },
     getPackageWatchDirectories() {
       if (allowPackageNames.size === 0) return []
       return packageStateDirectories
@@ -75,13 +128,9 @@ export function createAccessPolicy(options: {
 
       packageRootsDirty = true
     },
+    inspect,
     isAllowed(filePath) {
-      if (isInjectedPackageFilePath(filePath)) return true
-      if (!allowMatchers.some((matcher) => matcher(filePath)) && !isAllowedPackage(filePath)) {
-        return false
-      }
-      if (denyMatchers.length > 0 && denyMatchers.some((matcher) => matcher(filePath))) return false
-      return true
+      return inspect(filePath).allowed
     },
   }
 }
@@ -121,7 +170,7 @@ type PackageJson = {
 
 type PackageRootPathTrie = {
   children: Map<string, PackageRootPathTrie>
-  packageRoot: boolean
+  packageName?: string
 }
 
 type PackageRootQueueItem = {
@@ -132,8 +181,8 @@ type PackageRootQueueItem = {
 function createPackageRootPaths(options: {
   allowPackageNames: ReadonlySet<string>
   searchRoots: readonly string[]
-}): Set<string> {
-  let allowPackageRootPaths = new Set<string>()
+}): Map<string, string> {
+  let allowPackageRootPaths = new Map<string, string>()
   let allowQueue: PackageRootQueueItem[] = []
   let seenAllowedPackageRoots = new Set<string>()
   let searchRoots = normalizePackageSearchRoots(options.searchRoots)
@@ -155,13 +204,13 @@ function createPackageRootPaths(options: {
   }
 
   while (allowQueue.length > 0) {
-    let { packageJsonPath } = allowQueue.shift()!
+    let { packageJsonPath, packageName } = allowQueue.shift()!
     let packageRootPath = normalizeFilePath(path.dirname(packageJsonPath))
     if (seenAllowedPackageRoots.has(packageRootPath)) continue
     seenAllowedPackageRoots.add(packageRootPath)
 
     let packageJson = readPackageJson(packageJsonPath)
-    allowPackageRootPaths.add(packageRootPath)
+    allowPackageRootPaths.set(packageRootPath, packageName)
 
     for (let dependencyName of Object.keys(packageJson.dependencies ?? {})) {
       validatePackageName(
@@ -197,10 +246,12 @@ function createPackageRootPaths(options: {
   return allowPackageRootPaths
 }
 
-function createPackageRootPathTrie(packageRootPaths: ReadonlySet<string>): PackageRootPathTrie {
+function createPackageRootPathTrie(
+  packageRootPaths: ReadonlyMap<string, string>,
+): PackageRootPathTrie {
   let rootNode = createPackageRootPathTrieNode()
 
-  for (let packageRootPath of packageRootPaths) {
+  for (let [packageRootPath, packageName] of packageRootPaths) {
     let node = rootNode
     for (let segment of getFilePathSegments(packageRootPath)) {
       let childNode = node.children.get(segment)
@@ -210,7 +261,7 @@ function createPackageRootPathTrie(packageRootPaths: ReadonlySet<string>): Packa
       }
       node = childNode
     }
-    node.packageRoot = true
+    node.packageName = packageName
   }
 
   return rootNode
@@ -219,22 +270,24 @@ function createPackageRootPathTrie(packageRootPaths: ReadonlySet<string>): Packa
 function createPackageRootPathTrieNode(): PackageRootPathTrie {
   return {
     children: new Map(),
-    packageRoot: false,
   }
 }
 
-function isPathInPackageRootPathTrie(filePath: string, trie: PackageRootPathTrie): boolean {
+function getPackageNameFromRootPathTrie(
+  filePath: string,
+  trie: PackageRootPathTrie,
+): string | undefined {
   let node = trie
-  if (node.packageRoot) return true
+  if (node.packageName !== undefined) return node.packageName
 
   for (let segment of getFilePathSegments(filePath)) {
     let childNode = node.children.get(segment)
-    if (!childNode) return false
-    if (childNode.packageRoot) return true
+    if (!childNode) return undefined
+    if (childNode.packageName !== undefined) return childNode.packageName
     node = childNode
   }
 
-  return false
+  return undefined
 }
 
 function getFilePathSegments(filePath: string): string[] {

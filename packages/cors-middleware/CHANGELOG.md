@@ -2,6 +2,63 @@
 
 This is the changelog for [`cors-middleware`](https://github.com/remix-run/remix/tree/main/packages/cors-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.1`](https://github.com/remix-run/remix/releases/tag/headers@1.0.1)
+
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@1.0.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.0.0)
+  - [`headers@1.0.0`](https://github.com/remix-run/remix/releases/tag/headers@1.0.0)
+
+## v0.2.1
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+
+## v0.2.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `cors({ credentials: true })` now preserves the default `Access-Control-Allow-Origin: *` response. Applications that intentionally allow credentialed requests from any origin must configure `origin: '*'` explicitly; applications with a restricted origin policy should continue to configure an exact origin, pattern, array, or resolver.
+
+### Patch Changes
+
+- Include `Access-Control-Request-Private-Network` in `Vary` on all allowed preflight responses when `allowPrivateNetwork` is enabled, so caches distinguish ordinary preflights from private network preflights. This also applies when `preflightContinue` is enabled.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.1)
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
+## v0.1.9
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.0)
+
+## v0.1.8
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.21.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.21.0)
+
 ## v0.1.7
 
 ### Patch Changes

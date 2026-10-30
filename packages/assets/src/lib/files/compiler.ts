@@ -2,7 +2,6 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { FileStorage } from '@remix-run/file-storage'
 import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 import { detectContentType } from '@remix-run/mime'
 import {
@@ -10,11 +9,13 @@ import {
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
-import { formatFingerprintedPathname, generateFingerprint, hashContent } from '../fingerprint.ts'
+import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
 import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
+import { createTransformCacheKey } from './cache.ts'
+import type { FileCache } from './file-cache.ts'
 import { createSourceFileStore } from './store.ts'
 import type {
   FileSnapshot,
@@ -56,8 +57,8 @@ type FileGetHrefOptions = {
 }
 
 type FileCompilerOptions = {
-  buildId?: string
-  cache?: FileStorage
+  cache?: FileCache
+  cacheKey?: string
   extensions: readonly string[]
   fingerprintAssets: boolean
   globalTransforms: readonly {
@@ -125,10 +126,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   }
   let sourceFileStore: SourceFileStore = createSourceFileStore()
   let sourceFileInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
-  let transformedAssetMetadataByCacheKey = new Map<string, EmittedFileMetadata>()
-  let transformedCacheKeysByIdentityPath = new Map<string, Set<string>>()
+  let cache = options.cache
   let transformedEmitInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
-  let cacheEpoch = resolvedOptions.buildId ?? crypto.randomUUID()
+  let cacheKey = resolvedOptions.cacheKey ?? crypto.randomUUID()
   let resolveArgs: ResolveArgs = {
     extensions: resolvedOptions.extensionSet,
     isAllowed: resolvedOptions.isAllowed,
@@ -140,15 +140,22 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       let resolvedFile = resolveServedFileOrThrow(resolveInputFilePath(filePath), resolveArgs)
       let record = getFreshSourceFileRecord(resolvedFile.identityPath)
       if (shouldUseTransformPipeline(getOptions.transform)) {
-        let cacheKey = getTransformedRecordCacheKey(cacheEpoch, record, getOptions.transform)
-        let notModified = getNotModifiedFile(
-          transformedAssetMetadataByCacheKey.get(cacheKey),
-          getOptions,
+        let parsedTransforms = parseRequestTransforms(
+          getOptions.transform,
+          resolvedOptions.transforms,
+          resolvedOptions.maxRequestTransforms,
         )
-        if (notModified) return notModified
-
-        let transformedFile = await getOrCreateTransformedFile(record, getOptions.transform)
-        notModified = getNotModifiedFile(toEmittedFileMetadata(transformedFile), getOptions)
+        let transformedCacheKey = await getTransformedRecordCacheKey(
+          cacheKey,
+          record,
+          parsedTransforms,
+        )
+        let transformedFile = await getOrCreateTransformedFile(
+          record,
+          parsedTransforms,
+          transformedCacheKey,
+        )
+        let notModified = getNotModifiedFile(toEmittedFileMetadata(transformedFile), getOptions)
         if (notModified) return notModified
 
         return {
@@ -179,12 +186,30 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     async getHref(filePath, hrefOptions) {
       let resolvedFile = resolveServedFileOrThrow(resolveInputFilePath(filePath), resolveArgs)
       let record = getFreshSourceFileRecord(resolvedFile.identityPath)
-      let href = resolvedOptions.fingerprintAssets
-        ? formatFingerprintedPathname(
-            resolvedFile.stableUrlPathname,
-            (await getOrCreateSourceFileMetadata(record)).fingerprint,
+      let href = resolvedFile.stableUrlPathname
+      if (resolvedOptions.fingerprintAssets) {
+        let emittedFile: EmittedFile
+        if (shouldUseTransformPipeline(hrefOptions.transform)) {
+          let parsedTransforms = parseRequestTransforms(
+            hrefOptions.transform,
+            resolvedOptions.transforms,
+            resolvedOptions.maxRequestTransforms,
           )
-        : resolvedFile.stableUrlPathname
+          let transformedCacheKey = await getTransformedRecordCacheKey(
+            cacheKey,
+            record,
+            parsedTransforms,
+          )
+          emittedFile = await getOrCreateTransformedFile(
+            record,
+            parsedTransforms,
+            transformedCacheKey,
+          )
+        } else {
+          emittedFile = await getOrCreateSourceFile(record)
+        }
+        href = formatFingerprintedPathname(href, emittedFile.fingerprint)
+      }
 
       if (shouldUseTransformPipeline(hrefOptions.transform)) {
         return appendTransformQuery(href, hrefOptions.transform)
@@ -196,7 +221,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     async handleFileEvent(filePath, event) {
       if (!isServedFilePath(filePath, resolvedOptions.extensionSet)) return
       sourceFileStore.invalidateForFileEvent(filePath, event)
-      clearTransformedCacheIndex(filePath)
     },
 
     isServedFilePath(filePath) {
@@ -234,7 +258,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     let record = sourceFileStore.get(identityPath)
     if (record.metadataSnapshot && !isFileSnapshotFresh(record.metadataSnapshot)) {
       sourceFileStore.invalidate(identityPath)
-      clearTransformedCacheIndex(identityPath)
       record = sourceFileStore.get(identityPath)
     }
 
@@ -284,26 +307,17 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
 
   async function getOrCreateTransformedFile(
     record: SourceFileRecord,
-    transformQuery: readonly string[] | null,
+    parsedTransforms: readonly ParsedRequestTransform[],
+    transformedCacheKey: string,
   ): Promise<EmittedFile> {
-    let parsedTransforms = parseRequestTransforms(
-      transformQuery,
-      resolvedOptions.transforms,
-      resolvedOptions.maxRequestTransforms,
-    )
-    let cacheKey = getTransformedRecordCacheKey(cacheEpoch, record, transformQuery)
-    let existing = transformedEmitInFlightByCacheKey.get(cacheKey)
+    let existing = transformedEmitInFlightByCacheKey.get(transformedCacheKey)
     if (existing) return existing
 
     let promise = (async () => {
-      let sourceFile = await getOrCreateSourceFile(record)
-      let cachedFile = await getCachedTransformedFile(
-        cacheKey,
-        record.identityPath,
-        sourceFile.fingerprint,
-      )
+      let cachedFile = await getCachedTransformedFile(transformedCacheKey, record.identityPath)
       if (cachedFile) return cachedFile
 
+      let sourceFile = await getOrCreateSourceFile(record)
       let transformedFile = await applyTransforms(record.identityPath, sourceFile, parsedTransforms)
       if (transformedFile === null) {
         return sourceFile
@@ -312,24 +326,26 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
       let emittedFile = await createEmittedFile(transformedFile.body, {
         extension: transformedFile.extension,
         filePath: record.identityPath,
-        fingerprint: sourceFile.fingerprint,
       })
-      rememberTransformedAssetMetadata(
-        cacheKey,
-        record.identityPath,
-        toEmittedFileMetadata(emittedFile),
-      )
-      await setCachedTransformedFile(cacheKey, record.identityPath, emittedFile)
+      if (cache) {
+        let name =
+          path.basename(record.identityPath, path.extname(record.identityPath)) +
+          emittedFile.extension
+        await cache.put(
+          transformedCacheKey,
+          new File([toArrayBufferView(emittedFile.body)], name, { type: emittedFile.contentType }),
+        )
+      }
       return emittedFile
     })()
 
-    transformedEmitInFlightByCacheKey.set(cacheKey, promise)
+    transformedEmitInFlightByCacheKey.set(transformedCacheKey, promise)
 
     try {
       return await promise
     } finally {
-      if (transformedEmitInFlightByCacheKey.get(cacheKey) === promise) {
-        transformedEmitInFlightByCacheKey.delete(cacheKey)
+      if (transformedEmitInFlightByCacheKey.get(transformedCacheKey) === promise) {
+        transformedEmitInFlightByCacheKey.delete(transformedCacheKey)
       }
     }
   }
@@ -338,13 +354,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     return createEmittedFile(body, {
       extension: path.extname(identityPath).toLowerCase(),
       filePath: identityPath,
-      fingerprint:
-        resolvedOptions.fingerprintAssets && resolvedOptions.buildId
-          ? await generateFingerprint({
-              buildId: resolvedOptions.buildId,
-              content: body,
-            })
-          : null,
     })
   }
 
@@ -363,7 +372,8 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     source: EmittedFile,
     transforms: readonly ParsedRequestTransform[],
   ): Promise<{ body: Uint8Array; extension: string } | null> {
-    let currentBody = source.body
+    // Concurrent pipelines can share a source read, but transforms may mutate their input.
+    let currentBody: Uint8Array = new Uint8Array(source.body)
     let currentExtension = source.extension
     let appliedTransform = false
 
@@ -439,44 +449,15 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   async function getCachedTransformedFile(
     cacheKey: string,
     identityPath: string,
-    fingerprint: string | null,
   ): Promise<EmittedFile | null> {
-    if (!resolvedOptions.cache) return null
-
-    let file = await resolvedOptions.cache.get(cacheKey)
+    if (!cache) return null
+    let file = await cache.get(cacheKey)
     if (!file) return null
 
-    let body = new Uint8Array(await file.arrayBuffer())
-    let metadata =
-      transformedAssetMetadataByCacheKey.get(cacheKey) ??
-      (await createEmittedFileMetadata(body, {
-        extension: path.extname(file.name).toLowerCase(),
-        filePath: identityPath,
-        fingerprint,
-      }))
-
-    rememberTransformedAssetMetadata(cacheKey, identityPath, metadata)
-
-    return {
-      body,
-      ...metadata,
-    }
-  }
-
-  async function setCachedTransformedFile(
-    cacheKey: string,
-    filePath: string,
-    emittedFile: EmittedFile,
-  ): Promise<void> {
-    if (!resolvedOptions.cache) return
-
-    let basename = path.basename(filePath, path.extname(filePath))
-    await resolvedOptions.cache.set(
-      cacheKey,
-      new File([Buffer.from(emittedFile.body)], `${basename}${emittedFile.extension}`, {
-        type: emittedFile.contentType,
-      }),
-    )
+    return createEmittedFile(new Uint8Array(await file.arrayBuffer()), {
+      extension: path.extname(file.name),
+      filePath: identityPath,
+    })
   }
 
   async function createEmittedFile(
@@ -484,7 +465,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     options: {
       extension: string
       filePath: string
-      fingerprint: string | null
     },
   ): Promise<EmittedFile> {
     let metadata = await createEmittedFileMetadata(body, options)
@@ -494,37 +474,14 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     }
   }
 
-  function clearTransformedCacheIndex(identityPath: string): void {
-    let cacheKeys = transformedCacheKeysByIdentityPath.get(identityPath)
-    if (!cacheKeys) return
-
-    for (let cacheKey of cacheKeys) {
-      transformedAssetMetadataByCacheKey.delete(cacheKey)
-    }
-
-    transformedCacheKeysByIdentityPath.delete(identityPath)
-  }
-
-  function rememberTransformedAssetMetadata(
-    cacheKey: string,
-    identityPath: string,
-    metadata: EmittedFileMetadata,
-  ): void {
-    transformedAssetMetadataByCacheKey.set(cacheKey, metadata)
-
-    let cacheKeys = transformedCacheKeysByIdentityPath.get(identityPath) ?? new Set<string>()
-    cacheKeys.add(cacheKey)
-    transformedCacheKeysByIdentityPath.set(identityPath, cacheKeys)
-  }
-
   async function createEmittedFileMetadata(
     body: Uint8Array,
     options: {
       extension: string
       filePath: string
-      fingerprint: string | null
     },
   ): Promise<EmittedFileMetadata> {
+    let contentHash = await hashContent(body)
     let contentType =
       detectContentType(`file${options.extension}`) ??
       detectContentType(options.filePath) ??
@@ -532,9 +489,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
 
     return {
       contentType,
-      etag: `W/"${await hashContent(body)}"`,
+      etag: `W/"${contentHash}"`,
       extension: options.extension,
-      fingerprint: options.fingerprint,
+      fingerprint: resolvedOptions.fingerprintAssets ? contentHash : null,
     }
   }
 }
@@ -566,9 +523,9 @@ export function resolveServedFileOrThrow(filePath: string, args: ResolveArgs): R
   let stableUrlPathname = args.routes.toUrlPathname(identityPath)
   if (!stableUrlPathname) {
     throw createAssetServerCompilationError(
-      `File ${identityPath} is outside all configured fileMap entries.`,
+      `File ${identityPath} is outside all configured mounts.`,
       {
-        code: 'FILE_OUTSIDE_FILE_MAP',
+        code: 'FILE_OUTSIDE_MOUNTS',
       },
     )
   }
@@ -591,13 +548,20 @@ export function createResponseForFile(
     return new Response(null, { status: 304, headers: { ETag: result.etag } })
   }
 
-  return new Response(options.method === 'HEAD' ? null : Buffer.from(result.body), {
+  return new Response(options.method === 'HEAD' ? null : toArrayBufferView(result.body), {
     headers: {
       'Cache-Control': options.cacheControl,
       'Content-Type': result.contentType,
       ETag: result.etag,
     },
   })
+}
+
+function toArrayBufferView(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  // File and Response require ArrayBuffer-backed input, so copy only shared buffers.
+  return bytes.buffer instanceof ArrayBuffer
+    ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    : new Uint8Array(bytes)
 }
 
 export function isServedFilePath(filePath: string, extensions: ReadonlySet<string>): boolean {
@@ -609,16 +573,14 @@ function getRecordCacheKey(record: SourceFileRecord): string {
 }
 
 function getTransformedRecordCacheKey(
-  cacheEpoch: string,
+  namespace: string,
   record: SourceFileRecord,
-  transformQuery: readonly string[] | null,
-): string {
-  return [
-    encodeCacheKeyPart(cacheEpoch),
-    encodeCacheKeyPart(record.identityPath),
-    String(record.invalidationVersion),
-    encodeCacheKeyPart(JSON.stringify(transformQuery ?? [])),
-  ].join('/')
+  transforms: readonly ParsedRequestTransform[],
+): Promise<string> {
+  return createTransformCacheKey(
+    namespace,
+    JSON.stringify([record.identityPath, record.invalidationVersion, transforms]),
+  )
 }
 
 function getFileSnapshot(filePath: string): FileSnapshot | null {
@@ -676,10 +638,6 @@ function appendTransformQuery(href: string, transformQuery: readonly string[] | 
 
   let search = searchParams.toString()
   return search.length > 0 ? `${href}?${search}` : href
-}
-
-function encodeCacheKeyPart(value: string): string {
-  return Buffer.from(value).toString('base64url')
 }
 
 function normalizeTransformResult(
@@ -863,7 +821,8 @@ function isNoEntityError(
 
 async function readFileContents(identityPath: string): Promise<Uint8Array> {
   try {
-    return new Uint8Array(await fsp.readFile(identityPath))
+    let bytes = await fsp.readFile(identityPath)
+    return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   } catch (error) {
     if (isNoEntityError(error)) {
       throw createAssetServerCompilationError(`File not found: ${identityPath}`, {

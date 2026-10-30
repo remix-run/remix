@@ -64,6 +64,8 @@ import { describe, it } from '@remix-run/test'
 - Avoid importing higher-level workspace packages just to build a fixture. For example, a fetch-handler test can branch on `new URL(request.url).pathname` instead of depending on `@remix-run/fetch-router`.
 - Prefer Web APIs and standards-aligned primitives when they express the fixture clearly.
 - For e2e tests, serve the smallest app or handler that exercises the user-observable behavior under test.
+- For HMR tests, use real file changes, child processes, watchers, and browser assertions when the public behavior depends on runtime coordination.
+- Close spawned processes, asset servers, watchers, and HTTP servers in test cleanup.
 
 ## Assertions
 

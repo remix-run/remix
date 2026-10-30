@@ -6,19 +6,21 @@ type PackageInfo = {
   dirName: string
   name: string
   dependencies: string[]
+  scripts: string[]
 }
 
 type CliOptions = {
   baseRef: string
   headRef: string
   listOnly: boolean
+  scriptName: string
 }
 
 function main() {
   let options = parseArgs(process.argv.slice(2))
   let packageInfos = getPackageInfos()
   let changedPackages = getChangedPackageNames(options.baseRef, options.headRef, packageInfos)
-  let selectedPackages = getSelectedPackageNames(changedPackages, packageInfos)
+  let selectedPackages = getSelectedPackageNames(changedPackages, packageInfos, options.scriptName)
 
   if (options.listOnly) {
     console.log(JSON.stringify(selectedPackages, null, 2))
@@ -27,13 +29,13 @@ function main() {
 
   if (selectedPackages.length === 0) {
     console.log(
-      `No package changes detected between ${options.baseRef} and ${options.headRef}. Skipping package tests.`,
+      `No affected packages with a "${options.scriptName}" script between ${options.baseRef} and ${options.headRef}. Skipping.`,
     )
     return
   }
 
   console.log(
-    `Running tests for packages changed between ${options.baseRef} and ${options.headRef}:`,
+    `Running ${options.scriptName} for packages changed between ${options.baseRef} and ${options.headRef}:`,
   )
   for (let packageName of selectedPackages) {
     console.log(`- ${packageName}`)
@@ -41,7 +43,7 @@ function main() {
   console.log()
 
   let args = selectedPackages.flatMap((packageName) => ['--filter', packageName])
-  args.push('run', 'test')
+  args.push('run', options.scriptName)
 
   let result = cp.spawnSync('pnpm', args, {
     stdio: 'inherit',
@@ -57,10 +59,21 @@ function parseArgs(args: string[]): CliOptions {
   let baseRef = ''
   let headRef = 'HEAD'
   let listOnly = false
+  let scriptName = 'test'
 
-  for (let arg of args) {
+  for (let index = 0; index < args.length; index++) {
+    let arg = args[index]
     if (arg === '--list') {
       listOnly = true
+      continue
+    }
+
+    if (arg === '--script') {
+      let value = args[++index]
+      if (!value || value.startsWith('--')) {
+        throw new Error('Expected a script name after --script')
+      }
+      scriptName = value
       continue
     }
 
@@ -79,11 +92,11 @@ function parseArgs(args: string[]): CliOptions {
 
   if (baseRef === '') {
     throw new Error(
-      'Usage: node ./scripts/detect-changed-packages.ts <base-ref> [head-ref] [--list]',
+      'Usage: node ./scripts/detect-changed-packages.ts <base-ref> [head-ref] [--list] [--script <script-name>]',
     )
   }
 
-  return { baseRef, headRef, listOnly }
+  return { baseRef, headRef, listOnly, scriptName }
 }
 
 function getPackageInfos(): PackageInfo[] {
@@ -98,6 +111,7 @@ function getPackageInfos(): PackageInfo[] {
 
     let packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
       name?: string
+      scripts?: Record<string, string>
       dependencies?: Record<string, string>
       devDependencies?: Record<string, string>
       optionalDependencies?: Record<string, string>
@@ -125,6 +139,7 @@ function getPackageInfos(): PackageInfo[] {
       dirName,
       name: packageJson.name,
       dependencies: [...dependencyNames],
+      scripts: Object.keys(packageJson.scripts ?? {}),
     })
   }
 
@@ -163,6 +178,7 @@ function getChangedPackageNames(
 function getSelectedPackageNames(
   changedPackages: Set<string>,
   packageInfos: PackageInfo[],
+  scriptName: string,
 ): string[] {
   if (changedPackages.size === 0) {
     return []
@@ -205,8 +221,8 @@ function getSelectedPackageNames(
   }
 
   return packageInfos
+    .filter((info) => selectedPackages.has(info.name) && info.scripts.includes(scriptName))
     .map((info) => info.name)
-    .filter((packageName) => selectedPackages.has(packageName))
 }
 
 main()

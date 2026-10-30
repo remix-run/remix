@@ -3,6 +3,7 @@ import { describe, it } from '@remix-run/test'
 
 import { minLength } from './checks.ts'
 import { number, object, parse, parseSafe, string } from './schema.ts'
+import type { ErrorMapContext } from './schema.ts'
 
 describe('parse', () => {
   it('returns validated output', () => {
@@ -105,6 +106,45 @@ describe('parseSafe', () => {
       locale: 'es',
       values: { min: 3 },
     })
+  })
+
+  it('preserves paths in retained error map contexts', () => {
+    let captured: ErrorMapContext[] = []
+    let schema = object({
+      user: object({
+        name: string(),
+        nickname: string().pipe(minLength(3)),
+        age: number().refine((value) => value >= 0),
+      }),
+    })
+
+    let result = parseSafe(
+      schema,
+      { user: { name: 123, nickname: 'a', age: -1 } },
+      {
+        errorMap(context) {
+          captured.push(context)
+        },
+      },
+    )
+
+    assert.ok(!result.success)
+    assert.deepEqual(
+      captured.map((context) => context.path),
+      [
+        ['user', 'name'],
+        ['user', 'nickname'],
+        ['user', 'age'],
+      ],
+    )
+    assert.deepEqual(
+      result.issues.map((issue) => issue.path),
+      [
+        ['user', 'name'],
+        ['user', 'nickname'],
+        ['user', 'age'],
+      ],
+    )
   })
 
   it('falls back to default message when errorMap returns undefined', () => {

@@ -1,1 +1,0 @@
-Add an `allowPackages` option to `createAssetServer()` from `remix/assets` for package-level access control, allowing packages and their dependencies to be served, e.g. `allowPackages: ['remix']`

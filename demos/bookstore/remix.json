@@ -1,5 +1,33 @@
 {
-  "$schema": "https://remix.run/schemas/remix.json",
+  "$schema": "node_modules/remix/schema/remix.json",
+  "assets": {
+    "rootDir": "../..",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "demos/bookstore/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": [
+      "demos/bookstore/app/routes.ts",
+      "demos/bookstore/app/**/public/**",
+      "demos/bookstore/app/images/*.png"
+    ],
+    "allowPackages": ["remix"],
+    "denyFiles": ["demos/bookstore/app/**/*.test.*"],
+    "files": { "extensions": [".png"] }
+  },
+  "db": {
+    "adapter": {
+      "type": "sqlite",
+      "filename": "./db/bookstore.sqlite",
+      "foreignKeys": true
+    },
+    "migrations": {
+      "directory": "./db/migrations"
+    },
+    "seed": "./db/seed.sql"
+  },
   "test": {
     "playwright": {
       "configFile": "./playwright.config.ts"

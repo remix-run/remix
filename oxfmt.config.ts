@@ -16,5 +16,9 @@ export default defineConfig({
     '**/test/fixtures/',
     '**/worker-configuration.d.ts',
     'pnpm-lock.yaml',
+    '.github/workflows/*.lock.yml',
+    'packages/remix/guides/',
+    'packages/remix/INDEX.md',
+    'packages/remix/src/**/README.md',
   ],
 })

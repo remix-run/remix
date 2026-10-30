@@ -41,8 +41,8 @@ export interface CompressResponseOptions {
   /**
    * node:zlib options for gzip/deflate compression.
    *
-   * For SSE responses (text/event-stream), `flush: Z_SYNC_FLUSH` is automatically
-   * applied unless you explicitly set a flush value.
+   * For HTML and SSE responses (`text/html` and `text/event-stream`),
+   * `flush: Z_SYNC_FLUSH` is automatically applied unless you explicitly set a flush value.
    *
    * See: https://nodejs.org/api/zlib.html#class-options
    */
@@ -51,8 +51,9 @@ export interface CompressResponseOptions {
   /**
    * node:zlib options for Brotli compression.
    *
-   * For SSE responses (text/event-stream), `flush: BROTLI_OPERATION_FLUSH` is
-   * automatically applied unless you explicitly set a flush value.
+   * For HTML and SSE responses (`text/html` and `text/event-stream`),
+   * `flush: BROTLI_OPERATION_FLUSH` is automatically applied unless you explicitly set a flush
+   * value.
    *
    * See: https://nodejs.org/api/zlib.html#class-brotlioptions
    */
@@ -231,18 +232,18 @@ export function createCompressionOptions(
   options: CompressResponseOptions,
 ): CompressResponseOptions {
   let contentTypeHeader = responseHeaders.get('Content-Type')
-  let mediaType = contentTypeHeader?.split(';')[0].trim()
-  let isSSE = mediaType === 'text/event-stream'
+  let mediaType = contentTypeHeader?.split(';')[0].trim().toLowerCase()
+  let shouldFlush = mediaType === 'text/event-stream' || mediaType === 'text/html'
 
   return {
     ...options,
     brotli: {
       ...options.brotli,
-      ...(isSSE && options.brotli?.flush === undefined ? brotliFlushOptions : null),
+      ...(shouldFlush && options.brotli?.flush === undefined ? brotliFlushOptions : null),
     },
     zlib: {
       ...options.zlib,
-      ...(isSSE && options.zlib?.flush === undefined ? zlibFlushOptions : null),
+      ...(shouldFlush && options.zlib?.flush === undefined ? zlibFlushOptions : null),
     },
   }
 }

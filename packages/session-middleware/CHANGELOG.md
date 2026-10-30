@@ -2,6 +2,70 @@
 
 This is the changelog for [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@1.0.1`](https://github.com/remix-run/remix/releases/tag/cookie@1.0.1)
+
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@1.0.0`](https://github.com/remix-run/remix/releases/tag/cookie@1.0.0)
+  - [`fetch-router@1.0.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.0.0)
+  - [`session@1.0.0`](https://github.com/remix-run/remix/releases/tag/session@1.0.0)
+
+## v0.5.1
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@0.7.1`](https://github.com/remix-run/remix/releases/tag/cookie@0.7.1)
+  - [`fetch-router@0.22.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.2)
+  - [`session@0.4.3`](https://github.com/remix-run/remix/releases/tag/session@0.4.3)
+
+## v0.5.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Session middleware now checks configured cookie `maxAge` and `expires` before loading session data from any backend. Existing cookies without expiration metadata start a new session when a lifetime is configured. `maxAge` renews when an updated session emits a cookie; reads alone do not renew it. Sessions without a configured lifetime and backend TTL settings are unchanged. Backend record cleanup remains the storage provider's responsibility.
+
+### Patch Changes
+
+- Session cookies now default to `Secure` for HTTPS request URLs. HTTP development requests and explicit `secure` settings retain their configured behavior. When HTTPS terminates at a proxy, expose the original request URL or configure `secure: true`.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@0.7.0`](https://github.com/remix-run/remix/releases/tag/cookie@0.7.0)
+  - [`fetch-router@0.22.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.1)
+
+## v0.4.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.22.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.22.0)
+
+## v0.4.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Session cookies now default to `HttpOnly` when the cookie's `httpOnly` option is omitted. Set `httpOnly: false` explicitly to preserve access from client-side JavaScript; the middleware emits a warning when this protection is disabled.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@0.6.0`](https://github.com/remix-run/remix/releases/tag/cookie@0.6.0)
+  - [`fetch-router@0.21.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.21.0)
+
 ## v0.3.4
 
 ### Patch Changes

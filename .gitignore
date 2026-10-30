@@ -4,13 +4,15 @@ node_modules/
 !packages/assets/bench/fixtures/large-fixture/node_modules/**
 pnpm-publish-summary.json
 reference/
+!docs/site/app/actions/reference/
+!docs/site/app/actions/reference/**
 .coverage/
 .tmp/
 autoresearch-results/
 /demos/tmp/
 /packages/cli/template/
-/packages/remix/src/**/README.md
-/packages/ui/demo/.artifacts/
+/packages/remix/schema/
+/packages/component/demo/.artifacts/
 *.db
 *.db-*
 *.sqlite
@@ -22,3 +24,4 @@ autoresearch-results/
 .env
 
 /reference
+/.agents/worktrees/

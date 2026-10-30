@@ -16,7 +16,7 @@ export interface LoggerFunction {
  * Context key used to read the current request logger with `context.get(Logger)`.
  * The `logger()` middleware also installs the logger as `context.logger`.
  */
-export const Logger = createContextKey<LoggerFunction>()
+export const Logger: { defaultValue?: LoggerFunction } = createContextKey<LoggerFunction>()
 
 /**
  * Options for the {@link logger} middleware.

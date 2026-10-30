@@ -1,12 +1,6 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
-import {
-  getOwnerFileExtension,
-  isActionFileName,
-  isControllerEntryFileName,
-  type OwnerFileExtension,
-} from '../controller-files.ts'
 import { CliError } from '../errors.ts'
 import { loadRouteManifestFromAppRoot, type LoadedRouteManifest } from '../route-map.ts'
 import {
@@ -61,9 +55,6 @@ export async function checkProject(projectRoot: string): Promise<ProjectDoctorRe
 
 export async function getProjectFixPlans(projectRoot: string): Promise<DoctorFixPlan[]> {
   let routesFile = path.join(projectRoot, 'app', 'routes.ts')
-  let homeActionPath = normalizeRelativePath(
-    path.join('app', 'actions', `controller${await inferHomeOwnerExtension(projectRoot)}`),
-  )
 
   if (await pathExists(routesFile)) {
     let routesSource = await fs.readFile(routesFile, 'utf8')
@@ -79,18 +70,6 @@ export async function getProjectFixPlans(projectRoot: string): Promise<DoctorFix
         path: 'app/routes.ts',
         suite: 'project',
       },
-      ...((await pathExists(path.join(projectRoot, homeActionPath)))
-        ? []
-        : [
-            {
-              code: 'missing-owner',
-              contents: renderDefaultHomeAction(homeActionPath),
-              kind: 'create-file',
-              path: homeActionPath,
-              routeName: 'home',
-              suite: 'project',
-            } satisfies DoctorFixPlan,
-          ]),
     ]
   }
 
@@ -100,14 +79,6 @@ export async function getProjectFixPlans(projectRoot: string): Promise<DoctorFix
       contents: renderDefaultRoutesFile(),
       kind: 'create-file',
       path: 'app/routes.ts',
-      suite: 'project',
-    },
-    {
-      code: 'missing-owner',
-      contents: renderDefaultHomeAction(homeActionPath),
-      kind: 'create-file',
-      path: homeActionPath,
-      routeName: 'home',
       suite: 'project',
     },
   ]
@@ -224,78 +195,6 @@ function hasOnlyWhitespaceAndComments(source: string): boolean {
   return true
 }
 
-async function inferHomeOwnerExtension(projectRoot: string): Promise<OwnerFileExtension> {
-  let actionsDir = path.join(projectRoot, 'app', 'actions')
-  let extensions = await collectOwnerExtensions(actionsDir)
-
-  if (extensions.length > 0) {
-    return getMostCommonExtension(extensions)
-  }
-
-  if (await pathExists(path.join(projectRoot, 'tsconfig.json'))) {
-    return '.tsx'
-  }
-
-  return '.js'
-}
-
-async function collectOwnerExtensions(directory: string): Promise<OwnerFileExtension[]> {
-  try {
-    let entries = await fs.readdir(directory, { withFileTypes: true })
-    let extensions: OwnerFileExtension[] = []
-
-    for (let entry of entries) {
-      let absolutePath = path.join(directory, entry.name)
-
-      if (entry.isDirectory()) {
-        extensions.push(...(await collectOwnerExtensions(absolutePath)))
-        continue
-      }
-
-      let fileName = path.basename(absolutePath)
-      if (!isActionFileName(fileName) && !isControllerEntryFileName(fileName)) {
-        continue
-      }
-
-      let extension = getOwnerFileExtension(fileName)
-      if (extension != null) {
-        extensions.push(extension)
-      }
-    }
-
-    return extensions
-  } catch (error) {
-    let nodeError = error as NodeJS.ErrnoException
-    if (nodeError.code === 'ENOENT') {
-      return []
-    }
-
-    throw error
-  }
-}
-
-function getMostCommonExtension(extensions: OwnerFileExtension[]): OwnerFileExtension {
-  let priority: OwnerFileExtension[] = ['.tsx', '.ts', '.jsx', '.js']
-  let counts = new Map<OwnerFileExtension, number>()
-
-  for (let extension of extensions) {
-    counts.set(extension, (counts.get(extension) ?? 0) + 1)
-  }
-
-  let bestExtension = priority[0]
-  let bestCount = -1
-
-  for (let extension of priority) {
-    let count = counts.get(extension) ?? 0
-    if (count > bestCount) {
-      bestCount = count
-      bestExtension = extension
-    }
-  }
-
-  return bestExtension
-}
-
 function renderDefaultRoutesFile(): string {
   return [
     `import { route } from 'remix/routes'`,
@@ -303,141 +202,6 @@ function renderDefaultRoutesFile(): string {
     'export const routes = route({',
     `  home: '/',`,
     '})',
-    '',
-  ].join('\n')
-}
-
-function normalizeRelativePath(filePath: string): string {
-  return filePath.split(path.sep).join('/')
-}
-
-function renderDefaultHomeAction(entryPath: string): string {
-  let extension = getOwnerFileExtension(entryPath)
-  if (extension === '.js') {
-    return [
-      `import { html } from 'remix/html-template'`,
-      `import { createHtmlResponse } from 'remix/response/html'`,
-      '',
-      'export default {',
-      '  actions: {',
-      '    home() {',
-      '      let page = html`',
-      '        <html lang="en">',
-      '          <head>',
-      '            <meta charset="utf-8" />',
-      '            <meta name="viewport" content="width=device-width, initial-scale=1" />',
-      '            <title>Home</title>',
-      '          </head>',
-      '          <body>',
-      '            <h1>Home</h1>',
-      '            <p>Update app/routes.ts and app/actions/controller to keep building your app.</p>',
-      '          </body>',
-      '        </html>',
-      '      `',
-      '      return createHtmlResponse(page)',
-      '    },',
-      '  },',
-      '}',
-      '',
-    ].join('\n')
-  }
-
-  if (extension === '.ts') {
-    return [
-      `import { createController } from 'remix/router'`,
-      `import { html } from 'remix/html-template'`,
-      `import { createHtmlResponse } from 'remix/response/html'`,
-      '',
-      `import { routes } from '../routes.ts'`,
-      '',
-      `export default createController(routes, {`,
-      '  actions: {',
-      '    home() {',
-      '      let page = html`',
-      '        <html lang="en">',
-      '          <head>',
-      '            <meta charset="utf-8" />',
-      '            <meta name="viewport" content="width=device-width, initial-scale=1" />',
-      '            <title>Home</title>',
-      '          </head>',
-      '          <body>',
-      '            <h1>Home</h1>',
-      '            <p>Update app/routes.ts and app/actions/controller to keep building your app.</p>',
-      '          </body>',
-      '        </html>',
-      '      `',
-      '      return createHtmlResponse(page)',
-      '    },',
-      '  },',
-      `})`,
-      '',
-    ].join('\n')
-  }
-
-  if (extension === '.jsx') {
-    return [
-      `import { renderToStream } from 'remix/ui/server'`,
-      `import { createHtmlResponse } from 'remix/response/html'`,
-      '',
-      'export default {',
-      '  actions: {',
-      '    home() {',
-      '      let page = <HomePage />',
-      '      return createHtmlResponse(renderToStream(page))',
-      '    },',
-      '  },',
-      '}',
-      '',
-      'function HomePage() {',
-      '  return () => (',
-      '    <html lang="en">',
-      '      <head>',
-      '        <meta charSet="utf-8" />',
-      '        <meta name="viewport" content="width=device-width, initial-scale=1" />',
-      '        <title>Home</title>',
-      '      </head>',
-      '      <body>',
-      '        <h1>Home</h1>',
-      '        <p>Update app/routes.ts and app/actions/controller to keep building your app.</p>',
-      '      </body>',
-      '    </html>',
-      '  )',
-      '}',
-      '',
-    ].join('\n')
-  }
-
-  return [
-    `import { createController } from 'remix/router'`,
-    `import { renderToStream } from 'remix/ui/server'`,
-    `import { createHtmlResponse } from 'remix/response/html'`,
-    '',
-    `import { routes } from '../routes.ts'`,
-    '',
-    `export default createController(routes, {`,
-    '  actions: {',
-    '    home() {',
-    '      let page = <HomePage />',
-    '      return createHtmlResponse(renderToStream(page))',
-    '    },',
-    '  },',
-    `})`,
-    '',
-    'function HomePage() {',
-    '  return () => (',
-    '    <html lang="en">',
-    '      <head>',
-    '        <meta charSet="utf-8" />',
-    '        <meta name="viewport" content="width=device-width, initial-scale=1" />',
-    '        <title>Home</title>',
-    '      </head>',
-    '      <body>',
-    '        <h1>Home</h1>',
-    '        <p>Update app/routes.ts and app/actions/controller to keep building your app.</p>',
-    '      </body>',
-    '    </html>',
-    '  )',
-    '}',
     '',
   ].join('\n')
 }

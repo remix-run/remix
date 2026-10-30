@@ -22,7 +22,7 @@ type PredicateColumn<input extends string | ColumnReferenceLike> = NormalizeColu
   string
 
 /**
- * Normalized predicate representation consumed by adapters.
+ * Normalized predicate representation consumed by drivers.
  */
 export type Predicate<column extends string = string> =
   | {
@@ -66,16 +66,16 @@ export type WhereObject<column extends string = string> = Partial<Record<column,
  */
 export type WhereInput<column extends string = string> = Predicate<column> | WhereObject<column>
 
+type WhereInputColumn<input extends WhereInput> =
+  input extends Predicate<infer column> ? column : keyof input & string
+
 /**
  * Builds an equality predicate.
  */
 export function eq<
   left extends ColumnInput<QualifiedColumnReference>,
-  right extends ColumnInput<QualifiedColumnReference>,
->(
-  column: left,
-  value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+  right extends ColumnReferenceLike<QualifiedColumnReference>,
+>(column: left, value: right): Predicate<PredicateColumn<left> | PredicateColumn<right>>
 export function eq<column extends string | ColumnReferenceLike>(
   column: column,
   value: unknown,
@@ -89,11 +89,8 @@ export function eq(column: string | ColumnReferenceLike, value: unknown): Predic
  */
 export function ne<
   left extends ColumnInput<QualifiedColumnReference>,
-  right extends ColumnInput<QualifiedColumnReference>,
->(
-  column: left,
-  value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+  right extends ColumnReferenceLike<QualifiedColumnReference>,
+>(column: left, value: right): Predicate<PredicateColumn<left> | PredicateColumn<right>>
 export function ne<column extends string | ColumnReferenceLike>(
   column: column,
   value: unknown,
@@ -107,11 +104,8 @@ export function ne(column: string | ColumnReferenceLike, value: unknown): Predic
  */
 export function gt<
   left extends ColumnInput<QualifiedColumnReference>,
-  right extends ColumnInput<QualifiedColumnReference>,
->(
-  column: left,
-  value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+  right extends ColumnReferenceLike<QualifiedColumnReference>,
+>(column: left, value: right): Predicate<PredicateColumn<left> | PredicateColumn<right>>
 export function gt<column extends string | ColumnReferenceLike>(
   column: column,
   value: unknown,
@@ -125,11 +119,8 @@ export function gt(column: string | ColumnReferenceLike, value: unknown): Predic
  */
 export function gte<
   left extends ColumnInput<QualifiedColumnReference>,
-  right extends ColumnInput<QualifiedColumnReference>,
->(
-  column: left,
-  value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+  right extends ColumnReferenceLike<QualifiedColumnReference>,
+>(column: left, value: right): Predicate<PredicateColumn<left> | PredicateColumn<right>>
 export function gte<column extends string | ColumnReferenceLike>(
   column: column,
   value: unknown,
@@ -143,11 +134,8 @@ export function gte(column: string | ColumnReferenceLike, value: unknown): Predi
  */
 export function lt<
   left extends ColumnInput<QualifiedColumnReference>,
-  right extends ColumnInput<QualifiedColumnReference>,
->(
-  column: left,
-  value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+  right extends ColumnReferenceLike<QualifiedColumnReference>,
+>(column: left, value: right): Predicate<PredicateColumn<left> | PredicateColumn<right>>
 export function lt<column extends string | ColumnReferenceLike>(
   column: column,
   value: unknown,
@@ -161,11 +149,8 @@ export function lt(column: string | ColumnReferenceLike, value: unknown): Predic
  */
 export function lte<
   left extends ColumnInput<QualifiedColumnReference>,
-  right extends ColumnInput<QualifiedColumnReference>,
->(
-  column: left,
-  value: right & (right extends `${string}@${string}` ? never : right),
-): Predicate<PredicateColumn<left> | PredicateColumn<right>>
+  right extends ColumnReferenceLike<QualifiedColumnReference>,
+>(column: left, value: right): Predicate<PredicateColumn<left> | PredicateColumn<right>>
 export function lte<column extends string | ColumnReferenceLike>(
   column: column,
   value: unknown,
@@ -293,23 +278,33 @@ export function notNull<column extends string | ColumnReferenceLike>(
 }
 
 /**
- * Combines predicates with logical `AND`.
- * @param predicates Child predicates.
+ * Combines where inputs with logical `AND`.
+ * @param inputs Child predicates or object shorthand filters.
  * @returns A logical `and` predicate.
  */
-export function and<column extends string>(...predicates: Predicate<column>[]): Predicate<column> {
-  let filtered = predicates.filter(Boolean)
-  return { type: 'logical', operator: 'and', predicates: filtered }
+export function and<inputs extends WhereInput[]>(
+  ...inputs: inputs
+): Predicate<WhereInputColumn<inputs[number]>> {
+  type column = WhereInputColumn<inputs[number]>
+  let predicates = inputs
+    .filter(Boolean)
+    .map((input) => normalizeWhereInput(input) as Predicate<column>)
+  return { type: 'logical', operator: 'and', predicates }
 }
 
 /**
- * Combines predicates with logical `OR`.
- * @param predicates Child predicates.
+ * Combines where inputs with logical `OR`.
+ * @param inputs Child predicates or object shorthand filters.
  * @returns A logical `or` predicate.
  */
-export function or<column extends string>(...predicates: Predicate<column>[]): Predicate<column> {
-  let filtered = predicates.filter(Boolean)
-  return { type: 'logical', operator: 'or', predicates: filtered }
+export function or<inputs extends WhereInput[]>(
+  ...inputs: inputs
+): Predicate<WhereInputColumn<inputs[number]>> {
+  type column = WhereInputColumn<inputs[number]>
+  let predicates = inputs
+    .filter(Boolean)
+    .map((input) => normalizeWhereInput(input) as Predicate<column>)
+  return { type: 'logical', operator: 'or', predicates }
 }
 
 /**
@@ -416,12 +411,12 @@ function createComparisonPredicate(
   let normalizedColumn = resolvePredicateColumn(column)
   let normalizedValue = resolveComparisonValue(value)
 
-  if (isQualifiedColumnReference(normalizedColumn) && isQualifiedColumnReference(normalizedValue)) {
+  if (isQualifiedColumnReference(normalizedColumn) && isColumnReference(value)) {
     return {
       type: 'comparison',
       operator,
       column: normalizedColumn,
-      value: normalizedValue,
+      value: normalizeColumnInput(value),
       valueType: 'column',
     }
   }

@@ -40,18 +40,22 @@ Use this skill to scaffold and standardize packages so they look and behave like
   - `src`
   - `!src/**/*.test.ts`
 - Add standard scripts:
-  - `build`: `tsgo -p tsconfig.build.json`
+  - `build`: `tsc -p tsconfig.build.json`
   - `clean`: `git clean -fdX`
   - `prepublishOnly`: `pnpm run build`
   - `test`: `remix test`
   - `test:bun`: `bun x --bun remix test`
-  - `typecheck`: `tsgo --noEmit`
+  - `typecheck`: `tsc --noEmit`
 - Use baseline dev dependencies:
   - `"@remix-run/assert": "workspace:^"`
   - `"@remix-run/test": "workspace:^"`
   - `"@types/node": "catalog:"`
-  - `"@typescript/native-preview": "catalog:"`
+  - `"typescript": "catalog:"`
 - Add `keywords` like existing packages (short, lowercase, feature-focused).
+- Every published package must declare accurate `sideEffects` metadata. The generated `remix` package derives its metadata from each owning package, and package metadata validation rejects missing or invalid declarations.
+  - Use `"sideEffects": false` only when evaluating every runtime module is free of observable side effects, including effects introduced by its imports.
+  - Otherwise, list every effectful module using package-relative paths or glob patterns. Cover both source and emitted paths when the published package contains both, such as `./src/register.ts` and `./dist/register.js`.
+  - Re-audit the field whenever runtime exports, top-level imports, or evaluation behavior changes. Registration, polyfills, global mutation, hook installation, event listeners, and effectful style imports are common reasons a module must be listed.
 
 3. Define exports with `src` entry files only.
 
@@ -62,6 +66,9 @@ Use this skill to scaffold and standardize packages so they look and behave like
   - `default`: `./dist/<entry>.js`
 - Rule: every export must have a `src` file that re-exports from `src/lib`.
   - Example: export `./foo` -> `src/foo.ts` -> `export { ... } from './lib/foo.ts'`
+- Type-only exports may map only a `types` condition to `src/*.d.ts` and `dist/*.d.ts`.
+- Runtime-specific exports may use package conditions before `default` when the runtime owns that condition, such as `node-hmr` for `remix/node-hmr/runtime`.
+- If a package has type-only exports, add `node ../../scripts/copy-package-type-only-exports.ts .` to the package build script after `tsc`.
 
 4. Add TypeScript config files with shared defaults.
 
@@ -70,6 +77,7 @@ Use this `tsconfig.json` pattern:
 ```json
 {
   "compilerOptions": {
+    "types": ["node"],
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ES2022",
@@ -88,6 +96,7 @@ Use this `tsconfig.build.json` pattern:
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist"
@@ -158,6 +167,7 @@ npm i remix <peer-dependency>
 - Do not hand-edit `packages/remix/package.json` or `packages/remix/src/*`; run the generator when generated output is required.
 - **When adding a new package**, add it to `packages/remix/manifest.json` before running the generator:
   - Add one entry per export: `"remix/<canonical-path>": "@remix-run/<package-name>"`,`"remix/<canonical-path>/foo": "@remix-run/<package-name>/foo"`.
+  - Include type-only and runtime-condition exports that should be reachable through `remix/...`, such as `remix/<canonical-path>/types`.
   - Choose a domain-oriented canonical path (e.g. `remix/middleware/logger`, not `remix/logger-middleware`).
 - If user asks for full surfacing, you can still update root `README.md` package list when applicable.
 

@@ -63,7 +63,7 @@ createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
 | `remix/route-pattern/join`        | Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints.                            |
 | `remix/route-pattern/specificity` | Rank matches by [specificity](#ranking-matches-by-specificity).                                                                        |
 
-For in-depth reference, visit the [`route-pattern` API docs](https://api.remix.run/api/remix/route-pattern)
+For in-depth reference, visit the [`route-pattern` API docs](https://docs.remix.run/route-pattern/)
 
 Examples in this README use `remix/route-pattern/*` imports. The same APIs are also available from the direct package entrypoints: `@remix-run/route-pattern`, `@remix-run/route-pattern/href`, `@remix-run/route-pattern/match`, `@remix-run/route-pattern/join`, and `@remix-run/route-pattern/specificity`.
 
@@ -231,7 +231,7 @@ matcher.match('https://example.com/docs/Intro')?.params
 // { slug: 'Intro' }
 ```
 
-Matchers limit individual pattern size, total matcher size, and the work performed by one match. Pattern and matcher sizes are measured in UTF-8 bytes. Direct package consumers may lower or raise individual limits. Exceeding one throws `MatcherResourceError` with structured `details` instead of silently abandoning matching:
+Matchers limit individual pattern size, total matcher size, and the work performed by one match, including variable scans and comparisons between wildcard or optional captures. Pattern and matcher sizes are measured in UTF-8 bytes. Direct package consumers may lower or raise individual limits. Exceeding one throws `MatcherResourceError` with structured `details` instead of silently abandoning matching:
 
 ```ts
 let matcher = createMultiMatcher({
@@ -331,6 +331,10 @@ createHref('search', undefined, { searchParams })
 `createHref()` throws `CreateHrefError` when it cannot safely generate an href. The error exposes stable structured details on `error.details`; the string message is for humans.
 
 Common failures include missing required params, nameless wildcards, invalid hostname params, empty pathname variables, and origin patterns that specify a protocol or port without a concrete hostname.
+
+Hostname params reject URL structural characters, including backslashes. Hostname variables also reject dots; hostname wildcards allow dots to span labels.
+
+Pathname wildcards preserve internal slashes and dotted filenames, but reject standalone `.` and `..` segments with `error.details.type === 'invalid-pathname-wildcard'`. Generated pathnames have exactly one leading slash, including when the wildcard value starts with slashes. This normalization also applies to absolute URLs and happens before generating a relative href with `baseURL`.
 
 **Note:** optional groups without params are included in the generated href:
 

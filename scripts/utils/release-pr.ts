@@ -5,6 +5,14 @@ import { generateChangelogContent } from './changes.ts'
 const maxBodyLength = 60_000
 
 /**
+ * Generates the title for a release PR
+ */
+export function generatePrTitle(releases: PackageRelease[]): string {
+  let remixRelease = releases.find((release) => release.packageDirName === 'remix')
+  return remixRelease ? `Release v${remixRelease.nextVersion}` : 'Release'
+}
+
+/**
  * Generates the PR body for a release PR
  */
 export function generatePrBody(releases: PackageRelease[]): string {
@@ -54,11 +62,23 @@ function generateHeader(): string {
 }
 
 function generateReleasesTable(releases: PackageRelease[]): string {
-  let lines = ['# Releases', '', '| Package | Version |', '|---------|---------|']
+  let lines = [
+    '# Releases',
+    '',
+    '| Package | Version | Change files |',
+    '|---------|---------|--------------|',
+  ]
 
   for (let release of releases) {
+    let changeFileCounts =
+      ['major', 'minor', 'patch']
+        .flatMap((bump) => {
+          let count = release.changes.filter((change) => change.bump === bump).length
+          return count > 0 ? [`${count} ${bump}`] : []
+        })
+        .join(', ') || 'n/a'
     lines.push(
-      `| ${release.packageName} | \`${release.currentVersion}\` → \`${release.nextVersion}\` |`,
+      `| ${release.packageName} | \`${release.currentVersion}\` → \`${release.nextVersion}\` | ${changeFileCounts} |`,
     )
   }
 

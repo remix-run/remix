@@ -1,1 +1,0 @@
-Add an `rmx-preserve-dom` attribute that tells the DOM reconciler to preserve a matching element's current attributes and children during reloads, allowing client-owned subtrees such as custom elements to manage their own DOM.

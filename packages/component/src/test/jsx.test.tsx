@@ -1,0 +1,462 @@
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
+import type { Assert, Equal } from './utils.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
+import { createMixin, on, ref, unsafeHTML } from '../index.ts'
+
+import type { Dispatched, MixInput, MixinDescriptor, MixinHandle, Props } from '../index.ts'
+
+type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
+type FalsyMixValue = false | 0 | 0n | '' | null | undefined
+type NormalizeMixLeaf<mix> = Exclude<MixLeaf<mix>, FalsyMixValue>
+type NormalizedMix<mix> = Array<NormalizeMixLeaf<mix>> | undefined
+
+describe('jsx', () => {
+  it('creates an element', () => {
+    let element = <div>Hello, world!</div>
+    expect(element.type).toBe('div')
+    expect(element.props.children).toEqual('Hello, world!')
+  })
+
+  it('preserves generic component prop types in JSX', () => {
+    type Row = { id: number; label: string }
+    type ListProps<T> = { rows: T[]; renderRow: (row: T) => RemixNode }
+
+    let GenericList =
+      <T,>(handle: Handle<ListProps<T>>) =>
+      () => <div>{handle.props.rows.map(handle.props.renderRow)}</div>
+
+    let explicit = (
+      <GenericList<Row>
+        rows={[{ id: 1, label: 'First' }]}
+        renderRow={(row) => {
+          type InferredRow = Assert<Equal<typeof row, Row>>
+          return row.label
+        }}
+      />
+    )
+
+    let explicitWithWrongRow = (
+      <GenericList<Row>
+        // @ts-expect-error - generic row types still validate the rows prop
+        rows={[{ id: 'wrong', label: 'First' }]}
+        renderRow={(row) => row.label}
+      />
+    )
+
+    let inferred = (
+      <GenericList
+        rows={[{ id: 1, label: 'First' }]}
+        renderRow={(row) => {
+          type InferredRow = Assert<Equal<typeof row, Row>>
+          return row.label
+        }}
+      />
+    )
+
+    expect(explicit).toBeDefined()
+    expect(explicitWithWrongRow).toBeDefined()
+    expect(inferred).toBeDefined()
+  })
+
+  /* oxlint-disable eslint/no-unused-vars */
+  it('warns when the wrong type of a prop is used', () => {
+    let element = <a target="_blank">Hello, world!</a>
+
+    // @ts-expect-error - wrong type
+    let badElement = <a target={123}>Hello, world!</a>
+  })
+
+  describe('intrinsic elements', () => {
+    it('uses literal types for element props', () => {
+      let good = <button type="button">Click me</button>
+      // @ts-expect-error - wrong type
+      let bad = <button type="lol">Click me</button>
+    })
+
+    it('infers the event target type from the element type', () => {
+      let element = (
+        <button
+          mix={[
+            on('pointerdown', (event) => {
+              type dispatchedEvent = Assert<
+                Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
+              >
+              type eventTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+            }),
+          ]}
+        >
+          Click me
+        </button>
+      )
+    })
+
+    it('accepts nested mix values for host element JSX while runtime props still see arrays', () => {
+      let passthrough = createMixin((_handle) => {})
+      let descriptor = passthrough()
+
+      let withNested = <button mix={[[descriptor], [[[descriptor]]]]}>Click me</button>
+
+      expect(withNested.props.mix).toEqual([descriptor, descriptor])
+    })
+
+    it('accepts mixin descriptors with arguments on subtype hosts', () => {
+      let withArgument = createMixin<Element, [value: string]>((_handle) => {})
+      let descriptor = withArgument('value')
+      let mix: MixInput<HTMLButtonElement> = descriptor
+
+      let invalid: MixinDescriptor<Element> = {
+        // @ts-expect-error mixin runners must return a supported mixin value
+        type: () => () => 123,
+        args: [],
+      }
+
+      let element = <button mix={mix}>Click me</button>
+
+      expect(element.props.mix).toEqual([descriptor])
+    })
+
+    it('does not accept children for textarea elements', () => {
+      let good = <textarea defaultValue="Hello" />
+      // @ts-expect-error textarea content should come from value/defaultValue
+      let bad = <textarea>Hello</textarea>
+      // @ts-expect-error textarea content should come from value/defaultValue
+      let alsoBad = <textarea innerHTML="Hello" />
+    })
+
+    it('requires an unsafeHTML value for the innerHTML prop', () => {
+      let element = <div innerHTML={unsafeHTML('<strong>HTML</strong>')} />
+      // @ts-expect-error raw strings must be explicitly authorized with unsafeHTML()
+      let badElement = <div innerHTML="<strong>HTML</strong>" />
+
+      expect(element.props.innerHTML).toBeDefined()
+    })
+
+    it('requires an unsafeHTML value for iframe srcdoc props', () => {
+      let camelCase = <iframe srcDoc={unsafeHTML('<p>HTML</p>')} />
+      let lowercase = <iframe srcdoc={unsafeHTML('<p>HTML</p>')} />
+      // @ts-expect-error raw strings must be explicitly authorized with unsafeHTML()
+      let badCamelCase = <iframe srcDoc="<p>HTML</p>" />
+      // @ts-expect-error raw strings must be explicitly authorized with unsafeHTML()
+      let badLowercase = <iframe srcdoc="<p>HTML</p>" />
+
+      expect(camelCase.props.srcDoc).toBeDefined()
+      expect(lowercase.props.srcdoc).toBeDefined()
+    })
+
+    it('accepts navigation reset values and rejects unsupported values', () => {
+      let manual = <a data-rmx-reset-scroll="manual" data-rmx-reset-focus="manual" />
+      let afterTransition = (
+        <form data-rmx-reset-scroll="after-transition" data-rmx-reset-focus="after-transition" />
+      )
+      let legacyFalse = <a data-rmx-reset-scroll="false" data-rmx-reset-focus="false" />
+      let legacyTrue = <form data-rmx-reset-scroll="true" data-rmx-reset-focus="true" />
+
+      // @ts-expect-error scroll accepts only Navigation API values and legacy boolean strings
+      let badAnchorScroll = <a data-rmx-reset-scroll="automatic" />
+      // @ts-expect-error focus accepts only Navigation API values and legacy boolean strings
+      let badAnchorFocus = <a data-rmx-reset-focus="automatic" />
+      // @ts-expect-error scroll accepts only Navigation API values and legacy boolean strings
+      let badFormScroll = <form data-rmx-reset-scroll="automatic" />
+      // @ts-expect-error focus accepts only Navigation API values and legacy boolean strings
+      let badFormFocus = <form data-rmx-reset-focus="automatic" />
+    })
+
+    it('accepts booleanish string attributes', () => {
+      let contentEditable = <div contentEditable="false" />
+      let draggable = <img alt="" draggable="false" />
+      let spellCheck = <div spellCheck="false" />
+      let spellcheck = <div spellcheck="false" />
+      let svg = (
+        <svg>
+          <animate autoReverse="false" />
+          <rect externalResourcesRequired="false" focusable="false" />
+          <feColorMatrix preserveAlpha="false" />
+        </svg>
+      )
+      let translate = <div translate="no" />
+
+      // @ts-expect-error translate uses yes/no attribute values, not true/false strings
+      let badTranslate = <div translate="false" />
+    })
+  })
+
+  describe('library managed attributes', () => {
+    it('infers component props', () => {
+      interface CounterProps {
+        initialCount: number
+        label: string
+      }
+
+      function Counter(handle: Handle<CounterProps>) {
+        let count = handle.props.initialCount
+
+        return () => {
+          type componentProps = Assert<Equal<typeof handle.props, CounterProps>>
+          return (
+            <button
+              mix={[
+                on('click', () => {
+                  count++
+                  handle.update()
+                }),
+              ]}
+            >
+              {handle.props.label} {count}
+            </button>
+          )
+        }
+      }
+
+      let good = <Counter initialCount={10} label="Count" />
+      // @ts-expect-error - wrong type
+      let bad = <Counter initialCount={{ initial: 10 }} label={10} />
+    })
+
+    it('infers component props from a partial handle', () => {
+      function Label(handle: Pick<Handle<{ label: string }>, 'props'>) {
+        return () => <span>{handle.props.label}</span>
+      }
+
+      let element = <Label label="Hello" />
+      // @ts-expect-error - label must be a string
+      let wrongType = <Label label={123} />
+      // @ts-expect-error - component props must be passed as JSX attributes
+      let nestedProps = <Label props={{ label: 'Hello' }} />
+
+      expect(element.props).toEqual({ label: 'Hello' })
+    })
+
+    it('preserves generic component props from a partial handle', () => {
+      function GenericLabel<value>(
+        handle: Pick<Handle<{ value: value; renderValue: (value: value) => RemixNode }>, 'props'>,
+      ) {
+        return () => <span>{handle.props.renderValue(handle.props.value)}</span>
+      }
+
+      let explicit = (
+        <GenericLabel<string>
+          value="Hello"
+          renderValue={(value) => {
+            type InferredValue = Assert<Equal<typeof value, string>>
+            return value
+          }}
+        />
+      )
+      let inferred = (
+        <GenericLabel
+          value="Hello"
+          renderValue={(value) => {
+            type InferredValue = Assert<Equal<typeof value, string>>
+            return value
+          }}
+        />
+      )
+
+      expect(explicit.props.value).toBe('Hello')
+      expect(inferred.props.value).toBe('Hello')
+    })
+
+    it('accepts components with handles typed without props', () => {
+      function Identifier(handle: Pick<Handle, 'id'>) {
+        return () => <span>{handle.id}</span>
+      }
+
+      let element = <Identifier />
+
+      expect(element.props).toEqual({})
+    })
+
+    it('infers component props with context', () => {
+      interface CounterProps {
+        initialCount: number
+        label: string
+      }
+
+      function Counter(handle: Handle<CounterProps, number>) {
+        let count = handle.props.initialCount
+
+        return () => {
+          handle.context.set(count)
+          type componentProps = Assert<Equal<typeof handle.props, CounterProps>>
+          return (
+            <button
+              mix={[
+                on('click', () => {
+                  count++
+                  handle.update()
+                }),
+              ]}
+            >
+              {handle.props.label} {count}
+            </button>
+          )
+        }
+      }
+
+      let good = <Counter initialCount={10} label="Count" />
+    })
+
+    it('accepts single or array mix values for component JSX while handle props see arrays', () => {
+      let passthrough = createMixin((handle) => {})
+
+      function Button(handle: Handle<Props<'button'>>) {
+        return () => {
+          type normalizedMix = Assert<
+            Equal<typeof handle.props.mix, NormalizedMix<JSX.IntrinsicElements['button']['mix']>>
+          >
+          return <button {...handle.props} />
+        }
+      }
+
+      let descriptor = passthrough()
+      let withSingle = <Button mix={descriptor} />
+      let withArray = <Button mix={[descriptor]} />
+      let withNested = <Button mix={[[descriptor], [[[descriptor]]]]} />
+      let withoutMix = <Button />
+
+      expect(withSingle.props.mix).toEqual([descriptor])
+      expect(withArray.props.mix).toEqual([descriptor])
+      expect(withNested.props.mix).toEqual([descriptor, descriptor])
+      expect(withoutMix.props.mix).toBeUndefined()
+    })
+
+    it('rejects component props typed on the render callback', () => {
+      function InvalidComponent(handle: Handle) {
+        void handle
+        return (props: { label: string }) => <div>{props.label}</div>
+      }
+
+      // @ts-expect-error - component props must be typed on Handle<Props>
+      let invalid = <InvalidComponent label="Count" />
+    })
+  })
+
+  describe('mixins', () => {
+    it('infers mixin usage from scoped callback annotations without top-level generics', () => {
+      type ButtonMixinProps = Omit<Props<'button'>, 'mix' | 'children' | 'innerHTML'>
+      let buttonOnly = createMixin(
+        (handle: MixinHandle<HTMLButtonElement, Props<'button'>>) => (props: ButtonMixinProps) => {
+          type inferredButtonProps = Assert<Equal<typeof props, ButtonMixinProps>>
+          return <handle.element {...props} />
+        },
+      )
+
+      let good = <button mix={[buttonOnly()]} />
+      // @ts-expect-error button-scoped mixin should not apply to div
+      let bad = <div mix={[buttonOnly()]} />
+    })
+
+    it('allows optional explicit narrowing for specific element kinds', () => {
+      let inputOnly = createMixin<HTMLInputElement>((handle) => {})
+
+      let good = <input mix={[inputOnly()]} />
+      // @ts-expect-error input-only mixin should not apply to button
+      let bad = <button mix={[inputOnly()]} />
+    })
+
+    it('allows base descriptors on subtype hosts without allowing the inverse', () => {
+      let elementWide = createMixin<Element>((handle) => {})()
+      let selectOnly = createMixin<HTMLSelectElement>((handle) => {})()
+
+      let good = <select mix={[elementWide]} />
+      // @ts-expect-error select-only descriptors cannot be widened to all elements
+      let bad: MixinDescriptor<Element> = selectOnly
+    })
+
+    it('treats mixin handles as covariant in their node type', () => {
+      function verify(
+        selectHandle: MixinHandle<HTMLSelectElement>,
+        elementHandle: MixinHandle<Element>,
+      ) {
+        let good: MixinHandle<Element> = selectHandle
+        // @ts-expect-error element handles cannot be narrowed to select handles
+        let bad: MixinHandle<HTMLSelectElement> = elementHandle
+      }
+    })
+
+    it('does not widen descriptor argument types', () => {
+      let stringOnly = createMixin<Element, [value: string]>((handle) => (value) => {
+        void value
+      })
+      let descriptor = stringOnly('value')
+
+      // @ts-expect-error the runtime runner only accepts string arguments
+      let widened: MixinDescriptor<Element, [value: string | number]> = descriptor
+    })
+
+    it('infers insert event node type from createMixin node generic', () => {
+      let inputOnly = createMixin<HTMLInputElement>((handle) => {
+        handle.addEventListener('insert', (event) => {
+          type inferredInsertNode = Assert<Equal<typeof event.node, HTMLInputElement>>
+        })
+      })
+
+      let good = <input mix={[inputOnly()]} />
+    })
+
+    it('infers on mixin event/currentTarget types from host context', () => {
+      let direct = (
+        <button
+          mix={[
+            on('pointerdown', (event, signal) => {
+              type inferredEvent = Assert<
+                Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
+              >
+              type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+              type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+            }),
+          ]}
+        />
+      )
+
+      let withOnMixin = createMixin<HTMLElement>((handle) => (props) => (
+        <handle.element
+          {...props}
+          mix={[
+            on('pointerdown', (event, signal) => {
+              type inferredEvent = Assert<
+                Equal<typeof event, Dispatched<PointerEvent, HTMLElement>>
+              >
+              type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLElement>>
+              type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+            }),
+          ]}
+        />
+      ))
+
+      let applied = <div mix={[withOnMixin()]} />
+    })
+
+    it('infers ref mixin node type from host context', () => {
+      let element = (
+        <button
+          mix={[
+            ref((node, signal) => {
+              type inferredNode = Assert<Equal<typeof node, HTMLButtonElement>>
+              type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+            }),
+          ]}
+        />
+      )
+    })
+
+    it('infers context.get types on mixin handles', () => {
+      function Provider(handle: Handle<{ children?: RemixNode }, { value: number }>) {
+        handle.context.set({ value: 1 })
+        return () => <div>{handle.props.children}</div>
+      }
+
+      let withContext = createMixin<HTMLDivElement, [], Props<'div'>>((handle) => {
+        let provider = handle.context.get(Provider)
+        type inferredContext = Assert<Equal<typeof provider, { value: number }>>
+
+        return (props) => <handle.element {...props} data-value={String(provider.value)} />
+      })
+
+      let descriptor = withContext()
+      let provider = <Provider />
+    })
+  })
+  /* oxlint-enable eslint/no-unused-vars */
+})

@@ -15,7 +15,7 @@ npm i remix
 Create a new app with the CLI:
 
 ```sh
-npx remix@next new my-remix-app
+npx remix new my-remix-app
 ```
 
 After installing `remix`, the equivalent local command and the rest of the CLI are available through `remix`:
@@ -26,6 +26,7 @@ remix completion bash >> ~/.bashrc
 remix doctor
 remix doctor --fix
 remix db migrate
+remix db rollback
 remix db status
 remix routes
 remix routes --table
@@ -45,6 +46,7 @@ await runRemix(['completion', 'bash'])
 await runRemix(['doctor'])
 await runRemix(['doctor', '--fix'])
 await runRemix(['db', 'migrate'])
+await runRemix(['db', 'rollback'])
 await runRemix(['db', 'status'])
 await runRemix(['routes'])
 await runRemix(['routes', '--table'])

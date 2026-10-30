@@ -736,11 +736,9 @@ describe('compressResponse()', () => {
     assert.equal(compressed.body, null)
   })
 
-  describe('Server-Sent Events', () => {
-    it('applies flush defaults while preserving custom compression options', () => {
+  describe('Streaming response types', () => {
+    it('applies flush defaults to SSE while preserving custom compression options', () => {
       let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/event-stream' }), {
-        // Provide custom options without flush. compressResponse() should
-        // automatically apply flush for SSE.
         zlib: {
           level: 9,
         },
@@ -757,7 +755,36 @@ describe('compressResponse()', () => {
       assert.equal(options.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
     })
 
-    it('preserves explicit flush options', () => {
+    it('applies HTML flush defaults unless explicitly configured', () => {
+      let headers = new Headers({ 'Content-Type': 'text/html; charset=UTF-8' })
+      let defaults = createCompressionOptions(headers, {})
+
+      assert.equal(defaults.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(defaults.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+
+      let configured = createCompressionOptions(headers, {
+        zlib: { flush: constants.Z_FULL_FLUSH },
+        brotli: { flush: constants.BROTLI_OPERATION_PROCESS },
+      })
+
+      assert.equal(configured.zlib?.flush, constants.Z_FULL_FLUSH)
+      assert.equal(configured.brotli?.flush, constants.BROTLI_OPERATION_PROCESS)
+    })
+
+    it('matches streaming media types case-insensitively', () => {
+      let html = createCompressionOptions(
+        new Headers({ 'Content-Type': 'Text/HTML; charset=UTF-8' }),
+        {},
+      )
+      let sse = createCompressionOptions(new Headers({ 'Content-Type': 'TEXT/Event-Stream' }), {})
+
+      assert.equal(html.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(html.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+      assert.equal(sse.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(sse.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+    })
+
+    it('preserves explicit SSE flush options', () => {
       let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/event-stream' }), {
         zlib: {
           flush: constants.Z_FULL_FLUSH,
@@ -771,7 +798,7 @@ describe('compressResponse()', () => {
       assert.equal(options.brotli?.flush, constants.BROTLI_OPERATION_PROCESS)
     })
 
-    it('does not apply flush defaults for non-SSE responses', () => {
+    it('does not apply flush defaults to other response types', () => {
       let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/plain' }), {
         zlib: {
           level: 9,
@@ -984,6 +1011,94 @@ describe('compressResponse()', () => {
       let decompressed = decompressStream(compressed.body!, encoding)
       return await streamToString(decompressed)
     }
+
+    async function readChunkWithTimeout(
+      reader: ReadableStreamDefaultReader<Uint8Array>,
+      message: string,
+    ): Promise<ReadableStreamReadResult<Uint8Array>> {
+      let timeout: ReturnType<typeof setTimeout> | undefined
+
+      try {
+        return await Promise.race([
+          reader.read(),
+          new Promise<never>((_, reject) => {
+            timeout = setTimeout(() => reject(new Error(message)), 1000)
+          }),
+        ])
+      } finally {
+        if (timeout != null) clearTimeout(timeout)
+      }
+    }
+
+    async function assertHtmlStreamsBeforeCompletion(encoding: Encoding): Promise<void> {
+      let initialHtml = '<!DOCTYPE html><main>Initial content</main>'
+      let frameHtml = '<template>Deferred frame</template>'
+      let releaseFrame = () => {}
+      let source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          let released = false
+          controller.enqueue(new TextEncoder().encode(initialHtml))
+          releaseFrame = () => {
+            if (released) return
+            released = true
+            controller.enqueue(new TextEncoder().encode(frameHtml))
+            controller.close()
+          }
+        },
+      })
+      let request = new Request('https://remix.run', {
+        headers: { 'Accept-Encoding': encoding },
+      })
+      let response = new Response(source, {
+        headers: { 'Content-Type': 'text/html; charset=UTF-8' },
+      })
+      let compressed = await compressResponse(response, request, { encodings: [encoding] })
+      let compressedBody = compressed.body
+      assert.ok(compressedBody)
+      let decompressed = decompressStream(compressedBody, encoding)
+      let reader = decompressed.getReader()
+      let decoder = new TextDecoder()
+      let html = ''
+
+      try {
+        while (html.length < initialHtml.length) {
+          let result = await readChunkWithTimeout(
+            reader,
+            `Initial HTML was buffered by ${encoding} compression`,
+          )
+          assert.ok(!result.done, 'Compressed stream should contain the initial HTML')
+          html += decoder.decode(result.value, { stream: true })
+        }
+
+        assert.equal(html, initialHtml)
+        releaseFrame()
+
+        while (true) {
+          let result = await reader.read()
+          if (result.done) break
+          html += decoder.decode(result.value, { stream: true })
+        }
+        html += decoder.decode()
+
+        assert.equal(html, initialHtml + frameHtml)
+      } finally {
+        releaseFrame()
+      }
+    }
+
+    describe('HTML streaming', () => {
+      it('flushes the initial HTML through Brotli before the source completes', async () => {
+        await assertHtmlStreamsBeforeCompletion('br')
+      })
+
+      it('flushes the initial HTML through gzip before the source completes', async () => {
+        await assertHtmlStreamsBeforeCompletion('gzip')
+      })
+
+      it('flushes the initial HTML through deflate before the source completes', async () => {
+        await assertHtmlStreamsBeforeCompletion('deflate')
+      })
+    })
 
     describe('correctness (round-trip compression)', () => {
       it('handles binary data byte-perfectly', async () => {

@@ -1,0 +1,289 @@
+import { createDocumentState } from './document-state.ts'
+import { createComponentErrorEvent } from './error-event.ts'
+import type { CommittedComponentNode, VNodeParent } from './vnode.ts'
+import { isCommittedComponentNode } from './vnode.ts'
+import {
+  findNextSiblingDomAnchor,
+  renderComponent,
+  setActiveSchedulerUpdateParents,
+} from './reconcile.ts'
+import { defaultStyleManager } from './diff-props.ts'
+import type { StyleManager } from '../style/index.ts'
+
+type EmptyFn = () => void
+type SchedulerPhaseType = 'beforeUpdate' | 'commit'
+type SchedulerPhaseListener = EventListenerOrEventListenerObject | null
+
+/**
+ * Scheduler API used by the reconciler and frame runtime.
+ */
+export interface Scheduler {
+  enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
+  enqueueWork(newTasks: EmptyFn[]): void
+  enqueueCommitPhase(newTasks: EmptyFn[]): void
+  enqueueTasks(newTasks: EmptyFn[]): void
+  addEventListener(
+    type: SchedulerPhaseType,
+    listener: SchedulerPhaseListener,
+    options?: AddEventListenerOptions | boolean,
+  ): void
+  removeEventListener(
+    type: SchedulerPhaseType,
+    listener: SchedulerPhaseListener,
+    options?: EventListenerOptions | boolean,
+  ): void
+  dequeue(): void
+}
+
+const CASCADING_UPDATE_WARN_THRESHOLD = 50
+const MAX_CASCADING_COMPONENT_UPDATES = 50
+
+export type SchedulerPhaseEvent = Event & {
+  parents: ParentNode[]
+}
+
+function getComponentName(vnode: CommittedComponentNode): string {
+  return vnode.type.name || 'Anonymous'
+}
+
+function formatComponentCounts(counts: Map<string, number>): string {
+  return Array.from(counts, ([name, count]) => `${name} x${count}`).join(', ')
+}
+
+/**
+ * Creates the DOM update scheduler used by the component runtime.
+ *
+ * @param doc Document associated with the rendered tree.
+ * @param rootTarget Event target that receives runtime errors.
+ * @param styles Style manager used during reconciliation.
+ * @returns A scheduler instance.
+ */
+export function createScheduler(
+  doc: Document,
+  rootTarget: EventTarget,
+  styles: StyleManager = defaultStyleManager,
+): Scheduler {
+  let documentState = createDocumentState(doc)
+  let scheduled = new Map<CommittedComponentNode, ParentNode>()
+  let workTasks: EmptyFn[] = []
+  let commitPhaseTasks: EmptyFn[] = []
+  let postCommitTasks: EmptyFn[] = []
+  let flushScheduled = false
+  let flushing = false
+  let cascadingComponentUpdateCount = 0
+  let cascadingComponentUpdateCounts = new WeakMap<CommittedComponentNode, number>()
+  let cascadingComponentNameCounts = new Map<string, number>()
+  let warnedAboutCascadingUpdates = false
+  let resetScheduled = false
+  let phaseEvents = new EventTarget()
+  let phaseListenerCounts: Record<SchedulerPhaseType, number> = {
+    beforeUpdate: 0,
+    commit: 0,
+  }
+  let scheduler: Scheduler
+
+  function dispatchError(error: unknown) {
+    console.error(error)
+    rootTarget.dispatchEvent(createComponentErrorEvent(error))
+  }
+
+  function scheduleCounterReset() {
+    if (resetScheduled) return
+    resetScheduled = true
+    // Reset when control returns to the event loop while still allowing
+    // microtask-driven flushes in the same turn to count as cascading.
+    setTimeout(() => {
+      cascadingComponentUpdateCount = 0
+      cascadingComponentUpdateCounts = new WeakMap()
+      cascadingComponentNameCounts = new Map()
+      warnedAboutCascadingUpdates = false
+      resetScheduled = false
+    }, 0)
+  }
+
+  function trackCascadingUpdate(vnode: CommittedComponentNode): boolean {
+    cascadingComponentUpdateCount++
+
+    let componentName = getComponentName(vnode)
+    cascadingComponentNameCounts.set(
+      componentName,
+      (cascadingComponentNameCounts.get(componentName) ?? 0) + 1,
+    )
+
+    let componentUpdateCount = (cascadingComponentUpdateCounts.get(vnode) ?? 0) + 1
+    cascadingComponentUpdateCounts.set(vnode, componentUpdateCount)
+    scheduleCounterReset()
+
+    if (
+      !warnedAboutCascadingUpdates &&
+      cascadingComponentUpdateCount >= CASCADING_UPDATE_WARN_THRESHOLD
+    ) {
+      warnedAboutCascadingUpdates = true
+      console.warn(
+        `${cascadingComponentUpdateCount} cascading component updates detected in one event loop turn. Consider reducing hydration regions. Components: ${formatComponentCounts(cascadingComponentNameCounts)}`,
+      )
+    }
+
+    if (componentUpdateCount > MAX_CASCADING_COMPONENT_UPDATES) {
+      let error = new Error(
+        `handle.update() infinite loop detected in ${componentName} after ${componentUpdateCount} cascading updates. Components: ${formatComponentCounts(cascadingComponentNameCounts)}`,
+      )
+      dispatchError(error)
+      return false
+    }
+
+    return true
+  }
+
+  function flush() {
+    if (flushing) return
+    flushing = true
+    try {
+      while (true) {
+        flushScheduled = false
+
+        let batch = new Map(scheduled)
+        scheduled.clear()
+
+        let hasWork =
+          batch.size > 0 ||
+          workTasks.length > 0 ||
+          commitPhaseTasks.length > 0 ||
+          postCommitTasks.length > 0
+        if (!hasWork) return
+
+        documentState.capture()
+
+        let updateParents = batch.size > 0 ? Array.from(new Set(batch.values())) : []
+        setActiveSchedulerUpdateParents(updateParents)
+        dispatchPhaseEvent('beforeUpdate', updateParents)
+
+        if (batch.size > 0) {
+          let vnodes = Array.from(batch)
+          let noScheduledAncestor = new Set<VNodeParent>()
+
+          for (let [vnode, domParent] of vnodes) {
+            if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
+            if (!trackCascadingUpdate(vnode)) return
+            let curr = vnode._content
+            // Calculate anchor at render time from current vdom position (never stale).
+            // Needed for fragment self-updates that add children - without this, new children
+            // would be appended after siblings. The keyed diff has placement logic, but unkeyed
+            // diff relies on anchor for correct positioning.
+            let anchor = findNextSiblingDomAnchor(vnode) || undefined
+            try {
+              renderComponent(curr, vnode, domParent, vnode._context, anchor)
+            } catch (error) {
+              dispatchError(error)
+            }
+          }
+        }
+
+        flushTaskQueue(workTasks)
+        setActiveSchedulerUpdateParents(undefined)
+
+        // Restore selection before commit-phase lifecycle work so mixins see
+        // the final DOM state but still run before commit listeners and user tasks.
+        documentState.restore()
+
+        flushTaskQueue(commitPhaseTasks)
+        dispatchPhaseEvent('commit', updateParents)
+        flushTaskQueue(postCommitTasks)
+      }
+    } finally {
+      setActiveSchedulerUpdateParents(undefined)
+      flushing = false
+    }
+  }
+
+  function dispatchPhaseEvent(type: SchedulerPhaseType, parents: ParentNode[]) {
+    if (phaseListenerCounts[type] === 0) return
+    let event: SchedulerPhaseEvent = Object.assign(new Event(type), { parents })
+    phaseEvents.dispatchEvent(event)
+  }
+
+  function flushTaskQueue(queue: EmptyFn[]) {
+    while (queue.length > 0) {
+      let task = queue.shift()
+      if (!task) continue
+      try {
+        task()
+      } catch (error) {
+        dispatchError(error)
+      }
+    }
+  }
+
+  function scheduleFlush() {
+    if (flushScheduled || flushing) return
+    flushScheduled = true
+    queueMicrotask(flush)
+  }
+
+  function ancestorIsScheduled(
+    vnode: CommittedComponentNode,
+    batch: Map<CommittedComponentNode, ParentNode>,
+    safe: Set<VNodeParent>,
+  ): boolean {
+    let path: VNodeParent[] = []
+    let current: VNodeParent | undefined = vnode._parent
+
+    while (current) {
+      // Already verified this node has no scheduled ancestor above it
+      if (safe.has(current)) {
+        for (let node of path) safe.add(node)
+        return false
+      }
+
+      path.push(current)
+
+      if (isCommittedComponentNode(current) && batch.has(current)) {
+        return true
+      }
+
+      current = current.kind === 'root' ? undefined : current._parent
+    }
+
+    // Reached root - mark entire path as safe for future lookups
+    for (let node of path) safe.add(node)
+    return false
+  }
+
+  scheduler = {
+    enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void {
+      scheduled.set(vnode, domParent)
+      scheduleFlush()
+    },
+
+    enqueueWork(newTasks: EmptyFn[]): void {
+      workTasks.push(...newTasks)
+      scheduleFlush()
+    },
+
+    enqueueCommitPhase(newTasks: EmptyFn[]): void {
+      commitPhaseTasks.push(...newTasks)
+      scheduleFlush()
+    },
+
+    enqueueTasks(newTasks: EmptyFn[]): void {
+      postCommitTasks.push(...newTasks)
+      scheduleFlush()
+    },
+
+    addEventListener(type, listener, options) {
+      if (listener) phaseListenerCounts[type]++
+      phaseEvents.addEventListener(type, listener, options)
+    },
+
+    removeEventListener(type, listener, options) {
+      if (listener) phaseListenerCounts[type] = Math.max(0, phaseListenerCounts[type] - 1)
+      phaseEvents.removeEventListener(type, listener, options)
+    },
+
+    dequeue() {
+      flush()
+    },
+  }
+
+  return scheduler
+}

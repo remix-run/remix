@@ -34,6 +34,22 @@ describe('Accept-Language', () => {
     assert.equal(header.size, 2)
   })
 
+  it('preserves weights and ordering around empty list entries', () => {
+    let header = AcceptLanguage.from(' , EN-US ;q=0.5,\t,fr;q=0.9, en-us;q=0.7, ')
+
+    assert.deepEqual(Array.from(header), [
+      ['fr', 0.9],
+      ['en-us', 0.7],
+    ])
+    assert.equal(AcceptLanguage.from(' \t ').size, 0)
+
+    let value = `en-US,fr${' '.repeat(100)};q=0.5`
+    assert.deepEqual(Array.from(AcceptLanguage.from(value)), [
+      ['en-us', 1],
+      ['fr', 0.5],
+    ])
+  })
+
   it('gets all languages', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9')
     assert.deepEqual(header.languages, ['en-us', 'en'])

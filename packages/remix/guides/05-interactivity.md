@@ -1,0 +1,1117 @@
+---
+title: Interactivity
+description: How server-rendered UI hydrates, handles events, connects components to application models, navigates, and cancels stale work.
+---
+
+Remix renders pages on the server and hydrates only the components that need to run in the browser.
+This chapter covers marking those components with `clientEntry(...)`, starting the browser runtime
+with `run()`, updating local UI state, handling events with `on(...)` and other mixins, cancelling
+stale async work, and enhancing links and forms with client navigation. For application state and
+business rules, components call ordinary TypeScript models and keep their own state focused on the
+UI.
+
+## Progressive enhancement {#progressive-enhancement}
+
+Begin with links and forms that already describe the request the server should receive. This album
+form has a real action and method:
+
+```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
+import type { Handle } from "remix/component";
+
+import { routes } from "../../../../routes.ts";
+
+interface Album {
+  artist: string;
+  id: string;
+  title: string;
+  year: number;
+}
+
+export function AlbumEditForm(handle: Handle<{ album: Album }>) {
+  return () => {
+    let { album } = handle.props;
+
+    return (
+      <form action={routes.albums.edit.action.href({ albumId: album.id })} method="post">
+        <label>
+          Title
+          <input defaultValue={album.title} name="title" required />
+        </label>
+        <label>
+          Artist
+          <input defaultValue={album.artist} name="artist" required />
+        </label>
+        <label>
+          Year
+          <input defaultValue={album.year} name="year" required type="number" />
+        </label>
+        <button type="submit">Save album</button>
+      </form>
+    );
+  };
+}
+```
+
+With no JavaScript, the browser posts `FormData` to the route. The action validates it, updates the
+album, and returns a redirect. With JavaScript, an event handler can intercept that same submission
+to add pending UI or reload part of the page. The controller still owns the mutation and every error
+response.
+
+Use the same rule for navigation. Render an anchor with a useful `href` first, then let the browser
+runtime enhance same-origin navigation when it is available.
+
+Some interactions only make sense with JavaScript. The server can still render the useful content,
+navigation, and forms around them. Give each hydrated component the serializable data and route URLs
+it needs rather than moving the whole page into browser code.
+
+## Hydration boundaries with clientEntry {#cliententry}
+
+`clientEntry(...)` marks the smallest component that needs to run in the browser. An album edit page
+can remain server-only while its form hydrates:
+
+```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx lines=[1,13-15]
+import { clientEntry } from "remix/component";
+import type { Handle } from "remix/component";
+
+import { routes } from "../../../../routes.ts";
+
+interface Album {
+  artist: string;
+  id: string;
+  title: string;
+  year: number;
+}
+
+export const AlbumEditForm = clientEntry(
+  import.meta.url,
+  function AlbumEditForm(handle: Handle<{ album: Album }>) {
+    return () => {
+      let { album } = handle.props;
+
+      return (
+        <form action={routes.albums.edit.action.href({ albumId: album.id })} method="post">
+          {/* fields */}
+        </form>
+      );
+    };
+  },
+);
+```
+
+The first argument identifies the component's module. With `import.meta.url`, Remix uses the
+function's name as the export name, so name the function the same as its export.
+
+On the server, this still renders like an ordinary component. The server wraps its output in a pair
+of HTML comments, `<!-- rmx:h:... -->` and `<!-- /rmx:h -->`, and serializes its props into the page.
+The comments mark a range of the document rather than adding a wrapper element, so the hydrated output
+can be any markup. In the browser, `run()` finds each range, loads the component's module with a
+normal `import()`, and hydrates the existing DOM in place with the serialized props.
+
+Each client entry hydrates on its own. A client entry rendered inside another one can read its
+ancestor's context, but sibling client entries don't share component context. Pass each sibling the
+data it needs as props, or connect them through an ordinary TypeScript module, as shown in [keeping application logic outside components](#saving-a-client-owned-document).
+
+Client-entry props cross from the server to the browser, so they must be serializable. They may
+contain strings, numbers, booleans, `null`, `undefined`, plain objects and arrays, and JSX elements.
+Do not pass functions, class instances, database records with custom prototypes, or other opaque
+runtime values.
+
+Mark a boundary around interactive UI, not an entire page by habit. Static ancestors and siblings do
+not need to hydrate just because a button below them does. Keep the database, authenticated user,
+and request context on the server. Pass the client entry plain initial data, route URLs, and other
+browser-safe values it needs to handle its part of the page.
+
+## Booting the browser runtime with run {#browser-entry-with-run}
+
+Client entries hydrate once a browser entry module calls `run()`. Load that module, such as
+`app/actions/public/entry.ts`, from the document shell and call `run()` once:
+
+```ts filename=app/actions/public/entry.ts
+import {
+  detectMultipleImportMapSupport,
+  importModule,
+  preloadShim,
+} from "remix/multiple-import-maps-polyfill";
+import { run } from "remix/component";
+
+let app = run({
+  async loadModule(moduleUrl, exportName) {
+    let module = await importModule(moduleUrl);
+    let Component = module[exportName];
+    if (typeof Component !== "function") {
+      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`);
+    }
+    return Component;
+  },
+  async processClientEntryPreloads(preloads) {
+    if (await detectMultipleImportMapSupport()) return preloads;
+
+    preloadShim(preloads);
+    return [];
+  },
+});
+
+app.addEventListener("error", (event) => {
+  console.error("Component error:", event.error);
+});
+
+await app.ready();
+```
+
+`loadModule` imports the named component for every client entry discovered in the document. An
+[import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap)
+tells the browser which URL each bare module specifier resolves to, and Remix adds more of them as
+[client entries and frames load](/files-and-assets/#load-browser-scripts).
+Browsers that support multiple import maps on one page use native imports and preloads. Browsers without that support use
+the [`remix/multiple-import-maps-polyfill`](../src/multiple-import-maps-polyfill/README.md)
+shim when later frame responses introduce new mappings. If you only target browsers with native
+support, `loadModule` can call `import(moduleUrl)` directly and you can drop
+`processClientEntryPreloads`.
+
+The returned app runtime has three lifecycle methods:
+
+- `app.ready()` resolves after the initial client entries hydrate.
+- `app.flush()` synchronously applies pending component updates. This is mainly useful in tests and
+  integrations that must observe the DOM immediately.
+- `app.dispose()` removes the runtime's components and listeners.
+
+`run()` hydrates the server-rendered page. It is not a second application router. Browser requests
+still go to the route actions that own the corresponding server behavior.
+
+`run()` also provides a [default browser resolver for frames](/streaming-ui-with-frames/#resolve-frames-in-the-browser),
+the route-owned regions that load or reload independently.
+
+## Mount client-only UI with createRoot {#client-only-roots}
+
+Use `createRoot(container)` when there is no server-rendered component to hydrate, such as an
+imperative widget mounted into a container created by another application.
+
+```tsx filename=app/actions/public/support-widget.tsx
+import { createRoot } from "remix/component";
+import type { Handle } from "remix/component";
+
+function SupportWidget(_handle: Handle) {
+  return () => <a href="/support">Contact support</a>;
+}
+
+let container = document.getElementById("support-widget");
+
+if (container) {
+  let root = createRoot(container);
+  root.render(<SupportWidget />);
+
+  window.addEventListener("pagehide", () => root.dispose(), { once: true });
+}
+```
+
+The root owns that container. `root.render(node)` schedules a tree, `root.flush()` applies pending
+work synchronously, and `root.dispose()` removes the tree and runs cleanup. Normal page UI should
+start on the server and use `clientEntry(...)`. Otherwise users wait for JavaScript before they see
+content the server could have rendered.
+
+## State, updates, and post-render tasks {#state-updates-and-post-render-tasks}
+
+Component-local UI state lives in [setup scope](/rendering-ui/#handle-props-setup-render-and-updates),
+the body of the component function that runs once before it returns its render function. Change it in an event handler, then call
+`handle.update()`:
+
+```tsx
+import { on } from "remix/component";
+import type { Handle } from "remix/component";
+
+function Counter(handle: Handle<{ initialCount: number }>) {
+  let count = handle.props.initialCount;
+
+  return () => (
+    <button
+      mix={on("click", () => {
+        count++;
+        handle.update();
+      })}
+      type="button"
+    >
+      Count: {count}
+    </button>
+  );
+}
+```
+
+`count` lives in setup scope, so it survives each render without becoming part of the component's
+props.
+
+Remix doesn't own your state. It's a plain variable, and you change it directly. `handle.update()` is
+the only signal that the component should render again. If you forget it, the component visibly
+doesn't change, which is usually easy to spot. Because a component only needs state and a way to
+request a render, you can build other patterns on top, such as a store or signals that call
+`handle.update()` when they change.
+
+Call `handle.update()` from an event handler, queued task, subscription, timer, or other work that
+runs after the component commits, meaning its rendered output has been applied to the DOM. Calling
+it during setup warns and skips the extra render because
+the initial render follows setup. Calling it during rendering, or before the initial commit from
+outside setup, throws an error. If rendering discovers work that should run after the commit,
+schedule that work with `handle.queueTask()`.
+
+Components rendered on the server run their setup and render functions there too. On the server,
+`handle.update()` throws and queued tasks never run. Start timers, read the DOM, and use browser
+globals such as `window` in event handlers or queued tasks, which only run in the browser.
+
+`handle.update()` schedules work and returns a promise. Await it when the next step needs the updated
+DOM:
+
+```tsx
+import { on, ref } from "remix/component";
+import type { Handle } from "remix/component";
+
+function RenameButton(handle: Handle) {
+  let editing = false;
+  let input: HTMLInputElement;
+
+  return () => (
+    <div>
+      <button
+        mix={on("click", async () => {
+          editing = true;
+          await handle.update();
+          input.focus();
+        })}
+        type="button"
+      >
+        Rename
+      </button>
+      {editing && <input aria-label="Album title" mix={ref((node) => (input = node))} />}
+    </div>
+  );
+}
+```
+
+When an update removes the element that has focus, such as a dialog's close button, move focus back
+to the control that opened it the same way, so keyboard and screen reader users don't lose their
+place.
+
+The promise resolves to an
+[`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal), an object that
+reports when work should stop and that APIs such as `fetch()` accept for cancellation. Capture it only if work continues across another async
+boundary after the update. The runtime cannot abort the signal between `await handle.update()` and
+the next synchronous statement, so `input.focus()` does not need a signal check. When more async
+work follows, pass the signal to that work when possible and check it after the later `await` before
+continuing:
+
+```tsx
+// Inside an async event handler:
+let signal = await handle.update();
+let response = await fetch(href, { signal });
+if (signal.aborted) return;
+
+status = response.ok ? "saved" : "error";
+handle.update();
+```
+
+`handle.queueTask(task)` runs a task during the commit after the next update. Use it when DOM
+measurement or another update must happen as part of that flush:
+
+```tsx
+// Inside an event handler after `detailsSection` has been assigned:
+showDetails = true;
+handle.update();
+handle.queueTask(() => {
+  detailsSection.scrollIntoView({ block: "nearest" });
+});
+```
+
+Do not create extra state only to make a queued task notice it later. Start work in the event handler
+that owns it, or key a queued task directly to the prop value it observes.
+
+Keys matter whenever an update changes a list. Use a stable ID, not an array index that changes when
+the list is sorted or a random value created during render. Matching keys let Remix move existing DOM
+and component instances instead of pairing state with the wrong item.
+
+```tsx
+import { on, type Handle } from "remix/component";
+
+type ListItem = {
+  id: string;
+  label: string;
+};
+
+export function KeyedList(handle: Handle) {
+  let items: ListItem[] = [
+    { id: "a", label: "Item A" },
+    { id: "b", label: "Item B" },
+    { id: "c", label: "Item C" },
+    { id: "d", label: "Item D" },
+  ];
+
+  let shuffleInterval: ReturnType<typeof setInterval> | null = null;
+
+  let moveUp = (index: number) => {
+    if (index === 0) return;
+    let newItems = [...items];
+    [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
+    items = newItems;
+    handle.update();
+  };
+
+  let moveDown = (index: number) => {
+    if (index === items.length - 1) return;
+    let newItems = [...items];
+    [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+    items = newItems;
+    handle.update();
+  };
+
+  let reverse = () => {
+    items = [...items].reverse();
+    handle.update();
+  };
+
+  let shuffle = () => {
+    let newItems = [...items];
+    for (let i = newItems.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [newItems[i], newItems[j]] = [newItems[j], newItems[i]];
+    }
+    items = newItems;
+    handle.update();
+  };
+
+  let toggleAutoShuffle = () => {
+    if (shuffleInterval !== null) {
+      clearInterval(shuffleInterval);
+      shuffleInterval = null;
+    } else {
+      shuffleInterval = setInterval(() => {
+        shuffle();
+      }, 1000);
+    }
+    handle.update();
+  };
+
+  return () => (
+    <div>
+      <div class="controls">
+        <button mix={[on("click", reverse)]}>Reverse List</button>
+        <button mix={[on("click", shuffle)]}>Shuffle List</button>
+        <button mix={[on("click", toggleAutoShuffle)]}>
+          {shuffleInterval !== null ? "Stop Auto-Shuffle" : "Start Auto-Shuffle"}
+        </button>
+      </div>
+
+      {items.map((item, index) => (
+        <div key={item.id} class="list-item">
+          <input type="text" placeholder={item.label} defaultValue={item.label} />
+          <button
+            // disabled={index === 0}
+            mix={[on("click", () => moveUp(index))]}
+          >
+            ↑
+          </button>
+          <button
+            // disabled={index === items.length - 1}
+            mix={[on("click", () => moveDown(index))]}
+          >
+            ↓
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+Setup-scope variables are a good home for UI state such as whether a menu is open, which field has
+focus, or whether a request is pending. Put business rules and shared application state in ordinary
+TypeScript outside the component, then call that code from event handlers and
+[update the component when the model changes](#saving-a-client-owned-document).
+
+## Events with on {#events-with-on}
+
+`on(type, handler, capture?)` attaches a typed DOM event to a host element. The event's
+`currentTarget` is inferred from that host:
+
+```tsx
+import { on } from "remix/component";
+import type { Handle } from "remix/component";
+
+function AlbumForm(_handle: Handle) {
+  return () => (
+    <form
+      mix={on("submit", (event) => {
+        event.preventDefault();
+        let formData = new FormData(event.currentTarget);
+        console.log(formData.get("title"));
+      })}
+    >
+      {/* fields */}
+    </form>
+  );
+}
+```
+
+Prefer native elements and their native events. A button's `click` event already covers pointer,
+touch, Enter, and Space activation. A form's `submit` event covers its submit button and Enter from a
+field. Use lower-level pointer or keyboard events when the interaction itself requires them, not to
+rebuild behavior the platform already supplies.
+
+If an event starts temporary listeners on `window` or `document`, give those listeners their own cleanup signal and
+stop them when the interaction finishes or the component disconnects.
+
+Only call `preventDefault()` when the enhanced path will finish the browser's job. If an event
+handler merely adds pending state before an ordinary form submission, allow the submission to
+continue.
+
+## Controlled and uncontrolled inputs {#controlled-and-uncontrolled-inputs}
+
+An uncontrolled input keeps its current value in the DOM, and `defaultValue` gives it an initial
+value. A controlled input gets its current value from component state instead. Its input handler
+copies the DOM value into that state and updates the component:
+
+```tsx filename=app/ui/public/title-inputs.tsx
+import { on } from "remix/component";
+import type { Handle } from "remix/component";
+
+const initialTitle = "Thriller";
+
+function TitleInputs(handle: Handle) {
+  let title = initialTitle;
+
+  return () => (
+    <div>
+      <p>
+        <label>
+          Uncontrolled <input defaultValue={initialTitle} />
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Controlled{" "}
+          <input
+            value={title}
+            mix={on("input", (event) => {
+              title = event.currentTarget.value;
+              handle.update();
+            })}
+          />
+        </label>
+      </p>
+
+      <button
+        mix={on("click", () => {
+          title = initialTitle;
+          handle.update();
+        })}
+        type="button"
+      >
+        Reset controlled input
+      </button>
+    </div>
+  );
+}
+```
+
+Typing changes both inputs. Clicking the button resets the controlled input because its `value`
+comes from `title`. The uncontrolled input keeps its DOM value because `defaultValue` only applies
+its initial value.
+
+Prefer uncontrolled inputs. Control an input only when something besides the user's typing changes
+its value, such as a reset button, a generated value, or formatting applied as the user types.
+Otherwise read the value from the event, or from
+[`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) on submit, so the component
+only stores state it renders.
+
+## Composing behavior with mix {#the-mix-prop}
+
+The `mix` prop attaches reusable behavior and styles to host elements. Pass one mixin directly, or an
+array when the element needs several:
+
+```tsx
+import { attrs, css, on, ref } from "remix/component";
+import type { Handle } from "remix/component";
+
+const saveButtonStyle = css({
+  minWidth: "8rem",
+  minHeight: "2.5rem",
+  border: 0,
+  borderRadius: "999px",
+  background: "#111",
+  color: "#fff",
+});
+
+function SaveButton(_handle: Handle) {
+  return () => (
+    <button
+      mix={[
+        saveButtonStyle,
+        attrs({ type: "button" }),
+        ref((node) => console.log("Mounted", node)),
+        on("click", () => console.log("Save album")),
+      ]}
+    >
+      Save
+    </button>
+  );
+}
+```
+
+The core mixins serve different host-level jobs:
+
+- `on(...)` attaches a typed event handler.
+- `ref(...)` runs setup when the element is inserted and supplies a cleanup signal.
+- `attrs(...)` provides default attributes without replacing explicit element props.
+- `link(...)` adds client navigation behavior and link semantics.
+- `css(...)` applies static generated CSS.
+
+Components and mixins compose along different axes. Components compose the tree, so a component
+renders other components and host elements inside it. Mixins compose behavior and styles on one host
+element. To add a tooltip, a menu trigger, and a click handler to a button, keep the button where you
+render it and add a mixin for each behavior, rather than wrapping it in a component for each one.
+
+Mixins apply in array order. `on(...)` handlers for the same event run in that order, so calling `event.stopImmediatePropagation()` in one
+handler stops the handlers after it.
+
+[Animation mixins](/animation/#entrance-and-exit-animations) use the same prop. Put frequently
+changing values in normal props such as `style`, `value`, `checked`, and ARIA attributes rather than
+recreating static mixins for every state change.
+
+## DOM references, global events, and cleanup {#refs-attrs-and-dom-lifecycle}
+
+`ref(...)` receives the inserted DOM node and a signal that aborts when that node is removed. Tie
+observers and element-owned listeners to that signal:
+
+```tsx
+import { ref } from "remix/component";
+import type { Handle } from "remix/component";
+
+function MeasuredPanel(handle: Handle) {
+  let width = 0;
+
+  return () => (
+    <div
+      mix={ref((node, signal) => {
+        let observer = new ResizeObserver((entries) => {
+          let entry = entries[0];
+          if (!entry) return;
+          width = Math.round(entry.contentRect.width);
+          handle.update();
+        });
+
+        observer.observe(node);
+        signal.addEventListener("abort", () => observer.disconnect());
+      })}
+    >
+      Panel width: {width}px
+    </div>
+  );
+}
+```
+
+The ref callback runs when the element is inserted, not on every component update. If an element is
+conditional, its ref signal has the right lifetime for work that should stop when just that element
+disappears.
+
+For event targets outside the rendered tree, such as `window`, `document`, or a media query, use
+native `addEventListener()`. Schedule browser-only setup after the client commit, and pass
+`handle.signal` so the listener is removed when the component disconnects:
+
+```tsx
+import { clientEntry } from "remix/component";
+import type { Handle } from "remix/component";
+
+export const ViewportWidth = clientEntry(import.meta.url, function ViewportWidth(handle: Handle) {
+  let width: number | undefined;
+
+  handle.queueTask(() => {
+    width = window.innerWidth;
+    window.addEventListener(
+      "resize",
+      () => {
+        width = window.innerWidth;
+        handle.update();
+      },
+      { signal: handle.signal },
+    );
+    handle.update();
+  });
+
+  return () => <span>{width === undefined ? "Measuring…" : `${width}px`}</span>;
+});
+```
+
+Scheduling the setup avoids reading `window` during server rendering. For a client-only root, setup
+already runs only in the browser, so it can register the listener directly.
+
+Some listeners need a shorter lifetime than the component. Create an `AbortController` when that
+work starts, pass its signal to `addEventListener(...)`, and abort it when the work finishes. Also
+abort it from `handle.signal` so navigation cannot leave temporary listeners behind.
+
+## Async work and cancellation {#optimistic-updates-and-cancellation-with-handle-signal}
+
+Remix gives async work an abort signal scoped to the work that created it:
+
+| Signal                                      | Aborts when                                           | Good for                                                     |
+| ------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------ |
+| The second argument to an `on(...)` handler | The same handler runs again or its element is removed | Requests where the latest event should replace earlier work. |
+| The argument to a queued task               | The component renders again or disconnects            | Prop-keyed loading and post-render DOM work.                 |
+| `handle.signal`                             | The component disconnects                             | Component-lifetime timers and global listeners.              |
+
+Pass the narrowest signal into `fetch()` and check it after any awaited operation that cannot accept
+the signal. In this example, the server passes `routes.albums.search.href()` as `searchHref`, and the
+route returns a short text result. The browser component does not hard-code the endpoint:
+
+```tsx filename=app/ui/public/album-search.tsx
+import { clientEntry, on } from "remix/component";
+import type { Handle } from "remix/component";
+
+export const AlbumSearch = clientEntry(
+  import.meta.url,
+  function AlbumSearch(handle: Handle<{ searchHref: string }>) {
+    let error: string | undefined;
+    let loading = false;
+    let resultText = "";
+
+    return () => (
+      <div>
+        <input
+          aria-label="Search albums"
+          mix={on("input", async (event, signal) => {
+            let url = new URL(handle.props.searchHref, window.location.href);
+            url.searchParams.set("query", event.currentTarget.value);
+            error = undefined;
+            loading = true;
+            handle.update();
+
+            try {
+              let response = await fetch(url, { signal });
+              if (!response.ok) {
+                throw new Error(`Search failed with status ${response.status}`);
+              }
+
+              let nextResultText = await response.text();
+              if (signal.aborted) return;
+
+              resultText = nextResultText;
+              loading = false;
+              handle.update();
+            } catch (caught) {
+              if (signal.aborted) return;
+              error = caught instanceof Error ? caught.message : "Search failed";
+              loading = false;
+              handle.update();
+            }
+          })}
+          type="search"
+        />
+        {error ? <p role="alert">{error}</p> : null}
+        {loading ? <p>Searching…</p> : null}
+        {resultText ? <p>{resultText}</p> : null}
+      </div>
+    );
+  },
+);
+```
+
+Typing again aborts the previous handler signal and its fetch. A slow response for an old query
+cannot replace the newer results.
+
+## Keep application logic outside components {#saving-a-client-owned-document}
+
+Setup-scope variables make component state easy, but they do not make the component the right owner
+for every rule. Keep state in the component when it describes the current UI, such as whether a panel is
+open, which element should receive focus, or whether a request is pending. Put application data and
+operations in ordinary TypeScript that the component calls.
+
+A small model makes that boundary concrete. This cart owns its items and quantity changes:
+
+```ts filename=app/ui/public/cart-model.ts
+import { TypedEventTarget } from "remix/component";
+
+export interface CartItem {
+  id: string;
+  quantity: number;
+}
+
+export class CartModel extends TypedEventTarget<{ change: Event }> {
+  #items: CartItem[];
+
+  constructor(items: readonly CartItem[]) {
+    super();
+    this.#items = [...items];
+  }
+
+  get itemCount(): number {
+    return this.#items.reduce((total, item) => total + item.quantity, 0);
+  }
+
+  add(productId: string): void {
+    let item = this.#items.find((item) => item.id === productId);
+
+    this.#items = item
+      ? this.#items.map((item) =>
+          item.id === productId ? { ...item, quantity: item.quantity + 1 } : item,
+        )
+      : [...this.#items, { id: productId, quantity: 1 }];
+
+    this.dispatchEvent(new Event("change"));
+  }
+}
+```
+
+The component creates the model from serializable props, listens for changes, and keeps only the
+open state for its details panel:
+
+```tsx filename=app/ui/public/cart.tsx
+import { clientEntry, on } from "remix/component";
+import type { Handle } from "remix/component";
+
+import { CartModel, type CartItem } from "./cart-model.ts";
+
+interface CartProps {
+  initialItems: CartItem[];
+  product: { id: string; name: string };
+}
+
+export const Cart = clientEntry(import.meta.url, function Cart(handle: Handle<CartProps>) {
+  let cart = new CartModel(handle.props.initialItems);
+  let detailsOpen = false;
+
+  cart.addEventListener("change", () => handle.update(), { signal: handle.signal });
+
+  return () => (
+    <section>
+      <button mix={on("click", () => cart.add(handle.props.product.id))} type="button">
+        Add {handle.props.product.name}
+      </button>
+      <button
+        aria-expanded={detailsOpen}
+        mix={on("click", () => {
+          detailsOpen = !detailsOpen;
+          handle.update();
+        })}
+        type="button"
+      >
+        Cart ({cart.itemCount})
+      </button>
+      {detailsOpen ? <p>{cart.itemCount} items in your cart.</p> : null}
+    </section>
+  );
+});
+```
+
+`cart.addEventListener()` connects model changes to `handle.update()`, and `handle.signal` removes the
+subscription when the component disconnects. If several components use the same model, create it at
+their nearest shared client boundary and provide it through [component context](/rendering-ui/#handle-props-setup-render-and-updates). Do not pass a class
+instance through `clientEntry(...)` props because those props are serialized.
+
+With this split, you can test cart rules without a DOM and save
+[component tests](/testing/#test-remix-components-in-the-browser) for the details button and rendered
+item count, which depend on the component and DOM.
+
+## Client navigation {#client-navigation}
+
+Keep using real anchors for links. After `run()` starts, the runtime can enhance same-origin
+navigations through the browser's
+[Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_API), which lets
+scripts intercept a navigation and handle it without a full page load. Cross-origin links, downloads, and navigations the
+browser cannot intercept continue as normal document requests.
+
+```tsx filename=app/ui/album-link.tsx
+import type { Handle } from "remix/component";
+
+import { routes } from "../routes.ts";
+
+function AlbumLink(handle: Handle<{ albumId: string; title: string }>) {
+  return () => (
+    <a href={routes.albums.show.href({ albumId: handle.props.albumId })}>{handle.props.title}</a>
+  );
+}
+```
+
+Use `navigate(href, options)` when navigation begins in code. Apply `link(href, options)` to any HTML
+host that should behave like a link, such as a card whose whole surface is interactive:
+
+```tsx filename=app/ui/album-navigation.tsx
+import { link, navigate, on } from "remix/component";
+import type { Handle } from "remix/component";
+
+import { routes } from "../routes.ts";
+
+function AlbumNavigation(handle: Handle<{ albumId: string; title: string }>) {
+  return () => {
+    let href = routes.albums.show.href({ albumId: handle.props.albumId });
+
+    return (
+      <div>
+        <article mix={link(href)}>{handle.props.title}</article>
+        <button mix={on("click", () => navigate(href, { history: "replace" }))} type="button">
+          Replace current album
+        </button>
+      </div>
+    );
+  };
+}
+```
+
+On a non-anchor host, `link(...)` adds `role="link"`, makes the element keyboard-focusable when
+needed, handles Enter and mouse or modifier-key activation, and reflects a disabled host with
+`aria-disabled`. Prefer an anchor when its markup fits. Use the mixin when making another host act as
+a link is an intentional part of the UI.
+
+Native anchors and forms can also control frame-aware navigation with attributes that correspond to
+the `link(...)` and `navigate(...)` options:
+
+- `data-rmx-target` names the frame to reload.
+- `data-rmx-src` provides the URL to fetch for the mounted named frame selected by `data-rmx-target` while `href` remains the browser's destination.
+- `data-rmx-history="push|replace"` controls how the navigation updates history, including overriding a form's default.
+- `data-rmx-reset-scroll="manual"` preserves the current scroll position.
+- `data-rmx-reset-focus="manual"` disables the browser's automatic focus reset after navigation.
+- `data-rmx-document` opts out of interception and lets the browser perform a full-document navigation.
+
+Use `resetScroll: "manual"` or `resetFocus: "manual"` for the same behavior in `link(...)` and
+`navigate(...)`. Both controls also accept `"after-transition"`, the default. Existing boolean options
+and `"true"` / `"false"` attribute values still work. `true` corresponds to `"after-transition"` and
+`false` to `"manual"`.
+
+The top frame follows the browser URL. If `data-rmx-target` is omitted, an intercepted navigation
+reloads the top frame from the link or form destination. Remix reconciles the new page into the
+current document, so a client entry that the new page renders in the same place keeps its local
+state while receiving the new server props. If a server
+render shows a section collapsed but the user expanded it in a client entry, it stays expanded. If a specified target does not match a
+mounted frame, the browser performs a document navigation. Native form navigation preserves its
+method, body, files, and submitter overrides. Back and forward traversal reloads the destination
+document instead of reconciling stale frame content.
+
+A supplied `data-rmx-src` must be a valid same-origin URL regardless of the target. Invalid or
+cross-origin values disable interception and leave the navigation to the browser. These rules also
+apply to the `src` and `target` options of `link(...)` and `navigate(...)`.
+
+These attributes are most useful with [named frames](/streaming-ui-with-frames/#frames-and-partial-server-rendered-ui),
+and a form can [navigate a frame](/streaming-ui-with-frames/#navigate-a-frame-with-a-form) directly
+through the frame resolver.
+
+## Prefetch links before navigation
+
+You can opt into link prefetching to speed up client-side navigations with the `data-rmx-prefetch="intent|viewport"` attribute. Remix loads the destination HTML to discover JavaScript, CSS, and declared image and font
+preloads without running the destination's code. Navigation reuses matching fresh HTML and asset
+responses from the browser HTTP cache.
+
+Use `intent` to prefetch on hover, focus, or pointer press. Or use the more aggressive `viewport`
+value to prefetch links when they enter the viewport, including links already visible
+on initial load.
+
+```tsx
+<a href={routes.albums.show.href({ albumId: handle.props.albumId })} data-rmx-prefetch="intent">
+  {handle.props.title}
+</a>
+```
+
+If you need to prefetch imperatively based on custom logic, you can use the `prefetch` API:
+
+```ts
+import { prefetch } from "remix/component";
+
+import { routes } from "../routes.ts";
+
+prefetch(routes.albums.show.href({ albumId: "thriller" }));
+```
+
+Only prefetch links whose GET requests are safe to make speculatively. See the [prefetching reference](../src/component/README.md#prefetching) for more information.
+
+## Enhancing forms with fetch and navigation
+
+Once [`run()`](#browser-entry-with-run) boots the runtime, Remix already submits forms as
+[frame navigations](/streaming-ui-with-frames/#navigate-a-frame-with-a-form) without a full page
+reload. Write your own submit handler when you need behavior that doesn't provide, such as handling
+an error response inside the component.
+
+You can do that without adding a second mutation API. The submit handler sends the form's existing
+action, method, and `FormData`, then follows the action's redirect:
+
+```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
+import { clientEntry, navigate, on } from "remix/component";
+import type { Handle } from "remix/component";
+
+import { routes } from "../../../../routes.ts";
+
+interface Album {
+  artist: string;
+  id: string;
+  title: string;
+  year: number;
+}
+
+export const AlbumEditForm = clientEntry(
+  import.meta.url,
+  function AlbumEditForm(handle: Handle<{ album: Album }>) {
+    let error: string | undefined;
+    let pending = false;
+
+    return () => {
+      let { album } = handle.props;
+
+      return (
+        <form
+          action={routes.albums.edit.action.href({ albumId: album.id })}
+          method="post"
+          mix={on("submit", async (event, signal) => {
+            let form = event.currentTarget;
+            event.preventDefault();
+            error = undefined;
+            pending = true;
+            handle.update();
+
+            try {
+              let response = await fetch(form.action, {
+                body: new FormData(form),
+                method: form.method,
+                signal,
+              });
+
+              if (signal.aborted) return;
+              if (!response.ok) {
+                error = await response.text();
+                if (signal.aborted) return;
+                pending = false;
+                handle.update();
+                return;
+              }
+
+              await navigate(response.url, { history: "replace" });
+            } catch (caught) {
+              if (signal.aborted) return;
+              error = caught instanceof Error ? caught.message : "Unable to save album";
+              pending = false;
+              handle.update();
+            }
+          })}
+        >
+          <label>
+            Title
+            <input defaultValue={album.title} name="title" required />
+          </label>
+          <label>
+            Artist
+            <input defaultValue={album.artist} name="artist" required />
+          </label>
+          <label>
+            Year
+            <input defaultValue={album.year} name="year" required type="number" />
+          </label>
+          <button disabled={pending} type="submit">
+            {pending ? "Saving…" : "Save album"}
+          </button>
+          {error ? <p role="alert">{error}</p> : null}
+        </form>
+      );
+    };
+  },
+);
+```
+
+The server action is the same one the plain form posts to. A non-enhanced submission still receives its redirect or
+error response. The enhanced path consumes that response, shows an error locally when it is not
+successful, and follows the controller's redirect URL with `navigate(...)`.
+
+Choose the synchronization boundary that matches the UI:
+
+- Submit the existing form normally when a document navigation is the right result.
+- Intercept it with `fetch()` when the page needs pending or inline error UI before navigating.
+- Send JSON when a browser-side model owns the data and no server-rendered region needs to change.
+- Poll a small JSON endpoint when data changes independently of the current page.
+
+A mutation can also
+[reload one route-owned frame](/streaming-ui-with-frames/#coordinating-forms-fetches-frame-reloads-and-navigation)
+without navigating the whole document.
+
+## Pending and optimistic UI {#optimistic-ui}
+
+Keep a `pending` flag in setup scope when the render output reads it. Set it in the submit handler
+before the request and clear it when the request settles, as in the
+[enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough for disabled
+controls, pending labels, progress indicators, and duplicate-submission prevention.
+
+Optimistic UI renders the expected result before the request completes. Put the optimistic operation
+and its recovery policy in the model that owns the data. The component can render the model's current
+state while keeping UI concerns such as a pending label, open menu, or focused control locally.
+
+Optimistic state works best for reversible, predictable changes such as toggles, reordering, and
+adding a known item. Wait for the response when the server chooses the final value, performs a
+destructive operation, or can reject the request in ways the user must resolve first. If an
+optimistic request fails, the model can restore its previous state or adopt the server response, and
+the component can render the resulting error or retry control.
+
+## When to create a custom event mixin {#creating-custom-mixins}
+
+Most application code should use `on(...)` with native events. Create an event mixin when several
+components need the same interaction built from multiple low-level events, such as a gesture with
+timing or pointer state. The mixin can keep that state in setup scope and dispatch one semantic,
+typed event for consumers.
+
+This `longPress()` mixin turns a held pointer into an `app:longpress` event:
+
+```tsx filename=app/ui/public/long-press.tsx
+import { createMixin, on } from "remix/component";
+
+export const longPressType = "app:longpress" as const;
+
+export class LongPressEvent extends Event {
+  constructor() {
+    super(longPressType, { bubbles: true });
+  }
+}
+
+declare global {
+  interface HTMLElementEventMap {
+    [longPressType]: LongPressEvent;
+  }
+}
+
+export const longPress = createMixin<HTMLElement>((handle) => {
+  let node: HTMLElement | undefined;
+  let timeout: number | undefined;
+
+  handle.addEventListener("insert", (event) => {
+    node = event.node;
+  });
+  handle.addEventListener("remove", cancel);
+
+  function cancel() {
+    window.clearTimeout(timeout);
+  }
+
+  return () => (
+    <handle.element
+      mix={[
+        on("pointerdown", () => {
+          cancel();
+          timeout = window.setTimeout(() => {
+            node?.dispatchEvent(new LongPressEvent());
+          }, 500);
+        }),
+        on("pointerup", cancel),
+        on("pointercancel", cancel),
+        on("pointerleave", cancel),
+      ]}
+    />
+  );
+});
+```
+
+Consume the semantic event with `on(...)` like any other DOM event:
+
+```tsx
+<button
+  mix={[
+    longPress(),
+    on(longPressType, () => {
+      console.log("Long press");
+    }),
+  ]}
+>
+  Hold for options
+</button>
+```
+
+Namespace custom event names to avoid collisions, and keep one-off behavior in the component that
+uses it. The [`remix/component` mixins reference](../src/component/README.md#mixins) covers the full
+mixin API.

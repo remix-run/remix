@@ -6,8 +6,9 @@ export interface CompletionResult {
 }
 
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
-const DB_COMMANDS = ['migrate', 'reset', 'seed', 'status', 'wipe'] as const
+const DB_COMMANDS = ['migrate', 'reset', 'rollback', 'seed', 'status', 'wipe'] as const
 const HELP_COMMANDS = [
+  'assets',
   'completion',
   'db',
   'doctor',
@@ -18,6 +19,7 @@ const HELP_COMMANDS = [
   'version',
 ] as const
 const ROOT_COMMANDS = [
+  'assets',
   'completion',
   'db',
   'doctor',
@@ -225,6 +227,10 @@ function completeCommand(
     return completeHelp(tokens, currentWord, usedGlobalFlags)
   }
 
+  if (command === 'assets') {
+    return completeAssets(tokens, currentWord, usedGlobalFlags)
+  }
+
   if (command === 'new') {
     return completeNew(tokens, currentWord, usedGlobalFlags)
   }
@@ -259,6 +265,30 @@ function completeCommand(
   }
 
   return completeValues([], currentWord)
+}
+
+function completeAssets(
+  tokens: string[],
+  currentWord: string,
+  usedGlobalFlags: Set<string>,
+): CompletionResult {
+  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
+  if (filteredTokens == null) {
+    return completeValues([], currentWord)
+  }
+
+  if (filteredTokens.length === 0) {
+    return completeValues(withHelpFlags(['inspect'], usedGlobalFlags), currentWord)
+  }
+
+  let [subcommand, ...rest] = filteredTokens
+  if (subcommand !== 'inspect' || rest.length > 0) {
+    return completeValues([], currentWord)
+  }
+
+  return currentWord.startsWith('-')
+    ? completeValues(withHelpFlags([], usedGlobalFlags), currentWord)
+    : { mode: 'files' }
 }
 
 function completeTest(
@@ -514,48 +544,96 @@ function completeDb(
   let [subcommand, ...rest] = filteredTokens
 
   if (subcommand === 'migrate') {
-    return completeDbMigrate(rest, currentWord, usedGlobalFlags)
+    return completeDbOptions(
+      rest,
+      currentWord,
+      usedGlobalFlags,
+      [],
+      ['--connection-env', '--journal-table', '--migrations', '--to'],
+    )
   }
 
-  if (subcommand === 'reset' || subcommand === 'wipe') {
-    return completeSimpleFlags(rest, currentWord, usedGlobalFlags, ['--force'])
+  if (subcommand === 'reset') {
+    return completeDbOptions(
+      rest,
+      currentWord,
+      usedGlobalFlags,
+      ['--force'],
+      ['--connection-env', '--journal-table', '--migrations', '--seed'],
+    )
   }
 
-  if (subcommand === 'seed' || subcommand === 'status') {
-    return completeSimpleFlags(rest, currentWord, usedGlobalFlags, [])
+  if (subcommand === 'rollback') {
+    return completeDbOptions(
+      rest,
+      currentWord,
+      usedGlobalFlags,
+      ['--dry-run'],
+      ['--connection-env', '--journal-table', '--migrations', '--step', '--to'],
+    )
+  }
+
+  if (subcommand === 'wipe') {
+    return completeDbOptions(rest, currentWord, usedGlobalFlags, ['--force'], ['--connection-env'])
+  }
+
+  if (subcommand === 'seed') {
+    return completeDbOptions(rest, currentWord, usedGlobalFlags, [], ['--connection-env', '--seed'])
+  }
+
+  if (subcommand === 'status') {
+    return completeDbOptions(
+      rest,
+      currentWord,
+      usedGlobalFlags,
+      [],
+      ['--connection-env', '--journal-table', '--migrations'],
+    )
   }
 
   return completeValues([], currentWord)
 }
 
-function completeDbMigrate(
+function completeDbOptions(
   tokens: string[],
   currentWord: string,
   usedGlobalFlags: Set<string>,
+  booleanFlags: string[],
+  valueFlags: string[],
 ): CompletionResult {
-  let hasTo = false
-  let expectsTo = false
+  let usedFlags = new Set<string>()
+  let expectedValueFor: string | undefined
 
   for (let token of tokens) {
-    if (expectsTo) {
-      expectsTo = false
+    if (expectedValueFor !== undefined) {
+      expectedValueFor = undefined
       continue
     }
 
-    if (token === '--to') {
-      hasTo = true
-      expectsTo = true
+    let equalsIndex = token.indexOf('=')
+    let flag = equalsIndex === -1 ? token : token.slice(0, equalsIndex)
+    if (booleanFlags.includes(flag)) {
+      usedFlags.add(flag)
+      continue
+    }
+
+    if (valueFlags.includes(flag)) {
+      usedFlags.add(flag)
+      if (equalsIndex === -1) expectedValueFor = flag
       continue
     }
 
     return completeValues([], currentWord)
   }
 
-  if (expectsTo) {
-    return { mode: 'none' }
+  if (expectedValueFor !== undefined) {
+    return expectedValueFor === '--migrations' || expectedValueFor === '--seed'
+      ? { mode: 'files' }
+      : { mode: 'none' }
   }
 
-  return completeValues(withHelpFlags(!hasTo ? ['--to'] : [], usedGlobalFlags), currentWord)
+  let available = [...booleanFlags, ...valueFlags].filter((flag) => !usedFlags.has(flag))
+  return completeValues(withHelpFlags(available, usedGlobalFlags), currentWord)
 }
 
 function completeCompletionCommand(

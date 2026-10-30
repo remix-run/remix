@@ -2,6 +2,28 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+## v0.14.2
+
+### Patch Changes
+
+- Use HTTP/2 `:authority` before `Host` when constructing request URLs. Requests whose `Host` and `:authority` identify different hosts now receive a 400 response by default from `createRequestListener()`, with custom responses supported through `onError`. Equivalent hostnames and default ports remain accepted.
+
+- `createRequestListener()` now accepts request-only handlers separately from handlers that read client address information, so handlers such as `router.fetch` can be passed directly.
+
+- Declare package modules as side-effect-free.
+
+## v0.14.1
+
+### Patch Changes
+
+- Request handlers now receive native `Request` instances instead of lazy request objects that emulated native requests. This fixes compatibility with standard APIs like `new Request(request, init)` that rely on native `Request` internals.
+
 ## v0.14.0
 
 ### Minor Changes

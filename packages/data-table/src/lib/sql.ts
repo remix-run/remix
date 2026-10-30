@@ -69,7 +69,7 @@ export function isSqlStatement(value: unknown): value is SqlStatement {
 
 /**
  * Creates a SQL statement from raw text and values.
- * @param text SQL text containing placeholders expected by the target adapter.
+ * @param text SQL text containing placeholders expected by the target database.
  * @param values Placeholder values.
  * @returns A normalized SQL statement.
  * @example

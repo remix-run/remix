@@ -1,4 +1,4 @@
-import { css } from '@remix-run/ui'
+import { css } from '@remix-run/component'
 import { lookupCatalogItem } from '#packages/catalog/index.ts'
 import { formatPrice } from '#packages/pricing/index.ts'
 import { Badge } from '#packages/ui/badge.tsx'

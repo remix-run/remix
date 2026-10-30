@@ -9,16 +9,21 @@ import type {
   SelectOperation,
   UpdateOperation,
   UpsertOperation,
-} from '../adapter.ts'
+} from '../driver.ts'
 import { DataTableQueryError } from '../errors.ts'
 import type { ReturningInput, WriteResult, WriteRowResult, WriteRowsResult } from '../database.ts'
+import type { Predicate } from '../operators.ts'
 import { normalizeWhereInput } from '../operators.ts'
 import type { AnyQuery, QueryExecutionResult, QueryState } from '../query.ts'
 import { cloneQueryState, querySnapshot } from '../query.ts'
 import type { AnyTable } from '../table.ts'
 import { getPrimaryKeyObject, getTableName } from '../table.ts'
 
-import { executeOperation, type QueryExecutionContext } from './execution-context.ts'
+import {
+  executeOperation,
+  runInTransaction,
+  type QueryExecutionContext,
+} from './execution-context.ts'
 import {
   buildPrimaryKeyPredicate,
   hasScopedWriteModifiers,
@@ -244,7 +249,7 @@ async function executeInsert(
   )
   let returning = options?.returning
 
-  assertReturningCapability(database.adapter, 'insert', returning)
+  assertReturningCapability(database.capabilities, 'insert', returning)
 
   if (returning) {
     let operation: InsertOperation<AnyTable> = {
@@ -314,7 +319,7 @@ async function executeInsertMany(
   }
 
   let returning = options?.returning
-  assertReturningCapability(database.adapter, 'insertMany', returning)
+  assertReturningCapability(database.capabilities, 'insertMany', returning)
 
   if (returning) {
     let operation: InsertManyOperation<AnyTable> = {
@@ -371,7 +376,7 @@ async function executeUpdate(
   options?: { returning?: ReturningInput<Record<string, unknown>>; touch?: boolean },
 ): Promise<WriteResult | WriteRowsResult<Record<string, unknown>>> {
   let returning = options?.returning
-  assertReturningCapability(database.adapter, 'update', returning)
+  assertReturningCapability(database.capabilities, 'update', returning)
   let preparedChanges = prepareUpdateValues(
     table,
     changes as never,
@@ -383,10 +388,12 @@ async function executeUpdate(
     throw new DataTableQueryError('update() requires at least one change')
   }
 
+  assertWhereIsNotStructurallyUnconditional(state.where, 'update')
+
   let result: DataManipulationResult
 
   if (hasScopedWriteModifiers(state)) {
-    result = await database.transaction(async (tx) => {
+    result = await database[runInTransaction](async (tx) => {
       let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
       let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
@@ -448,7 +455,8 @@ async function executeDelete(
   options?: { returning?: ReturningInput<Record<string, unknown>> },
 ): Promise<WriteResult | WriteRowsResult<Record<string, unknown>>> {
   let returning = options?.returning
-  assertReturningCapability(database.adapter, 'delete', returning)
+  assertReturningCapability(database.capabilities, 'delete', returning)
+  assertWhereIsNotStructurallyUnconditional(state.where, 'delete')
   let tableName = getTableName(table)
   let deleteContext = {
     tableName,
@@ -462,7 +470,7 @@ async function executeDelete(
   let result: DataManipulationResult
 
   if (hasScopedWriteModifiers(state)) {
-    result = await database.transaction(async (tx) => {
+    result = await database[runInTransaction](async (tx) => {
       let primaryKeys = await loadPrimaryKeyRowsForScope(tx, table, state)
       let primaryKeyPredicate = buildPrimaryKeyPredicate(table, primaryKeys)
 
@@ -516,6 +524,37 @@ async function executeDelete(
   }
 }
 
+function assertWhereIsNotStructurallyUnconditional(
+  where: Predicate[],
+  operation: 'update' | 'delete',
+): void {
+  if (where.length > 0 && where.every(isStructurallyUnconditional)) {
+    throw new DataTableQueryError(
+      operation + '() does not allow a structurally unconditional where clause',
+    )
+  }
+}
+
+function isStructurallyUnconditional(predicate: Predicate): boolean {
+  if (predicate.type === 'comparison') {
+    return (
+      predicate.operator === 'notIn' &&
+      Array.isArray(predicate.value) &&
+      predicate.value.length === 0
+    )
+  }
+
+  if (predicate.type !== 'logical') {
+    return false
+  }
+
+  if (predicate.operator === 'and') {
+    return predicate.predicates.every(isStructurallyUnconditional)
+  }
+
+  return predicate.predicates.some(isStructurallyUnconditional)
+}
+
 async function executeUpsert(
   database: QueryExecutionContext,
   table: AnyTable,
@@ -527,8 +566,8 @@ async function executeUpsert(
     update?: Record<string, unknown>
   },
 ): Promise<WriteResult | WriteRowResult<Record<string, unknown>>> {
-  if (!database.adapter.capabilities.upsert) {
-    throw new DataTableQueryError('Adapter does not support upsert')
+  if (!database.capabilities.upsert) {
+    throw new DataTableQueryError('Database does not support upsert')
   }
 
   let preparedValues = prepareInsertValues(
@@ -547,7 +586,7 @@ async function executeUpsert(
       )
     : undefined
   let returning = options?.returning
-  assertReturningCapability(database.adapter, 'upsert', returning)
+  assertReturningCapability(database.capabilities, 'upsert', returning)
 
   if (returning) {
     let operation: UpsertOperation<AnyTable> = {

@@ -1,6 +1,6 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
-import type { OAuthProvider, OAuthResult, OAuthStandardTokens, OAuthTokens } from '../provider.ts'
+import type { OAuthProvider, OAuthResult, OAuthTokens } from '../provider.ts'
 import {
   createAuthorizationURL,
   createOAuthProvider,
@@ -8,7 +8,7 @@ import {
   exchangeRefreshToken,
   fetchJson,
   getAuthorizationCode,
-  mergeRefreshedStandardTokens,
+  mergeRefreshedTokens,
 } from '../provider.ts'
 import { createCodeChallenge } from '../utils.ts'
 
@@ -127,9 +127,7 @@ export interface OIDCAuthProviderOptions<
 export function createOIDCAuthProvider<
   profile extends OIDCAuthProfile = OIDCAuthProfile,
   provider extends string = 'oidc',
->(
-  options: OIDCAuthProviderOptions<profile, provider>,
-): OAuthProvider<profile, provider, OAuthStandardTokens> {
+>(options: OIDCAuthProviderOptions<profile, provider>): OAuthProvider<profile, provider> {
   let name = options.name ?? ('oidc' as provider)
   let scopes = options.scopes ?? DEFAULT_OIDC_SCOPES
   let metadataPromise: Promise<OIDCAuthProviderMetadata> | undefined
@@ -165,10 +163,7 @@ export function createOIDCAuthProvider<
         code_challenge_method: 'S256',
       })
     },
-    async handleCallback(
-      context,
-      transaction,
-    ): Promise<OAuthResult<profile, provider, OAuthStandardTokens>> {
+    async handleCallback(context, transaction): Promise<OAuthResult<profile, provider>> {
       let metadata = await getMetadata()
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: metadata.token_endpoint,
@@ -191,7 +186,7 @@ export function createOIDCAuthProvider<
         tokens,
       }
     },
-    async refreshTokens(currentTokens): Promise<OAuthStandardTokens> {
+    async refreshTokens(currentTokens): Promise<OAuthTokens> {
       if (currentTokens.refreshToken == null || currentTokens.refreshToken.length === 0) {
         throw new Error(`OIDC provider "${name}" did not receive a refresh token.`)
       }
@@ -204,7 +199,7 @@ export function createOIDCAuthProvider<
         refreshToken: currentTokens.refreshToken,
       })
 
-      return mergeRefreshedStandardTokens(currentTokens, refreshedTokens)
+      return mergeRefreshedTokens(currentTokens, refreshedTokens)
     },
   })
 }

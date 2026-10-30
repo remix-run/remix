@@ -1,6 +1,7 @@
 {
   "include": ["server.ts", "../../global.d.ts"],
   "compilerOptions": {
+    "types": ["node"],
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "NodeNext",

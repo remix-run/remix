@@ -296,7 +296,13 @@ export function matchPart(
         if (end === undefined) throw new Error('missing optional end')
         let omitted = solutions[end + 1][position]
         let included = solutions[state + 1][position]
-        solutions[state][position] = betterSolution(inputLength, hostnameOrder, omitted, included)
+        solutions[state][position] = betterSolution(
+          inputLength,
+          hostnameOrder,
+          omitted,
+          included,
+          budget,
+        )
         continue
       }
 
@@ -319,7 +325,10 @@ export function matchPart(
 
       if (token.type === ':') {
         let end = position
-        while (end < inputLength && !input.units[end].structural) end += 1
+        while (end < inputLength && !input.units[end].structural) {
+          consumeMatchWork(budget, 1)
+          end += 1
+        }
         let suffix = end === position ? null : solutions[state + 1][end]
         solutions[state][position] = prependCapture(suffix, {
           type: token.type,
@@ -352,7 +361,13 @@ export function matchPart(
         begin: position,
         end: position,
       })
-      solutions[state][position] = betterSolution(inputLength, hostnameOrder, consumed, exited)
+      solutions[state][position] = betterSolution(
+        inputLength,
+        hostnameOrder,
+        consumed,
+        exited,
+        budget,
+      )
     }
   }
 
@@ -445,10 +460,11 @@ function betterSolution(
   hostnameOrder: ReadonlyArray<number> | null,
   preferred: Solution | null,
   alternative: Solution | null,
+  budget: MatchWorkBudget,
 ): Solution | null {
   if (preferred === null) return alternative
   if (alternative === null) return preferred
-  let comparison = compareSolutions(inputLength, hostnameOrder, preferred, alternative)
+  let comparison = compareSolutions(inputLength, hostnameOrder, preferred, alternative, budget)
   return comparison >= 0 ? preferred : alternative
 }
 
@@ -457,22 +473,31 @@ function compareSolutions(
   hostnameOrder: ReadonlyArray<number> | null,
   a: Solution,
   b: Solution,
+  budget: MatchWorkBudget,
 ): -1 | 0 | 1 {
   if (hostnameOrder === null) {
     let aCapture = a.captures
     let bCapture = b.captures
     for (let position = 0; position < inputLength; position++) {
-      while (aCapture !== null && aCapture.end <= position) aCapture = aCapture.next
-      while (bCapture !== null && bCapture.end <= position) bCapture = bCapture.next
+      consumeMatchWork(budget, 1)
+      while (aCapture !== null && aCapture.end <= position) {
+        consumeMatchWork(budget, 1)
+        aCapture = aCapture.next
+      }
+      while (bCapture !== null && bCapture.end <= position) {
+        consumeMatchWork(budget, 1)
+        bCapture = bCapture.next
+      }
       let aSpecificity = captureSpecificityAt(aCapture, position)
       let bSpecificity = captureSpecificityAt(bCapture, position)
       if (aSpecificity < bSpecificity) return 1
       if (aSpecificity > bSpecificity) return -1
     }
   } else {
-    let aEncoding = encodeSpecificity(inputLength, a.captures)
-    let bEncoding = encodeSpecificity(inputLength, b.captures)
+    let aEncoding = encodeSpecificity(inputLength, a.captures, budget)
+    let bEncoding = encodeSpecificity(inputLength, b.captures, budget)
     for (let position of hostnameOrder) {
+      consumeMatchWork(budget, 1)
       if (aEncoding[position] < bEncoding[position]) return 1
       if (aEncoding[position] > bEncoding[position]) return -1
     }
@@ -487,9 +512,15 @@ function captureSpecificityAt(capture: CaptureNode | null, position: number): 0 
   return capture.type === ':' ? 1 : 2
 }
 
-function encodeSpecificity(length: number, captures: CaptureNode | null): Uint8Array {
+function encodeSpecificity(
+  length: number,
+  captures: CaptureNode | null,
+  budget: MatchWorkBudget,
+): Uint8Array {
+  consumeMatchWork(budget, length)
   let encoding = new Uint8Array(length)
   for (let capture = captures; capture !== null; capture = capture.next) {
+    consumeMatchWork(budget, 1 + capture.end - capture.begin)
     encoding.fill(capture.type === ':' ? 1 : 2, capture.begin, capture.end)
   }
   return encoding

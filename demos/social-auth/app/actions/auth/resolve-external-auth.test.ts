@@ -1,12 +1,12 @@
 import * as assert from 'remix/assert'
 import { beforeEach, describe, it } from 'remix/test'
 
-import { db, getMigrations, seed } from '../../db.ts'
+import { db, loadAppMigrations, loadAppSeed } from '../../db.ts'
 import { authAccounts } from '../../data/schema.ts'
 import { resolveExternalAuth } from './resolve-external-auth.ts'
 
 beforeEach(async () => {
-  await db.reset({ migrations: await getMigrations(), seed })
+  await db.reset({ migrations: await loadAppMigrations(), seed: await loadAppSeed() })
 })
 
 describe('resolve external auth helper', () => {

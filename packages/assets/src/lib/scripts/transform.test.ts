@@ -1,0 +1,73 @@
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
+
+import { createHmrClientSource } from '../hmr.ts'
+import { getHmrAnalysis } from './transform.ts'
+
+describe('getHmrAnalysis', () => {
+  it('ignores comments and strings that mention import.meta.hot', () => {
+    assert.deepEqual(
+      getHmrAnalysis(
+        [
+          `// import.meta.hot.accept()`,
+          `const text = "import.meta.hot.accept('./dep.ts')"`,
+          `export const value = 1`,
+        ].join('\n'),
+      ),
+      {
+        acceptedDeps: [],
+        selfAccepting: false,
+        usesImportMetaHot: false,
+      },
+    )
+  })
+
+  it('detects real import.meta.hot usage', () => {
+    assert.deepEqual(getHmrAnalysis(`import.meta.hot?.accept()`), {
+      acceptedDeps: [],
+      selfAccepting: true,
+      usesImportMetaHot: true,
+    })
+  })
+
+  it('detects import.meta.hot usage without treating dispose callbacks as accept boundaries', () => {
+    assert.deepEqual(getHmrAnalysis(`import.meta.hot?.dispose(() => {})`), {
+      acceptedDeps: [],
+      selfAccepting: false,
+      usesImportMetaHot: true,
+    })
+  })
+
+  it('throws when transformed code mentions import.meta.hot but cannot be parsed', () => {
+    assert.throws(
+      () => getHmrAnalysis(`if (import.meta.hot) { import.meta.hot.accept(() => {})`),
+      /Failed to analyze HMR usage in transformed script/,
+    )
+  })
+})
+
+describe('createHmrClientSource', () => {
+  it('awaits async dispose and accept callbacks during JavaScript updates', () => {
+    let source = createHmrClientSource({
+      dataKey: 'remix/assets@1:/assets',
+      eventPathname: '/__hmr',
+      moduleImporter: null,
+    })
+
+    assert.match(source, /await callback\(previousContext\.data\)/)
+    assert.match(source, /await callback\(updatedModule\)/)
+    assert.match(source, /await callback\(acceptedContext\.data\)/)
+    assert.match(source, /await callback\(deps\.map\(\(dep\) =>/)
+  })
+
+  it('uses a configured browser module importer for JavaScript updates', () => {
+    let source = createHmrClientSource({
+      dataKey: 'remix/assets@1:/assets',
+      eventPathname: '/__hmr',
+      moduleImporter: 'app/module-importer',
+    })
+
+    assert.match(source, /import \{ importModule as __remixImport \} from "app\/module-importer"/)
+    assert.match(source, /__remixImport\(withTimestamp\(path, timestamp\), import\.meta\.url\)/)
+  })
+})

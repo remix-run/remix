@@ -1,1 +1,0 @@
-Added database wipe, migration, status, seed, and reset APIs through `remix/data-table` and `remix/data-table/cli`. Migration status reports applied migrations whose files are missing, and migration runs stop before executing SQL when an applied migration is absent from the current set (see #11608).

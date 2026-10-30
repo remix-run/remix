@@ -2,7 +2,11 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 
 import { resolveDefaultRemixVersion } from './remix-version.ts'
-import { loadRemixConfig, type RemixConfig } from './remix-config.ts'
+import {
+  loadConfig as loadProjectConfig,
+  loadRemixConfig,
+  type RemixConfig,
+} from './remix-config.ts'
 
 interface ResolveCliContextOptions {
   configPath?: string
@@ -11,6 +15,8 @@ interface ResolveCliContextOptions {
 }
 
 export interface CliContext {
+  /** Explicit Remix configuration path selected by the caller. */
+  configPath?: string
   cwd: string
   /** Loads and validates the Remix config file, memoizing the result. */
   loadConfig(): Promise<RemixConfig>
@@ -24,7 +30,11 @@ export async function resolveCliContext(
   let remixVersion = normalizeRemixVersion(options.remixVersion)
 
   let configPromise: Promise<RemixConfig> | undefined
-  let loadConfig = () => (configPromise ??= loadRemixConfig(cwd, options.configPath))
+  let loadConfig = () =>
+    (configPromise ??=
+      options.configPath === undefined
+        ? loadProjectConfig(cwd)
+        : loadRemixConfig(cwd, options.configPath))
 
   // Validate an explicitly selected config file up front so every command
   // fails fast on a bad --config path. The default remix.json is loaded
@@ -33,6 +43,7 @@ export async function resolveCliContext(
   if (options.configPath !== undefined) await loadConfig()
 
   return {
+    configPath: options.configPath,
     cwd,
     loadConfig,
     remixVersion: remixVersion ?? (await resolveDefaultRemixVersion(cwd)),

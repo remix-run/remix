@@ -1,4 +1,4 @@
-import type { Handle, RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
 
 import { AuthCard } from '../../ui/auth-card.tsx'
 import { Document } from '../../ui/document.tsx'

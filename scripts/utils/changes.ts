@@ -9,9 +9,11 @@ import {
   getGitHubReleaseUrl,
   getPackageDependencies,
   getGitTag,
+  GITHUB_REPO_URL,
 } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
 import { inc, major, prerelease, type ReleaseType } from './semver.ts'
+import { getFileIntroductionCommit, parsePrNumber } from './git.ts'
 
 const bumpTypes = ['major', 'minor', 'patch'] as const
 export type BumpType = (typeof bumpTypes)[number]
@@ -19,6 +21,7 @@ export type BumpType = (typeof bumpTypes)[number]
 // Changes configuration (from packages/*/.changes/config.json)
 export interface ChangesConfig {
   prereleaseChannel: string
+  prereleaseStart?: number
 }
 
 export type ParsedChangesConfig =
@@ -56,6 +59,7 @@ export function readChangesConfig(
 
   let obj = content as Record<string, unknown>
 
+  let prereleaseChannel = ''
   if ('prereleaseChannel' in obj) {
     if (typeof obj.prereleaseChannel !== 'string' || obj.prereleaseChannel.trim().length === 0) {
       return {
@@ -64,14 +68,36 @@ export function readChangesConfig(
         error: '.changes/config.json "prereleaseChannel" must be a non-empty string',
       }
     }
+    prereleaseChannel = obj.prereleaseChannel.trim()
+  }
+
+  if ('prereleaseStart' in obj) {
+    if (
+      typeof obj.prereleaseStart !== 'number' ||
+      !Number.isInteger(obj.prereleaseStart) ||
+      obj.prereleaseStart < 0
+    ) {
+      return {
+        exists: true,
+        valid: false,
+        error: '.changes/config.json "prereleaseStart" must be a non-negative integer',
+      }
+    }
+    if (prereleaseChannel.length === 0) {
+      return {
+        exists: true,
+        valid: false,
+        error: '.changes/config.json "prereleaseStart" requires "prereleaseChannel"',
+      }
+    }
     return {
       exists: true,
       valid: true,
-      config: { prereleaseChannel: obj.prereleaseChannel.trim() },
+      config: { prereleaseChannel, prereleaseStart: obj.prereleaseStart },
     }
   }
 
-  return { exists: true, valid: true, config: { prereleaseChannel: '' } }
+  return { exists: true, valid: true, config: { prereleaseChannel } }
 }
 
 /**
@@ -118,7 +144,7 @@ export function getNextVersion(
         throw new Error(`Invalid version increment: ${currentVersion} + ${bumpType}`)
       }
 
-      return `${baseVersion}-${targetChannel}.0`
+      return `${baseVersion}-${targetChannel}.${changesConfig.prereleaseStart ?? 0}`
     }
   } else {
     // Not in prerelease mode
@@ -141,6 +167,8 @@ interface ChangeFile {
   file: string
   bump: BumpType
   content: string
+  gitSha?: string
+  prNumber?: number
 }
 
 interface ValidationError {
@@ -344,7 +372,14 @@ export function parsePackageChanges(
     }
 
     // File is valid, add to changes
-    changes.push({ file, bump, content })
+    let change: ChangeFile = { file, bump, content }
+    let commit = getFileIntroductionCommit(filePath)
+    if (commit) {
+      change.gitSha = commit.sha
+      let prNumber = parsePrNumber(commit.subject)
+      if (prNumber !== null) change.prNumber = prNumber
+    }
+    changes.push(change)
   }
 
   // Validate entering prerelease requires a major bump
@@ -597,16 +632,22 @@ function hasBreakingChangePrefix(content: string): boolean {
 /**
  * Formats a changelog entry from change file content
  */
-function formatChangelogEntry(content: string): string {
-  let lines = content.trim().split('\n')
+function formatChangelogEntry(change: ChangeFile): string {
+  let lines = change.content.trim().split('\n')
+  let link = ''
+  if (change.prNumber) {
+    link = ` ([#${change.prNumber}](${GITHUB_REPO_URL}/pull/${change.prNumber}))`
+  } else if (change.gitSha) {
+    link = ` ([${change.gitSha.slice(0, 7)}](${GITHUB_REPO_URL}/commit/${change.gitSha}))`
+  }
 
   if (lines.length === 1) {
-    return `- ${lines[0]}`
+    return `- ${lines[0]}${link}`
   }
 
   // Multi-line: first line is bullet, rest are indented
   let [firstLine, ...restLines] = lines
-  let formatted = [`- ${firstLine}`]
+  let formatted = [`- ${firstLine}${link}`]
 
   for (let index = 0; index < restLines.length; index++) {
     let line = restLines[index]
@@ -661,7 +702,7 @@ function generateBumpTypeSection(
   lines.push('')
 
   for (let change of sorted) {
-    lines.push(formatChangelogEntry(change.content))
+    lines.push(formatChangelogEntry(change))
     lines.push('')
   }
 
@@ -684,7 +725,7 @@ function generatePrereleaseChangesSection(
 
   let sortedChanges = sortChangelogChanges(changes)
   for (let change of sortedChanges) {
-    lines.push(formatChangelogEntry(change.content))
+    lines.push(formatChangelogEntry(change))
     lines.push('')
   }
 
@@ -812,42 +853,61 @@ export function generateCommitMessage(releases: PackageRelease[]): string {
 // CHANGELOG.md parsing utilities (for reading already-released changes)
 // =============================================================================
 
-interface ChangelogEntry {
+export interface ChangelogEntry {
   version: string
   date?: Date
   body: string
 }
 
-type AllChangelogEntries = Record<string, ChangelogEntry>
+/**
+ * Parses changelog content and returns its version entries in document order.
+ */
+export function parseChangelog(changelog: string): ChangelogEntry[] {
+  let headingParser = /^## ([^\n]+)$/gm
+  let versionParser =
+    /^v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)(?: \(([^)]+)\))?$/
+  let entries: ChangelogEntry[] = []
+
+  let match
+  while ((match = headingParser.exec(changelog))) {
+    let heading = match[1]
+    let lastIndex = headingParser.lastIndex
+    let nextMatch = headingParser.exec(changelog)
+    let body = changelog.slice(lastIndex, nextMatch ? nextMatch.index : undefined).trim()
+    headingParser.lastIndex = lastIndex
+
+    let versionMatch = versionParser.exec(heading)
+    if (versionMatch === null) {
+      continue
+    }
+
+    let [_, version, dateString] = versionMatch
+    let date = dateString ? new Date(dateString) : undefined
+    entries.push({ version, date, body })
+  }
+
+  return entries
+}
 
 /**
- * Parses a package's CHANGELOG.md and returns all version entries
+ * Gets every version entry from a package's CHANGELOG.md in document order.
  */
-function parseChangelog(packageDirName: string): AllChangelogEntries | null {
-  let changelogPath = getPackageFile(packageDirName, 'CHANGELOG.md')
+export function getChangelogEntries({
+  packageName,
+}: {
+  packageName: string
+}): ChangelogEntry[] | null {
+  let dirName = packageNameToDirectoryName(packageName)
+  if (dirName === null) {
+    return null
+  }
 
+  let changelogPath = getPackageFile(dirName, 'CHANGELOG.md')
   if (!fileExists(changelogPath)) {
     return null
   }
 
-  let changelog = readFile(changelogPath)
-  let parser = /^## ([a-z\d.-]+)(?: \(([^)]+)\))?$/gim
-
-  let result: AllChangelogEntries = {}
-
-  let match
-  while ((match = parser.exec(changelog))) {
-    let [_, versionString, dateString] = match
-    let lastIndex = parser.lastIndex
-    let version = versionString.startsWith('v') ? versionString.slice(1) : versionString
-    let date = dateString ? new Date(dateString) : undefined
-    let nextMatch = parser.exec(changelog)
-    let body = changelog.slice(lastIndex, nextMatch ? nextMatch.index : undefined).trim()
-    result[version] = { version, date, body }
-    parser.lastIndex = lastIndex
-  }
-
-  return result
+  return parseChangelog(readFile(changelogPath))
 }
 
 /**
@@ -861,15 +921,5 @@ export function getChangelogEntry({
   packageName: string
   version: string
 }): ChangelogEntry | null {
-  let dirName = packageNameToDirectoryName(packageName)
-  if (dirName === null) {
-    return null
-  }
-
-  let allEntries = parseChangelog(dirName)
-  if (allEntries !== null) {
-    return allEntries[version] ?? null
-  }
-
-  return null
+  return getChangelogEntries({ packageName })?.find((entry) => entry.version === version) ?? null
 }

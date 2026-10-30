@@ -56,7 +56,10 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
     }
   }
 
-  async function putFile(key: string, file: FileLike): Promise<LazyFile> {
+  async function putFile(
+    key: string,
+    file: FileLike,
+  ): Promise<{ filePath: string; meta: FileMetadata }> {
     let { directory, filePath, metaPath } = await getPaths(key)
 
     // Ensure directory exists
@@ -73,13 +76,7 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
     }
     await fsp.writeFile(metaPath, JSON.stringify(meta))
 
-    let metaData = await readMetadata(metaPath)
-
-    return openLazyFile(filePath, {
-      lastModified: metaData.lastModified,
-      name: metaData.name,
-      type: metaData.type,
-    })
+    return { filePath, meta }
   }
 
   return {
@@ -158,8 +155,13 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
         files,
       }
     },
-    put(key: string, file: FileLike): Promise<LazyFile> {
-      return putFile(key, file)
+    async put(key: string, file: FileLike): Promise<LazyFile> {
+      let { filePath, meta } = await putFile(key, file)
+      return openLazyFile(filePath, {
+        lastModified: meta.lastModified,
+        name: meta.name,
+        type: meta.type,
+      })
     },
     async remove(key: string): Promise<void> {
       let { directory, filePath, metaPath } = await getPaths(key)

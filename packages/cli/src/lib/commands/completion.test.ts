@@ -80,6 +80,7 @@ describe('completion command', () => {
       result.stdout,
       [
         'mode:values',
+        'assets',
         'completion',
         'db',
         'doctor',
@@ -110,6 +111,7 @@ describe('completion command', () => {
         'mode:values',
         'migrate',
         'reset',
+        'rollback',
         'seed',
         'status',
         'wipe',
@@ -137,17 +139,40 @@ describe('completion command', () => {
     assert.equal(wipe.exitCode, 0)
     assert.equal(
       wipe.stdout,
-      ['mode:values', '--force', '--config', '--help', '--no-color', ''].join('\n'),
+      ['mode:values', '--force', '--connection-env', '--config', '--help', '--no-color', ''].join(
+        '\n',
+      ),
     )
     assert.equal(reset.exitCode, 0)
     assert.equal(
       reset.stdout,
-      ['mode:values', '--force', '--config', '--help', '--no-color', ''].join('\n'),
+      [
+        'mode:values',
+        '--force',
+        '--connection-env',
+        '--journal-table',
+        '--migrations',
+        '--seed',
+        '--config',
+        '--help',
+        '--no-color',
+        '',
+      ].join('\n'),
     )
     assert.equal(migrate.exitCode, 0)
     assert.equal(
       migrate.stdout,
-      ['mode:values', '--to', '--config', '--help', '--no-color', ''].join('\n'),
+      [
+        'mode:values',
+        '--connection-env',
+        '--journal-table',
+        '--migrations',
+        '--to',
+        '--config',
+        '--help',
+        '--no-color',
+        '',
+      ].join('\n'),
     )
   })
 

@@ -2,6 +2,63 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.1`](https://github.com/remix-run/remix/releases/tag/headers@1.0.1)
+
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.0`](https://github.com/remix-run/remix/releases/tag/headers@1.0.0)
+
+## v0.9.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Return upstream redirects to proxy clients by default so redirect responses retain their status, `Location`, and headers such as `Set-Cookie`. The new `redirect` option supports following redirects internally, and a defined per-call `init.redirect` takes precedence over that option.
+
+  To preserve the previous behavior and keep following redirects inside the proxy:
+
+  ```diff
+  -let proxy = createFetchProxy('https://remix.run')
+  +let proxy = createFetchProxy('https://remix.run', { redirect: 'follow' })
+  ```
+
+### Patch Changes
+
+- Remove connection-specific request headers, fields named by `Connection`, and incoming `Content-Length` before forwarding. The outgoing `fetch` now determines framing for the forwarded body, including when a custom `fetch` is provided.
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+
+## v0.8.6
+
+### Patch Changes
+
+- Remove incoming `X-Forwarded-For` values when `xForwardedHeaders` is enabled, alongside `Forwarded`. Fetch requests do not expose the client's connection address, so no replacement address is generated. Existing forwarding headers continue to pass through when the option is disabled.
+
+- Replace existing forwarding URL metadata when `xForwardedHeaders` is enabled so proxied requests consistently describe the current incoming request URL.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
+## v0.8.5
+
+### Patch Changes
+
+- Stop forwarding incoming `Accept-Encoding` headers to proxy targets, strip `Content-Encoding` and related `Content-Length` headers from proxied responses with a body, and strip `Transfer-Encoding` and related `Content-Length` headers from proxied responses.
+
 ## v0.8.4
 
 ### Patch Changes

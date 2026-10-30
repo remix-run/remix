@@ -1,4 +1,4 @@
-import type { OAuthProvider, OAuthStandardTokens } from '../provider.ts'
+import type { OAuthProvider } from '../provider.ts'
 
 import {
   createOIDCAuthProvider,
@@ -37,7 +37,7 @@ export interface MicrosoftAuthProviderOptions extends Omit<
  */
 export function createMicrosoftAuthProvider(
   options: MicrosoftAuthProviderOptions,
-): OAuthProvider<MicrosoftAuthProfile, 'microsoft', OAuthStandardTokens> {
+): OAuthProvider<MicrosoftAuthProfile, 'microsoft'> {
   return createOIDCAuthProvider({
     ...options,
     name: 'microsoft',

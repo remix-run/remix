@@ -23,7 +23,7 @@ export interface RunRemixOptions {
 
 /**
  * Entry point for the `remix` CLI. Parses `argv`, dispatches to the matching
- * subcommand (`new`, `db`, `doctor`, `routes`, `test`, `version`,
+ * subcommand (`new`, `assets`, `db`, `doctor`, `routes`, `test`, `version`,
  * `completion`, `help`), and resolves with the exit code the process should
  * use.
  *
@@ -101,6 +101,11 @@ async function runCommand(command: string, argv: string[], context: CliContext):
   if (command === 'completion') {
     let { runCompletionCommand } = await import('./commands/completion.ts')
     return runCompletionCommand(argv)
+  }
+
+  if (command === 'assets') {
+    let { runAssetsCommand } = await import('./commands/assets.ts')
+    return runAssetsCommand(argv, context)
   }
 
   if (command === 'doctor') {

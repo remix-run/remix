@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
 import { Document } from '../../../ui/document.tsx'
@@ -48,10 +48,15 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
           </form>
 
           <p mix={css({ marginTop: '1.5rem' })}>
-            Don't have an account? <a href={routes.auth.register.index.href()}>Register here</a>
+            Don't have an account?{' '}
+            <a data-rmx-prefetch="intent" href={routes.auth.register.index.href()}>
+              Register here
+            </a>
           </p>
           <p>
-            <a href={routes.auth.forgotPassword.index.href()}>Forgot password?</a>
+            <a data-rmx-prefetch="intent" href={routes.auth.forgotPassword.index.href()}>
+              Forgot password?
+            </a>
           </p>
 
           <div

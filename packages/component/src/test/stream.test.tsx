@@ -1,0 +1,5006 @@
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
+import type { Handle, RemixNode } from '../runtime/component.ts'
+import { createMixin, css, on, unsafeHTML } from '../index.ts'
+import { createElement } from '../runtime/create-element.ts'
+
+import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
+import { clientEntry } from '../runtime/client-entries.ts'
+import { drain, readChunks, withResolvers } from './utils.ts'
+import { Fragment, Frame } from '../runtime/component.ts'
+import { invariant } from '../runtime/invariant.ts'
+
+const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
+const flushMarkerPattern = /<!--\s*rmx:flush\s+(?:document|fragment)\s*-->/g
+const managedModulePreloadPattern = /<link data-rmx-module-preload rel="modulepreload"/g
+const blockedJavaScriptUrl =
+  "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
+
+describe('stream', () => {
+  function getLatestRmxDataScript(root: ParentNode): HTMLScriptElement {
+    let scripts = root.querySelectorAll(rmxDataScriptSelector)
+    let script = scripts.item(scripts.length - 1) as HTMLScriptElement | null
+    invariant(script)
+    return script
+  }
+
+  function parseRmxDataFromHtml(html: string): any {
+    let shelf = document.createElement('template')
+    shelf.innerHTML = html
+    let script = getLatestRmxDataScript(shelf.content)
+    return JSON.parse(script.textContent || '{}')
+  }
+
+  function getSingleEntry(obj: Record<string, any>): [string, any] {
+    let entries = Object.entries(obj)
+    expect(entries.length).toBe(1)
+    return entries[0]!
+  }
+
+  function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
+    let re = prefix === 'rmx:f:' ? /<!--\s*rmx:f:([^ ]+)\s*-->/ : /<!--\s*rmx:h:([^ ]+)\s*-->/
+    let match = html.match(re)
+    expect(match).not.toBeNull()
+    return match![1]!
+  }
+
+  describe('basic nodes', () => {
+    it('should render to a stream', () => {
+      let stream = renderToStream(<div>Hello, world!</div>)
+      expect(stream).toBeDefined()
+    })
+
+    it('streams basic HTML', async () => {
+      let stream = renderToStream(<div>Hello, world!</div>)
+      let html = await drain(stream)
+      expect(html).toBe('<div>Hello, world!</div>')
+    })
+
+    it('removes the request abort listener after rendering finishes', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+
+      await drain(renderToStream(<p>Finished</p>, { signal: controller.signal }))
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+    })
+
+    it('removes the request abort listener when rendering fails', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+      function Broken(): never {
+        throw new Error('Render failed')
+      }
+
+      await expect(
+        drain(renderToStream(<Broken />, { signal: controller.signal, onError() {} })),
+      ).rejects.toThrow('Render failed')
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+    })
+
+    it('removes the request abort listener when the consumer cancels pending rendering', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let remove = t.mock.method(controller.signal, 'removeEventListener')
+      let [frame, resolve] = withResolvers<string>()
+      let stream = renderToStream(<Frame src="/pending" fallback={<p>Loading</p>} />, {
+        signal: controller.signal,
+        resolveFrame() {
+          return frame
+        },
+      })
+      let reader = stream.getReader()
+      await reader.read()
+
+      expect(remove).toHaveBeenCalledTimes(0)
+      await reader.cancel()
+
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+      resolve('<p>Done</p>')
+    })
+
+    it('keeps earlier stream chunks intact while other renders finish', async () => {
+      let content = '日本語🙂'.repeat(1000)
+      let reader = renderToStream(<p>{content}</p>).getReader()
+      try {
+        let first = await reader.read()
+        invariant(!first.done)
+
+        await drain(renderToStream(<p>{'Other content'.repeat(3000)}</p>))
+
+        expect(new TextDecoder().decode(first.value)).toBe(
+          `<p>${content}</p><!-- rmx:flush fragment -->`,
+        )
+      } finally {
+        await reader.cancel()
+      }
+    })
+
+    it('encodes large ASCII output', async () => {
+      let content = 'Hello'.repeat(20_000)
+      let html = await drain(renderToStream(<p>{content}</p>))
+      expect(html).toBe(`<p>${content}</p>`)
+    })
+
+    it('encodes large multi-byte output', async () => {
+      let content = '日本語'.repeat(20_000) + '🙂'
+      let html = await drain(renderToStream(<p>{content}</p>))
+      expect(html).toBe(`<p>${content}</p>`)
+    })
+
+    it('encodes surrogate pairs across adjacent text nodes', async () => {
+      let html = await drain(renderToStream(<p>{['\ud83d', '\ude00', '\ud800', 'Å']}</p>))
+      expect(html).toBe('<p>😀�Å</p>')
+    })
+
+    it('inserts head resources and hydration data around a large Unicode body', async () => {
+      let content = '日本語🙂'.repeat(3000)
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>{content}</p>
+      })
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>日本語</title>
+            </head>
+            <body>
+              <Entry />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/entry.js',
+                exportName: 'Entry',
+                preloads: ['/entry.js'],
+                importMap: { imports: { entry: '/entry.js' } },
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html).toContain('<title>日本語</title>')
+      expect(html).toContain('href="/entry.js" /></head><body>')
+      expect(html).toContain(`<p>${content}</p><!-- /rmx:h --><script type="application/json"`)
+      expect(html).toContain('</script></body></html>')
+      let [, data] = getSingleEntry(parseRmxDataFromHtml(html).h)
+      expect(data).toEqual({ moduleUrl: '/entry.js', exportName: 'Entry', props: {} })
+    })
+
+    it('streams a large synchronous tree without yielding for every node', async () => {
+      let children = Array.from({ length: 1000 }, (_, index) => <span>{index}</span>)
+      let reader = renderToStream(<div>{children}</div>).getReader()
+      let ready = false
+      let firstChunk = reader.read().then((chunk) => {
+        ready = true
+        return chunk
+      })
+
+      for (let index = 0; index < 20; index++) await Promise.resolve()
+      expect(ready).toBe(true)
+      let chunk = await firstChunk
+      expect(new TextDecoder().decode(chunk.value)).toContain('<span>999</span>')
+      await reader.cancel()
+    })
+
+    it('marks stream batches as documents or fragments', async () => {
+      let fragmentChunks = readChunks(renderToStream(<div>Hello, world!</div>))
+      let fragment = await fragmentChunks.next()
+      invariant(!fragment.done)
+      expect(fragment.value).toContain('<!-- rmx:flush fragment -->')
+
+      let documentChunks = readChunks(
+        renderToStream(
+          <html>
+            <body>Hello, world!</body>
+          </html>,
+        ),
+      )
+      let document = await documentChunks.next()
+      invariant(!document.done)
+      expect(document.value).toContain('<!-- rmx:flush document -->')
+    })
+
+    it('renders string nodes', async () => {
+      let stream = renderToStream('Hello, world!')
+      let html = await drain(stream)
+      expect(html).toBe('Hello, world!')
+    })
+
+    it('escapes text node content', async () => {
+      let stream = renderToStream('<img src=x onerror="alert(1)">&</img>')
+      let html = await drain(stream)
+      expect(html).toBe('&lt;img src=x onerror="alert(1)"&gt;&amp;&lt;/img&gt;')
+    })
+
+    it('escapes text children in elements', async () => {
+      let stream = renderToStream(<div>{'<script>alert(1)</script>'}</div>)
+      let html = await drain(stream)
+      expect(html).toBe('<div>&lt;script&gt;alert(1)&lt;/script&gt;</div>')
+    })
+
+    it('preserves Unicode and entity text while escaping text and attribute delimiters', async () => {
+      let value = `café 😀 "'<&> &amp; "'<&>`
+      let html = await drain(renderToStream(<p title={value}>{value}</p>))
+
+      expect(html).toBe(
+        '<p title="café 😀 &quot;&#39;&lt;&amp;&gt; &amp;amp; &quot;&#39;&lt;&amp;&gt;">' +
+          `café 😀 "'&lt;&amp;&gt; &amp;amp; "'&lt;&amp;&gt;</p>`,
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      expect(shelf.content.querySelector('p')?.getAttribute('title')).toBe(value)
+      expect(shelf.content.textContent).toBe(value)
+    })
+
+    it('renders script string children as raw text', async () => {
+      let script = 'if (value < 10 && value > 0) console.log("in range")'
+      let html = await drain(renderToStream(<script>{script}</script>))
+
+      expect(html).toBe(`<script>${script}</script>`)
+    })
+
+    it('renders empty script elements', async (t) => {
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<script />))
+
+      expect(html).toBe('<script></script>')
+      expect(errorSpy).not.toHaveBeenCalled()
+    })
+
+    it('prevents script string children from terminating the element', async () => {
+      let importMap = {
+        imports: {
+          example: '/example.js?before=a&after=</ScRiPt><script>alert(1)</script>',
+        },
+      }
+      let html = await drain(
+        renderToStream(<script type="importmap">{JSON.stringify(importMap)}</script>),
+      )
+
+      expect(html).toBe(
+        '<script type="importmap">' +
+          '{"imports":{"example":"/example.js?before=a&after=</\\u0053cRiPt><\\u0073cript>alert(1)</\\u0073cript>"}}' +
+          '</script>',
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll('script')
+      expect(scripts).toHaveLength(1)
+      expect(JSON.parse(scripts[0]!.textContent!)).toEqual(importMap)
+    })
+
+    it('escapes script prefixes conservatively while preserving non-matching text', async () => {
+      let script =
+        'prescription pre<scription pre<Scription pre</scRipTion pre</ScripTion </ script> </script><script><!-- <script> -->'
+      let html = await drain(renderToStream(<script>{script}</script>))
+
+      expect(html).toBe(
+        '<script>' +
+          'prescription pre<\\u0073cription pre<\\u0053cription pre</\\u0073cRipTion pre</\\u0053cripTion ' +
+          '</ script> </\\u0073cript><\\u0073cript><!-- <\\u0073cript> -->' +
+          '</script>',
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll('script')
+      expect(scripts).toHaveLength(1)
+    })
+
+    it('renders SVG script string children as raw text', async () => {
+      let script = 'if (value < 10 && value > 0) console.log("in range")'
+      let html = await drain(
+        renderToStream(
+          <svg>
+            <script>{script}</script>
+          </svg>,
+        ),
+      )
+
+      expect(html).toBe(`<svg><script>${script}</script></svg>`)
+    })
+
+    it('warns and ignores non-string script children', async (t) => {
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<script>{['one', 'two']}</script>))
+
+      expect(html).toBe('<script></script>')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      let error = errorSpy.mock.calls[0]?.arguments[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('script elements with children must have a single string child')
+    })
+
+    it('renders textarea defaultValue as escaped text content', async () => {
+      let stream = renderToStream(<textarea defaultValue={'Hello <Ryan> & friends'} />)
+      let html = await drain(stream)
+      expect(html).toBe('<textarea>Hello &lt;Ryan&gt; &amp; friends</textarea>')
+    })
+
+    it('renders textarea value as escaped text content', async () => {
+      let stream = renderToStream(<textarea value={'Hello <Ryan> & friends'} />)
+      let html = await drain(stream)
+      expect(html).toBe('<textarea>Hello &lt;Ryan&gt; &amp; friends</textarea>')
+    })
+
+    it('renders number nodes', async () => {
+      let stream = renderToStream(42)
+      let html = await drain(stream)
+      expect(html).toBe('42')
+    })
+
+    it('renders 0', async () => {
+      let stream = renderToStream(<span>0</span>)
+      let html = await drain(stream)
+      expect(html).toBe('<span>0</span>')
+    })
+
+    it('renders bigint nodes', async () => {
+      let stream = renderToStream(BigInt(9007199254740991))
+      let html = await drain(stream)
+      expect(html).toBe('9007199254740991')
+    })
+
+    it('renders boolean nodes', async () => {
+      let stream = renderToStream(true)
+      let html = await drain(stream)
+      expect(html).toBe('')
+    })
+
+    it('renders null nodes', async () => {
+      let stream = renderToStream(null)
+      let html = await drain(stream)
+      expect(html).toBe('')
+    })
+
+    it('renders undefined nodes', async () => {
+      let stream = renderToStream(undefined)
+      let html = await drain(stream)
+      expect(html).toBe('')
+    })
+
+    it('renders array of nodes', async () => {
+      let stream = renderToStream([<div>One</div>, <span>Two</span>])
+      let html = await drain(stream)
+      expect(html).toBe('<div>One</div><span>Two</span>')
+    })
+
+    it('renders sparse arrays without content for empty slots', async () => {
+      let nested: RemixNode[] = [<span>Second</span>]
+      nested[2] = 'Third'
+
+      let children: RemixNode[] = []
+      children.length = 5
+      children[1] = 'First'
+      children[3] = nested
+
+      let html = await drain(renderToStream(children))
+      expect(html).toBe('First<span>Second</span>Third')
+    })
+
+    it('renders mixed array of nodes', async () => {
+      let stream = renderToStream([<div>One</div>, 'text', 42, null, undefined])
+      let html = await drain(stream)
+      expect(html).toBe('<div>One</div>text42')
+    })
+
+    it('renders fragments', async () => {
+      let stream = renderToStream(
+        <>
+          <h1>Title</h1>
+          <p>Paragraph</p>
+          <div>Content</div>
+        </>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe('<h1>Title</h1><p>Paragraph</p><div>Content</div>')
+    })
+  })
+
+  describe('component nodes', () => {
+    it('renders component nodes', async () => {
+      function Greeting(handle: Handle<{ name: string }>) {
+        return () => <div>Hello, {handle.props.name}!</div>
+      }
+      let stream = renderToStream(<Greeting name="World" />)
+      let html = await drain(stream)
+      expect(html).toBe('<div>Hello, World!</div>')
+    })
+
+    it('renders 0', async () => {
+      function Test() {
+        let n = 0
+        return () => <span>{n}</span>
+      }
+      let stream = renderToStream(<Test />)
+      let html = await drain(stream)
+      expect(html).toBe('<span>0</span>')
+    })
+
+    it('renders stateful component nodes', async () => {
+      function Stateful() {
+        return () => <div>Stateful</div>
+      }
+      let stream = renderToStream(<Stateful />)
+      let html = await drain(stream)
+      expect(html).toBe('<div>Stateful</div>')
+    })
+
+    it('provides and reads context', async () => {
+      type ThemeContext = { color: string; size: number }
+
+      function ThemeProvider(handle: Handle<{ children?: RemixNode }, ThemeContext>) {
+        handle.context.set({ color: 'blue', size: 16 })
+        return () => handle.props.children
+      }
+
+      function ThemedText(handle: Handle) {
+        let theme = handle.context.get(ThemeProvider)
+        return () => <p style={`color: ${theme.color}; font-size: ${theme.size}px`}>Themed!</p>
+      }
+
+      function App() {
+        return () => (
+          <ThemeProvider>
+            <div>
+              <ThemedText />
+            </div>
+          </ThemeProvider>
+        )
+      }
+
+      let stream = renderToStream(<App />)
+      let html = await drain(stream)
+      expect(html).toBe('<div><p style="color: blue; font-size: 16px">Themed!</p></div>')
+    })
+
+    it('provides and reads nested context', async () => {
+      type ThemeContext = { color: string }
+      type UserContext = { name: string }
+
+      function ThemeProvider(handle: Handle<{ children?: RemixNode }, ThemeContext>) {
+        handle.context.set({ color: 'red' })
+        return () => handle.props.children
+      }
+
+      function UserProvider(handle: Handle<{ children?: RemixNode }, UserContext>) {
+        handle.context.set({ name: 'John' })
+        return () => handle.props.children
+      }
+
+      function Display(handle: Handle) {
+        let theme = handle.context.get(ThemeProvider)
+        let user = handle.context.get(UserProvider)
+        return () => <p style={`color: ${theme.color}`}>Hello, {user.name}!</p>
+      }
+
+      function App() {
+        return () => (
+          <ThemeProvider>
+            <UserProvider>
+              <div>
+                <Display />
+              </div>
+            </UserProvider>
+          </ThemeProvider>
+        )
+      }
+
+      let stream = renderToStream(<App />)
+      let html = await drain(stream)
+      expect(html).toBe('<div><p style="color: red">Hello, John!</p></div>')
+    })
+
+    it('provides context to multiple consumers', async () => {
+      type CountContext = { count: number }
+
+      function CountProvider(handle: Handle<{ children?: RemixNode }, CountContext>) {
+        handle.context.set({ count: 42 })
+        return () => handle.props.children
+      }
+
+      function CountDisplay(handle: Handle) {
+        let { count } = handle.context.get(CountProvider)
+        return () => <span>Count: {count}</span>
+      }
+
+      function DoubleDisplay(handle: Handle) {
+        let { count } = handle.context.get(CountProvider)
+        return () => <span>Double: {count * 2}</span>
+      }
+
+      function App() {
+        return () => (
+          <CountProvider>
+            <div>
+              <CountDisplay />
+              <br />
+              <DoubleDisplay />
+            </div>
+          </CountProvider>
+        )
+      }
+
+      let stream = renderToStream(<App />)
+      let html = await drain(stream)
+      expect(html).toBe('<div><span>Count: 42</span><br /><span>Double: 84</span></div>')
+    })
+
+    it('gives sibling components unique ids after nested components', async () => {
+      function Leaf(handle: Handle) {
+        return () => <i id={handle.id} />
+      }
+      function Mid() {
+        return () => <Leaf />
+      }
+
+      let html = await renderToString(
+        <div>
+          <Mid />
+          <Mid />
+          <Leaf />
+        </div>,
+      )
+
+      let ids = Array.from(html.matchAll(/id="([^"]+)"/g), (match) => match[1])
+      expect(ids.length).toBe(3)
+      expect(new Set(ids).size).toBe(3)
+    })
+
+    it('exposes the current and top frame src during SSR', async () => {
+      let seen:
+        | {
+            frameSrc: string
+            topFrameSrc: string
+            sameFrame: boolean
+          }
+        | undefined
+
+      function Inspect(handle: Handle) {
+        seen = {
+          frameSrc: handle.frame.src,
+          topFrameSrc: handle.frames.top.src,
+          sameFrame: handle.frame === handle.frames.top,
+        }
+
+        return () => <div>{handle.frames.top.src}</div>
+      }
+
+      let html = await drain(
+        renderToStream(<Inspect />, { frameSrc: 'https://example.com/dashboard' }),
+      )
+
+      expect(seen).toEqual({
+        frameSrc: 'https://example.com/dashboard',
+        topFrameSrc: 'https://example.com/dashboard',
+        sameFrame: true,
+      })
+      expect(html).toBe('<div>https://example.com/dashboard</div>')
+    })
+  })
+
+  describe('special props', () => {
+    it('renders innerHTML on elements', async () => {
+      let htmlContent = '<strong>Bold text</strong> and <em>italic text</em>'
+      let stream = renderToStream(
+        <div>
+          <h1>Title</h1>
+          <div innerHTML={unsafeHTML(htmlContent)} />
+          <p>After innerHTML</p>
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<div><h1>Title</h1><div><strong>Bold text</strong> and <em>italic text</em></div><p>After innerHTML</p></div>',
+      )
+    })
+
+    it('rejects unbranded innerHTML values', async () => {
+      let stream = renderToStream(
+        createElement('div', {
+          innerHTML: '<img src="invalid" onerror="alert(1)">',
+        }),
+      )
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+      )
+    })
+
+    it('rejects JSON-shaped innerHTML values', async () => {
+      let stream = renderToStream(
+        createElement('div', {
+          innerHTML: { value: '<img src="invalid" onerror="alert(1)">' },
+        }),
+      )
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+      )
+    })
+
+    it('renders branded iframe srcDoc as escaped attribute markup', async () => {
+      let html = await drain(
+        renderToStream(<iframe srcDoc={unsafeHTML('<p class="message">HTML & text</p>')} />),
+      )
+
+      expect(html).toBe(
+        '<iframe srcdoc="&lt;p class=&quot;message&quot;&gt;HTML &amp; text&lt;/p&gt;"></iframe>',
+      )
+    })
+
+    it('renders branded iframe srcdoc as escaped attribute markup', async () => {
+      let html = await drain(renderToStream(<iframe srcdoc={unsafeHTML('<p>HTML</p>')} />))
+
+      expect(html).toBe('<iframe srcdoc="&lt;p&gt;HTML&lt;/p&gt;"></iframe>')
+    })
+
+    it('rejects unbranded iframe srcDoc values', async () => {
+      let stream = renderToStream(createElement('iframe', { srcDoc: '<p>HTML</p>' }))
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcDoc prop: expected a value created with unsafeHTML()',
+      )
+    })
+
+    it('rejects JSON-shaped iframe srcDoc values', async () => {
+      let stream = renderToStream(createElement('iframe', { srcDoc: { value: '<p>HTML</p>' } }))
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcDoc prop: expected a value created with unsafeHTML()',
+      )
+    })
+
+    it('rejects unbranded iframe srcdoc values', async () => {
+      let stream = renderToStream(createElement('iframe', { srcdoc: '<p>HTML</p>' }))
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcdoc prop: expected a value created with unsafeHTML()',
+      )
+    })
+
+    it('rejects JSON-shaped iframe srcdoc values', async () => {
+      let stream = renderToStream(createElement('iframe', { srcdoc: { value: '<p>HTML</p>' } }))
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid srcdoc prop: expected a value created with unsafeHTML()',
+      )
+    })
+
+    it('rejects outerHTML values', async () => {
+      let stream = renderToStream(createElement('div', { outerHTML: '<p>replacement</p>' }))
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid outerHTML prop: outerHTML is not supported on host elements',
+      )
+    })
+
+    it('omits invalid and reserved host prop names', async () => {
+      let html = await drain(
+        renderToStream(
+          createElement('div', {
+            'data-value': 'ok',
+            'aria-label': 'Example',
+            'x onclick="alert(1)': 'value',
+            onclick: 'alert(1)',
+          }),
+        ),
+      )
+
+      expect(html).toBe('<div data-value="ok" aria-label="Example"></div>')
+    })
+
+    it('blocks javascript URLs in executable URL attributes', async () => {
+      let html = await drain(
+        renderToStream(
+          <>
+            <a id="link" href="javascript:alert(1)" />
+            <img id="image" alt="" src={'\u0000 \tJ\na\rv\ta\ns\rc\tr\ni\tp\tt:alert(1)'} />
+            <form id="form" action="javascript:alert(1)" />
+            {createElement('button', { id: 'button', formaction: 'javascript:alert(1)' })}
+            <svg>{createElement('use', { id: 'use', 'xlink:href': 'javascript:alert(1)' })}</svg>
+            <object id="object" data="javascript:alert(1)" />
+          </>,
+        ),
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+
+      expect(shelf.content.querySelector('#link')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
+      expect(shelf.content.querySelector('#image')?.getAttribute('src')).toBe(blockedJavaScriptUrl)
+      expect(shelf.content.querySelector('#form')?.getAttribute('action')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#button')?.getAttribute('formaction')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#use')?.getAttribute('xlink:href')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#object')?.getAttribute('data')).toBe(
+        blockedJavaScriptUrl,
+      )
+    })
+
+    it('preserves allowed URLs and non-executable URL attributes', async () => {
+      let html = await drain(
+        renderToStream(
+          <>
+            <a id="relative" href="/docs" />
+            <a id="mailto" href="mailto:test@example.com" />
+            <a id="blob" href="blob:https://example.com/id" />
+            <img id="data-url" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP" />
+            <img id="srcset" alt="" srcSet="javascript:alert(1) 1x" />
+            <video id="poster" poster="javascript:alert(1)" />
+            {createElement('div', { id: 'ordinary-data', data: 'javascript:alert(1)' })}
+          </>,
+        ),
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+
+      expect(shelf.content.querySelector('#relative')?.getAttribute('href')).toBe('/docs')
+      expect(shelf.content.querySelector('#mailto')?.getAttribute('href')).toBe(
+        'mailto:test@example.com',
+      )
+      expect(shelf.content.querySelector('#blob')?.getAttribute('href')).toBe(
+        'blob:https://example.com/id',
+      )
+      expect(shelf.content.querySelector('#data-url')?.getAttribute('src')).toBe(
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP',
+      )
+      expect(shelf.content.querySelector('#srcset')?.getAttribute('srcset')).toBe(
+        'javascript:alert(1) 1x',
+      )
+      expect(shelf.content.querySelector('#poster')?.getAttribute('poster')).toBe(
+        'javascript:alert(1)',
+      )
+      expect(shelf.content.querySelector('#ordinary-data')?.getAttribute('data')).toBe(
+        'javascript:alert(1)',
+      )
+    })
+
+    it('changes className to class', async () => {
+      let stream = renderToStream(<div className="test-class">Content</div>)
+      let html = await drain(stream)
+      expect(html).toBe('<div class="test-class">Content</div>')
+    })
+
+    it('merges class and className in order', async () => {
+      let html = await drain(renderToStream(<div class="first" className="second" />))
+      expect(html).toBe('<div class="first second"></div>')
+    })
+
+    it('does not render inherited attributes from props', async () => {
+      let element = <p className="plain">Child</p>
+      Object.setPrototypeOf(element.props, { title: 'inherited' })
+
+      let html = await drain(renderToStream(element))
+
+      expect(html).toBe('<p class="plain">Child</p>')
+    })
+
+    it('renders reused frozen props without changing classes or styles', async () => {
+      let plain = <p className="plain">Plain</p>
+      let style = Object.freeze({ marginTop: 2 })
+      let styled = (
+        <p class="first" className="second" style={style}>
+          Styled
+        </p>
+      )
+      Object.freeze(plain.props)
+      Object.freeze(styled.props)
+
+      let first = await drain(renderToStream([plain, styled]))
+      let second = await drain(renderToStream([plain, styled]))
+
+      expect(first).toBe(
+        '<p class="plain">Plain</p><p class="first second" style="margin-top: 2px;">Styled</p>',
+      )
+      expect(second).toBe(first)
+      expect(styled.props.class).toBe('first')
+      expect(styled.props.className).toBe('second')
+      expect(styled.props.style).toBe(style)
+    })
+
+    it('changes htmlFor to for', async () => {
+      let stream = renderToStream(
+        <>
+          <label htmlFor="test-input">Label</label>
+          <input id="test-input" />
+        </>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe('<label for="test-input">Label</label><input id="test-input" />')
+    })
+
+    it('changes acceptCharset to accept-charset', async () => {
+      let stream = renderToStream(
+        <form acceptCharset="UTF-8">
+          <input type="submit" />
+        </form>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe('<form accept-charset="UTF-8"><input type="submit" /></form>')
+    })
+
+    it('changes httpEquiv to http-equiv', async () => {
+      let stream = renderToStream(
+        <head>
+          <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
+        </head>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head>',
+      )
+    })
+
+    it('handles namespaced xlinkHref to xlink:href', async () => {
+      let stream = renderToStream(
+        <svg>
+          <use xlinkHref="#icon-star" />
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe('<svg><use xlink:href="#icon-star"></use></svg>')
+    })
+
+    it("lowercases camelCase attributes that don't need special handling", async () => {
+      let stream = renderToStream(
+        <input autoComplete="off" autoFocus={true} readOnly={true} tabIndex={-1} maxLength={10} />,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<input autocomplete="off" autofocus readonly tabindex="-1" maxlength="10" />',
+      )
+    })
+
+    it('renders booleanish string attributes as explicit false values', async () => {
+      let stream = renderToStream(
+        <div contentEditable={false} draggable={false} spellCheck={false}>
+          {createElement('input', { value: false })}
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<div contenteditable="false" draggable="false" spellcheck="false"><input value="false" /></div>',
+      )
+    })
+
+    it('preserves boolean and escaped values in HTML and SVG attributes', async () => {
+      let html = await drain(
+        renderToStream(
+          <>
+            <input disabled required={false} value={0} title={'A & "B"'} />
+            <div contentEditable draggable={false} title={undefined} />
+            <svg preserveAlpha={false} focusable>
+              <use xlinkHref="#safe" />
+            </svg>
+          </>,
+        ),
+      )
+
+      expect(html).toBe(
+        '<input disabled value="0" title="A &amp; &quot;B&quot;" />' +
+          '<div contenteditable="true" draggable="false"></div>' +
+          '<svg preserveAlpha="false" focusable="true"><use xlink:href="#safe"></use></svg>',
+      )
+    })
+
+    it('renders translate with yes/no attribute values', async () => {
+      let stream = renderToStream(<div translate="no" />)
+      let html = await drain(stream)
+      expect(html).toBe('<div translate="no"></div>')
+    })
+
+    it('renders input defaultValue as a value attribute', async () => {
+      let stream = renderToStream(<input defaultValue={'Hello "Ryan" & friends'} />)
+      let html = await drain(stream)
+      expect(html).toBe('<input value="Hello &quot;Ryan&quot; &amp; friends" />')
+    })
+
+    it('renders input defaultChecked as a checked attribute', async () => {
+      let stream = renderToStream(<input type="checkbox" defaultChecked />)
+      let html = await drain(stream)
+      expect(html).toBe('<input type="checkbox" checked />')
+    })
+
+    it('handles table attributes colSpan and rowSpan', async () => {
+      let stream = renderToStream(
+        <table>
+          <tr>
+            <td colSpan={2} rowSpan={3}>
+              Cell
+            </td>
+          </tr>
+        </table>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe('<table><tr><td colspan="2" rowspan="3">Cell</td></tr></table>')
+    })
+
+    it('filters framework-specific props', async () => {
+      let stream = renderToStream(
+        <div>
+          <button key="btn-1" mix={[on('click', () => {})]} type="button">
+            Click me
+          </button>
+          <ul>
+            <li key="item-1">First</li>
+            <li key="item-2">Second</li>
+          </ul>
+        </div>,
+      )
+      let html = await drain(stream)
+
+      // Framework props should not appear in HTML
+      expect(html).not.toContain('key=')
+      expect(html).not.toContain('mix=')
+
+      // But regular HTML attributes should be preserved
+      expect(html).toContain('type="button"')
+      expect(html).toContain('<li>First</li>')
+      expect(html).toContain('<li>Second</li>')
+    })
+
+    it('resolves mixins for host prop composition', async () => {
+      let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
+        <handle.element {...props} title={title} />
+      ))
+      let appendTitle = createMixin((handle) => (suffix: string, props: { title?: string }) => (
+        <handle.element {...props} title={`${props.title ?? ''}${suffix}`} />
+      ))
+
+      let stream = renderToStream(<div mix={[withTitle('hello'), appendTitle('-world')]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div title="hello-world"></div>')
+      expect(html).not.toContain('mix=')
+    })
+
+    it('supports nested mix descriptors via handle.element', async () => {
+      let withData = createMixin(
+        (handle) => (value: string, props: { ['data-mixed']?: string }) => (
+          <handle.element {...props} data-mixed={value} />
+        ),
+      )
+      let withNested = createMixin(
+        (handle) => (value: string, props: { ['data-mixed']?: string }) => (
+          <handle.element {...props} mix={[withData(value)]} />
+        ),
+      )
+
+      let stream = renderToStream(<div mix={[withNested('nested')]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div data-mixed="nested"></div>')
+      expect(html).not.toContain('mix=')
+    })
+
+    it('supports createElement(handle.element, props) during SSR', async () => {
+      let withData = createMixin(
+        (handle) => (value: string, props: { ['data-mixed']?: string }) =>
+          createElement(handle.element, { ...props, 'data-mixed': value }),
+      )
+
+      let stream = renderToStream(<div mix={[withData('created')]}>child</div>)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div data-mixed="created">child</div>')
+    })
+
+    it('strips children and raw HTML props before passing props to SSR mixins', async () => {
+      let seenProps: Array<Record<string, unknown>> = []
+      let inspect = createMixin((_handle) => (props: Record<string, unknown>) => {
+        seenProps.push(props)
+      })
+
+      await drain(renderToStream(<div mix={[inspect()]}>child</div>))
+      await drain(
+        renderToStream(<div innerHTML={unsafeHTML('<strong>html</strong>')} mix={[inspect()]} />),
+      )
+      await drain(renderToStream(<iframe srcdoc={unsafeHTML('<p>html</p>')} mix={[inspect()]} />))
+
+      expect('children' in seenProps[0]!).toBe(false)
+      expect('innerHTML' in seenProps[0]!).toBe(false)
+      expect('children' in seenProps[1]!).toBe(false)
+      expect('innerHTML' in seenProps[1]!).toBe(false)
+      expect('srcdoc' in seenProps[2]!).toBe(false)
+    })
+
+    it('ignores children returned from mixins during SSR', async (t) => {
+      let withChildren = createMixin(
+        (handle) => () =>
+          createElement(handle.element as any, { 'data-mode': 'children' }, 'blocked'),
+      )
+
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<div mix={[withChildren()]}>safe</div>))
+
+      expect(html).toBe('<div data-mode="children">safe</div>')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      let error = errorSpy.mock.calls[0]?.arguments[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('mixin elements must not receive children')
+    })
+
+    it('ignores innerHTML returned from mixins during SSR', async (t) => {
+      let withInnerHtml = createMixin((_handle) => () => (
+        <div data-mode="innerHTML" innerHTML={unsafeHTML('<strong>blocked</strong>')} />
+      ))
+
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<div mix={[withInnerHtml()]}>safe</div>))
+
+      expect(html).toBe('<div data-mode="innerHTML">safe</div>')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      let error = errorSpy.mock.calls[0]?.arguments[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('mixins must not return children or raw HTML props')
+    })
+
+    it('ignores iframe document and outerHTML props returned from SSR mixins', async (t) => {
+      let withRawHtml = createMixin(
+        (_handle) => () =>
+          createElement('iframe', {
+            srcDoc: '<p>camel</p>',
+            srcdoc: '<p>lowercase</p>',
+            outerHTML: '<p>replacement</p>',
+          }),
+      )
+
+      let errorSpy = t.mock.method(console, 'error', () => {})
+      let html = await drain(renderToStream(<iframe mix={[withRawHtml()]} />))
+
+      expect(html).toBe('<iframe></iframe>')
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      let error = errorSpy.mock.calls[0]?.arguments[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('mixins must not return children or raw HTML props')
+    })
+
+    it('supports mixins returning nested descriptors directly during SSR', async () => {
+      let withData = createMixin(
+        (handle) => (value: string, props: { ['data-mixed']?: string }) => (
+          <handle.element {...props} data-mixed={value} />
+        ),
+      )
+      let withReturnedMix = createMixin<Element, [value: string]>((_handle) => (value) => [
+        false,
+        [withData(value)],
+        undefined,
+      ])
+
+      let stream = renderToStream(<div mix={[withReturnedMix('returned')]} />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div data-mixed="returned"></div>')
+      expect(html).not.toContain('mix=')
+    })
+
+    it('reads ancestor component context from mixins during SSR', async () => {
+      function Provider(handle: Handle<{ children?: RemixNode }, { value: string }>) {
+        handle.context.set({ value: 'from-context' })
+        return () => <section>{handle.props.children}</section>
+      }
+
+      let withContextValue = createMixin((handle) => (props: { ['data-value']?: string }) => {
+        let provider = handle.context.get(Provider)
+        return <handle.element {...props} data-value={provider.value} />
+      })
+
+      let stream = renderToStream(
+        <Provider>
+          <div mix={[withContextValue()]} />
+        </Provider>,
+      )
+      let html = await drain(stream)
+
+      expect(html).toBe('<section><div data-value="from-context"></div></section>')
+    })
+
+    it('provides a shared no-op signal during SSR', async () => {
+      let updateError: unknown
+      let componentSignal: AbortSignal | undefined
+      let mixinSignal: AbortSignal | undefined
+
+      function App(handle: Handle) {
+        componentSignal = handle.signal
+        componentSignal.addEventListener('abort', () => {
+          throw new Error('should not run in SSR')
+        })
+        componentSignal.onabort = () => {
+          throw new Error('should not run in SSR')
+        }
+
+        return () => <div mix={[lifecycleOnly()]} />
+      }
+
+      let lifecycleOnly = createMixin((handle) => {
+        mixinSignal = handle.signal
+        mixinSignal.addEventListener('abort', () => {
+          throw new Error('should not run in SSR')
+        })
+        mixinSignal.onabort = () => {
+          throw new Error('should not run in SSR')
+        }
+        handle.addEventListener('insert', () => {
+          throw new Error('should not run in SSR')
+        })
+        handle.queueTask(() => {
+          throw new Error('should not run in SSR')
+        })
+        try {
+          void handle.update()
+        } catch (error) {
+          updateError = error
+        }
+
+        return (props: { title?: string }) => <handle.element {...props} title="ok" />
+      })
+
+      let stream = renderToStream(<App />)
+      let html = await drain(stream)
+
+      expect(html).toBe('<div title="ok"></div>')
+      expect(componentSignal).toBe(mixinSignal)
+      expect(componentSignal?.aborted).toBe(false)
+      expect(componentSignal?.reason).toBeUndefined()
+      expect(componentSignal?.onabort).toBe(null)
+      expect(updateError).toBeInstanceOf(Error)
+      expect((updateError as Error).message).toBe('handle.update() is not available during SSR.')
+    })
+
+    it('serializes css mixin styles into style tags and class names', async () => {
+      let stream = renderToStream(
+        <div
+          className="base"
+          mix={[
+            css({ color: 'red' }),
+            css({
+              backgroundColor: 'black',
+            }),
+          ]}
+        />,
+      )
+      let html = await drain(stream)
+
+      expect(html).toContain('<style data-rmx-style=')
+      expect(html).toMatch(/class="base rmxc-[a-z0-9]+ rmxc-[a-z0-9]+"/)
+      expect(html).toContain('.rmxc-')
+    })
+
+    it('prevents css mixin styles from breaking out of style tags', async () => {
+      let html = await renderToString(
+        <div mix={[css({ color: '</style><script>globalThis.__xss = true</script><style>' })]} />,
+      )
+
+      expect(html).not.toContain('</style><script>')
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      expect(shelf.content.querySelectorAll('script')).toHaveLength(0)
+      expect(html).toContain('\\3C/style><script>globalThis.__xss = true</script><style>')
+    })
+  })
+
+  describe('svg', () => {
+    it('renders SVG with preserved viewBox and kebab-cased attributes', async () => {
+      let stream = renderToStream(
+        <svg viewBox="0 0 24 24" fill="none" className="icon">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<svg viewBox="0 0 24 24" fill="none" class="icon"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"></path></svg>',
+      )
+    })
+
+    it('renders foreignObject subtree as HTML (className -> class)', async () => {
+      let stream = renderToStream(
+        <svg>
+          <foreignObject>
+            <div id="x" className="a">
+              Hello
+            </div>
+          </foreignObject>
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<svg><foreignObject><div id="x" class="a">Hello</div></foreignObject></svg>',
+      )
+    })
+
+    it('renders xmlLang and xmlSpace as xml:lang and xml:space', async () => {
+      let stream = renderToStream(
+        <svg>
+          <text xmlLang="en" xmlSpace="preserve">
+            Hi
+          </text>
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe('<svg><text xml:lang="en" xml:space="preserve">Hi</text></svg>')
+    })
+
+    it('renders canonical camelCase unit attributes for SVG filters and gradients', async () => {
+      let stream = renderToStream(
+        <svg>
+          <defs>
+            <filter id="f" filterUnits="userSpaceOnUse" primitiveUnits="objectBoundingBox">
+              <feGaussianBlur stdDeviation="2.5" />
+            </filter>
+            <linearGradient id="g" gradientUnits="userSpaceOnUse" />
+          </defs>
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toContain('filterUnits="userSpaceOnUse"')
+      expect(html).toContain('primitiveUnits="objectBoundingBox"')
+      expect(html).toContain('gradientUnits="userSpaceOnUse"')
+      expect(html).not.toContain('filter-units=')
+      expect(html).not.toContain('primitive-units=')
+      expect(html).not.toContain('gradient-units=')
+      expect(html).toContain('stdDeviation="2.5"')
+      expect(html).not.toContain('std-deviation=')
+    })
+
+    it('renders SVG booleanish string attributes as explicit values', async () => {
+      let stream = renderToStream(
+        <svg>
+          <animate autoReverse={false} />
+          <rect externalResourcesRequired={false} focusable={false} />
+          <feColorMatrix preserveAlpha={false} />
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toContain('autoReverse="false"')
+      expect(html).toContain('externalResourcesRequired="false"')
+      expect(html).toContain('focusable="false"')
+      expect(html).toContain('preserveAlpha="false"')
+    })
+  })
+
+  describe('styles', () => {
+    it('handles css mixin with style objects', async () => {
+      let stream = renderToStream(
+        <div mix={[css({ color: 'red', fontSize: '16px' })]}>Styled text</div>,
+      )
+      let html = await drain(stream)
+
+      // Should have a style tag in head
+      expect(html).toContain('<style data-rmx-style=')
+      expect(html).toContain('.rmxc-')
+      expect(html).toContain('color: red')
+      expect(html).toContain('font-size: 16px')
+
+      expect(html).toMatch(/<div class="rmxc-[a-z0-9]+"/)
+    })
+
+    it('handles string style prop', async () => {
+      let stream = renderToStream(<div style="color: blue; font-weight: bold;">String styled</div>)
+      let html = await drain(stream)
+
+      // String styles should be passed through as-is
+      expect(html).toBe('<div style="color: blue; font-weight: bold;">String styled</div>')
+    })
+
+    it('converts style object to inline string', async () => {
+      let stream = renderToStream(
+        <div style={{ color: 'green', marginTop: 10, padding: '5px' }}>Object styled</div>,
+      )
+      let html = await drain(stream)
+
+      // Style objects should be serialized to inline styles
+      expect(html).toBe(
+        '<div style="color: green; margin-top: 10px; padding: 5px;">Object styled</div>',
+      )
+    })
+
+    it('combines css mixin with existing className', async () => {
+      let stream = renderToStream(
+        <div className="existing-class" mix={[css({ background: 'yellow' })]}>
+          Combined classes
+        </div>,
+      )
+      let html = await drain(stream)
+
+      expect(html).toMatch(/<div class="existing-class rmxc-[a-z0-9]+"/)
+      expect(html).toContain('background: yellow')
+    })
+
+    it('combines css mixin with existing class attribute', async () => {
+      let stream = renderToStream(
+        <div class="existing-class" mix={[css({ background: 'yellow' })]}>
+          Combined classes
+        </div>,
+      )
+      let html = await drain(stream)
+
+      expect(html).toMatch(/<div class="existing-class rmxc-[a-z0-9]+"/)
+      expect(html).toContain('background: yellow')
+    })
+
+    it('deduplicates styles across multiple elements', async () => {
+      let stream = renderToStream(
+        <div>
+          <span mix={[css({ color: 'red', fontSize: '14px' })]}>First</span>
+          <span mix={[css({ color: 'red', fontSize: '14px' })]}>Second</span>
+          <span mix={[css({ color: 'blue' })]}>Third</span>
+        </div>,
+      )
+      let html = await drain(stream)
+
+      // Should only have one instance of the red/14px style
+      let redStyleMatches = html.match(/color: red/g)
+      expect(redStyleMatches?.length).toBe(1)
+
+      // Should have the blue style too
+      expect(html).toContain('color: blue')
+
+      // Both red spans should have same className (same css hash)
+      let spanMatches = html.match(/<span class="rmxc-[a-z0-9]+">/g)
+      expect(spanMatches?.length).toBe(3)
+      // First two spans have same style, third has different
+      expect(spanMatches?.[0]).toBe(spanMatches?.[1])
+      expect(spanMatches?.[0]).not.toBe(spanMatches?.[2])
+    })
+
+    it('repeats selector-addressed styles in each frame template that uses them', async () => {
+      // Each frame owns its style rules independently on the client (per-frame
+      // refcounted adoption), so every frame template must carry the full set
+      // of style tags its content references. Deduping across templates would
+      // hand rule ownership to one frame, and the rule would vanish for the
+      // other frame when the owner reloads away from it.
+      async function resolveFrame(src: string): Promise<string> {
+        if (src === '/outer') {
+          return await drain(
+            renderToStream(
+              <section mix={[css({ color: 'red' })]}>
+                <Frame src="/inner" fallback={<span>Loading inner...</span>} />
+              </section>,
+              { resolveFrame },
+            ),
+          )
+        }
+
+        if (src === '/inner') {
+          return await drain(renderToStream(<span mix={[css({ color: 'red' })]}>Inner</span>))
+        }
+
+        throw new Error(`Unexpected frame src: ${src}`)
+      }
+
+      let html = await drain(renderToStream(<Frame src="/outer" />, { resolveFrame }))
+
+      expect(html).toContain('<template')
+      // One tag in the outer frame's template, one in the inner frame's.
+      let tags = html.match(/data-rmx-style="[^"]+"/g) ?? []
+      expect(tags).toHaveLength(2)
+      expect(new Set(tags).size).toBe(1)
+    })
+
+    it('places styles in head when html root exists', async () => {
+      let stream = renderToStream(
+        <html>
+          <body>
+            <div mix={[css({ color: 'purple' })]}>Content</div>
+          </body>
+        </html>,
+      )
+      let html = await drain(stream)
+
+      // Style should be in the head section
+      expect(html).toContain('<html><head><style data-rmx-style=')
+      expect(html).toContain('color: purple')
+      expect(html).toContain('</style></head><body>')
+    })
+
+    it('places styles in head when no html root', async () => {
+      let stream = renderToStream(<div mix={[css({ color: 'orange' })]}>No HTML root</div>)
+      let html = await drain(stream)
+
+      // Style should be in a head element
+      expect(html).toMatch(/^<head><style data-rmx-style=/)
+      expect(html).toContain('color: orange')
+      expect(html).toMatch(/<\/style><\/head><div class="rmxc-[a-z0-9]+">No HTML root<\/div>$/)
+    })
+
+    it('handles css mixin in components', async () => {
+      function StyledButton(handle: Handle<{ label: string }>) {
+        return () => (
+          <button mix={[css({ background: 'blue', color: 'white', padding: '10px' })]}>
+            {handle.props.label}
+          </button>
+        )
+      }
+
+      let stream = renderToStream(
+        <div>
+          <StyledButton label="Click me" />
+          <StyledButton label="And me" />
+        </div>,
+      )
+      let html = await drain(stream)
+
+      // Should have the style only once
+      let bgMatches = html.match(/background: blue/g)
+      expect(bgMatches?.length).toBe(1)
+
+      // Both buttons should have the same generated class
+      let buttonMatches = html.match(/<button class="rmxc-[a-z0-9]+"/g)
+      expect(buttonMatches?.length).toBe(2)
+      expect(buttonMatches?.[0]).toBe(buttonMatches?.[1])
+    })
+
+    it('handles empty css mixin', async () => {
+      let stream = renderToStream(<div mix={[css({})]}>Empty css mixin</div>)
+      let html = await drain(stream)
+
+      // Should not add any class or styles
+      expect(html).toBe('<div>Empty css mixin</div>')
+      expect(html).not.toContain('<style')
+      expect(html).not.toContain('class=')
+    })
+
+    it('handles pseudo selectors in css mixin', async () => {
+      let stream = renderToStream(
+        <button
+          mix={[
+            css({
+              color: 'black',
+              ':hover': {
+                color: 'red',
+              },
+              ':focus': {
+                outline: '2px solid blue',
+              },
+            }),
+          ]}
+        >
+          Hover me
+        </button>,
+      )
+      let html = await drain(stream)
+
+      // Should generate hover and focus styles
+      expect(html).toContain(':hover')
+      expect(html).toContain('color: red')
+      expect(html).toContain(':focus')
+      expect(html).toContain('outline: 2px solid blue')
+    })
+
+    it('handles media queries in css mixin', async () => {
+      let stream = renderToStream(
+        <div
+          mix={[
+            css({
+              fontSize: '14px',
+              '@media (min-width: 768px)': {
+                fontSize: '16px',
+              },
+            }),
+          ]}
+        >
+          Responsive text
+        </div>,
+      )
+      let html = await drain(stream)
+
+      // Should generate media query
+      expect(html).toContain('@media (min-width: 768px)')
+      expect(html).toContain('font-size: 16px')
+    })
+
+    it('preserves range media query operators in css mixin', async () => {
+      let html = await renderToString(
+        <div
+          mix={[
+            css({
+              '@media (width < 900px)': {
+                display: 'none',
+              },
+            }),
+          ]}
+        />,
+      )
+
+      expect(html).toContain('@media (width < 900px)')
+    })
+
+    it('merges styles with existing head content', async () => {
+      let stream = renderToStream(
+        <html>
+          <head>
+            <title>Page Title</title>
+            <meta charSet="utf-8" />
+          </head>
+          <body>
+            <div mix={[css({ fontWeight: 'bold' })]}>Bold text</div>
+          </body>
+        </html>,
+      )
+      let html = await drain(stream)
+
+      // Styles should be injected into existing head, preserving other content
+      expect(html).toContain('<head>')
+      expect(html).toContain('<style data-rmx-style=')
+      expect(html).toContain('font-weight: bold')
+      expect(html).toContain('<title>Page Title</title>')
+      expect(html).toContain('<meta charset="utf-8" />')
+      expect(html).toContain('</head>')
+
+      // Verify styles are in the head
+      let headMatch = html.match(/<head>(.*?)<\/head>/s)
+      expect(headMatch).toBeTruthy()
+      let headContent = headMatch![1]
+      expect(headContent).toContain('<style data-rmx-style=')
+      expect(headContent).toContain('<title>Page Title</title>')
+      expect(headContent).toContain('<meta charset="utf-8" />')
+    })
+  })
+
+  describe('client entry preloads', () => {
+    function Island() {
+      return () => <section>Island</section>
+    }
+
+    let ClientIsland = clientEntry('/island.ts#Island', Island)
+
+    it('emits and deduplicates client entry preloads in the document head', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <ClientIsland />
+              <ClientIsland />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/island.js',
+                exportName: 'Island',
+                preloads: ['/assets/island.js', '/assets/shared.js', '/assets/island.js'],
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html.match(/href="\/assets\/island\.js"/g)).toHaveLength(1)
+      expect(html.match(/href="\/assets\/shared\.js"/g)).toHaveLength(1)
+      expect(html).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+      )
+      expect(html).not.toContain('"preloads"')
+    })
+
+    it('leaves authored module preloads outside framework deduplication', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <link rel="modulepreload" href="/assets/island.js" />
+            </head>
+            <body>
+              <ClientIsland />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/island.js',
+                exportName: 'Island',
+                preloads: ['/assets/island.js'],
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html.match(/href="\/assets\/island\.js"/g)).toHaveLength(2)
+      expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
+    })
+
+    it('orders fragment import maps and preloads before styles', async () => {
+      let html = await drain(
+        renderToStream(
+          <main mix={[css({ color: 'purple' })]}>
+            <ClientIsland />
+          </main>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/island.js',
+                exportName: 'Island',
+                preloads: ['/assets/island.js'],
+                importMap: {
+                  imports: { '/assets/island.js': '/assets/island.hash.js' },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html).toMatch(
+        /^<head><script data-rmx-import-map type="importmap">.*<\/script><link data-rmx-module-preload rel="modulepreload" href="\/assets\/island\.js" \/><style data-rmx-style=.*<\/style><\/head><main class="rmxc-[a-z0-9]+">/s,
+      )
+    })
+
+    it('hoists module preloads from blocking frames', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>Books</title>
+            </head>
+            <body>
+              <Frame src="/frame" />
+            </body>
+          </html>,
+          {
+            resolveFrame() {
+              return renderToStream(<ClientIsland />, {
+                resolveClientEntry() {
+                  return {
+                    href: '/assets/island.js',
+                    exportName: 'Island',
+                    preloads: ['/assets/island.js'],
+                  }
+                },
+              })
+            },
+          },
+        ),
+      )
+
+      let head = html.match(/<head>(.*?)<\/head>/s)?.[1]
+      expect(head).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+      )
+      expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
+    })
+
+    it('leaves styles in a blocking frame head when hoisting its preloads', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>Books</title>
+            </head>
+            <body>
+              <Frame src="/frame" />
+            </body>
+          </html>,
+          {
+            resolveFrame() {
+              return renderToStream(
+                <main mix={[css({ color: 'purple' })]}>
+                  <ClientIsland />
+                </main>,
+                {
+                  resolveClientEntry() {
+                    return {
+                      href: '/assets/island.js',
+                      exportName: 'Island',
+                      preloads: ['/assets/island.js'],
+                      importMap: {
+                        imports: { '/assets/island.js': '/assets/island.hash.js' },
+                      },
+                    }
+                  },
+                },
+              )
+            },
+          },
+        ),
+      )
+
+      let documentHead = html.match(/<head>(.*?)<\/head>/s)?.[1]
+      invariant(documentHead)
+      expect(documentHead).toContain(
+        '<script data-rmx-import-map type="importmap">{"imports":{"/assets/island.js":"/assets/island.hash.js"}}</script>',
+      )
+      expect(documentHead).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+      )
+      expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
+      expect(html).toMatch(/<body><!-- rmx:f:[^ ]+ --><head><style data-rmx-style=/)
+    })
+
+    it('does not inspect marker-shaped markup outside the leading frame head', async () => {
+      let markerShapedMarkup =
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/not-a-preload.js" />'
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>Books</title>
+            </head>
+            <body>
+              <Frame src="/frame" />
+            </body>
+          </html>,
+          {
+            resolveFrame() {
+              return `<script type="text/plain">${markerShapedMarkup}</script>`
+            },
+          },
+        ),
+      )
+
+      expect(html).toContain(`<script type="text/plain">${markerShapedMarkup}</script>`)
+      expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
+    })
+
+    it('does not inspect the leading frame head after its generated resource prefix', async () => {
+      let markerShapedMarkup =
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/not-a-preload.js" />'
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>Books</title>
+            </head>
+            <body>
+              <Frame src="/frame" />
+            </body>
+          </html>,
+          {
+            resolveFrame() {
+              return [
+                '<head>',
+                '<script data-rmx-import-map type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
+                '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+                '<style data-rmx-style="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>',
+                `<script type="text/plain">${markerShapedMarkup}</script>`,
+                '</head><main>Frame</main>',
+              ].join('')
+            },
+          },
+        ),
+      )
+
+      expect(html).toContain(
+        '<head><style data-rmx-style="rmxc-frame">@layer rmx-ui.rmxc-frame { color: purple }</style>' +
+          `<script type="text/plain">${markerShapedMarkup}</script></head>`,
+      )
+      expect(html).toContain(
+        '<script data-rmx-import-map type="importmap">{"imports":{"island":"/assets/island.js"}}</script>',
+      )
+      expect(html.match(/href="\/assets\/island\.js"/g)).toHaveLength(1)
+    })
+
+    it('creates a document head for module preloads when one is omitted', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <body>
+              <ClientIsland />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/island.js',
+                exportName: 'Island',
+                preloads: ['/assets/island.js'],
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html).toContain(
+        '<html><head><link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" /></head><body>',
+      )
+    })
+
+    it('hoists module preloads through nested blocking frames', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>Books</title>
+            </head>
+            <body>
+              <Frame src="/outer" />
+            </body>
+          </html>,
+          {
+            resolveFrame() {
+              return renderToStream(<Frame src="/inner" />, {
+                resolveFrame() {
+                  return renderToStream(<ClientIsland />, {
+                    resolveClientEntry() {
+                      return {
+                        href: '/assets/island.js',
+                        exportName: 'Island',
+                        preloads: ['/assets/island.js'],
+                      }
+                    },
+                  })
+                },
+              })
+            },
+          },
+        ),
+      )
+
+      let head = html.match(/<head>(.*?)<\/head>/s)?.[1]
+      expect(head).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+      )
+      expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
+    })
+
+    it('keeps module preloads with non-blocking frame content', async () => {
+      let html = await drain(
+        renderToStream(<Frame src="/frame" fallback={<p>Loading</p>} />, {
+          resolveFrame() {
+            return renderToStream(<ClientIsland />, {
+              resolveClientEntry() {
+                return {
+                  href: '/assets/island.js',
+                  exportName: 'Island',
+                  preloads: ['/assets/island.js'],
+                }
+              },
+            })
+          },
+        }),
+      )
+
+      expect(html).toContain('<template id="f')
+      expect(html).toContain(
+        '<head><link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" /></head>',
+      )
+    })
+
+    it('preloads fallback and resolved client entries at their respective stream stages', async () => {
+      let ResolvedIsland = clientEntry('/resolved.ts#ResolvedIsland', function ResolvedIsland() {
+        return () => <section>Resolved</section>
+      })
+      let html = await drain(
+        renderToStream(<Frame src="/frame" fallback={<ClientIsland />} />, {
+          resolveClientEntry() {
+            return {
+              href: '/assets/fallback.js',
+              exportName: 'Island',
+              preloads: ['/assets/fallback.js'],
+            }
+          },
+          resolveFrame() {
+            return renderToStream(<ResolvedIsland />, {
+              resolveClientEntry() {
+                return {
+                  href: '/assets/resolved.js',
+                  exportName: 'ResolvedIsland',
+                  preloads: ['/assets/resolved.js'],
+                }
+              },
+            })
+          },
+        }),
+      )
+
+      let templateIndex = html.indexOf('<template')
+      expect(html.indexOf('href="/assets/fallback.js"')).toBeLessThan(templateIndex)
+      expect(html.indexOf('href="/assets/resolved.js"')).toBeGreaterThan(templateIndex)
+    })
+
+    it('validates preload URLs returned by resolveClientEntry', async () => {
+      await expect(
+        drain(
+          renderToStream(<ClientIsland />, {
+            resolveClientEntry() {
+              return {
+                href: '/assets/island.js',
+                exportName: 'Island',
+                preloads: [''],
+              }
+            },
+          }),
+        ),
+      ).rejects.toThrow('resolveClientEntry preloads must contain non-empty strings')
+    })
+  })
+
+  describe('error handling', () => {
+    it('calls onError for errors', async () => {
+      let capturedError: unknown
+
+      function BadComponent() {
+        throw new Error('Render error!')
+        return () => null
+      }
+
+      let stream = renderToStream(<BadComponent />, {
+        onError: (error) => {
+          capturedError = error
+        },
+      })
+
+      await expect(drain(stream)).rejects.toThrow('Render error!')
+      expect(capturedError instanceof Error && capturedError.message).toBe('Render error!')
+    })
+
+    it('renderToString throws errors that can be caught with try/catch', async () => {
+      function BadComponent() {
+        throw new Error('Component error!')
+        return () => null
+      }
+
+      let caughtError: unknown
+      try {
+        await renderToString(<BadComponent />)
+      } catch (error) {
+        caughtError = error
+      }
+
+      expect(caughtError).toBeInstanceOf(Error)
+      expect((caughtError as Error).message).toBe('Component error!')
+    })
+  })
+
+  describe('doctype', () => {
+    it('handles whitespace before html element', async () => {
+      let stream = renderToStream([
+        '\n  ',
+        <html>
+          <body>Content</body>
+        </html>,
+      ])
+      let html = await drain(stream)
+      expect(html).toBe('\n  <html><body>Content</body></html>')
+    })
+  })
+
+  describe('head-like elements outside explicit head', () => {
+    it('renders title elements in place', async () => {
+      let stream = renderToStream(
+        <html>
+          <body>
+            <title>Page Title</title>
+            <div>Content</div>
+          </body>
+        </html>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe('<html><body><title>Page Title</title><div>Content</div></body></html>')
+    })
+
+    it('renders meta elements in place', async () => {
+      let stream = renderToStream(
+        <div>
+          <meta name="description" content="Test page" />
+          <h1>Hello</h1>
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe('<div><meta name="description" content="Test page" /><h1>Hello</h1></div>')
+    })
+
+    it('renders link elements in place', async () => {
+      let stream = renderToStream(
+        <div>
+          <link rel="stylesheet" href="/styles.css" />
+          <p>Content</p>
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe('<div><link rel="stylesheet" href="/styles.css" /><p>Content</p></div>')
+    })
+
+    it('renders multiple head-like elements in place', async () => {
+      let stream = renderToStream(
+        <div>
+          <title>My App</title>
+          <meta charSet="utf-8" />
+          <p>Hello</p>
+          <link rel="icon" href="/favicon.ico" />
+          <meta name="viewport" content="width=device-width" />
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<div><title>My App</title><meta charset="utf-8" /><p>Hello</p><link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width" /></div>',
+      )
+    })
+
+    it('renders head-like elements from components in place', async () => {
+      function SEO() {
+        return () => (
+          <>
+            <title>Component Title</title>
+            <meta name="description" content="Component Description" />
+          </>
+        )
+      }
+
+      let stream = renderToStream(
+        <div>
+          <SEO />
+          <main>Content</main>
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<div><title>Component Title</title><meta name="description" content="Component Description" /><main>Content</main></div>',
+      )
+    })
+
+    it('keeps bare head-like elements out of an explicit head tag', async () => {
+      let stream = renderToStream(
+        <html>
+          <head>
+            <meta charSet="utf-8" />
+          </head>
+          <body>
+            <title>Body Title</title>
+            <link rel="stylesheet" href="/app.css" />
+            <div>Content</div>
+          </body>
+        </html>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<html><head><meta charset="utf-8" /></head><body><title>Body Title</title><link rel="stylesheet" href="/app.css" /><div>Content</div></body></html>',
+      )
+    })
+
+    it('renders structured data scripts in place', async () => {
+      let structuredData = {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: 'Test Product',
+      }
+
+      let stream = renderToStream(
+        <div>
+          <script
+            type="application/ld+json"
+            innerHTML={unsafeHTML(JSON.stringify(structuredData))}
+          />
+          <h1>Product Page</h1>
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<div><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Test Product"}</script><h1>Product Page</h1></div>',
+      )
+    })
+
+    it('does NOT hoist regular script tags', async () => {
+      let stream = renderToStream(
+        <div>
+          <h1>Page Title</h1>
+          <script innerHTML={unsafeHTML("console.log('Hello World')")} />
+          <p>Some content</p>
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        "<div><h1>Page Title</h1><script>console.log('Hello World')</script><p>Some content</p></div>",
+      )
+    })
+
+    it('renders ld+json scripts in place when mixed with regular scripts', async () => {
+      let stream = renderToStream(
+        <div>
+          <script type="text/javascript" innerHTML={unsafeHTML("console.log('Regular script')")} />
+          <script
+            type="application/ld+json"
+            innerHTML={unsafeHTML('{"@context":"https://schema.org","@type":"WebPage"}')}
+          />
+          <script innerHTML={unsafeHTML("console.log('Another regular script')")} />
+          <h1>Mixed Scripts Page</h1>
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<div><script type="text/javascript">console.log(\'Regular script\')</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage"}</script><script>console.log(\'Another regular script\')</script><h1>Mixed Scripts Page</h1></div>',
+      )
+    })
+  })
+
+  describe('hydration', () => {
+    it('renders hydrated component with hydration script', async () => {
+      // Create a simple hydrated component
+      let Counter = clientEntry(
+        '/js/counter.js#Counter',
+        function Counter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      // Render the component
+      let stream = renderToStream(<Counter initialCount={42} />)
+      let html = await drain(stream)
+
+      // Verify the output contains both the rendered HTML and markers with ID
+      let hydrationId = getCommentMarkerId(html, 'rmx:h:')
+      expect(html).toContain(`<!-- rmx:h:${hydrationId} -->`)
+      expect(html).toContain('<div>Count: 42</div>')
+      expect(html).toContain('<!-- /rmx:h -->')
+
+      // Check for aggregated data script at the end
+      expect(html).toContain('<script type="application/json" id="rmx-data">')
+
+      // Parse the aggregated data
+      let data = parseRmxDataFromHtml(html)
+
+      expect(data.h).toBeDefined()
+      expect(data.h[hydrationId]).toEqual({
+        moduleUrl: '/js/counter.js',
+        exportName: 'Counter',
+        props: { initialCount: 42 },
+      })
+
+      // Ordering: start marker < content < end marker
+      let startIdx = html.indexOf(`<!-- rmx:h:${hydrationId} -->`)
+      let contentIdx = html.indexOf('<div>Count: 42</div>')
+      let endIdx = html.indexOf('<!-- /rmx:h -->')
+      expect(startIdx).toBeGreaterThanOrEqual(0)
+      expect(contentIdx).toBeGreaterThan(startIdx)
+      expect(endIdx).toBeGreaterThan(contentIdx)
+    })
+
+    it('escapes rmx-data payloads that contain script end tags', async () => {
+      let Counter = clientEntry(
+        '/js/counter.js#Counter',
+        function Counter(handle: Handle<{ label: string }>) {
+          return () => <div>{handle.props.label}</div>
+        },
+      )
+
+      let scriptBreakingLabel = '</script><script>alert("xss")</script>'
+      let stream = renderToStream(<Counter label={scriptBreakingLabel} />)
+      let html = await drain(stream)
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let script = getLatestRmxDataScript(shelf.content)
+
+      // Ensure we do not emit a literal closing tag inside rmx-data payload.
+      expect(script.textContent || '').not.toContain('</script>')
+
+      // Ensure the data still parses and round-trips to the original value.
+      let data = parseRmxDataFromHtml(html)
+      let [hydrationId, entry] = getSingleEntry(data.h)
+      expect(hydrationId).toBeDefined()
+      expect(entry.props.label).toBe(scriptBreakingLabel)
+    })
+
+    it('renders multiple hydrated components with unique instance IDs', async () => {
+      // Create hydrated components
+      let Button = clientEntry(
+        '/js/button.js#Button',
+        function Button(handle: Handle<{ text: string }>) {
+          return () => <button>{handle.props.text}</button>
+        },
+      )
+
+      // Render multiple hydrated components
+      let stream = renderToStream(
+        <div>
+          <Button text="First" />
+          <Button text="Second" />
+        </div>,
+      )
+      let html = await drain(stream)
+
+      // Verify both buttons are rendered inside hydration markers with unique IDs
+      expect(html).toContain('<!-- rmx:h:')
+      expect(html).toContain('<button>First</button>')
+      expect(html).toContain('<button>Second</button>')
+
+      let data = parseRmxDataFromHtml(html)
+      expect(Object.keys(data.h).length).toBe(2)
+      for (let entry of Object.values<any>(data.h)) {
+        expect(entry.moduleUrl).toBe('/js/button.js')
+        expect(entry.exportName).toBe('Button')
+      }
+    })
+
+    it('snapshots hydration props before resolving client entries and calls toJSON once', async () => {
+      let calls = 0
+      let value = {
+        count: 1,
+        toJSON() {
+          calls++
+          return { count: this.count, label: '</script>日本語🙂' }
+        },
+      }
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let html = await drain(
+        renderToStream(createElement(Entry, { value }), {
+          async resolveClientEntry() {
+            value.count = 2
+            return { href: '/entry.js', exportName: 'Entry' }
+          },
+        }),
+      )
+
+      let [, data] = getSingleEntry(parseRmxDataFromHtml(html).h)
+      expect(data.props.value).toEqual({ count: 1, label: '</script>日本語🙂' })
+      expect(calls).toBe(1)
+    })
+
+    it('rejects client entry props whose toJSON returns undefined', async () => {
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let stream = renderToStream(createElement(Entry, { toJSON() {} }), { onError() {} })
+
+      await expect(drain(stream)).rejects.toThrow('Client entry props must serialize to JSON')
+    })
+
+    it('renders hydrated component with complex props', async () => {
+      let Card = clientEntry(
+        '/js/card.js#Card',
+        function Card(
+          handle: Handle<{
+            title: string
+            count: number
+            enabled: boolean
+            items: string[]
+            nested: { value: number }
+          }>,
+        ) {
+          return () => (
+            <div>
+              <h2>{handle.props.title}</h2>
+              <p>Count: {handle.props.count}</p>
+              <section>Enabled: {String(handle.props.enabled)}</section>
+              <ul>
+                {handle.props.items.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+              <main>Nested value: {handle.props.nested.value}</main>
+            </div>
+          )
+        },
+      )
+
+      let stream = renderToStream(
+        <Card
+          title="Test Card"
+          count={10}
+          enabled={true}
+          items={['one', 'two', 'three']}
+          nested={{ value: 99 }}
+        />,
+      )
+      let html = await drain(stream)
+
+      // Verify the rendered output inside hydration markers
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let content = shelf.content
+      invariant(content.firstChild instanceof Comment)
+      expect(content.firstChild.data.trim().startsWith('rmx:h:')).toBe(true)
+      expect(shelf.content.querySelector('h2')?.textContent).toBe('Test Card')
+      expect(shelf.content.querySelector('p')?.textContent).toBe('Count: 10')
+      expect(shelf.content.querySelector('section')?.textContent).toBe('Enabled: true')
+      let items = shelf.content.querySelectorAll('li')
+      expect(items).toHaveLength(3)
+      expect(items[0].textContent).toBe('one')
+      expect(items[1].textContent).toBe('two')
+      expect(items[2].textContent).toBe('three')
+      expect(shelf.content.querySelector('main')?.textContent).toBe('Nested value: 99')
+
+      // Check aggregated data script
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry.props).toEqual({
+        title: 'Test Card',
+        count: 10,
+        enabled: true,
+        items: ['one', 'two', 'three'],
+        nested: { value: 99 },
+      })
+    })
+
+    it('serializes virtual host elements', async () => {
+      let Card = clientEntry(
+        '/js/card.js#Card',
+        function Card(handle: Handle<{ children?: RemixNode }>) {
+          return () => (
+            <div>
+              <h1>Test Card</h1>
+              {handle.props.children}
+            </div>
+          )
+        },
+      )
+
+      let stream = renderToStream(
+        <Card>
+          <p>Hello, world!</p>
+        </Card>,
+      )
+      let html = await drain(stream)
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry.props.children).toEqual({
+        $rmx: true,
+        type: 'p',
+        props: {
+          children: 'Hello, world!',
+        },
+      })
+    })
+
+    it('serializes virtual component elements', async () => {
+      let Card = clientEntry(
+        '/js/card.js#Card',
+        function Card(handle: Handle<{ children?: RemixNode }>) {
+          return () => (
+            <div>
+              <h1>Test Card</h1>
+              {handle.props.children}
+            </div>
+          )
+        },
+      )
+
+      function UnwrappedChild() {
+        return () => (
+          <p>
+            <DeepChild />
+          </p>
+        )
+      }
+
+      function DeepChild() {
+        return () => <span>Hello, world!</span>
+      }
+
+      let stream = renderToStream(
+        <Card>
+          <UnwrappedChild />
+        </Card>,
+      )
+      let html = await drain(stream)
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry).toEqual({
+        exportName: 'Card',
+        moduleUrl: '/js/card.js',
+        props: {
+          children: {
+            $rmx: true,
+            props: {
+              children: {
+                $rmx: true,
+                props: {
+                  children: 'Hello, world!',
+                },
+                type: 'span',
+              },
+            },
+            type: 'p',
+          },
+        },
+      })
+    })
+
+    it('serializes Frame elements in entry props as frame descriptors', async () => {
+      let Card = clientEntry(
+        '/js/card.js#Card',
+        function Card(handle: Handle<{ children?: RemixNode }>) {
+          return () => <div>{handle.props.children}</div>
+        },
+      )
+
+      let stream = renderToStream(
+        <Card>
+          <Frame src="/child-frame" fallback={<p>Loading child frame…</p>} />
+        </Card>,
+        {
+          resolveFrame: () => '<p>Loaded child frame</p>',
+        },
+      )
+      let html = await drain(stream)
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      let [, entry] = getSingleEntry(data.h)
+
+      expect(entry.props.children).toEqual({
+        $rmxFrame: true,
+        props: {
+          src: '/child-frame',
+          fallback: {
+            $rmx: true,
+            type: 'p',
+            props: {
+              children: 'Loading child frame…',
+            },
+          },
+        },
+      })
+    })
+
+    it('serializes Fragment elements in entry props as fragment descriptors', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={
+              <>
+                <b>Bold</b>
+                <i>Italic</i>
+              </>
+            }
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(html).toContain('<div><b>Bold</b><i>Italic</i></div>')
+      expect(entry.props.content).toEqual({
+        $rmxFragment: true,
+        props: {
+          children: [
+            { $rmx: true, type: 'b', props: { children: 'Bold' } },
+            { $rmx: true, type: 'i', props: { children: 'Italic' } },
+          ],
+        },
+      })
+    })
+
+    it('serializes fragments rendered by virtual components in entry props', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      function Pair() {
+        return () => (
+          <>
+            <b>Bold</b>
+            <i>Italic</i>
+          </>
+        )
+      }
+
+      let html = await drain(renderToStream(<Slot content={<Pair />} />))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual({
+        $rmxFragment: true,
+        props: {
+          children: [
+            { $rmx: true, type: 'b', props: { children: 'Bold' } },
+            { $rmx: true, type: 'i', props: { children: 'Italic' } },
+          ],
+        },
+      })
+    })
+
+    it('serializes element and fragment keys in entry props', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={[
+              <b key="bold">Bold</b>,
+              <Fragment key={2}>
+                <i>Italic</i>
+              </Fragment>,
+            ]}
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual([
+        { $rmx: true, type: 'b', props: { children: 'Bold' }, key: 'bold' },
+        {
+          $rmxFragment: true,
+          props: { children: { $rmx: true, type: 'i', props: { children: 'Italic' } } },
+          key: 2,
+        },
+      ])
+    })
+
+    it('omits entry prop keys that cannot round-trip through JSON', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={[
+              <b key={1n}>Bold</b>,
+              <Fragment key={{ id: 'italic' }}>
+                <i>Italic</i>
+              </Fragment>,
+              <u key={Number.NaN}>Underline</u>,
+            ]}
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual([
+        { $rmx: true, type: 'b', props: { children: 'Bold' } },
+        {
+          $rmxFragment: true,
+          props: { children: { $rmx: true, type: 'i', props: { children: 'Italic' } } },
+        },
+        { $rmx: true, type: 'u', props: { children: 'Underline' } },
+      ])
+    })
+
+    it('nests hydrated components', async () => {
+      let Card = clientEntry(
+        '/card.js#Card',
+        function Card(handle: Handle<{ children?: RemixNode }>) {
+          return () => <div>{handle.props.children}</div>
+        },
+      )
+
+      let Button = clientEntry('/button.js#Button', function Button() {
+        return () => <button />
+      })
+
+      let stream = renderToStream(
+        <Card>
+          <Button />
+        </Card>,
+      )
+
+      let html = await drain(stream)
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      let entries = Object.values<any>(data.h)
+      expect(entries.length).toBe(2)
+      expect(
+        entries.some((entry) => entry.moduleUrl === '/card.js' && entry.exportName === 'Card'),
+      ).toBe(true)
+      expect(
+        entries.some((entry) => entry.moduleUrl === '/button.js' && entry.exportName === 'Button'),
+      ).toBe(true)
+    })
+
+    it('resolves opaque client-entry ids during SSR', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function ResolverCounter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(<Counter initialCount={42} />, {
+          async resolveClientEntry(entryId, component) {
+            expect(entryId).toBe('file:///app/components/counter.tsx')
+            expect(component.name).toBe('ResolverCounter')
+            return {
+              href: '/scripts/counter.js',
+              exportName: 'Counter',
+            }
+          },
+        }),
+      )
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(1)
+      expect(entries[0].entryId).toBeUndefined()
+      expect(entries[0]).toEqual({
+        moduleUrl: '/scripts/counter.js',
+        exportName: 'Counter',
+        props: { initialCount: 42 },
+      })
+    })
+
+    it('merges resolved client entry maps into a managed import map in place', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+      function Document() {
+        return () => (
+          <html>
+            <head>
+              <meta charSet="utf-8" />
+              <ImportMap
+                id="app-import-map"
+                nonce="nonce-value"
+                data-source="document"
+                value={{
+                  imports: {
+                    '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+                  },
+                  integrity: {
+                    '/assets/app/entry.@abc123.tsx': 'sha256-entry',
+                  },
+                }}
+              />
+              <title>Counter</title>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>
+        )
+      }
+
+      let html = await drain(
+        renderToStream(<Document />, {
+          resolveClientEntry() {
+            return {
+              href: '/assets/app/components/counter.tsx',
+              exportName: 'Counter',
+              importMap: {
+                imports: {
+                  '/assets/app/components/counter.tsx':
+                    '/assets/app/components/counter.@def456.tsx',
+                },
+                scopes: {
+                  '/assets/app/components/': {
+                    pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
+                  },
+                },
+                integrity: {
+                  '/assets/app/components/counter.@def456.tsx': 'sha256-counter',
+                },
+              },
+            }
+          },
+        }),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let script = shelf.content.querySelector<HTMLScriptElement>('#app-import-map')
+      expect(script?.nonce).toBe('nonce-value')
+      expect(script?.dataset.source).toBe('document')
+      expect(JSON.parse(script?.textContent ?? '{}')).toEqual({
+        imports: {
+          '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+          '/assets/app/components/counter.tsx': '/assets/app/components/counter.@def456.tsx',
+        },
+        scopes: {
+          '/assets/app/components/': {
+            pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
+          },
+        },
+        integrity: {
+          '/assets/app/entry.@abc123.tsx': 'sha256-entry',
+          '/assets/app/components/counter.@def456.tsx': 'sha256-counter',
+        },
+      })
+      expect(html.indexOf('<meta')).toBeLessThan(html.indexOf('id="app-import-map"'))
+      expect(html.indexOf('id="app-import-map"')).toBeLessThan(html.indexOf('<title>'))
+    })
+
+    it('rejects managed import maps outside a document head', async () => {
+      await expect(renderToString(<ImportMap value={{}} />)).rejects.toThrow(
+        'ImportMap must be rendered inside a document head',
+      )
+    })
+
+    it('rejects multiple managed import maps in one document', async () => {
+      await expect(
+        renderToString(
+          <html>
+            <head>
+              <ImportMap value={{}} />
+              <ImportMap value={{}} />
+            </head>
+          </html>,
+        ),
+      ).rejects.toThrow('Only one ImportMap can be rendered per document')
+    })
+
+    it('does not merge resolved client entry maps into authored import maps', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+      let authoredMap = { imports: { pkg: '/assets/pkg.@abc.ts' } }
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">{JSON.stringify(authoredMap)}</script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: { imports: { added: '/assets/added.@abc.ts' } },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let scripts = shelf.content.querySelectorAll<HTMLScriptElement>('script[type="importmap"]')
+      expect(scripts).toHaveLength(2)
+      expect(JSON.parse(scripts[0]?.textContent ?? '{}')).toEqual(authoredMap)
+      expect(JSON.parse(scripts[1]?.textContent ?? '{}')).toEqual({
+        imports: { added: '/assets/added.@abc.ts' },
+      })
+    })
+
+    it('emits import maps returned from resolved client entries', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function ImportMapCounter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(<Counter initialCount={42} />, {
+          resolveClientEntry() {
+            return {
+              href: '/assets/app/components/counter.tsx',
+              exportName: 'Counter',
+              importMap: {
+                imports: {
+                  '/assets/app/components/counter.tsx':
+                    '/assets/app/components/counter.@abc123.tsx',
+                  '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                },
+              },
+            }
+          },
+        }),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScript = shelf.content.querySelector('script[type="importmap"]')
+      expect(importMapScript?.textContent).toBe(
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}',
+      )
+      expect(importMapScript?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(html).toMatch(/^<head><script data-rmx-import-map type="importmap">/)
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries[0]).toMatchObject({
+        moduleUrl: '/assets/app/components/counter.tsx',
+        exportName: 'Counter',
+      })
+    })
+
+    it('merges client entry import maps and dedupes overlapping entries', async () => {
+      let First = clientEntry('file:///app/first.tsx', function First() {
+        return () => <div>First</div>
+      })
+      let Second = clientEntry('file:///app/second.tsx', function Second() {
+        return () => <div>Second</div>
+      })
+      let Duplicate = clientEntry('file:///app/duplicate.tsx', function Duplicate() {
+        return () => <div>Duplicate</div>
+      })
+      let firstImportMap = {
+        imports: {
+          first: '/assets/first.hash.js',
+          shared: '/assets/shared.hash.js',
+        },
+      }
+      let secondImportMap = {
+        imports: {
+          second: '/assets/second.hash.js',
+          shared: '/assets/shared.hash.js',
+        },
+      }
+
+      let html = await drain(
+        renderToStream(
+          <>
+            <First />
+            <Second />
+            <Duplicate />
+          </>,
+          {
+            resolveClientEntry(entryId) {
+              return {
+                href: entryId,
+                exportName: 'default',
+                importMap: entryId.endsWith('/second.tsx') ? secondImportMap : firstImportMap,
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll(
+        'script[data-rmx-import-map][type="importmap"]',
+      )
+      expect(importMapScripts).toHaveLength(1)
+      expect(JSON.parse(importMapScripts[0]?.textContent ?? '{}')).toEqual({
+        imports: {
+          first: '/assets/first.hash.js',
+          shared: '/assets/shared.hash.js',
+          second: '/assets/second.hash.js',
+        },
+      })
+    })
+
+    it('rejects conflicting client entry import maps', async () => {
+      let First = clientEntry('file:///app/first.tsx', function First() {
+        return () => <div>First</div>
+      })
+      let Second = clientEntry('file:///app/second.tsx', function Second() {
+        return () => <div>Second</div>
+      })
+
+      let stream = renderToStream(
+        <>
+          <First />
+          <Second />
+        </>,
+        {
+          resolveClientEntry(entryId) {
+            return {
+              href: entryId,
+              exportName: 'default',
+              importMap: {
+                imports: {
+                  shared: entryId.endsWith('/first.tsx')
+                    ? '/assets/shared.first.js'
+                    : '/assets/shared.second.js',
+                },
+              },
+            }
+          },
+        },
+      )
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Conflicting framework import map entry for "shared"',
+      )
+    })
+
+    it('rejects conflicting client entry import map integrity metadata', async () => {
+      let First = clientEntry('file:///app/first.tsx', function First() {
+        return () => <div>First</div>
+      })
+      let Second = clientEntry('file:///app/second.tsx', function Second() {
+        return () => <div>Second</div>
+      })
+
+      let stream = renderToStream(
+        <>
+          <First />
+          <Second />
+        </>,
+        {
+          resolveClientEntry(entryId) {
+            return {
+              href: entryId,
+              exportName: 'default',
+              importMap: {
+                integrity: {
+                  '/assets/shared.js': entryId.endsWith('/first.tsx')
+                    ? 'sha256-first'
+                    : 'sha256-second',
+                },
+              },
+            }
+          },
+        },
+      )
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Conflicting framework import map integrity entry for "/assets/shared.js"',
+      )
+    })
+
+    it('emits preloads and import maps returned from the same resolved client entry', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function PreloadedImportMapCounter() {
+          return () => <div>Count</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <title>Counter</title>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                preloads: [
+                  '/assets/app/components/counter.@abc123.tsx',
+                  '/assets/app/shared.@def456.ts',
+                ],
+                importMap: {
+                  imports: {
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let head = html.match(/<head>(.*?)<\/head>/s)?.[1]
+      invariant(head)
+      expect(head).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/app/components/counter.@abc123.tsx" />',
+      )
+      expect(head).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/app/shared.@def456.ts" />',
+      )
+      expect(head).toContain(
+        '<script data-rmx-import-map type="importmap">{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"}}</script>',
+      )
+      expect(head.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
+        head.indexOf('<link data-rmx-module-preload rel="modulepreload"'),
+      )
+    })
+
+    it('emits discovered import maps after authored document head content', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <meta name="theme-color" content="white" />
+              <link rel="stylesheet" href="/assets/app.css" />
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let importMapIndex = html.indexOf('<script data-rmx-import-map type="importmap">')
+      let metaIndex = html.indexOf('<meta name="theme-color"')
+      let stylesheetIndex = html.indexOf('<link rel="stylesheet"')
+
+      expect(importMapIndex).toBeGreaterThan(html.indexOf('<head>'))
+      expect(importMapIndex).toBeGreaterThan(metaIndex)
+      expect(importMapIndex).toBeGreaterThan(stylesheetIndex)
+      expect(html).toContain('</script></head>')
+    })
+
+    it('creates a document head for discovered import maps when one is omitted', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <body>
+              <Counter />
+              <script type="module" src="/assets/app/entry.@abc123.tsx" />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@abc123.tsx',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      expect(html).toContain('<html><head><script data-rmx-import-map type="importmap">')
+      expect(html.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
+        html.indexOf('<body>'),
+      )
+    })
+
+    it('leaves authored import maps in document heads before module preloads', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <meta charSet="utf-8" />
+              <title>Import maps</title>
+              <link rel="stylesheet" href="/assets/app.css" />
+              <script type="importmap">
+                {JSON.stringify({
+                  imports: {
+                    '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                  },
+                })}
+              </script>
+              <link rel="modulepreload" href="/assets/app/shared.@def456.ts" />
+              <script type="module" src="/assets/app/entry.@abc123.tsx" />
+            </head>
+            <body>App</body>
+          </html>,
+        ),
+      )
+
+      let stylesheetIndex = html.indexOf('<link rel="stylesheet"')
+      let importMapIndex = html.indexOf('<script type="importmap">')
+      let modulePreloadIndex = html.indexOf('<link rel="modulepreload"')
+      let moduleScriptIndex = html.indexOf('<script type="module"')
+
+      expect(importMapIndex).toBeGreaterThan(stylesheetIndex)
+      expect(importMapIndex).toBeLessThan(modulePreloadIndex)
+      expect(importMapIndex).toBeLessThan(moduleScriptIndex)
+    })
+
+    it('dedupes resolved client entry import maps against authored document import maps', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">
+                {JSON.stringify({
+                  imports: {
+                    '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                  },
+                  integrity: {
+                    '/assets/app/shared.@def456.ts': 'sha256-shared',
+                  },
+                })}
+              </script>
+              <link rel="modulepreload" href="/assets/app/shared.@def456.ts" />
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/shared.ts': '/assets/app/shared.@def456.ts',
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@def456.tsx',
+                  },
+                  scopes: {
+                    '/assets/app/components/': {
+                      pkg: '/assets/app/node_modules/pkg/index.@fedcba.ts',
+                    },
+                  },
+                  integrity: {
+                    '/assets/app/shared.@def456.ts': 'sha256-shared',
+                    '/assets/app/components/counter.@def456.tsx': 'sha256-counter',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(importMapScripts[0]?.textContent).toBe(
+        '{"imports":{"/assets/app/entry.tsx":"/assets/app/entry.@abc123.tsx","/assets/app/shared.ts":"/assets/app/shared.@def456.ts"},"integrity":{"/assets/app/shared.@def456.ts":"sha256-shared"}}',
+      )
+      expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(false)
+      expect(importMapScripts[1]?.textContent).toBe(
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@def456.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.@fedcba.ts"}},"integrity":{"/assets/app/components/counter.@def456.tsx":"sha256-counter"}}',
+      )
+      expect(importMapScripts[1]?.hasAttribute('data-rmx-import-map')).toBe(true)
+    })
+
+    it('does not dedupe against authored import maps rendered with innerHTML', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script
+                type="importmap"
+                innerHTML={unsafeHTML(
+                  JSON.stringify({
+                    imports: { pkg: '/assets/pkg.@abc.ts' },
+                  }),
+                )}
+              />
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    pkg: '/assets/pkg.@abc.ts',
+                    added: '/assets/added.@abc.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[0]?.textContent ?? '{}')).toEqual({
+        imports: { pkg: '/assets/pkg.@abc.ts' },
+      })
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: {
+          pkg: '/assets/pkg.@abc.ts',
+          added: '/assets/added.@abc.ts',
+        },
+      })
+    })
+
+    it('does not dedupe against authored import maps with a src attribute', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap" src="/import-map.json">
+                {JSON.stringify({ imports: { pkg: '/assets/pkg.@abc.ts' } })}
+              </script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    pkg: '/assets/pkg.@abc.ts',
+                    added: '/assets/added.@abc.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = Array.from(shelf.content.querySelectorAll('script')).filter(
+        (script) => script.type.toLowerCase() === 'importmap',
+      )
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: {
+          pkg: '/assets/pkg.@abc.ts',
+          added: '/assets/added.@abc.ts',
+        },
+      })
+    })
+
+    it('matches authored import map types case-insensitively', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="IMPORTMAP">
+                {JSON.stringify({ imports: { pkg: '/assets/pkg.@abc.ts' } })}
+              </script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    pkg: '/assets/pkg.@abc.ts',
+                    added: '/assets/added.@abc.ts',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = Array.from(shelf.content.querySelectorAll('script')).filter(
+        (script) => script.type.toLowerCase() === 'importmap',
+      )
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: { added: '/assets/added.@abc.ts' },
+      })
+    })
+
+    it('dedupes exact and null entries from partially invalid authored import maps', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">
+                {JSON.stringify({
+                  imports: {
+                    '/assets/shared.ts': '/assets/shared.@abc.ts',
+                    blocked: null,
+                    invalidAddress: 'https://[',
+                    invalidType: true,
+                  },
+                  scopes: {
+                    '/assets/features/': { pkg: '/assets/pkg.@abc.ts' },
+                  },
+                })}
+              </script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/shared.ts': '/assets/shared.@abc.ts',
+                    blocked: null,
+                    invalidAddress: 'https://[',
+                    invalidType: null,
+                    added: '/assets/added.@abc.ts',
+                  },
+                  scopes: {
+                    '/assets/features/': {
+                      pkg: '/assets/pkg.@abc.ts',
+                      other: '/assets/other.@abc.ts',
+                    },
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: { added: '/assets/added.@abc.ts' },
+        scopes: {
+          '/assets/features/': { other: '/assets/other.@abc.ts' },
+        },
+      })
+    })
+
+    it('does not dedupe against authored import maps after the document head', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <script type="importmap">
+                {JSON.stringify({ imports: { pkg: '/assets/pkg.@abc.ts' } })}
+              </script>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: { imports: { pkg: '/assets/pkg.@abc.ts' } },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(importMapScripts[1]?.hasAttribute('data-rmx-import-map')).toBe(false)
+    })
+
+    it('leaves arbitrary authored import map content opaque', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">not valid JSON</script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            frameSrc: 'https://example.com/app/page',
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    'https://example.com/app/shared.ts': 'https://example.com/app/shared.@abc.ts',
+                    blocked: null,
+                    invalidAddress: null,
+                    added: '/assets/added.@abc.ts',
+                  },
+                  scopes: {
+                    'https://example.com/app/features/': {
+                      pkg: 'https://example.com/pkg.@abc.ts',
+                      other: '/assets/other.@abc.ts',
+                    },
+                    'https://[': { ignored: '/ignored.ts' },
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(importMapScripts[0]?.textContent).toBe('not valid JSON')
+      expect(importMapScripts[0]?.hasAttribute('data-rmx-import-map')).toBe(false)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: {
+          'https://example.com/app/shared.ts': 'https://example.com/app/shared.@abc.ts',
+          blocked: null,
+          invalidAddress: null,
+          added: '/assets/added.@abc.ts',
+        },
+        scopes: {
+          'https://example.com/app/features/': {
+            pkg: 'https://example.com/pkg.@abc.ts',
+            other: '/assets/other.@abc.ts',
+          },
+          'https://[': { ignored: '/ignored.ts' },
+        },
+      })
+    })
+
+    it('warns and ignores client entry import maps that conflict with authored maps', async (t) => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+      let warn = t.mock.method(console, 'warn', () => {})
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script type="importmap">
+                {JSON.stringify({
+                  imports: {
+                    '/assets/app/shared.ts': '/assets/app/shared.@old.ts',
+                  },
+                  integrity: {
+                    '/assets/app/shared.@old.ts': 'sha256-old',
+                  },
+                })}
+              </script>
+            </head>
+            <body>
+              <Counter />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/shared.ts': '/assets/app/shared.@new.ts',
+                    '/assets/app/added.ts': '/assets/app/added.@new.ts',
+                  },
+                  integrity: {
+                    '/assets/app/shared.@old.ts': 'sha256-new',
+                    '/assets/app/added.@new.ts': 'sha256-added',
+                  },
+                },
+              }
+            },
+          },
+        ),
+      )
+
+      expect(warn).toHaveBeenCalledTimes(2)
+      expect(warn.mock.calls[0]?.arguments[0]).toBe(
+        '[remix] Ignoring conflicting import map entry for "/assets/app/shared.ts": ' +
+          '"/assets/app/shared.@old.ts" is already authored, but the discovered map points to "/assets/app/shared.@new.ts"',
+      )
+      expect(warn.mock.calls[1]?.arguments[0]).toBe(
+        '[remix] Ignoring conflicting import map integrity entry for "/assets/app/shared.@old.ts": ' +
+          '"sha256-old" is already authored, but the discovered map points to "sha256-new"',
+      )
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScripts = shelf.content.querySelectorAll('script[type="importmap"]')
+      expect(importMapScripts).toHaveLength(2)
+      expect(JSON.parse(importMapScripts[1]?.textContent ?? '{}')).toEqual({
+        imports: {
+          '/assets/app/added.ts': '/assets/app/added.@new.ts',
+        },
+        integrity: {
+          '/assets/app/added.@new.ts': 'sha256-added',
+        },
+      })
+    })
+
+    it('emits scoped import maps returned from resolved client entries', async () => {
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let html = await drain(
+        renderToStream(<Counter />, {
+          resolveClientEntry() {
+            return {
+              href: '/assets/app/components/counter.tsx',
+              exportName: 'Counter',
+              importMap: {
+                imports: {
+                  '/assets/app/components/counter.tsx':
+                    '/assets/app/components/counter.@abc123.tsx',
+                },
+                scopes: {
+                  '/assets/app/components/': {
+                    pkg: '/assets/app/node_modules/pkg/index.@def456.ts',
+                  },
+                },
+              },
+            }
+          },
+        }),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let importMapScript = shelf.content.querySelector('script[type="importmap"]')
+      expect(importMapScript?.textContent).toBe(
+        '{"imports":{"/assets/app/components/counter.tsx":"/assets/app/components/counter.@abc123.tsx"},"scopes":{"/assets/app/components/":{"pkg":"/assets/app/node_modules/pkg/index.@def456.ts"}}}',
+      )
+    })
+
+    it('resolves opaque client-entry ids inside blocking frames during SSR', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function BlockingFrameCounter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <html>
+            <body>
+              <Frame src="/child" />
+            </body>
+          </html>,
+          {
+            resolveFrame: async () =>
+              drain(
+                renderToStream(
+                  <html>
+                    <body>
+                      <Counter initialCount={42} />
+                    </body>
+                  </html>,
+                  {
+                    async resolveClientEntry(entryId, component) {
+                      expect(entryId).toBe('file:///app/components/counter.tsx')
+                      expect(component.name).toBe('BlockingFrameCounter')
+                      return {
+                        href: '/js/counter.js',
+                        exportName: 'Counter',
+                      }
+                    },
+                  },
+                ),
+              ),
+          },
+        ),
+      )
+
+      expect(html).toContain('<div>Count: 42</div>')
+      let shelf = document.createElement('template')
+      shelf.innerHTML = html
+      let data = Array.from(shelf.content.querySelectorAll(rmxDataScriptSelector)).reduce<any>(
+        (merged, script) => {
+          let next = JSON.parse(script.textContent || '{}')
+          if (next.h) merged.h = { ...(merged.h ?? {}), ...next.h }
+          if (next.f) merged.f = { ...(merged.f ?? {}), ...next.f }
+          return merged
+        },
+        {},
+      )
+
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toEqual({
+        moduleUrl: '/js/counter.js',
+        exportName: 'Counter',
+        props: { initialCount: 42 },
+      })
+    })
+
+    it('calls resolveClientEntry only once per unique entry id during SSR', async () => {
+      let Counter = clientEntry(
+        'file:///app/components/counter.tsx',
+        function DedupedResolverCounter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      let resolveCalls: Array<{ entryId: string; componentName: string }> = []
+      let html = await drain(
+        renderToStream(
+          <div>
+            <Counter initialCount={1} />
+            <Counter initialCount={2} />
+            <Counter initialCount={3} />
+          </div>,
+          {
+            async resolveClientEntry(entryId, component) {
+              resolveCalls.push({ entryId, componentName: component.name })
+              return {
+                href: '/js/counter.js',
+                exportName: 'Counter',
+              }
+            },
+          },
+        ),
+      )
+
+      expect(resolveCalls).toEqual([
+        {
+          entryId: 'file:///app/components/counter.tsx',
+          componentName: 'DedupedResolverCounter',
+        },
+      ])
+      expect(html).toContain('<div>Count: 1</div>')
+      expect(html).toContain('<div>Count: 2</div>')
+      expect(html).toContain('<div>Count: 3</div>')
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(3)
+      expect(entries.every((entry) => entry.moduleUrl === '/js/counter.js')).toBe(true)
+      expect(entries.every((entry) => entry.exportName === 'Counter')).toBe(true)
+    })
+
+    it('resolves two clientEntries sharing one entry id to distinct exports during SSR', async () => {
+      let entryId = 'file:///app/widgets.tsx'
+      let AlphaEntry = clientEntry(entryId, function Alpha() {
+        return () => <div>I am Alpha</div>
+      })
+      let BetaEntry = clientEntry(entryId, function Beta() {
+        return () => <div>I am Beta</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <div>
+            <AlphaEntry />
+            <BetaEntry />
+          </div>,
+        ),
+      )
+
+      expect(html).toContain('I am Alpha')
+      expect(html).toContain('I am Beta')
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(2)
+      let exportNames = entries.map((entry) => entry.exportName).sort()
+      expect(exportNames).toEqual(['Alpha', 'Beta'])
+    })
+
+    it('uses the component name as the default export name during SSR', async () => {
+      let Counter = clientEntry(
+        '/js/counter.js',
+        function NamedCounter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      let html = await drain(renderToStream(<Counter initialCount={42} />))
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toEqual({
+        moduleUrl: '/js/counter.js',
+        exportName: 'NamedCounter',
+        props: { initialCount: 42 },
+      })
+    })
+
+    it('throws during SSR when an entry still has no export name after resolution', async () => {
+      let anonymousComponent = function () {
+        return () => <div>Test</div>
+      }
+      Object.defineProperty(anonymousComponent, 'name', { value: '' })
+
+      let EntryComponent = clientEntry('/js/test.js', anonymousComponent)
+
+      await expect(async () => {
+        await drain(renderToStream(<EntryComponent />))
+      }).rejects.toThrow(
+        'clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName"), a named component function, or a resolveClientEntry hook that resolves one.',
+      )
+    })
+
+    it('throws during SSR when resolveClientEntry returns an empty exportName', async () => {
+      let EntryComponent = clientEntry(
+        'opaque-entry-id',
+        function Counter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              return {
+                href: '/scripts/counter.js',
+                exportName: '',
+              }
+            },
+          }),
+        )
+      }).rejects.toThrow('resolveClientEntry must return a non-empty exportName')
+    })
+
+    it('throws during SSR when resolveClientEntry returns an empty href', async () => {
+      let EntryComponent = clientEntry(
+        'opaque-entry-id',
+        function Counter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              return {
+                href: '',
+                exportName: 'Counter',
+              }
+            },
+          }),
+        )
+      }).rejects.toThrow('resolveClientEntry must return a non-empty href')
+    })
+
+    it('throws during SSR when resolveClientEntry returns an invalid value', async () => {
+      let EntryComponent = clientEntry(
+        'opaque-entry-id',
+        function Counter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              return null as any
+            },
+          }),
+        )
+      }).rejects.toThrow('resolveClientEntry must return an object with href and exportName')
+    })
+
+    it('throws during SSR when resolveClientEntry throws', async () => {
+      let EntryComponent = clientEntry(
+        'opaque-entry-id',
+        function Counter(handle: Handle<{ initialCount: number }>) {
+          return () => <div>Count: {handle.props.initialCount}</div>
+        },
+      )
+
+      await expect(async () => {
+        await drain(
+          renderToStream(<EntryComponent initialCount={42} />, {
+            async resolveClientEntry() {
+              throw new Error('resolver failed')
+            },
+          }),
+        )
+      }).rejects.toThrow('resolver failed')
+    })
+  })
+
+  describe('frames', () => {
+    it('adds frame scripts for non-blocking frames', async () => {
+      // Test non-blocking frame (with fallback)
+      let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
+        resolveFrame: () => '<div>Resolved</div>',
+      })
+      let result = await drain(stream)
+
+      let frameId = getCommentMarkerId(result, 'rmx:f:')
+      // Should render fallback content with frame markers
+      expect(result).toContain(`<!-- rmx:f:${frameId} -->`)
+      expect(result).toContain('<div>Loading...</div>')
+      expect(result).toContain('<!-- /rmx:f -->')
+
+      // Should have aggregated frame metadata script
+      let data = parseRmxDataFromHtml(result)
+      expect(data.f[frameId]).toEqual({
+        status: 'pending',
+        src: '/x',
+      })
+    })
+
+    it('strips doctype markup from non-blocking frame templates', async () => {
+      let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
+        async resolveFrame() {
+          let html = await drain(
+            renderToStream(<div mix={[css({ color: 'rebeccapurple' })]}>Resolved</div>),
+          )
+          return `<!DOCTYPE html>${html}`
+        },
+      })
+      let result = await drain(stream)
+
+      expect(result).not.toContain('<!DOCTYPE')
+      expect(result).toContain('<template')
+      expect(result).toContain('<head><style data-rmx-style=')
+      expect(result).toContain('<div class="rmxc-')
+      expect(result).toContain('>Resolved</div>')
+    })
+
+    it('keeps frame stream content inside the template when doctype is its own chunk', async () => {
+      let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
+        resolveFrame() {
+          let encoder = new TextEncoder()
+          return new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(encoder.encode('<!DOCTYPE html>'))
+              controller.enqueue(encoder.encode('<div id="resolved">Resolved</div>'))
+              controller.close()
+            },
+          })
+        },
+      })
+      let result = await drain(stream)
+
+      let template = document.createElement('template')
+      template.innerHTML = result
+      let resolvedTemplate = template.content.querySelector('template')
+
+      expect(result).not.toContain('<!DOCTYPE')
+      expect(result).not.toContain('</template><div id="resolved">')
+      expect(resolvedTemplate?.innerHTML).toContain('<div id="resolved">Resolved</div>')
+    })
+
+    it('adds frame scripts for blocking frames', async () => {
+      let stream = renderToStream(<Frame src="/x" />, {
+        resolveFrame: () => '<div>Resolved</div>',
+      })
+      let result = await drain(stream)
+
+      let frameId = getCommentMarkerId(result, 'rmx:f:')
+      // Should have frame markers
+      expect(result).toContain(`<!-- rmx:f:${frameId} -->`)
+      expect(result).toContain('<div>Resolved</div>')
+      expect(result).toContain('<!-- /rmx:f -->')
+
+      // Should have aggregated frame metadata script
+      let data = parseRmxDataFromHtml(result)
+      expect(data.f[frameId].status).toBe('resolved')
+    })
+
+    it('hoists framework import maps from blocking frame heads', async () => {
+      let Outer = clientEntry('file:///app/outer.tsx', function OuterImportMapEntry() {
+        return () => <div>Outer</div>
+      })
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let result = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <ImportMap
+                value={{
+                  imports: { '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx' },
+                }}
+              />
+              <title>Frame import map</title>
+            </head>
+            <body>
+              <Outer />
+              <Frame src="/x" />
+            </body>
+          </html>,
+          {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/outer.tsx',
+                exportName: 'Outer',
+                importMap: {
+                  imports: {
+                    '/assets/app/outer.tsx': '/assets/app/outer.@abc123.tsx',
+                    '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
+                  },
+                },
+              }
+            },
+            resolveFrame: async () =>
+              drain(
+                renderToStream(
+                  <>
+                    <Counter />
+                    <div mix={css({ color: 'purple' })}>Styled frame content</div>
+                  </>,
+                  {
+                    resolveClientEntry() {
+                      return {
+                        href: '/assets/app/components/counter.tsx',
+                        exportName: 'Counter',
+                        importMap: {
+                          imports: {
+                            '/assets/app/components/counter.tsx':
+                              '/assets/app/components/counter.@abc123.tsx',
+                            '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
+                          },
+                        },
+                      }
+                    },
+                  },
+                ),
+              ),
+          },
+        ),
+      )
+
+      let shelf = document.createElement('template')
+      shelf.innerHTML = result
+      let importMapScript = shelf.content.querySelector('script[type="importmap"]')
+      expect(JSON.parse(importMapScript?.textContent ?? '{}')).toEqual({
+        imports: {
+          '/assets/app/entry.tsx': '/assets/app/entry.@abc123.tsx',
+          '/assets/app/components/counter.tsx': '/assets/app/components/counter.@abc123.tsx',
+          '/assets/app/shared.ts': '/assets/app/shared.@abc123.ts',
+          '/assets/app/outer.tsx': '/assets/app/outer.@abc123.tsx',
+        },
+      })
+      expect(importMapScript?.hasAttribute('data-rmx-import-map')).toBe(true)
+      expect(result.match(/<script data-rmx-import-map type="importmap">/g)).toHaveLength(1)
+      expect(result.indexOf('<script data-rmx-import-map type="importmap">')).toBeLessThan(
+        result.indexOf('<body>'),
+      )
+      expect(result).toMatch(/<!-- rmx:f:[^ ]+ --><head><style data-rmx-style=/)
+      expect(result).toContain('<div>Count</div>')
+    })
+
+    it('rejects malformed framework import maps in blocking frame heads', async () => {
+      let stream = renderToStream(
+        <html>
+          <head>
+            <title>Invalid frame import map</title>
+          </head>
+          <body>
+            <Frame src="/x" />
+          </body>
+        </html>,
+        {
+          resolveFrame: () =>
+            '<head><script data-rmx-import-map type="importmap">not valid JSON</script></head>' +
+            '<main>Frame content</main>',
+        },
+      )
+
+      await expect(drain(stream)).rejects.toThrow(
+        'Invalid framework-owned import map in frame head',
+      )
+    })
+
+    it('preserves framework import maps in non-blocking frame heads', async () => {
+      let [framePromise, resolveFrame] = withResolvers<string>()
+      let Counter = clientEntry('file:///app/components/counter.tsx', function ImportMapCounter() {
+        return () => <div>Count</div>
+      })
+
+      let stream = renderToStream(
+        <html>
+          <head>
+            <title>Late frame import map</title>
+          </head>
+          <body>
+            <Frame src="/x" fallback={<div>Loading</div>} />
+          </body>
+        </html>,
+        {
+          resolveFrame: () => framePromise,
+        },
+      )
+      let chunks = readChunks(stream)
+
+      let firstChunk = await chunks.next()
+      invariant(!firstChunk.done)
+      expect(firstChunk.value).not.toContain('<script type="importmap">')
+
+      resolveFrame(
+        await drain(
+          renderToStream(<Counter />, {
+            resolveClientEntry() {
+              return {
+                href: '/assets/app/components/counter.tsx',
+                exportName: 'Counter',
+                importMap: {
+                  imports: {
+                    '/assets/app/components/counter.tsx':
+                      '/assets/app/components/counter.@abc123.tsx',
+                  },
+                },
+              }
+            },
+          }),
+        ),
+      )
+
+      let secondChunk = await chunks.next()
+      invariant(!secondChunk.done)
+      expect(secondChunk.value).toContain('<template id="f')
+      expect(secondChunk.value).toContain(
+        '<head><script data-rmx-import-map type="importmap">' +
+          '{"imports":{"/assets/app/components/counter.tsx":' +
+          '"/assets/app/components/counter.@abc123.tsx"}}' +
+          '</script></head>',
+      )
+    })
+
+    it('renders blocking frames without fallback', async () => {
+      // Test blocking frame (no fallback)
+      let stream = renderToStream(<Frame src="/fragments/product" />, {
+        resolveFrame: async () => '<div>Product</div>',
+      })
+      let chunks = readChunks(stream)
+
+      // Get first chunk
+      let firstChunk = await chunks.next()
+      expect(firstChunk.done).toBe(false)
+      let content = firstChunk.value!
+
+      // First chunk should contain the resolved frame with markers
+      let frameId = getCommentMarkerId(content, 'rmx:f:')
+      expect(content).toContain(`<!-- rmx:f:${frameId} -->`)
+      expect(content).toContain('<div>Product</div>')
+      expect(content).toContain('<!-- /rmx:f -->')
+
+      // Should have aggregated frame metadata script with resolved status
+      let data = parseRmxDataFromHtml(content)
+      expect(data.f[frameId].status).toBe('resolved')
+
+      // Should be done after first chunk
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('keeps sibling order and nested frame boundaries across the first chunk', async () => {
+      let [pending, resolvePending] = withResolvers<string>()
+      let chunks = readChunks(
+        renderToStream(
+          <main>
+            {[
+              'before',
+              <Frame src="/blocking" />,
+              [
+                null,
+                <span>between</span>,
+                <Frame
+                  src="/pending"
+                  fallback={
+                    <>
+                      <i>Loading</i>
+                      <Frame src="/nested" />
+                    </>
+                  }
+                />,
+              ],
+              'after',
+            ]}
+          </main>,
+          {
+            resolveFrame(src) {
+              if (src === '/pending') return pending
+              return src === '/blocking' ? '<b>Blocking</b>' : '<em>Nested</em>'
+            },
+          },
+        ),
+      )
+
+      let first = await chunks.next()
+      invariant(!first.done)
+      expect(first.value.replace(/<!-- rmx:f:[^ ]+ -->/g, '<!-- frame -->')).toContain(
+        '<main>before<!-- frame --><b>Blocking</b><!-- /rmx:f --><span>between</span>' +
+          '<!-- frame --><i>Loading</i><!-- frame --><em>Nested</em><!-- /rmx:f -->' +
+          '<!-- /rmx:f -->after</main>',
+      )
+
+      resolvePending('<strong>Done</strong>')
+      let second = await chunks.next()
+      invariant(!second.done)
+      expect(second.value).toContain('<strong>Done</strong>')
+      expect((await chunks.next()).done).toBe(true)
+    })
+
+    it('assigns IDs for nested non-blocking frames', async () => {
+      let stream = renderToStream(
+        <div>
+          <Frame
+            src="/outer"
+            fallback={
+              <div>
+                Outer loading
+                <Frame src="/inner" fallback={<span>Inner loading</span>} />
+              </div>
+            }
+          />
+        </div>,
+        { resolveFrame: async () => '<div>Resolved</div>' },
+      )
+      let html = await drain(stream)
+
+      // Check for frame markers
+      expect(html).toContain('<!-- rmx:f:')
+
+      // Aggregated data with hierarchical ids and pending statuses
+      let data = parseRmxDataFromHtml(html)
+      expect(Object.keys(data.f).length).toBe(2)
+      for (let entry of Object.values<any>(data.f)) {
+        expect(entry.status).toBe('pending')
+      }
+
+      // Fallbacks rendered
+      expect(html).toContain('Outer loading')
+      expect(html).toContain('Inner loading')
+    })
+
+    it('awaits nested blocking frames before first chunk', async () => {
+      async function resolveFrame(src: string) {
+        if (src === '/outer') {
+          return renderToStream(
+            <div>
+              Outer
+              <Frame src="/inner" />
+            </div>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/inner') {
+          return '<div>Inner</div>'
+        }
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(<Frame src="/outer" />, { resolveFrame })
+
+      let chunks = readChunks(stream)
+      let first = await chunks.next()
+      expect(first.done).toBe(false)
+      let content = first.value!
+
+      // Both outer and inner should be present in first chunk
+      expect(content).toContain('Outer')
+      expect(content).toContain('<div>Inner</div>')
+      expect(content.match(flushMarkerPattern)?.length).toBe(1)
+
+      // Both frames resolved in aggregated data
+      let shelf = document.createElement('template')
+      shelf.innerHTML = content
+      let scripts = shelf.content.querySelectorAll(rmxDataScriptSelector)
+      let script = scripts.item(scripts.length - 1)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
+
+      console.log(content)
+      // Stream completes
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('renders nested non-blocking inside blocking with fallback', async () => {
+      async function resolveFrame(src: string) {
+        if (src === '/outer') {
+          return renderToStream(
+            <div>
+              Outer
+              <Frame src="/inner" fallback={<span>Inner loading</span>} />
+            </div>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/inner') return '<div>Inner</div>'
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(<Frame src="/outer" />, { resolveFrame })
+
+      let chunks = readChunks(stream)
+      let first = await chunks.next()
+      expect(first.done).toBe(false)
+      let content = first.value!
+
+      // Outer resolved, inner fallback pending in first chunk
+      expect(content).toContain('Outer')
+      expect(content).toContain('Inner loading')
+
+      // Check aggregated data
+      let shelf = document.createElement('template')
+      shelf.innerHTML = content
+      let scripts = shelf.content.querySelectorAll(rmxDataScriptSelector)
+      let script = scripts.item(scripts.length - 1)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
+
+      // Since the inner frame is non-blocking, it should stream later
+      let second = await chunks.next()
+      expect(second.done).toBe(false)
+      expect(second.value).toContain('<template id="f')
+
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('streams non-blocking frame content after initial chunk', async () => {
+      let [promise, resolve] = withResolvers<string>()
+
+      let stream = renderToStream(
+        <div>
+          <h1>Page Title</h1>
+          <Frame src="/fragments/product" fallback={<div>Loading product...</div>} />
+          <p>Footer content</p>
+        </div>,
+        {
+          resolveFrame: async (src) => {
+            if (src === '/fragments/product') {
+              return promise
+            }
+            return '<div></div>'
+          },
+        },
+      )
+
+      let chunks = readChunks(stream)
+
+      // First chunk should contain fallback
+      let firstChunk = await chunks.next()
+      expect(firstChunk.done).toBe(false)
+      let content = firstChunk.value!
+
+      expect(content).toContain('<h1>Page Title</h1>')
+      expect(content).toContain('<div>Loading product...</div>')
+      expect(content).toContain('<p>Footer content</p>')
+
+      // Check aggregated data for pending status
+      let shelf = document.createElement('template')
+      shelf.innerHTML = content
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'pending')).toBe(true)
+
+      // Resolve the frame content
+      resolve('<div>Async Product Content</div>')
+
+      // Second chunk should contain the resolved content as a template
+      let secondChunk = await chunks.next()
+      expect(secondChunk.done).toBe(false)
+      let template = secondChunk.value
+
+      expect(template).toContain('<template id="f')
+      expect(template).toContain('<div>Async Product Content</div>')
+      expect(template).toContain('</template>')
+
+      // Stream should complete
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('cancels all blocking frames without unhandled rejections', async () => {
+      let controller = new AbortController()
+      let errors: unknown[] = []
+      let [frameOne, , rejectFrameOne] = withResolvers<string>()
+      let [frameTwo, , rejectFrameTwo] = withResolvers<string>()
+      let unhandledRejections: unknown[] = []
+      let onUnhandledRejection = (event: PromiseRejectionEvent) => {
+        event.preventDefault()
+        unhandledRejections.push(event.reason)
+      }
+      window.addEventListener('unhandledrejection', onUnhandledRejection)
+
+      try {
+        let stream = renderToStream(
+          <div>
+            <Frame src="/fragments/one" />
+            <Frame src="/fragments/two" />
+          </div>,
+          {
+            onError(error) {
+              errors.push(error)
+            },
+            resolveFrame(src) {
+              return src === '/fragments/one' ? frameOne : frameTwo
+            },
+            signal: controller.signal,
+          },
+        )
+
+        let reader = stream.getReader()
+        let read = reader.read()
+
+        let abortError = new DOMException('This operation was aborted', 'AbortError')
+        controller.abort(abortError)
+        rejectFrameOne(abortError)
+        rejectFrameTwo(abortError)
+
+        await expect(read).resolves.toEqual({ done: true, value: undefined })
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        expect(errors).toEqual([])
+        expect(unhandledRejections).toEqual([])
+      } finally {
+        window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      }
+    })
+
+    it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {
+      let controller = new AbortController()
+      let errors: unknown[] = []
+
+      let stream = renderToStream(
+        <Frame src="/fragments/product" fallback={<div>Loading...</div>} />,
+        {
+          onError(error) {
+            errors.push(error)
+          },
+          resolveFrame: () =>
+            new Promise<string>((_resolve, reject) => {
+              controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
+                once: true,
+              })
+            }),
+          signal: controller.signal,
+        },
+      )
+
+      let reader = stream.getReader()
+      let first = await reader.read()
+      expect(first.done).toBe(false)
+
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+
+      await expect(reader.read()).resolves.toEqual({ done: true, value: undefined })
+      expect(errors).toEqual([])
+    })
+
+    it('calls onError for AbortError when the request was not canceled', async () => {
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      let errors: unknown[] = []
+
+      let stream = renderToStream(<Frame src="/fragments/product" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame() {
+          throw abortError
+        },
+      })
+
+      await expect(drain(stream)).rejects.toThrow('This operation was aborted')
+      expect(errors).toEqual([abortError])
+    })
+
+    it('closes immediately when signal is already aborted before rendering starts', async () => {
+      let controller = new AbortController()
+      let abortError = new DOMException('Already aborted', 'AbortError')
+      controller.abort(abortError)
+
+      let errors: unknown[] = []
+
+      let stream = renderToStream(<Frame src="/fragments/product" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame: () =>
+          new Promise<string>((_resolve, reject) => {
+            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
+              once: true,
+            })
+            if (controller.signal.aborted) reject(controller.signal.reason)
+          }),
+        signal: controller.signal,
+      })
+
+      let reader = stream.getReader()
+      await expect(reader.read()).resolves.toEqual({ done: true, value: undefined })
+      expect(errors).toEqual([])
+    })
+
+    it('escapes frame template content to prevent template breakouts', async () => {
+      let [promise, resolve] = withResolvers<string>()
+      let injectedHtml = '</template><script>alert("xss")</script><template><p>safe</p>'
+
+      let stream = renderToStream(<Frame src="/danger" fallback={<div>Loading...</div>} />, {
+        resolveFrame: async () => promise,
+      })
+
+      let chunks = readChunks(stream)
+      let firstChunk = await chunks.next()
+      expect(firstChunk.done).toBe(false)
+      expect(firstChunk.value).toContain('<div>Loading...</div>')
+
+      resolve(injectedHtml)
+
+      let secondChunk = await chunks.next()
+      expect(secondChunk.done).toBe(false)
+      let templateChunk = secondChunk.value!
+      expect(templateChunk).toContain('<template id="f')
+      expect(templateChunk).toContain(
+        '<\\/template><script>alert("xss")</script><template><p>safe</p>',
+      )
+      expect(templateChunk).not.toContain('</template><script>alert("xss")</script><template>')
+
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('streams multiple non-blocking frames in order of resolution', async () => {
+      let [frame1Promise, resolveFrame1] = withResolvers<string>()
+      let [frame2Promise, resolveFrame2] = withResolvers<string>()
+
+      let stream = renderToStream(
+        <div>
+          <Frame src="/frame1" fallback={<div>Loading frame 1...</div>} />
+          <Frame src="/frame2" fallback={<div>Loading frame 2...</div>} />
+        </div>,
+        {
+          resolveFrame: async (src) => {
+            if (src === '/frame1') return frame1Promise
+            if (src === '/frame2') return frame2Promise
+            return '<div></div>'
+          },
+        },
+      )
+
+      let chunks = readChunks(stream)
+
+      // First chunk has both fallbacks
+      let firstChunk = await chunks.next()
+      expect(firstChunk.value).toContain('Loading frame 1...')
+      expect(firstChunk.value).toContain('Loading frame 2...')
+
+      // Check aggregated data
+      let shelf = document.createElement('template')
+      shelf.innerHTML = firstChunk.value!
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      expect(Object.keys(data.f).length).toBe(2)
+
+      // Resolve frame 2 first
+      resolveFrame2('<div>Second Frame Content</div>')
+
+      // Should stream frame 2's content
+      let secondChunk = await chunks.next()
+      expect(secondChunk.value).toContain('<template id="f')
+      expect(secondChunk.value).toContain('Second Frame Content')
+
+      // Resolve frame 1
+      resolveFrame1('<div>First Frame Content</div>')
+
+      // Should stream frame 1's content
+      let thirdChunk = await chunks.next()
+      expect(thirdChunk.value).toContain('<template id="f')
+      expect(thirdChunk.value).toContain('First Frame Content')
+
+      // Stream completes
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('renders descendant frames returned from resolveFrame', async () => {
+      async function resolveFrame(src: string) {
+        if (src === '/parent') {
+          // Parent frame returns content containing a child frame
+          return renderToStream(
+            <section>
+              <h2>Parent Content</h2>
+              <Frame src="/child" fallback={<span>Loading child...</span>} />
+              <p>Parent footer</p>
+            </section>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/child') {
+          // Simulate async loading of child
+          await new Promise((resolve) => setTimeout(resolve, 10))
+          return '<article>Child Content</article>'
+        }
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(
+        <div>
+          <h1>Page</h1>
+          <Frame src="/parent" fallback={<div>Loading parent...</div>} />
+        </div>,
+        { resolveFrame },
+      )
+
+      let chunks = readChunks(stream)
+
+      // First chunk should contain parent fallback
+      let firstChunk = await chunks.next()
+      expect(firstChunk.done).toBe(false)
+      let content = firstChunk.value!
+
+      expect(content).toContain('<h1>Page</h1>')
+      expect(content).toContain('<div>Loading parent...</div>')
+
+      // Check aggregated data for parent pending
+      let shelf = document.createElement('template')
+      shelf.innerHTML = content
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'pending')).toBe(true)
+
+      // Second chunk should contain parent's resolved content with child frame
+      let secondChunk = await chunks.next()
+      expect(secondChunk.done).toBe(false)
+      let parentTemplate = secondChunk.value
+
+      expect(parentTemplate).toContain('<template id="f')
+      expect(parentTemplate).toContain('<section>')
+      expect(parentTemplate).toContain('<h2>Parent Content</h2>')
+      expect(parentTemplate).toContain('<span>Loading child...</span>')
+      expect(parentTemplate).toContain('<p>Parent footer</p>')
+      expect(parentTemplate).toContain('</section>')
+      expect(parentTemplate).toContain('</template>')
+
+      // Third chunk should contain child's resolved content
+      let thirdChunk = await chunks.next()
+      expect(thirdChunk.done).toBe(false)
+      let childTemplate = thirdChunk.value
+
+      // IDs are local within the returned fragment stream, so the child template id may collide.
+      expect(childTemplate).toContain('<template id="f')
+      expect(childTemplate).toContain('<article>Child Content</article>')
+      expect(childTemplate).toContain('</template>')
+
+      // Stream should complete
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('preserves top frame src across nested SSR frame renders', async () => {
+      let seen = new Map<
+        string,
+        {
+          frameSrc: string
+          topFrameSrc: string
+          sameFrame: boolean
+        }
+      >()
+      let resolveFrameContexts: Array<{
+        src: string
+        currentFrameSrc: string
+        topFrameSrc: string
+      }> = []
+
+      function Inspect(handle: Handle<{ label: string }>) {
+        return () => {
+          seen.set(handle.props.label, {
+            frameSrc: handle.frame.src,
+            topFrameSrc: handle.frames.top.src,
+            sameFrame: handle.frame === handle.frames.top,
+          })
+
+          return <div data-label={handle.props.label}>{handle.frame.src}</div>
+        }
+      }
+
+      async function resolveFrame(
+        src: string,
+        target?: string,
+        context?: { currentFrameSrc: string; topFrameSrc: string },
+      ) {
+        void target
+        invariant(context)
+        resolveFrameContexts.push({ src, ...context })
+
+        if (src === '/settings') {
+          return renderToStream(
+            <section>
+              <Inspect label="settings" />
+              <Frame src="/settings/profile" />
+            </section>,
+            {
+              frameSrc: new URL(src, context.currentFrameSrc),
+              topFrameSrc: context.topFrameSrc,
+              resolveFrame,
+            },
+          )
+        }
+
+        if (src === '/settings/profile') {
+          return renderToStream(<Inspect label="profile" />, {
+            frameSrc: new URL(src, context.currentFrameSrc),
+            topFrameSrc: context.topFrameSrc,
+            resolveFrame,
+          })
+        }
+
+        throw new Error(`Unexpected frame src: ${src}`)
+      }
+
+      let html = await drain(
+        renderToStream(
+          <main>
+            <Inspect label="root" />
+            <Frame src="/settings" />
+          </main>,
+          {
+            frameSrc: 'https://example.com/app',
+            resolveFrame,
+          },
+        ),
+      )
+
+      expect(html).toContain('https://example.com/app')
+      expect(html).toContain('https://example.com/settings')
+      expect(html).toContain('https://example.com/settings/profile')
+
+      expect(resolveFrameContexts).toEqual([
+        {
+          src: '/settings',
+          currentFrameSrc: 'https://example.com/app',
+          topFrameSrc: 'https://example.com/app',
+        },
+        {
+          src: '/settings/profile',
+          currentFrameSrc: 'https://example.com/settings',
+          topFrameSrc: 'https://example.com/app',
+        },
+      ])
+
+      expect(seen.get('root')).toEqual({
+        frameSrc: 'https://example.com/app',
+        topFrameSrc: 'https://example.com/app',
+        sameFrame: true,
+      })
+      expect(seen.get('settings')).toEqual({
+        frameSrc: 'https://example.com/settings',
+        topFrameSrc: 'https://example.com/app',
+        sameFrame: false,
+      })
+      expect(seen.get('profile')).toEqual({
+        frameSrc: 'https://example.com/settings/profile',
+        topFrameSrc: 'https://example.com/app',
+        sameFrame: false,
+      })
+    })
+
+    it('handles blocking descendant frames returned from resolveFrame', async () => {
+      async function resolveFrame(src: string) {
+        if (src === '/parent') {
+          // Parent returns content with a blocking child frame (no fallback)
+          return renderToStream(
+            <main>
+              <h2>Parent Header</h2>
+              <Frame src="/child" />
+              <p>Parent Footer</p>
+            </main>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/child') {
+          return '<div>Blocking Child Content</div>'
+        }
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(<Frame src="/parent" />, { resolveFrame })
+
+      let chunks = readChunks(stream)
+
+      // First chunk should contain everything resolved (all blocking frames await)
+      let firstChunk = await chunks.next()
+      expect(firstChunk.done).toBe(false)
+      let content = firstChunk.value!
+
+      // Parent frame and content
+      expect(content).toContain('<main>')
+      expect(content).toContain('<h2>Parent Header</h2>')
+
+      // Child frame content (nested within parent)
+      expect(content).toContain('<div>Blocking Child Content</div>')
+
+      expect(content).toContain('<p>Parent Footer</p>')
+      expect(content).toContain('</main>')
+
+      // Both frames should have resolved status in aggregated data
+      let shelf = document.createElement('template')
+      shelf.innerHTML = content
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
+
+      // Stream should complete
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('handles mixed blocking and non-blocking descendant frames', async () => {
+      async function resolveFrame(src: string) {
+        if (src === '/parent') {
+          // Blocking parent returns content with both blocking and non-blocking children
+          return renderToStream(
+            <div>
+              <Frame src="/blocking-child" />
+              <Frame src="/non-blocking-child" fallback={<span>Loading...</span>} />
+            </div>,
+            { resolveFrame },
+          )
+        }
+        if (src === '/blocking-child') {
+          return '<div>Blocking Child</div>'
+        }
+        if (src === '/non-blocking-child') {
+          // Simulate async
+          await new Promise((resolve) => setTimeout(resolve, 10))
+          return '<div>Non-blocking Child</div>'
+        }
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(<Frame src="/parent" />, { resolveFrame })
+
+      let chunks = readChunks(stream)
+
+      // First chunk has parent and blocking child resolved, non-blocking child fallback
+      let firstChunk = await chunks.next()
+      let content = firstChunk.value!
+      console.log('first:\n', firstChunk.value)
+      // Parent frame
+      expect(content).toContain('<div>')
+
+      // Blocking child resolved
+      expect(content).toContain('<div>Blocking Child</div>')
+
+      // Non-blocking child shows fallback
+      expect(content).toContain('<span>Loading...</span>')
+
+      expect(content).toContain('</div>')
+
+      // Check aggregated data
+      let shelf = document.createElement('template')
+      shelf.innerHTML = content
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
+
+      // Second chunk has non-blocking child resolved
+      let secondChunk = await chunks.next()
+      console.log('\n\nsecond:\n', secondChunk.value)
+      // IDs are local within the returned fragment stream.
+      expect(secondChunk.value).toContain('<template id="f')
+      expect(secondChunk.value).toContain('<div>Non-blocking Child</div>')
+      expect(secondChunk.value).toContain('</template>')
+
+      // Stream completes
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('emits comment boundaries around non-blocking frame content', async () => {
+      let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
+        resolveFrame: () => '<div>Resolved</div>',
+      })
+      let chunks = readChunks(stream)
+
+      // First chunk contains fallback + markers
+      let first = await chunks.next()
+      expect(first.done).toBe(false)
+      let content = first.value!
+
+      expect(content).toContain('<!-- rmx:f:')
+      expect(content).toContain('<div>Loading...</div>')
+      expect(content).toContain('<!-- /rmx:f -->')
+
+      let frameId = getCommentMarkerId(content, 'rmx:f:')
+      let startIdx = content.indexOf(`<!-- rmx:f:${frameId} -->`)
+      let innerIdx = content.indexOf('<div>Loading...</div>')
+      let endIdx = content.indexOf('<!-- /rmx:f -->')
+
+      expect(startIdx).toBeGreaterThanOrEqual(0)
+      expect(innerIdx).toBeGreaterThan(startIdx)
+      expect(endIdx).toBeGreaterThan(innerIdx)
+
+      // Second chunk should be the template for resolved content (no markers expected here)
+      let second = await chunks.next()
+      if (!second.done) {
+        expect(second.value).toContain('<template id="f')
+      }
+    })
+
+    it('emits comment boundaries around blocking frame content', async () => {
+      let stream = renderToStream(<Frame src="/product" />, {
+        resolveFrame: async () => '<section>Resolved</section>',
+      })
+
+      let chunks = readChunks(stream)
+      let first = await chunks.next()
+      expect(first.done).toBe(false)
+      let content = first.value!
+
+      expect(content).toContain('<!-- rmx:f:')
+      expect(content).toContain('<section>Resolved</section>')
+      expect(content).toContain('<!-- /rmx:f -->')
+
+      let frameId = getCommentMarkerId(content, 'rmx:f:')
+      let startIdx = content.indexOf(`<!-- rmx:f:${frameId} -->`)
+      let innerIdx = content.indexOf('<section>Resolved</section>')
+      let endIdx = content.indexOf('<!-- /rmx:f -->')
+
+      expect(startIdx).toBeGreaterThanOrEqual(0)
+      expect(innerIdx).toBeGreaterThan(startIdx)
+      expect(endIdx).toBeGreaterThan(innerIdx)
+
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+
+    it('adds name to json script', async () => {
+      let stream = renderToStream(<Frame src="/x" name="test" />, {
+        resolveFrame: async () => '<div>Resolved</div>',
+      })
+      let chunks = readChunks(stream)
+      let first = await chunks.next()
+      expect(first.done).toBe(false)
+      let content = first.value!
+
+      // Check aggregated data contains name
+      let shelf = document.createElement('template')
+      shelf.innerHTML = content
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      let entry = Object.values<any>(data.f)[0]
+      expect(entry.name).toBe('test')
+    })
+
+    it('delays streaming non-blocking parent until nested blocking child resolves', async () => {
+      let [parentPromise, resolveParent] = withResolvers<ReadableStream<Uint8Array>>()
+      let [childPromise, resolveChild] = withResolvers<string>()
+
+      async function resolveFrame(src: string) {
+        if (src === '/parent') {
+          return parentPromise
+        }
+        if (src === '/child') {
+          return childPromise
+        }
+        return '<div></div>'
+      }
+
+      let stream = renderToStream(<Frame src="/parent" fallback={<div>Loading parent...</div>} />, {
+        resolveFrame,
+      })
+
+      let chunks = readChunks(stream)
+
+      // First chunk should contain parent fallback with pending status
+      let first = await chunks.next()
+      expect(first.done).toBe(false)
+      let firstContent = first.value!
+      expect(firstContent).toContain('<div>Loading parent...</div>')
+
+      // Check aggregated data
+      let shelf = document.createElement('template')
+      shelf.innerHTML = firstContent
+      let script = shelf.content.querySelector(rmxDataScriptSelector)
+      invariant(script)
+      let data = JSON.parse(script.textContent || '{}')
+      expect(Object.values<any>(data.f).some((v) => v.status === 'pending')).toBe(true)
+
+      // Resolve parent to content that includes a blocking child frame (no fallback)
+      resolveParent(
+        renderToStream(
+          <section>
+            <h2>Parent Content</h2>
+            <Frame src="/child" />
+            <p>Parent footer</p>
+          </section>,
+          { resolveFrame },
+        ),
+      )
+
+      // Expect no new chunk yet because the child is blocking
+      let chunkArrived = false
+      let nextChunkPromise = chunks.next().then((result) => {
+        chunkArrived = true
+        return result
+      })
+
+      await Promise.resolve()
+      expect(chunkArrived).toBe(false)
+
+      // Now resolve the blocking child
+      resolveChild('<article>Child Content</article>')
+
+      // Next chunk should now contain the parent's template with the child's resolved content
+      let second = await nextChunkPromise
+      expect(second.done).toBe(false)
+      let parentTemplate = second.value!
+      expect(parentTemplate).toContain('<template id="f')
+      expect(parentTemplate).toContain('<h2>Parent Content</h2>')
+      expect(parentTemplate).toContain('<article>Child Content</article>')
+      expect(parentTemplate).toContain('</template>')
+
+      // Stream should complete
+      let done = await chunks.next()
+      expect(done.done).toBe(true)
+    })
+  })
+})

@@ -1,31 +1,24 @@
 import * as path from 'node:path'
 import { createContextKey, type Middleware } from 'remix/router'
 import { getContext } from 'remix/middleware/async-context'
+import type { ScriptEntry } from 'remix/assets'
 
-import { assetServer } from '../utils/assets.ts'
+import { assets } from '../utils/assets.ts'
 
 interface AssetEntry {
-  scriptSrc: string
-  scriptPreloads: string[]
+  scriptEntry: ScriptEntry
 }
 
 const assetEntryKey = createContextKey<AssetEntry>()
-const defaultScriptEntry = path.resolve(import.meta.dirname, '../assets/entry.tsx')
+const defaultScriptEntry = path.resolve(import.meta.dirname, '../actions/public/entry.tsx')
 
 export function loadAssetEntry(
   scriptEntry = defaultScriptEntry,
 ): Middleware<{ key: typeof assetEntryKey; value: AssetEntry }> {
   return async (context, next) => {
-    let [scriptSrc, scriptPreloads] = await Promise.all([
-      assetServer.getHref(scriptEntry),
-      assetServer.getPreloads(scriptEntry).catch((error) => {
-        // Surface asset compilation errors without breaking HTML rendering.
-        console.error(error)
-        return []
-      }),
-    ])
+    let resolvedScriptEntry = await assets.getScriptEntry(scriptEntry)
 
-    context.set(assetEntryKey, { scriptSrc, scriptPreloads })
+    context.set(assetEntryKey, { scriptEntry: resolvedScriptEntry })
     return next()
   }
 }

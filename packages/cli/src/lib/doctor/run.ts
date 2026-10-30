@@ -204,31 +204,10 @@ async function collectDoctorReport(
       project.routeManifest!.appRoot,
       project.routeManifest!.tree,
     )
-    let remainingFindings = controllerResult.suite.findings
-    let suiteAppliedFixes: DoctorAppliedFix[] = []
-
-    if (options.fix && controllerResult.fixPlans.length > 0) {
-      suiteAppliedFixes = await applyDoctorFixPlans(
-        project.routeManifest!.appRoot,
-        controllerResult.fixPlans,
-      )
-      let finalControllerResult = await checkControllerConventions(
-        project.routeManifest!.appRoot,
-        project.routeManifest!.tree,
-      )
-      remainingFindings = finalControllerResult.suite.findings
-    }
-
-    let suite = createDoctorSuite('actions', remainingFindings)
-    if (suiteAppliedFixes.length > 0) {
-      suite.appliedFixes = suiteAppliedFixes
-    }
-
-    return { appliedFixes: suiteAppliedFixes, suite }
+    return { suite: controllerResult.suite }
   })
 
   findings.push(...actions.suite.findings)
-  appliedFixes.push(...(actions.appliedFixes ?? []))
   suites.push(actions.suite)
   writeDoctorSuiteDetails(reporter, actions.suite)
   progress?.writeSummaryGap()

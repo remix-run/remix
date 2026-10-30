@@ -8,7 +8,7 @@
  *   GITHUB_TOKEN - Required (unless --preview)
  */
 import { parseAllChangeFiles, generateCommitMessage } from './utils/changes.ts'
-import { generatePrBody } from './utils/release-pr.ts'
+import { generatePrBody, generatePrTitle } from './utils/release-pr.ts'
 import { logAndExec } from './utils/process.ts'
 import { findOpenPr, createPr, updatePr, closePr } from './utils/github.ts'
 
@@ -17,7 +17,6 @@ const preview = args.includes('--preview')
 
 const baseBranch = 'main'
 const prBranch = 'release-pr/main'
-const prTitle = 'Release'
 
 async function main() {
   console.log(preview ? '🔍 PREVIEW MODE\n' : '')
@@ -63,6 +62,7 @@ async function main() {
 
   // Generate content
   let commitMessage = generateCommitMessage(releases)
+  let prTitle = generatePrTitle(releases)
   let prBody = generatePrBody(releases)
 
   if (preview) {
@@ -86,22 +86,22 @@ async function main() {
 
   // Configure git
   console.log('Configuring git...')
-  logAndExec('git config user.name "Remix Run Bot"')
-  logAndExec('git config user.email "hello@remix.run"')
+  logAndExec('git', ['config', 'user.name', 'Remix Run Bot'])
+  logAndExec('git', ['config', 'user.email', 'hello@remix.run'])
 
   // Create or switch to PR branch
   console.log(`\nSwitching to branch: ${prBranch}`)
-  logAndExec(`git checkout -B ${prBranch}`)
+  logAndExec('git', ['checkout', '-B', prBranch])
 
   // Reset to base branch
-  logAndExec(`git reset --hard origin/${baseBranch}`)
+  logAndExec('git', ['reset', '--hard', `origin/${baseBranch}`])
 
   // Run version command
   console.log('\nRunning pnpm changes:version...')
-  logAndExec('pnpm changes:version')
+  logAndExec('pnpm', ['changes:version'])
 
   console.log('\nPushing branch...')
-  logAndExec(`git push origin ${prBranch} --force`)
+  logAndExec('git', ['push', 'origin', prBranch, '--force'])
 
   // Create or update PR
   console.log('\nChecking for existing PR...')

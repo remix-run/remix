@@ -1,1 +1,0 @@
-`remix test` now defaults `NODE_ENV` to `test` when it is not already set, so app modules loaded by test files can reliably select test-only resources such as in-memory databases. An explicitly set `NODE_ENV` is preserved (see #11608).

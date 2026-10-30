@@ -2,6 +2,60 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- `createFileResponse()` now ignores valid range requests on empty files and returns `416 Range Not Satisfiable` for zero-length suffix ranges on nonempty files, avoiding invalid partial responses. ([#12043](https://github.com/remix-run/remix/pull/12043))
+
+- Reduce memory use when streaming HTML by checking a short prefix for a doctype instead of decoding the whole first chunk. Leading whitespace and declarations that cross the prefix boundary continue to work. ([#12016](https://github.com/remix-run/remix/pull/12016))
+
+- `createFileResponse()` now ignores unsupported `Range` units and returns the full file instead of interpreting those ranges as byte ranges. ([#12045](https://github.com/remix-run/remix/pull/12045))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.1`](https://github.com/remix-run/remix/releases/tag/headers@1.0.1)
+
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.0.0`](https://github.com/remix-run/remix/releases/tag/headers@1.0.0)
+  - [`html-template@1.0.0`](https://github.com/remix-run/remix/releases/tag/html-template@1.0.0)
+  - [`mime@1.0.0`](https://github.com/remix-run/remix/releases/tag/mime@1.0.0)
+
+## v0.3.10
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.3`](https://github.com/remix-run/remix/releases/tag/headers@0.21.3)
+  - [`html-template@0.3.2`](https://github.com/remix-run/remix/releases/tag/html-template@0.3.2)
+  - [`mime@0.4.3`](https://github.com/remix-run/remix/releases/tag/mime@0.4.3)
+
+## v0.3.9
+
+### Patch Changes
+
+- Include `X-Content-Type-Options: nosniff` on file responses, including partial, conditional, and error responses. Existing file media types and response bodies are preserved.
+
+- Compressed `text/html` responses now flush each chunk as it becomes available, so streamed pages can send initial HTML before deferred content resolves. `compressResponse()` uses `Z_SYNC_FLUSH` for gzip and deflate and `BROTLI_OPERATION_FLUSH` for Brotli unless `flush` is configured explicitly.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.2`](https://github.com/remix-run/remix/releases/tag/headers@0.21.2)
+
+## v0.3.8
+
+### Patch Changes
+
+- `compressResponse()` now adds `Vary: Accept-Encoding` to otherwise eligible identity responses, including requests that omit `Accept-Encoding`, so shared caches do not reuse an uncompressed response for compression-capable clients.
+
 ## v0.3.7
 
 ### Patch Changes

@@ -3,6 +3,8 @@ import { form, get, post, route } from 'remix/routes'
 export const assetsBase = '/assets'
 
 export const frames = {
+  account: 'account',
+  courses: 'courses',
   settings: 'settings',
 } as const
 
@@ -12,7 +14,10 @@ export const routes = {
     index: get('/'),
     courses: get('courses'),
     calendar: get('calendar'),
-    account: get('account'),
+    account: route('account', {
+      index: get('/'),
+      edit: form('edit'),
+    }),
   }),
   auth: route('auth', {
     login: form('login'),
@@ -20,6 +25,7 @@ export const routes = {
   }),
   settings: route('settings', {
     index: get('/'),
+    overview: get('overview'),
     profile: get('profile'),
     notifications: get('notifications'),
     privacy: get('privacy'),

@@ -10,22 +10,22 @@ import type { WorkspaceInfo } from './workspaces.ts'
 test('getChangedWorkspaceDirs prefers the most specific nested workspace', () => {
   let workspaces: WorkspaceInfo[] = [
     {
-      dir: 'packages/ui',
-      name: '@remix-run/ui',
+      dir: 'packages/component',
+      name: '@remix-run/component',
       dependencies: [],
       scripts: ['test', 'typecheck'],
     },
     {
-      dir: 'packages/ui/demo',
-      name: 'ui-demos',
-      dependencies: ['@remix-run/ui'],
+      dir: 'packages/component/bench',
+      name: 'component-bench',
+      dependencies: ['@remix-run/component'],
       scripts: ['typecheck'],
     },
   ]
 
   assert.deepEqual(
-    [...getChangedWorkspaceDirs(['packages/ui/demo/app/root.tsx'], workspaces)],
-    ['packages/ui/demo'],
+    [...getChangedWorkspaceDirs(['packages/component/bench/runner.ts'], workspaces)],
+    ['packages/component/bench'],
   )
 })
 
@@ -44,8 +44,8 @@ test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', (
       scripts: ['test', 'typecheck'],
     },
     {
-      dir: 'api',
-      name: 'remix-api',
+      dir: 'docs/site',
+      name: 'remix-docs',
       dependencies: ['remix'],
       scripts: ['typecheck'],
     },
@@ -58,7 +58,7 @@ test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', (
   ]
 
   assert.deepEqual(getAffectedWorkspaceDirs(new Set(['packages/headers']), workspaces), [
-    'api',
+    'docs/site',
     'packages/cookie',
     'packages/headers',
     'packages/remix',

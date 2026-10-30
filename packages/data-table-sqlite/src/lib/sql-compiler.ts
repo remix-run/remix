@@ -1,7 +1,9 @@
 import { getTableName, getTablePrimaryKey } from '@remix-run/data-table'
-import type { DataManipulationOperation, Predicate, SqlStatement } from '@remix-run/data-table'
+import type { Predicate, SqlStatement } from '@remix-run/data-table'
+import type { DataManipulationOperation } from '@remix-run/data-table'
 import {
   collectColumns as collectColumnsHelper,
+  compileOrderByDirection,
   normalizeJoinType as normalizeJoinTypeHelper,
   quotePath as quotePathHelper,
 } from '@remix-run/data-table/sql-helpers'
@@ -213,6 +215,9 @@ function compileUpsertOperation(operation: UpsertOperation, context: CompileCont
 
   let updateValues = operation.update ?? operation.values
   let updateColumns = Object.keys(updateValues)
+  let insertValues = insertColumns
+    .map((column) => pushValue(context, operation.values[column]))
+    .join(', ')
 
   let conflictClause = ''
 
@@ -238,7 +243,7 @@ function compileUpsertOperation(operation: UpsertOperation, context: CompileCont
       ' (' +
       insertColumns.map((column) => quotePath(column)).join(', ') +
       ') values (' +
-      insertColumns.map((column) => pushValue(context, operation.values[column])).join(', ') +
+      insertValues +
       ')' +
       conflictClause +
       compileReturningClause(operation.returning),
@@ -304,7 +309,7 @@ function compileOrderByClause(orderBy: { column: string; direction: 'asc' | 'des
   return (
     ' order by ' +
     orderBy
-      .map((clause) => quotePath(clause.column) + ' ' + clause.direction.toUpperCase())
+      .map((clause) => quotePath(clause.column) + ' ' + compileOrderByDirection(clause.direction))
       .join(', ')
   )
 }

@@ -51,7 +51,7 @@ export function getDoctorCommandHelpText(target: NodeJS.WriteStream = process.st
           description: 'Do not exit with status 1 when warning-level findings are present',
           label: '--no-strict',
         },
-        { description: 'Apply low-risk project and action fixes', label: '--fix' },
+        { description: 'Apply available low-risk fixes', label: '--fix' },
       ],
       usage: ['remix doctor [--json] [--strict] [--fix] [--no-color]'],
     },

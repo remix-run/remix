@@ -1,11 +1,19 @@
 # animation
 
-`animation` provides small primitives for entrance, exit, layout, spring, and tween animation. Use these helpers with Remix UI mixins, CSS transitions, the Web Animations API, and imperative `requestAnimationFrame` loops.
+`animation` provides utilities for entrance, exit, layout, spring, and tween animation. Use these helpers with component mixins, CSS transitions, the Web Animations API, and imperative `requestAnimationFrame` loops.
+
+## Installation
+
+`@remix-run/ui` is currently unstable and versioned independently. It is not available through the `remix` package.
+
+```sh
+npm i remix @remix-run/ui
+```
 
 ## Usage
 
 ```tsx
-import { animateEntrance, animateExit, animateLayout, spring } from 'remix/ui/animation'
+import { animateEntrance, animateExit, animateLayout, spring } from '@remix-run/ui/animation'
 
 let panelTransition = spring.transition(['opacity', 'transform'], 'snappy')
 
@@ -30,7 +38,7 @@ function Panel() {
 `animateEntrance` animates an element from the provided keyframe into its natural styles when the element is inserted.
 
 ```tsx
-import { animateEntrance, spring } from 'remix/ui/animation'
+import { animateEntrance, spring } from '@remix-run/ui/animation'
 
 function Toast() {
   return () => (
@@ -52,8 +60,8 @@ function Toast() {
 `animateExit` keeps a removed keyed element in the DOM long enough to animate from its natural styles to the provided keyframe.
 
 ```tsx
-import type { Handle } from 'remix/ui'
-import { animateExit } from 'remix/ui/animation'
+import type { Handle } from 'remix/component'
+import { animateExit } from '@remix-run/ui/animation'
 
 function Item(handle: Handle<{ id: string; label: string }>) {
   return () => (
@@ -101,13 +109,15 @@ Pass `initial: false` to skip only the first keyed entrance for an element withi
 
 Exit animations can reclaim a removed keyed node if the same keyed element is rendered again before the exit finishes. The reclaimed node retargets toward its natural styles instead of simply reversing the exit animation.
 
+For custom teardown, `createMixin` exposes `event.persistNode(callback)` in its `beforeRemove` event. It keeps the host in the DOM until the callback settles and supplies an abort signal for cancellation when a keyed node is reclaimed. See [Deferring removal](https://github.com/remix-run/remix/blob/main/packages/component/README.md#deferring-removal-with-persistnode) for a complete example and lifecycle ordering.
+
 ## Layout Animation
 
 `animateLayout` animates layout changes with a FLIP-style transform projection. Use it on elements whose position or size can change between renders.
 
 ```tsx
-import type { Handle } from 'remix/ui'
-import { animateLayout, spring } from 'remix/ui/animation'
+import type { Handle } from 'remix/component'
+import { animateLayout, spring } from '@remix-run/ui/animation'
 
 function Card(handle: Handle<{ expanded: boolean }>) {
   return () => (
@@ -133,12 +143,30 @@ Pass `size: false` when the element should animate position only and avoid scale
 
 Passing `true` or no argument enables the default layout animation. Passing `false`, `null`, or `undefined` disables it. Layout animation skips work when geometry does not change, keeps in-flight animations running when their target geometry has not changed, and continues from the current visual transform when a new layout change interrupts an active animation.
 
+## Reduced Motion
+
+`prefersReducedMotion()` reads the current `prefers-reduced-motion: reduce` media query. It returns `false` during server rendering or when `matchMedia` is unavailable. Call it during render or before starting playback so each check uses the current preference.
+
+```tsx
+import { animateLayout, prefersReducedMotion, spring } from '@remix-run/ui/animation'
+
+function Card() {
+  return () => (
+    <section mix={animateLayout(prefersReducedMotion() ? false : { ...spring('snappy') })}>
+      Details
+    </section>
+  )
+}
+```
+
+The helper returns a snapshot; it does not subscribe to preference changes or update components. Animation mixins do not check the preference automatically. For CSS transitions, use the `@media (prefers-reduced-motion: reduce)` media query.
+
 ## Spring
 
 `spring` returns a decorated iterator. It can be iterated for JavaScript animation, spread into Web Animations API options, or stringified for CSS transition syntax.
 
 ```tsx
-import { spring } from 'remix/ui/animation'
+import { spring } from '@remix-run/ui/animation'
 
 spring('bouncy')
 spring('snappy')
@@ -209,7 +237,7 @@ The built-in presets are:
 | `snappy` | 0      | 200ms    | Quick, no overshoot      |
 | `bouncy` | 0.3    | 400ms    | Underdamped bounce       |
 
-Override preset duration or velocity with the second argument.
+Override preset duration or velocity with the second argument. `velocity` is the initial speed in progress per second, where progress runs from `0` to `1`. Positive values start faster and overshoot more. Negative values start slower, and large ones move away from the target first. To continue a gesture, divide its speed toward the target, in pixels per second, by the remaining distance in pixels.
 
 ```ts
 spring('bouncy', { duration: 300 })
@@ -231,7 +259,7 @@ spring({
 `tween` creates a generator that interpolates a numeric value over time with a cubic-bezier curve. Call `next()` once to initialize the generator, then pass `requestAnimationFrame` timestamps into `next(timestamp)`.
 
 ```ts
-import { easings, tween } from 'remix/ui/animation'
+import { easings, tween } from '@remix-run/ui/animation'
 
 let animation = tween({
   from: 0,
@@ -298,6 +326,7 @@ let animation = tween({
 - `animateEntrance(config?)`: mixin that animates an element when it enters the DOM.
 - `animateExit(config?)`: mixin that persists a removed keyed element long enough to run its exit animation.
 - `animateLayout(config?)`: mixin that animates layout changes by comparing geometry between renders.
+- `prefersReducedMotion()`: reads the current reduced-motion preference, returning `false` when `matchMedia` is unavailable.
 - `spring(preset?, overrides?)`: creates a `SpringIterator` from a named preset.
 - `spring(options?)`: creates a `SpringIterator` from explicit spring options.
 - `spring.transition(property, presetOrOptions?, overrides?)`: builds one or more CSS transition entries from a spring.

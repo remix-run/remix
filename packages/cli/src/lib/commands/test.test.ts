@@ -38,6 +38,7 @@ describe('test command', () => {
 
     try {
       await writeTestProject(projectDir)
+      await writeNamedTest(projectDir, 'nested/sample.test.ts')
 
       let result = await captureOutput(() =>
         runRemix(['test', 'sample.test.ts', '-c', '1', '-r', 'spec', '-t', 'server', '-q'], {
@@ -52,6 +53,162 @@ describe('test command', () => {
       assert.match(stdout, /✓ passes/)
       assert.match(stdout, /ℹ pass 1/)
       assert.equal(result.stderr, '')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('expands simple names to test globs without running source files or unrelated tests', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-test-partial-'))
+
+    try {
+      await writeTestProject(projectDir)
+      await writeNamedTest(projectDir, 'src/frame.test.ts')
+      await writeNamedTest(projectDir, 'src/frame.css.test.ts')
+      await writeNamedTest(projectDir, 'src/frame.test.integration.tsx')
+      await writeNamedTest(projectDir, 'src/frame.test.browser.ts')
+      await fs.writeFile(path.join(projectDir, 'src/frame.ts'), 'throw new Error("source loaded")')
+
+      let result = await captureOutput(() =>
+        runRemix(['test', 'frame', '--type', 'server', '--concurrency', '1'], { cwd: projectDir }),
+      )
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.match(result.stdout, /Found 3 test file\(s\) \(3 server, 0 browser, 0 e2e\)/)
+      assert.match(result.stdout, /src[/\\]frame\.test\.ts/)
+      assert.match(result.stdout, /src[/\\]frame\.css\.test\.ts/)
+      assert.match(result.stdout, /src[/\\]frame\.test\.integration\.tsx/)
+      assert.doesNotMatch(result.stdout, /sample\.test\.ts/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('lets expanded names override configured globs while respecting exclusions', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-test-simple-config-'))
+
+    try {
+      await writeTestProject(projectDir)
+      await writeNamedTest(projectDir, 'spec/frame.spec.ts')
+      await writeNamedTest(projectDir, 'src/frame.test.ts')
+      await writeNamedTest(projectDir, 'src/frame-excluded.test.ts')
+      await fs.writeFile(
+        path.join(projectDir, 'remix.json'),
+        JSON.stringify({
+          test: {
+            files: ['spec/**/*.spec.ts'],
+            exclude: ['**/*excluded*'],
+            concurrency: 1,
+          },
+        }),
+      )
+
+      let result = await captureOutput(() =>
+        runRemix(['test', 'frame', '--glob.test', 'missing/**/*.test.ts'], { cwd: projectDir }),
+      )
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.match(result.stdout, /Found 1 test file/)
+      assert.match(result.stdout, /src[/\\]frame\.test\.ts/)
+      assert.doesNotMatch(result.stdout, /frame-excluded|spec[/\\]frame\.spec\.ts/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('unions expanded names, exact files, and globs without running duplicates', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-test-patterns-'))
+
+    try {
+      await writeTestProject(projectDir)
+      await writeNamedTest(projectDir, 'src/frame.test.ts')
+      await writeNamedTest(projectDir, 'src/navigation.test.ts')
+      await writeNamedTest(projectDir, 'custom/check.ts')
+      await writeNamedTest(projectDir, 'custom/excluded.ts')
+
+      let result = await captureOutput(() =>
+        runRemix(
+          [
+            'test',
+            'frame',
+            'navigation',
+            'src/frame.test.ts',
+            'custom/*.ts',
+            '--glob.exclude',
+            '**/excluded.ts',
+            '--concurrency',
+            '1',
+          ],
+          { cwd: projectDir },
+        ),
+      )
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.match(result.stdout, /Found 3 test file/)
+      assert.match(result.stdout, /src[/\\]frame\.test\.ts/)
+      assert.match(result.stdout, /src[/\\]navigation\.test\.ts/)
+      assert.match(result.stdout, /custom[/\\]check\.ts/)
+      assert.doesNotMatch(result.stdout, /sample\.test\.ts|custom[/\\]excluded\.ts/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('preserves glob syntax and file paths when expanding simple names', () => {
+    let options = resolveTestCommandOptions(
+      [
+        'frame',
+        'src/frame.test.ts',
+        './frame.test.ts',
+        '/tmp/frame.test.ts',
+        'C:\\tests\\frame.test.ts',
+        'frame.test.ts',
+        'frame.test.tsx',
+        './frame.spec.js',
+        'src/frames',
+        'src/**/*.test.ts',
+        '**/?(frame|router).test.ts',
+        '*.{test,spec}.ts',
+        'frame[12].test.ts',
+      ],
+      undefined,
+      ['forks', 'threads'],
+    )
+
+    assert.deepEqual(options.glob?.test, [
+      '**/*frame*.test*.{ts,tsx}',
+      'src/frame.test.ts',
+      './frame.test.ts',
+      '/tmp/frame.test.ts',
+      'C:\\tests\\frame.test.ts',
+      'frame.test.ts',
+      'frame.test.tsx',
+      './frame.spec.js',
+      'src/frames',
+      'src/**/*.test.ts',
+      '**/?(frame|router).test.ts',
+      '*.{test,spec}.ts',
+      'frame[12].test.ts',
+    ])
+  })
+
+  it('reports unmatched names and globs without running unrelated tests', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-test-no-match-'))
+
+    try {
+      await writeTestProject(projectDir)
+
+      let partial = await captureOutput(() => runRemix(['test', 'missing'], { cwd: projectDir }))
+      let glob = await captureOutput(() =>
+        runRemix(['test', 'missing/**/*.test.ts'], { cwd: projectDir }),
+      )
+
+      assert.equal(partial.exitCode, 1)
+      assert.match(partial.stdout, /No test files found matching pattern: \*\*\/\*missing\*\.test/)
+      assert.equal(glob.exitCode, 1)
+      assert.match(glob.stdout, /No test files found matching pattern: missing\/\*\*\/\*\.test\.ts/)
+      assert.doesNotMatch(partial.stdout, /Running server tests/)
+      assert.doesNotMatch(glob.stdout, /Running server tests/)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -459,7 +616,7 @@ describe('test command', () => {
       let result = await captureOutput(() => runRemix(['test', '--', '-h'], { cwd: projectDir }))
 
       assert.equal(result.exitCode, 1, result.stderr)
-      assert.match(result.stdout, /No test files found matching pattern: -h/)
+      assert.match(result.stdout, /No test files found matching pattern: \*\*\/\*-h\*\.test/)
       assert.doesNotMatch(result.stdout, /Usage:/)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
@@ -487,6 +644,19 @@ describe('test command', () => {
     assert.match(TEST_COMMAND_HELP_TEXT, /--no-coverage/)
   })
 })
+
+async function writeNamedTest(projectDir: string, file: string): Promise<void> {
+  await fs.mkdir(path.dirname(path.join(projectDir, file)), { recursive: true })
+  await fs.writeFile(
+    path.join(projectDir, file),
+    [
+      "import { describe, it } from '@remix-run/test'",
+      `describe(${JSON.stringify(file)}, () => {`,
+      "  it('passes', () => {})",
+      '})',
+    ].join('\n'),
+  )
+}
 
 async function writeTestProject(projectDir: string): Promise<void> {
   await fs.writeFile(

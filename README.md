@@ -3,8 +3,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="api/public/remix-wordmark-racing-darkmode.svg">
-    <img alt="Remix" src="api/public/remix-wordmark-racing-lightmode.svg" width="400">
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/remix-wordmark-racing-darkmode.svg">
+    <img alt="Remix" src=".github/assets/remix-wordmark-racing-lightmode.svg" width="400">
   </picture>
 </p>
 
@@ -55,6 +55,8 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Remix
 - [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Remix
 - [cli](packages/cli): Command-line interface for Remix
+- [component](packages/component): Component runtime with server rendering and browser hydration
+- [component-hmr](packages/component-hmr): Hot module replacement runtime and transforms for Remix components
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
@@ -62,9 +64,9 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [csrf-middleware](packages/csrf-middleware): Middleware for CSRF protection in Fetch API servers
 - [data-schema](packages/data-schema): Tiny, standards-aligned schema validation
 - [data-table](packages/data-table): A typed, relational query toolkit for JavaScript
-- [data-table-mysql](packages/data-table-mysql): MySQL adapter for remix/data-table
-- [data-table-postgres](packages/data-table-postgres): PostgreSQL adapter for remix/data-table
-- [data-table-sqlite](packages/data-table-sqlite): SQLite adapter for remix/data-table
+- [data-table-mysql](packages/data-table-mysql): MySQL database implementation for remix/data-table
+- [data-table-postgres](packages/data-table-postgres): PostgreSQL database implementation for remix/data-table
+- [data-table-sqlite](packages/data-table-sqlite): SQLite database implementation for remix/data-table
 - [fetch-proxy](packages/fetch-proxy): An HTTP proxy for the web Fetch API
 - [fetch-router](packages/fetch-router): A minimal, composable router for the web Fetch API
 - [file-storage](packages/file-storage): Key/value storage for JavaScript File objects
@@ -80,6 +82,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [mime](packages/mime): Utilities for working with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
+- [node-hmr](packages/node-hmr): Run Node.js applications with hot module reloading
 - [node-tsx](packages/node-tsx): Run Node.js with TypeScript and JSX syntax support
 - [remix](packages/remix): The Remix web framework
 - [response](packages/response): Response helpers for the web Fetch API
@@ -92,20 +95,20 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
-- [ui](packages/ui): View layer with reconciler, component model, and first-party UI components
+- [ui](packages/ui): Headless, accessible UI primitives and animation utilities for Remix components
 
 ## Installation
 
-To try the current Remix beta, install the `next` dist-tag:
+Install Remix:
 
 ```sh
-npm install remix@next
+npm i remix
 ```
 
-To create a new Remix app with the CLI, use `npx remix@next new`:
+To create a new Remix app with the CLI, use `npx remix new`:
 
 ```sh
-npx remix@next new my-remix-app
+npx remix new my-remix-app
 ```
 
 If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):

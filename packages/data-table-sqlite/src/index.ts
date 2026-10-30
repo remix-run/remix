@@ -1,7 +1,7 @@
-export { createSqliteDatabaseAdapter, SqliteDatabaseAdapter } from './lib/adapter.ts'
+export { createSqliteDatabase, SqliteDatabase } from './lib/database.ts'
 export type {
-  SqliteDatabase,
-  SqliteDatabaseAdapterConfig,
+  SqliteDatabaseClient,
+  SqliteDatabaseConfig,
   SqliteRunResult,
   SqliteStatement,
-} from './lib/adapter.ts'
+} from './lib/driver.ts'

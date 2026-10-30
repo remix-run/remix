@@ -5,7 +5,7 @@ Composable browser authentication primitives for Remix. Use this package to veri
 ## Features
 
 - Small, composable primitives: `verifyCredentials()`, `startExternalAuth()`, `finishExternalAuth()`, `refreshExternalAuth()`, and `completeAuth()`
-- Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, X, and Atmosphere
+- Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, and X
 - Module-scope provider configuration for boot-time validation and stable callback URLs
 - App-owned session records so you decide what auth data to persist
 - Shared session completion for credentials and external auth flows
@@ -147,6 +147,8 @@ router.get(routes.app.dashboard, {
 
 Starting from the same `session()`, `auth()`, and `createSessionAuthScheme()` setup as the credentials example above, you can add a Google login flow like this. The provider is created once at module scope, and the routes compose `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()` directly.
 
+`returnTo` accepts local paths beginning with `/`, including queries and fragments. The auth helpers normalize the path and omit targets that resolve to another origin or normalize to an authority reference beginning with `//`. `finishExternalAuth()` also validates targets from existing transactions.
+
 ```ts
 import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/middleware/auth'
 import {
@@ -276,7 +278,7 @@ router.get(routes.app.dashboard, {
 
 A typical external auth flow looks like this:
 
-1. Create the provider once at module scope. For Atmosphere, call `provider.prepare(handleOrDid)` only when starting the login flow.
+1. Create the provider once at module scope.
 2. Call `startExternalAuth()` from the login route.
 3. Call `finishExternalAuth()` from the callback route.
 4. Persist any provider tokens you want to reuse later.
@@ -286,12 +288,11 @@ A typical external auth flow looks like this:
 
 ## Built-in External Auth Providers
 
-When one of the built-in providers matches your auth provider, start there. Google, Microsoft, Okta, and Auth0 use the shared OIDC runtime. GitHub, Facebook, X, and Atmosphere use built-in custom OAuth flows.
+When one of the built-in providers matches your auth provider, start there. Google, Microsoft, Okta, and Auth0 use the shared OIDC runtime. GitHub, Facebook, and X use built-in custom OAuth flows.
 
 ```ts
 import {
   createAuth0AuthProvider,
-  createAtmosphereAuthProvider,
   createFacebookAuthProvider,
   createGitHubAuthProvider,
   createGoogleAuthProvider,
@@ -305,12 +306,6 @@ let auth0Provider = createAuth0AuthProvider({
   clientId: env.AUTH0_CLIENT_ID,
   clientSecret: env.AUTH0_CLIENT_SECRET,
   redirectUri: new URL('/auth/auth0/callback', env.APP_ORIGIN),
-})
-
-let atmosphereProvider = createAtmosphereAuthProvider({
-  clientId: new URL('/oauth/client-metadata.json', env.APP_ORIGIN),
-  redirectUri: new URL('/auth/atmosphere/callback', env.APP_ORIGIN),
-  sessionSecret: env.SESSION_SECRET,
 })
 
 let facebookProvider = createFacebookAuthProvider({
@@ -361,11 +356,7 @@ Notes:
 - `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
 - `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
 - `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
-- `createAtmosphereAuthProvider()` returns a module-scope provider with `prepare(handleOrDid)` for request-time atproto account discovery before `startExternalAuth()`
-- Atmosphere callback routes pass the module-scope provider directly to `finishExternalAuth()`; the original handle or DID is stored in the sealed OAuth transaction state
-- `createAtmosphereAuthProvider()` requires `sessionSecret` and seals the in-flight account, authorization server, nonce, and DPoP key state into the existing OAuth transaction stored in your app session, so you do not need a separate file or database store for the redirect step
-- `createAtmosphereAuthProvider()` returns DPoP-bound token material in `result.tokens`, including `accessToken`, `refreshToken`, authorization server refresh details, and `dpop` JWK state for follow-up DPoP-signed requests
-- `refreshExternalAuth()` supports built-in OIDC providers, X, and Atmosphere when the stored token bundle includes a refresh token
+- `refreshExternalAuth()` supports built-in OIDC providers and X when the stored token bundle includes a refresh token
 - Providers only return refresh tokens when configured to request offline access, such as `authorizationParams: { access_type: 'offline' }` for Google or adding `offline.access` to X scopes
 - Use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches your route code
 
@@ -376,6 +367,8 @@ Default scopes for OAuth providers that don't use OIDC discovery:
 - X: `tweet.read users.read`
 
 Pass `scopes` if you need a different set for a provider.
+
+GitHub uses the email returned in the profile when present. Otherwise, it selects a verified address from the email API, preferring the primary address, and leaves the email `null` or absent if none are verified. The provider account identity remains the GitHub user ID in `result.account.providerAccountId`.
 
 ## Custom Auth Providers
 
@@ -424,6 +417,53 @@ router.get('/auth/company/callback', async (context) => {
   return redirect(returnTo ?? '/dashboard')
 })
 ```
+
+Provider packages for other OAuth protocols can use `createOAuthProvider()` to implement the authorization, callback, and optional refresh hooks consumed by `startExternalAuth()`, `finishExternalAuth()`, and `refreshExternalAuth()`.
+
+```ts
+import { createOAuthProvider } from 'remix/auth'
+import type { OAuthTokens } from 'remix/auth'
+
+interface AcmeProfile {
+  id: string
+  email: string
+}
+
+interface AcmeTokens extends OAuthTokens {
+  resourceServer: string
+}
+
+export function createAcmeAuthProvider(options: AcmeAuthProviderOptions) {
+  return createOAuthProvider<AcmeProfile, 'acme', AcmeTokens>('acme', {
+    async createAuthorizationURL(transaction) {
+      let metadata = await discoverAuthorizationServer(options)
+
+      transaction.providerState = await encryptProviderState(metadata)
+      return createAuthorizationRequest(metadata, transaction)
+    },
+    async handleCallback(context, transaction) {
+      let metadata = await decryptProviderState(transaction.providerState)
+      let tokens = await exchangeAuthorizationCode(metadata, context, transaction)
+      let profile = await loadProfile(tokens)
+
+      return {
+        provider: 'acme',
+        account: {
+          provider: 'acme',
+          providerAccountId: profile.id,
+        },
+        profile,
+        tokens,
+      }
+    },
+    async refreshTokens(tokens) {
+      return refreshAcmeTokens(tokens)
+    },
+  })
+}
+```
+
+The runtime may write a serialized value to `transaction.providerState` during `createAuthorizationURL()`. Remix persists that value with the OAuth transaction and returns it to `handleCallback()`. Treat it as provider-owned opaque data, and encrypt sensitive values because session storage is not guaranteed to be confidential. Extending `OAuthTokens` preserves provider-specific fields through callback and refresh results without requiring those fields to become part of Remix's built-in token model.
 
 ## Related Packages
 

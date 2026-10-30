@@ -1,0 +1,202 @@
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
+import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import process from 'node:process'
+import { pathToFileURL } from 'node:url'
+
+import { emitServerReady, installNodeHmrRuntime, type RemixNodeHmrRuntime } from './runtime.ts'
+import { serverHmrEvents } from './events.ts'
+
+type TestRuntimeGlobal = typeof globalThis & {
+  __remixNodeHmr?: RemixNodeHmrRuntime
+}
+
+describe('installNodeHmrRuntime', () => {
+  it('creates a browser HMR channel for the process runtime', async () => {
+    let runtime = installNodeHmrRuntime({ browserEventUrl: 'http://127.0.0.1:1234/hmr' })
+    let browserHmrChannel = await runtime.createBrowserHmrChannel()
+
+    assert.equal(browserHmrChannel.url, 'http://127.0.0.1:1234/hmr')
+  })
+
+  it('throws when browser HMR is disabled for the process runtime', async () => {
+    let runtimeGlobal = globalThis as TestRuntimeGlobal
+    let originalRuntime = runtimeGlobal.__remixNodeHmr
+
+    try {
+      delete runtimeGlobal.__remixNodeHmr
+      let runtime = installNodeHmrRuntime()
+
+      await assert.rejects(
+        () => runtime.createBrowserHmrChannel(),
+        /Browser HMR is disabled for this node-hmr runtime/,
+      )
+    } finally {
+      runtimeGlobal.__remixNodeHmr = originalRuntime
+    }
+  })
+
+  it('preserves data for repeated hot contexts with the same URL', () => {
+    let runtime = installNodeHmrRuntime()
+    let first = runtime.createHotContext('file:///app/server.ts')
+
+    first.data.count = 1
+
+    let second = runtime.createHotContext('file:///app/server.ts')
+
+    assert.equal(second.data.count, 1)
+  })
+
+  it('runs dispose callbacks with persistent data', async () => {
+    let runtime = installNodeHmrRuntime()
+    let context = runtime.createHotContext('file:///app/dispose.ts')
+    let disposed = false
+
+    context.data.value = 'hello'
+    context.dispose((data) => {
+      disposed = data.value === 'hello'
+    })
+
+    await runtime.disposeAll()
+
+    assert.equal(disposed, true)
+  })
+
+  it('awaits dispose callbacks before accept callbacks during updates', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'node-hmr-runtime-test-'))
+    try {
+      let modulePath = path.join(tmpDir, 'server-module.mjs')
+      await fs.writeFile(modulePath, 'export const value = 1\n')
+      let moduleUrl = pathToFileURL(modulePath).href
+      let runtime = installNodeHmrRuntime()
+      let events: string[] = []
+      let context = runtime.createHotContext(moduleUrl)
+
+      context.dispose(async () => {
+        await Promise.resolve()
+        events.push('dispose')
+      })
+      context.accept(async () => {
+        events.push('accept')
+      })
+
+      await runtime.update(moduleUrl, 123)
+
+      assert.deepEqual(events, ['dispose', 'accept'])
+    } finally {
+      await fs.rm(tmpDir, { force: true, recursive: true })
+    }
+  })
+
+  it('awaits accepted dependency dispose callbacks before dependency accept callbacks', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'node-hmr-runtime-test-'))
+    try {
+      let depPath = path.join(tmpDir, 'dep.mjs')
+      await fs.writeFile(depPath, 'export const value = 1\n')
+      let parentUrl = pathToFileURL(path.join(tmpDir, 'parent.mjs')).href
+      let depUrl = pathToFileURL(depPath).href
+      let runtime = installNodeHmrRuntime()
+      let events: string[] = []
+      let depContext = runtime.createHotContext(depUrl)
+      let parentContext = runtime.createHotContext(parentUrl)
+
+      depContext.dispose(async (data) => {
+        await Promise.resolve()
+        data.disposed = true
+        events.push('dep dispose')
+      })
+      parentContext.dispose(() => {
+        events.push('parent dispose')
+      })
+      parentContext.accept('./dep.mjs', (module) => {
+        assert.equal(module.value, 1)
+        assert.equal(depContext.data.disposed, true)
+        events.push('parent accept dep')
+      })
+
+      await runtime.update(parentUrl, 123, depUrl)
+
+      assert.deepEqual(events, ['dep dispose', 'parent accept dep'])
+    } finally {
+      await fs.rm(tmpDir, { force: true, recursive: true })
+    }
+  })
+
+  it('emits server update events after successful hot updates', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'node-hmr-runtime-test-'))
+    let unsubscribe: (() => void) | undefined
+    try {
+      let modulePath = path.join(tmpDir, 'server-module.mjs')
+      await fs.writeFile(modulePath, 'export const value = 1\n')
+      let moduleUrl = pathToFileURL(modulePath).href
+      let runtime = installNodeHmrRuntime()
+      let eventPromise = new Promise<unknown>((resolve) => {
+        unsubscribe = serverHmrEvents.subscribe(resolve)
+      })
+
+      runtime.createHotContext(moduleUrl).accept()
+      await runtime.update(moduleUrl, 123)
+
+      assert.deepEqual(await eventPromise, {
+        filePath: modulePath,
+        timestamp: 123,
+        type: 'update',
+        url: moduleUrl,
+      })
+    } finally {
+      unsubscribe?.()
+      await fs.rm(tmpDir, { force: true, recursive: true })
+    }
+  })
+
+  it('emits server restart events when a hot context invalidates', async () => {
+    let runtime = installNodeHmrRuntime()
+    let originalSend = process.send
+    let eventPromise = new Promise<unknown>((resolve) => {
+      let unsubscribe = serverHmrEvents.subscribe((event) => {
+        unsubscribe()
+        resolve(event)
+      })
+    })
+    let context = runtime.createHotContext('file:///app/server.ts')
+
+    try {
+      process.send = (() => true) as typeof process.send
+      context.invalidate('server graph restart')
+    } finally {
+      process.send = originalSend
+    }
+
+    let event = await eventPromise
+    assert.ok(event && typeof event === 'object')
+    assert.equal('type' in event && event.type, 'restart')
+    assert.equal('reason' in event && event.reason, 'server graph restart')
+    assert.equal('timestamp' in event && typeof event.timestamp, 'number')
+  })
+})
+
+describe('emitServerReady', () => {
+  it('does nothing outside the HMR runtime', () => {
+    let runtimeGlobal = globalThis as TestRuntimeGlobal
+    let originalRuntime = runtimeGlobal.__remixNodeHmr
+    let originalSend = process.send
+    let sentMessages: unknown[] = []
+
+    try {
+      delete runtimeGlobal.__remixNodeHmr
+      process.send = ((message: unknown) => {
+        sentMessages.push(message)
+        return true
+      }) as typeof process.send
+
+      emitServerReady()
+    } finally {
+      runtimeGlobal.__remixNodeHmr = originalRuntime
+      process.send = originalSend
+    }
+
+    assert.deepEqual(sentMessages, [])
+  })
+})

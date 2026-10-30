@@ -1,4 +1,4 @@
-import type { OAuthAccount, OAuthProvider, OAuthResult, OAuthStandardTokens } from '../provider.ts'
+import type { OAuthAccount, OAuthProvider, OAuthResult } from '../provider.ts'
 import {
   createAuthorizationURL,
   createOAuthProvider,
@@ -38,7 +38,7 @@ export interface GitHubAuthProfile {
   login: string
   /** Display name returned by GitHub, when available. */
   name?: string | null
-  /** Primary email returned by GitHub, when available. */
+  /** Email returned in the GitHub profile, or a verified fallback address when available. */
   email?: string | null
   /** Avatar image URL returned by GitHub, when available. */
   avatar_url?: string
@@ -68,7 +68,7 @@ export interface GitHubAuthProviderEmail {
  */
 export function createGitHubAuthProvider(
   options: GitHubAuthProviderOptions,
-): OAuthProvider<GitHubAuthProfile, 'github', OAuthStandardTokens> {
+): OAuthProvider<GitHubAuthProfile, 'github'> {
   let scopes = options.scopes ?? DEFAULT_GITHUB_SCOPES
 
   return createOAuthProvider('github', {
@@ -84,10 +84,7 @@ export function createGitHubAuthProvider(
         code_challenge_method: 'S256',
       })
     },
-    async handleCallback(
-      context,
-      transaction,
-    ): Promise<OAuthResult<GitHubAuthProfile, 'github', OAuthStandardTokens>> {
+    async handleCallback(context, transaction): Promise<OAuthResult<GitHubAuthProfile, 'github'>> {
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: GITHUB_TOKEN_ENDPOINT,
         clientId: options.clientId,
@@ -151,11 +148,7 @@ function pickGitHubEmail(emails: GitHubAuthProviderEmail[]): string | undefined 
   }
 
   let verified = emails.find((email) => email.verified)
-  if (verified != null) {
-    return verified.email
-  }
-
-  return emails[0]?.email
+  return verified?.email
 }
 
 function validateGitHubProfile(profile: GitHubAuthProfile): GitHubAuthProfile {

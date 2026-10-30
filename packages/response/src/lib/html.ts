@@ -1,6 +1,7 @@
 import { isSafeHtml, type SafeHtml } from '@remix-run/html-template'
 
 const DOCTYPE = '<!DOCTYPE html>'
+const DOCTYPE_SNIFF_BYTES = 64
 
 type HtmlBody = string | SafeHtml | Blob | BufferSource | ReadableStream<Uint8Array>
 
@@ -53,6 +54,16 @@ function startsWithDoctype(str: string): boolean {
   return /^\s*<!doctype html/i.test(str)
 }
 
+function startsWithDoctypeBytes(bytes: Uint8Array): boolean {
+  let decoder = new TextDecoder()
+  let prefix = decoder.decode(bytes.subarray(0, DOCTYPE_SNIFF_BYTES), { stream: true })
+  // Long leading whitespace or a partial declaration needs the rest of the chunk.
+  if (bytes.length > DOCTYPE_SNIFF_BYTES && prefix.trimStart().length < '<!doctype html'.length) {
+    prefix += decoder.decode(bytes.subarray(DOCTYPE_SNIFF_BYTES), { stream: true })
+  }
+  return startsWithDoctype(prefix)
+}
+
 function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
   let doctypeBytes = new TextEncoder().encode(DOCTYPE)
   let reader = stream.getReader()
@@ -71,8 +82,7 @@ function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStr
         }
 
         // Check if the first chunk starts with DOCTYPE
-        let text = new TextDecoder().decode(firstChunk.value, { stream: true })
-        if (startsWithDoctype(text)) {
+        if (startsWithDoctypeBytes(firstChunk.value)) {
           // Already has DOCTYPE, pass through
           controller.enqueue(firstChunk.value)
         } else {
@@ -83,9 +93,11 @@ function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStr
 
         // Pass through remaining chunks
         while (true) {
-          let { done, value } = await reader.read()
-          if (done) break
-          controller.enqueue(value)
+          // Keep the result intact so TypeScript 7 can narrow value from done. The abortable UI
+          // stream uses the same pattern.
+          let result = await reader.read()
+          if (result.done) break
+          controller.enqueue(result.value)
         }
 
         controller.close()

@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import type { Book } from '../../../data/schema.ts'
 import { RestfulForm } from '../../../ui/restful-form.tsx'
@@ -117,7 +117,12 @@ export function AdminBookFormPage(handle: Handle<AdminBookFormPageProps>) {
             <button type="submit" class="btn">
               {submitLabel}
             </button>
-            <a href={cancelHref} class="btn btn-secondary" mix={css({ marginLeft: '0.5rem' })}>
+            <a
+              data-rmx-prefetch="intent"
+              href={cancelHref}
+              class="btn btn-secondary"
+              mix={css({ marginLeft: '0.5rem' })}
+            >
               Cancel
             </a>
           </RestfulForm>

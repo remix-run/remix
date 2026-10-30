@@ -2,6 +2,56 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- `ContentRange` now rejects ranges whose end precedes their start or reaches a known resource size, including ranges made invalid by field mutation. Initializers with an incomplete pair of bounds continue to serialize as unsatisfied ranges. ([#12040](https://github.com/remix-run/remix/pull/12040))
+
+- `IfNoneMatch#matches()` now treats strong and weak entity tags with the same opaque tag as equivalent, as required for `If-None-Match` cache validation by RFC 9110. ([#12048](https://github.com/remix-run/remix/pull/12048))
+
+- Fix `IfRange.matches()` incorrectly matching dates against `ETag` or accepting malformed nonempty values as entity tags. HTTP dates now compare only against `Last-Modified`, and ETags must be valid quoted strong tags. Empty and absent values retain their existing unconditional matching behavior. ([#12049](https://github.com/remix-run/remix/pull/12049))
+
+- Ignore malformed lines rejected by the Web `Headers` API while parsing raw header strings, preserving valid surrounding headers. ([#12027](https://github.com/remix-run/remix/pull/12027))
+
+- Preserve valid `Range` header serialization for decimal bounds above JavaScript's maximum safe integer while retaining equivalent range semantics for supported resource sizes. ([#12025](https://github.com/remix-run/remix/pull/12025))
+
+- Return only satisfiable byte ranges from `Range.normalize()`, excluding zero-length suffixes and members outside the resource bounds. ([#12023](https://github.com/remix-run/remix/pull/12023))
+
+- Preserve backslashes in serialized header parameter values, such as `ContentDisposition` filenames, so they round-trip without data loss. ([#12002](https://github.com/remix-run/remix/pull/12002))
+
+- `SuperHeaders` numeric accessors now return `null` instead of `NaN` when the raw header value has no parseable integer prefix. ([#12046](https://github.com/remix-run/remix/pull/12046))
+
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+## v0.21.3
+
+### Patch Changes
+
+- Improve parsing performance for `Accept`, `Accept-Encoding`, `Accept-Language`, `If-Match`, and `If-None-Match` headers containing long whitespace runs while preserving existing list parsing behavior.
+
+- Recognize `ContentType` parameter names case-insensitively while preserving media type and parameter value casing. Keep the first value when a `boundary` or `charset` parameter is repeated, including when the names use different casing.
+
+  Read unterminated quoted parameter values through the end of the input, honoring backslash escapes and preserving quoted whitespace without interpreting embedded delimiters as new parameters. `ContentType` follows [WHATWG quoted-string recovery](https://fetch.spec.whatwg.org/#collect-an-http-quoted-string): `boundary="abc` yields `abc`, while `note="value; boundary=abc` does not supply a boundary.
+
+- Preserve subsequent `Cookie` pairs when quotes span semicolon delimiters while retaining existing value decoding. `Cookie#toString()` encodes semicolons in values as `%3B`; `Cookie.from()` preserves that encoding, so a value such as `a;b` is parsed back as `a%3Bb` (see #11906).
+
+- `SetCookie` now accepts lowercase `'strict'`, `'lax'`, and `'none'` values for `sameSite` and serializes them using canonical casing.
+
+- Declare package modules as side-effect-free.
+
+## v0.21.2
+
+### Patch Changes
+
+- Fix `SetCookie` accepting invalid `SameSite` values
+
+  The `SameSite` check used `/strict|lax|none/i` as a substring test, so any value containing one of those words (e.g. `SameSite=nonesense`, `SameSite=strictly`) was accepted, capitalized, and re-serialized — violating the declared `'Strict' | 'Lax' | 'None'` type. The regex is now anchored, and invalid values fall through to `undefined` like other malformed attributes.
+
 ## v0.21.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/form-data-middleware",
-  "version": "0.3.4",
+  "version": "1.1.0",
   "description": "Middleware for parsing FormData from request bodies",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -18,8 +18,10 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
+    "./future": "./src/future.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -27,6 +29,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./future": {
+        "types": "./dist/future.d.ts",
+        "default": "./dist/future.js"
       },
       "./package.json": "./package.json"
     }
@@ -37,19 +43,20 @@
     "@remix-run/form-data-parser": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "typescript": "catalog:"
   },
   "dependencies": {
     "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/form-data-parser": "workspace:^"
+    "@remix-run/form-data-parser": "workspace:^",
+    "@remix-run/headers": "workspace:^"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix test",
     "test:bun": "bun x --bun remix test",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "fetch",
