@@ -128,11 +128,21 @@ export function isBooleanishStringAttribute(name: string): boolean {
   return BOOLEANISH_STRING_ATTRIBUTES.has(name)
 }
 
+// Remix reads most of its own data-rmx-* attributes by presence or as strings, so booleans follow
+// HTML boolean attribute rules: `true` renders an empty attribute and `false` omits it. The reset
+// attributes are the exception because Remix reads "false" as an opt-out.
+export function isRemixBooleanAttribute(name: string): boolean {
+  return (
+    name.startsWith('data-rmx-') &&
+    name !== 'data-rmx-reset-scroll' &&
+    name !== 'data-rmx-reset-focus'
+  )
+}
+
 export function shouldStringifyBooleanAttribute(name: string): boolean {
   return (
     name.startsWith('aria-') ||
-    // Remix's own data-rmx-* markers, like data-rmx-document, are read by presence.
-    (name.startsWith('data-') && !name.startsWith('data-rmx-')) ||
+    (name.startsWith('data-') && !isRemixBooleanAttribute(name)) ||
     isBooleanishStringAttribute(name) ||
     name === 'value'
   )

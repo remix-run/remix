@@ -10,6 +10,9 @@ import type { ResolveFrameOptions } from '../runtime/frame.ts'
 import { withResolvers } from './utils.ts'
 import { reloadDocument } from '../runtime/document-reload.ts'
 import { run } from '../runtime/run.ts'
+import { createElement } from '../runtime/create-element.ts'
+import { invariant } from '../runtime/invariant.ts'
+import { createRoot } from '../runtime/vdom.ts'
 
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
 
@@ -1250,6 +1253,50 @@ describe('navigate', () => {
     expect(clickEvent.defaultPrevented).toBe(true)
 
     anchor.remove()
+    controller.abort()
+  })
+
+  it('intercepts anchors rendered with data-rmx-document set to false', (t) => {
+    let navigateListener: EventListener | undefined
+    stubGlobalField(t, 'navigation', {
+      navigate: mock.fn(() => ({ finished: Promise.resolve() })),
+      updateCurrentEntry: mock.fn(),
+      addEventListener(type: string, listener: EventListener) {
+        if (type === 'navigate') navigateListener = listener
+      },
+    })
+
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, stubFrames)
+
+    let container = document.createElement('div')
+    document.body.append(container)
+    let root = createRoot(container)
+    root.render(createElement('a', { href: '/login', 'data-rmx-document': false }))
+    let anchor = container.querySelector('a')
+    invariant(anchor)
+
+    let intercept = mock.fn()
+    let eventController = new AbortController()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'push',
+      signal: eventController.signal,
+      sourceElement: anchor,
+      destination: {
+        url: new URL('/login', window.location.origin).href,
+        key: 'next',
+        getState: () => undefined,
+      },
+      intercept,
+    })
+
+    navigateListener?.(event)
+
+    expect(intercept).toHaveBeenCalledTimes(1)
+
+    eventController.abort()
+    container.remove()
     controller.abort()
   })
 

@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { link } from '../index.ts'
+import { createElement } from '../runtime/create-element.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -166,20 +167,30 @@ describe('hydration', () => {
       expect(existingDiv.getAttribute('data-value')).toBe('42')
     })
 
-    it('hydrates data-rmx-preserve-dom as a boolean attribute', async () => {
-      let html = await renderToString(<div data-rmx-preserve-dom />)
-      expect(html).toBe('<div data-rmx-preserve-dom></div>')
+    it('hydrates data-rmx-* boolean attributes to match server output', async () => {
+      let element = createElement('a', {
+        href: '/login',
+        'data-rmx-preserve-dom': true,
+        'data-rmx-document': false,
+        'data-rmx-reset-scroll': false,
+        'data-rmx-reset-focus': true,
+      })
+      let html = await renderToString(element)
+      expect(html).toBe(
+        '<a href="/login" data-rmx-preserve-dom data-rmx-reset-scroll="false" data-rmx-reset-focus="true"></a>',
+      )
       container.innerHTML = html
+      let serverHtml = container.innerHTML
 
-      let existingDiv = container.querySelector('div')
-      invariant(existingDiv)
+      let existingAnchor = container.querySelector('a')
+      invariant(existingAnchor)
 
       let root = createRoot(container)
-      root.render(<div data-rmx-preserve-dom />)
+      root.render(element)
       root.flush()
 
-      expect(container.querySelector('div')).toBe(existingDiv)
-      expect(existingDiv.hasAttribute('data-rmx-preserve-dom')).toBe(true)
+      expect(container.querySelector('a')).toBe(existingAnchor)
+      expect(container.innerHTML).toBe(serverHtml)
     })
 
     it('hydrates SVG xlinkHref as xlink:href', async () => {

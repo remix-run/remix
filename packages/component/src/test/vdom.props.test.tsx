@@ -222,6 +222,37 @@ describe('vnode rendering', () => {
     })
   })
 
+  describe('data-rmx-* attributes', () => {
+    it('removes presence attributes and keeps reset values when updated from true to false', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        createElement('a', {
+          href: '/login',
+          'data-rmx-document': true,
+          'data-rmx-reset-scroll': true,
+        }),
+      )
+
+      let anchor = container.querySelector('a')
+      invariant(anchor instanceof HTMLAnchorElement)
+      expect(anchor.getAttribute('data-rmx-document')).toBe('')
+      expect(anchor.getAttribute('data-rmx-reset-scroll')).toBe('true')
+
+      root.render(
+        createElement('a', {
+          href: '/login',
+          'data-rmx-document': false,
+          'data-rmx-reset-scroll': false,
+        }),
+      )
+
+      expect(anchor.hasAttribute('data-rmx-document')).toBe(false)
+      expect(anchor.getAttribute('data-rmx-reset-scroll')).toBe('false')
+    })
+  })
+
   describe('innerHTML prop', () => {
     it('sets innerHTML on element', () => {
       let container = document.createElement('div')
