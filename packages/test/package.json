@@ -71,7 +71,7 @@
   "dependencies": {
     "@remix-run/node-tsx": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "es-module-lexer": "^2.0.0",
+    "es-module-lexer": "^2.3.0",
     "esbuild": "^0.27.1",
     "get-tsconfig": "^4.13.6",
     "istanbul-lib-coverage": "^3.2.2",

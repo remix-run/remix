@@ -1,1 +1,0 @@
-Polyfilled module graphs now load without CSP permissions for JavaScript eval or Wasm compilation. Blob imports can inherit a matching nonce from the native module graph; policies that authorize scripts only by URL still need to allow `blob:` module scripts.
