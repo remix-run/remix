@@ -2,6 +2,13 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@1.1.1`](https://github.com/remix-run/remix/releases/tag/component@1.1.1)
+
 ## v0.13.0
 
 ### Minor Changes

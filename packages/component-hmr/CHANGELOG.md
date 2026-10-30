@@ -2,6 +2,12 @@
 
 This is the changelog for [`component-hmr`](https://github.com/remix-run/remix/tree/main/packages/component-hmr). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Fix stale hydration boundaries in fresh server responses after adding or removing `clientEntry` during HMR (see #11966). These edits restart the app server automatically, while ordinary render-only edits continue to update in place. ([#11982](https://github.com/remix-run/remix/pull/11982))
+
 ## v1.0.0
 
 ### Major Changes
