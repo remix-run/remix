@@ -32,6 +32,16 @@ type BoundarySiblingUnit = {
 
 type SiblingUnit = NodeSiblingUnit | BoundarySiblingUnit
 
+type SiblingDiff = {
+  parent: ParentNode
+  currentNodes: Node[]
+  nextNodes: Node[]
+  currentUnits: SiblingUnit[]
+  nextUnits: SiblingUnit[]
+  used: boolean[]
+  matchIndexForNext: number[]
+}
+
 const REMIX_PRESERVE_DOM_ATTRIBUTE = 'data-rmx-preserve-dom'
 
 export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
@@ -44,7 +54,9 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
     context.regionTailRef ??
     (curr.length > 0 ? (curr[curr.length - 1].nextSibling as ChildNode | null) : null)
 
-  diffSiblingUnits(curr, next, parent, regionTailRef, context)
+  // Frame regions rendered inside the head still hold head resources.
+  if (isDocumentHead(parent)) diffHeadUnits(curr, next, parent, regionTailRef, context)
+  else diffSiblingUnits(curr, next, parent, regionTailRef, context)
 }
 
 function diffNode(current: Node, next: Node, context: FrameContext): ChildNode | undefined {
@@ -247,18 +259,47 @@ function isPopoverOpen(element: Element): boolean {
 }
 
 function diffElementChildren(current: Element, next: Element, context: FrameContext): void {
+  if (isDocumentHead(current)) {
+    diffHeadChildren(current, next, context)
+    return
+  }
+  diffSiblingUnits(
+    Array.from(current.childNodes),
+    Array.from(next.childNodes),
+    current,
+    null,
+    context,
+  )
+}
+
+function diffHeadChildren(head: Element, next: Element, context: FrameContext): void {
   let shouldPreserveHeadNode = context.shouldPreserveHeadNode
   let regionTailRef: ChildNode | null = null
-  let currentChildren = Array.from(current.childNodes)
-  if (current === current.ownerDocument.head && shouldPreserveHeadNode) {
+  let currentChildren = Array.from(head.childNodes)
+  if (shouldPreserveHeadNode) {
     // Only preserved nodes after every diffed child can anchor the diff. Using a
     // leading one would move every diffed node in front of it.
     let lastDiffedIndex = currentChildren.findLastIndex((node) => !shouldPreserveHeadNode(node))
     regionTailRef = currentChildren[lastDiffedIndex + 1] ?? null
     currentChildren = currentChildren.filter((node) => !shouldPreserveHeadNode(node))
   }
-  let nextChildren = Array.from(next.childNodes)
-  diffSiblingUnits(currentChildren, nextChildren, current, regionTailRef, context)
+  diffHeadUnits(currentChildren, Array.from(next.childNodes), head, regionTailRef, context)
+}
+
+function diffHeadUnits(
+  currentNodes: Node[],
+  nextNodes: Node[],
+  head: ParentNode,
+  regionTailRef: ChildNode | null,
+  context: FrameContext,
+): void {
+  let diff = createSiblingDiff(currentNodes, nextNodes, head)
+  matchKeyedSiblingUnits(diff, context)
+  matchPositionalSiblingUnits(diff)
+  matchShiftedHeadUnits(diff)
+  let committed = commitSiblingUnits(diff, context)
+  removeUnusedSiblingUnits(diff, context)
+  placeSiblingUnits(diff, committed, regionTailRef)
 }
 
 function diffSiblingUnits(
@@ -268,8 +309,36 @@ function diffSiblingUnits(
   regionTailRef: ChildNode | null,
   context: FrameContext,
 ): void {
+  let diff = createSiblingDiff(currentNodes, nextNodes, parent)
+  matchKeyedSiblingUnits(diff, context)
+  matchPositionalSiblingUnits(diff)
+  let committed = commitSiblingUnits(diff, context)
+  removeUnusedSiblingUnits(diff, context)
+  placeSiblingUnits(diff, committed, regionTailRef)
+}
+
+function createSiblingDiff(
+  currentNodes: Node[],
+  nextNodes: Node[],
+  parent: ParentNode,
+): SiblingDiff {
   let currentUnits = parseSiblingUnits(currentNodes)
   let nextUnits = parseSiblingUnits(nextNodes)
+  return {
+    parent,
+    currentNodes,
+    nextNodes,
+    currentUnits,
+    nextUnits,
+    used: new Array<boolean>(currentUnits.length).fill(false),
+    matchIndexForNext: new Array<number>(nextUnits.length).fill(-1),
+  }
+}
+
+// Reserve globally matched keyed elements and semantic boundaries before
+// positionally pairing the remaining ordinary siblings.
+function matchKeyedSiblingUnits(diff: SiblingDiff, context: FrameContext): void {
+  let { currentUnits, nextUnits, used, matchIndexForNext } = diff
   let keyToIndex = new Map<string, number>()
 
   for (let i = 0; i < currentUnits.length; i++) {
@@ -277,11 +346,6 @@ function diffSiblingUnits(
     if (key !== undefined) keyToIndex.set(key, i)
   }
 
-  let used = new Array<boolean>(currentUnits.length).fill(false)
-  let matchIndexForNext = new Array<number>(nextUnits.length).fill(-1)
-
-  // Reserve globally matched keyed elements and semantic boundaries before
-  // positionally pairing the remaining ordinary siblings.
   for (let i = 0; i < nextUnits.length; i++) {
     let nextUnit = nextUnits[i]
     let matchIndex = -1
@@ -315,6 +379,10 @@ function diffSiblingUnits(
     if (matchIndex !== -1) used[matchIndex] = true
     matchIndexForNext[i] = matchIndex
   }
+}
+
+function matchPositionalSiblingUnits(diff: SiblingDiff): void {
+  let { currentUnits, nextUnits, used, matchIndexForNext } = diff
 
   let remainingCurrentIndexes: number[] = []
   for (let i = 0; i < currentUnits.length; i++) {
@@ -348,12 +416,51 @@ function diffSiblingUnits(
     used[currentIndex] = true
     matchIndexForNext[nextIndex] = currentIndex
   }
+}
 
-  if (isDocumentHead(parent)) {
-    pairShiftedHeadUnits(currentUnits, nextUnits, used, matchIndexForNext)
+// Head resources are routinely added or removed ahead of shared ones, which
+// shifts the shared ones out of positional pairing. Pair what is left in order
+// within each identity so they are reused instead of recreated. Outside the
+// head this could hand one element's live state, like typed input, to another.
+function matchShiftedHeadUnits(diff: SiblingDiff): void {
+  let { currentUnits, nextUnits, used, matchIndexForNext } = diff
+  let currentIndexesByIdentity = new Map<string, number[]>()
+  for (let i = 0; i < currentUnits.length; i++) {
+    let currentUnit = currentUnits[i]
+    if (used[i] || currentUnit.kind !== 'node' || getSiblingUnitKey(currentUnit) !== undefined) {
+      continue
+    }
+    let identity = getUnkeyedNodeIdentity(currentUnit.node)
+    if (identity === undefined) continue
+    let indexes = currentIndexesByIdentity.get(identity)
+    if (indexes) indexes.push(i)
+    else currentIndexesByIdentity.set(identity, [i])
   }
 
+  for (let i = 0; i < nextUnits.length; i++) {
+    let nextUnit = nextUnits[i]
+    if (
+      matchIndexForNext[i] !== -1 ||
+      nextUnit.kind !== 'node' ||
+      getSiblingUnitKey(nextUnit) !== undefined
+    ) {
+      continue
+    }
+    let identity = getUnkeyedNodeIdentity(nextUnit.node)
+    if (identity === undefined) continue
+    let currentIndex = currentIndexesByIdentity.get(identity)?.shift()
+    if (currentIndex === undefined) continue
+    used[currentIndex] = true
+    matchIndexForNext[i] = currentIndex
+  }
+}
+
+// Patches each matched current unit from its next unit and returns the units
+// that will occupy each next position.
+function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUnit[] {
+  let { parent, currentNodes, nextNodes, currentUnits, nextUnits, matchIndexForNext } = diff
   let committed = new Array<SiblingUnit>(nextUnits.length)
+
   for (let i = 0; i < nextUnits.length; i++) {
     let matchIndex = matchIndexForNext[i]
     let nextUnit = nextUnits[i]
@@ -401,15 +508,28 @@ function diffSiblingUnits(
     committed[i] = currentUnit
   }
 
-  // Remove obsolete siblings first so they do not force surviving nodes to move and lose focus.
+  return committed
+}
+
+// Remove obsolete siblings before placement so they do not force surviving
+// nodes to move and lose focus.
+function removeUnusedSiblingUnits(diff: SiblingDiff, context: FrameContext): void {
+  let { parent, currentUnits, used } = diff
   for (let i = 0; i < currentUnits.length; i++) {
     if (!used[i]) removeSiblingUnit(currentUnits[i], parent, context)
   }
+}
 
-  // Moving a node detaches it, which reloads stylesheets, restarts iframes and
-  // drops focus, so keep the longest run of reused units that are already in
-  // order where they are and only move the rest around them.
-  let stable = getStableCommittedIndexes(committed, currentUnits, matchIndexForNext, parent)
+// Moving a node detaches it, which reloads stylesheets, restarts iframes and
+// drops focus, so keep the longest run of reused units that are already in
+// order where they are and only move the rest around them.
+function placeSiblingUnits(
+  diff: SiblingDiff,
+  committed: SiblingUnit[],
+  regionTailRef: ChildNode | null,
+): void {
+  let { parent } = diff
+  let stable = getStableCommittedIndexes(diff, committed)
   let anchor: Node | null = regionTailRef
   for (let i = committed.length - 1; i >= 0; i--) {
     let unit = committed[i]
@@ -429,57 +549,12 @@ function diffSiblingUnits(
   }
 }
 
-// Head resources are routinely added or removed ahead of shared ones, which
-// shifts the shared ones out of positional pairing. Pair what is left in order
-// within each identity so they are reused instead of recreated. Outside the
-// head this could hand one element's live state, like typed input, to another.
-function pairShiftedHeadUnits(
-  currentUnits: SiblingUnit[],
-  nextUnits: SiblingUnit[],
-  used: boolean[],
-  matchIndexForNext: number[],
-): void {
-  let currentIndexesByIdentity = new Map<string, number[]>()
-  for (let i = 0; i < currentUnits.length; i++) {
-    let currentUnit = currentUnits[i]
-    if (used[i] || currentUnit.kind !== 'node' || getSiblingUnitKey(currentUnit) !== undefined) {
-      continue
-    }
-    let identity = getUnkeyedNodeIdentity(currentUnit.node)
-    if (identity === undefined) continue
-    let indexes = currentIndexesByIdentity.get(identity)
-    if (indexes) indexes.push(i)
-    else currentIndexesByIdentity.set(identity, [i])
-  }
-
-  for (let i = 0; i < nextUnits.length; i++) {
-    let nextUnit = nextUnits[i]
-    if (
-      matchIndexForNext[i] !== -1 ||
-      nextUnit.kind !== 'node' ||
-      getSiblingUnitKey(nextUnit) !== undefined
-    ) {
-      continue
-    }
-    let identity = getUnkeyedNodeIdentity(nextUnit.node)
-    if (identity === undefined) continue
-    let currentIndex = currentIndexesByIdentity.get(identity)?.shift()
-    if (currentIndex === undefined) continue
-    used[currentIndex] = true
-    matchIndexForNext[i] = currentIndex
-  }
-}
-
 function isDocumentHead(node: ParentNode): boolean {
   return isElement(node) && node === node.ownerDocument.head
 }
 
-function getStableCommittedIndexes(
-  committed: SiblingUnit[],
-  currentUnits: SiblingUnit[],
-  matchIndexForNext: number[],
-  parent: ParentNode,
-): Set<number> {
+function getStableCommittedIndexes(diff: SiblingDiff, committed: SiblingUnit[]): Set<number> {
+  let { parent, currentUnits, matchIndexForNext } = diff
   let committedIndexes: number[] = []
   let currentIndexes: number[] = []
   for (let i = 0; i < committed.length; i++) {
