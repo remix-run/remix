@@ -3,25 +3,6 @@
 
   max-width: none;
 }
-.ui-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 20px 24px;
-  border: 1px solid var(--rmx-color-border-subtle);
-  border-radius: var(--rmx-radius-lg);
-  background: var(--rmx-surface-lvl2);
-}
-.ui-notice > svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--rmx-color-warning);
-}
-.ui-notice p {
-  margin: 0;
-  color: var(--rmx-color-text-secondary);
-  font-size: var(--docs-font-size-small);
-}
 .ui-doc-section,
 .ui-example {
   scroll-margin-top: var(--ui-anchor-offset);

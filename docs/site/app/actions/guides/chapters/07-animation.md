@@ -255,6 +255,17 @@ export function countUp(from: number, to: number, onValue: (value: number) => vo
 
 Prefer CSS transitions and animation mixins for ordinary UI. Use `tween` for canvas, custom counters, or values that are not CSS properties.
 
+Pass `velocity` to continue the momentum of a gesture when the animation takes over. A spring's progress runs from 0 to 1, so `velocity` is measured in progress per second. Divide the gesture's speed toward the target, in pixels per second, by the remaining distance in pixels. A positive value starts faster and overshoots more. A negative value starts slower, and a large one moves away from the target first:
+
+```ts
+// After a drag release, with speed in pixels per second toward the target
+let velocity = releaseSpeed / distanceToTarget;
+card.style.transition = `transform ${spring("bouncy", { velocity })}`;
+card.style.transform = "translateX(0)";
+```
+
+The demo below releases a dragged card with the velocity of the drag.
+
 ::frame{src="/examples/07-animation/spring-drag-release/"}
 
 ::frame{src="/examples/07-animation/bouncy-switch/"}
