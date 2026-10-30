@@ -67,14 +67,22 @@ export function createFsSessionStorage(
   // Writing in place lets overlapping saves of one session interleave into invalid JSON, and lets
   // reads see a truncated file. Renaming a complete file over the old one replaces it in one step.
   async function writeFileAtomically(file: string, content: string): Promise<void> {
+    let mode = await readFileMode(file)
     // The same directory keeps the rename on one filesystem, where it is atomic.
     let tempFile = `${file}.${crypto.randomUUID()}.tmp`
+    let handle = await fsp.open(tempFile, 'wx', mode)
 
     try {
-      await fsp.writeFile(tempFile, content, 'utf-8')
+      try {
+        // Restore the existing mode even if the process umask has changed since the last write.
+        if (mode !== undefined) await handle.chmod(mode)
+        await handle.writeFile(content, 'utf-8')
+      } finally {
+        await handle.close()
+      }
       await replaceFile(tempFile, file)
     } catch (error) {
-      await fsp.rm(tempFile, { force: true }).catch(() => undefined)
+      await fsp.rm(tempFile, { force: true }).catch(() => {})
       throw error
     }
   }
@@ -157,6 +165,15 @@ async function renameWithRetries(source: string, destination: string): Promise<v
       }
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
+  }
+}
+
+async function readFileMode(file: string): Promise<number | undefined> {
+  try {
+    return (await fsp.stat(file)).mode & 0o777
+  } catch (error) {
+    if (isNoEntityError(error)) return undefined
+    throw error
   }
 }
 
