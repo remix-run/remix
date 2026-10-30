@@ -1550,6 +1550,167 @@ describe('stream', () => {
     })
   })
 
+  describe('nonce', () => {
+    it('forwards the nonce through nested blocking frame renders', async () => {
+      let nonce = 'document-"&<nonce>'
+      let html = await drain(
+        renderToStream(<Frame src="/child" />, {
+          nonce,
+          resolveFrame(_src, _target, context) {
+            return renderToStream(
+              <>
+                <p mix={[css({ color: 'red' })]}>Child</p>
+                <Frame src="/grandchild" />
+              </>,
+              {
+                nonce: context?.nonce,
+                resolveFrame(_src, _target, context) {
+                  return renderToStream(<p mix={[css({ color: 'blue' })]}>Grandchild</p>, {
+                    nonce: context?.nonce,
+                  })
+                },
+              },
+            )
+          },
+        }),
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      let styles = Array.from(doc.querySelectorAll<HTMLStyleElement>('style[data-rmx-style]'))
+
+      expect(styles).toHaveLength(2)
+      expect(styles.map((style) => style.nonce)).toEqual([nonce, nonce])
+      expect(html).toContain('nonce="document-&quot;&amp;&lt;nonce&gt;"')
+    })
+
+    it('forwards the nonce to non-blocking frame renders', async () => {
+      let html = await drain(
+        renderToStream(<Frame src="/child" fallback={<p>Loading</p>} />, {
+          nonce: 'document-nonce',
+          resolveFrame(_src, _target, context) {
+            return renderToStream(<p mix={[css({ color: 'red' })]}>Child</p>, {
+              nonce: context?.nonce,
+            })
+          },
+        }),
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      let template = doc.querySelector('template')
+      invariant(template)
+      let styles = template.content.querySelectorAll<HTMLStyleElement>('style[data-rmx-style]')
+
+      expect(styles).toHaveLength(1)
+      expect(styles[0].nonce).toBe('document-nonce')
+    })
+
+    function Island() {
+      return () => <section>Island</section>
+    }
+
+    let NonceIsland = clientEntry('/nonce-island.ts#Island', Island)
+
+    function resolveNonceIsland() {
+      return {
+        href: '/assets/nonce-island.js',
+        exportName: 'Island',
+        importMap: { imports: { '/assets/nonce-island.js': '/assets/nonce-island.hash.js' } },
+        preloads: ['/assets/nonce-island.hash.js'],
+      }
+    }
+
+    it('renderToString applies nonce to styles, import maps, and metadata', async () => {
+      let html = await renderToString(
+        <html>
+          <head>
+            <ImportMap value={{ imports: { app: '/app.js' } }} />
+          </head>
+          <body>
+            <div mix={[css({ color: 'red' })]}>Styled</div>
+          </body>
+        </html>,
+        { nonce: 'r4nd0m' },
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      let map = doc.head.querySelector<HTMLScriptElement>('script[data-rmx-import-map]')
+
+      expect(doc.head.querySelector<HTMLStyleElement>('style[data-rmx-style]')?.nonce).toBe(
+        'r4nd0m',
+      )
+      expect(doc.querySelectorAll('script[data-rmx-import-map]')).toHaveLength(1)
+      expect(map?.nonce).toBe('r4nd0m')
+      expect(JSON.parse(map?.textContent ?? '{}')).toEqual({
+        imports: { app: '/app.js' },
+      })
+      expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+        'r4nd0m',
+      )
+      expect(html).not.toContain('<!-- rmx:flush')
+    })
+
+    it('stamps streamed resources when a nonce is provided and omits it otherwise', async () => {
+      let node = (
+        <html>
+          <head />
+          <body>
+            <div mix={[css({ color: 'red' })]}>Styled</div>
+            <NonceIsland />
+          </body>
+        </html>
+      )
+      let html = await drain(
+        renderToStream(node, { nonce: 'r4nd0m', resolveClientEntry: resolveNonceIsland }),
+      )
+
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      expect(doc.querySelector<HTMLStyleElement>('style[data-rmx-style]')?.nonce).toBe('r4nd0m')
+      expect(doc.querySelector<HTMLLinkElement>('link[rel="modulepreload"]')?.nonce).toBe('r4nd0m')
+      expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+        'r4nd0m',
+      )
+      expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="r4nd0m">')
+
+      let withoutNonce = await drain(
+        renderToStream(node, { resolveClientEntry: resolveNonceIsland }),
+      )
+      expect(withoutNonce).toContain('<style data-rmx-style=')
+      expect(withoutNonce).toContain('<script data-rmx-import-map type="importmap">')
+      expect(withoutNonce).not.toContain('nonce=')
+    })
+
+    it('emits nonce metadata only for documents without adding an empty import map', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <body>Hello</body>
+          </html>,
+          { nonce: 'r4nd0m' },
+        ),
+      )
+
+      expect(html).toContain('<head><meta name="rmx-nonce" content="" nonce="r4nd0m"></head>')
+      expect(html).not.toContain('data-rmx-import-map')
+
+      let fragment = await drain(renderToStream(<p>Hello</p>, { nonce: 'r4nd0m' }))
+      expect(fragment).toBe('<p>Hello</p>')
+    })
+
+    it('keeps a nonce authored on the import map', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <ImportMap nonce="authored" value={{ imports: { app: '/assets/app.js' } }} />
+            </head>
+            <body>Hello</body>
+          </html>,
+          { nonce: 'r4nd0m' },
+        ),
+      )
+
+      expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="authored">')
+      expect(html).toContain('<meta name="rmx-nonce" content="" nonce="r4nd0m">')
+    })
+  })
+
   describe('client entry preloads', () => {
     function Island() {
       return () => <section>Island</section>
@@ -4714,11 +4875,13 @@ describe('stream', () => {
           src: '/settings',
           currentFrameSrc: 'https://example.com/app',
           topFrameSrc: 'https://example.com/app',
+          nonce: undefined,
         },
         {
           src: '/settings/profile',
           currentFrameSrc: 'https://example.com/settings',
           topFrameSrc: 'https://example.com/app',
+          nonce: undefined,
         },
       ])
 

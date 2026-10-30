@@ -46,7 +46,7 @@ Exports covered by the same README are grouped together.
 | `remix/file-storage/s3` | S3 backend for remix/file-storage | [README](src/file-storage-s3/README.md) |
 | `remix/form-data-parser`<br>`remix/form-data-parser/future` | A request.formData() wrapper with streaming file upload handling | [README](src/form-data-parser/README.md) |
 | `remix/fs` | Filesystem utilities using the Web File API | [README](src/fs/README.md) |
-| `remix/headers`<br>`remix/headers/accept`<br>`remix/headers/accept-encoding`<br>`remix/headers/accept-language`<br>`remix/headers/cache-control`<br>`remix/headers/content-disposition`<br>`remix/headers/content-range`<br>`remix/headers/content-type`<br>`remix/headers/cookie`<br>`remix/headers/if-match`<br>`remix/headers/if-none-match`<br>`remix/headers/if-range`<br>`remix/headers/range`<br>`remix/headers/raw-headers`<br>`remix/headers/set-cookie`<br>`remix/headers/vary` | A toolkit for working with HTTP headers in JavaScript | [README](src/headers/README.md) |
+| `remix/headers`<br>`remix/headers/accept`<br>`remix/headers/accept-encoding`<br>`remix/headers/accept-language`<br>`remix/headers/cache-control`<br>`remix/headers/content-disposition`<br>`remix/headers/content-range`<br>`remix/headers/content-security-policy`<br>`remix/headers/content-type`<br>`remix/headers/cookie`<br>`remix/headers/if-match`<br>`remix/headers/if-none-match`<br>`remix/headers/if-range`<br>`remix/headers/range`<br>`remix/headers/raw-headers`<br>`remix/headers/set-cookie`<br>`remix/headers/vary` | A toolkit for working with HTTP headers in JavaScript | [README](src/headers/README.md) |
 | `remix/html-template` | HTML template tag with auto-escaping for JavaScript | [README](src/html-template/README.md) |
 | `remix/lazy-file` | Lazy, streaming files for JavaScript | [README](src/lazy-file/README.md) |
 | `remix/middleware/async-context` | Middleware for storing request context in AsyncLocalStorage | [README](src/async-context-middleware/README.md) |
@@ -54,6 +54,7 @@ Exports covered by the same README are grouped together.
 | `remix/middleware/compression` | Middleware for compressing HTTP responses | [README](src/compression-middleware/README.md) |
 | `remix/middleware/cop` | Middleware for tokenless cross-origin protection in Fetch API servers | [README](src/cop-middleware/README.md) |
 | `remix/middleware/cors` | Middleware for handling CORS in Fetch API servers | [README](src/cors-middleware/README.md) |
+| `remix/middleware/csp` | Content Security Policy middleware and request-scoped nonces for Remix | [README](src/csp-middleware/README.md) |
 | `remix/middleware/csrf` | Middleware for CSRF protection in Fetch API servers | [README](src/csrf-middleware/README.md) |
 | `remix/middleware/form-data`<br>`remix/middleware/form-data/future` | Middleware for parsing FormData from request bodies | [README](src/form-data-middleware/README.md) |
 | `remix/middleware/logger` | Middleware for logging HTTP requests and responses | [README](src/logger-middleware/README.md) |

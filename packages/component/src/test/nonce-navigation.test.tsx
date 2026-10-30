@@ -1,0 +1,257 @@
+import { expect } from '@remix-run/assert'
+import { describe, it, type TestContext } from '@remix-run/test'
+
+import { Frame } from '../runtime/component.ts'
+import { invariant } from '../runtime/invariant.ts'
+import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
+import { drain, renderNonceDocument } from './utils.ts'
+
+describe('CSP frame navigation', () => {
+  it('keeps authored styles working across document navigation', async (t) => {
+    let doc = await navigateUnderCsp(t, 'document')
+
+    let styled = doc.querySelector('#styled')
+    invariant(styled)
+    expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
+    expect(doc.querySelector<HTMLStyleElement>('#authorized-style')?.nonce).toBe('document-nonce')
+    expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+      'document-nonce',
+    )
+  })
+
+  it('uses the render nonce on named frame reloads and leaves unauthorized styles blocked', async (t) => {
+    let doc = await navigateUnderCsp(t, 'named', { separateImportMapNonce: true })
+    let styled = doc.querySelector('#styled')
+    let unnonced = doc.querySelector('#unnonced')
+    let forged = doc.querySelector('#forged')
+    invariant(styled && unnonced && forged)
+
+    expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
+    expect(doc.querySelector<HTMLStyleElement>('#authorized-style')?.nonce).toBe('document-nonce')
+    expect(doc.defaultView?.getComputedStyle(unnonced).color).toBe('rgb(0, 0, 0)')
+    expect(doc.defaultView?.getComputedStyle(forged).color).toBe('rgb(0, 0, 0)')
+    expect(doc.querySelector<HTMLStyleElement>('#forged-style')?.nonce).toBe('forged-nonce')
+    expect(doc.querySelector('#unnonced-style')?.hasAttribute('nonce')).toBe(false)
+  })
+
+  it('keeps authored styles working in client-created frames', async (t) => {
+    let doc = await navigateUnderCsp(t, 'client')
+    let styled = doc.querySelector('#styled')
+    invariant(styled)
+    expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
+  })
+
+  it('rewrites styles inside streamed non-blocking frame templates', async (t) => {
+    let doc = await navigateUnderCsp(t, 'named', { nestedTemplate: true })
+    let styled = doc.querySelector('#styled')
+    invariant(styled)
+    expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
+  })
+
+  it('does not trust nonce metadata without a CSP response header', async (t) => {
+    let doc = await navigateUnderCsp(t, 'named', { responsePolicy: null })
+    let styled = doc.querySelector('#styled')
+    invariant(styled)
+    expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(0, 0, 0)')
+    expect(doc.querySelector<HTMLStyleElement>('#authorized-style')?.nonce).toBe('response-nonce')
+  })
+
+  it('leaves styles blocked when the response has conflicting nonces', async (t) => {
+    let doc = await navigateUnderCsp(t, 'named', {
+      responsePolicy: "script-src 'nonce-other'; style-src 'nonce-response-nonce'",
+    })
+    let styled = doc.querySelector('#styled')
+    invariant(styled)
+    expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(0, 0, 0)')
+    expect(doc.querySelector<HTMLStyleElement>('#authorized-style')?.nonce).toBe('response-nonce')
+  })
+
+  it('respects CSP when adopting marked styles during initial hydration', async (t) => {
+    expectMarkedStyles(await navigateUnderCsp(t, 'initial', { markedStyles: true }))
+  })
+
+  it('respects CSP when adopting marked styles during document navigation', async (t) => {
+    expectMarkedStyles(await navigateUnderCsp(t, 'document', { markedStyles: true }))
+  })
+
+  it('respects CSP when adopting marked styles from streamed templates', async (t) => {
+    expectMarkedStyles(
+      await navigateUnderCsp(t, 'named', { markedStyles: true, nestedTemplate: true }),
+    )
+  })
+
+  it('does not adopt marked styles forbidden by another enforcing policy', async (t) => {
+    let doc = await navigateUnderCsp(t, 'named', {
+      markedStyles: true,
+      additionalStylePolicy: "style-src-elem 'none'",
+    })
+    let styled = doc.querySelector('#styled')
+    invariant(styled)
+    expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(0, 0, 0)')
+    expect(doc.querySelector<HTMLStyleElement>('#authorized-style')?.sheet).toBeNull()
+  })
+
+  it('adopts a marked style authorized by a hash in style-src-elem', async (t) => {
+    let cssText = '#unnonced { color: rgb(255, 0, 0); }'
+    let digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(cssText))
+    let hash = btoa(String.fromCharCode(...new Uint8Array(digest)))
+    let doc = await navigateUnderCsp(t, 'named', {
+      markedStyles: true,
+      stylePolicy: `style-src 'none'; style-src-elem 'sha256-${hash}'`,
+    })
+    let unnonced = doc.querySelector('#unnonced')
+    let styled = doc.querySelector('#styled')
+    invariant(unnonced && styled)
+    expect(doc.defaultView?.getComputedStyle(unnonced).color).toBe('rgb(255, 0, 0)')
+    expect(doc.querySelector('#unnonced-style')).toBeNull()
+    expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(0, 0, 0)')
+    expect(doc.querySelector<HTMLStyleElement>('#authorized-style')?.sheet).toBeNull()
+  })
+})
+
+function expectMarkedStyles(doc: Document): void {
+  let styled = doc.querySelector('#styled')
+  let unnonced = doc.querySelector('#unnonced')
+  let forged = doc.querySelector('#forged')
+  invariant(styled && unnonced && forged)
+  expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
+  expect(doc.querySelector('#authorized-style')).toBeNull()
+  expect(doc.defaultView?.getComputedStyle(unnonced).color).toBe('rgb(0, 0, 0)')
+  expect(doc.defaultView?.getComputedStyle(forged).color).toBe('rgb(0, 0, 0)')
+  expect(doc.querySelector<HTMLStyleElement>('#unnonced-style')?.sheet).toBeNull()
+  expect(doc.querySelector<HTMLStyleElement>('#forged-style')?.sheet).toBeNull()
+}
+
+async function navigateUnderCsp(
+  t: TestContext,
+  target: 'document' | 'named' | 'client' | 'initial',
+  options: {
+    nestedTemplate?: boolean
+    separateImportMapNonce?: boolean
+    responsePolicy?: string | null
+    markedStyles?: boolean
+    additionalStylePolicy?: string
+    stylePolicy?: string
+  } = {},
+) {
+  let initialContent = <p id="initial">Initial frame</p>
+  let nextContent = (
+    <section>
+      <style
+        id="authorized-style"
+        nonce={target === 'initial' ? 'document-nonce' : 'response-nonce'}
+        data-rmx-style={options.markedStyles ? 'authorized' : undefined}
+      >
+        {'#styled { color: rgb(65, 43, 21); }'}
+      </style>
+      <p id="styled">Styled</p>
+      <meta name="rmx-nonce" nonce="forged-nonce" />
+      <style
+        id="forged-style"
+        nonce="forged-nonce"
+        data-rmx-style={options.markedStyles ? 'forged' : undefined}
+      >
+        {'#forged { color: rgb(255, 0, 0); }'}
+      </style>
+      <p id="forged">Forged</p>
+      <style id="unnonced-style" data-rmx-style={options.markedStyles ? 'unnonced' : undefined}>
+        {'#unnonced { color: rgb(255, 0, 0); }'}
+      </style>
+      <p id="unnonced">Unnonced</p>
+    </section>
+  )
+  let nextHtml = await renderToString(
+    target === 'document' ? (
+      <html>
+        <head />
+        <body>{nextContent}</body>
+      </html>
+    ) : (
+      nextContent
+    ),
+    { nonce: 'response-nonce' },
+  )
+  if (options.nestedTemplate) {
+    let nestedHtml = nextHtml
+    nextHtml = await new Response(
+      renderToStream(<Frame src="/nested" fallback={<p>Loading</p>} />, {
+        nonce: 'response-nonce',
+        resolveFrame: async () => nestedHtml,
+      }),
+    ).text()
+  }
+  let componentHref = new URL('../runtime/component.ts', import.meta.url).href
+  let jsxHref = new URL('../runtime/jsx.ts', import.meta.url).href
+  let runHref = new URL('../runtime/run.ts', import.meta.url).href
+  let message = crypto.randomUUID()
+  let responsePolicy =
+    options.responsePolicy === undefined
+      ? "script-src 'nonce-response-nonce'; style-src 'nonce-response-nonce'"
+      : options.responsePolicy
+  let bootstrap = `
+    import { run } from ${JSON.stringify(runHref)}
+    import { Frame } from ${JSON.stringify(componentHref)}
+    import { jsx } from ${JSON.stringify(jsxHref)}
+    let app = run({
+      resolveFrame() {
+        return new Response(${JSON.stringify(nextHtml).replace(/</g, '\\u003c')}, {
+          headers: ${JSON.stringify(responsePolicy === null ? {} : { 'Content-Security-Policy': responsePolicy })},
+        })
+      },
+      async loadModule(href, name) { return (await import(href))[name] },
+    })
+    try {
+      await app.ready()
+      ${
+        target === 'initial'
+          ? ''
+          : target === 'client'
+            ? `let styledReady = new Promise(resolve => {
+          let observer = new MutationObserver(() => {
+            if (!document.querySelector('#styled')) return
+            observer.disconnect()
+            resolve()
+          })
+          observer.observe(document.body, {childList: true, subtree: true})
+        })
+        await app.frames.top.replace(jsx(Frame, {src: '/next'}))
+        await styledReady`
+            : `let frame = ${target === 'document' ? 'app.frames.top' : "app.frames.get('child')"}
+          frame.src = '/next'
+          await frame.reload()`
+      }
+    } catch (error) {
+      document.documentElement.dataset.error = String(error)
+    }
+    parent.postMessage(${JSON.stringify(message)}, ${JSON.stringify(location.origin)})
+  `
+  let html = await drain(
+    renderToStream(
+      <html>
+        <head>
+          <meta
+            httpEquiv="Content-Security-Policy"
+            content={`script-src 'self' 'nonce-document-nonce'; ${options.stylePolicy ?? "style-src 'nonce-document-nonce'"}`}
+          />
+          {options.additionalStylePolicy ? (
+            <meta httpEquiv="Content-Security-Policy" content={options.additionalStylePolicy} />
+          ) : null}
+          {options.separateImportMapNonce ? <ImportMap nonce="map-nonce" value={{}} /> : null}
+          <script type="module" nonce="document-nonce">
+            {bootstrap}
+          </script>
+        </head>
+        <body>
+          <Frame name="child" src="/child" />
+        </body>
+      </html>,
+      {
+        nonce: 'document-nonce',
+        resolveFrame: () => renderToStream(target === 'initial' ? nextContent : initialContent),
+      },
+    ),
+  )
+  let doc = await renderNonceDocument(t, html, message)
+  expect(doc.documentElement.dataset.error).toBeUndefined()
+  return doc
+}

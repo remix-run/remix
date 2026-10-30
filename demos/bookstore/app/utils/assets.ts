@@ -8,15 +8,19 @@ if (config.assets === undefined) throw new Error('Missing assets configuration')
 const isDevelopment = process.env.NODE_ENV === 'development'
 const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
+export const browserHmrChannel = isHmr
+  ? await (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+  : undefined
+
 export const assets = createAssetServer({
   ...config.assets,
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
   fingerprint: !isDevelopment,
   watch: isHmr,
-  hmr: isHmr
+  hmr: browserHmrChannel
     ? {
-        channel: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+        channel: () => browserHmrChannel,
         moduleImporter: 'remix/multiple-import-maps-polyfill',
       }
     : undefined,

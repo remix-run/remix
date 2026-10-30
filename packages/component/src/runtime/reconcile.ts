@@ -1,3 +1,4 @@
+import { getNonceManager } from './nonce.ts'
 import type { Component, ComponentHandle, FrameContent, FrameHandle } from './component.ts'
 import { createComponent } from './component.ts'
 import type { FrameRuntime } from './frame.ts'
@@ -279,11 +280,14 @@ function resolveNodeMixProps(
   let directEventDescriptors = resolveDirectEventDescriptors(mix)
   if (directEventDescriptors) {
     if (state) teardownMixins(state)
-    return { props: node.props, directEventDescriptors }
+    return {
+      props: getNonceManager().resolveResourceNonce(node.type, node.props, parent),
+      directEventDescriptors,
+    }
   }
 
   if (state == null && (mix == null || (Array.isArray(mix) && mix.length === 0))) {
-    return { props: node.props }
+    return { props: getNonceManager().resolveResourceNonce(node.type, node.props, parent) }
   }
 
   let resolved = resolveMixedProps({
@@ -300,7 +304,10 @@ function resolveNodeMixProps(
     props: node.props,
     state,
   })
-  return { props: resolved.props, mixState: resolved.state }
+  return {
+    props: getNonceManager().resolveResourceNonce(node.type, resolved.props, parent),
+    mixState: resolved.state,
+  }
 }
 
 function applyResolvedHostProps(node: CommittedHostNode, resolved: ResolvedHostProps): void {
@@ -1108,6 +1115,7 @@ function diffFrame(
   }
 
   if (!committed._state.resolved && committed._state.fallbackRoot) {
+    getNonceManager().inheritRootResourceNonces(committed._state.fallbackRoot, vParent)
     committed._state.fallbackRoot.render(committed.props.fallback ?? null)
   }
   return committed
@@ -1194,6 +1202,7 @@ function insertFrame(
     getContext: (type) => findContextFromAncestry(vParent, type),
     styleManager: styles,
   })
+  getNonceManager().inheritRootResourceNonces(fallbackRoot, vParent)
   fallbackRoot.render(node.props.fallback ?? null)
 
   let instance = createFrame([start, end], {
@@ -1264,12 +1273,13 @@ function resolveClientFrame(
     )
     .then(async (resolution) => {
       if (state.resolveToken !== token || resolveController.signal.aborted) return
-      let { content } = await unwrapFrameResolution(resolution)
+      let { content, nonce } = await unwrapFrameResolution(resolution)
       if (state.resolveToken !== token || resolveController.signal.aborted) return
       state.fallbackRoot?.dispose()
       state.fallbackRoot = undefined
       let nextContent = asAbortableFrameContent(content, resolveController.signal)
       await instance.render(nextContent, {
+        nonce,
         signal: resolveController.signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
@@ -1533,6 +1543,7 @@ function updateClientEntryBoundary(
   let element = jsx(node.type, node.props, node.key)
   let owner = getClientEntryBoundaryOwner(node._rangeStart)
   if (owner) {
+    getNonceManager().inheritRootResourceNonces(owner.root, node._parent)
     owner.root.render(element)
     return
   }
@@ -1540,7 +1551,11 @@ function updateClientEntryBoundary(
   let runtime = getFrameRuntime(context.frame)
   let pending = runtime?.pendingClientEntries.get(node._rangeStart)
   invariant(runtime && pending?.[0] === node._rangeEnd, 'Expected pending client entry boundary')
-  runtime.pendingClientEntries.set(node._rangeStart, [node._rangeEnd, element])
+  runtime.pendingClientEntries.set(node._rangeStart, [
+    node._rangeEnd,
+    element,
+    getNonceManager().getResourceNonces(node._parent),
+  ])
 }
 
 function diffClientEntryBoundary(

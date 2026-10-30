@@ -1,3 +1,4 @@
+import { getNonceManager } from './nonce.ts'
 import { createFrame, NamedFrameRegistry, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
@@ -29,7 +30,10 @@ export interface RunInit {
    * and abort signal. All requests send `X-Remix-Frame: true`, plus `X-Remix-Target` when named.
    * The default resolver only fetches from the document origin, including
    * redirects, but does not sanitize the returned HTML. Custom resolvers own their request,
-   * redirect, and content trust policies.
+   * redirect, and content trust policies. Preserve the Response's `Content-Security-Policy` and
+   * `Content-Security-Policy-Report-Only` headers to translate matching resource nonces to the active
+   * document nonce when the policy identifies a single shared nonce for script and style elements.
+   * The report-only header is used only when the enforcing header is absent.
    */
   resolveFrame?: ResolveFrame
 
@@ -154,6 +158,7 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
+  getNonceManager()
   let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
   let scheduler = createScheduler(document, errorTarget, styleManager)

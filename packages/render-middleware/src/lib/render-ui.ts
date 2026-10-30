@@ -1,4 +1,5 @@
 import type { AssetServer } from '@remix-run/assets'
+import { CspNonce, getCspNonce, inheritCspNonce } from '@remix-run/csp-middleware'
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
 import {
@@ -15,8 +16,8 @@ type RemixNode = Parameters<typeof renderToStream>[0]
 const FRAME_HEADER = 'X-Remix-Frame'
 const FRAME_TARGET_HEADER = 'X-Remix-Target'
 const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
-// Internal subrequest errors are reported by the enclosing render. Browser frame requests
-// use the same headers, so identify internal requests by object identity instead.
+// Internal subrequests report errors through the enclosing render.
+// Browser frame requests use the same headers, so identify internal requests by object identity.
 const internalFrameRequests = new WeakSet<Request>()
 const MAX_FRAME_REDIRECTS = 20
 const FRAME_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
@@ -74,6 +75,9 @@ export function render(
     let request = context.request
     let topFrameSrc = getTopFrameSrc(request)
     let onError = internalFrameRequests.has(request) ? () => {} : options.onError
+    let nonce = getCspNonce(context)
+    // Child routes may render without installing CSP middleware themselves.
+    if (nonce !== undefined) context.set(CspNonce, nonce)
 
     return function render(node: RemixNode, init?: ResponseInit): Response {
       let stream = renderToStream(node, {
@@ -81,6 +85,7 @@ export function render(
         topFrameSrc,
         signal: request.signal,
         onError,
+        nonce: getCspNonce(context),
         resolveFrame: (src, target, frameContext) =>
           resolveFrame(context, src, target, frameContext),
         resolveClientEntry: (entryId, component) =>
@@ -107,7 +112,7 @@ async function resolveFrame(
   let topFrameSrc = frameContext?.topFrameSrc ?? getTopFrameSrc(context.request)
   let frameUrl = new URL(src, currentFrameSrc)
   let headers = createFrameRequestHeaders(context.headers, target, topFrameSrc)
-  let response = await followFrameRedirects(context, frameUrl, headers)
+  let response = await followFrameRedirects(context, frameUrl, headers, frameContext?.nonce)
 
   if (!isHtmlResponse(response)) {
     throw new Error('Frame response must be HTML')
@@ -155,6 +160,7 @@ async function followFrameRedirects(
   context: RenderRequestContext,
   initialUrl: URL,
   headers: Headers,
+  nonce: string | undefined,
 ): Promise<Response> {
   let url = initialUrl
 
@@ -169,6 +175,7 @@ async function followFrameRedirects(
       signal: context.request.signal,
     })
     internalFrameRequests.add(request)
+    if (nonce !== undefined) inheritCspNonce(request, nonce)
     let response = await context.router.fetch(request)
     let location = response.headers.get('Location')
 

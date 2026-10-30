@@ -14,6 +14,7 @@ import {
 } from '../runtime/frame.ts'
 import { jsx } from '../runtime/jsx.ts'
 import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
+import { resetNonceManager } from '../runtime/nonce.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
@@ -48,6 +49,7 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
 describe('frames', () => {
   afterEach(() => {
     resetDocumentImportMapManager(document)
+    resetNonceManager()
     document.documentElement.innerHTML = '<head></head><body></body>'
   })
 
@@ -2288,7 +2290,7 @@ describe('frames', () => {
   it('keeps active initial preloads connected across a document reload', async () => {
     document.documentElement.innerHTML = [
       '<head><title>Initial</title>',
-      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
+      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" nonce="document-nonce" />',
       '</head><body></body>',
     ].join('')
 
@@ -2321,6 +2323,7 @@ describe('frames', () => {
         document.head.querySelectorAll<HTMLLinkElement>(managedModulePreloadSelector),
       )
       expect(activePreloads).toHaveLength(2)
+      expect(activePreloads.map((link) => link.nonce)).toEqual(['document-nonce', 'document-nonce'])
 
       await frame.handle.reload()
 

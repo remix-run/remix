@@ -57,6 +57,9 @@ ${
 
 const contexts = new Map()
 const dataByPath = new Map()
+const importMapNonce =
+  document.querySelector('script[data-rmx-import-map][type="importmap"]')?.nonce ||
+  document.querySelector('meta[name="rmx-nonce"]')?.nonce
 
 class RemixHmrContext {
   constructor(path) {
@@ -439,6 +442,7 @@ function installImportMap(importMap) {
   let script = document.createElement('script')
   script.setAttribute('data-rmx-import-map', '')
   script.type = 'importmap'
+  if (importMapNonce) script.nonce = importMapNonce
   script.textContent = JSON.stringify(delta)
   document.head.appendChild(script)
   processedScripts.add(script)

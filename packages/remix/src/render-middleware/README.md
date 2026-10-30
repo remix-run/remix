@@ -75,6 +75,32 @@ The middleware forwards request credentials and session headers to internal fram
 - **`assets`** - An asset server that resolves source-based client entry IDs to browser module URLs, import maps, and preload URLs. Omit it when client entries already use public URLs or the app has no client entries.
 - **`onError`** - A callback for server rendering errors, including browser-initiated frame requests. Errors from internal frame subrequests are reported by the enclosing render to avoid duplicate reports. When omitted, the UI renderer uses its default error reporting.
 
+### Content Security Policy
+
+Install `csp()` before `render()` to generate a nonce and matching policy:
+
+```tsx
+import { csp } from 'remix/middleware/csp'
+
+let router = createRouter({
+  middleware: [
+    csp({
+      policy: ({ nonce }) => ({
+        scriptSrc: [`'nonce-${nonce}'`],
+        styleSrc: [`'nonce-${nonce}'`],
+      }),
+    }),
+    render(),
+  ],
+})
+```
+
+Generated import maps, module preloads, and CSS mixin styles receive the context nonce. Authored tags use `getCspNonce(context)` from `remix/middleware/csp`. Internal frame requests, including redirects, inherit the nonce before child handlers run, even on routes without their own CSP middleware.
+
+Client navigation and frame reloads preserve the original document policy and rewrite matching resource nonces, including during island updates. See [client navigation](../component/server/README.md#client-navigation) for the required response headers and custom-resolver setup.
+
+See [csp-middleware](../csp-middleware/README.md) for policy configuration and response scope. Direct users of `renderToStream()` and `renderToString()` supply the `nonce` option themselves.
+
 ## Custom renderers
 
 Use `renderWith()` when the input is not a Remix component node or the application owns a fully custom response pipeline. The factory runs once per request and may read the current request context.
