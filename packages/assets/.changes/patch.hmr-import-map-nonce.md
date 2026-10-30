@@ -1,0 +1,1 @@
+Fix browser HMR updates introducing new imports being blocked by nonce-based Content Security Policies. New import maps retain the startup managed import map's nonce, falling back to the document render nonce.
