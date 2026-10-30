@@ -1,0 +1,1 @@
+`staticFiles()` from `remix/middleware/static` now serves files with spaces, reserved characters, or non-ASCII characters in their names, such as `/my%20file.txt`, by percent-decoding request paths before resolving them.

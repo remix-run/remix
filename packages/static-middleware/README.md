@@ -31,6 +31,8 @@ let router = createRouter({
 router.get('/', () => new Response('Home'))
 ```
 
+Request paths are percent-decoded before they are resolved against the root directory, so `/my%20file.txt` serves `public/my file.txt` and `/caf%C3%A9.txt` serves `public/café.txt`.
+
 ### With Cache Control
 
 Internally, the `staticFiles()` middleware uses the [`createFileResponse()` helper from `remix/response`](https://github.com/remix-run/remix/tree/main/packages/response/README.md#file-responses) to send files with full HTTP semantics. This means it also accepts the same options as the `createFileResponse()` helper.
@@ -46,6 +48,8 @@ let router = createRouter({
 ```
 
 ### Filter Files
+
+The `filter` function receives the decoded path relative to the root, without a leading slash.
 
 ```ts
 let router = createRouter({
@@ -88,6 +92,7 @@ let router = createRouter({
 ## Security
 
 - Prevents path traversal attacks
+- Falls through for malformed percent-encoding and for path segments that decode to `/`, `\`, a null byte, `.`, or `..`
 - Only serves files with GET and HEAD requests
 - Respects the configured root directory boundary
 
