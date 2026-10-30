@@ -1,18 +1,18 @@
 # component
 
-A minimal component system built on JavaScript and DOM primitives. Write components that render on the server, stream to the browser, and hydrate only where you need interactivity.
+A component system built on JavaScript closures and DOM primitives. State lives in ordinary variables, components render again when you call `handle.update()`, and behavior attaches to elements through mixins.
 
-For a walkthrough of building with these APIs, see the guides on [rendering UI](https://docs.remix.run/rendering-ui/), [interactivity](https://docs.remix.run/interactivity/), [streaming UI with frames](https://docs.remix.run/streaming-ui-with-frames/), and [animation](https://docs.remix.run/animation/).
+For how components fit into a full Remix app, see the guides on [rendering UI](https://docs.remix.run/rendering-ui/), [interactivity](https://docs.remix.run/interactivity/), [streaming UI with frames](https://docs.remix.run/streaming-ui-with-frames/), and [animation](https://docs.remix.run/animation/).
 
 ## Features
 
-- Components are plain closures. Setup runs once, render runs on every update, and `handle.update()` schedules renders explicitly
-- Server rendering and streaming through `remix/component/server`
-- Selective hydration with `clientEntry()`, so the rest of the page stays plain HTML
-- `<Frame>` regions that stream in and reload independently
-- Client navigation for ordinary links and forms through the Navigation API, with prefetching
+- Components are closures. Setup runs once, and the returned render function runs on every update
+- State is plain JavaScript, and `handle.update()` decides when the UI renders again
+- `handle.queueTask()` for work that needs the committed DOM, and abort signals for cancelling stale async work
+- Context keyed by the provider component
 - Composable `mix` behaviors: `on`, `ref`, `link`, `attrs`, `css`, and your own `createMixin()` mixins
 - Scoped `css()` styles with nesting and cascade layers
+- Server rendering, selective hydration with `clientEntry()`, streaming `<Frame>` regions, and client navigation
 
 ## Installation
 
@@ -37,98 +37,62 @@ The transform imports from `remix/component/jsx-runtime`. Without JSX, build the
 
 ## Usage
 
-Pages render on the server, and only the components marked with `clientEntry()` hydrate in the browser. A route action renders a page with the [`render()` middleware](https://github.com/remix-run/remix/tree/main/packages/render-middleware):
+A component receives a `handle` and returns a render function. State is a variable in the outer function. Change it, then call `handle.update()` to render again:
 
 ```tsx
-// app/actions/controller.tsx
-import { createController } from 'remix/router'
-
-import { routes } from '../routes.ts'
-import { HomePage } from './home-page.tsx'
-
-export default createController(routes, {
-  actions: {
-    home(context) {
-      return context.render(<HomePage />)
-    },
-  },
-})
-```
-
-The page is an ordinary component. Everything except `LikeButton` is sent as static HTML:
-
-```tsx
-// app/actions/home-page.tsx
-import { Document } from './document.tsx'
-import { LikeButton } from './public/like-button.tsx'
-
-export function HomePage() {
-  return () => (
-    <Document title="Home">
-      <h1>Welcome</h1>
-      <LikeButton initialLikes={3} />
-    </Document>
-  )
-}
-```
-
-`LikeButton` keeps local state in setup scope and calls `handle.update()` to render again:
-
-```tsx
-// app/actions/public/like-button.tsx
-import { clientEntry, css, on } from 'remix/component'
+import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
 const buttonStyle = css({
   padding: '8px 12px',
   borderRadius: '6px',
   '&:hover': { background: '#f3f0ff' },
+  '&:disabled': { opacity: 0.6 },
 })
 
-export const LikeButton = clientEntry(
-  import.meta.url,
-  function LikeButton(handle: Handle<{ initialLikes: number }>) {
-    let likes = handle.props.initialLikes
+export function LikeButton(handle: Handle<{ href: string; initialLikes: number }>) {
+  let likes = handle.props.initialLikes
+  let saving = false
 
-    return () => (
-      <button
-        type="button"
-        mix={[
-          buttonStyle,
-          on('click', () => {
-            likes++
-            handle.update()
-          }),
-        ]}
-      >
-        {likes} likes
-      </button>
-    )
-  },
-)
+  return () => (
+    <button
+      type="button"
+      disabled={saving}
+      mix={[
+        buttonStyle,
+        on('click', async (_event, signal) => {
+          likes++
+          saving = true
+          handle.update()
+
+          try {
+            let response = await fetch(handle.props.href, { method: 'POST', signal })
+            if (!response.ok) throw new Error('Like failed')
+            let data: { likes: number } = await response.json()
+            likes = data.likes
+          } catch {
+            likes--
+          }
+          if (signal.aborted) return
+
+          saving = false
+          handle.update()
+        }),
+      ]}
+    >
+      {likes} likes
+    </button>
+  )
+}
 ```
 
-A browser entry, loaded by the document, calls `run()` to hydrate each client entry:
+The click handler updates `likes` and `saving` right away and renders, then renders again with the count from the server. If the button is removed mid-request, the handler's `signal` cancels the request.
 
-```ts
-// app/actions/public/entry.ts
-import { run } from 'remix/component'
-
-let app = run({
-  async loadModule(moduleUrl, exportName) {
-    let mod = await import(moduleUrl)
-    return mod[exportName]
-  },
-})
-
-await app.ready()
-```
-
-To render HTML yourself instead of through the middleware, use `renderToStream()` from [`remix/component/server`](https://github.com/remix-run/remix/blob/main/packages/component/src/server/README.md).
+Render components in the browser with [`createRoot()`](#browser-roots), or on the server with [`remix/component/server`](https://github.com/remix-run/remix/blob/main/packages/component/src/server/README.md). Wrap the components that need to be interactive on a server-rendered page in [`clientEntry()`](#client-entries).
 
 ## Components
 
-A component is a function that receives a `handle` and returns a render function. The outer function is the setup scope. It runs once per component instance, so variables declared there persist for the instance's lifetime. The render function runs on the first render and again on every update:
+The outer function is the setup scope. It runs once per component instance, so variables declared there persist for the instance's lifetime. The render function runs on the first render and again on every update:
 
 ```tsx
 import type { Handle } from 'remix/component'
@@ -147,43 +111,45 @@ function Price(handle: Handle<{ amount: number; currency: string }>) {
 
 Values read from `handle.props` during setup are the initial props. `Price` keeps its first `currency` even if the parent later passes a different one, while `amount` updates because render reads it. Read props inside render, or inside callbacks, whenever the component should follow changes.
 
+### Children
+
+JSX children arrive as `handle.props.children`. Type them as `RemixNode` and render them wherever they belong:
+
+```tsx
+import type { Handle, RemixNode } from 'remix/component'
+
+function Card(handle: Handle<{ title: string; children?: RemixNode }>) {
+  return () => (
+    <section class="card">
+      <h2>{handle.props.title}</h2>
+      {handle.props.children}
+    </section>
+  )
+}
+
+function TrackList() {
+  return () => (
+    <Card title="Tracks">
+      <ol>
+        <li>Wanna Be Startin' Somethin'</li>
+        <li>Baby Be Mine</li>
+      </ol>
+    </Card>
+  )
+}
+```
+
+A render function can return `handle.props.children` directly when a component only wraps its children, such as a [context](#context) provider.
+
 ### Lifecycle
 
 1. **First render:** The runtime calls the component function with a handle whose `props` are already set, then calls the returned render function. After the result is committed to the DOM, tasks queued with `handle.queueTask()` run.
 2. **Updates:** The runtime replaces the values on `handle.props` and calls the render function again. Setup does not run again. Tasks queued during the update run after the commit.
 3. **Removal:** `handle.signal` is aborted, so listeners registered with `{ signal: handle.signal }` are removed. Queued tasks that haven't run yet still run, with an aborted signal.
 
-During server rendering, setup and render run, but `handle.update()` throws and `handle.queueTask()` does nothing. Start timers, read the DOM, and do other browser-only work in queued tasks, event handlers, or mixin lifecycle events.
+A component renders again when its parent renders again, or when it calls `handle.update()` itself.
 
-## Host Elements
-
-Lowercase JSX tags render host elements. Props become attributes, with a few conveniences:
-
-- HTML attribute names such as `class` and `for` work, and so do the DOM property names `className` and `htmlFor`. These examples use the HTML names.
-- `style` accepts an object of camelCase properties. Numbers get a `px` unit, except for unitless properties such as `opacity` and `zIndex`, and custom properties such as `'--accent'` are set as written.
-- Boolean attributes render when `true` and are omitted when `false`. ARIA attributes render `true` and `false` as strings.
-- `<>…</>`, or `Fragment`, groups children without adding an element.
-
-```tsx
-<label for="volume" class="field" style={{ marginBlock: 8, '--accent': '#6d28d9' }}>
-  Volume
-</label>
-```
-
-### Raw HTML
-
-Host raw-HTML props (`innerHTML` and iframe `srcDoc` / `srcdoc`) require an explicit value created with `unsafeHTML(...)`:
-
-```tsx
-import { unsafeHTML } from 'remix/component'
-import type { Handle } from 'remix/component'
-
-function ArticleBody(handle: Handle<{ html: string }>) {
-  return () => <article innerHTML={unsafeHTML(handle.props.html)} />
-}
-```
-
-When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` is an authorization boundary and does not sanitize input; only pass trusted or already-sanitized HTML.
+During server rendering, setup and render run, but `handle.update()` throws and `handle.queueTask()` does nothing. Start timers, read the DOM, and do other browser-only work in [queued tasks](#queued-tasks), event handlers, or mixin [lifecycle events](#lifecycle-events).
 
 ## Handle
 
@@ -198,9 +164,15 @@ When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` is
 | `handle.frame`           | The [frame](#frame-handles) that contains the component. Call `handle.frame.reload()` to fetch its content again.                        |
 | `handle.frames`          | `handle.frames.top` is the root frame, and `handle.frames.get(name)` finds a mounted frame by name. See [Frame Handles](#frame-handles). |
 
-### Updates
+### State and Updates
 
-Call `handle.update()` from event handlers, queued tasks, timers, and subscriptions. Calling it during setup warns and skips the extra render, because the first render follows setup anyway. Calling it during render throws. When render discovers work that should happen after the commit, queue it with [`handle.queueTask()`](#queued-tasks).
+State is any variable in setup scope, like `likes` and `saving` in [Usage](#usage). Change it directly, then call `handle.update()` when the UI should reflect the change.
+
+- The runtime doesn't compare state, so mutating arrays and objects in place works. It renders when you call `handle.update()`.
+- Compute values that come from props or state inside render, such as `todos.filter((todo) => !todo.done).length`, instead of storing them in variables that have to be kept in sync.
+- Several `handle.update()` calls in the same task are batched into one render.
+- Call `handle.update()` from event handlers, queued tasks, timers, and subscriptions. Calling it during setup warns and skips the extra render, because the first render follows setup anyway. Calling it during render throws. Queue work that render discovers with [`handle.queueTask()`](#queued-tasks).
+- To share state between components, keep it in a common parent and pass it down as props, or share a model object through [context](#context).
 
 Await `handle.update()` when the next step needs the updated DOM:
 
@@ -247,9 +219,35 @@ function Disclosure(handle: Handle) {
 
 ### Queued Tasks
 
-`handle.queueTask(task)` runs `task` after the next commit, once the rendered output is in the DOM. Use it for work that render discovers but can't do itself, such as loading data for a prop, measuring layout, or moving focus. Queued tasks never run during server rendering.
+`handle.queueTask(task)` runs `task` after the next commit, once the rendered output is in the DOM. Queued tasks never run during server rendering, so they're where browser-only work goes, such as reading storage, starting timers, measuring layout, moving focus, or loading data.
 
-The task receives an `AbortSignal` that is aborted when the component renders again or is removed. A task queued from render is queued again on every render, so guard it with the prop value it depends on. Otherwise the task's own `handle.update()` renders again and queues the work again:
+Queue a task from setup for work that should start once, after the first render. The server renders the initial state, and the browser takes over after the component is in the DOM:
+
+```tsx
+import type { Handle } from 'remix/component'
+
+function Clock(handle: Handle) {
+  let now: Date | undefined
+
+  handle.queueTask(() => {
+    if (handle.signal.aborted) return
+
+    let tick = () => {
+      now = new Date()
+      handle.update()
+    }
+    tick()
+    let interval = setInterval(tick, 1000)
+    handle.signal.addEventListener('abort', () => clearInterval(interval))
+  })
+
+  return () => <time>{now ? now.toLocaleTimeString() : '--:--:--'}</time>
+}
+```
+
+Use `handle.signal` for work started this way, because it's only aborted when the component is removed. Pass it to `fetch()` for a one-time load that later renders shouldn't cancel.
+
+Queue a task from render when the work depends on props. The task receives an `AbortSignal` that is aborted when the component renders again or is removed. A task queued from render is queued again on every render, so guard it with the prop value it depends on. Otherwise the task's own `handle.update()` renders again and queues the work again:
 
 ```tsx
 import type { Handle } from 'remix/component'
@@ -289,11 +287,9 @@ function UserCard(handle: Handle<{ userId: string }>) {
 
 When `userId` changes, the next render aborts the previous request and queues one for the new ID. Any other render while a request is in flight also aborts it, and that render queues it again, so only the latest request for the current `userId` completes. Catch errors inside async tasks, as described in [Abort Signals](#abort-signals).
 
-For a one-time load that should ignore later prop changes, queue the task from setup instead of render, and pass `handle.signal` to `fetch()`. A task queued from setup runs once after the first render, and `handle.signal` is only aborted when the component is removed, so later renders don't cancel the request.
-
 ### Abort Signals
 
-Each signal covers a different lifetime. Pass the narrowest one to `fetch()` and other cancellable work:
+Pass the signal with the narrowest lifetime to `fetch()` and other cancellable work:
 
 | Signal                                   | Aborted when                                           |
 | ---------------------------------------- | ------------------------------------------------------ |
@@ -374,29 +370,35 @@ function CartCount(handle: Handle) {
 }
 ```
 
-When several public components should provide the same logical scope, render one shared provider from each of them, so descendants read a single provider type regardless of which component wraps them:
+## Host Elements
+
+Lowercase JSX tags render host elements. Props become attributes, with a few conveniences:
+
+- HTML attribute names such as `class` and `for` work, and so do the DOM property names `className` and `htmlFor`. These examples use the HTML names.
+- `style` accepts an object of camelCase properties. Numbers get a `px` unit, except for unitless properties such as `opacity` and `zIndex`, and custom properties such as `'--accent'` are set as written.
+- Boolean attributes render when `true` and are omitted when `false`. ARIA attributes render `true` and `false` as strings.
+- `<>…</>`, or `Fragment`, groups children without adding an element.
 
 ```tsx
-import type { Handle, RemixNode } from 'remix/component'
+<label for="volume" class="field" style={{ marginBlock: 8, '--accent': '#6d28d9' }}>
+  Volume
+</label>
+```
 
-function MenuScope(handle: Handle<{ children?: RemixNode }, { id: string }>) {
-  handle.context.set({ id: handle.id })
-  return () => handle.props.children
-}
+### Raw HTML
 
-function MenuRoot(handle: Handle<{ children?: RemixNode }>) {
-  return () => <MenuScope>{handle.props.children}</MenuScope>
-}
+Host raw-HTML props (`innerHTML` and iframe `srcDoc` / `srcdoc`) require an explicit value created with `unsafeHTML(...)`:
 
-function MenuGroup(handle: Handle<{ children?: RemixNode }>) {
-  return () => <MenuScope>{handle.props.children}</MenuScope>
-}
+```tsx
+import { unsafeHTML } from 'remix/component'
+import type { Handle } from 'remix/component'
 
-function MenuTrigger(handle: Handle) {
-  let scope = handle.context.get(MenuScope)
-  return () => <button aria-controls={scope.id}>Open</button>
+function ArticleBody(handle: Handle<{ html: string }>) {
+  return () => <article innerHTML={unsafeHTML(handle.props.html)} />
 }
 ```
+
+When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` marks the HTML as trusted but does not sanitize it, so only pass trusted or already-sanitized HTML.
 
 ## Keys
 
@@ -703,7 +705,7 @@ function SaveButton() {
 - Create mixin factories at module scope, and keep the order of mixins stable. Changing the setup function in a slot disposes that mixin and sets up its replacement.
 - Setup and render run during server rendering by default. Put DOM access in lifecycle listeners or `handle.queueTask()`, which only run in the browser.
 
-The mixin handle has its own API:
+Mixin setup receives its own handle:
 
 | Member                    | Use                                                                                               |
 | ------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -770,7 +772,7 @@ const observeSize = createMixin<HTMLElement>((handle) => {
 
 `beforeUpdate` and `commit` concern the containing update scope, so they can run when another element's update affects this host's layout. They are not a notification that this mixin's arguments changed.
 
-`beforeRemove` and `remove` have different jobs. Register work that delays host removal in `beforeRemove`. Release resources in `remove`, which marks final disposal of the mixin slot. It is a cleanup notification, not a guarantee that the host has already been detached. Removing only a mixin from `mix` does not remove its host or provide a `persistNode` opportunity.
+Register work that delays host removal in `beforeRemove`, and release resources in `remove`. `remove` marks final disposal of the mixin slot, which doesn't guarantee the host has already been detached. Removing only a mixin from `mix` does not remove its host or provide a `persistNode` opportunity.
 
 ### Deferring Removal with `persistNode`
 
@@ -909,17 +911,62 @@ Consumers listen for it like any DOM event:
 - Put the data consumers need on the event object.
 - Keep state the gesture needs in setup scope, and clean up timers and global listeners in a `remove` listener.
 
-## Client Entries
+## Rendering
 
-`clientEntry(entryId, component)` marks a component that hydrates in the browser, as `LikeButton` does in [Usage](#usage). On the server it renders like any other component. Remix wraps its output in `<!-- rmx:h:... -->` comments and serializes its props into a `<script type="application/json" id="rmx-data">` tag. In the browser, [`run()`](#client-runtime) loads the component's module and hydrates the existing DOM in place.
+The same component can render in the browser, on the server, or both:
 
-### Entry IDs
+- [`createRoot()`](#browser-roots) renders a tree in the browser.
+- [`remix/component/server`](https://github.com/remix-run/remix/blob/main/packages/component/src/server/README.md) renders a tree to HTML with `renderToString()` or `renderToStream()`. Event handlers, queued tasks, and browser-only mixins don't run there.
+- [`clientEntry()`](#client-entries) and [`run()`](#client-runtime) hydrate selected components of a server-rendered page, leaving the rest as plain HTML.
 
-An entry ID has the form `moduleUrl#ExportName`. When it has no `#ExportName`, as with `import.meta.url`, Remix uses the component function's name, so give the function the same name as its export. Rendering throws when it can't determine an export name.
+### Browser Roots
 
-The `render()` middleware and `renderToStream()` resolve entry IDs to the public module URLs the browser loads. Pass `resolveClientEntry` to map source modules to built assets. See [`remix/component/server`](https://github.com/remix-run/remix/blob/main/packages/component/src/server/README.md).
+`createRoot(container)` renders a component tree into an element:
 
-### Serializable Props
+```tsx
+import { createRoot } from 'remix/component'
+
+import { SupportWidget } from './support-widget.tsx'
+
+let root = createRoot(document.getElementById('support-widget')!)
+root.render(<SupportWidget />)
+
+window.addEventListener('pagehide', () => root.dispose(), { once: true })
+```
+
+| Member              | Use                                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `root.render(node)` | Renders a tree, reusing existing DOM and component instances. The first render hydrates any content already in the container. Pass `null` to remove the tree. |
+| `root.reconcile()`  | Renders the most recently supplied tree again.                                                                                                                |
+| `root.flush()`      | Applies pending DOM work and tasks synchronously, mainly for tests and integrations.                                                                          |
+| `root.dispose()`    | Removes the tree and releases its listeners and component resources.                                                                                          |
+| `error` event       | Dispatched when a component render or queued task fails.                                                                                                      |
+
+`createRangeRoot([start, end])` works the same way, but owns only the nodes between two sibling boundary nodes instead of a whole container.
+
+### Client Entries
+
+`clientEntry(entryId, component)` marks a component that should hydrate in the browser when it appears in server-rendered HTML. To make the `LikeButton` from [Usage](#usage) interactive on a server-rendered page, wrap it and export the result:
+
+```tsx
+import { clientEntry } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+export const LikeButton = clientEntry(
+  import.meta.url,
+  function LikeButton(handle: Handle<{ href: string; initialLikes: number }>) {
+    // Same setup and render function as in Usage
+  },
+)
+```
+
+On the server, a client entry renders like any other component. Remix also serializes its props into the page, so [`run()`](#client-runtime) can load its module in the browser and hydrate the existing DOM in place.
+
+- An entry ID has the form `moduleUrl#ExportName`. When it has no `#ExportName`, as with `import.meta.url`, Remix uses the component function's name, so give the function the same name as its export. Rendering throws when it can't determine an export name.
+- The server renderer maps entry IDs to the URLs the browser loads. See `resolveClientEntry` in [`remix/component/server`](https://github.com/remix-run/remix/blob/main/packages/component/src/server/README.md).
+- Each client entry hydrates on its own. A client entry inside another one can read its ancestor's context, but sibling client entries don't share context.
+- Hydration adopts the server-rendered DOM. Remix patches mismatched attributes and adds missing ones, but leaves extra attributes alone. When an element's type doesn't match, Remix skips one node to look for a match, then recreates the element.
+- Client entries inside a `data-rmx-preserve-dom` element hydrate normally, but stop receiving new server props on frame reloads. See [Preserving Client-Owned DOM](#preserving-client-owned-dom).
 
 Client entry props cross from the server to the browser, so they must be serializable:
 
@@ -927,17 +974,11 @@ Client entry props cross from the server to the browser, so they must be seriali
 - plain objects and arrays of serializable values
 - JSX elements, including `<Frame>` elements, which are serialized as frame descriptors
 
-Functions and class instances are rejected by the types. Pass plain data, route URLs, and other browser-safe values instead of database records or request objects.
+Functions and class instances are rejected by the types. Pass plain data and URLs instead of database records or request objects.
 
-### How Hydration Works
+### Client Runtime
 
-- Each client entry hydrates on its own. A client entry inside another one can read its ancestor's context, but sibling client entries don't share context.
-- Remix adopts the server-rendered DOM in place. It patches mismatched attributes and adds missing ones, but leaves extra attributes alone. When an element's type doesn't match, Remix skips one node to look for a match, then recreates the element.
-- Client entries inside a `data-rmx-preserve-dom` element hydrate normally, but stop receiving new server props on frame reloads. See [Preserving Client-Owned DOM](#preserving-client-owned-dom).
-
-## Client Runtime
-
-`run()` starts the browser runtime. It hydrates every client entry in the document by calling `loadModule` for each component module, and handles [frame resolution](#resolving-frames), [navigation](#navigation), and [prefetching](#prefetching). Call it once from your browser entry:
+`run()` starts the browser runtime. It hydrates every client entry in the document by calling `loadModule` for each component module, and handles [frames](#frames), [navigation](#navigation), and [prefetching](#prefetching). Call it once from your browser entry:
 
 ```tsx
 import { run } from 'remix/component'
@@ -972,7 +1013,11 @@ The returned runtime emits `error` events for component errors, and has these me
 | `app.dispose()` | Stops the runtime's listeners and disposes the top-level frame.                     |
 | `app.frames`    | The top-level and named frames, like [`handle.frames`](#frame-handles).             |
 
-### Loading Modules
+### Trusted Content and Module Loading
+
+The initial document and HTML returned by `resolveFrame` are trusted application content. They can select client entry modules and contribute import maps, styles, and nested frames. Only return HTML from sources the application trusts to run code in the current page. The default resolver restricts requests and redirects to the document origin, but Remix does not sanitize the returned HTML, and same-origin user-generated content is not implicitly safe.
+
+Remix passes each serialized module specifier unchanged to `loadModule`. The loader decides how to resolve it, so client entries can use CDN URLs, development server URLs, or bare specifiers resolved through import maps. With `import(moduleUrl)`, relative specifiers resolve from the module containing that import, subject to the document's import map. Applications that restrict module sources should enforce that policy in their loader before importing code.
 
 Client entries introduced after the initial document may depend on import maps added at runtime. When targeting browsers without native support for multiple import maps, use `remix/multiple-import-maps-polyfill` to load these modules and process their preloads:
 
@@ -1001,35 +1046,6 @@ let app = run({
   },
 })
 ```
-
-The initial document and HTML returned by `resolveFrame` are trusted application content. They can select client-entry modules and contribute import maps, styles, and nested frames. Only return HTML from sources the application trusts to run code in the current page. The default resolver restricts requests and redirects to the document origin, but Remix does not sanitize the returned HTML and same-origin user-generated content is not implicitly safe.
-
-Remix passes each serialized module specifier unchanged to `loadModule`. The loader controls how it resolves that specifier, so client entries can use CDN URLs, development server URLs, or bare specifiers resolved through import maps or a custom loader. With `import(moduleUrl)`, relative specifiers resolve from the module containing that import, subject to the document's import map. Applications that restrict module sources should enforce that policy in their loader before importing code.
-
-### Client-Only Roots
-
-`createRoot(container)` renders a component tree into an element without server-rendered HTML, for UI that only exists in the browser, such as a widget mounted into a third-party page:
-
-```tsx
-import { createRoot } from 'remix/component'
-
-import { SupportWidget } from './support-widget.tsx'
-
-let root = createRoot(document.getElementById('support-widget')!)
-root.render(<SupportWidget />)
-
-window.addEventListener('pagehide', () => root.dispose(), { once: true })
-```
-
-| Member              | Use                                                                                                                                                           |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `root.render(node)` | Renders a tree, reusing existing DOM and component instances. The first render hydrates any content already in the container. Pass `null` to remove the tree. |
-| `root.reconcile()`  | Renders the most recently supplied tree again.                                                                                                                |
-| `root.flush()`      | Applies pending DOM work and tasks synchronously, mainly for tests and integrations.                                                                          |
-| `root.dispose()`    | Removes the tree and releases its listeners and component resources.                                                                                          |
-| `error` event       | Dispatched when a component render or queued task fails.                                                                                                      |
-
-`createRangeRoot([start, end])` works the same way, but owns only the nodes between two sibling boundary nodes instead of a whole container.
 
 ## Frames
 
@@ -1060,14 +1076,12 @@ function AlbumPage(handle: Handle<{ albumId: string }>) {
 | `fallback` | Content to render while the frame is pending.                                     |
 | `on`       | Event handlers for events dispatched from the frame element, keyed by event type. |
 
-Frame content is itself rendered with `renderToStream`, so frames can contain other frames and client entries. The hydration data from nested frames is merged into the parent response automatically.
+Frame content can contain other frames and client entries.
 
-A frame goes through four stages:
-
-1. **Server render:** Frame content is resolved through `renderToStream`'s `resolveFrame` option and streamed into the HTML. Frame metadata is stored in the `rmx-data` script.
-2. **Client boot:** `run()` discovers frame boundaries, hydrates the client entries inside them, and watches any frames still streaming.
-3. **Reload:** `frame.reload()` fetches the frame's `src`, reconciles the new content into the DOM, and passes updated props to the client entries inside it.
-4. **Dispose:** When a frame is removed, such as by a parent render, its client entries are cleaned up and nested frames are disposed recursively.
+- **Server render:** The server renderer fetches frame content through its `resolveFrame` option and streams it into the HTML. See [`remix/component/server`](https://github.com/remix-run/remix/blob/main/packages/component/src/server/README.md).
+- **In the browser:** `run()` hydrates the client entries inside each frame and waits for frames that are still streaming. A `<Frame>` first rendered in the browser fetches its content through the [frame resolver](#resolving-frames).
+- **Reload:** `frame.reload()` fetches the frame's `src`, reconciles the new content into the DOM, and passes updated props to the client entries inside it.
+- **Removal:** When a frame is removed, its client entries are cleaned up and nested frames are disposed.
 
 ### Nested Frames
 
@@ -1173,7 +1187,7 @@ if (form.reportValidity()) {
 
 The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`. Top-frame and unnamed frame requests omit the target, so give a frame a name when its route needs to tell it apart. The route decides whether to return a full document or a fragment.
 
-The default resolver omits `X-Remix-Top-Frame-Src`. When `render()` middleware handles these requests, the server-rendered `handle.frames.top.src` defaults to the requested frame's URL. Same-origin subrequests created by a `render()` middleware render carry its top-frame source to nested renders. If frame content depends on the containing page, include that context explicitly in the frame's `src`.
+The default resolver doesn't tell the server which page contains the frame. If frame content depends on the containing page, include that context explicitly in the frame's `src`.
 
 The default resolver is a short `fetch()` call ([source](https://github.com/remix-run/remix/blob/main/packages/component/src/runtime/run.ts)), so a custom resolver can start from a copy of it. It also follows these rules:
 
