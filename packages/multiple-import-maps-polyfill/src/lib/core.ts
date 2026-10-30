@@ -19,8 +19,8 @@ import {
   supportsImportMaps,
   supportsMultipleImportMaps,
 } from './features.ts'
-import * as lexer from 'es-module-lexer'
-import type { ExportSpecifier, ImportSpecifier } from 'es-module-lexer'
+import * as lexer from 'es-module-lexer/minimal/js'
+import type { ExportSpecifier, ImportSpecifier } from 'es-module-lexer/minimal/js'
 
 // This source is adapted from ES Module Shims 2.8.4.
 const bridgeName = `remix.importMapPolyfill.runtime:${import.meta.url}`
@@ -31,8 +31,6 @@ type ModuleNamespace = Record<string, unknown>
 type Analysis = readonly [
   imports: ReadonlyArray<ImportSpecifier>,
   exports: ReadonlyArray<ExportSpecifier>,
-  facade: boolean,
-  hasModuleSyntax: boolean,
 ]
 type Seen = Record<string, 0 | 1>
 
@@ -528,7 +526,7 @@ const getOrCreateLoad = (
       load.a = lexer.parse(load.S!, load.u)
     } catch (e) {
       throwError(e)
-      load.a = [[], [], false, false]
+      load.a = [[], []]
     }
     return load
   })()

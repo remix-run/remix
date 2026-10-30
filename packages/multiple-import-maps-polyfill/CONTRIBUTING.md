@@ -40,7 +40,7 @@ The fork keeps ES Module Shims' graph fetching, parsing, resolution, rewriting, 
 - Shim mode, legacy module support, initialization options, customization hooks, and hot reloading are removed.
 - Module transforms for CSS, JSON, Wasm, and TypeScript are removed. Native JSON and CSS import attributes and static Wasm source-phase imports retain upstream's URL-rewriting structure but delegate module loading to the browser.
 - Dynamic source imports and import defer are removed.
-- `es-module-lexer` is a package dependency rather than vendored into the loader.
+- `es-module-lexer` is a package dependency rather than vendored into the loader. The loader imports the same CSP-compatible minimal asm.js build that upstream bundles (`es-module-lexer/minimal/js`).
 - Import-map integrity metadata is enforced when present, but upstream's `enforceIntegrity` policy requiring integrity for every module is removed.
 - Runtime warnings use the `remix/multiple-import-maps-polyfill` package name, and upstream's global `ESMS_DEBUG` diagnostics are not exposed.
 - Native module registration prevents the package's lazy ESM wrapper from loading itself through the polyfill.
