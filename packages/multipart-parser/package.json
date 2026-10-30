@@ -20,30 +20,22 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./node": "./src/node.ts",
-    "./future": "./src/future.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    },
+    "./future": {
+      "types": "./dist/future.d.ts",
+      "default": "./dist/future.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./node": {
-        "types": "./dist/node.d.ts",
-        "default": "./dist/node.js"
-      },
-      "./future": {
-        "types": "./dist/future.d.ts",
-        "default": "./dist/future.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/headers": "workspace:^"
+    "@remix-run/headers": "remix-run/remix#preview/pr-12098&path:packages/headers"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",

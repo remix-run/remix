@@ -21,17 +21,11 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
@@ -43,11 +37,11 @@
     "@remix-run/multiple-import-maps-polyfill": "workspace:^"
   },
   "dependencies": {
-    "@remix-run/assets": "workspace:^",
-    "@remix-run/component": "workspace:^",
-    "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/response": "workspace:^",
-    "@remix-run/csp-middleware": "workspace:^"
+    "@remix-run/assets": "remix-run/remix#preview/pr-12098&path:packages/assets",
+    "@remix-run/component": "remix-run/remix#preview/pr-12098&path:packages/component",
+    "@remix-run/fetch-router": "remix-run/remix#preview/pr-12098&path:packages/fetch-router",
+    "@remix-run/response": "remix-run/remix#preview/pr-12098&path:packages/response",
+    "@remix-run/csp-middleware": "remix-run/remix#preview/pr-12098&path:packages/csp-middleware"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
