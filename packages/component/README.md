@@ -976,6 +976,8 @@ Client entry props cross from the server to the browser, so they must be seriali
 
 Functions and class instances are rejected by the types. Pass plain data and URLs instead of database records or request objects.
 
+Elements in props may use `css()` mixins. Other mixins, such as `on()`, `ref()`, animation mixins, and custom mixins from `createMixin()` (even ones that return `css()`), can't be serialized, and the client entry reports an error when it renders them. Render those elements inside the client entry instead.
+
 ### Client Runtime
 
 `run()` starts the browser runtime. It hydrates every client entry in the document by calling `loadModule` for each component module, and handles [frames](#frames), [navigation](#navigation), and [prefetching](#prefetching). Call it once from your browser entry:
