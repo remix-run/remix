@@ -47,85 +47,22 @@ export function camelToKebab(str: string): string {
 // with units to select a length. Audited against @webref/css 8.7.8 and legacy
 // properties in mdn-data 2.27.1, retaining existing legacy entries.
 // https://github.com/w3c/webref/tree/main/packages/css
-// Matched after stripping vendor prefixes: WebkitLineClamp and msFlex use the
-// line-clamp and flex entries; WebKit's mask-box-image aliases need their own.
-const NUMERIC_CSS_PROPS = new Set([
-  'animation',
-  'animation-iteration-count',
-  'aspect-ratio',
-  'bookmark-level',
-  'border-image',
-  'border-image-outset',
-  'border-image-slice',
-  'border-image-width',
-  'box-flex',
-  'box-flex-group',
-  'box-ordinal-group',
-  'column-count',
-  'column-span',
-  'columns',
-  'flex',
-  'flex-grow',
-  'flex-line-count',
-  'flex-negative',
-  'flex-order',
-  'flex-positive',
-  'flex-shrink',
-  'float-defer',
-  'font-size-adjust',
-  'font-weight',
-  'force-broken-image-icon',
-  'grid-area',
-  'grid-column',
-  'grid-column-end',
-  'grid-column-span',
-  'grid-column-start',
-  'grid-row',
-  'grid-row-end',
-  'grid-row-span',
-  'grid-row-start',
-  'hyphenate-limit-chars',
-  'hyphenate-limit-lines',
-  'initial-letter',
-  'line-clamp',
-  'line-height',
-  'mask-border',
-  'mask-border-outset',
-  'mask-border-slice',
-  'mask-border-width',
-  'mask-box-image',
-  'mask-box-image-outset',
-  'mask-box-image-slice',
-  'mask-box-image-width',
-  'math-depth',
-  'max-lines',
-  'opacity',
-  'order',
-  'orphans',
-  'reading-order',
-  'scale',
-  'shape-image-threshold',
-  'tab-size',
-  'voice-balance',
-  'widows',
-  'z-index',
-  'zoom',
-  // SVG
-  'fill-opacity',
-  'flood-opacity',
-  'stop-opacity',
-  'stroke-dasharray',
-  'stroke-dashoffset',
-  'stroke-miterlimit',
-  'stroke-opacity',
-  'stroke-width',
-])
-
-const VENDOR_PREFIX_RE = /^-(?:webkit|moz|ms|o)-/
-
-function isUnitlessCssProp(cssKey: string): boolean {
-  return NUMERIC_CSS_PROPS.has(cssKey.replace(VENDOR_PREFIX_RE, ''))
-}
+// Vendor prefixes are optional: WebkitLineClamp and msFlex use the line-clamp
+// and flex entries; WebKit's mask-box-image aliases need their own.
+const NUMERIC_CSS_PROP = new RegExp(
+  '^(?:-(?:webkit|moz|ms|o)-)?(?:' +
+    'animation(?:-iteration-count)?|aspect-ratio|bookmark-level|' +
+    '(?:border-image|mask-border|mask-box-image)(?:-outset|-slice|-width)?|' +
+    'box-(?:flex|flex-group|ordinal-group)|column(?:s|-count|-span)|' +
+    'flex(?:-grow|-line-count|-negative|-order|-positive|-shrink)?|float-defer|' +
+    'font-(?:size-adjust|weight)|force-broken-image-icon|' +
+    'grid-(?:area|(?:column|row)(?:-end|-span|-start)?)|hyphenate-limit-(?:chars|lines)|' +
+    'initial-letter|line-(?:clamp|height)|math-depth|max-lines|opacity|order|orphans|' +
+    'reading-order|scale|shape-image-threshold|tab-size|voice-balance|widows|z-index|zoom|' +
+    // SVG
+    '(?:fill|flood|stop|stroke)-opacity|stroke-(?:dasharray|dashoffset|miterlimit|width)' +
+    ')$',
+)
 
 // Numbers default to pixels, except for unitless properties, custom properties,
 // and zero. Other units (such as time or angle) must be explicit strings.
@@ -134,7 +71,7 @@ export function normalizeCssValue(key: string, value: unknown): string | undefin
   if (value == null) return undefined
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) return undefined
-    if (value !== 0 && !key.startsWith('--') && !isUnitlessCssProp(camelToKebab(key))) {
+    if (value !== 0 && !key.startsWith('--') && !NUMERIC_CSS_PROP.test(camelToKebab(key))) {
       return `${value}px`
     }
   }
@@ -143,25 +80,12 @@ export function normalizeCssValue(key: string, value: unknown): string | undefin
 
 // Check if a style property is a nested selector or media query
 function isComplexSelector(key: string): boolean {
-  return (
-    key.startsWith('&') ||
-    key.startsWith('@') ||
-    key.startsWith(':') ||
-    key.startsWith('[') ||
-    key.startsWith('.')
-  )
+  return /^[&@:.[]/.test(key)
 }
 
 // Detect @keyframes (including vendor-prefixed variants)
 function isKeyframesAtRule(key: string): boolean {
-  if (!key.startsWith('@')) return false
-  let lower = key.toLowerCase()
-  return (
-    lower.startsWith('@keyframes') ||
-    lower.startsWith('@-webkit-keyframes') ||
-    lower.startsWith('@-moz-keyframes') ||
-    lower.startsWith('@-o-keyframes')
-  )
+  return /^@(?:-(?:webkit|moz|o)-)?keyframes/.test(key.toLowerCase())
 }
 
 // Generate a hash for style objects to create unique class names.
@@ -187,109 +111,46 @@ function hashStyle(obj: CSSProps): string {
 }
 
 // Convert style object to CSS text
-function styleToCss(styles: StyleObject, selector: string = ''): string {
-  let baseDeclarations: string[] = []
-  let nestedBlocks: string[] = []
-  let atRules: string[] = []
+function styleToCss(styles: StyleObject, selector: string): string {
   let preludeAtRules: string[] = []
+  let atRules: string[] = []
+  let body = styleBodyToCss(styles, '  ', (key, record) => {
+    if (!key.startsWith('@')) return nestedRuleToCss(key, record, '  ')
 
-  for (let [key, value] of Object.entries(styles)) {
-    if (isComplexSelector(key)) {
-      if (key.startsWith('@')) {
-        // Allow at-rules to be conditionally disabled.
-        // e.g. { '@media (min-width: 600px)': condition ? undefined : { ... } }
-        let record = toRecord(value)
-        if (!record) continue
-
-        // Some at-rules (e.g., @media) scope declarations to the selector.
-        // Others (e.g., @function) must NOT include the selector in their body.
-        if (key.startsWith('@function')) {
-          let body = atRuleBodyToCss(record)
-          if (body.trim().length > 0) {
-            preludeAtRules.push(`${key} {\n${indent(body, 2)}\n}`)
-          } else {
-            preludeAtRules.push(`${key} {\n}`)
-          }
-        } else if (isKeyframesAtRule(key)) {
-          // Keyframes definitions must not be wrapped with the element selector.
-          // Emit them before the class rule so animations can be referenced.
-          let body = keyframesBodyToCss(record)
-          if (body.trim().length > 0) {
-            preludeAtRules.push(`${key} {\n${indent(body, 2)}\n}`)
-          } else {
-            preludeAtRules.push(`${key} {\n}`)
-          }
-        } else {
-          // Default: keep at-rules nested with the element selector
-          let inner = styleToCss(record, selector)
-          if (inner.trim().length > 0) {
-            atRules.push(`${key} {\n${indent(inner, 2)}\n}`)
-          } else {
-            // Empty at-rule body with selector block
-            atRules.push(`${key} {\n  ${selector} {\n  }\n}`)
-          }
-        }
-        continue
-      }
-
-      // Allow nested selectors to be conditionally disabled.
-      // e.g. { '&:hover': condition ? undefined : { ... } }
-      let record = toRecord(value)
-      if (!record) continue
-
-      let nestedContent = nestedStyleBodyToCss(record, 4)
-      if (nestedContent.trim().length > 0) {
-        // Preserve key verbatim (e.g., '&[aria-selected], &[rmx-focus]')
-        nestedBlocks.push(`  ${key} {\n${nestedContent}\n  }`)
-      }
+    // Some at-rules (e.g., @media) scope declarations to the selector.
+    // Others (e.g., @function) must NOT include the selector in their body.
+    if (key.startsWith('@function')) {
+      preludeAtRules.push(ruleToCss(key, indent(atRuleBodyToCss(record))))
+    } else if (isKeyframesAtRule(key)) {
+      // Keyframes definitions must not be wrapped with the element selector.
+      // Emit them before the class rule so animations can be referenced.
+      preludeAtRules.push(ruleToCss(key, indent(keyframesBodyToCss(record))))
     } else {
-      // Base declaration
-      let normalizedValue = normalizeCssValue(key, value)
-      if (normalizedValue !== undefined) {
-        baseDeclarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
-      }
+      // Default: keep at-rules nested with the element selector, even when empty
+      let inner = styleToCss(record, selector) || ruleToCss(selector, '')
+      atRules.push(ruleToCss(key, indent(inner)))
     }
-  }
+  })
 
-  let css = ''
-  if (preludeAtRules.length > 0) {
-    css += preludeAtRules.join('\n')
-  }
-  if (selector && (baseDeclarations.length > 0 || nestedBlocks.length > 0)) {
-    css += (css ? '\n' : '') + `${selector} {\n`
-    if (baseDeclarations.length > 0) {
-      css += baseDeclarations.join('\n') + '\n'
-    }
-    if (nestedBlocks.length > 0) {
-      css += nestedBlocks.join('\n') + '\n'
-    }
-    css += '}'
-  }
-
-  if (atRules.length > 0) {
-    css += (css ? '\n' : '') + atRules.join('\n')
-  }
-
-  return css
+  let rule = body ? [ruleToCss(selector, body)] : []
+  return [...preludeAtRules, ...rule, ...atRules].join('\n')
 }
 
-function nestedStyleBodyToCss(styles: StyleObject, spaces: number): string {
-  // This renders content that is already inside a style rule. Nested selectors
-  // and nested at-rules can stay in that rule body; root at-rule placement is
-  // handled by styleToCss before entering a nested style body.
-  let pad = ' '.repeat(spaces)
+// Render declarations, followed by the rules renderRule returns for nested selectors and at-rules
+function styleBodyToCss(
+  styles: StyleObject,
+  pad: string,
+  renderRule?: (key: string, record: StyleObject) => string | undefined,
+): string {
   let declarations: string[] = []
-  let nestedBlocks: string[] = []
+  let rules: string[] = []
 
   for (let [key, value] of Object.entries(styles)) {
     if (isComplexSelector(key)) {
-      let record = toRecord(value)
-      if (!record) continue
-
-      let nestedContent = nestedStyleBodyToCss(record, spaces + 2)
-      if (nestedContent.trim().length > 0) {
-        nestedBlocks.push(`${pad}${key} {\n${nestedContent}\n${pad}}`)
-      }
+      // Allow nested rules to be conditionally disabled.
+      // e.g. { '&:hover': condition ? undefined : { ... } }
+      let rule = isRecord(value) ? renderRule?.(key, value) : undefined
+      if (rule) rules.push(rule)
     } else {
       let normalizedValue = normalizeCssValue(key, value)
       if (normalizedValue !== undefined) {
@@ -298,14 +159,28 @@ function nestedStyleBodyToCss(styles: StyleObject, spaces: number): string {
     }
   }
 
-  return [...declarations, ...nestedBlocks].join('\n')
+  return [...declarations, ...rules].join('\n')
 }
 
-function indent(text: string, spaces: number): string {
-  let pad = ' '.repeat(spaces)
+// Render a rule that is already inside a style rule. Nested selectors and nested at-rules can stay
+// in that rule body; root at-rule placement is handled by styleToCss.
+function nestedRuleToCss(key: string, styles: StyleObject, pad: string): string | undefined {
+  let bodyPad = pad + '  '
+  let body = styleBodyToCss(styles, bodyPad, (nestedKey, record) =>
+    nestedRuleToCss(nestedKey, record, bodyPad),
+  )
+  // Preserve key verbatim (e.g., '&[aria-selected], &[rmx-focus]')
+  if (body) return `${pad}${key} {\n${body}\n${pad}}`
+}
+
+function ruleToCss(selector: string, body: string): string {
+  return body ? `${selector} {\n${body}\n}` : `${selector} {\n}`
+}
+
+function indent(text: string): string {
   return text
     .split('\n')
-    .map((line) => (line.length ? pad + line : line))
+    .map((line) => (line.length ? '  ' + line : line))
     .join('\n')
 }
 
@@ -314,77 +189,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function toRecord(value: unknown): Record<string, unknown> | null {
-  return isRecord(value) ? value : null
-}
-
 // Build the body of a @keyframes rule (without wrapping selector)
 function keyframesBodyToCss(frames: StyleObject): string {
   let blocks: string[] = []
 
   for (let [frameSelector, frameValue] of Object.entries(frames)) {
-    if (!isRecord(frameValue)) {
-      // Skip non-object frame definitions
-      continue
-    }
-
-    let declarations: string[] = []
-    for (let [prop, propValue] of Object.entries(frameValue)) {
-      // Ignore nested selectors/at-rules inside keyframe steps
-      if (isComplexSelector(prop)) continue
-      let normalizedValue = normalizeCssValue(prop, propValue)
-      if (normalizedValue === undefined) continue
-      declarations.push(`  ${camelToKebab(prop)}: ${normalizedValue};`)
-    }
-
-    if (declarations.length > 0) {
-      blocks.push(`${frameSelector} {\n${declarations.join('\n')}\n}`)
-    } else {
-      blocks.push(`${frameSelector} {\n}`)
+    // Skip non-object frame definitions and ignore nested selectors/at-rules inside keyframe steps
+    if (isRecord(frameValue)) {
+      blocks.push(ruleToCss(frameSelector, styleBodyToCss(frameValue, '  ')))
     }
   }
 
   return blocks.join('\n')
 }
 
-// Build the body for at-rules that should not include a selector wrapper (e.g., @function)
+// Build the body for at-rules that should not include a selector wrapper (e.g., @function).
+// Nested selectors (&, :, ., [) aren't meaningful there, so only nested at-rules are rendered.
 function atRuleBodyToCss(styles: StyleObject): string {
-  let declarations: string[] = []
-  let nested: string[] = []
-
-  for (let [key, value] of Object.entries(styles)) {
-    if (isComplexSelector(key)) {
-      if (key.startsWith('@')) {
-        // Nested at-rules inside definition blocks; render their bodies recursively without selectors
-        let record = toRecord(value)
-        if (!record) continue
-        let inner = atRuleBodyToCss(record)
-        if (inner.trim().length > 0) {
-          nested.push(`${key} {\n${indent(inner, 2)}\n}`)
-        } else {
-          nested.push(`${key} {\n}`)
-        }
-      } else {
-        // Ignore nested selectors (&, :, ., [) inside definition-style at-rules
-        // They are not meaningful within e.g. @function bodies
-        continue
-      }
-    } else {
-      let normalizedValue = normalizeCssValue(key, value)
-      if (normalizedValue !== undefined) {
-        declarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
-      }
-    }
-  }
-
-  let body = ''
-  if (declarations.length > 0) {
-    body += declarations.join('\n')
-  }
-  if (nested.length > 0) {
-    body += (body ? '\n' : '') + nested.join('\n')
-  }
-  return body
+  return styleBodyToCss(styles, '  ', (key, record) =>
+    key.startsWith('@') ? ruleToCss(key, indent(atRuleBodyToCss(record))) : undefined,
+  )
 }
 
 export function processStyleClass(
