@@ -22,6 +22,19 @@ describe('processStyleClass', () => {
     expect(first.css).toBe(second.css)
   })
 
+  it('deduplicates omitted and undefined style properties', () => {
+    let cache = new Map<string, { selector: string; css: string }>()
+    let first = processStyleClass(
+      { color: 'red', backgroundColor: undefined, '&:hover': undefined },
+      cache,
+    )
+    let second = processStyleClass({ color: 'red' }, cache)
+
+    expect(first.selector).toBe(second.selector)
+    expect(first.css).toBe(second.css)
+    expect(cache.size).toBe(1)
+  })
+
   it('returns empty selector/css for empty objects', () => {
     let cache = new Map<string, { selector: string; css: string }>()
     let result = processStyleClass({}, cache)

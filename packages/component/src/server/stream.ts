@@ -25,8 +25,13 @@ import {
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps, isBrowserOnlyMixinDescriptor } from '../runtime/core/mix.ts'
+import {
+  composeMixedProps,
+  isBrowserOnlyMixinDescriptor,
+  isMixinDescriptor,
+} from '../runtime/core/mix.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
+import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
 
@@ -1082,6 +1087,13 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
   }
 
   return function replacer(_key: string, value: unknown) {
+    // Mixin descriptors hold their setup function, which JSON drops. `css()`
+    // only holds style data, so it's revived in the browser by name.
+    if (isMixinDescriptor(value)) {
+      return isCSSMixinDescriptor(value)
+        ? { $rmxMixin: 'css', args: value.args }
+        : { $rmxMixin: null }
+    }
     if (isRemixElement(value)) {
       return unwrapElement(value)
     }

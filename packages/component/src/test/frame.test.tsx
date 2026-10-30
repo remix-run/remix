@@ -2344,6 +2344,121 @@ describe('run', () => {
     expect(document.querySelector('dl')?.textContent).toBe('BSecondAFirst')
   })
 
+  it('hydrates css() mixins in element props', async (t) => {
+    let Tabs = clientEntry(
+      '/js/tabs.js#Tabs',
+      function Tabs(handle: Handle<{ panels: RemixNode[] }>) {
+        let selected = 0
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                selected = (selected + 1) % handle.props.panels.length
+                handle.update()
+              })}
+            >
+              Next
+            </button>
+            <section>{handle.props.panels[selected]}</section>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Tabs
+          panels={[
+            <p mix={css({ color: 'rgb(1, 2, 3)' })}>One</p>,
+            <article mix={[css({ color: 'rgb(4, 5, 6)' }), css({ paddingTop: 7 })]}>
+              <span mix={css({ fontWeight: 700 })}>Two</span>
+            </article>,
+          ]}
+        />,
+      ),
+    )
+    let serverPanel = document.querySelector('p')
+    invariant(serverPanel)
+
+    let errors: unknown[] = []
+    let app = run({ loadModule: () => Tabs })
+    app.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => app.dispose())
+    await app.ready()
+
+    expect(errors).toEqual([])
+    expect(document.querySelector('p')).toBe(serverPanel)
+    expect(getComputedStyle(serverPanel).color).toBe('rgb(1, 2, 3)')
+
+    document.querySelector('button')?.click()
+    app.flush()
+
+    let article = document.querySelector('article')
+    let span = document.querySelector('article > span')
+    invariant(article && span)
+    expect(getComputedStyle(article).color).toBe('rgb(4, 5, 6)')
+    expect(getComputedStyle(article).paddingTop).toBe('7px')
+    expect(getComputedStyle(span).fontWeight).toBe('700')
+  })
+
+  it('preserves css() precedence when entry props contain undefined styles', async (t) => {
+    let Slot = clientEntry(
+      '/js/slot.js#Slot',
+      function Slot(handle: Handle<{ content: RemixNode }>) {
+        return () => <div>{handle.props.content}</div>
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Slot
+          content={
+            <p mix={[css({ color: 'red', '&:hover': undefined }), css({ color: 'blue' })]}>
+              Styled
+            </p>
+          }
+        />,
+      ),
+    )
+    let paragraph = document.querySelector('p')
+    invariant(paragraph)
+    let serverClassName = paragraph.className
+    expect(getComputedStyle(paragraph).color).toBe('rgb(0, 0, 255)')
+
+    let app = run({ loadModule: () => Slot })
+    t.after(() => app.dispose())
+    await app.ready()
+
+    expect(document.querySelector('p')).toBe(paragraph)
+    expect(getComputedStyle(paragraph).color).toBe('rgb(0, 0, 255)')
+    expect(paragraph.className).toBe(serverClassName)
+  })
+
+  it('reports a clear error for mixins in element props that cannot be serialized', async (t) => {
+    let Slot = clientEntry(
+      '/js/slot.js#Slot',
+      function Slot(handle: Handle<{ content: RemixNode }>) {
+        return () => <div>{handle.props.content}</div>
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(<Slot content={<button mix={on('click', () => {})}>Save</button>} />),
+    )
+
+    let errors: unknown[] = []
+    let app = run({ loadModule: () => Slot })
+    app.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => app.dispose())
+    await app.ready()
+
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toBeInstanceOf(Error)
+    expect(String(errors[0])).toMatch(
+      /Client entry props contain a mixin that can't be serialized\. Only css\(\) mixins/,
+    )
+  })
+
   it('ready() does not wait for hydration markers from later frame templates', async () => {
     let Initial = clientEntry('/js/initial.js#Initial', function Initial(handle: Handle) {
       let clicked = false
