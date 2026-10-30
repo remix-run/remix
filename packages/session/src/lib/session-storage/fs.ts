@@ -74,14 +74,6 @@ export function createFsSessionStorage(
 
     try {
       try {
-  async function writeFileAtomically(file: string, content: string): Promise<void> {
-    let mode = await readFileMode(file)
-    // The same directory keeps the rename on one filesystem, where it is atomic.
-    let tempFile = `${file}.${crypto.randomUUID()}.tmp`
-    let handle = await fsp.open(tempFile, 'wx', mode)
-
-    try {
-      try {
         // Restore the existing mode even if the process umask has changed since the last write.
         if (mode !== undefined) await handle.chmod(mode)
         await handle.writeFile(content, 'utf-8')
@@ -173,15 +165,6 @@ async function renameWithRetries(source: string, destination: string): Promise<v
       }
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
-  }
-}
-
-async function readFileMode(file: string): Promise<number | undefined> {
-  try {
-    return (await fsp.stat(file)).mode & 0o777
-  } catch (error) {
-    if (isNoEntityError(error)) return undefined
-    throw error
   }
 }
 
