@@ -91,8 +91,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
       policy({ nonce }) {
         return {
           defaultSrc: ["'self'"],
-          // The import-map polyfill evaluates module graphs from blob URLs.
-          scriptSrc: ["'self'", `'nonce-${nonce}'`, 'blob:'],
+          scriptSrc: ["'self'", `'nonce-${nonce}'`],
           styleSrc: ["'self'", `'nonce-${nonce}'`],
           styleSrcAttr: ["'none'"],
           connectSrc: browserHmrChannel

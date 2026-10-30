@@ -64,7 +64,43 @@ Inferred directive objects and factory returns reject unknown directive names wi
 
 `render()` applies the nonce to generated import maps, module preloads, and CSS mixin styles. Internal frame requests, including redirects, share the enclosing nonce; independent requests generate fresh values. Authored script and style tags use `getCspNonce(context)`, which returns `undefined` before a nonce is established.
 
+Module preloads can load without a nonce under `'strict-dynamic'`. The renderer stamps them so they also work with nonce-based policies that omit `'strict-dynamic'` and do not otherwise allow their URLs.
+
 Browser navigation retains the original document's CSP. Matching resource nonces are rewritten when the response's CSP identifies one shared nonce, using the report-only header when the enforcing header is absent. The browser still enforces the original document's policies. See [client navigation](https://github.com/remix-run/remix/tree/main/packages/component/src/server#client-navigation) for island updates, nonce requirements, and custom resolvers.
+
+### Nonce access in components
+
+Components do not receive the route's request context directly. Pass `getCspNonce(context)` as a component prop, or use [`asyncContext()`](https://github.com/remix-run/remix/tree/main/packages/async-context-middleware) on Node.js to read it during server rendering:
+
+```tsx
+import { createRouter } from 'remix/router'
+import { asyncContext, getContext } from 'remix/middleware/async-context'
+import { csp, getCspNonce } from 'remix/middleware/csp'
+import { render } from 'remix/middleware/render'
+
+let router = createRouter({
+  middleware: [
+    asyncContext(),
+    csp({
+      policy: ({ nonce }) => ({ scriptSrc: [`'nonce-${nonce}'`] }),
+    }),
+    render(),
+  ],
+})
+
+function Document() {
+  return () => (
+    <html>
+      <head>
+        <script type="module" src="/app.js" nonce={getCspNonce(getContext())} />
+      </head>
+      <body>Hello, world!</body>
+    </html>
+  )
+}
+
+router.get('/', (context) => context.render(<Document />))
+```
 
 ## Static policies
 
@@ -109,6 +145,8 @@ Separate `csp()` instances also share the request nonce, so policies can be spli
 Policy and reporting endpoint headers apply only to downstream `text/html` responses by default, including HTML errors. Matching ignores case and parameters such as `charset`. Other responses, including those without a `Content-Type`, are unchanged.
 
 `304 Not Modified` responses are always unchanged, even with a custom filter, so cache revalidation retains the policy matching the cached HTML's nonce.
+
+`csp()` does not set `Cache-Control`. For nonce-bearing HTML, use `Cache-Control: private` to allow browser caching while preventing shared caches from reusing a nonce across visitors, or `Cache-Control: no-store` to prevent storage in all caches. `no-cache` alone permits storage and reuse after revalidation; it does not prevent shared caching. See [HTTP caching directives](https://www.rfc-editor.org/rfc/rfc9111.html#section-5.2.2).
 
 Use `filter(response)` to replace the default, for example to include worker scripts:
 

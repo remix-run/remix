@@ -89,7 +89,7 @@ let stream = renderToStream(<App />, {
 })
 ```
 
-Server resolvers that fetch HTML must arrange for the remote renderer to use the enclosing nonce; server rendering does not rewrite returned frame HTML.
+Server resolvers that fetch HTML must arrange for the remote renderer to use the enclosing nonce. The renderer hoists managed import maps and module preloads from blocking frame heads into the enclosing document and applies its nonce to those resources. It does not rewrite nonces elsewhere in the returned frame HTML, so authored resources and styles must already match the enclosing policy. Only return trusted frame HTML.
 
 #### Client navigation
 
