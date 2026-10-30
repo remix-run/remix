@@ -1,4 +1,5 @@
 import { createMixin, type MixinType } from './mixin.ts'
+import { ignoreAbortedRejection } from '../ignore-aborted-rejection.ts'
 import type { ElementProps } from '../jsx.ts'
 import type { MixinDescriptor } from './mixin.ts'
 import type { EnsureEvent, EventMap } from '../event-types.ts'
@@ -32,7 +33,8 @@ const onMixinSetup: MixinType<
   let stableHandler = (event: Event) => {
     reentry?.abort(new DOMException('', 'EventReentry'))
     reentry = new AbortController()
-    void currentHandler(event, reentry.signal)
+    let signal = reentry.signal
+    ignoreAbortedRejection(currentHandler(event, signal), signal)
   }
 
   handle.addEventListener('insert', (event) => {

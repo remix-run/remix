@@ -3,6 +3,7 @@ import { createComponent } from './component.ts'
 import type { FrameRuntime } from './frame.ts'
 import { createFrame, isFrameRuntime } from './frame.ts'
 import { unwrapFrameResolution } from './frame-resolution.ts'
+import { ignoreAbortedRejection } from './ignore-aborted-rejection.ts'
 import { createRangeRoot } from './vdom.ts'
 import type {
   CommittedFragmentNode,
@@ -766,7 +767,8 @@ function abandonDirectEventListeners(node: CommittedHostNode): void {
 function invokeDirectEventBinding(binding: DirectEventBinding, event: Event): void {
   binding.reentry?.abort(new DOMException('', 'EventReentry'))
   binding.reentry = new AbortController()
-  void binding.handler(event, binding.reentry.signal)
+  let signal = binding.reentry.signal
+  ignoreAbortedRejection(binding.handler(event, signal), signal)
 }
 
 function diffText(
