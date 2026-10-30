@@ -96,13 +96,48 @@ export function createFsSessionStorage(
       if (session.dirty) {
         let file = await getFilePath(session.id)
         await fsp.mkdir(path.dirname(file), { recursive: true })
-        await fsp.writeFile(file, JSON.stringify(session.data), 'utf-8')
+        await writeFileAtomically(file, JSON.stringify(session.data))
         return session.id
       }
 
       return null
     },
   }
+}
+
+// Writing in place lets overlapping saves of one session interleave into invalid JSON, and lets
+// reads see a truncated file. Renaming a complete file over the old one replaces it in one step.
+async function writeFileAtomically(file: string, content: string): Promise<void> {
+  // The same directory keeps the rename on one filesystem, where it is atomic.
+  let tempFile = `${file}.${crypto.randomUUID()}.tmp`
+
+  try {
+    await fsp.writeFile(tempFile, content, 'utf-8')
+    await replaceFile(tempFile, file)
+  } catch (error) {
+    await fsp.rm(tempFile, { force: true }).catch(() => undefined)
+    throw error
+  }
+}
+
+// Windows can refuse to replace a file that another handle has open, such as a virus scanner's or
+// an overlapping save's, so it retries for about a second before failing the save.
+async function replaceFile(source: string, destination: string): Promise<void> {
+  for (let delay = 10; ; delay *= 2) {
+    try {
+      return await fsp.rename(source, destination)
+    } catch (error) {
+      if (process.platform !== 'win32' || delay > 640 || !isFileInUseError(error)) {
+        throw error
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+  }
+}
+
+function isFileInUseError(error: unknown): boolean {
+  let code = error instanceof Error && 'code' in error ? error.code : undefined
+  return code === 'EACCES' || code === 'EBUSY' || code === 'EPERM'
 }
 
 function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
