@@ -24,6 +24,17 @@ export function getRetainedPreviewBuilds(
   latestSha: string,
   now = Date.now(),
 ): PreviewBuild[] {
+  if (/^preview\/pr-\d+$/.test(branch)) {
+    // Reserve one slot for the build being published, including reruns of old SHAs.
+    let recentBuilds = new Set(
+      builds
+        .filter((build) => build.sha !== latestSha)
+        .toSorted((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
+        .slice(-19),
+    )
+    return builds.filter((build) => build.sha === latestSha || recentBuilds.has(build))
+  }
+
   let cutoff = now - 7 * 24 * 60 * 60 * 1000
   return builds.filter(
     (build) =>

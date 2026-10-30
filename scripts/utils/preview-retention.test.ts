@@ -13,12 +13,42 @@ const now = Date.parse('2026-10-29T12:00:00Z')
 const repository = path.resolve(import.meta.dirname, '../..')
 
 describe('preview retention', () => {
-  it('retains all PR builds regardless of age', () => {
+  it('retains PR builds below the cap regardless of age', () => {
     let builds = [
       { sha: oldSha, createdAt: '2020-01-01T00:00:00Z' },
       { sha: latestSha, createdAt: '2026-10-29T00:00:00Z' },
     ]
     assert.deepEqual(getRetainedPreviewBuilds('preview/pr-123', builds, latestSha, now), builds)
+  })
+
+  it('reserves room for a new PR build and keeps the newest nineteen previous builds', () => {
+    let builds = Array.from({ length: 20 }, (_, index) => ({
+      sha: index.toString(16).padStart(40, '0'),
+      createdAt: new Date(now + index * 1000).toISOString(),
+    }))
+    assert.deepEqual(
+      getRetainedPreviewBuilds('preview/pr-123', builds.toReversed(), latestSha, now),
+      builds.slice(1).toReversed(),
+    )
+  })
+
+  it('keeps twenty PR builds on a rerun without evicting the active SHA', () => {
+    let builds = Array.from({ length: 21 }, (_, index) => ({
+      sha: index.toString(16).padStart(40, '0'),
+      createdAt: new Date(now + index * 1000).toISOString(),
+    }))
+    assert.deepEqual(getRetainedPreviewBuilds('preview/pr-123', builds, builds[0].sha, now), [
+      builds[0],
+      ...builds.slice(2),
+    ])
+  })
+
+  it('does not apply the PR count cap to custom preview branches', () => {
+    let builds = Array.from({ length: 21 }, (_, index) => ({
+      sha: index.toString(16).padStart(40, '0'),
+      createdAt: '2020-01-01T00:00:00Z',
+    }))
+    assert.deepEqual(getRetainedPreviewBuilds('experimental', builds, latestSha, now), builds)
   })
 
   it('expires main builds older than seven days and keeps the cutoff', () => {
@@ -107,6 +137,46 @@ describe('preview retention', () => {
         currentTarball,
       )
       assert.equal(fixture.manifest().builds.length, 2)
+    } finally {
+      fixture.dispose()
+    }
+  })
+
+  it('prunes PR artifacts beyond twenty builds from the snapshot and reachable history', () => {
+    let fixture = createFixture()
+    try {
+      let sourceSha = fixture.git('rev-parse', 'HEAD')
+      fixture.build('preview/pr-123', 'initial')
+      let manifest = fixture.manifest()
+      let previousBuilds = Array.from({ length: 20 }, (_, index) => ({
+        sha: index.toString(16).padStart(8, '0') + '0'.repeat(32),
+        createdAt: new Date(now + index * 1000).toISOString(),
+      }))
+      for (let build of previousBuilds) {
+        let directory = path.join(fixture.cwd, 'tarballs', build.sha.slice(0, 8))
+        fs.mkdirSync(directory)
+        fs.writeFileSync(path.join(directory, 'remix.tgz'), build.sha)
+      }
+      fs.rmSync(path.join(fixture.cwd, 'tarballs', sourceSha.slice(0, 8)), { recursive: true })
+      manifest.sha = previousBuilds[19].sha
+      manifest.builds = previousBuilds
+      fs.writeFileSync(path.join(fixture.cwd, 'tarballs/preview.json'), JSON.stringify(manifest))
+      fixture.git('add', '.')
+      fixture.git('commit', '-m', 'seed retained builds')
+      fixture.git('push', 'origin', 'HEAD:refs/heads/preview/pr-123')
+      fixture.git('checkout', 'main')
+
+      fixture.build('preview/pr-123', 'new build')
+      assert.deepEqual(
+        fixture.manifest().builds.map((build) => build.sha),
+        [...previousBuilds.slice(1).map((build) => build.sha), sourceSha],
+      )
+      assert.equal(fs.existsSync(path.join(fixture.cwd, 'tarballs/00000000')), false)
+      assert.doesNotMatch(fixture.git('rev-list', '--objects', 'HEAD'), /tarballs\/00000000/)
+      assert.equal(
+        fs.readFileSync(path.join(fixture.cwd, 'tarballs/00000001/remix.tgz'), 'utf8'),
+        previousBuilds[1].sha,
+      )
     } finally {
       fixture.dispose()
     }

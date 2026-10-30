@@ -7,8 +7,9 @@
 #   pnpm add "https://raw.githubusercontent.com/remix-run/remix/refs/heads/preview/pr-12345/tarballs/<source-sha>/remix.tgz"
 #
 # The script prints the exact install URL and writes tarballs/preview.json.
-# PR builds remain until the PR closes. Main builds older than seven days are
-# pruned on the next update, with the latest main build always retained.
+# PR previews retain the latest 20 SHA builds until the PR closes. Main builds
+# older than seven days are pruned on the next update, with the latest main build
+# always retained.
 #
 # Can also be dispatched manually with base/installable branches to provide
 # `experimental` branches from PRs or otherwise.
