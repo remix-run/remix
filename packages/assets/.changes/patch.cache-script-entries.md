@@ -1,1 +1,0 @@
-Reduce server rendering work by caching `getScriptEntry()` metadata between calls. Watched file changes and browser HMR events clear the cache, failed requests can be retried, and each caller receives a separate copy of the metadata.

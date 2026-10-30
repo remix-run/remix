@@ -88,39 +88,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docs:
-    name: Update API Docs
+    name: Deploy docs
     needs: publish
     # Don't run on no-op publish runs (i.e., docs updates on a clean main branch)
     if: needs.publish.outputs.tag != ''
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger remix-api-docs
+      - name: Trigger the Docs and UI deploys
         uses: actions/github-script@v8
         with:
+          # Needs permission to dispatch events to both docs repos.
           github-token: ${{ secrets.REMIX_API_DOCS_PAT }}
           script: |
-            await github.rest.repos.createDispatchEvent({
-              owner: 'remix-run',
-              repo: 'remix-api-docs',
-              event_type: 'update-docs',
-              client_payload: { tag: '${{ needs.publish.outputs.tag }}' }
-            });
-
-  ui_docs:
-    name: Update UI Docs
-    needs: publish
-    # Remove the temporary false guard once the hosting workflow and token are configured.
-    if: ${{ false && needs.publish.outputs.tag != '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger remix-ui-docs
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.REMIX_UI_DOCS_PAT }}
-          script: |
-            await github.rest.repos.createDispatchEvent({
-              owner: 'remix-run',
-              repo: 'remix-ui-docs',
-              event_type: 'update-ui',
-              client_payload: { ref: '${{ needs.publish.outputs.tag }}' }
-            });
+            let ref = '${{ needs.publish.outputs.tag }}';
+            let deploys = [
+              ['remix-docs', 'update-docs'],
+              ['remix-ui-docs', 'update-ui'],
+            ];
+            for (let [repo, event_type] of deploys) {
+              await github.rest.repos.createDispatchEvent({
+                owner: 'remix-run',
+                repo,
+                event_type,
+                client_payload: { ref },
+              });
+            }

@@ -6,7 +6,8 @@ import { CodeBlockCopyButtons } from 'remix-docs-shared/ui/code-block-copy'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsShell, DocsSecondaryNavigation } from 'remix-docs-shared/ui/docs-shell'
-import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
+import { DocsSocialMeta } from 'remix-docs-shared/ui/social-meta'
+import { DocsTableOfContents, hasTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 import uiPackage from '../../../../packages/ui/package.json' with { type: 'json' }
 import type { PageMeta, UiPage } from '../data/pages.ts'
@@ -24,6 +25,8 @@ interface UiDocumentProps {
   children: RemixNode
 }
 
+const siteUrl = 'https://ui.remix.run'
+
 const pagefindModulePath = path.resolve(
   import.meta.dirname,
   '../../build/site/assets/pagefind/pagefind-component-ui.js',
@@ -35,13 +38,25 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
     let searchEnabled = shouldLoadPagefind(pagefindModulePath)
     let links = createDocsNavigationLinks()
     let contentId = `${handle.id}-content`
+    let pageTitle = title === 'Remix UI' ? title : `${title} | Remix UI`
+    let pagePath = currentPage
+      ? routes.docs.page.href({ category: currentPage.category, slug: currentPage.slug })
+      : routes.docs.index.href()
     return (
       <html lang="en">
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <meta name="description" content={description} />
-          <title>{title === 'Remix UI' ? title : `${title} | Remix UI`}</title>
+          <title>{pageTitle}</title>
+          <DocsSocialMeta
+            siteName="Remix UI"
+            url={`${siteUrl}${pagePath.replace(/\/?$/, '/')}`}
+            title={pageTitle}
+            description={description}
+            image={`${siteUrl}/social/remix.jpg`}
+            imageAlt="Remix"
+          />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           {searchEnabled ? (
             <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
@@ -72,7 +87,7 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
             navigationLabel="Remix UI documentation"
             mobileNavigationLabel={currentPage?.title ?? 'Getting Started'}
             navigationName="Remix UI navigation"
-            hasSecondaryNavigation={headings.length > 0}
+            hasSecondaryNavigation={hasTableOfContents(headings)}
             footer={<DocsFooter />}
           >
             <div class="docs-layout ui-docs-layout">
@@ -80,9 +95,9 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
                 {children}
                 <CodeBlockCopyButtons rootId={contentId} />
               </article>
-              {headings.length > 0 ? (
+              {hasTableOfContents(headings) ? (
                 <DocsSecondaryNavigation pagefindIgnore>
-                  <h2 class="docs-toc__heading">On this page</h2>
+                  <h2 class="docs-nav-heading docs-toc__heading">On this page</h2>
                   <DocsTableOfContents headings={headings} />
                 </DocsSecondaryNavigation>
               ) : null}
@@ -98,11 +113,11 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
 function Sidebar(handle: Handle<{ pages: UiPage[]; currentPage?: PageMeta }>) {
   return () => (
     <>
-      <p class="ui-nav-heading">
-        Remix UI <span class="ui-nav-version">v{uiPackage.version}</span>
+      <p class="docs-nav-heading docs-nav-title">
+        Remix UI <span class="docs-nav-version">v{uiPackage.version}</span>
       </p>
       <a
-        class="ui-nav-link ui-nav-start"
+        class="docs-nav-item ui-nav-link ui-nav-start"
         href={routes.docs.index.href()}
         aria-current={handle.props.currentPage === undefined ? 'page' : undefined}
       >
@@ -110,14 +125,14 @@ function Sidebar(handle: Handle<{ pages: UiPage[]; currentPage?: PageMeta }>) {
       </a>
       {categories.map((category) => (
         <section key={category.id} class="ui-nav-group">
-          <h2>{category.title}</h2>
+          <h2 class="docs-nav-heading">{category.title}</h2>
           <ul>
             {handle.props.pages
               .filter((page) => page.category === category.id)
               .map((page) => (
                 <li key={page.slug}>
                   <a
-                    class="ui-nav-link"
+                    class="docs-nav-item ui-nav-link"
                     href={routes.docs.page.href({ category: category.id, slug: page.slug })}
                     aria-current={
                       handle.props.currentPage?.category === page.category &&

@@ -63,7 +63,7 @@ createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
 | `remix/route-pattern/join`        | Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints.                            |
 | `remix/route-pattern/specificity` | Rank matches by [specificity](#ranking-matches-by-specificity).                                                                        |
 
-For in-depth reference, visit the [`route-pattern` API docs](https://api.remix.run/api/remix/route-pattern)
+For in-depth reference, visit the [`route-pattern` API docs](https://docs.remix.run/route-pattern/)
 
 Examples in this README use `remix/route-pattern/*` imports. The same APIs are also available from the direct package entrypoints: `@remix-run/route-pattern`, `@remix-run/route-pattern/href`, `@remix-run/route-pattern/match`, `@remix-run/route-pattern/join`, and `@remix-run/route-pattern/specificity`.
 

@@ -1,1 +1,0 @@
-Fix frame navigations in iOS Safari that could open the next page scrolled to the bottom after scrolling down the previous page. Safari restored the previous scroll position for several frames after the navigation reset it; Remix now undoes those restorations until shortly after the navigation finishes, the user interacts with the page, or another navigation starts (see #12011).

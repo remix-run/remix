@@ -3,13 +3,16 @@ title: Rendering UI
 description: How to build pages from Remix components, props, context, document shells, styles, and first-party UI.
 ---
 
-In the previous chapter, we added `render()` to the middleware stack so actions could call
-`context.render(...)`. This chapter uses that function to build pages from Remix components, then
-adds a document shell, styles, and first-party UI.
+Remix pages are component trees. An action passes a tree to `context.render(...)`, and the render
+middleware turns it into an HTML `Response`. This guide covers components from
+[`remix/component`](../src/component/README.md), props, local state and context, what runs on the server and
+in the browser, the shared document shell, styling with `css(...)` and
+[cascade layers](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer), headless primitives from
+`@remix-run/ui`, and HTML responses that skip the component runtime.
 
 The component model is the same on the server and in the browser. A page does not need browser
-JavaScript unless part of it handles events or uses browser APIs. We'll add that layer in
-[Interactivity](/interactivity/).
+JavaScript unless part of it handles events or uses browser APIs. Those components need a
+[hydration boundary](/interactivity/#cliententry).
 
 ## The Remix component model {#the-remix-component-model}
 
@@ -39,9 +42,8 @@ export function AlbumHeading(handle: Handle<AlbumHeadingProps>) {
 }
 ```
 
-Render components with JSX, such as `<AlbumHeading artist="..." title="..." />`. The runtime creates
-the component instance, preserves its setup scope, and calls its render function again when the
-component updates.
+Render components with JSX, such as `<AlbumHeading artist="..." title="..." />`. Each JSX use
+creates its own instance with its own setup scope.
 
 The render function returns a `RemixNode`. That includes host elements such as `<main>`, other Remix
 components, strings, numbers, booleans, `null`, `undefined`, and nested arrays of those values.
@@ -59,9 +61,6 @@ export function AlbumByline(handle: Handle<{ artist: string; year: number }>) {
   );
 }
 ```
-
-The same component can render to HTML on the server, mount into a client-only root, or hydrate inside
-a server-rendered page. Only the last two cases execute it in the browser.
 
 ```tsx
 import { css, on } from "remix/component";
@@ -136,8 +135,11 @@ const counterValueStyles = css({
 
 ## Props, local state, context, and updates {#handle-props-setup-render-and-updates}
 
-Every component receives a `Handle`. `handle.props` is a stable object whose property values are
-replaced before each render, so callbacks and render output should read current values from it.
+Every component receives a `Handle` with its props and the methods that control rendering. The
+[`Handle` reference](../src/component/README.md#handle) lists every member.
+
+`handle.props` is a stable object whose property values are replaced before each render, so
+callbacks and render output should read current values from it.
 Destructuring the object is safe. Destructuring one of its properties in setup captures only the
 initial value.
 
@@ -194,10 +196,10 @@ export function AlbumList(handle: Handle<{ albums: Album[] }>) {
 }
 ```
 
-The input handler changes `filter` and calls `handle.update()`. Updates are explicit: changing a
-variable does not render anything until the component requests an update. Stable `key` values tell
-Remix which list items are the same across renders, preserving their DOM and component state if the
-list changes order. [Interactivity](/interactivity/) covers event handlers, updates, and hydration.
+The input handler changes `filter`, then calls `handle.update()` to render with the new value.
+Changing the variable alone doesn't render anything. Stable `key` values tell Remix which list items
+are the same across renders, so their DOM, component state, focus, and typed input values survive
+when the list changes order.
 
 `handle.id` is a stable identifier for the component instance. It is useful when a reusable control
 needs to connect a label, input, description, or ARIA relationship without requiring an `id` prop:
@@ -243,12 +245,91 @@ export function AlbumPrice(handle: Handle<{ amount: number }>) {
 ```
 
 Calling `handle.context.set(...)` stores a value but does not schedule an update. For context that
-changes in the browser, update the provider or use a `TypedEventTarget` so only consumers that listen
-for the change need to update.
+changes in the browser, update the provider or share a
+[`TypedEventTarget`](/interactivity/#saving-a-client-owned-document), a typed version of the DOM's
+[`EventTarget`](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) exported from
+[`remix/component`](../src/component/README.md). Then only consumers that listen for the change need to update.
+
+When a provider sets a new value and updates, consumers must read the context inside their render
+function to see it. A value read in setup stays the one from the first render.
+
+## Server and browser work {#server-and-browser-work}
+
+Setup and render run wherever the component renders, including on the server. Event handlers and the
+parts of the handle that react to a live page only do work in the browser:
+
+| API                      | On the server | In the browser                                    |
+| ------------------------ | ------------- | ------------------------------------------------- |
+| Setup and render         | Run           | Run                                               |
+| `on(...)` event handlers | Not attached  | Run when the event fires                          |
+| `handle.update()`        | Throws        | Schedules a render                                |
+| `handle.queueTask(task)` | Does nothing  | Runs `task` after the next render reaches the DOM |
+| `handle.signal`          | Never aborted | Aborted when the component is removed             |
+
+Keep setup and render free of browser globals such as `window`, `document`, and `localStorage`.
+Put browser-only work in event handlers or queued tasks. A component only runs in the browser when it
+mounts in a [client-only root](/interactivity/#client-only-roots) or sits inside a
+[hydration boundary](/interactivity/#cliententry).
+
+Queue a task from setup for work that should start once the component is in the page, such as
+reading browser storage:
+
+```tsx filename=app/ui/recently-viewed.tsx
+import type { Handle } from "remix/component";
+
+export function RecentlyViewed(handle: Handle) {
+  let titles: string[] | undefined;
+
+  handle.queueTask(() => {
+    let stored = localStorage.getItem("recently-viewed");
+    titles = stored ? JSON.parse(stored) : [];
+    handle.update();
+  });
+
+  return () => {
+    if (!titles) return <p>Loading recently viewed albums…</p>;
+    if (titles.length === 0) return null;
+
+    return (
+      <ul>
+        {titles.map((title) => (
+          <li key={title}>{title}</li>
+        ))}
+      </ul>
+    );
+  };
+}
+```
+
+The server renders the loading message. In the browser, the queued task runs after the first render
+reaches the DOM, reads `localStorage`, and renders the list.
+
+Queued tasks also handle work that render discovers, such as
+[loading data when a prop changes](../src/component/README.md#queued-tasks) or moving focus after an update.
+Each task receives an [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal)
+that is aborted when the component renders again or is removed, so pass it to `fetch()` and check it
+before using the result.
+
+A timer or subscription that should last as long as the component should stop when `handle.signal`
+aborts:
+
+```tsx
+// Inside setup:
+handle.queueTask(() => {
+  if (handle.signal.aborted) return;
+
+  let interval = setInterval(() => handle.update(), 1000);
+  handle.signal.addEventListener("abort", () => clearInterval(interval));
+});
+```
+
+In hydrated components, these updates usually start in [event handlers](/interactivity/#events-with-on).
+The Interactivity guide covers [when updates and queued tasks run](/interactivity/#state-updates-and-post-render-tasks)
+relative to the DOM.
 
 ## Rendering pages through request context {#rendering-pages-through-request-context}
 
-Our album controller already returns a page with `context.render(...)`:
+An action renders a page by returning `context.render(...)` with a component tree:
 
 ```tsx filename=app/actions/albums/controller.tsx
 import { createController } from "remix/router";
@@ -272,9 +353,11 @@ export default createController(routes.albums, {
 });
 ```
 
-The generated app installs the render middleware once, so normal actions only call
-`context.render(...)`. It also accepts a `ResponseInit` when a rendered page needs a status or
-headers:
+`context.render(...)` comes from `render()` in
+[`remix/middleware/render`](../src/render-middleware/README.md). Install it once in the
+[router's middleware](/request-handling/#common-middleware), and every action can call
+`context.render(...)` without importing a renderer. It also accepts a `ResponseInit` when a rendered
+page needs a status or headers:
 
 ```tsx
 return context.render(<AlbumPage album={album} />, {
@@ -283,14 +366,16 @@ return context.render(<AlbumPage album={album} />, {
 });
 ```
 
-Most components do not need to know how the middleware turns their tree into a response.
-[Streaming UI with Frames](/streaming-ui-with-frames/) covers the underlying server renderer and the
-optional `<Frame>` API for pages that load route-owned regions independently.
+Most components do not need to know how the middleware turns their tree into a response. The
+middleware
+[streams the rendered tree](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring),
+and [frames](/streaming-ui-with-frames/#use-a-frame-for-route-owned-ui) let a page load route-owned
+regions independently.
 
 ## Document shells, head content, and HTML responses {#document-shells-and-head-content}
 
-Pages should render a complete document through one shared component. The default app keeps it in
-`app/actions/document.tsx`:
+Render every page inside one shared component that outputs the complete document, kept in a module
+such as `app/actions/document.tsx`:
 
 ```tsx filename=app/actions/document.tsx
 import type { Handle, RemixNode } from "remix/component";
@@ -330,14 +415,19 @@ export function Document(handle: Handle<DocumentProps>) {
 }
 ```
 
-`<ImportMap>` combines the script entry's map with mappings from blocking client entries so the
-initial document contains one complete import map.
+`<ImportMap>` from [`remix/component/server`](../src/component/server/README.md) combines
+the script entry's map with mappings from blocking client entries so the initial document contains
+one complete [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap).
+An import map is a `<script type="importmap">` tag that tells the browser which URL to load for each
+bare module specifier, such as [`remix/component`](../src/component/README.md).
 
 Put `title`, `meta`, `link`, and `style` elements inside the document's explicit `<head>`, along with
-global stylesheets, module preloads, icons, and the browser entry script. Resolve the entry href and
-its module graph once in `app/assets.ts` instead of constructing an asset URL in the component.
+global stylesheets, module preloads, icons, and the browser entry script. Resolve the
+[entry href and its module graph](/files-and-assets/#load-browser-scripts)
+once in `app/assets.ts` instead of constructing an asset URL in the component.
 
-The renderer passes this tree to `createHtmlResponse()`. That helper preserves an existing doctype or
+The renderer passes this tree to `createHtmlResponse()` from
+[`remix/response/html`](../src/response/README.md). That helper preserves an existing doctype or
 prepends `<!DOCTYPE html>`, sets `Content-Type: text/html; charset=UTF-8` unless the action supplied
 one, and returns a normal Web `Response`.
 
@@ -376,9 +466,16 @@ export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
 }
 ```
 
-The `css(...)` call creates a generated class and static rule. The `style` prop is better for values
+The `css(...)` call creates a generated class and static rule, and the element's
+[`mix` prop](/interactivity/#the-mix-prop) applies it. The `style` prop is better for values
 such as progress, coordinates, opacity, or transforms that can change on every update. Putting those
 values in `css(...)` would create another generated rule for each value.
+
+Prefer state selectors such as `"&:hover .title"` or `'&[aria-expanded="true"]'` over tracking hover
+or focus in JavaScript. The browser applies them without a render, and they work before the page
+hydrates. When two `css(...)` styles on one element set the same property, their order in `mix`
+doesn't decide which one wins, so
+[put variants behind a selector in a single style](../src/component/README.md#combining-styles).
 
 During server rendering, Remix collects generated rules, deduplicates them, and inserts their
 `<style data-rmx-style>` tags into the document head. A server-rendered page does not wait for browser
@@ -519,8 +616,10 @@ const productButtonStyles = css({
 
 ## Cascade layers and app-owned design tokens {#theme-tokens-and-cascade-layers}
 
-Generated `css(...)` rules live in the native `rmx` cascade layer. If your app uses its own layers,
-declare the complete order once:
+A [cascade layer](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer) is a named group of CSS
+rules declared with `@layer`. The order of layers decides which rules win, before selector
+specificity is compared. Generated `css(...)` rules live in the `rmx` layer. If your app uses its
+own layers, declare the complete order once:
 
 ```css filename=app/actions/public/app.css
 @layer base, rmx, app;
@@ -546,8 +645,8 @@ declare the complete order once:
 ```
 
 Layers before `rmx` provide defaults that generated styles can override. Layers after `rmx` can
-override generated styles deliberately. Unlayered author CSS outranks normal layered CSS, so use it
-intentionally when the rest of the app has an explicit layer order.
+override generated styles deliberately. Unlayered CSS outranks every layer, including `rmx`, so an
+unlayered rule overrides generated styles no matter how the layers are ordered.
 
 Keep brand colors, spacing, typography, radii, and other design tokens in app-owned CSS custom
 properties or TypeScript values.
@@ -572,12 +671,11 @@ import * as accordion from "@remix-run/ui/accordion";
 
 The primitives supply structural attributes, keyboard interaction, focus management, and state
 coordination. Your app supplies the markup and all visual styling. Controls that handle browser
-events must also be inside a `clientEntry(...)` boundary, either directly or through an interactive
-ancestor. The next chapter shows how to choose that boundary.
+events must also be inside a [`clientEntry(...)` boundary](/interactivity/#cliententry), either
+directly or through an interactive ancestor.
 
-Preserve native elements when they fit, keep labels and ARIA relationships intact, and test pointer
-and keyboard behavior. A custom select, for example, still needs a provider, trigger, popover,
-list, options, and hidden input if it participates in a form.
+Use a native element when it covers the behavior you need. A custom select built from primitives
+needs a provider, trigger, popover, list, options, and a hidden input if it participates in a form.
 
 ```tsx
 import { css } from "remix/component";
@@ -708,7 +806,8 @@ Raw strings are rejected on `innerHTML` and iframe `srcDoc` props so untrusted p
 
 ## Rendering HTML without the component runtime {#rendering-html-without-the-component-runtime}
 
-Not every HTML response needs a component tree. `remix/html-template` produces escaped `SafeHtml`
+Not every HTML response needs a component tree.
+[`remix/html-template`](../src/html-template/README.md) produces escaped `SafeHtml`
 values for feeds, email bodies, small fragments, and other string-oriented output:
 
 ```ts filename=app/actions/albums/feed.ts
@@ -739,9 +838,5 @@ export function renderAlbumFeed(albums: Array<{ id: string; title: string }>) {
 ```
 
 Interpolated strings are escaped, and nested `SafeHtml` fragments compose without being escaped a
-second time. `html.raw` is only for markup the application already trusts; never pass user input to
+second time. `html.raw` is only for markup the application already trusts. Never pass user input to
 it.
-
-For normal pages, components provide composition, server rendering, and a path to browser
-interactivity. The next chapter marks the smallest interactive components with `clientEntry(...)`
-and hydrates them without replacing the server response path.

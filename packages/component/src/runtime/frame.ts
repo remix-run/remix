@@ -1,5 +1,12 @@
+import { pendingPrefetchLinks } from './prefetch-links.ts'
 import { jsx } from './jsx.ts'
-import { Frame, createFrameHandle, type FrameContent, type FrameResolution } from './component.ts'
+import {
+  Fragment,
+  Frame,
+  createFrameHandle,
+  type FrameContent,
+  type FrameResolution,
+} from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
@@ -156,7 +163,6 @@ const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 const pendingClientEntryHydrations = new WeakMap<Comment, Promise<void>>()
 const frameClientEntryParents = new WeakMap<Comment, Comment>()
-const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 
 function createLinkedAbortController(
   first: AbortSignal,
@@ -182,10 +188,6 @@ function createLinkedAbortController(
       }
     },
   }
-}
-
-function stripDoctypeMarkup(html: string): string {
-  return html.replace(DOCTYPE_PATTERN, '')
 }
 
 // Marker-less HTML is a whole document when it starts with a doctype or `<html>`.
@@ -371,6 +373,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let initialClientEntryResources: Promise<boolean> | undefined
   function shouldPreserveManagedHeadNode(node: Node): boolean {
     return (
+      pendingPrefetchLinks.has(node) ||
       importMapManager.shouldPreserveHeadNode(node) ||
       (modulePreloader.hasActivePreloads() && modulePreloader.isActivePreload(node))
     )
@@ -515,13 +518,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       }
     }
 
-    let rawHtml = typeof content === 'string' ? content : undefined
-    let htmlContent = rawHtml === undefined ? undefined : stripDoctypeMarkup(rawHtml)
+    let htmlContent = typeof content === 'string' ? content : undefined
 
     let isFullDocumentReload =
       container.root instanceof Document &&
-      rawHtml !== undefined &&
-      (options.flushKind ?? inferFlushKind(rawHtml)) === 'document'
+      htmlContent !== undefined &&
+      (options.flushKind ?? inferFlushKind(htmlContent)) === 'document'
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
@@ -1414,6 +1416,12 @@ function reviveSerializedValue(value: unknown): unknown {
     return jsx(Frame, props, key)
   }
 
+  if (record.$rmxFragment === true) {
+    let props = reviveSerializedObject(record.props)
+    let key = reviveSerializedValue(record.key)
+    return jsx(Fragment, props, key)
+  }
+
   if (record.$rmx === true && typeof record.type === 'string') {
     let props = reviveSerializedObject(record.props)
     let key = reviveSerializedValue(record.key)
@@ -1953,7 +1961,7 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
 
 function createFragmentFromString(doc: Document, content: string): DocumentFragment {
   let template = doc.createElement('template')
-  template.innerHTML = stripDoctypeMarkup(content).trim()
+  template.innerHTML = content.trim()
   return template.content
 }
 

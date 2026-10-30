@@ -29,7 +29,7 @@ export function AccountPage(handle: Handle<{ user: User }>) {
           </p>
 
           <p mix={css({ marginTop: '1.5rem' })}>
-            <a href={routes.account.settings.index.href()} class="btn">
+            <a data-rmx-prefetch="intent" href={routes.account.settings.index.href()} class="btn">
               Edit Settings
             </a>
           </p>
@@ -38,10 +38,15 @@ export function AccountPage(handle: Handle<{ user: User }>) {
         <div class="card" mix={css({ marginTop: '1.5rem' })}>
           <h2>Quick Links</h2>
           <p>
-            <a href={routes.account.orders.index.href()} class="btn btn-secondary">
+            <a
+              data-rmx-prefetch="intent"
+              href={routes.account.orders.index.href()}
+              class="btn btn-secondary"
+            >
               View Orders
             </a>
             <a
+              data-rmx-prefetch="intent"
               href={routes.books.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}

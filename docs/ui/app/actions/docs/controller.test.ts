@@ -10,9 +10,12 @@ describe('UI docs', () => {
     let response = await router.fetch(new Request('http://localhost/'))
     let html = await response.text()
     assert.equal(response.status, 200)
-    assert.equal(html.match(/class="ui-nav-version">([^<]+)<\/span>/)?.[1], `v${uiPackage.version}`)
+    assert.equal(
+      html.match(/class="docs-nav-version">([^<]+)<\/span>/)?.[1],
+      `v${uiPackage.version}`,
+    )
     assert.match(html, /Unstyled, accessible UI patterns and animation for Remix/)
-    assert.match(html, /<h2>Patterns<\/h2>/)
+    assert.match(html, /<h2 class="docs-nav-heading">Patterns<\/h2>/)
     assert.match(html, /is currently unstable and versioned in the v0\.x range/)
     assert.match(html, /npm/)
     assert.match(html, /@remix-run\/ui/)
@@ -25,9 +28,8 @@ describe('UI docs', () => {
     assert.match(html, /<section id="installation"[^>]*><h2>Installation<\/h2>/)
     assert.match(html, /<section id="using-ui"[^>]*><h2>Using the library<\/h2>/)
     assert.match(html, /<section id="explore"[^>]*><h2>Explore the library<\/h2>/)
-    assert.match(html, /href="#installation" aria-current="location"/)
-    assert.match(html, /href="#using-ui"/)
-    assert.match(html, /href="#explore"/)
+    // Three sections is too few for an "On this page" list.
+    assert.doesNotMatch(html, /On this page/)
   })
 
   it('makes landing previews decorative and does not hydrate their examples', async () => {

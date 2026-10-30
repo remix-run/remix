@@ -27,16 +27,15 @@ export default function GettingStarted() {
   return () => {
     let content = (
       <>
-        <header class="ui-page-header ui-landing-header">
-          <p class="ui-eyebrow">Remix UI</p>
+        <header class="docs-page-header">
           <h1 class="rmx-page-title">Unstyled, accessible UI patterns and animation for Remix</h1>
-          <p class="ui-description">
+          <p class="docs-page-description">
             Compose accessible behavior directly onto your own elements with Remix's mixins feature,
             without the need for extra wrapper components. Keep semantic markup explicit and provide
             your own styles and motion.
           </p>
         </header>
-        <aside class="ui-notice" aria-label="Stability">
+        <aside class="docs-notice" data-notice="warning" aria-label="Stability">
           <StabilityIcon />
           <p>
             <code>@remix-run/ui</code> is currently unstable and versioned in the v0.x range
@@ -68,9 +67,9 @@ export default function GettingStarted() {
           <p>
             Render your UI as Remix components and hydrate it with <code>clientEntry</code> and{' '}
             <code>run</code> for browser interaction. Follow the{' '}
-            <a href="https://guides.remix.run/rendering-ui/">rendering UI guide</a> and{' '}
-            <a href="https://guides.remix.run/interactivity/">interactivity guide</a> for
-            application setup.
+            <a href="https://docs.remix.run/rendering-ui/">rendering UI guide</a> and{' '}
+            <a href="https://docs.remix.run/interactivity/">interactivity guide</a> for application
+            setup.
           </p>
           <p>
             The animation utilities also work with CSS transitions and the browser's Web Animations
