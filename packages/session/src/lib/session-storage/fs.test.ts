@@ -291,6 +291,22 @@ describe('fs session storage', () => {
     assert.equal((await storage.read(cookie)).get('count'), 2)
   })
 
+  it('preserves session file permissions when saving', async () => {
+    let storage = createFsSessionStorage(tmpDir)
+    let session = await storage.read(null)
+    session.set('count', 1)
+    let cookie = await storage.save(session)
+    let [file] = await listEntries(tmpDir)
+    await fsp.chmod(file, 0o600)
+    let mode = (await fsp.stat(file)).mode & 0o777
+
+    session.set('count', 2)
+    await storage.save(session)
+
+    assert.equal((await fsp.stat(file)).mode & 0o777, mode)
+    assert.equal((await storage.read(cookie)).get('count'), 2)
+  })
+
   it('removes its temporary file when a save fails', async () => {
     let storage = createFsSessionStorage(tmpDir)
     let session = await storage.read(null)
