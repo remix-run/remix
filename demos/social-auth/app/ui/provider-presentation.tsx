@@ -24,5 +24,13 @@ export function formatProviderLabel(provider: AuthMethod): string {
     return 'Credentials'
   }
 
+  if (provider === 'magic-link') {
+    return 'Magic Link'
+  }
+
+  if (provider === 'email-otp') {
+    return 'Email Code'
+  }
+
   return getExternalProviderLabel(provider)
 }

@@ -33,6 +33,8 @@ export function createRootController(
               undefined,
               returnToHrefOptions,
             )}
+            magicLinkHref={routes.auth.magicLink.index.href(undefined, returnToHrefOptions)}
+            emailCodeHref={routes.auth.emailCode.index.href(undefined, returnToHrefOptions)}
             providers={readExternalProviderLinks(returnToHrefOptions, registry)}
             error={typeof error === 'string' ? error : undefined}
             success={typeof success === 'string' ? success : undefined}
