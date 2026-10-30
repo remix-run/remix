@@ -185,6 +185,15 @@ async function readFileMode(file: string): Promise<number | undefined> {
   }
 }
 
+async function readFileMode(file: string): Promise<number | undefined> {
+  try {
+    return (await fsp.stat(file)).mode & 0o777
+  } catch (error) {
+    if (isNoEntityError(error)) return undefined
+    throw error
+  }
+}
+
 function isFileInUseError(error: unknown): boolean {
   let code = error instanceof Error && 'code' in error ? error.code : undefined
   return code === 'EACCES' || code === 'EBUSY' || code === 'EPERM'
