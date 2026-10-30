@@ -143,3 +143,33 @@
     grid-row: 1;
   }
 }
+
+.docs-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 24px;
+  border: 1px solid var(--rmx-color-border-subtle);
+  border-radius: var(--rmx-radius-lg);
+  background: var(--rmx-surface-lvl2);
+}
+
+.docs-notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--rmx-color-accent);
+}
+
+.docs-notice:is([data-notice='warning'], [data-notice='caution']) > svg {
+  color: var(--rmx-color-warning);
+}
+
+.docs-notice p {
+  margin: 0;
+  color: var(--rmx-color-text-secondary);
+  font-size: var(--docs-font-size-small);
+}
+
+.docs-notice p + p {
+  margin-top: var(--rmx-space-sm);
+}
