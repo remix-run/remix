@@ -131,14 +131,10 @@ export function isBooleanishStringAttribute(name: string): boolean {
 // Remix reads these by presence, so `true` renders an empty attribute and `false` omits it.
 const REMIX_BOOLEAN_ATTRIBUTES = new Set(['data-rmx-document', 'data-rmx-preserve-dom'])
 
-export function isRemixBooleanAttribute(name: string): boolean {
-  return REMIX_BOOLEAN_ATTRIBUTES.has(name)
-}
-
 export function shouldStringifyBooleanAttribute(name: string): boolean {
   return (
     name.startsWith('aria-') ||
-    (name.startsWith('data-') && !isRemixBooleanAttribute(name)) ||
+    (name.startsWith('data-') && !REMIX_BOOLEAN_ATTRIBUTES.has(name)) ||
     isBooleanishStringAttribute(name) ||
     name === 'value'
   )
