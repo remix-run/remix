@@ -42,12 +42,19 @@ export function camelToKebab(str: string): string {
   return cached
 }
 
-// Properties that should remain unitless (numeric values without px). Matched
-// after stripping any vendor prefix, so `WebkitLineClamp` (`-webkit-line-clamp`)
-// and `msFlex` (`-ms-flex`) are covered by `line-clamp` and `flex`.
+// Properties whose grammar accepts a standalone number, including shorthands
+// and number/length unions. Numbers select the unitless branch; use a string
+// with units to select a length. Audited against @webref/css 8.7.8 and legacy
+// properties in mdn-data 2.27.1, retaining existing legacy entries.
+// https://github.com/w3c/webref/tree/main/packages/css
+// Matched after stripping vendor prefixes: WebkitLineClamp and msFlex use the
+// line-clamp and flex entries; WebKit's mask-box-image aliases need their own.
 const NUMERIC_CSS_PROPS = new Set([
+  'animation',
   'animation-iteration-count',
   'aspect-ratio',
+  'bookmark-level',
+  'border-image',
   'border-image-outset',
   'border-image-slice',
   'border-image-width',
@@ -55,15 +62,19 @@ const NUMERIC_CSS_PROPS = new Set([
   'box-flex-group',
   'box-ordinal-group',
   'column-count',
+  'column-span',
   'columns',
   'flex',
   'flex-grow',
+  'flex-line-count',
   'flex-negative',
   'flex-order',
   'flex-positive',
   'flex-shrink',
+  'float-defer',
   'font-size-adjust',
   'font-weight',
+  'force-broken-image-icon',
   'grid-area',
   'grid-column',
   'grid-column-end',
@@ -73,15 +84,29 @@ const NUMERIC_CSS_PROPS = new Set([
   'grid-row-end',
   'grid-row-span',
   'grid-row-start',
+  'hyphenate-limit-chars',
+  'hyphenate-limit-lines',
   'initial-letter',
   'line-clamp',
   'line-height',
+  'mask-border',
+  'mask-border-outset',
+  'mask-border-slice',
+  'mask-border-width',
+  'mask-box-image',
+  'mask-box-image-outset',
+  'mask-box-image-slice',
+  'mask-box-image-width',
   'math-depth',
+  'max-lines',
   'opacity',
   'order',
   'orphans',
+  'reading-order',
   'scale',
+  'shape-image-threshold',
   'tab-size',
+  'voice-balance',
   'widows',
   'z-index',
   'zoom',
@@ -102,9 +127,8 @@ function isUnitlessCssProp(cssKey: string): boolean {
   return NUMERIC_CSS_PROPS.has(cssKey.replace(VENDOR_PREFIX_RE, ''))
 }
 
-// Normalize numeric CSS values: append 'px' for properties that need units
-// In Standards Mode, browsers drop numeric values without units when multiple properties
-// are present in insertRule(). We must normalize them ourselves.
+// Numbers default to pixels, except for unitless properties, custom properties,
+// and zero. Other units (such as time or angle) must be explicit strings.
 // Returns undefined for values that shouldn't be emitted (nullish and non-finite numbers).
 export function normalizeCssValue(key: string, value: unknown): string | undefined {
   if (value == null) return undefined

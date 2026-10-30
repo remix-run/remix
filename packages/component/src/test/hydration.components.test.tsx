@@ -321,15 +321,22 @@ describe('hydration', () => {
     })
 
     it('hydrates, updates, and removes unitless inline styles', async () => {
-      let styles = {
+      let layout = {
         display: '-webkit-box',
         webkitBoxOrient: 'vertical',
         overflow: 'hidden',
         whiteSpace: 'pre-line',
         lineHeight: '10px',
+      }
+      let styles = {
+        ...layout,
         webkitLineClamp: 4,
         flex: 2,
         marginTop: 8,
+        animation: 2,
+        borderImage: 3,
+        webkitMaskBoxImageWidth: 2,
+        shapeImageThreshold: 0.25,
       }
       let text = 'One\nTwo\nThree\nFour\nFive'
       container.innerHTML = await renderToString(<div style={styles}>{text}</div>)
@@ -339,6 +346,10 @@ describe('hydration', () => {
       expect(div.style.webkitLineClamp).toBe('4')
       expect(div.style.flexGrow).toBe('2')
       expect(div.style.marginTop).toBe('8px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('2')
+      expect(getComputedStyle(div).borderImageSlice).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
       expect(div.getBoundingClientRect().height).toBe(40)
 
       let root = createRoot(container)
@@ -349,20 +360,41 @@ describe('hydration', () => {
       expect(div.style.webkitLineClamp).toBe('4')
       expect(div.style.flexGrow).toBe('2')
       expect(div.style.marginTop).toBe('8px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('2')
+      expect(getComputedStyle(div).borderImageSlice).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
       expect(div.getBoundingClientRect().height).toBe(40)
 
       root.render(
-        <div style={{ ...styles, webkitLineClamp: 2, flex: 3, marginTop: 12 }}>{text}</div>,
+        <div
+          style={{
+            ...styles,
+            webkitLineClamp: 2,
+            flex: 3,
+            marginTop: 12,
+            animation: 3,
+            borderImage: 4,
+            webkitMaskBoxImageWidth: 3,
+            shapeImageThreshold: 0.75,
+          }}
+        >
+          {text}
+        </div>,
       )
       root.flush()
 
       expect(div.style.webkitLineClamp).toBe('2')
       expect(div.style.flexGrow).toBe('3')
       expect(div.style.marginTop).toBe('12px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('3')
+      expect(getComputedStyle(div).borderImageSlice).toBe('4')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('3')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.75')
       expect(div.getBoundingClientRect().height).toBe(20)
 
       root.render(
-        <div style={{ ...styles, webkitLineClamp: undefined, flex: null, marginTop: NaN }}>
+        <div style={{ ...layout, webkitLineClamp: undefined, flex: null, marginTop: NaN }}>
           {text}
         </div>,
       )
@@ -371,6 +403,10 @@ describe('hydration', () => {
       expect(div.style.webkitLineClamp).toBe('')
       expect(div.style.flex).toBe('')
       expect(div.style.marginTop).toBe('')
+      expect(getComputedStyle(div).animationIterationCount).toBe('1')
+      expect(getComputedStyle(div).borderImageSlice).toBe('100%')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('auto')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0')
       expect(div.getBoundingClientRect().height).toBe(50)
       root.dispose()
     })
