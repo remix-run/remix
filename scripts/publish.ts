@@ -44,6 +44,7 @@ import {
 import { readJson, fileExists } from './utils/fs.ts'
 import {
   createPublishPlan,
+  fetchDocsReleaseTags,
   getDocsReleaseTag,
   getReleaseNotes,
   isPackageVersionPublished,
@@ -657,13 +658,14 @@ async function main() {
   }
 
   if (process.env.GITHUB_OUTPUT) {
-    let docsTag = getDocsReleaseTag(
-      getLocalPackages().map((pkg) => ({
-        packageName: pkg.npmName,
-        version: pkg.localVersion,
-        tag: getGitTag(pkg.npmName, pkg.localVersion),
-      })),
-    )
+    let docsCandidates = getLocalPackages().map((pkg) => ({
+      packageName: pkg.npmName,
+      version: pkg.localVersion,
+      tag: getGitTag(pkg.npmName, pkg.localVersion),
+    }))
+    console.log('\nFetching active release tags for docs deployment...')
+    fetchDocsReleaseTags(docsCandidates)
+    let docsTag = getDocsReleaseTag(docsCandidates)
     if (docsTag !== undefined) {
       fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=${docsTag}\n`)
     }
