@@ -48,7 +48,7 @@ describe('CSP frame navigation', () => {
     expect(doc.defaultView?.getComputedStyle(styled).color).toBe('rgb(65, 43, 21)')
   })
 
-  it('does not trust nonce metadata without an enforcing CSP response header', async (t) => {
+  it('does not trust nonce metadata without a CSP response header', async (t) => {
     let doc = await navigateUnderCsp(t, 'named', { responsePolicy: null })
     let styled = doc.querySelector('#styled')
     invariant(styled)

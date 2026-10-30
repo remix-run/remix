@@ -83,23 +83,14 @@ describe('frame response CSP nonce', () => {
     expect(await resolveNonce("script-src 'nonce-invalid==='")).toBeUndefined()
   })
 
-  it('does not use report-only policies to authorize nonce replacement', async () => {
-    let resolution = await unwrapFrameResolution(
-      new Response('', {
-        headers: { 'Content-Security-Policy-Report-Only': "script-src 'nonce-report-only'" },
-      }),
-    )
-    expect(resolution.nonce).toBeUndefined()
-  })
-
-  it('reads a report-only nonce when the initial document explicitly uses report-only CSP', async () => {
+  it('reads a report-only nonce when the response has no enforcing header without consuming the body', async () => {
     let response = new Response('<p>Frame</p>', {
       headers: {
         'Content-Security-Policy-Report-Only':
           "script-src 'nonce-monitored'; style-src 'nonce-monitored'",
       },
     })
-    let resolution = await unwrapFrameResolution(response, true)
+    let resolution = await unwrapFrameResolution(response)
 
     expect(resolution.nonce).toBe('monitored')
     expect(resolution.content).toBe(response.body)
@@ -114,7 +105,6 @@ describe('frame response CSP nonce', () => {
           'Content-Security-Policy-Report-Only': "style-src 'nonce-monitored'",
         },
       }),
-      true,
     )
     expect(resolution.nonce).toBeUndefined()
   })
@@ -127,7 +117,6 @@ describe('frame response CSP nonce', () => {
           'Content-Security-Policy-Report-Only': "style-src 'nonce-monitored'",
         },
       }),
-      true,
     )
     expect(resolution.nonce).toBeUndefined()
   })
@@ -140,12 +129,11 @@ describe('frame response CSP nonce', () => {
           'Content-Security-Policy-Report-Only': "style-src 'nonce-monitored'",
         },
       }),
-      true,
     )
     expect(resolution.nonce).toBeUndefined()
   })
 
-  it('skips conflicting report-only nonces even with report-only CSP enabled', async () => {
+  it('skips conflicting report-only nonces', async () => {
     let resolution = await unwrapFrameResolution(
       new Response('', {
         headers: {
@@ -153,7 +141,6 @@ describe('frame response CSP nonce', () => {
             "script-src 'nonce-first'; style-src 'nonce-second'",
         },
       }),
-      true,
     )
     expect(resolution.nonce).toBeUndefined()
   })
@@ -166,7 +153,6 @@ describe('frame response CSP nonce', () => {
           'Content-Security-Policy-Report-Only': "style-src 'nonce-report-only'",
         },
       }),
-      true,
     )
     expect(resolution.nonce).toBe('enforced')
   })

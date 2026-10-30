@@ -910,10 +910,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (reloadController !== controller || controller.signal.aborted) {
         return { signal: controller.signal }
       }
-      let { content, redirectedTo, nonce } = await unwrapFrameResolution(
-        resolution,
-        nonceManager.reportOnlyCsp,
-      )
+      let { content, redirectedTo, nonce } = await unwrapFrameResolution(resolution)
       if (reloadController !== controller || controller.signal.aborted) {
         return { signal: controller.signal }
       }

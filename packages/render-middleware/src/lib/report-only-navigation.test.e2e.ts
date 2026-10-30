@@ -112,7 +112,7 @@ describe('report-only CSP navigation', () => {
     assert.ok(getReports() > 0)
   })
 
-  it('does not authorize report-only response nonces in a document with an enforced policy', async (t) => {
+  it('normalizes matching report-only response nonces while the original document enforces its policy', async (t) => {
     let { page, getReports } = await createNavigationFixture(t, true)
     let initialResponse = await page.goto('/')
     assert.ok(initialResponse)
@@ -122,14 +122,10 @@ describe('report-only CSP navigation', () => {
       ['content-security-policy']?.match(/'nonce-([^']+)'/)?.[1]
     assert.ok(documentNonce)
 
-    let reportReceived = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/csp-report',
-    )
     let [childResponse] = await Promise.all([
       page.waitForResponse((response) => new URL(response.url()).search === '?updated'),
       page.evaluate(async () => Reflect.get(globalThis, 'reloadFrame')('named')),
     ])
-    await reportReceived
     let childNonce = childResponse
       .headers()
       ['content-security-policy-report-only']?.match(/'nonce-([^']+)'/)?.[1]
@@ -138,13 +134,40 @@ describe('report-only CSP navigation', () => {
     assert.equal(childResponse.headers()['content-security-policy'], undefined)
     assert.equal(
       await page.locator('#child-style').evaluate((element) => element.nonce),
-      childNonce,
+      documentNonce,
     )
-    assert.notEqual(
+    assert.equal(
       await page.locator('#child-styled').evaluate((element) => getComputedStyle(element).color),
       'rgb(65, 43, 21)',
     )
+    assert.deepEqual(await page.evaluate(() => Reflect.get(globalThis, 'styleViolations')), [])
+    assert.equal(getReports(), 0)
+
+    let reportReceived = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/csp-report',
+    )
+    await page.evaluate(async () => Reflect.get(globalThis, 'reloadFrame')('invalid'))
+    await reportReceived
+    await page.waitForFunction(() => Reflect.get(globalThis, 'styleViolations').length === 2)
+    assert.equal(
+      await page.locator('#child-style').evaluate((element) => element.nonce),
+      documentNonce,
+    )
+    assert.equal(
+      await page.locator('#forged-style').evaluate((element) => element.nonce),
+      'forged-nonce',
+    )
+    assert.equal(await page.locator('#unnonced-style').getAttribute('nonce'), null)
+    assert.equal(
+      await page.locator('#forged').evaluate((element) => getComputedStyle(element).color),
+      'rgb(0, 0, 0)',
+    )
+    assert.equal(
+      await page.locator('#unnonced').evaluate((element) => getComputedStyle(element).color),
+      'rgb(0, 0, 0)',
+    )
     assert.deepEqual(await page.evaluate(() => Reflect.get(globalThis, 'styleViolations')), [
+      'enforce',
       'enforce',
     ])
     assert.ok(getReports() > 0)
@@ -166,7 +189,6 @@ async function createNavigationFixture(t: TestContext, enforcedDocument: boolean
   let bootstrap = `
     import { run, createElement, Frame } from ${JSON.stringify(entry.href)}
     let app = run({
-      ${enforcedDocument ? '' : 'reportOnlyCsp: true,'}
       async loadModule(href, name) { return (await import(href))[name] }
     })
     await app.ready()

@@ -4,7 +4,6 @@ import { getSpaResponseData } from './spa-response.ts'
 
 export async function unwrapFrameResolution(
   resolution: FrameResolution,
-  reportOnlyCsp = false,
 ): Promise<{ content: FrameContent; redirectedTo?: string; nonce?: string }> {
   if (!(resolution instanceof Response)) return { content: resolution }
 
@@ -19,7 +18,7 @@ export async function unwrapFrameResolution(
   let content = resolution.body ?? (await resolution.text())
   return {
     content,
-    nonce: getResponseNonce(resolution, reportOnlyCsp),
+    nonce: getResponseNonce(resolution),
     redirectedTo: resolution.redirected && resolution.url ? resolution.url : undefined,
   }
 }
