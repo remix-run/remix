@@ -11,15 +11,14 @@ describe('hydration', () => {
   let container: HTMLDivElement
 
   beforeEach(() => {
+    // The test runner's page starts with its own <title>, so every test needs an empty head.
+    document.head.replaceChildren()
     container = document.createElement('div')
     document.body.appendChild(container)
   })
 
   afterEach(() => {
     document.body.innerHTML = ''
-    for (let node of Array.from(document.head.childNodes)) {
-      document.head.removeChild(node)
-    }
   })
 
   describe('component edge cases', () => {
