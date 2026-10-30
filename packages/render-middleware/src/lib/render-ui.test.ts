@@ -191,9 +191,7 @@ describe('render', () => {
     router.get('/', (context) => context.render(createElement(Frame, { src: '/text' })))
     router.get('/text', () => new Response('Not UI'))
 
-    let response = await router.fetch('https://remix.run/')
-
-    await assert.rejects(response.text(), /Frame response must be HTML/)
+    await assert.rejects(router.fetch('https://remix.run/'), /Frame response must be HTML/)
     assert.equal(errors.length, 1)
   })
 
@@ -213,9 +211,10 @@ describe('render', () => {
         }),
     )
 
-    let response = await router.fetch('https://remix.run/')
-
-    await assert.rejects(response.text(), /Failed to resolve frame: 404 Not Found/)
+    await assert.rejects(
+      router.fetch('https://remix.run/'),
+      /Failed to resolve frame: 404 Not Found/,
+    )
     assert.equal(errors.length, 1)
   })
 
@@ -318,9 +317,8 @@ describe('render', () => {
     assert.match(html, /\/public\/widget\.js/)
     assert.match(html, /https:\/\/cdn\.example\/widget\.js/)
 
-    let missingExportResponse = await router.fetch('https://remix.run/missing-export')
     await assert.rejects(
-      missingExportResponse.text(),
+      router.fetch('https://remix.run/missing-export'),
       /entry ID \(e\.g\., import\.meta\.url \+ "#ExportName"\)/,
     )
     assert.equal(errors.length, 1)
@@ -352,30 +350,21 @@ describe('render', () => {
     assert.match(html, /\/assets\/public\.js/)
     assert.match(html, /"exportName":"PublicEntry"/)
 
-    let missingPublicExportResponse = await router.fetch('https://remix.run/missing-public-export')
     await assert.rejects(
-      missingPublicExportResponse.text(),
+      router.fetch('https://remix.run/missing-public-export'),
       /entry ID \(e\.g\., "\/js\/module\.js#ExportName"\)/,
     )
     assert.doesNotMatch(String(errors[0]), /import\.meta\.url/)
 
-    let sourceResponse = await router.fetch('https://remix.run/source')
     await assert.rejects(
-      sourceResponse.text(),
+      router.fetch('https://remix.run/source'),
       /file: source entry ID without an asset server.*render\(\{ assets \}\)/,
     )
     assert.doesNotMatch(String(errors[1]), /Users\/alice/)
   })
 
-  it('emits generated styles and reports rendering errors', async () => {
-    let errors: unknown[] = []
-    let middleware = render({ onError: (error) => errors.push(error) })
-    let router = createRouter({ middleware: [middleware] as const })
-    let renderError = new Error('Broken component')
-
-    function Broken() {
-      throw renderError
-    }
+  it('emits generated styles', async () => {
+    let router = createRouter({ middleware: [render()] as const })
 
     router.get('/styles', (context) =>
       context.render(
@@ -387,15 +376,54 @@ describe('render', () => {
         ),
       ),
     )
-    router.get('/error', (context) => context.render(createElement(Broken)))
 
     let styleResponse = await router.fetch('https://remix.run/styles')
     let styleHtml = await styleResponse.text()
     assert.match(styleHtml, /<style\b/)
     assert.match(styleHtml, /color: red/)
+  })
 
-    let errorResponse = await router.fetch('https://remix.run/error')
-    await errorResponse.text().catch(() => '')
+  it('rejects the request when a component throws while rendering the shell', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    router.get('/', (context) => context.render(createElement('main', {}, createElement(Broken))))
+
+    await assert.rejects(router.fetch('https://remix.run/'), renderError)
+    assert.deepEqual(errors, [renderError])
+  })
+
+  it('keeps the shell response when streamed frame content throws', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken frame component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    router.get('/', (context) =>
+      context.render(
+        createElement(Frame, { src: '/broken', fallback: createElement('p', {}, 'Loading') }),
+      ),
+    )
+    router.get('/broken', (context) => context.render(createElement(Broken)))
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    assert.match(await response.text(), /<p>Loading<\/p>/)
     assert.deepEqual(errors, [renderError])
   })
 
@@ -427,10 +455,10 @@ describe('render', () => {
     })
 
     let controller = new AbortController()
-    let response = await router.fetch(
-      new Request('https://remix.run/', { signal: controller.signal }),
-    )
-    let body = response.text().catch(() => '')
+    let body = router
+      .fetch(new Request('https://remix.run/', { signal: controller.signal }))
+      .then((response) => response.text())
+      .catch(() => '')
 
     await frameStarted
     controller.abort(new Error('Request cancelled'))
@@ -455,23 +483,27 @@ describe('render', () => {
       '/stream',
       () =>
         new Response(
-          new ReadableStream({
-            pull() {
-              frameStreamStartedResolve?.()
+          new ReadableStream(
+            {
+              pull() {
+                frameStreamStartedResolve?.()
+              },
+              cancel(reason) {
+                frameStreamCancelledResolve?.(reason)
+              },
             },
-            cancel(reason) {
-              frameStreamCancelledResolve?.(reason)
-            },
-          }),
+            // Only signal a start once the frame body is read.
+            { highWaterMark: 0 },
+          ),
           { headers: { 'Content-Type': 'text/html' } },
         ),
     )
 
     let controller = new AbortController()
-    let response = await router.fetch(
-      new Request('https://remix.run/', { signal: controller.signal }),
-    )
-    let body = response.text().catch(() => '')
+    let body = router
+      .fetch(new Request('https://remix.run/', { signal: controller.signal }))
+      .then((response) => response.text())
+      .catch(() => '')
     let reason = new Error('Request cancelled')
 
     await frameStreamStarted
@@ -493,10 +525,12 @@ describe('render', () => {
 
     router.get('/frame', (context) => context.render(createElement(Broken)))
 
-    let response = await router.fetch('https://remix.run/frame', {
-      headers: { 'X-Remix-Frame': 'true', 'X-Remix-Target': 'details' },
-    })
-    await assert.rejects(response.text(), /Broken frame component/)
+    await assert.rejects(
+      router.fetch('https://remix.run/frame', {
+        headers: { 'X-Remix-Frame': 'true', 'X-Remix-Target': 'details' },
+      }),
+      /Broken frame component/,
+    )
 
     assert.deepEqual(errors, [renderError])
   })
@@ -512,10 +546,10 @@ describe('render', () => {
 
     router.get('/frame', (context) => context.render(createElement(Broken)))
 
-    let response = await router.fetch('https://remix.run/frame', {
-      headers: { 'X-Remix-Frame': 'true' },
-    })
-    await assert.rejects(response.text(), /Broken frame component/)
+    await assert.rejects(
+      router.fetch('https://remix.run/frame', { headers: { 'X-Remix-Frame': 'true' } }),
+      /Broken frame component/,
+    )
 
     assert.equal(reportError.mock.calls.length, 1)
     assert.deepEqual(reportError.mock.calls[0].arguments, [renderError])
@@ -540,10 +574,10 @@ describe('render', () => {
       handler: (context) => context.render(createElement(Broken)),
     })
 
-    let response = await router.fetch('https://remix.run/', {
-      headers: { 'X-Remix-Frame': 'true' },
-    })
-    await assert.rejects(response.text(), /Broken child component/)
+    await assert.rejects(
+      router.fetch('https://remix.run/', { headers: { 'X-Remix-Frame': 'true' } }),
+      /Broken child component/,
+    )
 
     assert.deepEqual(errors, [renderError])
     assert.deepEqual(childErrors, [])
@@ -562,9 +596,7 @@ describe('render', () => {
     router.get('/', (context) => context.render(createElement(Frame, { src: '/child' })))
     router.get('/child', (context) => context.render(createElement(Broken)))
 
-    let response = await router.fetch('https://remix.run/')
-    await response.text().catch(() => '')
-
+    await assert.rejects(router.fetch('https://remix.run/'), renderError)
     assert.deepEqual(errors, [renderError])
   })
 })

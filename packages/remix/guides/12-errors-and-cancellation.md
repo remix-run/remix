@@ -25,7 +25,7 @@ Return a route-specific `404` page when the action understands what is missing. 
 
 ## Report streaming render failures {#streaming-render-errors}
 
-Pass `onError` and `request.signal` to `renderToStream()`. Root and blocking-render failures report the error and reject the stream. A later non-blocking frame or streamed frame-tail failure is reported while the already-rendered fallback remains. After body bytes are sent, the server cannot replace the response with a new error page.
+Pass `onError` and `request.signal` to `renderToStream()`. Root and blocking-render failures report the error and reject the stream. A later non-blocking frame or streamed frame-tail failure is reported while the already-rendered fallback remains. After body bytes are sent, the server cannot replace the response with a new error page. The `render()` middleware waits for the shell before returning the response, so root and blocking-render failures reject `router.fetch()` like any other action error and the server boundary can respond with a `500`.
 
 ## Own frame-resolution failures {#frame-resolution-errors}
 
