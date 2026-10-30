@@ -111,16 +111,18 @@ To create a new Remix app with the CLI, use `npx remix new`:
 npx remix new my-remix-app
 ```
 
-If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
+To try the latest `main` build, copy the `remix` tarball URL from the [preview manifest](https://github.com/remix-run/remix/blob/preview/main/t/preview.json) and install it with pnpm:
 
 ```sh
-pnpm install "remix-run/remix#preview/main&path:packages/remix"
+pnpm add "<tarball-url>"
 ```
 
-Or, just install a single package:
+The manifest also lists URLs for individual packages, such as `@remix-run/fetch-router`. Each build has a new URL. When updating a preview, copy its new URL from the manifest. Main builds older than seven days are removed when `preview/main` next updates, and the latest build is always kept. PR previews retain the latest 3 SHA builds, including the current build, and remove older builds on each update. Merging or closing the PR deletes its preview branch. Installs using expired or deleted builds need a newer preview URL and an updated lockfile.
 
-```
-pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
+If your pnpm version blocks transitive Git or tarball dependencies, add this to your `pnpm-workspace.yaml`:
+
+```yaml
+blockExoticSubdeps: false
 ```
 
 ## Agent Skills For Building Apps

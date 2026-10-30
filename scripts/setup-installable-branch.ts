@@ -1,146 +1,126 @@
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
+
+import { getPreviewTarballUrl, preparePreviewPackage } from './utils/preview.ts'
+import type { PreviewPackageManifest } from './utils/preview.ts'
+import {
+  getRetainedPreviewBuilds,
+  loadPreviousPreview,
+  restorePreviewTarballs,
+  writePreviewManifest,
+} from './utils/preview-retention.ts'
 import { logAndExec } from './utils/process.ts'
 
 /**
- * This script prepares a base branch (usually `main`) to be PNPM-installable
- * directly from GitHub via a new branch (usually `preview/main`):
+ * Build and pack every package onto an installable preview branch. Internal
+ * dependencies point to the other tarballs in the same build. Generated commits
+ * belong only on preview branches and must never be merged back into source.
  *
- *   pnpm install "remix-run/remix#preview/main&path:packages/remix"
- *
- * To do this, we can run a build, make some minor changes to the repo, and
- * commit the build + changes to the new branch. These changes would never be
- * down-merged back to the source branch.
- *
- * This script does the following:
- *  - Checks out the new branch and resets it to the base (current) branch
- *  - Runs a build
- *  - Removes `dist/` from `.gitignore`
- *  - Updates all internal `@remix-run/*` deps to use the github format for the
- *    given installable branch
- *  - Copies all `publishConfig`'s down so we get `exports` from `dist/` instead of `src/`
- *  - Commits the changes
- *
- * Then, after pushing, `pnpm install "remix-run/remix#preview/main&path:packages/remix"`
- * sees the `remix` nested deps and they all point to github with similar URLs so
- * they install as nested deps the same way.
+ * Usage: pnpm setup-installable-branch preview/main
+ * Push the resulting branch, then install the URL printed by this script.
  */
-
-const { positionals } = util.parseArgs({
-  allowPositionals: true,
-})
-
-// Use first positional argument or fall back to --branch flag or default
+const { positionals } = util.parseArgs({ allowPositionals: true })
 const installableBranch = positionals[0]
-if (!installableBranch) {
-  throw new Error('Error: You must provide an installable branch name')
+if (!installableBranch || positionals.length !== 1) {
+  throw new Error('Usage: pnpm setup-installable-branch <installable-branch>')
 }
 
-// Error if git status is not clean
-const gitStatus = logAndExec('git', ['status', '--porcelain'], true)
-if (gitStatus) {
+logAndExec('git', ['check-ref-format', '--branch', installableBranch], true)
+if (logAndExec('git', ['status', '--porcelain'], true)) {
   throw new Error('Error: Git working directory is not clean. Commit or stash changes first.')
 }
 
-// Capture the current branch name
-const sha = logAndExec('git', ['rev-parse', '--short', 'HEAD'], true).trim()
+const sha = logAndExec('git', ['rev-parse', 'HEAD'], true)
+const repository = process.env.GITHUB_REPOSITORY ?? 'remix-run/remix'
+const previous = loadPreviousPreview(installableBranch)
+const builds = getRetainedPreviewBuilds(installableBranch, previous?.manifest.builds ?? [], sha)
+const existingBuild = builds.find((build) => build.sha === sha)
+if (builds.some((build) => build.sha !== sha && build.sha.slice(0, 8) === sha.slice(0, 8))) {
+  throw new Error(`Preview SHA prefix collision for ${sha}`)
+}
+const tarballsDir = path.resolve('t', sha.slice(0, 8))
+const packages = await readPackages()
+const tarballUrls = new Map(
+  packages.map(({ dirName, manifest }) => [
+    manifest.name,
+    getPreviewTarballUrl(installableBranch, sha, dirName, repository),
+  ]),
+)
+const remixUrl = tarballUrls.get('remix')
+if (!remixUrl) throw new Error('Missing remix package')
 
 console.log(`Preparing installable branch \`${installableBranch}\` from sha ${sha}`)
-
-// Switch to new branch and reset to current commit on base branch
+// Copy retained artifacts onto source without chaining generated preview commits.
 logAndExec('git', ['checkout', '-B', installableBranch])
+if (previous) restorePreviewTarballs(previous, builds)
+if (!existingBuild) {
+  logAndExec('pnpm', ['--filter', './packages/*', 'run', 'build'])
 
-// Build dist/ folders
-logAndExec('pnpm', ['build'])
+  // Prepare generated files while the workspace manifests still point to source.
+  for (let { manifest } of packages) {
+    if (manifest.scripts?.prepack) {
+      logAndExec('pnpm', ['--filter', manifest.name, 'run', 'prepack'])
+    }
+  }
+}
 
-await updateGitignore()
-await updatePackageDependencies()
-await runCliPrepack()
+await fsp.mkdir(tarballsDir, { recursive: true })
+for (let { dirName, manifest } of packages) {
+  let pkg = preparePreviewPackage(manifest, tarballUrls)
+  await fsp.writeFile(`packages/${dirName}/package.json`, JSON.stringify(pkg, null, 2) + '\n')
+}
 
-logAndExec('git', ['add', '.'])
-logAndExec('git', ['commit', '-a', '-m', `installable build from ${sha}`])
+if (!existingBuild) {
+  for (let { dirName } of packages) {
+    logAndExec('pnpm', [
+      '--dir',
+      `packages/${dirName}`,
+      'pack',
+      '--out',
+      path.join(tarballsDir, `${dirName}.tgz`),
+    ])
+  }
+  builds.push({ sha, createdAt: new Date().toISOString() })
+}
+
+await writePreviewManifest({
+  branch: installableBranch,
+  sha,
+  packages: Object.fromEntries(tarballUrls),
+  builds,
+})
+
+// Built files and generated templates remain ignored; only the packed artifacts
+// and rewritten manifests are needed on the preview branch.
+logAndExec('git', [
+  'add',
+  't',
+  ...packages.map(({ dirName }) => `packages/${dirName}/package.json`),
+])
+logAndExec('git', ['commit', '-m', `installable tarballs from ${sha}`])
 
 console.log(
   [
     '',
-    `✅ Done!`,
+    `✅ Done! Push \`${installableBranch}\` to GitHub, then install via:`,
     '',
-    `You can now push the \`${installableBranch}\` branch to GitHub and install via:`,
+    `  pnpm add "${remixUrl}"`,
     '',
-    `  pnpm install "remix-run/remix#${installableBranch}&path:packages/remix"`,
+    'The preview branch moves with each build. Use the new URL when updating a preview.',
   ].join('\n'),
 )
 
-// Remove `dist` from gitignore so we include built code in the repo
-async function updateGitignore() {
-  let linesToRemove = new Set(['dist/', '/packages/cli/template/'])
-  let gitignorePath = path.join(process.cwd(), '.gitignore')
-  let content = await fsp.readFile(gitignorePath, 'utf-8')
-  let filtered = content
-    .split('\n')
-    .filter((line) => !linesToRemove.has(line.trim()))
-    .join('\n')
-  await fsp.writeFile(gitignorePath, filtered)
-  console.log('Updated .gitignore')
-}
-
-// Run the cli package's `prepack` script to sync the CLI template, then strip
-// the prepack/postpack scripts so they don't run again when the installable
-// branch is consumed. Warn if `prepack` has been removed upstream.
-async function runCliPrepack() {
-  let cliPackageJsonPath = path.join(process.cwd(), 'packages', 'cli', 'package.json')
-  let pkg = JSON.parse(await fsp.readFile(cliPackageJsonPath, 'utf-8'))
-  if (!pkg.scripts?.prepack) {
-    console.warn(
-      '⚠️  @remix-run/cli no longer defines a `prepack` script — skipping CLI template sync. ' +
-        'If the template is still required on the installable branch, update setup-installable-branch.ts.',
+async function readPackages() {
+  let entries = await fsp.readdir('packages', { withFileTypes: true })
+  let packages: { dirName: string; manifest: PreviewPackageManifest }[] = []
+  for (let entry of entries) {
+    if (!entry.isDirectory()) continue
+    let manifest: PreviewPackageManifest = JSON.parse(
+      await fsp.readFile(`packages/${entry.name}/package.json`, 'utf-8'),
     )
-    return
+    if (manifest.private) continue
+    packages.push({ dirName: entry.name, manifest })
   }
-
-  console.log('Running CLI prepack script...')
-  logAndExec('pnpm', ['--filter', '@remix-run/cli', 'run', 'prepack'])
-
-  delete pkg.scripts.prepack
-  delete pkg.scripts.postpack
-  await fsp.writeFile(cliPackageJsonPath, JSON.stringify(pkg, null, 2) + '\n')
-  console.log('Removed prepack/postpack scripts from @remix-run/cli')
-}
-
-// Update `package.json` files to point to this branch on github
-async function updatePackageDependencies() {
-  let packagesDir = path.join(process.cwd(), 'packages')
-
-  let packageDirNames = await fsp.readdir(packagesDir, { withFileTypes: true })
-
-  for (let dir of packageDirNames) {
-    if (!dir.isDirectory()) continue
-
-    let packageJsonPath = path.join(packagesDir, dir.name, 'package.json')
-    let content = await fsp.readFile(packageJsonPath, 'utf-8')
-    let pkg = JSON.parse(content)
-
-    // Point all `@remix-run/` dependencies to this branch on github
-    if (pkg.dependencies) {
-      for (let name of Object.keys(pkg.dependencies)) {
-        if (name.startsWith('@remix-run/')) {
-          let packageDirName = name.replace('@remix-run/', '')
-          pkg.dependencies[name] =
-            `remix-run/remix#${installableBranch}&path:packages/${packageDirName}`
-        }
-      }
-    }
-
-    // Apply `publishConfig` overrides
-    if (pkg.publishConfig) {
-      Object.assign(pkg, pkg.publishConfig)
-      delete pkg.publishConfig
-    }
-
-    await fsp.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n')
-    console.log(`Updated ${dir.name}`)
-  }
-
-  console.log('Done')
+  return packages
 }

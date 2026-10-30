@@ -44,6 +44,7 @@ import {
 import { readJson, fileExists } from './utils/fs.ts'
 import {
   createPublishPlan,
+  fetchDocsReleaseTags,
   getDocsReleaseTag,
   getReleaseNotes,
   isPackageVersionPublished,
@@ -261,14 +262,11 @@ function isShallowRepository(): boolean {
 }
 
 function ensureGitHistoryForVersionLookup() {
-  if (isShallowRepository()) {
-    console.log('\nRepository is shallow, fetching full history for release tag anchoring...')
-    logAndExec('git', ['fetch', '--unshallow', '--tags', 'origin'])
-    return
-  }
+  if (!isShallowRepository()) return
 
-  console.log('\nFetching tags from origin...')
-  logAndExec('git', ['fetch', '--tags', 'origin'])
+  console.log('\nRepository is shallow, fetching source history for release tag anchoring...')
+  let sha = logAndExec('git', ['rev-parse', 'HEAD'], true)
+  logAndExec('git', ['fetch', '--no-tags', '--unshallow', 'origin', sha])
 }
 
 function resolveTagPlans(packages: PublishedPackage[]): TagPlan[] {
@@ -660,13 +658,14 @@ async function main() {
   }
 
   if (process.env.GITHUB_OUTPUT) {
-    let docsTag = getDocsReleaseTag(
-      getLocalPackages().map((pkg) => ({
-        packageName: pkg.npmName,
-        version: pkg.localVersion,
-        tag: getGitTag(pkg.npmName, pkg.localVersion),
-      })),
-    )
+    let docsCandidates = getLocalPackages().map((pkg) => ({
+      packageName: pkg.npmName,
+      version: pkg.localVersion,
+      tag: getGitTag(pkg.npmName, pkg.localVersion),
+    }))
+    console.log('\nFetching active release tags for docs deployment...')
+    fetchDocsReleaseTags(docsCandidates)
+    let docsTag = getDocsReleaseTag(docsCandidates)
     if (docsTag !== undefined) {
       fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=${docsTag}\n`)
     }

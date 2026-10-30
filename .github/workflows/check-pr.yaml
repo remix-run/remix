@@ -175,18 +175,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Fetch base and head refs
+      - name: Fetch base and head history
         shell: bash
         env:
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch --no-tags origin \
-            "$PR_BASE_REF" \
-            "+refs/pull/$PR_NUMBER/head"
+          # Three-dot diffs need ancestry, but no other branches or tags.
+          git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -231,18 +228,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Fetch base and head refs
+      - name: Fetch base and head history
         shell: bash
         env:
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch --no-tags origin \
-            "$PR_BASE_REF" \
-            "+refs/pull/$PR_NUMBER/head"
+          # Three-dot diffs need ancestry, but no other branches or tags.
+          git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6

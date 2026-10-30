@@ -6,6 +6,7 @@ import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import {
   createPublishPlan,
+  fetchDocsReleaseTags,
   getDocsReleaseTag,
   getReleaseNotes,
   isPackageVersionPublished,
@@ -40,6 +41,85 @@ function withReleaseRepository(run: (cwd: string, git: (...args: string[]) => st
     fs.rmSync(cwd, { recursive: true, force: true })
   }
 }
+
+function withShallowReleaseCheckout(
+  source: string,
+  run: (cwd: string, git: (...args: string[]) => string) => void,
+) {
+  let root = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-docs-fetch-test-'))
+  let remote = path.join(root, 'remote.git')
+  let cwd = path.join(root, 'checkout')
+  try {
+    cp.execFileSync('git', ['clone', '--bare', source, remote], { stdio: 'pipe' })
+    cp.execFileSync('git', ['clone', '--no-tags', '--depth=1', `file://${remote}`, cwd], {
+      stdio: 'pipe',
+    })
+    function git(...args: string[]) {
+      return cp.execFileSync('git', args, { cwd, encoding: 'utf8', stdio: 'pipe' }).trim()
+    }
+    let sha = git('rev-parse', 'HEAD')
+    git('fetch', '--no-tags', '--unshallow', 'origin', sha)
+    run(cwd, git)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+}
+
+describe('fetchDocsReleaseTags', () => {
+  it('restores an existing active tag on a fresh release retry without fetching unrelated tags or branches', () => {
+    withReleaseRepository((source, git) => {
+      git('tag', 'remix@1.0.0')
+      git('tag', 'remix@0.9.0')
+      git('branch', 'preview/pr-123')
+      git('commit', '--allow-empty', '-m', 'After release')
+      withShallowReleaseCheckout(source, (cwd, checkoutGit) => {
+        let packages = [makePackage('remix'), makePackage('@remix-run/ui')]
+        assert.equal(getDocsReleaseTag(packages, cwd), undefined)
+
+        fetchDocsReleaseTags(packages, cwd)
+
+        assert.equal(getDocsReleaseTag(packages, cwd), 'remix@1.0.0')
+        assert.equal(checkoutGit('tag', '--list'), 'remix@1.0.0')
+        assert.equal(
+          checkoutGit('for-each-ref', '--format=%(refname)', 'refs/remotes/origin/preview'),
+          '',
+        )
+      })
+    })
+  })
+
+  it('fetches the completed newer active tag when a retry repairs an older package', () => {
+    withReleaseRepository((source, git) => {
+      git('tag', 'remix@1.0.0')
+      git('commit', '--allow-empty', '-m', 'Newer UI release')
+      git('tag', '-a', 'ui@1.0.0', '-m', 'UI release')
+      withShallowReleaseCheckout(source, (cwd, checkoutGit) => {
+        let packages = [makePackage('remix'), makePackage('@remix-run/ui')]
+        checkoutGit('tag', 'remix@1.0.0', 'HEAD^')
+        assert.equal(getDocsReleaseTag(packages, cwd), 'remix@1.0.0')
+
+        fetchDocsReleaseTags(packages, cwd)
+
+        assert.equal(getDocsReleaseTag(packages, cwd), 'ui@1.0.0')
+      })
+    })
+  })
+
+  it('does not fetch unrelated refs when no active tags exist remotely', () => {
+    withReleaseRepository((source, git) => {
+      git('tag', 'remix@0.9.0')
+      git('commit', '--allow-empty', '-m', 'Unreleased changes')
+      withShallowReleaseCheckout(source, (cwd, checkoutGit) => {
+        let packages = [makePackage('remix')]
+        fetchDocsReleaseTags([], cwd)
+        fetchDocsReleaseTags(packages, cwd)
+
+        assert.equal(getDocsReleaseTag(packages, cwd), undefined)
+        assert.equal(checkoutGit('tag', '--list'), '')
+      })
+    })
+  })
+})
 
 describe('getDocsReleaseTag', () => {
   it('uses any published package as the shared docs source', () => {
