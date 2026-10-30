@@ -63,6 +63,7 @@
     "./fetch-proxy": "./src/fetch-proxy.ts",
     "./file-storage": "./src/file-storage.ts",
     "./file-storage/fs": "./src/file-storage/fs.ts",
+    "./file-storage/fs/future": "./src/file-storage/fs/future.ts",
     "./file-storage/memory": "./src/file-storage/memory.ts",
     "./file-storage/s3": "./src/file-storage-s3.ts",
     "./form-data-parser": "./src/form-data-parser.ts",
@@ -276,6 +277,10 @@
       "./file-storage/fs": {
         "types": "./dist/file-storage/fs.d.ts",
         "default": "./dist/file-storage/fs.js"
+      },
+      "./file-storage/fs/future": {
+        "types": "./dist/file-storage/fs/future.d.ts",
+        "default": "./dist/file-storage/fs/future.js"
       },
       "./file-storage/memory": {
         "types": "./dist/file-storage/memory.d.ts",

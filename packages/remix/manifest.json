@@ -34,6 +34,7 @@
   "remix/fetch-proxy": "@remix-run/fetch-proxy",
   "remix/file-storage": "@remix-run/file-storage",
   "remix/file-storage/fs": "@remix-run/file-storage/fs",
+  "remix/file-storage/fs/future": "@remix-run/file-storage/fs/future",
   "remix/file-storage/memory": "@remix-run/file-storage/memory",
   "remix/file-storage/s3": "@remix-run/file-storage-s3",
   "remix/form-data-parser": "@remix-run/form-data-parser",

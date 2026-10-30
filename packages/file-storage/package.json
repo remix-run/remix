@@ -22,6 +22,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./fs": "./src/fs.ts",
+    "./fs/future": "./src/fs-future.ts",
     "./memory": "./src/memory.ts",
     "./package.json": "./package.json"
   },
@@ -34,6 +35,10 @@
       "./fs": {
         "types": "./dist/fs.d.ts",
         "default": "./dist/fs.js"
+      },
+      "./fs/future": {
+        "types": "./dist/fs-future.d.ts",
+        "default": "./dist/fs-future.js"
       },
       "./memory": {
         "types": "./dist/memory.d.ts",
