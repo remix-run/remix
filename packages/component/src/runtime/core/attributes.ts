@@ -129,7 +129,13 @@ export function isBooleanishStringAttribute(name: string): boolean {
 }
 
 export function shouldStringifyBooleanAttribute(name: string): boolean {
-  return isBooleanishStringAttribute(name) || name === 'value'
+  return (
+    name.startsWith('aria-') ||
+    // Remix's own data-rmx-* markers, like data-rmx-document, are read by presence.
+    (name.startsWith('data-') && !name.startsWith('data-rmx-')) ||
+    isBooleanishStringAttribute(name) ||
+    name === 'value'
+  )
 }
 
 export function serializeStyleObject(style: Record<string, unknown>): string {
