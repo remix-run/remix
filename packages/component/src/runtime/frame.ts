@@ -1423,18 +1423,6 @@ function reviveSerializedValue(value: unknown): unknown {
   if (!isRecord(value)) return value
   let record = value
 
-  if (Array.isArray(record.$rmxObject)) {
-    return Object.fromEntries(
-      record.$rmxObject.map((entry: unknown) => {
-        invariant(
-          Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string',
-          'Invalid serialized object entry',
-        )
-        return [entry[0], reviveSerializedValue(entry[1])]
-      }),
-    )
-  }
-
   if (record.$rmxFrame === true) {
     let props = reviveSerializedObject(record.props)
     let key = reviveSerializedValue(record.key)
@@ -1448,9 +1436,7 @@ function reviveSerializedValue(value: unknown): unknown {
   }
 
   if (record.$rmxMixin === 'css') {
-    let styles: unknown = Array.isArray(record.args)
-      ? reviveSerializedValue(record.args[0])
-      : undefined
+    let styles: unknown = Array.isArray(record.args) ? record.args[0] : undefined
     return css(isCSSProps(styles) ? styles : {})
   }
 
