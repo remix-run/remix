@@ -25,7 +25,11 @@ import {
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps, isBrowserOnlyMixinDescriptor } from '../runtime/core/mix.ts'
+import {
+  composeMixedProps,
+  isBrowserOnlyMixinDescriptor,
+  isMixinDescriptor,
+} from '../runtime/core/mix.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -1069,8 +1073,6 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
       let value = input[key]
       if (key === 'children') {
         out[key] = unwrapNode(value)
-      } else if (key === 'mix') {
-        out[key] = serializeMix(value)
       } else {
         if (isRemixElement(value)) {
           out[key] = unwrapNode(value)
@@ -1085,6 +1087,13 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
   }
 
   return function replacer(_key: string, value: unknown) {
+    // Mixin descriptors hold their setup function, which JSON drops. `css()`
+    // only holds style data, so it's revived in the browser by name.
+    if (isMixinDescriptor(value)) {
+      return isCSSMixinDescriptor(value)
+        ? { $rmxMixin: 'css', args: value.args }
+        : { $rmxMixin: null }
+    }
     if (isRemixElement(value)) {
       return unwrapElement(value)
     }
@@ -1101,15 +1110,6 @@ function serializeKey(key: unknown): string | number | undefined {
   if (typeof key === 'string') return key
   if (typeof key === 'number' && Number.isFinite(key)) return key
   return undefined
-}
-
-// Mixin descriptors hold their setup function, which JSON drops. `css()` only
-// holds style data, so it's sent by name and revived in the browser.
-function serializeMix(mix: unknown): unknown {
-  if (!Array.isArray(mix)) return mix
-  return mix.map((descriptor) =>
-    isCSSMixinDescriptor(descriptor) ? { $rmxMixin: 'css', args: descriptor.args } : descriptor,
-  )
 }
 
 function buildEntrySegment(

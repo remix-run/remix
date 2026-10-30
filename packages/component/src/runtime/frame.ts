@@ -17,6 +17,7 @@ import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffElementAttributes, diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { css } from '../style/css-mixin.ts'
+import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
@@ -1401,6 +1402,16 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
+// Stands in for a mixin the server couldn't serialize, so the error is reported
+// when the element renders, the same way other client entry render errors are.
+const unserializableMixin = createMixin(() => {
+  throw new Error(
+    "Client entry props contain a mixin that can't be serialized. Only css() mixins can be " +
+      'used in JSX passed to a client entry. Render elements that use other mixins, such as ' +
+      'on() or ref(), inside the client entry instead.',
+  )
+})
+
 function reviveSerializedValue(value: unknown): unknown {
   if (value === null || value === undefined) return value
   if (typeof value !== 'object') return value
@@ -1424,9 +1435,13 @@ function reviveSerializedValue(value: unknown): unknown {
     return jsx(Fragment, props, key)
   }
 
-  if (record.$rmxMixin === 'css' && Array.isArray(record.args)) {
-    let [styles] = record.args
-    return css(isRecord(styles) ? (styles as CSSProps) : {})
+  if (record.$rmxMixin === 'css') {
+    let styles: unknown = Array.isArray(record.args) ? record.args[0] : undefined
+    return css(isCSSProps(styles) ? styles : {})
+  }
+
+  if (record.$rmxMixin === null) {
+    return unserializableMixin()
   }
 
   if (record.$rmx === true && typeof record.type === 'string') {
@@ -1451,6 +1466,16 @@ function reviveSerializedObject(value: unknown): Record<string, unknown> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isCSSProps(value: unknown): value is CSSProps {
+  if (!isRecord(value)) return false
+  for (let key in value) {
+    let item = value[key]
+    if (item == null || typeof item === 'string' || typeof item === 'number') continue
+    if (!isCSSProps(item)) return false
+  }
+  return true
 }
 
 function hydrateRegion(

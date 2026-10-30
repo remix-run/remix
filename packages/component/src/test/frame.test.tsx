@@ -2370,7 +2370,9 @@ describe('run', () => {
         <Tabs
           panels={[
             <p mix={css({ color: 'rgb(1, 2, 3)' })}>One</p>,
-            <p mix={css({ color: 'rgb(4, 5, 6)' })}>Two</p>,
+            <article mix={[css({ color: 'rgb(4, 5, 6)' }), css({ paddingTop: 7 })]}>
+              <span mix={css({ fontWeight: 700 })}>Two</span>
+            </article>,
           ]}
         />,
       ),
@@ -2391,66 +2393,37 @@ describe('run', () => {
     document.querySelector('button')?.click()
     app.flush()
 
-    let clientPanel = document.querySelector('p')
-    invariant(clientPanel)
-    expect(clientPanel.textContent).toBe('Two')
-    expect(getComputedStyle(clientPanel).color).toBe('rgb(4, 5, 6)')
+    let article = document.querySelector('article')
+    let span = document.querySelector('article > span')
+    invariant(article && span)
+    expect(getComputedStyle(article).color).toBe('rgb(4, 5, 6)')
+    expect(getComputedStyle(article).paddingTop).toBe('7px')
+    expect(getComputedStyle(span).fontWeight).toBe('700')
   })
 
-  it('hydrates nested elements with multiple css() mixins in props', async (t) => {
-    let Disclosure = clientEntry(
-      '/js/disclosure.js#Disclosure',
-      function Disclosure(handle: Handle<{ content: RemixNode }>) {
-        let open = true
-        return () => (
-          <div>
-            <button
-              mix={on('click', () => {
-                open = !open
-                handle.update()
-              })}
-            >
-              Toggle
-            </button>
-            <section>{open ? handle.props.content : null}</section>
-          </div>
-        )
+  it('reports a clear error for mixins in element props that cannot be serialized', async (t) => {
+    let Slot = clientEntry(
+      '/js/slot.js#Slot',
+      function Slot(handle: Handle<{ content: RemixNode }>) {
+        return () => <div>{handle.props.content}</div>
       },
     )
 
     document.body.innerHTML = await drain(
-      renderToStream(
-        <Disclosure
-          content={
-            <article mix={[css({ color: 'rgb(1, 2, 3)' }), css({ paddingTop: 7 })]}>
-              <span mix={css({ fontWeight: 700 })}>Nested</span>
-            </article>
-          }
-        />,
-      ),
+      renderToStream(<Slot content={<button mix={on('click', () => {})}>Save</button>} />),
     )
 
     let errors: unknown[] = []
-    let app = run({ loadModule: () => Disclosure })
+    let app = run({ loadModule: () => Slot })
     app.addEventListener('error', (event) => errors.push(event.error))
     t.after(() => app.dispose())
     await app.ready()
-    expect(errors).toEqual([])
 
-    let button = document.querySelector('button')
-    invariant(button)
-    button.click()
-    app.flush()
-    expect(document.querySelector('article')).toBe(null)
-
-    button.click()
-    app.flush()
-    let article = document.querySelector('article')
-    let span = document.querySelector('article > span')
-    invariant(article && span)
-    expect(getComputedStyle(article).color).toBe('rgb(1, 2, 3)')
-    expect(getComputedStyle(article).paddingTop).toBe('7px')
-    expect(getComputedStyle(span).fontWeight).toBe('700')
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toBeInstanceOf(Error)
+    expect(String(errors[0])).toMatch(
+      /Client entry props contain a mixin that can't be serialized\. Only css\(\) mixins/,
+    )
   })
 
   it('ready() does not wait for hydration markers from later frame templates', async () => {
