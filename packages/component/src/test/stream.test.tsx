@@ -1297,13 +1297,15 @@ describe('stream', () => {
 
     it('converts style object to inline string', async () => {
       let stream = renderToStream(
-        <div style={{ color: 'green', marginTop: 10, padding: '5px' }}>Object styled</div>,
+        <div style={{ color: 'green', marginTop: 10, padding: '5px', '--gapSize': 4 }}>
+          Object styled
+        </div>,
       )
       let html = await drain(stream)
 
       // Style objects should be serialized to inline styles
       expect(html).toBe(
-        '<div style="color: green; margin-top: 10px; padding: 5px;">Object styled</div>',
+        '<div style="color: green; margin-top: 10px; padding: 5px; --gapSize: 4;">Object styled</div>',
       )
     })
 

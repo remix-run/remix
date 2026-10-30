@@ -18,16 +18,21 @@ export interface CSSProps extends DOMStyleProperties {
 
 type StyleObject = Record<string, unknown>
 
-// Convert camelCase CSS properties to kebab-case
+// Convert camelCase CSS properties to kebab-case, restoring the leading dash on
+// vendor prefixes (`webkitLineClamp`, `msFlex` -> `-webkit-line-clamp`, `-ms-flex`).
+// Custom properties are case-sensitive, so they're returned as written.
 // Property names repeat constantly across renders; cache conversions instead
 // of running a regex each time.
 const CAMEL_TO_KEBAB_CACHE_LIMIT = 256
 const camelToKebabCache = new Map<string, string>()
 
-function camelToKebab(str: string): string {
+export function camelToKebab(str: string): string {
+  if (str.startsWith('--')) return str
   let cached = camelToKebabCache.get(str)
   if (cached === undefined) {
-    cached = str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    cached = str
+      .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+      .replace(/^(webkit|moz|ms|o)-/, '-$1-')
     if (camelToKebabCache.size >= CAMEL_TO_KEBAB_CACHE_LIMIT) {
       let oldest = camelToKebabCache.keys().next()
       if (!oldest.done) camelToKebabCache.delete(oldest.value)
@@ -37,35 +42,99 @@ function camelToKebab(str: string): string {
   return cached
 }
 
-// Properties that should remain unitless (numeric values without px)
+// Properties whose grammar accepts a standalone number, including shorthands
+// and number/length unions. Numbers select the unitless branch; use a string
+// with units to select a length. Audited against @webref/css 8.7.8 and legacy
+// properties in mdn-data 2.27.1, retaining existing legacy entries.
+// https://github.com/w3c/webref/tree/main/packages/css
+// Matched after stripping vendor prefixes: WebkitLineClamp and msFlex use the
+// line-clamp and flex entries; WebKit's mask-box-image aliases need their own.
 const NUMERIC_CSS_PROPS = new Set([
+  'animation',
+  'animation-iteration-count',
   'aspect-ratio',
-  'z-index',
-  'opacity',
+  'bookmark-level',
+  'border-image',
+  'border-image-outset',
+  'border-image-slice',
+  'border-image-width',
+  'box-flex',
+  'box-flex-group',
+  'box-ordinal-group',
+  'column-count',
+  'column-span',
+  'columns',
+  'flex',
   'flex-grow',
-  'flex-shrink',
+  'flex-line-count',
+  'flex-negative',
   'flex-order',
-  'grid-area',
-  'grid-row',
-  'grid-column',
+  'flex-positive',
+  'flex-shrink',
+  'float-defer',
+  'font-size-adjust',
   'font-weight',
+  'force-broken-image-icon',
+  'grid-area',
+  'grid-column',
+  'grid-column-end',
+  'grid-column-span',
+  'grid-column-start',
+  'grid-row',
+  'grid-row-end',
+  'grid-row-span',
+  'grid-row-start',
+  'hyphenate-limit-chars',
+  'hyphenate-limit-lines',
+  'initial-letter',
+  'line-clamp',
   'line-height',
+  'mask-border',
+  'mask-border-outset',
+  'mask-border-slice',
+  'mask-border-width',
+  'mask-box-image',
+  'mask-box-image-outset',
+  'mask-box-image-slice',
+  'mask-box-image-width',
+  'math-depth',
+  'max-lines',
+  'opacity',
   'order',
   'orphans',
+  'reading-order',
+  'scale',
+  'shape-image-threshold',
+  'tab-size',
+  'voice-balance',
   'widows',
+  'z-index',
   'zoom',
-  'columns',
-  'column-count',
+  // SVG
+  'fill-opacity',
+  'flood-opacity',
+  'stop-opacity',
+  'stroke-dasharray',
+  'stroke-dashoffset',
+  'stroke-miterlimit',
+  'stroke-opacity',
+  'stroke-width',
 ])
 
-// Normalize numeric CSS values: append 'px' for properties that need units
-// In Standards Mode, browsers drop numeric values without units when multiple properties
-// are present in insertRule(). We must normalize them ourselves.
-export function normalizeCssValue(key: string, value: unknown): string {
-  if (value == null) return String(value)
-  if (typeof value === 'number' && value !== 0) {
-    let cssKey = camelToKebab(key)
-    if (!NUMERIC_CSS_PROPS.has(cssKey) && !cssKey.startsWith('--')) {
+const VENDOR_PREFIX_RE = /^-(?:webkit|moz|ms|o)-/
+
+function isUnitlessCssProp(cssKey: string): boolean {
+  return NUMERIC_CSS_PROPS.has(cssKey.replace(VENDOR_PREFIX_RE, ''))
+}
+
+// Numbers default to pixels, except for unitless properties, custom properties,
+// and zero. Other units (such as time or angle) must be explicit strings.
+// Returns undefined for values that shouldn't be emitted (nullish and non-finite numbers).
+export function normalizeCssValue(key: string, value: unknown): string | undefined {
+  if (value == null) return undefined
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return undefined
+    if (value !== 0 && !key.startsWith('--') && !isUnitlessCssProp(camelToKebab(key))) {
       return `${value}px`
     }
   }
@@ -175,8 +244,8 @@ function styleToCss(styles: StyleObject, selector: string = ''): string {
       }
     } else {
       // Base declaration
-      if (value != null) {
-        let normalizedValue = normalizeCssValue(key, value)
+      let normalizedValue = normalizeCssValue(key, value)
+      if (normalizedValue !== undefined) {
         baseDeclarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
       }
     }
@@ -221,9 +290,11 @@ function nestedStyleBodyToCss(styles: StyleObject, spaces: number): string {
       if (nestedContent.trim().length > 0) {
         nestedBlocks.push(`${pad}${key} {\n${nestedContent}\n${pad}}`)
       }
-    } else if (value != null) {
+    } else {
       let normalizedValue = normalizeCssValue(key, value)
-      declarations.push(`${pad}${camelToKebab(key)}: ${normalizedValue};`)
+      if (normalizedValue !== undefined) {
+        declarations.push(`${pad}${camelToKebab(key)}: ${normalizedValue};`)
+      }
     }
   }
 
@@ -259,10 +330,10 @@ function keyframesBodyToCss(frames: StyleObject): string {
 
     let declarations: string[] = []
     for (let [prop, propValue] of Object.entries(frameValue)) {
-      if (propValue == null) continue
       // Ignore nested selectors/at-rules inside keyframe steps
       if (isComplexSelector(prop)) continue
       let normalizedValue = normalizeCssValue(prop, propValue)
+      if (normalizedValue === undefined) continue
       declarations.push(`  ${camelToKebab(prop)}: ${normalizedValue};`)
     }
 
@@ -299,8 +370,8 @@ function atRuleBodyToCss(styles: StyleObject): string {
         continue
       }
     } else {
-      if (value != null) {
-        let normalizedValue = normalizeCssValue(key, value)
+      let normalizedValue = normalizeCssValue(key, value)
+      if (normalizedValue !== undefined) {
         declarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
       }
     }

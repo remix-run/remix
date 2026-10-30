@@ -7,9 +7,9 @@ import {
   normalizeAttributeName,
   sanitizeUrlAttribute,
   serializeStyleObject,
-  toKebabCase,
+  styleValueToCss,
 } from './attributes.ts'
-import { normalizeCssValue } from '../../style/style.ts'
+import { camelToKebab } from '../../style/style.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -164,7 +164,7 @@ function patchStyleObject(
       let prevCssValue = styleValueToCss(name, curr[name])
       if (prevCssValue === undefined) continue
 
-      style.removeProperty(toKebabCase(name))
+      style.removeProperty(camelToKebab(name))
     }
   }
 
@@ -175,18 +175,6 @@ function patchStyleObject(
     let prevCssValue = curr ? styleValueToCss(name, curr[name]) : undefined
     if (prevCssValue === nextCssValue) continue
 
-    style.setProperty(toKebabCase(name), nextCssValue)
+    style.setProperty(camelToKebab(name), nextCssValue)
   }
-}
-
-function styleValueToCss(name: string, value: unknown): string | undefined {
-  if (value == null) return undefined
-  if (typeof value === 'boolean') return undefined
-  if (typeof value === 'number' && !Number.isFinite(value)) return undefined
-
-  if (Array.isArray(value)) {
-    return value.join(', ')
-  }
-
-  return normalizeCssValue(name, value)
 }
