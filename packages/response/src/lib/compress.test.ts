@@ -1357,6 +1357,62 @@ describe('compressResponse()', () => {
       assert.equal(cancelReason, 'User cancelled', 'Cancel reason should be passed through')
     })
 
+    it('applies consumer backpressure to the source body', async () => {
+      let pulled = 0
+      let total = 40
+      let chunk = new TextEncoder().encode('x'.repeat(48 * 1024))
+
+      let stream = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            pulled++
+            controller.enqueue(chunk)
+            if (pulled >= total) {
+              controller.close()
+            }
+          },
+        },
+        { highWaterMark: 1 },
+      )
+
+      let request = new Request('https://remix.run', {
+        headers: { 'Accept-Encoding': 'gzip' },
+      })
+      // text/html enables Z_SYNC_FLUSH, matching the #12104 server case
+      let response = new Response(stream, {
+        headers: { 'Content-Type': 'text/html' },
+      })
+
+      let compressed = await compressResponse(response, request, {
+        encodings: ['gzip'],
+        threshold: 0,
+      })
+      let reader = compressed.body!.getReader()
+
+      // Locking the body without reading must not drain the source.
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      assert.ok(
+        pulled < total / 2,
+        `Source should stay mostly paused without a consumer (pulled ${pulled} of ${total})`,
+      )
+      let withoutReads = pulled
+
+      // Reading one compressed chunk may pull a few more source chunks,
+      // but must not drain the entire source while the consumer pauses.
+      await reader.read()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      assert.ok(
+        pulled < total,
+        `Source should not be fully drained after one read (pulled ${pulled} of ${total})`,
+      )
+      assert.ok(
+        pulled - withoutReads < total / 2,
+        `One read should not release unbounded source pulls (delta ${pulled - withoutReads})`,
+      )
+
+      await reader.cancel()
+    })
+
     describe('Compressor interactions', () => {
       it('ignores data events emitted after error', async () => {
         let errorEmitted = false
