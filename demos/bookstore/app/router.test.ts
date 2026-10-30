@@ -25,7 +25,7 @@ describe('router', () => {
   it('serves fingerprinted, immutable images shared by catalog and product pages', async () => {
     let response = await router.fetch('https://remix.run/')
     let html = await response.text()
-    let cover = html.match(/src="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png)"/)
+    let cover = html.match(/src="(\/assets\/app\/images\/bbq-1\.~[\w-]+\.png)"/)
     assert.ok(cover)
 
     let image = await router.fetch(new URL(cover[1], 'https://remix.run'))
@@ -40,7 +40,7 @@ describe('router', () => {
     let product = await router.fetch('https://remix.run/books/bbq')
     let productHtml = await product.text()
     let preload = productHtml.match(
-      /<link rel="preload" as="image" href="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png)"/,
+      /<link rel="preload" as="image" href="(\/assets\/app\/images\/bbq-1\.~[\w-]+\.png)"/,
     )
     assert.ok(preload)
     assert.equal(preload[1], cover[1])

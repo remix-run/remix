@@ -19,6 +19,14 @@ export function normalizePathname(pathname: string): string {
   return normalized
 }
 
+export function safeDecodeURIComponent(value: string): string | null {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return null
+  }
+}
+
 export function isAbsoluteFilePath(filePath: string): boolean {
   let normalized = normalizeWindowsPath(filePath)
   return normalized.startsWith('/') || windowsDriveLetterRE.test(normalized)
