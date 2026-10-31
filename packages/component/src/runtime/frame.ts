@@ -8,6 +8,7 @@ import {
   type FrameResolution,
 } from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
+import { createFrameReloadEvent, type FrameReloadEventInit } from './frame-reload-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
@@ -147,7 +148,13 @@ export interface ResolveFrameOptions {
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
-type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
+export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
+  /** The link, form or submit button whose navigation started the reload. */
+  sourceElement?: Element
+}
+
+// The navigation that started a reload, which frames it reloads inside this one inherit.
+type ReloadOrigin = Omit<FrameReloadEventInit, 'finished'>
 
 type FrameReloadResult = {
   signal: AbortSignal
@@ -310,7 +317,8 @@ export type Frame = {
     complete: () => void
   }
   cancelReload: () => void
-  startInheritedReload: (signal?: AbortSignal) => void
+  startInheritedReload: (signal?: AbortSignal, origin?: ReloadOrigin) => void
+  completeInheritedReload: (failure?: unknown) => void
   updateMarker: (marker: FrameMarkerData, options?: RenderOptions) => Promise<void>
   renderMarkerContent: (
     marker: FrameMarkerData,
@@ -356,6 +364,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let pendingTemplateUnsubscribe: (() => void) | undefined
   let inheritedReloadPending = false
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
+  // The `finished` promises of the `reloadStart` events for the direct or ancestor-driven reload
+  // and for the inherited reload, which can be in progress at the same time.
+  let reloadFinished: PromiseWithResolvers<void> | undefined
+  let inheritedReloadFinished: PromiseWithResolvers<void> | undefined
   let disposed = false
   let lifecycleController = new AbortController()
 
@@ -682,6 +694,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     reloadAbortUnsubscribe?.()
     reloadAbortUnsubscribe = undefined
     reloadKind = undefined
+    settleReloadFinished(reloadFinished, createAbortError())
+    reloadFinished = undefined
+    inheritedReloadPending = false
+    inheritedReloadAbortUnsubscribe?.()
+    inheritedReloadAbortUnsubscribe = undefined
+    settleReloadFinished(inheritedReloadFinished, createAbortError())
+    inheritedReloadFinished = undefined
     contentRoot?.dispose()
     contentRoot = undefined
     clearPendingFrameTemplateWatch()
@@ -711,6 +730,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     beginClientFrameReloadForAncestorReload,
     cancelReload,
     startInheritedReload,
+    completeInheritedReload,
     updateMarker,
     renderMarkerContent,
     matchesIdentity: (src, name) => !disposed && frame.src === src && frameName === name,
@@ -811,7 +831,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
-    let controller = startReload(options?.signal)
+    let controller = startReload(options)
     let committed = Promise.withResolvers<void>()
     let commitStarted = false
     let finished = resolveAndRenderReload(controller, options, (ready) => {
@@ -826,12 +846,20 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     return { signal: controller.signal, committed: committed.promise, finished }
   }
 
-  function startReload(signal?: AbortSignal): AbortController {
-    let controller = replaceReloadController(signal)
+  function startReload(options?: FrameNavigationOptions): AbortController {
+    let controller = replaceReloadController(options?.signal)
     reloadKind = 'direct'
-    frame.dispatchEvent(new Event('reloadStart'))
-    startSubFrameInheritedReloads(getContentNodes(), controller.signal)
+    let origin = { formData: options?.formData, sourceElement: options?.sourceElement }
+    dispatchReloadStart(origin)
+    startSubFrameInheritedReloads(getContentNodes(), controller.signal, origin)
     return controller
+  }
+
+  function dispatchReloadStart(origin?: ReloadOrigin): void {
+    // The frame shows one direct or ancestor-driven reload at a time, so this one replaces the last.
+    settleReloadFinished(reloadFinished, createAbortError())
+    reloadFinished = createReloadFinished()
+    frame.dispatchEvent(createFrameReloadEvent({ ...origin, finished: reloadFinished.promise }))
   }
 
   function beginClientFrameReloadForAncestorReload(signal: AbortSignal): {
@@ -844,7 +872,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     reloadKind = 'ancestor'
 
     if (!inheritedReloadStarted && !continuingAncestorReload) {
-      frame.dispatchEvent(new Event('reloadStart'))
+      dispatchReloadStart()
       startSubFrameInheritedReloads(getContentNodes(), controller.signal)
     }
 
@@ -887,9 +915,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     options?: FrameNavigationOptions,
     resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
+    let failure: unknown
     try {
+      // The source element is for `reloadStart` listeners; resolvers get the options they document.
+      let { sourceElement: _, ...resolveOptions } = options ?? {}
       let resolution = await init.resolveFrame(frame.src, {
-        ...options,
+        ...resolveOptions,
         signal: controller.signal,
         target: frameName,
       })
@@ -926,33 +957,43 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (reloadController !== controller || controller.signal.aborted) {
         return { signal: controller.signal }
       }
+      failure = error
       init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       throw error
     } finally {
-      completeReload(controller)
+      completeReload(controller, failure)
     }
   }
 
-  function completeReload(controller: AbortController): void {
+  function completeReload(controller: AbortController, failure?: unknown): void {
     if (reloadController !== controller || reloadKind === undefined) return
     reloadAbortUnsubscribe?.()
     reloadAbortUnsubscribe = undefined
     reloadKind = undefined
+    let outcome = failure ?? (controller.signal.aborted ? controller.signal.reason : undefined)
+    settleReloadFinished(reloadFinished, outcome)
+    reloadFinished = undefined
+    // A reload that rendered gave the frames in its content reloads of their own. One that failed
+    // left the previous content in place, so the reloads its frames inherited end here.
+    if (outcome !== undefined) completeSubFrameInheritedReloads(getContentNodes(), outcome)
     frame.dispatchEvent(new Event('reloadComplete'))
   }
 
-  function startInheritedReload(signal?: AbortSignal): void {
+  function startInheritedReload(signal?: AbortSignal, origin?: ReloadOrigin): void {
     if (signal?.aborted) return
     if (!inheritedReloadPending) {
       inheritedReloadPending = true
-      frame.dispatchEvent(new Event('reloadStart'))
-      startSubFrameInheritedReloads(getContentNodes(), signal)
+      inheritedReloadFinished = createReloadFinished()
+      frame.dispatchEvent(
+        createFrameReloadEvent({ ...origin, finished: inheritedReloadFinished.promise }),
+      )
+      startSubFrameInheritedReloads(getContentNodes(), signal, origin)
     }
 
     inheritedReloadAbortUnsubscribe?.()
     inheritedReloadAbortUnsubscribe = undefined
     if (signal) {
-      let abort = () => completeInheritedReload()
+      let abort = () => completeInheritedReload(signal.reason)
       signal.addEventListener('abort', abort, { once: true })
       inheritedReloadAbortUnsubscribe = () => {
         signal.removeEventListener('abort', abort)
@@ -965,18 +1006,29 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     inheritedReloadPending = false
     inheritedReloadAbortUnsubscribe?.()
     inheritedReloadAbortUnsubscribe = undefined
+    // The ancestor-driven reload continues the inherited one, and replaces any direct reload.
+    settleReloadFinished(reloadFinished, createAbortError())
+    reloadFinished = inheritedReloadFinished
+    inheritedReloadFinished = undefined
     return true
   }
 
-  function completeInheritedReload(): void {
+  function completeInheritedReload(failure?: unknown): void {
     if (!inheritedReloadPending) return
     inheritedReloadPending = false
     inheritedReloadAbortUnsubscribe?.()
     inheritedReloadAbortUnsubscribe = undefined
+    settleReloadFinished(inheritedReloadFinished, failure)
+    inheritedReloadFinished = undefined
+    if (failure !== undefined) completeSubFrameInheritedReloads(getContentNodes(), failure)
     frame.dispatchEvent(new Event('reloadComplete'))
   }
 
-  function startSubFrameInheritedReloads(nodes: Node[], signal?: AbortSignal): void {
+  function startSubFrameInheritedReloads(
+    nodes: Node[],
+    signal?: AbortSignal,
+    origin?: ReloadOrigin,
+  ): void {
     for (let i = 0; i < nodes.length; i++) {
       if (signal?.aborted) break
 
@@ -984,13 +1036,30 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
       if (isFrameStart(node)) {
         let end = findEndMarker(node, isFrameStart, isFrameEnd)
-        context.frameInstances.get(node)?.startInheritedReload(signal)
+        context.frameInstances.get(node)?.startInheritedReload(signal, origin)
         i = findMarkerRangeEndIndex(nodes, end, i)
         continue
       }
 
       if (node.childNodes && node.childNodes.length > 0) {
-        startSubFrameInheritedReloads(Array.from(node.childNodes), signal)
+        startSubFrameInheritedReloads(Array.from(node.childNodes), signal, origin)
+      }
+    }
+  }
+
+  function completeSubFrameInheritedReloads(nodes: Node[], failure: unknown): void {
+    for (let i = 0; i < nodes.length; i++) {
+      let node = nodes[i]
+
+      if (isFrameStart(node)) {
+        let end = findEndMarker(node, isFrameStart, isFrameEnd)
+        context.frameInstances.get(node)?.completeInheritedReload(failure)
+        i = findMarkerRangeEndIndex(nodes, end, i)
+        continue
+      }
+
+      if (node.childNodes && node.childNodes.length > 0) {
+        completeSubFrameInheritedReloads(Array.from(node.childNodes), failure)
       }
     }
   }
@@ -1055,6 +1124,25 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
     }
   }
+}
+
+function createReloadFinished(): PromiseWithResolvers<void> {
+  let finished = Promise.withResolvers<void>()
+  // Listeners that don't follow `finished` shouldn't get unhandled rejections.
+  finished.promise.catch(() => {})
+  return finished
+}
+
+function settleReloadFinished(
+  finished: PromiseWithResolvers<void> | undefined,
+  failure?: unknown,
+): void {
+  if (failure === undefined) finished?.resolve()
+  else finished?.reject(failure)
+}
+
+function createAbortError(): DOMException {
+  return new DOMException('The frame reload was aborted.', 'AbortError')
 }
 
 export function createFrameRuntime(init: {

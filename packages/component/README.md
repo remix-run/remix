@@ -1122,7 +1122,7 @@ Components reach frames through `handle.frame`, the frame that contains the comp
 | `frame.src`              | The source the next reload uses. Assigning it alone doesn't load content or change history.                                               |
 | `frame.reload(options?)` | Fetches the frame's source through the resolver and reconciles the result. See [Reloading Frames](#reloading-frames).                     |
 | `frame.replace(content)` | Renders trusted HTML, a byte stream, or a Remix node directly, without calling the resolver or changing the source. HTML isn't sanitized. |
-| `reloadStart` event      | Dispatched when a direct or ancestor-driven reload starts.                                                                                |
+| `reloadStart` event      | Dispatched when a direct or ancestor-driven reload starts, as a `FrameReloadEvent`. See [Following a Reload](#following-a-reload).        |
 | `reloadComplete` event   | Dispatched when reload processing ends, including after cancellation or failure.                                                          |
 
 Use `handle.frames.top` when a nested component needs to reload the whole page instead of only its nearest frame:
@@ -1185,6 +1185,66 @@ if (form.reportValidity()) {
     body: new FormData(form, saveButton),
   })
 }
+```
+
+### Following a Reload
+
+`reloadStart` is a `FrameReloadEvent`. Like the Navigation API's [`NavigateEvent`](https://developer.mozilla.org/en-US/docs/Web/API/NavigateEvent), it says what started the reload and how it ended:
+
+| Property        | Value                                                                                                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `formData`      | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                                                              |
+| `sourceElement` | The link, form, or submit button whose navigation started the reload, otherwise `null`, as for `frame.reload()`.                                                                         |
+| `finished`      | Resolves once the reload's content renders. Rejects with the failure when it fails, and with an `AbortError` `DOMException` when it's cancelled, replaced by a newer reload, or removed. |
+
+Frames inside a reloading frame reload with it, and their `reloadStart` has the same `formData` and `sourceElement`, so a component in a nested frame can follow a form submission that reloads the page.
+
+A newer reload replaces the one in progress without a `reloadComplete` for it, so listeners that need to know how their own reload ended follow `finished`. A component can show a pending state only for its own form, and read what it submitted to render the outcome before the response arrives:
+
+```tsx
+import { clientEntry, ref } from 'remix/component'
+import type { FrameReloadEvent, Handle } from 'remix/component'
+
+export const SaveStatus = clientEntry(import.meta.url, function SaveStatus(handle: Handle) {
+  let status: HTMLElement | undefined
+  let reload: FrameReloadEvent | undefined
+  let failed = false
+
+  handle.frame.addEventListener(
+    'reloadStart',
+    async (event) => {
+      let form = status?.closest('form')
+      let source = event.sourceElement
+      // Other forms and links in this frame reload it too, even links inside the form. Its own
+      // submissions start from the form or one of its submit buttons.
+      let submitted =
+        source === form || (source != null && 'form' in source && source.form === form)
+      if (!form || !submitted) return
+      reload = event
+      failed = false
+      handle.update()
+      try {
+        await event.finished
+      } catch (error) {
+        failed = !(error instanceof DOMException && error.name === 'AbortError')
+      }
+      if (reload !== event) return
+      reload = undefined
+      handle.update()
+    },
+    { signal: handle.signal },
+  )
+
+  return () => (
+    <p mix={ref((node) => (status = node))} role="status">
+      {reload
+        ? `Saving ${reload.formData?.get('title')}…`
+        : failed
+          ? 'Couldn’t save. Try again.'
+          : ''}
+    </p>
+  )
+})
 ```
 
 ### Resolving Frames
