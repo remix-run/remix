@@ -628,6 +628,99 @@ describe('runTests only filtering', () => {
   })
 })
 
+describe('runTests inherited beforeAll/afterAll hooks', () => {
+  it('runs hooks shared with nested suites once per scope', async () => {
+    let ran: string[] = []
+    let outerBefore = { fn: () => void ran.push('outer beforeAll') }
+    let outerAfter = { fn: () => void ran.push('outer afterAll') }
+    let innerBefore = { fn: () => void ran.push('inner beforeAll') }
+    let innerAfter = { fn: () => void ran.push('inner afterAll') }
+
+    let results = await runWithSuites([
+      {
+        name: 'outer',
+        beforeAll: [outerBefore],
+        afterAll: [outerAfter],
+        tests: [{ name: 'a', fn: () => void ran.push('outer test') }],
+      },
+      {
+        name: 'outer > inner',
+        beforeAll: [outerBefore, innerBefore],
+        afterAll: [outerAfter, innerAfter],
+        tests: [{ name: 'b', fn: () => void ran.push('inner test') }],
+      },
+      {
+        name: 'outer > inner2',
+        beforeAll: [outerBefore],
+        afterAll: [outerAfter],
+        tests: [{ name: 'c', fn: () => void ran.push('inner2 test') }],
+      },
+    ])
+
+    assert.equal(results.failed, 0)
+    assert.deepEqual(ran, [
+      'outer beforeAll',
+      'outer test',
+      'inner beforeAll',
+      'inner test',
+      'inner afterAll',
+      'inner2 test',
+      'outer afterAll',
+    ])
+  })
+
+  it('reports a failing inherited beforeAll for each suite without rerunning it', async () => {
+    let calls = 0
+    let testBodiesRan = 0
+    let hook = {
+      fn() {
+        calls++
+        throw new Error('setup failed')
+      },
+    }
+
+    let results = await runWithSuites([
+      {
+        name: 'outer',
+        beforeAll: [hook],
+        tests: [{ name: 'a', fn: () => void testBodiesRan++ }],
+      },
+      {
+        name: 'outer > inner',
+        beforeAll: [hook],
+        tests: [{ name: 'b', fn: () => void testBodiesRan++ }],
+      },
+    ])
+
+    assert.equal(calls, 1)
+    assert.equal(results.failed, 2)
+    assert.equal(testBodiesRan, 0)
+  })
+
+  it("runs a scope's afterAll hooks in reverse order and stops at the first failure", async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        afterAll: [
+          { fn: () => void ran.push('first') },
+          {
+            fn() {
+              ran.push('second')
+              throw new Error('teardown failed')
+            },
+          },
+        ],
+        tests: [{ name: 'a', fn() {} }],
+      },
+    ])
+
+    assert.deepEqual(ran, ['second'])
+    assert.equal(results.failed, 1)
+  })
+})
+
 describe('runTests skip and todo reasons', () => {
   it('preserves suite skip reasons on skipped test results', async () => {
     let results = await runWithSuites([
