@@ -66,7 +66,10 @@ export type PendingClientEntries = Map<
   [Comment, RemixElement | undefined, ResourceNonces?]
 >
 
-export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
+export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
+  /** The link, form or submit button whose navigation started the reload. */
+  sourceElement?: Element
+}
 
 export type FrameReloadResult = {
   signal: AbortSignal

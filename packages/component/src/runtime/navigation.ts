@@ -30,6 +30,8 @@ interface FormSubmissionNavigationInfo {
   type: typeof formSubmissionNavigationInfoType
   state: NavigationState
   frame: FrameHandle
+  // The replacement navigation has no source element of its own.
+  sourceElement: Element | undefined
   getSubmission(): Promise<FormSubmission>
 }
 
@@ -262,6 +264,9 @@ export function startNavigationListenerImpl(
 
       let topFrame = options.getTopFrame()
       let frame = replayedSubmission?.frame
+      let sourceElement = replayedSubmission
+        ? replayedSubmission.sourceElement
+        : getSourceElement(event)
       if (!frame) {
         if (state.target) {
           frame = options.getNamedFrame(state.target)
@@ -289,6 +294,7 @@ export function startNavigationListenerImpl(
         if (frame !== topFrame) frame.src = state.src
         let reload = options.reloadFrame(frame, {
           ...submission,
+          sourceElement,
           signal: event.signal,
         })
         await reload.committed
@@ -355,6 +361,7 @@ export function startNavigationListenerImpl(
                 type: formSubmissionNavigationInfoType,
                 state,
                 frame,
+                sourceElement,
                 getSubmission: runtimeNavigation.getSubmission,
               } satisfies FormSubmissionNavigationInfo,
             })
@@ -387,6 +394,11 @@ export function getInterceptableNavigation(): Navigation | undefined {
     return
   }
   return navigation
+}
+
+function getSourceElement(event: NavigateEvent): Element | undefined {
+  let sourceElement = (event as SourceElementNavigateEvent).sourceElement
+  return sourceElement instanceof Element ? sourceElement : undefined
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

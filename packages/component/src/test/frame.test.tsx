@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
+import type { FrameReloadEvent } from '../runtime/frame-reload-event.ts'
 import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { Frame, getNamedFrame, getTopFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
@@ -28,6 +29,20 @@ async function setupReloadBodyTest(t: TestContext) {
   t.after(() => app.dispose())
   await app.ready()
   return { app, requests }
+}
+
+function expectAbortError(error: unknown) {
+  expect(error).toBeInstanceOf(DOMException)
+  expect((error as DOMException).name).toBe('AbortError')
+}
+
+async function getRejection(promise: Promise<unknown>): Promise<unknown> {
+  return await promise.then(
+    () => {
+      throw new Error('Expected the promise to reject')
+    },
+    (error: unknown) => error,
+  )
 }
 
 function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
@@ -434,6 +449,134 @@ describe('run', () => {
       true,
     )
     expect((await request.formData()).get('name')).toBe('Ada')
+  })
+
+  it('describes a POST reload on its reloadStart event and resolves finished once it renders', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let events: FrameReloadEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
+    let body = new FormData()
+    body.set('name', 'Ada')
+
+    let reload = app.frames.top.reload({ src: '/save', method: 'post', body })
+
+    expect(events).toHaveLength(1)
+    let event = events[0]!
+    expect(event.formData?.get('name')).toBe('Ada')
+    expect(event.sourceElement).toBeNull()
+    await event.finished
+    expect(document.querySelector('main')?.textContent).toBe('Saved')
+    await reload
+  })
+
+  it('leaves formData null on a GET reload', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let events: FrameReloadEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
+
+    await app.frames.top.reload({ src: '/search', body: new URLSearchParams({ q: 'Ada' }) })
+
+    expect(events).toHaveLength(1)
+    expect(events[0]!.formData).toBeNull()
+    await events[0]!.finished
+  })
+
+  it('gives reloadStart the element whose navigation started the reload', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let events: FrameReloadEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
+    let button = document.createElement('button')
+    let formData = new FormData()
+    formData.set('name', 'Ada')
+
+    await reloadFrameForNavigation(app.frames.top, {
+      formData,
+      method: 'post',
+      encType: 'application/x-www-form-urlencoded',
+      sourceElement: button,
+    }).finished
+
+    expect(events).toHaveLength(1)
+    expect(events[0]!.sourceElement).toBe(button)
+    expect(events[0]!.formData).toBe(formData)
+    expect(requests).toHaveLength(1)
+    await events[0]!.finished
+  })
+
+  it('rejects finished with the failure when the reload fails', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response('<main>Internal Server Error</main>', {
+          headers: { 'Content-Type': 'text/html' },
+          status: 500,
+          statusText: 'Internal Server Error',
+        }),
+    )
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    app.addEventListener('error', () => {})
+    await app.ready()
+    let events: FrameReloadEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
+
+    await expect(app.frames.top.reload()).rejects.toThrow('500 Internal Server Error')
+
+    expect(events).toHaveLength(1)
+    await expect(events[0]!.finished).rejects.toThrow('500 Internal Server Error')
+  })
+
+  it('rejects finished with an AbortError when a newer reload replaces it', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let [firstResponse, resolveFirstResponse] = withResolvers<Response>()
+    let fetchCalls = 0
+    t.mock.method(globalThis, 'fetch', async () => {
+      fetchCalls++
+      if (fetchCalls === 1) return firstResponse
+      return new Response(
+        '<!DOCTYPE html><html><head></head><body><main>Second</main></body></html><!-- rmx:flush document -->',
+      )
+    })
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    let events: FrameReloadEvent[] = []
+    let completions = 0
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
+    app.frames.top.addEventListener('reloadComplete', () => completions++)
+
+    let first = app.frames.top.reload()
+    let second = app.frames.top.reload()
+
+    expect(events).toHaveLength(2)
+    expectAbortError(await getRejection(events[0]!.finished))
+    resolveFirstResponse(
+      new Response(
+        '<!DOCTYPE html><html><head></head><body><main>First</main></body></html><!-- rmx:flush document -->',
+      ),
+    )
+    await Promise.all([first, second])
+    await events[1]!.finished
+    expect(completions).toBe(1)
+    expect(document.querySelector('main')?.textContent).toBe('Second')
+  })
+
+  it('rejects finished with an AbortError when the frame is disposed mid-reload', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let [response] = withResolvers<Response>()
+    t.mock.method(globalThis, 'fetch', () => response)
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    let events: FrameReloadEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
+
+    void app.frames.top.reload().catch(() => {})
+    app.dispose()
+
+    expect(events).toHaveLength(1)
+    expectAbortError(await getRejection(events[0]!.finished))
   })
 
   it('reloads with text/plain FormData and normalizes line breaks', async (t) => {
@@ -3807,6 +3950,8 @@ describe('run', () => {
   it('dispatches reloadStart and reloadComplete events for non-blocking child frames during top frame reloads', async () => {
     let childReloadStartEvents = 0
     let childReloadCompleteEvents = 0
+    let childReloadFinished: Promise<void> | undefined
+    let childReloadSettled = false
     let reloadTopFromChild: undefined | (() => Promise<AbortSignal>)
 
     let ChildReloadObserver = clientEntry(
@@ -3815,8 +3960,11 @@ describe('run', () => {
         reloadTopFromChild = async () => {
           handle.frame.addEventListener(
             'reloadStart',
-            () => {
+            (event) => {
               childReloadStartEvents++
+              childReloadFinished = event.finished.finally(() => {
+                childReloadSettled = true
+              })
             },
             { once: true },
           )
@@ -3914,6 +4062,7 @@ describe('run', () => {
 
     expect(childReloadStartEvents).toBe(1)
     expect(childReloadCompleteEvents).toBe(0)
+    expect(childReloadSettled).toBe(false)
     expect(document.getElementById('event-child-frame-fallback')).toBeNull()
     expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
 
@@ -3923,10 +4072,96 @@ describe('run', () => {
 
     expect(childReloadStartEvents).toBe(1)
     expect(childReloadCompleteEvents).toBe(1)
+    await childReloadFinished
     expect(document.getElementById('event-child-frame-fallback')).toBeNull()
     expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Reloaded child')
 
     app.dispose()
+  })
+
+  it('gives child frames the submission and source element of the navigation that reloads them', async (t) => {
+    function renderDocument(label: string) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="child" src="/child" />
+          </body>
+        </html>,
+        {
+          resolveFrame: () => renderToStream(<p id="child-label">{label}</p>),
+        },
+      )
+    }
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument('Initial child')),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame: () => renderDocument('Saved child'),
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadEvent[] = []
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    let button = document.createElement('button')
+    let formData = new FormData()
+    formData.set('name', 'Ada')
+
+    await reloadFrameForNavigation(app.frames.top, {
+      formData,
+      method: 'post',
+      encType: 'application/x-www-form-urlencoded',
+      sourceElement: button,
+    }).finished
+
+    expect(events).toHaveLength(1)
+    expect(events[0]!.formData).toBe(formData)
+    expect(events[0]!.sourceElement).toBe(button)
+    await events[0]!.finished
+    expect(document.getElementById('child-label')?.textContent).toBe('Saved child')
+  })
+
+  it('rejects child frames’ finished with the failure when the reload of an ancestor fails', async (t) => {
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <Frame name="child" src="/child" />
+            </body>
+          </html>,
+          { resolveFrame: () => '<p id="child-label">Initial child</p>' },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame: () => Promise.reject(new Error('500 Internal Server Error')),
+    })
+    t.after(() => app.dispose())
+    app.addEventListener('error', () => {})
+    await app.ready()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadEvent[] = []
+    let completions = 0
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    child.addEventListener('reloadComplete', () => completions++)
+
+    await expect(app.frames.top.reload()).rejects.toThrow('500 Internal Server Error')
+
+    expect(events).toHaveLength(1)
+    await expect(events[0]!.finished).rejects.toThrow('500 Internal Server Error')
+    expect(completions).toBe(1)
+    expect(document.getElementById('child-label')?.textContent).toBe('Initial child')
   })
 
   it('reloads a frame region when the response uses css mixins', async () => {
