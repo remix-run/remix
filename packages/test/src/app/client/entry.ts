@@ -196,7 +196,9 @@ function runInIframe(
     let parentBody = iframe.contentWindow?.document.body
     iframe.width = Math.max(parentBody?.scrollWidth ?? 0, 800).toString()
     iframe.height = Math.max(Math.round((parentBody?.scrollHeight ?? 0) / 2), 400).toString()
-    document.body.appendChild(iframe)
+    // Earlier files' results render ahead of an appended iframe and push it out of view, where
+    // WebKit throttles its timers, so the running file goes first.
+    document.body.prepend(iframe)
 
     function onMessage(event: MessageEvent) {
       if (event.source !== iframe.contentWindow) return
