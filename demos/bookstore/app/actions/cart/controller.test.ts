@@ -167,6 +167,63 @@ describe('cart handlers', () => {
     assert.equal(response.status, 204)
   })
 
+  it('PUT /cart/api/update sets the quantity of a book that is not in the cart yet', async () => {
+    let response = await router.fetch('https://remix.run/cart/api/update', {
+      method: 'PUT',
+      body: new URLSearchParams({ bookId: '2', quantity: '3', redirect: 'none' }),
+    })
+    assert.equal(response.status, 204)
+    let sessionId = getSessionCookie(response)
+    assert.ok(sessionId)
+
+    // Sending the same end state again, as a retry does, leaves one copy of the change.
+    await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '2', quantity: '3', redirect: 'none' }),
+      }),
+    )
+
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+    let html = await cart.text()
+    assertContains(html, 'Heavy Metal Guitar Riffs')
+    assertContains(html, 'value="3"')
+  })
+
+  it('PUT /cart/api/update removes the book when the quantity is 0', async () => {
+    let addResponse = await router.fetch('https://remix.run/cart/api/update', {
+      method: 'PUT',
+      body: new URLSearchParams({ bookId: '2', quantity: '1', redirect: 'none' }),
+    })
+    let sessionId = getSessionCookie(addResponse)
+    assert.ok(sessionId)
+
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '2', quantity: '0', redirect: 'none' }),
+      }),
+    )
+    assert.equal(response.status, 204)
+
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+    assertContains(await cart.text(), 'Your cart is empty.')
+  })
+
+  it('PUT /cart/api/update rejects a quantity that is not a whole number of at least 0', async () => {
+    for (let quantity of ['-1', '1.5', 'many']) {
+      let response = await router.fetch('https://remix.run/cart/api/update', {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '2', quantity, redirect: 'none' }),
+      })
+      assert.equal(response.status, 400, quantity)
+    }
+  })
+
   it('DELETE /cart/api/remove returns 204 when redirect is none', async () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',

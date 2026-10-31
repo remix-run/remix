@@ -219,41 +219,50 @@ To show "Album saved" on the destination page, store the message as [session fla
 
 Once the page [boots the browser runtime with `run()`](/interactivity/#browser-entry-with-run), Remix handles the form submission as a [frame navigation](/streaming-ui-with-frames/#navigate-a-frame-with-a-form). It renders validation responses into the page and follows redirects after a successful save.
 
-To show that a save is in progress, hydrate only the submit button and follow the containing frame's `reloadStart` and `reloadComplete` events. The rest of the form stays server-rendered, and the pending state resets whenever the response renders, including a validation error that keeps the form on the page.
+To show that a save is in progress, hydrate only the submit button and follow the containing frame's `reloadStart` event. The rest of the form stays server-rendered. The event's `sourceElement` is what started the reload: the submit button when the visitor submits the form, the form when code calls `requestSubmit()`, or a link. The button follows only its own form's submissions, so other forms and links leave it alone, even links inside its form. The event's `finished` promise resolves once the response renders, including a validation error that keeps the form on the page, and rejects when the save fails.
 
 Setting pending state from a hydrated form's `submit` handler, as the [hydrated album form](/start-here/#add-your-first-hydrated-component) does, only resets when the page replaces the form. A validation response can re-render the same form component in place, leaving it stuck on "Saving…". Use a `submit` handler when you [send the request yourself with `fetch()`](/interactivity/#enhancing-forms-with-fetch-and-navigation) and can reset the state when the response arrives.
 
 Put the button in the edit action's `public/` directory so the [asset server can serve it to the browser](/files-and-assets/#control-what-the-browser-can-reach):
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
-import { clientEntry } from "remix/component";
-import type { Handle } from "remix/component";
+import { clientEntry, ref } from "remix/component";
+import type { FrameReloadEvent, Handle } from "remix/component";
 
 export const SaveButton = clientEntry(import.meta.url, function SaveButton(handle: Handle) {
-  let pending = false;
+  let button: HTMLButtonElement | undefined;
+  let save: FrameReloadEvent | undefined;
+  let failed = false;
 
   handle.frame.addEventListener(
     "reloadStart",
-    () => {
-      pending = true;
+    async (event) => {
+      // Links inside the form reload the frame too.
+      let form = button?.form;
+      if (!form || (event.sourceElement !== button && event.sourceElement !== form)) return;
+      save = event;
+      failed = false;
       handle.update();
-    },
-    { signal: handle.signal },
-  );
-
-  handle.frame.addEventListener(
-    "reloadComplete",
-    () => {
-      pending = false;
+      try {
+        await event.finished;
+      } catch (error) {
+        // An `AbortError` means a newer navigation replaced this one, which shows its own state.
+        failed = !(error instanceof DOMException && error.name === "AbortError");
+      }
+      if (save !== event) return;
+      save = undefined;
       handle.update();
     },
     { signal: handle.signal },
   );
 
   return () => (
-    <button type="submit" disabled={pending}>
-      {pending ? "Saving…" : "Save album"}
-    </button>
+    <>
+      <button type="submit" mix={ref((node) => (button = node))}>
+        {save ? "Saving…" : "Save album"}
+      </button>
+      <span role="status">{failed ? "Couldn’t save the album. Try again." : ""}</span>
+    </>
   );
 });
 ```
@@ -270,7 +279,7 @@ import { SaveButton } from "./public/save-button.tsx";
 </form>;
 ```
 
-`reloadStart` disables the button and shows "Saving…", and `reloadComplete` restores it after the navigation settles, including a validation response or request failure. `handle.signal` is an [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) that aborts when the component is removed, which also removes the listeners.
+The button shows "Saving…" from its form's `reloadStart` until `finished` settles. When the request fails, `finished` rejects, and the status says so without moving focus. When another navigation replaces the save, such as a second click, `finished` rejects with an `AbortError` and the newer one takes over. The button stays enabled, so the visitor can submit again, which replaces the pending save. `handle.signal` is an [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) that aborts when the component is removed, which also removes the listener.
 
 ## Use other HTTP methods when the route calls for them
 
