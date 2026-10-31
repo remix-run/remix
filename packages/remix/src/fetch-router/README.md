@@ -826,11 +826,27 @@ In this example, the router's inline middleware array defines the app context co
 
 Apps that install `@remix-run/fetch-router` directly should augment the `@remix-run/fetch-router` module instead.
 
-Prefer plain inline arrays for `middleware` options on routers, controllers, actions, and route helpers. Inline arrays already give TypeScript enough information to infer middleware-provided context for downstream handlers, so `createAction()` and direct action objects see action middleware context, and `createController()` sees controller middleware context without `createMiddleware()`. Conditional entries like `...(isDev ? [logger()] : [])` are fine too: the middleware around them still types the context, but the conditional middleware's values are left out because it may not run.
+Prefer plain inline arrays for `middleware` options on routers, controllers, actions, and route helpers. Inline arrays already give TypeScript enough information to infer middleware-provided context for downstream handlers without `createMiddleware()`. `createController()` sees controller middleware context, and each action sees its own action middleware context, whether it is a `createAction()` value or a direct action object, including actions inside a controller. Conditional entries like `...(isDev ? [logger()] : [])` are fine too: the middleware around them still types the context, but the conditional middleware's values are left out because it may not run.
+
+```ts
+let pageController = createController(pageRoutes, {
+  actions: {
+    // Only this action runs loadShopApi(), and only its handler sees ShopApi
+    home: {
+      middleware: [loadShopApi()],
+      handler(context) {
+        let shop = context.get(ShopApi)
+        return Response.json(shop.featuredProducts())
+      },
+    },
+    account: accountAction,
+  },
+})
+```
 
 Use `createMiddleware()` only when a middleware chain is stored somewhere and its exact tuple type needs to survive that boundary. The common cases are deriving `MiddlewareContext<typeof rootMiddleware>` without a router value, exporting a reusable chain, or returning a chain from a factory. A standalone array like `let middleware = [loadSession(), loadDatabase()]` widens to a normal array, so `MiddlewareContext<typeof middleware>` cannot derive the ordered middleware context.
 
-When manually annotating stored handlers with `Action<typeof route, Context>` or `Controller<typeof routes, Context>`, compose any action or controller middleware chain into `Context` with `MiddlewareContext<typeof actionOrControllerMiddleware, AppContext>`.
+When manually annotating stored handlers with `Action<typeof route, Context>` or `Controller<typeof routes, Context>`, compose any action or controller middleware chain into `Context` with `MiddlewareContext<typeof actionOrControllerMiddleware, AppContext>`. The same applies to explicit type arguments like `createController<typeof routes, AppContext>(...)`, which turn off controller and action middleware inference.
 
 #### Middleware Provider Guidance
 

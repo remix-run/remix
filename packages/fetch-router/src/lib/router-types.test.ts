@@ -3,7 +3,12 @@ import { describe, it } from '@remix-run/test'
 
 import { createRoutes as route } from '../routes.ts'
 import { createAction, createController, type Action, type Controller } from './controller.ts'
-import { createMiddleware, type Middleware, type MiddlewareContext } from './middleware.ts'
+import {
+  createMiddleware,
+  type AnyMiddleware,
+  type Middleware,
+  type MiddlewareContext,
+} from './middleware.ts'
 import { createContextKey, type ContextWithEntry, type RequestContext } from './request-context.ts'
 import {
   createRouter,
@@ -449,6 +454,209 @@ describe('router type inference', () => {
 
     void elevatedReportsControllerWithMiddleware
     void checkMiddlewareContextBase
+  })
+
+  it('infers each action middleware chain in a controller without leaking between actions', () => {
+    let reportsController = createController(
+      { account: routes.account, reports: routes.reports },
+      {
+        actions: {
+          account: {
+            middleware: [setFormData()],
+            handler(context) {
+              let formData = context.get(FormData)
+
+              expectTypeEquality<IsEqual<typeof formData, FormData>>()
+              expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+
+              return new Response(context.params.accountId)
+            },
+          },
+          reports: {
+            middleware: [setRole('admin')],
+            handler(context) {
+              let formData = context.get(FormData)
+
+              expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+              expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+
+              return new Response(context.params.reportId)
+            },
+          },
+        },
+      },
+    )
+
+    createAppRouter().map({ account: routes.account, reports: routes.reports }, reportsController)
+  })
+
+  it('composes router, controller, and action middleware in inline mapped controllers', () => {
+    let router = createRouter({ middleware: [setRole('viewer')] })
+
+    router.map(routes.admin, {
+      middleware: [requireUser()],
+      actions: {
+        dashboard(context) {
+          let formData = context.get(FormData)
+
+          expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+          expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+          expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+
+          return new Response('Dashboard')
+        },
+        member: {
+          middleware: [setFormData(), setRole('admin')],
+          handler(context) {
+            let formData = context.get(FormData)
+
+            expectTypeEquality<IsEqual<typeof formData, FormData>>()
+            expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+            expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+
+            return new Response(context.params.memberId)
+          },
+        },
+      },
+    })
+  })
+
+  it('applies conditional action middleware entries in controllers', () => {
+    let isDev = false as boolean
+
+    createController(
+      { reports: routes.reports },
+      {
+        actions: {
+          reports: {
+            middleware: [setFormData(), ...(isDev ? [requireUser()] : []), setRole('admin')],
+            handler(context) {
+              let formData = context.get(FormData)
+
+              expectTypeEquality<IsEqual<typeof formData, FormData>>()
+              expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+
+              return new Response(context.params.reportId)
+            },
+          },
+        },
+      },
+    )
+  })
+
+  it('accepts created actions with action middleware in controllers', () => {
+    let reportAction = createAction(routes.reports, {
+      middleware: [setRole('admin')],
+      handler(context) {
+        let exactRole: 'admin' = context.role
+        return new Response(context.params.reportId + ':' + exactRole)
+      },
+    })
+
+    let reportsController = createController(
+      { reports: routes.reports },
+      { actions: { reports: reportAction } },
+    )
+
+    createAppRouter().map({ reports: routes.reports }, reportsController)
+
+    if (false as boolean) {
+      createController(
+        { account: routes.account },
+        {
+          actions: {
+            // @ts-expect-error - created actions keep their route params contract
+            account: reportAction,
+          },
+        },
+      )
+    }
+  })
+
+  it('rejects missing and unknown controller action keys with descriptive types', () => {
+    type ReportActions = Controller<
+      typeof routes,
+      AppContext,
+      readonly AnyMiddleware[],
+      { report: unknown; admin: unknown }
+    >['actions']
+
+    expectTypeEquality<
+      IsEqual<
+        ReportActions['report'],
+        "Unknown action `report`: no route with this name in the controller's route map"
+      >
+    >()
+    expectTypeEquality<
+      IsEqual<
+        ReportActions['admin'],
+        'Nested route map `admin` must be mapped with its own controller'
+      >
+    >()
+
+    if (false as boolean) {
+      createController(
+        { account: routes.account, reports: routes.reports },
+        {
+          // @ts-expect-error - every route leaf needs an action
+          actions: {
+            account: {
+              middleware: [setFormData()],
+              handler: () => new Response('Account'),
+            },
+          },
+        },
+      )
+
+      createController(
+        { reports: routes.reports },
+        {
+          actions: {
+            reports: () => new Response('Reports'),
+            // @ts-expect-error - controller action keys must exist in the route map
+            report: () => new Response('Report'),
+          },
+        },
+      )
+    }
+  })
+
+  it('rejects controllers with action middleware when the router lacks their base context', () => {
+    let reportsController = createController(
+      { reports: routes.reports },
+      {
+        actions: {
+          reports: {
+            middleware: [setRole('admin')],
+            handler(context) {
+              return new Response(context.currentUser.id + ':' + context.role)
+            },
+          },
+        },
+      },
+    )
+
+    if (false as boolean) {
+      // @ts-expect-error - action middleware does not provide the app context's current user
+      createRouter().map({ reports: routes.reports }, reportsController)
+    }
+  })
+
+  it('does not infer action middleware when controller type arguments are explicit', () => {
+    createController<{ reports: typeof routes.reports }, AppContext>(
+      { reports: routes.reports },
+      {
+        actions: {
+          reports: {
+            middleware: [setRole('admin')],
+            handler(context) {
+              expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+              return new Response(context.params.reportId)
+            },
+          },
+        },
+      },
+    )
   })
 
   it('keeps explicit context support for action and controller middleware results', () => {
