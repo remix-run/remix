@@ -38,15 +38,21 @@ export function addToCart(
   return cart
 }
 
-export function updateCartItem(cart: Cart, bookId: number, quantity: number): Cart | undefined {
-  let item = cart.items.find((item) => item.bookId === bookId)
-
-  if (!item) return undefined
+// Sets the quantity the visitor asked for rather than changing it by an amount, so sending the same
+// change twice, as a retry does, leaves the cart as one send would.
+export function setCartItemQuantity(
+  cart: Cart,
+  book: Omit<CartItem, 'quantity'>,
+  quantity: number,
+): Cart {
+  let item = cart.items.find((item) => item.bookId === book.bookId)
 
   if (quantity <= 0) {
-    cart.items = cart.items.filter((item) => item.bookId !== bookId)
-  } else {
+    cart.items = cart.items.filter((item) => item.bookId !== book.bookId)
+  } else if (item) {
     item.quantity = quantity
+  } else {
+    cart.items.push({ ...book, quantity })
   }
 
   return cart

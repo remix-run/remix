@@ -5,6 +5,7 @@ import type { User } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { RestfulForm } from '../../../ui/restful-form.tsx'
 import { Layout } from '../../../ui/layout.tsx'
+import { SaveButton } from './public/save-button.tsx'
 
 export function AccountSettingsPage(handle: Handle<{ user: User }>) {
   return () => {
@@ -31,9 +32,7 @@ export function AccountSettingsPage(handle: Handle<{ user: User }>) {
               <input type="password" id="password" name="password" autoComplete="new-password" />
             </div>
 
-            <button type="submit" class="btn">
-              Update Settings
-            </button>
+            <SaveButton>Update Settings</SaveButton>
             <a
               data-rmx-prefetch="intent"
               href={routes.account.index.href()}

@@ -9,9 +9,6 @@ export const routes = route({
     cartButton: get('/cart-button/:bookId'),
     cartItems: get('/cart-items'),
   }),
-  api: route('api', {
-    cartToggle: post('/cart/toggle'),
-  }),
 
   // Simple static routes
   home: '/',
