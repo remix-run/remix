@@ -3562,7 +3562,7 @@ describe('run', () => {
     ])
   })
 
-  it('restores traversal scroll after a preserved entry resolves a blocking frame', async (t) => {
+  it('restores the full traversal scroll after a preserved entry resolves a blocking frame', async (t) => {
     let initialUrl = window.location.href
     let initialEntryKey = window.navigation.currentEntry?.key
     let listUrl = new URL('/scroll-list', initialUrl).href
@@ -3663,6 +3663,10 @@ describe('run', () => {
 
     await navigate(detailUrl)
     expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
+
+    window.scrollTo(0, 100)
+    expect(window.scrollY).toBe(100)
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 
     let didScroll = false
     window.navigation.addEventListener(
