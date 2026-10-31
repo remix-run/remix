@@ -22,8 +22,8 @@ catalogs:
       specifier: 1.5.2
       version: 1.5.2
     playwright:
-      specifier: ^1.60.0
-      version: 1.60.0
+      specifier: ^1.64.1
+      version: 1.64.1
     shiki:
       specifier: 4.4.1
       version: 4.4.1
@@ -87,7 +87,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -109,7 +109,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -144,7 +144,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -192,7 +192,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -501,7 +501,7 @@ importers:
         version: 4.0.3
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -761,7 +761,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -816,7 +816,7 @@ importers:
         version: 5.0.0
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -1699,7 +1699,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -1939,8 +1939,8 @@ importers:
         specifier: ^8.16.3
         version: 8.18.0
       playwright:
-        specifier: ^1.60.0
-        version: 1.60.0
+        specifier: ^1.64.1
+        version: 1.64.1
       redis:
         specifier: ^5.10.0
         version: 5.11.0
@@ -2326,7 +2326,7 @@ importers:
         version: 6.0.1
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -2351,7 +2351,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.64.1
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -5895,9 +5895,19 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  playwright-core@1.64.1:
+    resolution: {integrity: sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   playwright@1.60.0:
     resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
     engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.64.1:
+    resolution: {integrity: sha512-HCrVhHr5QQuwYoswEUGTb7gGp522yflbv/ST8nF4sFWGuLjQCt17Q/EubpGGSNKYn1tsTCPZxqHhHCfVURu7UA==}
+    engines: {node: '>=20'}
     hasBin: true
 
   postcss@8.5.14:
@@ -9620,11 +9630,17 @@ snapshots:
 
   playwright-core@1.60.0: {}
 
+  playwright-core@1.64.1: {}
+
   playwright@1.60.0:
     dependencies:
       playwright-core: 1.60.0
     optionalDependencies:
       fsevents: 2.3.2
+
+  playwright@1.64.1:
+    dependencies:
+      playwright-core: 1.64.1
 
   postcss@8.5.14:
     dependencies:
