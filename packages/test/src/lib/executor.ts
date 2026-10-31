@@ -42,7 +42,10 @@ export interface RunTestsOptions extends Partial<RunTestsE2EOptions> {
 
 export async function runTests(options?: RunTestsOptions): Promise<TestResults> {
   let suites = getRegisteredSuites()
-  let e2eCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
+  let e2eCoverageEntries: Array<{
+    entries: V8CoverageEntry[]
+    baseUrl: string
+  }> = []
   let results: TestResults = {
     passed: 0,
     failed: 0,
@@ -77,7 +80,43 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
 
   let hasOnly = hasOnlyPatterns || hasOnlySuites || hasOnlyTests
 
-  for (let suite of suites) {
+  // Nested describes inherit their parent's `beforeAll`/`afterAll` hooks (the
+  // same hook objects), but those hooks must run once per scope, not once per
+  // describe. Run each `beforeAll` hook the first time a suite containing it
+  // starts, and each `afterAll` hook once the last suite containing it is done.
+  let afterAllLastSuite = new Map<LifecycleHook, number>()
+  suites.forEach((suite, index) => {
+    for (let hook of suite.afterAll ?? []) afterAllLastSuite.set(hook, index)
+  })
+  let beforeAllErrors = new Map<LifecycleHook, unknown>()
+  let beforeAllDone = new Set<LifecycleHook>()
+  let afterAllStarted = new Set<LifecycleHook>()
+  let pendingAfterAll: Array<{
+    hook: LifecycleHook
+    suiteName: string
+    lastSuite: number
+  }> = []
+
+  async function flushAfterAll(currentIndex: number) {
+    for (let i = pendingAfterAll.length - 1; i >= 0; i--) {
+      let entry = pendingAfterAll[i]
+      if (entry.lastSuite >= currentIndex) continue
+      pendingAfterAll.splice(i, 1)
+      let startTime = performance.now()
+      try {
+        await runLifecycleHooks('afterAll', [entry.hook])
+      } catch (error) {
+        results.tests.push(
+          createFailedHookResult('afterAll', entry.suiteName, error, performance.now() - startTime),
+        )
+        results.failed++
+      }
+    }
+  }
+
+  for (let [suiteIndex, suite] of suites.entries()) {
+    await flushAfterAll(suiteIndex)
+
     let suiteHasOnlyTests = suite.tests.some((test) => test.only)
 
     // If any suite or test uses .only, skip suites that do not contain focused work
@@ -104,16 +143,38 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
       continue
     }
 
-    if (suite.beforeAll) {
+    let beforeAllFailed = false
+    for (let hook of suite.beforeAll ?? []) {
+      if (beforeAllDone.has(hook)) continue
       let startTime = performance.now()
-      try {
-        await runLifecycleHooks('beforeAll', suite.beforeAll)
-      } catch (error) {
-        results.tests.push(
-          createFailedHookResult('beforeAll', suite.name, error, performance.now() - startTime),
-        )
-        results.failed++
-        continue
+      let error = beforeAllErrors.get(hook)
+      if (!beforeAllErrors.has(hook)) {
+        try {
+          await runLifecycleHooks('beforeAll', [hook])
+          beforeAllDone.add(hook)
+          continue
+        } catch (e) {
+          error = e
+          beforeAllErrors.set(hook, e)
+        }
+      }
+      results.tests.push(
+        createFailedHookResult('beforeAll', suite.name, error, performance.now() - startTime),
+      )
+      results.failed++
+      beforeAllFailed = true
+      break
+    }
+    if (beforeAllFailed) continue
+
+    for (let hook of suite.afterAll ?? []) {
+      if (!pendingAfterAll.some((entry) => entry.hook === hook) && !afterAllStarted.has(hook)) {
+        afterAllStarted.add(hook)
+        pendingAfterAll.push({
+          hook,
+          suiteName: suite.name,
+          lastSuite: afterAllLastSuite.get(hook)!,
+        })
       }
     }
 
@@ -198,19 +259,9 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
         results.tests.push(result)
       }
     }
-
-    if (suite.afterAll) {
-      let startTime = performance.now()
-      try {
-        await runLifecycleHooks('afterAll', suite.afterAll, undefined, undefined, true)
-      } catch (error) {
-        results.tests.push(
-          createFailedHookResult('afterAll', suite.name, error, performance.now() - startTime),
-        )
-        results.failed++
-      }
-    }
   }
+
+  await flushAfterAll(Infinity)
 
   // Clear suites in-place so the shared framework module is reset
   // for the next test file (which reuses the same cached module instance)
@@ -249,7 +300,9 @@ function createE2EOptions(
 }
 
 function getRegisteredSuites(): RegisteredSuite[] {
-  let global = globalThis as typeof globalThis & { __testSuites?: RegisteredSuite[] }
+  let global = globalThis as typeof globalThis & {
+    __testSuites?: RegisteredSuite[]
+  }
   return global.__testSuites ?? []
 }
 
