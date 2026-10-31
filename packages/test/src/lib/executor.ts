@@ -94,14 +94,19 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
   let pendingAfterAll: Array<{
     hook: LifecycleHook
     suiteName: string
+    suiteIndex: number
     lastSuite: number
   }> = []
 
   async function flushAfterAll(currentIndex: number) {
+    // Hooks run in reverse order. As before, a failing hook stops the remaining
+    // hooks declared by the same suite from running in this flush.
+    let failedScopes = new Set<number>()
     for (let i = pendingAfterAll.length - 1; i >= 0; i--) {
       let entry = pendingAfterAll[i]
       if (entry.lastSuite >= currentIndex) continue
       pendingAfterAll.splice(i, 1)
+      if (failedScopes.has(entry.suiteIndex)) continue
       let startTime = performance.now()
       try {
         await runLifecycleHooks('afterAll', [entry.hook])
@@ -110,6 +115,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
           createFailedHookResult('afterAll', entry.suiteName, error, performance.now() - startTime),
         )
         results.failed++
+        failedScopes.add(entry.suiteIndex)
       }
     }
   }
@@ -173,6 +179,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
         pendingAfterAll.push({
           hook,
           suiteName: suite.name,
+          suiteIndex,
           lastSuite: afterAllLastSuite.get(hook)!,
         })
       }

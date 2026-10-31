@@ -671,6 +671,7 @@ describe('runTests inherited beforeAll/afterAll hooks', () => {
 
   it('reports a failing inherited beforeAll for each suite without rerunning it', async () => {
     let calls = 0
+    let testBodiesRan = 0
     let hook = {
       fn() {
         calls++
@@ -679,16 +680,44 @@ describe('runTests inherited beforeAll/afterAll hooks', () => {
     }
 
     let results = await runWithSuites([
-      { name: 'outer', beforeAll: [hook], tests: [{ name: 'a', fn() {} }] },
+      {
+        name: 'outer',
+        beforeAll: [hook],
+        tests: [{ name: 'a', fn: () => void testBodiesRan++ }],
+      },
       {
         name: 'outer > inner',
         beforeAll: [hook],
-        tests: [{ name: 'b', fn() {} }],
+        tests: [{ name: 'b', fn: () => void testBodiesRan++ }],
       },
     ])
 
     assert.equal(calls, 1)
     assert.equal(results.failed, 2)
+    assert.equal(testBodiesRan, 0)
+  })
+
+  it("runs a scope's afterAll hooks in reverse order and stops at the first failure", async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        afterAll: [
+          { fn: () => void ran.push('first') },
+          {
+            fn() {
+              ran.push('second')
+              throw new Error('teardown failed')
+            },
+          },
+        ],
+        tests: [{ name: 'a', fn() {} }],
+      },
+    ])
+
+    assert.deepEqual(ran, ['second'])
+    assert.equal(results.failed, 1)
   })
 })
 
