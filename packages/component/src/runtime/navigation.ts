@@ -296,6 +296,10 @@ export function startNavigationListenerImpl(
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
         if (scroll !== 'manual') {
+          // WebKit restores a traversal's position against the layout from before the commit, so
+          // it clamps the position to the old page's height. Reading the height lays out the new
+          // content first.
+          document.documentElement.scrollHeight
           event.scroll()
           webKitScrollResets.get(event)?.()
         }
