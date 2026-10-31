@@ -58,6 +58,7 @@ Exports covered by the same README are grouped together.
 | `remix/middleware/form-data`<br>`remix/middleware/form-data/future` | Middleware for parsing FormData from request bodies | [README](src/form-data-middleware/README.md) |
 | `remix/middleware/logger` | Middleware for logging HTTP requests and responses | [README](src/logger-middleware/README.md) |
 | `remix/middleware/method-override` | Middleware for overriding HTTP request methods from form data | [README](src/method-override-middleware/README.md) |
+| `remix/middleware/rate-limit` | Middleware for rate limiting requests in Fetch API servers | [README](src/rate-limit-middleware/README.md) |
 | `remix/middleware/render` | Conventional Remix component and custom request-scoped render middleware | [README](src/render-middleware/README.md) |
 | `remix/middleware/session` | Middleware for managing sessions with cookie-based storage | [README](src/session-middleware/README.md) |
 | `remix/middleware/static` | Middleware for serving static files from the filesystem | [README](src/static-middleware/README.md) |
