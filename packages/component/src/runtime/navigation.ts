@@ -455,9 +455,14 @@ function interceptNavigation(
 
   let interceptOptions: NavigationInterceptOptions = {
     ...options,
-    handler() {
+    async handler() {
       bindTransition()
-      return options.handler?.()
+      try {
+        await options.handler?.()
+      } catch (error) {
+        keepFocusAfterFailure(navigation, event)
+        throw error
+      }
     },
   }
   let precommitHandler = options.precommitHandler
@@ -474,6 +479,24 @@ function interceptNavigation(
     scrollStyleWorkarounds?.remove()
     throw error
   }
+}
+
+// The Navigation API resets focus once a navigation settles, even when its handler fails and the
+// page stays as it was, which would take the visitor away from a form whose save failed. The reset
+// runs before the transition's `finished` rejects, so focus goes back to where it was at the
+// failure. When focus moved during the navigation, the browser skips the reset and this changes
+// nothing. A navigation that a newer one replaced leaves focus to that one: moving focus during it
+// would also cancel its own reset. The check comes first, since the browser aborts the signal of a
+// failed navigation too.
+function keepFocusAfterFailure(navigation: Navigation, event: NavigateEvent): void {
+  let focused = document.activeElement
+  if (event.signal.aborted || focused === document.body) return
+  if (!(focused instanceof HTMLElement || focused instanceof SVGElement)) return
+  navigation.transition?.finished.catch(() => {
+    if (focused.isConnected && document.activeElement !== focused) {
+      focused.focus({ preventScroll: true })
+    }
+  })
 }
 
 const disableScrollAnchoringCssText = `
