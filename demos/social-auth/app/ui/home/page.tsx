@@ -7,6 +7,7 @@ import { TextField } from '../form-field.tsx'
 import { EmailIcon, PasswordIcon } from '../icons.tsx'
 import { Notice } from '../notice.tsx'
 import * as styles from '../styles.ts'
+import { EmailSignInSection } from './email-sign-in-section.tsx'
 import { ExternalAuthSection } from './external-auth-section.tsx'
 import { LoginFooter } from './footer.tsx'
 
@@ -14,6 +15,8 @@ interface LoginPageProps {
   formAction: string
   signupHref: string
   forgotPasswordHref: string
+  magicLinkHref: string
+  emailCodeHref: string
   providers: ExternalProviderLink[]
   error?: string
   success?: string
@@ -21,7 +24,16 @@ interface LoginPageProps {
 
 export function LoginPage(handle: Handle<LoginPageProps>) {
   return () => {
-    let { formAction, signupHref, forgotPasswordHref, providers, error, success } = handle.props
+    let {
+      formAction,
+      signupHref,
+      forgotPasswordHref,
+      magicLinkHref,
+      emailCodeHref,
+      providers,
+      error,
+      success,
+    } = handle.props
 
     return (
       <Document title="Social Auth Demo">
@@ -70,6 +82,8 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
               Sign In
             </button>
           </form>
+
+          <EmailSignInSection magicLinkHref={magicLinkHref} emailCodeHref={emailCodeHref} />
 
           <ExternalAuthSection providers={providers} />
         </AuthCard>
