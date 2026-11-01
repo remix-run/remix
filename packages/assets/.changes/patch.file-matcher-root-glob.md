@@ -1,0 +1,1 @@
+Fixed the asset server rejecting a project's own files when the project directory name contains glob characters such as parentheses (e.g. `app (copy)`, `Dropbox (Company)`, or `project (1)`). `allowFiles`/`denyFiles` glob patterns are now matched with the root directory portion treated literally, so only the pattern itself is interpreted as a glob (see #11970).
