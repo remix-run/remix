@@ -1,0 +1,35 @@
+{
+  "name": "@remix-run/uwebsockets-js-darwin-arm64",
+  "version": "0.0.0",
+  "description": "Remix-owned npm distribution of uWebSockets.js for darwin-arm64",
+  "license": "Apache-2.0",
+  "sideEffects": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/uwebsockets-js-darwin-arm64"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/uwebsockets-js-darwin-arm64#readme",
+  "remix": {
+    "internal": true
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "upstream.json",
+    "dist",
+    "!src/**/*.test.ts"
+  ],
+  "main": "./dist/uws.js",
+  "types": "./dist/index.d.ts",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/sync-uwebsockets.ts darwin-arm64",
+    "prepack": "pnpm run build"
+  }
+}

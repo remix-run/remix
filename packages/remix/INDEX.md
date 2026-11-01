@@ -66,6 +66,7 @@ Exports covered by the same README are grouped together.
 | `remix/multiple-import-maps-polyfill` | Polyfill for dynamic JavaScript imports that depend on import maps added at runtime | [README](src/multiple-import-maps-polyfill/README.md) |
 | `remix/node-fetch-server`<br>`remix/node-fetch-server/test` | Build servers for Node.js using the web fetch API | [README](src/node-fetch-server/README.md) |
 | `remix/node-hmr`<br>`remix/node-hmr/runtime`<br>`remix/node-hmr/types` | Run Node.js applications with Hot Module Reloading | [README](src/node-hmr/README.md) |
+| `remix/node-serve` | Build high-performance Fetch API servers for Node.js | [README](src/node-serve/README.md) |
 | `remix/node-tsx`<br>`remix/node-tsx/load-module` | Run Node.js with TypeScript and JSX syntax support | [README](src/node-tsx/README.md) |
 | `remix/response/compress`<br>`remix/response/file`<br>`remix/response/html`<br>`remix/response/redirect` | Response helpers for the web Fetch API | [README](src/response/README.md) |
 | `remix/route-pattern`<br>`remix/route-pattern/href`<br>`remix/route-pattern/join`<br>`remix/route-pattern/match`<br>`remix/route-pattern/specificity` | Match and generate URLs with strong typing | [README](src/route-pattern/README.md) |

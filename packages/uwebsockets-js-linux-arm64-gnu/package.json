@@ -1,0 +1,38 @@
+{
+  "name": "@remix-run/uwebsockets-js-linux-arm64-gnu",
+  "version": "0.0.0",
+  "description": "Remix-owned npm distribution of uWebSockets.js for linux-arm64-gnu",
+  "license": "Apache-2.0",
+  "sideEffects": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/uwebsockets-js-linux-arm64-gnu"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/uwebsockets-js-linux-arm64-gnu#readme",
+  "remix": {
+    "internal": true
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "upstream.json",
+    "dist",
+    "!src/**/*.test.ts"
+  ],
+  "main": "./dist/uws.js",
+  "types": "./dist/index.d.ts",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/sync-uwebsockets.ts linux-arm64-gnu",
+    "prepack": "pnpm run build"
+  },
+  "libc": [
+    "glibc"
+  ]
+}
