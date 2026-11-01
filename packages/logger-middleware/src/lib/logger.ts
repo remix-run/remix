@@ -19,13 +19,40 @@ export interface LoggerFunction {
 export const Logger: { defaultValue?: LoggerFunction } = createContextKey<LoggerFunction>()
 
 /**
+ * Request and response data available to a custom log formatter.
+ */
+export interface LoggerEvent {
+  /**
+   * The incoming request.
+   */
+  request: Request
+  /**
+   * The outgoing response.
+   */
+  response: Response
+  /**
+   * The time when request processing started.
+   */
+  start: Date
+  /**
+   * The time when request processing finished.
+   */
+  end: Date
+  /**
+   * The request duration in milliseconds.
+   */
+  duration: number
+}
+
+/**
  * Options for the {@link logger} middleware.
  */
 export interface LoggerOptions {
   /**
-   * The format to use for log messages.
+   * The template or formatter to use for request log messages. A formatter receives the request,
+   * response, start and end times, and duration, and returns the complete message to log.
    *
-   * The following tokens are available:
+   * String templates support the following tokens:
    *
    * - `%date` - The date and time of the request in Apache/nginx log format (dd/Mon/yyyy:HH:mm:ss ±zzzz)
    * - `%dateISO` - The date and time of the request in ISO format
@@ -48,7 +75,7 @@ export interface LoggerOptions {
    *
    * @default '[%date] %method %path %status %contentLength'
    */
-  format?: string
+  format?: string | ((event: LoggerEvent) => string)
   /**
    * The function to use to log messages.
    *
@@ -61,6 +88,7 @@ export interface LoggerOptions {
    * By default, colors are enabled when terminal color detection allows them. Set this to `false`
    * to opt out or `true` to force colors on. When the `process` global is defined, color
    * detection respects `CI`, `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb`, and TTY output streams.
+   * This option only affects string templates; formatter callbacks control their complete output.
    *
    * The following tokens are colorized when colors are enabled:
    *
@@ -123,7 +151,10 @@ export function logger(
       userAgent: () => request.headers.get('User-Agent') ?? '-',
     }
 
-    let message = format.replace(/%(\w+)/g, (_, key) => tokens[key]?.() ?? '-')
+    let message =
+      typeof format === 'function'
+        ? format({ request, response, start, end, duration })
+        : format.replace(/%(\w+)/g, (_, key) => tokens[key]?.() ?? '-')
 
     log(message)
 
