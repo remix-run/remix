@@ -282,7 +282,7 @@ export function createHmrSupervisor(options: {
     moduleStore.reset()
     browserWatchedFileRefCountsByRuntime = new Map()
     browserWatchedFilePaths = new Set()
-    unwatchKnownModuleFiles()
+    resetWatchedModuleFiles()
     watchKnownModuleFile(getEntryPath())
     waitingForFileChangeAfterExit = false
     let childRestartGeneration = restartGeneration
@@ -467,7 +467,7 @@ export function createHmrSupervisor(options: {
     syncWatchedDirectories()
   }
 
-  function unwatchKnownModuleFiles(): void {
+  function resetWatchedModuleFiles(): void {
     watchedFilePaths = new Set()
     watchedDirectoryRefCounts = new Map()
     syncWatchedDirectories()
@@ -517,21 +517,20 @@ export function createHmrSupervisor(options: {
       ...getWatchedDirectoriesForFiles(nextBrowserWatchedFilePaths),
     ])
 
+    // Never unwatch directories: chokidar's unwatch() also ignores every path below the directory,
+    // which silently stops events from nested directories that are still in use.
+    // handleWatchEvent() ignores changes to files that are no longer watched.
     let directoriesToAdd = [...nextWatchedDirectories].filter(
       (directory) => !activeWatchedDirectories.has(directory),
     )
-    let directoriesToRemove = [...activeWatchedDirectories].filter(
-      (directory) => !nextWatchedDirectories.has(directory),
-    )
 
-    if (directoriesToRemove.length > 0) {
-      watcher.unwatch(directoriesToRemove)
-    }
     if (directoriesToAdd.length > 0) {
       watcher.add(directoriesToAdd)
+      for (let directory of directoriesToAdd) {
+        activeWatchedDirectories.add(directory)
+      }
     }
 
-    activeWatchedDirectories = nextWatchedDirectories
     browserWatchedFilePaths = nextBrowserWatchedFilePaths
   }
 

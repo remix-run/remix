@@ -763,6 +763,42 @@ describe('node-hmr', () => {
     }
   })
 
+  it('keeps watching module directories after a parent directory leaves the module graph', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./app/routes/home.ts', 'getMessage()'),
+      'app/config.ts': `export const message = 'one'`,
+      'app/routes/home.ts': getAcceptingMessageSource({
+        imports: [`import { message as configMessage } from '../config.ts'`],
+        message: 'configMessage',
+      }),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      await writeFileAtomically(
+        path.join(fixture.path, 'app/routes/home.ts'),
+        getAcceptingMessageSource({ imports: [], message: `'two'` }),
+      )
+      await waitForResponse(ready.port, 'two', () => server.output)
+
+      // Rescan the routes directory while its parent directory is out of the module graph.
+      await fs.writeFile(path.join(fixture.path, 'app/routes/unrelated.txt'), '')
+      await new Promise((resolve) => setTimeout(resolve, 250))
+
+      await writeFileAtomically(
+        path.join(fixture.path, 'app/routes/home.ts'),
+        getAcceptingMessageSource({ imports: [], message: `'three'` }),
+      )
+      await waitForResponse(ready.port, 'three', () => server.output)
+      assert.equal(server.readyCount, 1)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('ignores file changes outside the imported module graph', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -1486,6 +1522,26 @@ function getSlowShutdownServerSource(message: string): string {
     `})`,
     ``,
     `setInterval(() => {}, 1_000)`,
+  ].join('\n')
+}
+
+function getAcceptingMessageSource(options: { imports: string[]; message: string }): string {
+  return [
+    ...options.imports,
+    ``,
+    `let message = ${options.message}`,
+    ``,
+    `export function getMessage() {`,
+    `  return message`,
+    `}`,
+    ``,
+    `if (import.meta.hot) {`,
+    `  import.meta.hot.accept((module) => {`,
+    `    if (module && typeof module === 'object' && 'getMessage' in module) {`,
+    `      message = String(module.getMessage())`,
+    `    }`,
+    `  })`,
+    `}`,
   ].join('\n')
 }
 
