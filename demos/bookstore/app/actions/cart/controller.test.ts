@@ -176,6 +176,86 @@ describe('cart handlers', () => {
     )
     assertContains(await cart.text(), 'Your cart is empty.')
   })
+
+  it('PUT /cart/api/update accepts exponent notation from number inputs', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '1', quantity: '1e2' }),
+      }),
+    )
+
+    assert.equal(response.status, 302)
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+    assertContains(await cart.text(), 'Total: $1699.00')
+  })
+
+  it('PUT /cart/api/update rejects a fractional quantity without changing the cart', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '1', quantity: '1.5' }),
+      }),
+    )
+
+    assert.equal(response.status, 400)
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+    assertContains(await cart.text(), 'Total: $16.99')
+  })
+
+  it('PUT /cart/api/update rejects an empty quantity without removing the book', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '1', quantity: '' }),
+      }),
+    )
+
+    assert.equal(response.status, 400)
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+    assertContains(await cart.text(), 'Total: $16.99')
+  })
+
+  it('PUT /cart/api/update rejects zero without removing the book', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '1', quantity: '0' }),
+      }),
+    )
+
+    assert.equal(response.status, 400)
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+    assertContains(await cart.text(), 'Total: $16.99')
+  })
+
+  it('PUT /cart/api/update rejects quantities outside the safe integer range', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '1', quantity: '9007199254740992' }),
+      }),
+    )
+
+    assert.equal(response.status, 400)
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+    assertContains(await cart.text(), 'Total: $16.99')
+  })
 })
 
 async function addToCart(bookId: string, slug: string): Promise<string> {

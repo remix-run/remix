@@ -1,5 +1,6 @@
 import { createController } from 'remix/router'
 import * as s from 'remix/data-schema'
+import * as coerce from 'remix/data-schema/coerce'
 import * as f from 'remix/data-schema/form-data'
 import { redirect } from 'remix/response/redirect'
 
@@ -10,7 +11,14 @@ import { getCurrentCart } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 
 const bookIdField = f.field(s.optional(s.string()))
-const quantityField = f.field(s.defaulted(s.string(), '1'))
+const quantityField = f.field(
+  s.defaulted(
+    coerce
+      .number()
+      .refine((quantity) => Number.isSafeInteger(quantity) && quantity > 0, 'Invalid quantity'),
+    1,
+  ),
+)
 const cartActionSchema = f.object({
   bookId: bookIdField,
 })
@@ -42,7 +50,11 @@ export default createController(routes.cart.api, {
     },
 
     async update({ db, formData, session }) {
-      let { bookId, quantity } = s.parse(cartUpdateSchema, formData)
+      let result = s.parseSafe(cartUpdateSchema, formData)
+      if (!result.success) {
+        return new Response('Invalid cart update', { status: 400 })
+      }
+      let { bookId, quantity } = result.value
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       let parsedBookId = parseId(bookId)
@@ -51,8 +63,7 @@ export default createController(routes.cart.api, {
         return new Response('Book not found', { status: 404 })
       }
 
-      let nextQuantity = parseInt(quantity, 10)
-      session.set('cart', updateCartItem(getCurrentCart(session), book.id, nextQuantity))
+      session.set('cart', updateCartItem(getCurrentCart(session), book.id, quantity))
 
       return redirect(routes.cart.index.href())
     },
