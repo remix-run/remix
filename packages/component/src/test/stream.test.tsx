@@ -1551,6 +1551,89 @@ describe('stream', () => {
   })
 
   describe('nonce', () => {
+    it('keeps literal document tags in script data when inserting nonce metadata', async () => {
+      let data = { html: '</head></body></html>' }
+      let html = await renderToString(
+        <html>
+          <head>
+            <script id="config" type="application/json">
+              {JSON.stringify(data)}
+            </script>
+          </head>
+          <body>Hello</body>
+        </html>,
+        { nonce: 'document-nonce' },
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+
+      expect(JSON.parse(doc.querySelector('#config')?.textContent ?? '')).toEqual(data)
+      expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+        'document-nonce',
+      )
+      expect(doc.body.textContent).toBe('Hello')
+    })
+
+    it('creates a missing head without treating script data as document markup', async () => {
+      let data = { html: '<html lang="fake"></head></body></html>' }
+      let html = await renderToString(
+        <html lang="en">
+          <body>
+            <script id="config" type="application/json">
+              {JSON.stringify(data)}
+            </script>
+          </body>
+        </html>,
+        { nonce: 'document-nonce' },
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+
+      expect(JSON.parse(doc.querySelector('#config')?.textContent ?? '')).toEqual(data)
+      expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+        'document-nonce',
+      )
+      expect(doc.documentElement.lang).toBe('en')
+    })
+
+    it('inserts generated resources and hydration data outside authored scripts', async () => {
+      let data = { html: '</head></body></html>' }
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Island</p>
+      })
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script id="head-config" type="application/json">
+                {JSON.stringify(data)}
+              </script>
+            </head>
+            <body>
+              <script id="body-config" type="application/json">
+                {JSON.stringify(data)}
+              </script>
+              <Entry />
+            </body>
+          </html>,
+          {
+            nonce: 'document-nonce',
+            resolveClientEntry() {
+              return { href: '/entry.js', exportName: 'Entry', preloads: ['/entry.js'] }
+            },
+          },
+        ),
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+
+      expect(JSON.parse(doc.querySelector('#head-config')?.textContent ?? '')).toEqual(data)
+      expect(JSON.parse(doc.querySelector('#body-config')?.textContent ?? '')).toEqual(data)
+      expect(doc.head.querySelector<HTMLLinkElement>('link[rel="modulepreload"]')?.nonce).toBe(
+        'document-nonce',
+      )
+      expect(doc.body.lastElementChild?.id).toBe('rmx-data')
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+      expect(entry).toEqual({ moduleUrl: '/entry.js', exportName: 'Entry', props: {} })
+    })
+
     it('forwards the nonce through nested blocking frame renders', async () => {
       let nonce = 'document-"&<nonce>'
       let html = await drain(

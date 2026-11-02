@@ -144,6 +144,18 @@ type ImportMapImports = Record<string, ImportMapAddress>
 type AuthoredImportMapEntries = Map<string, ImportMapAddress>
 type AuthoredImportMapScope = { imports: AuthoredImportMapEntries }
 type StaticSegment = { kind: 'static'; html: string }
+interface DocumentElementSegments {
+  open: StaticSegment
+  close: StaticSegment
+}
+
+interface DocumentSegments {
+  depth?: number
+  html?: DocumentElementSegments
+  head?: DocumentElementSegments
+  body?: DocumentElementSegments
+}
+
 type ManagedImportMap = {
   attrs: string
   segment: StaticSegment
@@ -188,6 +200,8 @@ interface FrameData {
 interface RenderContext {
   insideSvg: boolean
   insideHead: boolean
+  elementDepth: number
+  documentSegments: DocumentSegments
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
@@ -305,6 +319,8 @@ export function renderToStream(
   let context: RenderContext = {
     insideSvg: false,
     insideHead: false,
+    elementDepth: 0,
+    documentSegments: {},
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
@@ -354,8 +370,7 @@ export function renderToStream(
         if (closeIfCancelled(controller, context)) return
         validateClientEntriesForHydration(context)
         finalizeManagedImportMap(context)
-        let html = serializeSegment(root)
-        let finalHtml = finalizeHtml(html, context)
+        let finalHtml = finalizeHtml(root, context)
         let bytes = encodeHtml(appendFlushMarker(finalHtml, context.flushKind), encoder)
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
@@ -665,8 +680,15 @@ function buildElementSegment(
     return
   }
 
+  let documentElement =
+    !currentIsSvg && (tag === 'html' || tag === 'body')
+      ? createDocumentElementSegments(tag, attrs, context)
+      : undefined
+  let open = documentElement?.open ?? `<${tag}${attrs}>`
+  let close = documentElement?.close ?? `</${tag}>`
+
   if (innerHTML !== undefined) {
-    output.push(`<${tag}${attrs}>${innerHTML}</${tag}>`)
+    output.push(open, innerHTML, close)
     return
   }
 
@@ -685,13 +707,15 @@ function buildElementSegment(
     return
   }
 
-  output.push(`<${tag}${attrs}>`)
+  output.push(open)
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
+  context.elementDepth++
   if (props.children != null) buildSegment(props.children, context, frameState, output)
+  context.elementDepth--
   context.insideSvg = previousInsideSvg
-  output.push(`</${tag}>`)
+  output.push(close)
 }
 
 function buildTextareaElementSegment(tag: string, props: any): Segment {
@@ -796,13 +820,37 @@ function buildHeadElementSegment(
 ): void {
   let processedProps = processStyleProps(props)
   let attrs = renderAttributes(tag, processedProps, false)
+  let head = createDocumentElementSegments('head', attrs, context)
 
-  output.push(`<${tag}${attrs}>`)
+  output.push(head.open)
   let previousInsideHead = context.insideHead
   context.insideHead = true
+  context.elementDepth++
   if (props.children != null) buildSegment(props.children, context, frameState, output)
+  context.elementDepth--
   context.insideHead = previousInsideHead
-  output.push(`</${tag}>`)
+  output.push(head.close)
+}
+
+function createDocumentElementSegments(
+  tag: 'html' | 'head' | 'body',
+  attrs: string,
+  context: RenderContext,
+): DocumentElementSegments {
+  let segments: DocumentElementSegments = {
+    open: { kind: 'static', html: `<${tag}${attrs}>` },
+    close: { kind: 'static', html: `</${tag}>` },
+  }
+  let document = context.documentSegments
+  if (tag === 'html') {
+    if (!document.html) {
+      document.html = segments
+      document.depth = context.elementDepth
+    }
+  } else if (document.depth !== undefined && context.elementDepth === document.depth + 1) {
+    document[tag] ??= segments
+  }
+  return segments
 }
 
 function renderAttributes(
@@ -1323,7 +1371,7 @@ function transformAttributeName(name: string, isSvg: boolean): string {
   return normalizeAttributeName(name, isSvg).attr
 }
 
-function finalizeHtml(html: string, context: RenderContext): string {
+function finalizeHtml(root: Segment[], context: RenderContext): string {
   let preloads = collectModulePreloadTags(context.clientEntryHeadResources, context.nonce)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
@@ -1334,40 +1382,23 @@ function finalizeHtml(html: string, context: RenderContext): string {
   let headContent = nonceMeta + importMapScript + preloads + styles
   let rmxData = buildRmxDataScript(context)
   if (context.flushKind !== 'document') {
-    return (headContent ? `<head>${headContent}</head>` : '') + html + rmxData
+    return (headContent ? `<head>${headContent}</head>` : '') + serializeSegment(root) + rmxData
   }
-  if (!headContent && !rmxData) return html
+  if (!headContent && !rmxData) return serializeSegment(root)
 
-  // Both insertion points are found in the rendered document before either insertion.
-  let headIndex = headContent ? html.indexOf('</head>') : -1
-  if (headContent && headIndex === -1) {
-    let htmlOpenMatch = html.match(/<html[^>]*>/)
-    headIndex = htmlOpenMatch ? htmlOpenMatch.index! + htmlOpenMatch[0].length : 0
-    if (htmlOpenMatch) headContent = `<head>${headContent}</head>`
+  // Use the rendered element boundaries so raw script and frame contents cannot
+  // be mistaken for document tags.
+  let { html, head, body } = context.documentSegments
+  invariant(html, 'Missing document element segments')
+  if (headContent) {
+    if (head) head.close.html = headContent + head.close.html
+    else html.open.html += `<head>${headContent}</head>`
   }
-  let dataIndex = html.length
   if (rmxData) {
-    dataIndex = html.indexOf('</body>')
-    if (dataIndex === -1) dataIndex = html.indexOf('</html>')
-    if (dataIndex === -1) dataIndex = html.length
+    let close = (body ?? html).close
+    close.html = rmxData + close.html
   }
-  if (!headContent) return html.slice(0, dataIndex) + rmxData + html.slice(dataIndex)
-  if (dataIndex < headIndex) {
-    return (
-      html.slice(0, dataIndex) +
-      rmxData +
-      html.slice(dataIndex, headIndex) +
-      headContent +
-      html.slice(headIndex)
-    )
-  }
-  return (
-    html.slice(0, headIndex) +
-    headContent +
-    html.slice(headIndex, dataIndex) +
-    rmxData +
-    html.slice(dataIndex)
-  )
+  return serializeSegment(root)
 }
 
 const FRAME_HEAD_OPEN_TAG = '<head>'
