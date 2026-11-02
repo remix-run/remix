@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { Frame, css } from 'remix/component'
 
 import type { Book } from '../../data/schema.ts'
+import { cartButtonFrameName } from '../fragments/public/cart-button.tsx'
 import { routes } from '../../routes.ts'
 import { ImageCarousel } from './public/image-carousel.tsx'
 import { Layout } from '../../ui/layout.tsx'
@@ -70,7 +71,10 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
 
             {book.in_stock ? (
               <div mix={css({ marginTop: '2rem' })}>
-                <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
+                <Frame
+                  name={cartButtonFrameName(book.id)}
+                  src={routes.fragments.cartButton.href({ bookId: book.id })}
+                />
               </div>
             ) : (
               <p mix={css({ color: '#e74c3c', fontWeight: 500 })}>

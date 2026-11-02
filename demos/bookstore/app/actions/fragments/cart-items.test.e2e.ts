@@ -12,8 +12,13 @@ describe('cart items', () => {
     let save = Promise.withResolvers<void>()
     t.after(() => save.resolve())
     let received = Promise.withResolvers<void>()
+    let pageReloads = 0
     let page = await serveCart(t, [{ bookId: '1', slug: 'bbq' }], async (request) => {
-      if (new URL(request.url).pathname !== routes.cart.api.update.href()) return
+      let { pathname } = new URL(request.url)
+      if (pathname === routes.cart.index.href() && request.headers.has('X-Remix-Frame')) {
+        pageReloads++
+      }
+      if (pathname !== routes.cart.api.update.href()) return
       received.resolve()
       await save.promise
     })
@@ -32,6 +37,7 @@ describe('cart items', () => {
     assert.equal(await page.getByRole('status').textContent(), '')
     assert.equal(new URL(page.url()).pathname, routes.cart.index.href())
     assert.equal(await page.evaluate(() => history.length), entries)
+    assert.equal(pageReloads, 0)
   })
 
   it('removes a book before the server saves it', async (t) => {

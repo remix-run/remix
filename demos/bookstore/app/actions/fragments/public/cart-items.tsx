@@ -119,13 +119,12 @@ export const CartItems = clientEntry(
                     <td>${item.price.toFixed(2)}</td>
 
                     <td>
-                      {/* The action redirects back to the cart, which then replaces this page in place. */}
+                      {/* The action redirects to the cart's items, which load into its frame. */}
                       <form
                         method="POST"
                         action={routes.cart.api.update.href()}
-                        data-rmx-history="replace"
-                        data-rmx-reset-scroll="manual"
-                        data-rmx-reset-focus="manual"
+                        data-rmx-target="cart"
+                        data-rmx-history="none"
                         mix={css({ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' })}
                       >
                         <input type="hidden" name="_method" value="PUT" />
@@ -164,9 +163,8 @@ export const CartItems = clientEntry(
                       <form
                         method="POST"
                         action={routes.cart.api.remove.href()}
-                        data-rmx-history="replace"
-                        data-rmx-reset-scroll="manual"
-                        data-rmx-reset-focus="manual"
+                        data-rmx-target="cart"
+                        data-rmx-history="none"
                         mix={css({ display: 'inline' })}
                       >
                         <input type="hidden" name="_method" value="DELETE" />

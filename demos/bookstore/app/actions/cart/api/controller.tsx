@@ -29,7 +29,7 @@ const cartUpdateSchema = f.object({
 
 export default createController(routes.cart.api, {
   actions: {
-    async add({ db, formData, session }) {
+    async add({ db, formData, request, session }) {
       let { bookId } = s.parse(cartActionSchema, formData)
       if (process.env.NODE_ENV !== 'test') {
         await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -46,10 +46,10 @@ export default createController(routes.cart.api, {
         addToCart(getCurrentCart(session), book.id, book.slug, book.title, book.price, 1),
       )
 
-      return redirect(routes.cart.index.href())
+      return redirectToCart(request)
     },
 
-    async update({ db, formData, session }) {
+    async update({ db, formData, request, session }) {
       let result = s.parseSafe(cartUpdateSchema, formData)
       if (!result.success) {
         return new Response('Invalid cart update', { status: 400 })
@@ -69,10 +69,10 @@ export default createController(routes.cart.api, {
       }
       session.set('cart', cart)
 
-      return redirect(routes.cart.index.href())
+      return redirectToCart(request)
     },
 
-    async remove({ db, formData, session }) {
+    async remove({ db, formData, request, session }) {
       let { bookId } = s.parse(cartActionSchema, formData)
       if (process.env.NODE_ENV !== 'test') {
         await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -86,7 +86,17 @@ export default createController(routes.cart.api, {
 
       session.set('cart', removeFromCart(getCurrentCart(session), book.id))
 
-      return redirect(routes.cart.index.href())
+      return redirectToCart(request)
     },
   },
 })
+
+// The cart's forms load into its frame, which names itself in `X-Remix-Target`. A submission without
+// the client runtime loads the whole cart page.
+function redirectToCart(request: Request): Response {
+  return redirect(
+    request.headers.get('X-Remix-Target') === 'cart'
+      ? routes.fragments.cartItems.href()
+      : routes.cart.index.href(),
+  )
+}

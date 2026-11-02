@@ -272,6 +272,36 @@ describe('cart handlers', () => {
     assertContains(await cart.text(), 'Total: $16.99')
     assert.equal(response.status, 404)
   })
+
+  it('PUT /cart/api/update redirects the cart frame to its items', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        headers: { 'X-Remix-Frame': 'true', 'X-Remix-Target': 'cart' },
+        body: new URLSearchParams({ bookId: '1', quantity: '2' }),
+      }),
+    )
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/fragments/cart-items')
+  })
+
+  it('DELETE /cart/api/remove redirects the cart frame to its items', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/remove', sessionId, {
+        method: 'DELETE',
+        headers: { 'X-Remix-Frame': 'true', 'X-Remix-Target': 'cart' },
+        body: new URLSearchParams({ bookId: '1' }),
+      }),
+    )
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/fragments/cart-items')
+  })
 })
 
 async function addToCart(bookId: string, slug: string): Promise<string> {

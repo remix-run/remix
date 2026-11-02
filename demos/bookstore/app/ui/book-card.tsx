@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { Frame, css } from 'remix/component'
 
 import type { Book } from '../data/schema.ts'
+import { cartButtonFrameName } from '../actions/fragments/public/cart-button.tsx'
 import { routes } from '../routes.ts'
 
 export interface BookCardProps {
@@ -29,7 +30,10 @@ export function BookCard(handle: Handle<BookCardProps>) {
               View Details
             </a>
 
-            <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
+            <Frame
+              name={cartButtonFrameName(book.id)}
+              src={routes.fragments.cartButton.href({ bookId: book.id })}
+            />
           </div>
         </div>
       </div>

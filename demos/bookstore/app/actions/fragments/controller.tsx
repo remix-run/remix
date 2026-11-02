@@ -22,10 +22,7 @@ export default createController(routes.fragments, {
       let cart = getCurrentCart(session)
       let inCart = cart.items.some((item) => item.bookId === book.id)
 
-      return render(
-        <CartButton inCart={inCart} id={book.id} slug={book.slug} />,
-        fragmentResponseInit(),
-      )
+      return render(<CartButton inCart={inCart} id={book.id} />, fragmentResponseInit())
     },
 
     cartItems({ auth, render, session }) {
