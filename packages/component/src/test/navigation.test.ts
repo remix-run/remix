@@ -566,7 +566,7 @@ describe('navigate', () => {
     await transition.succeed()
 
     expect(reloadFrame.mock.calls[0]?.arguments[1]?.sourceElement).toBe(anchor)
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.submitted).toBe(false)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.form).toBeUndefined()
     expect(reloadFrame.mock.calls[0]?.arguments[1]?.formData).toBeUndefined()
   })
 
@@ -1638,7 +1638,7 @@ describe('navigate', () => {
       expect(reload).toHaveBeenCalledTimes(1)
       // The replacement navigation has no source element of its own.
       expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(anchor)
-      expect(reload.mock.calls[0]?.arguments[0]?.submitted).toBe(false)
+      expect(reload.mock.calls[0]?.arguments[0]?.form).toBeUndefined()
       expect(document.activeElement).toBe(anchor)
     } finally {
       if (didNavigate) await navigate(originalUrl, { history: 'replace' })
@@ -1678,7 +1678,7 @@ describe('navigate', () => {
       expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation)
       expect(reload).toHaveBeenCalledTimes(1)
       expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(button)
-      expect(reload.mock.calls[0]?.arguments[0]?.submitted).toBe(true)
+      expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
     } finally {
       if (didNavigate) await navigate(originalUrl, { history: 'replace' })
       controller.abort()
@@ -2171,7 +2171,7 @@ describe('form navigation', () => {
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
     expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(form)
-    expect(reload.mock.calls[0]?.arguments[0]?.submitted).toBe(true)
+    expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
   })
 
   it('replays same-location POST submissions as replace navigations without precommit support', async (t) => {
@@ -2213,7 +2213,7 @@ describe('form navigation', () => {
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
     expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(form)
-    expect(reload.mock.calls[0]?.arguments[0]?.submitted).toBe(true)
+    expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
   })
 
   it('replays a POST submission in the frame selected before cancelling it', async (t) => {
