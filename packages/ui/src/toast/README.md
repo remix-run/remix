@@ -73,7 +73,7 @@ Screen reader users cannot activate a toast's actions directly from its announce
 
 F6 enters the collection and F6 again returns to the previous element. Tab visits each available notification before its controls. Shift+Tab from the collection, or Tab past either boundary, returns to the previous element. Escape dismisses the focused notification. Closing it moves focus to a neighbouring mounted, available notification or returns to the previous element. Focus is not deferred to a future mount. Make the shortcut discoverable in your application; change or disable `hotkey` for secondary managers.
 
-Supply a type to `createToastManager<data>()` for custom values and behavior. The context callback infers `toastItem.data`. Use native buttons and links for actions. Consumer-defined `data` may describe one or multiple controls; actions do not implicitly dismiss. Provide a visible dismiss button so swiping is not the only dismissal method. Essential information and decisions should also be available in the page. Evaluate speech with the assistive technologies your application supports, and test placement and focus alongside modal dialogs.
+Supply a type to `createToastManager<data>()` for custom values and behavior. The context callback infers `toastItem.data`. Use native buttons and links for actions. Consumer-defined `data` may describe one or multiple controls; actions do not implicitly dismiss. Provide a visible dismiss button. Essential information and decisions should also be available in the page. Evaluate speech with the assistive technologies your application supports, and test placement and focus alongside modal dialogs.
 
 ## Timers and motion
 
@@ -85,7 +85,7 @@ Timers run while `item()` presents the item, including limited items. Publicatio
 
 A primary touch inside the collection expands it and pauses dismissal until a primary touch outside. Releasing or cancelling a gesture keeps it expanded. Touching outside clears hover and blurs focus inside; native controls retain normal activation.
 
-`root()` exposes `data-expanded`; `item()` exposes `data-limited`. CSS chooses the stack, offsets and expanded presentation. Compose `drag()` from `@remix-run/ui/animation` with your dismissal logic to customize swipe gestures. The primitive does not measure elements or own animation styles. Keep overflow mounted and inert for transitions. Compose `animateLayout()`, `animateEntrance()` and `animateExit()` with your styles, respecting reduced motion. Keep decorative depth transforms on a separate surface from the host animated by layout. Closing removes the item immediately; exit animation may retain its inert DOM.
+`root()` exposes `data-expanded`; `item()` exposes `data-limited`. CSS chooses the stack, offsets and expanded presentation. The primitive does not measure elements or own animation styles. Keep overflow mounted and inert for transitions. Compose `animateLayout()`, `animateEntrance()` and `animateExit()` with your styles, respecting reduced motion. Keep decorative depth transforms on a separate surface from the host animated by layout. Closing removes the item immediately; exit animation may retain its inert DOM.
 
 ## Countdown indicators
 

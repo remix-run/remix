@@ -104,7 +104,7 @@ function Toast() {
 }
 ```
 
-See the [`animation` module README](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for drag, layout animation, CSS transitions, Web Animations API options, and imperative animation.
+See the [`animation` module README](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for layout animation, CSS transitions, Web Animations API options, and imperative animation.
 
 ## License
 

@@ -1,15 +1,6 @@
 import { createMixin } from '@remix-run/component'
 import type { ElementProps, LayoutAnimationConfig, MixinDescriptor } from '@remix-run/component'
 
-import {
-  measureUntransformed,
-  measureUntransformedBatch,
-  createNativeAnimationPlayback,
-  retainAnimationHost,
-} from './animation-host.ts'
-
-import { measureCoordinateSpace } from './coordinate-space.ts'
-
 type LayoutConfig = true | false | null | undefined | LayoutAnimationConfig
 
 type Axis = { min: number; max: number }
@@ -67,6 +58,22 @@ function calcBoxDelta(delta: Delta, source: Box, target: Box, layoutConfig: Layo
   calcAxisDelta(delta.y, source.y, target.y, origin)
 }
 
+function buildProjectionTransform(delta: Delta, layoutConfig: LayoutAnimationConfig): string {
+  let transform = ''
+  if (delta.x.translate || delta.y.translate) {
+    transform = `translate3d(${delta.x.translate}px, ${delta.y.translate}px, 0)`
+  }
+  if (layoutConfig.size !== false && (delta.x.scale !== 1 || delta.y.scale !== 1)) {
+    transform += transform ? ' ' : ''
+    transform += `scale(${delta.x.scale}, ${delta.y.scale})`
+  }
+  return transform || 'none'
+}
+
+function buildTransformOrigin(delta: Delta): string {
+  return `${delta.x.origin * 100}% ${delta.y.origin * 100}%`
+}
+
 function rectToBox(rect: DOMRect): Box {
   return {
     x: { min: rect.left, max: rect.right },
@@ -75,7 +82,14 @@ function rectToBox(rect: DOMRect): Box {
 }
 
 function measureNaturalBox(node: HTMLElement): Box {
-  return rectToBox(measureUntransformed(node))
+  let prevTransform = node.style.transform
+  let prevOrigin = node.style.transformOrigin
+  node.style.transform = 'none'
+  node.style.transformOrigin = ''
+  let rect = node.getBoundingClientRect()
+  node.style.transform = prevTransform
+  node.style.transformOrigin = prevOrigin
+  return rectToBox(rect)
 }
 
 function resolveLayoutConfig(config: LayoutConfig): LayoutAnimationConfig | null {
@@ -103,70 +117,37 @@ function isTargetBoxSame(source: Box, target: Box, layoutConfig: LayoutAnimation
   )
 }
 
-interface LayoutMeasurement {
-  node: HTMLElement
-  read(rect: DOMRect): () => void
-}
-const pendingMeasurements = new WeakMap<Document, Map<symbol, LayoutMeasurement>>()
+function measureAnimationTargetBox(
+  node: HTMLElement,
+  animation: Animation,
+  animationEndTime: number,
+): Box {
+  let currentTime = animation.currentTime
+  let wasRunning = animation.playState === 'running'
 
-function flushLayoutMeasurements(pending: Map<symbol, LayoutMeasurement>) {
-  let byNode = new Map<HTMLElement, LayoutMeasurement[]>()
-  for (let measurement of pending.values()) {
-    let group = byNode.get(measurement.node)
-    if (group) group.push(measurement)
-    else byNode.set(measurement.node, [measurement])
+  animation.currentTime = animationEndTime
+  let box = measureNaturalBox(node)
+  animation.currentTime = currentTime
+
+  if (wasRunning && animation.playState !== 'running') {
+    animation.play()
   }
-  measureUntransformedBatch(byNode.keys(), (node, rect) => {
-    let writes = (byNode.get(node) ?? []).map((measurement) => measurement.read(rect))
-    return () => {
-      for (let write of writes) write()
-    }
-  })
+
+  return box
 }
 
 const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], ElementProps>(
   (handle) => {
     let snapshot: Box | null = null
     let currentConfig: LayoutConfig = true
-    let animations: Animation[] = []
-    let releases: Array<() => void> = []
-    let registration: ReturnType<typeof retainAnimationHost> | undefined
-    let projectionOrigin = 0.5
-    let measurementKey = Symbol('layout measurement')
-    let cancelMeasurement: (() => void) | undefined
-
-    function attach(node: HTMLElement) {
-      registration ??= retainAnimationHost(node)
-    }
-
-    function cancel() {
-      for (let release of releases) release()
-      releases = []
-      animations = []
-    }
-
-    function projectedBox(node: HTMLElement) {
-      let box = measureNaturalBox(node)
-      if (!registration) return box
-      let space = measureCoordinateSpace(node, false, { left: box.x.min, top: box.y.min })
-      let projected = space.toClient({
-        x: registration.read('layoutX'),
-        y: registration.read('layoutY'),
-      })
-      for (let axis of ['x', 'y'] as const) {
-        let position = projected[axis]
-        let scale = registration.read(axis === 'x' ? 'layoutScaleX' : 'layoutScaleY')
-        let length = calcLength(box[axis])
-        box[axis].min += position + (1 - scale) * projectionOrigin * length
-        box[axis].max = box[axis].min + length * scale
-      }
-      return box
-    }
+    let animation: Animation | null = null
     let animationTarget: Box | null = null
+    let animationEndTime = 0
 
     let clearActiveAnimationState = () => {
-      animations = []
+      animation = null
       animationTarget = null
+      animationEndTime = 0
     }
 
     let clearLayoutState = () => {
@@ -174,19 +155,10 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
       snapshot = null
     }
 
-    let clearProjectionStyles = () => {
-      if (!registration) return
-      for (let key of ['layoutX', 'layoutY', 'layoutScaleX', 'layoutScaleY'] as const) {
-        let claim = registration.claim(key, 'animation')
-        claim?.set(key.includes('Scale') ? 1 : 0)
-        claim?.release()
-      }
-      registration.setOrigin(undefined)
+    let clearProjectionStyles = (node: HTMLElement) => {
+      node.style.transform = ''
+      node.style.transformOrigin = ''
     }
-
-    handle.addEventListener('insert', ({ node }) => {
-      if (node instanceof HTMLElement) attach(node)
-    })
 
     handle.addEventListener('beforeUpdate', (event) => {
       let layoutConfig = resolveLayoutConfig(currentConfig)
@@ -194,56 +166,21 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
       let htmlNode = event.node as HTMLElement
       // Capture the live on-screen position so the next animation can pick up
       // where this one was interrupted if this update changes the target box.
-      if (
-        animations.some(
-          (animation) => animation.playState === 'running' || animation.playState === 'paused',
-        )
-      ) {
-        snapshot = projectedBox(htmlNode)
+      if (animation && animation.playState === 'running') {
+        snapshot = rectToBox(htmlNode.getBoundingClientRect())
       } else {
         snapshot = measureNaturalBox(htmlNode)
       }
     })
 
     handle.addEventListener('commit', (event) => {
-      let htmlNode = event.node as HTMLElement
-      registration ??= retainAnimationHost(htmlNode)
       let layoutConfig = resolveLayoutConfig(currentConfig)
-      cancelMeasurement?.()
-      let document = htmlNode.ownerDocument
-      let pending = pendingMeasurements.get(document)
-      if (!pending) {
-        pending = new Map()
-        pendingMeasurements.set(document, pending)
-        let batch = pending
-        handle.queueTask(() => {
-          pendingMeasurements.delete(document)
-          flushLayoutMeasurements(batch)
-        })
-      }
-      let batch = pending
-      cancelMeasurement = () => batch.delete(measurementKey)
-      pending.set(measurementKey, {
-        node: htmlNode,
-        read(rect) {
-          let latest = rectToBox(rect)
-          let space = measureCoordinateSpace(htmlNode, false, rect)
-          return () => commitProjection(htmlNode, latest, space, layoutConfig)
-        },
-      })
-    })
-
-    function commitProjection(
-      htmlNode: HTMLElement,
-      latest: Box,
-      space: ReturnType<typeof measureCoordinateSpace>,
-      layoutConfig: LayoutAnimationConfig | null,
-    ) {
-      let runningAnimation = animations.some(
-        (animation) => animation.playState === 'running' || animation.playState === 'paused',
-      )
+      let htmlNode = event.node as HTMLElement
+      let runningAnimation = animation?.playState === 'running' ? animation : null
+      let latest: Box | null = null
 
       if (runningAnimation && animationTarget && layoutConfig) {
+        latest = measureAnimationTargetBox(htmlNode, runningAnimation, animationEndTime)
         if (isTargetBoxSame(latest, animationTarget, layoutConfig)) {
           snapshot = null
           return
@@ -253,9 +190,10 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
       // Defensive cleanup for cases where beforeUpdate didn't run (e.g. the
       // mixin was just attached, layoutConfig was disabled this render, or an
       // in-flight animation needs to retarget to a new final box).
-      cancel()
+      animation?.cancel()
       clearActiveAnimationState()
-      clearProjectionStyles()
+      clearProjectionStyles(htmlNode)
+      latest ??= measureNaturalBox(htmlNode)
 
       if (!layoutConfig) {
         clearLayoutState()
@@ -275,59 +213,41 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
         return
       }
 
-      let local = space.toLocal({ x: targetDelta.x.translate, y: targetDelta.y.translate })
-      targetDelta.x.translate = local.x
-      targetDelta.y.translate = local.y
-      let remaining = registration?.rebase(targetDelta.x.translate, targetDelta.y.translate)
-      if (remaining) {
-        targetDelta.x.translate = remaining.x
-        targetDelta.y.translate = remaining.y
-      }
-      projectionOrigin = layoutConfig.size === false ? 0 : 0.5
-      registration?.setOrigin(`${projectionOrigin * 100}% ${projectionOrigin * 100}%`)
+      let invert = buildProjectionTransform(targetDelta, layoutConfig)
+      let origin = buildTransformOrigin(targetDelta)
+      htmlNode.style.transform = invert
+      htmlNode.style.transformOrigin = origin
 
       let duration = layoutConfig.duration ?? DEFAULT_DURATION
       let easing = layoutConfig.easing ?? DEFAULT_EASING
-      let values = {
-        layoutX: targetDelta.x.translate,
-        layoutY: targetDelta.y.translate,
-        layoutScaleX: layoutConfig.size === false ? 1 : targetDelta.x.scale,
-        layoutScaleY: layoutConfig.size === false ? 1 : targetDelta.y.scale,
-      }
-      for (let key of ['layoutX', 'layoutY', 'layoutScaleX', 'layoutScaleY'] as const) {
-        let claim = registration?.claim(key, 'animation')
-        if (!claim) continue
-        let target = key.includes('Scale') ? 1 : 0
-        let playback = createNativeAnimationPlayback(htmlNode, key, values[key], target, {
-          duration,
-          easing,
-        })
-        claim.start(playback.backend)
-        releases.push(() => claim.release())
-        animations.push(playback.animation)
-      }
-      let active = animations
+      let active = htmlNode.animate(
+        [
+          { transform: invert, transformOrigin: origin },
+          { transform: 'none', transformOrigin: origin },
+        ],
+        { duration, easing, fill: 'forwards' },
+      )
+      animation = active
       animationTarget = latest
+      animationEndTime = duration
       snapshot = null
-      Promise.allSettled(active.map((animation) => animation.finished))
+      active.finished
         .then(() => {
-          if (animations !== active) return
-          // Release only this projection's playbacks; gesture and presence owners survive.
-          cancel()
-          clearProjectionStyles()
+          if (animation !== active) return
+          // Cancel even though the animation finished naturally. A fill:forwards
+          // animation in 'finished' state remains an effective animation on
+          // transform, which makes commitStyles() throw on the next interrupted
+          // animation because more than one effect targets the same property.
+          active.cancel()
+          clearProjectionStyles(htmlNode)
           clearLayoutState()
         })
         .catch(() => {})
-    }
+    })
 
     handle.addEventListener('remove', () => {
-      cancelMeasurement?.()
-      cancelMeasurement = undefined
-      cancel()
+      animation?.cancel()
       clearLayoutState()
-      registration?.setOrigin(undefined)
-      registration?.dispose()
-      registration = undefined
     })
 
     return (config = true) => {

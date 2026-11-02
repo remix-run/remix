@@ -19,7 +19,6 @@ describe('UI docs pages', () => {
         'patterns/tabs',
         'patterns/toast',
         'patterns/toggle',
-        'animation/drag',
         'animation/entrance-exit',
         'animation/layout',
         'animation/reduced-motion',

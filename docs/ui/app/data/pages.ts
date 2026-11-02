@@ -11,7 +11,6 @@ import EntranceExitPage, {
   meta as entranceExit,
   preview as entranceExitPreview,
 } from '../pages/animation/entrance-exit.tsx'
-import DragPage, { meta as drag } from '../pages/animation/drag.tsx'
 import LayoutPage, { meta as layout } from '../pages/animation/layout.tsx'
 import ReducedMotionPage, { meta as reducedMotion } from '../pages/animation/reduced-motion.tsx'
 import SpringPage, { meta as spring } from '../pages/animation/spring.tsx'
@@ -46,7 +45,6 @@ export const pages: UiPage[] = [
   { ...accordion, Component: AccordionPage, preview: accordionPreview },
   { ...anchor, Component: AnchorPage },
   { ...entranceExit, Component: EntranceExitPage, preview: entranceExitPreview },
-  { ...drag, Component: DragPage },
   { ...layout, Component: LayoutPage },
   { ...reducedMotion, Component: ReducedMotionPage },
   { ...spring, Component: SpringPage },

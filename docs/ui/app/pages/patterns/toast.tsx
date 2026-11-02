@@ -193,9 +193,9 @@ export default function ToastPage(handle: Handle<PageProps>) {
       }
     >
       <p>
-        Notifications form a compact stack that expands on hover, focus or touch. Swipe right to
-        dismiss, drag left to feel resistance, or use the dismiss button. F6 moves focus into the
-        stack and back. Escape dismisses the focused notification.
+        Notifications form a compact stack that expands on hover, focus or touch. Use the dismiss
+        button to close a notification. F6 moves focus into the stack and back. Escape dismisses the
+        focused notification.
       </p>
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
@@ -221,10 +221,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <Example id="programmatic-dismissal" example={dismissal} />
       </Section>
       <Section id="custom-position" title="Custom position">
-        <p>
-          Your CSS and render logic define styles and gestures, allowing you to customize where
-          toasts are rendered and how to dismiss them.
-        </p>
+        <p>Your CSS and render logic define where toasts are rendered and how they are styled.</p>
         <Example id="position" example={customPosition} />
       </Section>
       <Section id="limiting-toasts" title="Limit">
@@ -335,8 +332,8 @@ export default function ToastPage(handle: Handle<PageProps>) {
           discoverable in your application and use distinct shortcuts for separate managers.
         </p>
         <p>
-          Provide a visible dismiss control. Swiping must not be the only way to dismiss a toast.
-          Essential errors and decisions should also be available in the page.
+          Provide a visible dismiss control. Essential errors and decisions should also be available
+          in the page.
         </p>
       </Section>
       <Section id="api-reference" title="API reference">

@@ -1,7 +1,27 @@
 import * as assert from '@remix-run/assert'
+import type { RemixNode } from '@remix-run/component'
+import { render } from '@remix-run/component/test'
 import { describe, it } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 import { createToastManager, Context, ItemContext, item } from './toast.tsx'
-import { element, frame, mount } from './test/animation.ts'
+
+async function mount(t: TestContext, node: RemixNode) {
+  let result = render(node)
+  t.after(result.cleanup)
+  await frame()
+  await frame()
+  return result
+}
+
+function element(container: ParentNode, selector: string): HTMLElement {
+  let node = container.querySelector(selector)
+  assert.ok(node instanceof HTMLElement)
+  return node
+}
+
+function frame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()))
+}
 
 function Indicators() {
   return () => (

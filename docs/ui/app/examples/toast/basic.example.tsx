@@ -1,15 +1,11 @@
 import {
   prefersReducedMotion,
-  drag,
-  onDragStart,
-  onDrag,
-  onDragEnd,
   animateLayout,
   animateEntrance,
   animateExit,
 } from '@remix-run/ui/animation'
 import * as toast from '@remix-run/ui/toast'
-import { css, on, createMixin } from 'remix/component'
+import { createMixin, css, on } from 'remix/component'
 import type { ElementProps } from 'remix/component'
 
 export const toastManager = toast.createToastManager()
@@ -51,7 +47,7 @@ export function ToastRegion() {
                 mix={[
                   toast.item(),
                   styles.toastLayout,
-                  swipeToDismiss(toastItem.id),
+                  retainExitLayout(),
                   animateLayout(
                     prefersReducedMotion()
                       ? false
@@ -66,21 +62,11 @@ export function ToastRegion() {
                     easing: 'ease-out',
                   }),
                   animateExit({
-                    position: index === 0 ? 'absolute' : 'var(--stack-position)',
-                    zIndex: index === 0 ? 101 : 100 - index,
                     opacity: 0,
                     gridTemplateRows: '0fr',
                     marginBlockStart: 0,
                     translate: 'calc(100% + 24px) 0',
                     duration: prefersReducedMotion() ? 0 : 140,
-                    transition: {
-                      position: {
-                        duration: 0,
-                      },
-                      zIndex: {
-                        duration: 0,
-                      },
-                    },
                   }),
                 ]}
               >
@@ -108,46 +94,20 @@ export function ToastRegion() {
   )
 }
 
-const swipeToDismiss = createMixin<HTMLElement, [id: string], ElementProps>(() => {
-  let returning = false
-  let turningPoint = 0
-
-  function trackSwipe(offset: number) {
-    if (returning) {
-      turningPoint = Math.min(turningPoint, offset)
-      if (offset - turningPoint > 40) {
-        returning = false
-        turningPoint = offset
-      }
-    } else {
-      turningPoint = Math.max(turningPoint, offset)
-      if (turningPoint - offset >= 10) {
-        returning = true
-        turningPoint = offset
-      }
-    }
-  }
-
-  return (id) => [
-    drag({
-      snapToOrigin: true,
-      axis: 'x',
-      constraints: { left: 0 },
-      elasticity: 0.1,
-    }),
-    onDragStart(() => {
-      returning = false
-      turningPoint = 0
-    }),
-    onDrag((event) => trackSwipe(event.offset.x)),
-    onDragEnd((event) => {
-      if (event.cancelled) return
-      trackSwipe(event.offset.x)
-      if (returning || event.offset.x <= 40) return
-      event.preventDefault()
-      toastManager.close(id)
-    }),
-  ]
+const retainExitLayout = createMixin<HTMLElement, [], ElementProps>((handle) => {
+  let node: HTMLElement | undefined
+  handle.addEventListener('insert', (event) => {
+    node = event.node
+  })
+  handle.addEventListener('beforeRemove', () => {
+    // Let layout mixins capture the stack before taking the front toast out of flow.
+    node?.setAttribute('data-exiting', '')
+  })
+  handle.addEventListener('reclaimed', (event) => {
+    node = event.node
+    node.removeAttribute('data-exiting')
+  })
+  return () => handle.element
 })
 
 const styles = {
@@ -225,6 +185,10 @@ const styles = {
       '--stack-height': 'auto',
       '--stack-overflow': 'visible',
       '--stack-content-visibility': 'visible',
+    },
+    '&[data-exiting][data-toast-index="0"]': {
+      position: 'absolute',
+      zIndex: 101,
     },
     '&[data-limited]': {
       gridTemplateRows: '0fr',

@@ -16,6 +16,84 @@ async function settle(target: Element) {
 }
 
 describe('Toast stack', () => {
+  it('starts dismissal from the visible stack positions and slides the toast out', async (t) => {
+    toastManager.close()
+    let result = await mount(t, <ToastRegion />)
+    t.after(() => toastManager.close())
+    await result.act(() => {
+      toastManager.add({ title: 'First toast' })
+      toastManager.add({ title: 'Second toast' })
+      toastManager.add({ title: 'Third toast' })
+    })
+    let region = element(result.container, '[role="region"]')
+    await settle(region)
+    await result.act(() =>
+      region.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' })),
+    )
+    await settle(region)
+    let outgoing = element(region, '[data-toast-index="0"]')
+    let survivor = element(region, '[data-toast-index="1"]')
+    let previousTop = survivor.getBoundingClientRect().top
+    let previousLeft = outgoing.getBoundingClientRect().left
+    await result.act(() => button(outgoing, 'Dismiss notification').click())
+    for (let animation of region.getAnimations({ subtree: true })) {
+      animation.pause()
+      animation.currentTime = 0
+    }
+    assert.ok(
+      Math.abs(survivor.getBoundingClientRect().top - previousTop) < 1,
+      'A surviving toast starts at its previous visible position rather than jumping',
+    )
+    let exit = outgoing
+      .getAnimations()
+      .find(
+        (animation) =>
+          animation.effect instanceof KeyframeEffect &&
+          animation.effect.getKeyframes().some((keyframe) => keyframe.translate !== undefined),
+      )
+    assert.ok(exit, 'Dismissal retains the slide animation')
+    exit.currentTime = 70
+    assert.ok(outgoing.getBoundingClientRect().left > previousLeft + 50)
+    await result.act(() => toastManager.close())
+    for (let animation of region.getAnimations({ subtree: true })) animation.finish()
+  })
+
+  it('closes a gap in the expanded stack without reversing the remaining cards', async (t) => {
+    toastManager.close()
+    let result = await mount(t, <ToastRegion />)
+    t.after(() => toastManager.close())
+    await result.act(() => {
+      toastManager.add({ title: 'First toast' })
+      toastManager.add({ title: 'Second toast' })
+      toastManager.add({ title: 'Third toast' })
+    })
+    let region = element(result.container, '[role="region"]')
+    await settle(region)
+    await result.act(() =>
+      region.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' })),
+    )
+    await settle(region)
+    let outgoing = element(region, '[data-toast-index="1"]')
+    let survivor = element(region, '[data-toast-index="2"]')
+    let startingTop = survivor.getBoundingClientRect().top
+    let previousTop = startingTop
+    await result.act(() => button(outgoing, 'Dismiss notification').click())
+    let deadline = performance.now() + 3000
+    while (
+      outgoing.isConnected ||
+      region.getAnimations({ subtree: true }).some((animation) => animation.playState === 'running')
+    ) {
+      assert.ok(performance.now() < deadline, 'The stack settles after dismissal')
+      let top = survivor.getBoundingClientRect().top
+      assert.ok(top >= previousTop - 1, 'The remaining card moves toward the gap without bouncing')
+      previousTop = top
+      await frame()
+    }
+    assert.ok(survivor.getBoundingClientRect().top > startingTop + 40)
+    await result.act(() => toastManager.close())
+    await waitFor(() => assert.equal(region.querySelector('[data-toast]'), null))
+  })
+
   it('keeps an exiting covered card behind the front at the collapsed stack height', async (t) => {
     toastManager.close()
     let result = await mount(
@@ -161,7 +239,9 @@ describe('Toast stack', () => {
               animation.effect instanceof KeyframeEffect &&
               animation.effect
                 .getKeyframes()
-                .some((keyframe) => keyframe['--rmx-animation-layout-y'] !== undefined),
+                .some(
+                  (keyframe) => keyframe.transform !== undefined && keyframe.transform !== 'none',
+                ),
           ),
         'The layout primitive projects the fan-out',
       ),

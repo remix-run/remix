@@ -20,8 +20,7 @@
     "!src/**/*.demo.ts",
     "!src/**/*.demo.tsx",
     "!src/**/*.test.ts",
-    "!src/**/*.test.tsx",
-    "!src/test"
+    "!src/**/*.test.tsx"
   ],
   "type": "module",
   "sideEffects": false,
