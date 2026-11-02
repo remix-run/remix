@@ -1199,52 +1199,61 @@ if (form.reportValidity()) {
 
 Frames inside a reloading frame reload with it, and their `reloadStart` has the same `formData` and `sourceElement`, so a component in a nested frame can follow a form submission that reloads the page.
 
-A newer reload replaces the one in progress without a `reloadComplete` for it, so listeners that need to know how their own reload ended follow `finished`. A component can show a pending state only for its own form, and read what it submitted to render the outcome before the response arrives:
+A newer reload replaces the one in progress without a `reloadComplete` for it, so listeners that need to know how their own reload ended follow `finished`. `reloadStart` suits components that follow every reload of their frame, or a form they don't render. A component that renders the form follows its submissions with `rmx:form-submit-start`.
+
+### Following a Form Submission
+
+When a form submission reloads a frame, the submit button receives an `rmx:form-submit-start` event after the frame's `reloadStart`, or the form does when no button submitted it. The event bubbles, so listen on a button for its own submissions, or on the form for all of them. It's a `FormSubmitStartEvent`, with the same `formData` and `finished` as the reload's `reloadStart`, and the button or form as its `sourceElement`.
+
+- GET and non-GET submissions dispatch it, and `formData` is `null` for GET, as on `NavigateEvent`.
+- Links, `frame.reload()`, and forms that load a new document, such as those marked `data-rmx-document`, don't dispatch it.
+- The signal `on()` passes is aborted when the same element receives its next submission or is removed. Any other newer reload of the frame, such as a link's, rejects `finished` with an `AbortError`.
+
+Render what the submission will change as soon as it starts, then let the response replace it:
 
 ```tsx
-import { clientEntry, ref } from 'remix/component'
-import type { FrameReloadStartEvent, Handle } from 'remix/component'
+import { clientEntry, on } from 'remix/component'
+import type { FormSubmitStartEvent, Handle } from 'remix/component'
 
-export const SaveStatus = clientEntry(import.meta.url, function SaveStatus(handle: Handle) {
-  let status: HTMLElement | undefined
-  let reload: FrameReloadStartEvent | undefined
-  let failed = false
+export const TitleForm = clientEntry(
+  import.meta.url,
+  function TitleForm(handle: Handle<{ action: string; title: string }>) {
+    let submission: FormSubmitStartEvent | undefined
+    let failed = false
 
-  handle.frame.addEventListener(
-    'reloadStart',
-    async (event) => {
-      let form = status?.closest('form')
-      let source = event.sourceElement
-      // Other forms and links in this frame reload it too, even links inside the form. Its own
-      // submissions start from the form or one of its submit buttons.
-      let submitted =
-        source === form || (source != null && 'form' in source && source.form === form)
-      if (!form || !submitted) return
-      reload = event
-      failed = false
-      handle.update()
-      try {
-        await event.finished
-      } catch (error) {
-        failed = !(error instanceof DOMException && error.name === 'AbortError')
-      }
-      if (reload !== event) return
-      reload = undefined
-      handle.update()
-    },
-    { signal: handle.signal },
-  )
-
-  return () => (
-    <p mix={ref((node) => (status = node))} role="status">
-      {reload
-        ? `Saving ${reload.formData?.get('title')}…`
-        : failed
-          ? 'Couldn’t save. Try again.'
-          : ''}
-    </p>
-  )
-})
+    return () => (
+      <form
+        method="post"
+        action={handle.props.action}
+        mix={on('rmx:form-submit-start', async (event, signal) => {
+          submission = event
+          failed = false
+          handle.update()
+          try {
+            await event.finished
+          } catch (error) {
+            // A newer reload, such as a link's, aborts this one and shows its own state.
+            failed = !(error instanceof DOMException && error.name === 'AbortError')
+          }
+          // The form's next submission owns the state from here.
+          if (signal.aborted) return
+          submission = undefined
+          handle.update()
+        })}
+      >
+        <input name="title" aria-label="Title" defaultValue={handle.props.title} />
+        <button type="submit">Save</button>
+        <p role="status">
+          {submission
+            ? `Saving ${submission.formData?.get('title')}…`
+            : failed
+              ? 'Couldn’t save. Try again.'
+              : ''}
+        </p>
+      </form>
+    )
+  },
+)
 ```
 
 ### Resolving Frames
