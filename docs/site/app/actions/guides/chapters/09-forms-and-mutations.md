@@ -219,50 +219,40 @@ To show "Album saved" on the destination page, store the message as [session fla
 
 Once the page [boots the browser runtime with `run()`](/interactivity/#browser-entry-with-run), Remix handles the form submission as a [frame navigation](/streaming-ui-with-frames/#navigate-a-frame-with-a-form). It renders validation responses into the page and follows redirects after a successful save.
 
-To show that a save is in progress, hydrate only the submit button and follow the containing frame's `reloadStart` event. The rest of the form stays server-rendered. The event's `sourceElement` is what started the reload: the submit button when the visitor submits the form, the form when code calls `requestSubmit()`, or a link. The button follows only its own form's submissions, so other forms and links leave it alone, even links inside its form. The event's `finished` promise resolves once the response renders, including a validation error that keeps the form on the page, and rejects when the save fails.
+To show that a save is in progress, hydrate only the submit button and listen for its `rmx:form-submit-start` event. The rest of the form stays server-rendered. Remix dispatches the event on the button that submitted the form once the submission starts reloading the page, or on the form when code calls `requestSubmit()` without a submitter, so the button follows only its own submissions. Other forms and links leave it alone, even links inside its form. The event's `finished` promise resolves once the response renders, including a validation error that keeps the form on the page, and rejects when the save fails.
 
 Setting pending state from a hydrated form's `submit` handler, as the [hydrated album form](/start-here/#add-your-first-hydrated-component) does, only resets when the page replaces the form. A validation response can re-render the same form component in place, leaving it stuck on "Saving…". Use a `submit` handler when you [send the request yourself with `fetch()`](/interactivity/#enhancing-forms-with-fetch-and-navigation) and can reset the state when the response arrives.
 
 Put the button in the edit action's `public/` directory so the [asset server can serve it to the browser](/files-and-assets/#control-what-the-browser-can-reach):
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
-import { clientEntry, ref } from "remix/component";
-import type { FrameReloadStartEvent, Handle } from "remix/component";
+import { clientEntry, on } from "remix/component";
+import type { FormSubmitStartEvent, Handle } from "remix/component";
 
 export const SaveButton = clientEntry(import.meta.url, function SaveButton(handle: Handle) {
-  let button: HTMLButtonElement | undefined;
-  let save: FrameReloadStartEvent | undefined;
+  let save: FormSubmitStartEvent | undefined;
   let failed = false;
-
-  handle.frame.addEventListener(
-    "reloadStart",
-    async (event) => {
-      // Other forms and links in this frame reload it too, even links inside the form. Its own
-      // submissions start from the form or one of its submit buttons.
-      let form = button?.form;
-      let source = event.sourceElement;
-      let submitted =
-        source === form || (source != null && "form" in source && source.form === form);
-      if (!form || !submitted) return;
-      save = event;
-      failed = false;
-      handle.update();
-      try {
-        await event.finished;
-      } catch (error) {
-        // An `AbortError` means a newer navigation replaced this one, which shows its own state.
-        failed = !(error instanceof DOMException && error.name === "AbortError");
-      }
-      if (save !== event) return;
-      save = undefined;
-      handle.update();
-    },
-    { signal: handle.signal },
-  );
 
   return () => (
     <>
-      <button type="submit" mix={ref((node) => (button = node))}>
+      <button
+        type="submit"
+        mix={on("rmx:form-submit-start", async (event, signal) => {
+          save = event;
+          failed = false;
+          handle.update();
+          try {
+            await event.finished;
+          } catch (error) {
+            // An `AbortError` means a newer navigation replaced this one, which shows its own state.
+            failed = !(error instanceof DOMException && error.name === "AbortError");
+          }
+          // The button's next submission, or its removal, aborts the signal.
+          if (signal.aborted) return;
+          save = undefined;
+          handle.update();
+        })}
+      >
         {save ? "Saving…" : "Save album"}
       </button>
       <span role="status">{failed ? "Couldn’t save the album. Try again." : ""}</span>
@@ -283,7 +273,9 @@ import { SaveButton } from "./public/save-button.tsx";
 </form>;
 ```
 
-The button shows "Saving…" from its form's `reloadStart` until `finished` settles. When the request fails, `finished` rejects, and the status says so without moving focus. When another navigation replaces the save, such as a second click, `finished` rejects with an `AbortError` and the newer one takes over. The button stays enabled, so the visitor can submit again, which replaces the pending save. `handle.signal` is an [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) that aborts when the component is removed, which also removes the listener.
+The button shows "Saving…" from its `rmx:form-submit-start` until `finished` settles. When the request fails, `finished` rejects, and the status says so without moving focus. When another navigation replaces the save, such as a link, `finished` rejects with an `AbortError` and the newer one takes over. The button stays enabled, so the visitor can submit again: the new submission replaces the pending save, and [`on()`](/interactivity/#events-with-on) aborts the earlier handler's signal so only the latest one updates the button.
+
+The event also carries the submission's `formData`, so a component can render what the save will change before the response arrives. See [Pending and optimistic UI](/interactivity/#optimistic-ui).
 
 ## Use other HTTP methods when the route calls for them
 
