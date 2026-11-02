@@ -1209,7 +1209,7 @@ When a form submission reloads a frame, the submit button receives an `rmx:form-
 
 - GET and non-GET submissions dispatch it, and `formData` is `null` for GET, as on `NavigateEvent`.
 - Links, `frame.reload()`, and forms that load a new document, such as those marked `data-rmx-document`, don't dispatch it.
-- The signal `on()` passes is aborted when the same element receives its next submission or is removed. Any other newer reload of the frame, such as a link's, rejects `finished` with an `AbortError`.
+- The signal `on()` passes is aborted when the same element receives its next submission or is removed. When the submission removes what it submitted, such as a list item, listen on an ancestor that stays, such as the list: a removed form's handler would see its signal aborted and stop following the submission. Any other newer reload of the frame, such as a link's, rejects `finished` with an `AbortError`.
 
 Render what the submission will change as soon as it starts, then let the response replace it:
 
