@@ -13,33 +13,34 @@ const now = Date.parse('2026-10-29T12:00:00Z')
 const repository = path.resolve(import.meta.dirname, '../..')
 
 describe('preview retention', () => {
-  it('retains PR builds below the cap regardless of age', () => {
+  it('retains only the latest PR build regardless of age', () => {
     let builds = [
-      { sha: oldSha, createdAt: '2020-01-01T00:00:00Z' },
-      { sha: latestSha, createdAt: '2026-10-29T00:00:00Z' },
+      { sha: oldSha, createdAt: '2026-10-29T00:00:00Z' },
+      { sha: latestSha, createdAt: '2020-01-01T00:00:00Z' },
     ]
-    assert.deepEqual(getRetainedPreviewBuilds('preview/pr-123', builds, latestSha, now), builds)
+    assert.deepEqual(getRetainedPreviewBuilds('preview/pr-123', builds, latestSha, now), [
+      builds[1],
+    ])
   })
 
-  it('reserves room for a new PR build and keeps the newest two previous builds', () => {
+  it('discards all previous PR builds when publishing a new SHA', () => {
     let builds = Array.from({ length: 3 }, (_, index) => ({
       sha: index.toString(16).padStart(40, '0'),
       createdAt: new Date(now + index * 1000).toISOString(),
     }))
     assert.deepEqual(
       getRetainedPreviewBuilds('preview/pr-123', builds.toReversed(), latestSha, now),
-      builds.slice(1).toReversed(),
+      [],
     )
   })
 
-  it('keeps three PR builds on a rerun without evicting the active SHA', () => {
+  it('keeps only the active PR SHA on a rerun', () => {
     let builds = Array.from({ length: 4 }, (_, index) => ({
       sha: index.toString(16).padStart(40, '0'),
       createdAt: new Date(now + index * 1000).toISOString(),
     }))
     assert.deepEqual(getRetainedPreviewBuilds('preview/pr-123', builds, builds[0].sha, now), [
       builds[0],
-      ...builds.slice(2),
     ])
   })
 
@@ -100,13 +101,12 @@ describe('preview retention', () => {
     )
   })
 
-  it('retains exact PR tarballs across source commits and repeated builds without retaining preview history', () => {
+  it('replaces PR tarballs on new source commits and preserves them on repeated builds', () => {
     let fixture = createFixture()
     try {
       let firstSha = fixture.git('rev-parse', 'HEAD')
       fixture.build('preview/pr-123', 'first')
       let firstPreview = fixture.git('rev-parse', 'HEAD')
-      let tarball = fs.readFileSync(path.join(fixture.cwd, 't', firstSha.slice(0, 8), 'remix.tgz'))
       fixture.git('push', 'origin', 'HEAD:refs/heads/preview/pr-123')
       fixture.git('checkout', 'main')
       fs.writeFileSync(path.join(fixture.cwd, 'change.txt'), 'second source commit')
@@ -116,11 +116,12 @@ describe('preview retention', () => {
       fixture.build('preview/pr-123', 'second')
       assert.deepEqual(
         fixture.manifest().builds.map((build) => build.sha),
-        [firstSha, secondSha],
+        [secondSha],
       )
-      assert.deepEqual(
-        fs.readFileSync(path.join(fixture.cwd, 't', firstSha.slice(0, 8), 'remix.tgz')),
-        tarball,
+      assert.equal(fs.existsSync(path.join(fixture.cwd, 't', firstSha.slice(0, 8))), false)
+      assert.doesNotMatch(
+        fixture.git('rev-list', '--objects', 'HEAD'),
+        new RegExp(`t/${firstSha.slice(0, 8)}`),
       )
       assert.equal(fixture.git('rev-parse', 'HEAD^'), secondSha)
       assert.notEqual(fixture.git('rev-parse', 'HEAD^'), firstPreview)
@@ -128,19 +129,20 @@ describe('preview retention', () => {
       let currentTarball = fs.readFileSync(
         path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz'),
       )
+      let currentBuilds = fixture.manifest().builds
       fixture.git('checkout', 'main')
       fixture.build('preview/pr-123', 'must not repack')
       assert.deepEqual(
         fs.readFileSync(path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz')),
         currentTarball,
       )
-      assert.equal(fixture.manifest().builds.length, 2)
+      assert.deepEqual(fixture.manifest().builds, currentBuilds)
     } finally {
       fixture.dispose()
     }
   })
 
-  it('prunes PR artifacts beyond three builds from the snapshot and reachable history', () => {
+  it('prunes all previous PR builds from the snapshot and reachable history', () => {
     let fixture = createFixture()
     try {
       let sourceSha = fixture.git('rev-parse', 'HEAD')
@@ -167,14 +169,14 @@ describe('preview retention', () => {
       fixture.build('preview/pr-123', 'new build')
       assert.deepEqual(
         fixture.manifest().builds.map((build) => build.sha),
-        [...previousBuilds.slice(1).map((build) => build.sha), sourceSha],
+        [sourceSha],
       )
-      assert.equal(fs.existsSync(path.join(fixture.cwd, 't/00000000')), false)
-      assert.doesNotMatch(fixture.git('rev-list', '--objects', 'HEAD'), /t\/00000000/)
-      assert.equal(
-        fs.readFileSync(path.join(fixture.cwd, 't/00000001/remix.tgz'), 'utf8'),
-        previousBuilds[1].sha,
-      )
+      let reachableObjects = fixture.git('rev-list', '--objects', 'HEAD')
+      for (let build of previousBuilds) {
+        let directory = `t/${build.sha.slice(0, 8)}`
+        assert.equal(fs.existsSync(path.join(fixture.cwd, directory)), false)
+        assert.doesNotMatch(reachableObjects, new RegExp(directory))
+      }
     } finally {
       fixture.dispose()
     }
