@@ -779,6 +779,127 @@ describe('run', () => {
     expectAbortError(await getRejection(events[0]!.finished))
   })
 
+  it('rejects finished immediately when navigation aborts before its resolver settles', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let response = Promise.withResolvers<string>()
+    let app = run({ loadModule: mock.fn(), resolveFrame: () => response.promise })
+    t.after(() => {
+      response.resolve('')
+      app.dispose()
+    })
+    await app.ready()
+    let outcome: unknown = 'pending'
+    app.frames.top.addEventListener('reloadStart', (event) => {
+      event.finished.then(
+        () => {
+          outcome = 'resolved'
+        },
+        (error: unknown) => {
+          outcome = error
+        },
+      )
+    })
+    let controller = new AbortController()
+    let reload = reloadFrameForNavigation(app.frames.top, { signal: controller.signal })
+
+    controller.abort()
+    await Promise.resolve()
+
+    expectAbortError(outcome)
+    response.resolve('<!DOCTYPE html><html><head></head><body>Stale</body></html>')
+    await reload.finished
+    expect(document.querySelector('main')?.textContent).toBe('Initial')
+  })
+
+  it('preserves null and undefined reload failures in finished', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let failure: unknown
+    let app = run({ loadModule: mock.fn(), resolveFrame: () => Promise.reject(failure) })
+    t.after(() => app.dispose())
+    app.addEventListener('error', () => {})
+    await app.ready()
+    let events: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
+
+    await expect(app.frames.top.reload()).rejects.toBe(undefined)
+    await expect(events[0]?.finished).rejects.toBe(undefined)
+    failure = null
+    await expect(app.frames.top.reload()).rejects.toBe(null)
+    await expect(events[1]?.finished).rejects.toBe(null)
+  })
+
+  it('rejects a client child frame’s finished when its ancestor-driven request fails', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let failure = new Error('Child request failed')
+    let failChild = false
+    let order: string[] = []
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src) {
+        if (src === '/child') {
+          if (failChild) throw failure
+          return '<p>Initial child</p>'
+        }
+        return (
+          <main>
+            <Frame name="child" src="/child" />
+          </main>
+        )
+      },
+    })
+    t.after(() => app.dispose())
+    app.addEventListener('error', () => order.push('error'))
+    await app.ready()
+    await app.frames.top.reload()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    child.addEventListener('reloadComplete', () => order.push('complete'))
+    failChild = true
+
+    await app.frames.top.reload()
+
+    expect(events).toHaveLength(1)
+    await expect(events[0]?.finished).rejects.toBe(failure)
+    expect(order).toEqual(['error', 'complete'])
+    expect(document.querySelector('main')?.textContent).toBe('Initial child')
+  })
+
+  it('replaces inherited finished when a child reloadStart listener reloads its ancestor', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src) {
+        if (src === '/child') return '<p>Child</p>'
+        return (
+          <main>
+            <Frame name="child" src="/child" />
+          </main>
+        )
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    await app.frames.top.reload()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    let replacement: Promise<AbortSignal> | undefined
+    child.addEventListener('reloadStart', (event) => {
+      events.push(event)
+      if (events.length === 1) replacement = app.frames.top.reload()
+    })
+
+    await app.frames.top.reload()
+    await replacement
+
+    expect(events).toHaveLength(2)
+    expectAbortError(await getRejection(events[0]!.finished))
+    await events[1]!.finished
+    expect(document.querySelector('main')?.textContent).toBe('Child')
+  })
+
   it('reloads with text/plain FormData and normalizes line breaks', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
     let body = new FormData()

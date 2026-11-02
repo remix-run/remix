@@ -1254,6 +1254,7 @@ function resolveClientFrame(
   let resolveController = reload?.controller ?? new AbortController()
   state.resolveController = resolveController
   let frameCommitted = Promise.withResolvers<void>()
+  let failure: { error: unknown } | undefined
 
   let resolve = Promise.resolve()
     .then(() =>
@@ -1280,12 +1281,13 @@ function resolveClientFrame(
     })
     .catch((error) => {
       if (reload && state.resolveToken === token && !resolveController.signal.aborted) {
+        failure = { error }
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
     })
     .finally(() => {
       frameCommitted.resolve()
-      reload?.complete()
+      reload?.complete(failure)
       if (state.resolveController === resolveController) {
         state.resolveController = undefined
       }
