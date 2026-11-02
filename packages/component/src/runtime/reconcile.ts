@@ -1,46 +1,32 @@
-import type { Component, ComponentHandle, FrameContent, FrameHandle } from './component.ts'
-import { createComponent } from './component.ts'
+import type {
+  Component,
+  ComponentHandle,
+  FrameContent,
+  FrameHandle,
+  FrameProps,
+} from './component.ts'
+import { createComponent, Fragment, Frame } from './component.ts'
 import type { Frame as FrameInstance, FrameRuntime } from './frame.ts'
 import { createFrame, isFrameRuntime } from './frame.ts'
-import { unwrapFrameResolution } from './frame-resolution.ts'
+import { unwrapFrameResolution } from './spa-response.ts'
 import { createRangeRoot } from './vdom.ts'
-import type {
-  CommittedFragmentNode,
-  CommittedFrameNode,
-  CommittedNonRenderNode,
-  ComponentNode,
-  CommittedClientEntryNode,
-  CommittedComponentNode,
-  CommittedHostNode,
-  CommittedTextNode,
-  ControlledReflectionState,
-  DirectEventBinding,
-  FrameMountState,
-  FrameNode,
-  HostNode,
-  MountingComponentNode,
-  ReconcileContext,
-  RuntimeHostProps,
-  TextNode,
-  VNodeInput,
-  VNodeParent,
-  CommittedVNode,
-} from './vnode.ts'
-import {
-  isCommittedComponentNode,
-  isCommittedClientEntryNode,
-  isCommittedHostNode,
-  isCommittedTextNode,
-  isFragmentNode,
-  findContextFromAncestry,
-} from './vnode.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps } from './core/props.ts'
+import { isMixinDescriptor } from './core/mix.ts'
+import {
+  isEmptyChild,
+  isPrimitiveChild,
+  isRemixElement,
+  isRemixNode,
+  jsx,
+  normalizeChildren,
+} from './core/vnode.ts'
+import type { RemixNode } from './core/vnode.ts'
+import { normalizeUnsafeHTMLProps } from './unsafe-html.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-import { skipComments, logHydrationMismatch } from './client-entries.ts'
+import { isEntry, skipComments, logHydrationMismatch } from './client-entries.ts'
 import type { Scheduler } from './scheduler.ts'
-import { toVNode } from './to-vnode.ts'
 import {
   bindMixinRuntime,
   cancelPendingMixinRemoval,
@@ -52,13 +38,384 @@ import {
   teardownMixins,
   type MixinRuntimeBinding,
   type MixinRuntimeState,
+  type MixinRuntimeValue,
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
-import { createComponentErrorEvent } from './error-event.ts'
 import { componentStalenessCheck } from './refresh.ts'
-import { jsx } from './jsx.ts'
-import { isEntry } from './client-entries.ts'
 import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
+import { createStyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/index.ts'
+
+export const TEXT_NODE = Symbol('TEXT_NODE')
+export const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
+export const ROOT_VNODE = Symbol('ROOT_VNODE')
+
+export type VNodeKind =
+  | 'root'
+  | 'empty'
+  | 'text'
+  | 'fragment'
+  | 'host'
+  | 'component'
+  | 'client-entry'
+  | 'frame'
+
+export type RuntimeElementProps = {
+  [name: string]: unknown
+}
+
+export type RuntimeHostProps = RuntimeElementProps & {
+  children?: RemixNode
+  innerHTML?: string
+  srcDoc?: string
+  srcdoc?: string
+  mix?: MixinRuntimeValue
+}
+
+type InputNodeBase<kind extends VNodeKind, type> = {
+  kind: kind
+  type: type
+  key?: Key
+  _parent?: never
+}
+
+export type NonRenderNode = InputNodeBase<'empty', typeof NON_RENDER_NODE>
+
+export type TextNode = InputNodeBase<'text', typeof TEXT_NODE> & {
+  _text: string
+}
+
+export type FragmentNode = InputNodeBase<'fragment', typeof Fragment> & {
+  _children: VNodeInput[]
+}
+
+export type HostNode = InputNodeBase<'host', string> & {
+  props: RuntimeHostProps
+  _children: VNodeInput[]
+}
+
+export type ComponentNode = InputNodeBase<'component', ElementFunction> & {
+  props: RuntimeElementProps
+}
+
+export type FrameNode = InputNodeBase<'frame', typeof Frame> & {
+  props: RuntimeElementProps & FrameProps
+}
+
+export type VNodeInput =
+  | NonRenderNode
+  | TextNode
+  | FragmentNode
+  | HostNode
+  | ComponentNode
+  | FrameNode
+
+type MountedNodeBase = {
+  _parent: VNodeParent
+  _svg: boolean
+}
+
+type CommittedNodeBase<kind extends VNodeKind, type> = {
+  kind: kind
+  type: type
+  key?: Key
+} & MountedNodeBase
+
+export type CommittedNonRenderNode = CommittedNodeBase<'empty', typeof NON_RENDER_NODE>
+
+export type CommittedTextNode = CommittedNodeBase<'text', typeof TEXT_NODE> & {
+  _text: string
+  _dom: Text
+}
+
+export type ControlledReflectionState = {
+  disposed: boolean
+  listenersAttached: boolean
+  pendingRestoreVersion: number
+  hasControlledValue: boolean
+  controlledValue: unknown
+  hasControlledChecked: boolean
+  controlledChecked: unknown
+  onInput(): void
+  onChange(): void
+}
+
+export type DirectEventBinding = {
+  type: string
+  handler: (event: Event, signal: AbortSignal) => void | Promise<void>
+  capture: boolean
+  stableHandler: (event: Event) => void
+  reentry: AbortController | null
+}
+
+export type DirectEventState = {
+  bindings: DirectEventBinding[]
+}
+
+export type HostPersistenceState = {
+  parent: ParentNode
+  token: number
+}
+
+export type CommittedHostNode = CommittedNodeBase<'host', string> & {
+  props: RuntimeHostProps
+  _children: CommittedVNode[]
+  _dom: Element
+  _mixedProps: RuntimeHostProps
+  _mixState?: MixinRuntimeState
+  _directEventDescriptors?: OnMixinDescriptor[]
+  _directEventState?: DirectEventState
+  _controlledState?: ControlledReflectionState
+  _persistence?: HostPersistenceState
+}
+
+export type CommittedFragmentNode = CommittedNodeBase<'fragment', typeof Fragment> & {
+  _children: CommittedVNode[]
+}
+
+export type MountingComponentNode = CommittedNodeBase<'component', ElementFunction> & {
+  props: RuntimeElementProps
+  _handle: ComponentHandle
+  _context: ReconcileContext
+}
+
+export type CommittedComponentNode = MountingComponentNode & {
+  _content: CommittedVNode
+}
+
+export type CommittedClientEntryNode = CommittedNodeBase<'client-entry', ElementFunction> & {
+  props: RuntimeElementProps
+  _rangeStart: Comment
+  _rangeEnd: Comment
+}
+
+export interface FrameFallbackRoot {
+  render(element: RemixNode): void
+  dispose(): void
+}
+
+export type FrameMountState = {
+  instance: FrameInstance
+  fallbackRoot?: FrameFallbackRoot
+  resolveToken: number
+  resolveController?: AbortController
+  resolved: boolean
+}
+
+export type CommittedFrameNode = CommittedNodeBase<'frame', typeof Frame> & {
+  props: RuntimeElementProps & FrameProps
+  _rangeStart: Comment
+  _rangeEnd: Comment
+  _state: FrameMountState
+}
+
+export type CommittedVNode =
+  | CommittedNonRenderNode
+  | CommittedTextNode
+  | CommittedFragmentNode
+  | CommittedHostNode
+  | CommittedComponentNode
+  | CommittedClientEntryNode
+  | CommittedFrameNode
+
+export type RootVNode = {
+  kind: 'root'
+  type: typeof ROOT_VNODE
+  _children: CommittedVNode[]
+  _svg: boolean
+  _getContext?: (type: ElementFunction) => unknown
+  _rangeStart?: Node
+  _rangeEnd?: Node
+  _pendingHydrationComponentId?: string
+}
+
+export interface ReconcileContext {
+  frame: FrameHandle
+  scheduler: Scheduler
+  styles: StyleManager
+  rootTarget: EventTarget
+}
+
+export type VNodeParent =
+  | RootVNode
+  | CommittedFragmentNode
+  | CommittedHostNode
+  | MountingComponentNode
+  | CommittedComponentNode
+
+export type VNode = VNodeInput | CommittedVNode | RootVNode | MountingComponentNode
+
+export function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNode {
+  return node.kind === 'fragment'
+}
+
+export function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
+  return node.kind === 'text'
+}
+
+export function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
+  return node.kind === 'host'
+}
+
+export function isCommittedComponentNode(node: VNode): node is CommittedComponentNode {
+  return node.kind === 'component' && '_content' in node
+}
+
+export function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClientEntryNode {
+  return node.kind === 'client-entry'
+}
+
+export function findContextFromAncestry(node: VNodeParent, type: ElementFunction): unknown {
+  let current: VNodeParent | undefined = node
+  while (current) {
+    if (current.kind === 'component' && current.type === type) {
+      return current._handle.getContextValue()
+    }
+    if (current.kind === 'root') {
+      return current._getContext?.(type)
+    }
+    current = '_parent' in current ? current._parent : undefined
+  }
+  return undefined
+}
+
+function flatMapChildrenToVNodes(props: RuntimeHostProps): VNodeInput[] {
+  let children = props.children
+  if (children === undefined) return []
+  if (!Array.isArray(children)) return [toVNode(children)]
+  let vnodes: VNodeInput[] = []
+  flattenChildrenToVNodes(children, vnodes)
+  return vnodes
+}
+
+function flattenChildrenToVNodes(nodes: RemixNode[], out: VNodeInput[]): void {
+  let children = normalizeChildren(nodes)
+  for (let i = 0; i < children.length; i++) {
+    out.push(toVNode(children[i]))
+  }
+}
+
+export function toVNode(node: RemixNode): VNodeInput {
+  if (isEmptyChild(node)) {
+    return { kind: 'empty', type: NON_RENDER_NODE }
+  }
+
+  if (isPrimitiveChild(node)) {
+    return { kind: 'text', type: TEXT_NODE, _text: String(node) }
+  }
+
+  if (isRemixElement(node)) {
+    if (node.type === Fragment) {
+      let props = parseHostProps(node.props)
+      return {
+        kind: 'fragment',
+        type: Fragment,
+        key: node.key,
+        _children: flatMapChildrenToVNodes(props),
+      }
+    }
+
+    if (node.type === Frame) {
+      invariant(isFrameProps(node.props), '<Frame /> requires a src prop')
+      return { kind: 'frame', type: Frame, key: node.key, props: node.props }
+    }
+
+    if (typeof node.type === 'string') {
+      let props = parseHostProps(node.props)
+      // When innerHTML is set, ignore children
+      let children = props.innerHTML != null ? [] : flatMapChildrenToVNodes(props)
+      return {
+        kind: 'host',
+        type: node.type,
+        key: node.key,
+        props,
+        _children: children,
+      }
+    }
+    invariant(isElementFunction(node.type), 'Expected component element type')
+    return { kind: 'component', type: node.type, key: node.key, props: node.props }
+  }
+
+  if (Array.isArray(node)) {
+    let children: VNodeInput[] = []
+    flattenChildrenToVNodes(node, children)
+    return { kind: 'fragment', type: Fragment, _children: children }
+  }
+
+  invariant(false, 'Unexpected RemixNode')
+}
+
+function isFrameProps(props: RuntimeElementProps): props is RuntimeElementProps & FrameProps {
+  return typeof props.src === 'string' && props.src.length > 0
+}
+
+function parseHostProps(props: RuntimeElementProps): RuntimeHostProps {
+  let normalizedProps = normalizeUnsafeHTMLProps(props)
+
+  let children = normalizedProps.children
+  invariant(children === undefined || isRemixNode(children), 'Invalid host children')
+
+  let mix = normalizedProps.mix
+  invariant(mix === undefined || isRuntimeMixValue(mix), 'Invalid mix prop')
+  return normalizedProps
+}
+
+function isRuntimeMixValue(value: unknown): value is RuntimeHostProps['mix'] {
+  if (!Array.isArray(value)) return isMixinDescriptor(value)
+  for (let descriptor of value) {
+    if (!isMixinDescriptor(descriptor)) return false
+  }
+  return true
+}
+
+function isElementFunction(value: unknown): value is ElementFunction {
+  return typeof value === 'function'
+}
+
+/**
+ * Error event shape emitted by the component runtime.
+ */
+export type ComponentErrorEvent = ErrorEvent & {
+  readonly error: unknown
+}
+
+/**
+ * Creates a normalized component error event from any thrown value.
+ *
+ * @param error Error-like value to expose on the event.
+ * @returns An `error` event carrying the original value.
+ */
+export function createComponentErrorEvent(error: unknown): ComponentErrorEvent {
+  return new ErrorEvent('error', { error }) as ComponentErrorEvent
+}
+
+/**
+ * Reads the `.error` payload from a dispatched component error event.
+ *
+ * @param event Event to inspect.
+ * @returns The original error value, if present.
+ */
+export function getComponentError(event: Event): unknown {
+  return (event as { error?: unknown }).error
+}
+
+let globalStyleManager =
+  typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
+
+export let defaultStyleManager: StyleManager = globalStyleManager
+
+/**
+ * Reset the global style state. For testing only - not exported from index.ts.
+ */
+export function resetStyleState() {
+  invariant(
+    typeof window !== 'undefined',
+    'resetStyleState() is only available in a browser environment',
+  )
+  globalStyleManager.dispose()
+  globalStyleManager = createStyleManager()
+  defaultStyleManager = globalStyleManager
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 

@@ -1,10 +1,10 @@
 import type { Context, FrameHandle } from '../component.ts'
-import type { ElementProps, RemixElement } from '../jsx.ts'
+import type { ElementProps, RemixElement } from '../core/vnode.ts'
 import type { Key } from '../key.ts'
 import type { Scheduler } from '../scheduler.ts'
 import type { SchedulerPhaseEvent } from '../scheduler.ts'
-import { jsx } from '../jsx.ts'
-import { TypedEventTarget } from '../typed-event-target.ts'
+import { jsx } from '../core/vnode.ts'
+import { TypedEventTarget } from '../component.ts'
 import { invariant } from '../invariant.ts'
 import { composeMixedProps, isMixinElementFunction } from '../core/mix.ts'
 

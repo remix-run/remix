@@ -1,7 +1,6 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
-import { reloadFrameForNavigation } from './frame.ts'
+import { isDocumentReload, reloadCurrentDocument, reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
-import { isDocumentReload, reloadCurrentDocument } from './document-reload.ts'
 import type { FrameHandle } from './component.ts'
 
 type NavigationState = {

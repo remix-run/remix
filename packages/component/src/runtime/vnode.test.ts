@@ -1,9 +1,9 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { RemixNode } from './jsx.ts'
-import { jsx } from './jsx.ts'
-import { toVNode } from './to-vnode.ts'
+import type { RemixNode } from './core/vnode.ts'
+import { jsx } from './core/vnode.ts'
+import { toVNode } from './reconcile.ts'
 import type {
   CommittedComponentNode,
   CommittedFrameNode,
@@ -14,7 +14,7 @@ import type {
   HostNode,
   VNodeInput,
   VNodeParent,
-} from './vnode.ts'
+} from './reconcile.ts'
 
 type Equal<left, right> =
   (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2

@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import { Frame } from '../runtime/component.ts'
-import { jsx } from '../runtime/jsx.ts'
+import { jsx } from '../runtime/core/vnode.ts'
 import {
   createDefaultPrefetch,
   prefetch,

@@ -1,19 +1,23 @@
 import type { FrameHandle } from './component.ts'
-import { createFrameHandle } from './component.ts'
+import { createFrameHandle, TypedEventTarget } from './component.ts'
 import { invariant } from './invariant.ts'
-import type { RemixNode } from './jsx.ts'
+import type { RemixNode } from './core/vnode.ts'
 import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame.ts'
+import { createScheduler, type Scheduler } from './scheduler.ts'
 import {
   createComponentErrorEvent,
+  defaultStyleManager,
+  diffVNodes,
   getComponentError,
+  remove as removeVNode,
+  resetStyleState,
+  ROOT_VNODE,
+  toVNode,
+  type CommittedVNode,
   type ComponentErrorEvent,
-} from './error-event.ts'
-import { createScheduler, type Scheduler } from './scheduler.ts'
-import { diffVNodes, remove as removeVNode } from './reconcile.ts'
-import { toVNode } from './to-vnode.ts'
-import { TypedEventTarget } from './typed-event-target.ts'
-import { ROOT_VNODE, type CommittedVNode, type ReconcileContext, type RootVNode } from './vnode.ts'
-import { resetStyleState, defaultStyleManager } from './diff-props.ts'
+  type ReconcileContext,
+  type RootVNode,
+} from './reconcile.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
 import type { StyleManager } from '../style/index.ts'
 import type { ElementFunction } from './element-function.ts'

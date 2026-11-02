@@ -8,7 +8,7 @@ import {
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
 import { withResolvers } from './utils.ts'
-import { reloadDocument } from '../runtime/document-reload.ts'
+import { reloadDocument } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }

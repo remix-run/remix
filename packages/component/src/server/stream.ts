@@ -6,7 +6,7 @@ import type {
   RemixNode,
   RenderFn,
 } from '../runtime/component.ts'
-import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/jsx.ts'
+import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
 import type { ElementFunction } from '../runtime/element-function.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'

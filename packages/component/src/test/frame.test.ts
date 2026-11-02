@@ -12,7 +12,7 @@ import {
   type LoadModule,
   type ResolveFrameOptions,
 } from '../runtime/frame.ts'
-import { jsx } from '../runtime/jsx.ts'
+import { jsx } from '../runtime/core/vnode.ts'
 import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
