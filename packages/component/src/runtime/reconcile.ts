@@ -254,7 +254,7 @@ export interface FrameNodeRenderer {
 export type FrameComponent = ElementFunction & { readonly [FRAME_NODE]: FrameNodeRenderer }
 
 function isFrameComponent(type: ElementFunction): type is FrameComponent {
-  return FRAME_NODE in type
+  return Object.hasOwn(type, FRAME_NODE)
 }
 
 export function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNode {

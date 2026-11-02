@@ -935,7 +935,7 @@ function isElementFunction(value: unknown): value is ElementFunction {
 }
 
 function isFrameComponent(type: unknown): boolean {
-  return typeof type === 'function' && FRAME_NODE in type
+  return typeof type === 'function' && Object.hasOwn(type, FRAME_NODE)
 }
 
 function buildComponentSegment(

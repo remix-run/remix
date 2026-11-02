@@ -97,6 +97,18 @@ describe('VNode lifecycle types', () => {
     assert.equal(vnode.type, Frame)
   })
 
+  it('treats components that inherit from Frame as regular components', () => {
+    function DerivedFrame() {
+      return () => null
+    }
+    Object.setPrototypeOf(DerivedFrame, Frame)
+
+    let vnode = toVNode(jsx(DerivedFrame, { src: '/sidebar' }))
+
+    assert.equal(vnode.kind, 'component')
+    assert.equal(vnode.type, DerivedFrame)
+  })
+
   it('requires a src prop on built-in Frame elements', () => {
     assert.throws(() => toVNode(jsx(Frame, {})), /<Frame \/> requires a src prop/)
     assert.throws(() => toVNode(jsx(Frame, { src: '' })), /<Frame \/> requires a src prop/)

@@ -3984,6 +3984,17 @@ describe('stream', () => {
       expect(result).toBe('<p>Not a frame</p>')
     })
 
+    it('renders components that inherit from Frame as regular components', async () => {
+      function DerivedFrame() {
+        return () => <p>Not a frame</p>
+      }
+      Object.setPrototypeOf(DerivedFrame, Frame)
+
+      let result = await renderToString(<DerivedFrame />)
+
+      expect(result).toBe('<p>Not a frame</p>')
+    })
+
     it('strips doctype markup from non-blocking frame templates', async () => {
       let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
         async resolveFrame() {
