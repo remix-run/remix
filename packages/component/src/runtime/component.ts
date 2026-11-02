@@ -619,16 +619,10 @@ function syncProps(target: ElementProps, next: ElementProps): void {
   }
 }
 
-/**
- * Built-in component used to render nested frame content.
- *
- * @param handle Component handle for the frame instance.
- * @returns A placeholder render function handled by the reconciler.
- */
-export function Frame(handle: Handle<FrameProps, FrameHandle>): RenderFn {
-  void handle
-  return () => null // reconciler renders
-}
+// Marks the built-in `Frame` component, which is defined with the frame runtime. The property
+// holds the client frame node renderer, so the reconciler and server renderer can recognize and
+// render frames without importing the frame runtime.
+export const FRAME_NODE = Symbol('FrameNode')
 
 /**
  * Built-in component used to group children without adding a host element.

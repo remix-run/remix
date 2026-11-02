@@ -1,11 +1,12 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 
-import { Frame, type Handle } from '../runtime/component.ts'
+import type { Handle } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
+  Frame,
   publishFrameTemplate,
   reloadFrameForNavigation,
 } from '../runtime/frame.ts'

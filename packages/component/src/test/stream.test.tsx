@@ -7,7 +7,8 @@ import { createElement } from '../runtime/create-element.ts'
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
-import { Fragment, Frame } from '../runtime/component.ts'
+import { Fragment } from '../runtime/component.ts'
+import { Frame } from '../runtime/frame.ts'
 import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
@@ -3971,6 +3972,16 @@ describe('stream', () => {
         status: 'pending',
         src: '/x',
       })
+    })
+
+    it('renders other components named Frame as regular components', async () => {
+      function Frame() {
+        return () => <p>Not a frame</p>
+      }
+
+      let result = await renderToString(<Frame />)
+
+      expect(result).toBe('<p>Not a frame</p>')
     })
 
     it('strips doctype markup from non-blocking frame templates', async () => {

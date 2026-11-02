@@ -8,7 +8,7 @@ import type {
 } from '../runtime/component.ts'
 import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
 import type { ElementFunction } from '../runtime/element-function.ts'
-import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
+import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
@@ -546,7 +546,7 @@ function buildSegment(
     if (isElementFunction(type)) {
       if (type === ImportMap) {
         output.push(buildImportMapSegment(props, context))
-      } else if (type === Frame) {
+      } else if (isFrameComponent(type)) {
         output.push(buildFrameSegment(node, context, frameState))
       } else if (isEntry(type)) {
         buildEntrySegment(type, props, context, frameState, output)
@@ -934,6 +934,10 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
+function isFrameComponent(type: unknown): boolean {
+  return typeof type === 'function' && FRAME_NODE in type
+}
+
 function buildComponentSegment(
   type: ElementFunction,
   props: any,
@@ -1003,7 +1007,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
 
     // Preserve Frame semantics through serialized props by emitting
     // a dedicated descriptor that can be revived on the client.
-    if (type === Frame) {
+    if (isFrameComponent(type)) {
       return {
         $rmxFrame: true,
         props: transformProps(props),

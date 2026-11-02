@@ -1,16 +1,6 @@
-import type {
-  Component,
-  ComponentHandle,
-  FrameContent,
-  FrameHandle,
-  FrameProps,
-} from './component.ts'
-import { createComponent, createComponentErrorEvent, Fragment, Frame } from './component.ts'
-import type { FrameInstance } from './frame.ts'
-import { createFrame } from './frame.ts'
-import { getFrameRuntime, type FrameMountState, type FrameRuntime } from './frame-runtime.ts'
-import { unwrapFrameResolution } from './spa-response.ts'
-import { createRangeRoot } from './vdom.ts'
+import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
+import { createComponent, Fragment, FRAME_NODE } from './component.ts'
+import { getFrameRuntime, type FrameMountState } from './frame-runtime.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps } from './core/props.ts'
 import { isMixinDescriptor } from './core/mix.ts'
@@ -99,7 +89,7 @@ export type ComponentNode = InputNodeBase<'component', ElementFunction> & {
   props: RuntimeElementProps
 }
 
-export type FrameNode = InputNodeBase<'frame', typeof Frame> & {
+export type FrameNode = InputNodeBase<'frame', FrameComponent> & {
   props: RuntimeElementProps & FrameProps
 }
 
@@ -190,7 +180,7 @@ export type CommittedClientEntryNode = CommittedNodeBase<'client-entry', Element
   _rangeEnd: Comment
 }
 
-export type CommittedFrameNode = CommittedNodeBase<'frame', typeof Frame> & {
+export type CommittedFrameNode = CommittedNodeBase<'frame', FrameComponent> & {
   props: RuntimeElementProps & FrameProps
   _rangeStart: Comment
   _rangeEnd: Comment
@@ -232,6 +222,40 @@ export type VNodeParent =
   | CommittedComponentNode
 
 export type VNode = VNodeInput | CommittedVNode | RootVNode | MountingComponentNode
+
+export type HydrationCursor = { current: Node | null | undefined }
+
+/**
+ * Renders `<Frame>` nodes. The frame runtime attaches it to the built-in `Frame` component so the
+ * reconciler can render frames without importing the frame runtime.
+ */
+export interface FrameNodeRenderer {
+  insert(
+    node: FrameNode,
+    domParent: ParentNode,
+    vParent: VNodeParent,
+    context: ReconcileContext,
+    svg: boolean,
+    anchor?: Node,
+    cursor?: HydrationCursor,
+  ): CommittedFrameNode
+  diff(
+    curr: CommittedFrameNode,
+    next: FrameNode,
+    domParent: ParentNode,
+    vParent: VNodeParent,
+    context: ReconcileContext,
+    svg: boolean,
+    anchor?: Node,
+  ): CommittedFrameNode
+  dispose(node: CommittedFrameNode): void
+}
+
+export type FrameComponent = ElementFunction & { readonly [FRAME_NODE]: FrameNodeRenderer }
+
+function isFrameComponent(type: ElementFunction): type is FrameComponent {
+  return FRAME_NODE in type
+}
 
 export function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNode {
   return node.kind === 'fragment'
@@ -303,11 +327,6 @@ export function toVNode(node: RemixNode): VNodeInput {
       }
     }
 
-    if (node.type === Frame) {
-      invariant(isFrameProps(node.props), '<Frame /> requires a src prop')
-      return { kind: 'frame', type: Frame, key: node.key, props: node.props }
-    }
-
     if (typeof node.type === 'string') {
       let props = parseHostProps(node.props)
       // When innerHTML is set, ignore children
@@ -321,6 +340,10 @@ export function toVNode(node: RemixNode): VNodeInput {
       }
     }
     invariant(isElementFunction(node.type), 'Expected component element type')
+    if (isFrameComponent(node.type)) {
+      invariant(isFrameProps(node.props), '<Frame /> requires a src prop')
+      return { kind: 'frame', type: node.type, key: node.key, props: node.props }
+    }
     return { kind: 'component', type: node.type, key: node.key, props: node.props }
   }
 
@@ -431,8 +454,6 @@ function findMatchingPersistedMixinNode(
 
 const EMPTY_DIRECT_EVENT_DESCRIPTORS: OnMixinDescriptor[] = []
 const EMPTY_COMMITTED_CHILDREN: CommittedVNode[] = []
-
-type HydrationCursor = { current: Node | null | undefined }
 
 function shouldRestoreControlledReflectionOnInput(
   node: CommittedHostNode,
@@ -822,7 +843,15 @@ export function diffVNodes(
       return committed
     }
     case 'frame': {
-      return diffFrame(curr as CommittedFrameNode, next, domParent, vParent, context, svg, anchor)
+      return next.type[FRAME_NODE].diff(
+        curr as CommittedFrameNode,
+        next,
+        domParent,
+        vParent,
+        context,
+        svg,
+        anchor,
+      )
     }
     case 'component': {
       return diffComponent(
@@ -1070,7 +1099,7 @@ function getHydrationTagName(element: Element, svg: boolean): string {
   return svg ? element.tagName : element.tagName.toLowerCase()
 }
 
-function insertDomNode(dom: Node, domParent: ParentNode, anchor?: Node): void {
+export function insertDomNode(dom: Node, domParent: ParentNode, anchor?: Node): void {
   if (anchor) {
     domParent.insertBefore(dom, anchor)
   } else {
@@ -1278,306 +1307,10 @@ function insert(
   }
 
   if (node.kind === 'frame') {
-    return insertFrame(node, domParent, vParent, context, svg, anchor, cursor)
+    return node.type[FRAME_NODE].insert(node, domParent, vParent, context, svg, anchor, cursor)
   }
 
   invariant(false, 'Unexpected node type')
-}
-
-function diffFrame(
-  curr: CommittedFrameNode,
-  next: FrameNode,
-  domParent: ParentNode,
-  vParent: VNodeParent,
-  context: ReconcileContext,
-  svg: boolean,
-  anchor?: Node,
-): CommittedFrameNode {
-  let { frame } = context
-  let currSrc = getFrameSrc(curr)
-  let nextSrc = getFrameSrc(next)
-  let currName = getFrameName(curr)
-  let nextName = getFrameName(next)
-
-  // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
-  // so pending streams from the old src cannot take over the new src.
-  if (currName !== nextName || (currSrc !== nextSrc && !curr._state.resolved)) {
-    let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
-    remove(curr, domParent, context)
-    return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
-  }
-
-  let committed = commitFrameNode(next, vParent, svg, curr._rangeStart, curr._rangeEnd, curr._state)
-
-  let frameRuntime = getFrameRuntime(frame)
-  let frameInstance = committed._state.instance
-  let serverFrameReload = frameRuntime?.serverFrameReload
-
-  if (currSrc !== nextSrc) {
-    if (frameInstance) {
-      frameInstance.handle.src = nextSrc
-    }
-
-    if (frameRuntime) {
-      resolveClientFrame(committed, frameRuntime, serverFrameReload)
-    }
-  } else if (frameRuntime && frameInstance && serverFrameReload) {
-    // Reload client frames that have the same src during a render triggered by an ancestor frame reload
-    resolveClientFrame(committed, frameRuntime, serverFrameReload)
-  }
-
-  if (!committed._state.resolved && committed._state.fallbackRoot) {
-    committed._state.fallbackRoot.render(committed.props.fallback ?? null)
-  }
-  return committed
-}
-
-function insertFrame(
-  node: FrameNode,
-  domParent: ParentNode,
-  vParent: VNodeParent,
-  context: ReconcileContext,
-  svg: boolean,
-  anchor?: Node,
-  cursor?: HydrationCursor,
-): CommittedFrameNode {
-  let { frame, styles } = context
-  let runtime = getFrameRuntime(frame)
-  if (!runtime || runtime.canResolveFrames === false) {
-    throw new Error(
-      'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
-    )
-  }
-
-  let getContext = (type: ElementFunction) => findContextFromAncestry(vParent, type)
-
-  // Hydration path: adopt server-rendered frame markers and reuse the existing
-  // frame instance created during createSubFrames().
-  if (isFrameStartComment(cursor?.current)) {
-    let start = cursor.current
-    let end = findFrameEndComment(start)
-    if (end) {
-      let instance = runtime.frameInstances.get(start)
-      if (!instance) {
-        instance = createFrameInstance(node, start, end, runtime, getContext)
-      } else {
-        let instanceRuntime = getFrameRuntime(instance.handle)
-        if (instanceRuntime) instanceRuntime.getContext = getContext
-      }
-
-      cursor.current = end.nextSibling
-      return commitFrameNode(node, vParent, svg, start, end, {
-        instance,
-        resolveToken: 0,
-        resolveController: undefined,
-        fallbackRoot: undefined,
-        resolved: true,
-      })
-    }
-  }
-
-  let start = document.createComment(` rmx:f:${randomFrameId()} `)
-  let end = document.createComment(' /rmx:f ')
-  insertDomNode(start, domParent, anchor)
-  insertDomNode(end, domParent, anchor)
-
-  let fallbackRoot = createRangeRoot([start, end], {
-    frame,
-    getContext,
-    styleManager: styles,
-  })
-  fallbackRoot.render(node.props.fallback ?? null)
-
-  let instance = createFrameInstance(node, start, end, runtime, getContext)
-  let committed = commitFrameNode(node, vParent, svg, start, end, {
-    instance,
-    fallbackRoot,
-    resolved: false,
-    resolveToken: 0,
-    resolveController: undefined,
-  })
-  resolveClientFrame(committed, runtime, runtime.serverFrameReload)
-
-  return committed
-}
-
-function createFrameInstance(
-  node: FrameNode,
-  start: Comment,
-  end: Comment,
-  runtime: FrameRuntime,
-  getContext: (type: ElementFunction) => unknown,
-): FrameInstance {
-  let instance = createFrame([start, end], {
-    name: getFrameName(node),
-    src: getFrameSrc(node),
-    getContext,
-    errorTarget: runtime.errorTarget,
-    loadModule: runtime.loadModule,
-    resolveFrame: runtime.resolveFrame,
-    pendingClientEntries: runtime.pendingClientEntries,
-    scheduler: runtime.scheduler,
-    styleManager: runtime.styleManager,
-    data: {},
-    moduleCache: runtime.moduleCache,
-    moduleLoads: runtime.moduleLoads,
-    frameInstances: runtime.frameInstances,
-    namedFrames: runtime.namedFrames,
-    processClientEntryPreloads: runtime.processClientEntryPreloads,
-  })
-  runtime.frameInstances.set(start, instance)
-  return instance
-}
-
-function commitFrameNode(
-  node: FrameNode,
-  parent: VNodeParent,
-  svg: boolean,
-  start: Comment,
-  end: Comment,
-  state: FrameMountState,
-): CommittedFrameNode {
-  let committed = node as unknown as CommittedFrameNode
-  committed._parent = parent
-  committed._svg = svg
-  committed._rangeStart = start
-  committed._rangeEnd = end
-  committed._state = state
-  return committed
-}
-
-function resolveClientFrame(
-  node: CommittedFrameNode,
-  runtime: FrameRuntime,
-  serverFrameReload?: NonNullable<FrameRuntime['serverFrameReload']>,
-): void {
-  let frameSrc = getFrameSrc(node)
-  let state = node._state
-  let instance = state.instance
-
-  let token = state.resolveToken + 1
-  state.resolveToken = token
-  state.resolveController?.abort()
-  let reload = serverFrameReload
-    ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
-    : undefined
-  if (!reload) {
-    instance.cancelReload()
-  }
-  let resolveController = reload?.controller ?? new AbortController()
-  state.resolveController = resolveController
-  let isStale = () => state.resolveToken !== token || resolveController.signal.aborted
-  let frameCommitted = Promise.withResolvers<void>()
-
-  let resolve = Promise.resolve()
-    .then(() =>
-      runtime.resolveFrame(frameSrc, {
-        signal: resolveController.signal,
-        target: getFrameName(node),
-      }),
-    )
-    .then(async (resolution) => {
-      if (isStale()) return
-      let { content } = await unwrapFrameResolution(resolution)
-      if (isStale()) return
-      state.fallbackRoot?.dispose()
-      state.fallbackRoot = undefined
-      let nextContent = asAbortableFrameContent(content, resolveController.signal)
-      await instance.render(nextContent, {
-        signal: resolveController.signal,
-        reconciliationTracker: serverFrameReload?.reconciliationTracker,
-        blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
-        onCommit: frameCommitted.resolve,
-      })
-      if (isStale()) return
-      state.resolved = true
-    })
-    .catch((error) => {
-      if (reload && !isStale()) {
-        runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
-      }
-    })
-    .finally(() => {
-      frameCommitted.resolve()
-      reload?.complete()
-      if (state.resolveController === resolveController) {
-        state.resolveController = undefined
-      }
-    })
-
-  if (serverFrameReload?.reconciliationTracker && !node.props.fallback) {
-    serverFrameReload.reconciliationTracker.waitFor(resolve)
-  }
-  if (serverFrameReload?.blockingFrameTracker && !node.props.fallback) {
-    serverFrameReload.blockingFrameTracker.waitFor(frameCommitted.promise)
-  }
-}
-
-function disposeFrameResources(node: CommittedFrameNode): void {
-  let state = node._state
-  state.resolveToken++
-  state.resolveController?.abort()
-  state.resolveController = undefined
-  state.fallbackRoot?.dispose()
-  state.fallbackRoot = undefined
-
-  state.instance.dispose()
-}
-
-function asAbortableFrameContent(content: FrameContent, signal: AbortSignal): FrameContent {
-  if (!(content instanceof ReadableStream)) return content
-  return createAbortableReadableStream(content, signal)
-}
-
-function createAbortableReadableStream(
-  source: ReadableStream<Uint8Array>,
-  signal: AbortSignal,
-): ReadableStream<Uint8Array> {
-  let reader = source.getReader()
-  let aborted = false
-
-  let onAbort = () => {
-    aborted = true
-    void reader.cancel(signal.reason)
-  }
-
-  if (signal.aborted) onAbort()
-  else signal.addEventListener('abort', onAbort, { once: true })
-
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (aborted) {
-        controller.close()
-        return
-      }
-
-      let removeAbortReadListener: undefined | (() => void)
-      let abortRead = new Promise<{ done: true; value: undefined }>((resolve) => {
-        if (signal.aborted) {
-          resolve({ done: true, value: undefined })
-          return
-        }
-        let onAbortRead = () => {
-          resolve({ done: true, value: undefined })
-        }
-        removeAbortReadListener = () => signal.removeEventListener('abort', onAbortRead)
-        signal.addEventListener('abort', onAbortRead, { once: true })
-      })
-
-      let result = await Promise.race([reader.read(), abortRead])
-      removeAbortReadListener?.()
-
-      if (result.done) {
-        controller.close()
-        return
-      }
-      controller.enqueue(result.value)
-    },
-    cancel(reason) {
-      signal.removeEventListener('abort', onAbort)
-      return reader.cancel(reason)
-    },
-  })
 }
 
 function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
@@ -1590,19 +1323,6 @@ function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
     if (cursor === end) break
     cursor = nextSibling
   }
-}
-
-function getFrameSrc(node: FrameNode | CommittedFrameNode): string {
-  return node.props.src
-}
-
-function getFrameName(node: FrameNode | CommittedFrameNode): string | undefined {
-  let name = node.props.name
-  return typeof name === 'string' && name.length > 0 ? name : undefined
-}
-
-function randomFrameId(): string {
-  return `f${crypto.randomUUID().slice(0, 8)}`
 }
 
 function skipCommentsExceptBoundaryStart(
@@ -1619,32 +1339,12 @@ function skipCommentsExceptBoundaryStart(
   return cursor
 }
 
-function isFrameStartComment(node: Node | null | undefined): node is Comment {
+export function isFrameStartComment(node: Node | null | undefined): node is Comment {
   return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
-}
-
-function isFrameEndComment(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim() === '/rmx:f'
 }
 
 function isCommentNode(node: Node | null | undefined): node is Comment {
   return node?.nodeType === Node.COMMENT_NODE
-}
-
-function findFrameEndComment(start: Comment): Comment | null {
-  let depth = 1
-  let node: Node | null = start.nextSibling
-
-  while (node) {
-    if (isFrameStartComment(node)) depth++
-    else if (isFrameEndComment(node)) {
-      depth--
-      if (depth === 0) return node
-    }
-    node = node.nextSibling
-  }
-
-  return null
 }
 
 export function renderComponent(
@@ -1839,7 +1539,7 @@ export function remove(
   }
 
   if (node.kind === 'frame') {
-    disposeFrameResources(node)
+    node.type[FRAME_NODE].dispose(node)
     if (domParent) removeDomRange(node._rangeStart, node._rangeEnd, domParent)
     return
   }
