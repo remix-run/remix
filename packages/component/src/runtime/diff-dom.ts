@@ -416,10 +416,7 @@ function diffSiblingUnits(
     let first = getSiblingUnitFirstNode(unit)
     let ref = anchor?.parentNode === parent ? anchor : null
 
-    if (
-      (stable.has(i) || (unit.kind === 'node' && isPreservedDomElement(unit.node))) &&
-      first.parentNode === parent
-    ) {
+    if (stable.has(i)) {
       anchor = first
       continue
     }
@@ -474,6 +471,8 @@ function isDocumentHead(node: ParentNode): boolean {
   return isElement(node) && node === node.ownerDocument.head
 }
 
+// Preserved elements never move, so any other unit can only stay in place if it
+// already sits between the same preserved neighbors it needs to end up between.
 function getStableCommittedIndexes(
   committed: SiblingUnit[],
   currentUnits: SiblingUnit[],
@@ -481,47 +480,44 @@ function getStableCommittedIndexes(
   parent: ParentNode,
 ): Set<number> {
   let stable = new Set<number>()
-  let segmentStart = 0
-  let previousPreservedIndex = -1
-
-  // Preserved elements cannot move, so only keep units stable when they already
-  // lie between the same preserved neighbors in both the current and next order.
-  for (let segmentEnd = 0; segmentEnd <= committed.length; segmentEnd++) {
-    if (segmentEnd < committed.length) {
-      let unit = committed[segmentEnd]
-      if (
-        unit.kind !== 'node' ||
-        !isPreservedDomElement(unit.node) ||
-        unit.node.parentNode !== parent
-      ) {
-        continue
-      }
+  let upperBounds = new Array<number>(committed.length)
+  let upperBound = currentUnits.length
+  for (let i = committed.length - 1; i >= 0; i--) {
+    upperBounds[i] = upperBound
+    let unit = committed[i]
+    if (
+      unit.kind === 'node' &&
+      isPreservedDomElement(unit.node) &&
+      unit.node.parentNode === parent
+    ) {
+      stable.add(i)
+      upperBound = matchIndexForNext[i]
     }
+  }
 
-    let nextPreservedIndex =
-      segmentEnd < committed.length ? matchIndexForNext[segmentEnd] : currentUnits.length
-    let committedIndexes: number[] = []
-    let currentIndexes: number[] = []
-    for (let i = segmentStart; i < segmentEnd; i++) {
-      let matchIndex = matchIndexForNext[i]
-      if (
-        matchIndex <= previousPreservedIndex ||
-        matchIndex >= nextPreservedIndex ||
-        committed[i] !== currentUnits[matchIndex]
-      ) {
-        continue
-      }
-      let first = getSiblingUnitFirstNode(committed[i])
-      if (first.parentNode !== parent) continue
-      committedIndexes.push(i)
-      currentIndexes.push(matchIndex)
+  let committedIndexes: number[] = []
+  let currentIndexes: number[] = []
+  let lowerBound = -1
+  for (let i = 0; i < committed.length; i++) {
+    let matchIndex = matchIndexForNext[i]
+    if (stable.has(i)) {
+      lowerBound = matchIndex
+      continue
     }
+    if (
+      matchIndex <= lowerBound ||
+      matchIndex >= upperBounds[i] ||
+      committed[i] !== currentUnits[matchIndex] ||
+      getSiblingUnitFirstNode(committed[i]).parentNode !== parent
+    ) {
+      continue
+    }
+    committedIndexes.push(i)
+    currentIndexes.push(matchIndex)
+  }
 
-    for (let index of getLongestIncreasingSubsequence(currentIndexes)) {
-      stable.add(committedIndexes[index])
-    }
-    segmentStart = segmentEnd + 1
-    previousPreservedIndex = nextPreservedIndex
+  for (let index of getLongestIncreasingSubsequence(currentIndexes)) {
+    stable.add(committedIndexes[index])
   }
   return stable
 }

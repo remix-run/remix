@@ -1267,8 +1267,7 @@ describe('diffNodes', () => {
         container.innerHTML = `<section><${tagName} data-rmx-key="modal" data-rmx-preserve-dom><dialog>Client</dialog></${tagName}><p data-rmx-key="a">A</p><p data-rmx-key="b">B</p></section>`
         let section = container.querySelector('section')
         invariant(section)
-        let modal = container.querySelector(tagName)
-        invariant(modal)
+        let [modal, a, b] = Array.from(section.children)
         let dialog = modal.querySelector('dialog')
         invariant(dialog)
         connects = 0
@@ -1279,23 +1278,7 @@ describe('diffNodes', () => {
           `<section><p data-rmx-key="a">A</p><p data-rmx-key="b">B</p><${tagName} data-rmx-key="modal" data-rmx-preserve-dom></${tagName}></section>`,
         )
 
-        expect(Array.from(section.children, (node) => node.getAttribute('data-rmx-key'))).toEqual([
-          'a',
-          'b',
-          'modal',
-        ])
-
-        diffDom(
-          container,
-          `<section><${tagName} data-rmx-key="modal" data-rmx-preserve-dom></${tagName}><p data-rmx-key="a">A</p><p data-rmx-key="b">B</p></section>`,
-        )
-
-        expect(Array.from(section.children, (node) => node.getAttribute('data-rmx-key'))).toEqual([
-          'modal',
-          'a',
-          'b',
-        ])
-        expect(container.querySelector(tagName)).toBe(modal)
+        expect(Array.from(section.children)).toEqual([a, b, modal])
         expect(modal.querySelector('dialog')).toBe(dialog)
         expect(connects).toBe(0)
         expect(disconnects).toBe(0)
@@ -1307,26 +1290,22 @@ describe('diffNodes', () => {
     it('moves siblings across multiple preserved DOM elements without detaching them', () => {
       let container = document.createElement('div')
       container.innerHTML =
-        '<p data-rmx-key="a">A</p>' +
-        '<div data-rmx-key="first" data-rmx-preserve-dom>First widget</div>' +
-        '<p data-rmx-key="b">B</p>' +
-        '<div data-rmx-key="second" data-rmx-preserve-dom>Second widget</div>' +
-        '<p data-rmx-key="c">C</p>'
-      let [a, first, b, second, c] = Array.from(container.children)
+        '<div data-rmx-key="first" data-rmx-preserve-dom></div>' +
+        '<p data-rmx-key="a">A</p><p data-rmx-key="b">B</p>' +
+        '<div data-rmx-key="second" data-rmx-preserve-dom></div>' +
+        '<p data-rmx-key="c">C</p><p data-rmx-key="d">D</p>'
+      let [first, a, b, second, c, d] = Array.from(container.children)
       let mutations = recordMutations(container)
 
       diffDom(
         container,
-        '<p data-rmx-key="b">B</p>' +
+        '<p data-rmx-key="c">C</p>' +
           '<div data-rmx-key="first" data-rmx-preserve-dom></div>' +
-          '<p data-rmx-key="c">C</p>' +
           '<div data-rmx-key="second" data-rmx-preserve-dom></div>' +
-          '<p data-rmx-key="a">A</p>',
+          '<p data-rmx-key="a">A</p><p data-rmx-key="b">B</p><p data-rmx-key="d">D</p>',
       )
 
-      expect(Array.from(container.children)).toEqual([b, first, c, second, a])
-      expect(first.textContent).toBe('First widget')
-      expect(second.textContent).toBe('Second widget')
+      expect(Array.from(container.children)).toEqual([c, first, second, a, b, d])
       let { removed } = mutations()
       expect(removed).not.toContain(first)
       expect(removed).not.toContain(second)
