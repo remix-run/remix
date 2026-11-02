@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
-import type { FrameReloadEvent } from '../runtime/frame-reload-event.ts'
+import type { FrameReloadStartEvent } from '../runtime/reload-start-event.ts'
 import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { Frame, getNamedFrame, getTopFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
@@ -453,7 +453,7 @@ describe('run', () => {
 
   it('describes a POST reload on its reloadStart event and resolves finished once it renders', async (t) => {
     let { app } = await setupReloadBodyTest(t)
-    let events: FrameReloadEvent[] = []
+    let events: FrameReloadStartEvent[] = []
     app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
     let body = new FormData()
     body.set('name', 'Ada')
@@ -471,7 +471,7 @@ describe('run', () => {
 
   it('leaves formData null on a GET reload', async (t) => {
     let { app } = await setupReloadBodyTest(t)
-    let events: FrameReloadEvent[] = []
+    let events: FrameReloadStartEvent[] = []
     app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
 
     await app.frames.top.reload({ src: '/search', body: new URLSearchParams({ q: 'Ada' }) })
@@ -483,7 +483,7 @@ describe('run', () => {
 
   it('gives reloadStart the element whose navigation started the reload', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
-    let events: FrameReloadEvent[] = []
+    let events: FrameReloadStartEvent[] = []
     app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
     let button = document.createElement('button')
     let formData = new FormData()
@@ -519,7 +519,7 @@ describe('run', () => {
     t.after(() => app.dispose())
     app.addEventListener('error', () => {})
     await app.ready()
-    let events: FrameReloadEvent[] = []
+    let events: FrameReloadStartEvent[] = []
     app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
 
     await expect(app.frames.top.reload()).rejects.toThrow('500 Internal Server Error')
@@ -542,7 +542,7 @@ describe('run', () => {
     let app = run({ loadModule: mock.fn() })
     t.after(() => app.dispose())
     await app.ready()
-    let events: FrameReloadEvent[] = []
+    let events: FrameReloadStartEvent[] = []
     let completions = 0
     app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
     app.frames.top.addEventListener('reloadComplete', () => completions++)
@@ -569,7 +569,7 @@ describe('run', () => {
     t.mock.method(globalThis, 'fetch', () => response)
     let app = run({ loadModule: mock.fn() })
     await app.ready()
-    let events: FrameReloadEvent[] = []
+    let events: FrameReloadStartEvent[] = []
     app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
 
     void app.frames.top.reload().catch(() => {})
@@ -4106,7 +4106,7 @@ describe('run', () => {
     await app.ready()
     let child = app.frames.get('child')
     invariant(child)
-    let events: FrameReloadEvent[] = []
+    let events: FrameReloadStartEvent[] = []
     child.addEventListener('reloadStart', (event) => events.push(event))
     let button = document.createElement('button')
     let formData = new FormData()
@@ -4151,7 +4151,7 @@ describe('run', () => {
     await app.ready()
     let child = app.frames.get('child')
     invariant(child)
-    let events: FrameReloadEvent[] = []
+    let events: FrameReloadStartEvent[] = []
     let completions = 0
     child.addEventListener('reloadStart', (event) => events.push(event))
     child.addEventListener('reloadComplete', () => completions++)

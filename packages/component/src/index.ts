@@ -4,7 +4,7 @@
 export { run } from './runtime/run.ts'
 export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
 export type { ComponentErrorEvent } from './runtime/component.ts'
-export type { FrameReloadEvent } from './runtime/frame-reload-event.ts'
+export type { FrameReloadStartEvent } from './runtime/reload-start-event.ts'
 
 export { createRoot, createRangeRoot, createScheduler } from './runtime/vdom.ts'
 export type {

@@ -227,19 +227,23 @@ Put the button in the edit action's `public/` directory so the [asset server can
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
 import { clientEntry, ref } from "remix/component";
-import type { FrameReloadEvent, Handle } from "remix/component";
+import type { FrameReloadStartEvent, Handle } from "remix/component";
 
 export const SaveButton = clientEntry(import.meta.url, function SaveButton(handle: Handle) {
   let button: HTMLButtonElement | undefined;
-  let save: FrameReloadEvent | undefined;
+  let save: FrameReloadStartEvent | undefined;
   let failed = false;
 
   handle.frame.addEventListener(
     "reloadStart",
     async (event) => {
-      // Links inside the form reload the frame too.
+      // Other forms and links in this frame reload it too, even links inside the form. Its own
+      // submissions start from the form or one of its submit buttons.
       let form = button?.form;
-      if (!form || (event.sourceElement !== button && event.sourceElement !== form)) return;
+      let source = event.sourceElement;
+      let submitted =
+        source === form || (source != null && "form" in source && source.form === form);
+      if (!form || !submitted) return;
       save = event;
       failed = false;
       handle.update();
