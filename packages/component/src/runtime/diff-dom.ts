@@ -480,20 +480,48 @@ function getStableCommittedIndexes(
   matchIndexForNext: number[],
   parent: ParentNode,
 ): Set<number> {
-  let committedIndexes: number[] = []
-  let currentIndexes: number[] = []
-  for (let i = 0; i < committed.length; i++) {
-    let matchIndex = matchIndexForNext[i]
-    if (matchIndex === -1 || committed[i] !== currentUnits[matchIndex]) continue
-    let first = getSiblingUnitFirstNode(committed[i])
-    if (first.parentNode !== parent) continue
-    committedIndexes.push(i)
-    currentIndexes.push(matchIndex)
-  }
-
   let stable = new Set<number>()
-  for (let index of getLongestIncreasingSubsequence(currentIndexes)) {
-    stable.add(committedIndexes[index])
+  let segmentStart = 0
+  let previousPreservedIndex = -1
+
+  // Preserved elements cannot move, so only keep units stable when they already
+  // lie between the same preserved neighbors in both the current and next order.
+  for (let segmentEnd = 0; segmentEnd <= committed.length; segmentEnd++) {
+    if (segmentEnd < committed.length) {
+      let unit = committed[segmentEnd]
+      if (
+        unit.kind !== 'node' ||
+        !isPreservedDomElement(unit.node) ||
+        unit.node.parentNode !== parent
+      ) {
+        continue
+      }
+    }
+
+    let nextPreservedIndex =
+      segmentEnd < committed.length ? matchIndexForNext[segmentEnd] : currentUnits.length
+    let committedIndexes: number[] = []
+    let currentIndexes: number[] = []
+    for (let i = segmentStart; i < segmentEnd; i++) {
+      let matchIndex = matchIndexForNext[i]
+      if (
+        matchIndex <= previousPreservedIndex ||
+        matchIndex >= nextPreservedIndex ||
+        committed[i] !== currentUnits[matchIndex]
+      ) {
+        continue
+      }
+      let first = getSiblingUnitFirstNode(committed[i])
+      if (first.parentNode !== parent) continue
+      committedIndexes.push(i)
+      currentIndexes.push(matchIndex)
+    }
+
+    for (let index of getLongestIncreasingSubsequence(currentIndexes)) {
+      stable.add(committedIndexes[index])
+    }
+    segmentStart = segmentEnd + 1
+    previousPreservedIndex = nextPreservedIndex
   }
   return stable
 }

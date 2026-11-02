@@ -1264,7 +1264,9 @@ describe('diffNodes', () => {
       document.body.appendChild(container)
 
       try {
-        container.innerHTML = `<section><${tagName} data-rmx-key="modal" data-rmx-preserve-dom><dialog>Client</dialog></${tagName}><p>Old</p></section>`
+        container.innerHTML = `<section><${tagName} data-rmx-key="modal" data-rmx-preserve-dom><dialog>Client</dialog></${tagName}><p data-rmx-key="a">A</p><p data-rmx-key="b">B</p></section>`
+        let section = container.querySelector('section')
+        invariant(section)
         let modal = container.querySelector(tagName)
         invariant(modal)
         let dialog = modal.querySelector('dialog')
@@ -1274,9 +1276,25 @@ describe('diffNodes', () => {
 
         diffDom(
           container,
-          `<section><p>New</p><${tagName} data-rmx-key="modal" data-rmx-preserve-dom></${tagName}></section>`,
+          `<section><p data-rmx-key="a">A</p><p data-rmx-key="b">B</p><${tagName} data-rmx-key="modal" data-rmx-preserve-dom></${tagName}></section>`,
         )
 
+        expect(Array.from(section.children, (node) => node.getAttribute('data-rmx-key'))).toEqual([
+          'a',
+          'b',
+          'modal',
+        ])
+
+        diffDom(
+          container,
+          `<section><${tagName} data-rmx-key="modal" data-rmx-preserve-dom></${tagName}><p data-rmx-key="a">A</p><p data-rmx-key="b">B</p></section>`,
+        )
+
+        expect(Array.from(section.children, (node) => node.getAttribute('data-rmx-key'))).toEqual([
+          'modal',
+          'a',
+          'b',
+        ])
         expect(container.querySelector(tagName)).toBe(modal)
         expect(modal.querySelector('dialog')).toBe(dialog)
         expect(connects).toBe(0)
@@ -1284,6 +1302,56 @@ describe('diffNodes', () => {
       } finally {
         container.remove()
       }
+    })
+
+    it('moves siblings across multiple preserved DOM elements without detaching them', () => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<p data-rmx-key="a">A</p>' +
+        '<div data-rmx-key="first" data-rmx-preserve-dom>First widget</div>' +
+        '<p data-rmx-key="b">B</p>' +
+        '<div data-rmx-key="second" data-rmx-preserve-dom>Second widget</div>' +
+        '<p data-rmx-key="c">C</p>'
+      let [a, first, b, second, c] = Array.from(container.children)
+      let mutations = recordMutations(container)
+
+      diffDom(
+        container,
+        '<p data-rmx-key="b">B</p>' +
+          '<div data-rmx-key="first" data-rmx-preserve-dom></div>' +
+          '<p data-rmx-key="c">C</p>' +
+          '<div data-rmx-key="second" data-rmx-preserve-dom></div>' +
+          '<p data-rmx-key="a">A</p>',
+      )
+
+      expect(Array.from(container.children)).toEqual([b, first, c, second, a])
+      expect(first.textContent).toBe('First widget')
+      expect(second.textContent).toBe('Second widget')
+      let { removed } = mutations()
+      expect(removed).not.toContain(first)
+      expect(removed).not.toContain(second)
+    })
+
+    it('minimizes sibling moves between preserved DOM elements', () => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<div data-rmx-key="first" data-rmx-preserve-dom></div>' +
+        '<p data-rmx-key="a">A</p><p data-rmx-key="b">B</p>' +
+        '<p data-rmx-key="c">C</p><p data-rmx-key="d">D</p>' +
+        '<div data-rmx-key="last" data-rmx-preserve-dom></div>'
+      let [first, a, b, c, d, last] = Array.from(container.children)
+      let mutations = recordMutations(container)
+
+      diffDom(
+        container,
+        '<div data-rmx-key="first" data-rmx-preserve-dom></div>' +
+          '<p data-rmx-key="d">D</p><p data-rmx-key="a">A</p>' +
+          '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>' +
+          '<div data-rmx-key="last" data-rmx-preserve-dom></div>',
+      )
+
+      expect(Array.from(container.children)).toEqual([first, d, a, b, c, last])
+      expect(mutations().removed).toEqual([d])
     })
 
     it('preserves current select value when incoming html changes selected options', () => {
