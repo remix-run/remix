@@ -10,6 +10,7 @@ import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/middleware/session'
 import { staticFiles } from 'remix/middleware/static'
 
+import apiController from './actions/api/controller.tsx'
 import accountController from './actions/account/controller.tsx'
 import accountOrdersController from './actions/account/orders/controller.tsx'
 import accountSettingsController from './actions/account/settings/controller.tsx'
@@ -89,6 +90,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
 
   router.map(routes, rootController)
   router.map(routes.fragments, fragmentsController)
+  router.map(routes.api, apiController)
 
   router.map(routes.contact, contactController)
 
