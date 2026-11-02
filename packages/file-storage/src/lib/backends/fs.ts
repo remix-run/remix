@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
-import * as fsp from 'node:fs/promises'
+import fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { openLazyFile, writeFile } from '@remix-run/fs'
+import { openLazyFile } from '@remix-run/fs'
 import type { LazyFile } from '@remix-run/lazy-file'
 
 import type {
@@ -17,6 +17,17 @@ import type {
  *
  * Important: No attempt is made to avoid overwriting existing files, so the directory used should
  * be a new directory solely dedicated to this storage object.
+ *
+ * Writes stage complete content and metadata before replacing their existing files with two
+ * atomic renames. Upload failures during staging preserve the previous entry. If the content
+ * rename succeeds but the metadata rename fails, or the process stops between them, new content
+ * remains with old metadata (or no metadata for a new key). A rejected write may have changed
+ * the content. The storage format remains compatible with older versions.
+ *
+ * Requires a filesystem that supports atomic rename and permission to create, rename, and remove
+ * files in the storage directory. Existing POSIX mode bits are preserved; ownership and ACLs
+ * follow the filesystem's rules for newly created files. Callers must coordinate overlapping
+ * operations, including consumption of returned lazy files. Power-loss durability is not guaranteed.
  *
  * Note: Keys have no correlation to file names on disk, so they may be any string including
  * characters that are not valid in file names. Additionally, individual `File` names have no
@@ -62,21 +73,52 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
   ): Promise<{ filePath: string; meta: FileMetadata }> {
     let { directory, filePath, metaPath } = await getPaths(key)
 
-    // Ensure directory exists
     await fsp.mkdir(directory, { recursive: true })
 
-    await writeFile(filePath, file)
+    let metaMode = await readFileMode(metaPath)
+    let dataMode = (await readFileMode(filePath)) ?? metaMode
+    let tempDir = await fsp.mkdtemp(path.join(directory, '.upload-'))
+    let tempDataPath = path.join(tempDir, 'data')
+    let tempMetaPath = path.join(tempDir, 'metadata')
 
-    let meta: FileMetadata = {
-      key,
-      lastModified: file.lastModified,
-      name: file.name,
-      size: file.size,
-      type: file.type,
+    try {
+      let dataHandle = await fsp.open(tempDataPath, 'wx', dataMode)
+      let meta: FileMetadata
+      try {
+        // Preserve the previous mode even when the process umask has changed.
+        if (dataMode !== undefined) await dataHandle.chmod(dataMode)
+        for await (let chunk of file.stream()) {
+          await dataHandle.writeFile(chunk)
+        }
+        // Streaming uploads may not expose their metadata until their content has been consumed.
+        meta = {
+          key,
+          lastModified: file.lastModified,
+          name: file.name,
+          size: (await dataHandle.stat()).size,
+          type: file.type,
+        }
+      } finally {
+        await dataHandle.close()
+      }
+
+      let metaHandle = await fsp.open(tempMetaPath, 'wx', metaMode)
+      try {
+        if (metaMode !== undefined) await metaHandle.chmod(metaMode)
+        await metaHandle.writeFile(JSON.stringify(meta))
+      } finally {
+        await metaHandle.close()
+      }
+
+      // Both files are complete before publication, but the two renames are not a transaction.
+      await fsp.rename(tempDataPath, filePath)
+      await fsp.rename(tempMetaPath, metaPath)
+
+      return { filePath, meta }
+    } finally {
+      // Cleanup must not mask a write error or turn a successful publication into a failure.
+      await fsp.rm(tempDir, { recursive: true, force: true }).catch(() => {})
     }
-    await fsp.writeFile(metaPath, JSON.stringify(meta))
-
-    return { filePath, meta }
   }
 
   return {
@@ -183,6 +225,15 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
     async set(key: string, file: FileLike): Promise<void> {
       await putFile(key, file)
     },
+  }
+}
+
+async function readFileMode(filePath: string): Promise<number | undefined> {
+  try {
+    return (await fsp.stat(filePath)).mode & 0o777
+  } catch (error) {
+    if (isNoEntityError(error)) return undefined
+    throw error
   }
 }
 

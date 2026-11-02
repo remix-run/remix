@@ -46,61 +46,23 @@ if (fileFromStorage != null) {
 await storage.remove(key)
 ```
 
-The stable filesystem backend writes directly to the content file. A failed replacement can leave the previous content partially overwritten. Use the [future API](#future-api) when a failed replacement must preserve the previous file.
+### Replacement Writes
 
-## Future API
+`set()` and `put()` write complete content and metadata to temporary files before replacing the stored content file and then the metadata file with two atomic renames. An upload stream error, size-limit rejection, or other failure during staging leaves the previous entry untouched. Temporary files are removed on a best-effort basis; a stopped process or failed cleanup can leave `.upload-*` directories inside the storage subdirectories. Storage ignores these directories. Remove them only while all operations are stopped.
 
-**Future APIs are not stable.** The `remix/file-storage/fs/future` entrypoint may change in any release, but it is a good indication of where this package will land in its next major release. The stable `remix/file-storage/fs` entrypoint keeps its existing behavior and storage format.
+The two renames are not a transaction. There is a small window after the content rename and before the metadata rename where a reader can see complete new content with old metadata. If the second rename fails or the process stops in that window, this mismatch remains, and a rejected write may already have changed the content. The old filename, MIME type, and modification time can be returned with the new bytes; metadata listings can also report the old size, while `get()` obtains the size from the content file. For a new key, the content remains unpublished: `get()` returns `null`, `has()` returns `false`, and listings omit it. A successful retry with a fresh upload replaces both files; the original upload stream may already have been consumed.
 
-### Atomic Writes
+The storage key still determines the `<hash>.dat` and `<hash>.meta.json` paths, and the metadata format is unchanged. Existing entries need no migration, and entries written by this version remain readable and writable by older versions. Rolling back does not repair an interrupted publication.
 
-The future backend always writes atomically. For example, an avatar upload usually reuses a key for each user:
+### Filesystem Requirements
 
-```ts
-import { createFsFileStorage } from 'remix/file-storage/fs/future'
+Use a filesystem that supports atomic rename on the same filesystem. The process needs permission to create, rename, and remove files in each storage subdirectory, even when replacing an existing entry. Unlike direct overwrites, replacement cannot work with only write access to existing files in a directory that disallows creating or replacing files. Writes do not need to read existing metadata.
 
-let avatarStorage = createFsFileStorage('./uploads/user-avatars')
-
-async function saveAvatar(userId: string, avatar: File) {
-  await avatarStorage.set(`user-${userId}-avatar`, avatar)
-}
-```
-
-Both `set()` and `put()` stream content to a new versioned `.dat` file, then atomically replace the `.meta.json` file to point to it. Failures before publication leave the previous entry intact. This requires a filesystem that supports atomic rename within a directory; it does not guarantee persistence across power loss.
-
-The process needs read and write access to both content and metadata files, and permission to create, rename, and remove files in the storage directory. Atomic replacements preserve existing POSIX content and metadata permission modes.
-
-Atomic replacements create new content and metadata files. They preserve POSIX permission mode bits but do not copy the previous files’ owner, group, or ACLs. Ownership and inherited permissions follow the filesystem’s rules for newly created files. If your deployment relies on custom ownership or ACLs, verify that newly created files grant access to the intended users and groups before adopting this backend.
-
-If every upload uses a fresh key, you can also preserve the previous file by updating your application's reference only after the new upload succeeds, then removing the old entry.
-
-### Upgrading Existing Storage
-
-The future backend reads both legacy and versioned entries. Reading or listing an entry never migrates it. New entries use the versioned format, and legacy entries migrate when successfully replaced. No bulk migration is required.
-
-To adopt it for an existing directory:
-
-1. Stop all processes and readers accessing the directory through the stable backend.
-2. Switch every instance that accesses the directory to the future import, ensure the required permissions, then resume operations.
-
-```diff
--import { createFsFileStorage } from 'remix/file-storage/fs'
-+import { createFsFileStorage } from 'remix/file-storage/fs/future'
-
- let storage = createFsFileStorage('./uploads')
-```
-
-Stable and future backends must not share the directory once future writes start. The stable backend cannot read versioned entries, even in this release. Switching the import back does not undo migration; rollback requires restoring a backup or converting versioned entries back to the legacy format while all operations are stopped.
+Replacements preserve existing POSIX permission mode bits, but create new files. Owner, group, and ACLs follow the filesystem's rules for newly created files rather than being copied from the previous files. Ensure newly created files grant access to the intended users and groups. Atomic rename does not guarantee persistence across power loss.
 
 ### Coordinating Operations
 
-Callers are responsible for coordinating overlapping reads, writes, removals, and listings across all instances and processes sharing the directory. The returned `LazyFile` reads content on demand, so coordination must cover consuming the file or finishing/canceling its stream, not just the `get()` or `put()` call. Replacing or removing a key can delete content referenced by an earlier `LazyFile`.
-
-Atomic writes do not provide locking or coordinate concurrent requests.
-
-### Cleanup
-
-Failed atomic writes attempt to remove unpublished files. After a successful atomic replacement, deleting the previous content is best-effort and cannot cause the write to report failure. An interrupted process or failed cleanup can leave temporary metadata or unreferenced `.dat` files, which storage ignores. Reclaim these only while all operations and readers using the directory are stopped, preserving content referenced by current metadata (including the matching `<hash>.dat` for legacy metadata without a content pointer).
+Callers must coordinate overlapping reads, writes, removals, and listings across all instances and processes sharing the directory, including older versions. Coordination must cover consuming returned lazy files or finishing/canceling their streams, not just awaiting `get()` or `put()`. This backend does not provide locking or snapshot reads.
 
 ## Related Packages
 

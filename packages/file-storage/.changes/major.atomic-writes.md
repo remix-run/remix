@@ -1,0 +1,7 @@
+Replacement requires permission to create, rename, and remove files in the storage subdirectories; write access to existing files alone is no longer sufficient. Existing POSIX mode bits are preserved, but owner, group, and ACLs follow the filesystem's rules for newly created files. Configure directory permissions and inherited ownership/ACLs so the process can replace files and intended readers retain access.
+
+Filesystem storage now stages complete uploads and metadata before replacing the existing content and metadata files with two atomic renames. Upload-stream failures and size-limit rejections during staging preserve the previous entry. The existing `createFsFileStorage()` import and signature, filenames, and metadata schema are unchanged, so stored entries remain compatible with older versions without migration.
+
+The two renames are not a transaction. If the content rename succeeds but the metadata rename fails, or the process stops between them, complete new content remains with old metadata. Filename, MIME type, modification time, and listed size can be stale; `get()` reads the new content size from the filesystem. A new key remains unpublished without its metadata. A rejected write may therefore have changed content. Retry with a fresh upload to replace both files.
+
+Callers must coordinate overlapping operations, including consumption of returned lazy files. Temporary cleanup is best-effort and power-loss durability is not guaranteed.
