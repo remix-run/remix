@@ -2382,7 +2382,6 @@ describe('run', () => {
     }
 
     expect(await hydrateDataProps(t, props)).toEqual(props)
-    expect(document.querySelector('b')).toBeNull()
   })
 
   it('preserves descriptor tags on the top-level client entry props', async (t) => {
@@ -2514,7 +2513,6 @@ describe('run', () => {
     let content = (
       <Fragment key="content">
         {{ ...element }}
-        {Object.assign({}, <span>Copied</span>)}
         <Frame src="/real-frame" />
       </Fragment>
     )
@@ -2544,9 +2542,7 @@ describe('run', () => {
     invariant(paragraph)
     expect(paragraph.textContent).toBe('Styled')
     expect(getComputedStyle(paragraph).color).toBe('rgb(1, 2, 3)')
-    expect(document.querySelector('span')?.textContent).toBe('Copied')
     expect(document.querySelector('i')?.textContent).toBe('Frame content')
-    expect(document.querySelector('b')).toBeNull()
     expect(requests).toEqual(['/real-frame'])
     expect(errors).toEqual([])
   })

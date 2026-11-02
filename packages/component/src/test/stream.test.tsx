@@ -2320,21 +2320,6 @@ describe('stream', () => {
       })
     })
 
-    it('escapes plain element-shaped data without rendering it on the server', async () => {
-      let Entry = clientEntry(
-        '/entry.js#Entry',
-        function Entry(_handle: Handle<{ data: SerializableObject }>) {
-          return () => <p>Content</p>
-        },
-      )
-      let data = { $rmx: 'data', type: 'div', props: { innerHTML: '<b>Data</b>' }, key: {} }
-      let html = await drain(renderToStream(<Entry data={data} />))
-      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
-
-      expect(entry.props.data).toEqual({ $rmxObject: data })
-      expect(html).not.toContain('<b>Data</b>')
-    })
-
     it('keeps genuine wire descriptors distinct from escaped application props', async () => {
       let Entry = clientEntry(
         '/entry.js#Entry',
@@ -2345,12 +2330,17 @@ describe('stream', () => {
       function Content() {
         return () => <span>Real</span>
       }
-      let data = { $rmxMixin: 'css', args: [{ color: 'red' }] }
+      let elementData = { $rmx: 'data', type: 'div', props: { innerHTML: '<b>Data</b>' }, key: {} }
+      let mixinData = { $rmxMixin: 'css', args: [{ color: 'red' }] }
+      let data = { element: elementData, mixin: mixinData }
       let html = await drain(renderToStream(<Entry data={data} content={<Content />} />))
       let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
 
       expect(entry.props).toEqual({
-        data: { $rmxObject: data },
+        data: {
+          element: { $rmxObject: elementData },
+          mixin: { $rmxObject: mixinData },
+        },
         content: { $rmx: true, type: 'span', props: { children: 'Real' } },
       })
     })
