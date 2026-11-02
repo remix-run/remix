@@ -510,7 +510,7 @@ describe('run', () => {
       method: 'post',
       encType: 'application/x-www-form-urlencoded',
       sourceElement: button,
-      submitted: true,
+      form,
     })
 
     expect(order).toEqual(['reloadStart', 'button', 'form'])
@@ -576,13 +576,101 @@ describe('run', () => {
     await reloadFrameForNavigation(app.frames.top, {
       method: 'get',
       sourceElement: form,
-      submitted: true,
+      form,
     }).finished
 
     expect(events).toHaveLength(1)
     expect(events[0]!.sourceElement).toBe(form)
     expect(events[0]!.formData).toBeNull()
     await events[0]!.finished
+  })
+
+  it('notifies the owning form when its submit button is inside another form', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let form = document.createElement('form')
+    form.id = 'external-submit-form'
+    form.method = 'post'
+    let otherForm = document.createElement('form')
+    let button = document.createElement('button')
+    button.setAttribute('form', form.id)
+    otherForm.append(button)
+    document.body.append(form, otherForm)
+    let order: string[] = []
+    let events: FormSubmitStartEvent[] = []
+    button.addEventListener('rmx:form-submit-start', (event) => {
+      order.push('button')
+      events.push(event)
+    })
+    form.addEventListener('rmx:form-submit-start', (event) => {
+      order.push('form')
+      events.push(event)
+    })
+    otherForm.addEventListener('rmx:form-submit-start', () => order.push('other form'))
+    window.addEventListener('rmx:form-submit-start', () => order.push('window'), {
+      signal: t.signal,
+    })
+    let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
+    app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
+
+    form.requestSubmit(button)
+    let reload = await reloaded.promise
+    await reload.finished
+
+    expect(order).toEqual(['button', 'form', 'window'])
+    expect(events).toHaveLength(2)
+    expect(events[0]?.target).toBe(button)
+    expect(events[0]?.bubbles).toBe(false)
+    expect(events[1]?.target).toBe(form)
+    expect(events[1]?.sourceElement).toBe(button)
+    expect(events[1]?.finished).toBe(reload.finished)
+    expect(events[0]?.finished).toBe(reload.finished)
+  })
+
+  it('notifies the owning form after a GET submitter is detached and history is replaced', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let form = document.createElement('form')
+    form.setAttribute('data-rmx-history', 'replace')
+    let button = document.createElement('button')
+    form.append(button)
+    document.body.append(form)
+    form.addEventListener('submit', () => button.remove())
+    let events: FormSubmitStartEvent[] = []
+    form.addEventListener('rmx:form-submit-start', (event) => events.push(event))
+    let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
+    app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
+
+    form.requestSubmit(button)
+    let reload = await reloaded.promise
+    await reload.finished
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.sourceElement).toBe(button)
+    expect(events[0]?.formData).toBeNull()
+    expect(events[0]?.finished).toBe(reload.finished)
+  })
+
+  it('notifies the owning form after a POST submitter is detached', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let form = document.createElement('form')
+    form.method = 'post'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    form.append(button)
+    document.body.append(form)
+    form.addEventListener('submit', () => button.remove())
+    let events: FormSubmitStartEvent[] = []
+    form.addEventListener('rmx:form-submit-start', (event) => events.push(event))
+    let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
+    app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
+
+    form.requestSubmit(button)
+    let reload = await reloaded.promise
+    await reload.finished
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.sourceElement).toBe(button)
+    expect(events[0]?.finished).toBe(reload.finished)
   })
 
   it('dispatches rmx:form-submit-start only for reloads a form submission started', async (t) => {
@@ -598,8 +686,6 @@ describe('run', () => {
     window.addEventListener('rmx:form-submit-start', (event) => events.push(event), listeners)
 
     await reloadFrameForNavigation(app.frames.top, { sourceElement: link }).finished
-    await reloadFrameForNavigation(app.frames.top, { sourceElement: link, submitted: false })
-      .finished
     await app.frames.top.reload({ method: 'post', body: new FormData(form) })
 
     expect(events).toHaveLength(0)
@@ -630,7 +716,7 @@ describe('run', () => {
       formData: new FormData(form),
       method: 'post',
       sourceElement: form,
-      submitted: true,
+      form,
     })
 
     expect(events).toHaveLength(1)
@@ -671,6 +757,8 @@ describe('run', () => {
     root.flush()
     let button = container.querySelector('button')
     invariant(button)
+    let form = button.form
+    invariant(form)
     function submit(value: string) {
       let formData = new FormData()
       formData.set('value', value)
@@ -678,7 +766,7 @@ describe('run', () => {
         formData,
         method: 'post',
         sourceElement: button!,
-        submitted: true,
+        form,
       })
     }
 

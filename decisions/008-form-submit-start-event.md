@@ -42,6 +42,8 @@ Remix already has both halves of the answer:
 
 Dispatching on the submitter and bubbling to the form means a submit button hears only its own submissions, including implicit ones, whose submitter is the form's [default button](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#implicit-submission). The form hears all of its own submissions, including `requestSubmit()` and `form.submit()` without a submitter. Links never dispatch it, so a link inside the form can't be mistaken for a submission.
 
+An external submitter associated through its `form` attribute, or a submitter removed during submission, has no DOM event path through its owning form. The navigation resolver retains that form. The submitter receives a non-bubbling event, then the form receives a separate bubbling event with the same `sourceElement` and `finished`. This keeps bubbling listeners on shared ancestors from receiving the submission twice. Capture listeners on shared ancestors can receive both events.
+
 ## Naming
 
 The name follows the conventions the event sits between:

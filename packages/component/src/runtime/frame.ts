@@ -155,8 +155,8 @@ type InternalFrameContent = FrameContent | DocumentFragment
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
   /** The link, form or submit button whose navigation started the reload. */
   sourceElement?: Element
-  /** Whether `sourceElement` submitted a form: it's the form, or the button that submitted it. */
-  submitted?: boolean
+  /** The owning form for a submission, even when its submitter has been detached. */
+  form?: HTMLFormElement
 }
 
 // The navigation that started a reload, which frames it reloads inside this one inherit.
@@ -861,10 +861,23 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let finished = dispatchReloadStart(origin, controller.signal)
     startSubFrameInheritedReloads(getContentNodes(), controller.signal, origin)
     // A `reloadStart` listener can start a newer reload, which this submission no longer leads to.
-    if (options?.submitted && origin.sourceElement && !controller.signal.aborted) {
+    let form = options?.form
+    if (form && origin.sourceElement && !controller.signal.aborted) {
+      let bubbles = form.contains(origin.sourceElement)
       origin.sourceElement.dispatchEvent(
-        createFormSubmitStartEvent({ ...origin, sourceElement: origin.sourceElement, finished }),
+        createFormSubmitStartEvent({
+          ...origin,
+          sourceElement: origin.sourceElement,
+          finished,
+          bubbles,
+        }),
       )
+      // External or detached submitters have no event path through their owning form.
+      if (!bubbles && !controller.signal.aborted) {
+        form.dispatchEvent(
+          createFormSubmitStartEvent({ ...origin, sourceElement: origin.sourceElement, finished }),
+        )
+      }
     }
     return controller
   }
@@ -934,7 +947,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let failure: ReloadFailure | undefined
     try {
       // The source is for the reload's events; resolvers get the options they document.
-      let { sourceElement: _, submitted: __, ...resolveOptions } = options ?? {}
+      let { sourceElement: _, form: __, ...resolveOptions } = options ?? {}
       let resolution = await init.resolveFrame(frame.src, {
         ...resolveOptions,
         signal: controller.signal,

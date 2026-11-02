@@ -16,10 +16,10 @@ type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
 
-// The link, form or submit button whose navigation this is, and whether it submitted a form.
+// The element whose navigation this is, and the owning form for a submission.
 type NavigationSource = {
   element: Element
-  submitted: boolean
+  form?: HTMLFormElement
 }
 
 type RuntimeNavigation = {
@@ -307,7 +307,7 @@ export function startNavigationListenerImpl(
         let reload = options.reloadFrame(frame, {
           ...submission,
           sourceElement: source?.element,
-          submitted: source?.submitted,
+          form: source?.form,
           signal: event.signal,
         })
         await reload.committed
@@ -708,7 +708,7 @@ function getSourceElementNavigation(
         resetFocus: normalizeResetBehavior(linkElement.getAttribute('data-rmx-reset-focus')),
         $rmx: true,
       },
-      source: { element: sourceElement, submitted: false },
+      source: { element: sourceElement },
       replaceHistory: getReplaceHistory(linkElement.getAttribute('data-rmx-history'), false),
     }
   }
@@ -728,7 +728,7 @@ function getSourceElementNavigation(
       resetFocus: normalizeResetBehavior(formNavigation.getAttribute('data-rmx-reset-focus')),
       $rmx: true,
     },
-    source: { element: sourceElement, submitted: true },
+    source: { element: sourceElement, form: formNavigation.form },
     replaceHistory: getReplaceHistory(
       formNavigation.getAttribute('data-rmx-history'),
       replaceHistoryByDefault,

@@ -1205,6 +1205,8 @@ A newer reload replaces the one in progress without a `reloadComplete` for it, s
 
 When a form submission reloads a frame, the submit button receives an `rmx:form-submit-start` event after the frame's `reloadStart`, or the form does when no button submitted it. The event bubbles, so listen on a button for its own submissions, or on the form for all of them. It's a `FormSubmitStartEvent`, with the same `formData` and `finished` as the reload's `reloadStart`, and the button or form as its `sourceElement`.
 
+If the submit button is outside its owning form, or was removed during submission, it receives a non-bubbling event and the form receives a separate bubbling event. Both carry the same `sourceElement` and `finished`. Bubbling listeners on ancestors receive the form's event once; capture listeners on shared ancestors can receive both events.
+
 - GET and non-GET submissions dispatch it, and `formData` is `null` for GET, as on `NavigateEvent`.
 - Links, `frame.reload()`, and forms that load a new document, such as those marked `data-rmx-document`, don't dispatch it.
 - The signal `on()` passes is aborted when the same element receives its next submission or is removed. When the submission removes what it submitted, such as a list item, listen on an ancestor that stays, such as the list: a removed form's handler would see its signal aborted and stop following the submission. Any other newer reload of the frame, such as a link's, rejects `finished` with an `AbortError`.

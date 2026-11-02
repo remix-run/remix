@@ -28,6 +28,8 @@ export interface FormSubmission {
 
 /** Metadata and deferred submission data for an intercepted form navigation. */
 export interface FormNavigation {
+  /** The owning form captured before its submitter can be detached. */
+  form: HTMLFormElement
   /** Checks the submitter before the form for a submission attribute. */
   hasAttribute(name: string): boolean
   /** Reads a submission attribute, preferring the submitter-specific name when provided. */
@@ -128,6 +130,7 @@ export function createFormNavigationResolver(
       }
     }
     return {
+      form,
       hasAttribute(name) {
         return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
       },

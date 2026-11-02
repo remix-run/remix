@@ -1,6 +1,7 @@
 /**
  * Event dispatched on a submit button, or on its form when no button submitted it, when the form's
- * submission starts a frame reload. It bubbles, so the form and its ancestors receive it too.
+ * submission starts a frame reload. It bubbles through the owning form. A submitter outside the
+ * form receives a non-bubbling event, followed by a separate bubbling event on the form.
  */
 export type FormSubmitStartEvent = Event & {
   /** Submitted form entries for a non-GET submission. `null` for a GET submission, as on `NavigateEvent`. */
@@ -23,16 +24,17 @@ export type FormSubmitStartEventInit = {
   formData?: FormData
   sourceElement: Element
   finished: Promise<void>
+  bubbles?: boolean
 }
 
 /**
  * Creates a `rmx:form-submit-start` event.
  *
  * @param init The submission and its reload's outcome.
- * @returns A bubbling `rmx:form-submit-start` event carrying the submission's details.
+ * @returns A `rmx:form-submit-start` event carrying the submission's details.
  */
 export function createFormSubmitStartEvent(init: FormSubmitStartEventInit): FormSubmitStartEvent {
-  return Object.assign(new Event('rmx:form-submit-start', { bubbles: true }), {
+  return Object.assign(new Event('rmx:form-submit-start', { bubbles: init.bubbles ?? true }), {
     formData: init.formData ?? null,
     sourceElement: init.sourceElement,
     finished: init.finished,
