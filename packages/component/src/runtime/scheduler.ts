@@ -1,7 +1,7 @@
 import { createDocumentState } from './document-state.ts'
 import type { CommittedComponentNode, VNodeParent } from './reconcile.ts'
+import { createComponentErrorEvent } from './component.ts'
 import {
-  createComponentErrorEvent,
   defaultStyleManager,
   findNextSiblingDomAnchor,
   isCommittedComponentNode,

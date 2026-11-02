@@ -3,7 +3,7 @@
 // -- Roots --
 export { run } from './runtime/run.ts'
 export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
-export type { ComponentErrorEvent } from './runtime/reconcile.ts'
+export type { ComponentErrorEvent } from './runtime/component.ts'
 
 export { createRoot, createRangeRoot, createScheduler } from './runtime/vdom.ts'
 export type {

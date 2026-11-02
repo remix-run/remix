@@ -2,11 +2,12 @@ import { jsx } from './core/vnode.ts'
 import {
   Fragment,
   Frame,
+  createComponentErrorEvent,
   createFrameHandle,
+  getComponentError,
   type FrameContent,
   type FrameResolution,
 } from './component.ts'
-import { createComponentErrorEvent, getComponentError } from './reconcile.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'

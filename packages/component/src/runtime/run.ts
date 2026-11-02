@@ -1,13 +1,11 @@
 import { createFrame, NamedFrameRegistry, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
-import type { FrameHandle, Handle } from './component.ts'
-import { createComponentErrorEvent } from './reconcile.ts'
-import type { ComponentErrorEvent } from './reconcile.ts'
+import type { ComponentErrorEvent, FrameHandle, Handle } from './component.ts'
 import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
 import { startNavigationListener } from './navigation.ts'
 import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
-import { TypedEventTarget } from './component.ts'
+import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 
 /**
