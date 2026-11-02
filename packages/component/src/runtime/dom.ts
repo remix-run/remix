@@ -1793,8 +1793,11 @@ export interface PartialAnchorHTMLProps<
   'data-rmx-target'?: Trackable<string | undefined>
   /** The `data-rmx-src` HTML attribute. */
   'data-rmx-src'?: Trackable<string | undefined>
-  /** Controls how activating this anchor updates the current history entry. */
-  'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
+  /**
+   * Controls how activating this anchor updates the current history entry. `none` loads the
+   * `data-rmx-target` frame in place, without changing the URL or history.
+   */
+  'data-rmx-history'?: Trackable<'push' | 'replace' | 'none' | undefined>
   /** Prefetches on hover, focus, or press (`intent`), or when the anchor enters the viewport. */
   'data-rmx-prefetch'?: Trackable<'intent' | 'viewport' | undefined>
   /** Scroll behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
@@ -2310,8 +2313,11 @@ export interface FormHTMLProps<
   'data-rmx-target'?: Trackable<string | undefined>
   /** The `data-rmx-src` HTML attribute. */
   'data-rmx-src'?: Trackable<string | undefined>
-  /** Overrides how submitting this form updates the current history entry. */
-  'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
+  /**
+   * Overrides how submitting this form updates the current history entry. `none` loads the
+   * `data-rmx-target` frame in place, without changing the URL or history.
+   */
+  'data-rmx-history'?: Trackable<'push' | 'replace' | 'none' | undefined>
   /** Scroll behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
   'data-rmx-reset-scroll'?: Trackable<NavigationInterceptOptions['scroll'] | 'true' | 'false'>
   /** Focus reset behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
