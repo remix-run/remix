@@ -114,7 +114,8 @@ data it needs as props, or connect them through an ordinary TypeScript module, a
 Client-entry props cross from the server to the browser, so they must be serializable. They may
 contain strings, numbers, booleans, `null`, `undefined`, plain objects and arrays, and JSX elements.
 Do not pass functions, class instances, database records with custom prototypes, or other opaque
-runtime values.
+runtime values. Elements in props may use `css()`, but not other mixins such as `on()`, `ref()`, or
+custom mixins from `createMixin()`. Render elements that need those inside the client entry.
 
 Mark a boundary around interactive UI, not an entire page by habit. Static ancestors and siblings do
 not need to hydrate just because a button below them does. Keep the database, authenticated user,
