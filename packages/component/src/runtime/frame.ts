@@ -754,10 +754,23 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let finished = dispatchReloadStart(origin, controller.signal)
     startSubFrameInheritedReloads(getContentNodes(), controller.signal, origin)
     // A `reloadStart` listener can start a newer reload, which this submission no longer leads to.
-    if (options?.submitted && origin.sourceElement && !controller.signal.aborted) {
+    let form = options?.form
+    if (form && origin.sourceElement && !controller.signal.aborted) {
+      let bubbles = form.contains(origin.sourceElement)
       origin.sourceElement.dispatchEvent(
-        createFormSubmitStartEvent({ ...origin, sourceElement: origin.sourceElement, finished }),
+        createFormSubmitStartEvent({
+          ...origin,
+          sourceElement: origin.sourceElement,
+          finished,
+          bubbles,
+        }),
       )
+      // External or detached submitters have no event path through their owning form.
+      if (!bubbles && !controller.signal.aborted) {
+        form.dispatchEvent(
+          createFormSubmitStartEvent({ ...origin, sourceElement: origin.sourceElement, finished }),
+        )
+      }
     }
     return controller
   }
@@ -817,7 +830,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let failure: ReloadFailure | undefined
     try {
       // The source is for the reload's events; resolvers get the options they document.
-      let { sourceElement: _, submitted: __, ...resolveOptions } = options ?? {}
+      let { sourceElement: _, form: __, ...resolveOptions } = options ?? {}
       let resolution = await init.resolveFrame(frame.src, {
         ...resolveOptions,
         signal: controller.signal,
@@ -920,7 +933,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     frame.dispatchEvent(new Event('reloadComplete'))
   }
 
-  function startSubFrameInheritedReloads(nodes: Node[], signal?: AbortSignal, origin?: ReloadOrigin): void {
+  function startSubFrameInheritedReloads(
+    nodes: Node[],
+    signal?: AbortSignal,
+    origin?: ReloadOrigin,
+  ): void {
     walkNodes(
       nodes,
       (node) => {
