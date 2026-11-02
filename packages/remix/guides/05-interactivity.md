@@ -1018,12 +1018,15 @@ Choose the synchronization boundary that matches the UI:
 
 - Submit the existing form normally when a document navigation is the right result.
 - Intercept it with `fetch()` when the page needs pending or inline error UI before navigating.
+- Target a named frame with `data-rmx-history="none"` when the response renders one region and the
+  URL should stay the same.
 - Send JSON when a browser-side model owns the data and no server-rendered region needs to change.
 - Poll a small JSON endpoint when data changes independently of the current page.
 
 A mutation can also
-[reload one route-owned frame](/streaming-ui-with-frames/#coordinating-forms-fetches-frame-reloads-and-navigation)
-without navigating the whole document.
+[update one region without navigating](/streaming-ui-with-frames/#update-a-region-without-navigating),
+or [reload a separate route-owned frame](/streaming-ui-with-frames/#coordinating-forms-fetches-frame-reloads-and-navigation)
+after it succeeds.
 
 ## Pending and optimistic UI {#optimistic-ui}
 
@@ -1087,6 +1090,10 @@ export const FavoriteForm = clientEntry(
   },
 );
 ```
+
+Without a target, the submission reloads the whole page in place. When the form renders inside a
+named frame, add `data-rmx-target` with that frame's name and `data-rmx-history="none"` so only the
+frame reloads and the URL stays put. The event and its `finished` promise work the same way.
 
 Optimistic state works best for reversible, predictable changes such as toggles, reordering, and
 adding a known item. Wait for the response when the server chooses the final value, performs a

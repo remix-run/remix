@@ -4103,6 +4103,101 @@ describe('run', () => {
     ])
   })
 
+  it('loads the target frame in place for navigate() with history none', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let initialUrl = window.location.href
+    let entryCount = window.navigation.entries().length
+    let destinationUrl = new URL('/destination', initialUrl).href
+
+    await navigate(destinationUrl, { target: 'target', history: 'none' })
+
+    let frames = fixture.frames()
+    expect(window.location.href).toBe(initialUrl)
+    expect(window.navigation.entries()).toHaveLength(entryCount)
+    expect(frames.top.src).toBe(initialUrl)
+    expect(frames.target.src).toBe(destinationUrl)
+    expect(fixture.requests).toEqual([{ src: destinationUrl, target: 'target' }])
+    expect(document.getElementById('frame-content')?.textContent).toBe('Targeted frame')
+  })
+
+  it('loads a link’s target frame in place with data-rmx-history="none"', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let initialUrl = window.location.href
+    let entryCount = window.navigation.entries().length
+    let link = document.createElement('a')
+    link.href = '/destination'
+    link.setAttribute('data-rmx-target', 'target')
+    link.setAttribute('data-rmx-history', 'none')
+    link.textContent = 'Destination'
+    document.body.append(link)
+    link.focus()
+    let frames = fixture.frames()
+    let started = Promise.withResolvers<FrameReloadStartEvent>()
+    frames.target.addEventListener('reloadStart', started.resolve, { once: true })
+
+    link.click()
+    let reload = await started.promise
+    await reload.finished
+
+    expect(reload.sourceElement).toBe(link)
+    expect(window.location.href).toBe(initialUrl)
+    expect(window.navigation.entries()).toHaveLength(entryCount)
+    expect(window.navigation.transition).toBeNull()
+    expect(frames.target.src).toBe(link.href)
+    expect(fixture.requests).toEqual([{ src: link.href, target: 'target' }])
+    expect(document.getElementById('frame-content')?.textContent).toBe('Targeted frame')
+    expect(document.activeElement).toBe(link)
+  })
+
+  it('submits a form into its target frame in place with data-rmx-history="none"', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    let initialUrl = window.location.href
+    let entryCount = window.navigation.entries().length
+    let form = document.createElement('form')
+    form.method = 'post'
+    form.action = '/save'
+    form.setAttribute('data-rmx-target', 'target')
+    form.setAttribute('data-rmx-history', 'none')
+    let input = document.createElement('input')
+    input.name = 'title'
+    input.value = 'Ada'
+    let button = document.createElement('button')
+    form.append(input, button)
+    document.body.append(form)
+    let submissions: FormSubmitStartEvent[] = []
+    button.addEventListener('rmx:form-submit-start', (event) => submissions.push(event))
+    let frames = fixture.frames()
+    let started = Promise.withResolvers<FrameReloadStartEvent>()
+    frames.target.addEventListener('reloadStart', started.resolve, { once: true })
+
+    button.click()
+    let reload = await started.promise
+    await reload.finished
+
+    expect(submissions).toHaveLength(1)
+    expect(submissions[0]!.sourceElement).toBe(button)
+    expect(submissions[0]!.formData?.get('title')).toBe('Ada')
+    expect(submissions[0]!.finished).toBe(reload.finished)
+    expect(window.location.href).toBe(initialUrl)
+    expect(window.navigation.entries()).toHaveLength(entryCount)
+    expect(frames.top.src).toBe(initialUrl)
+    expect(fixture.requests).toEqual([{ src: form.action, target: 'target' }])
+    expect(document.getElementById('frame-content')?.textContent).toBe('Targeted frame')
+  })
+
+  it('navigates as usual for navigate() with history none and no target', async (t) => {
+    let fixture = await setupFrameNavigationTest(t)
+    // Earlier tests can leave forward entries, which a push drops, so the entry count can't tell.
+    let entryIndex = window.navigation.currentEntry?.index ?? -1
+    let destinationUrl = new URL('/next', window.location.href).href
+
+    await navigate(destinationUrl, { history: 'none' })
+
+    expect(window.location.href).toBe(destinationUrl)
+    expect(window.navigation.currentEntry?.index).toBe(entryIndex + 1)
+    expect(fixture.requests).toEqual([{ src: destinationUrl, target: undefined }])
+  })
+
   it('restores top and targeted frame sources during back and forward traversal', async (t) => {
     let fixture = await setupFrameNavigationTest(t)
     let firstDestinationUrl = new URL('/first', window.location.href).href

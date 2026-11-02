@@ -5,7 +5,8 @@ import {
   reloadCurrentDocument,
   reloadFrameForNavigation,
 } from './frame.ts'
-import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
+import { createFormNavigationResolver, getFormSubmit, type FormSubmission } from './form-navigation.ts'
+import type { FrameNavigationOptions } from './frame-runtime.ts'
 import type { FrameHandle } from './component.ts'
 
 type NavigationState = {
@@ -26,11 +27,13 @@ type NavigationSource = {
   form?: HTMLFormElement
 }
 
+type HistoryBehavior = NonNullable<NavigationOptions['history']>
+
 type RuntimeNavigation = {
   state: NavigationState
   source?: NavigationSource
   getSubmission?: () => Promise<FormSubmission>
-  replaceHistory?: boolean
+  history?: HistoryBehavior
 }
 
 interface FormSubmissionNavigationInfo {
@@ -150,8 +153,13 @@ export type NavigationOptions = {
    * back to document navigation.
    */
   target?: string
-  /** How the destination updates browser history. */
-  history?: 'push' | 'replace'
+  /**
+   * How the destination updates browser history. `none` loads the mounted named `target` in place,
+   * without changing the URL or history, resetting scroll or focus, or reloading the top frame. The
+   * frame's `src` follows a redirect. Navigations without a `target` ignore `none`, since the page
+   * has to match its URL.
+   */
+  history?: 'push' | 'replace' | 'none'
   /**
    * Scroll behavior. `true` aliases `"after-transition"` and `false` aliases `"manual"`.
    * (default: `"after-transition"`)
@@ -190,8 +198,34 @@ export async function navigate(href: string, options?: NavigationOptions) {
     return
   }
 
-  let transition = navigation.navigate(href, { state, history: options?.history })
+  let history = options?.history
+  if (history === 'none') {
+    let frame = state.target === undefined ? undefined : getNamedFrame(state.target)
+    if (frame && isSameOriginUrl(state.src)) {
+      return loadFrameInPlace(frame, state.src, reloadFrameForNavigation)
+    }
+    // Without a mounted target, the navigation goes ahead as it would without `none`.
+    history = undefined
+  }
+
+  let transition = navigation.navigate(href, { state, history })
   await transition.finished
+}
+
+// Loads a named frame outside the Navigation API, so the URL, history, scroll and focus stay as
+// they are. The frame's next reload loads where this one ended, as an iframe's would.
+async function loadFrameInPlace(
+  frame: FrameHandle,
+  src: string,
+  reloadFrame: typeof reloadFrameForNavigation,
+  reloadOptions?: FrameNavigationOptions,
+): Promise<void> {
+  frame.src = src
+  let reload = reloadFrame(frame, reloadOptions)
+  // A failure rejects both promises, and only `finished` is awaited here.
+  void reload.committed.catch(() => {})
+  let { redirectedTo } = await reload.finished
+  if (redirectedTo && !reload.signal.aborted) frame.src = redirectedTo
 }
 
 /**
@@ -233,6 +267,42 @@ export function startNavigationListenerImpl(
       $rmx: true,
     },
   })
+
+  // A form that loads its frame in place never navigates, so it starts at `submit`, before the
+  // browser plans a navigation. Cancelling that navigation's `navigate` event instead leaves
+  // Chromium's planned form navigation for tools such as Playwright to wait on. Listening after the
+  // app's own `submit` listeners leaves any submission they cancel alone.
+  document.addEventListener(
+    'submit',
+    (event) => {
+      if (event.defaultPrevented) return
+      let submit = getFormSubmit(event)
+      if (
+        !submit ||
+        submit.hasAttribute('data-rmx-document') ||
+        submit.getAttribute('data-rmx-history') !== 'none'
+      ) {
+        return
+      }
+      let target = submit.getAttribute('data-rmx-target')
+      let frame = target == null ? undefined : options.getNamedFrame(target)
+      if (!frame) return
+
+      // Reading the entries fires `formdata`, so only a submission that loads in place reads them.
+      let { url, submission } = submit.read()
+      let src = submit.getAttribute('data-rmx-src') ?? url
+      // A submission elsewhere goes ahead, and its navigation falls back to a document load.
+      if (!isSameOriginUrl(url) || !isSameOriginUrl(src)) return
+
+      event.preventDefault()
+      void loadFrameInPlace(frame, src, options.reloadFrame, {
+        ...submission,
+        sourceElement: submit.sourceElement,
+        form: submit.form,
+      }).catch(() => {})
+    },
+    { signal },
+  )
 
   navigation.addEventListener(
     'navigate',
@@ -295,6 +365,21 @@ export function startNavigationListenerImpl(
         }
       }
 
+      // Links, and forms submitted without a `submit` event, such as by `form.submit()`.
+      if (runtimeNavigation.history === 'none' && event.cancelable) {
+        event.preventDefault()
+        // The frame reports a failure to the app's error listeners and to its reload's `finished`.
+        void (async () => {
+          let submission = await runtimeNavigation.getSubmission?.()
+          await loadFrameInPlace(frame, state.src, options.reloadFrame, {
+            ...submission,
+            sourceElement: source?.element,
+            form: source?.form,
+          })
+        })().catch(() => {})
+        return
+      }
+
       needsFrameReload = true
       let handler = async () => {
         if (event.signal.aborted) return
@@ -353,7 +438,7 @@ export function startNavigationListenerImpl(
 
       if (runtimeNavigation.getSubmission) {
         // <form method="post"> navigations
-        if (runtimeNavigation.replaceHistory && replayedSubmission == null) {
+        if (runtimeNavigation.history === 'replace' && replayedSubmission == null) {
           let supportsPrecommit =
             typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
 
@@ -389,7 +474,7 @@ export function startNavigationListenerImpl(
         interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
-        if (runtimeNavigation.replaceHistory && event.cancelable) {
+        if (runtimeNavigation.history === 'replace' && event.cancelable) {
           event.preventDefault()
           navigation.navigate(event.destination.url, {
             history: 'replace',
@@ -719,7 +804,7 @@ function getSourceElementNavigation(
 }
 
 function getElementNavigation(
-  element: { getAttribute(name: string): string | null },
+  element: { getAttribute(name: string): string | null; hasAttribute(name: string): boolean },
   event: NavigateEvent,
   replaceHistoryByDefault: boolean,
 ): RuntimeNavigation {
@@ -731,9 +816,10 @@ function getElementNavigation(
       resetFocus: normalizeResetBehavior(element.getAttribute('data-rmx-reset-focus')),
       $rmx: true,
     },
-    replaceHistory: getReplaceHistory(
+    history: getHistoryBehavior(
       element.getAttribute('data-rmx-history'),
-      replaceHistoryByDefault,
+      replaceHistoryByDefault ? 'replace' : 'push',
+      element.hasAttribute('data-rmx-target'),
     ),
   }
 }
@@ -744,8 +830,12 @@ function normalizeResetBehavior(
   return value === false || value === 'false' || value === 'manual' ? 'manual' : 'after-transition'
 }
 
-function getReplaceHistory(value: string | null, defaultValue: boolean): boolean {
-  if (value === 'replace') return true
-  if (value === 'push') return false
-  return defaultValue
+function getHistoryBehavior(
+  value: string | null,
+  defaultValue: HistoryBehavior,
+  hasTarget: boolean,
+): HistoryBehavior {
+  if (value === 'push' || value === 'replace') return value
+  // Without a frame to load, `none` can't apply, since the page has to match its URL.
+  return value === 'none' && hasTarget ? value : defaultValue
 }

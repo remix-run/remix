@@ -1801,6 +1801,283 @@ describe('navigate', () => {
   })
 })
 
+describe('in-place frame loads', () => {
+  function setup(t: TestContext, result: Partial<StubFrameReloadResult> = {}) {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let namedFrame = { src: '/initial-frame' } as FrameHandle
+    let loaded = Promise.withResolvers<void>()
+    let reloadFrame = mock.fn((_frame: FrameHandle, _options?: FrameNavigationOptions) => {
+      let signal = result.signal ?? new AbortController().signal
+      let finished = Promise.resolve({ signal, redirectedTo: result.redirectedTo })
+      void finished.then(() => loaded.resolve())
+      return { signal, committed: finished.then(() => {}), finished }
+    })
+    let dispatch = startStubNavigationListener(t, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: (name) => (name === 'details' ? namedFrame : undefined),
+      reloadFrame,
+    })
+    let anchor = document.createElement('a')
+    anchor.href = new URL('/destination', window.location.href).href
+    anchor.setAttribute('data-rmx-target', 'details')
+    anchor.setAttribute('data-rmx-history', 'none')
+    let intercept = mock.fn()
+    let event = createAnchorNavigateEvent(anchor, {
+      destinationUrl: anchor.href,
+      intercept,
+      cancelable: true,
+    })
+    // The frame's `src` settles a task after its reload finishes.
+    let settled = () => loaded.promise.then(() => new Promise((resolve) => setTimeout(resolve)))
+    return { topFrame, namedFrame, reloadFrame, dispatch, anchor, intercept, event, settled }
+  }
+
+  it('loads a link’s named frame without a navigation', async (t) => {
+    let { anchor, event, dispatch, intercept, reloadFrame, topFrame, namedFrame, settled } =
+      setup(t)
+
+    dispatch(event)
+    await settled()
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).toHaveBeenCalledTimes(1)
+    expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.sourceElement).toBe(anchor)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.form).toBeUndefined()
+    expect(namedFrame.src).toBe(anchor.href)
+    expect(topFrame.src).toBe(window.location.href)
+  })
+
+  it('loads a link’s data-rmx-src into its named frame', async (t) => {
+    let { anchor, event, dispatch, namedFrame, settled } = setup(t)
+    anchor.setAttribute('data-rmx-src', '/details-frame')
+
+    dispatch(event)
+    await settled()
+
+    expect(namedFrame.src).toBe('/details-frame')
+  })
+
+  it('submits a form that skipped its submit event into its named frame', async (t) => {
+    let { dispatch, intercept, reloadFrame, topFrame, namedFrame, settled } = setup(t)
+    let form = document.createElement('form')
+    form.method = 'post'
+    form.action = new URL('/save', window.location.href).href
+    form.setAttribute('data-rmx-target', 'details')
+    form.setAttribute('data-rmx-history', 'none')
+    let input = document.createElement('input')
+    input.name = 'title'
+    input.value = 'Ada'
+    form.append(input)
+    let event = createFormNavigateEvent(form, {
+      intercept,
+      destinationUrl: form.action,
+      cancelable: true,
+    })
+
+    dispatch(event)
+    await settled()
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(intercept).not.toHaveBeenCalled()
+    let options = reloadFrame.mock.calls[0]?.arguments[1]
+    expect(options?.method).toBe('post')
+    expect(options?.formData?.get('title')).toBe('Ada')
+    expect(options?.sourceElement).toBe(form)
+    expect(options?.form).toBe(form)
+    expect(namedFrame.src).toBe(form.action)
+    expect(topFrame.src).toBe(window.location.href)
+  })
+
+  it('moves the frame’s src to where its load redirected', async (t) => {
+    let redirectedTo = new URL('/redirected-frame', window.location.href).href
+    let { event, dispatch, namedFrame, settled } = setup(t, { redirectedTo })
+
+    dispatch(event)
+    await settled()
+
+    expect(namedFrame.src).toBe(redirectedTo)
+  })
+
+  it('leaves the frame’s src to a newer load when a redirected one is replaced', async (t) => {
+    let controller = new AbortController()
+    controller.abort()
+    let { event, dispatch, namedFrame, anchor, settled } = setup(t, {
+      redirectedTo: new URL('/redirected-frame', window.location.href).href,
+      signal: controller.signal,
+    })
+
+    dispatch(event)
+    await settled()
+
+    expect(namedFrame.src).toBe(anchor.href)
+  })
+
+  it('navigates as usual when a link with data-rmx-history="none" has no target', async (t) => {
+    let { anchor, event, dispatch, intercept, namedFrame } = setup(t)
+    anchor.removeAttribute('data-rmx-target')
+
+    let transition = dispatch(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(namedFrame.src).toBe('/initial-frame')
+  })
+
+  it('leaves a link with data-rmx-history="none" and a missing target to document navigation', async (t) => {
+    let { anchor, event, dispatch, intercept, reloadFrame } = setup(t)
+    anchor.setAttribute('data-rmx-target', 'missing')
+
+    dispatch(event)
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(intercept).not.toHaveBeenCalled()
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+})
+
+describe('in-place form submissions', () => {
+  function setup(t: TestContext) {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let namedFrame = { src: '/initial-frame' } as FrameHandle
+    let loaded = Promise.withResolvers<void>()
+    let reloadFrame = mock.fn((_frame: FrameHandle, _options?: FrameNavigationOptions) => {
+      let signal = new AbortController().signal
+      let finished = Promise.resolve({ signal })
+      void finished.then(() => loaded.resolve())
+      return { signal, committed: finished.then(() => {}), finished }
+    })
+    startStubNavigationListener(t, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: (name) => (name === 'details' ? namedFrame : undefined),
+      reloadFrame,
+    })
+    let form = document.createElement('form')
+    form.method = 'post'
+    form.action = new URL('/save', window.location.href).href
+    form.setAttribute('data-rmx-target', 'details')
+    form.setAttribute('data-rmx-history', 'none')
+    let input = document.createElement('input')
+    input.name = 'title'
+    input.value = 'Ada'
+    form.append(input)
+    document.body.append(form)
+    t.after(() => form.remove())
+    // A synthetic `submit` event never navigates, even when the runtime leaves it alone.
+    function submit(submitter?: HTMLButtonElement) {
+      let event = new SubmitEvent('submit', { bubbles: true, cancelable: true, submitter })
+      form.dispatchEvent(event)
+      return event
+    }
+    return { topFrame, namedFrame, reloadFrame, form, submit, settled: () => loaded.promise }
+  }
+
+  it('loads the named frame before the browser plans a navigation', async (t) => {
+    let { form, submit, reloadFrame, namedFrame, topFrame, settled } = setup(t)
+
+    let event = submit()
+    await settled()
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(reloadFrame).toHaveBeenCalledTimes(1)
+    expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
+    let options = reloadFrame.mock.calls[0]?.arguments[1]
+    expect(options?.method).toBe('post')
+    expect(options?.encType).toBe('application/x-www-form-urlencoded')
+    expect(options?.formData?.get('title')).toBe('Ada')
+    expect(options?.sourceElement).toBe(form)
+    expect(options?.form).toBe(form)
+    expect(namedFrame.src).toBe(form.action)
+    expect(topFrame.src).toBe(window.location.href)
+  })
+
+  it('submits with the submit button’s entry, overrides, and attributes', async (t) => {
+    let { form, submit, reloadFrame, namedFrame, settled } = setup(t)
+    form.removeAttribute('data-rmx-history')
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'publish'
+    button.formAction = new URL('/publish', window.location.href).href
+    button.formEnctype = 'multipart/form-data'
+    button.setAttribute('data-rmx-history', 'none')
+    form.append(button)
+
+    submit(button)
+    await settled()
+
+    let options = reloadFrame.mock.calls[0]?.arguments[1]
+    expect(options?.formData?.get('intent')).toBe('publish')
+    expect(options?.encType).toBe('multipart/form-data')
+    expect(options?.sourceElement).toBe(button)
+    expect(options?.form).toBe(form)
+    expect(namedFrame.src).toBe(button.formAction)
+  })
+
+  it('loads a GET submission’s entries as its frame’s query', async (t) => {
+    let { form, submit, reloadFrame, namedFrame, settled } = setup(t)
+    form.method = 'get'
+    form.action = new URL('/search?page=2#results', window.location.href).href
+
+    submit()
+    await settled()
+
+    expect(namedFrame.src).toBe(new URL('/search?title=Ada#results', window.location.href).href)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.formData).toBeUndefined()
+  })
+
+  it('loads data-rmx-src into the named frame', async (t) => {
+    let { form, submit, namedFrame, settled } = setup(t)
+    form.setAttribute('data-rmx-src', '/details-frame')
+
+    submit()
+    await settled()
+
+    expect(namedFrame.src).toBe('/details-frame')
+  })
+
+  it('leaves a submission the app cancelled', (t) => {
+    let { form, submit, reloadFrame } = setup(t)
+    form.addEventListener('submit', (event) => event.preventDefault())
+
+    submit()
+
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves a submission without a mounted target to its navigation', (t) => {
+    let { form, submit, reloadFrame } = setup(t)
+    form.setAttribute('data-rmx-target', 'missing')
+
+    let event = submit()
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves a submission into another window to the browser', (t) => {
+    let { form, submit, reloadFrame } = setup(t)
+    form.target = '_blank'
+
+    let event = submit()
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves a cross-origin submission to its navigation', (t) => {
+    let { form, submit, reloadFrame } = setup(t)
+    form.action = 'https://example.com/save'
+
+    let event = submit()
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+})
+
 describe('frame navigation sources', () => {
   function setup(t: TestContext) {
     let topFrame = { src: window.location.href } as FrameHandle
@@ -2710,9 +2987,10 @@ function createAnchorNavigateEvent(
     info?: unknown
     scroll?: () => void
     signal?: AbortSignal
+    cancelable?: boolean
   },
 ): Event {
-  return Object.assign(new Event('navigate'), {
+  return Object.assign(new Event('navigate', { cancelable: options.cancelable }), {
     canIntercept: true,
     navigationType: 'push',
     hashChange: options.hashChange ?? false,
