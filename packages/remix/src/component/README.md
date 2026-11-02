@@ -375,7 +375,7 @@ function CartCount(handle: Handle) {
 Lowercase JSX tags render host elements. Props become attributes, with a few conveniences:
 
 - HTML attribute names such as `class` and `for` work, and so do the DOM property names `className` and `htmlFor`. These examples use the HTML names.
-- `style` accepts an object of camelCase properties. Numbers get a `px` unit, except for unitless properties such as `opacity` and `zIndex`, and custom properties such as `'--accent'` are set as written.
+- `style` accepts camelCase or kebab-case properties, including vendor prefixes. Numbers get a `px` unit, except for zero, unitless properties such as `opacity` and `zIndex`, and custom properties such as `'--accent'`. Custom property names keep their casing.
 - Boolean attributes render when `true` and are omitted when `false`. ARIA attributes render `true` and `false` as strings.
 - `<>…</>`, or `Fragment`, groups children without adding an element.
 
@@ -384,6 +384,10 @@ Lowercase JSX tags render host elements. Props become attributes, with a few con
   Volume
 </label>
 ```
+
+`style` and `css()` use the same numeric conventions. When a property accepts both a number and a length, numbers select the unitless meaning: `tabSize: 4` means four spaces and `maskBorderWidth: 2` means twice the border width; use `'4px'` or `'2px'` for lengths. Numeric shorthands follow their CSS grammar: `animation: 2` sets the iteration count, and `borderImage: 2` sets the slice. Use strings with units for times and angles, such as `animationDuration: '200ms'` and `rotate: '45deg'`, and strings for multi-part values such as `hyphenateLimitChars: '6 3 2'`.
+
+The unitless list includes standard, draft, and legacy properties; serializing a value does not add browser support or validate its allowed range. `null`, `undefined`, `NaN`, and infinite numbers are omitted.
 
 ### Raw HTML
 
@@ -975,6 +979,8 @@ Client entry props cross from the server to the browser, so they must be seriali
 - JSX elements, including `<Frame>` elements, which are serialized as frame descriptors
 
 Functions and class instances are rejected by the types. Pass plain data and URLs instead of database records or request objects.
+
+Elements in props may use `css()` mixins. Other mixins, such as `on()`, `ref()`, animation mixins, and custom mixins from `createMixin()` (even ones that return `css()`), can't be serialized, and the client entry reports an error when it renders them. Render those elements inside the client entry instead.
 
 ### Client Runtime
 

@@ -1297,13 +1297,15 @@ describe('stream', () => {
 
     it('converts style object to inline string', async () => {
       let stream = renderToStream(
-        <div style={{ color: 'green', marginTop: 10, padding: '5px' }}>Object styled</div>,
+        <div style={{ color: 'green', marginTop: 10, padding: '5px', '--gapSize': 4 }}>
+          Object styled
+        </div>,
       )
       let html = await drain(stream)
 
       // Style objects should be serialized to inline styles
       expect(html).toBe(
-        '<div style="color: green; margin-top: 10px; padding: 5px;">Object styled</div>',
+        '<div style="color: green; margin-top: 10px; padding: 5px; --gapSize: 4;">Object styled</div>',
       )
     })
 
@@ -2579,6 +2581,47 @@ describe('stream', () => {
         },
         { $rmx: true, type: 'u', props: { children: 'Underline' } },
       ])
+    })
+
+    it('serializes css() mixins in entry props as mixin descriptors', async () => {
+      let Slot = clientEntry(
+        '/js/slot.js#Slot',
+        function Slot(handle: Handle<{ content: RemixNode }>) {
+          return () => <div>{handle.props.content}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Slot
+            content={
+              <p mix={[css({ color: 'red' }), css({ '&:hover': { color: 'blue' } })]}>
+                <b mix={css({ fontWeight: 700 })}>Bold</b>
+              </p>
+            }
+          />,
+        ),
+      )
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props.content).toEqual({
+        $rmx: true,
+        type: 'p',
+        props: {
+          children: {
+            $rmx: true,
+            type: 'b',
+            props: {
+              children: 'Bold',
+              mix: [{ $rmxMixin: 'css', args: [{ fontWeight: 700 }] }],
+            },
+          },
+          mix: [
+            { $rmxMixin: 'css', args: [{ color: 'red' }] },
+            { $rmxMixin: 'css', args: [{ '&:hover': { color: 'blue' } }] },
+          ],
+        },
+      })
     })
 
     it('nests hydrated components', async () => {
