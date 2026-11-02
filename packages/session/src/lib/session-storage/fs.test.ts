@@ -1,8 +1,9 @@
 import * as assert from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
-import * as fsp from 'node:fs/promises'
+import fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
+import { setImmediate } from 'node:timers/promises'
 
 import { createFsSessionStorage } from './fs.ts'
 
@@ -291,21 +292,104 @@ describe('fs session storage', () => {
     assert.equal((await storage.read(cookie)).get('count'), 2)
   })
 
-  it('removes its temporary file when a save fails', async () => {
+  it('preserves the saved session and removes its temporary file when replacement fails', async (t) => {
     let storage = createFsSessionStorage(tmpDir)
     let session = await storage.read(null)
     session.set('count', 1)
-    await storage.save(session)
+    let cookie = await storage.save(session)
     let [file] = await listEntries(tmpDir)
+    let content = await fsp.readFile(file, 'utf-8')
+    let failure = new Error('Session replacement failed')
 
-    // A directory where the session file belongs makes replacing it fail.
-    await fsp.rm(file)
-    await fsp.mkdir(file)
+    let rename = t.mock.method(fsp, 'rename', async (source: string, destination: string) => {
+      assert.equal(destination, file)
+      assert.equal(await fsp.readFile(source, 'utf-8'), JSON.stringify(session.data))
+      throw failure
+    })
     session.set('count', 2)
-    await assert.rejects(storage.save(session))
+    await assert.rejects(storage.save(session), failure)
 
+    assert.equal(rename.mock.calls.length, 1)
+    assert.equal(await fsp.readFile(file, 'utf-8'), content)
+    let saved = await storage.read(cookie)
+    assert.equal(saved.id, session.id)
+    assert.equal(saved.get('count'), 1)
     assert.deepEqual(await listEntries(tmpDir), [file])
   })
+
+  it(
+    'continues queued saves and reads after a replacement fails',
+    { timeout: 5_000 },
+    async (t) => {
+      let storage = createFsSessionStorage(tmpDir)
+      let session = await storage.read(null)
+      session.set('count', 1)
+      let cookie = await storage.save(session)
+      let [file] = await listEntries(tmpDir)
+      let first = await storage.read(cookie)
+      let second = await storage.read(cookie)
+      first.set('count', 2)
+      second.set('count', 3)
+
+      let failure = new Error('Session replacement failed')
+      let replacing = Promise.withResolvers<void>()
+      let release = Promise.withResolvers<void>()
+      let originalRename = fsp.rename
+      let firstRename = true
+      let rename = t.mock.method(fsp, 'rename', async (...args: Parameters<typeof fsp.rename>) => {
+        if (firstRename) {
+          firstRename = false
+          replacing.resolve()
+          await release.promise
+          throw failure
+        }
+        return originalRename(...args)
+      })
+      t.after(() => release.resolve())
+
+      let firstSave = storage.save(first)
+      await replacing.promise
+
+      let closed = Promise.withResolvers<void>()
+      let originalOpen = fsp.open
+      t.mock.method(fsp, 'open', async (...args: Parameters<typeof fsp.open>) => {
+        let handle = await originalOpen(...args)
+        let originalClose = handle.close.bind(handle)
+        t.mock.method(handle, 'close', async () => {
+          await originalClose()
+          closed.resolve()
+        })
+        return handle
+      })
+
+      let secondSave = storage.save(second)
+      let saves = Promise.allSettled([firstSave, secondSave])
+      try {
+        await closed.promise
+        // Let the second save enqueue its replacement after closing its complete temporary file.
+        await setImmediate()
+        assert.equal(rename.mock.calls.length, 1)
+        let reading = storage.read(cookie)
+        let read = Promise.allSettled([reading])
+        release.resolve()
+
+        assert.deepEqual(await saves, [
+          { status: 'rejected', reason: failure },
+          { status: 'fulfilled', value: cookie },
+        ])
+        let [result] = await read
+        assert.ok(result.status === 'fulfilled')
+        assert.equal(result.value.id, session.id)
+        assert.equal(result.value.get('count'), 3)
+        assert.equal(rename.mock.calls.length, 2)
+        assert.equal((await storage.read(cookie)).get('count'), 3)
+        assert.deepEqual(await listEntries(tmpDir), [file])
+      } finally {
+        release.resolve()
+        await saves
+      }
+    },
+  )
 
   it('starts a new session when the session file is not valid JSON', async () => {
     let storage = createFsSessionStorage(tmpDir)

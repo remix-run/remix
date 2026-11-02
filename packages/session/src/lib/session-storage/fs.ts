@@ -1,5 +1,5 @@
 import * as fs from 'node:fs'
-import * as fsp from 'node:fs/promises'
+import fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
 import { createSession, type SessionData } from '../session.ts'
