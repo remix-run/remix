@@ -1,8 +1,10 @@
+import type { PlacementBatch } from './reconcile.ts'
 import { createDocumentState } from './document-state.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import type { CommittedComponentNode, VNodeParent } from './vnode.ts'
 import { isCommittedComponentNode } from './vnode.ts'
 import {
+  placeReclaimedComponents,
   findNextSiblingDomAnchor,
   renderComponent,
   setActiveSchedulerUpdateParents,
@@ -159,23 +161,36 @@ export function createScheduler(
         dispatchPhaseEvent('beforeUpdate', updateParents)
 
         if (batch.size > 0) {
-          let vnodes = Array.from(batch)
-          let noScheduledAncestor = new Set<VNodeParent>()
+          let placements: PlacementBatch = new Map()
+          try {
+            let vnodes = Array.from(batch)
+            let noScheduledAncestor = new Set<VNodeParent>()
 
-          for (let [vnode, domParent] of vnodes) {
-            if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
-            if (!trackCascadingUpdate(vnode)) return
-            let curr = vnode._content
-            // Calculate anchor at render time from current vdom position (never stale).
-            // Needed for fragment self-updates that add children - without this, new children
-            // would be appended after siblings. The keyed diff has placement logic, but unkeyed
-            // diff relies on anchor for correct positioning.
-            let anchor = findNextSiblingDomAnchor(vnode) || undefined
-            try {
-              renderComponent(curr, vnode, domParent, vnode._context, anchor)
-            } catch (error) {
-              dispatchError(error)
+            for (let [vnode, domParent] of vnodes) {
+              if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
+              if (!trackCascadingUpdate(vnode)) return
+              let curr = vnode._content
+              // Calculate anchor at render time from current vdom position (never stale).
+              // Needed for fragment self-updates that add children - without this, new children
+              // would be appended after siblings. The keyed diff has placement logic, but unkeyed
+              // diff relies on anchor for correct positioning.
+              let anchor = findNextSiblingDomAnchor(vnode) || undefined
+              try {
+                renderComponent(
+                  curr,
+                  vnode,
+                  domParent,
+                  vnode._context,
+                  anchor,
+                  undefined,
+                  placements,
+                )
+              } catch (error) {
+                dispatchError(error)
+              }
             }
+          } finally {
+            placeReclaimedComponents(placements, batch)
           }
         }
 

@@ -67,6 +67,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
 let idCounter = 0
 let persistedRemovalToken = 0
 const persistedMixinNodes = new Set<CommittedHostNode>()
+const mixinReclamationVersions = new WeakMap<ParentNode, number>()
 let activeSchedulerUpdateParents: ParentNode[] | undefined
 
 // Compute SVG context for a node based on its parent and type.
@@ -937,6 +938,7 @@ function insert(
     // Check for matching mixin-persisted node that can be reclaimed
     let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
     if (persistedNode) {
+      mixinReclamationVersions.set(domParent, (mixinReclamationVersions.get(domParent) ?? 0) + 1)
       return reclaimPersistedMixinNode(persistedNode, node, vParent, context)
     }
 
@@ -1032,12 +1034,15 @@ function insert(
   if (node.kind === 'fragment') {
     let childInputs = node._children
     let committed = beginFragmentNode(node, vParent, svg)
-    let children: Array<VNodeInput | CommittedVNode> = childInputs
-    // Insert fragment children in order before the same anchor
-    for (let i = 0; i < childInputs.length; i++) {
-      children[i] = insert(childInputs[i], domParent, committed, context, anchor, cursor)
-    }
-    committed._children = children as CommittedVNode[]
+    committed._children = diffChildren(
+      null,
+      childInputs,
+      domParent,
+      committed,
+      context,
+      cursor,
+      anchor,
+    )
     return committed
   }
 
@@ -1449,6 +1454,7 @@ export function renderComponent(
   context: ReconcileContext,
   anchor?: Node,
   cursor?: HydrationCursor,
+  placements?: PlacementBatch,
 ): CommittedComponentNode {
   let { scheduler } = context
   let handle = next._handle
@@ -1458,8 +1464,16 @@ export function renderComponent(
   }
 
   let [element, tasks] = handle.render(next.props)
+  let reclamationVersion = mixinReclamationVersions.get(domParent)
   let content = diffVNodes(currContent, toVNode(element), domParent, next, context, anchor, cursor)
+  let needsPlacement =
+    ('_content' in next || next._parent.kind === 'root') &&
+    mixinReclamationVersions.get(domParent) !== reclamationVersion
   let committed = commitComponentNode(next, content)
+  if (needsPlacement) {
+    if (placements) queueReclaimedComponent(placements, committed, domParent)
+    else placeReclaimedChildren([content], domParent, committed, anchor)
+  }
   handle.setScheduleUpdate(scheduler, committed, domParent)
 
   scheduler.enqueueTasks(tasks)
@@ -1719,6 +1733,7 @@ function diffChildren(
   cursor?: HydrationCursor,
   anchor?: Node,
 ): CommittedVNode[] {
+  let reclamationVersion = mixinReclamationVersions.get(domParent)
   let hasKeys = hasKeyedChildren(next)
   let committed: Array<VNodeInput | CommittedVNode> = next
 
@@ -1729,11 +1744,7 @@ function diffChildren(
     for (let i = 0; i < next.length; i++) {
       committed[i] = insert(next[i], domParent, vParent, context, anchor, cursor)
     }
-    return committed as CommittedVNode[]
-  }
-
-  // Only bulk-clear when at least one committed child is being removed.
-  if (
+  } else if (
     curr.length > 0 &&
     next.length === 0 &&
     anchor === undefined &&
@@ -1745,9 +1756,7 @@ function diffChildren(
     }
     domParent.textContent = ''
     return EMPTY_COMMITTED_CHILDREN
-  }
-
-  if (!hasKeys) {
+  } else if (!hasKeys) {
     for (let i = 0; i < next.length; i++) {
       let currentNode = i < curr.length ? curr[i] : null
       committed[i] = diffVNodes(currentNode, next[i], domParent, vParent, context, anchor, cursor)
@@ -1759,11 +1768,18 @@ function diffChildren(
         if (node) remove(node, domParent, context)
       }
     }
-
-    return committed as CommittedVNode[]
+  } else {
+    committed = patchKeyedChildren(curr, next, domParent, vParent, context, cursor, anchor)
   }
 
-  return patchKeyedChildren(curr, next, domParent, vParent, context, cursor, anchor)
+  let committedChildren = committed as CommittedVNode[]
+  if (
+    (vParent.kind !== 'fragment' || vParent._parent.kind === 'root') &&
+    mixinReclamationVersions.get(domParent) !== reclamationVersion
+  ) {
+    placeReclaimedChildren(committedChildren, domParent, vParent, anchor)
+  }
+  return committedChildren
 }
 
 function parentUsesInnerHTML(parent: VNodeParent): boolean {
@@ -1840,6 +1856,7 @@ function patchKeyedChildren(
   cursor?: HydrationCursor,
   anchor?: Node,
 ): CommittedVNode[] {
+  let reclamationVersion = mixinReclamationVersions.get(domParent)
   let matches =
     matchKeyedChildrenInOrder(curr, next) ??
     matchKeyedChildrenAfterSingleRemoval(curr, next) ??
@@ -1876,26 +1893,16 @@ function patchKeyedChildren(
   }
   let committedChildren = committed as CommittedVNode[]
 
-  if (matchAnalysis.canSkipPlacement) {
+  // Reclaimed hosts still occupy their previous DOM positions. Place the whole
+  // sibling sequence after reconciliation instead of treating them as new inserts.
+  if (
+    matchAnalysis.canSkipPlacement ||
+    mixinReclamationVersions.get(domParent) !== reclamationVersion
+  ) {
     return committedChildren
   }
 
-  let stableIndexes = lisMatches(matches)
-  let stableCursor = stableIndexes.length - 1
-  let placementAnchor: Node | null = anchor ?? null
-
-  for (let index = next.length - 1; index >= 0; index--) {
-    let nextNode = committedChildren[index]
-    let isStable = stableIndexes[stableCursor] === index
-
-    if (isStable) {
-      stableCursor--
-    } else {
-      placeVNode(nextNode, domParent, placementAnchor)
-    }
-
-    placementAnchor = findFirstDomAnchor(nextNode) ?? placementAnchor
-  }
+  placeChildren(committedChildren, matches, domParent, anchor)
   return committedChildren
 }
 
@@ -2119,12 +2126,74 @@ function lisMatches(matches: readonly number[]): number[] {
   return tails
 }
 
+function placeReclaimedChildren(
+  children: CommittedVNode[],
+  domParent: ParentNode,
+  vParent: VNodeParent,
+  anchor?: Node,
+): void {
+  let previous =
+    vParent.kind === 'root'
+      ? vParent._rangeStart
+      : vParent.kind === 'component' || vParent.kind === 'fragment'
+        ? findPreviousSiblingDomAnchor(vParent)
+        : null
+  // Flatten transparent wrappers so retained DOM ranges can be interleaved correctly.
+  let placementChildren: CommittedVNode[] = []
+  function collect(node: CommittedVNode): void {
+    if (isCommittedComponentNode(node)) collect(node._content)
+    else if (isFragmentNode(node)) for (let child of node._children) collect(child)
+    else placementChildren.push(node)
+  }
+  for (let child of children) collect(child)
+  let indexes = new Map<Node, number>(),
+    index = 0,
+    current = previous ? previous.nextSibling : domParent.firstChild
+  while (current && current !== anchor) {
+    indexes.set(current, index++)
+    current = current.nextSibling
+  }
+  if (anchor && current !== anchor) indexes.clear()
+  let matches = placementChildren.map((child) => {
+    let dom = findFirstDomAnchor(child)
+    return dom ? (indexes.get(dom) ?? -1) : -1
+  })
+  let analysis = analyzeKeyedChildMatches(matches.length, matches)
+  if (analysis.hasRemovals || !analysis.canSkipPlacement)
+    placeChildren(placementChildren, matches, domParent, anchor)
+}
+
+function placeChildren(
+  children: CommittedVNode[],
+  matches: number[],
+  domParent: ParentNode,
+  anchor?: Node,
+): void {
+  let stableIndexes = lisMatches(matches)
+  let stableCursor = stableIndexes.length - 1
+  let placementAnchor: Node | null = anchor ?? null
+
+  for (let index = children.length - 1; index >= 0; index--) {
+    let child = children[index]
+    let isStable = stableIndexes[stableCursor] === index
+
+    if (isStable) {
+      stableCursor--
+    } else {
+      placeVNode(child, domParent, placementAnchor)
+    }
+
+    placementAnchor = findFirstDomAnchor(child) ?? placementAnchor
+  }
+}
+
 function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | null): void {
   let firstDom = findFirstDomAnchor(node)
   if (!firstDom || firstDom.parentNode !== domParent) return
 
   let lastDom = findLastDomAnchor(node)
   if (!lastDom) return
+  if (lastDom.nextSibling === anchor) return
   if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) return
   if (firstDom === anchor) return
 
@@ -2200,6 +2269,21 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
   return true
 }
 
+function findPreviousSiblingDomAnchor(curr: CommittedVNode | MountingComponentNode): Node | null {
+  let parent = curr._parent
+  if (parent.kind === 'component') return findPreviousSiblingDomAnchor(parent)
+  let index = parent._children.indexOf(curr as CommittedVNode)
+  // Newly mounting ancestors are not in their parent's committed children yet.
+  // Their enclosing reconciliation pass will place the complete sibling list.
+  if (index === -1) return null
+  for (let i = index - 1; i >= 0; i--) {
+    let dom = findLastDomAnchor(parent._children[i])
+    if (dom) return dom
+  }
+  if (parent.kind === 'fragment') return findPreviousSiblingDomAnchor(parent)
+  return parent.kind === 'root' ? (parent._rangeStart ?? null) : null
+}
+
 export function findNextSiblingDomAnchor(
   curr: CommittedVNode | MountingComponentNode,
 ): Node | null {
@@ -2272,4 +2356,57 @@ function reclaimPersistedMixinNode(
     scheduler.enqueueCommitPhase([() => dispatchMixinCommit(committed._mixState)])
   }
   return committed
+}
+
+export type PlacementBatch = Map<
+  Extract<VNodeParent, { kind: 'root' | 'host' }>,
+  { domParent: ParentNode; node: CommittedComponentNode | undefined }
+>
+
+function queueReclaimedComponent(
+  placements: PlacementBatch,
+  node: CommittedComponentNode,
+  domParent: ParentNode,
+): void {
+  let owner = findPlacementOwner(node)
+  let group = placements.get(owner)
+  // Multiple returning components share one repair of the completed sibling list.
+  if (group) group.node = undefined
+  else placements.set(owner, { domParent, node })
+}
+
+function findPlacementOwner(
+  node: CommittedComponentNode,
+): Extract<VNodeParent, { kind: 'root' | 'host' }> {
+  let owner: VNodeParent = node._parent
+  while (owner.kind === 'component' || owner.kind === 'fragment') owner = owner._parent
+  return owner
+}
+
+export function placeReclaimedComponents(
+  placements: PlacementBatch,
+  updates: ReadonlyMap<CommittedComponentNode, ParentNode>,
+): void {
+  if (placements.size === 0) return
+  // Other updated siblings can invalidate local bounds without reclaiming a node.
+  for (let node of updates.keys()) {
+    let group = placements.get(findPlacementOwner(node))
+    if (group && group.node !== node) group.node = undefined
+  }
+  for (let [owner, { domParent, node }] of placements) {
+    if (node)
+      placeReclaimedChildren(
+        [node._content],
+        domParent,
+        node,
+        findNextSiblingDomAnchor(node) ?? undefined,
+      )
+    else
+      placeReclaimedChildren(
+        owner._children,
+        domParent,
+        owner,
+        owner.kind === 'root' ? owner._rangeEnd : undefined,
+      )
+  }
 }
