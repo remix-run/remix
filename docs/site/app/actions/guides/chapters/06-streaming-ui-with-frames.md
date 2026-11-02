@@ -242,7 +242,8 @@ take precedence over its form's values. These attributes control the navigation:
 - `data-rmx-src` provides a different request URL for that named frame.
 - `data-rmx-reset-scroll="manual"` preserves the current scroll position.
 - `data-rmx-reset-focus="manual"` disables the browser's automatic focus reset.
-- `data-rmx-history="push|replace"` controls how the navigation updates history.
+- `data-rmx-history="push|replace|none"` controls how the navigation updates history. `none` loads
+  the target frame in place, without changing the URL.
 - `data-rmx-document` opts out of interception.
 
 Scroll and focus controls accept `"after-transition"` (the default) and `"manual"`. Existing `"true"`
@@ -256,6 +257,45 @@ frame when it receives a frame request, while keeping its normal document respon
 unenhanced submissions. Non-GET submissions to the current URL replace that history entry, while GET
 submissions and submissions to a different URL push one. The `data-rmx-history` attribute overrides
 those defaults.
+
+## Update a region without navigating
+
+Some forms only change one region, such as a cart's quantity controls. Add
+`data-rmx-history="none"` with the frame's name in `data-rmx-target`. The submission loads into that
+frame, and the URL, history, scroll position, and focus stay as they are:
+
+```tsx
+// Inside the component that renders the cart frame's content:
+<form
+  action={routes.cart.update.href()}
+  method="post"
+  data-rmx-target="cart"
+  data-rmx-history="none"
+>
+  <input type="hidden" name="bookId" value={item.bookId} />
+  <input type="number" name="quantity" aria-label="Quantity" defaultValue={item.quantity} />
+  <button type="submit">Update</button>
+</form>
+```
+
+The action saves the change, then redirects. The runtime's request names its frame in
+`X-Remix-Target`, so the action can send it to the frame's route and keep sending document
+submissions to the page:
+
+```tsx
+// Inside the cart update action:
+return redirect(
+  request.headers.get("X-Remix-Target") === "cart"
+    ? routes.cart.items.href()
+    : routes.cart.index.href(),
+);
+```
+
+The frame's `src` follows the redirect, so its next reload fetches what it now shows. Links accept the
+same attributes, and `navigate()` and `link()` accept `history: "none"`. Without a mounted target,
+`none` doesn't apply, because the page has to match its URL. To render the change before the
+response arrives, follow the submission with
+[`rmx:form-submit-start`](/interactivity/#optimistic-ui).
 
 ## Coordinate a mutation and a separate frame reload {#coordinating-forms-fetches-frame-reloads-and-navigation}
 
@@ -292,10 +332,11 @@ import { on } from "remix/component";
 </form>;
 ```
 
-The custom handler earns its place because the mutation response and the recommendations frame are
-two different requests. The mutation stays in the edit action, the recommendations HTML stays in its
-`GET` action, and the browser component only sequences them. When the form action itself returns the
-HTML that belongs in the target frame, prefer `data-rmx-target` and let the runtime submit it.
+The custom handler earns its place when one mutation updates a region the form doesn't target, or
+more than one region. The mutation stays in the edit action, the recommendations HTML stays in its
+`GET` action, and the browser component only sequences them. When the form action can return or
+redirect to the HTML that belongs in the target frame, prefer `data-rmx-target` and let the runtime
+submit it.
 
 Pick the update that matches the response:
 
@@ -322,7 +363,8 @@ A link can keep its public destination in `href` while loading a smaller route i
 ```
 
 `data-rmx-target` chooses a mounted named frame, while `data-rmx-src` chooses the request used to fill it.
-The address bar still moves to `href`. If the target is omitted, Remix uses `href` as the source of
+The address bar still moves to `href`, unless `data-rmx-history="none"` loads the frame in place. If
+the target is omitted, Remix uses `href` as the source of
 the top frame, the implicit frame that holds the whole document, to keep it in sync with the browser
 URL. If a specified target does not match a mounted frame,
 the browser performs a document navigation. A supplied `data-rmx-src` must still be a valid same-origin
@@ -332,7 +374,8 @@ Add `data-rmx-prefetch="intent"` or `data-rmx-prefetch="viewport"` to
 [prefetch](/interactivity/#prefetch-links-before-navigation) that same source and target before
 navigation. When a link attribute doesn't fit, call `prefetch(src, { target })` instead.
 
-Add `data-rmx-history="replace"` when it should replace the current history entry. Use
+Add `data-rmx-history="replace"` when it should replace the current history entry, or
+`data-rmx-history="none"` when it shouldn't change the URL or history. Use
 `data-rmx-document` when a same-origin link must perform an ordinary document navigation instead.
 
 These `"manual"` values disable automatic scroll restoration and focus reset during navigation.
