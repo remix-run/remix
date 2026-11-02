@@ -13,6 +13,8 @@
   "env": {
     "builtin": true
   },
+  // Enables import resolution for `import/no-cycle` overrides. Categories stay off, so this adds no rules.
+  "plugins": ["typescript", "unicorn", "oxc", "import"],
   "ignorePatterns": [
     "**/*.d.ts",
     "**/dist/**",
@@ -83,6 +85,12 @@
         ],
         "remix-interface/interface-pascal-case": "error",
         "remix-typescript/no-typescript-accessibility": "error"
+      }
+    },
+    {
+      "files": ["packages/component/src/**/*.{ts,tsx}"],
+      "rules": {
+        "import/no-cycle": "error"
       }
     },
     {
