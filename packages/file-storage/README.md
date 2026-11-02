@@ -19,6 +19,8 @@ npm i remix
 
 ### File System
 
+Use a directory dedicated to this backend. You can reuse an existing storage directory; storing a file under an existing key replaces that entry.
+
 ```ts
 import { createFsFileStorage } from 'remix/file-storage/fs'
 
@@ -48,21 +50,25 @@ await storage.remove(key)
 
 ### Replacement Writes
 
-`set()` and `put()` write complete content and metadata to temporary files before replacing the stored content file and then the metadata file with two atomic renames. An upload stream error, size-limit rejection, or other failure during staging leaves the previous entry untouched. Temporary files are removed on a best-effort basis; a stopped process or failed cleanup can leave `.upload-*` directories inside the storage subdirectories. Storage ignores these directories. Remove them only while all operations are stopped.
+`set()` and `put()` stage complete content and metadata in temporary files, then atomically rename the content file into place followed by the metadata file. An upload stream error, size-limit rejection, or other failure during staging leaves the previous entry untouched.
 
-The two renames are not a transaction. There is a small window after the content rename and before the metadata rename where a reader can see complete new content with old metadata. If the second rename fails or the process stops in that window, this mismatch remains, and a rejected write may already have changed the content. The old filename, MIME type, and modification time can be returned with the new bytes; metadata listings can also report the old size, while `get()` obtains the size from the content file. For a new key, the content remains unpublished: `get()` returns `null`, `has()` returns `false`, and listings omit it. A successful retry with a fresh upload replaces both files; the original upload stream may already have been consumed.
+The two renames are not a transaction. Between them, a reader can see complete new content with old metadata. If the metadata rename fails or the process stops between renames, that mismatch remains: the filename, MIME type, modification time, and listed size can be stale. `get()` obtains the size from the content file. For a new key, the content remains unpublished: `get()` returns `null`, `has()` returns `false`, and listings omit it.
 
-The storage key still determines the `<hash>.dat` and `<hash>.meta.json` paths, and the metadata format is unchanged. Existing entries need no migration, and entries written by this version remain readable and writable by older versions. Rolling back does not repair an interrupted publication.
+A rejected write may therefore have changed the content. A successful retry replaces both files; supply a fresh upload if the original stream has already been consumed. Rolling back the package version does not repair an interrupted publication.
+
+The storage key's SHA-256 hash determines the `<hash>.dat` and `<hash>.meta.json` paths. The file's name, content type, and bytes do not affect those paths. The filenames and metadata schema are unchanged, so existing entries need no migration and older versions can read and write entries produced by this version, subject to the filesystem permissions below.
 
 ### Filesystem Requirements
 
-Use a filesystem that supports atomic rename on the same filesystem. The process needs permission to create, rename, and remove files in each storage subdirectory, even when replacing an existing entry. Unlike direct overwrites, replacement cannot work with only write access to existing files in a directory that disallows creating or replacing files. Writes do not need to read existing metadata.
+Use a filesystem that supports atomic rename on the same filesystem. The process needs permission to create, rename, and remove files in each storage subdirectory, even when replacing an existing entry. Write access to existing files alone is no longer sufficient. Writes do not need to read existing metadata.
 
-Replacements preserve existing POSIX permission mode bits, but create new files. Owner, group, and ACLs follow the filesystem's rules for newly created files rather than being copied from the previous files. Ensure newly created files grant access to the intended users and groups. Atomic rename does not guarantee persistence across power loss.
+Replacements preserve existing POSIX read/write/execute mode bits, but create new files. Owner, group, and ACLs follow the filesystem's rules for newly created files rather than being copied from the previous files. Ensure newly created files grant access to the intended users and groups. Atomic rename does not guarantee persistence across power loss.
 
 ### Coordinating Operations
 
 Callers must coordinate overlapping reads, writes, removals, and listings across all instances and processes sharing the directory, including older versions. Coordination must cover consuming returned lazy files or finishing/canceling their streams, not just awaiting `get()` or `put()`. This backend does not provide locking or snapshot reads.
+
+Temporary files are removed on a best-effort basis. A stopped process or failed cleanup can leave `.upload-*` directories inside the storage subdirectories. Storage ignores these directories; remove them only while all operations are stopped.
 
 ## Related Packages
 

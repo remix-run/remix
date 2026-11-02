@@ -15,8 +15,8 @@ import type {
 /**
  * Creates a {@link FileStorage} that is backed by a filesystem directory using `node:fs`.
  *
- * Important: No attempt is made to avoid overwriting existing files, so the directory used should
- * be a new directory solely dedicated to this storage object.
+ * Use a directory dedicated to this backend. Existing storage directories can be reused;
+ * storing a file under an existing key replaces that entry.
  *
  * Writes stage complete content and metadata before replacing their existing files with two
  * atomic renames. Upload failures during staging preserve the previous entry. If the content
@@ -25,14 +25,14 @@ import type {
  * the content. The storage format remains compatible with older versions.
  *
  * Requires a filesystem that supports atomic rename and permission to create, rename, and remove
- * files in the storage directory. Existing POSIX mode bits are preserved; ownership and ACLs
- * follow the filesystem's rules for newly created files. Callers must coordinate overlapping
- * operations, including consumption of returned lazy files. Power-loss durability is not guaranteed.
+ * files in the storage subdirectories. Existing POSIX read/write/execute mode bits are preserved;
+ * owner, group, and ACLs follow the filesystem's rules for newly created files. Callers must
+ * coordinate overlapping operations, including consumption of returned lazy files. Temporary
+ * cleanup is best-effort, and power-loss durability is not guaranteed.
  *
- * Note: Keys have no correlation to file names on disk, so they may be any string including
- * characters that are not valid in file names. Additionally, individual `File` names have no
- * correlation to names of files on disk, so multiple files with the same name may be stored in the
- * same storage object.
+ * Keys are hashed to determine paths on disk, so they may contain characters that are not valid
+ * in filenames. A file's name and other metadata do not affect its storage path; files with the
+ * same name can be stored under different keys.
  *
  * @param directory The directory where files are stored
  * @returns A new {@link FileStorage} backed by a filesystem directory
