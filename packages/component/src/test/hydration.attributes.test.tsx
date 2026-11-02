@@ -185,6 +185,59 @@ describe('hydration', () => {
       expect(container.innerHTML).toBe(serverHtml)
     })
 
+    it('hydrates and updates MathML boolean attributes as strings', async (t) => {
+      function math(value: boolean) {
+        return (
+          <math displaystyle={value}>
+            <mover accent={value}>
+              <munder accentunder={value}>
+                <mo
+                  fence={value}
+                  largeop={value}
+                  movablelimits={value}
+                  separator={value}
+                  stretchy={value}
+                  symmetric={value}
+                >
+                  ∑
+                </mo>
+                <mi>a</mi>
+              </munder>
+              <mi>b</mi>
+            </mover>
+          </math>
+        )
+      }
+
+      container.innerHTML = await renderToString(math(true))
+      let existingMath = container.querySelector('math')
+      invariant(existingMath)
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(math(true))
+      root.flush()
+
+      expect(container.querySelector('math')).toBe(existingMath)
+      expect(container.innerHTML).toBe(
+        '<math displaystyle="true"><mover accent="true"><munder accentunder="true">' +
+          '<mo fence="true" largeop="true" movablelimits="true" separator="true" stretchy="true" symmetric="true">∑</mo>' +
+          '<mi>a</mi></munder><mi>b</mi></mover></math>',
+      )
+      expect(getComputedStyle(existingMath).getPropertyValue('math-style')).toBe('normal')
+
+      root.render(math(false))
+      root.flush()
+
+      expect(container.querySelector('math')).toBe(existingMath)
+      expect(container.innerHTML).toBe(
+        '<math displaystyle="false"><mover accent="false"><munder accentunder="false">' +
+          '<mo fence="false" largeop="false" movablelimits="false" separator="false" stretchy="false" symmetric="false">∑</mo>' +
+          '<mi>a</mi></munder><mi>b</mi></mover></math>',
+      )
+      expect(getComputedStyle(existingMath).getPropertyValue('math-style')).toBe('compact')
+    })
+
     it('hydrates SVG xlinkHref as xlink:href', async () => {
       let html = await renderToString(
         <svg>

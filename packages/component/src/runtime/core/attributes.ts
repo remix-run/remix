@@ -18,13 +18,22 @@ const ATTRIBUTE_FALLBACK_NAMES = new Set([
 ])
 
 const BOOLEANISH_STRING_ATTRIBUTES = new Set([
+  'accent',
+  'accentunder',
   'autoReverse',
   'contenteditable',
+  'displaystyle',
   'draggable',
   'externalResourcesRequired',
+  'fence',
   'focusable',
+  'largeop',
+  'movablelimits',
   'preserveAlpha',
+  'separator',
   'spellcheck',
+  'stretchy',
+  'symmetric',
 ])
 
 const BLOCKED_HOST_PROP_NAMES = new Set(['__proto__', 'outerHTML'])
