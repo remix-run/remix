@@ -6,7 +6,7 @@ Search this generated index by task, export name, or description. Use the guides
 
 | Guide | Description |
 | --- | --- |
-| [Start Here](guides/01-start-here.md) | A high-level introduction to Remix and the mental model behind a Remix application. |
+| [Getting Started](guides/01-start-here.md) | A high-level introduction to Remix and the mental model behind a Remix application. |
 | [Routing and Controllers](guides/02-routing-and-controllers.md) | How route maps, route helpers, controllers, actions, and responses define Remix request handling. |
 | [Request Handling](guides/03-request-handling.md) | How a Web Request becomes a Web Response across runtime adapters and the middleware pipeline. |
 | [Rendering UI](guides/04-rendering-ui.md) | How to build pages from Remix components, props, context, document shells, styles, and first-party UI. |

@@ -16,8 +16,7 @@ catalog:
 
 packages:
   - demos/*
-  - docs/api
-  - docs/guides
+  - docs/site
   - docs/shared
   - docs/ui
   - docs/shared/prerender/bench

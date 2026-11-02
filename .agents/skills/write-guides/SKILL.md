@@ -1,21 +1,35 @@
 ---
 name: write-guides
-description: Write, rewrite, or audit Remix guide chapters in the voice of docs/guides/app/actions/docs/chapters/01-start-here.md. Use when drafting app guides, revising generated-sounding prose, tightening guide examples, preserving doc anchors, or reviewing Markdown chapters under docs/guides/app/actions/docs/chapters/.
+description: Write, rewrite, or audit Remix guide chapters in the voice of docs/site/app/actions/guides/chapters/01-start-here.md. Use when drafting app guides, revising generated-sounding prose, tightening guide examples, preserving doc anchors, or reviewing Markdown chapters under docs/site/app/actions/guides/chapters/.
 ---
 
 # Write Guides
 
 ## Overview
 
-Use this skill for Remix guide chapters, especially `docs/guides/app/actions/docs/chapters/*.md`.
+Use this skill for Remix guide chapters, especially `docs/site/app/actions/guides/chapters/*.md`.
 
 The goal is guide prose that sounds like a person walking through real Remix code: concrete, direct, slightly conversational, and careful with examples. Avoid polished filler, repeated takeaways, and abstract claims that could fit any framework.
+
+## Chapter Roles
+
+Only `01-start-here.md` is a tutorial. It builds an app step by step, and each step assumes the reader did the previous one.
+
+Every other chapter is a guide: general advice about how Remix handles one topic and how to accomplish common tasks with it. Guides use the albums record store as a shared example domain, not as an app the reader is building across chapters.
+
+- Write each guide so it can be read on its own, without having followed chapter 1 or any earlier chapter.
+- Write each section so a reader who lands on it from search can follow it without reading the sections above it.
+- Use albums, artists, tracks, and covers as example names, but do not narrate a build. Avoid phrases like "next we'll add uploads to our app," "back in the albums controller we wrote earlier," or "now that our app has a form."
+- Explain how the feature works and how to accomplish the task, then show a focused snippet. A snippet may be a partial file when the surrounding code is obvious.
+- Steps are fine inside a section when a task genuinely has an order, such as configuring middleware before reading `context.formData`. Keep them local to the task.
+- Assume an app shaped like the one `remix new` generates, but don't keep pointing at it. Avoid phrases like "the template does X" or "the template's asset server." Explain good ways to use Remix directly, such as "Serve them with `staticFiles()`" or "Create the asset server in its own module."
+- When there is more than one reasonable approach, name the options and explain the trade-off instead of presenting one setup as the only way. For example, restarting on change is simpler, while hot module replacement is faster and keeps client state at the cost of more moving parts.
 
 ## Read First
 
 Before editing a guide chapter:
 
-1. Read `docs/guides/app/actions/docs/chapters/01-start-here.md` for voice and example style.
+1. Read `docs/site/app/actions/guides/chapters/01-start-here.md` for voice and example style. Borrow its tone, not its tutorial structure, unless you are editing chapter 1.
 2. Read the target chapter completely.
 3. Read adjacent chapters when the target chapter refers to earlier or later concepts.
 4. If the chapter explains Remix app code, load the `remix` skill or relevant Remix references before inventing patterns.
@@ -23,11 +37,11 @@ Before editing a guide chapter:
 
 ## Voice
 
-Match `01-start-here.md`:
+Match the tone of `01-start-here.md`:
 
-- Start from what the reader just did or will do next.
+- In chapter 1, start from what the reader just did or will do next. In guides, start from the task or the Remix behavior the section explains.
 - Use concrete files, URLs, routes, handlers, components, and responses.
-- Use `we` for walkthrough steps and `you` for choices the reader controls.
+- In chapter 1, use `we` for walkthrough steps and `you` for choices the reader controls. In guides, address the reader as `you` and describe what Remix does directly.
 - Keep paragraphs short. One idea per paragraph is usually enough.
 - Explain code immediately after showing it, but do not narrate every line.
 - Let examples carry the explanation when they can.
@@ -36,19 +50,44 @@ Match `01-start-here.md`:
 
 Chapter intros can set scope. A short paragraph before the first section that names what the chapter covers and where it sits in the request path is welcome, and it can be more thesis-like than a section opener. The line to hold is grounding: the intro should name the concrete files, APIs, or stages this chapter actually walks through, not make a generic claim that could open any framework guide. `01-start-here.md` does this with its six principles and "What is Remix?" section. Section openers stay tighter and start from the concrete work.
 
-Good guide phrasing:
+Good tutorial phrasing (chapter 1 only):
 
 ```md
 Back in `routes.ts`, add the edit route with `form(...)`.
 ```
 
 ```md
-Since `albums.edit` is a nested route map, give it its own controller.
+Open `/albums/thriller/edit`. The route now returns an HTML form with the album data filled in.
+```
+
+Good guide phrasing:
+
+```md
+`staticFiles()` answers `GET` and `HEAD` requests for files under the directory you pass it, such as `./public`. Requests for missing files fall through to the router.
 ```
 
 ```md
-Open `/albums/thriller/edit`. The route now returns an HTML form with the album data filled in.
+`formData()` parses the body before your action runs, so an upload handler stores each file before the action sees the rest of the form.
 ```
+
+Avoid in guides:
+
+```md
+Now that our album app can list records, let's let users upload cover art.
+```
+
+## Introduce Unfamiliar Concepts
+
+Don't assume the reader already knows every term. Before relying on a concept that a working web developer might not know, introduce it:
+
+- Say what it is in a sentence, then why it matters for this task.
+- Link web platform features to MDN on first mention, such as import maps, the Navigation API, `AbortSignal`, or cascade layers.
+- Link Remix APIs to their API overview, and Remix concepts to the guide section that explains them.
+- When the reader needs to write configuration or code to use the concept, show a short snippet of what it looks like, such as a `package.json` field.
+
+Check every explanation you add against the package source or README, especially absolute claims such as "doesn't share", "overrides", "always", or "still submits". A confident explanation that is wrong costs the reader more than a missing one.
+
+For example, don't write "it only applies when every skipped module is declared side-effect free by its package's `sideEffects` field" without first explaining what the `sideEffects` field is, linking to its documentation, and showing an example.
 
 ## Avoid AI-Sounding Patterns
 
@@ -59,7 +98,7 @@ Cut or rewrite prose that has these tells:
 - “One source of truth” unless the paragraph immediately shows the exact typed value and what breaks when it changes.
 - Repeating the same idea before and after an example.
 - Staccato explanation where several short sentences define obvious neighboring parts in a row. Combine related clauses when it reads more naturally.
-- Semicolons used as prose punctuation when a period, comma, colon, or split sentence would read more naturally. This does not apply to code snippets, which should follow the local Prettier config.
+- Colons, semicolons, and em dashes joining clauses inside a sentence, such as "This is an optimization: it only applies when…" Split the sentence or rewrite it with a period or comma instead, keeping the relationship between the clauses. If the second clause explains or causes the first, say so with "because", "so", or "such as" rather than leaving two disconnected sentences. A colon that ends a sentence introducing a code block or list is fine. This does not apply to code snippets, which follow the local formatter config.
 - Soft transitions such as “Additionally,” “Furthermore,” “It is important to note,” “A few things to keep in mind,” or “This is where X comes in.”
 - Placeholder nouns such as “thing,” “stuff,” “pieces,” or “functionality” when a precise noun exists.
 - Overconfident reassurance such as “TypeScript tells you every place” or “the failure is loud.” Say what actually happens.
@@ -95,17 +134,17 @@ For guide chapters:
 7. Put related explanation adjacent to the code or list it describes.
 8. End sections by pointing to the next practical detail, not by restating the thesis.
 
-For tutorials:
+For the chapter 1 tutorial:
 
 1. State the next thing the reader will build or change.
 2. Show the file path and command or code.
 3. Explain what changed and how to see it work.
 4. Mention related chapters only after the reader has enough local context.
 
-For concept chapters:
+For guides (every other chapter):
 
 1. Start from the concrete app surface: files, imports, functions, route maps, responses.
-2. Use one running example when possible.
+2. Draw examples from the shared albums domain, but don't depend on code from earlier chapters. A snippet can be [explicitly partial](#code-examples) instead of repeating a whole file.
 3. Prefer the most explicit form before helpers, aliases, or generated shortcuts.
 4. Teach the common case directly, then summarize advanced cases in a compact list or one expressive example.
 5. Name the rule, then show the consequence in code.
@@ -113,26 +152,30 @@ For concept chapters:
 
 ## Code Examples
 
-Examples in `docs/guides/app/actions/docs/chapters/` should follow the local chapter formatting and teach the shape in the clearest order:
+Examples in `docs/site/app/actions/guides/chapters/` should follow the local chapter formatting and teach the shape in the clearest order:
 
 - Import from `remix/...`, not `@remix-run/...`.
-- Let the local chapter formatter config format code snippets. `docs/guides/app/actions/docs/chapters/.oxfmtrc.json` intentionally uses double quotes in snippets instead of the repo TypeScript style, so do not hand-edit snippets back to repo style.
+- Let the local chapter formatter config format code snippets. `docs/site/app/actions/guides/chapters/.oxfmtrc.json` intentionally uses double quotes in snippets instead of the repo TypeScript style, so do not hand-edit snippets back to repo style.
 - Use TypeScript file extensions in relative imports.
 - Make snippets internally consistent: every used helper is imported, unused imports are removed, and names match the surrounding example.
-- Prefer the existing albums record-store example unless the chapter needs a different domain.
+- Prefer the shared albums record-store domain unless the chapter needs a different one. Outside chapter 1, treat it as a source of example names, not a continuing build.
 - Use `routes.<name>.href(...)` for links, redirects, forms, and tests.
 - Return explicit Web `Response` objects from actions.
 - Keep examples realistic enough to copy into a project, but short enough that the point is visible.
 - If a snippet omits surrounding code, mark it with a short comment such as `// inside an action:` rather than pretending it is a complete file.
+- When you expand a partial snippet into a complete one, keep its behavior consistent with the code around it. A form must still send every field the action it posts to validates, and types must match the data the chapter uses elsewhere.
 
 ## Anchors And Links
 
 - Use generated heading anchors by default. Add an explicit `{#anchor}` only when preserving an existing linked anchor or intentionally choosing an anchor that differs from the generated value.
 - Remove explicit anchors that only repeat the generated heading anchor.
-- Before changing or removing a heading anchor, search for incoming links with `rg "#anchor-name" guides packages`.
+- Before changing or removing a heading anchor, search for incoming links with `rg "#anchor-name" docs packages`.
 - Preserve old anchors when another chapter links to them, even if you simplify the heading text.
 - Same-document anchors can stay relative.
-- Cross-chapter docs links should use the existing `/docs/...` style used by the guide.
+- Link the relevant words in the sentence instead of quoting a section or chapter title. Write "the same options [`createFileResponse()` accepts](#send-stored-and-on-disk-files)," not "covered in [Send Stored and On-Disk Files](#send-stored-and-on-disk-files)." If you must name a section, write it in sentence case without capitalizing words mid-sentence.
+- Point cross-chapter links at the most specific heading anchor that covers the topic, such as `/production/#caching`, rather than the top of the chapter.
+- Cross-chapter docs links use the chapter slug without its number prefix, such as `/interactivity/#browser-entry-with-run`.
+- Link prose references to `remix/*` packages and subpaths to their API overview. The guides and API reference share one docs site, so use a root-relative path under `/api/` without the `remix/` prefix, for example [`remix/middleware/form-data/future`](/api/middleware/form-data/future/). Don't use absolute `https://docs.remix.run/...` URLs. Link the first prose mention in each section, not every occurrence. Don't add a package name to a sentence only to create a link. Do not add links inside code blocks or headings. `pnpm run generate-remix` rewrites these links to the installed package READMEs in `packages/remix/guides/`.
 - Do not add link-heavy “for more information” endings to every section.
 - Link to API overviews when the guide intentionally skips exhaustive syntax, options, or package surface area.
 
@@ -155,23 +198,33 @@ When asked to identify generated-sounding prose:
 4. Reorder sections and examples when the current order teaches shorthand before the underlying shape.
 5. Fix example drift while rewriting prose.
 6. Re-read the chapter next to `01-start-here.md` and smooth any voice mismatch.
-7. Run Prettier on the changed Markdown file:
+7. Outside chapter 1, remove narration that treats the albums app as an ongoing build.
+8. Run Oxfmt on the changed Markdown file:
 
 ```sh
-pnpm exec prettier --check <path-to-chapter.md>
+pnpm exec oxfmt --check <path-to-chapter.md>
 ```
 
-Use `pnpm exec prettier --write <path-to-chapter.md>` only when formatting changes are expected and acceptable.
+Use `pnpm exec oxfmt --write <path-to-chapter.md>` only when formatting changes are expected and acceptable.
+
+9. Run `pnpm run generate-remix` to refresh the guide copies in `packages/remix/guides/`.
 
 ## Review Checklist
 
-- Does the chapter sound like a continuation of `01-start-here.md`?
+- Does the chapter match the tone of `01-start-here.md`?
+- If it isn't chapter 1, does it read as a standalone guide rather than the next step of a tutorial?
+- Does it explain good ways to use Remix and their trade-offs, rather than describing what "the template" does?
 - Does the first paragraph start with useful context instead of a generic thesis?
+- Are colons, semicolons, and em dashes kept out of the middle of sentences?
+- Is every unfamiliar concept introduced, linked, or shown before the guide relies on it?
+- Did you check new explanations and rationale against the source?
 - Did you remove repeated “write once / stay in sync / TypeScript catches it” takeaways unless each one adds new information?
-- Are all code snippets internally consistent?
+- Are all code snippets internally consistent, and do expanded snippets still match the actions and data they use?
 - Does the order teach the underlying shape before helper shortcuts and edge cases?
 - Does the chapter avoid duplicating API overview material while still showing why the lower-level API is useful?
 - Are route names, params, imports, and file paths consistent across the chapter?
 - Did you preserve anchors that other docs link to?
+- Is the first prose reference to a `remix/*` package in each section linked to its API overview with a root-relative `/api/...` path?
 - Are links used for real next steps instead of filler endings?
-- Did Prettier pass for the changed Markdown?
+- Do links wrap relevant words in the sentence rather than quoting capitalized section or chapter titles?
+- Did Oxfmt pass for the changed Markdown?

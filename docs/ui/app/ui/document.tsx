@@ -7,7 +7,7 @@ import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 import { DocsShell, DocsSecondaryNavigation } from 'remix-docs-shared/ui/docs-shell'
 import { DocsSocialMeta } from 'remix-docs-shared/ui/social-meta'
-import { DocsTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
+import { DocsTableOfContents, hasTableOfContents } from 'remix-docs-shared/ui/table-of-contents'
 import type { DocsHeadingLink } from 'remix-docs-shared/ui/table-of-contents'
 import uiPackage from '../../../../packages/ui/package.json' with { type: 'json' }
 import type { PageMeta, UiPage } from '../data/pages.ts'
@@ -87,7 +87,7 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
             navigationLabel="Remix UI documentation"
             mobileNavigationLabel={currentPage?.title ?? 'Getting Started'}
             navigationName="Remix UI navigation"
-            hasSecondaryNavigation={headings.length > 0}
+            hasSecondaryNavigation={hasTableOfContents(headings)}
             footer={<DocsFooter />}
           >
             <div class="docs-layout ui-docs-layout">
@@ -95,7 +95,7 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
                 {children}
                 <CodeBlockCopyButtons rootId={contentId} />
               </article>
-              {headings.length > 0 ? (
+              {hasTableOfContents(headings) ? (
                 <DocsSecondaryNavigation pagefindIgnore>
                   <h2 class="docs-nav-heading docs-toc__heading">On this page</h2>
                   <DocsTableOfContents headings={headings} />

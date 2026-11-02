@@ -11,14 +11,13 @@ const navigationLinks = [
 ] satisfies readonly DocsNavigationLink[]
 
 describe('createDocsNavigationLinks', () => {
-  it('returns the seven absolute links in navigation order', () => {
+  it('returns the six absolute links in navigation order', () => {
     let links = createDocsNavigationLinks()
 
     assert.deepEqual(
       [...links],
       [
-        ['guides', { href: 'https://guides.remix.run/', label: 'Guides' }],
-        ['api', { href: 'https://docs.remix.run', label: 'Docs' }],
+        ['docs', { href: 'https://docs.remix.run', label: 'Docs' }],
         ['github', { href: 'https://github.com/remix-run/remix', label: 'GitHub' }],
         ['blog', { href: 'https://remix.run/blog', label: 'Blog' }],
         ['newsletter', { href: 'https://remix.run/newsletter', label: 'Newsletter' }],
@@ -30,13 +29,13 @@ describe('createDocsNavigationLinks', () => {
 
   it('retains order when a caller replaces an existing link', () => {
     let links = createDocsNavigationLinks()
-    links.set('api', { href: '/v3', label: 'Docs', current: 'page' })
+    links.set('docs', { href: '/v3', label: 'Docs', current: 'page' })
 
     assert.deepEqual(
       [...links.values()].map((link) => link.label),
-      ['Guides', 'Docs', 'GitHub', 'Blog', 'Newsletter', 'Jam', 'Store'],
+      ['Docs', 'GitHub', 'Blog', 'Newsletter', 'Jam', 'Store'],
     )
-    assert.deepEqual(links.get('api'), { href: '/v3', label: 'Docs', current: 'page' })
+    assert.deepEqual(links.get('docs'), { href: '/v3', label: 'Docs', current: 'page' })
   })
 })
 

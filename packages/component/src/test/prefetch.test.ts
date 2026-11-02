@@ -1016,16 +1016,22 @@ describe('default frame prefetch', () => {
   })
 
   it('deduplicates pending asset hints across pages and targets and removes failed hints', async (t) => {
-    t.mock.method(globalThis, 'fetch', async () =>
-      htmlResponse('<script src="/shared.js"></script>'),
-    )
+    let html = Promise.withResolvers<string>()
+    t.mock.method(globalThis, 'fetch', async () => {
+      let response = htmlResponse('')
+      // Discover all three responses together while their shared asset hint is still pending.
+      t.mock.method(response, 'text', () => html.promise)
+      return response
+    })
     let { prefetch } = createPrefetch(t)
+    let linked = Promise.withResolvers<void>()
     let hints: HTMLLinkElement[] = []
     let observer = new MutationObserver((records) => {
       for (let record of records) {
         for (let node of record.addedNodes) {
           if (node instanceof HTMLLinkElement && node.rel === 'prefetch') {
             hints.push(node)
+            linked.resolve()
           }
         }
       }
@@ -1038,10 +1044,12 @@ describe('default frame prefetch', () => {
       prefetch(new URL('/second', location.href).href),
       prefetch(new URL('/first', location.href).href, { target: 'details' }),
     ])
-    await new Promise(requestAnimationFrame)
+    html.resolve('<script src="/shared.js"></script>')
+    await linked.promise
     expect(hints).toHaveLength(1)
     hints[0].dispatchEvent(new Event('error'))
     await ready
+    expect(hints).toHaveLength(1)
     expect(hints[0].isConnected).toBe(false)
   })
 
