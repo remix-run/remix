@@ -60,9 +60,9 @@ The storage key's SHA-256 hash determines the `<hash>.dat` and `<hash>.meta.json
 
 ### Filesystem Requirements
 
-Use a filesystem that supports atomic rename on the same filesystem. The process needs permission to create, rename, and remove files in each storage subdirectory, even when replacing an existing entry. Write access to existing files alone is no longer sufficient. Writes do not need to read existing metadata.
+The storage directory is managed by the application. Keep the application's filesystem user, groups, and directory inheritance rules consistent across restarts and deployments. Configure access for other readers through directory permissions and inheritance; custom per-file ownership and ACL changes are not preserved when an entry is replaced.
 
-Replacements preserve existing POSIX read/write/execute mode bits, but create new files. Owner, group, and ACLs follow the filesystem's rules for newly created files rather than being copied from the previous files. Ensure newly created files grant access to the intended users and groups. Atomic rename does not guarantee persistence across power loss.
+Use a filesystem that supports atomic rename on the same filesystem. The process needs permission to create, rename, and remove files in each storage subdirectory. Replacements preserve existing POSIX read/write/execute mode bits; owner, group, and ACLs follow the filesystem's rules for newly created files. Writes do not need to read existing metadata. Atomic rename does not guarantee persistence across power loss.
 
 ### Coordinating Operations
 

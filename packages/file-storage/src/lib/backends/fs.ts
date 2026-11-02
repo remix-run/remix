@@ -15,8 +15,10 @@ import type {
 /**
  * Creates a {@link FileStorage} that is backed by a filesystem directory using `node:fs`.
  *
- * Use a directory dedicated to this backend. Existing storage directories can be reused;
- * storing a file under an existing key replaces that entry.
+ * Use a directory dedicated to this backend and managed by the application, with consistent
+ * filesystem user, groups, and directory inheritance rules across restarts and deployments.
+ * Existing storage directories can be reused; storing a file under an existing key replaces
+ * that entry.
  *
  * Writes stage complete content and metadata before replacing their existing files with two
  * atomic renames. Upload failures during staging preserve the previous entry. If the content
@@ -26,9 +28,10 @@ import type {
  *
  * Requires a filesystem that supports atomic rename and permission to create, rename, and remove
  * files in the storage subdirectories. Existing POSIX read/write/execute mode bits are preserved;
- * owner, group, and ACLs follow the filesystem's rules for newly created files. Callers must
- * coordinate overlapping operations, including consumption of returned lazy files. Temporary
- * cleanup is best-effort, and power-loss durability is not guaranteed.
+ * owner, group, and ACLs follow the filesystem's rules for newly created files. Custom per-file
+ * ownership and ACL changes are not preserved. Callers must coordinate overlapping operations,
+ * including consumption of returned lazy files. Temporary cleanup is best-effort, and power-loss
+ * durability is not guaranteed.
  *
  * Keys are hashed to determine paths on disk, so they may contain characters that are not valid
  * in filenames. A file's name and other metadata do not affect its storage path; files with the
