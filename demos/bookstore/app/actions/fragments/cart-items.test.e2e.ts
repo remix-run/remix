@@ -58,7 +58,8 @@ describe('cart items', () => {
     await page.getByRole('row').filter({ hasText: 'Three Ways to Change Your Life' }).waitFor()
 
     save.resolve()
-    await page.getByRole('button', { name: 'Remove' }).and(page.locator(':enabled')).waitFor()
+    await page.getByRole('status').getByText('Updating your cart...').waitFor({ state: 'detached' })
+    assert.equal(await page.getByRole('button', { name: 'Remove' }).isDisabled(), false)
     assert.equal(await ashAndSmoke.count(), 0)
   })
 
@@ -93,6 +94,127 @@ describe('cart items', () => {
     await page.getByRole('status').getByText('Couldn’t update your cart. Try again.').waitFor()
     await page.getByRole('row').filter({ hasText: 'Ash & Smoke' }).waitFor()
     await page.getByText('Total: $16.99').waitFor()
+  })
+
+  it('keeps keyboard focus and blocks repeated submissions while saving', async (t) => {
+    let save = Promise.withResolvers<void>()
+    t.after(() => save.resolve())
+    let received = Promise.withResolvers<void>()
+    let updates = 0
+    let page = await serveCart(t, [{ bookId: '1', slug: 'bbq' }], async (request) => {
+      if (new URL(request.url).pathname !== routes.cart.api.update.href()) return
+      updates++
+      received.resolve()
+      await save.promise
+    })
+    let quantity = page.getByLabel('Quantity of Ash & Smoke')
+
+    await quantity.fill('3')
+    await quantity.press('Enter')
+    await received.promise
+    await page.getByText('Total: $50.97').waitFor()
+    assert.equal(await quantity.evaluate((input) => input === document.activeElement), true)
+    assert.equal(await quantity.isEditable(), false)
+    let repeatedSubmitPrevented = await quantity.evaluate((input) => {
+      let form = input.closest('form')
+      if (!form) throw new Error('Missing quantity form')
+      let prevented = false
+      form.addEventListener(
+        'submit',
+        (event) =>
+          queueMicrotask(() => {
+            prevented = event.defaultPrevented
+          }),
+        { once: true },
+      )
+      form.requestSubmit()
+      return Promise.resolve().then(() => prevented)
+    })
+    assert.equal(repeatedSubmitPrevented, true)
+
+    save.resolve()
+    await page.getByRole('button', { name: 'Update' }).waitFor()
+    assert.equal(await quantity.evaluate((input) => input === document.activeElement), true)
+    assert.equal(updates, 1)
+  })
+
+  it('restores totals after a failed quantity update and allows a retry', async (t) => {
+    let reject = true
+    let save = Promise.withResolvers<void>()
+    t.after(() => save.resolve())
+    let received = Promise.withResolvers<void>()
+    let page = await serveCart(t, [{ bookId: '1', slug: 'bbq' }], async (request) => {
+      if (new URL(request.url).pathname !== routes.cart.api.update.href()) return
+      received.resolve()
+      await save.promise
+      if (reject) return new Response('Server error', { status: 500 })
+    })
+    let quantity = page.getByLabel('Quantity of Ash & Smoke')
+    let update = page.getByRole('button', { name: 'Update' })
+
+    await quantity.fill('3')
+    await update.focus()
+    await update.press('Enter')
+    await received.promise
+    await page.getByRole('button', { name: 'Saving...' }).waitFor()
+    assert.equal(await page.getByRole('button', { name: 'Saving...' }).isDisabled(), true)
+    save.resolve()
+    await page.getByRole('status').getByText('Couldn’t update your cart. Try again.').waitFor()
+    await page.getByText('Total: $16.99').waitFor()
+    assert.equal(await quantity.inputValue(), '3')
+    assert.equal(await update.evaluate((button) => button === document.activeElement), true)
+
+    reject = false
+    await update.press('Enter')
+    await page.getByText('Total: $50.97').waitFor()
+    await update.waitFor()
+    assert.equal(await page.getByRole('status').textContent(), '')
+  })
+
+  it('shows the empty cart after removing its last book', async (t) => {
+    let save = Promise.withResolvers<void>()
+    t.after(() => save.resolve())
+    let received = Promise.withResolvers<void>()
+    let page = await serveCart(t, [{ bookId: '1', slug: 'bbq' }], async (request) => {
+      if (new URL(request.url).pathname !== routes.cart.api.remove.href()) return
+      received.resolve()
+      await save.promise
+    })
+
+    await page.getByRole('button', { name: 'Remove' }).click()
+    await received.promise
+    await page.getByText('Total: $0.00').waitFor()
+    await page.getByRole('status').getByText('Updating your cart...').waitFor()
+    assert.equal(await page.getByRole('row').filter({ hasText: 'Ash & Smoke' }).count(), 0)
+
+    save.resolve()
+    await page.getByText('Your cart is empty.').waitFor()
+    await page.getByRole('link', { name: 'Browse Books' }).waitFor()
+    assert.equal(new URL(page.url()).pathname, routes.cart.index.href())
+  })
+
+  it('updates and removes items without JavaScript', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let runtimePage = await t.serve(server)
+    let browser = runtimePage.context().browser()
+    assert.ok(browser)
+    let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
+    t.after(() => context.close())
+    let page = await context.newPage()
+    await page.request.post(routes.cart.api.add.href(), {
+      form: { bookId: '1' },
+      maxRedirects: 0,
+    })
+    await page.goto(routes.cart.index.href())
+
+    await page.getByLabel('Quantity of Ash & Smoke').fill('3')
+    await page.getByRole('button', { name: 'Update' }).click()
+    await page.getByText('Total: $50.97').waitFor()
+    assert.equal(new URL(page.url()).pathname, routes.cart.index.href())
+
+    await page.getByRole('button', { name: 'Remove' }).click()
+    await page.getByText('Your cart is empty.').waitFor()
+    assert.equal(new URL(page.url()).pathname, routes.cart.index.href())
   })
 })
 
