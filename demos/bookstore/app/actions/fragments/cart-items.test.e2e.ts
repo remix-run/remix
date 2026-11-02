@@ -62,6 +62,26 @@ describe('cart items', () => {
     assert.equal(await ashAndSmoke.count(), 0)
   })
 
+  it('keeps optimistic and saved totals consistent for exponent quantities', async (t) => {
+    let save = Promise.withResolvers<void>()
+    t.after(() => save.resolve())
+    let received = Promise.withResolvers<void>()
+    let page = await serveCart(t, [{ bookId: '1', slug: 'bbq' }], async (request) => {
+      if (new URL(request.url).pathname !== routes.cart.api.update.href()) return
+      received.resolve()
+      await save.promise
+    })
+
+    await page.getByLabel('Quantity of Ash & Smoke').fill('1e2')
+    await page.getByRole('button', { name: 'Update' }).click()
+    await received.promise
+    await page.getByText('Total: $1699.00').waitFor()
+
+    save.resolve()
+    await page.getByRole('button', { name: 'Update' }).and(page.locator(':enabled')).waitFor()
+    assert.equal(await page.getByText('Total: $1699.00').count(), 1)
+  })
+
   it('puts the cart back and says so when a change fails', async (t) => {
     let page = await serveCart(t, [{ bookId: '1', slug: 'bbq' }], (request) => {
       if (new URL(request.url).pathname === routes.cart.api.remove.href()) {
