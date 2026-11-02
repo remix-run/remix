@@ -69,6 +69,8 @@ export type PendingClientEntries = Map<
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
   /** The link, form or submit button whose navigation started the reload. */
   sourceElement?: Element
+  /** Whether `sourceElement` submitted a form. */
+  submitted?: boolean
 }
 
 export type FrameReloadResult = {

@@ -565,6 +565,7 @@ describe('navigate', () => {
     await transition.succeed()
 
     expect(reloadFrame.mock.calls[0]?.arguments[1]?.sourceElement).toBe(anchor)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.submitted).toBe(false)
     expect(reloadFrame.mock.calls[0]?.arguments[1]?.formData).toBeUndefined()
   })
 
@@ -1604,7 +1605,7 @@ describe('navigate', () => {
     let originalUrl = window.location.href
     let destination = new URL(originalUrl)
     destination.searchParams.set('frame-navigation', 'replace-link')
-    let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
+    let reload = mock.fn(async (_options?: FrameNavigationOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
@@ -1634,10 +1635,53 @@ describe('navigate', () => {
       expect(entryAfterNavigation.url).toBe(destination.href)
       expect(topFrame.src).toBe(destination.href)
       expect(reload).toHaveBeenCalledTimes(1)
+      // The replacement navigation has no source element of its own.
+      expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(anchor)
+      expect(reload.mock.calls[0]?.arguments[0]?.submitted).toBe(false)
       expect(document.activeElement).toBe(anchor)
     } finally {
       if (didNavigate) await navigate(originalUrl, { history: 'replace' })
       controller.abort()
+    }
+  })
+
+  it('keeps a GET form as the source when it replaces history', async () => {
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'replace-form')
+    let reload = mock.fn(async (_options?: FrameNavigationOptions) => new AbortController().signal)
+    let topFrame = { src: '' } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame: (_frame, options) =>
+        createReloadTransition(reload(options).then((signal) => ({ signal }))),
+    })
+
+    let form = document.createElement('form')
+    form.action = destination.href
+    form.setAttribute('data-rmx-history', 'replace')
+    let button = document.createElement('button')
+    form.append(button)
+    document.body.append(form)
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    let didNavigate = false
+    try {
+      let navigationSucceeded = waitForNavigationSuccess()
+      button.click()
+      await navigationSucceeded
+      didNavigate = true
+
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation)
+      expect(reload).toHaveBeenCalledTimes(1)
+      expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(button)
+      expect(reload.mock.calls[0]?.arguments[0]?.submitted).toBe(true)
+    } finally {
+      if (didNavigate) await navigate(originalUrl, { history: 'replace' })
+      controller.abort()
+      form.remove()
     }
   })
 
@@ -2126,6 +2170,7 @@ describe('form navigation', () => {
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
     expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(form)
+    expect(reload.mock.calls[0]?.arguments[0]?.submitted).toBe(true)
   })
 
   it('replays same-location POST submissions as replace navigations without precommit support', async (t) => {
@@ -2167,6 +2212,7 @@ describe('form navigation', () => {
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
     expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(form)
+    expect(reload.mock.calls[0]?.arguments[0]?.submitted).toBe(true)
   })
 
   it('replays a POST submission in the frame selected before cancelling it', async (t) => {

@@ -1,0 +1,1 @@
+`remix/component` dispatches `rmx:form-submit-start`, a `FormSubmitStartEvent`, on the submit button or form whose submission starts a frame reload, with the submission's `formData` and a `finished` promise, so pending and optimistic UI can follow a form's own submissions. See the `@remix-run/component` changelog for an example.
