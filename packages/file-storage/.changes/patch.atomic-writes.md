@@ -1,0 +1,7 @@
+Failed uploads no longer partially overwrite previous filesystem entries during staging. `createFsFileStorage()` writes complete content and metadata to temporary files before replacing the content file and then the metadata file with two atomic renames. The import, signature, filenames, and metadata schema are unchanged; no opt-in or storage migration is needed, and the disk format remains compatible with older versions.
+
+The two renames are not a transaction. If the content rename succeeds but the metadata rename fails, or the process stops between them, complete new content remains with old metadata. Filename, MIME type, modification time, and listed size can be stale; `get()` obtains the size from the content file. A new key remains unpublished. A rejected write may have changed content; a successful retry with a fresh upload replaces both files. Rollback does not repair a partially published entry.
+
+Replacements require permission to create, rename, and remove files in the storage subdirectories; write access to existing files alone is no longer sufficient. POSIX read/write/execute mode bits are preserved, but owner, group, and ACLs follow the filesystem's rules for newly created files. Deployments with custom filesystem permissions must allow replacement and ensure newly created files remain accessible to intended readers.
+
+Callers must coordinate overlapping operations, including consumption of returned lazy files. Temporary cleanup is best-effort and power-loss durability is not guaranteed.
