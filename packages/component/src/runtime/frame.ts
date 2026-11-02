@@ -6,7 +6,6 @@ import {
   createFrameHandle,
   getComponentError,
   type FrameContent,
-  type FrameResolution,
 } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
@@ -14,6 +13,19 @@ import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
+import {
+  createFrameRuntime,
+  getSharedFrameRuntime,
+  isFrameRuntime,
+  NamedFrameRegistry,
+  type FrameNavigationOptions,
+  type FrameReloadResult,
+  type FrameReloadTransition,
+  type LoadModule,
+  type PendingClientEntries,
+  type ReconciliationTracker,
+  type ResolveFrame,
+} from './frame-runtime.ts'
 import {
   collectNodesBetween,
   diffElementAttributes,
@@ -69,46 +81,14 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-type PendingClientEntries = Map<Comment, [Comment, RemixElement | undefined]>
-
-export class NamedFrameRegistry {
-  #framesByName = new Map<string, FrameHandle[]>()
-
-  register(name: string, frame: FrameHandle): void {
-    let frames = this.#framesByName.get(name)
-    if (frames) {
-      frames.push(frame)
-    } else {
-      this.#framesByName.set(name, [frame])
-    }
-  }
-
-  get(name: string): FrameHandle | undefined {
-    return this.#framesByName.get(name)?.at(-1)
-  }
-
-  unregister(name: string, frame: FrameHandle): void {
-    let frames = this.#framesByName.get(name)
-    if (!frames) return
-
-    let index = frames.lastIndexOf(frame)
-    if (index === -1) return
-    frames.splice(index, 1)
-
-    if (frames.length === 0) {
-      this.#framesByName.delete(name)
-    }
-  }
-}
-
-let appTopFrame: Frame
+let appTopFrame: FrameInstance
 export const appNamedFrames = new NamedFrameRegistry()
 
-export function setAppTopFrame(frame: Frame): void {
+export function setAppTopFrame(frame: FrameInstance): void {
   appTopFrame = frame
 }
 
-export function getAppTopFrame(): Frame {
+export function getAppTopFrame(): FrameInstance {
   return appTopFrame
 }
 
@@ -132,74 +112,7 @@ export function getNamedFrame(name: string): FrameHandle | undefined {
   return appNamedFrames.get(name)
 }
 
-/**
- * Loads a named client-entry export for hydration.
- *
- * Module specifiers from trusted document metadata are passed through unchanged. The loader
- * controls resolution, including import maps, CDN URLs, and development server URLs.
- *
- * @param moduleUrl Module specifier for the client entry, as serialized by the server.
- * @param exportName Named export to read from the loaded module.
- * @returns The exported component function, or a promise for it.
- *
- * @example
- * ```ts
- * run({
- *   async loadModule(moduleUrl, exportName) {
- *     let mod = await import(moduleUrl)
- *     return mod[exportName]
- *   },
- * })
- * ```
- */
-export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
-
-/**
- * Resolves content for a browser-loaded frame.
- *
- * Only return trusted application content. Remix does not sanitize HTML strings, streams, or
- * response bodies before parsing and reconciling them into the current document. Frame HTML can
- * select client-entry modules and contribute import maps, styles, and nested frames.
- *
- * @param src Frame source or destination URL for a top-frame navigation.
- * @param options Information about the active frame load or form submission.
- * @returns Frame content or a response whose body should be rendered into the frame.
- */
-export type ResolveFrame = (
-  src: string,
-  options?: ResolveFrameOptions,
-) => Promise<FrameResolution> | FrameResolution
-
-/**
- * Information available while resolving browser-loaded frame content.
- */
-export interface ResolveFrameOptions {
-  /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
-  target?: string
-  /** Form values submitted to the frame source for a POST reload or navigation. */
-  formData?: FormData
-  /** HTTP method selected by the reload options or the form and its submitter. */
-  method?: string
-  /** Body encoding selected by the reload options or the form and its submitter. */
-  encType?: string
-  /** Cancels the active frame request. Custom resolvers should forward this to `fetch()`. */
-  signal?: AbortSignal
-}
-
 type InternalFrameContent = FrameContent | DocumentFragment
-
-type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
-
-type FrameReloadResult = {
-  signal: AbortSignal
-  redirectedTo?: string
-}
-
-type FrameReloadTransition = {
-  signal: AbortSignal
-  committed: Promise<void>
-  finished: Promise<FrameReloadResult>
-}
 
 type FrameTemplateListener = (fragment: DocumentFragment) => void
 
@@ -247,69 +160,6 @@ function inferFlushKind(html: string): FlushKind {
   return FULL_DOCUMENT_PATTERN.test(html) ? 'document' : 'fragment'
 }
 
-const FRAME_RUNTIME = Symbol('FrameRuntime')
-
-export type FrameRuntime = {
-  [FRAME_RUNTIME]: true
-  canResolveFrames?: boolean
-  getContext?: (type: ElementFunction) => unknown
-  topFrame?: FrameHandle
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
-  styleManager: StyleManager
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
-  serverFrameReload:
-    | {
-        signal: AbortSignal
-        reconciliationTracker?: ReconciliationTracker
-        blockingFrameTracker?: ReconciliationTracker
-      }
-    | undefined
-  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
-}
-
-type SharedFrameRuntime = Pick<
-  FrameRuntime,
-  | 'errorTarget'
-  | 'loadModule'
-  | 'resolveFrame'
-  | 'pendingClientEntries'
-  | 'scheduler'
-  | 'styleManager'
-  | 'moduleCache'
-  | 'moduleLoads'
-  | 'frameInstances'
-  | 'namedFrames'
-  | 'processClientEntryPreloads'
->
-
-function getSharedFrameRuntime(source: SharedFrameRuntime): SharedFrameRuntime {
-  return {
-    errorTarget: source.errorTarget,
-    loadModule: source.loadModule,
-    resolveFrame: source.resolveFrame,
-    pendingClientEntries: source.pendingClientEntries,
-    scheduler: source.scheduler,
-    styleManager: source.styleManager,
-    moduleCache: source.moduleCache,
-    moduleLoads: source.moduleLoads,
-    frameInstances: source.frameInstances,
-    namedFrames: source.namedFrames,
-    processClientEntryPreloads: source.processClientEntryPreloads,
-  }
-}
-
-export function isFrameRuntime(value: unknown): value is FrameRuntime {
-  return isRecord(value) && Reflect.get(value, FRAME_RUNTIME) === true
-}
-
 /**
  * Reloads a frame and returns response metadata used by the navigation runtime.
  *
@@ -341,7 +191,7 @@ export type FrameContext = {
   data: RmxData
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
+  frameInstances: WeakMap<Comment, FrameInstance>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   lifecycleSignal: AbortSignal
@@ -368,12 +218,12 @@ type FrameInit = {
   data: RmxData
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
+  frameInstances: WeakMap<Comment, FrameInstance>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
 }
 
-export type Frame = {
+export type FrameInstance = {
   render: (content: InternalFrameContent, options?: RenderOptions) => Promise<void>
   ready: () => Promise<void>
   flush: () => void
@@ -411,7 +261,7 @@ type ActiveRenderOptions = RenderOptions & {
   data: RmxData
 }
 
-export function createFrame(root: FrameRoot, init: FrameInit): Frame {
+export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let container = createContainer(root)
   let contentRoot: VirtualRoot | undefined
   let reloadController: AbortController | undefined
@@ -1035,39 +885,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     await render(template, { reconciliationTracker, signal, contentStatus: 'resolved' })
     if (!isRenderAborted(signal)) onResolved?.()
   }
-}
-
-export function createFrameRuntime(init: {
-  topFrame?: FrameHandle
-  getContext?: (type: ElementFunction) => unknown
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
-  styleManager: StyleManager
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
-  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
-}): FrameRuntime {
-  return {
-    [FRAME_RUNTIME]: true,
-    topFrame: init.topFrame,
-    getContext: init.getContext,
-    ...getSharedFrameRuntime(init),
-    serverFrameReload: undefined,
-    reloadForNavigation: init.reloadForNavigation,
-  }
-}
-
-export type ReconciliationTracker = {
-  track: () => () => void
-  waitFor: (task: Promise<void>) => void
-  finalize: () => void
-  ready: () => Promise<void>
 }
 
 function createReconciliationTracker(): ReconciliationTracker {

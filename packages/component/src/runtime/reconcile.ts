@@ -6,8 +6,9 @@ import type {
   FrameProps,
 } from './component.ts'
 import { createComponent, createComponentErrorEvent, Fragment, Frame } from './component.ts'
-import type { Frame as FrameInstance, FrameRuntime } from './frame.ts'
-import { createFrame, isFrameRuntime } from './frame.ts'
+import type { FrameInstance } from './frame.ts'
+import { createFrame } from './frame.ts'
+import { getFrameRuntime, type FrameMountState, type FrameRuntime } from './frame-runtime.ts'
 import { unwrapFrameResolution } from './spa-response.ts'
 import { createRangeRoot } from './vdom.ts'
 import { invariant } from './invariant.ts'
@@ -187,19 +188,6 @@ export type CommittedClientEntryNode = CommittedNodeBase<'client-entry', Element
   props: RuntimeElementProps
   _rangeStart: Comment
   _rangeEnd: Comment
-}
-
-export interface FrameFallbackRoot {
-  render(element: RemixNode): void
-  dispose(): void
-}
-
-export type FrameMountState = {
-  instance: FrameInstance
-  fallbackRoot?: FrameFallbackRoot
-  resolveToken: number
-  resolveController?: AbortController
-  resolved: boolean
 }
 
 export type CommittedFrameNode = CommittedNodeBase<'frame', typeof Frame> & {
@@ -1602,11 +1590,6 @@ function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
     if (cursor === end) break
     cursor = nextSibling
   }
-}
-
-function getFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
-  let runtime = frame.$runtime
-  return isFrameRuntime(runtime) ? runtime : undefined
 }
 
 function getFrameSrc(node: FrameNode | CommittedFrameNode): string {

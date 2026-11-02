@@ -36,7 +36,7 @@ export type {
   FrameReloadOptions,
   FrameProps,
 } from './runtime/component.ts'
-export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame.ts'
+export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame-runtime.ts'
 export { spaResponse } from './runtime/spa-response.ts'
 
 // -- Elements/JSX/Props --

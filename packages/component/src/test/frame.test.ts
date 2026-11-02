@@ -6,12 +6,14 @@ import { clientEntry } from '../runtime/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
-  NamedFrameRegistry,
   publishFrameTemplate,
   reloadFrameForNavigation,
+} from '../runtime/frame.ts'
+import {
+  NamedFrameRegistry,
   type LoadModule,
   type ResolveFrameOptions,
-} from '../runtime/frame.ts'
+} from '../runtime/frame-runtime.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
