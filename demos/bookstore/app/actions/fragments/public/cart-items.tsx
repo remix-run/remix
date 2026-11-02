@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/component'
+import type { FormSubmitStartEvent, Handle } from 'remix/component'
 import { css, clientEntry, on } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
@@ -17,53 +17,71 @@ type CartItemsProps = {
   canCheckout: boolean
 }
 
-type PendingAction = {
-  type: 'update' | 'remove'
+// A submitted change: the book and the quantity it leaves, 0 when it removes the book.
+type CartChange = {
   bookId: number
-} | null
+  quantity: number
+}
 
 export const CartItems = clientEntry(
   import.meta.url,
   function CartItems(handle: Handle<CartItemsProps>) {
-    let pendingAction: PendingAction = null
+    let change: CartChange | undefined
+    let failed = false
 
-    let submit = async (form: HTMLFormElement, signal: AbortSignal, nextAction: PendingAction) => {
-      if (pendingAction) return
-
-      pendingAction = nextAction
-      handle.update()
-
-      try {
-        let formData = new FormData(form)
-        formData.set('redirect', 'none')
-
-        await fetch(form.action, {
-          method: 'POST',
-          body: formData,
-          signal,
-        })
-
-        if (signal.aborted) return
-
-        await handle.frame.reload()
-      } finally {
-        pendingAction = null
-        handle.update()
+    // Shows a change as soon as its submission starts, until the cart it saved renders. The cart
+    // listens around its rows, because removing a row removes its form, which would abort the
+    // form's signal and leave the change pending.
+    async function follow(event: FormSubmitStartEvent, signal: AbortSignal) {
+      let { formData } = event
+      if (!formData) return
+      change = {
+        bookId: Number(formData.get('bookId')),
+        quantity: formData.has('quantity') ? Number(formData.get('quantity')) : 0,
       }
+      failed = false
+      handle.update()
+      try {
+        await event.finished
+      } catch (error) {
+        // An `AbortError` means a newer navigation replaced this one, which shows its own state.
+        failed = !(error instanceof DOMException && error.name === 'AbortError')
+      }
+      if (signal.aborted) return
+      change = undefined
+      handle.update()
     }
 
     return () => {
-      let { items, total, canCheckout } = handle.props
-      let isPending = pendingAction !== null
-      let totalLabel = isPending ? '---' : `$${total.toFixed(2)}`
+      let { canCheckout } = handle.props
+      let items = handle.props.items.flatMap((item) => {
+        if (item.bookId !== change?.bookId) return [item]
+        return change.quantity > 0 ? [{ ...item, quantity: change.quantity }] : []
+      })
+      let total = change
+        ? items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        : handle.props.total
+      // Each change saves the same session, so the next one waits for it.
+      let isPending = change !== undefined
 
       return (
-        <>
-          {isPending ? (
-            <p mix={css({ marginBottom: '1rem', fontSize: '0.9rem', color: '#666' })}>
-              Updating your cart...
-            </p>
-          ) : null}
+        <div mix={on('rmx:form-submit-start', (event, signal) => follow(event, signal))}>
+          <p
+            role="status"
+            data-failed={failed ? '' : undefined}
+            mix={css({
+              fontSize: '0.9rem',
+              '&:not(:empty)': { marginBottom: '1rem' },
+              '&:not([data-failed])': { color: '#666' },
+              '&[data-failed]': { color: '#e74c3c' },
+            })}
+          >
+            {isPending
+              ? 'Updating your cart...'
+              : failed
+                ? 'Couldn’t update your cart. Try again.'
+                : ''}
+          </p>
 
           <table>
             <thead>
@@ -77,10 +95,7 @@ export const CartItems = clientEntry(
             </thead>
             <tbody>
               {items.map((item) => {
-                let isUpdating =
-                  pendingAction?.type === 'update' && pendingAction.bookId === item.bookId
-                let isRemoving =
-                  pendingAction?.type === 'remove' && pendingAction.bookId === item.bookId
+                let isUpdating = change?.bookId === item.bookId
 
                 return (
                   <tr key={item.bookId}>
@@ -96,19 +111,14 @@ export const CartItems = clientEntry(
                     <td>${item.price.toFixed(2)}</td>
 
                     <td>
+                      {/* The action redirects back to the cart, which then replaces this page in place. */}
                       <form
                         method="POST"
                         action={routes.cart.api.update.href()}
-                        mix={[
-                          on('submit', async (event, signal) => {
-                            event.preventDefault()
-                            await submit(event.currentTarget, signal, {
-                              type: 'update',
-                              bookId: item.bookId,
-                            })
-                          }),
-                          css({ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }),
-                        ]}
+                        data-rmx-history="replace"
+                        data-rmx-reset-scroll="manual"
+                        data-rmx-reset-focus="manual"
+                        mix={css({ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' })}
                       >
                         <input type="hidden" name="_method" value="PUT" />
                         <input type="hidden" name="bookId" value={item.bookId} />
@@ -116,8 +126,10 @@ export const CartItems = clientEntry(
                         <input
                           type="number"
                           name="quantity"
+                          aria-label={`Quantity of ${item.title}`}
                           defaultValue={item.quantity}
                           min="1"
+                          required
                           disabled={isPending}
                           mix={css({ width: '70px' })}
                         />
@@ -144,16 +156,10 @@ export const CartItems = clientEntry(
                       <form
                         method="POST"
                         action={routes.cart.api.remove.href()}
-                        mix={[
-                          on('submit', async (event, signal) => {
-                            event.preventDefault()
-                            await submit(event.currentTarget, signal, {
-                              type: 'remove',
-                              bookId: item.bookId,
-                            })
-                          }),
-                          css({ display: 'inline' }),
-                        ]}
+                        data-rmx-history="replace"
+                        data-rmx-reset-scroll="manual"
+                        data-rmx-reset-focus="manual"
+                        mix={css({ display: 'inline' })}
                       >
                         <input type="hidden" name="_method" value="DELETE" />
                         <input type="hidden" name="bookId" value={item.bookId} />
@@ -169,7 +175,7 @@ export const CartItems = clientEntry(
                             textAlign: 'center',
                           })}
                         >
-                          {isRemoving ? 'Removing...' : 'Remove'}
+                          Remove
                         </button>
                       </form>
                     </td>
@@ -183,7 +189,7 @@ export const CartItems = clientEntry(
             <p
               mix={css({ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', marginRight: 'auto' })}
             >
-              Total: {totalLabel}
+              Total: ${total.toFixed(2)}
             </p>
 
             <a
@@ -204,7 +210,7 @@ export const CartItems = clientEntry(
               </a>
             )}
           </div>
-        </>
+        </div>
       )
     }
   },
