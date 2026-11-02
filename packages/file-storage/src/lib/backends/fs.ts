@@ -77,12 +77,13 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
 
     let metaMode = await readFileMode(metaPath)
     let dataMode = (await readFileMode(filePath)) ?? metaMode
-    let tempDir = await fsp.mkdtemp(path.join(directory, '.upload-'))
-    let tempDataPath = path.join(tempDir, 'data')
-    let tempMetaPath = path.join(tempDir, 'metadata')
+    let uploadId = crypto.randomUUID()
+    let tempDataPath = `${filePath}.${uploadId}.upload`
+    let tempMetaPath = `${metaPath}.${uploadId}.upload`
+    let dataHandle = await fsp.open(tempDataPath, 'wx', dataMode)
+    let tempMetadataCreated = false
 
     try {
-      let dataHandle = await fsp.open(tempDataPath, 'wx', dataMode)
       let meta: FileMetadata
       try {
         // Preserve the previous mode even when the process umask has changed.
@@ -103,6 +104,7 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
       }
 
       let metaHandle = await fsp.open(tempMetaPath, 'wx', metaMode)
+      tempMetadataCreated = true
       try {
         if (metaMode !== undefined) await metaHandle.chmod(metaMode)
         await metaHandle.writeFile(JSON.stringify(meta))
@@ -117,7 +119,10 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
       return { filePath, meta }
     } finally {
       // Cleanup must not mask a write error or turn a successful publication into a failure.
-      await fsp.rm(tempDir, { recursive: true, force: true }).catch(() => {})
+      await fsp.rm(tempDataPath, { force: true }).catch(() => {})
+      if (tempMetadataCreated) {
+        await fsp.rm(tempMetaPath, { force: true }).catch(() => {})
+      }
     }
   }
 

@@ -267,7 +267,7 @@ describe('fs file storage', () => {
     let files = fs.readdirSync(tmpDir, { recursive: true, withFileTypes: true })
     assert.equal(files.filter((file) => file.isFile()).length, 1)
     assert.ok(files.some((file) => file.name.endsWith('.dat')))
-    assert.ok(files.every((file) => !file.name.startsWith('.upload-')))
+    assert.ok(files.every((file) => !file.name.endsWith('.upload')))
     await storage.remove('file')
     assert.equal(await storage.get('file'), null)
   })
@@ -365,7 +365,7 @@ describe('fs file storage', () => {
   it('keeps a successful replacement successful when temporary cleanup fails', async (t) => {
     let storage = createFsFileStorage(tmpDir)
     await storage.set('file', new File(['original'], 'original.txt'))
-    let failure = new Error('Temporary directory cleanup failed')
+    let failure = new Error('Temporary file cleanup failed')
     t.mock.method(fsp, 'rm', async () => {
       throw failure
     })
@@ -377,20 +377,85 @@ describe('fs file storage', () => {
     assert.deepEqual((await storage.list()).files, [{ key: 'file' }])
   })
 
-  it('ignores files left in an abandoned staging directory', async () => {
+  it('ignores abandoned sibling uploads and leaves them intact during replacement', async () => {
     let storage = createFsFileStorage(tmpDir)
     await storage.set('file', new File(['original'], 'original.txt'))
     let metaPath = findMetadataPath(tmpDir)
-    let abandoned = fs.mkdtempSync(path.join(path.dirname(metaPath), '.upload-'))
-    fs.writeFileSync(path.join(abandoned, 'data'), 'incomplete')
-    fs.copyFileSync(metaPath, path.join(abandoned, path.basename(metaPath)))
+    let uploadId = crypto.randomUUID()
+    let dataPath = metaPath.replace(/\.meta\.json$/, '.dat')
+    let abandonedData = `${dataPath}.${uploadId}.upload`
+    let abandonedMetadata = `${metaPath}.${uploadId}.upload`
+    fs.writeFileSync(abandonedData, 'incomplete')
+    fs.copyFileSync(metaPath, abandonedMetadata)
+    let originalMetadata = fs.readFileSync(abandonedMetadata, 'utf-8')
 
     let reopened = createFsFileStorage(tmpDir)
     let stored = await reopened.get('file')
     assert.ok(stored)
     assert.equal(await stored.text(), 'original')
     assert.deepEqual((await reopened.list()).files, [{ key: 'file' }])
-    assert.ok(fs.existsSync(abandoned))
+    await reopened.set('file', new File(['replacement'], 'new.txt'))
+    assert.equal(fs.readFileSync(abandonedData, 'utf-8'), 'incomplete')
+    assert.equal(fs.readFileSync(abandonedMetadata, 'utf-8'), originalMetadata)
+    assert.deepEqual(
+      fs.readdirSync(path.dirname(metaPath)).sort(),
+      [
+        path.basename(dataPath),
+        path.basename(abandonedData),
+        path.basename(metaPath),
+        path.basename(abandonedMetadata),
+      ].sort(),
+    )
+  })
+
+  it('stages files beside their destinations without creating a temporary directory', async (t) => {
+    let storage = createFsFileStorage(tmpDir)
+    await storage.set('file', new File(['original'], 'original.txt'))
+    let metaPath = findMetadataPath(tmpDir)
+    let directory = path.dirname(metaPath)
+    let originalRename = fsp.rename
+    let sources: string[] = []
+    t.mock.method(fsp, 'rename', async (source: fs.PathLike, destination: fs.PathLike) => {
+      assert.equal(path.dirname(String(source)), directory)
+      assert.equal(path.dirname(String(destination)), directory)
+      assert.ok(String(source).endsWith('.upload'))
+      sources.push(String(source))
+      return originalRename(source, destination)
+    })
+
+    await storage.set('file', new File(['replacement'], 'new.txt'))
+    await storage.set('file', new File(['another replacement'], 'newer.txt'))
+
+    assert.equal(sources.length, 4)
+    assert.equal(new Set(sources).size, 4)
+    assert.ok(fs.readdirSync(directory, { withFileTypes: true }).every((entry) => entry.isFile()))
+  })
+
+  it('does not remove an existing temporary metadata file when exclusive creation fails', async (t) => {
+    let storage = createFsFileStorage(tmpDir)
+    await storage.set('file', new File(['original'], 'original.txt'))
+    let metaPath = findMetadataPath(tmpDir)
+    let uploadId = crypto.randomUUID()
+    let occupiedPath = `${metaPath}.${uploadId}.upload`
+    fs.writeFileSync(occupiedPath, 'existing upload')
+    t.mock.method(crypto, 'randomUUID', () => uploadId)
+
+    await assert.rejects(async () => storage.set('file', new File(['replacement'], 'new.txt')), {
+      code: 'EEXIST',
+    })
+
+    assert.equal(fs.readFileSync(occupiedPath, 'utf-8'), 'existing upload')
+    let stored = await storage.get('file')
+    assert.ok(stored)
+    assert.equal(await stored.text(), 'original')
+    assert.deepEqual(
+      fs.readdirSync(path.dirname(metaPath)).sort(),
+      [
+        path.basename(metaPath.replace(/\.meta\.json$/, '.dat')),
+        path.basename(metaPath),
+        path.basename(occupiedPath),
+      ].sort(),
+    )
   })
 
   it('removes empty hash directories after removing files', async () => {
