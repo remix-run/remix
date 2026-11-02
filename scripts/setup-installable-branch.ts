@@ -2,14 +2,15 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
 
-import { getPreviewTarballUrl, preparePreviewPackage } from './utils/preview.ts'
-import type { PreviewPackageManifest } from './utils/preview.ts'
 import {
+  getPreviewTarballUrl,
+  preparePreviewPackage,
   getRetainedPreviewBuilds,
   loadPreviousPreview,
   restorePreviewTarballs,
   writePreviewManifest,
-} from './utils/preview-retention.ts'
+} from './utils/preview.ts'
+import type { PreviewPackageManifest } from './utils/preview.ts'
 import { logAndExec } from './utils/process.ts'
 
 /**
