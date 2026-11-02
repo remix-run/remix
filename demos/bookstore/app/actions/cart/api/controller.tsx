@@ -63,7 +63,11 @@ export default createController(routes.cart.api, {
         return new Response('Book not found', { status: 404 })
       }
 
-      session.set('cart', updateCartItem(getCurrentCart(session), book.id, quantity))
+      let cart = updateCartItem(getCurrentCart(session), book.id, quantity)
+      if (cart === undefined) {
+        return new Response('Cart item not found', { status: 404 })
+      }
+      session.set('cart', cart)
 
       return redirect(routes.cart.index.href())
     },
