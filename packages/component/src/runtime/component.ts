@@ -1,7 +1,7 @@
 import type { ElementProps, ElementType, RemixNode, Renderable } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-import type { FrameReloadEvent } from './frame-reload-event.ts'
+import type { FrameReloadStartEvent } from './reload-start-event.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 
 /**
@@ -185,7 +185,7 @@ export type FrameResolution = FrameContent | Response
  */
 export type FrameHandleEventMap = {
   /** A direct reload or an ancestor-driven reload has started. */
-  reloadStart: FrameReloadEvent
+  reloadStart: FrameReloadStartEvent
   /** Reload processing has ended, including cancellation or failure. */
   reloadComplete: Event
 }

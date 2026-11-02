@@ -1,0 +1,1 @@
+`reloadStart` from `remix/component` is now a `FrameReloadStartEvent` with the `sourceElement` and `formData` of the navigation that started the reload and a `finished` promise that settles with its outcome, so pending and optimistic UI can follow its own form's submission and learn how it ended. See the `@remix-run/component` changelog for an example.

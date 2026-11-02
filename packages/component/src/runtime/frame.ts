@@ -8,7 +8,10 @@ import {
   type FrameResolution,
 } from './component.ts'
 import { createComponentErrorEvent, getComponentError } from './error-event.ts'
-import { createFrameReloadEvent, type FrameReloadEventInit } from './frame-reload-event.ts'
+import {
+  createFrameReloadStartEvent,
+  type FrameReloadStartEventInit,
+} from './reload-start-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
@@ -154,7 +157,7 @@ export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
 }
 
 // The navigation that started a reload, which frames it reloads inside this one inherit.
-type ReloadOrigin = Omit<FrameReloadEventInit, 'finished'>
+type ReloadOrigin = Omit<FrameReloadStartEventInit, 'finished'>
 
 type FrameReloadResult = {
   signal: AbortSignal
@@ -859,7 +862,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     // The frame shows one direct or ancestor-driven reload at a time, so this one replaces the last.
     settleReloadFinished(reloadFinished, createAbortError())
     reloadFinished = createReloadFinished()
-    frame.dispatchEvent(createFrameReloadEvent({ ...origin, finished: reloadFinished.promise }))
+    frame.dispatchEvent(
+      createFrameReloadStartEvent({ ...origin, finished: reloadFinished.promise }),
+    )
   }
 
   function beginClientFrameReloadForAncestorReload(signal: AbortSignal): {
@@ -985,7 +990,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       inheritedReloadPending = true
       inheritedReloadFinished = createReloadFinished()
       frame.dispatchEvent(
-        createFrameReloadEvent({ ...origin, finished: inheritedReloadFinished.promise }),
+        createFrameReloadStartEvent({ ...origin, finished: inheritedReloadFinished.promise }),
       )
       startSubFrameInheritedReloads(getContentNodes(), signal, origin)
     }

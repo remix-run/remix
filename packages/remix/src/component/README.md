@@ -1122,7 +1122,7 @@ Components reach frames through `handle.frame`, the frame that contains the comp
 | `frame.src`              | The source the next reload uses. Assigning it alone doesn't load content or change history.                                               |
 | `frame.reload(options?)` | Fetches the frame's source through the resolver and reconciles the result. See [Reloading Frames](#reloading-frames).                     |
 | `frame.replace(content)` | Renders trusted HTML, a byte stream, or a Remix node directly, without calling the resolver or changing the source. HTML isn't sanitized. |
-| `reloadStart` event      | Dispatched when a direct or ancestor-driven reload starts, as a `FrameReloadEvent`. See [Following a Reload](#following-a-reload).        |
+| `reloadStart` event      | Dispatched when a direct or ancestor-driven reload starts, as a `FrameReloadStartEvent`. See [Following a Reload](#following-a-reload).        |
 | `reloadComplete` event   | Dispatched when reload processing ends, including after cancellation or failure.                                                          |
 
 Use `handle.frames.top` when a nested component needs to reload the whole page instead of only its nearest frame:
@@ -1189,7 +1189,7 @@ if (form.reportValidity()) {
 
 ### Following a Reload
 
-`reloadStart` is a `FrameReloadEvent`. Like the Navigation API's [`NavigateEvent`](https://developer.mozilla.org/en-US/docs/Web/API/NavigateEvent), it says what started the reload and how it ended:
+`reloadStart` is a `FrameReloadStartEvent`, which says what started the reload and how it ended. Its `formData` and `sourceElement` are those of the Navigation API's [`NavigateEvent`](https://developer.mozilla.org/en-US/docs/Web/API/NavigateEvent), and its `finished` settles like [`NavigationTransition.finished`](https://developer.mozilla.org/en-US/docs/Web/API/NavigationTransition/finished):
 
 | Property        | Value                                                                                                                                                                                    |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1203,11 +1203,11 @@ A newer reload replaces the one in progress without a `reloadComplete` for it, s
 
 ```tsx
 import { clientEntry, ref } from 'remix/component'
-import type { FrameReloadEvent, Handle } from 'remix/component'
+import type { FrameReloadStartEvent, Handle } from 'remix/component'
 
 export const SaveStatus = clientEntry(import.meta.url, function SaveStatus(handle: Handle) {
   let status: HTMLElement | undefined
-  let reload: FrameReloadEvent | undefined
+  let reload: FrameReloadStartEvent | undefined
   let failed = false
 
   handle.frame.addEventListener(
