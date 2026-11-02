@@ -326,7 +326,7 @@ await updateUrl('/products/shirt?color=red', { history: 'push' })
 
 When no navigation is active, the URL changes synchronously without fetching or rendering. Otherwise, the update waits for the current Navigation API transition to finish. The returned promise resolves after the URL update. `history` defaults to `'replace'`, which replaces the current entry. Use `'push'` to add an entry so Back returns to the previous URL. Scroll position and focus stay where they are in both modes, including when only the fragment changes.
 
-`history.state` and Navigation API state are carried into the updated entry; Remix's entry state reloads the top frame from the matching URL on Back/Forward. A push leaves the previous entry unchanged. Traversing between these entries performs normal frame navigation. The mounted top-frame source also updates, so `handle.frames.top.reload()` uses the new URL. Each URL must render the state the page displayed for that entry.
+`history.state` and Navigation API state are carried into the updated entry. A push leaves the previous entry unchanged. Back/Forward performs normal frame navigation when the path or query string changes; fragment-only traversals keep the browser's native behavior without fetching or rendering. The update also sets the mounted top-frame source, so `handle.frames.top.reload()` uses the new URL. Each URL that reloads the frame must render the state the page displayed for that entry.
 
 Relative URLs resolve against `document.baseURI` when the update executes, after any wait. Cross-origin URLs reject with a `SecurityError` instead of navigating away. Updates work even when frame navigation is unavailable or `run()` hasn't started.
 
@@ -342,7 +342,7 @@ The wait is bound to the captured navigation. Navigation failures reject with th
 
 Do not await `updateUrl()` inside the active navigation's own interception handler: the update waits for that handler to finish.
 
-Like `history.pushState()` and `history.replaceState()`, this still fires native Navigation API events in browsers that support them.
+Like `history.pushState()` and `history.replaceState()`, this still fires native Navigation API events in browsers that support them. If a `navigate` listener cancels the update with `event.preventDefault()`, the promise rejects with an `AbortError` and leaves the existing history entry and frame source unchanged.
 
 ### Disabling frame navigation
 

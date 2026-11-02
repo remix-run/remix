@@ -7,6 +7,6 @@ await updateUrl('/products/shirt?color=blue')
 await updateUrl('/products/shirt?color=red', { history: 'push' })
 ```
 
-The top-frame source and Remix history state stay in sync so subsequent frame reloads and Back/Forward use the matching URL. Application history state is carried into the updated entry, and a push leaves the previous entry unchanged. Updates work without frame navigation support. Cross-origin URLs reject with a `SecurityError`.
+The top-frame source and Remix history state stay in sync so subsequent frame reloads and Back/Forward use the matching URL. Fragment-only traversals retain native browser behavior without fetching or rendering. Application history state is carried into the updated entry, and a push leaves the previous entry unchanged. Updates work without frame navigation support. Cross-origin URLs reject with a `SecurityError`. Native navigation listeners can cancel an update, which rejects with an `AbortError` and leaves the existing entry unchanged.
 
 The URL changes synchronously when idle. During a navigation, the update waits for that transition and rejects if it fails, is superseded, or changes destination. Pass `{ signal: handle.signal }` to cancel a pending update when the component unmounts. Cancellation rejects with the signal's reason without aborting the navigation. Relative URLs resolve when the update executes. `UpdateUrlOptions` is exported for typed options.

@@ -188,7 +188,7 @@ export interface UpdateUrlOptions {
  * Replaces the current history entry by default; use `history: 'push'` to add an entry.
  * Waits for the current navigation, rejecting if it fails, is superseded, or changes destination.
  * Keeps Remix history state and the top-frame source in sync. Cross-origin URLs reject with
- * `SecurityError`; superseded or redirected updates reject with `AbortError`.
+ * `SecurityError`; superseded, redirected, or natively canceled updates reject with `AbortError`.
  * An aborted signal rejects with its reason without aborting the navigation.
  * Do not await this inside the active navigation's own interception handler.
  *
@@ -244,11 +244,16 @@ export async function updateUrl(href: string, options?: UpdateUrlOptions): Promi
     }
   }
 
-  let state = navigation?.currentEntry?.getState()
+  let entry = navigation?.currentEntry
+  let state = entry?.getState()
   if (options?.history === 'push') {
     window.history.pushState(window.history.state, '', href)
   } else {
     window.history.replaceState(window.history.state, '', href)
+  }
+  // A canceled History API update returns normally without creating or replacing an entry.
+  if (entry && navigation?.currentEntry?.id === entry.id) {
+    throw new DOMException('URL update was canceled', 'AbortError')
   }
   let src = window.location.href
   if (navigation && state !== undefined) {

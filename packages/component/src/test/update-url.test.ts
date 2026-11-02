@@ -47,6 +47,35 @@ function stubGlobal(t: TestContext, name: string, value: unknown): void {
   })
 }
 
+async function expectCancelledUpdate(t: TestContext, history: 'push' | 'replace') {
+  let { app, resolveFrame } = startApp(t)
+  await app.ready()
+  let href = window.location.href
+  let state = { $rmx: true, target: 'details', src: '/partials/details', custom: 'preserved' }
+  window.history.replaceState({ application: 'preserved' }, '', href)
+  window.navigation.updateCurrentEntry({ state })
+  let entry = window.navigation.currentEntry
+  let entryCount = window.navigation.entries().length
+  let listener = new AbortController()
+  t.after(() => listener.abort())
+  window.navigation.addEventListener('navigate', (event) => event.preventDefault(), {
+    once: true,
+    signal: listener.signal,
+  })
+
+  await expect(
+    updateUrl(history === 'replace' ? href : '?variant=blocked', { history }),
+  ).rejects.toHaveProperty('name', 'AbortError')
+
+  expect(window.location.href).toBe(href)
+  expect(window.navigation.currentEntry).toBe(entry)
+  expect(window.navigation.entries()).toHaveLength(entryCount)
+  expect(window.navigation.currentEntry?.getState()).toEqual(state)
+  expect(window.history.state).toEqual({ application: 'preserved' })
+  expect(app.frames.top.src).toBe(href)
+  expect(resolveFrame).not.toHaveBeenCalled()
+}
+
 describe('updateUrl', () => {
   let originalHref: string
   let originalHistoryState: unknown
@@ -114,6 +143,14 @@ describe('updateUrl', () => {
     expect(document.activeElement).toBe(input)
     expect(app.frames.top.src).toBe(window.location.href)
     expect(resolveFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves the previous entry unchanged when a native listener cancels a push', async (t) => {
+    await expectCancelledUpdate(t, 'push')
+  })
+
+  it('rejects a canceled replacement even when the requested URL is unchanged', async (t) => {
+    await expectCancelledUpdate(t, 'replace')
   })
 
   it('reloads the replaced URL on Back after navigating away', async (t) => {
