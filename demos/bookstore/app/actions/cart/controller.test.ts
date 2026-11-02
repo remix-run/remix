@@ -141,54 +141,50 @@ describe('cart handlers', () => {
     assertContains(html, 'Browse Books')
   })
 
-  it('PUT /cart/api/update returns 204 when redirect is none', async () => {
-    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
-      method: 'POST',
-      body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+  it('PUT /cart/api/update saves the quantity and redirects to the cart', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '1', quantity: '3' }),
       }),
-      redirect: 'manual',
-    })
+    )
 
-    let sessionId = getSessionCookie(addResponse)
-    assert.ok(sessionId)
-
-    let request = requestWithSession('https://remix.run/cart/api/update', sessionId, {
-      method: 'PUT',
-      body: new URLSearchParams({
-        bookId: '1',
-        quantity: '2',
-        redirect: 'none',
-      }),
-    })
-    let response = await router.fetch(request)
-
-    assert.equal(response.status, 204)
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/cart')
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+    assertContains(await cart.text(), 'Total: $50.97')
   })
 
-  it('DELETE /cart/api/remove returns 204 when redirect is none', async () => {
-    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
-      method: 'POST',
-      body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+  it('DELETE /cart/api/remove removes the book and redirects to the cart', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/remove', sessionId, {
+        method: 'DELETE',
+        body: new URLSearchParams({ bookId: '1' }),
       }),
-      redirect: 'manual',
-    })
+    )
 
-    let sessionId = getSessionCookie(addResponse)
-    assert.ok(sessionId)
-
-    let request = requestWithSession('https://remix.run/cart/api/remove', sessionId, {
-      method: 'DELETE',
-      body: new URLSearchParams({
-        bookId: '1',
-        redirect: 'none',
-      }),
-    })
-    let response = await router.fetch(request)
-
-    assert.equal(response.status, 204)
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/cart')
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+    assertContains(await cart.text(), 'Your cart is empty.')
   })
 })
+
+async function addToCart(bookId: string, slug: string): Promise<string> {
+  let response = await router.fetch('https://remix.run/cart/api/add', {
+    method: 'POST',
+    body: new URLSearchParams({ bookId, slug }),
+    redirect: 'manual',
+  })
+  let sessionId = getSessionCookie(response)
+  assert.ok(sessionId)
+  return sessionId
+}
