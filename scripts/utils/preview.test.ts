@@ -16,6 +16,9 @@ const oldSha = '1111111100000000000000000000000000000000'
 const latestSha = '2222222200000000000000000000000000000000'
 const now = Date.parse('2026-10-29T12:00:00Z')
 const repository = path.resolve(import.meta.dirname, '../..')
+const skipOnWindows =
+  process.platform === 'win32' &&
+  'setup-installable-branch only runs on Linux in the preview workflow'
 
 describe('preview packages', () => {
   it('uses the first eight characters of the source SHA in tarball URLs', () => {
@@ -115,44 +118,48 @@ describe('preview retention', () => {
     assert.deepEqual(getRetainedPreviewBuilds('preview/main', builds, latestSha, now), builds)
   })
 
-  it('replaces PR tarballs on new source commits and preserves them on repeated builds', () => {
-    let fixture = createFixture()
-    try {
-      let firstSha = fixture.git('rev-parse', 'HEAD')
-      fixture.build('preview/pr-123', 'first')
-      fixture.git('push', 'origin', 'HEAD:refs/heads/preview/pr-123')
-      fixture.git('checkout', 'main')
-      fs.writeFileSync(path.join(fixture.cwd, 'change.txt'), 'second source commit')
-      fixture.git('add', '.')
-      fixture.git('commit', '-m', 'second source')
-      let secondSha = fixture.git('rev-parse', 'HEAD')
-      fixture.build('preview/pr-123', 'second')
-      assert.deepEqual(
-        fixture.manifest().builds.map((build) => build.sha),
-        [secondSha],
-      )
-      assert.equal(fs.existsSync(path.join(fixture.cwd, 't', firstSha.slice(0, 8))), false)
-      assert.doesNotMatch(
-        fixture.git('rev-list', '--objects', 'HEAD'),
-        new RegExp(`t/${firstSha.slice(0, 8)}`),
-      )
-      assert.equal(fixture.git('rev-parse', 'HEAD^'), secondSha)
-      fixture.git('push', '--force-with-lease', 'origin', 'HEAD:refs/heads/preview/pr-123')
-      let currentTarball = fs.readFileSync(
-        path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz'),
-      )
-      let currentBuilds = fixture.manifest().builds
-      fixture.git('checkout', 'main')
-      fixture.build('preview/pr-123', 'must not repack')
-      assert.deepEqual(
-        fs.readFileSync(path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz')),
-        currentTarball,
-      )
-      assert.deepEqual(fixture.manifest().builds, currentBuilds)
-    } finally {
-      fixture.dispose()
-    }
-  })
+  it(
+    'replaces PR tarballs on new source commits and preserves them on repeated builds',
+    { skip: skipOnWindows },
+    () => {
+      let fixture = createFixture()
+      try {
+        let firstSha = fixture.git('rev-parse', 'HEAD')
+        fixture.build('preview/pr-123', 'first')
+        fixture.git('push', 'origin', 'HEAD:refs/heads/preview/pr-123')
+        fixture.git('checkout', 'main')
+        fs.writeFileSync(path.join(fixture.cwd, 'change.txt'), 'second source commit')
+        fixture.git('add', '.')
+        fixture.git('commit', '-m', 'second source')
+        let secondSha = fixture.git('rev-parse', 'HEAD')
+        fixture.build('preview/pr-123', 'second')
+        assert.deepEqual(
+          fixture.manifest().builds.map((build) => build.sha),
+          [secondSha],
+        )
+        assert.equal(fs.existsSync(path.join(fixture.cwd, 't', firstSha.slice(0, 8))), false)
+        assert.doesNotMatch(
+          fixture.git('rev-list', '--objects', 'HEAD'),
+          new RegExp(`t/${firstSha.slice(0, 8)}`),
+        )
+        assert.equal(fixture.git('rev-parse', 'HEAD^'), secondSha)
+        fixture.git('push', '--force-with-lease', 'origin', 'HEAD:refs/heads/preview/pr-123')
+        let currentTarball = fs.readFileSync(
+          path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz'),
+        )
+        let currentBuilds = fixture.manifest().builds
+        fixture.git('checkout', 'main')
+        fixture.build('preview/pr-123', 'must not repack')
+        assert.deepEqual(
+          fs.readFileSync(path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz')),
+          currentTarball,
+        )
+        assert.deepEqual(fixture.manifest().builds, currentBuilds)
+      } finally {
+        fixture.dispose()
+      }
+    },
+  )
 })
 
 function createFixture() {
