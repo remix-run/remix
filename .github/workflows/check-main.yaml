@@ -223,10 +223,7 @@ jobs:
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
       - name: Run tests
-        shell: pwsh
-        run: |
-          . ./scripts/windows-normal-io.ps1
-          pnpm test
+        run: pnpm test
 
   lint:
     name: Lint
