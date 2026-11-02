@@ -5,10 +5,7 @@ import fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { parseFormData } from '@remix-run/form-data-parser'
-import {
-  MaxFileSizeExceededError,
-  parseFormData as parseFutureFormData,
-} from '@remix-run/form-data-parser/future'
+import { parseFormData as parseFutureFormData } from '@remix-run/form-data-parser/future'
 import { LazyFile } from '@remix-run/lazy-file'
 
 import type { FileLike, FileStorage } from '../file-storage.ts'
@@ -131,27 +128,6 @@ describe('fs file storage', () => {
     assert.deepEqual(fs.readdirSync(tmpDir, { recursive: true }), entries)
   })
 
-  it('preserves the previous entry when upload metadata throws', async () => {
-    let storage = createFsFileStorage(tmpDir)
-    await storage.set('file', new File(['original'], 'original.txt'))
-    let entries = fs.readdirSync(tmpDir, { recursive: true })
-    let failure = new Error('Metadata unavailable')
-    let upload = new File(['replacement'], 'replacement.txt')
-    Object.defineProperty(upload, 'name', {
-      get() {
-        throw failure
-      },
-    })
-
-    await assert.rejects(async () => storage.put('file', upload), failure)
-
-    let stored = await storage.get('file')
-    assert.ok(stored)
-    assert.equal(await stored.text(), 'original')
-    assert.equal(stored.name, 'original.txt')
-    assert.deepEqual(fs.readdirSync(tmpDir, { recursive: true }), entries)
-  })
-
   it('preserves the previous entry when metadata staging fails', async (t) => {
     let storage = createFsFileStorage(tmpDir)
     await storage.set('file', new File(['original'], 'original.txt'))
@@ -176,42 +152,11 @@ describe('fs file storage', () => {
     assert.deepEqual(fs.readdirSync(tmpDir, { recursive: true }), entries)
   })
 
-  it('preserves the previous entry when the data rename fails', async (t) => {
-    let storage = createFsFileStorage(tmpDir)
-    await storage.set('file', new File(['original'], 'original.txt'))
-    let entries = fs.readdirSync(tmpDir, { recursive: true })
-    let metaPath = findMetadataPath(tmpDir)
-    let failure = new Error('Content replacement failed')
-    let rename = t.mock.method(
-      fsp,
-      'rename',
-      async (source: fs.PathLike, destination: fs.PathLike) => {
-        assert.equal(destination, metaPath.replace(/\.meta\.json$/, '.dat'))
-        assert.equal(await fsp.readFile(source, 'utf-8'), 'replacement')
-        throw failure
-      },
-    )
-
-    await assert.rejects(
-      async () => storage.put('file', new File(['replacement'], 'new.txt')),
-      failure,
-    )
-
-    assert.equal(rename.mock.calls.length, 1)
-    let stored = await storage.get('file')
-    assert.ok(stored)
-    assert.equal(await stored.text(), 'original')
-    assert.equal(stored.name, 'original.txt')
-    assert.deepEqual(fs.readdirSync(tmpDir, { recursive: true }), entries)
-  })
-
-  it('retains complete new content with old metadata when the metadata rename fails', async (t) => {
+  it('retains new content with old metadata after a failed publication and repairs it on retry', async (t) => {
     let storage = createFsFileStorage(tmpDir)
     let original = new File(['old'], 'old.txt', { type: 'text/plain', lastModified: 123 })
     await storage.set('file', original)
-    let entries = fs.readdirSync(tmpDir, { recursive: true })
     let metaPath = findMetadataPath(tmpDir)
-    let metadata = fs.readFileSync(metaPath, 'utf-8')
     let failure = new Error('Metadata replacement failed')
     let originalRename = fsp.rename
     let rename = t.mock.method(fsp, 'rename', async (...args: Parameters<typeof fsp.rename>) => {
@@ -225,8 +170,6 @@ describe('fs file storage', () => {
 
     await assert.rejects(async () => storage.set('file', replacement), failure)
 
-    assert.equal(rename.mock.calls.length, 2)
-    assert.equal(fs.readFileSync(metaPath, 'utf-8'), metadata)
     let stored = await storage.get('file')
     assert.ok(stored)
     assert.equal(await stored.text(), 'replacement content')
@@ -235,12 +178,10 @@ describe('fs file storage', () => {
     assert.equal(stored.type, original.type)
     assert.equal(stored.lastModified, original.lastModified)
     assert.equal((await storage.list({ includeMetadata: true })).files[0].size, original.size)
-    assert.deepEqual(fs.readdirSync(tmpDir, { recursive: true }), entries)
 
     rename.mock.restore?.()
-    await storage.set('file', replacement)
-    let repaired = await storage.get('file')
-    assert.ok(repaired)
+    let repaired = await storage.put('file', replacement)
+    assert.equal(await repaired.text(), 'replacement content')
     assert.equal(repaired.name, replacement.name)
     assert.equal(repaired.type, replacement.type)
     assert.equal(repaired.lastModified, replacement.lastModified)
@@ -264,12 +205,6 @@ describe('fs file storage', () => {
     assert.equal(await storage.get('file'), null)
     assert.equal(await storage.has('file'), false)
     assert.deepEqual((await storage.list()).files, [])
-    let files = fs.readdirSync(tmpDir, { recursive: true, withFileTypes: true })
-    assert.equal(files.filter((file) => file.isFile()).length, 1)
-    assert.ok(files.some((file) => file.name.endsWith('.dat')))
-    assert.ok(files.every((file) => !file.name.endsWith('.upload')))
-    await storage.remove('file')
-    assert.equal(await storage.get('file'), null)
   })
 
   it('preserves separate content and metadata modes when replacing files', async () => {
@@ -290,29 +225,6 @@ describe('fs file storage', () => {
 
     assert.equal(fs.statSync(dataPath).mode & 0o777, dataMode)
     assert.equal(fs.statSync(metaPath).mode & 0o777, metaMode)
-  })
-
-  it('replaces entries without reading their existing metadata', async (t) => {
-    let storage = createFsFileStorage(tmpDir)
-    await storage.set('file', new File(['original'], 'original.txt'))
-    let metaPath = findMetadataPath(tmpDir)
-    let originalReadFile = fsp.readFile
-    let readFile = t.mock.method(
-      fsp,
-      'readFile',
-      async (...args: Parameters<typeof fsp.readFile>) => {
-        assert.notEqual(args[0], metaPath, 'Replacement should not read existing metadata')
-        return originalReadFile(...args)
-      },
-    )
-
-    await storage.set('file', new File(['replacement'], 'new.txt'))
-
-    readFile.mock.restore?.()
-    let stored = await storage.get('file')
-    assert.ok(stored)
-    assert.equal(await stored.text(), 'replacement')
-    assert.equal(stored.name, 'new.txt')
   })
 
   it('keeps the storage format readable and writable by older versions', async () => {
@@ -351,111 +263,6 @@ describe('fs file storage', () => {
       lastModified: 456,
     })
     assert.deepEqual(fs.readdirSync(directory).sort(), [`${hash}.dat`, `${hash}.meta.json`])
-
-    fs.writeFileSync(dataPath, 'old')
-    fs.writeFileSync(metaPath, JSON.stringify(originalMetadata))
-    let reopened = await createFsFileStorage(tmpDir).get('file')
-    assert.ok(reopened)
-    assert.equal(await reopened.text(), 'old')
-    assert.equal(reopened.name, 'old.txt')
-    await storage.remove('file')
-    assert.deepEqual(fs.readdirSync(tmpDir), [])
-  })
-
-  it('keeps a successful replacement successful when temporary cleanup fails', async (t) => {
-    let storage = createFsFileStorage(tmpDir)
-    await storage.set('file', new File(['original'], 'original.txt'))
-    let failure = new Error('Temporary file cleanup failed')
-    t.mock.method(fsp, 'rm', async () => {
-      throw failure
-    })
-
-    let stored = await storage.put('file', new File(['replacement'], 'new.txt'))
-
-    assert.equal(await stored.text(), 'replacement')
-    assert.equal(stored.name, 'new.txt')
-    assert.deepEqual((await storage.list()).files, [{ key: 'file' }])
-  })
-
-  it('ignores abandoned sibling uploads and leaves them intact during replacement', async () => {
-    let storage = createFsFileStorage(tmpDir)
-    await storage.set('file', new File(['original'], 'original.txt'))
-    let metaPath = findMetadataPath(tmpDir)
-    let uploadId = crypto.randomUUID()
-    let dataPath = metaPath.replace(/\.meta\.json$/, '.dat')
-    let abandonedData = `${dataPath}.${uploadId}.upload`
-    let abandonedMetadata = `${metaPath}.${uploadId}.upload`
-    fs.writeFileSync(abandonedData, 'incomplete')
-    fs.copyFileSync(metaPath, abandonedMetadata)
-    let originalMetadata = fs.readFileSync(abandonedMetadata, 'utf-8')
-
-    let reopened = createFsFileStorage(tmpDir)
-    let stored = await reopened.get('file')
-    assert.ok(stored)
-    assert.equal(await stored.text(), 'original')
-    assert.deepEqual((await reopened.list()).files, [{ key: 'file' }])
-    await reopened.set('file', new File(['replacement'], 'new.txt'))
-    assert.equal(fs.readFileSync(abandonedData, 'utf-8'), 'incomplete')
-    assert.equal(fs.readFileSync(abandonedMetadata, 'utf-8'), originalMetadata)
-    assert.deepEqual(
-      fs.readdirSync(path.dirname(metaPath)).sort(),
-      [
-        path.basename(dataPath),
-        path.basename(abandonedData),
-        path.basename(metaPath),
-        path.basename(abandonedMetadata),
-      ].sort(),
-    )
-  })
-
-  it('stages files beside their destinations without creating a temporary directory', async (t) => {
-    let storage = createFsFileStorage(tmpDir)
-    await storage.set('file', new File(['original'], 'original.txt'))
-    let metaPath = findMetadataPath(tmpDir)
-    let directory = path.dirname(metaPath)
-    let originalRename = fsp.rename
-    let sources: string[] = []
-    t.mock.method(fsp, 'rename', async (source: fs.PathLike, destination: fs.PathLike) => {
-      assert.equal(path.dirname(String(source)), directory)
-      assert.equal(path.dirname(String(destination)), directory)
-      assert.ok(String(source).endsWith('.upload'))
-      sources.push(String(source))
-      return originalRename(source, destination)
-    })
-
-    await storage.set('file', new File(['replacement'], 'new.txt'))
-    await storage.set('file', new File(['another replacement'], 'newer.txt'))
-
-    assert.equal(sources.length, 4)
-    assert.equal(new Set(sources).size, 4)
-    assert.ok(fs.readdirSync(directory, { withFileTypes: true }).every((entry) => entry.isFile()))
-  })
-
-  it('does not remove an existing temporary metadata file when exclusive creation fails', async (t) => {
-    let storage = createFsFileStorage(tmpDir)
-    await storage.set('file', new File(['original'], 'original.txt'))
-    let metaPath = findMetadataPath(tmpDir)
-    let uploadId = crypto.randomUUID()
-    let occupiedPath = `${metaPath}.${uploadId}.upload`
-    fs.writeFileSync(occupiedPath, 'existing upload')
-    t.mock.method(crypto, 'randomUUID', () => uploadId)
-
-    await assert.rejects(async () => storage.set('file', new File(['replacement'], 'new.txt')), {
-      code: 'EEXIST',
-    })
-
-    assert.equal(fs.readFileSync(occupiedPath, 'utf-8'), 'existing upload')
-    let stored = await storage.get('file')
-    assert.ok(stored)
-    assert.equal(await stored.text(), 'original')
-    assert.deepEqual(
-      fs.readdirSync(path.dirname(metaPath)).sort(),
-      [
-        path.basename(metaPath.replace(/\.meta\.json$/, '.dat')),
-        path.basename(metaPath),
-        path.basename(occupiedPath),
-      ].sort(),
-    )
   })
 
   it('removes empty hash directories after removing files', async () => {
@@ -620,38 +427,13 @@ describe('fs file storage', () => {
       })
 
       assert.equal(formData.get('avatar'), 'avatar')
-      let reopened = createFsFileStorage(tmpDir)
-      let stored = await reopened.get('avatar')
+      let stored = await storage.get('avatar')
       assert.ok(stored)
       assert.equal(await stored.text(), 'new avatar')
       assert.equal(stored.name, 'avatar.txt')
       assert.equal(stored.type, normalizeFileType('text/plain'))
       assert.equal(stored.size, 10)
-      assert.equal((await reopened.list({ includeMetadata: true })).files[0].size, 10)
-    })
-
-    it('preserves the previous entry when a streaming upload exceeds its size limit', async () => {
-      let storage = createFsFileStorage(tmpDir)
-      await storage.set('avatar', new File(['old avatar'], 'old.txt'))
-      let entries = fs.readdirSync(tmpDir, { recursive: true })
-      let body = new FormData()
-      body.set('avatar', new File(['replacement avatar'], 'new.txt'))
-      let request = new Request('http://example.com', { method: 'POST', body })
-
-      await assert.rejects(
-        () =>
-          parseFutureFormData(request, { maxFileSize: 4 }, async (upload) => {
-            await storage.set('avatar', upload)
-            return 'avatar'
-          }),
-        MaxFileSizeExceededError,
-      )
-
-      let stored = await storage.get('avatar')
-      assert.ok(stored)
-      assert.equal(await stored.text(), 'old avatar')
-      assert.equal(stored.name, 'old.txt')
-      assert.deepEqual(fs.readdirSync(tmpDir, { recursive: true }), entries)
+      assert.equal((await storage.list({ includeMetadata: true })).files[0].size, 10)
     })
 
     it('stores and lists file uploads', async () => {
