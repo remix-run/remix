@@ -65,7 +65,15 @@ export const CartItems = clientEntry(
       let isPending = change !== undefined
 
       return (
-        <div mix={on('rmx:form-submit-start', (event, signal) => follow(event, signal))}>
+        <div
+          mix={[
+            on('rmx:form-submit-start', (event, signal) => follow(event, signal)),
+            on('submit', (event) => {
+              // Keep pending controls focusable without allowing another session write.
+              if (change) event.preventDefault()
+            }),
+          ]}
+        >
           <p
             role="status"
             data-failed={failed ? '' : undefined}
@@ -130,13 +138,13 @@ export const CartItems = clientEntry(
                           defaultValue={item.quantity}
                           min="1"
                           required
-                          disabled={isPending}
+                          readOnly={isPending}
                           mix={css({ width: '70px' })}
                         />
 
                         <button
                           type="submit"
-                          disabled={isPending}
+                          aria-disabled={isPending || undefined}
                           class="btn btn-secondary"
                           mix={css({
                             fontSize: '0.875rem',
@@ -166,7 +174,7 @@ export const CartItems = clientEntry(
 
                         <button
                           type="submit"
-                          disabled={isPending}
+                          aria-disabled={isPending || undefined}
                           class="btn btn-danger"
                           mix={css({
                             fontSize: '0.875rem',
