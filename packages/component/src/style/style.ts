@@ -80,7 +80,13 @@ export function normalizeCssValue(key: string, value: unknown): string | undefin
 
 // Check if a style property is a nested selector or media query
 function isComplexSelector(key: string): boolean {
-  return /^[&@:.[]/.test(key)
+  return (
+    key.startsWith('&') ||
+    key.startsWith('@') ||
+    key.startsWith(':') ||
+    key.startsWith('[') ||
+    key.startsWith('.')
+  )
 }
 
 // Detect @keyframes (including vendor-prefixed variants)
