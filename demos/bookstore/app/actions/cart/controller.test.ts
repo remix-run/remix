@@ -256,6 +256,22 @@ describe('cart handlers', () => {
     )
     assertContains(await cart.text(), 'Total: $16.99')
   })
+
+  it('PUT /cart/api/update preserves other items when the submitted book is no longer in the cart', async () => {
+    let sessionId = await addToCart('1', 'bbq')
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/update', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({ bookId: '3', quantity: '2' }),
+      }),
+    )
+    let cart = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-items', sessionId),
+    )
+
+    assertContains(await cart.text(), 'Total: $16.99')
+    assert.equal(response.status, 404)
+  })
 })
 
 async function addToCart(bookId: string, slug: string): Promise<string> {
