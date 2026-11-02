@@ -1,9 +1,11 @@
 import { createController } from 'remix/router'
+import { css } from 'remix/component'
 
 import { CartButton } from './public/cart-button.tsx'
 import { CartItems } from './public/cart-items.tsx'
 import { books } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
+import { getCartTotal } from '../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
 
@@ -17,25 +19,36 @@ export default createController(routes.fragments, {
         return render(<p>Book not found</p>, fragmentResponseInit({ status: 404 }))
       }
 
-      let item = getCurrentCart(session).items.find((item) => item.bookId === book.id)
+      let cart = getCurrentCart(session)
+      let inCart = cart.items.some((item) => item.bookId === book.id)
 
       return render(
-        <CartButton
-          book={{ bookId: book.id, slug: book.slug, title: book.title, price: book.price }}
-          quantity={item?.quantity ?? 0}
-        />,
+        <CartButton inCart={inCart} id={book.id} slug={book.slug} />,
         fragmentResponseInit(),
       )
     },
 
     cartItems({ auth, render, session }) {
-      // Rendered even when the cart is empty, so it can show books added on other pages that
-      // haven't saved yet.
+      let cart = getCurrentCart(session)
+      let total = getCartTotal(cart)
+      let user = getCurrentUserSafely(auth)
+
+      if (cart.items.length === 0) {
+        return render(
+          <div mix={css({ marginTop: '2rem' })}>
+            <p>Your cart is empty.</p>
+            <p mix={css({ marginTop: '1rem' })}>
+              <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
+                Browse Books
+              </a>
+            </p>
+          </div>,
+          fragmentResponseInit(),
+        )
+      }
+
       return render(
-        <CartItems
-          items={getCurrentCart(session).items}
-          canCheckout={getCurrentUserSafely(auth) !== null}
-        />,
+        <CartItems items={cart.items} total={total} canCheckout={!!user} />,
         fragmentResponseInit(),
       )
     },

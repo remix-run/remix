@@ -5,7 +5,7 @@ import { redirect } from 'remix/response/redirect'
 
 import { books } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
-import { addToCart, removeFromCart, setCartItemQuantity } from '../../../utils/cart.ts'
+import { addToCart, removeFromCart, updateCartItem } from '../../../utils/cart.ts'
 import { getCurrentCart } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 
@@ -50,9 +50,7 @@ export default createController(routes.cart.api, {
 
     async update({ db, formData, session }) {
       let { bookId, quantity, redirect: redirectTo } = s.parse(cartUpdateSchema, formData)
-      if (process.env.NODE_ENV !== 'test') {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-      }
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       let parsedBookId = parseId(bookId)
       let book = parsedBookId === undefined ? undefined : await db.find(books, parsedBookId)
@@ -60,19 +58,8 @@ export default createController(routes.cart.api, {
         return new Response('Book not found', { status: 404 })
       }
 
-      let nextQuantity = Number(quantity)
-      if (!Number.isInteger(nextQuantity) || nextQuantity < 0) {
-        return new Response('Quantity must be a whole number of at least 0', { status: 400 })
-      }
-
-      session.set(
-        'cart',
-        setCartItemQuantity(
-          getCurrentCart(session),
-          { bookId: book.id, slug: book.slug, title: book.title, price: book.price },
-          nextQuantity,
-        ),
-      )
+      let nextQuantity = parseInt(quantity, 10)
+      session.set('cart', updateCartItem(getCurrentCart(session), book.id, nextQuantity))
 
       if (redirectTo === 'none') {
         return new Response(null, { status: 204 })
