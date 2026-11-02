@@ -76,7 +76,7 @@ describe('node-hmr', () => {
         ].join('\n'),
       )
 
-      await waitForResponse(ready.port, 'two')
+      await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
       await waitForOutput(server, /hmr update message\.ts/)
     } finally {
@@ -467,7 +467,7 @@ describe('node-hmr', () => {
 
       await writeFileAtomically(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
 
-      await waitForResponse(ready.port, 'two')
+      await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
       await waitForOutput(server, /hmr update value\.ts/)
     } finally {
@@ -687,7 +687,7 @@ describe('node-hmr', () => {
         `export const message = 'two'`,
       )
 
-      await waitForResponse(ready.port, 'two')
+      await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
       await waitForOutput(server, /hmr update packages\/fixture-message\/index\.ts/)
     } finally {
@@ -930,7 +930,7 @@ describe('node-hmr', () => {
 
       await writeFileAtomically(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
 
-      await waitForResponse(ready.port, 'two')
+      await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
       await waitForOutput(server, /hmr update value\.ts/)
     } finally {

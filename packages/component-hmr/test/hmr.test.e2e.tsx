@@ -2880,13 +2880,14 @@ async function waitForText(page: TestPage, selector: string, text: string): Prom
       { timeout: 5000 },
     )
   } catch (error) {
+    // A busy browser can take longer than a few milliseconds to answer these diagnostic reads.
     let actualText = await page
       .locator(selector)
-      .textContent({ timeout: 100 })
+      .textContent({ timeout: 1000 })
       .catch(() => '<missing>')
     let bodyText = await page
       .locator('body')
-      .textContent({ timeout: 100 })
+      .textContent({ timeout: 1000 })
       .catch(() => '<missing body>')
     let message = error instanceof Error ? error.message : String(error)
     throw new Error(
