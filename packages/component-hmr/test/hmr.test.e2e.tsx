@@ -1019,7 +1019,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
         timeout: browserStartupTimeout,
       })
       let reloaded = waitForNavigation(page, { waitUntil: 'commit' })
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       await fs.writeFile(
         clientFieldPath,
         clientFieldSource
@@ -1035,6 +1034,8 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await Promise.all([reloaded, entryRequested])
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      // The blocked entry cannot adopt the frame yet, so start the adoption budget here.
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
       startup.resolve()
       await adopted
       assert.equal(
