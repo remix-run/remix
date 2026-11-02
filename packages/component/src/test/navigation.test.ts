@@ -19,9 +19,8 @@ function createReloadTransition(result: StubFrameReloadResult | Promise<StubFram
   return { signal, committed: finished.then(() => {}), finished }
 }
 
-// Stand-in frame the navigation handler can call without dragging in the
-// full app runtime from ./run.ts. Only `src` and `reload` are touched on
-// the path under test.
+// Stand-in frame the navigation handler can call without starting the app
+// runtime. Only `src` and `reload` are touched on the path under test.
 const stubFrame = {
   src: '',
   reload: async () => new AbortController().signal,

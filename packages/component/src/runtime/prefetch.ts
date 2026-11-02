@@ -1,6 +1,5 @@
-import { pendingPrefetchLinks } from './frame.ts'
+import { getNamedFrame, pendingPrefetchLinks } from './frame.ts'
 import { getInterceptableNavigation, getSameOriginUrl } from './navigation.ts'
-import { getNamedFrame } from './run.ts'
 
 /** Options for prefetching frame content. */
 export interface PrefetchOptions {

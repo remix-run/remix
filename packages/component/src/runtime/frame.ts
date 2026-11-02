@@ -101,6 +101,37 @@ export class NamedFrameRegistry {
   }
 }
 
+let appTopFrame: Frame
+export const appNamedFrames = new NamedFrameRegistry()
+
+export function setAppTopFrame(frame: Frame): void {
+  appTopFrame = frame
+}
+
+export function getAppTopFrame(): Frame {
+  return appTopFrame
+}
+
+/**
+ * Returns the top-level frame handle for the running application.
+ *
+ * @returns The top-level frame handle.
+ */
+export function getTopFrame(): FrameHandle {
+  if (!appTopFrame) throw new Error('app runtime not initialized')
+  return appTopFrame.handle
+}
+
+/**
+ * Returns a named frame handle.
+ *
+ * @param name Name of the frame to look up.
+ * @returns The matching frame handle, or `undefined` when not found.
+ */
+export function getNamedFrame(name: string): FrameHandle | undefined {
+  return appNamedFrames.get(name)
+}
+
 /**
  * Loads a named client-entry export for hydration.
  *
