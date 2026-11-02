@@ -763,6 +763,39 @@ describe('node-hmr', () => {
     }
   })
 
+  it('hot updates unchanged dependencies of a module after the module hot updates', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': getAcceptingMessageSource({
+        imports: [`import { suffix } from './suffix.ts'`],
+        message: `'one' + suffix`,
+      }),
+      'suffix.ts': `export const suffix = ''`,
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      await writeFileAtomically(
+        path.join(fixture.path, 'message.ts'),
+        getAcceptingMessageSource({
+          imports: [`import { suffix } from './suffix.ts'`],
+          message: `'two' + suffix`,
+        }),
+      )
+      await waitForResponse(ready.port, 'two', () => server.output)
+
+      await writeFileAtomically(path.join(fixture.path, 'suffix.ts'), `export const suffix = '!'`)
+      await waitForResponse(ready.port, 'two!', () => server.output)
+      assert.equal(server.readyCount, 1)
+      await waitForOutput(server, /hmr update suffix\.ts/)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('keeps watching module directories after a parent directory leaves the module graph', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./app/routes/home.ts', 'getMessage()'),

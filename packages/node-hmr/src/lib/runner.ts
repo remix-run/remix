@@ -210,6 +210,7 @@ export function createHmrSupervisor(options: {
   let resolveRun: (() => void) | undefined
   let moduleStore = createModuleStore()
   let watchedFilePaths = new Set<string>()
+  let watchedModuleFilesSyncImmediate: NodeJS.Immediate | undefined
   let watchedDirectoryRefCounts = new Map<string, number>()
   let browserWatchedFileRefCountsByRuntime = new Map<number, Map<string, number>>()
   let browserWatchedFilePaths = new Set<string>()
@@ -425,6 +426,8 @@ export function createHmrSupervisor(options: {
 
     if (message.type === 'node-hmr:child:module-imported') {
       moduleStore.addDependency(message.importerUrl, message.depUrl)
+      // A re-evaluated importer reports its cached dependencies here without loading them again.
+      scheduleWatchedModuleFilesSync()
       return
     }
 
@@ -438,10 +441,26 @@ export function createHmrSupervisor(options: {
       hmr: message.hmr,
       url: message.url,
     })
+    scheduleWatchedModuleFilesSync()
+  }
+
+  function scheduleWatchedModuleFilesSync(): void {
+    watchedModuleFilesSyncImmediate ??= setImmediate(flushWatchedModuleFilesSync)
+  }
+
+  function flushWatchedModuleFilesSync(): void {
+    if (watchedModuleFilesSyncImmediate === undefined) return
+    cancelWatchedModuleFilesSync()
     syncWatchedModuleFiles()
   }
 
+  function cancelWatchedModuleFilesSync(): void {
+    clearImmediate(watchedModuleFilesSyncImmediate)
+    watchedModuleFilesSyncImmediate = undefined
+  }
+
   function watchKnownModuleFile(filePath: string): void {
+    cancelWatchedModuleFilesSync()
     syncWatchedModuleFiles(new Set([resolve(filePath)]))
   }
 
@@ -536,6 +555,7 @@ export function createHmrSupervisor(options: {
 
   function handleWatchEvent(event: string, changedPath: string, stats?: Stats) {
     let filePath = resolve(options.cwd, changedPath)
+    flushWatchedModuleFilesSync()
 
     if (event === 'change') {
       let normalizedFilePath = normalizeBrowserHmrFilePath(filePath)
@@ -576,6 +596,7 @@ export function createHmrSupervisor(options: {
 
       let browserFileEvents = getBrowserHmrFileEvents(changedPaths, restartPathEvents)
       let browserHmrEvents = await requestBrowserHmrEvents(browserFileEvents)
+      flushWatchedModuleFilesSync()
       for (let event of browserHmrEvents) {
         queueBrowserHmrEvent(event, { schedule: false })
       }
@@ -965,6 +986,7 @@ export function createHmrSupervisor(options: {
     if (browserHmrEventFlushTimer !== undefined) {
       clearTimeout(browserHmrEventFlushTimer)
     }
+    cancelWatchedModuleFilesSync()
     clearPendingHotUpdates()
     resolveReadyWaiters({ force: true })
     resolvePendingBrowserHmrRequests([])

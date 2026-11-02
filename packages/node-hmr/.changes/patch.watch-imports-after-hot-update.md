@@ -1,0 +1,1 @@
+Fix ignored edits to a module's imports after that module hot updates. When a hot update re-ran a module without reloading its imports, `node-hmr` stopped watching those imports until another module loaded, so later edits to them neither hot updated nor restarted the server.
