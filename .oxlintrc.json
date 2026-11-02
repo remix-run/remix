@@ -13,7 +13,9 @@
   "env": {
     "builtin": true
   },
-  // Enables import resolution for `import/no-cycle` overrides. Categories stay off, so this adds no rules.
+  // `plugins` replaces oxlint's defaults (typescript, unicorn, oxc), so this lists them plus `import`.
+  // `import` must be enabled here for oxlint to resolve modules for `import/no-cycle`. Categories stay
+  // off, so this adds no rules.
   "plugins": ["typescript", "unicorn", "oxc", "import"],
   "ignorePatterns": [
     "**/*.d.ts",
