@@ -281,11 +281,13 @@ jobs:
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
       - name: Run changed package tests
-        shell: bash
+        shell: pwsh
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node ./scripts/detect-changed-packages.ts "$PR_BASE_SHA" "$PR_HEAD_SHA"
+        run: |
+          . ./scripts/windows-normal-io.ps1
+          node ./scripts/detect-changed-packages.ts $env:PR_BASE_SHA $env:PR_HEAD_SHA
 
   lint:
     name: Lint
