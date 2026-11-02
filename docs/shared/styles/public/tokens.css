@@ -137,7 +137,7 @@
   --docs-sidebar-inline-start: var(--docs-edge-inset);
   --docs-sidebar-content-width: 240px;
   --docs-collapsed-offset: 24px;
-  --docs-collapsed-content-padding: 220px;
+  --docs-collapsed-content-padding: calc(var(--docs-main-padding) - var(--docs-collapsed-offset));
   --docs-main-padding: 52px;
   --docs-content-max-width: 1044px;
 

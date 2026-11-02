@@ -93,7 +93,7 @@ function ProductPage() {
 
 ## CSS
 
-Components using the `css(...)` mixin through `mix` have their styles collected during rendering and emitted as a single `<style>` tag in the `<head>`. No client-side style injection is needed for server-rendered content.
+Components using the `css(...)` mixin through `mix` have their styles collected and deduplicated during rendering, then emitted as `<style data-rmx-style>` tags in the `<head>`, one per generated class. No client-side style injection is needed for server-rendered content.
 
 ### Import maps
 
@@ -119,5 +119,5 @@ function Document(handle: Handle<{ children: RemixNode }>) {
 
 ## See Also
 
-- [Hydration](https://github.com/remix-run/remix/blob/main/packages/component/docs/hydration.md) - Making server-rendered components interactive on the client
-- [Frames](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md) - Streaming partial server UI with `<Frame>`
+- [Hydration boundaries with clientEntry](https://docs.remix.run/interactivity/#cliententry) - Making server-rendered components interactive on the client
+- [Streaming UI with Frames](https://docs.remix.run/streaming-ui-with-frames/) - Streaming partial server UI with `<Frame>`

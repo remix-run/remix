@@ -30,6 +30,29 @@ interface GetReleaseNotesOptions {
   isVersionPublished(version: string): Promise<boolean>
 }
 
+export function fetchDocsReleaseTags(packages: PublishCandidate[], cwd?: string): void {
+  let refs = new Set(packages.map((pkg) => `refs/tags/${pkg.tag}`))
+  if (refs.size === 0) return
+
+  let remoteTags = cp.execFileSync('git', ['ls-remote', '--refs', '--tags', 'origin', ...refs], {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  let refspecs = remoteTags
+    .trim()
+    .split('\n')
+    .map((line) => line.split('\t')[1])
+    .filter((ref) => refs.has(ref))
+    .map((ref) => `${ref}:${ref}`)
+  if (refspecs.length === 0) return
+
+  cp.execFileSync('git', ['fetch', '--no-tags', 'origin', ...refspecs], {
+    cwd,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+}
+
 export function getDocsReleaseTag(packages: PublishCandidate[], cwd?: string): string | undefined {
   let latestRelease: { pkg: PublishCandidate; targetCommit: string } | undefined
 

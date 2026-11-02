@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const lexerPath = fileURLToPath(import.meta.resolve('es-module-lexer'))
+const lexerPath = fileURLToPath(import.meta.resolve('es-module-lexer/minimal/js'))
 
 export async function createErrorTestServer() {
   return createTestServer(async (request) => {
@@ -27,7 +27,7 @@ const dynamicImportFailureDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -59,7 +59,7 @@ const loadErrorDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
