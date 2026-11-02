@@ -12,6 +12,7 @@ import {
   createFrameReloadStartEvent,
   type FrameReloadStartEventInit,
 } from './reload-start-event.ts'
+import { createFormSubmitStartEvent } from './form-submit-start-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
 import type { ElementFunction } from './element-function.ts'
@@ -154,6 +155,8 @@ type InternalFrameContent = FrameContent | DocumentFragment
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
   /** The link, form or submit button whose navigation started the reload. */
   sourceElement?: Element
+  /** Whether `sourceElement` submitted a form: it's the form, or the button that submitted it. */
+  submitted?: boolean
 }
 
 // The navigation that started a reload, which frames it reloads inside this one inherit.
@@ -853,18 +856,24 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let controller = replaceReloadController(options?.signal)
     reloadKind = 'direct'
     let origin = { formData: options?.formData, sourceElement: options?.sourceElement }
-    dispatchReloadStart(origin)
+    let finished = dispatchReloadStart(origin)
     startSubFrameInheritedReloads(getContentNodes(), controller.signal, origin)
+    // A `reloadStart` listener can start a newer reload, which this submission no longer leads to.
+    if (options?.submitted && origin.sourceElement && !controller.signal.aborted) {
+      origin.sourceElement.dispatchEvent(
+        createFormSubmitStartEvent({ ...origin, sourceElement: origin.sourceElement, finished }),
+      )
+    }
     return controller
   }
 
-  function dispatchReloadStart(origin?: ReloadOrigin): void {
+  function dispatchReloadStart(origin?: ReloadOrigin): Promise<void> {
     // The frame shows one direct or ancestor-driven reload at a time, so this one replaces the last.
     settleReloadFinished(reloadFinished, createAbortError())
-    reloadFinished = createReloadFinished()
-    frame.dispatchEvent(
-      createFrameReloadStartEvent({ ...origin, finished: reloadFinished.promise }),
-    )
+    let finished = createReloadFinished()
+    reloadFinished = finished
+    frame.dispatchEvent(createFrameReloadStartEvent({ ...origin, finished: finished.promise }))
+    return finished.promise
   }
 
   function beginClientFrameReloadForAncestorReload(signal: AbortSignal): {
@@ -922,8 +931,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   ): Promise<FrameReloadResult> {
     let failure: unknown
     try {
-      // The source element is for `reloadStart` listeners; resolvers get the options they document.
-      let { sourceElement: _, ...resolveOptions } = options ?? {}
+      // The source is for the reload's events; resolvers get the options they document.
+      let { sourceElement: _, submitted: __, ...resolveOptions } = options ?? {}
       let resolution = await init.resolveFrame(frame.src, {
         ...resolveOptions,
         signal: controller.signal,

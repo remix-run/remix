@@ -16,8 +16,15 @@ type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
 
+// The link, form or submit button whose navigation this is, and whether it submitted a form.
+type NavigationSource = {
+  element: Element
+  submitted: boolean
+}
+
 type RuntimeNavigation = {
   state: NavigationState
+  source?: NavigationSource
   getSubmission?: () => Promise<FormSubmission>
   replaceHistory?: boolean
 }
@@ -27,8 +34,15 @@ interface FormSubmissionNavigationInfo {
   state: NavigationState
   frame: FrameHandle
   // The replacement navigation has no source element of its own.
-  sourceElement: Element | undefined
+  source: NavigationSource | undefined
   getSubmission(): Promise<FormSubmission>
+}
+
+// A link or GET form navigation that started again to replace the current history entry.
+interface HistoryReplacementNavigationInfo {
+  type: typeof historyReplacementNavigationInfoType
+  // The replacement navigation has no source element of its own.
+  source: NavigationSource | undefined
 }
 
 interface FrameRedirectNavigationInfo {
@@ -38,6 +52,7 @@ interface FrameRedirectNavigationInfo {
 }
 
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
+const historyReplacementNavigationInfoType = Symbol('frame-history-replacement')
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
 // Lets the navigation handler tell the WebKit workaround once it has reset scroll.
@@ -242,6 +257,9 @@ export function startNavigationListenerImpl(
       }
 
       let replayedSubmission = isFormSubmissionNavigationInfo(event.info) ? event.info : undefined
+      let historyReplacement = isHistoryReplacementNavigationInfo(event.info)
+        ? event.info
+        : undefined
       let runtimeNavigation = replayedSubmission
         ? {
             state: replayedSubmission.state,
@@ -260,9 +278,7 @@ export function startNavigationListenerImpl(
 
       let topFrame = options.getTopFrame()
       let frame = replayedSubmission?.frame
-      let sourceElement = replayedSubmission
-        ? replayedSubmission.sourceElement
-        : getSourceElement(event)
+      let source = (replayedSubmission ?? historyReplacement)?.source ?? runtimeNavigation.source
       if (!frame) {
         if (state.target) {
           frame = options.getNamedFrame(state.target)
@@ -290,7 +306,8 @@ export function startNavigationListenerImpl(
         if (frame !== topFrame) frame.src = state.src
         let reload = options.reloadFrame(frame, {
           ...submission,
-          sourceElement,
+          sourceElement: source?.element,
+          submitted: source?.submitted,
           signal: event.signal,
         })
         await reload.committed
@@ -357,7 +374,7 @@ export function startNavigationListenerImpl(
                 type: formSubmissionNavigationInfoType,
                 state,
                 frame,
-                sourceElement,
+                source,
                 getSubmission: runtimeNavigation.getSubmission,
               } satisfies FormSubmissionNavigationInfo,
             })
@@ -370,7 +387,14 @@ export function startNavigationListenerImpl(
         // <a>/<form method="get"> navigations
         if (runtimeNavigation.replaceHistory && event.cancelable) {
           event.preventDefault()
-          navigation.navigate(event.destination.url, { history: 'replace', state })
+          navigation.navigate(event.destination.url, {
+            history: 'replace',
+            state,
+            info: {
+              type: historyReplacementNavigationInfoType,
+              source,
+            } satisfies HistoryReplacementNavigationInfo,
+          })
         } else {
           interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
         }
@@ -392,11 +416,6 @@ export function getInterceptableNavigation(): Navigation | undefined {
   return navigation
 }
 
-function getSourceElement(event: NavigateEvent): Element | undefined {
-  let sourceElement = (event as SourceElementNavigateEvent).sourceElement
-  return sourceElement instanceof Element ? sourceElement : undefined
-}
-
 function isRuntimeNavigation(info: unknown): info is NavigationState {
   return typeof info === 'object' && info != null && '$rmx' in info
 }
@@ -412,6 +431,17 @@ function isFormSubmissionNavigationInfo(value: unknown): value is FormSubmission
     'frame' in value &&
     'getSubmission' in value &&
     typeof value.getSubmission === 'function'
+  )
+}
+
+function isHistoryReplacementNavigationInfo(
+  value: unknown,
+): value is HistoryReplacementNavigationInfo {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'type' in value &&
+    value.type === historyReplacementNavigationInfoType
   )
 }
 
@@ -678,6 +708,7 @@ function getSourceElementNavigation(
         resetFocus: normalizeResetBehavior(linkElement.getAttribute('data-rmx-reset-focus')),
         $rmx: true,
       },
+      source: { element: sourceElement, submitted: false },
       replaceHistory: getReplaceHistory(linkElement.getAttribute('data-rmx-history'), false),
     }
   }
@@ -697,6 +728,7 @@ function getSourceElementNavigation(
       resetFocus: normalizeResetBehavior(formNavigation.getAttribute('data-rmx-reset-focus')),
       $rmx: true,
     },
+    source: { element: sourceElement, submitted: true },
     replaceHistory: getReplaceHistory(
       formNavigation.getAttribute('data-rmx-history'),
       replaceHistoryByDefault,
