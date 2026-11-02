@@ -136,6 +136,11 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
+      # Cached browsers lack the system libraries that --with-deps installs, which WebKit needs.
+      - name: Install Playwright System Dependencies
+        if: steps.cache-browsers.outputs.cache-hit == 'true'
+        run: pnpm --filter @remix-run/component exec playwright install-deps
+
       - name: Run tests
         run: pnpm test
 
@@ -175,6 +180,11 @@ jobs:
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
+
+      # Cached browsers lack the system libraries that --with-deps installs, which WebKit needs.
+      - name: Install Playwright System Dependencies
+        if: steps.cache-browsers.outputs.cache-hit == 'true'
+        run: pnpm --filter @remix-run/component exec playwright install-deps
 
       - name: Run Bun tests
         run: pnpm test:bun
