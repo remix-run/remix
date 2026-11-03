@@ -1,5 +1,5 @@
 import assert from '@remix-run/assert'
-import { test } from '@remix-run/test'
+import { describe, it, test } from '@remix-run/test'
 import {
   getAffectedWorkspaceDirs,
   getChangedWorkspaceDirs,
@@ -65,21 +65,56 @@ test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', (
   ])
 })
 
-test('getFullRunReasons flags root-wide config changes and deleted workspace manifests', () => {
-  let workspaces: WorkspaceInfo[] = [
-    {
-      dir: 'packages/headers',
-      name: '@remix-run/headers',
-      dependencies: [],
-      scripts: ['test', 'typecheck'],
-    },
-  ]
+describe('getFullRunReasons', () => {
+  it('flags root-wide config changes and deleted workspace manifests', () => {
+    let workspaces: WorkspaceInfo[] = [
+      {
+        dir: 'packages/headers',
+        name: '@remix-run/headers',
+        dependencies: [],
+        scripts: ['test', 'typecheck'],
+      },
+    ]
 
-  assert.deepEqual(
-    getFullRunReasons(
-      ['package.json', 'pnpm-lock.yaml', 'packages/removed/package.json', 'README.md'],
-      workspaces,
-    ),
-    ['package.json', 'pnpm-lock.yaml', 'packages/removed/package.json'],
-  )
+    assert.deepEqual(
+      getFullRunReasons(
+        ['package.json', 'pnpm-lock.yaml', 'packages/removed/package.json', 'README.md'],
+        workspaces,
+      ),
+      ['package.json', 'pnpm-lock.yaml', 'packages/removed/package.json'],
+    )
+  })
+
+  it('flags deleted nested workspace manifests even when a parent workspace still exists', () => {
+    let parent: WorkspaceInfo = {
+      dir: 'packages/component',
+      name: '@remix-run/component',
+      dependencies: [],
+      scripts: ['test'],
+    }
+    assert.deepEqual(getFullRunReasons(['packages/component/removed/package.json'], [parent]), [
+      'packages/component/removed/package.json',
+    ])
+  })
+
+  it('runs all workspaces when shared CI or scripts change', () => {
+    assert.deepEqual(
+      getFullRunReasons(
+        [
+          '.github/workflows/check-pr.yaml',
+          '.github/actions/setup-node-pnpm-cache/action.yaml',
+          'scripts/run-changed-workspaces.ts',
+          'scripts/utils/workspaces.ts',
+          'README.md',
+        ],
+        [],
+      ),
+      [
+        '.github/workflows/check-pr.yaml',
+        '.github/actions/setup-node-pnpm-cache/action.yaml',
+        'scripts/run-changed-workspaces.ts',
+        'scripts/utils/workspaces.ts',
+      ],
+    )
+  })
 })
