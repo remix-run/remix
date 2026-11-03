@@ -1,27 +1,38 @@
-import { pendingPrefetchLinks } from './prefetch-links.ts'
-import { jsx } from './jsx.ts'
+import { jsx } from './core/vnode.ts'
 import {
   Fragment,
   Frame,
+  createComponentErrorEvent,
   createFrameHandle,
+  getComponentError,
   type FrameContent,
   type FrameResolution,
 } from './component.ts'
-import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
-import type { RemixElement, RemixNode } from './jsx.ts'
+import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
-import { diffElementAttributes, diffNodes } from './diff-dom.ts'
+import {
+  collectNodesBetween,
+  diffElementAttributes,
+  diffNodes,
+  findEndMarker,
+  getFrameId,
+  isCommentNode,
+  isFrameEnd,
+  isFrameStart,
+  isHydrationEnd,
+  isHydrationStart,
+} from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
-import { unwrapFrameResolution } from './frame-resolution.ts'
+import { unwrapFrameResolution } from './spa-response.ts'
 import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
@@ -30,17 +41,6 @@ import {
   type ClientEntryIdentity,
 } from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
-import { reloadDocument } from './document-reload.ts'
-import {
-  collectNodesBetween,
-  findEndMarker,
-  getFrameId,
-  isCommentNode,
-  isFrameEnd,
-  isFrameStart,
-  isHydrationEnd,
-  isHydrationStart,
-} from './frame-markers.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -99,6 +99,37 @@ export class NamedFrameRegistry {
       this.#framesByName.delete(name)
     }
   }
+}
+
+let appTopFrame: Frame
+export const appNamedFrames = new NamedFrameRegistry()
+
+export function setAppTopFrame(frame: Frame): void {
+  appTopFrame = frame
+}
+
+export function getAppTopFrame(): Frame {
+  return appTopFrame
+}
+
+/**
+ * Returns the top-level frame handle for the running application.
+ *
+ * @returns The top-level frame handle.
+ */
+export function getTopFrame(): FrameHandle {
+  if (!appTopFrame) throw new Error('app runtime not initialized')
+  return appTopFrame.handle
+}
+
+/**
+ * Returns a named frame handle.
+ *
+ * @param name Name of the frame to look up.
+ * @returns The matching frame handle, or `undefined` when not found.
+ */
+export function getNamedFrame(name: string): FrameHandle | undefined {
+  return appNamedFrames.get(name)
 }
 
 /**
@@ -176,6 +207,8 @@ const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 const pendingClientEntryHydrations = new WeakMap<Comment, Promise<void>>()
 const frameClientEntryParents = new WeakMap<Comment, Comment>()
+
+export const pendingPrefetchLinks = new WeakSet<Node>()
 
 function createLinkedAbortController(...signals: Array<AbortSignal | undefined>): {
   controller: AbortController
@@ -1937,4 +1970,28 @@ function isDocumentFragmentNode(value: unknown): value is DocumentFragment {
     value !== null &&
     Reflect.get(value, 'nodeType') === Node.DOCUMENT_FRAGMENT_NODE
   )
+}
+
+const documentReloadInfo = 'remix-document-reload'
+
+export function isDocumentReload(info: unknown): boolean {
+  return info === documentReloadInfo
+}
+
+export function reloadDocument(doc: Document, href = doc.location.href): void {
+  let navigation = doc.defaultView?.navigation
+  if (navigation) {
+    navigation.navigate(href, { history: 'replace', info: documentReloadInfo })
+  } else {
+    doc.location.replace(href)
+  }
+}
+
+export function reloadCurrentDocument(doc: Document): void {
+  let navigation = doc.defaultView?.navigation
+  if (navigation && typeof navigation.reload === 'function') {
+    navigation.reload({ info: documentReloadInfo })
+  } else {
+    doc.location.reload()
+  }
 }

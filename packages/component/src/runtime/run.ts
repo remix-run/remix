@@ -1,13 +1,11 @@
-import { createFrame, NamedFrameRegistry, type Frame } from './frame.ts'
+import { appNamedFrames, createFrame, getAppTopFrame, setAppTopFrame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
-import type { FrameHandle, Handle } from './component.ts'
-import { createComponentErrorEvent } from './error-event.ts'
-import type { ComponentErrorEvent } from './error-event.ts'
+import type { ComponentErrorEvent, Handle } from './component.ts'
 import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
 import { startNavigationListener } from './navigation.ts'
 import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
-import { TypedEventTarget } from './typed-event-target.ts'
+import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 
 /**
@@ -64,28 +62,6 @@ export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
   flush(): void
   /** Stops runtime listeners and disposes the top-level frame. */
   dispose(): void
-}
-
-let topFrame: Frame
-/**
- * Returns the top-level frame handle for the running application.
- *
- * @returns The top-level frame handle.
- */
-export function getTopFrame(): FrameHandle {
-  if (!topFrame) throw new Error('app runtime not initialized')
-  return topFrame.handle
-}
-
-const namedFrames = new NamedFrameRegistry()
-/**
- * Returns a named frame handle.
- *
- * @param name Name of the frame to look up.
- * @returns The matching frame handle, or `undefined` when not found.
- */
-export function getNamedFrame(name: string): FrameHandle | undefined {
-  return namedFrames.get(name)
 }
 
 function getRequestBody(options?: ResolveFrameOptions): {
@@ -154,7 +130,7 @@ export function run(init: RunInit): AppRuntime {
 
   let resolveFrame = init.resolveFrame ?? defaultResolveFrame
 
-  topFrame = createFrame(document, {
+  let topFrame = createFrame(document, {
     src: document.location.href,
     errorTarget,
     loadModule: init.loadModule,
@@ -166,15 +142,16 @@ export function run(init: RunInit): AppRuntime {
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames,
+    namedFrames: appNamedFrames,
     processClientEntryPreloads: init.processClientEntryPreloads,
   })
+  setAppTopFrame(topFrame)
 
   let appController = new AbortController()
   let frames: Handle['frames'] = {
     top: topFrame.handle,
     get(name) {
-      return namedFrames.get(name)
+      return appNamedFrames.get(name)
     },
   }
   startNavigationListener(appController.signal)
@@ -187,10 +164,10 @@ export function run(init: RunInit): AppRuntime {
   return Object.assign(errorTarget, {
     frames,
     ready: () => readyPromise,
-    flush: () => topFrame.flush(),
+    flush: () => getAppTopFrame().flush(),
     dispose: () => {
       appController.abort()
-      topFrame.dispose()
+      getAppTopFrame().dispose()
       styleManager.dispose()
     },
   })

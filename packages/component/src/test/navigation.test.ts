@@ -8,7 +8,7 @@ import {
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame.ts'
 import { withResolvers } from './utils.ts'
-import { reloadDocument } from '../runtime/document-reload.ts'
+import { reloadDocument } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
@@ -19,9 +19,8 @@ function createReloadTransition(result: StubFrameReloadResult | Promise<StubFram
   return { signal, committed: finished.then(() => {}), finished }
 }
 
-// Stand-in frame the navigation handler can call without dragging in the
-// full app runtime from ./run.ts. Only `src` and `reload` are touched on
-// the path under test.
+// Stand-in frame the navigation handler can call without starting the app
+// runtime. Only `src` and `reload` are touched on the path under test.
 const stubFrame = {
   src: '',
   reload: async () => new AbortController().signal,

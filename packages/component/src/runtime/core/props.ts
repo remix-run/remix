@@ -1,4 +1,4 @@
-import type { ElementProps } from '../jsx.ts'
+import type { ElementProps } from './vnode.ts'
 import {
   canUseProperty,
   getMergedClassName,

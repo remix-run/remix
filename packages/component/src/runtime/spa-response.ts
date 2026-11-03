@@ -1,4 +1,5 @@
-import type { RemixNode } from './jsx.ts'
+import type { FrameContent, FrameResolution } from './component.ts'
+import type { RemixNode } from './core/vnode.ts'
 
 type SPAResponseData = {
   node: RemixNode
@@ -51,6 +52,26 @@ export const spaResponse = {
   },
 }
 
-export function getSpaResponseData(response: Response): SPAResponseData | undefined {
+function getSpaResponseData(response: Response): SPAResponseData | undefined {
   return spaResponses?.get(response)
+}
+
+export async function unwrapFrameResolution(
+  resolution: FrameResolution,
+): Promise<{ content: FrameContent; redirectedTo?: string }> {
+  if (!(resolution instanceof Response)) return { content: resolution }
+
+  let data = getSpaResponseData(resolution)
+  if (data) {
+    return {
+      content: data.node,
+      redirectedTo: data.redirectedTo,
+    }
+  }
+
+  let content = resolution.body ?? (await resolution.text())
+  return {
+    content,
+    redirectedTo: resolution.redirected && resolution.url ? resolution.url : undefined,
+  }
 }

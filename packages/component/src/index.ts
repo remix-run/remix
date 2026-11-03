@@ -3,7 +3,7 @@
 // -- Roots --
 export { run } from './runtime/run.ts'
 export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
-export type { ComponentErrorEvent } from './runtime/error-event.ts'
+export type { ComponentErrorEvent } from './runtime/component.ts'
 
 export { createRoot, createRangeRoot, createScheduler } from './runtime/vdom.ts'
 export type {
@@ -48,7 +48,7 @@ export type {
   Renderable,
   RemixNode,
   Props,
-} from './runtime/jsx.ts'
+} from './runtime/core/vnode.ts'
 export type { HostProps, LayoutAnimationConfig } from './runtime/dom.ts'
 export { unsafeHTML } from './runtime/unsafe-html.ts'
 export type { UnsafeHTML } from './runtime/unsafe-html.ts'
@@ -62,7 +62,7 @@ export type {
   MixInput,
   MixValue,
 } from './runtime/mixins/mixin.ts'
-export { TypedEventTarget } from './runtime/typed-event-target.ts'
+export { TypedEventTarget } from './runtime/component.ts'
 export type { Dispatched } from './runtime/event-types.ts'
 export { on } from './runtime/mixins/on-mixin.ts'
 export { link } from './runtime/mixins/link-mixin.ts'

@@ -1,7 +1,7 @@
 import { createMixin, renderMixinElement, type MixinFactory } from './mixin.ts'
 import { navigate } from '../navigation.ts'
 import { on } from './on-mixin.ts'
-import type { ElementProps } from '../jsx.ts'
+import type { ElementProps } from '../core/vnode.ts'
 
 import type { NavigationOptions } from '../navigation.ts'
 
