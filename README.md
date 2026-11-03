@@ -111,13 +111,15 @@ To create a new Remix app with the CLI, use `npx remix new`:
 npx remix new my-remix-app
 ```
 
-To try the latest `main` build, open the [main preview releases](https://github.com/remix-run/previews/releases?q=main-), select the newest published build, and copy the `remix.tgz` download URL:
+To try a PR preview, use the installation command posted on the PR. For the latest `main` build, open the [main preview releases](https://github.com/remix-run/previews/releases?q=main-), select the newest published build, and copy the `remix.tgz` download URL:
 
 ```sh
 pnpm add "<tarball-url>"
 ```
 
-Each release contains tarballs for individual packages and a `preview.json` manifest listing their install URLs and source commit. Every SHA has a separate release and URL. Main previews are kept for seven days, with the newest successful build always retained. All PR builds are kept until the PR merges, then deleted. Closing a PR without merging keeps its builds. Installs using deleted builds need a newer preview URL and an updated lockfile.
+To install an individual package, use its tarball URL from the same release. Each release also includes a `preview.json` manifest listing all package install URLs and the source commit.
+
+Every SHA has a separate release and URL. Main previews are kept for seven days, with the newest successful build always retained. All PR builds are kept until the PR merges, then deleted. Closing a PR without merging keeps its builds. Installs using deleted builds need a newer preview URL and an updated lockfile.
 
 If your pnpm version blocks transitive Git or tarball dependencies, add this to your `pnpm-workspace.yaml`:
 

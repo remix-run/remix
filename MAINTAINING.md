@@ -85,23 +85,19 @@ To release the stable version:
 The prerelease suffix is removed, for example from `3.0.0-rc.7` to `3.0.0`. The bump type is used
 only for changelog categorization; by convention, use `major` for a major release announcement.
 
-## Preview Builds
+## Preview Releases
 
-The `preview/main` branch provides installable builds of `main` without publishing releases to npm.
-The
-[`preview` workflow](https://github.com/remix-run/remix/blob/main/.github/workflows/preview.yml)
-runs [`setup-installable-branch.ts`](./scripts/setup-installable-branch.ts) after every commit to
-`main`. The script builds the repository and commits the build output and required `package.json`
-changes to `preview/main`.
+The Preview Build workflow builds public package tarballs for `main` pushes and same-repository PR
+updates, then uploads and verifies them before publishing a prerelease per channel/source SHA in
+[remix-run/previews](https://github.com/remix-run/previews). Dispatch it with `baseBranch` and
+`previewName` for an experimental preview.
 
-The `preview/main` build can be installed directly with pnpm 9 or newer:
-
-```sh
-pnpm install "remix-run/remix#preview/main&path:packages/remix"
-
-# Or install a single package
-pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
-```
+The destination must be public, initialized with a commit, and have release immutability disabled.
+Set `REMIX_PREVIEWS_PAT` in this repository's Actions secrets to a fine-grained PAT with Contents
+read/write access to the destination. Set the `REMIX_PREVIEWS_REPOSITORY` Actions variable to use a
+different repository, and update the README discovery link accordingly. See the
+[README](https://github.com/remix-run/remix/blob/main/README.md#installation) for installation and
+retention details.
 
 ## Agentic Workflows
 
