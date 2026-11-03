@@ -95,8 +95,9 @@ for an experimental preview. Previewed refs must include the preview scripts fro
 
 Main and experimental release names and tags use `v0.YYYYMMDD.HHMMSS-<channel>-<8-character-sha>`,
 with the source commit's UTC date and time. Leading zeros are removed from the numeric time
-component for valid SemVer. PRs share a `pr-<number>` release with `<package>-<8-character-sha>.tgz`
-assets. After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
+component for valid SemVer. PRs share a `v0.YYYYMMDD.HHMMSS-pr-<number>` release, using the PR's
+creation timestamp so every build uses the same tag, with `<package>-<8-character-sha>.tgz` assets.
+After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
 updates the release's install table, and retains the latest 10 complete builds by completion time.
 Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release
 and any older per-SHA preview releases.

@@ -17,13 +17,17 @@ import {
 import type { PreviewRelease } from './preview.ts'
 
 describe('preview packages', () => {
-  it('uses UTC date and time as SemVer for main and experiments, and one tag per PR', () => {
+  it('uses UTC date and time as SemVer, with a fixed tag per PR', () => {
     let sha = 'abcdef1234567890'.padEnd(40, '0')
     let committedAt = '2026-11-02T23:30:00-05:00'
     let tag = getPreviewTag('main', sha, committedAt)
     assert.equal(tag, 'v0.20261103.43000-main-abcdef12')
     assert.ok(valid(tag))
-    assert.equal(getPreviewTag('pr-123', sha, committedAt), 'pr-123')
+    let pr = getPreviewTag('pr-123', sha, committedAt)
+    assert.equal(pr, 'v0.20261103.43000-pr-123')
+    assert.ok(valid(pr))
+    assert.equal(getPreviewChannel(pr), 'pr-123')
+    assert.equal(getPreviewTag('pr-123', 'b'.repeat(40), committedAt), pr)
     assert.equal(getPreviewChannel('pr-123'), 'pr-123')
     let experimental = getPreviewTag('experimental', sha, committedAt)
     assert.equal(experimental, 'v0.20261103.43000-experimental-abcdef12')
@@ -49,15 +53,22 @@ describe('preview packages', () => {
   it('uses eight-character SHA filenames within the shared PR release', () => {
     let sha = 'a'.repeat(40)
     let other = sha.slice(0, 8) + 'b'.repeat(32)
-    let build = parsePreviewBuild('pr-123', sha)
+    let tag = getPreviewTag('pr-123', sha, '2026-11-02T12:00:00Z')
+    let build = parsePreviewBuild(tag, sha)
+    assert.equal(build.channel, 'pr-123')
     assert.equal(
       getPreviewTarballUrl(build, 'remix'),
-      `https://github.com/remix-run/previews/releases/download/pr-123/remix-${sha.slice(0, 8)}.tgz`,
+      `https://github.com/remix-run/previews/releases/download/${tag}/remix-${sha.slice(0, 8)}.tgz`,
     )
     assert.equal(
       getPreviewTarballUrl(build, 'remix'),
       getPreviewTarballUrl({ ...build, sha: other }, 'remix'),
     )
+    assert.deepEqual(parsePreviewBuild(tag, 'b'.repeat(40)), {
+      channel: 'pr-123',
+      sha: 'b'.repeat(40),
+      tag,
+    })
   })
 
   it('requires a valid tag matching the full source SHA', () => {
@@ -119,23 +130,24 @@ const now = Date.parse('2026-11-02T12:00:00Z')
 describe('preview release retention', () => {
   it('treats both merged and unmerged closed PRs as closed, keeping open PRs', () => {
     let sha = 'a'.repeat(40)
+    let createdAt = '2026-11-01T04:30:00Z'
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
-        JSON.stringify({ state: 'closed', merged: false, head: { sha } }),
+        JSON.stringify({ state: 'closed', merged: false, head: { sha }, created_at: createdAt }),
       ),
-      { closed: true, sha },
+      { closed: true, sha, createdAt },
     )
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
-        JSON.stringify({ state: 'closed', merged: true, head: { sha } }),
+        JSON.stringify({ state: 'closed', merged: true, head: { sha }, created_at: createdAt }),
       ),
-      { closed: true, sha },
+      { closed: true, sha, createdAt },
     )
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
-        JSON.stringify({ state: 'open', merged: false, head: { sha } }),
+        JSON.stringify({ state: 'open', merged: false, head: { sha }, created_at: createdAt }),
       ),
-      { closed: false, sha },
+      { closed: false, sha, createdAt },
     )
   })
 
@@ -202,13 +214,15 @@ describe('preview release retention', () => {
     let experimental = release(3, 'experimental', '2020-01-01T00:00:00Z')
     let unrelated = { ...release(4, 'pr-12', '2020-01-01T00:00:00Z'), body: 'Unrelated release' }
     let malformed = { ...release(5, 'pr-12', '2020-01-01T00:00:00Z'), tag_name: 'pr-12-short' }
+    let legacyShared = { ...build, id: 7, tag_name: 'pr-12' }
+    let legacySha = { ...build, id: 8, tag_name: 'pr-12-20200101-00000001' }
     assert.deepEqual(
       getExpiredPreviewReleases(
-        [build, draft, other, experimental, unrelated, malformed],
+        [build, draft, other, experimental, unrelated, malformed, legacyShared, legacySha],
         'pr-12',
         now,
       ),
-      [build, draft],
+      [build, draft, legacyShared, legacySha],
     )
     assert.deepEqual(getExpiredPreviewReleases([build, other, experimental], 'main', now), [])
   })

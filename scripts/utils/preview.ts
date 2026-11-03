@@ -33,13 +33,15 @@ export interface PreviewRelease {
 export const PREVIEW_REPOSITORY = 'remix-run/previews'
 export const PREVIEW_RELEASE_MARKER = '<!-- remix-preview -->'
 const PR_BUILD_COMPLETE = 'Complete preview build'
+const SHARED_PR_TAG = /(?:^|-)pr-[1-9]\d*$/
 
 export function getPreviewChannel(tag: string): string | null {
   if (/^pr-[1-9]\d*$/.test(tag)) return tag
-  let channel = /^v0\.[1-9]\d{7}\.(?:0|[1-9]\d{0,5})-(main|experimental)-[a-f0-9]{8}$/.exec(
-    tag,
-  )?.[1]
-  if (channel) return channel
+  let match =
+    /^v0\.[1-9]\d{7}\.(?:0|[1-9]\d{0,5})-(?:(main|experimental)-[a-f0-9]{8}|(pr-[1-9]\d*))$/.exec(
+      tag,
+    )
+  if (match) return match[1] ?? match[2]
   return (
     /^(main|pr-[1-9]\d*|experimental-[a-zA-Z0-9][a-zA-Z0-9._-]*)-\d{8}-[a-f0-9]{8}$/.exec(
       tag,
@@ -81,16 +83,16 @@ export function getExpiredPreviewReleases(
   )
 }
 
-export function getPreviewTag(channel: string, sha: string, committedAt: string): string {
+export function getPreviewTag(channel: string, sha: string, timestamp: string): string {
   if (!/^(main|pr-[1-9]\d*|experimental)$/.test(channel)) {
     throw new Error(`Invalid preview channel: ${channel}`)
   }
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Invalid source SHA: ${sha}`)
-  if (/^pr-[1-9]\d*$/.test(channel)) return channel
-  let timestamp = new Date(committedAt).toISOString()
-  let date = timestamp.slice(0, 10).replaceAll('-', '')
-  let time = Number(timestamp.slice(11, 19).replaceAll(':', ''))
-  return `v0.${date}.${time}-${channel}-${sha.slice(0, 8)}`
+  let utc = new Date(timestamp).toISOString()
+  let date = utc.slice(0, 10).replaceAll('-', '')
+  let time = Number(utc.slice(11, 19).replaceAll(':', ''))
+  let suffix = channel.startsWith('pr-') ? channel : `${channel}-${sha.slice(0, 8)}`
+  return `v0.${date}.${time}-${suffix}`
 }
 
 export function validatePreviewRepository(repository: string): string {
@@ -113,7 +115,7 @@ export function getPreviewTarballUrl(
 }
 
 function getPreviewAssetName(build: PreviewBuild, packageDirName: string): string {
-  return /^pr-[1-9]\d*$/.test(build.tag)
+  return SHARED_PR_TAG.test(build.tag)
     ? `${packageDirName}-${build.sha.slice(0, 8)}.tgz`
     : `${packageDirName}.tgz`
 }
@@ -123,7 +125,7 @@ export function parsePreviewBuild(tag: string, sha: string): PreviewBuild {
   if (
     !channel ||
     !/^[a-f0-9]{40}$/.test(sha) ||
-    (tag !== channel && !tag.endsWith(`-${sha.slice(0, 8)}`))
+    (!SHARED_PR_TAG.test(tag) && !tag.endsWith(`-${sha.slice(0, 8)}`))
   )
     throw new Error('Invalid preview tag or source SHA')
   return { channel, sha, tag }
@@ -164,8 +166,12 @@ export async function buildPreview(
   { dryRun = false }: { dryRun?: boolean } = {},
 ): Promise<PreviewBuild> {
   let sha = logAndExec('git', ['rev-parse', 'HEAD'], true)
-  let committedAt = logAndExec('git', ['show', '--no-patch', '--format=%cI', 'HEAD'], true)
-  let tag = getPreviewTag(channel, sha, committedAt)
+  let prNumber = /^pr-([1-9]\d*)$/.exec(channel)?.[1]
+  let timestamp = prNumber
+    ? readPullRequest(process.env.GITHUB_REPOSITORY ?? 'remix-run/remix', Number(prNumber))
+        .createdAt
+    : logAndExec('git', ['show', '--no-patch', '--format=%cI', 'HEAD'], true)
+  let tag = getPreviewTag(channel, sha, timestamp)
   let build = { channel, sha, tag }
   let entries = await fsp.readdir('packages', { withFileTypes: true })
   let packages: { dirName: string; content: string; manifest: PreviewPackageManifest }[] = []
@@ -354,7 +360,7 @@ export function publishPreview(
   if (!files.includes(path.join(directory, getPreviewAssetName(build, 'remix'))))
     throw new Error('Missing remix preview tarball')
   if (
-    /^pr-[1-9]\d*$/.test(build.tag) &&
+    SHARED_PR_TAG.test(build.tag) &&
     files.some((filename) => !filename.endsWith(`-${build.sha.slice(0, 8)}.tgz`))
   )
     throw new Error('Preview tarballs do not match the source SHA')
@@ -380,7 +386,7 @@ export function publishPreview(
     process.env.GITHUB_REPOSITORY ?? 'remix-run/remix',
   )
   let repositoryUrl = `https://github.com/${sourceRepository}`
-  if (/^pr-[1-9]\d*$/.test(build.tag)) {
+  if (SHARED_PR_TAG.test(build.tag)) {
     return publishPrPreview(github, build, release, files, expected, repositoryUrl)
   }
   let commitUrl = `${repositoryUrl}/commit/${build.sha}`
@@ -553,19 +559,21 @@ export function readPullRequest(
   repository: string,
   number: number,
   run = createGitHubRunner(process.env.GITHUB_TOKEN),
-): { closed: boolean; sha: string } {
+): { closed: boolean; sha: string; createdAt: string } {
   validatePreviewRepository(repository)
   if (!Number.isSafeInteger(number) || number < 1) throw new Error('Invalid PR number')
   let value: unknown = JSON.parse(run(['api', `repos/${repository}/pulls/${number}`]))
   if (
     !isRecord(value) ||
     (value.state !== 'open' && value.state !== 'closed') ||
+    typeof value.created_at !== 'string' ||
+    !Number.isFinite(Date.parse(value.created_at)) ||
     !isRecord(value.head) ||
     typeof value.head.sha !== 'string'
   ) {
     throw new Error(`Invalid PR response: ${number}`)
   }
-  return { closed: value.state === 'closed', sha: value.head.sha }
+  return { closed: value.state === 'closed', sha: value.head.sha, createdAt: value.created_at }
 }
 
 function verifyAssets(
