@@ -103,13 +103,22 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
       continue
     }
 
-    if (prevValue === nextValue) continue
+    let sameObject = prevValue === nextValue
+    if (sameObject && typeof nextValue !== 'object') continue
 
-    patchHostProp(dom, name, nextValue, isSvg)
+    patchHostProp(dom, name, nextValue, isSvg, sameObject)
   }
 }
 
-function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolean): void {
+// Objects can be mutated in place, so a prop that receives the same object is compared with what
+// the DOM holds instead of skipped.
+function patchHostProp(
+  dom: Element,
+  name: string,
+  value: unknown,
+  isSvg: boolean,
+  sameObject = false,
+): void {
   let { ns, attr } = normalizeAttributeName(name, isSvg)
   value = sanitizeUrlAttribute(dom.localName, attr, value)
 
@@ -124,6 +133,8 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
   }
 
   if (canUseProperty(dom, name, isSvg, attr)) {
+    // Reassigning some properties, like `srcObject`, reloads the element even for the same object.
+    if (sameObject && dom[name] === value) return
     try {
       dom[name] = value == null ? '' : value
       return
@@ -137,6 +148,7 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
   let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
   if (value != null && (stringify || value)) {
     let attrValue = stringify ? String(value) : ''
+    if (sameObject && dom.getAttribute(attr) === attrValue) return
     if (ns) dom.setAttributeNS(ns, attr, attrValue)
     else dom.setAttribute(attr, attrValue)
   } else {
