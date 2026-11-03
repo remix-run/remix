@@ -1,1 +1,1 @@
-The Remix skill bundled with new apps keeps single-use styles inline in JSX, reserves named styles for reuse and variant maps, and favors keeping related code together.
+The starter app keeps single-use styles and helpers beside the JSX that uses them, and the bundled Remix skill favors keeping related code together.

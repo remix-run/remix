@@ -1,15 +1,13 @@
 import { createAssetServer } from 'remix/assets'
 import { componentHmr } from 'remix/component-hmr/assets'
 
-const rootDir = process.cwd()
 const nodeEnv = process.env.NODE_ENV ?? 'development'
 const isDevelopment = nodeEnv === 'development'
-const isProduction = nodeEnv === 'production'
 const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
 export const assets = createAssetServer({
   basePath: '/assets',
-  rootDir,
+  rootDir: process.cwd(),
   /* remix-template:remove-start This is only needed inside the Remix monorepo. */
   mounts: {
     app: 'app',
@@ -22,7 +20,7 @@ export const assets = createAssetServer({
   denyFiles: ['app/**/*.test.*'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
-  fingerprint: isProduction,
+  fingerprint: nodeEnv === 'production',
   watch: isDevelopment,
   hmr: isHmr
     ? {
@@ -33,6 +31,4 @@ export const assets = createAssetServer({
   scripts: { loaders: isHmr ? [componentHmr()] : undefined },
 })
 
-const entry = 'app/actions/public/entry.ts'
-
-export const scriptEntry = await assets.getScriptEntry(entry)
+export const scriptEntry = await assets.getScriptEntry('app/actions/public/entry.ts')

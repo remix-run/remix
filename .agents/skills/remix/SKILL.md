@@ -106,12 +106,6 @@ Event handlers run only when the component is mounted or hydrated in the browser
 - Prefer Web APIs, native links, buttons, and forms, plus existing first-party Remix primitives, over custom abstractions.
 - Treat browser-reachable modules as public: keep secrets and trusted server logic out of them. In the starter, colocated `public/` directories mark browser-reachable source.
 
-### Component Styling
-
-- Write a `css()` style used at one JSX site inline in that element's `mix`, such as `<p mix={css({ color: 'var(--muted)' })}>`. Keep comments explaining a rule beside it.
-- Name styles when multiple JSX sites share them or when a variant map makes the supported choices clear, such as `{ pill: ..., swatch: ... }`. Keep them in the component's module. Extract when the second use appears, not in anticipation of reuse.
-- Do not hoist a single-use `css()` style for performance. Naming it does not make rendering meaningfully cheaper.
-
 ## Verify the Behavior
 
 Use the app's scripts for relevant tests and typechecking, then verify the changed behavior directly. For UI changes, exercise the interaction in the browser, not just the rendered appearance. When enhancing a server-rendered page, check both ordinary document behavior and the enhanced path. Test rejection and failure paths for changes involving untrusted input or access control.

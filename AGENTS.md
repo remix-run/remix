@@ -33,7 +33,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 ## Code Style
 
 - **Locality**: write for the next reader, who may be an agent. Keep code that changes together in one place so understanding or editing a piece of UI does not require jumping between a use and its definition.
-- **Indirection**: do not introduce a name, constant, helper, type, or file solely to hold a single use. Each extraction adds a lookup for readers and context for agents. Extract when there is actual reuse or a separate responsibility.
+- **Indirection**: do not introduce a name, constant, helper, type, or file solely to hold a single use. Each extraction adds a lookup for readers and context for agents. Extract when there is actual reuse or a separate responsibility. Exported types and public API shapes are not single uses.
 - **Imports**: use `import type { X }` and `export type { X }`; include `.ts` extensions
 - **Variables**: use `let` for locals, `const` for module scope, never `var`
 - **Functions**: use regular functions by default; use arrow functions for callbacks; use concise arrow bodies when they only return an expression
