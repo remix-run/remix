@@ -141,6 +141,13 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
+      - name: Fetch base and head history
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
+
       - name: Install pnpm
         uses: pnpm/action-setup@v6
 
@@ -168,8 +175,11 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run affected workspace tests
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node ./scripts/run-changed-workspaces.ts test "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
   test_bun_changed:
     name: test (bun, ubuntu-latest, changed packages)
