@@ -89,12 +89,13 @@ only for changelog categorization; by convention, use `major` for a major releas
 
 The Preview Build workflow builds public package tarballs for `main` pushes and same-repository PR
 updates, then uploads and verifies them before publishing prereleases in
-[remix-run/previews](https://github.com/remix-run/previews). Dispatch it with `baseBranch` and
-`previewName` for an experimental preview. Previewed refs must include the preview scripts from
+[remix-run/previews](https://github.com/remix-run/previews). Dispatch it with `baseBranch`
+for an experimental preview. Previewed refs must include the preview scripts from
 `main`.
 
-Main and experimental release names and tags use `<channel>-YYYYMMDD-<8-character-sha>`, with
-the source commit's UTC date. PRs share a `pr-<number>` release with `<package>-<8-character-sha>.tgz`
+Main and experimental release names and tags use `v0.YYYYMMDD.HHMMSS-<channel>-<8-character-sha>`,
+with the source commit's UTC date and time. Leading zeros are removed from the numeric time
+component for valid SemVer. PRs share a `pr-<number>` release with `<package>-<8-character-sha>.tgz`
 assets. After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
 updates the release's install table, and retains the latest 10 complete builds by completion time.
 Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release

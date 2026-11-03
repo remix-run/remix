@@ -36,6 +36,10 @@ const PR_BUILD_COMPLETE = 'Complete preview build'
 
 export function getPreviewChannel(tag: string): string | null {
   if (/^pr-[1-9]\d*$/.test(tag)) return tag
+  let channel = /^v0\.[1-9]\d{7}\.(?:0|[1-9]\d{0,5})-(main|experimental)-[a-f0-9]{8}$/.exec(
+    tag,
+  )?.[1]
+  if (channel) return channel
   return (
     /^(main|pr-[1-9]\d*|experimental-[a-zA-Z0-9][a-zA-Z0-9._-]*)-\d{8}-[a-f0-9]{8}$/.exec(
       tag,
@@ -53,7 +57,7 @@ export function getExpiredPreviewReleases(
     return (
       release.body.startsWith(PREVIEW_RELEASE_MARKER) &&
       (channel === 'experimental'
-        ? releaseChannel?.startsWith('experimental-')
+        ? releaseChannel === 'experimental' || releaseChannel?.startsWith('experimental-')
         : releaseChannel === channel)
     )
   })
@@ -78,13 +82,15 @@ export function getExpiredPreviewReleases(
 }
 
 export function getPreviewTag(channel: string, sha: string, committedAt: string): string {
-  if (!/^(main|pr-[1-9]\d*|experimental-[a-zA-Z0-9][a-zA-Z0-9._-]*)$/.test(channel)) {
+  if (!/^(main|pr-[1-9]\d*|experimental)$/.test(channel)) {
     throw new Error(`Invalid preview channel: ${channel}`)
   }
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Invalid source SHA: ${sha}`)
   if (/^pr-[1-9]\d*$/.test(channel)) return channel
-  let date = new Date(committedAt).toISOString().slice(0, 10).replaceAll('-', '')
-  return `${channel}-${date}-${sha.slice(0, 8)}`
+  let timestamp = new Date(committedAt).toISOString()
+  let date = timestamp.slice(0, 10).replaceAll('-', '')
+  let time = Number(timestamp.slice(11, 19).replaceAll(':', ''))
+  return `v0.${date}.${time}-${channel}-${sha.slice(0, 8)}`
 }
 
 export function validatePreviewRepository(repository: string): string {

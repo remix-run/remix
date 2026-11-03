@@ -15,9 +15,6 @@ on:
       baseBranch:
         description: Source branch or SHA
         required: true
-      previewName:
-        description: Experimental preview name (letters, numbers, dots, underscores, hyphens)
-        required: true
 
 permissions:
   contents: read
@@ -38,7 +35,7 @@ jobs:
       tag: ${{ steps.metadata.outputs.tag }}
       sha: ${{ steps.metadata.outputs.sha }}
     env:
-      PREVIEW_CHANNEL: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'push' && 'main' || format('experimental-{0}', inputs.previewName) }}
+      PREVIEW_CHANNEL: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'push' && 'main' || 'experimental' }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v6
@@ -80,7 +77,7 @@ jobs:
       contents: read
       pull-requests: write
     concurrency:
-      group: preview-${{ startsWith(needs.build.outputs.channel, 'experimental-') && 'experimental' || needs.build.outputs.channel }}
+      group: preview-${{ needs.build.outputs.channel }}
       queue: max
     env:
       PREVIEW_TAG: ${{ needs.build.outputs.tag }}

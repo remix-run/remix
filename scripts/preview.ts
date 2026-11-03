@@ -51,7 +51,7 @@ if (command === 'build' && target && positionals.length === 2) {
   }
 } else {
   throw new Error(
-    'Usage: pnpm preview <build <main|pr-N|experimental-name>|publish <tag> <source-sha>|cleanup <main|experimental|pr-N>> [--dry-run] [--output <directory>]',
+    'Usage: pnpm preview <build <main|pr-N|experimental>|publish <tag> <source-sha>|cleanup <main|experimental|pr-N>> [--dry-run] [--output <directory>]',
   )
 }
 

@@ -1,5 +1,6 @@
 import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import { gt, valid } from 'semver'
 
 import {
   PREVIEW_RELEASE_MARKER,
@@ -16,18 +17,33 @@ import {
 import type { PreviewRelease } from './preview.ts'
 
 describe('preview packages', () => {
-  it('uses dated tags for main and experiments, and one tag per PR', () => {
+  it('uses UTC date and time as SemVer for main and experiments, and one tag per PR', () => {
     let sha = 'abcdef1234567890'.padEnd(40, '0')
     let committedAt = '2026-11-02T23:30:00-05:00'
     let tag = getPreviewTag('main', sha, committedAt)
-    assert.equal(tag, 'main-20261103-abcdef12')
+    assert.equal(tag, 'v0.20261103.43000-main-abcdef12')
+    assert.ok(valid(tag))
     assert.equal(getPreviewTag('pr-123', sha, committedAt), 'pr-123')
     assert.equal(getPreviewChannel('pr-123'), 'pr-123')
-    let experimental = getPreviewTag('experimental-feature-123', sha, committedAt)
-    assert.equal(experimental, 'experimental-feature-123-20261103-abcdef12')
+    let experimental = getPreviewTag('experimental', sha, committedAt)
+    assert.equal(experimental, 'v0.20261103.43000-experimental-abcdef12')
+    assert.ok(valid(experimental))
     assert.equal(getPreviewChannel(tag), 'main')
     assert.equal(getPreviewChannel('pr-123-20261103-abcdef12'), 'pr-123')
-    assert.equal(getPreviewChannel(experimental), 'experimental-feature-123')
+    assert.equal(getPreviewChannel(experimental), 'experimental')
+    assert.equal(getPreviewTag('main', sha, '2026-11-03T00:00:00Z'), 'v0.20261103.0-main-abcdef12')
+    assert.ok(
+      gt(
+        getPreviewTag('main', sha, '2027-01-01T00:00:00Z'),
+        getPreviewTag('main', sha, '2026-12-31T23:59:59Z'),
+      ),
+    )
+    assert.ok(
+      gt(
+        getPreviewTag('experimental', sha, '2026-11-03T17:53:10Z'),
+        getPreviewTag('main', sha, '2026-11-03T17:53:09Z'),
+      ),
+    )
   })
 
   it('uses eight-character SHA filenames within the shared PR release', () => {
@@ -151,15 +167,18 @@ describe('preview release retention', () => {
   })
 
   it('expires experimental builds after thirty days without keeping the newest in each channel', () => {
-    let expired = release(1, 'experimental-alpha', '2026-10-03T11:59:59Z')
-    let cutoff = release(2, 'experimental-alpha', '2026-10-03T12:00:00Z')
-    let other = release(3, 'experimental-beta', '2020-01-01T00:00:00Z')
+    let expired = release(1, 'experimental', '2026-10-03T11:59:59Z')
+    let cutoff = release(2, 'experimental', '2026-10-03T12:00:00Z')
+    let other = {
+      ...release(3, 'experimental', '2020-01-01T00:00:00Z'),
+      tag_name: 'experimental-beta-20200101-00000003',
+    }
     let recent = {
-      ...release(4, 'experimental-gamma', '2020-01-01T00:00:00Z'),
+      ...release(4, 'experimental', '2020-01-01T00:00:00Z'),
       published_at: '2026-11-02T00:00:00Z',
     }
     let draft = {
-      ...release(5, 'experimental-draft', '2020-01-01T00:00:00Z'),
+      ...release(5, 'experimental', '2020-01-01T00:00:00Z'),
       draft: true,
       published_at: null,
     }
@@ -180,7 +199,7 @@ describe('preview release retention', () => {
     let build = release(1, 'pr-12', '2020-01-01T00:00:00Z')
     let draft = { ...release(6, 'pr-12', '2020-01-01T00:00:00Z'), draft: true, published_at: null }
     let other = release(2, 'pr-123', '2020-01-01T00:00:00Z')
-    let experimental = release(3, 'experimental-test', '2020-01-01T00:00:00Z')
+    let experimental = release(3, 'experimental', '2020-01-01T00:00:00Z')
     let unrelated = { ...release(4, 'pr-12', '2020-01-01T00:00:00Z'), body: 'Unrelated release' }
     let malformed = { ...release(5, 'pr-12', '2020-01-01T00:00:00Z'), tag_name: 'pr-12-short' }
     assert.deepEqual(
