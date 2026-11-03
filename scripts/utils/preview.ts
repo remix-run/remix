@@ -95,15 +95,15 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   return `v0.${date}.${time}-${suffix}`
 }
 
-export function getPreviewReleaseTitle(build: PreviewBuild): string {
-  let match = /^v0\.(\d{4})(\d{2})(\d{2})\.(\d{1,6})-/.exec(build.tag)
-  if (!match) return build.tag
-  let [, year, month, day, time] = match
-  let clock = time.padStart(6, '0')
-  let timestamp = `${year}-${month}-${day} ${clock.slice(0, 2)}:${clock.slice(2, 4)}:${clock.slice(4)} UTC`
-  return build.channel.startsWith('pr-')
-    ? `PR #${build.channel.slice(3)} · ${timestamp}`
-    : `${build.channel} · ${timestamp} · ${build.sha.slice(0, 8)}`
+export function getPreviewReleaseTitle(
+  build: PreviewBuild,
+  pr?: { headRef: string; title: string },
+): string {
+  if (build.channel.startsWith('pr-')) {
+    let version = pr?.headRef === 'release-pr/main' ? /^Release v(\S+)$/.exec(pr.title)?.[1] : null
+    return version ? `Remix ${version} preview` : `PR #${build.channel.slice(3)}`
+  }
+  return `${build.channel} (${build.sha.slice(0, 8)})`
 }
 
 export function validatePreviewRepository(repository: string): string {
@@ -399,7 +399,11 @@ export function publishPreview(
   )
   let repositoryUrl = `https://github.com/${sourceRepository}`
   if (SHARED_PR_TAG.test(build.tag)) {
-    return publishPrPreview(github, build, release, files, expected, repositoryUrl)
+    title = getPreviewReleaseTitle(
+      build,
+      readPullRequest(sourceRepository, Number(build.channel.slice(3))),
+    )
+    return publishPrPreview(github, build, release, files, expected, repositoryUrl, title)
   }
   let commitUrl = `${repositoryUrl}/commit/${build.sha}`
   let prNumber = /^pr-([1-9]\d*)$/.exec(build.channel)?.[1]
@@ -457,9 +461,9 @@ function publishPrPreview(
   files: string[],
   expected: { name: string; size: number; digest: string }[],
   repositoryUrl: string,
+  title: string,
 ): string {
   let prNumber = build.channel.slice('pr-'.length)
-  let title = getPreviewReleaseTitle(build)
   let prUrl = `${repositoryUrl}/pull/${prNumber}`
   let header = `${PREVIEW_RELEASE_MARKER}\nPreview builds for [PR #${prNumber}](${prUrl}).\n\nThe latest 10 successful SHA builds are retained until this PR closes.\n`
   if (
@@ -585,21 +589,29 @@ export function readPullRequest(
   repository: string,
   number: number,
   run = createGitHubRunner(process.env.GITHUB_TOKEN),
-): { closed: boolean; sha: string; createdAt: string } {
+): { closed: boolean; sha: string; headRef: string; title: string; createdAt: string } {
   validatePreviewRepository(repository)
   if (!Number.isSafeInteger(number) || number < 1) throw new Error('Invalid PR number')
   let value: unknown = JSON.parse(run(['api', `repos/${repository}/pulls/${number}`]))
   if (
     !isRecord(value) ||
     (value.state !== 'open' && value.state !== 'closed') ||
+    typeof value.title !== 'string' ||
     typeof value.created_at !== 'string' ||
     !Number.isFinite(Date.parse(value.created_at)) ||
     !isRecord(value.head) ||
+    typeof value.head.ref !== 'string' ||
     typeof value.head.sha !== 'string'
   ) {
     throw new Error(`Invalid PR response: ${number}`)
   }
-  return { closed: value.state === 'closed', sha: value.head.sha, createdAt: value.created_at }
+  return {
+    closed: value.state === 'closed',
+    sha: value.head.sha,
+    headRef: value.head.ref,
+    title: value.title,
+    createdAt: value.created_at,
+  }
 }
 
 function verifyAssets(
