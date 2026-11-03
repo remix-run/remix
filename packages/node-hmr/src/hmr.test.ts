@@ -861,7 +861,7 @@ describe('node-hmr', () => {
 
       await writeFileAtomically(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
 
-      await waitForResponse(ready.port, 'two')
+      await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
       await waitForOutput(server, /hmr update value\.ts/)
     } finally {
@@ -2142,6 +2142,7 @@ function startFixtureServer(cwd: string) {
             : ''
           return `Timed out waiting for fixture HMR URL.${exitText}\n${processOutput}`
         },
+        fixtureServerReadyTimeout,
       )
       return hmrUrlEvents[index]
     },
