@@ -35,6 +35,14 @@ describe('processStyleClass', () => {
     expect(cache.size).toBe(1)
   })
 
+  it('keeps declaration order for the same properties written in a different order', () => {
+    let cache = new Map<string, { selector: string; css: string }>()
+    processStyleClass({ margin: 0, marginTop: '5px' }, cache)
+    let reordered = processStyleClass({ marginTop: '5px', margin: 0 }, cache)
+
+    expect(reordered.css).toContain('margin-top: 5px;\n  margin: 0;')
+  })
+
   it('returns empty selector/css for empty objects', () => {
     let cache = new Map<string, { selector: string; css: string }>()
     let result = processStyleClass({}, cache)
