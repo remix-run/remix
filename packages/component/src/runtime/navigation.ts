@@ -381,42 +381,47 @@ export function getInterceptableNavigation(): Navigation | undefined {
   return navigation
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value != null
+}
+
 function isRuntimeNavigation(info: unknown): info is NavigationState {
-  return typeof info === 'object' && info != null && '$rmx' in info
+  return isObject(info) && '$rmx' in info
 }
 
 function isFormSubmissionNavigationInfo(value: unknown): value is FormSubmissionNavigationInfo {
   return (
-    typeof value === 'object' &&
-    value != null &&
-    'type' in value &&
+    isObject(value) &&
     value.type === formSubmissionNavigationInfoType &&
-    'state' in value &&
     isRuntimeNavigation(value.state) &&
     'frame' in value &&
-    'getSubmission' in value &&
     typeof value.getSubmission === 'function'
   )
 }
 
 function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNavigationInfo {
   return (
-    typeof value === 'object' &&
-    value != null &&
-    'type' in value &&
+    isObject(value) &&
     value.type === frameRedirectNavigationInfoType &&
-    'resetScroll' in value &&
-    (value.resetScroll === 'after-transition' || value.resetScroll === 'manual') &&
-    'resetFocus' in value &&
-    (value.resetFocus === 'after-transition' || value.resetFocus === 'manual')
+    isResetBehavior(value.resetScroll) &&
+    isResetBehavior(value.resetFocus)
   )
 }
 
+function isResetBehavior(value: unknown): boolean {
+  return value === 'after-transition' || value === 'manual'
+}
+
 function isSameOriginUrl(src: string): boolean {
+  return getSameOriginUrl(src) != null
+}
+
+export function getSameOriginUrl(src: string): URL | undefined {
   try {
-    return new URL(src, document.baseURI).origin === window.location.origin
+    let url = new URL(src, document.baseURI)
+    if (url.origin === window.location.origin) return url
   } catch {
-    return false
+    // Invalid URLs can't be same-origin.
   }
 }
 
@@ -476,12 +481,7 @@ function interceptNavigation(
   }
 }
 
-const disableScrollAnchoringCssText = `
-  html,
-  body {
-    overflow-anchor: none !important;
-  }
-`
+const disableScrollAnchoringCssText = 'html, body { overflow-anchor: none !important; }'
 
 function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): string | undefined {
   if (!resetScroll) return
@@ -500,16 +500,10 @@ function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): 
     // after the transition. The intended user-scroll behavior is tested here:
     // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
     let { scrollHeight, clientHeight } = document.documentElement
-    return `
-      html {
-        min-height: ${scrollHeight + clientHeight}px !important;
-        overflow-anchor: none !important;
-      }
-
-      body {
-        overflow-anchor: none !important;
-      }
-    `
+    return (
+      `html { min-height: ${scrollHeight + clientHeight}px !important; overflow-anchor: none !important; }` +
+      'body { overflow-anchor: none !important; }'
+    )
   }
 
   if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
@@ -631,16 +625,7 @@ function getSourceElementNavigation(
     if (linkElement.hasAttribute('data-rmx-document')) return
     if (linkElement.hasAttribute('download')) return
 
-    return {
-      state: {
-        target: linkElement.getAttribute('data-rmx-target') ?? undefined,
-        src: linkElement.getAttribute('data-rmx-src') ?? event.destination.url,
-        resetScroll: normalizeResetBehavior(linkElement.getAttribute('data-rmx-reset-scroll')),
-        resetFocus: normalizeResetBehavior(linkElement.getAttribute('data-rmx-reset-focus')),
-        $rmx: true,
-      },
-      replaceHistory: getReplaceHistory(linkElement.getAttribute('data-rmx-history'), false),
-    }
+    return getElementNavigation(linkElement, event, false)
   }
 
   let formNavigation = resolveFormNavigation(event)
@@ -651,18 +636,28 @@ function getSourceElementNavigation(
     event.destination.url === navigation.currentEntry?.url
 
   return {
+    ...getElementNavigation(formNavigation, event, replaceHistoryByDefault),
+    getSubmission: formNavigation.getSubmission,
+  }
+}
+
+function getElementNavigation(
+  element: { getAttribute(name: string): string | null },
+  event: NavigateEvent,
+  replaceHistoryByDefault: boolean,
+): RuntimeNavigation {
+  return {
     state: {
-      target: formNavigation.getAttribute('data-rmx-target') ?? undefined,
-      src: formNavigation.getAttribute('data-rmx-src') ?? event.destination.url,
-      resetScroll: normalizeResetBehavior(formNavigation.getAttribute('data-rmx-reset-scroll')),
-      resetFocus: normalizeResetBehavior(formNavigation.getAttribute('data-rmx-reset-focus')),
+      target: element.getAttribute('data-rmx-target') ?? undefined,
+      src: element.getAttribute('data-rmx-src') ?? event.destination.url,
+      resetScroll: normalizeResetBehavior(element.getAttribute('data-rmx-reset-scroll')),
+      resetFocus: normalizeResetBehavior(element.getAttribute('data-rmx-reset-focus')),
       $rmx: true,
     },
     replaceHistory: getReplaceHistory(
-      formNavigation.getAttribute('data-rmx-history'),
+      element.getAttribute('data-rmx-history'),
       replaceHistoryByDefault,
     ),
-    getSubmission: formNavigation.getSubmission,
   }
 }
 

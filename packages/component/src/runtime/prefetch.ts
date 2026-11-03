@@ -1,5 +1,5 @@
 import { pendingPrefetchLinks } from './prefetch-links.ts'
-import { getInterceptableNavigation } from './navigation.ts'
+import { getInterceptableNavigation, getSameOriginUrl } from './navigation.ts'
 import { getNamedFrame } from './run.ts'
 
 /** Options for prefetching frame content. */
@@ -295,16 +295,22 @@ function getPrefetchRequest(href: string, options?: PrefetchOptions): PrefetchRe
 }
 
 function getSameOriginHref(href: string): string | undefined {
-  let url: URL
-  try {
-    url = new URL(href, document.baseURI)
-  } catch {
-    return
-  }
+  let url = getSameOriginUrl(href)
+  if (!url) return
   url.hash = ''
-  if (url.origin !== window.location.origin) return
-
   return url.href
+}
+
+export function fetchFrame(
+  src: string,
+  target: string | undefined,
+  init: RequestInit,
+  contentType?: string,
+): Promise<Response> {
+  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+  if (target != null) headers.set('X-Remix-Target', target)
+  if (contentType) headers.set('Content-Type', contentType)
+  return fetch(src, { ...init, headers, mode: 'same-origin' })
 }
 
 export function createDefaultPrefetch(
@@ -356,13 +362,9 @@ export function createDefaultPrefetch(
 
   async function discover(src: string, options?: PrefetchOptions): Promise<void> {
     try {
-      let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
-      if (options?.target != null) headers.set('X-Remix-Target', options.target)
-      let response = await fetch(src, {
+      let response = await fetchFrame(src, options?.target, {
         method: 'GET',
-        mode: 'same-origin',
         priority: 'low',
-        headers,
         signal,
       })
       if (

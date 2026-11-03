@@ -31,19 +31,17 @@ export const link: MixinFactory<
 
     return (href, options, props: LinkCurrentProps) => {
       if (nativeLinkHostTypes.has(hostType)) {
-        return renderMixinElement(handle.element, {
-          ...(props ?? {}),
-          href,
-          ...(options?.target == null ? {} : { 'data-rmx-target': options.target }),
-          ...(options?.src == null ? {} : { 'data-rmx-src': options.src }),
-          ...(options?.history == null ? {} : { 'data-rmx-history': options.history }),
-          ...(options?.resetScroll == null
-            ? {}
-            : { 'data-rmx-reset-scroll': String(options.resetScroll) }),
-          ...(options?.resetFocus == null
-            ? {}
-            : { 'data-rmx-reset-focus': String(options.resetFocus) }),
-        })
+        let linkProps: Record<string, unknown> = { ...props, href }
+        for (let [name, value] of [
+          ['target', options?.target],
+          ['src', options?.src],
+          ['history', options?.history],
+          ['reset-scroll', options?.resetScroll == null ? null : String(options.resetScroll)],
+          ['reset-focus', options?.resetFocus == null ? null : String(options.resetFocus)],
+        ]) {
+          if (value != null) linkProps[`data-rmx-${name}`] = value
+        }
+        return renderMixinElement(handle.element, linkProps)
       }
 
       let nextProps = { ...props }

@@ -6,7 +6,7 @@ import { createComponentErrorEvent } from './error-event.ts'
 import type { ComponentErrorEvent } from './error-event.ts'
 import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
 import { startNavigationListener } from './navigation.ts'
-import { startPrefetching, type PrefetchFrame } from './prefetch.ts'
+import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 
@@ -125,19 +125,13 @@ function normalizeLineBreaks(value: string): string {
 }
 
 async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
-  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
-  if (options?.target != null) headers.set('X-Remix-Target', options.target)
-
   let { body, encType } = getRequestBody(options)
-  if (encType) headers.set('Content-Type', encType)
-  let requestInit: RequestInit = {
-    body,
-    headers,
-    method: options?.method,
-    mode: 'same-origin',
-    signal: options?.signal,
-  }
-  let response = await fetch(src, requestInit)
+  let response = await fetchFrame(
+    src,
+    options?.target,
+    { body, method: options?.method, signal: options?.signal },
+    encType,
+  )
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
