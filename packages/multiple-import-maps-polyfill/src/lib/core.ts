@@ -162,7 +162,7 @@ let firstImportMap: ImportMap | null = null
 // To support polyfilling multiple import maps, we separately track the composed import map from the first import map
 let composedImportMap: ImportMap = { imports: {}, scopes: {}, integrity: {} }
 
-const initPromise = Promise.all([lexer.init, featureDetectionPromise]).then(() => {
+const initPromise = featureDetectionPromise.then(() => {
   if (!hasDocument || !supportsImportMaps)
     throw new TypeError('The multiple import map polyfill requires native import map support.')
   attachMutationObserver()

@@ -1,9 +1,10 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { RemixNode } from './jsx.ts'
-import { jsx } from './jsx.ts'
-import { toVNode } from './to-vnode.ts'
+import type { RemixNode } from './core/vnode.ts'
+import { jsx } from './core/vnode.ts'
+import { Frame } from './frame.ts'
+import { toVNode } from './reconcile.ts'
 import type {
   CommittedComponentNode,
   CommittedFrameNode,
@@ -14,7 +15,7 @@ import type {
   HostNode,
   VNodeInput,
   VNodeParent,
-} from './vnode.ts'
+} from './reconcile.ts'
 
 type Equal<left, right> =
   (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2
@@ -71,5 +72,45 @@ describe('VNode lifecycle types', () => {
       /Invalid innerHTML prop: expected a value created with unsafeHTML\(\)/,
     )
     assert.throws(() => toVNode(jsx('div', { mix: {} })), /Invalid mix prop/)
+  })
+
+  it('converts built-in Frame elements into frame variants', () => {
+    let vnode = toVNode(jsx(Frame, { src: '/sidebar', name: 'sidebar' }, 'frame-key'))
+
+    assert.equal(vnode.kind, 'frame')
+    if (vnode.kind !== 'frame') return
+
+    assert.equal(vnode.type, Frame)
+    assert.equal(vnode.key, 'frame-key')
+    assert.equal(vnode.props.src, '/sidebar')
+    assert.equal(vnode.props.name, 'sidebar')
+  })
+
+  it('treats other components named Frame as regular components', () => {
+    function Frame() {
+      return () => null
+    }
+
+    let vnode = toVNode(jsx(Frame, { src: '/sidebar' }))
+
+    assert.equal(vnode.kind, 'component')
+    assert.equal(vnode.type, Frame)
+  })
+
+  it('treats components that inherit from Frame as regular components', () => {
+    function DerivedFrame() {
+      return () => null
+    }
+    Object.setPrototypeOf(DerivedFrame, Frame)
+
+    let vnode = toVNode(jsx(DerivedFrame, { src: '/sidebar' }))
+
+    assert.equal(vnode.kind, 'component')
+    assert.equal(vnode.type, DerivedFrame)
+  })
+
+  it('requires a src prop on built-in Frame elements', () => {
+    assert.throws(() => toVNode(jsx(Frame, {})), /<Frame \/> requires a src prop/)
+    assert.throws(() => toVNode(jsx(Frame, { src: '' })), /<Frame \/> requires a src prop/)
   })
 })

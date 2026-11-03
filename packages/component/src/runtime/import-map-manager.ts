@@ -51,7 +51,7 @@ function createImportMapManager(doc: Document): ImportMapManager {
     processedScripts.add(script)
 
     let importMap = parseImportMap(script.textContent ?? '')
-    if (importMap) mergeInstalledImportMap(installedImportMap, importMap, script.baseURI)
+    if (importMap) installImportMap(installedImportMap, importMap, script.baseURI)
   }
 
   function processImportMaps(): void {
@@ -86,24 +86,20 @@ function createImportMapManager(doc: Document): ImportMapManager {
       )
       if (scripts.length === 0) return 'ready'
 
-      let pendingImportMap: InstalledImportMap = {
-        imports: new Map(installedImportMap.imports),
-        scopes: new Map(
-          Array.from(installedImportMap.scopes, ([scope, imports]) => [scope, new Map(imports)]),
-        ),
-        integrity: new Map(installedImportMap.integrity),
-      }
+      let pendingImportMap = cloneInstalledImportMap(installedImportMap)
       let deltas: ImportMap[] = []
       let baseUrl = doc.baseURI
       try {
         for (let script of scripts) {
           let importMap = parseImportMap(script.textContent ?? '')
           if (!importMap) continue
-          let delta = getImportMapDelta(pendingImportMap, importMap, baseUrl)
-          if (delta) {
-            deltas.push(delta)
-            mergeInstalledImportMap(pendingImportMap, delta, baseUrl)
-          }
+          let delta = installImportMap(
+            pendingImportMap,
+            importMap,
+            baseUrl,
+            cloneInstalledImportMap(pendingImportMap),
+          )
+          if (delta) deltas.push(delta)
         }
       } catch (error) {
         if (!(error instanceof ImportMapConflictError)) throw error
@@ -141,141 +137,100 @@ function createInstalledImportMap(): InstalledImportMap {
   }
 }
 
-function getImportMapDelta(
-  installedImportMap: InstalledImportMap,
-  importMap: ImportMap,
-  baseUrl: string,
-): ImportMap | undefined {
-  let imports = getImportMapImportsDelta(installedImportMap.imports, importMap.imports, baseUrl)
-  let scopes = getImportMapScopesDelta(installedImportMap, importMap.scopes, baseUrl)
-  let integrity = getImportMapIntegrityDelta(
-    installedImportMap.integrity,
-    importMap.integrity,
-    baseUrl,
-  )
-  if (!imports && !scopes && !integrity) return undefined
+function cloneInstalledImportMap(importMap: InstalledImportMap): InstalledImportMap {
   return {
-    ...(imports ? { imports } : null),
-    ...(scopes ? { scopes } : null),
-    ...(integrity ? { integrity } : null),
+    imports: new Map(importMap.imports),
+    scopes: new Map(Array.from(importMap.scopes, ([scope, imports]) => [scope, new Map(imports)])),
+    integrity: new Map(importMap.integrity),
   }
 }
 
-function getImportMapImportsDelta(
-  installedImports: Map<string, InstalledImportMapEntry>,
+// Adds entries that are new to `installed` (defaults to `target`) to `target` and returns them.
+// When `installed` is passed, entries it already maps to a different value throw a conflict.
+function installImportMap(
+  target: InstalledImportMap,
+  importMap: ImportMap,
+  baseUrl: string,
+  installed?: InstalledImportMap,
+): ImportMap | undefined {
+  let imports = installImports(target.imports, installed?.imports, importMap.imports, baseUrl)
+
+  let scopes: Record<string, ImportMapImports> = {}
+  for (let [scope, scopeImports] of Object.entries(importMap.scopes ?? {})) {
+    let normalizedScope = normalizeImportMapUrl(scope, baseUrl)
+    if (normalizedScope === null) continue
+    let targetScopeImports = target.scopes.get(normalizedScope)
+    if (!targetScopeImports) {
+      targetScopeImports = new Map()
+      target.scopes.set(normalizedScope, targetScopeImports)
+    }
+    let importsDelta = installImports(
+      targetScopeImports,
+      installed && (installed.scopes.get(normalizedScope) ?? new Map()),
+      scopeImports,
+      baseUrl,
+      scope,
+    )
+    if (importsDelta) scopes[scope] = importsDelta
+  }
+
+  let integrity: Record<string, string> = {}
+  for (let [url, metadata] of Object.entries(importMap.integrity ?? {})) {
+    let normalizedUrl = normalizeImportMapUrl(url, baseUrl)
+    if (normalizedUrl === null) continue
+    let installedMetadata = (installed ?? target).integrity.get(normalizedUrl)
+    if (installedMetadata !== undefined) {
+      if (installed && installedMetadata !== metadata) {
+        throw new ImportMapConflictError(
+          `[remix] Reloading page after import map integrity conflict for "${url}": ` +
+            `"${installedMetadata}" is already installed, but the new map points to "${metadata}"`,
+        )
+      }
+      continue
+    }
+    integrity[url] = metadata
+    if (!target.integrity.has(normalizedUrl)) target.integrity.set(normalizedUrl, metadata)
+  }
+
+  let delta: ImportMap = {}
+  if (imports) delta.imports = imports
+  if (hasEntries(scopes)) delta.scopes = scopes
+  if (hasEntries(integrity)) delta.integrity = integrity
+  return hasEntries(delta) ? delta : undefined
+}
+
+function installImports(
+  target: Map<string, InstalledImportMapEntry>,
+  installed: Map<string, InstalledImportMapEntry> | undefined,
   imports: ImportMapImports | undefined,
   baseUrl: string,
   scope?: string,
 ): ImportMapImports | undefined {
-  if (!imports) return undefined
-
   let delta: ImportMapImports = {}
-  for (let [specifier, href] of Object.entries(imports)) {
+  for (let [specifier, href] of Object.entries(imports ?? {})) {
     let normalizedSpecifier = normalizeImportMapSpecifier(specifier, baseUrl)
     if (normalizedSpecifier === null) continue
     let normalizedHref = normalizeImportMapAddress(href, baseUrl)
-    let installedEntry = installedImports.get(normalizedSpecifier)
-    if (installedEntry?.normalizedHref === normalizedHref) continue
+    let installedEntry = (installed ?? target).get(normalizedSpecifier)
     if (installedEntry) {
-      let scopeDescription = scope ? ` in scope "${scope}"` : ''
-      throw new ImportMapConflictError(
-        `[remix] Reloading page after import map conflict for "${specifier}"${scopeDescription}: ` +
-          `${formatImportMapAddress(installedEntry.href)} is already installed, but the new map points to ${formatImportMapAddress(href)}`,
-      )
+      if (installed && installedEntry.normalizedHref !== normalizedHref) {
+        let scopeDescription = scope ? ` in scope "${scope}"` : ''
+        throw new ImportMapConflictError(
+          `[remix] Reloading page after import map conflict for "${specifier}"${scopeDescription}: ` +
+            `${formatImportMapAddress(installedEntry.href)} is already installed, but the new map points to ${formatImportMapAddress(href)}`,
+        )
+      }
+      continue
     }
     delta[specifier] = href
+    if (!target.has(normalizedSpecifier)) target.set(normalizedSpecifier, { href, normalizedHref })
   }
 
-  return Object.keys(delta).length > 0 ? delta : undefined
+  return hasEntries(delta) ? delta : undefined
 }
 
-function getImportMapScopesDelta(
-  installedImportMap: InstalledImportMap,
-  scopes: Record<string, ImportMapImports> | undefined,
-  baseUrl: string,
-): Record<string, ImportMapImports> | undefined {
-  if (!scopes) return undefined
-
-  let delta: Record<string, ImportMapImports> = {}
-  for (let [scope, imports] of Object.entries(scopes)) {
-    let normalizedScope = normalizeImportMapUrl(scope, baseUrl)
-    if (normalizedScope === null) continue
-    let installedScopeImports = installedImportMap.scopes.get(normalizedScope) ?? new Map()
-    let importsDelta = getImportMapImportsDelta(installedScopeImports, imports, baseUrl, scope)
-    if (importsDelta) delta[scope] = importsDelta
-  }
-
-  return Object.keys(delta).length > 0 ? delta : undefined
-}
-
-function getImportMapIntegrityDelta(
-  installedIntegrity: Map<string, string>,
-  integrity: Record<string, string> | undefined,
-  baseUrl: string,
-): Record<string, string> | undefined {
-  if (!integrity) return undefined
-
-  let delta: Record<string, string> = {}
-  for (let [url, metadata] of Object.entries(integrity)) {
-    let normalizedUrl = normalizeImportMapUrl(url, baseUrl)
-    if (normalizedUrl === null) continue
-    let installedMetadata = installedIntegrity.get(normalizedUrl)
-    if (installedMetadata === metadata) continue
-    if (installedMetadata !== undefined) {
-      throw new ImportMapConflictError(
-        `[remix] Reloading page after import map integrity conflict for "${url}": ` +
-          `"${installedMetadata}" is already installed, but the new map points to "${metadata}"`,
-      )
-    }
-    delta[url] = metadata
-  }
-
-  return Object.keys(delta).length > 0 ? delta : undefined
-}
-
-function mergeInstalledImportMap(
-  installedImportMap: InstalledImportMap,
-  importMap: ImportMap,
-  baseUrl: string,
-): void {
-  mergeInstalledImports(installedImportMap.imports, importMap.imports, baseUrl)
-
-  if (importMap.scopes) {
-    for (let [scope, imports] of Object.entries(importMap.scopes)) {
-      let normalizedScope = normalizeImportMapUrl(scope, baseUrl)
-      if (normalizedScope === null) continue
-      let installedScopeImports = installedImportMap.scopes.get(normalizedScope)
-      if (!installedScopeImports) {
-        installedScopeImports = new Map()
-        installedImportMap.scopes.set(normalizedScope, installedScopeImports)
-      }
-
-      mergeInstalledImports(installedScopeImports, imports, baseUrl)
-    }
-  }
-
-  if (importMap.integrity) {
-    for (let [url, metadata] of Object.entries(importMap.integrity)) {
-      let normalizedUrl = normalizeImportMapUrl(url, baseUrl)
-      if (normalizedUrl === null || installedImportMap.integrity.has(normalizedUrl)) continue
-      installedImportMap.integrity.set(normalizedUrl, metadata)
-    }
-  }
-}
-
-function mergeInstalledImports(
-  installed: Map<string, InstalledImportMapEntry>,
-  imports: ImportMapImports | undefined,
-  baseUrl: string,
-): void {
-  for (let [specifier, href] of Object.entries(imports ?? {})) {
-    let normalizedSpecifier = normalizeImportMapSpecifier(specifier, baseUrl)
-    if (normalizedSpecifier === null || installed.has(normalizedSpecifier)) continue
-    installed.set(normalizedSpecifier, {
-      href,
-      normalizedHref: normalizeImportMapAddress(href, baseUrl),
-    })
-  }
+function hasEntries(record: object): boolean {
+  return Object.keys(record).length > 0
 }
 
 function appendImportMapScript(

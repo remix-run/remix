@@ -1,16 +1,16 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
-import { Fragment, Frame } from '../runtime/component.ts'
+import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { reloadFrameForNavigation } from '../runtime/frame.ts'
-import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
+import { Frame, getNamedFrame, getTopFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
+import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on } from '../index.ts'
-import { jsx } from '../runtime/jsx.ts'
+import { jsx } from '../runtime/core/vnode.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
 async function setupReloadBodyTest(t: TestContext) {
@@ -286,15 +286,14 @@ describe('run', () => {
   let container: HTMLDivElement
 
   beforeEach(() => {
+    // The test runner's page starts with its own <title>, so every test needs an empty head.
+    document.head.replaceChildren()
     container = document.createElement('div')
     document.body.appendChild(container)
   })
 
   afterEach(() => {
     document.body.innerHTML = ''
-    for (let node of Array.from(document.head.childNodes)) {
-      document.head.removeChild(node)
-    }
   })
 
   it('uses fetch to request HTML by default and posts form data', async (t) => {

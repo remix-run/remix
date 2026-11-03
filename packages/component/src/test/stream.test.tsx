@@ -8,7 +8,8 @@ import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { SerializableObject } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
-import { Fragment, Frame } from '../runtime/component.ts'
+import { Fragment } from '../runtime/component.ts'
+import { Frame } from '../runtime/frame.ts'
 import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
@@ -876,6 +877,53 @@ describe('stream', () => {
       )
     })
 
+    it('renders aria and data boolean values as strings', async () => {
+      let stream = renderToStream(
+        <button
+          aria-pressed={true}
+          aria-hidden={false}
+          data-active={true}
+          data-open={false}
+          disabled
+        >
+          Toggle
+        </button>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<button aria-pressed="true" aria-hidden="false" data-active="true" data-open="false" disabled>Toggle</button>',
+      )
+    })
+
+    it('renders MathML boolean values as strings', async () => {
+      let html = await renderToString(
+        <math displaystyle={false}>
+          <mover accent={false}>
+            <munder accentunder={true}>
+              <mo
+                fence={false}
+                largeop={true}
+                movablelimits={false}
+                separator={true}
+                stretchy={false}
+                symmetric={true}
+              >
+                ∑
+              </mo>
+              <mi>a</mi>
+            </munder>
+            <mi>b</mi>
+          </mover>
+        </math>,
+      )
+
+      expect(html).toBe(
+        '<math displaystyle="false"><mover accent="false"><munder accentunder="true">' +
+          '<mo fence="false" largeop="true" movablelimits="false" separator="true" stretchy="false" symmetric="true">∑</mo>' +
+          '<mi>a</mi></munder><mi>b</mi></mover></math>',
+      )
+    })
+
     it('preserves boolean and escaped values in HTML and SVG attributes', async () => {
       let html = await drain(
         renderToStream(
@@ -1298,13 +1346,15 @@ describe('stream', () => {
 
     it('converts style object to inline string', async () => {
       let stream = renderToStream(
-        <div style={{ color: 'green', marginTop: 10, padding: '5px' }}>Object styled</div>,
+        <div style={{ color: 'green', marginTop: 10, padding: '5px', '--gapSize': 4 }}>
+          Object styled
+        </div>,
       )
       let html = await drain(stream)
 
       // Style objects should be serialized to inline styles
       expect(html).toBe(
-        '<div style="color: green; margin-top: 10px; padding: 5px;">Object styled</div>',
+        '<div style="color: green; margin-top: 10px; padding: 5px; --gapSize: 4;">Object styled</div>',
       )
     })
 
@@ -3982,6 +4032,27 @@ describe('stream', () => {
         status: 'pending',
         src: '/x',
       })
+    })
+
+    it('renders other components named Frame as regular components', async () => {
+      function Frame() {
+        return () => <p>Not a frame</p>
+      }
+
+      let result = await renderToString(<Frame />)
+
+      expect(result).toBe('<p>Not a frame</p>')
+    })
+
+    it('renders components that inherit from Frame as regular components', async () => {
+      function DerivedFrame() {
+        return () => <p>Not a frame</p>
+      }
+      Object.setPrototypeOf(DerivedFrame, Frame)
+
+      let result = await renderToString(<DerivedFrame />)
+
+      expect(result).toBe('<p>Not a frame</p>')
     })
 
     it('strips doctype markup from non-blocking frame templates', async () => {

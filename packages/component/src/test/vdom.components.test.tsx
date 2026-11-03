@@ -1,15 +1,17 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it } from '@remix-run/test'
+import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import type { Handle } from '../runtime/component.ts'
 
 describe('vnode rendering', () => {
+  beforeEach(() => {
+    // The test runner's page starts with its own <title>, so every test needs an empty head.
+    document.head.replaceChildren()
+  })
+
   afterEach(() => {
     document.body.innerHTML = ''
-    for (let node of Array.from(document.head.childNodes)) {
-      document.head.removeChild(node)
-    }
   })
 
   describe('components', () => {
