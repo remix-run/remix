@@ -1385,6 +1385,7 @@ return redirect(request.headers.get('X-Remix-Target') === 'cart' ? '/cart/items'
 - The URL, history, scroll position, focus, and the rest of the page stay as they are. The frame still dispatches `reloadStart` and `reloadComplete`, and forms dispatch [`rmx:form-submit-start`](#following-a-form-submission), so components can follow the load and render its result early.
 - The frame's `src` moves to the destination, or to where the request redirected, so its next `reload()` fetches what it now shows. Back and forward don't revisit the load, because it isn't in history.
 - The frame renders whatever the response contains. A route that redirects a frame request, for example to a login page, should send it to content that fits the frame.
+- A link opened elsewhere, such as with a modifier key or `target="_blank"`, opens as it would without `none`.
 - A navigation without `data-rmx-target` ignores `none`, because the page has to match its URL. A target that doesn't match a mounted frame falls back to document navigation, as does a browser without the client runtime or the Navigation API.
 
 ### Navigating from Code
