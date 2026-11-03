@@ -25,7 +25,9 @@ const clientStyleCache: StyleCache = new Map()
 const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (handle) => {
   let activeSelector = ''
   let activeGeneration = -1
-  let currentStyles: CSSProps = {}
+  let currentStyles: CSSProps | undefined
+  let currentStyleCache: StyleCache | undefined
+  let currentEntry: StyleEntry = { selector: '', css: '' }
 
   handle.addEventListener('remove', () => {
     if (!activeSelector) return
@@ -41,14 +43,20 @@ const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (hand
   })
 
   return (styles, props) => {
-    currentStyles = styles
     let runtime = handle.frame.$runtime as {
       styleCache?: StyleCache
       styleManager?: StyleManagerLike
     }
     invariant(runtime, 'css mixin requires frame runtime')
     let styleTarget = resolveStyleTarget(runtime)
-    let { selector, css: cssText } = processStyleClass(currentStyles, styleTarget.styleCache)
+    // Hoisted styles pass the same object on every render. Style objects are treated as
+    // immutable, so the class generated for it on the previous render still applies.
+    if (styles !== currentStyles || styleTarget.styleCache !== currentStyleCache) {
+      currentEntry = processStyleClass(styles, styleTarget.styleCache)
+      currentStyles = styles
+      currentStyleCache = styleTarget.styleCache
+    }
+    let { selector, css: cssText } = currentEntry
     let styleGeneration = styleTarget.styleManager?.getGeneration?.() ?? 0
 
     if (styleTarget.styleManager) {
@@ -75,6 +83,10 @@ const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (hand
 
 /**
  * Applies generated class names for CSS object styles.
+ *
+ * Style objects are treated as immutable. When an element receives the same object again, it
+ * keeps the class generated on the previous render without reading the object, so pass a new
+ * object to change styles instead of mutating an existing one.
  */
 export const css: MixinFactory<Element, [styles: CSSProps], ElementProps> = createMixin<
   Element,
