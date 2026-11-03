@@ -30,6 +30,9 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.state == 'open' &&
       github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
+    concurrency:
+      group: preview-build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     outputs:
       channel: ${{ steps.metadata.outputs.channel }}
       tag: ${{ steps.metadata.outputs.tag }}
