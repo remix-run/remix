@@ -1,5 +1,5 @@
 # Package builds run without publishing credentials. Releases and cleanup use
-# REMIX_PREVIEWS_PAT, scoped to REMIX_PREVIEWS_REPOSITORY (default remix-run/previews).
+# REMIX_PREVIEWS_PAT, scoped to remix-run/previews.
 # The destination must be public, initialized, and have release immutability disabled.
 name: Preview Build
 
@@ -22,9 +22,6 @@ on:
 permissions:
   contents: read
 
-env:
-  REMIX_PREVIEWS_REPOSITORY: ${{ vars.REMIX_PREVIEWS_REPOSITORY || 'remix-run/previews' }}
-
 jobs:
   build:
     if: >-
@@ -33,32 +30,22 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.state == 'open' &&
       github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: source
     outputs:
       channel: ${{ steps.metadata.outputs.channel }}
+      tag: ${{ steps.metadata.outputs.tag }}
+      sha: ${{ steps.metadata.outputs.sha }}
     env:
       PREVIEW_CHANNEL: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'push' && 'main' || format('experimental-{0}', inputs.previewName) }}
     steps:
-      # Keep tooling separate so PRs and experimental refs can predate this workflow.
-      - name: Checkout preview tooling
-        uses: actions/checkout@v6
-        with:
-          path: tools
-          persist-credentials: false
       - name: Checkout source
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || inputs.baseBranch || github.sha }}
-          path: source
           persist-credentials: false
       - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: source/package.json
       - uses: actions/setup-node@v6
         with:
-          node-version-file: tools/package.json
+          node-version-file: package.json
           package-manager-cache: false
       - name: Get pnpm store path
         id: pnpm-store
@@ -69,17 +56,15 @@ jobs:
         continue-on-error: true
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('source/pnpm-lock.yaml') }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       - name: Build tarballs
-        run: node "$GITHUB_WORKSPACE/tools/scripts/preview.ts" build "$PREVIEW_CHANNEL" --output "$RUNNER_TEMP/preview"
-      - name: Record channel
         id: metadata
-        run: printf 'channel=%s\n' "$PREVIEW_CHANNEL" >> "$GITHUB_OUTPUT"
+        run: node scripts/preview.ts build "$PREVIEW_CHANNEL" --output "$RUNNER_TEMP/preview"
       - uses: actions/upload-artifact@v7
         with:
           name: preview-${{ github.run_id }}
-          path: ${{ runner.temp }}/preview/*
+          path: ${{ runner.temp }}/preview/*.tgz
           if-no-files-found: error
           overwrite: true
           retention-days: 3
@@ -94,6 +79,9 @@ jobs:
     concurrency:
       group: preview-${{ needs.build.outputs.channel }}
       queue: max
+    env:
+      PREVIEW_TAG: ${{ needs.build.outputs.tag }}
+      PREVIEW_SHA: ${{ needs.build.outputs.sha }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -111,13 +99,13 @@ jobs:
         env:
           REMIX_PREVIEWS_PAT: ${{ secrets.REMIX_PREVIEWS_PAT }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/preview.ts publish
+        run: node scripts/preview.ts publish "$PREVIEW_TAG" "$PREVIEW_SHA"
       - name: Update PR installation instructions
         if: github.event_name == 'pull_request' && steps.publish.outputs.published == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node scripts/preview-pr.ts comment "$PR_NUMBER"
+        run: node scripts/preview-pr.ts comment "$PR_NUMBER" "$PREVIEW_TAG" "$PREVIEW_SHA"
 
   cleanup:
     if: >-

@@ -5,51 +5,45 @@ import {
   PREVIEW_RELEASE_MARKER,
   PreviewGitHub,
   getExpiredPreviewReleases,
+  getPreviewChannel,
   getPreviewTag,
   getPreviewTarballUrl,
+  parsePreviewBuild,
   preparePreviewPackage,
-  readPreviewManifest,
 } from './preview.ts'
 import type { PreviewRelease } from './preview.ts'
 
 describe('preview packages', () => {
-  it('validates the manifest and rejects assets outside its destination release', () => {
-    let tag = getPreviewTag('main', 'a'.repeat(40))
-    let manifest = {
-      repository: 'remix-run/previews',
-      sourceRepository: 'remix-run/remix',
-      channel: 'main',
-      sha: 'a'.repeat(40),
-      tag,
-      createdAt: '2026-11-02T12:00:00Z',
-      packages: { remix: getPreviewTarballUrl(tag, 'remix') },
-    }
-    assert.deepEqual(readPreviewManifest(JSON.stringify(manifest)), manifest)
+  it('uses the UTC commit date and eight SHA characters while preserving channel prefixes', () => {
+    let sha = 'abcdef1234567890'.padEnd(40, '0')
+    let committedAt = '2026-11-02T23:30:00-05:00'
+    let tag = getPreviewTag('main', sha, committedAt)
+    assert.equal(tag, 'main-20261103-abcdef12')
+    assert.equal(getPreviewTag('pr-123', sha, committedAt), 'pr-123-20261103-abcdef12')
+    let experimental = getPreviewTag('experimental-feature-123', sha, committedAt)
+    assert.equal(experimental, 'experimental-feature-123-20261103-abcdef12')
+    assert.equal(getPreviewChannel(tag), 'main')
+    assert.equal(getPreviewChannel('pr-123-20261103-abcdef12'), 'pr-123')
+    assert.equal(getPreviewChannel(experimental), 'experimental-feature-123')
+  })
+
+  it('requires a valid tag matching the full source SHA', () => {
+    let sha = 'a'.repeat(40)
+    let tag = getPreviewTag('main', sha, '2026-11-02T12:00:00Z')
+    assert.deepEqual(parsePreviewBuild(tag, sha), { channel: 'main', sha, tag })
+    assert.throws(() => parsePreviewBuild('different', sha), /Invalid preview tag or source SHA/)
+    assert.throws(() => parsePreviewBuild(tag, 'b'.repeat(40)), /Invalid preview tag or source SHA/)
     assert.throws(
-      () =>
-        readPreviewManifest(
-          JSON.stringify({ ...manifest, packages: { remix: 'https://example.com/remix.tgz' } }),
-        ),
-      /Invalid or duplicate preview URL/,
-    )
-    assert.throws(
-      () =>
-        readPreviewManifest(
-          JSON.stringify({
-            ...manifest,
-            packages: { ...manifest.packages, duplicate: manifest.packages.remix },
-          }),
-        ),
-      /Invalid or duplicate preview URL/,
-    )
-    assert.throws(
-      () => readPreviewManifest(JSON.stringify({ ...manifest, tag: 'different' })),
-      /Invalid preview manifest/,
+      () => parsePreviewBuild(tag, sha.slice(0, 8)),
+      /Invalid preview tag or source SHA/,
     )
   })
 
   it('rewrites internal runtime dependencies while preserving external and peer ranges', () => {
-    let url = getPreviewTarballUrl(getPreviewTag('main', 'a'.repeat(40)), 'headers')
+    let url = getPreviewTarballUrl(
+      getPreviewTag('main', 'a'.repeat(40), '2026-11-02T12:00:00Z'),
+      'headers',
+    )
     let pkg = preparePreviewPackage(
       {
         name: 'remix',
@@ -154,7 +148,7 @@ describe('preview tag cleanup', () => {
 function release(id: number, channel: string, timestamp: string): PreviewRelease {
   return {
     id,
-    tag_name: `${channel}-${id.toString(16).padStart(40, '0')}`,
+    tag_name: getPreviewTag(channel, id.toString(16).padStart(8, '0').padEnd(40, '0'), timestamp),
     body: PREVIEW_RELEASE_MARKER,
     draft: false,
     created_at: timestamp,

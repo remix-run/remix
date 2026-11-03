@@ -117,7 +117,7 @@ To try a PR preview, use the installation command posted on the PR. For the late
 pnpm add "<tarball-url>"
 ```
 
-To install an individual package, use its tarball URL from the same release. Each release also includes a `preview.json` manifest listing all package install URLs and the source commit.
+To install an individual package, use its tarball URL from the same release. The release notes link to the full source commit.
 
 Every SHA has a separate release and URL. Main previews are kept for seven days, with the newest successful build always retained. All PR builds are kept until the PR merges, then deleted. Closing a PR without merging keeps its builds. Installs using deleted builds need a newer preview URL and an updated lockfile.
 

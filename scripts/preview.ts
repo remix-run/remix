@@ -1,14 +1,15 @@
-import { appendFile, readFile } from 'node:fs/promises'
+import { appendFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 
 import {
+  PREVIEW_REPOSITORY,
   PreviewGitHub,
   buildPreview,
   cleanupPreviews,
   createGitHubRunner,
+  parsePreviewBuild,
   publishPreviewBuild,
   readPullRequest,
-  readPreviewManifest,
 } from './utils/preview.ts'
 
 const { positionals, values } = parseArgs({
@@ -18,35 +19,39 @@ const { positionals, values } = parseArgs({
     output: { type: 'string', default: '.preview' },
   },
 })
-const [command, channel] = positionals
+const [command, target, sha] = positionals
 const dryRun = values['dry-run']
-const repository = process.env.REMIX_PREVIEWS_REPOSITORY ?? 'remix-run/previews'
 
-if (command === 'build' && channel && positionals.length === 2) {
-  await buildPreview(channel, values.output, { dryRun, repository })
-} else if (command === 'publish' && positionals.length === 1) {
-  let manifest = readPreviewManifest(await readFile(`${values.output}/preview.json`, 'utf8'))
-  let published = publishPreviewBuild(client(), manifest, values.output, { dryRun })
+if (command === 'build' && target && positionals.length === 2) {
+  let build = await buildPreview(target, values.output, { dryRun })
+  if (process.env.GITHUB_OUTPUT)
+    await appendFile(
+      process.env.GITHUB_OUTPUT,
+      `channel=${build.channel}\ntag=${build.tag}\nsha=${build.sha}\n`,
+    )
+} else if (command === 'publish' && target && sha && positionals.length === 3) {
+  let build = parsePreviewBuild(target, sha)
+  let published = publishPreviewBuild(client(), build, values.output, { dryRun })
   if (process.env.GITHUB_OUTPUT)
     await appendFile(process.env.GITHUB_OUTPUT, `published=${published && !dryRun}\n`)
 } else if (
   command === 'cleanup' &&
-  channel &&
+  target &&
   positionals.length === 2 &&
-  /^(main|pr-[1-9]\d*)$/.test(channel)
+  /^(main|pr-[1-9]\d*)$/.test(target)
 ) {
-  let pr = /^pr-([1-9]\d*)$/.exec(channel)?.[1]
+  let pr = /^pr-([1-9]\d*)$/.exec(target)?.[1]
   if (
     !pr ||
     readPullRequest(process.env.GITHUB_REPOSITORY ?? 'remix-run/remix', Number(pr)).merged
   ) {
-    cleanupPreviews(client(), channel, { dryRun })
+    cleanupPreviews(client(), target, { dryRun })
   } else {
     console.log(`Keeping previews for unmerged PR #${pr}`)
   }
 } else {
   throw new Error(
-    'Usage: pnpm preview <build <main|pr-N|experimental-name>|publish|cleanup <main|pr-N>> [--dry-run] [--output <directory>]',
+    'Usage: pnpm preview <build <main|pr-N|experimental-name>|publish <tag> <source-sha>|cleanup <main|pr-N>> [--dry-run] [--output <directory>]',
   )
 }
 
@@ -54,5 +59,5 @@ function client(): PreviewGitHub {
   let token = process.env.REMIX_PREVIEWS_PAT
   if (!dryRun && !token)
     throw new Error('REMIX_PREVIEWS_PAT is required to publish or delete previews')
-  return new PreviewGitHub(repository, createGitHubRunner(token))
+  return new PreviewGitHub(PREVIEW_REPOSITORY, createGitHubRunner(token))
 }

@@ -15,14 +15,10 @@ export interface PreviewPackageManifest {
   [key: string]: unknown
 }
 
-export interface PreviewManifest {
-  repository: string
-  sourceRepository: string
+export interface PreviewBuild {
   channel: string
   sha: string
   tag: string
-  createdAt: string
-  packages: Record<string, string>
 }
 
 export interface PreviewRelease {
@@ -34,12 +30,14 @@ export interface PreviewRelease {
   published_at: string | null
 }
 
+export const PREVIEW_REPOSITORY = 'remix-run/previews'
 export const PREVIEW_RELEASE_MARKER = '<!-- remix-preview -->'
 
 export function getPreviewChannel(tag: string): string | null {
   return (
-    /^(main|pr-[1-9]\d*|experimental-[a-zA-Z0-9][a-zA-Z0-9._-]*)-[a-f0-9]{40}$/.exec(tag)?.[1] ??
-    null
+    /^(main|pr-[1-9]\d*|experimental-[a-zA-Z0-9][a-zA-Z0-9._-]*)-\d{8}-[a-f0-9]{8}$/.exec(
+      tag,
+    )?.[1] ?? null
   )
 }
 
@@ -69,12 +67,13 @@ export function getExpiredPreviewReleases(
   )
 }
 
-export function getPreviewTag(channel: string, sha: string): string {
+export function getPreviewTag(channel: string, sha: string, committedAt: string): string {
   if (!/^(main|pr-[1-9]\d*|experimental-[a-zA-Z0-9][a-zA-Z0-9._-]*)$/.test(channel)) {
     throw new Error(`Invalid preview channel: ${channel}`)
   }
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Invalid source SHA: ${sha}`)
-  return `${channel}-${sha}`
+  let date = new Date(committedAt).toISOString().slice(0, 10).replaceAll('-', '')
+  return `${channel}-${date}-${sha.slice(0, 8)}`
 }
 
 export function validatePreviewRepository(repository: string): string {
@@ -87,7 +86,7 @@ export function validatePreviewRepository(repository: string): string {
 export function getPreviewTarballUrl(
   tag: string,
   packageDirName: string,
-  repository = 'remix-run/previews',
+  repository = PREVIEW_REPOSITORY,
 ): string {
   validatePreviewRepository(repository)
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(packageDirName)) {
@@ -96,55 +95,11 @@ export function getPreviewTarballUrl(
   return `https://github.com/${repository}/releases/download/${encodeURIComponent(tag)}/${packageDirName}.tgz`
 }
 
-export function readPreviewManifest(content: string): PreviewManifest {
-  let value: unknown = JSON.parse(content)
-  if (
-    typeof value !== 'object' ||
-    value === null ||
-    !('repository' in value) ||
-    typeof value.repository !== 'string' ||
-    !('sourceRepository' in value) ||
-    typeof value.sourceRepository !== 'string' ||
-    !('channel' in value) ||
-    typeof value.channel !== 'string' ||
-    !('sha' in value) ||
-    typeof value.sha !== 'string' ||
-    !('tag' in value) ||
-    value.tag !== getPreviewTag(value.channel, value.sha) ||
-    !('createdAt' in value) ||
-    typeof value.createdAt !== 'string' ||
-    !Number.isFinite(Date.parse(value.createdAt)) ||
-    !('packages' in value) ||
-    typeof value.packages !== 'object' ||
-    value.packages === null ||
-    Array.isArray(value.packages)
-  )
-    throw new Error('Invalid preview manifest')
-
-  validatePreviewRepository(value.repository)
-  validatePreviewRepository(value.sourceRepository)
-  let packages: Record<string, string> = {}
-  let names = new Set<string>()
-  for (let [name, url] of Object.entries(value.packages)) {
-    if (typeof url !== 'string') throw new Error(`Invalid preview URL for ${name}`)
-    let filename = new URL(url).pathname.split('/').at(-1) ?? ''
-    let dirName = filename.replace(/\.tgz$/, '')
-    if (url !== getPreviewTarballUrl(value.tag, dirName, value.repository) || names.has(filename)) {
-      throw new Error(`Invalid or duplicate preview URL for ${name}`)
-    }
-    names.add(filename)
-    packages[name] = url
-  }
-  if (!packages.remix) throw new Error('Missing remix preview tarball')
-  return {
-    repository: value.repository,
-    sourceRepository: value.sourceRepository,
-    channel: value.channel,
-    sha: value.sha,
-    tag: value.tag,
-    createdAt: value.createdAt,
-    packages,
-  }
+export function parsePreviewBuild(tag: string, sha: string): PreviewBuild {
+  let channel = getPreviewChannel(tag)
+  if (!channel || !/^[a-f0-9]{40}$/.test(sha) || !tag.endsWith(`-${sha.slice(0, 8)}`))
+    throw new Error('Invalid preview tag or source SHA')
+  return { channel, sha, tag }
 }
 
 export function preparePreviewPackage(
@@ -179,14 +134,11 @@ export function preparePreviewPackage(
 export async function buildPreview(
   channel: string,
   directory: string,
-  {
-    dryRun = false,
-    repository = process.env.REMIX_PREVIEWS_REPOSITORY ?? 'remix-run/previews',
-  }: { dryRun?: boolean; repository?: string } = {},
-): Promise<PreviewManifest> {
-  validatePreviewRepository(repository)
+  { dryRun = false }: { dryRun?: boolean } = {},
+): Promise<PreviewBuild> {
   let sha = logAndExec('git', ['rev-parse', 'HEAD'], true)
-  let tag = getPreviewTag(channel, sha)
+  let committedAt = logAndExec('git', ['show', '--no-patch', '--format=%cI', 'HEAD'], true)
+  let tag = getPreviewTag(channel, sha, committedAt)
   let entries = await fsp.readdir('packages', { withFileTypes: true })
   let packages: { dirName: string; content: string; manifest: PreviewPackageManifest }[] = []
   for (let entry of entries) {
@@ -196,20 +148,8 @@ export async function buildPreview(
     if (!manifest.private) packages.push({ dirName: entry.name, content, manifest })
   }
   let urls = new Map(
-    packages.map(({ dirName, manifest }) => [
-      manifest.name,
-      getPreviewTarballUrl(tag, dirName, repository),
-    ]),
+    packages.map(({ dirName, manifest }) => [manifest.name, getPreviewTarballUrl(tag, dirName)]),
   )
-  let manifest: PreviewManifest = {
-    repository,
-    sourceRepository: validatePreviewRepository(process.env.GITHUB_REPOSITORY ?? 'remix-run/remix'),
-    channel,
-    sha,
-    tag,
-    createdAt: new Date().toISOString(),
-    packages: Object.fromEntries(urls),
-  }
   if (!urls.has('remix')) throw new Error('Missing remix package')
   function exec(command: string, args: string[]) {
     if (dryRun) console.log(`Would run: ${formatCommand(command, args)}`)
@@ -240,11 +180,6 @@ export async function buildPreview(
         '--out',
         path.resolve(directory, `${dirName}.tgz`),
       ])
-    if (!dryRun)
-      await fsp.writeFile(
-        path.join(directory, 'preview.json'),
-        JSON.stringify(manifest, null, 2) + '\n',
-      )
   } finally {
     if (!dryRun) {
       for (let { dirName, content } of packages)
@@ -254,7 +189,7 @@ export async function buildPreview(
   console.log(
     `${dryRun ? 'Would build' : 'Built'} ${tag}\nInstall after publication: pnpm add "${urls.get('remix')}"`,
   )
-  return manifest
+  return { channel, sha, tag }
 }
 
 export interface PreviewAsset {
@@ -347,17 +282,16 @@ export class PreviewGitHub {
 
 export function publishPreview(
   github: PreviewGitHub,
-  manifest: PreviewManifest,
+  build: PreviewBuild,
   directory: string,
   dryRun = false,
 ): string {
-  if (manifest.repository !== github.repository) throw new Error('Preview repository mismatch')
-  let files = [
-    ...Object.values(manifest.packages).map((url) =>
-      path.join(directory, new URL(url).pathname.split('/').at(-1) ?? ''),
-    ),
-    path.join(directory, 'preview.json'),
-  ]
+  let files = fs
+    .readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.tgz'))
+    .map((entry) => path.join(directory, entry.name))
+  if (!files.includes(path.join(directory, 'remix.tgz')))
+    throw new Error('Missing remix preview tarball')
   let expected = files.map((filename) => {
     let data = fs.readFileSync(filename)
     if (!data.length) throw new Error(`Empty preview asset: ${filename}`)
@@ -367,7 +301,7 @@ export function publishPreview(
       digest: `sha256:${createHash('sha256').update(data).digest('hex')}`,
     }
   })
-  let url = `https://github.com/${github.repository}/releases/tag/${manifest.tag}`
+  let url = `https://github.com/${github.repository}/releases/tag/${build.tag}`
   if (dryRun) {
     console.log(
       `Would publish ${url} with assets: ${expected.map((asset) => asset.name).join(', ')}`,
@@ -375,9 +309,16 @@ export function publishPreview(
     return url
   }
 
-  let release = github.listReleases().find((item) => item.tag_name === manifest.tag)
-  if (release && !release.body.startsWith(PREVIEW_RELEASE_MARKER)) {
-    throw new Error(`Refusing to replace an unrelated release: ${manifest.tag}`)
+  let release = github.listReleases().find((item) => item.tag_name === build.tag)
+  let sourceRepository = validatePreviewRepository(
+    process.env.GITHUB_REPOSITORY ?? 'remix-run/remix',
+  )
+  let sourceUrl = `https://github.com/${sourceRepository}/commit/${build.sha}`
+  if (
+    release &&
+    (!release.body.startsWith(PREVIEW_RELEASE_MARKER) || !release.body.includes(`](${sourceUrl})`))
+  ) {
+    throw new Error(`Preview release does not match the source commit: ${build.tag}`)
   }
   if (release && !release.draft) {
     verifyAssets(github.listAssets(release), expected, false)
@@ -387,12 +328,12 @@ export function publishPreview(
   if (!release) {
     release = readRelease(
       github.api('POST', 'releases', {
-        tag_name: manifest.tag,
-        name: manifest.tag,
+        tag_name: build.tag,
+        name: build.tag,
         draft: true,
         prerelease: true,
         make_latest: 'false',
-        body: `${PREVIEW_RELEASE_MARKER}\nBuilt from [${manifest.sourceRepository}@${manifest.sha}](https://github.com/${manifest.sourceRepository}/commit/${manifest.sha}).\n\nInstall:\n\n\`\`\`sh\npnpm add "${manifest.packages.remix}"\n\`\`\`\n`,
+        body: `${PREVIEW_RELEASE_MARKER}\nBuilt from [${sourceRepository}@${build.sha}](${sourceUrl}).\n\nInstall:\n\n\`\`\`sh\npnpm add "${getPreviewTarballUrl(build.tag, 'remix', github.repository)}"\n\`\`\`\n`,
       }),
     )
   }
@@ -411,24 +352,24 @@ export function publishPreview(
 
 export function publishPreviewBuild(
   github: PreviewGitHub,
-  manifest: PreviewManifest,
+  build: PreviewBuild,
   directory: string,
-  { dryRun = false, isMerged }: { dryRun?: boolean; isMerged?: () => boolean } = {},
+  { dryRun = false }: { dryRun?: boolean } = {},
 ): boolean {
-  let prNumber = /^pr-([1-9]\d*)$/.exec(manifest.channel)?.[1]
+  let prNumber = /^pr-([1-9]\d*)$/.exec(build.channel)?.[1]
   let merged = () =>
     prNumber !== undefined &&
-    (isMerged ? isMerged() : readPullRequest(manifest.sourceRepository, Number(prNumber)).merged)
+    readPullRequest(process.env.GITHUB_REPOSITORY ?? 'remix-run/remix', Number(prNumber)).merged
   let published = false
   try {
     if (dryRun || !merged()) {
-      publishPreview(github, manifest, directory, dryRun)
+      publishPreview(github, build, directory, dryRun)
       published = true
-      if (!dryRun && manifest.channel === 'main') cleanupPreviews(github, 'main')
+      if (!dryRun && build.channel === 'main') cleanupPreviews(github, 'main')
     }
   } finally {
     if (!dryRun && merged()) {
-      cleanupPreviews(github, manifest.channel)
+      cleanupPreviews(github, build.channel)
       published = false
     }
   }

@@ -1,33 +1,38 @@
-import { readFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 
 import {
+  PREVIEW_REPOSITORY,
   PreviewGitHub,
   createGitHubRunner,
+  getPreviewTarballUrl,
+  parsePreviewBuild,
   readPullRequest,
-  readPreviewManifest,
 } from './utils/preview.ts'
 
 const STICKY_MARKER = '<!-- pr-preview-comment-sticky -->'
 const CLEANUP_MARKER = '<!-- pr-preview-comment-cleanup -->'
 const { positionals } = parseArgs({ allowPositionals: true })
-const [command, prNumberString] = positionals
+const [command, prNumberString, tag, sha] = positionals
 const prNumber = Number(prNumberString)
 if (
-  positionals.length !== 2 ||
   !Number.isSafeInteger(prNumber) ||
   prNumber <= 0 ||
-  !['comment', 'cleanup'].includes(command)
+  !(
+    (command === 'comment' && positionals.length === 4) ||
+    (command === 'cleanup' && positionals.length === 2)
+  )
 ) {
-  throw new Error('Usage: node scripts/preview-pr.ts <comment|cleanup> <pr-number>')
+  throw new Error(
+    'Usage: pnpm preview-pr <comment <pr-number> <tag> <source-sha>|cleanup <pr-number>>',
+  )
 }
 const repository = process.env.GITHUB_REPOSITORY ?? 'remix-run/remix'
 const github = new PreviewGitHub(repository, createGitHubRunner(process.env.GITHUB_TOKEN))
 const pr = readPullRequest(repository, prNumber)
 let body: string
 if (command === 'comment') {
-  let preview = readPreviewManifest(await readFile('.preview/preview.json', 'utf8'))
-  if (preview.channel !== `pr-${prNumber}` || preview.sourceRepository !== repository) {
+  let preview = parsePreviewBuild(tag, sha)
+  if (preview.channel !== `pr-${prNumber}`) {
     throw new Error('Preview metadata does not match this PR')
   }
   // Builds can finish out of order; only advertise the current head.
@@ -38,10 +43,10 @@ if (command === 'comment') {
   body = `${STICKY_MARKER}
 ### Preview Build Available
 
-A [preview build](https://github.com/${preview.repository}/releases/tag/${preview.tag}) is available for this PR:
+A [preview build](https://github.com/${PREVIEW_REPOSITORY}/releases/tag/${preview.tag}) is available for this PR:
 
 \`\`\`sh
-pnpm add "${preview.packages.remix}"
+pnpm add "${getPreviewTarballUrl(preview.tag, 'remix')}"
 \`\`\`
 
 Each SHA has its own build URL. All builds remain installable until this PR is merged, when their releases and tags are deleted. Closing without merging keeps the builds.

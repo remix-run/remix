@@ -90,12 +90,15 @@ only for changelog categorization; by convention, use `major` for a major releas
 The Preview Build workflow builds public package tarballs for `main` pushes and same-repository PR
 updates, then uploads and verifies them before publishing a prerelease per channel/source SHA in
 [remix-run/previews](https://github.com/remix-run/previews). Dispatch it with `baseBranch` and
-`previewName` for an experimental preview.
+`previewName` for an experimental preview. Previewed refs must include the preview scripts from
+`main`.
+
+Release names and tags use `<channel>-YYYYMMDD-<8-character-sha>`, with the source commit's UTC
+date. Channels are `main`, `pr-<number>`, and `experimental-<previewName>`.
 
 The destination must be public, initialized with a commit, and have release immutability disabled.
 Set `REMIX_PREVIEWS_PAT` in this repository's Actions secrets to a fine-grained PAT with Contents
-read/write access to the destination. Set the `REMIX_PREVIEWS_REPOSITORY` Actions variable to use a
-different repository, and update the README discovery link accordingly. See the
+read/write access to the destination. See the
 [README](https://github.com/remix-run/remix/blob/main/README.md#installation) for installation and
 retention details.
 
