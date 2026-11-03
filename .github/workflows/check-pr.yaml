@@ -177,8 +177,8 @@ jobs:
 
       - name: Run affected workspace tests
         env:
-          PR_BASE_SHA: 9d28744abd533cb2db0b77633a5641aec3c45555
-          PR_HEAD_SHA: 6daa5e74e02c8a69e16cf19e7aab97ca196213e7
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node ./scripts/run-changed-workspaces.ts test "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
   test_bun_changed:
