@@ -274,6 +274,7 @@ type AnyMixinRunnerResult = ReturnType<AnyMixinRunner>
 type AnyMixinSetupResult = ReturnType<AnyMixinType> | AnyMixinRunnerResult
 type AnyMixinHandle = MixinHandle<Element, ElementProps>
 type ScopedAnyMixinHandle = AnyMixinHandle & {
+  hasPhaseListeners(type: SchedulerPhaseType): boolean
   queueCommitTask(task: () => void): void
   setActiveScope(scope?: symbol): void
   dispatchScopedEvent(scope: symbol, event: Event): void
@@ -644,6 +645,10 @@ class MixinHandleImpl
     this.#scheduler.enqueueCommitPhase([task])
   }
 
+  hasPhaseListeners(type: SchedulerPhaseType): boolean {
+    return this.#phaseListenerCounts[type] > 0
+  }
+
   setActiveScope(scope?: symbol): void {
     this.#activeScope = scope
     if (!scope) return
@@ -770,6 +775,9 @@ function finalizeMixinTeardown(state: MixinRuntimeState) {
 function dispatchMixinUpdateEvent(state: MixinRuntimeState | undefined, type: SchedulerPhaseType) {
   let node = state?.binding?.node
   if (!node) return
+  // Most mixins (like css) never listen for update phases; skip creating events nobody receives.
+  let handle = state?.handle as ScopedAnyMixinHandle | undefined
+  if (!handle?.hasPhaseListeners(type)) return
   dispatchMixinEvent(state, () => {
     let event = new Event(type) as MixinUpdateEvent<Element>
     event.node = node
