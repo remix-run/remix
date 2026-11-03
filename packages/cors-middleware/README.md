@@ -177,3 +177,5 @@ let router = createRouter({
 ## License
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)
+
+<!-- Controlled CORS workspace change for the CI timing benchmark. -->
