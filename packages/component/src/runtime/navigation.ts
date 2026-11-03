@@ -5,7 +5,11 @@ import {
   reloadCurrentDocument,
   reloadFrameForNavigation,
 } from './frame.ts'
-import { createFormNavigationResolver, getFormSubmit, type FormSubmission } from './form-navigation.ts'
+import {
+  createFormNavigationResolver,
+  getFormSubmit,
+  type FormSubmission,
+} from './form-navigation.ts'
 import type { FrameNavigationOptions } from './frame-runtime.ts'
 import type { FrameHandle } from './component.ts'
 
