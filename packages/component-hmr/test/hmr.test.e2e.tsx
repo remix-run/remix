@@ -40,6 +40,31 @@ declare global {
 }
 
 describe('component-hmr e2e', { skip: isBun }, () => {
+  it('serves an error response when document asset compilation fails and recovers after repair', async (t) => {
+    let fixture = await createHmrFixture()
+    let server = await createHmrTestServer(fixture)
+    t.after(async () => {
+      await server.close()
+      await fixture.close()
+    })
+
+    let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
+    let entrySource = await fs.readFile(entryPath, 'utf-8')
+    await fs.writeFile(entryPath, 'export default (')
+    await server.restartAssets()
+
+    let failedResponse = await fetch(server.baseUrl)
+    assert.equal(failedResponse.status, 500)
+    assert.ok((await failedResponse.text()).length > 0)
+
+    await fs.writeFile(entryPath, entrySource)
+    await server.restartAssets()
+
+    let recoveredResponse = await fetch(server.baseUrl)
+    assert.equal(recoveredResponse.status, 200)
+    assert.ok((await recoveredResponse.text()).includes('type="module"'))
+  })
+
   it('updates component render output without losing setup state', async (t) => {
     let fixture = await createHmrFixture()
 
@@ -2326,6 +2351,10 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     try {
       await handleRequest(request, response, fixture, assetServer, hmrEventStream)
     } catch (error) {
+      if (response.headersSent) {
+        response.destroy()
+        return
+      }
       response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
       response.end(error instanceof Error ? error.stack : String(error))
     }
@@ -2558,8 +2587,9 @@ async function handleRequest(
       )
       return
     }
+    let html = await renderStaticIndex(fixture, assetServer)
     response.writeHead(200, headers)
-    response.end(await renderStaticIndex(fixture, assetServer))
+    response.end(html)
     return
   }
 
