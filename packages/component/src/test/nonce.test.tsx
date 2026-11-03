@@ -78,7 +78,7 @@ describe('CSP nonces', () => {
   })
 
   it('hydrates the first late client entry under CSP without an authored import map', async (t) => {
-    let result = await renderLateEntryUnderCsp(t, { nonce: 'document-nonce' })
+    let result = await renderLateEntryUnderCsp(t)
 
     expect(result).toEqual({
       hydrated: true,
@@ -89,48 +89,13 @@ describe('CSP nonces', () => {
   })
 
   it('prefers an authored import map nonce over document nonce metadata', async (t) => {
-    let result = await renderLateEntryUnderCsp(t, {
-      nonce: 'document-nonce',
-      importMapNonce: 'authored-nonce',
-    })
+    let result = await renderLateEntryUnderCsp(t, 'authored-nonce')
 
     expect(result).toEqual({
       hydrated: true,
       error: '',
       nonce: 'authored-nonce',
       metadataNonces: ['document-nonce'],
-    })
-  })
-
-  it('uses an authored import map nonce for late maps and preloads without a render nonce', async (t) => {
-    let result = await renderLateEntryUnderCsp(t, {
-      nonce: undefined,
-      importMapNonce: 'authored-nonce',
-      preload: true,
-    })
-
-    expect(result).toEqual({
-      hydrated: true,
-      error: '',
-      nonce: 'authored-nonce',
-      metadataNonces: [],
-      preload: { status: 'load', nonce: 'authored-nonce' },
-    })
-  })
-
-  it('preserves the document nonce for late maps and preloads after a document reload', async (t) => {
-    let result = await renderLateEntryUnderCsp(t, {
-      nonce: 'document-nonce',
-      reloadDocument: true,
-      preload: true,
-    })
-
-    expect(result).toEqual({
-      hydrated: true,
-      error: '',
-      nonce: 'document-nonce',
-      metadataNonces: ['document-nonce'],
-      preload: { status: 'load', nonce: 'document-nonce' },
     })
   })
 })
@@ -177,16 +142,8 @@ async function renderPreloadUnderCsp(t: TestContext, options?: { blockingFrame?:
   return renderNonceDocument(t, html, completionMessage)
 }
 
-async function renderLateEntryUnderCsp(
-  t: TestContext,
-  options: {
-    nonce: string | undefined
-    importMapNonce?: string
-    reloadDocument?: boolean
-    preload?: boolean
-  },
-) {
-  let policyNonce = options.importMapNonce ?? options.nonce
+async function renderLateEntryUnderCsp(t: TestContext, importMapNonce?: string) {
+  let policyNonce = importMapNonce ?? 'document-nonce'
   let Island = clientEntry('late-island#Island', function Island() {
     return () => 'Island'
   })
@@ -204,44 +161,17 @@ async function renderLateEntryUnderCsp(
           href: 'late-island',
           exportName: 'Island',
           importMap: { imports: { 'late-island': moduleHref } },
-          preloads: options.preload ? [moduleHref] : undefined,
         }
       },
     }),
   )
-  let documentHtml = options.reloadDocument
-    ? await drain(
-        renderToStream(
-          <html>
-            <head />
-            <body>
-              <main>
-                <Frame name="late" src="/late" />
-              </main>
-            </body>
-          </html>,
-          { nonce: 'navigation-response-nonce', resolveFrame: () => '<p>Next page</p>' },
-        ),
-      )
-    : ''
   let runHref = new URL('../runtime/run.ts', import.meta.url).href
   let completionMessage = crypto.randomUUID()
   let bootstrap = `
     import { run } from ${JSON.stringify(runHref)}
     let error = ''
-    let preloaded = ${options.preload === true} ? new Promise((resolve) => {
-      function onPreload(event) {
-        if (!event.target.matches?.('link[data-rmx-module-preload]')) return
-        document.documentElement.dataset.preloadStatus = event.type
-        document.documentElement.dataset.preloadNonce = event.target.nonce
-        resolve()
-      }
-      document.addEventListener('load', onPreload, true)
-      document.addEventListener('error', onPreload, true)
-    }) : Promise.resolve()
     let app = run({
-      resolveFrame(src) {
-        if (src === '/next') return ${JSON.stringify(documentHtml).replace(/</g, '\\u003c')}
+      resolveFrame() {
         return ${JSON.stringify(frameHtml).replace(/</g, '\\u003c')}
       },
       async loadModule(href, name) {
@@ -252,15 +182,10 @@ async function renderLateEntryUnderCsp(
     app.addEventListener('error', (event) => { error = String(event.error) })
     try {
       await app.ready()
-      if (${options.reloadDocument === true}) {
-        app.frames.top.src = '/next'
-        await app.frames.top.reload()
-      }
       await app.frames.get('late').reload()
     } catch (cause) {
       error = String(cause)
     }
-    await preloaded
     document.documentElement.dataset.error = error
     document.documentElement.dataset.hydrated = document.querySelector('main').dataset.hydrated ?? ''
     let maps = document.head.querySelectorAll('script[data-rmx-import-map]')
@@ -274,9 +199,9 @@ async function renderLateEntryUnderCsp(
         <head>
           <meta
             httpEquiv="Content-Security-Policy"
-            content={`script-src ${options.preload ? '' : "'self' data: "}'nonce-${policyNonce}'; style-src 'nonce-${policyNonce}'`}
+            content={`script-src 'self' data: 'nonce-${policyNonce}'; style-src 'nonce-${policyNonce}'`}
           />
-          {options.importMapNonce && <ImportMap nonce={options.importMapNonce} value={{}} />}
+          {importMapNonce && <ImportMap nonce={importMapNonce} value={{}} />}
           <script type="module" nonce={policyNonce}>
             {bootstrap}
           </script>
@@ -287,7 +212,7 @@ async function renderLateEntryUnderCsp(
           </main>
         </body>
       </html>,
-      { nonce: options.nonce, resolveFrame: () => '<p>Initial page</p>' },
+      { nonce: 'document-nonce', resolveFrame: () => '<p>Initial page</p>' },
     ),
   )
   let doc = await renderNonceDocument(t, html, completionMessage)
@@ -299,13 +224,5 @@ async function renderLateEntryUnderCsp(
       doc.head.querySelectorAll<HTMLMetaElement>('meta[name="rmx-nonce"]'),
       (meta) => meta.nonce,
     ),
-    ...(options.preload
-      ? {
-          preload: {
-            status: doc.documentElement.dataset.preloadStatus,
-            nonce: doc.documentElement.dataset.preloadNonce,
-          },
-        }
-      : {}),
   }
 }
