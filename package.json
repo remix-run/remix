@@ -33,7 +33,7 @@
     "sync-remix-package-files": "node ./scripts/sync-remix-package-files.ts",
     "validate-remix-package": "node ./scripts/validate-remix-package.ts",
     "validate-package-meta": "node ./scripts/validate-package-meta.ts",
-    "test": "pnpm --recursive --no-sort --workspace-concurrency=4 --stream run test",
+    "test": "pnpm --recursive --workspace-concurrency=4 --stream run test",
     "test:bun": "pnpm --parallel --if-present run test:bun",
     "test:changed": "node ./scripts/run-changed-workspaces.ts test",
     "typecheck": "pnpm -r typecheck",
