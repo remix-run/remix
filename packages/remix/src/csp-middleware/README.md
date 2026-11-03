@@ -66,7 +66,7 @@ Inferred directive objects and factory returns reject unknown directive names wi
 
 Module preloads can load without a nonce under `'strict-dynamic'`. The renderer stamps them so they also work with nonce-based policies that omit `'strict-dynamic'` and do not otherwise allow their URLs.
 
-Browser navigation retains the original document's CSP. Matching resource nonces are rewritten when the response's CSP identifies one shared nonce, using the report-only header when the enforcing header is absent. The browser still enforces the original document's policies. See [client navigation](../component/server/README.md#client-navigation) for island updates, nonce requirements, and custom resolvers.
+Browser navigation retains the original document's CSP. Matching resource nonces are rewritten when the response's CSP identifies one shared nonce, using the report-only header when the enforcing header is absent. The browser still enforces the original document's policies. See [CSP integration](../component/server/README.md#content-security-policy) for island updates, nonce requirements, and custom resolvers.
 
 ### Nonce access in components
 

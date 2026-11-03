@@ -334,6 +334,32 @@ headers.set(
 )
 ```
 
+### Content-Security-Policy
+
+Parse, manipulate and stringify a single `Content-Security-Policy` value. Include quotes around CSP keywords and nonce sources.
+
+```ts
+import { ContentSecurityPolicy } from 'remix/headers/content-security-policy'
+
+let policy = new ContentSecurityPolicy({
+  defaultSrc: ["'self'"],
+  scriptSrc: [`'nonce-${nonce}'`],
+  styleSrc: [`'nonce-${nonce}'`],
+  upgradeInsecureRequests: true,
+})
+
+headers.set('Content-Security-Policy', policy.toString())
+
+let parsed = ContentSecurityPolicy.from(headers.get('Content-Security-Policy'))
+parsed.get('script-src') // ["'nonce-…'"]
+parsed.set('img-src', ["'self'", 'https://images.example.com'])
+parsed.delete('upgrade-insecure-requests')
+```
+
+Initializers use camel-cased directives; `get`, `set`, and `delete` use hyphenated names. Append separate policies with `headers.append()`.
+
+`SuperHeaders.contentSecurityPolicy` and `SuperHeaders.contentSecurityPolicyReportOnly` remain strings; assign `policy.toString()` to either property. Use [CSP middleware](https://github.com/remix-run/remix/tree/main/packages/csp-middleware) for nonce generation and policy headers.
+
 ### Content-Type
 
 Parse, manipulate and stringify [`Content-Type` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type).
@@ -647,46 +673,6 @@ headers.get('Cache-Control') // 'no-cache'
 stringify(headers)
 // 'Content-Type: text/html\r\nCache-Control: no-cache'
 ```
-
-## Content-Security-Policy
-
-`ContentSecurityPolicy` represents a single policy. Source values are individual CSP tokens, including the quotes around keywords and nonce sources.
-
-```ts
-import { ContentSecurityPolicy } from 'remix/headers/content-security-policy'
-
-let policy = new ContentSecurityPolicy({
-  defaultSrc: ["'self'"],
-  scriptSrc: [`'nonce-${nonce}'`],
-  styleSrc: [`'nonce-${nonce}'`],
-  upgradeInsecureRequests: true,
-})
-
-headers.set('Content-Security-Policy', policy.toString())
-
-let parsed = ContentSecurityPolicy.from(headers.get('Content-Security-Policy'))
-parsed.get('script-src') // ["'nonce-…'"]
-parsed.set('img-src', ["'self'", 'https://images.example.com'])
-parsed.delete('upgrade-insecure-requests')
-```
-
-Initializers use camel-cased directives; `get`, `set`, and `delete` use case-insensitive, hyphenated names. `set` also supports extension directives. Tokens cannot contain whitespace, commas, or semicolons. Empty arrays emit valueless directives; `upgradeInsecureRequests: false` omits that directive.
-
-`reportTo` takes one endpoint string, such as `'csp'`. Parsing and `set('report-to', values)` require exactly one HTTP token, as specified by [CSP's `report-to` directive](https://www.w3.org/TR/CSP3/#directive-report-to).
-
-Parsing retains the first duplicate directive and rejects policy lists. Append separate policies with `headers.append()` instead of merging directives. The utility validates directive and token syntax; browsers interpret policy values. [CSP middleware](https://github.com/remix-run/remix/tree/main/packages/csp-middleware) handles nonce generation and policy headers.
-
-`SuperHeaders.contentSecurityPolicy` and `SuperHeaders.contentSecurityPolicyReportOnly` retain their string API. Assign `policy.toString()` to either property.
-
-The same utility can serialize an enforced policy into a user-authored meta tag:
-
-```tsx
-<head>
-  <meta httpEquiv="Content-Security-Policy" content={policy.toString()} />
-</head>
-```
-
-Place it before resources it should govern and use the same nonce as the renderer. Meta policies apply alongside header policies and do not support report-only mode, `frame-ancestors`, `sandbox`, or `report-uri`. See the [CSP meta element specification](https://www.w3.org/TR/CSP3/#meta-element).
 
 ## Related Packages
 

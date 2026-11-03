@@ -10,6 +10,4 @@ Render under a nonce-based Content Security Policy with the `nonce` option on `r
  })
 ```
 
-Server frame resolvers receive `context.nonce` for nested renders. Client navigation preserves the original document nonce across streamed frames and island updates. Matching resource nonces are rewritten only when the initial document provides render-nonce metadata and the response's CSP identifies one shared nonce. The runtime uses `Content-Security-Policy-Report-Only` when `Content-Security-Policy` is absent, avoiding false nonce reports during navigation. The original document's policies remain active, and component props stay unchanged. See [CSP integration](https://github.com/remix-run/remix/tree/main/packages/component/src/server#content-security-policy) for resolver requirements.
-
-Server CSS mixin styles must pass the document's CSP before adoption. Document navigation avoids premature style reports and keeps fetched scripts inert, including SVG scripts in streamed frames. Frame navigation discards `<noscript>` fallback content.
+Client navigation preserves the document nonce across frame and island updates. See [CSP integration](https://github.com/remix-run/remix/tree/main/packages/component/src/server#content-security-policy) for nested rendering and custom resolver setup.
