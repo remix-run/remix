@@ -21,6 +21,7 @@ import {
   type RequestHandler,
   type Action,
   type Controller,
+  type ControllerActionMiddleware,
   isRequestHandler,
   isActionObject,
   isController,
@@ -106,11 +107,12 @@ export type MapHandler<
   target extends MapTarget,
   context extends AnyContext = RequestContext,
   middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  actionMiddleware = target extends RouteMap ? ControllerActionMiddleware<target> : never,
 > =
   target extends string ? Action<target, context, middleware> :
   target extends RoutePattern<infer pattern extends string> ? Action<RoutePattern<pattern>, context, middleware> :
   target extends Route<any, any> ? Action<target, context, middleware> :
-  target extends RouteMap ? Controller<target, context, middleware> :
+  target extends RouteMap ? Controller<target, context, middleware, actionMiddleware> :
   never
 
 declare const routeBuilderContext: unique symbol
@@ -146,9 +148,10 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
     target extends MapTarget,
     handlerContext extends AnyContext = context,
     const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+    const actionMiddleware = target extends RouteMap ? ControllerActionMiddleware<target> : never,
   >(
     target: target,
-    handler: MapHandler<target, handlerContext, middleware> &
+    handler: MapHandler<target, handlerContext, middleware, actionMiddleware> &
       ContextCompatibility<context, handlerContext, middleware>,
   ): void
   /**

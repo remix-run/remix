@@ -410,22 +410,58 @@ describe('router type inference', () => {
         return new Response(role)
       },
     })
+
+    let accountAction = createAction(routes.account, {
+      middleware: [setFormData()],
+      handler: (context) => new Response(context.params.accountId),
+    })
+
+    router.map(
+      { account: routes.account, reports: routes.reports },
+      {
+        actions: {
+          account: accountAction,
+          reports: {
+            middleware: [setRole('admin')],
+            handler(context) {
+              expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+              expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+
+              return new Response(context.params.reportId)
+            },
+          },
+        },
+      },
+    )
   })
 
   it('infers controller middleware results in stored controller actions', () => {
     let elevatedReportsControllerWithMiddleware = createController(
-      { reports: routes.reports },
+      { account: routes.account, reports: routes.reports },
       {
         middleware: [setRole('admin')],
         actions: {
+          account: {
+            middleware: [setFormData()],
+            handler(context) {
+              let formData = context.get(FormData)
+
+              expectTypeEquality<IsEqual<typeof formData, FormData>>()
+              expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
+
+              return new Response(context.params.accountId)
+            },
+          },
           reports(context) {
             let user = context.get(CurrentUser)
             let role = context.get(CurrentRole)
+            let formData = context.get(FormData)
             let reportId: string = context.params.reportId
             let exactRole: 'admin' = role
 
             expectTypeEquality<IsEqual<typeof user, { id: string }>>()
             expectTypeEquality<IsEqual<typeof role, 'admin'>>()
+            expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
             expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
 
             void reportId
@@ -828,6 +864,22 @@ describe('router type inference', () => {
           },
         },
       } satisfies Controller<typeof routes.admin, AppContext>
+
+      createController(routes.admin, {
+        // @ts-expect-error - every route leaf needs an action
+        actions: {
+          dashboard: { middleware: [setFormData()], handler: () => new Response('Dashboard') },
+        },
+      })
+
+      createController(routes.admin, {
+        actions: {
+          dashboard: { middleware: [setFormData()], handler: () => new Response('Dashboard') },
+          member: () => new Response('Member'),
+          // @ts-expect-error - controller action keys must exist in the route map
+          missing: () => new Response('Missing'),
+        },
+      })
 
       let functionAction: Action<typeof routes.reports, AppContext> = (context) =>
         new Response(context.params.reportId)
