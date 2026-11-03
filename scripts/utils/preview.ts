@@ -325,9 +325,13 @@ export function publishPreview(
   let commitUrl = `${repositoryUrl}/commit/${build.sha}`
   let prNumber = /^pr-([1-9]\d*)$/.exec(build.channel)?.[1]
   let sourceUrl = prNumber ? `${repositoryUrl}/pull/${prNumber}/commits/${build.sha}` : commitUrl
-  let source = prNumber
-    ? `SHA [${build.sha.slice(0, 8)}](${sourceUrl}) in PR [#${prNumber}](${repositoryUrl}/pull/${prNumber})`
-    : `[${sourceRepository}@${build.sha}](${sourceUrl})`
+  let shaLink = `[${build.sha.slice(0, 8)}](${sourceUrl})`
+  let source = `Experimental build from sha ${shaLink}`
+  if (build.channel === 'main') {
+    source = `Built from the \`main\` branch at sha ${shaLink}`
+  } else if (prNumber) {
+    source = `Built from SHA ${shaLink} in PR [#${prNumber}](${repositoryUrl}/pull/${prNumber})`
+  }
   if (
     release &&
     (!release.body.startsWith(PREVIEW_RELEASE_MARKER) ||
@@ -348,7 +352,7 @@ export function publishPreview(
         draft: true,
         prerelease: true,
         make_latest: 'false',
-        body: `${PREVIEW_RELEASE_MARKER}\nBuilt from ${source}.\n\nInstall:\n\n\`\`\`sh\npnpm add "${getPreviewTarballUrl(build.tag, 'remix', github.repository)}"\n\`\`\`\n`,
+        body: `${PREVIEW_RELEASE_MARKER}\n${source}.\n\nInstall:\n\n\`\`\`sh\npnpm add "${getPreviewTarballUrl(build.tag, 'remix', github.repository)}"\n\`\`\`\n`,
       }),
     )
   }
