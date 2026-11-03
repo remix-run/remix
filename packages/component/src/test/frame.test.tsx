@@ -4134,11 +4134,16 @@ describe('run', () => {
     let frames = fixture.frames()
     let started = Promise.withResolvers<FrameReloadStartEvent>()
     frames.target.addEventListener('reloadStart', started.resolve, { once: true })
+    let navigations = 0
+    let countNavigation = () => navigations++
+    window.navigation.addEventListener('navigate', countNavigation)
+    t.after(() => window.navigation.removeEventListener('navigate', countNavigation))
 
     link.click()
     let reload = await started.promise
     await reload.finished
 
+    expect(navigations).toBe(0)
     expect(reload.sourceElement).toBe(link)
     expect(window.location.href).toBe(initialUrl)
     expect(window.navigation.entries()).toHaveLength(entryCount)

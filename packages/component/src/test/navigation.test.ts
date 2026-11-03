@@ -2078,6 +2078,151 @@ describe('in-place form submissions', () => {
   })
 })
 
+describe('in-place link clicks', () => {
+  function setup(t: TestContext) {
+    let topFrame = { src: window.location.href } as FrameHandle
+    let namedFrame = { src: '/initial-frame' } as FrameHandle
+    let loaded = Promise.withResolvers<void>()
+    let reloadFrame = mock.fn((_frame: FrameHandle, _options?: FrameNavigationOptions) => {
+      let signal = new AbortController().signal
+      let finished = Promise.resolve({ signal })
+      void finished.then(() => loaded.resolve())
+      return { signal, committed: finished.then(() => {}), finished }
+    })
+    startStubNavigationListener(t, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: (name) => (name === 'details' ? namedFrame : undefined),
+      reloadFrame,
+    })
+    let anchor = document.createElement('a')
+    anchor.href = new URL('/destination', window.location.href).href
+    anchor.setAttribute('data-rmx-target', 'details')
+    anchor.setAttribute('data-rmx-history', 'none')
+    let label = document.createElement('span')
+    label.textContent = 'Details'
+    anchor.append(label)
+    document.body.append(anchor)
+    t.after(() => anchor.remove())
+    // A dispatched click follows the link unless it's cancelled, so this listener, which runs after
+    // the runtime's, records whether the runtime cancelled it, then keeps the test page in place.
+    let cancelled: boolean | undefined
+    function stayOnPage(event: Event) {
+      cancelled = event.defaultPrevented
+      event.preventDefault()
+    }
+    window.addEventListener('click', stayOnPage)
+    t.after(() => window.removeEventListener('click', stayOnPage))
+    function click(init?: MouseEventInit, element: Element = anchor) {
+      cancelled = undefined
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...init }))
+      return cancelled
+    }
+    return {
+      topFrame,
+      namedFrame,
+      reloadFrame,
+      anchor,
+      label,
+      click,
+      settled: () => loaded.promise,
+    }
+  }
+
+  it('loads the named frame before the browser plans a navigation', async (t) => {
+    let { anchor, click, reloadFrame, namedFrame, topFrame, settled } = setup(t)
+
+    let cancelled = click()
+    await settled()
+
+    expect(cancelled).toBe(true)
+    expect(reloadFrame).toHaveBeenCalledTimes(1)
+    expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
+    let options = reloadFrame.mock.calls[0]?.arguments[1]
+    expect(options?.sourceElement).toBe(anchor)
+    expect(options?.formData).toBeUndefined()
+    expect(namedFrame.src).toBe(anchor.href)
+    expect(topFrame.src).toBe(window.location.href)
+  })
+
+  it('loads the link when a click lands on its content', async (t) => {
+    let { anchor, label, click, reloadFrame, settled } = setup(t)
+
+    let cancelled = click(undefined, label)
+    await settled()
+
+    expect(cancelled).toBe(true)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.sourceElement).toBe(anchor)
+  })
+
+  it('loads data-rmx-src into the named frame', async (t) => {
+    let { anchor, click, namedFrame, settled } = setup(t)
+    anchor.setAttribute('data-rmx-src', '/details-frame')
+
+    click()
+    await settled()
+
+    expect(namedFrame.src).toBe('/details-frame')
+  })
+
+  it('leaves a click the app cancelled', (t) => {
+    let { anchor, click, reloadFrame } = setup(t)
+    anchor.addEventListener('click', (event) => event.preventDefault())
+
+    click()
+
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves modified clicks to the browser', (t) => {
+    let { click, reloadFrame } = setup(t)
+
+    expect(click({ metaKey: true })).toBe(false)
+    expect(click({ ctrlKey: true })).toBe(false)
+    expect(click({ shiftKey: true })).toBe(false)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves a link into another window to the browser', (t) => {
+    let { anchor, click, reloadFrame } = setup(t)
+    anchor.target = '_blank'
+
+    expect(click()).toBe(false)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves a download link to the browser', (t) => {
+    let { anchor, click, reloadFrame } = setup(t)
+    anchor.setAttribute('download', '')
+
+    expect(click()).toBe(false)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves a link without a mounted target to its navigation', (t) => {
+    let { anchor, click, reloadFrame } = setup(t)
+    anchor.setAttribute('data-rmx-target', 'missing')
+
+    expect(click()).toBe(false)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves a cross-origin link to its navigation', (t) => {
+    let { anchor, click, reloadFrame } = setup(t)
+    anchor.href = 'https://example.com/destination'
+
+    expect(click()).toBe(false)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+
+  it('leaves a link marked data-rmx-document to its navigation', (t) => {
+    let { anchor, click, reloadFrame } = setup(t)
+    anchor.setAttribute('data-rmx-document', '')
+
+    expect(click()).toBe(false)
+    expect(reloadFrame).not.toHaveBeenCalled()
+  })
+})
+
 describe('frame navigation sources', () => {
   function setup(t: TestContext) {
     let topFrame = { src: window.location.href } as FrameHandle

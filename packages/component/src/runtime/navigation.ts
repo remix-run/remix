@@ -304,6 +304,51 @@ export function startNavigationListenerImpl(
     { signal },
   )
 
+  // A link that loads its frame in place doesn't navigate either, so it starts at `click`, which
+  // the browser follows only when nothing cancels it. Cancelling the link's `navigate` event instead
+  // leaves WebKit's navigation for tools such as Playwright to wait on.
+  document.addEventListener(
+    'click',
+    (event) => {
+      // Modified clicks open the link elsewhere, or download it.
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return
+      }
+      let link = event.target instanceof Element ? event.target.closest('a, area') : null
+      if (
+        !(link instanceof HTMLAnchorElement || link instanceof HTMLAreaElement) ||
+        !link.hasAttribute('href') ||
+        link.hasAttribute('download') ||
+        link.hasAttribute('data-rmx-document') ||
+        link.getAttribute('data-rmx-history') !== 'none'
+      ) {
+        return
+      }
+      let windowTarget =
+        link.getAttribute('target') ??
+        link.ownerDocument.querySelector('base[target]')?.getAttribute('target')
+      if (windowTarget && windowTarget.toLowerCase() !== '_self') return
+      let target = link.getAttribute('data-rmx-target')
+      let frame = target == null ? undefined : options.getNamedFrame(target)
+      let src = link.getAttribute('data-rmx-src') ?? link.href
+      // A link elsewhere goes ahead, and its navigation falls back to a document load.
+      if (!frame || !isSameOriginUrl(link.href) || !isSameOriginUrl(src)) return
+
+      event.preventDefault()
+      void loadFrameInPlace(frame, src, options.reloadFrame, { sourceElement: link }).catch(
+        () => {},
+      )
+    },
+    { signal },
+  )
+
   navigation.addEventListener(
     'navigate',
     (event) => {
@@ -365,7 +410,8 @@ export function startNavigationListenerImpl(
         }
       }
 
-      // Links, and forms submitted without a `submit` event, such as by `form.submit()`.
+      // Forms submitted without a `submit` event, such as by `form.submit()`, and links followed
+      // without a `click`.
       if (runtimeNavigation.history === 'none' && event.cancelable) {
         event.preventDefault()
         // The frame reports a failure to the app's error listeners and to its reload's `finished`.
