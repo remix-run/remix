@@ -299,7 +299,7 @@ interface TestContext {
 
 #### Mocks and Spies
 
-Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. This is preferred over the standalone `mock` import because TestContext method mocks are automatically restored after the test runs.
+Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. Mock restoration and `t.after()` callbacks run in registration order, including when the test or an earlier cleanup callback fails.
 
 ```ts
 it('mocks and spies', (t) => {
@@ -316,7 +316,43 @@ it('mocks and spies', (t) => {
 })
 ```
 
-`t.mock` provides `fn()` and `method()`. Every spy created with `t.mock.method()` is restored automatically when the test finishes, or early via `spy.mock.restore?.()`.
+Both `t.mock` and the standalone `mock` export provide these controls on each mock function or method spy's `.mock` property:
+
+| Method                                            | Behavior                                                                                                                                                    |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mockImplementation(implementation)`              | Changes the default implementation, preserving pending overrides.                                                                                           |
+| `mockImplementationOnce(implementation, onCall?)` | Uses an implementation for one zero-based call index; defaults to the next call. Replaces any override already registered at that index.                    |
+| `resetCalls()`                                    | Clears call history and resets call indices, preserving implementations and pending overrides.                                                              |
+| `callCount()`                                     | Returns `mock.calls.length`, including invocations still executing.                                                                                         |
+| `restore()`                                       | Restores a method's original value and any own descriptor, or a standalone mock's original default implementation. Preserves history and pending overrides. |
+
+```ts
+import { it } from 'remix/test'
+
+it('changes a mock implementation', (t) => {
+  let price = t.mock.fn((quantity: number) => quantity * 10)
+  price.mock.mockImplementation((quantity) => quantity * 12)
+  price.mock.mockImplementationOnce((quantity) => quantity * 8, 1)
+
+  price(2) // 24
+  price(2) // 16
+  price(2) // 24
+  price.mock.callCount() // 3
+
+  price.mock.resetCalls()
+  price.mock.callCount() // 0
+  price.mock.restore()
+  price(2) // 20
+})
+```
+
+Replacement controls preserve the original function's types, including generic signatures and overloads. Method spies keep their permissive call and history types and initial implementation argument.
+
+Call indices must be safe integers at or after the next call index. `resetCalls()` replaces the history array, so pending override indices count from zero again; consumed overrides stay consumed.
+
+These controls follow the selected [Node `MockFunctionContext` APIs](https://nodejs.org/download/release/v24.3.0/docs/api/test.html#class-mockfunctioncontext). Remix keeps a live `mock.calls` array and records calls before invoking the implementation; Node returns array snapshots and records calls after it returns or throws. Inside the first invocation, Remix's `callCount()` returns `1`, while Node's returns `0`. Reentrant history inspection and override scheduling can therefore differ. Node's additional `mock.fn()` overloads and `times` options are not supported.
+
+Method spies use assignment to install replacements, including through setters. Restoring a method spy skips previously restored spies on the same property. A retained spy remains callable with its current implementation.
 
 #### Cleanup
 
@@ -329,6 +365,8 @@ it('cleanup', (t) => {
   // ...
 })
 ```
+
+Cleanup continues after a callback fails, reporting errors with their original stack traces alongside any test body or `afterEach` failure.
 
 #### Timeouts and Signals
 
@@ -395,7 +433,7 @@ import { mock } from 'remix/test'
 
 let spy = mock.method(console, 'log')
 // ...
-spy.mock.restore?.()
+spy.mock.restore()
 ```
 
 ### Browser Testing

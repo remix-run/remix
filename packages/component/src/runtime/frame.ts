@@ -1,27 +1,68 @@
-import { pendingPrefetchLinks } from './prefetch-links.ts'
-import { jsx } from './jsx.ts'
+import { jsx } from './core/vnode.ts'
 import {
   Fragment,
-  Frame,
+  FRAME_NODE,
+  createComponentErrorEvent,
   createFrameHandle,
+  getComponentError,
   type FrameContent,
-  type FrameResolution,
+  type FrameProps,
+  type Handle,
+  type RenderFn,
 } from './component.ts'
-import { createComponentErrorEvent, getComponentError } from './error-event.ts'
 import { invariant } from './invariant.ts'
-import type { RemixElement, RemixNode } from './jsx.ts'
+import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
-import { diffElementAttributes, diffNodes } from './diff-dom.ts'
+import {
+  createFrameRuntime,
+  getFrameRuntime,
+  getSharedFrameRuntime,
+  isFrameRuntime,
+  NamedFrameRegistry,
+  type FrameMountState,
+  type FrameNavigationOptions,
+  type FrameReloadResult,
+  type FrameReloadTransition,
+  type FrameRuntime,
+  type LoadModule,
+  type PendingClientEntries,
+  type ReconciliationTracker,
+  type ResolveFrame,
+} from './frame-runtime.ts'
+import {
+  findContextFromAncestry,
+  insertDomNode,
+  isFrameStartComment,
+  remove,
+  type CommittedFrameNode,
+  type FrameNode,
+  type FrameNodeRenderer,
+  type HydrationCursor,
+  type ReconcileContext,
+  type VNodeParent,
+} from './reconcile.ts'
+import {
+  collectNodesBetween,
+  diffElementAttributes,
+  diffNodes,
+  findEndMarker,
+  getFrameId,
+  isCommentNode,
+  isFrameEnd,
+  isFrameStart,
+  isHydrationEnd,
+  isHydrationStart,
+} from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
-import { unwrapFrameResolution } from './frame-resolution.ts'
+import { unwrapFrameResolution } from './spa-response.ts'
 import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
@@ -30,7 +71,6 @@ import {
   type ClientEntryIdentity,
 } from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
-import { reloadDocument } from './document-reload.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -59,106 +99,38 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-type PendingClientEntries = Map<Comment, [Comment, RemixElement | undefined]>
+let appTopFrame: FrameInstance
+export const appNamedFrames = new NamedFrameRegistry()
 
-export class NamedFrameRegistry {
-  #framesByName = new Map<string, FrameHandle[]>()
+export function setAppTopFrame(frame: FrameInstance): void {
+  appTopFrame = frame
+}
 
-  register(name: string, frame: FrameHandle): void {
-    let frames = this.#framesByName.get(name)
-    if (frames) {
-      frames.push(frame)
-    } else {
-      this.#framesByName.set(name, [frame])
-    }
-  }
-
-  get(name: string): FrameHandle | undefined {
-    return this.#framesByName.get(name)?.at(-1)
-  }
-
-  unregister(name: string, frame: FrameHandle): void {
-    let frames = this.#framesByName.get(name)
-    if (!frames) return
-
-    let index = frames.lastIndexOf(frame)
-    if (index === -1) return
-    frames.splice(index, 1)
-
-    if (frames.length === 0) {
-      this.#framesByName.delete(name)
-    }
-  }
+export function getAppTopFrame(): FrameInstance {
+  return appTopFrame
 }
 
 /**
- * Loads a named client-entry export for hydration.
+ * Returns the top-level frame handle for the running application.
  *
- * Module specifiers from trusted document metadata are passed through unchanged. The loader
- * controls resolution, including import maps, CDN URLs, and development server URLs.
- *
- * @param moduleUrl Module specifier for the client entry, as serialized by the server.
- * @param exportName Named export to read from the loaded module.
- * @returns The exported component function, or a promise for it.
- *
- * @example
- * ```ts
- * run({
- *   async loadModule(moduleUrl, exportName) {
- *     let mod = await import(moduleUrl)
- *     return mod[exportName]
- *   },
- * })
- * ```
+ * @returns The top-level frame handle.
  */
-export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
+export function getTopFrame(): FrameHandle {
+  if (!appTopFrame) throw new Error('app runtime not initialized')
+  return appTopFrame.handle
+}
 
 /**
- * Resolves content for a browser-loaded frame.
+ * Returns a named frame handle.
  *
- * Only return trusted application content. Remix does not sanitize HTML strings, streams, or
- * response bodies before parsing and reconciling them into the current document. Frame HTML can
- * select client-entry modules and contribute import maps, styles, and nested frames.
- *
- * @param src Frame source or destination URL for a top-frame navigation.
- * @param options Information about the active frame load or form submission.
- * @returns Frame content or a response whose body should be rendered into the frame.
+ * @param name Name of the frame to look up.
+ * @returns The matching frame handle, or `undefined` when not found.
  */
-export type ResolveFrame = (
-  src: string,
-  options?: ResolveFrameOptions,
-) => Promise<FrameResolution> | FrameResolution
-
-/**
- * Information available while resolving browser-loaded frame content.
- */
-export interface ResolveFrameOptions {
-  /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
-  target?: string
-  /** Form values submitted to the frame source for a POST reload or navigation. */
-  formData?: FormData
-  /** HTTP method selected by the reload options or the form and its submitter. */
-  method?: string
-  /** Body encoding selected by the reload options or the form and its submitter. */
-  encType?: string
-  /** Cancels the active frame request. Custom resolvers should forward this to `fetch()`. */
-  signal?: AbortSignal
+export function getNamedFrame(name: string): FrameHandle | undefined {
+  return appNamedFrames.get(name)
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
-
-type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
-
-type FrameReloadResult = {
-  signal: AbortSignal
-  redirectedTo?: string
-}
-
-type FrameReloadTransition = {
-  signal: AbortSignal
-  committed: Promise<void>
-  finished: Promise<FrameReloadResult>
-}
 
 type FrameTemplateListener = (fragment: DocumentFragment) => void
 
@@ -167,15 +139,17 @@ const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 const pendingClientEntryHydrations = new WeakMap<Comment, Promise<void>>()
 const frameClientEntryParents = new WeakMap<Comment, Comment>()
 
-function createLinkedAbortController(
-  first: AbortSignal,
-  second?: AbortSignal,
-): { controller: AbortController; disconnect: () => void } {
+export const pendingPrefetchLinks = new WeakSet<Node>()
+
+function createLinkedAbortController(...signals: Array<AbortSignal | undefined>): {
+  controller: AbortController
+  disconnect: () => void
+} {
   let controller = new AbortController()
-  let signals = second ? [first, second] : [first]
   let abort = () => controller.abort()
 
   for (let signal of signals) {
+    if (!signal) continue
     if (signal.aborted) {
       controller.abort()
       break
@@ -187,7 +161,7 @@ function createLinkedAbortController(
     controller,
     disconnect() {
       for (let signal of signals) {
-        signal.removeEventListener('abort', abort)
+        signal?.removeEventListener('abort', abort)
       }
     },
   }
@@ -202,38 +176,6 @@ const FULL_DOCUMENT_PATTERN = /^\s*(?:<!doctype\b|<html\b)/i
 
 function inferFlushKind(html: string): FlushKind {
   return FULL_DOCUMENT_PATTERN.test(html) ? 'document' : 'fragment'
-}
-
-const FRAME_RUNTIME = Symbol('FrameRuntime')
-
-export type FrameRuntime = {
-  [FRAME_RUNTIME]: true
-  canResolveFrames?: boolean
-  getContext?: (type: ElementFunction) => unknown
-  topFrame?: FrameHandle
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
-  styleManager: StyleManager
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
-  serverFrameReload:
-    | {
-        signal: AbortSignal
-        reconciliationTracker?: ReconciliationTracker
-        blockingFrameTracker?: ReconciliationTracker
-      }
-    | undefined
-  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
-}
-
-export function isFrameRuntime(value: unknown): value is FrameRuntime {
-  return isRecord(value) && Reflect.get(value, FRAME_RUNTIME) === true
 }
 
 /**
@@ -267,7 +209,7 @@ export type FrameContext = {
   data: RmxData
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
+  frameInstances: WeakMap<Comment, FrameInstance>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
   lifecycleSignal: AbortSignal
@@ -294,12 +236,12 @@ type FrameInit = {
   data: RmxData
   moduleCache: Map<string, ElementFunction>
   moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
+  frameInstances: WeakMap<Comment, FrameInstance>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
 }
 
-export type Frame = {
+export type FrameInstance = {
   render: (content: InternalFrameContent, options?: RenderOptions) => Promise<void>
   ready: () => Promise<void>
   flush: () => void
@@ -337,7 +279,7 @@ type ActiveRenderOptions = RenderOptions & {
   data: RmxData
 }
 
-export function createFrame(root: FrameRoot, init: FrameInit): Frame {
+export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let container = createContainer(root)
   let contentRoot: VirtualRoot | undefined
   let reloadController: AbortController | undefined
@@ -389,7 +331,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   // Merge any rmx-data found in the current document once at startup.
-  mergeRmxDataFromDocument(init.data, container.doc)
+  mergeRmxDataFrom(init.data, container.doc)
 
   let runtime = createFrameRuntime({
     ...init,
@@ -415,26 +357,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let context: FrameContext = {
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
-    errorTarget: init.errorTarget,
-    loadModule: init.loadModule,
-    resolveFrame: init.resolveFrame,
-    pendingClientEntries: init.pendingClientEntries,
-    scheduler: init.scheduler,
+    ...getSharedFrameRuntime(runtime),
     frame,
-    styleManager,
     data: init.data,
-    moduleCache: init.moduleCache,
-    moduleLoads: init.moduleLoads,
-    frameInstances: init.frameInstances,
-    namedFrames: init.namedFrames,
-    processClientEntryPreloads: init.processClientEntryPreloads,
     lifecycleSignal: lifecycleController.signal,
     regionTailRef: container.regionTailRef,
     regionParent: container.regionParent,
   }
 
   async function render(content: InternalFrameContent, options?: RenderOptions): Promise<void> {
-    if (disposed || lifecycleController.signal.aborted || options?.signal?.aborted) return
+    if (isRenderAborted(options?.signal)) return
     let ownsData = options?.data === undefined
     let renderOptions: ActiveRenderOptions = {
       ...options,
@@ -478,7 +410,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         removeVirtualRoots(currentNodes)
         disposeSubFrames(currentNodes, context)
         clearFrameContent()
-        contentRoot = createFrameContentRoot()
+        if (container.root instanceof Document) {
+          contentRoot = createFrameRoot(container.doc.body, context)
+        } else {
+          invariant(Array.isArray(root), 'Expected comment-bounded frame root')
+          contentRoot = createFrameRoot(root, context)
+        }
       }
 
       if (isRenderAborted(options.signal)) return
@@ -509,6 +446,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       contentRoot = undefined
     }
 
+    let source: Document | DocumentFragment
     if (typeof content === 'string') {
       let flushed = await consumeFlushBatches(content, async (html, flushKind) => {
         await render(html, { ...options, flushKind })
@@ -519,86 +457,59 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         }
         return
       }
+      source =
+        container.root instanceof Document &&
+        (options.flushKind ?? inferFlushKind(content)) === 'document'
+          ? new DOMParser().parseFromString(content, 'text/html')
+          : createFragmentFromString(container.doc, content)
+    } else {
+      source = content
     }
 
-    let htmlContent = typeof content === 'string' ? content : undefined
-
-    let isFullDocumentReload =
-      container.root instanceof Document &&
-      htmlContent !== undefined &&
-      (options.flushKind ?? inferFlushKind(htmlContent)) === 'document'
-
-    if (isFullDocumentReload && htmlContent !== undefined) {
-      let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
-      if (!(await consumeClientEntryResources(parsed, options.documentHref))) return
-      if (isRenderAborted(options.signal)) return
-      let responseData = options.data
-      mergeRmxDataFromDocument(responseData, parsed)
-      let responseContext = {
-        ...context,
-        data: responseData,
-        reconciliationTracker: options.reconciliationTracker,
-        blockingFrameTracker: options.blockingFrameTracker,
-      }
-      context.styleManager.adoptServerStyles(
-        collectFrameServerStyleTags(createElementContainer(parsed)),
-      )
-
-      diffElementAttributes(container.doc.documentElement, parsed.documentElement)
-
-      diffNodes([container.doc.head], [parsed.head], {
-        ...responseContext,
-        regionParent: container.doc.documentElement,
-        regionTailRef: null,
-        signal: options.signal,
-        shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
-      })
-      diffNodes([container.doc.body], [parsed.body], {
-        ...responseContext,
-        regionParent: container.doc.documentElement,
-        regionTailRef: null,
-        signal: options.signal,
-      })
-
-      let bodyContainer = createElementContainer(container.doc.body)
-      if (isRenderAborted(options.signal)) return
-      let subFramesReady = hydrateContainer(bodyContainer, responseContext, options)
-      options.onCommit?.()
-      await subFramesReady
-      if (isRenderAborted(options.signal)) return
-      displayedContentStatus = options.contentStatus ?? 'resolved'
-      return
-    }
-
-    let fragment =
-      htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
-    if (!(await consumeClientEntryResources(fragment, options.documentHref))) return
+    if (!(await consumeClientEntryResources(source, options.documentHref))) return
     if (isRenderAborted(options.signal)) return
     context.styleManager.adoptServerStyles(
-      collectFrameServerStyleTags(createElementContainer(fragment)),
+      collectFrameServerStyleTags(createElementContainer(source)),
     )
-    removeEmptyHeads(fragment)
-    let responseData = options.data
-    mergeRmxDataFromFragment(responseData, fragment)
+    if (!isDocumentNode(source)) removeEmptyHeads(source)
+    mergeRmxDataFrom(options.data, source)
     let responseContext = {
       ...context,
-      data: responseData,
+      data: options.data,
       reconciliationTracker: options.reconciliationTracker,
       blockingFrameTracker: options.blockingFrameTracker,
     }
+    let hydrationContainer = container
 
-    let nextContainer = createContainer(fragment)
+    if (isDocumentNode(source)) {
+      diffElementAttributes(container.doc.documentElement, source.documentElement)
 
-    if (isRenderAborted(options.signal)) return
+      let documentContext = {
+        ...responseContext,
+        regionParent: container.doc.documentElement,
+        regionTailRef: null,
+        signal: options.signal,
+      }
+      diffNodes([container.doc.head], [source.head], {
+        ...documentContext,
+        shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
+      })
+      diffNodes([container.doc.body], [source.body], documentContext)
 
-    diffNodes(container.childNodes, Array.from(nextContainer.childNodes), {
-      ...responseContext,
-      regionTailRef: container.regionTailRef,
-      regionParent: container.regionParent,
-      signal: options.signal,
-    })
+      hydrationContainer = createElementContainer(container.doc.body)
+      if (isRenderAborted(options.signal)) return
+    } else {
+      if (isRenderAborted(options.signal)) return
 
-    let subFramesReady = hydrateContainer(container, responseContext, options)
+      diffNodes(container.childNodes, Array.from(source.childNodes), {
+        ...responseContext,
+        regionTailRef: container.regionTailRef,
+        regionParent: container.regionParent,
+        signal: options.signal,
+      })
+    }
+
+    let subFramesReady = hydrateContainer(hydrationContainer, responseContext, options)
     options.onCommit?.()
     await subFramesReady
     if (isRenderAborted(options.signal)) return
@@ -607,33 +518,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
   function isRenderAborted(signal?: AbortSignal): boolean {
     return disposed || lifecycleController.signal.aborted || signal?.aborted === true
-  }
-
-  function createFrameContentRoot(): VirtualRoot {
-    let virtualRoot: VirtualRoot
-    if (container.root instanceof Document) {
-      virtualRoot = createRoot(container.doc.body, {
-        scheduler: context.scheduler,
-        frame,
-        getContext: context.getContext,
-        styleManager: context.styleManager,
-      })
-    } else {
-      invariant(Array.isArray(root), 'Expected comment-bounded frame root')
-      virtualRoot = createRangeRoot(root, {
-        scheduler: context.scheduler,
-        frame,
-        getContext: context.getContext,
-        styleManager: context.styleManager,
-      })
-    }
-
-    virtualRoot.addEventListener('error', (event: Event) => {
-      if (context.errorTarget === virtualRoot) return
-      context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
-    })
-
-    return virtualRoot
   }
 
   function getContentNodes(): Node[] {
@@ -652,14 +536,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let reconciliationTracker = createReconciliationTracker()
 
     if ((await initialClientEntryResources) === false) return
-    if (disposed || context.lifecycleSignal.aborted) return
+    if (isRenderAborted()) return
     context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
     let subFramesReady = hydrateContainer(container, context, { reconciliationTracker })
 
     try {
       await subFramesReady
 
-      if (disposed || context.lifecycleSignal.aborted) return
+      if (isRenderAborted()) return
 
       if (currentMarker?.status === 'pending') {
         await watchPendingFrameTemplate(currentMarker, reconciliationTracker)
@@ -718,15 +602,20 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     handle: frame,
   }
 
-  async function updateMarker(marker: FrameMarkerData, options?: RenderOptions): Promise<void> {
-    if (disposed || context.lifecycleSignal.aborted || options?.signal?.aborted) return
-    let previousMarker = currentMarker
-    let isInheritedReload = previousMarker !== undefined && previousMarker.id !== marker.id
+  function setCurrentMarker(marker: FrameMarkerData, signal?: AbortSignal): boolean {
+    let isInheritedReload = currentMarker !== undefined && currentMarker.id !== marker.id
     currentMarker = marker
 
     if (isInheritedReload) {
-      startInheritedReload(options?.signal)
+      startInheritedReload(signal)
     }
+
+    return isInheritedReload
+  }
+
+  async function updateMarker(marker: FrameMarkerData, options?: RenderOptions): Promise<void> {
+    if (isRenderAborted(options?.signal)) return
+    let isInheritedReload = setCurrentMarker(marker, options?.signal)
 
     if (marker.status === 'pending') {
       await watchPendingFrameTemplate(
@@ -752,24 +641,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     content: InternalFrameContent,
     options?: RenderOptions,
   ): Promise<void> {
-    if (disposed || context.lifecycleSignal.aborted || options?.signal?.aborted) return
-    let previousMarker = currentMarker
-    let isInheritedReload = previousMarker !== undefined && previousMarker.id !== marker.id
-    currentMarker = marker
-
-    if (isInheritedReload) {
-      startInheritedReload(options?.signal)
-    }
+    if (isRenderAborted(options?.signal)) return
+    let isInheritedReload = setCurrentMarker(marker, options?.signal)
 
     clearPendingFrameTemplateWatch()
     await render(content, { ...options, contentStatus: 'resolved' })
 
-    if (
-      isInheritedReload &&
-      !disposed &&
-      !context.lifecycleSignal.aborted &&
-      !options?.signal?.aborted
-    ) {
+    if (isInheritedReload && !isRenderAborted(options?.signal)) {
       completeInheritedReload()
     }
   }
@@ -784,10 +662,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (method !== 'post') {
         let url = new URL(src, container.doc.baseURI)
         let query = new URLSearchParams()
+        let normalizeNewlines = (value: string) => value.replace(/\r\n|\r|\n/g, '\r\n')
         for (let [name, value] of formData) {
           query.append(
-            name.replace(/\r\n|\r|\n/g, '\r\n'),
-            (typeof value === 'string' ? value : value.name).replace(/\r\n|\r|\n/g, '\r\n'),
+            normalizeNewlines(name),
+            normalizeNewlines(typeof value === 'string' ? value : value.name),
           )
         }
         url.search = `?${query}`
@@ -829,8 +708,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   function startReload(signal?: AbortSignal): AbortController {
     let controller = replaceReloadController(signal)
     reloadKind = 'direct'
-    frame.dispatchEvent(new Event('reloadStart'))
-    startSubFrameInheritedReloads(getContentNodes(), controller.signal)
+    dispatchReloadStart(controller.signal)
     return controller
   }
 
@@ -838,14 +716,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     controller: AbortController
     complete: () => void
   } {
-    let inheritedReloadStarted = reuseInheritedReloadStart()
+    let inheritedReloadStarted = clearInheritedReload()
     let continuingAncestorReload = reloadKind === 'ancestor'
     let controller = replaceReloadController(signal)
     reloadKind = 'ancestor'
 
     if (!inheritedReloadStarted && !continuingAncestorReload) {
-      frame.dispatchEvent(new Event('reloadStart'))
-      startSubFrameInheritedReloads(getContentNodes(), controller.signal)
+      dispatchReloadStart(controller.signal)
     }
 
     return {
@@ -861,24 +738,18 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     completeReload(controller)
   }
 
+  function dispatchReloadStart(signal?: AbortSignal): void {
+    frame.dispatchEvent(new Event('reloadStart'))
+    startSubFrameInheritedReloads(getContentNodes(), signal)
+  }
+
   function replaceReloadController(signal?: AbortSignal): AbortController {
     reloadController?.abort()
     reloadAbortUnsubscribe?.()
-    reloadAbortUnsubscribe = undefined
 
-    let controller = new AbortController()
+    let { controller, disconnect } = createLinkedAbortController(signal)
     reloadController = controller
-
-    if (signal) {
-      if (signal.aborted) {
-        controller.abort()
-      } else {
-        let abort = () => controller.abort()
-        signal.addEventListener('abort', abort, { once: true })
-        reloadAbortUnsubscribe = () => signal.removeEventListener('abort', abort)
-      }
-    }
-
+    reloadAbortUnsubscribe = disconnect
     return controller
   }
 
@@ -887,19 +758,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     options?: FrameNavigationOptions,
     resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
+    let isStale = () => reloadController !== controller || controller.signal.aborted
     try {
       let resolution = await init.resolveFrame(frame.src, {
         ...options,
         signal: controller.signal,
         target: frameName,
       })
-      if (reloadController !== controller || controller.signal.aborted) {
-        return { signal: controller.signal }
-      }
+      if (isStale()) return { signal: controller.signal }
       let { content, redirectedTo } = await unwrapFrameResolution(resolution)
-      if (reloadController !== controller || controller.signal.aborted) {
-        return { signal: controller.signal }
-      }
+      if (isStale()) return { signal: controller.signal }
       let reconciliationTracker = createReconciliationTracker()
       let blockingFrameTracker = createReconciliationTracker()
       let commitStarted = false
@@ -919,13 +787,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       await reconciliationTracker.ready()
       return {
         signal: controller.signal,
-        redirectedTo:
-          reloadController === controller && !controller.signal.aborted ? redirectedTo : undefined,
+        redirectedTo: isStale() ? undefined : redirectedTo,
       }
     } catch (error) {
-      if (reloadController !== controller || controller.signal.aborted) {
-        return { signal: controller.signal }
-      }
+      if (isStale()) return { signal: controller.signal }
       init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       throw error
     } finally {
@@ -945,8 +810,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (signal?.aborted) return
     if (!inheritedReloadPending) {
       inheritedReloadPending = true
-      frame.dispatchEvent(new Event('reloadStart'))
-      startSubFrameInheritedReloads(getContentNodes(), signal)
+      dispatchReloadStart(signal)
     }
 
     inheritedReloadAbortUnsubscribe?.()
@@ -960,7 +824,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     }
   }
 
-  function reuseInheritedReloadStart(): boolean {
+  function clearInheritedReload(): boolean {
     if (!inheritedReloadPending) return false
     inheritedReloadPending = false
     inheritedReloadAbortUnsubscribe?.()
@@ -969,30 +833,20 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   }
 
   function completeInheritedReload(): void {
-    if (!inheritedReloadPending) return
-    inheritedReloadPending = false
-    inheritedReloadAbortUnsubscribe?.()
-    inheritedReloadAbortUnsubscribe = undefined
-    frame.dispatchEvent(new Event('reloadComplete'))
+    if (clearInheritedReload()) frame.dispatchEvent(new Event('reloadComplete'))
   }
 
   function startSubFrameInheritedReloads(nodes: Node[], signal?: AbortSignal): void {
-    for (let i = 0; i < nodes.length; i++) {
-      if (signal?.aborted) break
-
-      let node = nodes[i]
-
-      if (isFrameStart(node)) {
-        let end = findEndMarker(node, isFrameStart, isFrameEnd)
+    walkNodes(
+      nodes,
+      (node) => {
+        if (!isFrameStart(node)) return
+        let end = findFrameEndMarker(node)
         context.frameInstances.get(node)?.startInheritedReload(signal)
-        i = findMarkerRangeEndIndex(nodes, end, i)
-        continue
-      }
-
-      if (node.childNodes && node.childNodes.length > 0) {
-        startSubFrameInheritedReloads(Array.from(node.childNodes), signal)
-      }
-    }
+        return end
+      },
+      signal,
+    )
   }
 
   function clearPendingFrameTemplateWatch(): void {
@@ -1009,95 +863,390 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     signal?: AbortSignal,
     onResolved?: () => void,
   ): Promise<void> {
-    if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
+    if (isRenderAborted(signal)) return
     if (pendingTemplateMarkerId === marker.id) return
 
     clearPendingFrameTemplateWatch()
     pendingTemplateMarkerId = marker.id
 
-    let early = consumeFrameTemplate(marker.id) ?? getEarlyFrameContent(marker.id)
-    if (early) {
-      clearPendingFrameTemplateWatch()
-      await render(early, { reconciliationTracker, signal, contentStatus: 'resolved' })
-      if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
-      return
+    let template = consumeFrameTemplate(marker.id) ?? getEarlyFrameContent(marker.id)
+    if (!template) {
+      if (isRenderAborted(signal)) {
+        clearPendingFrameTemplateWatch()
+        return
+      }
+
+      stopPendingTemplateObserver = setupTemplateObserver(marker.id)
+      pendingTemplateUnsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
+        if (isRenderAborted(signal)) return
+        if (pendingTemplateMarkerId !== marker.id) return
+        clearPendingFrameTemplateWatch()
+        await render(fragment, { signal, contentStatus: 'resolved' })
+        if (!isRenderAborted(signal)) onResolved?.()
+      })
+
+      signal?.addEventListener(
+        'abort',
+        () => {
+          if (pendingTemplateMarkerId === marker.id) {
+            clearPendingFrameTemplateWatch()
+          }
+        },
+        { once: true },
+      )
+
+      template = consumeFrameTemplate(marker.id)
+      if (!template) return
     }
 
-    if (disposed || context.lifecycleSignal.aborted || signal?.aborted) {
-      clearPendingFrameTemplateWatch()
-      return
+    clearPendingFrameTemplateWatch()
+    await render(template, { reconciliationTracker, signal, contentStatus: 'resolved' })
+    if (!isRenderAborted(signal)) onResolved?.()
+  }
+}
+
+/**
+ * Built-in component used to render nested frame content.
+ *
+ * @param handle Component handle for the frame instance.
+ * @returns A placeholder render function handled by the reconciler.
+ */
+export function Frame(handle: Handle<FrameProps, FrameHandle>): RenderFn {
+  void handle
+  return () => null // reconciler renders
+}
+
+const frameNodeRenderer: FrameNodeRenderer = {
+  insert: insertFrame,
+  diff: diffFrame,
+  dispose: disposeFrameResources,
+}
+
+Object.defineProperty(Frame, FRAME_NODE, { value: frameNodeRenderer })
+
+function diffFrame(
+  curr: CommittedFrameNode,
+  next: FrameNode,
+  domParent: ParentNode,
+  vParent: VNodeParent,
+  context: ReconcileContext,
+  svg: boolean,
+  anchor?: Node,
+): CommittedFrameNode {
+  let { frame } = context
+  let currSrc = getFrameSrc(curr)
+  let nextSrc = getFrameSrc(next)
+  let currName = getFrameName(curr)
+  let nextName = getFrameName(next)
+
+  // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
+  // so pending streams from the old src cannot take over the new src.
+  if (currName !== nextName || (currSrc !== nextSrc && !curr._state.resolved)) {
+    let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
+    remove(curr, domParent, context)
+    return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
+  }
+
+  let committed = commitFrameNode(next, vParent, svg, curr._rangeStart, curr._rangeEnd, curr._state)
+
+  let frameRuntime = getFrameRuntime(frame)
+  let frameInstance = committed._state.instance
+  let serverFrameReload = frameRuntime?.serverFrameReload
+
+  if (currSrc !== nextSrc) {
+    if (frameInstance) {
+      frameInstance.handle.src = nextSrc
     }
 
-    stopPendingTemplateObserver = setupTemplateObserver(marker.id)
-    let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
-      if (disposed || context.lifecycleSignal.aborted || signal?.aborted) return
-      if (pendingTemplateMarkerId !== marker.id) return
-      clearPendingFrameTemplateWatch()
-      await render(fragment, { signal, contentStatus: 'resolved' })
-      if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
-    })
-    pendingTemplateUnsubscribe = unsubscribe
+    if (frameRuntime) {
+      resolveClientFrame(committed, frameRuntime, serverFrameReload)
+    }
+  } else if (frameRuntime && frameInstance && serverFrameReload) {
+    // Reload client frames that have the same src during a render triggered by an ancestor frame reload
+    resolveClientFrame(committed, frameRuntime, serverFrameReload)
+  }
 
-    signal?.addEventListener(
-      'abort',
-      () => {
-        if (pendingTemplateMarkerId === marker.id) {
-          clearPendingFrameTemplateWatch()
-        }
-      },
-      { once: true },
+  if (!committed._state.resolved && committed._state.fallbackRoot) {
+    committed._state.fallbackRoot.render(committed.props.fallback ?? null)
+  }
+  return committed
+}
+
+function insertFrame(
+  node: FrameNode,
+  domParent: ParentNode,
+  vParent: VNodeParent,
+  context: ReconcileContext,
+  svg: boolean,
+  anchor?: Node,
+  cursor?: HydrationCursor,
+): CommittedFrameNode {
+  let { frame, styles } = context
+  let runtime = getFrameRuntime(frame)
+  if (!runtime || runtime.canResolveFrames === false) {
+    throw new Error(
+      'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
     )
+  }
 
-    let buffered = consumeFrameTemplate(marker.id)
-    if (buffered) {
-      clearPendingFrameTemplateWatch()
-      await render(buffered, { reconciliationTracker, signal, contentStatus: 'resolved' })
-      if (!disposed && !context.lifecycleSignal.aborted && !signal?.aborted) onResolved?.()
+  let getContext = (type: ElementFunction) => findContextFromAncestry(vParent, type)
+
+  // Hydration path: adopt server-rendered frame markers and reuse the existing
+  // frame instance created during createSubFrames().
+  if (isFrameStartComment(cursor?.current)) {
+    let start = cursor.current
+    let end = findFrameEndComment(start)
+    if (end) {
+      let instance = runtime.frameInstances.get(start)
+      if (!instance) {
+        instance = createFrameInstance(node, start, end, runtime, getContext)
+      } else {
+        let instanceRuntime = getFrameRuntime(instance.handle)
+        if (instanceRuntime) instanceRuntime.getContext = getContext
+      }
+
+      cursor.current = end.nextSibling
+      return commitFrameNode(node, vParent, svg, start, end, {
+        instance,
+        resolveToken: 0,
+        resolveController: undefined,
+        fallbackRoot: undefined,
+        resolved: true,
+      })
     }
   }
+
+  let start = document.createComment(` rmx:f:${randomFrameId()} `)
+  let end = document.createComment(' /rmx:f ')
+  insertDomNode(start, domParent, anchor)
+  insertDomNode(end, domParent, anchor)
+
+  let fallbackRoot = createRangeRoot([start, end], {
+    frame,
+    getContext,
+    styleManager: styles,
+  })
+  fallbackRoot.render(node.props.fallback ?? null)
+
+  let instance = createFrameInstance(node, start, end, runtime, getContext)
+  let committed = commitFrameNode(node, vParent, svg, start, end, {
+    instance,
+    fallbackRoot,
+    resolved: false,
+    resolveToken: 0,
+    resolveController: undefined,
+  })
+  resolveClientFrame(committed, runtime, runtime.serverFrameReload)
+
+  return committed
 }
 
-export function createFrameRuntime(init: {
-  topFrame?: FrameHandle
-  getContext?: (type: ElementFunction) => unknown
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
-  styleManager: StyleManager
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
-  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
-}): FrameRuntime {
-  return {
-    [FRAME_RUNTIME]: true,
-    topFrame: init.topFrame,
-    getContext: init.getContext,
-    errorTarget: init.errorTarget,
-    loadModule: init.loadModule,
-    resolveFrame: init.resolveFrame,
-    pendingClientEntries: init.pendingClientEntries,
-    scheduler: init.scheduler,
-    styleManager: init.styleManager,
-    moduleCache: init.moduleCache,
-    moduleLoads: init.moduleLoads,
-    frameInstances: init.frameInstances,
-    namedFrames: init.namedFrames,
-    processClientEntryPreloads: init.processClientEntryPreloads,
-    serverFrameReload: undefined,
-    reloadForNavigation: init.reloadForNavigation,
+function createFrameInstance(
+  node: FrameNode,
+  start: Comment,
+  end: Comment,
+  runtime: FrameRuntime,
+  getContext: (type: ElementFunction) => unknown,
+): FrameInstance {
+  let instance = createFrame([start, end], {
+    name: getFrameName(node),
+    src: getFrameSrc(node),
+    getContext,
+    errorTarget: runtime.errorTarget,
+    loadModule: runtime.loadModule,
+    resolveFrame: runtime.resolveFrame,
+    pendingClientEntries: runtime.pendingClientEntries,
+    scheduler: runtime.scheduler,
+    styleManager: runtime.styleManager,
+    data: {},
+    moduleCache: runtime.moduleCache,
+    moduleLoads: runtime.moduleLoads,
+    frameInstances: runtime.frameInstances,
+    namedFrames: runtime.namedFrames,
+    processClientEntryPreloads: runtime.processClientEntryPreloads,
+  })
+  runtime.frameInstances.set(start, instance)
+  return instance
+}
+
+function commitFrameNode(
+  node: FrameNode,
+  parent: VNodeParent,
+  svg: boolean,
+  start: Comment,
+  end: Comment,
+  state: FrameMountState,
+): CommittedFrameNode {
+  let committed = node as unknown as CommittedFrameNode
+  committed._parent = parent
+  committed._svg = svg
+  committed._rangeStart = start
+  committed._rangeEnd = end
+  committed._state = state
+  return committed
+}
+
+function resolveClientFrame(
+  node: CommittedFrameNode,
+  runtime: FrameRuntime,
+  serverFrameReload?: NonNullable<FrameRuntime['serverFrameReload']>,
+): void {
+  let frameSrc = getFrameSrc(node)
+  let state = node._state
+  let instance = state.instance
+
+  let token = state.resolveToken + 1
+  state.resolveToken = token
+  state.resolveController?.abort()
+  let reload = serverFrameReload
+    ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
+    : undefined
+  if (!reload) {
+    instance.cancelReload()
+  }
+  let resolveController = reload?.controller ?? new AbortController()
+  state.resolveController = resolveController
+  let isStale = () => state.resolveToken !== token || resolveController.signal.aborted
+  let frameCommitted = Promise.withResolvers<void>()
+
+  let resolve = Promise.resolve()
+    .then(() =>
+      runtime.resolveFrame(frameSrc, {
+        signal: resolveController.signal,
+        target: getFrameName(node),
+      }),
+    )
+    .then(async (resolution) => {
+      if (isStale()) return
+      let { content } = await unwrapFrameResolution(resolution)
+      if (isStale()) return
+      state.fallbackRoot?.dispose()
+      state.fallbackRoot = undefined
+      let nextContent = asAbortableFrameContent(content, resolveController.signal)
+      await instance.render(nextContent, {
+        signal: resolveController.signal,
+        reconciliationTracker: serverFrameReload?.reconciliationTracker,
+        blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
+        onCommit: frameCommitted.resolve,
+      })
+      if (isStale()) return
+      state.resolved = true
+    })
+    .catch((error) => {
+      if (reload && !isStale()) {
+        runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
+      }
+    })
+    .finally(() => {
+      frameCommitted.resolve()
+      reload?.complete()
+      if (state.resolveController === resolveController) {
+        state.resolveController = undefined
+      }
+    })
+
+  if (serverFrameReload?.reconciliationTracker && !node.props.fallback) {
+    serverFrameReload.reconciliationTracker.waitFor(resolve)
+  }
+  if (serverFrameReload?.blockingFrameTracker && !node.props.fallback) {
+    serverFrameReload.blockingFrameTracker.waitFor(frameCommitted.promise)
   }
 }
 
-export type ReconciliationTracker = {
-  track: () => () => void
-  waitFor: (task: Promise<void>) => void
-  finalize: () => void
-  ready: () => Promise<void>
+function disposeFrameResources(node: CommittedFrameNode): void {
+  let state = node._state
+  state.resolveToken++
+  state.resolveController?.abort()
+  state.resolveController = undefined
+  state.fallbackRoot?.dispose()
+  state.fallbackRoot = undefined
+
+  state.instance.dispose()
+}
+
+function asAbortableFrameContent(content: FrameContent, signal: AbortSignal): FrameContent {
+  if (!(content instanceof ReadableStream)) return content
+  return createAbortableReadableStream(content, signal)
+}
+
+function createAbortableReadableStream(
+  source: ReadableStream<Uint8Array>,
+  signal: AbortSignal,
+): ReadableStream<Uint8Array> {
+  let reader = source.getReader()
+  let aborted = false
+
+  let onAbort = () => {
+    aborted = true
+    void reader.cancel(signal.reason)
+  }
+
+  if (signal.aborted) onAbort()
+  else signal.addEventListener('abort', onAbort, { once: true })
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (aborted) {
+        controller.close()
+        return
+      }
+
+      let removeAbortReadListener: undefined | (() => void)
+      let abortRead = new Promise<{ done: true; value: undefined }>((resolve) => {
+        if (signal.aborted) {
+          resolve({ done: true, value: undefined })
+          return
+        }
+        let onAbortRead = () => {
+          resolve({ done: true, value: undefined })
+        }
+        removeAbortReadListener = () => signal.removeEventListener('abort', onAbortRead)
+        signal.addEventListener('abort', onAbortRead, { once: true })
+      })
+
+      let result = await Promise.race([reader.read(), abortRead])
+      removeAbortReadListener?.()
+
+      if (result.done) {
+        controller.close()
+        return
+      }
+      controller.enqueue(result.value)
+    },
+    cancel(reason) {
+      signal.removeEventListener('abort', onAbort)
+      return reader.cancel(reason)
+    },
+  })
+}
+
+function getFrameSrc(node: FrameNode | CommittedFrameNode): string {
+  return node.props.src
+}
+
+function getFrameName(node: FrameNode | CommittedFrameNode): string | undefined {
+  let name = node.props.name
+  return typeof name === 'string' && name.length > 0 ? name : undefined
+}
+
+function randomFrameId(): string {
+  return `f${crypto.randomUUID().slice(0, 8)}`
+}
+
+function findFrameEndComment(start: Comment): Comment | null {
+  let depth = 1
+  let node: Node | null = start.nextSibling
+
+  while (node) {
+    if (isFrameStart(node)) depth++
+    else if (isFrameEnd(node)) {
+      depth--
+      if (depth === 0) return node
+    }
+    node = node.nextSibling
+  }
+
+  return null
 }
 
 function createReconciliationTracker(): ReconciliationTracker {
@@ -1154,17 +1303,8 @@ function createReconciliationTracker(): ReconciliationTracker {
   }
 }
 
-function mergeRmxDataFromDocument(into: RmxData, doc: Document): void {
-  let scripts = Array.from(doc.querySelectorAll('script#rmx-data'))
-  for (let script of scripts) {
-    if (!(script instanceof HTMLScriptElement)) continue
-    mergeRmxData(into, parseRmxDataScript(script))
-    script.remove()
-  }
-}
-
-function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): void {
-  let scripts = Array.from(fragment.querySelectorAll('script#rmx-data'))
+function mergeRmxDataFrom(into: RmxData, root: ParentNode): void {
+  let scripts = Array.from(root.querySelectorAll('script#rmx-data'))
   for (let script of scripts) {
     if (!(script instanceof HTMLScriptElement)) continue
     mergeRmxData(into, parseRmxDataScript(script))
@@ -1193,29 +1333,14 @@ function collectFrameServerStyleTags(container: FrameContainer): HTMLStyleElemen
       ? [...Array.from(container.doc.head.childNodes), ...Array.from(container.doc.body.childNodes)]
       : container.childNodes
 
-  collectOwnedServerStyleTags(nodes, styles)
-  return styles
-}
-
-function collectOwnedServerStyleTags(nodes: Node[], styles: HTMLStyleElement[]): void {
-  for (let i = 0; i < nodes.length; i++) {
-    let node = nodes[i]
-
-    if (isFrameStart(node)) {
-      let end = findEndMarker(node, isFrameStart, isFrameEnd)
-      i = findMarkerRangeEndIndex(nodes, end, i)
-      continue
-    }
-
+  walkNodes(nodes, (node) => {
+    if (isFrameStart(node)) return findFrameEndMarker(node)
     if (node instanceof HTMLStyleElement && node.matches('style[data-rmx-style]')) {
       styles.push(node)
-      continue
+      return node
     }
-
-    if (node.childNodes.length > 0) {
-      collectOwnedServerStyleTags(Array.from(node.childNodes), styles)
-    }
-  }
+  })
+  return styles
 }
 
 function parseRmxDataScript(script: HTMLScriptElement): RmxData {
@@ -1228,21 +1353,13 @@ function parseRmxDataScript(script: HTMLScriptElement): RmxData {
 }
 
 function mergeRmxData(into: RmxData, from: RmxData): void {
-  if (from.h) {
-    if (!into.h) into.h = {}
-    copyOwnRmxEntries(into.h, from.h)
-  }
-
-  if (from.f) {
-    if (!into.f) into.f = {}
-    copyOwnRmxEntries(into.f, from.f)
-  }
+  if (from.h) copyOwnRmxEntries((into.h ??= {}), from.h)
+  if (from.f) copyOwnRmxEntries((into.f ??= {}), from.f)
 }
 
 function copyOwnRmxEntries<T>(target: Record<string, T>, source: Record<string, T>): void {
   for (let key of Object.keys(source)) {
     if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue
-    if (!Object.hasOwn(source, key)) continue
     target[key] = source[key]!
   }
 }
@@ -1423,17 +1540,8 @@ function reviveSerializedValue(value: unknown): unknown {
   if (!isRecord(value)) return value
   let record = value
 
-  if (record.$rmxFrame === true) {
-    let props = reviveSerializedObject(record.props)
-    let key = reviveSerializedValue(record.key)
-    return jsx(Frame, props, key)
-  }
-
-  if (record.$rmxFragment === true) {
-    let props = reviveSerializedObject(record.props)
-    let key = reviveSerializedValue(record.key)
-    return jsx(Fragment, props, key)
-  }
+  if (record.$rmxFrame === true) return reviveSerializedElement(Frame, record)
+  if (record.$rmxFragment === true) return reviveSerializedElement(Fragment, record)
 
   if (record.$rmxMixin === 'css') {
     let styles: unknown = Array.isArray(record.args) ? record.args[0] : undefined
@@ -1445,9 +1553,7 @@ function reviveSerializedValue(value: unknown): unknown {
   }
 
   if (record.$rmx === true && typeof record.type === 'string') {
-    let props = reviveSerializedObject(record.props)
-    let key = reviveSerializedValue(record.key)
-    return jsx(record.type, props, key)
+    return reviveSerializedElement(record.type, record)
   }
 
   let revived: Record<string, unknown> = {}
@@ -1457,10 +1563,18 @@ function reviveSerializedValue(value: unknown): unknown {
   return revived
 }
 
+function reviveSerializedElement(
+  type: string | typeof Frame | typeof Fragment,
+  record: Record<string, unknown>,
+): RemixElement {
+  let props = reviveSerializedObject(record.props)
+  let key = reviveSerializedValue(record.key)
+  return jsx(type, props, key)
+}
+
 function reviveSerializedObject(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  if (!isRecord(value)) return {}
   let revived = reviveSerializedValue(value)
-  if (!revived || typeof revived !== 'object' || Array.isArray(revived)) return {}
   return isRecord(revived) ? revived : {}
 }
 
@@ -1528,19 +1642,27 @@ function hydrateRegion(
     return
   }
 
-  let root = createRangeRoot([start, end], {
+  let root = createFrameRoot([start, end], context)
+  setClientEntryBoundaryOwner(start, end, identity, root)
+  renderEntry(root)
+}
+
+function createFrameRoot(
+  target: HTMLElement | [Comment, Comment],
+  context: FrameContext,
+): VirtualRoot {
+  let options = {
     scheduler: context.scheduler,
     frame: context.frame,
     getContext: context.getContext,
     styleManager: context.styleManager,
-  })
-  root.addEventListener('error', (event) => {
+  }
+  let root = Array.isArray(target) ? createRangeRoot(target, options) : createRoot(target, options)
+  root.addEventListener('error', (event: Event) => {
     if (context.errorTarget === root) return
     context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   })
-
-  setClientEntryBoundaryOwner(start, end, identity, root)
-  renderEntry(root)
+  return root
 }
 
 async function createSubFrames(
@@ -1556,7 +1678,7 @@ async function createSubFrames(
     let node = nodes[i]
 
     if (isFrameStart(node)) {
-      let end = findEndMarker(node, isFrameStart, isFrameEnd)
+      let end = findFrameEndMarker(node)
       let existingFrame = context.frameInstances.get(node)
       let id = getFrameId(node)
       let marker = context.data.f?.[id]
@@ -1576,18 +1698,8 @@ async function createSubFrames(
             marker: frameMarker,
             topFrame: context.topFrame,
             getContext: context.getContext,
-            errorTarget: context.errorTarget,
-            loadModule: context.loadModule,
-            resolveFrame: context.resolveFrame,
-            pendingClientEntries: context.pendingClientEntries,
-            scheduler: context.scheduler,
-            styleManager: context.styleManager,
+            ...getSharedFrameRuntime(context),
             data: context.data,
-            moduleCache: context.moduleCache,
-            moduleLoads: context.moduleLoads,
-            frameInstances: context.frameInstances,
-            namedFrames: context.namedFrames,
-            processClientEntryPreloads: context.processClientEntryPreloads,
           })
           context.frameInstances.set(node, subFrame)
           if (frameMarker.status === 'resolved') {
@@ -1612,12 +1724,8 @@ function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): 
   if (!marker.start.isConnected || !marker.end.isConnected) return false
   if (marker.start.parentNode !== marker.end.parentNode) return false
 
-  let startText = marker.start.data.trim()
-  if (startText !== `rmx:h:${marker.id}`) return false
+  if (marker.start.data.trim() !== `rmx:h:${marker.id}`) return false
   if (marker.end.data.trim() !== '/rmx:h') return false
-
-  let parent = marker.start.parentNode
-  if (!parent) return false
 
   if (context.regionTailRef) {
     let startPosition = marker.start.compareDocumentPosition(context.regionTailRef)
@@ -1631,40 +1739,24 @@ function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): 
 }
 
 function removeVirtualRoots(nodes: Node[]): void {
-  for (let i = 0; i < nodes.length; i++) {
-    let node = nodes[i]
-
-    if (isCommentNode(node) && isHydrationStart(node) && disposeClientEntryBoundary(node)) {
-      let end = findEndMarker(node, isHydrationStart, isHydrationEnd)
-      i = findMarkerRangeEndIndex(nodes, end, i)
-      continue
+  walkNodes(nodes, (node) => {
+    if (isHydrationStart(node) && disposeClientEntryBoundary(node)) {
+      return findEndMarker(node, isHydrationStart, isHydrationEnd)
     }
-
-    if (node.childNodes && node.childNodes.length > 0) {
-      removeVirtualRoots(Array.from(node.childNodes))
-    }
-  }
+  })
 }
 
 function disposeSubFrames(nodes: Node[], context: FrameContext): void {
-  for (let i = 0; i < nodes.length; i++) {
-    let node = nodes[i]
-
-    if (isFrameStart(node)) {
-      let end = findEndMarker(node, isFrameStart, isFrameEnd)
-      let subFrame = context.frameInstances.get(node)
-      if (subFrame) {
-        subFrame.dispose()
-        context.frameInstances.delete(node)
-      }
-      i = findMarkerRangeEndIndex(nodes, end, i)
-      continue
+  walkNodes(nodes, (node) => {
+    if (!isFrameStart(node)) return
+    let end = findFrameEndMarker(node)
+    let subFrame = context.frameInstances.get(node)
+    if (subFrame) {
+      subFrame.dispose()
+      context.frameInstances.delete(node)
     }
-
-    if (node.childNodes && node.childNodes.length > 0) {
-      disposeSubFrames(Array.from(node.childNodes), context)
-    }
-  }
+    return end
+  })
 }
 
 function getEarlyFrameContent(id: string): DocumentFragment | null {
@@ -1801,7 +1893,7 @@ type StreamTemplateParseResult = {
 }
 
 const COMPLETE_TEMPLATE_WITH_ID_PATTERN =
-  /<template\b[^>]*\bid=(?:"([^"]+)"|'([^']+)')[^>]*>[\s\S]*?<\/template>/gi
+  /<template\b[^>]*\bid=(?:"[^"]+"|'[^']+')[^>]*>[\s\S]*?<\/template>/gi
 
 function extractTemplatesFromBuffer(
   doc: Document,
@@ -1810,30 +1902,17 @@ function extractTemplatesFromBuffer(
 ): StreamTemplateParseResult {
   let html = ''
   let cursor = 0
-  let hadMatch = false
 
-  COMPLETE_TEMPLATE_WITH_ID_PATTERN.lastIndex = 0
-  let match = COMPLETE_TEMPLATE_WITH_ID_PATTERN.exec(buffer)
+  for (let match of buffer.matchAll(COMPLETE_TEMPLATE_WITH_ID_PATTERN)) {
+    html += buffer.slice(cursor, match.index)
 
-  while (match) {
-    hadMatch = true
-    let index = match.index
-    let fullMatch = match[0]
-    let id = match[1] ?? match[2]
-    let matchEnd = index + fullMatch.length
-
-    html += buffer.slice(cursor, index)
-
-    if (id) {
-      let parsed = createFragmentFromString(doc, fullMatch)
-      let template = parsed.querySelector('template')
-      if (template instanceof HTMLTemplateElement && template.id) {
-        onTemplate(template.id, takeFrameTemplateContent(template))
-      }
+    let parsed = createFragmentFromString(doc, match[0])
+    let template = parsed.querySelector('template')
+    if (template instanceof HTMLTemplateElement && template.id) {
+      onTemplate(template.id, takeFrameTemplateContent(template))
     }
 
-    cursor = matchEnd
-    match = COMPLETE_TEMPLATE_WITH_ID_PATTERN.exec(buffer)
+    cursor = match.index + match[0].length
   }
 
   let tail = buffer.slice(cursor)
@@ -1842,13 +1921,6 @@ function extractTemplatesFromBuffer(
   let tailStart = tail.toLowerCase().lastIndexOf('<template')
   if (tailStart === -1) {
     return { html: html + tail, remainder: '' }
-  }
-
-  if (!hadMatch) {
-    return {
-      html: buffer.slice(0, tailStart),
-      remainder: buffer.slice(tailStart),
-    }
   }
 
   return {
@@ -1897,21 +1969,13 @@ async function renderFrameStream(
 
     buffer += decoder.decode()
     let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
-    html += parsed.html
-    buffer = parsed.remainder
-    if (buffer !== '') {
-      html += buffer
-      buffer = ''
-    }
+    html += parsed.html + parsed.remainder
 
     if (html !== '') {
       await applyHtml(html, appliedOnce ? 'fragment' : inferFlushKind(html))
-      appliedOnce = true
-    }
-
-    // A frame stream can legitimately resolve to empty content. Ensure the
-    // existing frame region is cleared instead of treated as a no-op.
-    if (html === '' && !appliedOnce) {
+    } else if (!appliedOnce) {
+      // A frame stream can legitimately resolve to empty content. Ensure the
+      // existing frame region is cleared instead of treated as a no-op.
       await applyHtml('', 'fragment')
     }
   } finally {
@@ -1969,22 +2033,12 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
   invariant(start.parentNode === parent, 'Boundaries must share parent')
   let doc = parent.ownerDocument ?? document
 
-  let getChildNodesBetween = (): Node[] => {
-    let nodes: Node[] = []
-    let node = start.nextSibling
-    while (node && node !== end) {
-      nodes.push(node)
-      node = node.nextSibling
-    }
-    return nodes
-  }
-
   return {
     doc,
     root: parent,
     regionStart: start,
     get childNodes() {
-      return getChildNodesBetween()
+      return collectNodesBetween(start, end)
     },
     regionTailRef: end,
     regionParent: parent,
@@ -2030,7 +2084,7 @@ function findHydrationMarkers(container: FrameContainer, data: RmxData['h']): Hy
       if (isFrameStart(node)) {
         if (parent) frameClientEntryParents.set(node, parent)
         else frameClientEntryParents.delete(node)
-        let end = findEndMarker(node, isFrameStart, isFrameEnd)
+        let end = findFrameEndMarker(node)
         i = findMarkerRangeEndIndex(nodes, end, i)
         continue
       }
@@ -2057,58 +2111,32 @@ function findHydrationMarkers(container: FrameContainer, data: RmxData['h']): Hy
   }
 }
 
-function isHydrationStart(node: Comment): boolean {
-  return node.data.trim().startsWith('rmx:h:')
+// Visits nodes depth-first. A visitor that handles a range returns its last node, which skips the
+// rest of the range and its descendants.
+function walkNodes(nodes: Node[], visit: (node: Node) => Node | void, signal?: AbortSignal): void {
+  for (let i = 0; i < nodes.length; i++) {
+    if (signal?.aborted) break
+
+    let node = nodes[i]
+    let end = visit(node)
+    if (end) {
+      i = findMarkerRangeEndIndex(nodes, end, i)
+      continue
+    }
+
+    if (node.childNodes.length > 0) {
+      walkNodes(Array.from(node.childNodes), visit, signal)
+    }
+  }
 }
 
-function isHydrationEnd(node: Comment): boolean {
-  return node.data.trim() === '/rmx:h'
+function findFrameEndMarker(start: Comment): Comment {
+  return findEndMarker(start, isFrameStart, isFrameEnd)
 }
 
-function isFrameStart(node: Node): node is Comment {
-  return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
-}
-
-function isFrameEnd(node: Comment): boolean {
-  return node.data.trim() === '/rmx:f'
-}
-
-function getFrameId(start: Comment): string {
-  let trimmed = start.data.trim()
-  invariant(trimmed.startsWith('rmx:f:'), 'Invalid frame start marker')
-  return trimmed.slice('rmx:f:'.length)
-}
-
-function findMarkerRangeEndIndex(nodes: Node[], end: Comment, startIndex: number): number {
+function findMarkerRangeEndIndex(nodes: Node[], end: Node, startIndex: number): number {
   // The snapshot may not contain an end marker moved by a DOM update.
   return Math.max(startIndex, nodes.indexOf(end, startIndex))
-}
-
-function findEndMarker(
-  start: Comment,
-  isStart: (node: Comment) => boolean,
-  isEnd: (node: Comment) => boolean,
-): Comment {
-  let node: Node | null = start.nextSibling
-  let depth = 1
-
-  while (node) {
-    if (isCommentNode(node)) {
-      let comment = node
-      if (isStart(comment)) depth++
-      else if (isEnd(comment)) {
-        depth--
-        if (depth === 0) return comment
-      }
-    }
-    node = node.nextSibling
-  }
-
-  throw new Error('End marker not found')
-}
-
-function isCommentNode(node: Node | null | undefined): node is Comment {
-  return node?.nodeType === Node.COMMENT_NODE
 }
 
 function isDocumentNode(node: Node): node is Document {
@@ -2121,4 +2149,28 @@ function isDocumentFragmentNode(value: unknown): value is DocumentFragment {
     value !== null &&
     Reflect.get(value, 'nodeType') === Node.DOCUMENT_FRAGMENT_NODE
   )
+}
+
+const documentReloadInfo = 'remix-document-reload'
+
+export function isDocumentReload(info: unknown): boolean {
+  return info === documentReloadInfo
+}
+
+export function reloadDocument(doc: Document, href = doc.location.href): void {
+  let navigation = doc.defaultView?.navigation
+  if (navigation) {
+    navigation.navigate(href, { history: 'replace', info: documentReloadInfo })
+  } else {
+    doc.location.replace(href)
+  }
+}
+
+export function reloadCurrentDocument(doc: Document): void {
+  let navigation = doc.defaultView?.navigation
+  if (navigation && typeof navigation.reload === 'function') {
+    navigation.reload({ info: documentReloadInfo })
+  } else {
+    doc.location.reload()
+  }
 }

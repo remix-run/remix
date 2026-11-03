@@ -1,18 +1,21 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 
-import { Frame, type Handle } from '../runtime/component.ts'
+import type { Handle } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
-  NamedFrameRegistry,
+  Frame,
   publishFrameTemplate,
   reloadFrameForNavigation,
+} from '../runtime/frame.ts'
+import {
+  NamedFrameRegistry,
   type LoadModule,
   type ResolveFrameOptions,
-} from '../runtime/frame.ts'
-import { jsx } from '../runtime/jsx.ts'
+} from '../runtime/frame-runtime.ts'
+import { jsx } from '../runtime/core/vnode.ts'
 import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
@@ -392,6 +395,129 @@ describe('frames', () => {
     } finally {
       frame.dispose()
     }
+  })
+
+  it('does not move head nodes after a leading server-rendered import map on reload', async () => {
+    let importMap = { imports: { '/entry.js': '/entry.hash.js' } }
+    let stylesheet = '<link data-rmx-key="styles" rel="stylesheet" href="data:text/css,">'
+    document.documentElement.innerHTML = [
+      '<head>',
+      remixImportMapScript(importMap),
+      '<title>Initial</title>',
+      stylesheet,
+      '</head>',
+      '<body><main>Initial</main></body>',
+    ].join('')
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([
+          appendFlushMarker(
+            [
+              '<!doctype html><html><head>',
+              remixImportMapScript(importMap),
+              '<title>Next</title>',
+              stylesheet,
+              '</head><body><main>Next</main></body></html>',
+            ].join(''),
+            'document',
+          ),
+        ])
+      },
+    })
+
+    try {
+      await frame.ready()
+      let importMapScript = document.head.firstElementChild
+      let stylesheetLink = document.head.querySelector('link[data-rmx-key="styles"]')
+      let removedNodes: Node[] = []
+      let observer = new MutationObserver((records) => {
+        for (let record of records) removedNodes.push(...record.removedNodes)
+      })
+      observer.observe(document.head, { childList: true })
+
+      await frame.handle.reload()
+      for (let record of observer.takeRecords()) removedNodes.push(...record.removedNodes)
+      observer.disconnect()
+
+      expect(removedNodes).not.toContain(stylesheetLink)
+      expect(removedNodes).not.toContain(importMapScript)
+      expect(document.title).toBe('Next')
+      expect(Array.from(document.head.children)).toEqual([
+        importMapScript,
+        document.querySelector('title'),
+        stylesheetLink,
+      ])
+      expect(importMapScript?.matches('script[data-rmx-import-map][type="importmap"]')).toBe(true)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps shared head resources in place when page-specific links come and go', async (t) => {
+    let importMap = { imports: { '/entry.js': '/entry.hash.js' } }
+    let renderHead = (title: string, pageLinks = '') =>
+      [
+        remixImportMapScript(importMap),
+        `<title>${title}</title>`,
+        pageLinks,
+        '<link data-rmx-key="styles" rel="stylesheet" href="data:text/css,">',
+        '<link rel="modulepreload" href="data:text/javascript,">',
+      ].join('')
+    let pages = {
+      home: renderHead('Home'),
+      doc: renderHead('Doc', '<link rel="alternate" type="text/markdown" href="/doc.md">'),
+    }
+    let page: keyof typeof pages = 'home'
+    document.documentElement.innerHTML = `<head>${pages.home}</head><body><main>Home</main></body>`
+
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        htmlStream([
+          appendFlushMarker(
+            `<!doctype html><html><head>${pages[page]}</head><body><main>${page}</main></body></html>`,
+            'document',
+          ),
+        ]),
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let stylesheet = document.head.querySelector('link[rel="stylesheet"]')
+    let preload = document.head.querySelector('link[rel="modulepreload"]')
+    let detached: Node[] = []
+    let rewritten: Node[] = []
+    let collect = (records: MutationRecord[]) => {
+      for (let record of records) {
+        detached.push(...record.removedNodes)
+        if (record.type === 'attributes') rewritten.push(record.target)
+      }
+    }
+    let observer = new MutationObserver(collect)
+    observer.observe(document.head, { childList: true, attributes: true, subtree: true })
+    t.after(() => observer.disconnect())
+
+    page = 'doc'
+    await frame.handle.reload()
+
+    let alternate = document.head.querySelector('link[rel="alternate"]')
+    expect(document.title).toBe('Doc')
+    expect(alternate?.nextElementSibling).toBe(stylesheet)
+    expect(stylesheet?.nextElementSibling).toBe(preload)
+
+    page = 'home'
+    await frame.handle.reload()
+
+    expect(document.title).toBe('Home')
+    expect(document.head.querySelector('link[rel="alternate"]')).toBe(null)
+    expect(document.head.querySelector('link[rel="stylesheet"]')).toBe(stylesheet)
+    expect(document.head.querySelector('link[rel="modulepreload"]')).toBe(preload)
+    expect(preload?.getAttribute('href')).toBe('data:text/javascript,')
+
+    collect(observer.takeRecords())
+    expect(detached).not.toContain(stylesheet)
+    expect(detached).not.toContain(preload)
+    expect(rewritten).not.toContain(preload)
   })
 
   it('resolves after committing reload content', async () => {

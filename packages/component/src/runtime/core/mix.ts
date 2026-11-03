@@ -1,4 +1,4 @@
-import type { ElementProps, RemixElement } from '../jsx.ts'
+import type { ElementProps, RemixElement } from './vnode.ts'
 
 // Stop mixins that return themselves from expanding forever.
 const MAX_MIX_DESCRIPTORS = 1024

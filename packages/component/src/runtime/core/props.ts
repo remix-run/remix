@@ -1,12 +1,12 @@
-import type { ElementProps } from '../jsx.ts'
+import type { ElementProps } from './vnode.ts'
 import {
   canUseProperty,
   getMergedClassName,
   isAllowedHostPropName,
-  isBooleanishStringAttribute,
   normalizeAttributeName,
   sanitizeUrlAttribute,
   serializeStyleObject,
+  shouldStringifyBooleanAttribute,
   styleValueToCss,
 } from './attributes.ts'
 import { camelToKebab } from '../../style/style.ts'
@@ -129,10 +129,11 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
 
   if (typeof value === 'function') return
 
-  let isAriaOrData = name.startsWith('aria-') || name.startsWith('data-')
-  let isBooleanishString = isBooleanishStringAttribute(attr)
-  if (value != null && (value !== false || isAriaOrData || isBooleanishString)) {
-    let attrValue = name === 'popover' && value === true ? '' : String(value)
+  // Match server rendering: booleans render as "true"/"false" only for attributes that read them as
+  // strings; otherwise `true` renders an empty attribute and `false` omits it.
+  let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
+  if (value != null && (stringify || value)) {
+    let attrValue = stringify ? String(value) : ''
     if (ns) dom.setAttributeNS(ns, attr, attrValue)
     else dom.setAttribute(attr, attrValue)
   } else {
