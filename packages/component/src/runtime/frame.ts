@@ -73,6 +73,7 @@ import {
 } from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
 import { parseDocument, removeNoscriptContents } from './parse-document.ts'
+import { ESCAPED_OBJECT } from './props-serialization.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -1576,11 +1577,17 @@ function reviveSerializedValue(value: unknown): unknown {
   if (!isRecord(value)) return value
   let record = value
 
+  // Revive the fields, but never interpret the escaped object's own tags.
+  if (isRecord(record[ESCAPED_OBJECT])) {
+    return reviveSerializedProperties(record[ESCAPED_OBJECT])
+  }
+
   if (record.$rmxFrame === true) return reviveSerializedElement(Frame, record)
   if (record.$rmxFragment === true) return reviveSerializedElement(Fragment, record)
 
   if (record.$rmxMixin === 'css') {
-    let styles: unknown = Array.isArray(record.args) ? record.args[0] : undefined
+    let args = reviveSerializedValue(record.args)
+    let styles: unknown = Array.isArray(args) ? args[0] : undefined
     return css(isCSSProps(styles) ? styles : {})
   }
 
@@ -1592,11 +1599,13 @@ function reviveSerializedValue(value: unknown): unknown {
     return reviveSerializedElement(record.type, record)
   }
 
-  let revived: Record<string, unknown> = {}
-  for (let key in record) {
-    revived[key] = reviveSerializedValue(record[key])
-  }
-  return revived
+  return reviveSerializedProperties(record)
+}
+
+function reviveSerializedProperties(record: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(record).map(([key, value]) => [key, reviveSerializedValue(value)]),
+  )
 }
 
 function reviveSerializedElement(
