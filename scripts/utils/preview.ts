@@ -332,11 +332,11 @@ export class PreviewGitHub {
       this.api('DELETE', endpoint)
     } catch (error) {
       let stderr = error instanceof Error && 'stderr' in error ? String(error.stderr) : ''
-      let missingTag =
-        endpoint.startsWith('git/refs/tags/') &&
+      let missingRef =
+        endpoint.startsWith('git/refs/') &&
         /\(HTTP 422\)/.test(stderr) &&
         /Reference does not exist/i.test(stderr)
-      if (!/\(HTTP 404\)/.test(stderr) && !missingTag) throw error
+      if (!/\(HTTP 404\)/.test(stderr) && !missingRef) throw error
     }
   }
 
@@ -553,6 +553,16 @@ export function cleanupPreviews(
     console.log(`${dryRun ? 'Would delete' : 'Deleting'} preview: ${release.tag_name}`)
     if (!dryRun) github.deleteRelease(release)
   }
+}
+
+export function cleanupPreviewBranch(
+  github: PreviewGitHub,
+  channel: string,
+  { dryRun = false }: { dryRun?: boolean } = {},
+): void {
+  if (!/^(main|pr-[1-9]\d*)$/.test(channel)) throw new Error('Invalid legacy preview channel')
+  console.log(`${dryRun ? 'Would delete' : 'Deleting'} legacy preview branch: preview/${channel}`)
+  if (!dryRun) github.delete(`git/refs/heads/preview/${channel}`)
 }
 
 export function readPullRequest(

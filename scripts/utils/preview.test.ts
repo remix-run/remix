@@ -5,6 +5,7 @@ import { gt, valid } from 'semver'
 import {
   PREVIEW_RELEASE_MARKER,
   PreviewGitHub,
+  cleanupPreviewBranch,
   getExpiredPreviewReleases,
   getExpiredPrPreviewAssets,
   getPreviewChannel,
@@ -228,20 +229,48 @@ describe('preview release retention', () => {
   })
 })
 
-describe('preview tag cleanup', () => {
-  it('ignores missing tags without swallowing permission or validation errors', () => {
+describe('preview ref cleanup', () => {
+  it('deletes only the matching legacy main or PR branch', () => {
+    let calls: string[][] = []
+    let github = new PreviewGitHub('remix-run/remix', (args) => {
+      calls.push(args)
+      return ''
+    })
+    cleanupPreviewBranch(github, 'pr-123')
+    cleanupPreviewBranch(github, 'main')
+    assert.deepEqual(calls, [
+      ['api', '--method', 'DELETE', 'repos/remix-run/remix/git/refs/heads/preview/pr-123'],
+      ['api', '--method', 'DELETE', 'repos/remix-run/remix/git/refs/heads/preview/main'],
+    ])
+    assert.throws(
+      () => cleanupPreviewBranch(github, '../../main'),
+      /Invalid legacy preview channel/,
+    )
+    assert.throws(
+      () => cleanupPreviewBranch(github, 'experimental'),
+      /Invalid legacy preview channel/,
+    )
+    cleanupPreviewBranch(github, 'pr-123', { dryRun: true })
+    assert.equal(calls.length, 2)
+  })
+
+  it('ignores missing refs without swallowing permission or validation errors', () => {
     let stderr = 'gh: Reference does not exist (HTTP 422)'
     let github = new PreviewGitHub('remix-run/previews', () => {
       throw Object.assign(new Error('request failed'), { stderr })
     })
     let tag = 'git/refs/tags/preview'
     github.delete(tag)
+    let branch = 'git/refs/heads/preview/pr-123'
+    github.delete(branch)
     stderr = 'gh: Not Found (HTTP 404)'
     github.delete(tag)
     stderr = 'gh: Forbidden (HTTP 403)'
     assert.throws(() => github.delete(tag), /request failed/)
+    assert.throws(() => github.delete(branch), /request failed/)
     stderr = 'gh: Validation Failed (HTTP 422)'
     assert.throws(() => github.delete(tag), /request failed/)
+    assert.throws(() => github.delete(branch), /request failed/)
   })
 })
 

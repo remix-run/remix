@@ -79,7 +79,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     concurrency:
       group: preview-${{ needs.build.outputs.channel }}
@@ -111,6 +111,12 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: node scripts/preview-pr.ts comment "$PR_NUMBER" "$PREVIEW_TAG" "$PREVIEW_SHA"
+      - name: Delete legacy preview branch
+        if: steps.publish.outputs.published == 'true' && needs.build.outputs.channel != 'experimental'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PREVIEW_CHANNEL: ${{ needs.build.outputs.channel }}
+        run: node scripts/preview.ts cleanup-branch "$PREVIEW_CHANNEL"
 
   cleanup:
     if: >-
@@ -120,7 +126,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     strategy:
       fail-fast: false
@@ -139,6 +145,11 @@ jobs:
         with:
           node-version-file: package.json
           package-manager-cache: false
+      - name: Delete legacy PR preview branch
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/preview.ts cleanup-branch "$PREVIEW_CHANNEL"
       - name: Delete expired releases and tags
         env:
           REMIX_PREVIEWS_PAT: ${{ secrets.REMIX_PREVIEWS_PAT }}
