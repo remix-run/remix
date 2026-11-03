@@ -93,16 +93,54 @@ export function isActionObject(obj: unknown): obj is ActionObject<any, any> {
   return isRecord(obj) && typeof obj.handler === 'function'
 }
 
+type ControllerActionName<routes extends RouteMap> = {
+  [name in keyof routes]: routes[name] extends Route<any, any> ? name : never
+}[keyof routes]
+
+/**
+ * Untracked action middleware for every route leaf, used when a controller's action middleware is
+ * not inferred.
+ */
+export type ControllerActionMiddleware<routes extends RouteMap> = {
+  [name in ControllerActionName<routes>]: readonly AnyMiddleware[]
+}
+
+type ActionMiddleware<middleware> = middleware extends readonly AnyMiddleware[]
+  ? middleware
+  : readonly AnyMiddleware[]
+
+type ControllerAction<
+  routes extends RouteMap,
+  name,
+  context extends RequestContext<any, any>,
+  middleware,
+> = name extends keyof routes
+  ? routes[name] extends Route<any, any>
+    ? Action<routes[name], context, ActionMiddleware<middleware>>
+    : never
+  : never
+
+// Mapping over the inferred `actionMiddleware` keys lets TypeScript infer each action's middleware
+// from the object literal before it types that action's handler.
 type ControllerActions<
   routes extends RouteMap,
   context extends RequestContext<any, any>,
+  actionMiddleware,
 > = routes extends any
   ? {
-      [name in keyof routes as routes[name] extends Route<any, any>
-        ? name
-        : never]: routes[name] extends Route<any, any> ? Action<routes[name], context> : never
+      [name in keyof actionMiddleware]: ControllerAction<
+        routes,
+        name,
+        context,
+        actionMiddleware[name]
+      >
     } & {
-      [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
+      [name in Exclude<ControllerActionName<routes>, keyof actionMiddleware>]: ControllerAction<
+        routes,
+        name,
+        context,
+        unknown
+      >
     }
   : never
 
@@ -118,9 +156,10 @@ export type Controller<
   routes extends RouteMap,
   context extends RequestContext<any, any> = DefaultContext,
   middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  actionMiddleware = ControllerActionMiddleware<routes>,
 > = {
   middleware?: readonly [...middleware]
-  actions: ControllerActions<routes, MiddlewareContext<middleware, context>>
+  actions: ControllerActions<routes, MiddlewareContext<middleware, context>, actionMiddleware>
 }
 
 /**
@@ -128,7 +167,8 @@ export type Controller<
  *
  * This helper returns the controller unchanged while giving TypeScript the route map it needs to
  * type each action's `context.params`. If controller middleware adds context values, those values are
- * available to the controller actions.
+ * available to the controller actions. Values added by an action's own middleware are available to
+ * that action's handler.
  *
  * @param routes The route map this controller handles.
  * @param controller The controller object to type-check.
@@ -138,10 +178,11 @@ export function createController<
   routes extends RouteMap,
   context extends RequestContext<any, any> = DefaultContext,
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  const actionMiddleware = ControllerActionMiddleware<routes>,
 >(
   routes: routes,
-  controller: Controller<routes, context, middleware>,
-): Controller<routes, context, middleware> {
+  controller: Controller<routes, context, middleware, actionMiddleware>,
+): Controller<routes, context, middleware, actionMiddleware> {
   void routes
   return controller
 }
