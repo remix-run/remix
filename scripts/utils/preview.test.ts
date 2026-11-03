@@ -73,20 +73,43 @@ describe('preview packages', () => {
     })
   })
 
-  it('displays padded UTC timestamps without changing preview tags', () => {
+  it('uses concise display titles for each preview channel', () => {
     let sha = 'abcdef1234567890'.padEnd(40, '0')
     let pr = parsePreviewBuild('v0.20261026.417-pr-12082', sha)
-    assert.equal(getPreviewReleaseTitle(pr), 'PR #12082 · 2026-10-26 00:04:17 UTC')
+    assert.equal(getPreviewReleaseTitle(pr), 'PR #12082')
     assert.equal(getPreviewReleaseTitle({ ...pr, sha: 'b'.repeat(40) }), getPreviewReleaseTitle(pr))
     assert.equal(
       getPreviewReleaseTitle(parsePreviewBuild('v0.20261103.195415-main-abcdef12', sha)),
-      'main · 2026-11-03 19:54:15 UTC · abcdef12',
+      'main (abcdef12)',
     )
     assert.equal(
       getPreviewReleaseTitle(parsePreviewBuild('v0.20261103.0-experimental-abcdef12', sha)),
-      'experimental · 2026-11-03 00:00:00 UTC · abcdef12',
+      'experimental (abcdef12)',
     )
-    assert.equal(getPreviewReleaseTitle(parsePreviewBuild('pr-12082', sha)), 'pr-12082')
+    assert.equal(getPreviewReleaseTitle(parsePreviewBuild('pr-12082', sha)), 'PR #12082')
+  })
+
+  it('uses the planned version only for release PRs with a versioned title', () => {
+    let build = parsePreviewBuild('v0.20261026.417-pr-12082', 'a'.repeat(40))
+    assert.equal(
+      getPreviewReleaseTitle(build, { headRef: 'release-pr/main', title: 'Release v3.2.0' }),
+      'Remix 3.2.0 preview',
+    )
+    assert.equal(
+      getPreviewReleaseTitle(build, {
+        headRef: 'release-pr/main',
+        title: 'Release v3.3.0-alpha.1',
+      }),
+      'Remix 3.3.0-alpha.1 preview',
+    )
+    assert.equal(
+      getPreviewReleaseTitle(build, { headRef: 'other-branch', title: 'Release v3.2.0' }),
+      'PR #12082',
+    )
+    assert.equal(
+      getPreviewReleaseTitle(build, { headRef: 'release-pr/main', title: 'Release' }),
+      'PR #12082',
+    )
   })
 
   it('requires a valid tag matching the full source SHA', () => {
@@ -149,23 +172,26 @@ describe('preview release retention', () => {
   it('treats both merged and unmerged closed PRs as closed, keeping open PRs', () => {
     let sha = 'a'.repeat(40)
     let createdAt = '2026-11-01T04:30:00Z'
+    let headRef = 'feature'
+    let title = 'Add a feature'
+    let response = { title, head: { sha, ref: headRef }, created_at: createdAt }
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
-        JSON.stringify({ state: 'closed', merged: false, head: { sha }, created_at: createdAt }),
+        JSON.stringify({ ...response, state: 'closed', merged: false }),
       ),
-      { closed: true, sha, createdAt },
+      { closed: true, sha, headRef, title, createdAt },
     )
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
-        JSON.stringify({ state: 'closed', merged: true, head: { sha }, created_at: createdAt }),
+        JSON.stringify({ ...response, state: 'closed', merged: true }),
       ),
-      { closed: true, sha, createdAt },
+      { closed: true, sha, headRef, title, createdAt },
     )
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
-        JSON.stringify({ state: 'open', merged: false, head: { sha }, created_at: createdAt }),
+        JSON.stringify({ ...response, state: 'open', merged: false }),
       ),
-      { closed: false, sha, createdAt },
+      { closed: false, sha, headRef, title, createdAt },
     )
   })
 
