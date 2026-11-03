@@ -168,7 +168,7 @@ During server rendering, setup and render run, but `handle.update()` throws and 
 
 State is any variable in setup scope, like `likes` and `saving` in [Usage](#usage). Change it directly, then call `handle.update()` when the UI should reflect the change.
 
-- The runtime doesn't compare state, so mutating arrays and objects in place works. It renders when you call `handle.update()`.
+- The runtime doesn't compare state, so mutating arrays and objects in place works. It renders when you call `handle.update()`. Objects passed to the `style` prop or [`css(...)`](#dynamic-values) are the exception: an element that receives the same object again keeps its previous styles, so pass a new object to change them.
 - Compute values that come from props or state inside render, such as `todos.filter((todo) => !todo.done).length`, instead of storing them in variables that have to be kept in sync.
 - Several `handle.update()` calls in the same task are batched into one render.
 - Call `handle.update()` from event handlers, queued tasks, timers, and subscriptions. Calling it during setup warns and skips the extra render, because the first render follows setup anyway. Calling it during render throws. Queue work that render discovers with [`handle.queueTask()`](#queued-tasks).
@@ -586,7 +586,7 @@ function ProgressBar(handle: Handle<{ value: number }>) {
 }
 ```
 
-`css(...)` treats style objects as immutable. An element that receives the same object again keeps its class without reading the object, so pass a new object to change styles instead of mutating one.
+Like the `style` prop, `css(...)` treats style objects as immutable. An element that receives the same object again keeps its class without reading the object, so pass a new object to change styles instead of mutating one.
 
 During server rendering, Remix collects the generated rules, deduplicates them, and puts them in `<style data-rmx-style>` tags in the document head, so server-rendered pages are styled before any JavaScript loads.
 

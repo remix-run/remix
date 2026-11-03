@@ -4,7 +4,7 @@
 - When an element receives the same style object it received on the previous render, `css()` keeps the class without reading the object again.
 - Elements no longer create `beforeUpdate` and `commit` events when none of their mixins listen for them. This also speeds up other mixins that don't listen, such as `attrs()` and `link()`.
 
-**Behavior change:** `css()` now treats style objects as immutable. Mutating a style object in place and passing it to `css()` again no longer updates the element's styles. Pass a new object when the styles change:
+**Behavior change:** `css()` now treats style objects as immutable, matching the `style` prop. Mutating a style object in place and passing it to `css()` again no longer updates the element's styles. Pass a new object when the styles change:
 
 ```diff
  function Badge(handle: Handle<{ color: string }>) {
