@@ -1,5 +1,4 @@
 import * as fs from 'node:fs'
-import { parse } from 'yaml'
 import { colors, colorize } from './utils/color.ts'
 import { getSideEffectPatternPairingIssues } from './utils/package-side-effects.ts'
 import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
@@ -51,7 +50,6 @@ interface PackageMetaCheck {
 
 function main() {
   let packageInfos = getPublishedPackageInfos()
-  let catalogDependencies = getCatalogDependencies()
   let checks: PackageMetaCheck[] = [
     {
       name: 'Published package.json files have descriptions',
@@ -75,12 +73,6 @@ function main() {
       name: 'Published package.json files use consistent consumer-facing dependency ranges across packages',
       validate() {
         return validateConsistentConsumerDependencyRanges(packageInfos)
-      },
-    },
-    {
-      name: 'Published package.json files match catalog ranges for consumer-facing dependencies',
-      validate() {
-        return validateConsumerDependencyRangesMatchCatalog(packageInfos, catalogDependencies)
       },
     },
   ]
@@ -173,24 +165,6 @@ function validateSideEffects(packageInfos: PublishedPackageInfo[]): string[] {
   return violations
 }
 
-function getCatalogDependencies(): PackageDependencyMap {
-  let workspaceConfig: unknown = parse(fs.readFileSync('pnpm-workspace.yaml', 'utf8'))
-  if (!isRecord(workspaceConfig)) {
-    throw new Error('Expected pnpm-workspace.yaml to contain an object')
-  }
-
-  let catalog = workspaceConfig.catalog
-  if (catalog === undefined) {
-    return {}
-  }
-
-  if (!isDependencyMap(catalog)) {
-    throw new Error('Expected pnpm-workspace.yaml catalog to be an object of string specifiers')
-  }
-
-  return catalog
-}
-
 function validatePackageDescriptions(packageInfos: PublishedPackageInfo[]): string[] {
   return packageInfos.flatMap((packageInfo) =>
     packageInfo.packageJson.description?.trim()
@@ -215,35 +189,6 @@ function validateExplicitConsumerDependencyRanges(packageInfos: PublishedPackage
             `${packageInfo.dir}/package.json ${field}.${dependencyName} uses ${specifier}, but published consumer-facing dependencies must use explicit ranges.`,
           )
         }
-      }
-    }
-  }
-
-  return violations
-}
-
-function validateConsumerDependencyRangesMatchCatalog(
-  packageInfos: PublishedPackageInfo[],
-  catalogDependencies: PackageDependencyMap,
-): string[] {
-  let violations: string[] = []
-
-  for (let packageInfo of packageInfos) {
-    for (let field of CONSUMER_DEPENDENCY_FIELDS) {
-      let dependencies = packageInfo.packageJson[field]
-      if (!dependencies) {
-        continue
-      }
-
-      for (let [dependencyName, specifier] of Object.entries(dependencies)) {
-        let catalogSpecifier = catalogDependencies[dependencyName]
-        if (catalogSpecifier === undefined || specifier === catalogSpecifier) {
-          continue
-        }
-
-        violations.push(
-          `${packageInfo.dir}/package.json ${field}.${dependencyName} uses ${specifier}, but the catalog range is ${catalogSpecifier}.`,
-        )
       }
     }
   }

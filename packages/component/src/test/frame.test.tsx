@@ -275,11 +275,21 @@ async function navigateWithLink(
   if (options.src !== undefined) link.setAttribute('data-rmx-src', options.src)
   document.body.append(link)
 
+  // Chromium navigates during the click, but Firefox and WebKit navigate in a later task, so the
+  // transition doesn't exist yet when `click()` returns.
+  let listeners = new AbortController()
+  let settled = new Promise<void>((resolve, reject) => {
+    let { signal } = listeners
+    window.navigation.addEventListener('navigatesuccess', () => resolve(), { signal })
+    window.navigation.addEventListener('navigateerror', (event) => reject(event.error), { signal })
+  })
   link.click()
-  let transition = window.navigation.transition
-  invariant(transition, 'Expected link click to start a navigation transition')
-  await transition.finished
-  link.remove()
+  try {
+    await settled
+  } finally {
+    listeners.abort()
+    link.remove()
+  }
 }
 
 describe('run', () => {
