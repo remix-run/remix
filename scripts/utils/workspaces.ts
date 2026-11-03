@@ -105,15 +105,11 @@ export function getAffectedWorkspaceDirs(
 }
 
 export function getFullRunReasons(changedFiles: string[], workspaces: WorkspaceInfo[]): string[] {
+  let workspacesBySpecificity = [...workspaces].sort((a, b) => b.dir.length - a.dir.length)
   let reasons: string[] = []
 
   for (let file of changedFiles) {
-    if (
-      ROOT_FULL_RUN_FILES.has(file) ||
-      ROOT_TSCONFIG_PATTERN.test(file) ||
-      file.startsWith('.github/') ||
-      file.startsWith('scripts/')
-    ) {
+    if (ROOT_FULL_RUN_FILES.has(file) || ROOT_TSCONFIG_PATTERN.test(file)) {
       reasons.push(file)
       continue
     }
@@ -122,7 +118,7 @@ export function getFullRunReasons(changedFiles: string[], workspaces: WorkspaceI
       continue
     }
 
-    if (!workspaces.some((workspace) => file === `${workspace.dir}/package.json`)) {
+    if (findOwningWorkspace(file, workspacesBySpecificity) == null) {
       reasons.push(file)
     }
   }
