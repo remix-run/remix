@@ -302,6 +302,26 @@ describe('cart handlers', () => {
     assert.equal(response.status, 302)
     assert.equal(response.headers.get('Location'), '/fragments/cart-items')
   })
+
+  it('GET /cart redirects the cart frame to its items', async () => {
+    let response = await router.fetch('https://remix.run/cart', {
+      headers: { 'X-Remix-Frame': 'true', 'X-Remix-Target': 'cart' },
+      redirect: 'manual',
+    })
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), '/fragments/cart-items')
+  })
+
+  it('GET /cart renders the page for another frame', async () => {
+    let response = await router.fetch('https://remix.run/cart', {
+      headers: { 'X-Remix-Frame': 'true', 'X-Remix-Target': 'cart-button-1' },
+      redirect: 'manual',
+    })
+
+    assert.equal(response.status, 200)
+    assertContains(await response.text(), 'Shopping Cart')
+  })
 })
 
 async function addToCart(bookId: string, slug: string): Promise<string> {

@@ -8,6 +8,7 @@ import { routes } from '../../routes.ts'
 import { addToCart, removeFromCart } from '../../utils/cart.ts'
 import { getCurrentCart } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
+import { cartButtonFrameName } from '../fragments/public/cart-button.tsx'
 
 const bookIdField = f.field(s.optional(s.string()))
 const bookIdSchema = f.object({
@@ -37,7 +38,7 @@ export default createController(routes.api, {
       }
 
       // The button's form loads into its own frame, which names itself in `X-Remix-Target`.
-      if (request.headers.has('X-Remix-Target')) {
+      if (request.headers.get('X-Remix-Target') === cartButtonFrameName(book.id)) {
         return redirect(routes.fragments.cartButton.href({ bookId: book.id }))
       }
       // Without the client runtime, the form submits the whole page, so return to it.
