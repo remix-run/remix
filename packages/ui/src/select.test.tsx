@@ -104,7 +104,7 @@ function getTrigger(container: HTMLElement) {
 }
 
 function getSurface(container: HTMLElement) {
-  return container.querySelector('[popover]') as HTMLElement
+  return container.querySelector('[data-popover]') as HTMLElement
 }
 
 function getHiddenInput(container: HTMLElement) {
@@ -277,7 +277,7 @@ describe('Select', () => {
     let surface = getSurface(container)
 
     expect(trigger.textContent).toContain('Select a framework')
-    expect(surface.matches(':popover-open')).toBe(false)
+    expect(surface.matches('[data-open]')).toBe(false)
 
     await openSelect(container, root)
 
@@ -289,14 +289,14 @@ describe('Select', () => {
 
     expect(react.getAttribute('data-select-flash')).toBe('true')
     expect(trigger.textContent).toContain('Select a framework')
-    expect(surface.matches(':popover-open')).toBe(true)
+    expect(surface.matches('[data-open]')).toBe(true)
 
     await finishSelectUpdate(surface, root)
 
     expect(trigger.textContent).toContain('React framework')
     expect(trigger.textContent).not.toContain('React Router framework')
     expect(trigger.getAttribute('aria-describedby')).toBe(react.id)
-    expect(surface.matches(':popover-open')).toBe(false)
+    expect(surface.matches('[data-open]')).toBe(false)
   })
 
   it('supports a custom label swap delay on the primitive context', async (t) => {
@@ -360,14 +360,14 @@ describe('Select', () => {
     expect(trigger.getAttribute('aria-controls')).toBe(list.id)
     expect(trigger.getAttribute('aria-expanded')).toBe('true')
     expect(surface.style.minWidth).toBe('212px')
-    expect(surface.matches(':popover-open')).toBe(true)
+    expect(surface.matches('[data-open]')).toBe(true)
     expect(document.activeElement).toBe(list)
 
     key(list, 'Escape')
     await settleFrames(root)
 
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
-    expect(surface.matches(':popover-open')).toBe(false)
+    expect(surface.matches('[data-open]')).toBe(false)
     expect(document.activeElement).toBe(trigger)
   })
 
@@ -447,7 +447,7 @@ describe('Select', () => {
     key(trigger, 'r')
     await settle(root)
 
-    expect(surface.matches(':popover-open')).toBe(false)
+    expect(surface.matches('[data-open]')).toBe(false)
     expect(trigger.textContent).toContain('Remix framework')
     expect(trigger.getAttribute('aria-describedby')).toBe(remix.id)
     expect(remix.getAttribute('aria-selected')).toBe('true')

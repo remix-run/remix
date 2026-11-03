@@ -195,7 +195,7 @@ function eventBelongsToCurrentMenu(event: Event) {
     return false
   }
 
-  return event.target.closest('[role="menu"]') === event.currentTarget
+  return event.target.closest('[role="menu"], [data-popover]') === event.currentTarget
 }
 
 function shouldClearHighlightOnPointerLeave(event: PointerEvent) {
@@ -410,9 +410,11 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>): () =
     let updates: Promise<AbortSignal>[] = []
     closeSync(updates, { animation: 'fade' })
 
+    // Updates are descendant-first and root-last. Rendering the root through a portal
+    // can supersede child render signals without canceling this dismissal.
     if (updates.length > 0) {
       let signals = await Promise.all(updates)
-      if (signals.some((signal) => signal.aborted)) {
+      if (signals.at(-1)?.aborted) {
         return
       }
     }
@@ -426,7 +428,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>): () =
 
     if (updates.length > 0) {
       let signals = await Promise.all(updates)
-      if (signals.some((signal) => signal.aborted)) {
+      if (signals.at(-1)?.aborted) {
         return
       }
     }
@@ -841,6 +843,7 @@ const contextTriggerMixin: MixinFactory<
   function setAnchorPoint(
     { x, y, width = 0, height = 0 }: AnchorPoint,
     options: MenuContextTriggerOptions,
+    source: HTMLElement,
   ) {
     anchorPoint.x = x
     anchorPoint.y = y
@@ -848,6 +851,7 @@ const contextTriggerMixin: MixinFactory<
     anchorPoint.height = height
     popoverContext.anchor = {
       target: anchorPoint,
+      source,
       options: {
         placement: 'bottom-start',
         ...options,
@@ -876,7 +880,7 @@ const contextTriggerMixin: MixinFactory<
       on('contextmenu', (event) => {
         event.preventDefault()
         event.stopPropagation()
-        setAnchorPoint({ x: event.clientX, y: event.clientY }, options)
+        setAnchorPoint({ x: event.clientX, y: event.clientY }, options, event.currentTarget)
         void context.open({ strategy: 'list' })
       }),
       on('keydown', (event) => {
@@ -896,6 +900,7 @@ const contextTriggerMixin: MixinFactory<
             height: rect.height,
           },
           options,
+          event.currentTarget,
         )
         void context.open({ strategy: 'list' })
       }),
@@ -935,6 +940,8 @@ const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
           context.root.surfaceNode?.contains(request.target)
         ) {
           void context.closeBranch()
+        } else {
+          void context.closeAll()
         }
       },
       closeOnAnchorClick: false,
@@ -1033,19 +1040,13 @@ const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
           event.stopPropagation()
           void context.closeBranch({ focusTrigger: true })
           return
-        case 'Escape':
-          event.preventDefault()
-          event.stopPropagation()
-          void context.closeAll()
-          return
         case 'Tab':
-          event.stopPropagation()
           void context.closeAll({ focusRoot: false })
       }
     }),
     hiddenTypeahead((text) => {
       context.highlightSearchMatch(text)
-    }),
+    }, eventBelongsToCurrentMenu),
   ]
 })
 

@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as popover from '@remix-run/ui/popover'
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
@@ -5,7 +6,7 @@ import type { Handle } from 'remix/component'
 export default function ExamplePopover(handle: Handle) {
   let open = false
   return () => (
-    <div mix={styles.root}>
+    <div mix={[styles.theme, styles.root]}>
       <popover.Context>
         <button
           type="button"
@@ -27,64 +28,69 @@ export default function ExamplePopover(handle: Handle) {
         >
           <FilterIcon />
         </button>
-        <div
-          id={`${handle.id}-surface`}
-          role="dialog"
-          aria-label="Filter pull requests"
-          mix={[
-            popover.surface({
-              open,
-              onHide() {
-                open = false
-                handle.update()
-              },
-            }),
-            styles.surface,
-          ]}
-        >
-          <fieldset mix={styles.filters}>
-            <legend>Status</legend>
-            <label mix={styles.checkbox}>
-              <input
-                type="checkbox"
-                name="status"
-                value="open"
-                defaultChecked
-                mix={popover.focusOnShow()}
-              />
-              Open
-            </label>
-            <label mix={styles.checkbox}>
-              <input type="checkbox" name="status" value="merged" />
-              Merged
-            </label>
-            <label mix={styles.checkbox}>
-              <input type="checkbox" name="status" value="closed" />
-              Closed
-            </label>
-          </fieldset>
-        </div>
+        <Portal>
+          <div
+            id={`${handle.id}-surface`}
+            role="dialog"
+            aria-label="Filter pull requests"
+            mix={[
+              popover.surface({
+                open,
+                onHide() {
+                  open = false
+                  handle.update()
+                },
+              }),
+              styles.theme,
+              styles.surface,
+            ]}
+          >
+            <fieldset mix={styles.filters}>
+              <legend>Status</legend>
+              <label mix={styles.checkbox}>
+                <input
+                  type="checkbox"
+                  name="status"
+                  value="open"
+                  defaultChecked
+                  mix={popover.focusOnShow()}
+                />
+                Open
+              </label>
+              <label mix={styles.checkbox}>
+                <input type="checkbox" name="status" value="merged" />
+                Merged
+              </label>
+              <label mix={styles.checkbox}>
+                <input type="checkbox" name="status" value="closed" />
+                Closed
+              </label>
+            </fieldset>
+          </div>
+        </Portal>
       </popover.Context>
     </div>
   )
 }
 
 const styles = {
-  root: css({
+  theme: css({
     '--text': 'light-dark(#202027, #eeeef2)',
     '--hover-control': 'light-dark(#f0f0f5, #303038)',
     '--accent': 'light-dark(#40404a, #d8d8df)',
-
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {
       boxSizing: 'border-box',
     },
+    color: 'var(--text)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+
+  root: css({
     width: '320px',
     maxWidth: '100%',
     display: 'flex',
     justifyContent: 'center',
-    color: 'var(--text)',
-    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
   }),
 
   button: css({
@@ -108,7 +114,6 @@ const styles = {
   }),
 
   surface: css({
-    colorScheme: 'light dark',
     margin: 0,
     padding: '12px',
     width: '196px',
@@ -116,18 +121,15 @@ const styles = {
     border: '1px solid light-dark(#e0e0e6, #393940)',
     borderRadius: '10px',
     background: 'light-dark(#fff, #1b1b20)',
-    color: 'var(--text)',
     boxShadow: '0 12px 32px #00000024',
-    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
     opacity: 0,
     transform: 'scale(0.98)',
     transformOrigin: 'top center',
-    transition:
-      'opacity 140ms ease, transform 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+    transition: 'opacity 140ms ease, transform 140ms ease',
     '&[data-anchor-placement^="top"]': {
       transformOrigin: 'bottom center',
     },
-    '&:popover-open': {
+    '&[data-state="open"]': {
       opacity: 1,
       transform: 'scale(1)',
       '@starting-style': {

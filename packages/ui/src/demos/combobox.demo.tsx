@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import { css, type Handle } from '@remix-run/component'
 import * as combobox from '@remix-run/ui/combobox'
 
@@ -30,15 +31,17 @@ export default function Example(handle: Handle) {
           placeholder="Search frameworks"
         />
 
-        <div mix={[surfaceCss, combobox.popover()]}>
-          <div mix={[listCss, combobox.list()]}>
-            {frameworks.map((option) => (
-              <div key={option.value} mix={[optionCss, combobox.option(option)]}>
-                {option.label}
-              </div>
-            ))}
+        <Portal>
+          <div mix={[surfaceCss, combobox.popover()]}>
+            <div mix={[listCss, combobox.list()]}>
+              {frameworks.map((option) => (
+                <div key={option.value} mix={[optionCss, combobox.option(option)]}>
+                  {option.label}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </Portal>
 
         <input mix={[hiddenInputCss, combobox.hiddenInput()]} />
       </combobox.Context>
@@ -91,7 +94,7 @@ const surfaceCss = css({
   background: 'light-dark(#ffffff, #1a1a1a)',
   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
   padding: '4px',
-  '&:popover-open': {
+  '&[data-open]': {
     display: 'block',
   },
 })

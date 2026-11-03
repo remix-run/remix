@@ -1,0 +1,1 @@
+Build custom dialogs with `@remix-run/ui/dialog`. Compose a `Context` with trigger, surface, backdrop, title, description, close, and focus mixins. Dialogs support controlled or uncontrolled state, cancelable changes, modal and non-modal behavior, focus trapping and restoration, nested dismissal, and exit transitions while keeping markup and styles app-owned.

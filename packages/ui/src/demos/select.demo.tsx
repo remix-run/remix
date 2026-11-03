@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import { css, type Handle } from '@remix-run/component'
 import * as popover from '@remix-run/ui/popover'
 import * as select from '@remix-run/ui/select'
@@ -31,15 +32,17 @@ export default function Example(handle: Handle) {
         </button>
 
         <popover.Context>
-          <div mix={[surfaceCss, select.popover()]}>
-            <div mix={[listCss, select.list()]}>
-              {frameworks.map((option) => (
-                <div key={option.value} mix={[optionCss, select.option(option)]}>
-                  {option.label}
-                </div>
-              ))}
+          <Portal>
+            <div mix={[surfaceCss, select.popover()]}>
+              <div mix={[listCss, select.list()]}>
+                {frameworks.map((option) => (
+                  <div key={option.value} mix={[optionCss, select.option(option)]}>
+                    {option.label}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </Portal>
         </popover.Context>
 
         <input mix={[hiddenInputCss, select.hiddenInput()]} />
@@ -96,7 +99,7 @@ const surfaceCss = css({
   background: 'light-dark(#ffffff, #1a1a1a)',
   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
   padding: '4px',
-  '&:popover-open': {
+  '&[data-open]': {
     display: 'block',
   },
 })

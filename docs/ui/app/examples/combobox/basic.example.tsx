@@ -1,50 +1,31 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as combobox from '@remix-run/ui/combobox'
-import { css, on } from 'remix/component'
+import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
 export default function ExampleCombobox(handle: Handle) {
-  let searchText = ''
-
   return () => (
-    <div mix={styles.root}>
+    <div mix={[styles.theme, styles.root]}>
       <combobox.Context>
         <label for={`${handle.id}-state`}>State</label>
         <input
           id={`${handle.id}-state`}
           placeholder="Search states"
-          mix={[
-            combobox.input(),
-            on('input', (event) => {
-              searchText = event.currentTarget.value
-              handle.update()
-            }),
-            styles.input,
-          ]}
+          mix={[combobox.input(), styles.input]}
         />
-        <div
-          mix={[
-            combobox.popover(),
-            on('beforetoggle', (event) => {
-              if (event.newState === 'closed') {
-                searchText = ''
-              }
-            }),
-            on('toggle', (event) => {
-              if (event.newState === 'open') {
-                handle.update()
-              }
-            }),
-            styles.surface,
-          ]}
-        >
-          <div aria-label="US states" mix={[combobox.list(), styles.list]}>
-            {options.map((option) => (
-              <div key={option.value} mix={[combobox.option(option), styles.option]}>
-                <span>{highlightMatch(option.label, searchText)}</span>
-              </div>
-            ))}
+        <Portal>
+          <div mix={[combobox.popover(), styles.theme, styles.surface]}>
+            <div aria-label="US states" mix={[combobox.list(), styles.list]}>
+              {options.map((option) => (
+                <div key={option.value} mix={[combobox.option(option), styles.option]}>
+                  <span>
+                    <HighlightMatch text={option.label} />
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </Portal>
         <input mix={combobox.hiddenInput()} />
       </combobox.Context>
     </div>
@@ -52,20 +33,22 @@ export default function ExampleCombobox(handle: Handle) {
 }
 
 const styles = {
-  root: css({
+  theme: css({
     '--text': 'light-dark(#202027, #eeeef2)',
     '--surface': 'light-dark(#fff, #1b1b20)',
-
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {
       boxSizing: 'border-box',
     },
+    color: 'var(--text)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+
+  root: css({
     width: '320px',
     maxWidth: '100%',
     display: 'grid',
     gap: '16px',
-    color: 'var(--text)',
-    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
   }),
 
   input: css({
@@ -87,7 +70,6 @@ const styles = {
   }),
 
   surface: css({
-    colorScheme: 'light dark',
     margin: 0,
     padding: '6px',
     minWidth: '220px',
@@ -95,12 +77,10 @@ const styles = {
     border: '1px solid light-dark(#e0e0e6, #393940)',
     borderRadius: '10px',
     background: 'var(--surface)',
-    color: 'var(--text)',
     boxShadow: '0 12px 32px #00000024',
-    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
     opacity: 0,
-    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-    '&:popover-open': {
+    transition: 'opacity 140ms ease',
+    '&[data-state="open"]': {
       opacity: 1,
       '@starting-style': {
         opacity: 0,
@@ -155,21 +135,27 @@ const styles = {
   }),
 }
 
-function highlightMatch(text: string, searchText: string) {
-  let start = text.toLowerCase().indexOf(searchText.toLowerCase())
-  if (!searchText || start === -1) {
-    return text
+function HighlightMatch(handle: Handle<{ text: string }>) {
+  let context = handle.context.get(combobox.Context)
+  return () => {
+    let text = handle.props.text
+    let searchText = context.filterText
+
+    let start = text.toLowerCase().indexOf(searchText.toLowerCase())
+    if (!searchText || start === -1) {
+      return text
+    }
+
+    let end = start + searchText.length
+
+    return (
+      <>
+        {text.slice(0, start)}
+        <mark mix={styles.match}>{text.slice(start, end)}</mark>
+        {text.slice(end)}
+      </>
+    )
   }
-
-  let end = start + searchText.length
-
-  return (
-    <>
-      {text.slice(0, start)}
-      <mark mix={styles.match}>{text.slice(start, end)}</mark>
-      {text.slice(end)}
-    </>
-  )
 }
 
 const options = [
