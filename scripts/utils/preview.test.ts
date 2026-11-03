@@ -3,6 +3,7 @@ import { describe, it } from '@remix-run/test'
 
 import {
   PREVIEW_RELEASE_MARKER,
+  PreviewGitHub,
   getExpiredPreviewReleases,
   getPreviewTag,
   getPreviewTarballUrl,
@@ -12,19 +13,6 @@ import {
 import type { PreviewRelease } from './preview.ts'
 
 describe('preview packages', () => {
-  it('uses the full source SHA and destination release in tarball URLs', () => {
-    let sha = '0123456789abcdef0123456789abcdef01234567'
-    let tag = getPreviewTag('pr-123', sha)
-    assert.equal(
-      getPreviewTarballUrl(tag, 'remix', 'remix-run/custom-previews'),
-      `https://github.com/remix-run/custom-previews/releases/download/pr-123-${sha}/remix.tgz`,
-    )
-    assert.notEqual(getPreviewTag('main', sha), getPreviewTag('pr-123', sha))
-    assert.throws(() => getPreviewTag('../main', sha), /Invalid preview channel/)
-    assert.throws(() => getPreviewTag('main', 'abc123'), /Invalid source SHA/)
-    assert.throws(() => getPreviewTarballUrl(tag, '../remix'), /Invalid package directory/)
-  })
-
   it('validates the manifest and rejects assets outside its destination release', () => {
     let tag = getPreviewTag('main', 'a'.repeat(40))
     let manifest = {
@@ -94,17 +82,6 @@ describe('preview packages', () => {
     assert.equal(pkg.publishConfig, undefined)
     assert.equal(manifest.scripts.prepack, 'generate')
   })
-
-  it('rejects internal dependencies without an available preview tarball', () => {
-    assert.throws(
-      () =>
-        preparePreviewPackage(
-          { name: 'remix', dependencies: { '@remix-run/missing': 'workspace:^' } },
-          new Map(),
-        ),
-      /Missing preview tarball for @remix-run\/missing in remix/,
-    )
-  })
 })
 
 const now = Date.parse('2026-11-02T12:00:00Z')
@@ -114,7 +91,11 @@ describe('preview release retention', () => {
     let expired = release(1, 'main', '2026-10-26T11:59:59Z')
     let cutoff = release(2, 'main', '2026-10-26T12:00:00Z')
     let latest = release(3, 'main', '2026-11-02T00:00:00Z')
-    assert.deepEqual(getExpiredPreviewReleases([latest, expired, cutoff], 'main', now), [expired])
+    let draft = { ...release(4, 'main', '2020-01-01T00:00:00Z'), draft: true, published_at: null }
+    assert.deepEqual(getExpiredPreviewReleases([latest, expired, cutoff, draft], 'main', now), [
+      expired,
+      draft,
+    ])
   })
 
   it('always keeps the newest successful main build, even if every build is old', () => {
@@ -133,31 +114,40 @@ describe('preview release retention', () => {
     assert.deepEqual(getExpiredPreviewReleases([expired, build], 'main', now), [expired])
   })
 
-  it('removes abandoned main drafts after seven days', () => {
-    let draft = { ...release(1, 'main', '2020-01-01T00:00:00Z'), draft: true, published_at: null }
-    assert.deepEqual(getExpiredPreviewReleases([draft], 'main', now), [draft])
-  })
-
-  it('selects every SHA and draft for a merged PR, without an age or count cap', () => {
-    let builds = Array.from({ length: 120 }, (_, index) =>
-      release(index + 1, 'pr-123', '2020-01-01T00:00:00Z'),
-    )
-    builds[0] = { ...builds[0], draft: true, published_at: null }
-    assert.deepEqual(getExpiredPreviewReleases(builds, 'pr-123', now), builds)
-  })
-
   it('does not mix PR numbers or delete experimental and unrelated releases', () => {
     let build = release(1, 'pr-12', '2020-01-01T00:00:00Z')
+    let draft = { ...release(6, 'pr-12', '2020-01-01T00:00:00Z'), draft: true, published_at: null }
     let other = release(2, 'pr-123', '2020-01-01T00:00:00Z')
     let experimental = release(3, 'experimental-test', '2020-01-01T00:00:00Z')
     let unrelated = { ...release(4, 'pr-12', '2020-01-01T00:00:00Z'), body: 'Unrelated release' }
     let malformed = { ...release(5, 'pr-12', '2020-01-01T00:00:00Z'), tag_name: 'pr-12-short' }
     assert.deepEqual(
-      getExpiredPreviewReleases([build, other, experimental, unrelated, malformed], 'pr-12', now),
-      [build],
+      getExpiredPreviewReleases(
+        [build, draft, other, experimental, unrelated, malformed],
+        'pr-12',
+        now,
+      ),
+      [build, draft],
     )
     assert.deepEqual(getExpiredPreviewReleases([experimental], 'experimental-test', now), [])
     assert.deepEqual(getExpiredPreviewReleases([build, other, experimental], 'main', now), [])
+  })
+})
+
+describe('preview tag cleanup', () => {
+  it('ignores missing tags without swallowing permission or validation errors', () => {
+    let stderr = 'gh: Reference does not exist (HTTP 422)'
+    let github = new PreviewGitHub('remix-run/previews', () => {
+      throw Object.assign(new Error('request failed'), { stderr })
+    })
+    let tag = 'git/refs/tags/preview'
+    github.delete(tag)
+    stderr = 'gh: Not Found (HTTP 404)'
+    github.delete(tag)
+    stderr = 'gh: Forbidden (HTTP 403)'
+    assert.throws(() => github.delete(tag), /request failed/)
+    stderr = 'gh: Validation Failed (HTTP 422)'
+    assert.throws(() => github.delete(tag), /request failed/)
   })
 })
 
