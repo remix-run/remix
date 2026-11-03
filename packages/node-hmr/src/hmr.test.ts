@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
+import { createServer } from 'node:http'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 
@@ -17,6 +18,25 @@ const waitForTimeout = 5_000
 const fixtureServerReadyTimeout = isWindows ? 15_000 : waitForTimeout
 
 describe('node-hmr', () => {
+  it('fetches fixture responses after previous connections are closed', async () => {
+    await using server = createServer((_request, response) => {
+      response.end('hello')
+    })
+    server.listen(0, '127.0.0.1')
+    await once(server, 'listening')
+
+    let address = server.address()
+    assert.ok(address && typeof address === 'object')
+
+    // Warm the fetch pool before closing sockets, as a fixture restart does.
+    await fetchText(address.port)
+    await fetchText(address.port)
+    await fetchText(address.port)
+    server.closeAllConnections()
+
+    assert.equal(await fetchText(address.port), 'hello')
+  })
+
   it('stops the fixture child server during cleanup', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -2171,7 +2191,10 @@ async function waitForResponse(
 }
 
 async function fetchText(port: number, pathname = '/'): Promise<string> {
-  let response = await fetch(`http://127.0.0.1:${port}${pathname}`)
+  // Fixture processes may exit between requests; do not reuse their sockets.
+  let response = await fetch(`http://127.0.0.1:${port}${pathname}`, {
+    headers: { Connection: 'close' },
+  })
   return await response.text()
 }
 
