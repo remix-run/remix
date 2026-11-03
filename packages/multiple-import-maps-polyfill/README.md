@@ -70,9 +70,11 @@ Browsers with multiple import map support retain native module loading and nativ
 
 ## Content Security Policy
 
-Polyfilled module graphs are evaluated from blob URLs, so Content Security Policies must allow `blob:` module scripts. Modules are parsed with the asm.js build of `es-module-lexer`, which needs neither `'unsafe-eval'` nor `'wasm-unsafe-eval'`.
+Polyfilled module graphs are evaluated from blob URLs. With a nonce-based script policy, these imports can inherit the nonce from the native module graph that loaded the polyfill, so an explicit `blob:` source is not required. Give the entry module script and its `<link rel="modulepreload">` elements the matching nonce: an unnonced preload can cache a module without the nonce metadata needed by its later imports. Policies that authorize scripts only by URL need to allow `blob:` module scripts.
 
-The support detector creates a Trusted Types policy named `remix/multiple-import-maps-polyfill`. Allow this policy when Trusted Types are required for scripts, for example:
+The parser uses the CSP-compatible minimal asm.js build of `es-module-lexer` (`es-module-lexer/minimal/js`) and requires neither `'unsafe-eval'` nor `'wasm-unsafe-eval'`.
+
+The support detector creates a Trusted Types policy named `remix/multiple-import-maps-polyfill`. Allow this policy when Trusted Types are required for scripts. For example, a URL-based script policy can use:
 
 ```http
 Content-Security-Policy: script-src 'self' blob:; require-trusted-types-for 'script'; trusted-types remix/multiple-import-maps-polyfill;

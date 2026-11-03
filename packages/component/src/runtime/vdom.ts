@@ -1,3 +1,4 @@
+import { getNonceManager } from './nonce.ts'
 import type { ComponentErrorEvent, FrameHandle } from './component.ts'
 import {
   createComponentErrorEvent,
@@ -133,6 +134,7 @@ function createVirtualRoot(
   rangeStart?: Node,
   rangeEnd?: Node,
 ): VirtualRoot {
+  let nonceManager = getNonceManager()
   let vroot: CommittedVNode | null = null
   let currentElement: RemixNode | undefined
   let styles = options.styleManager ?? defaultStyleManager
@@ -185,6 +187,7 @@ function createVirtualRoot(
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
+        _resourceNonces: nonceManager.getRootResourceNonces(root),
         _getContext: options.getContext,
         _rangeStart: rangeStart,
         _rangeEnd: rangeEnd,
