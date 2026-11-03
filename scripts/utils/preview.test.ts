@@ -1,36 +1,67 @@
 import assert from '@remix-run/assert'
-import * as cp from 'node:child_process'
-import * as fs from 'node:fs'
-import * as os from 'node:os'
-import * as path from 'node:path'
 import { describe, it } from '@remix-run/test'
 
 import {
+  PREVIEW_RELEASE_MARKER,
+  getExpiredPreviewReleases,
+  getPreviewTag,
   getPreviewTarballUrl,
   preparePreviewPackage,
-  getRetainedPreviewBuilds,
   readPreviewManifest,
 } from './preview.ts'
-
-const oldSha = '1111111100000000000000000000000000000000'
-const latestSha = '2222222200000000000000000000000000000000'
-const now = Date.parse('2026-10-29T12:00:00Z')
-const repository = path.resolve(import.meta.dirname, '../..')
+import type { PreviewRelease } from './preview.ts'
 
 describe('preview packages', () => {
-  it('uses the first eight characters of the source SHA in tarball URLs', () => {
+  it('uses the full source SHA and destination release in tarball URLs', () => {
+    let sha = '0123456789abcdef0123456789abcdef01234567'
+    let tag = getPreviewTag('pr-123', sha)
     assert.equal(
-      getPreviewTarballUrl('preview/pr-123', '0123456789abcdef0123456789abcdef01234567', 'remix'),
-      'https://raw.githubusercontent.com/remix-run/remix/preview/pr-123/t/01234567/remix.tgz',
+      getPreviewTarballUrl(tag, 'remix', 'remix-run/custom-previews'),
+      `https://github.com/remix-run/custom-previews/releases/download/pr-123-${sha}/remix.tgz`,
     )
-    assert.notEqual(
-      getPreviewTarballUrl('preview/pr-123', 'abc123', 'remix'),
-      getPreviewTarballUrl('preview/pr-123', 'def456', 'remix'),
+    assert.notEqual(getPreviewTag('main', sha), getPreviewTag('pr-123', sha))
+    assert.throws(() => getPreviewTag('../main', sha), /Invalid preview channel/)
+    assert.throws(() => getPreviewTag('main', 'abc123'), /Invalid source SHA/)
+    assert.throws(() => getPreviewTarballUrl(tag, '../remix'), /Invalid package directory/)
+  })
+
+  it('validates the manifest and rejects assets outside its destination release', () => {
+    let tag = getPreviewTag('main', 'a'.repeat(40))
+    let manifest = {
+      repository: 'remix-run/previews',
+      sourceRepository: 'remix-run/remix',
+      channel: 'main',
+      sha: 'a'.repeat(40),
+      tag,
+      createdAt: '2026-11-02T12:00:00Z',
+      packages: { remix: getPreviewTarballUrl(tag, 'remix') },
+    }
+    assert.deepEqual(readPreviewManifest(JSON.stringify(manifest)), manifest)
+    assert.throws(
+      () =>
+        readPreviewManifest(
+          JSON.stringify({ ...manifest, packages: { remix: 'https://example.com/remix.tgz' } }),
+        ),
+      /Invalid or duplicate preview URL/,
+    )
+    assert.throws(
+      () =>
+        readPreviewManifest(
+          JSON.stringify({
+            ...manifest,
+            packages: { ...manifest.packages, duplicate: manifest.packages.remix },
+          }),
+        ),
+      /Invalid or duplicate preview URL/,
+    )
+    assert.throws(
+      () => readPreviewManifest(JSON.stringify({ ...manifest, tag: 'different' })),
+      /Invalid preview manifest/,
     )
   })
 
   it('rewrites internal runtime dependencies while preserving external and peer ranges', () => {
-    let url = getPreviewTarballUrl('preview/main', 'abc123', 'headers')
+    let url = getPreviewTarballUrl(getPreviewTag('main', 'a'.repeat(40)), 'headers')
     let pkg = preparePreviewPackage(
       {
         name: 'remix',
@@ -76,142 +107,67 @@ describe('preview packages', () => {
   })
 })
 
-describe('preview retention', () => {
-  it('retains only the latest PR build regardless of age', () => {
-    let builds = [
-      { sha: oldSha, createdAt: '2026-10-29T00:00:00Z' },
-      { sha: latestSha, createdAt: '2020-01-01T00:00:00Z' },
-    ]
-    assert.deepEqual(getRetainedPreviewBuilds('preview/pr-123', builds, latestSha, now), [
-      builds[1],
-    ])
+const now = Date.parse('2026-11-02T12:00:00Z')
+
+describe('preview release retention', () => {
+  it('expires main builds older than seven days, keeping the exact cutoff', () => {
+    let expired = release(1, 'main', '2026-10-26T11:59:59Z')
+    let cutoff = release(2, 'main', '2026-10-26T12:00:00Z')
+    let latest = release(3, 'main', '2026-11-02T00:00:00Z')
+    assert.deepEqual(getExpiredPreviewReleases([latest, expired, cutoff], 'main', now), [expired])
   })
 
-  it('discards all previous PR builds when publishing a new SHA', () => {
-    let builds = [{ sha: oldSha, createdAt: '2026-10-29T00:00:00Z' }]
-    assert.deepEqual(getRetainedPreviewBuilds('preview/pr-123', builds, latestSha, now), [])
+  it('always keeps the newest successful main build, even if every build is old', () => {
+    let older = release(1, 'main', '2020-01-01T00:00:00Z')
+    let latest = release(2, 'main', '2020-02-01T00:00:00Z')
+    let draft = { ...release(3, 'main', '2026-11-02T00:00:00Z'), draft: true, published_at: null }
+    assert.deepEqual(getExpiredPreviewReleases([older, draft, latest], 'main', now), [older])
   })
 
-  it('preserves builds on custom preview branches', () => {
-    let builds = [
-      { sha: oldSha, createdAt: '2020-01-01T00:00:00Z' },
-      { sha: latestSha, createdAt: '2026-10-29T00:00:00Z' },
-    ]
-    assert.deepEqual(getRetainedPreviewBuilds('experimental', builds, latestSha, now), builds)
-  })
-
-  it('expires main builds older than seven days and keeps the cutoff', () => {
-    let builds = [
-      { sha: oldSha, createdAt: '2026-10-22T11:59:59Z' },
-      { sha: latestSha, createdAt: '2026-10-22T12:00:00Z' },
-    ]
-    assert.deepEqual(getRetainedPreviewBuilds('preview/main', builds, '3'.repeat(40), now), [
-      builds[1],
-    ])
-  })
-
-  it('keeps the latest main build even after seven days without a new build', () => {
-    let builds = [{ sha: latestSha, createdAt: '2020-01-01T00:00:00Z' }]
-    assert.deepEqual(getRetainedPreviewBuilds('preview/main', builds, latestSha, now), builds)
-  })
-
-  it('replaces PR tarballs on new source commits and preserves them on repeated builds', () => {
-    let fixture = createFixture()
-    try {
-      let firstSha = fixture.git('rev-parse', 'HEAD')
-      fixture.build('preview/pr-123', 'first')
-      fixture.git('push', 'origin', 'HEAD:refs/heads/preview/pr-123')
-      fixture.git('checkout', 'main')
-      fs.writeFileSync(path.join(fixture.cwd, 'change.txt'), 'second source commit')
-      fixture.git('add', '.')
-      fixture.git('commit', '-m', 'second source')
-      let secondSha = fixture.git('rev-parse', 'HEAD')
-      fixture.build('preview/pr-123', 'second')
-      assert.deepEqual(
-        fixture.manifest().builds.map((build) => build.sha),
-        [secondSha],
-      )
-      assert.equal(fs.existsSync(path.join(fixture.cwd, 't', firstSha.slice(0, 8))), false)
-      assert.doesNotMatch(
-        fixture.git('rev-list', '--objects', 'HEAD'),
-        new RegExp(`t/${firstSha.slice(0, 8)}`),
-      )
-      assert.equal(fixture.git('rev-parse', 'HEAD^'), secondSha)
-      fixture.git('push', '--force-with-lease', 'origin', 'HEAD:refs/heads/preview/pr-123')
-      let currentTarball = fs.readFileSync(
-        path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz'),
-      )
-      let currentBuilds = fixture.manifest().builds
-      fixture.git('checkout', 'main')
-      fixture.build('preview/pr-123', 'must not repack')
-      assert.deepEqual(
-        fs.readFileSync(path.join(fixture.cwd, 't', secondSha.slice(0, 8), 'remix.tgz')),
-        currentTarball,
-      )
-      assert.deepEqual(fixture.manifest().builds, currentBuilds)
-    } finally {
-      fixture.dispose()
+  it('uses original publication time instead of release creation or rerun time', () => {
+    let build = {
+      ...release(1, 'main', '2020-01-01T00:00:00Z'),
+      published_at: '2026-11-02T00:00:00Z',
     }
+    let expired = release(2, 'main', '2020-01-01T00:00:00Z')
+    assert.deepEqual(getExpiredPreviewReleases([expired, build], 'main', now), [expired])
+  })
+
+  it('removes abandoned main drafts after seven days', () => {
+    let draft = { ...release(1, 'main', '2020-01-01T00:00:00Z'), draft: true, published_at: null }
+    assert.deepEqual(getExpiredPreviewReleases([draft], 'main', now), [draft])
+  })
+
+  it('selects every SHA and draft for a merged PR, without an age or count cap', () => {
+    let builds = Array.from({ length: 120 }, (_, index) =>
+      release(index + 1, 'pr-123', '2020-01-01T00:00:00Z'),
+    )
+    builds[0] = { ...builds[0], draft: true, published_at: null }
+    assert.deepEqual(getExpiredPreviewReleases(builds, 'pr-123', now), builds)
+  })
+
+  it('does not mix PR numbers or delete experimental and unrelated releases', () => {
+    let build = release(1, 'pr-12', '2020-01-01T00:00:00Z')
+    let other = release(2, 'pr-123', '2020-01-01T00:00:00Z')
+    let experimental = release(3, 'experimental-test', '2020-01-01T00:00:00Z')
+    let unrelated = { ...release(4, 'pr-12', '2020-01-01T00:00:00Z'), body: 'Unrelated release' }
+    let malformed = { ...release(5, 'pr-12', '2020-01-01T00:00:00Z'), tag_name: 'pr-12-short' }
+    assert.deepEqual(
+      getExpiredPreviewReleases([build, other, experimental, unrelated, malformed], 'pr-12', now),
+      [build],
+    )
+    assert.deepEqual(getExpiredPreviewReleases([experimental], 'experimental-test', now), [])
+    assert.deepEqual(getExpiredPreviewReleases([build, other, experimental], 'main', now), [])
   })
 })
 
-function createFixture() {
-  let root = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-preview-retention-'))
-  let cwd = path.join(root, 'source')
-  let remote = path.join(root, 'remote.git')
-  let bin = path.join(root, 'bin')
-  fs.mkdirSync(cwd)
-  fs.mkdirSync(bin)
-  function git(...args: string[]): string {
-    return cp.execFileSync('git', args, { cwd, encoding: 'utf8', stdio: 'pipe' }).trim()
-  }
-  git('init', '--bare', remote)
-  git('init', '-b', 'main')
-  git('config', 'user.name', 'Test')
-  git('config', 'user.email', 'test@example.com')
-  git('remote', 'add', 'origin', remote)
-  fs.mkdirSync(path.join(cwd, 'packages/remix'), { recursive: true })
-  fs.writeFileSync(
-    path.join(cwd, 'packages/remix/package.json'),
-    JSON.stringify({ name: 'remix', version: '1.0.0' }),
-  )
-  fs.writeFileSync(
-    path.join(bin, 'pnpm'),
-    `#!${process.execPath}
-const fs = require('node:fs')
-if (process.argv.includes('pack')) {
-  fs.writeFileSync(process.argv[process.argv.indexOf('--out') + 1], process.env.PREVIEW_TEST_BUILD)
-}
-`,
-    { mode: 0o755 },
-  )
-  git('add', '.')
-  git('commit', '-m', 'initial source')
-  git('push', 'origin', 'main')
+function release(id: number, channel: string, timestamp: string): PreviewRelease {
   return {
-    cwd,
-    git,
-    manifest() {
-      return readPreviewManifest(fs.readFileSync(path.join(cwd, 't/preview.json'), 'utf8'), '')
-    },
-    build(branch: string, content: string) {
-      cp.execFileSync(
-        process.execPath,
-        [path.join(repository, 'scripts/setup-installable-branch.ts'), branch],
-        {
-          cwd,
-          encoding: 'utf8',
-          stdio: 'pipe',
-          env: {
-            ...process.env,
-            PATH: `${bin}${path.delimiter}${process.env.PATH}`,
-            PREVIEW_TEST_BUILD: content,
-          },
-        },
-      )
-    },
-    dispose() {
-      fs.rmSync(root, { recursive: true, force: true })
-    },
+    id,
+    tag_name: `${channel}-${id.toString(16).padStart(40, '0')}`,
+    body: PREVIEW_RELEASE_MARKER,
+    draft: false,
+    created_at: timestamp,
+    published_at: timestamp,
   }
 }

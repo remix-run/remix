@@ -1,6 +1,3 @@
-import * as cp from 'node:child_process'
-import * as fsp from 'node:fs/promises'
-
 export interface PreviewPackageManifest {
   name: string
   dependencies?: Record<string, string>
@@ -10,31 +7,136 @@ export interface PreviewPackageManifest {
   [key: string]: unknown
 }
 
-export interface PreviewBuild {
-  sha: string
-  createdAt: string
-}
-
 export interface PreviewManifest {
-  branch: string
+  repository: string
+  sourceRepository: string
+  channel: string
   sha: string
+  tag: string
+  createdAt: string
   packages: Record<string, string>
-  builds: PreviewBuild[]
 }
 
-export interface PreviousPreview {
-  commit: string
-  manifest: PreviewManifest
+export interface PreviewRelease {
+  id: number
+  tag_name: string
+  body: string
+  draft: boolean
+  created_at: string
+  published_at: string | null
+}
+
+export const PREVIEW_RELEASE_MARKER = '<!-- remix-preview -->'
+
+export function getPreviewChannel(tag: string): string | null {
+  return (
+    /^(main|pr-[1-9]\d*|experimental-[a-zA-Z0-9][a-zA-Z0-9._-]*)-[a-f0-9]{40}$/.exec(tag)?.[1] ??
+    null
+  )
+}
+
+export function getExpiredPreviewReleases(
+  releases: PreviewRelease[],
+  channel: string,
+  now = Date.now(),
+): PreviewRelease[] {
+  let builds = releases.filter(
+    (release) =>
+      release.body.startsWith(PREVIEW_RELEASE_MARKER) &&
+      getPreviewChannel(release.tag_name) === channel,
+  )
+  if (/^pr-[1-9]\d*$/.test(channel)) return builds
+  if (channel !== 'main') return []
+
+  let latest = builds
+    .filter((release) => !release.draft)
+    .toSorted(
+      (a, b) =>
+        Date.parse(b.published_at ?? b.created_at) - Date.parse(a.published_at ?? a.created_at),
+    )[0]
+  let cutoff = now - 7 * 24 * 60 * 60 * 1000
+  return builds.filter(
+    (release) =>
+      release.id !== latest?.id && Date.parse(release.published_at ?? release.created_at) < cutoff,
+  )
+}
+
+export function getPreviewTag(channel: string, sha: string): string {
+  if (!/^(main|pr-[1-9]\d*|experimental-[a-zA-Z0-9][a-zA-Z0-9._-]*)$/.test(channel)) {
+    throw new Error(`Invalid preview channel: ${channel}`)
+  }
+  if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Invalid source SHA: ${sha}`)
+  return `${channel}-${sha}`
+}
+
+export function validatePreviewRepository(repository: string): string {
+  if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repository)) {
+    throw new Error(`Invalid preview repository: ${repository}`)
+  }
+  return repository
 }
 
 export function getPreviewTarballUrl(
-  branch: string,
-  sha: string,
+  tag: string,
   packageDirName: string,
-  repository = 'remix-run/remix',
+  repository = 'remix-run/previews',
 ): string {
-  let ref = branch.split('/').map(encodeURIComponent).join('/')
-  return `https://raw.githubusercontent.com/${repository}/${ref}/t/${sha.slice(0, 8)}/${packageDirName}.tgz`
+  validatePreviewRepository(repository)
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(packageDirName)) {
+    throw new Error(`Invalid package directory: ${packageDirName}`)
+  }
+  return `https://github.com/${repository}/releases/download/${encodeURIComponent(tag)}/${packageDirName}.tgz`
+}
+
+export function readPreviewManifest(content: string): PreviewManifest {
+  let value: unknown = JSON.parse(content)
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('repository' in value) ||
+    typeof value.repository !== 'string' ||
+    !('sourceRepository' in value) ||
+    typeof value.sourceRepository !== 'string' ||
+    !('channel' in value) ||
+    typeof value.channel !== 'string' ||
+    !('sha' in value) ||
+    typeof value.sha !== 'string' ||
+    !('tag' in value) ||
+    value.tag !== getPreviewTag(value.channel, value.sha) ||
+    !('createdAt' in value) ||
+    typeof value.createdAt !== 'string' ||
+    !Number.isFinite(Date.parse(value.createdAt)) ||
+    !('packages' in value) ||
+    typeof value.packages !== 'object' ||
+    value.packages === null ||
+    Array.isArray(value.packages)
+  )
+    throw new Error('Invalid preview manifest')
+
+  validatePreviewRepository(value.repository)
+  validatePreviewRepository(value.sourceRepository)
+  let packages: Record<string, string> = {}
+  let names = new Set<string>()
+  for (let [name, url] of Object.entries(value.packages)) {
+    if (typeof url !== 'string') throw new Error(`Invalid preview URL for ${name}`)
+    let filename = new URL(url).pathname.split('/').at(-1) ?? ''
+    let dirName = filename.replace(/\.tgz$/, '')
+    if (url !== getPreviewTarballUrl(value.tag, dirName, value.repository) || names.has(filename)) {
+      throw new Error(`Invalid or duplicate preview URL for ${name}`)
+    }
+    names.add(filename)
+    packages[name] = url
+  }
+  if (!packages.remix) throw new Error('Missing remix preview tarball')
+  return {
+    repository: value.repository,
+    sourceRepository: value.sourceRepository,
+    channel: value.channel,
+    sha: value.sha,
+    tag: value.tag,
+    createdAt: value.createdAt,
+    packages,
+  }
 }
 
 export function preparePreviewPackage(
@@ -64,126 +166,4 @@ export function preparePreviewPackage(
   }
 
   return pkg
-}
-
-export function getRetainedPreviewBuilds(
-  branch: string,
-  builds: PreviewBuild[],
-  latestSha: string,
-  now = Date.now(),
-): PreviewBuild[] {
-  if (/^preview\/pr-\d+$/.test(branch)) {
-    return builds.filter((build) => build.sha === latestSha)
-  }
-
-  let cutoff = now - 7 * 24 * 60 * 60 * 1000
-  return builds.filter(
-    (build) =>
-      branch !== 'preview/main' || build.sha === latestSha || Date.parse(build.createdAt) >= cutoff,
-  )
-}
-
-export function readPreviewManifest(content: string, fallbackCreatedAt: string): PreviewManifest {
-  let value: unknown = JSON.parse(content)
-  if (
-    typeof value !== 'object' ||
-    value === null ||
-    !('branch' in value) ||
-    typeof value.branch !== 'string' ||
-    !('sha' in value) ||
-    typeof value.sha !== 'string' ||
-    !/^[a-f0-9]{40}$/.test(value.sha) ||
-    !('packages' in value) ||
-    typeof value.packages !== 'object' ||
-    value.packages === null ||
-    Array.isArray(value.packages)
-  ) {
-    throw new Error('Invalid preview manifest')
-  }
-
-  let packages: Record<string, string> = {}
-  for (let [name, url] of Object.entries(value.packages)) {
-    if (typeof url !== 'string') throw new Error(`Invalid preview URL for ${name}`)
-    packages[name] = url
-  }
-
-  let entries: unknown =
-    'builds' in value ? value.builds : [{ sha: value.sha, createdAt: fallbackCreatedAt }]
-  if (!isUnknownArray(entries)) throw new Error('Invalid preview builds')
-  let builds: PreviewBuild[] = []
-  let shas = new Set<string>()
-  for (let entry of entries) {
-    if (
-      typeof entry !== 'object' ||
-      entry === null ||
-      !('sha' in entry) ||
-      typeof entry.sha !== 'string' ||
-      !/^[a-f0-9]{40}$/.test(entry.sha) ||
-      !('createdAt' in entry) ||
-      typeof entry.createdAt !== 'string' ||
-      !Number.isFinite(Date.parse(entry.createdAt)) ||
-      shas.has(entry.sha.slice(0, 8))
-    ) {
-      throw new Error('Invalid or duplicate preview build')
-    }
-    shas.add(entry.sha.slice(0, 8))
-    builds.push({ sha: entry.sha, createdAt: entry.createdAt })
-  }
-  if (!builds.some((build) => build.sha === value.sha)) {
-    throw new Error('Latest preview build is missing from the manifest')
-  }
-  return { branch: value.branch, sha: value.sha, packages, builds }
-}
-
-export function loadPreviousPreview(branch: string): PreviousPreview | null {
-  let remote = cp.spawnSync(
-    'git',
-    ['ls-remote', '--exit-code', '--heads', 'origin', `refs/heads/${branch}`],
-    {
-      encoding: 'utf8',
-    },
-  )
-  if (remote.status === 2) return null
-  if (remote.status !== 0) throw new Error(`Could not look up preview branch: ${remote.stderr}`)
-  let commit = remote.stdout.trim().split(/\s+/)[0]
-  git(['fetch', '--no-tags', '--depth=1', 'origin', `+${commit}:refs/remotes/origin/${branch}`])
-  let metadata = cp.spawnSync('git', ['show', `${commit}:t/preview.json`], {
-    encoding: 'utf8',
-  })
-  if (metadata.status !== 0) {
-    // Previews using an earlier artifact layout start with a fresh build.
-    if (git(['ls-tree', '--name-only', commit, 't']).length === 0) return null
-    throw new Error(`Could not read preview manifest: ${metadata.stderr}`)
-  }
-  let manifest = readPreviewManifest(metadata.stdout, git(['show', '-s', '--format=%cI', commit]))
-  if (manifest.branch !== branch)
-    throw new Error(`Preview metadata is for ${manifest.branch}, not ${branch}`)
-  return { commit, manifest }
-}
-
-export function restorePreviewTarballs(previous: PreviousPreview, builds: PreviewBuild[]): void {
-  if (builds.length === 0) return
-  git([
-    'restore',
-    '--source',
-    previous.commit,
-    '--worktree',
-    '--',
-    ...builds.map((build) => `t/${build.sha.slice(0, 8)}`),
-  ])
-}
-
-export async function writePreviewManifest(manifest: PreviewManifest): Promise<void> {
-  await fsp.mkdir('t', { recursive: true })
-  await fsp.writeFile('t/preview.json', JSON.stringify(manifest, null, 2) + '\n')
-}
-
-function git(args: string[]): string {
-  return cp
-    .execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
-    .trim()
-}
-
-function isUnknownArray(value: unknown): value is unknown[] {
-  return Array.isArray(value)
 }
