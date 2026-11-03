@@ -24,6 +24,41 @@ function diffDomNodes(current: Node[], next: Node[], data: FrameContext['data'] 
   } as any)
 }
 
+function parseHead(html: string): Document {
+  return new DOMParser().parseFromString(
+    `<!doctype html><html><head>${html}</head></html>`,
+    'text/html',
+  )
+}
+
+function diffHead(
+  current: Document,
+  nextHead: string,
+  shouldPreserveHeadNode?: (node: Node) => boolean,
+) {
+  diffNodes([current.head], [parseHead(nextHead).head], {
+    frameInstances: new WeakMap(),
+    pendingClientEntries: new Map(),
+    data: {},
+    shouldPreserveHeadNode,
+  } as any)
+}
+
+function recordMutations(target: Node) {
+  let observer = new MutationObserver(() => {})
+  observer.observe(target, { childList: true, attributes: true, subtree: true })
+  return () => {
+    let records = observer.takeRecords()
+    observer.disconnect()
+    return {
+      removed: records.flatMap((record) => Array.from(record.removedNodes)),
+      attributeTargets: records
+        .filter((record) => record.type === 'attributes')
+        .map((record) => record.target),
+    }
+  }
+}
+
 type TestFrame = {
   dispose(): void
   isDisplayingResolvedContent(): boolean
@@ -731,6 +766,122 @@ describe('diffNodes', () => {
         '<li data-rmx-key="b">B</li><li data-rmx-key="a">A</li><li data-rmx-key="c">C</li>',
       )
     })
+
+    it('does not move a keyed element when a sibling is added before it', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<p>Intro</p><iframe data-rmx-key="video"></iframe><p>Footer</p>'
+      let iframe = container.querySelector('iframe')
+      invariant(iframe)
+      let mutations = recordMutations(container)
+
+      diffDom(
+        container,
+        '<p>Notice</p><p>Intro</p><iframe data-rmx-key="video"></iframe><p>Footer</p>',
+      )
+
+      expect(container.innerHTML).toBe(
+        '<p>Notice</p><p>Intro</p><iframe data-rmx-key="video"></iframe><p>Footer</p>',
+      )
+      expect(container.querySelector('iframe')).toBe(iframe)
+      expect(mutations().removed).not.toContain(iframe)
+    })
+
+    it('moves only the displaced keyed element when keyed siblings rotate', () => {
+      let container = document.createElement('div')
+      container.innerHTML =
+        '<ul><li data-rmx-key="a">A</li><li data-rmx-key="b">B</li><li data-rmx-key="c">C</li><li data-rmx-key="d">D</li></ul>'
+      let list = container.querySelector('ul')
+      invariant(list)
+      let d = list.children.item(3)
+      invariant(d)
+      let mutations = recordMutations(list)
+
+      diffDom(
+        container,
+        '<ul><li data-rmx-key="d">D</li><li data-rmx-key="a">A</li><li data-rmx-key="b">B</li><li data-rmx-key="c">C</li></ul>',
+      )
+
+      expect(Array.from(list.children, (item) => item.textContent)).toEqual(['D', 'A', 'B', 'C'])
+      let { removed } = mutations()
+      expect(removed.length).toBe(1)
+      expect(removed[0]).toBe(d)
+    })
+  })
+
+  describe('head', () => {
+    it('does not move a keyed stylesheet when a link is added before it', () => {
+      let current = parseHead(
+        '<link data-rmx-key="styles" rel="stylesheet" href="/app.css">' +
+          '<link rel="modulepreload" href="/a.js">',
+      )
+      let [styles, preload] = Array.from(current.head.children)
+      let mutations = recordMutations(current.head)
+
+      diffHead(
+        current,
+        '<link rel="alternate" type="text/markdown" href="/b.md">' +
+          '<link data-rmx-key="styles" rel="stylesheet" href="/app.css">' +
+          '<link rel="modulepreload" href="/a.js">',
+      )
+
+      expect(current.head.innerHTML).toBe(
+        '<link rel="alternate" type="text/markdown" href="/b.md">' +
+          '<link data-rmx-key="styles" rel="stylesheet" href="/app.css">' +
+          '<link rel="modulepreload" href="/a.js">',
+      )
+      let { removed, attributeTargets } = mutations()
+      expect(removed).not.toContain(styles)
+      expect(attributeTargets).not.toContain(preload)
+      expect(current.head.children.item(2)).toBe(preload)
+    })
+
+    it('does not repurpose a link to load a different href', () => {
+      let current = parseHead(
+        '<link rel="stylesheet" href="/a.css"><link rel="stylesheet" href="/b.css">',
+      )
+      let [a, b] = Array.from(current.head.children)
+      let mutations = recordMutations(current.head)
+
+      diffHead(
+        current,
+        '<link rel="stylesheet" href="/page.css">' +
+          '<link rel="stylesheet" href="/a.css"><link rel="stylesheet" href="/b.css">',
+      )
+
+      expect(current.head.innerHTML).toBe(
+        '<link rel="stylesheet" href="/page.css">' +
+          '<link rel="stylesheet" href="/a.css"><link rel="stylesheet" href="/b.css">',
+      )
+      expect(current.head.children.item(1)).toBe(a)
+      expect(current.head.children.item(2)).toBe(b)
+      let { removed, attributeTargets } = mutations()
+      expect(removed).toEqual([])
+      expect(attributeTargets).toEqual([])
+    })
+
+    it('does not move a keyed stylesheet when a preserved node trails the head', () => {
+      let current = parseHead(
+        '<link data-rmx-key="styles" rel="stylesheet" href="/app.css">' +
+          '<link rel="modulepreload" href="/a.js">' +
+          '<link rel="prefetch" href="/next">',
+      )
+      let [styles, preload, prefetch] = Array.from(current.head.children)
+      let mutations = recordMutations(current.head)
+
+      diffHead(
+        current,
+        '<link rel="alternate" type="text/markdown" href="/b.md">' +
+          '<link data-rmx-key="styles" rel="stylesheet" href="/app.css">' +
+          '<link rel="modulepreload" href="/a.js">',
+        (node) => node === prefetch,
+      )
+
+      expect(current.head.children.length).toBe(4)
+      expect(current.head.children.item(1)).toBe(styles)
+      expect(current.head.children.item(2)).toBe(preload)
+      expect(current.head.children.item(3)).toBe(prefetch)
+      expect(mutations().removed).not.toContain(styles)
+    })
   })
 
   describe('live browser state', () => {
@@ -781,6 +932,22 @@ describe('diffNodes', () => {
 
       expect(input.value).toBe('user')
       expect(input.getAttribute('value')).toBe('server')
+    })
+
+    it('does not carry typed input into a different field when siblings reorder', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<input name="email"><p>Hint</p>'
+      let input = container.querySelector('input')
+      invariant(input)
+      input.value = 'user@example.com'
+
+      diffDom(container, '<p>Hint</p><input name="search">')
+
+      let nextInput = container.querySelector('input')
+      invariant(nextInput)
+      expect(nextInput).not.toBe(input)
+      expect(nextInput.name).toBe('search')
+      expect(nextInput.value).toBe('')
     })
 
     it('preserves current textarea value when incoming html changes its text', () => {
