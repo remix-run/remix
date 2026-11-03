@@ -111,11 +111,13 @@ To create a new Remix app with the CLI, use `npx remix new`:
 npx remix new my-remix-app
 ```
 
-To try a PR preview, use the installation command posted on the PR. For the latest `main` build, open the [main preview releases](https://github.com/remix-run/previews/releases?q=main-), select the newest published build, and copy the `remix.tgz` download URL:
+To try a PR preview, use the installation command posted on the PR. To install the [latest `main` build](https://github.com/remix-run/previews/releases/latest):
 
 ```sh
-pnpm add "<tarball-url>"
+pnpm add "$(curl -fsSL https://github.com/remix-run/previews/releases/latest/download/remix.url)"
 ```
+
+This resolves to the build's SHA-specific tarball URL, so your lockfile stays pinned. Run it again to update.
 
 To install an individual package, use its tarball URL from the same release. The release notes link to the full source commit.
 
