@@ -68,7 +68,14 @@ import type { Handle } from "remix/component";
 
 export function ComponentModelDemo() {
   return () => (
-    <div mix={counterDemoStyles}>
+    <div
+      mix={css({
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: "0.75rem",
+      })}
+    >
       <Counter initialCount={2} label="Inbox" />
       <Counter initialCount={8} label="Deploys" />
     </div>
@@ -81,7 +88,27 @@ function Counter(handle: Handle<{ initialCount: number; label: string }>) {
   return () => (
     <button
       mix={[
-        counterStyles,
+        css({
+          display: "grid",
+          minWidth: "9rem",
+          gap: "0.35rem",
+          padding: "1rem",
+          border: "1px solid #d6d6d6",
+          borderRadius: "16px",
+          background: "white",
+          color: "#151515",
+          cursor: "pointer",
+          font: "inherit",
+          textAlign: "left",
+          boxShadow: "0 8px 24px rgba(15, 17, 21, 0.08)",
+          "&:hover": {
+            boxShadow: "0 12px 32px rgba(15, 17, 21, 0.12)",
+            transform: "translateY(-2px)",
+          },
+          "&:active": {
+            transform: "translateY(0)",
+          },
+        }),
         on("click", () => {
           count++;
           handle.update();
@@ -89,48 +116,21 @@ function Counter(handle: Handle<{ initialCount: number; label: string }>) {
       ]}
       type="button"
     >
-      <span mix={counterValueStyles}>{count}</span>
+      <span
+        mix={css({
+          color: "#d83a5a",
+          fontSize: "2.75rem",
+          fontWeight: "900",
+          lineHeight: "0.9",
+          letterSpacing: "-0.08em",
+        })}
+      >
+        {count}
+      </span>
       <span>{handle.props.label}</span>
     </button>
   );
 }
-
-const counterDemoStyles = css({
-  display: "flex",
-  flexWrap: "wrap",
-  justifyContent: "center",
-  gap: "0.75rem",
-});
-
-const counterStyles = css({
-  display: "grid",
-  minWidth: "9rem",
-  gap: "0.35rem",
-  padding: "1rem",
-  border: "1px solid #d6d6d6",
-  borderRadius: "16px",
-  background: "white",
-  color: "#151515",
-  cursor: "pointer",
-  font: "inherit",
-  textAlign: "left",
-  boxShadow: "0 8px 24px rgba(15, 17, 21, 0.08)",
-  "&:hover": {
-    boxShadow: "0 12px 32px rgba(15, 17, 21, 0.12)",
-    transform: "translateY(-2px)",
-  },
-  "&:active": {
-    transform: "translateY(0)",
-  },
-});
-
-const counterValueStyles = css({
-  color: "#d83a5a",
-  fontSize: "2.75rem",
-  fontWeight: "900",
-  lineHeight: "0.9",
-  letterSpacing: "-0.08em",
-});
 ```
 
 ## Props, local state, context, and updates {#handle-props-setup-render-and-updates}
@@ -434,31 +434,33 @@ one, and returns a normal Web `Response`.
 ## Styling with css and dynamic style values {#styling-with-css}
 
 Use `css(...)` for static rules. It supports pseudo-selectors, pseudo-elements, descendant and
-attribute selectors, and media queries with normal CSS nesting:
+attribute selectors, and media queries with normal CSS nesting. Keep a style used at one JSX site
+inline in that element's `mix`, with any explanatory comment beside the relevant rule:
 
 ```tsx filename=app/ui/album-card.tsx
 import { css } from "remix/component";
 import type { Handle } from "remix/component";
 
-const cardStyle = css({
-  border: "1px solid #d6d6d6",
-  borderRadius: "12px",
-  padding: "1rem",
-  transition: "border-color 120ms ease",
-  "&:hover": {
-    borderColor: "#6d28d9",
-  },
-  "& .title": {
-    marginBlock: "0 0.25rem",
-  },
-  "@media (max-width: 40rem)": {
-    borderRadius: 0,
-  },
-});
-
 export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
   return () => (
-    <article mix={cardStyle} style={{ opacity: handle.props.soldOut ? 0.55 : 1 }}>
+    <article
+      mix={css({
+        border: "1px solid #d6d6d6",
+        borderRadius: "12px",
+        padding: "1rem",
+        transition: "border-color 120ms ease",
+        "&:hover": {
+          borderColor: "#6d28d9",
+        },
+        "& .title": {
+          marginBlock: "0 0.25rem",
+        },
+        "@media (max-width: 40rem)": {
+          borderRadius: 0,
+        },
+      })}
+      style={{ opacity: handle.props.soldOut ? 0.55 : 1 }}
+    >
       <h2 class="title">{handle.props.title}</h2>
       <p>{handle.props.soldOut ? "Sold out" : "In stock"}</p>
     </article>
@@ -466,8 +468,16 @@ export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
 }
 ```
 
-The `css(...)` call creates a generated class and static rule, and the element's
-[`mix` prop](/interactivity/#the-mix-prop) applies it. The `style` prop is better for values
+`css(...)` returns a mixin descriptor. When the element renders, the mixin generates a class name
+and reuses or creates the corresponding CSS rule. Name a style when multiple JSX sites share it
+or when a variant map makes the supported choices clear. Keep named styles in the component's
+module, and extract when the second use appears.
+
+Hoisting `css(...)` does not skip hashing. The mixin hashes nonempty styles on each render before
+checking its CSS cache, whether the descriptor is inline or named. Inlining recreates the object
+and descriptor and reevaluates expressions inside them, so consider expensive calculations separately.
+
+The element's [`mix` prop](/interactivity/#the-mix-prop) applies the generated class. The `style` prop is better for values
 such as progress, coordinates, opacity, or transforms that can change on every update. Putting those
 values in `css(...)` would create another generated rule for each value.
 
@@ -497,8 +507,46 @@ export function StylingCardDemo() {
 
 function ProductCard(handle: Handle<{ description: string; price: number; title: string }>) {
   return () => (
-    <article mix={productCardStyles}>
-      <div mix={productImageStyles} aria-hidden="true">
+    <article
+      mix={css({
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 10rem) minmax(0, 1fr)",
+        maxWidth: "34rem",
+        overflow: "hidden",
+        border: "1px solid #d6d6d6",
+        borderRadius: "18px",
+        background: "white",
+        boxShadow: "0 12px 32px rgba(15, 17, 21, 0.08)",
+        transition: "transform 180ms ease, box-shadow 180ms ease",
+        "&:hover": {
+          boxShadow: "0 18px 44px rgba(15, 17, 21, 0.14)",
+          transform: "translateY(-3px)",
+          "& .title": {
+            color: "#d83a5a",
+          },
+          "& button": {
+            backgroundColor: "#b8324d",
+          },
+        },
+        "@media (max-width: 560px)": {
+          gridTemplateColumns: "1fr",
+        },
+      })}
+    >
+      <div
+        mix={css({
+          display: "grid",
+          placeItems: "center",
+          minHeight: "12rem",
+          background: "linear-gradient(135deg, #ffe5eb, #f8fafc)",
+          color: "#d83a5a",
+          "& svg": {
+            width: "7rem",
+            height: "auto",
+          },
+        })}
+        aria-hidden="true"
+      >
         <svg viewBox="0 0 120 80" fill="none">
           <path
             d="M30 43c0-18 12-31 30-31s30 13 30 31"
@@ -510,14 +558,70 @@ function ProductCard(handle: Handle<{ description: string; price: number; title:
           <rect width="24" height="34" x="78" y="38" fill="currentColor" rx="12" />
         </svg>
       </div>
-      <div mix={productBodyStyles}>
-        <h4 class="title" mix={productTitleStyles}>
+      <div
+        mix={css({
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.75rem",
+          padding: "1rem",
+        })}
+      >
+        <h4
+          class="title"
+          mix={css({
+            margin: 0,
+            fontSize: "1.15rem",
+            fontWeight: "800",
+            letterSpacing: "-0.03em",
+            transition: "color 180ms ease",
+          })}
+        >
           {handle.props.title}
         </h4>
-        <p mix={productDescriptionStyles}>{handle.props.description}</p>
-        <div mix={productFooterStyles}>
-          <span mix={productPriceStyles}>${handle.props.price}</span>
-          <button mix={productButtonStyles} type="button">
+        <p
+          mix={css({
+            margin: 0,
+            color: "#4f4f4f",
+            lineHeight: "1.6",
+          })}
+        >
+          {handle.props.description}
+        </p>
+        <div
+          mix={css({
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "1rem",
+            marginTop: "auto",
+          })}
+        >
+          <span
+            mix={css({
+              fontSize: "1.5rem",
+              fontWeight: "900",
+              letterSpacing: "-0.06em",
+            })}
+          >
+            ${handle.props.price}
+          </span>
+          <button
+            mix={css({
+              border: "1px solid #d83a5a",
+              borderRadius: "999px",
+              background: "#d83a5a",
+              color: "white",
+              cursor: "pointer",
+              font: "inherit",
+              fontWeight: "700",
+              padding: "0.7rem 1rem",
+              transition: "background-color 180ms ease, transform 120ms ease",
+              "&:active": {
+                transform: "scale(0.98)",
+              },
+            })}
+            type="button"
+          >
             Add to cart
           </button>
         </div>
@@ -525,93 +629,6 @@ function ProductCard(handle: Handle<{ description: string; price: number; title:
     </article>
   );
 }
-
-const productCardStyles = css({
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 10rem) minmax(0, 1fr)",
-  maxWidth: "34rem",
-  overflow: "hidden",
-  border: "1px solid #d6d6d6",
-  borderRadius: "18px",
-  background: "white",
-  boxShadow: "0 12px 32px rgba(15, 17, 21, 0.08)",
-  transition: "transform 180ms ease, box-shadow 180ms ease",
-  "&:hover": {
-    boxShadow: "0 18px 44px rgba(15, 17, 21, 0.14)",
-    transform: "translateY(-3px)",
-    "& .title": {
-      color: "#d83a5a",
-    },
-    "& button": {
-      backgroundColor: "#b8324d",
-    },
-  },
-  "@media (max-width: 560px)": {
-    gridTemplateColumns: "1fr",
-  },
-});
-
-const productImageStyles = css({
-  display: "grid",
-  placeItems: "center",
-  minHeight: "12rem",
-  background: "linear-gradient(135deg, #ffe5eb, #f8fafc)",
-  color: "#d83a5a",
-  "& svg": {
-    width: "7rem",
-    height: "auto",
-  },
-});
-
-const productBodyStyles = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "0.75rem",
-  padding: "1rem",
-});
-
-const productTitleStyles = css({
-  margin: 0,
-  fontSize: "1.15rem",
-  fontWeight: "800",
-  letterSpacing: "-0.03em",
-  transition: "color 180ms ease",
-});
-
-const productDescriptionStyles = css({
-  margin: 0,
-  color: "#4f4f4f",
-  lineHeight: "1.6",
-});
-
-const productFooterStyles = css({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "1rem",
-  marginTop: "auto",
-});
-
-const productPriceStyles = css({
-  fontSize: "1.5rem",
-  fontWeight: "900",
-  letterSpacing: "-0.06em",
-});
-
-const productButtonStyles = css({
-  border: "1px solid #d83a5a",
-  borderRadius: "999px",
-  background: "#d83a5a",
-  color: "white",
-  cursor: "pointer",
-  font: "inherit",
-  fontWeight: "700",
-  padding: "0.7rem 1rem",
-  transition: "background-color 180ms ease, transform 120ms ease",
-  "&:active": {
-    transform: "scale(0.98)",
-  },
-});
 ```
 
 ## Cascade layers and app-owned design tokens {#theme-tokens-and-cascade-layers}
@@ -689,7 +706,19 @@ import * as accordion from "@remix-run/ui/accordion";
 export function AccordionPrimitives() {
   return () => (
     <accordion.Context defaultValue="shipping">
-      <div mix={[rootCss, accordion.root()]}>
+      <div
+        mix={[
+          css({
+            display: "grid",
+            width: "24rem",
+            maxWidth: "100%",
+            border: "1px solid #d8d8d8",
+            borderRadius: "8px",
+            background: "#ffffff",
+          }),
+          accordion.root(),
+        ]}
+      >
         <accordion.ItemContext value="shipping">
           <div mix={[itemCss, accordion.item()]}>
             <h3 mix={headingCss}>
@@ -730,15 +759,6 @@ export function AccordionPrimitives() {
     </accordion.Context>
   );
 }
-
-const rootCss = css({
-  display: "grid",
-  width: "24rem",
-  maxWidth: "100%",
-  border: "1px solid #d8d8d8",
-  borderRadius: "8px",
-  background: "#ffffff",
-});
 
 const itemCss = css({
   borderBlockStart: "1px solid #e8e8e8",

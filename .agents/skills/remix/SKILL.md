@@ -99,10 +99,18 @@ Event handlers run only when the component is mounted or hydrated in the browser
 
 ## Work Within the App
 
+- Write for the next reader, who may be an agent. Keep code that changes together in one place so understanding or editing a piece of UI does not require jumping between a use and its definition.
+- Do not introduce a name, constant, helper, type, or file solely to hold a single use. Each extraction adds a lookup for readers and context for agents. Extract when there is actual reuse or a separate responsibility.
 - Preserve the app's package manager, scripts, runtime, middleware order, and import conventions unless the task requires changing them. Do not replace an existing solution merely to match the starter.
 - Change the narrowest owner of the behavior. Keep route-local code together and share it only when multiple areas need it.
 - Prefer Web APIs, native links, buttons, and forms, plus existing first-party Remix primitives, over custom abstractions.
 - Treat browser-reachable modules as public: keep secrets and trusted server logic out of them. In the starter, colocated `public/` directories mark browser-reachable source.
+
+### Component Styling
+
+- Write a `css()` style used at one JSX site inline in that element's `mix`, such as `<p mix={css({ color: 'var(--muted)' })}>`. Keep comments explaining a rule beside it.
+- Name styles when multiple JSX sites share them or when a variant map makes the supported choices clear, such as `{ pill: ..., swatch: ... }`. Keep them in the component's module. Extract when the second use appears, not in anticipation of reuse.
+- Hoisting `css()` does not skip style hashing. It creates a mixin descriptor, and the mixin hashes nonempty styles on each render before checking the CSS cache. Inlining recreates the object and descriptor and reevaluates expressions inside them, so consider expensive calculations separately.
 
 ## Verify the Behavior
 
