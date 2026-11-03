@@ -2,7 +2,8 @@ import { expect } from '@remix-run/assert'
 import { describe, it, type TestContext } from '@remix-run/test'
 
 import { clientEntry } from '../runtime/client-entries.ts'
-import { Frame, type Handle } from '../runtime/component.ts'
+import type { Handle } from '../runtime/component.ts'
+import { Frame } from '../runtime/frame.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { renderToStream, renderToString } from '../server/stream.ts'
 import { drain, readChunks, renderNonceDocument } from './utils.ts'
@@ -99,7 +100,7 @@ async function exerciseIsland(
   let responses = [await renderResponse('response-nonce')]
   if (options.reloadAgain) responses.push(await renderResponse('second-nonce'))
   let runHref = new URL('../runtime/run.ts', import.meta.url).href
-  let jsxHref = new URL('../runtime/jsx.ts', import.meta.url).href
+  let jsxHref = new URL('../runtime/core/vnode.ts', import.meta.url).href
   let mixinHref = new URL('../runtime/mixins/mixin.ts', import.meta.url).href
   let message = crypto.randomUUID()
   let bootstrap = `

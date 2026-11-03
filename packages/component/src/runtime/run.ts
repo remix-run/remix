@@ -1,14 +1,12 @@
 import { getNonceManager } from './nonce.ts'
-import { createFrame, NamedFrameRegistry, type Frame } from './frame.ts'
+import { appNamedFrames, createFrame, getAppTopFrame, setAppTopFrame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
-import type { FrameHandle, Handle } from './component.ts'
-import { createComponentErrorEvent } from './error-event.ts'
-import type { ComponentErrorEvent } from './error-event.ts'
-import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
+import type { ComponentErrorEvent, Handle } from './component.ts'
+import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
-import { startPrefetching, type PrefetchFrame } from './prefetch.ts'
-import { TypedEventTarget } from './typed-event-target.ts'
+import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
+import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 
 /**
@@ -70,28 +68,6 @@ export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
   dispose(): void
 }
 
-let topFrame: Frame
-/**
- * Returns the top-level frame handle for the running application.
- *
- * @returns The top-level frame handle.
- */
-export function getTopFrame(): FrameHandle {
-  if (!topFrame) throw new Error('app runtime not initialized')
-  return topFrame.handle
-}
-
-const namedFrames = new NamedFrameRegistry()
-/**
- * Returns a named frame handle.
- *
- * @param name Name of the frame to look up.
- * @returns The matching frame handle, or `undefined` when not found.
- */
-export function getNamedFrame(name: string): FrameHandle | undefined {
-  return namedFrames.get(name)
-}
-
 function getRequestBody(options?: ResolveFrameOptions): {
   body?: BodyInit
   encType?: string
@@ -129,19 +105,13 @@ function normalizeLineBreaks(value: string): string {
 }
 
 async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
-  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
-  if (options?.target != null) headers.set('X-Remix-Target', options.target)
-
   let { body, encType } = getRequestBody(options)
-  if (encType) headers.set('Content-Type', encType)
-  let requestInit: RequestInit = {
-    body,
-    headers,
-    method: options?.method,
-    mode: 'same-origin',
-    signal: options?.signal,
-  }
-  let response = await fetch(src, requestInit)
+  let response = await fetchFrame(
+    src,
+    options?.target,
+    { body, method: options?.method, signal: options?.signal },
+    encType,
+  )
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
@@ -165,7 +135,7 @@ export function run(init: RunInit): AppRuntime {
 
   let resolveFrame = init.resolveFrame ?? defaultResolveFrame
 
-  topFrame = createFrame(document, {
+  let topFrame = createFrame(document, {
     src: document.location.href,
     errorTarget,
     loadModule: init.loadModule,
@@ -177,15 +147,16 @@ export function run(init: RunInit): AppRuntime {
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames,
+    namedFrames: appNamedFrames,
     processClientEntryPreloads: init.processClientEntryPreloads,
   })
+  setAppTopFrame(topFrame)
 
   let appController = new AbortController()
   let frames: Handle['frames'] = {
     top: topFrame.handle,
     get(name) {
-      return namedFrames.get(name)
+      return appNamedFrames.get(name)
     },
   }
   startNavigationListener(appController.signal)
@@ -198,10 +169,10 @@ export function run(init: RunInit): AppRuntime {
   return Object.assign(errorTarget, {
     frames,
     ready: () => readyPromise,
-    flush: () => topFrame.flush(),
+    flush: () => getAppTopFrame().flush(),
     dispose: () => {
       appController.abort()
-      topFrame.dispose()
+      getAppTopFrame().dispose()
       styleManager.dispose()
     },
   })

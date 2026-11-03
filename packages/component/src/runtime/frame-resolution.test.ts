@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { unwrapFrameResolution } from './frame-resolution.ts'
+import { unwrapFrameResolution } from './spa-response.ts'
 
 describe('frame response CSP nonce', () => {
   it('reads a shared nonce from script and style directives without consuming the body', async () => {

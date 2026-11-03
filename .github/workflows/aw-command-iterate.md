@@ -29,7 +29,8 @@ permissions:
   issues: read
   pull-requests: read
 checkout:
-  fetch-depth: 0
+  fetch-depth: 1
+  fetch: [main]
 model: gpt-5.6-sol
 engine:
   id: codex
@@ -289,7 +290,7 @@ Use read-only GitHub APIs and git plumbing to record:
 4. The exact current SHA of `remix-run/remix` `main` from the GitHub API.
 
 Verify that the workspace head matches the snapshotted pull request head and
-that the snapshotted `main` commit is already available in the full checkout.
+that the snapshotted `main` commit is already available in the targeted checkout.
 Do not perform network Git operations. If either commit is unavailable, call
 `report_incomplete` and stop. Do not act on another pull request, branch, or
 repository.

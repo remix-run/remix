@@ -6,9 +6,9 @@ import type {
   RemixNode,
   RenderFn,
 } from '../runtime/component.ts'
-import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/jsx.ts'
+import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
 import type { ElementFunction } from '../runtime/element-function.ts'
-import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
+import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
@@ -26,8 +26,13 @@ import {
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps, isBrowserOnlyMixinDescriptor } from '../runtime/core/mix.ts'
+import {
+  composeMixedProps,
+  isBrowserOnlyMixinDescriptor,
+  isMixinDescriptor,
+} from '../runtime/core/mix.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
+import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
 
@@ -580,7 +585,7 @@ function buildSegment(
     if (isElementFunction(type)) {
       if (type === ImportMap) {
         output.push(buildImportMapSegment(props, context))
-      } else if (type === Frame) {
+      } else if (isFrameComponent(type)) {
         output.push(buildFrameSegment(node, context, frameState))
       } else if (isEntry(type)) {
         buildEntrySegment(type, props, context, frameState, output)
@@ -1004,6 +1009,10 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
+function isFrameComponent(type: unknown): boolean {
+  return typeof type === 'function' && Object.hasOwn(type, FRAME_NODE)
+}
+
 function buildComponentSegment(
   type: ElementFunction,
   props: any,
@@ -1073,7 +1082,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
 
     // Preserve Frame semantics through serialized props by emitting
     // a dedicated descriptor that can be revived on the client.
-    if (type === Frame) {
+    if (isFrameComponent(type)) {
       return {
         $rmxFrame: true,
         props: transformProps(props),
@@ -1157,6 +1166,13 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
   }
 
   return function replacer(_key: string, value: unknown) {
+    // Mixin descriptors hold their setup function, which JSON drops. `css()`
+    // only holds style data, so it's revived in the browser by name.
+    if (isMixinDescriptor(value)) {
+      return isCSSMixinDescriptor(value)
+        ? { $rmxMixin: 'css', args: value.args }
+        : { $rmxMixin: null }
+    }
     if (isRemixElement(value)) {
       return unwrapElement(value)
     }

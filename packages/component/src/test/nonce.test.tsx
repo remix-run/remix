@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it, type TestContext } from '@remix-run/test'
 
 import { clientEntry } from '../runtime/client-entries.ts'
-import { Frame } from '../runtime/component.ts'
+import { Frame } from '../runtime/frame.ts'
 import { ImportMap, renderToStream } from '../server/stream.ts'
 import { drain, renderNonceDocument } from './utils.ts'
 

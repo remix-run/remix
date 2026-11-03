@@ -1,5 +1,5 @@
 import { DOCUMENT_NONCE_META_NAME } from './stream-protocol.ts'
-import type { RuntimeHostProps, VNodeParent } from './vnode.ts'
+import type { RuntimeHostProps, VNodeParent } from './reconcile.ts'
 
 export type ResourceNonces = Set<string>
 type NonceManager = ReturnType<typeof createNonceManager>
