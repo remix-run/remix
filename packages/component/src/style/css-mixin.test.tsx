@@ -206,29 +206,6 @@ describe('css mixin', () => {
     container.remove()
   })
 
-  it('keeps the class without rereading a style object passed again', () => {
-    let reads = 0
-    let styles = {
-      get color() {
-        reads++
-        return 'red'
-      },
-    }
-    let container = document.createElement('div')
-    let root = createRoot(container)
-    root.render(<div mix={css(styles)} />)
-    root.flush()
-    let className = container.firstElementChild?.className
-    let readsAfterFirstRender = reads
-
-    root.render(<div mix={css(styles)} />)
-    root.flush()
-
-    expect(className).toMatch(/^rmxc-/)
-    expect(container.firstElementChild?.className).toBe(className)
-    expect(reads).toBe(readsAfterFirstRender)
-  })
-
   it('keeps a dynamic rule alive while a mixin persists the node for an exit transition', async () => {
     // A sibling mixin can persist the host node past unmount (e.g. exit
     // transitions). The css rule must keep styling the node until the

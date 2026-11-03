@@ -25,8 +25,7 @@ const clientStyleCache: StyleCache = new Map()
 const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (handle) => {
   let activeSelector = ''
   let activeGeneration = -1
-  let currentStyles: CSSProps | undefined
-  let currentEntry: StyleEntry = { selector: '', css: '' }
+  let currentStyles: CSSProps = {}
 
   handle.addEventListener('remove', () => {
     if (!activeSelector) return
@@ -42,18 +41,14 @@ const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (hand
   })
 
   return (styles, props) => {
+    currentStyles = styles
     let runtime = handle.frame.$runtime as {
       styleCache?: StyleCache
       styleManager?: StyleManagerLike
     }
     invariant(runtime, 'css mixin requires frame runtime')
     let styleTarget = resolveStyleTarget(runtime)
-    // Style objects are immutable, so a hoisted style keeps its class across renders.
-    if (styles !== currentStyles) {
-      currentEntry = processStyleClass(styles, styleTarget.styleCache)
-      currentStyles = styles
-    }
-    let { selector, css: cssText } = currentEntry
+    let { selector, css: cssText } = processStyleClass(currentStyles, styleTarget.styleCache)
     let styleGeneration = styleTarget.styleManager?.getGeneration?.() ?? 0
 
     if (styleTarget.styleManager) {
@@ -80,10 +75,6 @@ const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (hand
 
 /**
  * Applies generated class names for CSS object styles.
- *
- * Style objects are treated as immutable. An element that receives the same object again keeps
- * its class without reading the object, so pass a new object to change styles instead of
- * mutating one.
  */
 export const css: MixinFactory<Element, [styles: CSSProps], ElementProps> = createMixin<
   Element,
