@@ -10,6 +10,7 @@ import {
   getPreviewTarballUrl,
   parsePreviewBuild,
   preparePreviewPackage,
+  readPullRequest,
 } from './preview.ts'
 import type { PreviewRelease } from './preview.ts'
 
@@ -81,6 +82,28 @@ describe('preview packages', () => {
 const now = Date.parse('2026-11-02T12:00:00Z')
 
 describe('preview release retention', () => {
+  it('treats both merged and unmerged closed PRs as closed, keeping open PRs', () => {
+    let sha = 'a'.repeat(40)
+    assert.deepEqual(
+      readPullRequest('remix-run/remix', 123, () =>
+        JSON.stringify({ state: 'closed', merged: false, head: { sha } }),
+      ),
+      { closed: true, sha },
+    )
+    assert.deepEqual(
+      readPullRequest('remix-run/remix', 123, () =>
+        JSON.stringify({ state: 'closed', merged: true, head: { sha } }),
+      ),
+      { closed: true, sha },
+    )
+    assert.deepEqual(
+      readPullRequest('remix-run/remix', 123, () =>
+        JSON.stringify({ state: 'open', merged: false, head: { sha } }),
+      ),
+      { closed: false, sha },
+    )
+  })
+
   it('expires main builds older than seven days, keeping the exact cutoff', () => {
     let expired = release(1, 'main', '2026-10-26T11:59:59Z')
     let cutoff = release(2, 'main', '2026-10-26T12:00:00Z')

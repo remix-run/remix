@@ -36,7 +36,7 @@ if (command === 'comment') {
     throw new Error('Preview metadata does not match this PR')
   }
   // Builds can finish out of order; only advertise the current head.
-  if (pr.merged || pr.sha !== preview.sha) {
+  if (pr.closed || pr.sha !== preview.sha) {
     console.log('Skipping preview comment for an obsolete PR head')
     process.exit(0)
   }
@@ -49,15 +49,18 @@ A [preview build](https://github.com/${PREVIEW_REPOSITORY}/releases/tag/${previe
 pnpm add "${getPreviewTarballUrl(preview.tag, 'remix')}"
 \`\`\`
 
-Each SHA has its own build URL. All builds remain installable until this PR is merged, when their releases and tags are deleted. Closing without merging keeps the builds.
+Each SHA has its own build URL. All builds remain installable until this PR is closed or merged, when their releases and tags are deleted.
 
 If your pnpm version blocks transitive Git or tarball dependencies, set \`blockExoticSubdeps: false\` in your \`pnpm-workspace.yaml\`.`
 } else {
-  if (!pr.merged) throw new Error('Cannot mark previews as removed for an unmerged PR')
+  if (!pr.closed) {
+    console.log('Skipping preview cleanup comment for an open PR')
+    process.exit(0)
+  }
   body = `${STICKY_MARKER}
 ### Preview Builds Removed
 
-All preview releases for this PR have been deleted following its merge. Installs using those URLs need a newer preview URL and an updated lockfile.`
+All preview releases for this PR have been deleted following its closure. Installs using those URLs need a newer preview URL and an updated lockfile.`
 }
 
 const comments: { id: number; body: string }[] = []

@@ -43,11 +43,11 @@ if (command === 'build' && target && positionals.length === 2) {
   let pr = /^pr-([1-9]\d*)$/.exec(target)?.[1]
   if (
     !pr ||
-    readPullRequest(process.env.GITHUB_REPOSITORY ?? 'remix-run/remix', Number(pr)).merged
+    readPullRequest(process.env.GITHUB_REPOSITORY ?? 'remix-run/remix', Number(pr)).closed
   ) {
     cleanupPreviews(client(), target, { dryRun })
   } else {
-    console.log(`Keeping previews for unmerged PR #${pr}`)
+    console.log(`Keeping previews for open PR #${pr}`)
   }
 } else {
   throw new Error(

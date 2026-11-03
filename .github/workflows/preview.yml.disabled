@@ -111,7 +111,7 @@ jobs:
     if: >-
       github.repository == 'remix-run/remix' &&
       (github.event_name == 'schedule' || (github.event_name == 'pull_request' &&
-      github.event.pull_request.merged == true &&
+      github.event.action == 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
     permissions:
@@ -135,7 +135,7 @@ jobs:
           REMIX_PREVIEWS_PAT: ${{ secrets.REMIX_PREVIEWS_PAT }}
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/preview.ts cleanup "$PREVIEW_CHANNEL"
-      - name: Update merged PR preview comment
+      - name: Update closed PR preview comment
         if: github.event_name == 'pull_request'
         env:
           GITHUB_TOKEN: ${{ github.token }}

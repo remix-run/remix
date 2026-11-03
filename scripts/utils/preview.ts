@@ -357,18 +357,18 @@ export function publishPreviewBuild(
   { dryRun = false }: { dryRun?: boolean } = {},
 ): boolean {
   let prNumber = /^pr-([1-9]\d*)$/.exec(build.channel)?.[1]
-  let merged = () =>
+  let closed = () =>
     prNumber !== undefined &&
-    readPullRequest(process.env.GITHUB_REPOSITORY ?? 'remix-run/remix', Number(prNumber)).merged
+    readPullRequest(process.env.GITHUB_REPOSITORY ?? 'remix-run/remix', Number(prNumber)).closed
   let published = false
   try {
-    if (dryRun || !merged()) {
+    if (dryRun || !closed()) {
       publishPreview(github, build, directory, dryRun)
       published = true
       if (!dryRun && build.channel === 'main') cleanupPreviews(github, 'main')
     }
   } finally {
-    if (!dryRun && merged()) {
+    if (!dryRun && closed()) {
       cleanupPreviews(github, build.channel)
       published = false
     }
@@ -391,19 +391,19 @@ export function readPullRequest(
   repository: string,
   number: number,
   run = createGitHubRunner(process.env.GITHUB_TOKEN),
-): { merged: boolean; sha: string } {
+): { closed: boolean; sha: string } {
   validatePreviewRepository(repository)
   if (!Number.isSafeInteger(number) || number < 1) throw new Error('Invalid PR number')
   let value: unknown = JSON.parse(run(['api', `repos/${repository}/pulls/${number}`]))
   if (
     !isRecord(value) ||
-    typeof value.merged !== 'boolean' ||
+    (value.state !== 'open' && value.state !== 'closed') ||
     !isRecord(value.head) ||
     typeof value.head.sha !== 'string'
   ) {
     throw new Error(`Invalid PR response: ${number}`)
   }
-  return { merged: value.merged, sha: value.head.sha }
+  return { closed: value.state === 'closed', sha: value.head.sha }
 }
 
 function verifyAssets(
