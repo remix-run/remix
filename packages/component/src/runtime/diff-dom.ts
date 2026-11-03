@@ -416,10 +416,7 @@ function diffSiblingUnits(
     let first = getSiblingUnitFirstNode(unit)
     let ref = anchor?.parentNode === parent ? anchor : null
 
-    if (
-      (stable.has(i) || (unit.kind === 'node' && isPreservedDomElement(unit.node))) &&
-      first.parentNode === parent
-    ) {
+    if (stable.has(i)) {
       anchor = first
       continue
     }
@@ -474,24 +471,51 @@ function isDocumentHead(node: ParentNode): boolean {
   return isElement(node) && node === node.ownerDocument.head
 }
 
+// Preserved elements never move, so any other unit can only stay in place if it
+// already sits between the same preserved neighbors it needs to end up between.
 function getStableCommittedIndexes(
   committed: SiblingUnit[],
   currentUnits: SiblingUnit[],
   matchIndexForNext: number[],
   parent: ParentNode,
 ): Set<number> {
+  let stable = new Set<number>()
+  let upperBounds = new Array<number>(committed.length)
+  let upperBound = currentUnits.length
+  for (let i = committed.length - 1; i >= 0; i--) {
+    upperBounds[i] = upperBound
+    let unit = committed[i]
+    if (
+      unit.kind === 'node' &&
+      isPreservedDomElement(unit.node) &&
+      unit.node.parentNode === parent
+    ) {
+      stable.add(i)
+      upperBound = matchIndexForNext[i]
+    }
+  }
+
   let committedIndexes: number[] = []
   let currentIndexes: number[] = []
+  let lowerBound = -1
   for (let i = 0; i < committed.length; i++) {
     let matchIndex = matchIndexForNext[i]
-    if (matchIndex === -1 || committed[i] !== currentUnits[matchIndex]) continue
-    let first = getSiblingUnitFirstNode(committed[i])
-    if (first.parentNode !== parent) continue
+    if (stable.has(i)) {
+      lowerBound = matchIndex
+      continue
+    }
+    if (
+      matchIndex <= lowerBound ||
+      matchIndex >= upperBounds[i] ||
+      committed[i] !== currentUnits[matchIndex] ||
+      getSiblingUnitFirstNode(committed[i]).parentNode !== parent
+    ) {
+      continue
+    }
     committedIndexes.push(i)
     currentIndexes.push(matchIndex)
   }
 
-  let stable = new Set<number>()
   for (let index of getLongestIncreasingSubsequence(currentIndexes)) {
     stable.add(committedIndexes[index])
   }
