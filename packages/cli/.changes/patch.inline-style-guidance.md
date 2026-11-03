@@ -1,1 +1,1 @@
-The Remix skill bundled with new apps keeps single-use styles inline in JSX and reserves named styles for reuse and variant maps. It also explains the rendering cost of `css()` and favors keeping related code together.
+The Remix skill bundled with new apps keeps single-use styles inline in JSX, reserves named styles for reuse and variant maps, and favors keeping related code together.

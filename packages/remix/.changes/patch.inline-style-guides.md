@@ -1,1 +1,1 @@
-The rendering and animation guides keep single-use `css()` styles beside their elements and explain when to name shared styles or variant maps. The styling guide also clarifies that hoisting a `css()` descriptor does not skip style hashing during rendering.
+The rendering and animation guides keep single-use `css()` styles beside their elements and explain when to name shared styles or variant maps.

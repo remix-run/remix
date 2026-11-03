@@ -47,7 +47,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 
 - Write a `css()` style used at one JSX site inline in that element's `mix`, such as `<p mix={css({ color: 'var(--muted)' })}>`. Keep comments explaining a rule beside it.
 - Name styles when multiple JSX sites share them or when a variant map makes the supported choices clear, such as `{ pill: ..., swatch: ... }`. Keep them in the component's module. Extract when the second use appears, not in anticipation of reuse.
-- Hoisting `css()` does not skip style hashing. It creates a mixin descriptor, and the mixin hashes nonempty styles on each render before checking the CSS cache. Inlining recreates the object and descriptor and reevaluates expressions inside them, so consider expensive calculations separately.
+- Do not hoist a single-use `css()` style for performance. Naming it does not make rendering meaningfully cheaper.
 
 ## Tests And Docs
 

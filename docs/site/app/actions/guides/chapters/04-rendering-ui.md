@@ -399,18 +399,14 @@ export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
 }
 ```
 
-`css(...)` returns a mixin descriptor. When the element renders, the mixin generates a class name
-and reuses or creates the corresponding CSS rule. Name a style when multiple JSX sites share it
-or when a variant map makes the supported choices clear. Keep named styles in the component's
+The `css(...)` call creates a generated class and static rule, and the element's
+[`mix` prop](/interactivity/#the-mix-prop) applies it. Name a style when multiple JSX sites share
+it or when a variant map makes the supported choices clear. Keep named styles in the component's
 module, and extract when the second use appears.
 
-Hoisting `css(...)` does not skip hashing. The mixin hashes nonempty styles on each render before
-checking its CSS cache, whether the descriptor is inline or named. Inlining recreates the object
-and descriptor and reevaluates expressions inside them, so consider expensive calculations separately.
-
-The element's [`mix` prop](/interactivity/#the-mix-prop) applies the generated class. The `style` prop is better for values
-such as progress, coordinates, opacity, or transforms that can change on every update. Putting those
-values in `css(...)` would create another generated rule for each value.
+The `style` prop is better for values such as progress, coordinates, opacity, or transforms that
+can change on every update. Putting those values in `css(...)` would create another generated rule
+for each value.
 
 Prefer state selectors such as `"&:hover .title"` or `'&[aria-expanded="true"]'` over tracking hover
 or focus in JavaScript. The browser applies them without a render, and they work before the page
