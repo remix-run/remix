@@ -511,9 +511,15 @@ function createMixinRuntimeState(): MixinRuntimeState {
 
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'
 
+type PhaseListener = EventListenerOrEventListenerObject
+
 type MixinScope = {
   target: TypedEventTarget<MixinHandleEventMap<Element>>
-  phaseCounts: Record<SchedulerPhaseType, number>
+  // EventTarget identifies a listener by its callback and capture flag.
+  phaseListeners: Record<
+    SchedulerPhaseType,
+    [bubble: Set<PhaseListener>, capture: Set<PhaseListener>]
+  >
   controller?: AbortController
 }
 
@@ -595,7 +601,9 @@ class MixinHandleImpl
       options,
     )
     if (!listener || !isSchedulerPhaseType(type)) return
-    scope.phaseCounts[type] += 1
+    let listeners = scope.phaseListeners[type][Number(isCapture(options))]
+    if (listeners.has(listener)) return
+    listeners.add(listener)
     this.#updatePhaseListenerCount(type, 1)
   }
 
@@ -611,7 +619,7 @@ class MixinHandleImpl
       typeof options === 'boolean' ? { capture: options } : options,
     )
     if (!listener || !isSchedulerPhaseType(type)) return
-    scope.phaseCounts[type] = Math.max(0, scope.phaseCounts[type] - 1)
+    if (!scope.phaseListeners[type][Number(isCapture(options))].delete(listener)) return
     this.#updatePhaseListenerCount(type, -1)
   }
 
@@ -655,7 +663,7 @@ class MixinHandleImpl
     if (this.#scopes.has(scope)) return
     this.#scopes.set(scope, {
       target: new TypedEventTarget<MixinHandleEventMap<Element>>(),
-      phaseCounts: { beforeUpdate: 0, commit: 0 },
+      phaseListeners: { beforeUpdate: [new Set(), new Set()], commit: [new Set(), new Set()] },
     })
   }
 
@@ -671,8 +679,10 @@ class MixinHandleImpl
   releaseScope(scope: symbol): void {
     let record = this.#scopes.get(scope)
     if (record) {
-      this.#updatePhaseListenerCount('beforeUpdate', -record.phaseCounts.beforeUpdate)
-      this.#updatePhaseListenerCount('commit', -record.phaseCounts.commit)
+      for (let type of ['beforeUpdate', 'commit'] as const) {
+        let [bubble, capture] = record.phaseListeners[type]
+        this.#updatePhaseListenerCount(type, -(bubble.size + capture.size))
+      }
       record.controller?.abort()
       this.#scopes.delete(scope)
     }
@@ -785,6 +795,10 @@ function dispatchMixinUpdateEvent(state: MixinRuntimeState | undefined, type: Sc
 
 function isSchedulerPhaseType(type: string): type is SchedulerPhaseType {
   return type === 'beforeUpdate' || type === 'commit'
+}
+
+function isCapture(options?: EventListenerOptions | boolean): boolean {
+  return typeof options === 'boolean' ? options : options?.capture === true
 }
 
 function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNode[]): boolean {
