@@ -1,0 +1,1 @@
+{"version":3,"file":"prefers-reduced-motion.js","sourceRoot":"","sources":["../../src/animation/prefers-reduced-motion.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AACH,MAAM,UAAU,oBAAoB;IAClC,OAAO,CACL,OAAO,MAAM,KAAK,WAAW;QAC7B,OAAO,MAAM,CAAC,UAAU,KAAK,UAAU;QACvC,MAAM,CAAC,UAAU,CAAC,kCAAkC,CAAC,CAAC,OAAO,CAC9D,CAAA;AACH,CAAC"}
