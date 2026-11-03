@@ -95,6 +95,17 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   return `v0.${date}.${time}-${suffix}`
 }
 
+export function getPreviewReleaseTitle(build: PreviewBuild): string {
+  let match = /^v0\.(\d{4})(\d{2})(\d{2})\.(\d{1,6})-/.exec(build.tag)
+  if (!match) return build.tag
+  let [, year, month, day, time] = match
+  let clock = time.padStart(6, '0')
+  let timestamp = `${year}-${month}-${day} ${clock.slice(0, 2)}:${clock.slice(2, 4)}:${clock.slice(4)} UTC`
+  return build.channel.startsWith('pr-')
+    ? `PR #${build.channel.slice(3)} · ${timestamp}`
+    : `${build.channel} · ${timestamp} · ${build.sha.slice(0, 8)}`
+}
+
 export function validatePreviewRepository(repository: string): string {
   if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repository)) {
     throw new Error(`Invalid preview repository: ${repository}`)
@@ -374,9 +385,10 @@ export function publishPreview(
     }
   })
   let url = `https://github.com/${github.repository}/releases/tag/${build.tag}`
+  let title = getPreviewReleaseTitle(build)
   if (dryRun) {
     console.log(
-      `Would publish ${url} with assets: ${expected.map((asset) => asset.name).join(', ')}`,
+      `Would publish ${url} as "${title}" with assets: ${expected.map((asset) => asset.name).join(', ')}`,
     )
     return url
   }
@@ -408,6 +420,7 @@ export function publishPreview(
   }
   if (release && !release.draft) {
     verifyAssets(github.listAssets(release), expected, false)
+    github.api('PATCH', `releases/${release.id}`, { name: title })
     console.log(`Reusing published preview: ${url}`)
     return url
   }
@@ -415,7 +428,7 @@ export function publishPreview(
     release = readRelease(
       github.api('POST', 'releases', {
         tag_name: build.tag,
-        name: build.tag,
+        name: title,
         draft: true,
         prerelease: true,
         make_latest: 'false',
@@ -428,6 +441,7 @@ export function publishPreview(
   for (let filename of files) github.upload(release, filename)
   verifyAssets(github.listAssets(release), expected, true)
   github.api('PATCH', `releases/${release.id}`, {
+    name: title,
     draft: false,
     prerelease: true,
     make_latest: 'false',
@@ -445,6 +459,7 @@ function publishPrPreview(
   repositoryUrl: string,
 ): string {
   let prNumber = build.channel.slice('pr-'.length)
+  let title = getPreviewReleaseTitle(build)
   let prUrl = `${repositoryUrl}/pull/${prNumber}`
   let header = `${PREVIEW_RELEASE_MARKER}\nPreview builds for [PR #${prNumber}](${prUrl}).\n\nThe latest 10 successful SHA builds are retained until this PR closes.\n`
   if (
@@ -457,7 +472,7 @@ function publishPrPreview(
     release = readRelease(
       github.api('POST', 'releases', {
         tag_name: build.tag,
-        name: build.tag,
+        name: title,
         draft: true,
         prerelease: true,
         make_latest: 'false',
@@ -505,6 +520,7 @@ function publishPrPreview(
     return `| [${sha.slice(0, 8)}](${prUrl}/commits/${sha}) | ${asset.updated_at} | \`pnpm add "${url}"\` |`
   })
   github.api('PATCH', `releases/${release.id}`, {
+    name: title,
     draft: false,
     prerelease: true,
     make_latest: 'false',

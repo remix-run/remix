@@ -9,6 +9,7 @@ import {
   getExpiredPreviewReleases,
   getExpiredPrPreviewAssets,
   getPreviewChannel,
+  getPreviewReleaseTitle,
   getPreviewTag,
   getPreviewTarballUrl,
   parsePreviewBuild,
@@ -70,6 +71,22 @@ describe('preview packages', () => {
       sha: 'b'.repeat(40),
       tag,
     })
+  })
+
+  it('displays padded UTC timestamps without changing preview tags', () => {
+    let sha = 'abcdef1234567890'.padEnd(40, '0')
+    let pr = parsePreviewBuild('v0.20261026.417-pr-12082', sha)
+    assert.equal(getPreviewReleaseTitle(pr), 'PR #12082 · 2026-10-26 00:04:17 UTC')
+    assert.equal(getPreviewReleaseTitle({ ...pr, sha: 'b'.repeat(40) }), getPreviewReleaseTitle(pr))
+    assert.equal(
+      getPreviewReleaseTitle(parsePreviewBuild('v0.20261103.195415-main-abcdef12', sha)),
+      'main · 2026-11-03 19:54:15 UTC · abcdef12',
+    )
+    assert.equal(
+      getPreviewReleaseTitle(parsePreviewBuild('v0.20261103.0-experimental-abcdef12', sha)),
+      'experimental · 2026-11-03 00:00:00 UTC · abcdef12',
+    )
+    assert.equal(getPreviewReleaseTitle(parsePreviewBuild('pr-12082', sha)), 'pr-12082')
   })
 
   it('requires a valid tag matching the full source SHA', () => {
