@@ -321,10 +321,17 @@ export function publishPreview(
   let sourceRepository = validatePreviewRepository(
     process.env.GITHUB_REPOSITORY ?? 'remix-run/remix',
   )
-  let sourceUrl = `https://github.com/${sourceRepository}/commit/${build.sha}`
+  let repositoryUrl = `https://github.com/${sourceRepository}`
+  let commitUrl = `${repositoryUrl}/commit/${build.sha}`
+  let prNumber = /^pr-([1-9]\d*)$/.exec(build.channel)?.[1]
+  let sourceUrl = prNumber ? `${repositoryUrl}/pull/${prNumber}/commits/${build.sha}` : commitUrl
+  let source = prNumber
+    ? `SHA [${build.sha.slice(0, 8)}](${sourceUrl}) in PR [#${prNumber}](${repositoryUrl}/pull/${prNumber})`
+    : `[${sourceRepository}@${build.sha}](${sourceUrl})`
   if (
     release &&
-    (!release.body.startsWith(PREVIEW_RELEASE_MARKER) || !release.body.includes(`](${sourceUrl})`))
+    (!release.body.startsWith(PREVIEW_RELEASE_MARKER) ||
+      (!release.body.includes(`](${sourceUrl})`) && !release.body.includes(`](${commitUrl})`)))
   ) {
     throw new Error(`Preview release does not match the source commit: ${build.tag}`)
   }
@@ -341,7 +348,7 @@ export function publishPreview(
         draft: true,
         prerelease: true,
         make_latest: 'false',
-        body: `${PREVIEW_RELEASE_MARKER}\nBuilt from [${sourceRepository}@${build.sha}](${sourceUrl}).\n\nInstall:\n\n\`\`\`sh\npnpm add "${getPreviewTarballUrl(build.tag, 'remix', github.repository)}"\n\`\`\`\n`,
+        body: `${PREVIEW_RELEASE_MARKER}\nBuilt from ${source}.\n\nInstall:\n\n\`\`\`sh\npnpm add "${getPreviewTarballUrl(build.tag, 'remix', github.repository)}"\n\`\`\`\n`,
       }),
     )
   }
