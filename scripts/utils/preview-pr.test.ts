@@ -7,7 +7,7 @@ import { describe, it } from '@remix-run/test'
 
 import { getPreviewTag, getPreviewTarballUrl } from './preview.ts'
 
-const script = path.resolve(import.meta.dirname, '../pr-preview.ts')
+const script = path.resolve(import.meta.dirname, '../preview-pr.ts')
 const sha = 'a'.repeat(40)
 
 describe('PR preview comments', () => {

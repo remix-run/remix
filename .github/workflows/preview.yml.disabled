@@ -117,7 +117,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node scripts/pr-preview.ts comment "$PR_NUMBER"
+        run: node scripts/preview-pr.ts comment "$PR_NUMBER"
 
   cleanup:
     if: >-
@@ -152,4 +152,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node scripts/pr-preview.ts cleanup "$PR_NUMBER"
+        run: node scripts/preview-pr.ts cleanup "$PR_NUMBER"

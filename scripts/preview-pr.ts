@@ -19,7 +19,7 @@ if (
   prNumber <= 0 ||
   !['comment', 'cleanup'].includes(command)
 ) {
-  throw new Error('Usage: node scripts/pr-preview.ts <comment|cleanup> <pr-number>')
+  throw new Error('Usage: node scripts/preview-pr.ts <comment|cleanup> <pr-number>')
 }
 const repository = process.env.GITHUB_REPOSITORY ?? 'remix-run/remix'
 const github = new PreviewGitHub(repository, createGitHubRunner(process.env.GITHUB_TOKEN))
