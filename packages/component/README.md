@@ -586,7 +586,7 @@ function ProgressBar(handle: Handle<{ value: number }>) {
 }
 ```
 
-`css(...)` treats style objects as immutable. When an element receives the same object on the next render, it keeps the class it already generated, so build a new object when a style changes instead of mutating an existing one.
+`css(...)` treats style objects as immutable. An element that receives the same object again keeps its class without reading the object, so pass a new object to change styles instead of mutating one.
 
 During server rendering, Remix collects the generated rules, deduplicates them, and puts them in `<style data-rmx-style>` tags in the document head, so server-rendered pages are styled before any JavaScript loads.
 

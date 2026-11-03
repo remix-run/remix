@@ -774,10 +774,8 @@ function finalizeMixinTeardown(state: MixinRuntimeState) {
 
 function dispatchMixinUpdateEvent(state: MixinRuntimeState | undefined, type: SchedulerPhaseType) {
   let node = state?.binding?.node
-  if (!node) return
-  // Most mixins (like css) never listen for update phases; skip creating events nobody receives.
   let handle = state?.handle as ScopedAnyMixinHandle | undefined
-  if (!handle?.hasPhaseListeners(type)) return
+  if (!node || !handle?.hasPhaseListeners(type)) return
   dispatchMixinEvent(state, () => {
     let event = new Event(type) as MixinUpdateEvent<Element>
     event.node = node

@@ -98,12 +98,8 @@ function isKeyframesAtRule(key: string): boolean {
 // Class names are content-addressed — a collision silently applies the wrong
 // styles — so use two independent 32-bit FNV-1a passes (~64 bits of hash
 // space) rather than a single 32-bit hash. Must be deterministic across
-// server and client.
-//
-// The input is the style object's JSON. Key order is kept because declaration
-// order changes the result (`margin` then `marginTop` differs from the
-// reverse), and JSON drops undefined properties just like client entry props
-// do, so hydration reuses the server's class and its position in the cascade.
+// server and client. Hashing the style's JSON keeps key order, which affects
+// the declarations, and drops undefined properties like client entry props do.
 function hashStyle(str: string): string {
   let h1 = 0x811c9dc5
   let h2 = 0xcbf29ce4

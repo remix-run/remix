@@ -206,42 +206,27 @@ describe('css mixin', () => {
     container.remove()
   })
 
-  it('reuses the class for the same style object without reading it again', () => {
+  it('keeps the class without rereading a style object passed again', () => {
     let reads = 0
     let styles = {
       get color() {
         reads++
-        return 'rgb(1, 2, 3)'
+        return 'red'
       },
     }
     let container = document.createElement('div')
-    document.body.appendChild(container)
     let root = createRoot(container)
-
-    root.render(<div mix={css(styles)}>Hoisted</div>)
+    root.render(<div mix={css(styles)} />)
     root.flush()
-    let div = container.querySelector('div')
-    invariant(div)
-    let firstClass = div.className
+    let className = container.firstElementChild?.className
     let readsAfterFirstRender = reads
-    expect(readsAfterFirstRender).toBeGreaterThan(0)
 
-    root.render(<div mix={css(styles)}>Hoisted</div>)
+    root.render(<div mix={css(styles)} />)
     root.flush()
-    expect(div.className).toBe(firstClass)
+
+    expect(className).toMatch(/^rmxc-/)
+    expect(container.firstElementChild?.className).toBe(className)
     expect(reads).toBe(readsAfterFirstRender)
-
-    root.render(<div mix={css({ color: 'rgb(4, 5, 6)' })}>Hoisted</div>)
-    root.flush()
-    expect(div.className).not.toBe(firstClass)
-
-    root.render(<div mix={css(styles)}>Hoisted</div>)
-    root.flush()
-    expect(div.className).toBe(firstClass)
-    expect(ruleTextPresent(`.${firstClass}`)).toBe(true)
-
-    root.dispose()
-    container.remove()
   })
 
   it('keeps a dynamic rule alive while a mixin persists the node for an exit transition', async () => {

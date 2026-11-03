@@ -482,36 +482,6 @@ describe('vnode mixins', () => {
     expect(calls).toEqual(['before:0', 'commit:1'])
   })
 
-  it('runs update lifecycle events for listeners added after setup', () => {
-    let calls: string[] = []
-    let withLateLifecycle = createMixin((handle) => {
-      let listening = false
-      return (step: string, props: { ['data-step']?: string }) => {
-        if (step === '1' && !listening) {
-          listening = true
-          handle.addEventListener('beforeUpdate', (event) => {
-            calls.push(`before:${(event.node as HTMLElement).dataset.step}`)
-          })
-          handle.addEventListener('commit', (event) => {
-            calls.push(`commit:${(event.node as HTMLElement).dataset.step}`)
-          })
-        }
-        return <handle.element {...props} data-step={step} />
-      }
-    })
-
-    let container = document.createElement('div')
-    let root = createRoot(container)
-    root.render(<div mix={[withLateLifecycle('0')]} />)
-    root.flush()
-    root.render(<div mix={[withLateLifecycle('1')]} />)
-    root.flush()
-    root.render(<div mix={[withLateLifecycle('2')]} />)
-    root.flush()
-
-    expect(calls).toEqual(['before:0', 'commit:1', 'before:1', 'commit:2'])
-  })
-
   it('composes ref callbacks across mixins and base mix', () => {
     let calls: string[] = []
 

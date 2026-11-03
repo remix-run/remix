@@ -26,7 +26,6 @@ const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (hand
   let activeSelector = ''
   let activeGeneration = -1
   let currentStyles: CSSProps | undefined
-  let currentStyleCache: StyleCache | undefined
   let currentEntry: StyleEntry = { selector: '', css: '' }
 
   handle.addEventListener('remove', () => {
@@ -49,12 +48,10 @@ const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (hand
     }
     invariant(runtime, 'css mixin requires frame runtime')
     let styleTarget = resolveStyleTarget(runtime)
-    // Hoisted styles pass the same object on every render. Style objects are treated as
-    // immutable, so the class generated for it on the previous render still applies.
-    if (styles !== currentStyles || styleTarget.styleCache !== currentStyleCache) {
+    // Style objects are immutable, so a hoisted style keeps its class across renders.
+    if (styles !== currentStyles) {
       currentEntry = processStyleClass(styles, styleTarget.styleCache)
       currentStyles = styles
-      currentStyleCache = styleTarget.styleCache
     }
     let { selector, css: cssText } = currentEntry
     let styleGeneration = styleTarget.styleManager?.getGeneration?.() ?? 0
@@ -84,9 +81,9 @@ const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (hand
 /**
  * Applies generated class names for CSS object styles.
  *
- * Style objects are treated as immutable. When an element receives the same object again, it
- * keeps the class generated on the previous render without reading the object, so pass a new
- * object to change styles instead of mutating an existing one.
+ * Style objects are treated as immutable. An element that receives the same object again keeps
+ * its class without reading the object, so pass a new object to change styles instead of
+ * mutating one.
  */
 export const css: MixinFactory<Element, [styles: CSSProps], ElementProps> = createMixin<
   Element,
