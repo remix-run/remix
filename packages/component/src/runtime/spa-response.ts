@@ -1,5 +1,6 @@
 import type { FrameContent, FrameResolution } from './component.ts'
 import type { RemixNode } from './core/vnode.ts'
+import { getResponseNonce } from './nonce.ts'
 
 type SPAResponseData = {
   node: RemixNode
@@ -58,7 +59,7 @@ function getSpaResponseData(response: Response): SPAResponseData | undefined {
 
 export async function unwrapFrameResolution(
   resolution: FrameResolution,
-): Promise<{ content: FrameContent; redirectedTo?: string }> {
+): Promise<{ content: FrameContent; redirectedTo?: string; nonce?: string }> {
   if (!(resolution instanceof Response)) return { content: resolution }
 
   let data = getSpaResponseData(resolution)
@@ -72,6 +73,7 @@ export async function unwrapFrameResolution(
   let content = resolution.body ?? (await resolution.text())
   return {
     content,
+    nonce: getResponseNonce(resolution),
     redirectedTo: resolution.redirected && resolution.url ? resolution.url : undefined,
   }
 }

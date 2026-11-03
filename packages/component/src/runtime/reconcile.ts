@@ -1,3 +1,4 @@
+import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
 import { createComponent, Fragment, FRAME_NODE } from './component.ts'
 import { getFrameRuntime, type FrameMountState } from './frame-runtime.ts'
@@ -205,6 +206,7 @@ export type RootVNode = {
   _rangeStart?: Node
   _rangeEnd?: Node
   _pendingHydrationComponentId?: string
+  _resourceNonces?: ResourceNonces
 }
 
 export interface ReconcileContext {
@@ -596,11 +598,14 @@ function resolveNodeMixProps(
   let directEventDescriptors = resolveDirectEventDescriptors(mix)
   if (directEventDescriptors) {
     if (state) teardownMixins(state)
-    return { props: node.props, directEventDescriptors }
+    return {
+      props: getNonceManager().resolveResourceNonce(node.type, node.props, parent),
+      directEventDescriptors,
+    }
   }
 
   if (state == null && (mix == null || (Array.isArray(mix) && mix.length === 0))) {
-    return { props: node.props }
+    return { props: getNonceManager().resolveResourceNonce(node.type, node.props, parent) }
   }
 
   let resolved = resolveMixedProps({
@@ -617,7 +622,10 @@ function resolveNodeMixProps(
     props: node.props,
     state,
   })
-  return { props: resolved.props, mixState: resolved.state }
+  return {
+    props: getNonceManager().resolveResourceNonce(node.type, resolved.props, parent),
+    mixState: resolved.state,
+  }
 }
 
 function applyResolvedHostProps(node: CommittedHostNode, resolved: ResolvedHostProps): void {
@@ -1438,6 +1446,7 @@ function updateClientEntryBoundary(
   let element = jsx(node.type, node.props, node.key)
   let owner = getClientEntryBoundaryOwner(node._rangeStart)
   if (owner) {
+    getNonceManager().inheritRootResourceNonces(owner.root, node._parent)
     owner.root.render(element)
     return
   }
@@ -1445,7 +1454,11 @@ function updateClientEntryBoundary(
   let runtime = getFrameRuntime(context.frame)
   let pending = runtime?.pendingClientEntries.get(node._rangeStart)
   invariant(runtime && pending?.[0] === node._rangeEnd, 'Expected pending client entry boundary')
-  runtime.pendingClientEntries.set(node._rangeStart, [node._rangeEnd, element])
+  runtime.pendingClientEntries.set(node._rangeStart, [
+    node._rangeEnd,
+    element,
+    getNonceManager().getResourceNonces(node._parent),
+  ])
 }
 
 function diffClientEntryBoundary(

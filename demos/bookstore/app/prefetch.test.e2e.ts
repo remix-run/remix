@@ -183,12 +183,14 @@ describe('bookstore prefetching', () => {
     }
     await link.click()
     await page.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
     await page.getByRole('button', { name: 'Next image' }).click()
-    await page.waitForFunction(() =>
-      document
-        .querySelector('img[alt="Image 1 of 3"]')
-        ?.parentElement?.parentElement?.style.transform.includes('-100%'),
-    )
+    await page.waitForFunction(() => {
+      let track = document.querySelector('img[alt="Image 1 of 3"]')?.parentElement?.parentElement
+      if (!track) return false
+      let transform = new DOMMatrixReadOnly(getComputedStyle(track).transform)
+      return Math.abs(transform.m41 + track.clientWidth) < 1
+    })
     assert.equal(
       await page
         .getByRole('heading', { name: 'Ash & Smoke', exact: true })
@@ -295,12 +297,14 @@ describe('bookstore prefetching', () => {
       prefetchesScript ? 1 : 0,
     )
     release.resolve()
+    await page.evaluate(async () => window.navigation.transition?.finished)
     await page.getByRole('button', { name: 'Next image' }).click()
-    await page.waitForFunction(() =>
-      document
-        .querySelector('img[alt="Image 1 of 3"]')
-        ?.parentElement?.parentElement?.style.transform.includes('-100%'),
-    )
+    await page.waitForFunction(() => {
+      let track = document.querySelector('img[alt="Image 1 of 3"]')?.parentElement?.parentElement
+      if (!track) return false
+      let transform = new DOMMatrixReadOnly(getComputedStyle(track).transform)
+      return Math.abs(transform.m41 + track.clientWidth) < 1
+    })
     assert.equal(requests, 1)
     assert.deepEqual(failedAssets, [])
   })

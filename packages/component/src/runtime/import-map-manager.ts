@@ -1,3 +1,5 @@
+import { getNonceManager } from './nonce.ts'
+
 type ImportMap = {
   imports?: ImportMapImports
   scopes?: Record<string, ImportMapImports>
@@ -41,7 +43,7 @@ export function resetDocumentImportMapManager(doc: Document): void {
 }
 
 function createImportMapManager(doc: Document): ImportMapManager {
-  let nonce = doc.head.querySelector<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)?.nonce
+  let nonce = getNonceManager().moduleNonce
   let installedImportMap = createInstalledImportMap()
   let processedScripts = new WeakSet<HTMLScriptElement>()
   let conflicted = false

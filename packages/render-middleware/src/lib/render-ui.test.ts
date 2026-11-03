@@ -2,6 +2,8 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createRouter, type MiddlewareContext } from '@remix-run/fetch-router'
+import { csp, getCspNonce } from '@remix-run/csp-middleware'
+import { jsx } from '@remix-run/component/jsx-runtime'
 import {
   clientEntry,
   createElement,
@@ -43,6 +45,154 @@ describe('render', () => {
     assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
     assert.equal(response.headers.get('X-Test'), 'render')
     assert.match(await response.text(), /^<!DOCTYPE html><h1>Hello<\/h1>/)
+  })
+
+  it('makes the inherited nonce available to children outside the CSP middleware scope', async () => {
+    let childNonce: string | undefined
+    let router = createRouter({ middleware: [render()] as const })
+    router.get('/', {
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            return { scriptSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+      ],
+      handler: (context) => context.render(createElement(Frame, { src: '/redirect' })),
+    })
+    router.get('/redirect', () => Response.redirect('https://remix.run/child'))
+    router.get('/child', (context) => {
+      childNonce = getCspNonce(context)
+      return context.render(
+        jsx('script', { nonce: childNonce, children: 'globalThis.child = true' }),
+      )
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+    assert.ok(childNonce)
+    assert.equal(
+      response.headers.get('Content-Security-Policy'),
+      `script-src 'nonce-${childNonce}'`,
+    )
+    assert.ok(html.includes(`<script nonce="${childNonce}">`))
+
+    let independent = await router.fetch('https://remix.run/child')
+    let independentHtml = await independent.text()
+    assert.equal(childNonce, undefined)
+    assert.equal(independent.headers.get('Content-Security-Policy'), null)
+    assert.doesNotMatch(independentHtml, /nonce=/)
+  })
+
+  it('shares the document nonce with frame resources and isolates independent frame requests', async () => {
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            return { scriptSrc: [`'nonce-${nonce}'`], styleSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+        render({
+          assets: {
+            async getScriptEntry() {
+              return {
+                href: '/assets/island.js',
+                importMap: { imports: { island: '/assets/island.js' } },
+                preloads: ['/assets/island.js'],
+              }
+            },
+          },
+        }),
+      ] as const,
+    })
+    let Island = clientEntry('file:///app/island.ts#Island', function Island() {
+      return () => createElement('p', { mix: css({ color: 'red' }) }, 'Island')
+    })
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          'html',
+          {},
+          createElement('head'),
+          createElement('body', {}, createElement(Frame, { src: '/child' })),
+        ),
+      ),
+    )
+    router.get('/child', (context) => context.render(createElement(Island)))
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+    let nonce = response.headers.get('Content-Security-Policy')?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(nonce)
+
+    assert.equal(
+      response.headers.get('Content-Security-Policy'),
+      `script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'`,
+    )
+    let styles = html.match(/<style\b[^>]*>/g) ?? []
+    assert.equal(styles.length, 1)
+    assert.ok(styles.every((tag) => tag.includes(`nonce="${nonce}"`)))
+    assert.ok(html.includes(`<script data-rmx-import-map type="importmap" nonce="${nonce}">`))
+    assert.ok(
+      html.includes(
+        `<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" nonce="${nonce}" />`,
+      ),
+    )
+    let frameResponse = await router.fetch('https://remix.run/child', {
+      headers: { 'X-Remix-Frame': 'true' },
+    })
+    let frameHtml = await frameResponse.text()
+    let frameStyles = frameHtml.match(/<style\b[^>]*>/g) ?? []
+    let frameNonce = frameResponse.headers
+      .get('Content-Security-Policy')
+      ?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(frameNonce)
+    assert.notEqual(frameNonce, nonce)
+
+    assert.equal(frameStyles.length, 1)
+    assert.ok(frameStyles.every((style) => style.includes(`nonce="${frameNonce}"`)))
+    assert.ok(!frameHtml.includes(`nonce="${nonce}"`))
+  })
+
+  it('propagates the document nonce through redirects to non-blocking frames', async () => {
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            return { styleSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+        render(),
+      ] as const,
+    })
+    router.get('/', (context) =>
+      context.render(
+        createElement(Frame, { src: '/redirect', fallback: createElement('p', {}, 'Loading') }),
+      ),
+    )
+    router.get('/redirect', () => Response.redirect('https://remix.run/child'))
+    router.get('/child', (context) =>
+      context.render(
+        createElement(
+          'section',
+          {},
+          createElement('p', { mix: css({ color: 'red' }) }, 'Child'),
+          jsx('script', { nonce: getCspNonce(context), children: 'globalThis.child = true' }),
+        ),
+      ),
+    )
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+    let nonce = response.headers.get('Content-Security-Policy')?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(nonce)
+
+    assert.match(html, /<p>Loading<\/p>/)
+    assert.match(html, /<template\b[^>]*>[\s\S]*?<style data-rmx-style=/)
+    let styles = html.match(/<style\b[^>]*>/g) ?? []
+    assert.equal(styles.length, 1)
+    assert.ok(styles.every((tag) => tag.includes(`nonce="${nonce}"`)))
+    assert.ok(html.includes(`<script nonce="${nonce}">globalThis.child = true</script>`))
   })
 
   it('resolves nested and targeted frames through the current router', async () => {

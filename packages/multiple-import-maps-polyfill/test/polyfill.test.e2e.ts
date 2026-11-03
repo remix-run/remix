@@ -243,7 +243,7 @@ describe('multiple import map polyfill', () => {
           return html(trustedTypesDocument, {
             headers: {
               'Content-Security-Policy':
-                "script-src 'self' 'nonce-n0nce' blob: 'wasm-unsafe-eval'; connect-src 'self' blob:; require-trusted-types-for 'script'; trusted-types remix/multiple-import-maps-polyfill",
+                "script-src 'self' 'nonce-n0nce' blob:; connect-src 'self' blob:; require-trusted-types-for 'script'; trusted-types remix/multiple-import-maps-polyfill",
             },
           })
         }
@@ -253,12 +253,22 @@ describe('multiple import map polyfill', () => {
           return javascript(await fs.readFile(lexerPath, 'utf8'))
         }
         if (url.pathname === '/csp-module.js') {
+          return javascript("export { value } from '/csp-dependency.js'")
+        }
+        if (url.pathname === '/csp-dependency.js') {
           return javascript("export let value = 'csp'")
         }
         return new Response('Not Found', { status: 404 })
       }),
     )
 
+    await page.addInitScript(() => {
+      let violations: string[] = []
+      Reflect.set(window, 'cspViolations', violations)
+      document.addEventListener('securitypolicyviolation', (event) => {
+        violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+      })
+    })
     await page.goto('/')
     await page.locator('#support, #error').waitFor({ state: 'attached' })
 
@@ -267,6 +277,7 @@ describe('multiple import map polyfill', () => {
       await page.locator('#support, #error').textContent(),
       `${String(browserName !== 'firefox')}:csp`,
     )
+    assert.deepEqual(await page.evaluate(() => Reflect.get(window, 'cspViolations')), [])
   })
 
   it('loads module graphs under a Content Security Policy without eval or Wasm', async (t) => {
@@ -294,10 +305,18 @@ describe('multiple import map polyfill', () => {
       }),
     )
 
+    await page.addInitScript(() => {
+      let violations: string[] = []
+      Reflect.set(window, 'cspViolations', violations)
+      document.addEventListener('securitypolicyviolation', (event) => {
+        violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+      })
+    })
     await page.goto('/')
     await page.locator('#result, #error').waitFor({ state: 'attached' })
 
     assert.equal(await page.locator('#result, #error').textContent(), 'static:dynamic:0')
+    assert.deepEqual(await page.evaluate(() => Reflect.get(window, 'cspViolations')), [])
   })
 
   it('rejects non-JavaScript module responses', async (t) => {

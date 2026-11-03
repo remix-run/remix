@@ -5,6 +5,7 @@ import type { FrameInstance } from './frame.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 import type { Scheduler } from './scheduler.ts'
 import type { StyleManager } from '../style/index.ts'
+import type { ResourceNonces } from './nonce.ts'
 
 /**
  * Loads a named client-entry export for hydration.
@@ -60,7 +61,10 @@ export interface ResolveFrameOptions {
   signal?: AbortSignal
 }
 
-export type PendingClientEntries = Map<Comment, [Comment, RemixElement | undefined]>
+export type PendingClientEntries = Map<
+  Comment,
+  [Comment, RemixElement | undefined, ResourceNonces?]
+>
 
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
 
