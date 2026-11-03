@@ -29,6 +29,22 @@ describe('cart toggle', () => {
     assertContains(await button.text(), 'Remove from Cart')
   })
 
+  it('returns another frame’s submission to the page it came from', async () => {
+    let response = await router.fetch('https://remix.run/api/cart/toggle', {
+      method: 'POST',
+      headers: {
+        'X-Remix-Frame': 'true',
+        'X-Remix-Target': 'cart-button-2',
+        Referer: 'https://remix.run/books',
+      },
+      body: new URLSearchParams({ bookId: '1' }),
+      redirect: 'manual',
+    })
+
+    assert.equal(response.status, 302)
+    assert.equal(response.headers.get('Location'), 'https://remix.run/books')
+  })
+
   it('removes a book that’s already in the cart', async () => {
     let first = await router.fetch('https://remix.run/api/cart/toggle', {
       method: 'POST',

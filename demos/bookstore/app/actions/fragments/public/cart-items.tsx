@@ -1,5 +1,5 @@
-import type { FormSubmitStartEvent, Handle } from 'remix/component'
-import { css, clientEntry, on } from 'remix/component'
+import type { FormSubmitStartEvent, FrameReloadStartEvent, Handle } from 'remix/component'
+import { css, clientEntry, link, on, ref } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
 
@@ -27,7 +27,31 @@ export const CartItems = clientEntry(
   import.meta.url,
   function CartItems(handle: Handle<CartItemsProps>) {
     let change: CartChange | undefined
-    let failed = false
+    let reloadLink: Element | undefined
+    let reload: FrameReloadStartEvent | undefined
+    let failed: 'change' | 'reload' | undefined
+
+    // Links don't dispatch `rmx:form-submit-start`, so the cart follows its reload link's loads
+    // through its frame. Any newer load of the frame replaces one, including a change, or a page
+    // navigation, which reloads the frame with the page.
+    handle.frame.addEventListener(
+      'reloadStart',
+      async (event) => {
+        reload = event.sourceElement === reloadLink ? event : undefined
+        if (reload !== event) return
+        failed = undefined
+        handle.update()
+        try {
+          await event.finished
+        } catch (error) {
+          if (!(error instanceof DOMException && error.name === 'AbortError')) failed = 'reload'
+        }
+        if (handle.signal.aborted) return
+        if (reload === event) reload = undefined
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
 
     // Shows a change as soon as its submission starts, until the cart it saved renders. The cart
     // listens around its rows, because removing a row removes its form, which would abort the
@@ -39,13 +63,13 @@ export const CartItems = clientEntry(
         bookId: Number(formData.get('bookId')),
         quantity: formData.has('quantity') ? Number(formData.get('quantity')) : 0,
       }
-      failed = false
+      failed = undefined
       handle.update()
       try {
         await event.finished
       } catch (error) {
         // An `AbortError` means a newer navigation replaced this one, which shows its own state.
-        failed = !(error instanceof DOMException && error.name === 'AbortError')
+        if (!(error instanceof DOMException && error.name === 'AbortError')) failed = 'change'
       }
       if (signal.aborted) return
       change = undefined
@@ -74,22 +98,57 @@ export const CartItems = clientEntry(
             }),
           ]}
         >
-          <p
-            role="status"
-            data-failed={failed ? '' : undefined}
+          <div
             mix={css({
-              fontSize: '0.9rem',
-              '&:not(:empty)': { marginBottom: '1rem' },
-              '&:not([data-failed])': { color: '#666' },
-              '&[data-failed]': { color: '#e74c3c' },
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: '0.5rem 1rem',
+              '&:has(> :not(:empty))': { marginBottom: '1rem' },
             })}
           >
-            {isPending
-              ? 'Updating your cart...'
-              : failed
-                ? 'Couldn’t update your cart. Try again.'
-                : ''}
-          </p>
+            <p
+              role="status"
+              data-failed={failed ? '' : undefined}
+              mix={css({
+                margin: 0,
+                fontSize: '0.9rem',
+                '&:not([data-failed])': { color: '#666' },
+                '&[data-failed]': { color: '#e74c3c' },
+              })}
+            >
+              {isPending
+                ? 'Updating your cart...'
+                : reload
+                  ? 'Reloading your cart...'
+                  : failed === 'change'
+                    ? 'Couldn’t update your cart. Try again, or reload it to see what’s saved.'
+                    : failed === 'reload'
+                      ? 'Couldn’t reload your cart. Try again.'
+                      : ''}
+            </p>
+
+            {failed || reload ? (
+              // The cart page answers a load for its frame with the frame's items.
+              <a
+                aria-disabled={reload ? true : undefined}
+                class="btn btn-secondary"
+                mix={[
+                  link(routes.cart.index.href(), { target: 'cart', history: 'none' }),
+                  ref((node) => {
+                    reloadLink = node
+                  }),
+                  css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }),
+                  on('click', (event) => {
+                    // Keep the link focusable while its load is pending without starting another.
+                    if (reload) event.preventDefault()
+                  }),
+                ]}
+              >
+                Reload cart
+              </a>
+            ) : null}
+          </div>
 
           <table>
             <thead>

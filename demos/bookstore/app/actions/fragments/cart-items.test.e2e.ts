@@ -97,9 +97,74 @@ describe('cart items', () => {
     })
 
     await page.getByRole('button', { name: 'Remove' }).click()
-    await page.getByRole('status').getByText('Couldn’t update your cart. Try again.').waitFor()
+    await page
+      .getByRole('status')
+      .getByText('Couldn’t update your cart. Try again, or reload it to see what’s saved.')
+      .waitFor()
     await page.getByRole('row').filter({ hasText: 'Ash & Smoke' }).waitFor()
     await page.getByText('Total: $16.99').waitFor()
+  })
+
+  it('reloads the cart in place after a change fails', async (t) => {
+    let reloadResponse = Promise.withResolvers<void>()
+    t.after(() => reloadResponse.resolve())
+    let reloadReceived = Promise.withResolvers<void>()
+    let reloads = 0
+    let page = await serveCart(t, [{ bookId: '1', slug: 'bbq' }], async (request) => {
+      let { pathname } = new URL(request.url)
+      if (pathname === routes.cart.api.remove.href()) {
+        return new Response('Server error', { status: 500 })
+      }
+      if (pathname !== routes.cart.index.href() || !request.headers.has('X-Remix-Frame')) return
+      reloads++
+      reloadReceived.resolve()
+      await reloadResponse.promise
+    })
+    let entries = await page.evaluate(() => history.length)
+    await page.getByRole('button', { name: 'Remove' }).click()
+    await page
+      .getByRole('status')
+      .getByText('Couldn’t update your cart.', { exact: false })
+      .waitFor()
+    // Another tab adds a book, which the cart shows once it reloads.
+    await page.request.post(routes.cart.api.add.href(), {
+      form: { bookId: '3', slug: 'three-ways' },
+      maxRedirects: 0,
+    })
+
+    let reload = page.getByRole('link', { name: 'Reload cart' })
+    await reload.focus()
+    await page.keyboard.press('Enter')
+    await reloadReceived.promise
+    await page.getByRole('status').getByText('Reloading your cart...').waitFor()
+    assert.equal(await reload.getAttribute('aria-disabled'), 'true')
+    await page.keyboard.press('Enter')
+
+    reloadResponse.resolve()
+    await page.getByRole('row').filter({ hasText: 'Three Ways to Change Your Life' }).waitFor()
+    assert.equal(await page.getByRole('status').textContent(), '')
+    assert.equal(await reload.count(), 0)
+    assert.equal(new URL(page.url()).pathname, routes.cart.index.href())
+    assert.equal(await page.evaluate(() => history.length), entries)
+    assert.equal(reloads, 1)
+  })
+
+  it('says so when reloading the cart fails', async (t) => {
+    let page = await serveCart(t, [{ bookId: '1', slug: 'bbq' }], (request) => {
+      let { pathname } = new URL(request.url)
+      if (
+        pathname === routes.cart.api.remove.href() ||
+        (pathname === routes.cart.index.href() && request.headers.has('X-Remix-Frame'))
+      ) {
+        return new Response('Server error', { status: 500 })
+      }
+    })
+
+    await page.getByRole('button', { name: 'Remove' }).click()
+    await page.getByRole('link', { name: 'Reload cart' }).click()
+    await page.getByRole('status').getByText('Couldn’t reload your cart. Try again.').waitFor()
+    await page.getByRole('row').filter({ hasText: 'Ash & Smoke' }).waitFor()
+    assert.equal(new URL(page.url()).pathname, routes.cart.index.href())
   })
 
   it('keeps keyboard focus and blocks repeated submissions while saving', async (t) => {
@@ -165,7 +230,10 @@ describe('cart items', () => {
     await page.getByRole('button', { name: 'Saving...' }).waitFor()
     assert.equal(await page.getByRole('button', { name: 'Saving...' }).isDisabled(), true)
     save.resolve()
-    await page.getByRole('status').getByText('Couldn’t update your cart. Try again.').waitFor()
+    await page
+      .getByRole('status')
+      .getByText('Couldn’t update your cart. Try again, or reload it to see what’s saved.')
+      .waitFor()
     await page.getByText('Total: $16.99').waitFor()
     assert.equal(await quantity.inputValue(), '3')
     assert.equal(await update.evaluate((button) => button === document.activeElement), true)
