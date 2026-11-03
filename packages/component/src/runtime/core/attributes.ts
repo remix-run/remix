@@ -1,6 +1,6 @@
 import { camelToKebab, normalizeCssValue } from '../../style/style.ts'
 import { normalizeSvgAttribute } from '../svg-attributes.ts'
-import type { ElementProps } from '../jsx.ts'
+import type { ElementProps } from './vnode.ts'
 
 const ATTRIBUTE_FALLBACK_NAMES = new Set([
   'width',
@@ -18,13 +18,22 @@ const ATTRIBUTE_FALLBACK_NAMES = new Set([
 ])
 
 const BOOLEANISH_STRING_ATTRIBUTES = new Set([
+  'accent',
+  'accentunder',
   'autoReverse',
   'contenteditable',
+  'displaystyle',
   'draggable',
   'externalResourcesRequired',
+  'fence',
   'focusable',
+  'largeop',
+  'movablelimits',
   'preserveAlpha',
+  'separator',
   'spellcheck',
+  'stretchy',
+  'symmetric',
 ])
 
 const BLOCKED_HOST_PROP_NAMES = new Set(['__proto__', 'outerHTML'])
@@ -128,8 +137,16 @@ export function isBooleanishStringAttribute(name: string): boolean {
   return BOOLEANISH_STRING_ATTRIBUTES.has(name)
 }
 
+// Remix reads these by presence, so `true` renders an empty attribute and `false` omits it.
+const REMIX_BOOLEAN_ATTRIBUTES = new Set(['data-rmx-document', 'data-rmx-preserve-dom'])
+
 export function shouldStringifyBooleanAttribute(name: string): boolean {
-  return isBooleanishStringAttribute(name) || name === 'value'
+  return (
+    name.startsWith('aria-') ||
+    (name.startsWith('data-') && !REMIX_BOOLEAN_ATTRIBUTES.has(name)) ||
+    isBooleanishStringAttribute(name) ||
+    name === 'value'
+  )
 }
 
 export function serializeStyleObject(style: Record<string, unknown>): string {

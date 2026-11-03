@@ -1,5 +1,5 @@
 import { createMixin } from './mixin.ts'
-import type { ElementProps } from '../jsx.ts'
+import type { ElementProps } from '../core/vnode.ts'
 import type { MixinDescriptor } from './mixin.ts'
 import { createElement } from '../create-element.ts'
 

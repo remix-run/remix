@@ -1,7 +1,96 @@
-import type { ElementProps, ElementType, RemixNode, Renderable } from './jsx.ts'
+import type { ElementProps, ElementType, RemixNode, Renderable } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-import { TypedEventTarget } from './typed-event-target.ts'
+
+/**
+ * An `EventTarget` subclass with typed event maps.
+ */
+export class TypedEventTarget<eventMap> extends EventTarget {}
+
+/**
+ * Interface surface for {@link TypedEventTarget} with typed listener overloads.
+ */
+export interface TypedEventTarget<eventMap> {
+  /**
+   * Adds a listener for a typed event name from the event map.
+   *
+   * @param type Event name to listen for.
+   * @param listener Listener to invoke when the event fires.
+   * @param options Listener registration options.
+   */
+  addEventListener<type extends Extract<keyof eventMap, string>>(
+    type: type,
+    listener: TypedEventListener<eventMap>[type],
+    options?: AddEventListenerOptions,
+  ): void
+  /**
+   * Adds a listener using the standard untyped `EventTarget` signature.
+   *
+   * @param type Event name to listen for.
+   * @param listener Listener to invoke when the event fires.
+   * @param options Listener registration options.
+   */
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void
+  /**
+   * Removes a listener for a typed event name from the event map.
+   *
+   * @param type Event name to stop listening for.
+   * @param listener Previously registered listener.
+   * @param options Listener removal options.
+   */
+  removeEventListener<type extends Extract<keyof eventMap, string>>(
+    type: type,
+    listener: TypedEventListener<eventMap>[type],
+    options?: EventListenerOptions,
+  ): void
+  /**
+   * Removes a listener using the standard untyped `EventTarget` signature.
+   *
+   * @param type Event name to stop listening for.
+   * @param listener Previously registered listener.
+   * @param options Listener removal options.
+   */
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: EventListenerOptions,
+  ): void
+}
+
+type TypedEventListener<eventMap> = {
+  [key in keyof eventMap]: (event: eventMap[key]) => void
+}
+
+/**
+ * Error event shape emitted by the component runtime.
+ */
+export type ComponentErrorEvent = ErrorEvent & {
+  readonly error: unknown
+}
+
+/**
+ * Creates a normalized component error event from any thrown value.
+ *
+ * @param error Error-like value to expose on the event.
+ * @returns An `error` event carrying the original value.
+ */
+export function createComponentErrorEvent(error: unknown): ComponentErrorEvent {
+  return new ErrorEvent('error', { error }) as ComponentErrorEvent
+}
+
+/**
+ * Reads the `.error` payload from a dispatched component error event.
+ *
+ * @param event Event to inspect.
+ * @returns The original error value, if present.
+ */
+export function getComponentError(event: Event): unknown {
+  return (event as { error?: unknown }).error
+}
 
 /**
  * Task queued to run after a component update completes.
@@ -259,7 +348,7 @@ export type ComponentFn<Props = Record<string, never>, ContextValue = NoContext>
  */
 export type RenderFn = () => RemixNode
 
-export type { RemixNode } from './jsx.ts'
+export type { RemixNode } from './core/vnode.ts'
 
 // Handle is already exported as an interface above, no need to re-export
 
@@ -520,26 +609,29 @@ let sharedAbortedSignal: AbortSignal | undefined
 
 function syncProps(target: ElementProps, next: ElementProps): void {
   for (let key in target) {
-    if (!(key in next)) {
+    if (!Object.hasOwn(next, key)) {
       delete target[key]
     }
   }
 
   for (let key in next) {
-    target[key] = next[key]
+    if (key === '__proto__') {
+      Object.defineProperty(target, key, {
+        value: next[key],
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
+    } else {
+      target[key] = next[key]
+    }
   }
 }
 
-/**
- * Built-in component used to render nested frame content.
- *
- * @param handle Component handle for the frame instance.
- * @returns A placeholder render function handled by the reconciler.
- */
-export function Frame(handle: Handle<FrameProps, FrameHandle>): RenderFn {
-  void handle
-  return () => null // reconciler renders
-}
+// Marks the built-in `Frame` component, which is defined with the frame runtime. The property
+// holds the client frame node renderer, so the reconciler and server renderer can recognize and
+// render frames without importing the frame runtime.
+export const FRAME_NODE = Symbol('FrameNode')
 
 /**
  * Built-in component used to group children without adding a host element.

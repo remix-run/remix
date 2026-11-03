@@ -1,0 +1,1 @@
+Keep keyed `<head>` stylesheets in place on the first client navigation of a server-rendered document. The server renders the managed import map as the first child of `<head>`, and the head diff used to move every other head node in front of it. Moving a `<link rel="stylesheet">` made the browser drop and reload it, which caused a flash of unstyled content.

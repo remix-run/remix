@@ -6,8 +6,10 @@ import { createElement } from '../runtime/create-element.ts'
 
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
+import type { SerializableObject } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
-import { Fragment, Frame } from '../runtime/component.ts'
+import { Fragment } from '../runtime/component.ts'
+import { Frame } from '../runtime/frame.ts'
 import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
@@ -872,6 +874,53 @@ describe('stream', () => {
       let html = await drain(stream)
       expect(html).toBe(
         '<div contenteditable="false" draggable="false" spellcheck="false"><input value="false" /></div>',
+      )
+    })
+
+    it('renders aria and data boolean values as strings', async () => {
+      let stream = renderToStream(
+        <button
+          aria-pressed={true}
+          aria-hidden={false}
+          data-active={true}
+          data-open={false}
+          disabled
+        >
+          Toggle
+        </button>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<button aria-pressed="true" aria-hidden="false" data-active="true" data-open="false" disabled>Toggle</button>',
+      )
+    })
+
+    it('renders MathML boolean values as strings', async () => {
+      let html = await renderToString(
+        <math displaystyle={false}>
+          <mover accent={false}>
+            <munder accentunder={true}>
+              <mo
+                fence={false}
+                largeop={true}
+                movablelimits={false}
+                separator={true}
+                stretchy={false}
+                symmetric={true}
+              >
+                ∑
+              </mo>
+              <mi>a</mi>
+            </munder>
+            <mi>b</mi>
+          </mover>
+        </math>,
+      )
+
+      expect(html).toBe(
+        '<math displaystyle="false"><mover accent="false"><munder accentunder="true">' +
+          '<mo fence="false" largeop="true" movablelimits="false" separator="true" stretchy="false" symmetric="true">∑</mo>' +
+          '<mi>a</mi></munder><mi>b</mi></mover></math>',
       )
     })
 
@@ -2319,6 +2368,65 @@ describe('stream', () => {
         items: ['one', 'two', 'three'],
         nested: { value: 99 },
       })
+    })
+
+    it('keeps genuine wire descriptors distinct from escaped application props', async () => {
+      let Entry = clientEntry(
+        '/entry.js#Entry',
+        function Entry(_handle: Handle<{ data: SerializableObject; content: RemixNode }>) {
+          return () => <p>Content</p>
+        },
+      )
+      function Content() {
+        return () => <span>Real</span>
+      }
+      let elementData = { $rmx: 'data', type: 'div', props: { innerHTML: '<b>Data</b>' }, key: {} }
+      let mixinData = { $rmxMixin: 'css', args: [{ color: 'red' }] }
+      let data = { element: elementData, mixin: mixinData }
+      let html = await drain(renderToStream(<Entry data={data} content={<Content />} />))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props).toEqual({
+        data: {
+          element: { $rmxObject: elementData },
+          mixin: { $rmxObject: mixinData },
+        },
+        content: { $rmx: true, type: 'span', props: { children: 'Real' } },
+      })
+    })
+
+    it('still rejects circular escaped data', async () => {
+      let Entry = clientEntry(
+        '/entry.js#Entry',
+        function Entry(_handle: Handle<{ data: SerializableObject }>) {
+          return () => <p>Content</p>
+        },
+      )
+      let data: SerializableObject = { $rmxMixin: 'css' }
+      data.self = data
+
+      await expect(drain(renderToStream(<Entry data={data} />, { onError() {} }))).rejects.toThrow(
+        /circular|cyclic/i,
+      )
+    })
+
+    it('reads plain data props only during JSON serialization', async () => {
+      let reads = 0
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let data = {
+        $rmx: 'data',
+        get props() {
+          reads++
+          return { label: 'Data' }
+        },
+      }
+      let html = await drain(renderToStream(createElement(Entry, { data })))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(reads).toBe(1)
+      expect(entry.props.data).toEqual({ $rmxObject: { $rmx: 'data', props: { label: 'Data' } } })
     })
 
     it('serializes virtual host elements', async () => {
@@ -3924,6 +4032,27 @@ describe('stream', () => {
         status: 'pending',
         src: '/x',
       })
+    })
+
+    it('renders other components named Frame as regular components', async () => {
+      function Frame() {
+        return () => <p>Not a frame</p>
+      }
+
+      let result = await renderToString(<Frame />)
+
+      expect(result).toBe('<p>Not a frame</p>')
+    })
+
+    it('renders components that inherit from Frame as regular components', async () => {
+      function DerivedFrame() {
+        return () => <p>Not a frame</p>
+      }
+      Object.setPrototypeOf(DerivedFrame, Frame)
+
+      let result = await renderToString(<DerivedFrame />)
+
+      expect(result).toBe('<p>Not a frame</p>')
     })
 
     it('strips doctype markup from non-blocking frame templates', async () => {

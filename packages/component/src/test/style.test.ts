@@ -196,6 +196,95 @@ describe('normalizeCssValue', () => {
     expect(normalizeCssValue('-moz-force-broken-image-icon', 1)).toBe('1')
   })
 
+  it('keeps every audited numeric property unitless with or without a vendor prefix', () => {
+    let properties = [
+      'animation',
+      'animation-iteration-count',
+      'aspect-ratio',
+      'bookmark-level',
+      'border-image',
+      'border-image-outset',
+      'border-image-slice',
+      'border-image-width',
+      'box-flex',
+      'box-flex-group',
+      'box-ordinal-group',
+      'column-count',
+      'column-span',
+      'columns',
+      'flex',
+      'flex-grow',
+      'flex-line-count',
+      'flex-negative',
+      'flex-order',
+      'flex-positive',
+      'flex-shrink',
+      'float-defer',
+      'font-size-adjust',
+      'font-weight',
+      'force-broken-image-icon',
+      'grid-area',
+      'grid-column',
+      'grid-column-end',
+      'grid-column-span',
+      'grid-column-start',
+      'grid-row',
+      'grid-row-end',
+      'grid-row-span',
+      'grid-row-start',
+      'hyphenate-limit-chars',
+      'hyphenate-limit-lines',
+      'initial-letter',
+      'line-clamp',
+      'line-height',
+      'mask-border',
+      'mask-border-outset',
+      'mask-border-slice',
+      'mask-border-width',
+      'mask-box-image',
+      'mask-box-image-outset',
+      'mask-box-image-slice',
+      'mask-box-image-width',
+      'math-depth',
+      'max-lines',
+      'opacity',
+      'order',
+      'orphans',
+      'reading-order',
+      'scale',
+      'shape-image-threshold',
+      'tab-size',
+      'voice-balance',
+      'widows',
+      'z-index',
+      'zoom',
+      'fill-opacity',
+      'flood-opacity',
+      'stop-opacity',
+      'stroke-dasharray',
+      'stroke-dashoffset',
+      'stroke-miterlimit',
+      'stroke-opacity',
+      'stroke-width',
+    ]
+
+    for (let property of properties) {
+      expect(normalizeCssValue(property, 2)).toBe('2')
+      for (let prefix of ['-webkit-', '-moz-', '-ms-', '-o-']) {
+        expect(normalizeCssValue(prefix + property, 2)).toBe('2')
+      }
+      expect(normalizeCssValue(`${property}-x`, 2)).toBe('2px')
+      expect(normalizeCssValue(`x-${property}`, 2)).toBe('2px')
+      expect(normalizeCssValue(`-khtml-${property}`, 2)).toBe('2px')
+    }
+  })
+
+  it('appends px to properties that only resemble numeric properties', () => {
+    for (let property of ['flex-basis', 'grid', 'grid-gap', 'column-gap', 'border-width', 'size']) {
+      expect(normalizeCssValue(property, 2)).toBe('2px')
+    }
+  })
+
   it('preserves explicit units and multi-part values', () => {
     expect(normalizeCssValue('maskBorderWidth', '3px')).toBe('3px')
     expect(normalizeCssValue('animationDuration', '200ms')).toBe('200ms')

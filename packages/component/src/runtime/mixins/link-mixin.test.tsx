@@ -3,7 +3,7 @@ import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
-import type { RemixNode } from '../jsx.ts'
+import type { RemixNode } from '../core/vnode.ts'
 import { link } from './link-mixin.ts'
 
 function render(node: RemixNode) {
