@@ -1,0 +1,26 @@
+diff --git a/lib/coreBundle.js b/lib/coreBundle.js
+index bc601fcf741792e3fc76884a28a3c43f80c6472f..ab82b1f8515696394b2eb259594eda90d17e3033 100644
+--- a/lib/coreBundle.js
++++ b/lib/coreBundle.js
+@@ -33611,6 +33611,8 @@ var init_chromiumSwitches = __esm({
+       "AutoDeElevate",
+       // See https://github.com/microsoft/playwright/issues/37714
+       "RenderDocument",
++      // Avoids intermittent ERR_NO_BUFFER_SPACE failures on Windows (https://crbug.com/572515601).
++      "TcpPortRandomizationWin",
+       // Prevents downloading optimization hints on startup.
+       "OptimizationHints",
+       // Disables forced sign-in in Edge.
+diff --git a/lib/server/electron/loader.js b/lib/server/electron/loader.js
+index 85427f6dbdddd8e9b49409502cc20c7ab7e16ebe..2779729fc8fc53ad2605beb58f2e09dd25b8a701 100644
+--- a/lib/server/electron/loader.js
++++ b/lib/server/electron/loader.js
+@@ -29,6 +29,8 @@ var disabledFeatures = [
+   "AutoDeElevate",
+   // See https://github.com/microsoft/playwright/issues/37714
+   "RenderDocument",
++  // Avoids intermittent ERR_NO_BUFFER_SPACE failures on Windows (https://crbug.com/572515601).
++  "TcpPortRandomizationWin",
+   // Prevents downloading optimization hints on startup.
+   "OptimizationHints",
+   // Disables forced sign-in in Edge.

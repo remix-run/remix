@@ -39,4 +39,7 @@ packages:
   - template
   - scripts
 
+patchedDependencies:
+  playwright-core@1.60.0: patches/playwright-core@1.60.0.patch
+
 shellEmulator: true
