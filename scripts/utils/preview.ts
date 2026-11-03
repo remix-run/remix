@@ -106,6 +106,11 @@ export function getPreviewReleaseTitle(build: PreviewBuild): string {
     : `${build.channel} · ${timestamp} · ${build.sha.slice(0, 8)}`
 }
 
+function getPreviewTagTime(tag: string): number {
+  let match = /^v0\.(\d{8})\.(\d{1,6})-/.exec(tag)
+  return match ? Number(match[1]) * 1_000_000 + Number(match[2]) : 0
+}
+
 export function validatePreviewRepository(repository: string): string {
   if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repository)) {
     throw new Error(`Invalid preview repository: ${repository}`)
@@ -375,6 +380,12 @@ export function publishPreview(
     files.some((filename) => !filename.endsWith(`-${build.sha.slice(0, 8)}.tgz`))
   )
     throw new Error('Preview tarballs do not match the source SHA')
+  if (build.channel === 'main') {
+    // Lets `releases/latest/download/remix.url` resolve to a lockfile-safe, SHA-specific URL.
+    let filename = path.join(directory, 'remix.url')
+    fs.writeFileSync(filename, `${getPreviewTarballUrl(build, 'remix', github.repository)}\n`)
+    files.push(filename)
+  }
   let expected = files.map((filename) => {
     let data = fs.readFileSync(filename)
     if (!data.length) throw new Error(`Empty preview asset: ${filename}`)
@@ -440,11 +451,22 @@ export function publishPreview(
   for (let asset of github.listAssets(release)) github.delete(`releases/assets/${asset.id}`)
   for (let filename of files) github.upload(release, filename)
   verifyAssets(github.listAssets(release), expected, true)
+  // Builds can finish out of order, so only the newest main commit becomes the latest release.
+  let latest =
+    build.channel === 'main' &&
+    github
+      .listReleases()
+      .every(
+        (item) =>
+          item.draft ||
+          getPreviewChannel(item.tag_name) !== 'main' ||
+          getPreviewTagTime(item.tag_name) <= getPreviewTagTime(build.tag),
+      )
   github.api('PATCH', `releases/${release.id}`, {
     name: title,
     draft: false,
-    prerelease: true,
-    make_latest: 'false',
+    prerelease: build.channel !== 'main',
+    make_latest: String(latest),
   })
   console.log(`Published preview: ${url}`)
   return url
