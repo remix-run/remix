@@ -1,8 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 
-import { PreviewGitHub, createGitHubRunner, readPullRequest } from './utils/preview-releases.ts'
-import { readPreviewManifest } from './utils/preview.ts'
+import {
+  PreviewGitHub,
+  createGitHubRunner,
+  readPullRequest,
+  readPreviewManifest,
+} from './utils/preview.ts'
 
 const STICKY_MARKER = '<!-- pr-preview-comment-sticky -->'
 const CLEANUP_MARKER = '<!-- pr-preview-comment-cleanup -->'
