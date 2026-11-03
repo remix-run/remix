@@ -1939,7 +1939,7 @@ importers:
         specifier: ^8.16.3
         version: 8.18.0
       playwright:
-        specifier: ^1.63.0
+        specifier: ^1.60.0
         version: 1.63.0
       redis:
         specifier: ^5.10.0
