@@ -1,17 +1,20 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 
-import { Frame, type Handle } from '../runtime/component.ts'
+import type { Handle } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
-  NamedFrameRegistry,
+  Frame,
   publishFrameTemplate,
   reloadFrameForNavigation,
+} from '../runtime/frame.ts'
+import {
+  NamedFrameRegistry,
   type LoadModule,
   type ResolveFrameOptions,
-} from '../runtime/frame.ts'
+} from '../runtime/frame-runtime.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'

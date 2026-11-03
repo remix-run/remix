@@ -25,7 +25,8 @@ export type {
 } from './runtime/client-entries.ts'
 
 // -- Components --
-export { Fragment, Frame } from './runtime/component.ts'
+export { Fragment } from './runtime/component.ts'
+export { Frame } from './runtime/frame.ts'
 export type {
   Task,
   Handle,
@@ -36,7 +37,7 @@ export type {
   FrameReloadOptions,
   FrameProps,
 } from './runtime/component.ts'
-export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame.ts'
+export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame-runtime.ts'
 export { spaResponse } from './runtime/spa-response.ts'
 
 // -- Elements/JSX/Props --

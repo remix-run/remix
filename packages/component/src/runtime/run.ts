@@ -2,7 +2,7 @@ import { appNamedFrames, createFrame, getAppTopFrame, setAppTopFrame } from './f
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
-import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame.ts'
+import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
 import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
