@@ -46,10 +46,10 @@ if (command === 'comment') {
 A [preview build](https://github.com/${PREVIEW_REPOSITORY}/releases/tag/${preview.tag}) is available for this PR:
 
 \`\`\`sh
-pnpm add "${getPreviewTarballUrl(preview.tag, 'remix')}"
+pnpm add "${getPreviewTarballUrl(preview, 'remix')}"
 \`\`\`
 
-Each SHA has its own build URL. All builds remain installable until this PR is closed or merged, when their releases and tags are deleted.
+Each SHA has its own build URL. The latest 10 successful SHA builds are retained. Closing or merging this PR deletes its preview release and tag.
 
 If your pnpm version blocks transitive Git or tarball dependencies, set \`blockExoticSubdeps: false\` in your \`pnpm-workspace.yaml\`.`
 } else {

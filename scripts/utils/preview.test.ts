@@ -1,3 +1,8 @@
+import { createHash } from 'node:crypto'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { basename, join } from 'node:path'
+
 import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
@@ -5,27 +10,44 @@ import {
   PREVIEW_RELEASE_MARKER,
   PreviewGitHub,
   getExpiredPreviewReleases,
+  getExpiredPrPreviewAssets,
   getPreviewChannel,
   getPreviewTag,
   getPreviewTarballUrl,
   parsePreviewBuild,
   preparePreviewPackage,
+  publishPreview,
   readPullRequest,
 } from './preview.ts'
-import type { PreviewRelease } from './preview.ts'
+import type { PreviewAsset, PreviewBuild, PreviewRelease } from './preview.ts'
 
 describe('preview packages', () => {
-  it('uses the UTC commit date and eight SHA characters while preserving channel prefixes', () => {
+  it('uses dated tags for main and experiments, and one tag per PR', () => {
     let sha = 'abcdef1234567890'.padEnd(40, '0')
     let committedAt = '2026-11-02T23:30:00-05:00'
     let tag = getPreviewTag('main', sha, committedAt)
     assert.equal(tag, 'main-20261103-abcdef12')
-    assert.equal(getPreviewTag('pr-123', sha, committedAt), 'pr-123-20261103-abcdef12')
+    assert.equal(getPreviewTag('pr-123', sha, committedAt), 'pr-123')
+    assert.equal(getPreviewChannel('pr-123'), 'pr-123')
     let experimental = getPreviewTag('experimental-feature-123', sha, committedAt)
     assert.equal(experimental, 'experimental-feature-123-20261103-abcdef12')
     assert.equal(getPreviewChannel(tag), 'main')
     assert.equal(getPreviewChannel('pr-123-20261103-abcdef12'), 'pr-123')
     assert.equal(getPreviewChannel(experimental), 'experimental-feature-123')
+  })
+
+  it('uses eight-character SHA filenames within the shared PR release', () => {
+    let sha = 'a'.repeat(40)
+    let other = sha.slice(0, 8) + 'b'.repeat(32)
+    let build = parsePreviewBuild('pr-123', sha)
+    assert.equal(
+      getPreviewTarballUrl(build, 'remix'),
+      `https://github.com/remix-run/previews/releases/download/pr-123/remix-${sha.slice(0, 8)}.tgz`,
+    )
+    assert.equal(
+      getPreviewTarballUrl(build, 'remix'),
+      getPreviewTarballUrl({ ...build, sha: other }, 'remix'),
+    )
   })
 
   it('requires a valid tag matching the full source SHA', () => {
@@ -42,7 +64,10 @@ describe('preview packages', () => {
 
   it('rewrites internal runtime dependencies while preserving external and peer ranges', () => {
     let url = getPreviewTarballUrl(
-      getPreviewTag('main', 'a'.repeat(40), '2026-11-02T12:00:00Z'),
+      parsePreviewBuild(
+        getPreviewTag('main', 'a'.repeat(40), '2026-11-02T12:00:00Z'),
+        'a'.repeat(40),
+      ),
       'headers',
     )
     let pkg = preparePreviewPackage(
@@ -192,6 +217,184 @@ describe('preview tag cleanup', () => {
     assert.throws(() => github.delete(tag), /request failed/)
   })
 })
+
+describe('shared PR preview releases', () => {
+  it('retains ten complete SHA groups by completion time and removes incomplete uploads', () => {
+    let builds = Array.from({ length: 12 }, (_, index) => {
+      let sha = index.toString(16).padStart(8, '0').padEnd(40, '0')
+      let updated_at = new Date(now + index * 1000).toISOString()
+      return [
+        {
+          id: index * 2,
+          name: `remix-${sha.slice(0, 8)}.tgz`,
+          label: `Complete preview build: ${sha}`,
+          updated_at,
+          state: 'uploaded',
+          size: 1,
+          digest: null,
+        },
+        {
+          id: index * 2 + 1,
+          name: `assert-${sha.slice(0, 8)}.tgz`,
+          label: null,
+          updated_at,
+          state: 'uploaded',
+          size: 1,
+          digest: null,
+        },
+      ]
+    })
+    let incomplete = { ...builds[0][1], id: 30, name: `assert-${'f'.repeat(8)}.tgz` }
+    let unrelated = { ...incomplete, id: 31, name: 'notes.txt' }
+    assert.deepEqual(
+      getExpiredPrPreviewAssets([...builds.flat().reverse(), incomplete, unrelated])
+        .map((asset) => asset.id)
+        .toSorted((a, b) => a - b),
+      [0, 1, 2, 3, 30],
+    )
+  })
+
+  it('retries partial uploads without replacing completed SHA builds or changing their age', () => {
+    let fixture = prPublisher()
+    try {
+      let first = fixture.build('a'.repeat(40))
+      publishPreview(fixture.github, first.build, first.directory)
+      let original = fixture.assets.map((asset) => ({ ...asset }))
+      let second = fixture.build('b'.repeat(40))
+      fixture.failOnUpload = fixture.uploads + 2
+      assert.throws(
+        () => publishPreview(fixture.github, second.build, second.directory),
+        /interrupted/,
+      )
+      assert.equal(fixture.release?.draft, false)
+      assert.equal(fixture.assets.filter((asset) => asset.label !== null).length, 1)
+      fixture.failOnUpload = undefined
+      publishPreview(fixture.github, second.build, second.directory)
+      assert.equal(fixture.assets.length, 4)
+      assert.deepEqual(
+        fixture.assets.filter((asset) =>
+          asset.name.endsWith(`-${first.build.sha.slice(0, 8)}.tgz`),
+        ),
+        original,
+      )
+      let uploads = fixture.uploads
+      writeFileSync(
+        join(first.directory, `remix-${first.build.sha.slice(0, 8)}.tgz`),
+        'different rebuild bytes',
+      )
+      publishPreview(fixture.github, first.build, first.directory)
+      assert.equal(fixture.uploads, uploads)
+      assert.deepEqual(
+        fixture.assets.filter((asset) =>
+          asset.name.endsWith(`-${first.build.sha.slice(0, 8)}.tgz`),
+        ),
+        original,
+      )
+      assert.ok(fixture.release?.body.includes(`/commits/${second.build.sha}`))
+      let collision = fixture.build('a'.repeat(8) + 'c'.repeat(32))
+      assert.throws(
+        () => publishPreview(fixture.github, collision.build, collision.directory),
+        /SHA collision/,
+      )
+      assert.equal(fixture.uploads, uploads)
+      for (let index = 0; index < 10; index++) {
+        let next = fixture.build(index.toString(16).padStart(8, '0').padEnd(40, '0'))
+        publishPreview(fixture.github, next.build, next.directory)
+      }
+      assert.equal(fixture.assets.length, 20)
+      assert.ok(!fixture.release?.body.includes(`/commits/${first.build.sha}`))
+      assert.ok(!fixture.release?.body.includes(`/commits/${second.build.sha}`))
+    } finally {
+      fixture.dispose()
+    }
+  })
+})
+
+function prPublisher() {
+  let root = mkdtempSync(join(tmpdir(), 'pr-preview-'))
+  let github = new PreviewGitHub('remix-run/previews', () => {
+    throw new Error('Unexpected GitHub command')
+  })
+  let fixture: {
+    github: PreviewGitHub
+    release: PreviewRelease | undefined
+    assets: PreviewAsset[]
+    uploads: number
+    failOnUpload: number | undefined
+    build(sha: string): { directory: string; build: PreviewBuild }
+    dispose(): void
+  } = {
+    github,
+    release: undefined,
+    assets: [],
+    uploads: 0,
+    failOnUpload: undefined,
+    build(sha: string) {
+      let directory = join(root, sha)
+      mkdirSync(directory)
+      writeFileSync(join(directory, `remix-${sha.slice(0, 8)}.tgz`), 'remix bytes')
+      writeFileSync(join(directory, `assert-${sha.slice(0, 8)}.tgz`), 'assert bytes')
+      return { directory, build: parsePreviewBuild('pr-123', sha) }
+    },
+    dispose() {
+      rmSync(root, { recursive: true, force: true })
+    },
+  }
+  let nextId = 1
+  github.listReleases = () => (fixture.release ? [fixture.release] : [])
+  github.listAssets = () => fixture.assets.map((asset) => ({ ...asset }))
+  github.upload = (_release, filename) => {
+    fixture.uploads++
+    if (fixture.uploads === fixture.failOnUpload) throw new Error('interrupted')
+    let bytes = readFileSync(filename)
+    fixture.assets.push({
+      id: nextId++,
+      name: basename(filename),
+      size: bytes.length,
+      state: 'uploaded',
+      digest: `sha256:${createHash('sha256').update(bytes).digest('hex')}`,
+      label: null,
+      updated_at: new Date(now + nextId * 1000).toISOString(),
+    })
+  }
+  github.delete = (endpoint) => {
+    fixture.assets = fixture.assets.filter((asset) => endpoint !== `releases/assets/${asset.id}`)
+  }
+  github.api = (method, endpoint, body) => {
+    if (method === 'POST' && endpoint === 'releases' && typeof body?.body === 'string') {
+      fixture.release = {
+        ...release(1, 'pr-123', new Date(now).toISOString()),
+        draft: true,
+        published_at: null,
+        body: body.body,
+      }
+      return fixture.release
+    }
+    if (
+      method === 'PATCH' &&
+      endpoint.startsWith('releases/assets/') &&
+      typeof body?.label === 'string'
+    ) {
+      let asset = fixture.assets.find((asset) => endpoint === `releases/assets/${asset.id}`)
+      if (!asset) throw new Error('Missing asset')
+      asset.label = body.label
+      asset.updated_at = new Date(now + nextId++ * 1000).toISOString()
+      return asset
+    }
+    if (
+      method === 'PATCH' &&
+      fixture.release &&
+      endpoint === `releases/${fixture.release.id}` &&
+      typeof body?.body === 'string'
+    ) {
+      fixture.release.body = body.body
+      fixture.release.draft = false
+      return fixture.release
+    }
+    throw new Error(`Unexpected API call: ${method} ${endpoint}`)
+  }
+  return fixture
+}
 
 function release(id: number, channel: string, timestamp: string): PreviewRelease {
   return {

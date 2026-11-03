@@ -32,8 +32,10 @@ export interface PreviewRelease {
 
 export const PREVIEW_REPOSITORY = 'remix-run/previews'
 export const PREVIEW_RELEASE_MARKER = '<!-- remix-preview -->'
+const PR_BUILD_COMPLETE = 'Complete preview build'
 
 export function getPreviewChannel(tag: string): string | null {
+  if (/^pr-[1-9]\d*$/.test(tag)) return tag
   return (
     /^(main|pr-[1-9]\d*|experimental-[a-zA-Z0-9][a-zA-Z0-9._-]*)-\d{8}-[a-f0-9]{8}$/.exec(
       tag,
@@ -80,6 +82,7 @@ export function getPreviewTag(channel: string, sha: string, committedAt: string)
     throw new Error(`Invalid preview channel: ${channel}`)
   }
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Invalid source SHA: ${sha}`)
+  if (/^pr-[1-9]\d*$/.test(channel)) return channel
   let date = new Date(committedAt).toISOString().slice(0, 10).replaceAll('-', '')
   return `${channel}-${date}-${sha.slice(0, 8)}`
 }
@@ -92,7 +95,7 @@ export function validatePreviewRepository(repository: string): string {
 }
 
 export function getPreviewTarballUrl(
-  tag: string,
+  build: PreviewBuild,
   packageDirName: string,
   repository = PREVIEW_REPOSITORY,
 ): string {
@@ -100,12 +103,22 @@ export function getPreviewTarballUrl(
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(packageDirName)) {
     throw new Error(`Invalid package directory: ${packageDirName}`)
   }
-  return `https://github.com/${repository}/releases/download/${encodeURIComponent(tag)}/${packageDirName}.tgz`
+  return `https://github.com/${repository}/releases/download/${encodeURIComponent(build.tag)}/${getPreviewAssetName(build, packageDirName)}`
+}
+
+function getPreviewAssetName(build: PreviewBuild, packageDirName: string): string {
+  return /^pr-[1-9]\d*$/.test(build.tag)
+    ? `${packageDirName}-${build.sha.slice(0, 8)}.tgz`
+    : `${packageDirName}.tgz`
 }
 
 export function parsePreviewBuild(tag: string, sha: string): PreviewBuild {
   let channel = getPreviewChannel(tag)
-  if (!channel || !/^[a-f0-9]{40}$/.test(sha) || !tag.endsWith(`-${sha.slice(0, 8)}`))
+  if (
+    !channel ||
+    !/^[a-f0-9]{40}$/.test(sha) ||
+    (tag !== channel && !tag.endsWith(`-${sha.slice(0, 8)}`))
+  )
     throw new Error('Invalid preview tag or source SHA')
   return { channel, sha, tag }
 }
@@ -147,6 +160,7 @@ export async function buildPreview(
   let sha = logAndExec('git', ['rev-parse', 'HEAD'], true)
   let committedAt = logAndExec('git', ['show', '--no-patch', '--format=%cI', 'HEAD'], true)
   let tag = getPreviewTag(channel, sha, committedAt)
+  let build = { channel, sha, tag }
   let entries = await fsp.readdir('packages', { withFileTypes: true })
   let packages: { dirName: string; content: string; manifest: PreviewPackageManifest }[] = []
   for (let entry of entries) {
@@ -156,7 +170,7 @@ export async function buildPreview(
     if (!manifest.private) packages.push({ dirName: entry.name, content, manifest })
   }
   let urls = new Map(
-    packages.map(({ dirName, manifest }) => [manifest.name, getPreviewTarballUrl(tag, dirName)]),
+    packages.map(({ dirName, manifest }) => [manifest.name, getPreviewTarballUrl(build, dirName)]),
   )
   if (!urls.has('remix')) throw new Error('Missing remix package')
   function exec(command: string, args: string[]) {
@@ -186,7 +200,7 @@ export async function buildPreview(
         `packages/${dirName}`,
         'pack',
         '--out',
-        path.resolve(directory, `${dirName}.tgz`),
+        path.resolve(directory, getPreviewAssetName(build, dirName)),
       ])
   } finally {
     if (!dryRun) {
@@ -206,6 +220,39 @@ export interface PreviewAsset {
   state: string
   size: number
   digest: string | null
+  label: string | null
+  updated_at: string
+}
+
+function getCompletedPrPreviewBuilds(
+  assets: PreviewAsset[],
+): { sha: string; asset: PreviewAsset }[] {
+  return assets
+    .flatMap((asset) => {
+      let sha = /^Complete preview build: ([a-f0-9]{40})$/.exec(asset.label ?? '')?.[1]
+      return sha &&
+        asset.name === `remix-${sha.slice(0, 8)}.tgz` &&
+        asset.state === 'uploaded' &&
+        asset.size > 0
+        ? [{ sha, asset }]
+        : []
+    })
+    .toSorted(
+      (a, b) =>
+        Date.parse(b.asset.updated_at) - Date.parse(a.asset.updated_at) || b.asset.id - a.asset.id,
+    )
+}
+
+export function getExpiredPrPreviewAssets(assets: PreviewAsset[]): PreviewAsset[] {
+  let retained = new Set(
+    getCompletedPrPreviewBuilds(assets)
+      .slice(0, 10)
+      .map((build) => build.sha.slice(0, 8)),
+  )
+  return assets.filter((asset) => {
+    let sha = /-([a-f0-9]{8})\.tgz$/.exec(asset.name)?.[1]
+    return sha !== undefined && !retained.has(sha)
+  })
 }
 
 export interface GitHubRunner {
@@ -298,8 +345,13 @@ export function publishPreview(
     .readdirSync(directory, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith('.tgz'))
     .map((entry) => path.join(directory, entry.name))
-  if (!files.includes(path.join(directory, 'remix.tgz')))
+  if (!files.includes(path.join(directory, getPreviewAssetName(build, 'remix'))))
     throw new Error('Missing remix preview tarball')
+  if (
+    /^pr-[1-9]\d*$/.test(build.tag) &&
+    files.some((filename) => !filename.endsWith(`-${build.sha.slice(0, 8)}.tgz`))
+  )
+    throw new Error('Preview tarballs do not match the source SHA')
   let expected = files.map((filename) => {
     let data = fs.readFileSync(filename)
     if (!data.length) throw new Error(`Empty preview asset: ${filename}`)
@@ -322,6 +374,9 @@ export function publishPreview(
     process.env.GITHUB_REPOSITORY ?? 'remix-run/remix',
   )
   let repositoryUrl = `https://github.com/${sourceRepository}`
+  if (/^pr-[1-9]\d*$/.test(build.tag)) {
+    return publishPrPreview(github, build, release, files, expected, repositoryUrl)
+  }
   let commitUrl = `${repositoryUrl}/commit/${build.sha}`
   let prNumber = /^pr-([1-9]\d*)$/.exec(build.channel)?.[1]
   let sourceUrl = prNumber ? `${repositoryUrl}/pull/${prNumber}/commits/${build.sha}` : commitUrl
@@ -352,7 +407,7 @@ export function publishPreview(
         draft: true,
         prerelease: true,
         make_latest: 'false',
-        body: `${PREVIEW_RELEASE_MARKER}\n${source}.\n\nInstall:\n\n\`\`\`sh\npnpm add "${getPreviewTarballUrl(build.tag, 'remix', github.repository)}"\n\`\`\`\n`,
+        body: `${PREVIEW_RELEASE_MARKER}\n${source}.\n\nInstall:\n\n\`\`\`sh\npnpm add "${getPreviewTarballUrl(build, 'remix', github.repository)}"\n\`\`\`\n`,
       }),
     )
   }
@@ -366,6 +421,87 @@ export function publishPreview(
     make_latest: 'false',
   })
   console.log(`Published preview: ${url}`)
+  return url
+}
+
+function publishPrPreview(
+  github: PreviewGitHub,
+  build: PreviewBuild,
+  release: PreviewRelease | undefined,
+  files: string[],
+  expected: { name: string; size: number; digest: string }[],
+  repositoryUrl: string,
+): string {
+  let prNumber = build.channel.slice('pr-'.length)
+  let prUrl = `${repositoryUrl}/pull/${prNumber}`
+  let header = `${PREVIEW_RELEASE_MARKER}\nPreview builds for [PR #${prNumber}](${prUrl}).\n\nThe latest 10 successful SHA builds are retained until this PR closes.\n`
+  if (
+    release &&
+    (!release.body.startsWith(PREVIEW_RELEASE_MARKER) || !release.body.includes(`](${prUrl})`))
+  ) {
+    throw new Error(`Preview release does not match the source PR: ${build.tag}`)
+  }
+  if (!release) {
+    release = readRelease(
+      github.api('POST', 'releases', {
+        tag_name: build.tag,
+        name: build.tag,
+        draft: true,
+        prerelease: true,
+        make_latest: 'false',
+        body: header,
+      }),
+    )
+  }
+  let assets = github.listAssets(release)
+  let complete = getCompletedPrPreviewBuilds(assets).find(
+    (item) => item.sha.slice(0, 8) === build.sha.slice(0, 8),
+  )
+  if (complete) {
+    if (complete.sha !== build.sha)
+      throw new Error(`Preview filename SHA collision: ${build.sha.slice(0, 8)}`)
+    verifyAssets(
+      assets.filter((asset) => asset.name.endsWith(`-${build.sha.slice(0, 8)}.tgz`)),
+      expected,
+      false,
+    )
+    console.log(`Reusing published preview SHA: ${build.sha}`)
+  } else {
+    // Publishing is serialized per PR, so unmarked SHA groups are interrupted uploads.
+    for (let asset of getExpiredPrPreviewAssets(assets))
+      github.delete(`releases/assets/${asset.id}`)
+    assets = github.listAssets(release)
+    if (assets.length + files.length > 1000) throw new Error('Preview release asset limit exceeded')
+    for (let filename of files) github.upload(release, filename)
+    assets = github.listAssets(release)
+    verifyAssets(
+      assets.filter((asset) => asset.name.endsWith(`-${build.sha.slice(0, 8)}.tgz`)),
+      expected,
+      true,
+    )
+    let remix = assets.find((asset) => asset.name === getPreviewAssetName(build, 'remix'))
+    if (!remix) throw new Error('Missing remix preview asset')
+    github.api('PATCH', `releases/assets/${remix.id}`, {
+      label: `${PR_BUILD_COMPLETE}: ${build.sha}`,
+    })
+  }
+  assets = github.listAssets(release)
+  for (let asset of getExpiredPrPreviewAssets(assets)) github.delete(`releases/assets/${asset.id}`)
+  let retained = getCompletedPrPreviewBuilds(assets).slice(0, 10)
+  let rows = retained.map(({ sha, asset }) => {
+    let url = getPreviewTarballUrl({ ...build, sha }, 'remix', github.repository)
+    return `| [${sha.slice(0, 8)}](${prUrl}/commits/${sha}) | ${asset.updated_at} | \`pnpm add "${url}"\` |`
+  })
+  github.api('PATCH', `releases/${release.id}`, {
+    draft: false,
+    prerelease: true,
+    make_latest: 'false',
+    body: `${header}\n| Source SHA | Published (UTC) | Install |\n| --- | --- | --- |\n${rows.join('\n')}\n`,
+  })
+  if (!retained.some((item) => item.sha === build.sha))
+    throw new Error('This preview SHA is no longer retained')
+  let url = `https://github.com/${github.repository}/releases/tag/${build.tag}`
+  console.log(`Published preview: ${url} (${build.sha})`)
   return url
 }
 
@@ -481,6 +617,9 @@ function readAsset(value: unknown): PreviewAsset {
     typeof value.name !== 'string' ||
     typeof value.state !== 'string' ||
     typeof value.size !== 'number' ||
+    !(value.label === null || typeof value.label === 'string') ||
+    typeof value.updated_at !== 'string' ||
+    !Number.isFinite(Date.parse(value.updated_at)) ||
     !(value.digest == null || typeof value.digest === 'string')
   )
     throw new Error('Invalid GitHub asset')
@@ -490,6 +629,8 @@ function readAsset(value: unknown): PreviewAsset {
     state: value.state,
     size: value.size,
     digest: value.digest ?? null,
+    label: value.label,
+    updated_at: value.updated_at,
   }
 }
 
