@@ -99,13 +99,12 @@ function isKeyframesAtRule(key: string): boolean {
 // styles — so use two independent 32-bit FNV-1a passes (~64 bits of hash
 // space) rather than a single 32-bit hash. Must be deterministic across
 // server and client.
-function hashStyle(obj: CSSProps): string {
-  // JSON drops undefined properties from client entry props. Omit them here too
-  // so hydration reuses the server's class and its position in the CSS cascade.
-  let sortedEntries = Object.entries(obj)
-    .filter(([, value]) => value !== undefined)
-    .sort(([a], [b]) => a.localeCompare(b))
-  let str = JSON.stringify(sortedEntries)
+//
+// The input is the style object's JSON. Key order is kept because declaration
+// order changes the result (`margin` then `marginTop` differs from the
+// reverse), and JSON drops undefined properties just like client entry props
+// do, so hydration reuses the server's class and its position in the cascade.
+function hashStyle(str: string): string {
   let h1 = 0x811c9dc5
   let h2 = 0xcbf29ce4
   for (let i = 0; i < str.length; i++) {
@@ -229,21 +228,19 @@ export function processStyleClass(
     return { selector: '', css: '' }
   }
 
-  // Generate a hash for the style object
-  let hash = hashStyle(styleObj)
-  let selector = `rmxc-${hash}`
-
-  // Check cache first
-  let cached = styleCache.get(hash)
+  // The cache is keyed by the serialized styles, so reused styles skip hashing.
+  let serialized = JSON.stringify(styleObj)
+  let cached = styleCache.get(serialized)
   if (cached) {
     return cached
   }
 
+  let selector = `rmxc-${hashStyle(serialized)}`
   let css = styleToCss(styleObj, `.${selector}`)
   let result = { selector, css }
 
   // Store in cache
-  styleCache.set(hash, result)
+  styleCache.set(serialized, result)
 
   return result
 }
