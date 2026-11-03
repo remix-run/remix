@@ -1,0 +1,1 @@
+Fix `style` objects that are mutated in place. Changing a property on a `style` object and calling `handle.update()` used to leave the element unchanged, because the runtime skipped a `style` prop that was the same object as in the previous render. The element now picks up changed and deleted properties, consistent with how the runtime treats other state that is mutated in place.
