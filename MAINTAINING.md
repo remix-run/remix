@@ -102,9 +102,9 @@ updates the release's install table, and retains the latest 10 complete builds b
 Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release
 and any older per-SHA preview releases.
 
-Successful main and PR publication deletes the corresponding legacy `preview/main` or
-`preview/pr-<number>` branch. Closing a PR also deletes its legacy branch, including when the PR
-head predates this workflow. These deletions use the source repository's `GITHUB_TOKEN`.
+Successful PR publication deletes the corresponding legacy `preview/pr-<number>` branch.
+Closing a PR also deletes its legacy branch, including when its head predates this workflow.
+These deletions use the source repository's `GITHUB_TOKEN`.
 
 The destination must be public, initialized with a commit, and have release immutability disabled.
 Set `REMIX_PREVIEWS_PAT` in this repository's Actions secrets to a fine-grained PAT with Contents

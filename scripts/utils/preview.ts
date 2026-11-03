@@ -555,12 +555,12 @@ export function cleanupPreviews(
   }
 }
 
-export function cleanupPreviewBranch(
+export function cleanupPrPreviewBranch(
   github: PreviewGitHub,
   channel: string,
   { dryRun = false }: { dryRun?: boolean } = {},
 ): void {
-  if (!/^(main|pr-[1-9]\d*)$/.test(channel)) throw new Error('Invalid legacy preview channel')
+  if (!/^pr-[1-9]\d*$/.test(channel)) throw new Error('Invalid legacy PR preview channel')
   console.log(`${dryRun ? 'Would delete' : 'Deleting'} legacy preview branch: preview/${channel}`)
   if (!dryRun) github.delete(`git/refs/heads/preview/${channel}`)
 }

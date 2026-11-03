@@ -5,7 +5,7 @@ import {
   PREVIEW_REPOSITORY,
   PreviewGitHub,
   buildPreview,
-  cleanupPreviewBranch,
+  cleanupPrPreviewBranch,
   cleanupPreviews,
   createGitHubRunner,
   parsePreviewBuild,
@@ -36,7 +36,7 @@ if (command === 'build' && target && positionals.length === 2) {
   if (process.env.GITHUB_OUTPUT)
     await appendFile(process.env.GITHUB_OUTPUT, `published=${published && !dryRun}\n`)
 } else if (command === 'cleanup-branch' && target && positionals.length === 2) {
-  cleanupPreviewBranch(
+  cleanupPrPreviewBranch(
     new PreviewGitHub(
       process.env.GITHUB_REPOSITORY ?? 'remix-run/remix',
       createGitHubRunner(process.env.GITHUB_TOKEN),
@@ -61,7 +61,7 @@ if (command === 'build' && target && positionals.length === 2) {
   }
 } else {
   throw new Error(
-    'Usage: pnpm preview <build <main|pr-N|experimental>|publish <tag> <source-sha>|cleanup <main|experimental|pr-N>|cleanup-branch <main|pr-N>> [--dry-run] [--output <directory>]',
+    'Usage: pnpm preview <build <main|pr-N|experimental>|publish <tag> <source-sha>|cleanup <main|experimental|pr-N>|cleanup-branch <pr-N>> [--dry-run] [--output <directory>]',
   )
 }
 

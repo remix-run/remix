@@ -111,8 +111,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: node scripts/preview-pr.ts comment "$PR_NUMBER" "$PREVIEW_TAG" "$PREVIEW_SHA"
-      - name: Delete legacy preview branch
-        if: steps.publish.outputs.published == 'true' && needs.build.outputs.channel != 'experimental'
+      - name: Delete legacy PR preview branch
+        if: github.event_name == 'pull_request' && steps.publish.outputs.published == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PREVIEW_CHANNEL: ${{ needs.build.outputs.channel }}

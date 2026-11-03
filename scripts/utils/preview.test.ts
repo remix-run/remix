@@ -5,7 +5,7 @@ import { gt, valid } from 'semver'
 import {
   PREVIEW_RELEASE_MARKER,
   PreviewGitHub,
-  cleanupPreviewBranch,
+  cleanupPrPreviewBranch,
   getExpiredPreviewReleases,
   getExpiredPrPreviewAssets,
   getPreviewChannel,
@@ -230,28 +230,23 @@ describe('preview release retention', () => {
 })
 
 describe('preview ref cleanup', () => {
-  it('deletes only the matching legacy main or PR branch', () => {
+  it('deletes only the matching legacy PR branch', () => {
     let calls: string[][] = []
     let github = new PreviewGitHub('remix-run/remix', (args) => {
       calls.push(args)
       return ''
     })
-    cleanupPreviewBranch(github, 'pr-123')
-    cleanupPreviewBranch(github, 'main')
+    cleanupPrPreviewBranch(github, 'pr-123')
     assert.deepEqual(calls, [
       ['api', '--method', 'DELETE', 'repos/remix-run/remix/git/refs/heads/preview/pr-123'],
-      ['api', '--method', 'DELETE', 'repos/remix-run/remix/git/refs/heads/preview/main'],
     ])
     assert.throws(
-      () => cleanupPreviewBranch(github, '../../main'),
-      /Invalid legacy preview channel/,
+      () => cleanupPrPreviewBranch(github, '../../main'),
+      /Invalid legacy PR preview channel/,
     )
-    assert.throws(
-      () => cleanupPreviewBranch(github, 'experimental'),
-      /Invalid legacy preview channel/,
-    )
-    cleanupPreviewBranch(github, 'pr-123', { dryRun: true })
-    assert.equal(calls.length, 2)
+    assert.throws(() => cleanupPrPreviewBranch(github, 'main'), /Invalid legacy PR preview channel/)
+    cleanupPrPreviewBranch(github, 'pr-123', { dryRun: true })
+    assert.equal(calls.length, 1)
   })
 
   it('ignores missing refs without swallowing permission or validation errors', () => {
