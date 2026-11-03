@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import { css, type Handle } from '@remix-run/component'
 import * as combobox from '@remix-run/ui/combobox'
 
@@ -58,64 +59,66 @@ export default function Example(handle: Handle) {
           placeholder="Search frameworks"
         />
 
-        <div
-          mix={[
-            combobox.popover(),
-            css({
-              boxSizing: 'border-box',
-              margin: 0,
-              border: '1px solid light-dark(#d1d1d1, #444444)',
-              borderRadius: '6px',
-              background: 'light-dark(#ffffff, #1a1a1a)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-              padding: '4px',
-              '&:popover-open': {
-                display: 'block',
-              },
-            }),
-          ]}
-        >
+        <Portal>
           <div
             mix={[
-              combobox.list(),
+              combobox.popover(),
               css({
-                display: 'grid',
-                gap: '2px',
-                maxHeight: '12rem',
-                overflow: 'auto',
-                outline: 0,
+                boxSizing: 'border-box',
+                margin: 0,
+                border: '1px solid light-dark(#d1d1d1, #444444)',
+                borderRadius: '6px',
+                background: 'light-dark(#ffffff, #1a1a1a)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+                padding: '4px',
+                '&[data-open]': {
+                  display: 'block',
+                },
               }),
             ]}
           >
-            {frameworks.map((option) => (
-              <div
-                key={option.value}
-                mix={[
-                  combobox.option(option),
-                  css({
-                    borderRadius: '4px',
-                    color: 'light-dark(#151515, #ececec)',
-                    font: '500 13px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-                    letterSpacing: 0,
-                    padding: '6px 8px',
-                    '&[data-highlighted="true"]': {
-                      background: 'light-dark(#eeeeee, #2c2c2c)',
-                    },
-                    '&[aria-selected="true"]': {
-                      background: 'light-dark(#101010, #ececec)',
-                      color: 'light-dark(#ffffff, #151515)',
-                    },
-                    '&[aria-disabled="true"]': {
-                      color: 'light-dark(#9a9a9a, #666666)',
-                    },
-                  }),
-                ]}
-              >
-                {option.label}
-              </div>
-            ))}
+            <div
+              mix={[
+                combobox.list(),
+                css({
+                  display: 'grid',
+                  gap: '2px',
+                  maxHeight: '12rem',
+                  overflow: 'auto',
+                  outline: 0,
+                }),
+              ]}
+            >
+              {frameworks.map((option) => (
+                <div
+                  key={option.value}
+                  mix={[
+                    combobox.option(option),
+                    css({
+                      borderRadius: '4px',
+                      color: 'light-dark(#151515, #ececec)',
+                      font: '500 13px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+                      letterSpacing: 0,
+                      padding: '6px 8px',
+                      '&[data-highlighted="true"]': {
+                        background: 'light-dark(#eeeeee, #2c2c2c)',
+                      },
+                      '&[aria-selected="true"]': {
+                        background: 'light-dark(#101010, #ececec)',
+                        color: 'light-dark(#ffffff, #151515)',
+                      },
+                      '&[aria-disabled="true"]': {
+                        color: 'light-dark(#9a9a9a, #666666)',
+                      },
+                    }),
+                  ]}
+                >
+                  {option.label}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </Portal>
 
         <input
           mix={[

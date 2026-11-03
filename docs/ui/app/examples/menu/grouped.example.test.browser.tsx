@@ -6,11 +6,11 @@ import { button, element, key, mount, waitFor } from '../test-helpers.ts'
 describe('Grouped menu example', () => {
   it('names groups and navigates past headings and separators to activate an item', async (t) => {
     let result = await mount(t, <Example />)
-    let trigger = button(result.container, 'Edit')
-    let list = element(result.container, '[role="menu"]')
+    let trigger = button(document.body, 'Edit')
+    let list = element(document.body, '[role="menu"]')
     let groups = list.querySelectorAll('[role="group"]')
     let selected: string | undefined
-    result.container.addEventListener('rmx:menu-select', (event) => {
+    document.body.addEventListener('rmx:menu-select', (event) => {
       selected = event.item.name
     })
 
@@ -18,7 +18,7 @@ describe('Grouped menu example', () => {
     assert.deepEqual(
       Array.from(groups, (group) =>
         element(
-          result.container,
+          document.body,
           `[id="${group.getAttribute('aria-labelledby')}"]`,
         ).textContent?.trim(),
       ),
@@ -39,7 +39,7 @@ describe('Grouped menu example', () => {
     await result.act(() => key(list, 'Enter'))
     await waitFor(() => assert.equal(selected, 'paste'))
     await waitFor(() =>
-      assert.equal(element(result.container, '[popover]').matches(':popover-open'), false),
+      assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), false),
     )
     await waitFor(() => assert.equal(document.activeElement, trigger))
   })

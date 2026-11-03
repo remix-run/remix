@@ -1,22 +1,17 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as menu from '@remix-run/ui/menu'
 import { css } from 'remix/component'
 
 export default function ExampleMenu() {
   return () => (
     <div
-      mix={css({
-        '--text': 'light-dark(#202027, #eeeef2)',
-        '--border': 'light-dark(#e0e0e6, #393940)',
-
-        colorScheme: 'light dark',
-        '&, & *, &::before, &::after, & *::before, & *::after': {
-          boxSizing: 'border-box',
-        },
-        width: 'fit-content',
-        maxWidth: '100%',
-        color: 'var(--text)',
-        font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-      })}
+      mix={[
+        themeStyle,
+        css({
+          width: 'fit-content',
+          maxWidth: '100%',
+        }),
+      ]}
     >
       <menu.Context label="Edit">
         <button
@@ -54,115 +49,125 @@ export default function ExampleMenu() {
         >
           Edit <ChevronDownIcon />
         </button>
-        <div
-          mix={[
-            menu.popover(),
-            css({
-              colorScheme: 'light dark',
-              margin: 0,
-              padding: '6px',
-              minWidth: '220px',
-              maxWidth: 'calc(100vw - 32px)',
-              border: '1px solid var(--border)',
-              borderRadius: '10px',
-              background: 'light-dark(#fff, #1b1b20)',
-              color: 'var(--text)',
-              boxShadow: '0 12px 32px #00000024',
-              font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-              opacity: 0,
-              transition:
-                'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-              '&[data-close-animation="none"]': {
-                transition: 'none',
-              },
-              '&:popover-open': {
-                opacity: 1,
-                '@starting-style': {
-                  opacity: 0,
-                },
-              },
-              '@media (prefers-reduced-motion: reduce)': {
-                transition: 'none',
-              },
-            }),
-          ]}
-        >
+        <Portal>
           <div
             mix={[
-              menu.list(),
+              menu.popover(),
+              themeStyle,
               css({
-                display: 'grid',
-                gap: '2px',
-                maxHeight: '240px',
-                overflow: 'auto',
-                outline: 0,
+                margin: 0,
+                padding: '6px',
+                minWidth: '220px',
+                maxWidth: 'calc(100vw - 32px)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                background: 'light-dark(#fff, #1b1b20)',
+                boxShadow: '0 12px 32px #00000024',
+                opacity: 0,
+                transition: 'opacity 140ms ease',
+                '&[data-close-animation="none"]': {
+                  transition: 'none',
+                },
+                '&[data-state="open"]': {
+                  opacity: 1,
+                  '@starting-style': {
+                    opacity: 0,
+                  },
+                },
+                '@media (prefers-reduced-motion: reduce)': {
+                  transition: 'none',
+                },
               }),
             ]}
           >
             <div
               mix={[
-                menu.item({
-                  name: 'undo',
+                menu.list(),
+                css({
+                  display: 'grid',
+                  gap: '2px',
+                  maxHeight: '240px',
+                  overflow: 'auto',
+                  outline: 0,
                 }),
-                itemStyle,
               ]}
             >
-              Undo
-            </div>
-            <div
-              mix={[
-                menu.item({
-                  name: 'redo',
-                }),
-                itemStyle,
-              ]}
-            >
-              Redo
-            </div>
-            <div
-              role="separator"
-              mix={css({
-                height: '1px',
-                margin: '4px 6px',
-                background: 'var(--border)',
-              })}
-            />
-            <div
-              mix={[
-                menu.item({
-                  name: 'cut',
-                }),
-                itemStyle,
-              ]}
-            >
-              Cut
-            </div>
-            <div
-              mix={[
-                menu.item({
-                  name: 'copy',
-                }),
-                itemStyle,
-              ]}
-            >
-              Copy
-            </div>
-            <div
-              mix={[
-                menu.item({
-                  name: 'paste',
-                }),
-                itemStyle,
-              ]}
-            >
-              Paste
+              <div
+                mix={[
+                  menu.item({
+                    name: 'undo',
+                  }),
+                  itemStyle,
+                ]}
+              >
+                Undo
+              </div>
+              <div
+                mix={[
+                  menu.item({
+                    name: 'redo',
+                  }),
+                  itemStyle,
+                ]}
+              >
+                Redo
+              </div>
+              <div
+                role="separator"
+                mix={css({
+                  height: '1px',
+                  margin: '4px 6px',
+                  background: 'var(--border)',
+                })}
+              />
+              <div
+                mix={[
+                  menu.item({
+                    name: 'cut',
+                  }),
+                  itemStyle,
+                ]}
+              >
+                Cut
+              </div>
+              <div
+                mix={[
+                  menu.item({
+                    name: 'copy',
+                  }),
+                  itemStyle,
+                ]}
+              >
+                Copy
+              </div>
+              <div
+                mix={[
+                  menu.item({
+                    name: 'paste',
+                  }),
+                  itemStyle,
+                ]}
+              >
+                Paste
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       </menu.Context>
     </div>
   )
 }
+
+const themeStyle = css({
+  '--text': 'light-dark(#202027, #eeeef2)',
+  '--border': 'light-dark(#e0e0e6, #393940)',
+  colorScheme: 'light dark',
+  '&, & *, &::before, &::after, & *::before, & *::after': {
+    boxSizing: 'border-box',
+  },
+  color: 'var(--text)',
+  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+})
 
 const itemStyle = css({
   display: 'flex',

@@ -1,21 +1,17 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as menu from '@remix-run/ui/menu'
 import { css } from 'remix/component'
 
 export default function ExampleMenu() {
   return () => (
     <div
-      mix={css({
-        '--text': 'light-dark(#202027, #eeeef2)',
-
-        colorScheme: 'light dark',
-        '&, & *, &::before, &::after, & *::before, & *::after': {
-          boxSizing: 'border-box',
-        },
-        width: 'fit-content',
-        maxWidth: '100%',
-        color: 'var(--text)',
-        font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-      })}
+      mix={[
+        themeStyle,
+        css({
+          width: 'fit-content',
+          maxWidth: '100%',
+        }),
+      ]}
     >
       <menu.Context label="File">
         <button
@@ -53,96 +49,109 @@ export default function ExampleMenu() {
         >
           File <ChevronDownIcon />
         </button>
-        <div mix={[menu.popover(), surfaceStyle]}>
-          <div mix={[menu.list(), listStyle]}>
-            <div
-              mix={[
-                menu.item({
-                  name: 'new',
-                }),
-                itemStyle,
-              ]}
-            >
-              New file
-            </div>
-            <div
-              mix={[
-                menu.item({
-                  name: 'open',
-                }),
-                itemStyle,
-              ]}
-            >
-              Open file
-            </div>
-            <menu.Context label="Export as">
+        <Portal>
+          <div mix={[menu.popover(), themeStyle, surfaceStyle]}>
+            <div mix={[menu.list(), listStyle]}>
               <div
                 mix={[
-                  menu.submenuTrigger({
-                    label: 'Export as',
+                  menu.item({
+                    name: 'new',
                   }),
                   itemStyle,
                 ]}
               >
-                Export as <ChevronRightIcon />
+                New file
               </div>
-              <div mix={[menu.popover(), surfaceStyle]}>
-                <div mix={[menu.list(), listStyle]}>
-                  <div
-                    mix={[
-                      menu.item({
-                        name: 'export',
-                        value: 'pdf',
-                      }),
-                      itemStyle,
-                    ]}
-                  >
-                    PDF
-                  </div>
-                  <div
-                    mix={[
-                      menu.item({
-                        name: 'export',
-                        value: 'png',
-                      }),
-                      itemStyle,
-                    ]}
-                  >
-                    PNG
-                  </div>
-                  <div
-                    mix={[
-                      menu.item({
-                        name: 'export',
-                        value: 'svg',
-                      }),
-                      itemStyle,
-                    ]}
-                  >
-                    SVG
-                  </div>
+              <div
+                mix={[
+                  menu.item({
+                    name: 'open',
+                  }),
+                  itemStyle,
+                ]}
+              >
+                Open file
+              </div>
+              <menu.Context label="Export as">
+                <div
+                  mix={[
+                    menu.submenuTrigger({
+                      label: 'Export as',
+                    }),
+                    itemStyle,
+                  ]}
+                >
+                  Export as <ChevronRightIcon />
                 </div>
+                <Portal>
+                  <div mix={[menu.popover(), themeStyle, surfaceStyle]}>
+                    <div mix={[menu.list(), listStyle]}>
+                      <div
+                        mix={[
+                          menu.item({
+                            name: 'export',
+                            value: 'pdf',
+                          }),
+                          itemStyle,
+                        ]}
+                      >
+                        PDF
+                      </div>
+                      <div
+                        mix={[
+                          menu.item({
+                            name: 'export',
+                            value: 'png',
+                          }),
+                          itemStyle,
+                        ]}
+                      >
+                        PNG
+                      </div>
+                      <div
+                        mix={[
+                          menu.item({
+                            name: 'export',
+                            value: 'svg',
+                          }),
+                          itemStyle,
+                        ]}
+                      >
+                        SVG
+                      </div>
+                    </div>
+                  </div>
+                </Portal>
+              </menu.Context>
+              <div
+                mix={[
+                  menu.item({
+                    name: 'print',
+                  }),
+                  itemStyle,
+                ]}
+              >
+                Print
               </div>
-            </menu.Context>
-            <div
-              mix={[
-                menu.item({
-                  name: 'print',
-                }),
-                itemStyle,
-              ]}
-            >
-              Print
             </div>
           </div>
-        </div>
+        </Portal>
       </menu.Context>
     </div>
   )
 }
 
-const surfaceStyle = css({
+const themeStyle = css({
+  '--text': 'light-dark(#202027, #eeeef2)',
   colorScheme: 'light dark',
+  '&, & *, &::before, &::after, & *::before, & *::after': {
+    boxSizing: 'border-box',
+  },
+  color: 'var(--text)',
+  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+})
+
+const surfaceStyle = css({
   margin: 0,
   padding: '6px',
   minWidth: '220px',
@@ -150,15 +159,13 @@ const surfaceStyle = css({
   border: '1px solid light-dark(#e0e0e6, #393940)',
   borderRadius: '10px',
   background: 'light-dark(#fff, #1b1b20)',
-  color: 'var(--text)',
   boxShadow: '0 12px 32px #00000024',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
   opacity: 0,
-  transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+  transition: 'opacity 140ms ease',
   '&[data-close-animation="none"]': {
     transition: 'none',
   },
-  '&:popover-open': {
+  '&[data-state="open"]': {
     opacity: 1,
     '@starting-style': {
       opacity: 0,

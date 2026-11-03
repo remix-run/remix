@@ -1,3 +1,7 @@
+:root {
+  --rmx-layer-base: 100;
+}
+
 .ui-article {
   --ui-anchor-offset: 72px;
 

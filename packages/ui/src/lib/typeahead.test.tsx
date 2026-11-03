@@ -125,6 +125,32 @@ describe('matchNextItemBySearchText', () => {
 })
 
 describe('hiddenTypeahead', () => {
+  it('does not change the query for keyboard events excluded by its scope', async () => {
+    let calls: string[] = []
+    let { container, root } = renderApp(
+      <div
+        id="scope"
+        mix={hiddenTypeahead(
+          (text) => calls.push(text),
+          (event) => event.target === event.currentTarget,
+        )}
+      >
+        <input id="nested-input" />
+      </div>,
+    )
+    let scope = getById(container, 'scope')
+    let input = getById(container, 'nested-input')
+
+    key(scope, 'r')
+    key(input, 'x')
+    key(input, 'Backspace')
+    key(input, 'Escape')
+    key(scope, 'e')
+    await settle(root)
+
+    expect(calls).toEqual(['r', 're'])
+  })
+
   it('builds a lowercase query from printable key presses and ignores modified and non-printable keys', async () => {
     let calls: string[] = []
     let { container, root } = renderTypeahead((text) => {

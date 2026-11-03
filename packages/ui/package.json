@@ -20,7 +20,8 @@
     "!src/**/*.demo.ts",
     "!src/**/*.demo.tsx",
     "!src/**/*.test.ts",
-    "!src/**/*.test.tsx"
+    "!src/**/*.test.tsx",
+    "!src/test"
   ],
   "type": "module",
   "sideEffects": false,
@@ -40,6 +41,10 @@
     "./combobox": {
       "types": "./src/combobox.tsx",
       "default": "./src/combobox.tsx"
+    },
+    "./dialog": {
+      "types": "./src/dialog.ts",
+      "default": "./src/dialog.ts"
     },
     "./form": {
       "types": "./src/form.ts",
@@ -69,7 +74,11 @@
       "types": "./src/toggle.ts",
       "default": "./src/toggle.ts"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./portal": {
+      "types": "./src/portal.tsx",
+      "default": "./src/portal.tsx"
+    }
   },
   "publishConfig": {
     "exports": {
@@ -88,6 +97,10 @@
       "./combobox": {
         "types": "./dist/combobox.d.ts",
         "default": "./dist/combobox.js"
+      },
+      "./dialog": {
+        "types": "./dist/dialog.d.ts",
+        "default": "./dist/dialog.js"
       },
       "./form": {
         "types": "./dist/form.d.ts",
@@ -117,18 +130,24 @@
         "types": "./dist/toggle.d.ts",
         "default": "./dist/toggle.js"
       },
-      "./package.json": "./package.json"
+      "./package.json": "./package.json",
+      "./portal": {
+        "types": "./dist/portal.d.ts",
+        "default": "./dist/portal.js"
+      }
     }
   },
   "dependencies": {
     "@remix-run/component": "workspace:^",
-    "@remix-run/data-schema": "workspace:*"
+    "@remix-run/data-schema": "workspace:*",
+    "tabbable": "^6.3.0"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
+    "esbuild": "^0.27.1",
     "playwright": "catalog:",
     "typescript": "catalog:"
   },

@@ -831,27 +831,25 @@ const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
 >((handle) => {
   let context = getComboboxContext(handle)
 
-  return () => [
-    attrs({ 'data-show-reason': context.showReason }),
-    ref((node: HTMLElement, signal) => {
-      context.registerSurface(node)
-      signal.addEventListener('abort', () => {
-        context.unregisterSurface(node)
-      })
-    }),
-    popover.surface({
-      open: context.isOpen,
-      onHide() {
-        context.close()
-      },
-      closeOnAnchorClick: false,
-    }),
-    on('beforetoggle', (event) => {
-      if (event.newState === 'open') {
-        context.syncPopoverMinWidth()
-      }
-    }),
-  ]
+  return () => {
+    handle.queueTask(() => context.syncPopoverMinWidth())
+    return [
+      attrs({ 'data-show-reason': context.showReason }),
+      ref((node: HTMLElement, signal) => {
+        context.registerSurface(node)
+        signal.addEventListener('abort', () => {
+          context.unregisterSurface(node)
+        })
+      }),
+      popover.surface({
+        open: context.isOpen,
+        onHide() {
+          context.close()
+        },
+        closeOnAnchorClick: false,
+      }),
+    ]
+  }
 })
 
 const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
