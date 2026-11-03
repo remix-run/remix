@@ -46,21 +46,29 @@ export function getExpiredPreviewReleases(
   channel: string,
   now = Date.now(),
 ): PreviewRelease[] {
-  let builds = releases.filter(
-    (release) =>
+  let builds = releases.filter((release) => {
+    let releaseChannel = getPreviewChannel(release.tag_name)
+    return (
       release.body.startsWith(PREVIEW_RELEASE_MARKER) &&
-      getPreviewChannel(release.tag_name) === channel,
-  )
+      (channel === 'experimental'
+        ? releaseChannel?.startsWith('experimental-')
+        : releaseChannel === channel)
+    )
+  })
   if (/^pr-[1-9]\d*$/.test(channel)) return builds
-  if (channel !== 'main') return []
+  if (channel !== 'main' && channel !== 'experimental') return []
 
-  let latest = builds
-    .filter((release) => !release.draft)
-    .toSorted(
-      (a, b) =>
-        Date.parse(b.published_at ?? b.created_at) - Date.parse(a.published_at ?? a.created_at),
-    )[0]
-  let cutoff = now - 7 * 24 * 60 * 60 * 1000
+  let latest =
+    channel === 'main'
+      ? builds
+          .filter((release) => !release.draft)
+          .toSorted(
+            (a, b) =>
+              Date.parse(b.published_at ?? b.created_at) -
+              Date.parse(a.published_at ?? a.created_at),
+          )[0]
+      : undefined
+  let cutoff = now - (channel === 'main' ? 7 : 30) * 24 * 60 * 60 * 1000
   return builds.filter(
     (release) =>
       release.id !== latest?.id && Date.parse(release.published_at ?? release.created_at) < cutoff,
@@ -365,7 +373,8 @@ export function publishPreviewBuild(
     if (dryRun || !closed()) {
       publishPreview(github, build, directory, dryRun)
       published = true
-      if (!dryRun && build.channel === 'main') cleanupPreviews(github, 'main')
+      if (!dryRun && !prNumber)
+        cleanupPreviews(github, build.channel === 'main' ? 'main' : 'experimental')
     }
   } finally {
     if (!dryRun && closed()) {

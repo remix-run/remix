@@ -77,7 +77,7 @@ jobs:
       contents: read
       pull-requests: write
     concurrency:
-      group: preview-${{ needs.build.outputs.channel }}
+      group: preview-${{ startsWith(needs.build.outputs.channel, 'experimental-') && 'experimental' || needs.build.outputs.channel }}
       queue: max
     env:
       PREVIEW_TAG: ${{ needs.build.outputs.tag }}
@@ -117,11 +117,15 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: ${{ github.event_name == 'schedule' && fromJSON('["main", "experimental"]') || fromJSON(format('["pr-{0}"]', github.event.pull_request.number)) }}
     concurrency:
-      group: preview-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
+      group: preview-${{ matrix.channel }}
       queue: max
     env:
-      PREVIEW_CHANNEL: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
+      PREVIEW_CHANNEL: ${{ matrix.channel }}
     steps:
       - uses: actions/checkout@v6
         with:

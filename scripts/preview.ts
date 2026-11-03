@@ -38,7 +38,7 @@ if (command === 'build' && target && positionals.length === 2) {
   command === 'cleanup' &&
   target &&
   positionals.length === 2 &&
-  /^(main|pr-[1-9]\d*)$/.test(target)
+  /^(main|experimental|pr-[1-9]\d*)$/.test(target)
 ) {
   let pr = /^pr-([1-9]\d*)$/.exec(target)?.[1]
   if (
@@ -51,7 +51,7 @@ if (command === 'build' && target && positionals.length === 2) {
   }
 } else {
   throw new Error(
-    'Usage: pnpm preview <build <main|pr-N|experimental-name>|publish <tag> <source-sha>|cleanup <main|pr-N>> [--dry-run] [--output <directory>]',
+    'Usage: pnpm preview <build <main|pr-N|experimental-name>|publish <tag> <source-sha>|cleanup <main|experimental|pr-N>> [--dry-run] [--output <directory>]',
   )
 }
 

@@ -131,7 +131,33 @@ describe('preview release retention', () => {
     assert.deepEqual(getExpiredPreviewReleases([expired, build], 'main', now), [expired])
   })
 
-  it('does not mix PR numbers or delete experimental and unrelated releases', () => {
+  it('expires experimental builds after thirty days without keeping the newest in each channel', () => {
+    let expired = release(1, 'experimental-alpha', '2026-10-03T11:59:59Z')
+    let cutoff = release(2, 'experimental-alpha', '2026-10-03T12:00:00Z')
+    let other = release(3, 'experimental-beta', '2020-01-01T00:00:00Z')
+    let recent = {
+      ...release(4, 'experimental-gamma', '2020-01-01T00:00:00Z'),
+      published_at: '2026-11-02T00:00:00Z',
+    }
+    let draft = {
+      ...release(5, 'experimental-draft', '2020-01-01T00:00:00Z'),
+      draft: true,
+      published_at: null,
+    }
+    let main = release(6, 'main', '2020-01-01T00:00:00Z')
+    let pr = release(7, 'pr-123', '2020-01-01T00:00:00Z')
+    let unrelated = { ...expired, id: 8, body: 'Unrelated release' }
+    assert.deepEqual(
+      getExpiredPreviewReleases(
+        [expired, cutoff, other, recent, draft, main, pr, unrelated],
+        'experimental',
+        now,
+      ),
+      [expired, other, draft],
+    )
+  })
+
+  it('keeps PR cleanup scoped to its PR and ignores unrelated releases', () => {
     let build = release(1, 'pr-12', '2020-01-01T00:00:00Z')
     let draft = { ...release(6, 'pr-12', '2020-01-01T00:00:00Z'), draft: true, published_at: null }
     let other = release(2, 'pr-123', '2020-01-01T00:00:00Z')
@@ -146,7 +172,6 @@ describe('preview release retention', () => {
       ),
       [build, draft],
     )
-    assert.deepEqual(getExpiredPreviewReleases([experimental], 'experimental-test', now), [])
     assert.deepEqual(getExpiredPreviewReleases([build, other, experimental], 'main', now), [])
   })
 })
