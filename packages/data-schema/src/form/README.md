@@ -81,6 +81,8 @@ let Settings = fd.object({
 
 Issues use logical keys such as `email`, independently of transport names. Field error maps compose with parse options; explicit schema messages keep precedence. Repeated text defaults to `[]`. `fields`, `file`, and `files` reuse the existing FormData extraction helpers. Form objects normalize the browser's empty upload placeholder (an unnamed zero-byte File) to `undefined` for `file` and remove it from `files` arrays. Named zero-byte files remain valid inputs. The supplied schema decides whether a missing file or empty list is accepted. Files are never included in failed restoration values.
 
+`fd.fields` also describes multiple selects and same-name checkbox groups for `form.control`. The parser reads all submitted strings in order, preserves blanks, and returns `[]` when no values are submitted. Failed submissions preserve the raw array so UI can restore selected or checked defaults. Use array validation or a refinement to require a selection; `fd.checkbox` remains the helper for one boolean checkbox.
+
 The lower-level `remix/data-schema/form-data` export stays available with its existing semantics, including `field()` preserving empty strings. Choose it when you only need explicit extraction without native form kinds or empty-value normalization.
 
 ## UI adapters

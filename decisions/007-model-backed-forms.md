@@ -36,6 +36,8 @@ Client errors become visible after blur or native invalid submission. Server err
 
 Radio groups share one text binding. UI reads the selected enabled option in the native form/name group and coordinates validity across its members. Option values scope control IDs, and `label(field, value)` associates each option's label. File bindings validate selected files with the original schema, infer `multiple` from `files`, and clear selections on failed submissions. Native control capabilities determine projected constraints; date/time bounds remain authored markup. Hidden and action inputs cannot participate in client constraint validation, so handlers remain authoritative.
 
+We reused `fd.fields` for multiple selects and same-name checkbox groups because both submit arrays of strings. Collection validation receives `[]` for no selection. Checkbox groups share feedback and option-scoped labels, without per-option `required` attributes that would require every checkbox. The component renderer supports array select values and defaults so SSR, hydration, and native reset use the same selection contract. Repeated free-text controls and indexed field arrays remain application-owned.
+
 ## Shared messages and application checks
 
 Field-level `errorMap` uses schema/domain codes on server and client. Native-only constraints keep browser messages. Explicit schema messages retain precedence. `setCustomErrors()` adds current-value supplemental messages while applications retain async orchestration, cancellation, stale-result handling, and authoritative server checks.

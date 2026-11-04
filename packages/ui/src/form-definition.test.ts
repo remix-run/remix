@@ -54,12 +54,7 @@ const mutableEntries = { name: fd.text(s.string()) }
 const MutableForm = fd.object(mutableEntries)
 expectType<Equal<typeof MutableForm.entries, Readonly<typeof mutableEntries>>>()
 const RepeatedForm = fd.object({ tags: fd.fields(s.array(s.string())) })
-expectType<
-  Equal<
-    FieldBindings<typeof RepeatedForm.entries>['tags'] extends FieldBinding ? true : false,
-    false
-  >
->()
+expectType<Equal<FieldBindings<typeof RepeatedForm.entries>['tags'], FieldBinding<'fields'>>>()
 expectType<Equal<Extract<keyof FieldBindings<typeof Profile.entries>, 'unknown'>, never>>()
 const UploadForm = fd.object({
   avatar: fd.file(s.optional(s.instanceof_(Blob))),

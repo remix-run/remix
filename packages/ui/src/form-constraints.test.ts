@@ -1,12 +1,12 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { boolean, literal, number, optional, string } from '@remix-run/data-schema'
+import { array, boolean, literal, number, optional, string } from '@remix-run/data-schema'
 import { email, max, maxLength, min, minLength, url } from '@remix-run/data-schema/checks'
 
 import { getConstraints } from './form.ts'
 
 describe('getConstraints', () => {
-  it('limits constraints to native control capabilities and handles file requiredness', () => {
+  it('limits constraints to native control capabilities and handles collection requiredness', () => {
     let text = string().pipe(minLength(2), maxLength(5))
     assert.deepEqual(getConstraints(text, { type: 'date' }), { required: true })
     assert.deepEqual(getConstraints(text, { type: 'radio' }), { required: true })
@@ -18,6 +18,12 @@ describe('getConstraints', () => {
       max: 5,
     })
     assert.deepEqual(getConstraints(optional(string()), { type: 'file' }), {})
+    let choices = array(string()).refine((values) => values.length > 0)
+    assert.deepEqual(getConstraints(array(string()), { type: 'select', multiple: true }), {})
+    assert.deepEqual(getConstraints(choices, { type: 'select', multiple: true }), {
+      required: true,
+    })
+    assert.deepEqual(getConstraints(choices, { type: 'checkbox', multiple: true }), {})
   })
   it('returns native length and range constraints', () => {
     assert.deepEqual(getConstraints(string().pipe(minLength(2), maxLength(50)), { type: 'text' }), {

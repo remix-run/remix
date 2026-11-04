@@ -49,7 +49,7 @@ export interface GetConstraintsOptions {
     | 'time'
     | 'url'
     | 'week'
-  /** Whether a file control reads an array of files (defaults to false). */
+  /** Whether a select, checkbox group, or file control reads an array (defaults to false). */
   multiple?: boolean
 }
 
@@ -57,7 +57,7 @@ export interface GetConstraintsOptions {
  * Returns native HTML constraints represented by a schema's recognized checks.
  *
  * Checks without an equivalent native constraint are omitted. Requiredness may evaluate the
- * schema with `undefined`, `false`, or an empty file list when metadata cannot determine it.
+ * schema with `undefined`, `false`, or an empty array when metadata cannot determine it.
  *
  * @param schema The schema to inspect.
  * @param options The input control receiving the constraints.
@@ -80,13 +80,13 @@ export function getConstraints<input, output>(
   }
 
   if (options.type !== 'range' && options.type !== 'color') {
-    let acceptsEmpty =
-      options.type === 'file' && options.multiple
-        ? schemaAcceptsValue(schema, [])
-        : options.type === 'checkbox'
-          ? schemaAcceptsValue(schema, false)
-          : schemaAcceptsUndefined(schema)
-    if (!acceptsEmpty) constraints.required = true
+    let acceptsEmpty = options.multiple
+      ? schemaAcceptsValue(schema, [])
+      : options.type === 'checkbox'
+        ? schemaAcceptsValue(schema, false)
+        : schemaAcceptsUndefined(schema)
+    if (!acceptsEmpty && !(options.type === 'checkbox' && options.multiple))
+      constraints.required = true
   }
 
   for (let check of getSchemaMetadata(schema).checks) {

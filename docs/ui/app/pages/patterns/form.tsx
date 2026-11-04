@@ -25,7 +25,7 @@ const handlerCode = await highlightSource(
 
 const typeDefinitions = {
   FieldBinding: await highlightSource(
-    "export interface FieldBinding<kind extends string = FormFieldKind | 'file' | 'files'> {\n  readonly kind: kind\n  readonly name: string\n  readonly id: string\n  readonly errorId: string\n  readonly errors: ReadonlyArray<string>\n  readonly touched: boolean\n  setCustomErrors(messages: ReadonlyArray<string>): void\n}",
+    "export interface FieldBinding<kind extends string = FormFieldKind | 'fields' | 'file' | 'files'> {\n  readonly kind: kind\n  readonly name: string\n  readonly id: string\n  readonly errorId: string\n  readonly errors: ReadonlyArray<string>\n  readonly touched: boolean\n  setCustomErrors(messages: ReadonlyArray<string>): void\n}",
     'ts',
   ),
 }
@@ -66,8 +66,10 @@ export default function FormPage(handle: Handle<PageProps>) {
           navigation to the browser or application. String-valued controls, including date/time,
           color, hidden, radio, select, and textarea, use text entries. Range uses a number entry.
           File entries validate selected uploads and supply <code>multiple</code> for file lists;
-          failed submissions clear selections. Repeated text entries remain parser-only. Author
-          action buttons normally.
+          failed submissions clear selections. Repeated text entries from <code>fd.fields</code>
+          support multiple selects and same-name checkbox groups, validating arrays and restoring
+          selected or checked defaults. Empty selections are <code>[]</code>. Author action buttons
+          normally.
         </p>
       </Section>
       <Section id="accessibility" title="Accessibility">
@@ -75,9 +77,9 @@ export default function FormPage(handle: Handle<PageProps>) {
           Author labels, help text, error content, and roles in your markup. The label and error
           mixins supply scoped IDs. A control gets <code>aria-invalid</code> and an error reference
           when feedback is visible. Existing <code>aria-describedby</code> help text is retained.
-          Keep each Context ID unique when rendering multiple forms. Radio options share one field
-          binding; group them with a fieldset and legend, and pass the option value to{' '}
-          <code>label(field, value)</code> for distinct label associations.
+          Keep each Context ID unique when rendering multiple forms. Radio and checkbox-group
+          options share one field binding; group them with a fieldset and legend, and pass the
+          option value to <code>label(field, value)</code> for distinct label associations.
         </p>
       </Section>
       <Section id="api-reference" title="API reference">
@@ -116,17 +118,22 @@ export default function FormPage(handle: Handle<PageProps>) {
         <h3 id="label-reference">label(field, value?)</h3>
         <p>
           Apply to a label to associate it with the field’s scoped control ID. Pass the option value
-          for a radio label.
+          for a radio or grouped checkbox label.
         </p>
         <h3 id="error-reference">error(field)</h3>
         <p>Apply to an application-owned error element to give it the field’s error ID.</p>
         <h3 id="constraints-reference">getConstraints(schema, options)</h3>
         <p>
           Returns constraints supported by the native control for a custom integration. Pass its
-          native type in <code>options.type</code> and <code>multiple: true</code> for file lists.
+          native type in <code>options.type</code> and <code>multiple: true</code> for collections.
           Recognized constraints include required, minimum and maximum length or value, and a
           numeric step. Date/time bounds remain authored props; hidden and action inputs receive no
           constraints.
+        </p>
+        <p>
+          Multiple-select requiredness can enforce a selection. Checkbox groups rely on client
+          schema validation and handler validation; requiring each checkbox would require every
+          option. Without JavaScript, the handler enforces group rules.
         </p>
         <h3 id="validation-listener-reference">onInputValidation(handler, captureBoolean?)</h3>
         <p>

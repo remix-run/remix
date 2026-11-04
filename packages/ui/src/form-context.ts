@@ -11,7 +11,7 @@ import type {
 } from '@remix-run/data-schema/form'
 import { getConstraints } from './form-constraints.ts'
 import type { GetConstraintsOptions } from './form-constraints.ts'
-import { fieldValidity, formValidity, getRadioControls } from './form-control.ts'
+import { fieldValidity, formValidity, getGroupControls, getRepeatedValues } from './form-control.ts'
 import type { FieldFeedback, FieldState, ValidatableControl } from './form-control.ts'
 
 const bindingData = Symbol('form binding')
@@ -36,12 +36,12 @@ const textInputTypes = [
 ] as const
 
 /** A live form field reference that can be passed to child components through props. */
-export interface FieldBinding<kind extends string = FormFieldKind | 'file' | 'files'> {
+export interface FieldBinding<kind extends string = FormFieldKind | 'fields' | 'file' | 'files'> {
   /** The field's form decoding kind. */
   readonly kind: kind
   /** The submitted HTML name. */
   readonly name: string
-  /** The context-scoped control ID; radio option IDs also include their values. */
+  /** The scoped control ID; radio and grouped checkbox IDs also include option values. */
   readonly id: string
   /** The context-scoped error element ID. */
   readonly errorId: string
@@ -215,10 +215,11 @@ export const control = createMixin<ValidatableControl, [field: FieldBinding], El
       let data = getBinding(field, owner)
       let entry = data.entry
       let scalar = isFormField(entry) ? entry : undefined
-      if (!scalar && entry.kind !== 'file' && entry.kind !== 'files')
-        throw new Error('form.control() supports scalar and file form entries only')
+      if (!scalar && entry.kind !== 'fields' && entry.kind !== 'file' && entry.kind !== 'files')
+        throw new Error('form.control() requires a form field, repeated text, or file entry')
       let kind = scalar ? scalar.formKind : entry.kind
-      let type: GetConstraintsOptions['type'] = scalar?.formKind ?? 'file'
+      let repeated = kind === 'fields'
+      let type: GetConstraintsOptions['type'] = scalar?.formKind ?? (repeated ? 'checkbox' : 'file')
       if (hostType === 'input') {
         let authoredType = String(props.type ?? type)
         let textType = textInputTypes.find((type) => type === authoredType)
@@ -226,17 +227,21 @@ export const control = createMixin<ValidatableControl, [field: FieldBinding], El
         else if (kind === 'number' && authoredType === 'range') type = 'range'
         else if (authoredType !== type)
           throw new Error(`Input type ${authoredType} is incompatible with form ${kind} decoding`)
-      } else if ((hostType !== 'select' && hostType !== 'textarea') || kind !== 'text') {
-        throw new Error('Only text form entries support select and textarea controls')
+      } else if (hostType === 'select' && (kind === 'text' || repeated)) {
+        if ((repeated && props.multiple === false) || (!repeated && props.multiple))
+          throw new Error('Multiple selects require fd.fields; single selects require fd.text')
+      } else if (hostType !== 'textarea' || kind !== 'text') {
+        throw new Error('Select and textarea controls require compatible text form entries')
       }
-      let id = type === 'radio' ? optionId(field.id, props.value ?? 'on') : field.id
+      let grouped = type === 'radio' || (repeated && hostType === 'input')
+      let id = grouped ? optionId(field.id, props.value ?? 'on') : field.id
       if (['button', 'submit', 'reset', 'image'].includes(type))
         return attrs({ id, name: field.name, type })
       return fieldValidity(() => {
         let feedback = data.getFeedback()
         let constraints = getConstraints(entry.schema, {
           type: hostType === 'input' ? type : hostType,
-          multiple: kind === 'files',
+          multiple: kind === 'files' || repeated,
         })
         if (scalar && scalar.empty === 'preserve' && !validateField(scalar, '').issues)
           delete constraints.required
@@ -245,11 +250,18 @@ export const control = createMixin<ValidatableControl, [field: FieldBinding], El
           name: field.name,
           type,
           ...(type === 'file' ? { multiple: kind === 'files' } : {}),
+          ...(repeated && hostType === 'select' ? { multiple: true } : {}),
           ...constraints,
         }
         let submission = owner.getSubmission()
         let value = submission?.values[data.key]
-        if (type === 'radio') {
+        if (repeated) {
+          if (submission) {
+            let values = Array.isArray(value) ? value : []
+            if (hostType === 'select') attributes.defaultValue = values
+            else attributes.defaultChecked = values.includes(String(props.value ?? 'on'))
+          }
+        } else if (type === 'radio') {
           if (submission)
             attributes.defaultChecked = !scalar?.sensitive && value === String(props.value ?? 'on')
         } else if ((kind === 'password' || scalar?.sensitive) && submission) {
@@ -264,11 +276,12 @@ export const control = createMixin<ValidatableControl, [field: FieldBinding], El
           errorId: field.errorId,
           errorMap: scalar?.errorMap,
           feedback,
+          repeated,
           validate(node) {
-            let raw: unknown = node.value
-            if (node instanceof HTMLInputElement) {
+            let raw: unknown = repeated ? getRepeatedValues(node) : node.value
+            if (!repeated && node instanceof HTMLInputElement) {
               if (type === 'radio') {
-                raw = getRadioControls(node).find(
+                raw = getGroupControls(node).find(
                   (control) =>
                     control instanceof HTMLInputElement &&
                     control.checked &&
@@ -294,7 +307,7 @@ export const control = createMixin<ValidatableControl, [field: FieldBinding], El
   },
 )
 
-/** Associates a label with a control; pass its option value for a radio label. */
+/** Associates a label with a control; pass its value for radio or grouped checkbox options. */
 export const label = createMixin<
   HTMLLabelElement,
   [field: FieldBinding<string>, value?: string | number],

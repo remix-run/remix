@@ -11,6 +11,187 @@ import type { FieldBinding } from './form.ts'
 import { renderForm, input, edit, blur } from './test/form.tsx'
 
 describe('form.Context', () => {
+  it('validates and restores multiple select values through SSR, hydration, and reset', async (t) => {
+    let schema = fd.object({
+      topics: fd.fields(s.array(s.string()).refine((values) => values.length >= 2, 'Choose two')),
+    })
+    let failure = fd.parseSafe(schema, new URLSearchParams({ topics: 'a' }))
+    if (failure.success) throw new Error('Expected failure')
+    function markup(submission: fd.FormSubmission) {
+      return (
+        <form.Context id="multiple-select" schema={schema} submission={submission}>
+          {({ fields }) => (
+            <form mix={form.root()}>
+              <label mix={form.label(fields.topics)}>Topics</label>
+              <select mix={form.control(fields.topics)}>
+                <option value="a">A</option>
+                <optgroup label="More">
+                  <option value="b">B</option>
+                  <option value="c">C</option>
+                </optgroup>
+                <optgroup label="Unavailable" disabled>
+                  <option value="disabled">Disabled</option>
+                </optgroup>
+              </select>
+              <p role="alert" mix={form.error(fields.topics)}>
+                {fields.topics.errors.join(' ')}
+              </p>
+            </form>
+          )}
+        </form.Context>
+      )
+    }
+    let container = document.createElement('div')
+    container.innerHTML = await renderToString(markup(failure))
+    document.body.appendChild(container)
+    let select = container.querySelector('select')
+    let native = container.querySelector('form')
+    if (!select || !native) throw new Error('Missing controls')
+    expect(select.multiple).toBe(true)
+    expect([...select.selectedOptions].map((option) => option.value)).toEqual(['a'])
+    expect(container.querySelector('label')?.control).toBe(select)
+    let view = render(markup(failure), { container })
+    t.after(view.cleanup)
+    expect(native.checkValidity()).toBe(false)
+    select.options[1].selected = true
+    select.options[3].selected = true
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+    view.root.flush()
+    expect(native.checkValidity()).toBe(true)
+    expect(fd.parseSafe(schema, new FormData(native))).toEqual({
+      success: true,
+      value: { topics: ['a', 'b'] },
+    })
+    expect(container.querySelector('p')?.textContent).toBe('')
+    view.root.render(markup(failure))
+    view.root.flush()
+    expect(select.options[1].selected).toBe(true)
+    let next = { values: { topics: ['b', 'c'] }, errors: { fields: {} } }
+    view.root.render(markup(next))
+    view.root.flush()
+    expect([...select.selectedOptions].map((option) => option.value)).toEqual(['b', 'c'])
+    select.options[0].selected = true
+    native.reset()
+    await Promise.resolve()
+    view.root.flush()
+    expect([...select.selectedOptions].map((option) => option.value)).toEqual(['b', 'c'])
+    view.root.render(markup({ values: { topics: [] }, errors: { fields: {} } }))
+    view.root.flush()
+    expect(select.selectedOptions.length).toBe(0)
+    expect(native.checkValidity()).toBe(false)
+    let empty = fd.parseSafe(schema, new FormData(native))
+    if (empty.success) throw new Error('Expected empty selection failure')
+    expect(empty.values.topics).toEqual([])
+  })
+
+  it('coordinates repeated checkbox values, group errors, and restored checked defaults', async (t) => {
+    let schema = fd.object({
+      topics: fd.fields(
+        s.array(s.string()).refine((values) => values.length >= 2, 'Choose two'),
+        { name: 'topic[]' },
+      ),
+    })
+    let failure = fd.parseSafe(schema, new URLSearchParams({ 'topic[]': 'a' }))
+    if (failure.success) throw new Error('Expected failure')
+    let binding: FieldBinding<'fields'> | undefined
+    let showB = true
+    function markup(submission: fd.FormSubmission) {
+      return (
+        <form.Context id="checkbox-group" schema={schema} submission={submission}>
+          {({ fields }) => {
+            binding = fields.topics
+            return (
+              <form mix={form.root()}>
+                <fieldset>
+                  <legend>Topics</legend>
+                  <input value="a" mix={form.control(fields.topics)} />
+                  <label mix={form.label(fields.topics, 'a')}>A</label>
+                  {showB && (
+                    <>
+                      <input value="b" mix={form.control(fields.topics)} />
+                      <label mix={form.label(fields.topics, 'b')}>B</label>
+                    </>
+                  )}
+                  <input
+                    value="disabled"
+                    disabled
+                    defaultChecked
+                    mix={form.control(fields.topics)}
+                  />
+                  <p role="alert" mix={form.error(fields.topics)}>
+                    {fields.topics.errors.join(' ')}
+                  </p>
+                </fieldset>
+              </form>
+            )
+          }}
+        </form.Context>
+      )
+    }
+    let container = document.createElement('div')
+    container.innerHTML = await renderToString(markup(failure))
+    document.body.appendChild(container)
+    let nodes = container.querySelectorAll('input')
+    let native = container.querySelector('form')
+    if (!native) throw new Error('Missing form')
+    expect(nodes[0].type).toBe('checkbox')
+    expect(nodes[0].checked).toBe(true)
+    expect(nodes[1].checked).toBe(false)
+    expect(nodes[0].required).toBe(false)
+    expect([...container.querySelectorAll('label')].map((label) => label.control)).toEqual([
+      nodes[0],
+      nodes[1],
+    ])
+    expect(fd.parseSafe(schema, new FormData(native))).toEqual(failure)
+    let view = render(markup(failure), { container })
+    t.after(view.cleanup)
+    expect(native.checkValidity()).toBe(false)
+    nodes[1].click()
+    view.root.flush()
+    expect(native.checkValidity()).toBe(true)
+    expect(fd.parseSafe(schema, new FormData(native))).toEqual({
+      success: true,
+      value: { topics: ['a', 'b'] },
+    })
+    if (!binding) throw new Error('Missing binding')
+    binding.setCustomErrors(['Unavailable combination'])
+    expect(native.checkValidity()).toBe(false)
+    view.root.render(markup(failure))
+    view.root.flush()
+    expect(native.checkValidity()).toBe(false)
+    nodes[0].click()
+    view.root.flush()
+    expect(binding.errors).toEqual(['Choose two'])
+    nodes[0].click()
+    view.root.flush()
+    expect(native.checkValidity()).toBe(true)
+    view.root.render(markup({ ...failure }))
+    view.root.flush()
+    expect(nodes[0].checked).toBe(true)
+    expect(nodes[1].checked).toBe(false)
+    nodes[1].click()
+    native.reset()
+    await Promise.resolve()
+    view.root.flush()
+    expect(nodes[1].checked).toBe(false)
+    expect(binding.touched).toBe(false)
+    expect(native.checkValidity()).toBe(false)
+    view.root.render(markup({ values: { topics: [] }, errors: { fields: {} } }))
+    view.root.flush()
+    expect(nodes[0].checked).toBe(false)
+    expect(nodes[1].checked).toBe(false)
+    let both = { values: { topics: ['a', 'b'] }, errors: { fields: {} } }
+    view.root.render(markup(both))
+    view.root.flush()
+    expect(native.checkValidity()).toBe(true)
+    showB = false
+    view.root.render(markup(both))
+    view.root.flush()
+    await Promise.resolve()
+    view.root.flush()
+    expect(native.checkValidity()).toBe(false)
+  })
+
   it('restores native string controls and numeric ranges without projecting unrelated constraints', async (t) => {
     let values = {
       date: '2026-11-04',

@@ -22,6 +22,7 @@ export interface FieldMixinConfig {
   errorMap?: ErrorMap
   errorId: string
   feedback: FieldFeedback
+  repeated: boolean
   onFeedbackChange(previous: FieldState): void
 }
 
@@ -120,8 +121,9 @@ export const fieldValidity = createMixin<
     mountedControl = event.node
     handle.queueTask(() => {
       if (!previousConfig || mountedControl !== event.node) return
+      if (previousConfig.repeated) return
       let { feedback } = previousConfig
-      let key = getControlKey(event.node)
+      let key = getControlKey(event.node, previousConfig.repeated)
       if (feedback.customValue !== undefined && feedback.customValue !== key) {
         feedback.customErrors = []
       }
@@ -134,6 +136,12 @@ export const fieldValidity = createMixin<
     mountedControl = undefined
     if (previousConfig && refreshControl)
       previousConfig.feedback.refreshControls.delete(refreshControl)
+    if (previousConfig?.repeated) {
+      let feedback = previousConfig.feedback
+      queueMicrotask(() => {
+        for (let refresh of feedback.refreshControls) refresh()
+      })
+    }
   })
 
   return (getConfig, props) => {
@@ -151,6 +159,13 @@ export const fieldValidity = createMixin<
             nextProps.checked === undefined
           ) {
             mountedControl.checked = nextProps.defaultChecked
+          } else if (
+            mountedControl instanceof HTMLSelectElement &&
+            Array.isArray(nextProps.defaultValue) &&
+            nextProps.value === undefined
+          ) {
+            for (let option of mountedControl.options)
+              option.selected = nextProps.defaultValue.includes(option.value)
           } else if (typeof nextProps.defaultValue === 'string' && nextProps.value === undefined) {
             mountedControl.value = nextProps.defaultValue
           }
@@ -188,7 +203,7 @@ export const fieldValidity = createMixin<
       reason: 'input' | 'focusout' | 'invalid' | 'reset' | 'custom' | 'sync',
     ) {
       let previous = { ...feedback }
-      let key = getControlKey(input)
+      let key = getControlKey(input, config.repeated)
       if (
         reason === 'reset' ||
         (feedback.customValue !== undefined && feedback.customValue !== key)
@@ -240,6 +255,11 @@ export const fieldValidity = createMixin<
     }
     feedback.refreshControls.add(refreshControl)
     resetControl = (control) => updateFeedback(control, 'reset')
+    if (config.repeated) {
+      handle.queueTask(() => {
+        if (mountedControl && previousConfig === config) updateFeedback(mountedControl, 'sync')
+      })
+    }
 
     return createElement(handle.element, {
       ...getFeedbackProps(),
@@ -287,11 +307,20 @@ export function onInputValidation<target extends HTMLElement>(
 
 function validateInput(
   input: ValidatableControl,
-  config: Pick<FieldMixinConfig, 'validate' | 'field' | 'errorMap'>,
+  config: Pick<FieldMixinConfig, 'validate' | 'field' | 'errorMap' | 'repeated'>,
   customErrors: ReadonlyArray<string> = [],
 ): ReadonlyArray<string> {
-  if (!input.willValidate) return []
-  let controls = getRadioControls(input)
+  let controls =
+    config.repeated || (input instanceof HTMLInputElement && input.type === 'radio')
+      ? getGroupControls(input)
+      : [input]
+  let target = input.willValidate
+    ? input
+    : config.repeated
+      ? controls.find((control) => control.willValidate)
+      : undefined
+  if (!target) return []
+  input = target
   let previousMessage = input.validity.customError ? input.validationMessage : ''
   for (let control of controls) control.setCustomValidity('')
   try {
@@ -350,7 +379,7 @@ function getNativeIssue(
 function getControlValue(input: ValidatableControl): unknown {
   if (input instanceof HTMLInputElement) {
     if (input.type === 'radio')
-      return getRadioControls(input).find(
+      return getGroupControls(input).find(
         (control) =>
           control instanceof HTMLInputElement && control.checked && !control.matches(':disabled'),
       )?.value
@@ -367,7 +396,8 @@ function getControlValue(input: ValidatableControl): unknown {
   return input.value === '' ? undefined : input.value
 }
 
-function getControlKey(control: ValidatableControl): string {
+function getControlKey(control: ValidatableControl, repeated: boolean): string {
+  if (repeated) return JSON.stringify(getRepeatedValues(control))
   if (control instanceof HTMLInputElement && control.type === 'radio')
     return JSON.stringify([getControlValue(control)])
   if (control instanceof HTMLInputElement && control.type === 'file')
@@ -385,8 +415,12 @@ function getControlKey(control: ValidatableControl): string {
   ])
 }
 
-export function getRadioControls(control: ValidatableControl): ValidatableControl[] {
-  if (!(control instanceof HTMLInputElement) || control.type !== 'radio' || !control.name)
+export function getGroupControls(control: ValidatableControl): ValidatableControl[] {
+  if (
+    !(control instanceof HTMLInputElement) ||
+    (control.type !== 'radio' && control.type !== 'checkbox') ||
+    !control.name
+  )
     return [control]
   let root = control.getRootNode()
   let elements =
@@ -397,10 +431,23 @@ export function getRadioControls(control: ValidatableControl): ValidatableContro
   return [...elements].filter(
     (node): node is HTMLInputElement =>
       node instanceof HTMLInputElement &&
-      node.type === 'radio' &&
+      node.type === control.type &&
       node.name === control.name &&
       node.form === control.form,
   )
+}
+
+export function getRepeatedValues(control: ValidatableControl): string[] {
+  if (control instanceof HTMLSelectElement)
+    return [...control.selectedOptions]
+      .filter((option) => !option.matches(':disabled'))
+      .map((option) => option.value)
+  return getGroupControls(control)
+    .filter(
+      (node): node is HTMLInputElement =>
+        node instanceof HTMLInputElement && node.checked && !node.matches(':disabled'),
+    )
+    .map((node) => node.value)
 }
 
 function setAttribute(element: HTMLElement, name: string, value: unknown): void {
