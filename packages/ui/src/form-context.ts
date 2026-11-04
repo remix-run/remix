@@ -10,18 +10,38 @@ import type {
   FormSubmission,
 } from '@remix-run/data-schema/form'
 import { getConstraints } from './form-constraints.ts'
-import { fieldValidity, formValidity } from './form-control.ts'
+import type { GetConstraintsOptions } from './form-constraints.ts'
+import { fieldValidity, formValidity, getRadioControls } from './form-control.ts'
 import type { FieldFeedback, FieldState, ValidatableControl } from './form-control.ts'
 
 const bindingData = Symbol('form binding')
+const textInputTypes = [
+  'text',
+  'email',
+  'url',
+  'search',
+  'tel',
+  'date',
+  'month',
+  'week',
+  'time',
+  'datetime-local',
+  'color',
+  'hidden',
+  'radio',
+  'button',
+  'submit',
+  'reset',
+  'image',
+] as const
 
 /** A live form field reference that can be passed to child components through props. */
-export interface FieldBinding<kind extends string = FormFieldKind> {
+export interface FieldBinding<kind extends string = FormFieldKind | 'file' | 'files'> {
   /** The field's form decoding kind. */
   readonly kind: kind
   /** The submitted HTML name. */
   readonly name: string
-  /** The context-scoped native control ID. */
+  /** The context-scoped control ID; radio option IDs also include their values. */
   readonly id: string
   /** The context-scoped error element ID. */
   readonly errorId: string
@@ -125,7 +145,7 @@ export function Context<entries extends FormEntries>(
               hasServerErrors: errors.length > 0,
               errors,
               customErrors: [],
-              refreshControl: feedback?.refreshControl,
+              refreshControls: feedback?.refreshControls ?? new Set(),
             }
           }
           return feedback
@@ -149,7 +169,7 @@ export function Context<entries extends FormEntries>(
           let feedback = data.getFeedback()
           feedback.customErrors = messages.filter((message) => message.length > 0)
           feedback.customValue = undefined
-          feedback.refreshControl?.()
+          for (let refresh of feedback.refreshControls) refresh()
         },
       }
       return [key, Object.freeze(binding)]
@@ -194,48 +214,75 @@ export const control = createMixin<ValidatableControl, [field: FieldBinding], El
     return (field, props) => {
       let data = getBinding(field, owner)
       let entry = data.entry
-      if (!isFormField(entry)) throw new Error('form.control() supports scalar form entries only')
-      let kind = entry.formKind
-      let type = props.type ?? kind
+      let scalar = isFormField(entry) ? entry : undefined
+      if (!scalar && entry.kind !== 'file' && entry.kind !== 'files')
+        throw new Error('form.control() supports scalar and file form entries only')
+      let kind = scalar ? scalar.formKind : entry.kind
+      let type: GetConstraintsOptions['type'] = scalar?.formKind ?? 'file'
       if (hostType === 'input') {
-        let compatible =
-          kind === 'text'
-            ? ['text', 'email', 'url', 'search', 'tel'].includes(String(type))
-            : type === kind
-        if (!compatible)
-          throw new Error(`Input type ${String(type)} is incompatible with form ${kind} decoding`)
+        let authoredType = String(props.type ?? type)
+        let textType = textInputTypes.find((type) => type === authoredType)
+        if (kind === 'text' && textType) type = textType
+        else if (kind === 'number' && authoredType === 'range') type = 'range'
+        else if (authoredType !== type)
+          throw new Error(`Input type ${authoredType} is incompatible with form ${kind} decoding`)
       } else if ((hostType !== 'select' && hostType !== 'textarea') || kind !== 'text') {
         throw new Error('Only text form entries support select and textarea controls')
       }
+      let id = type === 'radio' ? optionId(field.id, props.value ?? 'on') : field.id
+      if (['button', 'submit', 'reset', 'image'].includes(type))
+        return attrs({ id, name: field.name, type })
       return fieldValidity(() => {
         let feedback = data.getFeedback()
-        let constraints = getConstraints(entry.schema, { type: kind })
-        if (entry.empty === 'preserve' && !validateField(entry, '').issues)
+        let constraints = getConstraints(entry.schema, {
+          type: hostType === 'input' ? type : hostType,
+          multiple: kind === 'files',
+        })
+        if (scalar && scalar.empty === 'preserve' && !validateField(scalar, '').issues)
           delete constraints.required
         let attributes: Record<string, unknown> = {
-          id: field.id,
+          id,
           name: field.name,
-          type: kind,
+          type,
+          ...(type === 'file' ? { multiple: kind === 'files' } : {}),
           ...constraints,
         }
         let submission = owner.getSubmission()
         let value = submission?.values[data.key]
-        if ((kind === 'password' || entry.sensitive) && submission) {
+        if (type === 'radio') {
+          if (submission)
+            attributes.defaultChecked = !scalar?.sensitive && value === String(props.value ?? 'on')
+        } else if ((kind === 'password' || scalar?.sensitive) && submission) {
           if (kind === 'checkbox') attributes.defaultChecked = false
           else attributes.defaultValue = ''
-        } else if (typeof value === 'string') attributes.defaultValue = value
+        } else if (type !== 'file' && typeof value === 'string') attributes.defaultValue = value
         else if (typeof value === 'boolean') attributes.defaultChecked = value
         if (feedback.hasServerErrors) attributes['data-form-error-id'] = field.errorId
         return {
           attrs: attributes,
           field: data.key,
           errorId: field.errorId,
-          errorMap: entry.errorMap,
+          errorMap: scalar?.errorMap,
           feedback,
           validate(node) {
-            let raw =
-              kind === 'checkbox' && node instanceof HTMLInputElement ? node.checked : node.value
-            let result = validateField(entry, raw, [data.key])
+            let raw: unknown = node.value
+            if (node instanceof HTMLInputElement) {
+              if (type === 'radio') {
+                raw = getRadioControls(node).find(
+                  (control) =>
+                    control instanceof HTMLInputElement &&
+                    control.checked &&
+                    !control.matches(':disabled'),
+                )
+                raw = raw instanceof HTMLInputElement ? raw.value : undefined
+              } else if (type === 'file') {
+                let files = [...(node.files ?? [])]
+                raw = kind === 'files' ? files : files[0]
+              } else if (kind === 'checkbox') raw = node.checked
+            }
+            let result = scalar
+              ? validateField(scalar, raw, [data.key])
+              : entry.schema['~run'](raw, { path: [data.key] })
             node.setCustomValidity(result.issues?.[0]?.message ?? '')
           },
           onFeedbackChange(previous) {
@@ -247,17 +294,28 @@ export const control = createMixin<ValidatableControl, [field: FieldBinding], El
   },
 )
 
-/** Associates an application-owned label with a field's scoped control. */
-export const label = createMixin<HTMLLabelElement, [field: FieldBinding<string>], ElementProps>(
-  (handle) => {
-    let owner = handle.context.get(Context)
-    if (!owner) throw new Error('form.label() requires form.Context')
-    return (field) => {
-      getBinding(field, owner)
-      return attrs({ htmlFor: field.id })
-    }
-  },
-)
+/** Associates a label with a control; pass its option value for a radio label. */
+export const label = createMixin<
+  HTMLLabelElement,
+  [field: FieldBinding<string>, value?: string | number],
+  ElementProps
+>((handle) => {
+  let owner = handle.context.get(Context)
+  if (!owner) throw new Error('form.label() requires form.Context')
+  return (field, value) => {
+    getBinding(field, owner)
+    return attrs({
+      htmlFor:
+        typeof value === 'string' || typeof value === 'number'
+          ? optionId(field.id, value)
+          : field.id,
+    })
+  }
+})
+
+function optionId(id: string, value: unknown): string {
+  return `${id}-option-${encodeURIComponent(String(value))}`
+}
 
 /** Identifies application-owned error content without choosing its role or visibility. */
 export const error = createMixin<Element, [field: FieldBinding<string>], ElementProps>((handle) => {

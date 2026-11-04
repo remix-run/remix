@@ -25,7 +25,7 @@ const handlerCode = await highlightSource(
 
 const typeDefinitions = {
   FieldBinding: await highlightSource(
-    'export interface FieldBinding<kind extends string = FormFieldKind> {\n  readonly kind: kind\n  readonly name: string\n  readonly id: string\n  readonly errorId: string\n  readonly errors: ReadonlyArray<string>\n  readonly touched: boolean\n  setCustomErrors(messages: ReadonlyArray<string>): void\n}',
+    "export interface FieldBinding<kind extends string = FormFieldKind | 'file' | 'files'> {\n  readonly kind: kind\n  readonly name: string\n  readonly id: string\n  readonly errorId: string\n  readonly errors: ReadonlyArray<string>\n  readonly touched: boolean\n  setCustomErrors(messages: ReadonlyArray<string>): void\n}",
     'ts',
   ),
 }
@@ -63,9 +63,11 @@ export default function FormPage(handle: Handle<PageProps>) {
         </p>
         <p>
           <code>root()</code> coordinates native invalid feedback but leaves valid submission and
-          navigation to the browser or application. Only scalar text, password, number, and checkbox
-          entries can use <code>control()</code>. Text entries also support select and textarea.
-          Repeated values and files can still be parsed on the server.
+          navigation to the browser or application. String-valued controls, including date/time,
+          color, hidden, radio, select, and textarea, use text entries. Range uses a number entry.
+          File entries validate selected uploads and supply <code>multiple</code> for file lists;
+          failed submissions clear selections. Repeated text entries remain parser-only. Author
+          action buttons normally.
         </p>
       </Section>
       <Section id="accessibility" title="Accessibility">
@@ -73,7 +75,9 @@ export default function FormPage(handle: Handle<PageProps>) {
           Author labels, help text, error content, and roles in your markup. The label and error
           mixins supply scoped IDs. A control gets <code>aria-invalid</code> and an error reference
           when feedback is visible. Existing <code>aria-describedby</code> help text is retained.
-          Keep each Context ID unique when rendering multiple forms.
+          Keep each Context ID unique when rendering multiple forms. Radio options share one field
+          binding; group them with a fieldset and legend, and pass the option value to{' '}
+          <code>label(field, value)</code> for distinct label associations.
         </p>
       </Section>
       <Section id="api-reference" title="API reference">
@@ -109,15 +113,20 @@ export default function FormPage(handle: Handle<PageProps>) {
           Apply to an input, select, or textarea. Supplies constraints, restored defaults, native
           validity, touched state, and error associations. Compatible authored control props win.
         </p>
-        <h3 id="label-reference">label(field)</h3>
-        <p>Apply to a label to associate it with the field’s scoped control ID.</p>
+        <h3 id="label-reference">label(field, value?)</h3>
+        <p>
+          Apply to a label to associate it with the field’s scoped control ID. Pass the option value
+          for a radio label.
+        </p>
         <h3 id="error-reference">error(field)</h3>
         <p>Apply to an application-owned error element to give it the field’s error ID.</p>
         <h3 id="constraints-reference">getConstraints(schema, options)</h3>
         <p>
-          Returns recognized native constraints for a custom integration. Pass a form kind in{' '}
-          <code>options.type</code>. Recognized constraints include required, minimum and maximum
-          length or value, and a numeric step.
+          Returns constraints supported by the native control for a custom integration. Pass its
+          native type in <code>options.type</code> and <code>multiple: true</code> for file lists.
+          Recognized constraints include required, minimum and maximum length or value, and a
+          numeric step. Date/time bounds remain authored props; hidden and action inputs receive no
+          constraints.
         </p>
         <h3 id="validation-listener-reference">onInputValidation(handler, captureBoolean?)</h3>
         <p>
@@ -152,7 +161,7 @@ export default function FormPage(handle: Handle<PageProps>) {
             Context input and render callback value.
           </ApiEntry>
           <ApiEntry name="SchemaConstraints, GetConstraintsOptions" type="interfaces">
-            Native constraint output and its form kind option.
+            Native constraint output and its control options.
           </ApiEntry>
           <ApiEntry name="InputValidationState" type="interface">
             Field key, error ID, messages, and touched state.

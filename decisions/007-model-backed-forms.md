@@ -8,6 +8,8 @@ One inspectable form schema connects transport decoding, ordinary validation, an
 
 Explicit `text`, `password`, `number`, and `checkbox` descriptions identify transport semantics without inspecting DOM input types or changing ordinary `s.object` parsing. They normalize absence and blanks before running the original schema. The functional `fd.parse` and form-aware `fd.parseSafe` APIs reuse core validation, options, messages, and inferred transforms. The existing `data-schema/form-data` adapter retains its lower-level extraction behavior.
 
+We chose descriptors for decoding and sensitive-value policy instead of a helper for every HTML input type. Email, URL, date/time, color, hidden, and radio values use `text`; range uses `number`. The native type stays in markup. Existing `file` and `files` descriptors handle uploads. Form objects normalize unnamed zero-byte browser upload placeholders to missing values while preserving named empty files and the lower-level adapter's behavior.
+
 Readonly `.entries` preserves original scalar schemas and decoding metadata for adapters. Form kinds and sensitivity belong here; labels, IDs, ARIA, feedback, and browser validity flags remain in UI. Package dependencies flow from UI to data-schema.
 
 ## Form-aware safe parsing carries failed submissions
@@ -31,6 +33,8 @@ Without JavaScript, native constraints and server validation still work. Failed 
 The component runtime preserves client-entry handle IDs across hydration, while nested local components receive new IDs. Context accepts an initial `id` scope so an entry can pass `handle.id` and retain exact server associations without new runtime infrastructure.
 
 Client errors become visible after blur or native invalid submission. Server errors appear immediately and are replaced on editing. Non-canceled native reset clears feedback after defaults restore. Sensitive controls clear on failed submissions, while live edits survive ordinary rerenders. Single selects use the component renderer’s `defaultValue` handling to render selected options and update native reset defaults. A new submission identity refreshes failed values; ordinary rerenders preserve edits. Changing schemas requires a keyed remount.
+
+Radio groups share one text binding. UI reads the selected enabled option in the native form/name group and coordinates validity across its members. Option values scope control IDs, and `label(field, value)` associates each option's label. File bindings validate selected files with the original schema, infer `multiple` from `files`, and clear selections on failed submissions. Native control capabilities determine projected constraints; date/time bounds remain authored markup. Hidden and action inputs cannot participate in client constraint validation, so handlers remain authoritative.
 
 ## Shared messages and application checks
 

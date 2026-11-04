@@ -1,13 +1,28 @@
 import * as s from '@remix-run/data-schema'
 import * as fd from '@remix-run/data-schema/form'
 import { max, maxLength, min, minLength } from '@remix-run/data-schema/checks'
-import type { FieldBinding, FieldBindings } from './form.ts'
+import type { FieldBinding, FieldBindings, GetConstraintsOptions } from './form.ts'
 
 type Equal<left, right> =
   (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2
     ? true
     : false
 function expectType<condition extends true>(_value?: condition): void {}
+
+expectType<Equal<string extends GetConstraintsOptions['type'] ? true : false, false>>()
+expectType<
+  Equal<
+      | 'datetime-local'
+      | 'radio'
+      | 'range'
+      | 'file'
+      | 'select'
+      | 'textarea' extends GetConstraintsOptions['type']
+      ? true
+      : false,
+    true
+  >
+>()
 
 const User = s.object({
   id: s.string(),
@@ -46,3 +61,9 @@ expectType<
   >
 >()
 expectType<Equal<Extract<keyof FieldBindings<typeof Profile.entries>, 'unknown'>, never>>()
+const UploadForm = fd.object({
+  avatar: fd.file(s.optional(s.instanceof_(Blob))),
+  attachments: fd.files(s.array(s.instanceof_(Blob))),
+})
+expectType<Equal<FieldBindings<typeof UploadForm.entries>['avatar'], FieldBinding<'file'>>>()
+expectType<Equal<FieldBindings<typeof UploadForm.entries>['attachments'], FieldBinding<'files'>>>()

@@ -6,6 +6,19 @@ import { email, max, maxLength, min, minLength, url } from '@remix-run/data-sche
 import { getConstraints } from './form.ts'
 
 describe('getConstraints', () => {
+  it('limits constraints to native control capabilities and handles file requiredness', () => {
+    let text = string().pipe(minLength(2), maxLength(5))
+    assert.deepEqual(getConstraints(text, { type: 'date' }), { required: true })
+    assert.deepEqual(getConstraints(text, { type: 'radio' }), { required: true })
+    assert.deepEqual(getConstraints(text, { type: 'color' }), {})
+    assert.deepEqual(getConstraints(text, { type: 'hidden' }), {})
+    assert.deepEqual(getConstraints(number().pipe(min(1), max(5)), { type: 'range' }), {
+      step: 'any',
+      min: 1,
+      max: 5,
+    })
+    assert.deepEqual(getConstraints(optional(string()), { type: 'file' }), {})
+  })
   it('returns native length and range constraints', () => {
     assert.deepEqual(getConstraints(string().pipe(minLength(2), maxLength(50)), { type: 'text' }), {
       required: true,

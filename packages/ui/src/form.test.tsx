@@ -5,12 +5,263 @@ import { render } from '@remix-run/component/test'
 import type { Handle } from '@remix-run/component'
 import * as s from '@remix-run/data-schema'
 import * as fd from '@remix-run/data-schema/form'
-import { email, minLength } from '@remix-run/data-schema/checks'
+import { email, minLength, min, max } from '@remix-run/data-schema/checks'
 import * as form from './form.ts'
 import type { FieldBinding } from './form.ts'
 import { renderForm, input, edit, blur } from './test/form.tsx'
 
 describe('form.Context', () => {
+  it('restores native string controls and numeric ranges without projecting unrelated constraints', async (t) => {
+    let values = {
+      date: '2026-11-04',
+      month: '2026-11',
+      week: '2026-W45',
+      time: '09:30',
+      'datetime-local': '2026-11-04T09:30',
+      color: '#123456',
+      hidden: 'original',
+      range: '4',
+    }
+    let schema = fd.object({
+      date: fd.text(s.string()),
+      month: fd.text(s.string()),
+      week: fd.text(s.string()),
+      time: fd.text(s.string()),
+      'datetime-local': fd.text(s.string()),
+      color: fd.text(s.string().pipe(minLength(7))),
+      hidden: fd.text(s.string().pipe(minLength(20))),
+      range: fd.number(s.number().pipe(min(1), max(5))),
+      action: fd.text(s.optional(s.string())),
+    })
+    let submission = { values, errors: { fields: {} } }
+    function markup(state: fd.FormSubmission) {
+      return (
+        <form.Context id="native-types" schema={schema} submission={state}>
+          {({ fields }) => (
+            <form mix={form.root()}>
+              <input type="date" min="2026-01-01" mix={form.control(fields.date)} />
+              <input type="month" mix={form.control(fields.month)} />
+              <input type="week" mix={form.control(fields.week)} />
+              <input type="time" mix={form.control(fields.time)} />
+              <input type="datetime-local" mix={form.control(fields['datetime-local'])} />
+              <input type="color" mix={form.control(fields.color)} />
+              <input type="hidden" mix={form.control(fields.hidden)} />
+              <input type="range" mix={form.control(fields.range)} />
+              <input type="submit" value="save" mix={form.control(fields.action)} />
+              <input type="button" value="Help" />
+              <input type="reset" value="Reset" />
+              <input type="image" alt="Save" />
+            </form>
+          )}
+        </form.Context>
+      )
+    }
+    let container = document.createElement('div')
+    container.innerHTML = await renderToString(markup(submission))
+    document.body.appendChild(container)
+    for (let [name, value] of Object.entries(values))
+      expect(input(container, name).value).toBe(value)
+    let view = render(markup(submission), { container })
+    t.after(view.cleanup)
+    let native = container.querySelector('form')
+    if (!native) throw new Error('Missing form')
+    let range = input(container, 'range')
+    expect(range.min).toBe('1')
+    expect(range.max).toBe('5')
+    expect(range.step).toBe('any')
+    expect(range.required).toBe(false)
+    expect(input(container, 'color').hasAttribute('minlength')).toBe(false)
+    expect(input(container, 'hidden').required).toBe(false)
+    expect(input(container, 'action').value).toBe('save')
+    expect(input(container, 'action').hasAttribute('data-form-input')).toBe(false)
+    edit(range, '3')
+    view.root.render(markup(submission))
+    view.root.flush()
+    expect(range.value).toBe('3')
+    edit(input(container, 'date'), '2025-12-31')
+    expect(native.checkValidity()).toBe(false)
+    edit(input(container, 'date'), values.date)
+    expect(native.checkValidity()).toBe(true)
+    view.root.render(markup({ values: { ...values, range: '2' }, errors: { fields: {} } }))
+    view.root.flush()
+    expect(range.value).toBe('2')
+    edit(range, '5')
+    native.reset()
+    await Promise.resolve()
+    expect(range.value).toBe('2')
+    let result = fd.parseSafe(schema, new FormData(native))
+    expect(result.success).toBe(false)
+    if (result.success) throw new Error('Expected server rejection of hidden field')
+    expect(Object.keys(result.errors.fields)).toEqual(['hidden'])
+    expect(result.values.range).toBe('2')
+  })
+
+  it('shares radio feedback, validates selected values, and restores group defaults', async (t) => {
+    let schema = fd.object({
+      delivery: fd.text(
+        s.enum_(['email', 'sms']).refine((value) => value === 'email', 'Email only'),
+        { name: 'delivery.method' },
+      ),
+    })
+    let submission = fd.parseSafe(schema, new URLSearchParams({ 'delivery.method': 'sms' }))
+    if (submission.success) throw new Error('Expected failed submission')
+    let showSms = true
+    let binding: FieldBinding<'text'> | undefined
+    function markup(state?: fd.FormSubmission) {
+      return (
+        <form.Context id="radio-form" schema={schema} submission={state}>
+          {({ fields }) => {
+            binding = fields.delivery
+            return (
+              <form mix={form.root()}>
+                <fieldset>
+                  <legend>Delivery</legend>
+                  <input type="radio" value="email" mix={form.control(fields.delivery)} />
+                  <label mix={form.label(fields.delivery, 'email')}>Email</label>
+                  {showSms && (
+                    <>
+                      <input type="radio" value="sms" mix={form.control(fields.delivery)} />
+                      <label mix={form.label(fields.delivery, 'sms')}>SMS</label>
+                    </>
+                  )}
+                  <p mix={form.error(fields.delivery)}>{fields.delivery.errors.join(' ')}</p>
+                </fieldset>
+              </form>
+            )
+          }}
+        </form.Context>
+      )
+    }
+    let container = document.createElement('div')
+    container.innerHTML = await renderToString(markup(submission))
+    document.body.appendChild(container)
+    let email = container.querySelector('input[value="email"]')
+    let sms = container.querySelector('input[value="sms"]')
+    let native = container.querySelector('form')
+    if (!(email instanceof HTMLInputElement) || !(sms instanceof HTMLInputElement) || !native)
+      throw new Error('Missing group')
+    expect(email.checked).toBe(false)
+    expect(sms.checked).toBe(true)
+    expect(email.value).toBe('email')
+    expect(email.id === sms.id).toBe(false)
+    expect([...container.querySelectorAll('label')].map((label) => label.control)).toEqual([
+      email,
+      sms,
+    ])
+    let view = render(markup(submission), { container })
+    t.after(view.cleanup)
+    expect(native.checkValidity()).toBe(false)
+    email.click()
+    view.root.flush()
+    expect(native.checkValidity()).toBe(true)
+    expect(container.querySelector('p')?.textContent).toBe('')
+    expect(sms.getAttribute('aria-invalid')).toBe(null)
+    expect(fd.parseSafe(schema, new FormData(native))).toEqual({
+      success: true,
+      value: { delivery: 'email' },
+    })
+    if (!binding) throw new Error('Missing binding')
+    binding.setCustomErrors(['Try again'])
+    expect(native.checkValidity()).toBe(false)
+    view.root.render(markup(submission))
+    view.root.flush()
+    expect(email.checked).toBe(true)
+    expect(native.checkValidity()).toBe(false)
+    sms.click()
+    view.root.flush()
+    expect(binding.errors).toEqual(['Email only'])
+    email.click()
+    view.root.flush()
+    expect(native.checkValidity()).toBe(true)
+    view.root.render(markup({ ...submission }))
+    view.root.flush()
+    expect(sms.checked).toBe(true)
+    email.click()
+    native.reset()
+    await Promise.resolve()
+    view.root.flush()
+    expect(sms.checked).toBe(true)
+    email.click()
+    showSms = false
+    view.root.render(markup(submission))
+    view.root.flush()
+    email.checked = false
+    expect(native.checkValidity()).toBe(false)
+    email.click()
+    view.root.flush()
+    expect(native.checkValidity()).toBe(true)
+    binding.setCustomErrors(['Still registered'])
+    expect(native.checkValidity()).toBe(false)
+    binding.setCustomErrors([])
+    expect(native.checkValidity()).toBe(true)
+  })
+
+  it('validates single and multiple files and clears selections on new failures', async (t) => {
+    let schema = fd.object({
+      avatar: fd.file(
+        s
+          .optional(s.instanceof_(Blob))
+          .refine((file) => !file || file.size <= 3, 'Small files only'),
+      ),
+      attachments: fd.files(
+        s.array(s.instanceof_(Blob)).refine((files) => files.length > 0, 'Choose files'),
+      ),
+    })
+    let view = renderForm(schema, ({ fields }) => (
+      <form encType="multipart/form-data" mix={form.root()}>
+        <label mix={form.label(fields.avatar)}>Avatar</label>
+        <input accept="text/plain" mix={form.control(fields.avatar)} />
+        <input mix={form.control(fields.attachments)} />
+        <p mix={form.error(fields.avatar)}>{fields.avatar.errors.join(' ')}</p>
+      </form>
+    ))
+    t.after(view.cleanup)
+    let avatar = input(view.container, 'avatar')
+    let attachments = input(view.container, 'attachments')
+    let native = view.container.querySelector('form')
+    if (!native) throw new Error('Missing form')
+    expect(avatar.type).toBe('file')
+    expect(avatar.multiple).toBe(false)
+    expect(attachments.multiple).toBe(true)
+    expect(attachments.required).toBe(true)
+    expect(native.checkValidity()).toBe(false)
+    let transfer = new DataTransfer()
+    transfer.items.add(new File(['large'], 'test.txt'))
+    avatar.files = transfer.files
+    attachments.files = transfer.files
+    avatar.dispatchEvent(new Event('input', { bubbles: true }))
+    attachments.dispatchEvent(new Event('input', { bubbles: true }))
+    blur(avatar)
+    view.root.flush()
+    expect(view.fields.avatar.errors).toEqual(['Small files only'])
+    let failure = fd.parseSafe(schema, new FormData(native))
+    if (failure.success) throw new Error('Expected failure')
+    expect(failure.values).toEqual({})
+    expect(failure.errors.fields.avatar).toEqual(['Small files only'])
+    view.rerender(failure)
+    expect(avatar.files?.length).toBe(0)
+    expect(attachments.files?.length).toBe(0)
+    transfer = new DataTransfer()
+    transfer.items.add(new File(['ok'], 'first.txt'))
+    transfer.items.add(new File([], 'empty.txt'))
+    avatar.files = transfer.files
+    attachments.files = transfer.files
+    avatar.dispatchEvent(new Event('input', { bubbles: true }))
+    attachments.dispatchEvent(new Event('input', { bubbles: true }))
+    view.root.flush()
+    expect(native.checkValidity()).toBe(true)
+    let result = fd.parseSafe(schema, new FormData(native))
+    expect(result.success).toBe(true)
+    if (!result.success) throw new Error('Expected success')
+    expect(result.value.avatar?.size).toBe(2)
+    expect(result.value.attachments.length).toBe(2)
+    native.reset()
+    await Promise.resolve()
+    view.root.flush()
+    expect(avatar.files?.length).toBe(0)
+    expect(view.fields.avatar.touched).toBe(false)
+  })
+
   it('omits form errors when none exist and renders submitted form errors', (t) => {
     let schema = fd.object({ name: fd.text(s.string()) })
     let view = renderForm(schema, ({ fields, errors }) => (

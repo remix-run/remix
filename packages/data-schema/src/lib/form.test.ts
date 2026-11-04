@@ -7,6 +7,22 @@ import { min, minLength } from '../checks.ts'
 import * as legacy from '../form-data.ts'
 
 describe('form schemas', () => {
+  it('normalizes empty browser uploads without dropping named empty files or changing lower-level extraction', () => {
+    let single = fd.file(s.optional(s.instanceof_(Blob)))
+    let multiple = fd.files(s.array(s.instanceof_(Blob)))
+    let schema = fd.object({ single, multiple })
+    let data = new FormData()
+    let absent = new File([], '')
+    data.set('single', absent)
+    data.append('multiple', absent)
+    assert.deepEqual(fd.parse(schema, data), { single: undefined, multiple: [] })
+    let named = new File([], 'empty.txt')
+    data.set('single', named)
+    data.append('multiple', named)
+    assert.deepEqual(fd.parse(schema, data), { single: named, multiple: [named] })
+    let legacySchema = legacy.object({ single, multiple })
+    assert.deepEqual(s.parse(legacySchema, data), { single: named, multiple: [absent, named] })
+  })
   it('normalizes form values before ordinary optional/defaulted validation', () => {
     let Signup = fd.object({
       nickname: fd.text(s.optional(s.string())),

@@ -13,7 +13,7 @@ export interface FieldFeedback {
   errors: ReadonlyArray<string>
   customErrors: ReadonlyArray<string>
   customValue?: string
-  refreshControl?: () => void
+  refreshControls: Set<() => void>
 }
 export interface FieldMixinConfig {
   attrs: Record<string, unknown>
@@ -114,10 +114,12 @@ export const fieldValidity = createMixin<
   let previousConfig: FieldMixinConfig | undefined
   let mountedControl: ValidatableControl | undefined
   let resetControl: (control: ValidatableControl) => void
+  let refreshControl: (() => void) | undefined
 
   handle.addEventListener('insert', (event) => {
     mountedControl = event.node
-    if (previousConfig) {
+    handle.queueTask(() => {
+      if (!previousConfig || mountedControl !== event.node) return
       let { feedback } = previousConfig
       let key = getControlKey(event.node)
       if (feedback.customValue !== undefined && feedback.customValue !== key) {
@@ -125,23 +127,25 @@ export const fieldValidity = createMixin<
       }
       feedback.customValue = key
       validateInput(event.node, previousConfig, feedback.customErrors)
-    }
+    })
   })
 
   handle.addEventListener('remove', () => {
     mountedControl = undefined
-    if (previousConfig) previousConfig.feedback.refreshControl = undefined
+    if (previousConfig && refreshControl)
+      previousConfig.feedback.refreshControls.delete(refreshControl)
   })
 
   return (getConfig, props) => {
     let config = getConfig()
     let feedback = config.feedback
     if (previousConfig && previousConfig.feedback !== feedback) {
-      previousConfig.feedback.refreshControl = undefined
       handle.queueTask(() => {
         if (mountedControl && previousConfig?.feedback === feedback) {
           let nextProps = getFeedbackProps()
-          if (
+          if (mountedControl instanceof HTMLInputElement && mountedControl.type === 'file') {
+            mountedControl.value = ''
+          } else if (
             mountedControl instanceof HTMLInputElement &&
             typeof nextProps.defaultChecked === 'boolean' &&
             nextProps.checked === undefined
@@ -226,15 +230,15 @@ export const fieldValidity = createMixin<
       )
     }
 
-    feedback.refreshControl = function refreshControl() {
+    if (refreshControl) feedback.refreshControls.delete(refreshControl)
+    refreshControl = function refresh() {
       let nextConfig = getConfig()
-      if (nextConfig.feedback !== feedback) feedback.refreshControl = undefined
       config = nextConfig
       feedback = config.feedback
-      feedback.refreshControl = refreshControl
       previousConfig = config
       if (mountedControl) updateFeedback(mountedControl, 'custom')
     }
+    feedback.refreshControls.add(refreshControl)
     resetControl = (control) => updateFeedback(control, 'reset')
 
     return createElement(handle.element, {
@@ -286,8 +290,10 @@ function validateInput(
   config: Pick<FieldMixinConfig, 'validate' | 'field' | 'errorMap'>,
   customErrors: ReadonlyArray<string> = [],
 ): ReadonlyArray<string> {
+  if (!input.willValidate) return []
+  let controls = getRadioControls(input)
   let previousMessage = input.validity.customError ? input.validationMessage : ''
-  input.setCustomValidity('')
+  for (let control of controls) control.setCustomValidity('')
   try {
     if (input.validity.valid) {
       config.validate(input)
@@ -306,9 +312,13 @@ function validateInput(
     let message = input.validationMessage
     let errors = message ? [message, ...customErrors] : customErrors
     if (input.validity.valid) input.setCustomValidity(customErrors[0] ?? '')
+    for (let control of controls) {
+      if (control !== input) control.setCustomValidity(input.validationMessage)
+    }
     return errors
   } catch (error) {
-    input.setCustomValidity(previousMessage || customErrors[0] || '')
+    for (let control of controls)
+      control.setCustomValidity(previousMessage || customErrors[0] || '')
     throw error
   }
 }
@@ -331,7 +341,7 @@ function getNativeIssue(
     if (validity.tooLong) return { code: 'string.max_length', values: { max: input.maxLength } }
     if (validity.tooShort) return { code: 'string.min_length', values: { min: input.minLength } }
   }
-  if (input instanceof HTMLInputElement && type === 'number') {
+  if (input instanceof HTMLInputElement && (type === 'number' || type === 'range')) {
     if (validity.rangeUnderflow) return { code: 'number.min', values: { min: Number(input.min) } }
     if (validity.rangeOverflow) return { code: 'number.max', values: { max: Number(input.max) } }
   }
@@ -339,8 +349,17 @@ function getNativeIssue(
 
 function getControlValue(input: ValidatableControl): unknown {
   if (input instanceof HTMLInputElement) {
+    if (input.type === 'radio')
+      return getRadioControls(input).find(
+        (control) =>
+          control instanceof HTMLInputElement && control.checked && !control.matches(':disabled'),
+      )?.value
+    if (input.type === 'file') {
+      let files = [...(input.files ?? [])]
+      return input.multiple ? files : files[0]
+    }
     if (input.type === 'checkbox') return input.checked
-    if (input.type === 'number') {
+    if (input.type === 'number' || input.type === 'range') {
       if (input.validity.badInput) return NaN
       return input.value.trim() === '' ? undefined : Number(input.value)
     }
@@ -349,10 +368,39 @@ function getControlValue(input: ValidatableControl): unknown {
 }
 
 function getControlKey(control: ValidatableControl): string {
+  if (control instanceof HTMLInputElement && control.type === 'radio')
+    return JSON.stringify([getControlValue(control)])
+  if (control instanceof HTMLInputElement && control.type === 'file')
+    return JSON.stringify(
+      [...(control.files ?? [])].map((file) => [
+        file.name,
+        file.size,
+        file.type,
+        file.lastModified,
+      ]),
+    )
   return JSON.stringify([
     control.value,
     control instanceof HTMLInputElement ? control.checked : undefined,
   ])
+}
+
+export function getRadioControls(control: ValidatableControl): ValidatableControl[] {
+  if (!(control instanceof HTMLInputElement) || control.type !== 'radio' || !control.name)
+    return [control]
+  let root = control.getRootNode()
+  let elements =
+    control.form?.elements ??
+    (root instanceof Document || root instanceof DocumentFragment || root instanceof Element
+      ? root.querySelectorAll('input')
+      : [])
+  return [...elements].filter(
+    (node): node is HTMLInputElement =>
+      node instanceof HTMLInputElement &&
+      node.type === 'radio' &&
+      node.name === control.name &&
+      node.form === control.form,
+  )
 }
 
 function setAttribute(element: HTMLElement, name: string, value: unknown): void {

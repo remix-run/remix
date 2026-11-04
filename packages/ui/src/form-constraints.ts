@@ -23,15 +23,41 @@ export interface SchemaConstraints {
  * Input control context used to derive native HTML constraints.
  */
 export interface GetConstraintsOptions {
-  /** The native input type and its corresponding empty-value semantics. */
-  type: 'checkbox' | 'email' | 'number' | 'password' | 'text' | 'url'
+  /** The native input type, `select`, or `textarea`, with its empty-value semantics. */
+  type:
+    | 'button'
+    | 'checkbox'
+    | 'color'
+    | 'date'
+    | 'datetime-local'
+    | 'email'
+    | 'file'
+    | 'hidden'
+    | 'image'
+    | 'month'
+    | 'number'
+    | 'password'
+    | 'radio'
+    | 'range'
+    | 'reset'
+    | 'search'
+    | 'select'
+    | 'submit'
+    | 'tel'
+    | 'text'
+    | 'textarea'
+    | 'time'
+    | 'url'
+    | 'week'
+  /** Whether a file control reads an array of files (defaults to false). */
+  multiple?: boolean
 }
 
 /**
  * Returns native HTML constraints represented by a schema's recognized checks.
  *
  * Checks without an equivalent native constraint are omitted. Requiredness may evaluate the
- * schema with `undefined` or `false` when metadata alone cannot determine it.
+ * schema with `undefined`, `false`, or an empty file list when metadata cannot determine it.
  *
  * @param schema The schema to inspect.
  * @param options The input control receiving the constraints.
@@ -43,38 +69,46 @@ export function getConstraints<input, output>(
 ): SchemaConstraints {
   let constraints: SchemaConstraints = {}
 
-  if (options.type === 'number') {
+  let numeric = options.type === 'number' || options.type === 'range'
+  let text = ['text', 'search', 'tel', 'url', 'email', 'password', 'textarea'].includes(
+    options.type,
+  )
+  if (['hidden', 'button', 'submit', 'reset', 'image'].includes(options.type)) return constraints
+
+  if (numeric) {
     constraints.step = 'any'
   }
 
-  if (
-    options.type === 'checkbox'
-      ? !schemaAcceptsValue(schema, false)
-      : !schemaAcceptsUndefined(schema)
-  ) {
-    constraints.required = true
+  if (options.type !== 'range' && options.type !== 'color') {
+    let acceptsEmpty =
+      options.type === 'file' && options.multiple
+        ? schemaAcceptsValue(schema, [])
+        : options.type === 'checkbox'
+          ? schemaAcceptsValue(schema, false)
+          : schemaAcceptsUndefined(schema)
+    if (!acceptsEmpty) constraints.required = true
   }
 
   for (let check of getSchemaMetadata(schema).checks) {
     switch (check.code) {
       case 'string.min_length': {
         let minLength = getConstraintValue(check.values, 'min')
-        if (minLength !== undefined) constraints.minLength = minLength
+        if (text && minLength !== undefined) constraints.minLength = minLength
         break
       }
       case 'string.max_length': {
         let maxLength = getConstraintValue(check.values, 'max')
-        if (maxLength !== undefined) constraints.maxLength = maxLength
+        if (text && maxLength !== undefined) constraints.maxLength = maxLength
         break
       }
       case 'number.min': {
         let min = getConstraintValue(check.values, 'min')
-        if (min !== undefined) constraints.min = min
+        if (numeric && min !== undefined) constraints.min = min
         break
       }
       case 'number.max': {
         let max = getConstraintValue(check.values, 'max')
-        if (max !== undefined) constraints.max = max
+        if (numeric && max !== undefined) constraints.max = max
         break
       }
     }

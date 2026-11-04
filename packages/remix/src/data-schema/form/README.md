@@ -35,7 +35,7 @@ let Profile = fd.object({
 })
 ```
 
-The submission schema selects accepted fields and their transport behavior. It can omit generated IDs, combine fields from multiple models, and include request-only fields. Labels, layout, and presentation types such as `email` remain in markup.
+The submission schema selects accepted fields and their transport behavior. It can omit generated IDs, combine fields from multiple models, and include request-only fields. Labels, layout, and presentation types remain in markup. String-valued controls such as email, URL, date/time, color, hidden, and radio use `fd.text`; number and range use `fd.number`. Radio groups submit the selected option as text; an unselected group is missing. Date/time values stay strings unless the supplied schema transforms them.
 
 ## Missing and empty entries
 
@@ -79,7 +79,7 @@ let Settings = fd.object({
 })
 ```
 
-Issues use logical keys such as `email`, independently of transport names. Field error maps compose with parse options; explicit schema messages keep precedence. Repeated text defaults to `[]`. `fields`, `file`, and `files` reuse the existing FormData extraction helpers.
+Issues use logical keys such as `email`, independently of transport names. Field error maps compose with parse options; explicit schema messages keep precedence. Repeated text defaults to `[]`. `fields`, `file`, and `files` reuse the existing FormData extraction helpers. Form objects normalize the browser's empty upload placeholder (an unnamed zero-byte File) to `undefined` for `file` and remove it from `files` arrays. Named zero-byte files remain valid inputs. The supplied schema decides whether a missing file or empty list is accepted. Files are never included in failed restoration values.
 
 The lower-level `remix/data-schema/form-data` export stays available with its existing semantics, including `field()` preserving empty strings. Choose it when you only need explicit extraction without native form kinds or empty-value normalization.
 

@@ -74,16 +74,81 @@ await createAccount(submission.value)
 `Context` owns one form instance and supplies stable typed `fields` and current grouped errors. Its render prop always receives `errors`; `errors.form` is absent when there are no form-level messages. A separate domain schema is optional: reuse `Account.shape.email` inside `fd.text()` or define validations inline. Changing the schema requires a new keyed Context.
 
 - `root()` coordinates native invalid feedback for unmanaged controls. It leaves valid submissions to the browser and application.
-- `control(field)` provides constraints, restored defaults, native validity, touched state, and ARIA. It defaults the input type from the form kind. Text fields allow authored `email`, `url`, `search`, and `tel` types; incompatible types fail clearly. Scalar text also supports select and textarea. Repeated/file entries are parser-only in this release.
-- `label(field)` supplies `htmlFor`; `error(field)` supplies an error ID. Content, visibility, roles, and styling remain in JSX.
+- `control(field)` provides constraints, restored defaults, native validity, touched state, and ARIA. It defaults the input type from the decoding kind; compatible authored types override it. Text entries also support select and textarea. Repeated text entries remain parser-only.
+- `label(field, value?)` supplies `htmlFor`; pass the option value for a radio label. `error(field)` supplies an error ID. Content, visibility, roles, and styling remain in JSX.
 
 Bindings belong to their Context and cannot be shared between form instances. IDs default to the Context's instance scope. The component runtime only preserves a client entry's own handle ID during hydration: pass that entry's `handle.id` as Context's `id`, as above, when exact SSR IDs must persist. Explicit scopes must be unique. Authored props win; an explicit control ID needs matching label/error associations. Existing help-text IDs in `aria-describedby` are retained.
 
-`getConstraints(schema, { type })` exposes recognized native constraints for custom integrations: `required`, `minLength`, `maxLength`, `min`, and `max`, plus `step="any"` for numeric fields. Arbitrary refinements are checked with `setCustomValidity` after native constraints pass. Requiredness may evaluate schemas when metadata cannot determine it.
+`getConstraints(schema, { type, multiple? })` exposes recognized native constraints for custom integrations: `required`, `minLength`, `maxLength`, `min`, and `max`, plus `step="any"` for number and range inputs. Its `type` option accepts the supported native input literals, `select`, and `textarea`. It only derives attributes supported by the native control. Date/time bounds and steps remain authored props. Hidden and action controls receive no validation constraints; range and color inputs do not receive `required`. Arbitrary refinements are checked with `setCustomValidity` after native constraints pass. Requiredness may evaluate schemas when metadata cannot determine it; file lists use `[]` as their missing value.
+
+## Native control types
+
+Choose the descriptor for the submitted value, then set presentation types in markup:
+
+| Descriptor                             | Native controls                                                                                                |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `fd.text(schema)`                      | text, email, url, search, tel, date, month, week, time, datetime-local, color, hidden, radio, select, textarea |
+| `fd.password(schema)`                  | password                                                                                                       |
+| `fd.number(schema)`                    | number, range                                                                                                  |
+| `fd.checkbox(schema?)`                 | checkbox                                                                                                       |
+| `fd.file(schema)` / `fd.files(schema)` | file; `files` supplies `multiple`                                                                              |
+
+Date/time and color values stay strings; range values become numbers. Author buttons and submit/reset/image inputs normally. If an action input needs a text binding, `control(field)` supplies its ID, name, and type without validation or restoration. Hidden inputs retain server validation and failed values but cannot block browser submission.
+
+Radio options share one text binding, feedback, and submitted name. Use a fieldset and legend for the group:
+
+```tsx
+let Preferences = fd.object({ delivery: fd.text(s.enum_(['email', 'sms'])) })
+
+<form.Context schema={Preferences}>
+  {({ fields }) => (
+    <form method="post" mix={form.root()}>
+      <fieldset>
+        <legend>Delivery method</legend>
+        <input type="radio" value="email" mix={form.control(fields.delivery)} />
+        <label mix={form.label(fields.delivery, 'email')}>Email</label>
+        <input type="radio" value="sms" mix={form.control(fields.delivery)} />
+        <label mix={form.label(fields.delivery, 'sms')}>SMS</label>
+        {fields.delivery.errors.length > 0 && (
+          <p role="alert" mix={form.error(fields.delivery)}>
+            {fields.delivery.errors.join(' ')}
+          </p>
+        )}
+      </fieldset>
+      <button type="submit">Save</button>
+    </form>
+  )}
+</form.Context>
+```
+
+Option values produce distinct scoped control IDs. Authored IDs require matching label associations. A failed value restores the selected option and its native reset default; ordinary rerenders preserve the current selection. Client validation reads the selected enabled option in the native form/name group.
+
+File controls validate selected files with the original schema:
+
+```tsx
+let Upload = fd.object({
+  avatar: fd.file(s.optional(s.instanceof_(Blob))),
+  attachments: fd.files(s.array(s.instanceof_(Blob))),
+})
+
+<form.Context schema={Upload}>
+  {({ fields }) => (
+    <form method="post" encType="multipart/form-data" mix={form.root()}>
+      <label mix={form.label(fields.avatar)}>Avatar</label>
+      <input accept="image/*" mix={form.control(fields.avatar)} />
+      <label mix={form.label(fields.attachments)}>Attachments</label>
+      <input mix={form.control(fields.attachments)} />
+      <button type="submit">Upload</button>
+    </form>
+  )}
+</form.Context>
+```
+
+No selection becomes `undefined` for a single file or `[]` for multiple files. Use a refinement rejecting `[]` to require multiple uploads. Files are omitted from failed values, and a new failed submission clears live selections. Ordinary rerenders preserve selections. The application owns upload storage and server enforcement; `accept` is a browser hint.
 
 ## Live state and component props
 
-Pass `FieldBinding<'text'>`, `FieldBinding<'password'>`, or another scalar kind through ordinary props. Read `field.errors`, `field.touched`, and `handle.props` during rendering. Setup-time destructuring captures a snapshot. Context updates rerender child fields even when binding identity is unchanged; no subscriptions or update callbacks are needed.
+Pass `FieldBinding<'text'>`, `FieldBinding<'password'>`, or another supported kind through ordinary props. Read `field.errors`, `field.touched`, and `handle.props` during rendering. Setup-time destructuring captures a snapshot. Context updates rerender child fields even when binding identity is unchanged; no subscriptions or update callbacks are needed.
 
 Client errors appear after blur or blocked submission, then update while editing. Server errors appear immediately; editing replaces them with current client feedback. A non-canceled native reset clears touched state and custom errors after native defaults restore. Programmatic edits need an `input` or `change` event.
 

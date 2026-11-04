@@ -256,7 +256,19 @@ export function object<const entries extends FormEntries>(entries: entries): For
               validateField(entry, value, context.path, context.options),
             ),
           }
-        : entry,
+        : entry.kind === 'file' || entry.kind === 'files'
+          ? {
+              ...entry,
+              schema: createSchema((value, context) => {
+                let decoded = Array.isArray(value)
+                  ? value.filter((file) => !isEmptyUpload(file))
+                  : isEmptyUpload(value)
+                    ? undefined
+                    : value
+                return entry.schema['~run'](decoded, context)
+              }),
+            }
+          : entry,
     ]),
   )
   // Each extracted entry delegates to the corresponding original schema, preserving its output.
@@ -265,6 +277,10 @@ export function object<const entries extends FormEntries>(entries: entries): For
     enumerable: true,
   }) as FormSchema<entries>
   return schema
+}
+
+function isEmptyUpload(value: unknown): boolean {
+  return value instanceof File && value.name === '' && value.size === 0
 }
 
 /**
