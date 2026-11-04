@@ -742,18 +742,14 @@ describe('render', () => {
       '/stream',
       () =>
         new Response(
-          new ReadableStream(
-            {
-              pull() {
-                frameStreamStartedResolve?.()
-              },
-              cancel(reason) {
-                frameStreamCancelledResolve?.(reason)
-              },
+          new ReadableStream({
+            pull() {
+              frameStreamStartedResolve?.()
             },
-            // Only signal a start once the frame body is read.
-            { highWaterMark: 0 },
-          ),
+            cancel(reason) {
+              frameStreamCancelledResolve?.(reason)
+            },
+          }),
           { headers: { 'Content-Type': 'text/html' } },
         ),
     )

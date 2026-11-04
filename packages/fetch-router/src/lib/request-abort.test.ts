@@ -67,4 +67,43 @@ describe('raceRequestAbort', () => {
       },
     )
   })
+
+  it('cancels a response body that resolves after abort', async () => {
+    let controller = new AbortController()
+    let request = new Request('https://remix.run', { signal: controller.signal })
+    let resolveResponse: ((response: Response) => void) | undefined
+    let promise = new Promise<Response>((resolve) => {
+      resolveResponse = resolve
+    })
+    let result = raceRequestAbort(promise, request)
+    let reason = new Error('Request cancelled')
+
+    controller.abort(reason)
+    await assert.rejects(result, reason)
+
+    let cancelled = new Promise<unknown>((resolve) => {
+      resolveResponse?.(new Response(new ReadableStream({ cancel: resolve })))
+    })
+
+    assert.equal(await cancelled, reason)
+  })
+
+  it('cancels a response body when the signal was already aborted', async () => {
+    let controller = new AbortController()
+    let request = new Request('https://remix.run', { signal: controller.signal })
+    let reason = new Error('Request cancelled')
+    let cancelled = new Promise<unknown>((resolve) => {
+      controller.abort(reason)
+      assert.throws(
+        () =>
+          raceRequestAbort(
+            Promise.resolve(new Response(new ReadableStream({ cancel: resolve }))),
+            request,
+          ),
+        reason,
+      )
+    })
+
+    assert.equal(await cancelled, reason)
+  })
 })

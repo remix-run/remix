@@ -1034,6 +1034,25 @@ describe('HEAD request handling', () => {
     assert.deepEqual(requestLog, ['middleware', 'handler'])
   })
 
+  it('lets router middleware see the GET response body when a GET route serves a HEAD request', async () => {
+    let middlewareBody: string | undefined
+    let router = createRouter({
+      middleware: [
+        async (_, next) => {
+          let response = await next()
+          middlewareBody = await response.clone().text()
+          return response
+        },
+      ],
+    })
+    router.get('/file', () => new Response('content'))
+
+    let response = await router.fetch('https://remix.run/file', { method: 'HEAD' })
+
+    assert.equal(middlewareBody, 'content')
+    assert.equal(response.body, null)
+  })
+
   it('returns a 405 response for HEAD requests when only other methods match', async () => {
     let router = createRouter()
     router.post('/submit', () => new Response('Submitted'))
