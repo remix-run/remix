@@ -2,6 +2,16 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.2
+
+### Patch Changes
+
+- Fix browser HMR updates introducing new imports being blocked by nonce-based Content Security Policies. New import maps retain the startup managed import map's nonce, falling back to the document render nonce. ([#12098](https://github.com/remix-run/remix/pull/12098))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`file-storage@1.0.1`](https://github.com/remix-run/remix/releases/tag/file-storage@1.0.1)
+  - [`headers@1.1.0`](https://github.com/remix-run/remix/releases/tag/headers@1.1.0)
+
 ## v1.0.1
 
 ### Patch Changes

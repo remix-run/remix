@@ -1,1 +1,0 @@
-The `remix/component` browser runtime is about 10% smaller when minified. Apps that render with `createRoot()` or `createRangeRoot()` and never use `<Frame>` no longer load the frame runtime at all, which roughly halves their component JavaScript.

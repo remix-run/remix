@@ -1,1 +1,0 @@
-Mocks and method spies in `remix/test` can now swap their implementation with `mockImplementation()` or `mockImplementationOnce()`, clear recorded calls with `resetCalls()`, report `callCount()`, and `restore()` the original function. Mocks created with `t.mock` are restored even when a test or its cleanup fails.

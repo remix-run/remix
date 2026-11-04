@@ -1,1 +1,0 @@
-A failed upload stream no longer corrupts an existing file stored with `remix/file-storage/fs`. The API and disk format are unchanged; see the [filesystem storage documentation](https://github.com/remix-run/remix/tree/main/packages/file-storage#replacement-writes) for failure behavior and filesystem requirements.
