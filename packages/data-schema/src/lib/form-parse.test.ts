@@ -61,6 +61,36 @@ describe('form parseSafe', () => {
     assert.equal(Object.hasOwn(passwordFailure.values, 'password'), false)
   })
 
+  it('omits sensitive text from failures while returning validated values on success', () => {
+    let Payment = fd.object({
+      cardNumber: fd.text(s.string().pipe(minLength(20)), {
+        name: 'payment.card',
+        sensitive: true,
+      }),
+      cardholder: fd.text(s.string().pipe(minLength(2))),
+      password: fd.password(s.string(), { sensitive: false }),
+    })
+    let data = new FormData()
+    data.set('payment.card', 'private-card')
+    data.set('cardholder', 'A')
+    data.set('password', 'private-password')
+    let failure = fd.parseSafe(Payment, data)
+    if (failure.success) throw new Error('Expected failure')
+    assert.deepEqual(failure.values, { cardholder: 'A' })
+    assert.deepEqual(Object.keys(failure.errors.fields), ['cardNumber', 'cardholder'])
+    assert.equal(JSON.stringify(failure).includes('private-card'), false)
+    assert.equal(JSON.stringify(failure).includes('private-password'), false)
+    data.set('payment.card', '12345678901234567890')
+    data.set('cardholder', 'Ada')
+    let value = {
+      cardNumber: '12345678901234567890',
+      cardholder: 'Ada',
+      password: 'private-password',
+    }
+    assert.deepEqual(fd.parseSafe(Payment, data), { success: true, value })
+    assert.deepEqual(fd.parse(Payment, data), value)
+  })
+
   it('projects arbitrary issue metadata and logical paths into safe serializable failures', () => {
     let secretSchema = s.createSchema<unknown, string>(() => ({
       issues: [

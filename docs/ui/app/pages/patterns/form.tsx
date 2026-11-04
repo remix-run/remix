@@ -46,8 +46,10 @@ export default function FormPage(handle: Handle<PageProps>) {
         <p>
           Call <code>fd.parseSafe(schema, data)</code> in the handler. Success contains the
           validated value. Pass a failed submission back to Context to restore non-sensitive values
-          and show field or form errors. Passwords and files are never restored. Use the same
-          submission shape for application errors such as an email address already in use.
+          and show field or form errors. Sensitive fields and files are never restored. Passwords
+          are always sensitive; other scalar fields can use the <code>sensitive: true</code> option.
+          Use the same submission shape for application errors such as an email address already in
+          use.
         </p>
         <CodeBlock html={handlerCode} />
       </Section>

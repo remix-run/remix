@@ -20,7 +20,7 @@ if (result.success) await createAccount(result.value)
 
 `fd.parse(Signup, data)` returns validated output or throws `ValidationError`. `fd.parseSafe(Signup, data)` returns `{ success: true, value }` or a failure with `success: false`, `issues`, `values`, and grouped errors. `errors.fields` contains only fields with messages, and `errors.form` is absent when there are no form-level messages. Both functions accept ordinary parse options and preserve error-map precedence and inferred transforms. Validation runs once, after form decoding.
 
-On failure, `values` retains raw text, number text, checkbox states, and repeated text for restoration. Passwords and files are omitted. Issues retain messages and logical paths; raw inputs and arbitrary metadata are omitted. Application-authored messages must avoid embedding secrets. Invalid source inputs produce a form-level failure with empty restoration values.
+On failure, `values` retains raw text, number text, checkbox states, and repeated text for restoration. Sensitive fields and files are omitted; passwords are always sensitive. Issues retain messages and logical paths; raw inputs and arbitrary metadata are omitted. Application-authored messages must avoid embedding secrets. Invalid source inputs produce a form-level failure with empty restoration values.
 
 `fd.parse` re-exports the ordinary throwing parser; `fd.parseSafe` uses the core safe parser and prepares failures for rendering. The form object implements Standard Schema, so `s.parse` and `s.parseSafe` also work with it and keep their ordinary contracts. Core `s.parseSafe` does not add restoration data or project issues. Form and ordinary schemas use functional parsing APIs; neither exposes instance parsing methods.
 
@@ -50,6 +50,19 @@ The supplied schema decides whether the decoded value is valid. Use `s.optional(
 
 `checkbox()` uses a boolean schema by default. `checkbox(s.literal(true))` requires agreement. Any present text value, including `"false"`, means checked. An unchecked checkbox stays `false`, so an undefined-only default does not make it checked. Files supplied to scalar text helpers are rejected. Scalars read the first entry.
 
+## Sensitive values
+
+Set `sensitive: true` to omit a scalar field from failed-submission values without changing its input kind:
+
+```ts
+let Payment = fd.object({
+  cardNumber: fd.text(cardNumberSchema, { sensitive: true }),
+  cardholder: fd.text(s.string()),
+})
+```
+
+This option affects failure restoration only. `fd.parse` and successful `fd.parseSafe` results still return the validated value. Field errors remain available. Passwords are always sensitive, even with `sensitive: false`. `form.control` clears sensitive controls when a failed submission arrives; ordinary rerenders preserve live edits. Custom error messages must avoid embedding sensitive values.
+
 ## Names, messages, repeated values, and files
 
 ```ts
@@ -72,7 +85,7 @@ The lower-level `remix/data-schema/form-data` export stays available with its ex
 
 ## UI adapters
 
-Form objects expose readonly `.entries` with the original scalar schemas, kinds, names, and decoding options. `isFormField()` distinguishes scalar entries; `validateField()` applies the same decoding and validation to an individual control value.
+Form objects expose readonly `.entries` with the original scalar schemas, kinds, names, and decoding and sensitivity options. `isFormField()` distinguishes scalar entries; `validateField()` applies the same decoding and validation to an individual control value.
 
 `password` returns validated passwords normally on success. Pass a failed `fd.parseSafe(Signup, data)` result directly to [`form.Context`](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). This module owns the `FormSubmission`, `FormErrors`, and parsing-result types; UI imports them without a reverse dependency. Handlers can also construct a `FormSubmission` for business failures.
 

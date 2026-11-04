@@ -220,8 +220,10 @@ export const control = createMixin<ValidatableControl, [field: FieldBinding], El
         }
         let submission = owner.getSubmission()
         let value = submission?.values[data.key]
-        if (kind === 'password' && submission) attributes.defaultValue = ''
-        else if (typeof value === 'string') attributes.defaultValue = value
+        if ((kind === 'password' || entry.sensitive) && submission) {
+          if (kind === 'checkbox') attributes.defaultChecked = false
+          else attributes.defaultValue = ''
+        } else if (typeof value === 'string') attributes.defaultValue = value
         else if (typeof value === 'boolean') attributes.defaultChecked = value
         if (feedback.hasServerErrors) attributes['data-form-error-id'] = field.errorId
         return {

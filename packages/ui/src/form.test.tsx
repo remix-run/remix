@@ -83,10 +83,11 @@ describe('form.Context', () => {
     let schema = fd.object({
       email: fd.text(s.string().pipe(email())),
       password: fd.password(s.string().pipe(minLength(8))),
+      securityCode: fd.text(s.string(), { sensitive: true }),
       terms: fd.checkbox(s.literal(true)),
     })
     let submission = {
-      values: { email: 'bad', password: 'must-not-restore' },
+      values: { email: 'bad', password: 'must-not-restore', securityCode: 'private-code' },
       errors: { fields: { email: ['Use another address'] }, form: [] },
     }
     let markup = (
@@ -100,6 +101,7 @@ describe('form.Context', () => {
               <label mix={form.label(fields.email)}>Email</label>
               <input type="email" mix={form.control(fields.email)} />
               <input mix={form.control(fields.password)} />
+              <input mix={form.control(fields.securityCode)} />
               <input mix={form.control(fields.terms)} />
             </>
           )}
@@ -113,6 +115,7 @@ describe('form.Context', () => {
     expect(html).toContain('Use another address')
     expect(html).toContain('value="bad"')
     expect(html).not.toContain('must-not-restore')
+    expect(html).not.toContain('private-code')
     expect(html).toContain('type="password"')
     expect(html).toContain('type="checkbox"')
     let container = document.createElement('div')
@@ -125,7 +128,7 @@ describe('form.Context', () => {
     let nodes = view.container.querySelectorAll('input')
     expect([...nodes].map((node) => node.id)).toEqual(serverIds)
     expect(nodes[0]).toBe(serverNodes[0])
-    expect(new Set([...nodes].map((node) => node.id)).size).toBe(4)
+    expect(new Set([...nodes].map((node) => node.id)).size).toBe(5)
     expect(view.container.querySelector('label')?.control).toBe(nodes[0])
     expect(nodes[0].getAttribute('aria-describedby')).toBe(view.container.querySelector('p')?.id)
     expect(nodes[0].getAttribute('aria-invalid')).toBe('true')
@@ -174,7 +177,11 @@ describe('form.Context', () => {
   })
 
   it('restores a new submission without replaying values during ordinary rerenders', (t) => {
-    let schema = fd.object({ name: fd.text(s.string()), password: fd.password(s.string()) })
+    let schema = fd.object({
+      name: fd.text(s.string()),
+      password: fd.password(s.string()),
+      securityCode: fd.text(s.string(), { sensitive: true }),
+    })
     let first = {
       values: { name: 'first' },
       errors: { fields: { name: ['First error'] }, form: [] },
@@ -185,6 +192,7 @@ describe('form.Context', () => {
         <>
           <input mix={form.control(fields.name)} />
           <input mix={form.control(fields.password)} />
+          <input mix={form.control(fields.securityCode)} />
         </>
       ),
       first,
@@ -192,11 +200,14 @@ describe('form.Context', () => {
     t.after(view.cleanup)
     let name = input(view.container, 'name')
     let password = input(view.container, 'password')
+    let securityCode = input(view.container, 'securityCode')
     edit(name, 'edited')
     edit(password, 'secret')
+    edit(securityCode, 'private-code')
     view.rerender(first)
     expect(name.value).toBe('edited')
     expect(password.value).toBe('secret')
+    expect(securityCode.value).toBe('private-code')
     let field = view.fields.name
     view.rerender({
       values: { name: 'second' },
@@ -205,6 +216,7 @@ describe('form.Context', () => {
     expect(view.fields.name).toBe(field)
     expect(name.value).toBe('second')
     expect(password.value).toBe('')
+    expect(securityCode.value).toBe('')
     expect(field.touched).toBe(false)
     expect(field.errors).toEqual(['Second error'])
   })
@@ -213,8 +225,12 @@ describe('form.Context', () => {
     let schema = fd.object({
       name: fd.text(s.string().pipe(minLength(2))),
       role: fd.text(s.enum_(['customer', 'admin'])),
+      secret: fd.text(s.string(), { sensitive: true }),
     })
-    let first = fd.parseSafe(schema, new URLSearchParams({ name: 'A', role: 'admin' }))
+    let first = fd.parseSafe(
+      schema,
+      new URLSearchParams({ name: 'A', role: 'admin', secret: 'private' }),
+    )
     if (first.success) throw new Error('Expected failure')
     function markup(submission: fd.FormSubmission) {
       return (
@@ -227,6 +243,10 @@ describe('form.Context', () => {
                   <option value="admin">Admin</option>
                 </optgroup>
               </select>
+              <select mix={form.control(fields.secret)}>
+                <option value="">Choose</option>
+                <option value="private">Private</option>
+              </select>
             </form>
           )}
         </form.Context>
@@ -236,22 +256,28 @@ describe('form.Context', () => {
     container.innerHTML = await renderToString(markup(first))
     document.body.appendChild(container)
     let role = container.querySelector('select[name="role"]')
+    let secret = container.querySelector('select[name="secret"]')
     let native = container.querySelector('form')
-    if (!(role instanceof HTMLSelectElement) || !native) throw new Error('Missing form controls')
+    if (!(role instanceof HTMLSelectElement) || !(secret instanceof HTMLSelectElement) || !native)
+      throw new Error('Missing form controls')
     expect(role.value).toBe('admin')
     expect(role.options[1].defaultSelected).toBe(true)
+    expect(secret.value).toBe('')
     let view = render(markup(first), { container })
     t.after(view.cleanup)
     expect(container.querySelector('select[name="role"]')).toBe(role)
     expect(role.value).toBe('admin')
     edit(role, 'customer')
+    edit(secret, 'private')
     view.root.render(markup(first))
     view.root.flush()
     expect(role.value).toBe('customer')
+    expect(secret.value).toBe('private')
     edit(role, 'admin')
     view.root.render(markup({ values: { role: 'customer' }, errors: { fields: {} } }))
     view.root.flush()
     expect(role.value).toBe('customer')
+    expect(secret.value).toBe('')
     edit(role, 'admin')
     native.reset()
     await Promise.resolve()

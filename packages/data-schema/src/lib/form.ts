@@ -7,12 +7,14 @@ import { coerceNumber } from './coerce.ts'
 /** Form control kinds supported by scalar form entries. */
 export type FormFieldKind = 'text' | 'password' | 'number' | 'checkbox'
 
-/** Shared submission naming and validation messages for a form field. */
+/** Shared submission naming, sensitivity, and validation messages for a form field. */
 export interface FormFieldOptions {
   /** Submitted entry name, defaulting to the logical object key. */
   name?: string
   /** Shared field messages; explicit schema messages retain precedence. */
   errorMap?: ErrorMap
+  /** Omit the value from failed submissions; successful parsing still returns it (defaults to false). Passwords are always omitted. */
+  sensitive?: boolean
 }
 
 /** Empty-string policy for text and password entries. */
@@ -28,7 +30,7 @@ export interface FormField<
 > extends FormDataEntrySchema<output> {
   /** Scalar entries use the existing single-text extraction mode. */
   readonly kind: 'field'
-  /** The form control's decoding and sensitivity behavior. */
+  /** The form control's decoding behavior. */
   readonly formKind: kind
   /** Original value validation, run after form decoding. */
   readonly schema: Schema<unknown, output>
@@ -38,6 +40,8 @@ export interface FormField<
   readonly errorMap?: ErrorMap
   /** Whether an empty text value is preserved. */
   readonly empty?: 'preserve' | 'undefined'
+  /** Whether the value is omitted from failed submissions; passwords are always sensitive. */
+  readonly sensitive?: boolean
 }
 
 /** Form entries, including existing repeated-text and file extraction descriptors. */
@@ -61,7 +65,7 @@ export interface FormErrors {
 
 /** Serializable state for rendering a failed submission. */
 export interface FormSubmission {
-  /** Raw values, with password and file values omitted. */
+  /** Raw values, with sensitive fields and files omitted. */
   values: Readonly<Record<string, FormRawValue>>
   /** Grouped validation or application messages. */
   errors: FormErrors
@@ -108,7 +112,7 @@ const numeric = coerceNumber()
 /**
  * Describes a text field, decoding missing and empty entries to undefined by default.
  * @param schema Validation applied to the decoded text value.
- * @param options Entry naming, empty-value policy, and shared messages.
+ * @param options Entry naming, sensitivity, empty-value policy, and shared messages.
  * @returns An immutable text field description.
  */
 export function text<output>(
@@ -121,20 +125,20 @@ export function text<output>(
 /**
  * Describes password text that UI submission adapters must omit from restored failures.
  * @param schema Validation applied to the decoded password.
- * @param options Entry naming, empty-value policy, and shared messages.
+ * @param options Entry naming, sensitivity, empty-value policy, and shared messages.
  * @returns An immutable sensitive password description.
  */
 export function password<output>(
   schema: Schema<unknown, output>,
   options: FormTextOptions = {},
 ): FormField<output, 'password'> {
-  return Object.freeze({ ...options, kind: 'field', formKind: 'password', schema })
+  return Object.freeze({ ...options, kind: 'field', formKind: 'password', schema, sensitive: true })
 }
 
 /**
  * Describes numeric text, decoding blanks to undefined before numeric coercion and validation.
  * @param schema Validation applied to the coerced number or undefined.
- * @param options Entry naming and shared messages.
+ * @param options Entry naming, sensitivity, and shared messages.
  * @returns An immutable numeric field description.
  */
 export function number<output>(
@@ -152,7 +156,7 @@ export function checkbox(): FormField<boolean, 'checkbox'>
 /**
  * Describes a checkbox with application-supplied boolean-state validation.
  * @param schema Validation applied to the checkbox state.
- * @param options Entry naming and shared messages.
+ * @param options Entry naming, sensitivity, and shared messages.
  * @returns An immutable checkbox description.
  */
 export function checkbox<output>(
@@ -281,7 +285,7 @@ export function parseSafe<entries extends FormEntries>(
   if (data instanceof FormData || data instanceof URLSearchParams) {
     for (let [key, entry] of Object.entries(schema.entries)) {
       let name = entry.name ?? key
-      if (isFormField(entry) && entry.formKind === 'password') continue
+      if (isFormField(entry) && (entry.formKind === 'password' || entry.sensitive)) continue
       if (isFormField(entry) && entry.formKind === 'checkbox') values.push([key, data.has(name)])
       else if (entry.kind === 'field') {
         let value = data.get(name)

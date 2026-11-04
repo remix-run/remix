@@ -65,7 +65,7 @@ if (!submission.success) {
 await createAccount(submission.value)
 ```
 
-`fd.parseSafe(Signup, data)` is server-safe and delegates to the shared schema parser once. Success contains typed, transformed `value`. Failure contains `values`, grouped `errors.fields` and optional `errors.form`, and issues projected to messages and logical paths. Failed values preserve raw text, number text, checkbox states, and repeated text. Passwords, files, and arbitrary issue metadata are omitted. Keep secrets out of application-authored messages.
+`fd.parseSafe(Signup, data)` is server-safe and delegates to the shared schema parser once. Success contains typed, transformed `value`. Failure contains `values`, grouped `errors.fields` and optional `errors.form`, and issues projected to messages and logical paths. Failed values preserve raw text, number text, checkbox states, and repeated text. Sensitive fields, files, and arbitrary issue metadata are omitted. Passwords are always sensitive; other scalar fields can opt in with `{ sensitive: true }`. Successful parsing still returns their validated values. Keep secrets out of application-authored messages.
 
 `FormSubmission` and the result types belong to `remix/data-schema/form`. Context consumes failed results directly, including application-authored business failures using the same values/errors shape. `fd.parse` returns validated output or throws; core `s.parseSafe` keeps its ordinary issues-only failure contract. Handlers own business checks, generated values, persistence, authentication, and request handling.
 
