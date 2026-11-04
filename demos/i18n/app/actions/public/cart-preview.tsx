@@ -55,7 +55,17 @@ export const CartPreview = clientEntry(
     })
 
     return () => (
-      <div mix={cartStyle}>
+      <div
+        mix={css({
+          display: 'grid',
+          gap: '16px',
+          marginBlockStart: '20px',
+          padding: '18px',
+          border: '1px solid light-dark(#d7dde5, #343b45)',
+          borderRadius: '10px',
+          backgroundColor: 'light-dark(#f8fafc, #171b21)',
+        })}
+      >
         <CartHeading />
         <CartQuantity />
         <CartSummary />
@@ -67,14 +77,30 @@ export const CartPreview = clientEntry(
 function CartHeading(handle: Handle) {
   let cart = handle.context.get(CartPreview)
 
-  return () => <h3 mix={headingStyle}>{cart.t('pluralization.cart_demo.title')}</h3>
+  return () => (
+    <h3
+      mix={css({
+        margin: 0,
+        color: 'light-dark(#111827, #f3f4f6)',
+        fontSize: '16px',
+      })}
+    >
+      {cart.t('pluralization.cart_demo.title')}
+    </h3>
+  )
 }
 
 function CartQuantity(handle: Handle) {
   let cart = handle.context.get(CartPreview)
 
   return () => (
-    <div mix={quantityStyle}>
+    <div
+      mix={css({
+        display: 'flex',
+        alignItems: 'end',
+        gap: '10px',
+      })}
+    >
       <button
         type="button"
         aria-label={cart.t('pluralization.cart_demo.decrease')}
@@ -83,7 +109,15 @@ function CartQuantity(handle: Handle) {
       >
         −
       </button>
-      <label mix={quantityLabelStyle}>
+      <label
+        mix={css({
+          display: 'grid',
+          gap: '6px',
+          color: 'light-dark(#4b5563, #b4b8c0)',
+          fontSize: '13px',
+          fontWeight: 600,
+        })}
+      >
         <span>{cart.t('pluralization.cart_demo.quantity_label')}</span>
         <input
           type="number"
@@ -92,7 +126,17 @@ function CartQuantity(handle: Handle) {
           value={cart.quantity}
           disabled={!cart.interactive}
           mix={[
-            quantityInputStyle,
+            css({
+              inlineSize: '88px',
+              minHeight: '38px',
+              paddingInline: '10px',
+              border: '1px solid light-dark(#c7ced8, #4b5563)',
+              borderRadius: '8px',
+              backgroundColor: 'light-dark(#ffffff, #11151a)',
+              color: 'inherit',
+              font: 'inherit',
+              textAlign: 'center',
+            }),
             on('input', (event) => cart.setQuantity(event.currentTarget.valueAsNumber)),
           ]}
         />
@@ -118,48 +162,6 @@ function CartSummary(handle: Handle) {
     </output>
   )
 }
-
-const cartStyle = css({
-  display: 'grid',
-  gap: '16px',
-  marginBlockStart: '20px',
-  padding: '18px',
-  border: '1px solid light-dark(#d7dde5, #343b45)',
-  borderRadius: '10px',
-  backgroundColor: 'light-dark(#f8fafc, #171b21)',
-})
-
-const headingStyle = css({
-  margin: 0,
-  color: 'light-dark(#111827, #f3f4f6)',
-  fontSize: '16px',
-})
-
-const quantityStyle = css({
-  display: 'flex',
-  alignItems: 'end',
-  gap: '10px',
-})
-
-const quantityLabelStyle = css({
-  display: 'grid',
-  gap: '6px',
-  color: 'light-dark(#4b5563, #b4b8c0)',
-  fontSize: '13px',
-  fontWeight: 600,
-})
-
-const quantityInputStyle = css({
-  inlineSize: '88px',
-  minHeight: '38px',
-  paddingInline: '10px',
-  border: '1px solid light-dark(#c7ced8, #4b5563)',
-  borderRadius: '8px',
-  backgroundColor: 'light-dark(#ffffff, #11151a)',
-  color: 'inherit',
-  font: 'inherit',
-  textAlign: 'center',
-})
 
 const quantityButtonStyle = css({
   inlineSize: '38px',
