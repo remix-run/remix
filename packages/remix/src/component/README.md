@@ -628,7 +628,7 @@ function Button(handle: Handle<{ label: string; variant?: 'danger' }>) {
 
 ### Cascade Layers
 
-The component runtime emits generated `css(...)` rules under the `rmx` cascade layer. Each generated class gets its own sublayer, so a class such as `rmxc-k4a9f` is emitted as `@layer rmx.rmxc-k4a9f { ... }`. That keeps each class's place in the cascade the same across every root and frame on the page.
+The component runtime emits generated `css(...)` rules inside the `rmx` cascade layer.
 
 Unlayered CSS outranks layered CSS, so use explicit layer order when mixing generated styles with global styles. Put layers that should lose to generated styles before `rmx`:
 
