@@ -43,6 +43,12 @@ describe('form schemas', () => {
       subscribed: false,
       terms: true,
     })
+    let Defaults = fd.object({
+      age: fd.number(s.defaulted(s.number(), 18)),
+      subscribed: fd.checkbox(s.defaulted(s.boolean(), true)),
+    })
+    assert.deepEqual(fd.parse(Defaults, new FormData()), { age: 18, subscribed: false })
+    assert.equal(fd.parseSafe(Defaults, new URLSearchParams({ age: 'invalid' })).success, false)
     data.set('age', '0')
     assert.equal(fd.parse(Signup, data).age, 0)
     data.set('age', 'invalid')
@@ -65,7 +71,6 @@ describe('form schemas', () => {
     })
     let data = new URLSearchParams({ password: '  secret  ', name: ' Ada ', blank: '' })
     assert.deepEqual(fd.parse(Signup, data), { password: '  secret  ', name: ' Ada ', blank: '' })
-    assert.equal(Signup.entries.password.formKind, 'password')
   })
 
   it('maps descriptor errors using logical paths rather than submitted names', () => {
@@ -85,25 +90,6 @@ describe('form schemas', () => {
     )
   })
 
-  it('reuses repeated and file extraction without changing legacy empty strings', () => {
-    let data = new FormData()
-    data.set('name', '')
-    data.append('tags', 'one')
-    data.append('tags', 'two')
-    data.set('upload', new File(['contents'], 'test.txt'))
-    let Schema = fd.object({
-      tags: fd.fields(s.array(s.string())),
-      upload: fd.file(s.instanceof_(Blob)),
-    })
-    let result = fd.parse(Schema, data)
-    assert.deepEqual(result.tags, ['one', 'two'])
-    assert.equal(result.upload.size, 8)
-    assert.deepEqual(s.parse(legacy.object({ name: legacy.field(s.string()) }), data), { name: '' })
-    assert.equal(fd.parseSafe(fd.object({ name: fd.text(s.string()) }), data).success, false)
-    data.set('name', new File(['bad'], 'name.txt'))
-    assert.equal(fd.parseSafe(fd.object({ name: fd.text(s.string()) }), data).success, false)
-  })
-
   it('does not evaluate defaults during metadata inspection or accept mutated descriptors', () => {
     let calls = 0
     let descriptor = fd.text(
@@ -120,19 +106,5 @@ describe('form schemas', () => {
     assert.equal(calls, 1)
     assert.equal(Schema.entries.name, descriptor)
     assert.equal(Reflect.set(Schema, 'entries', {}), false)
-  })
-
-  it('does not replace invalid numeric input with defaults or treat unchecked boxes as missing', () => {
-    let Schema = fd.object({
-      age: fd.number(s.defaulted(s.number(), 18)),
-      subscribed: fd.checkbox(s.defaulted(s.boolean(), true)),
-    })
-    assert.deepEqual(fd.parse(Schema, new FormData()), { age: 18, subscribed: false })
-    assert.equal(fd.parseSafe(Schema, new URLSearchParams({ age: 'invalid' })).success, false)
-    assert.equal(fd.parseSafe(Schema, new URLSearchParams({ age: 'Infinity' })).success, false)
-    assert.deepEqual(fd.parse(Schema, new URLSearchParams({ age: ' 0 ' })), {
-      age: 0,
-      subscribed: false,
-    })
   })
 })

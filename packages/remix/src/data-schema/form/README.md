@@ -22,20 +22,11 @@ if (result.success) await createAccount(result.value)
 
 On failure, `values` retains raw text, number text, checkbox states, and repeated text for restoration. Sensitive fields and files are omitted; passwords are always sensitive. Issues retain messages and logical paths; raw inputs and arbitrary metadata are omitted. Application-authored messages must avoid embedding secrets. Invalid source inputs produce a form-level failure with empty restoration values.
 
-`fd.parse` re-exports the ordinary throwing parser; `fd.parseSafe` uses the core safe parser and prepares failures for rendering. The form object implements Standard Schema, so `s.parse` and `s.parseSafe` also work with it and keep their ordinary contracts. Core `s.parseSafe` does not add restoration data or project issues. Form and ordinary schemas use functional parsing APIs; neither exposes instance parsing methods.
+Form objects implement Standard Schema, so core `s.parse` and `s.parseSafe` work with them too; core safe parsing keeps its ordinary failure contract without restoration data or issue projection. Neither ordinary nor form schemas exposes instance parsing methods.
 
 ## Reuse domain rules
 
-A separate domain schema is optional. When one exists, reuse its fields:
-
-```ts
-let Profile = fd.object({
-  email: fd.text(Account.shape.email),
-  age: fd.number(Account.shape.age),
-})
-```
-
-The submission schema selects accepted fields and their transport behavior. It can omit generated IDs, combine fields from multiple models, and include request-only fields. Labels, layout, and presentation types remain in markup. String-valued controls such as email, URL, date/time, color, hidden, and radio use `fd.text`; number and range use `fd.number`. Radio groups submit the selected option as text; an unselected group is missing. Date/time values stay strings unless the supplied schema transforms them.
+A domain schema is optional. Reuse existing rules with `fd.text(Account.shape.email)` or `fd.number(Account.shape.age)`. The form schema selects submitted fields and their decoding; labels, layout, and presentation types stay in markup. String-valued controls, including radio and date/time inputs, use `fd.text`; number and range use `fd.number`. Date/time values stay strings unless the supplied schema transforms them.
 
 ## Missing and empty entries
 
@@ -61,27 +52,22 @@ let Payment = fd.object({
 })
 ```
 
-This option affects failure restoration only. `fd.parse` and successful `fd.parseSafe` results still return the validated value. Field errors remain available. Passwords are always sensitive, even with `sensitive: false`. `form.control` clears sensitive controls when a failed submission arrives; ordinary rerenders preserve live edits. Custom error messages must avoid embedding sensitive values.
+Sensitivity affects failure restoration only; validated success values and field errors remain available. Passwords are always sensitive, even with `sensitive: false`. Custom error messages must avoid embedding secrets.
 
 ## Names, messages, repeated values, and files
 
 ```ts
 let Settings = fd.object({
-  email: fd.text(Account.shape.email, {
-    name: 'account.email',
-    errorMap({ code }) {
-      if (code === 'value.required') return 'Enter your email'
-    },
-  }),
+  email: fd.text(Account.shape.email, { name: 'account.email' }),
   tags: fd.fields(s.array(s.string())),
   avatar: fd.file(s.optional(s.instanceof_(Blob))),
   attachments: fd.files(s.array(s.instanceof_(Blob))),
 })
 ```
 
-Issues use logical keys such as `email`, independently of transport names. Field error maps compose with parse options; explicit schema messages keep precedence. Repeated text defaults to `[]`. An unnamed zero-byte File means no upload: `file` receives `undefined`, and `files` excludes it. Named zero-byte files remain valid inputs. The supplied schema decides whether a missing file or empty list is accepted. Files are never included in failed restoration values.
+Issues use logical keys such as `email`, independently of transport names. Descriptor `errorMap` options compose with parse options; explicit schema messages keep precedence. An unnamed zero-byte File means no upload: `file` receives `undefined`, and `files` excludes it. Named zero-byte files remain valid inputs. The supplied schema decides whether a missing file or empty list is accepted. Files are never included in failed restoration values.
 
-`fd.fields` also describes multiple selects and same-name checkbox groups for `form.control`. The parser reads all submitted strings in order, preserves blanks, and returns `[]` when no values are submitted. Failed submissions preserve the raw array so UI can restore selected or checked defaults. Use array validation or a refinement to require a selection; `fd.checkbox` remains the helper for one boolean checkbox.
+`fd.fields` reads all submitted strings in order, preserves blanks, and returns `[]` for no entries. It supports multiple selects and same-name checkbox groups; use array validation or refinements to require selections. `fd.checkbox` describes one boolean checkbox.
 
 The lower-level `remix/data-schema/form-data` export stays available with its existing semantics, including `field()` preserving empty strings. Choose it when you only need explicit extraction without native form kinds or empty-value normalization.
 

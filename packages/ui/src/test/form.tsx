@@ -5,17 +5,29 @@ import type { FormEntries, FormSchema, FormSubmission } from '@remix-run/data-sc
 import * as form from '../form.ts'
 import type { FormContextValue } from '../form.ts'
 
-export async function renderServerForm(markup: RemixNode): Promise<HTMLDivElement> {
+export async function renderServerForm<entries extends FormEntries>(
+  schema: FormSchema<entries>,
+  children: (value: FormContextValue<entries>) => RemixNode,
+  submission: FormSubmission,
+) {
   let container = document.createElement('div')
-  container.innerHTML = await renderToString(markup)
+  container.innerHTML = await renderToString(
+    <form.Context id="form-test" schema={schema} submission={submission}>
+      {children}
+    </form.Context>,
+  )
   document.body.appendChild(container)
-  return container
+  return {
+    container,
+    hydrate: () => renderForm(schema, children, submission, container),
+  }
 }
 
 export function renderForm<entries extends FormEntries>(
   schema: FormSchema<entries>,
   children: (value: FormContextValue<entries>) => RemixNode,
   submission?: FormSubmission,
+  container?: HTMLDivElement,
 ) {
   let current: FormContextValue<entries> | undefined
   function content(value: FormContextValue<entries>) {
@@ -23,9 +35,10 @@ export function renderForm<entries extends FormEntries>(
     return children(value)
   }
   let result = render(
-    <form.Context schema={schema} submission={submission}>
+    <form.Context id="form-test" schema={schema} submission={submission}>
       {content}
     </form.Context>,
+    { container },
   )
   return {
     ...result,
@@ -35,7 +48,7 @@ export function renderForm<entries extends FormEntries>(
     },
     rerender(next?: FormSubmission) {
       result.root.render(
-        <form.Context schema={schema} submission={next}>
+        <form.Context id="form-test" schema={schema} submission={next}>
           {content}
         </form.Context>,
       )

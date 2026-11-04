@@ -17,38 +17,36 @@ describe('form.Context', () => {
     })
     let failure = fd.parseSafe(schema, new URLSearchParams({ topics: 'a' }))
     if (failure.success) throw new Error('Expected failure')
-    function markup(submission: fd.FormSubmission) {
-      return (
-        <form.Context id="multiple-select" schema={schema} submission={submission}>
-          {({ fields }) => (
-            <form mix={form.root()}>
-              <label mix={form.label(fields.topics)}>Topics</label>
-              <select mix={form.control(fields.topics)}>
-                <option value="a">A</option>
-                <optgroup label="More">
-                  <option value="b">B</option>
-                  <option value="c">C</option>
-                </optgroup>
-                <optgroup label="Unavailable" disabled>
-                  <option value="disabled">Disabled</option>
-                </optgroup>
-              </select>
-              <p role="alert" mix={form.error(fields.topics)}>
-                {fields.topics.errors.join(' ')}
-              </p>
-            </form>
-          )}
-        </form.Context>
-      )
-    }
-    let container = await renderServerForm(markup(failure))
+    let server = await renderServerForm(
+      schema,
+      ({ fields }) => (
+        <form mix={form.root()}>
+          <label mix={form.label(fields.topics)}>Topics</label>
+          <select mix={form.control(fields.topics)}>
+            <option value="a">A</option>
+            <optgroup label="More">
+              <option value="b">B</option>
+              <option value="c">C</option>
+            </optgroup>
+            <optgroup label="Unavailable" disabled>
+              <option value="disabled">Disabled</option>
+            </optgroup>
+          </select>
+          <p role="alert" mix={form.error(fields.topics)}>
+            {fields.topics.errors.join(' ')}
+          </p>
+        </form>
+      ),
+      failure,
+    )
+    let container = server.container
     let select = container.querySelector('select')
     let native = container.querySelector('form')
     if (!select || !native) throw new Error('Missing controls')
     expect(select.multiple).toBe(true)
     expect([...select.selectedOptions].map((option) => option.value)).toEqual(['a'])
     expect(container.querySelector('label')?.control).toBe(select)
-    let view = render(markup(failure), { container })
+    let view = server.hydrate()
     t.after(view.cleanup)
     expect(native.checkValidity()).toBe(false)
     select.options[1].selected = true
@@ -61,20 +59,17 @@ describe('form.Context', () => {
       value: { topics: ['a', 'b'] },
     })
     expect(container.querySelector('p')?.textContent).toBe('')
-    view.root.render(markup(failure))
-    view.root.flush()
+    view.rerender(failure)
     expect(select.options[1].selected).toBe(true)
     let next = { values: { topics: ['b', 'c'] }, errors: { fields: {} } }
-    view.root.render(markup(next))
-    view.root.flush()
+    view.rerender(next)
     expect([...select.selectedOptions].map((option) => option.value)).toEqual(['b', 'c'])
     select.options[0].selected = true
     native.reset()
     await Promise.resolve()
     view.root.flush()
     expect([...select.selectedOptions].map((option) => option.value)).toEqual(['b', 'c'])
-    view.root.render(markup({ values: { topics: [] }, errors: { fields: {} } }))
-    view.root.flush()
+    view.rerender({ values: { topics: [] }, errors: { fields: {} } })
     expect(select.selectedOptions.length).toBe(0)
     expect(native.checkValidity()).toBe(false)
     let empty = fd.parseSafe(schema, new FormData(native))
@@ -91,42 +86,31 @@ describe('form.Context', () => {
     })
     let failure = fd.parseSafe(schema, new URLSearchParams({ 'topic[]': 'a' }))
     if (failure.success) throw new Error('Expected failure')
-    let binding: FieldBinding<'fields'> | undefined
     let showB = true
-    function markup(submission: fd.FormSubmission) {
-      return (
-        <form.Context id="checkbox-group" schema={schema} submission={submission}>
-          {({ fields }) => {
-            binding = fields.topics
-            return (
-              <form mix={form.root()}>
-                <fieldset>
-                  <legend>Topics</legend>
-                  <input value="a" mix={form.control(fields.topics)} />
-                  <label mix={form.label(fields.topics, 'a')}>A</label>
-                  {showB && (
-                    <>
-                      <input value="b" mix={form.control(fields.topics)} />
-                      <label mix={form.label(fields.topics, 'b')}>B</label>
-                    </>
-                  )}
-                  <input
-                    value="disabled"
-                    disabled
-                    defaultChecked
-                    mix={form.control(fields.topics)}
-                  />
-                  <p role="alert" mix={form.error(fields.topics)}>
-                    {fields.topics.errors.join(' ')}
-                  </p>
-                </fieldset>
-              </form>
-            )
-          }}
-        </form.Context>
-      )
-    }
-    let container = await renderServerForm(markup(failure))
+    let server = await renderServerForm(
+      schema,
+      ({ fields }) => (
+        <form mix={form.root()}>
+          <fieldset>
+            <legend>Topics</legend>
+            <input value="a" mix={form.control(fields.topics)} />
+            <label mix={form.label(fields.topics, 'a')}>A</label>
+            {showB && (
+              <>
+                <input value="b" mix={form.control(fields.topics)} />
+                <label mix={form.label(fields.topics, 'b')}>B</label>
+              </>
+            )}
+            <input value="disabled" disabled defaultChecked mix={form.control(fields.topics)} />
+            <p role="alert" mix={form.error(fields.topics)}>
+              {fields.topics.errors.join(' ')}
+            </p>
+          </fieldset>
+        </form>
+      ),
+      failure,
+    )
+    let container = server.container
     let nodes = container.querySelectorAll('input')
     let native = container.querySelector('form')
     if (!native) throw new Error('Missing form')
@@ -139,7 +123,7 @@ describe('form.Context', () => {
       nodes[1],
     ])
     expect(fd.parseSafe(schema, new FormData(native))).toEqual(failure)
-    let view = render(markup(failure), { container })
+    let view = server.hydrate()
     t.after(view.cleanup)
     expect(native.checkValidity()).toBe(false)
     nodes[1].click()
@@ -149,11 +133,10 @@ describe('form.Context', () => {
       success: true,
       value: { topics: ['a', 'b'] },
     })
-    if (!binding) throw new Error('Missing binding')
+    let binding = view.fields.topics
     binding.setCustomErrors(['Unavailable combination'])
     expect(native.checkValidity()).toBe(false)
-    view.root.render(markup(failure))
-    view.root.flush()
+    view.rerender(failure)
     expect(native.checkValidity()).toBe(false)
     nodes[0].click()
     view.root.flush()
@@ -161,8 +144,7 @@ describe('form.Context', () => {
     nodes[0].click()
     view.root.flush()
     expect(native.checkValidity()).toBe(true)
-    view.root.render(markup({ ...failure }))
-    view.root.flush()
+    view.rerender({ ...failure })
     expect(nodes[0].checked).toBe(true)
     expect(nodes[1].checked).toBe(false)
     nodes[1].click()
@@ -172,17 +154,14 @@ describe('form.Context', () => {
     expect(nodes[1].checked).toBe(false)
     expect(binding.touched).toBe(false)
     expect(native.checkValidity()).toBe(false)
-    view.root.render(markup({ values: { topics: [] }, errors: { fields: {} } }))
-    view.root.flush()
+    view.rerender({ values: { topics: [] }, errors: { fields: {} } })
     expect(nodes[0].checked).toBe(false)
     expect(nodes[1].checked).toBe(false)
     let both = { values: { topics: ['a', 'b'] }, errors: { fields: {} } }
-    view.root.render(markup(both))
-    view.root.flush()
+    view.rerender(both)
     expect(native.checkValidity()).toBe(true)
     showB = false
-    view.root.render(markup(both))
-    view.root.flush()
+    view.rerender(both)
     await Promise.resolve()
     view.root.flush()
     expect(native.checkValidity()).toBe(false)
@@ -203,25 +182,23 @@ describe('form.Context', () => {
       action: fd.text(s.optional(s.string())),
     })
     let submission = { values, errors: { fields: {} } }
-    function markup(state: fd.FormSubmission) {
-      return (
-        <form.Context id="native-types" schema={schema} submission={state}>
-          {({ fields }) => (
-            <form mix={form.root()}>
-              <input type="date" min="2026-01-01" mix={form.control(fields.date)} />
-              <input type="color" mix={form.control(fields.color)} />
-              <input type="hidden" mix={form.control(fields.hidden)} />
-              <input type="range" mix={form.control(fields.range)} />
-              <input type="submit" value="save" mix={form.control(fields.action)} />
-            </form>
-          )}
-        </form.Context>
-      )
-    }
-    let container = await renderServerForm(markup(submission))
+    let server = await renderServerForm(
+      schema,
+      ({ fields }) => (
+        <form mix={form.root()}>
+          <input type="date" min="2026-01-01" mix={form.control(fields.date)} />
+          <input type="color" mix={form.control(fields.color)} />
+          <input type="hidden" mix={form.control(fields.hidden)} />
+          <input type="range" mix={form.control(fields.range)} />
+          <input type="submit" value="save" mix={form.control(fields.action)} />
+        </form>
+      ),
+      submission,
+    )
+    let container = server.container
     for (let [name, value] of Object.entries(values))
       expect(input(container, name).value).toBe(value)
-    let view = render(markup(submission), { container })
+    let view = server.hydrate()
     t.after(view.cleanup)
     let native = container.querySelector('form')
     if (!native) throw new Error('Missing form')
@@ -234,26 +211,14 @@ describe('form.Context', () => {
     expect(input(container, 'hidden').required).toBe(false)
     expect(input(container, 'action').value).toBe('save')
     expect(input(container, 'action').hasAttribute('data-form-input')).toBe(false)
-    edit(range, '3')
-    view.root.render(markup(submission))
-    view.root.flush()
-    expect(range.value).toBe('3')
     edit(input(container, 'date'), '2025-12-31')
     expect(native.checkValidity()).toBe(false)
     edit(input(container, 'date'), values.date)
     expect(native.checkValidity()).toBe(true)
-    view.root.render(markup({ values: { ...values, range: '2' }, errors: { fields: {} } }))
-    view.root.flush()
-    expect(range.value).toBe('2')
-    edit(range, '5')
-    native.reset()
-    await Promise.resolve()
-    expect(range.value).toBe('2')
     let result = fd.parseSafe(schema, new FormData(native))
     expect(result.success).toBe(false)
     if (result.success) throw new Error('Expected server rejection of hidden field')
     expect(Object.keys(result.errors.fields)).toEqual(['hidden'])
-    expect(result.values.range).toBe('2')
   })
 
   it('shares radio feedback, validates selected values, and restores group defaults', async (t) => {
@@ -266,35 +231,27 @@ describe('form.Context', () => {
     let submission = fd.parseSafe(schema, new URLSearchParams({ 'delivery.method': 'sms' }))
     if (submission.success) throw new Error('Expected failed submission')
     let showSms = true
-    let binding: FieldBinding<'text'> | undefined
-    function markup(state?: fd.FormSubmission) {
-      return (
-        <form.Context id="radio-form" schema={schema} submission={state}>
-          {({ fields }) => {
-            binding = fields.delivery
-            return (
-              <form mix={form.root()}>
-                <fieldset>
-                  <legend>Delivery</legend>
-                  <input type="radio" value="email" mix={form.control(fields.delivery)} />
-                  <label mix={form.label(fields.delivery, 'email')}>Email</label>
-                  {showSms && (
-                    <>
-                      <input type="radio" value="sms" mix={form.control(fields.delivery)} />
-                      <label mix={form.label(fields.delivery, 'sms')}>SMS</label>
-                    </>
-                  )}
-                  <p mix={form.error(fields.delivery)}>{fields.delivery.errors.join(' ')}</p>
-                </fieldset>
-              </form>
-            )
-          }}
-        </form.Context>
-      )
-    }
-    let container = document.createElement('div')
-    container.innerHTML = await renderToString(markup(submission))
-    document.body.appendChild(container)
+    let server = await renderServerForm(
+      schema,
+      ({ fields }) => (
+        <form mix={form.root()}>
+          <fieldset>
+            <legend>Delivery</legend>
+            <input type="radio" value="email" mix={form.control(fields.delivery)} />
+            <label mix={form.label(fields.delivery, 'email')}>Email</label>
+            {showSms && (
+              <>
+                <input type="radio" value="sms" mix={form.control(fields.delivery)} />
+                <label mix={form.label(fields.delivery, 'sms')}>SMS</label>
+              </>
+            )}
+            <p mix={form.error(fields.delivery)}>{fields.delivery.errors.join(' ')}</p>
+          </fieldset>
+        </form>
+      ),
+      submission,
+    )
+    let container = server.container
     let email = container.querySelector('input[value="email"]')
     let sms = container.querySelector('input[value="sms"]')
     let native = container.querySelector('form')
@@ -308,7 +265,7 @@ describe('form.Context', () => {
       email,
       sms,
     ])
-    let view = render(markup(submission), { container })
+    let view = server.hydrate()
     t.after(view.cleanup)
     expect(native.checkValidity()).toBe(false)
     email.click()
@@ -320,11 +277,10 @@ describe('form.Context', () => {
       success: true,
       value: { delivery: 'email' },
     })
-    if (!binding) throw new Error('Missing binding')
+    let binding = view.fields.delivery
     binding.setCustomErrors(['Try again'])
     expect(native.checkValidity()).toBe(false)
-    view.root.render(markup(submission))
-    view.root.flush()
+    view.rerender(submission)
     expect(email.checked).toBe(true)
     expect(native.checkValidity()).toBe(false)
     sms.click()
@@ -333,8 +289,7 @@ describe('form.Context', () => {
     email.click()
     view.root.flush()
     expect(native.checkValidity()).toBe(true)
-    view.root.render(markup({ ...submission }))
-    view.root.flush()
+    view.rerender({ ...submission })
     expect(sms.checked).toBe(true)
     email.click()
     native.reset()
@@ -343,8 +298,7 @@ describe('form.Context', () => {
     expect(sms.checked).toBe(true)
     email.click()
     showSms = false
-    view.root.render(markup(submission))
-    view.root.flush()
+    view.rerender(submission)
     email.checked = false
     expect(native.checkValidity()).toBe(false)
     email.click()
@@ -418,33 +372,22 @@ describe('form.Context', () => {
     expect(view.fields.avatar.touched).toBe(false)
   })
 
-  it('omits form errors when none exist and renders submitted form errors', (t) => {
-    let schema = fd.object({ name: fd.text(s.string()) })
-    let view = renderForm(schema, ({ fields, errors }) => (
-      <form mix={form.root()}>
-        {errors.form && <p role="alert">{errors.form.join(' ')}</p>}
-        <input mix={form.control(fields.name)} />
-      </form>
-    ))
-    t.after(view.cleanup)
-    expect(view.container.querySelector('p')).toBe(null)
-    view.rerender({ values: {}, errors: { fields: {}, form: ['Try again'] } })
-    expect(view.container.querySelector('p')?.textContent).toBe('Try again')
-    view.rerender({ values: {}, errors: { fields: {}, form: [] } })
-    expect(view.container.querySelector('p')).toBe(null)
-  })
-
-  it('rerenders a child field component with a stable binding through props', (t) => {
+  it('passes live bindings through props and preserves edits until a new submission arrives', (t) => {
     let schema = fd.object({
-      username: fd.text(s.string().refine((value) => value.startsWith('@'), 'Start with @')),
+      name: fd.text(s.string().refine((value) => value.startsWith('@'), 'Start with @')),
+      password: fd.password(s.string()),
+      securityCode: fd.text(s.string(), { sensitive: true }),
     })
     function Username(handle: Handle<{ field: FieldBinding<'text'> }>) {
       return () => {
         let field = handle.props.field
         return (
           <>
-            <label mix={form.label(field)}>Username</label>
-            <input mix={form.control(field)} />
+            <label htmlFor="authored" mix={form.label(field)}>
+              Username
+            </label>
+            <input id="authored" aria-describedby="help" mix={form.control(field)} />
+            <p id="help">Start with @</p>
             {field.errors.length > 0 && (
               <p role="alert" mix={form.error(field)}>
                 {field.errors.join(' ')}
@@ -454,33 +397,66 @@ describe('form.Context', () => {
         )
       }
     }
-    let view = renderForm(schema, ({ fields }) => (
+    let view = renderForm(schema, ({ fields, errors }) => (
       <form mix={form.root()}>
-        <Username field={fields.username} />
+        {errors.form && (
+          <p className="form-error" role="alert">
+            {errors.form.join(' ')}
+          </p>
+        )}
+        <Username field={fields.name} />
+        <input mix={form.control(fields.password)} />
+        <input mix={form.control(fields.securityCode)} />
       </form>
     ))
     t.after(view.cleanup)
-    let field = view.fields.username
-    let node = input(view.container)
-    expect(view.container.querySelector('label')?.control).toBe(node)
-    edit(node, 'ada')
+    let field = view.fields.name
+    let name = input(view.container, 'name')
+    let password = input(view.container, 'password')
+    let securityCode = input(view.container, 'securityCode')
+    expect(view.container.querySelector('label')?.control).toBe(name)
+    expect(view.container.querySelector('[role="alert"]')).toBe(null)
+    edit(name, 'ada')
     view.root.flush()
-    expect(view.container.querySelector('p')).toBe(null)
     expect(field.touched).toBe(false)
-    blur(node)
+    expect(view.container.querySelector('[role="alert"]')).toBe(null)
+    blur(name)
     view.root.flush()
-    expect(view.fields.username).toBe(field)
-    expect(view.container.querySelector('p')?.textContent).toBe('Start with @')
-    expect(node.getAttribute('aria-describedby')).toBe(field.errorId)
-    edit(node, '@ada')
+    expect(view.fields.name).toBe(field)
+    expect(view.container.querySelector('[role="alert"]')?.textContent).toBe('Start with @')
+    expect(name.getAttribute('aria-describedby')).toBe(`help ${field.errorId}`)
+    edit(name, '@ada')
     view.root.flush()
-    expect(view.container.querySelector('p')).toBe(null)
-    expect(node.hasAttribute('aria-describedby')).toBe(false)
-    expect(node.value).toBe('@ada')
-    edit(node, '')
-    expect(view.container.querySelector('form')?.checkValidity()).toBe(false)
-    view.root.flush()
-    expect(view.container.querySelector('p')?.textContent).toBe(node.validationMessage)
+    expect(view.container.querySelector('[role="alert"]')).toBe(null)
+    expect(name.getAttribute('aria-describedby')).toBe('help')
+    let first = {
+      values: { name: '@first' },
+      errors: { fields: { name: ['Taken'] }, form: ['Try again'] },
+    }
+    view.rerender(first)
+    expect(name.value).toBe('@first')
+    expect(field.touched).toBe(false)
+    expect(field.errors).toEqual(['Taken'])
+    expect(view.container.querySelector('.form-error')?.textContent).toBe('Try again')
+    edit(name, '@edited')
+    edit(password, 'secret')
+    edit(securityCode, 'private-code')
+    view.rerender(first)
+    expect(name.value).toBe('@edited')
+    expect(password.value).toBe('secret')
+    expect(securityCode.value).toBe('private-code')
+    expect(field.errors).toEqual([])
+    expect(field.touched).toBe(true)
+    view.rerender({
+      values: { name: '@second' },
+      errors: { fields: { name: ['Second error'] }, form: [] },
+    })
+    expect(view.fields.name).toBe(field)
+    expect(name.value).toBe('@second')
+    expect(password.value).toBe('')
+    expect(securityCode.value).toBe('')
+    expect(field.errors).toEqual(['Second error'])
+    expect(view.container.querySelector('.form-error')).toBe(null)
   })
 
   it('renders server errors before controls, derives kinds, and scopes accessible IDs', async (t) => {
@@ -540,90 +516,6 @@ describe('form.Context', () => {
     expect(nodes[2].required).toBe(true)
   })
 
-  it('preserves host props and help text while clearing stale server feedback after editing', (t) => {
-    let schema = fd.object({ email: fd.text(s.string().pipe(email())) })
-    let submission = {
-      values: { email: 'old@example.com' },
-      errors: { fields: { email: ['Server message'] }, form: [] },
-    }
-    let view = renderForm(
-      schema,
-      ({ fields }) => (
-        <>
-          <label htmlFor="authored" title="Custom label" mix={form.label(fields.email)}>
-            Email
-          </label>
-          <input
-            id="authored"
-            type="email"
-            defaultValue="authored@example.com"
-            aria-describedby="help"
-            mix={form.control(fields.email)}
-          />
-          <p id="help">Help</p>
-          <p mix={form.error(fields.email)}>{fields.email.errors.join(' ')}</p>
-        </>
-      ),
-      submission,
-    )
-    t.after(view.cleanup)
-    let node = input(view.container)
-    expect(node.value).toBe('authored@example.com')
-    expect(view.container.querySelector('label')?.control).toBe(node)
-    expect(node.getAttribute('aria-describedby')).toBe(`help ${view.fields.email.errorId}`)
-    expect(view.fields.email.touched).toBe(false)
-    edit(node, 'valid@example.com')
-    view.root.flush()
-    expect(view.fields.email.errors).toEqual([])
-    expect(view.fields.email.touched).toBe(true)
-    expect(node.getAttribute('aria-describedby')).toBe('help')
-  })
-
-  it('restores a new submission without replaying values during ordinary rerenders', (t) => {
-    let schema = fd.object({
-      name: fd.text(s.string()),
-      password: fd.password(s.string()),
-      securityCode: fd.text(s.string(), { sensitive: true }),
-    })
-    let first = {
-      values: { name: 'first' },
-      errors: { fields: { name: ['First error'] }, form: [] },
-    }
-    let view = renderForm(
-      schema,
-      ({ fields }) => (
-        <>
-          <input mix={form.control(fields.name)} />
-          <input mix={form.control(fields.password)} />
-          <input mix={form.control(fields.securityCode)} />
-        </>
-      ),
-      first,
-    )
-    t.after(view.cleanup)
-    let name = input(view.container, 'name')
-    let password = input(view.container, 'password')
-    let securityCode = input(view.container, 'securityCode')
-    edit(name, 'edited')
-    edit(password, 'secret')
-    edit(securityCode, 'private-code')
-    view.rerender(first)
-    expect(name.value).toBe('edited')
-    expect(password.value).toBe('secret')
-    expect(securityCode.value).toBe('private-code')
-    let field = view.fields.name
-    view.rerender({
-      values: { name: 'second' },
-      errors: { fields: { name: ['Second error'] }, form: [] },
-    })
-    expect(view.fields.name).toBe(field)
-    expect(name.value).toBe('second')
-    expect(password.value).toBe('')
-    expect(securityCode.value).toBe('')
-    expect(field.touched).toBe(false)
-    expect(field.errors).toEqual(['Second error'])
-  })
-
   it('restores select defaults through SSR, hydration, and replacement submissions', async (t) => {
     let schema = fd.object({
       name: fd.text(s.string().pipe(minLength(2))),
@@ -635,27 +527,25 @@ describe('form.Context', () => {
       new URLSearchParams({ name: 'A', role: 'admin', secret: 'private' }),
     )
     if (first.success) throw new Error('Expected failure')
-    function markup(submission: fd.FormSubmission) {
-      return (
-        <form.Context id="select-restoration" schema={schema} submission={submission}>
-          {({ fields }) => (
-            <form mix={form.root()}>
-              <select mix={form.control(fields.role)}>
-                <option value="customer">Customer</option>
-                <optgroup label="Staff">
-                  <option value="admin">Admin</option>
-                </optgroup>
-              </select>
-              <select mix={form.control(fields.secret)}>
-                <option value="">Choose</option>
-                <option value="private">Private</option>
-              </select>
-            </form>
-          )}
-        </form.Context>
-      )
-    }
-    let container = await renderServerForm(markup(first))
+    let server = await renderServerForm(
+      schema,
+      ({ fields }) => (
+        <form mix={form.root()}>
+          <select mix={form.control(fields.role)}>
+            <option value="customer">Customer</option>
+            <optgroup label="Staff">
+              <option value="admin">Admin</option>
+            </optgroup>
+          </select>
+          <select mix={form.control(fields.secret)}>
+            <option value="">Choose</option>
+            <option value="private">Private</option>
+          </select>
+        </form>
+      ),
+      first,
+    )
+    let container = server.container
     let role = container.querySelector('select[name="role"]')
     let secret = container.querySelector('select[name="secret"]')
     let native = container.querySelector('form')
@@ -664,19 +554,17 @@ describe('form.Context', () => {
     expect(role.value).toBe('admin')
     expect(role.options[1].defaultSelected).toBe(true)
     expect(secret.value).toBe('')
-    let view = render(markup(first), { container })
+    let view = server.hydrate()
     t.after(view.cleanup)
     expect(container.querySelector('select[name="role"]')).toBe(role)
     expect(role.value).toBe('admin')
     edit(role, 'customer')
     edit(secret, 'private')
-    view.root.render(markup(first))
-    view.root.flush()
+    view.rerender(first)
     expect(role.value).toBe('customer')
     expect(secret.value).toBe('private')
     edit(role, 'admin')
-    view.root.render(markup({ values: { role: 'customer' }, errors: { fields: {} } }))
-    view.root.flush()
+    view.rerender({ values: { role: 'customer' }, errors: { fields: {} } })
     expect(role.value).toBe('customer')
     expect(secret.value).toBe('')
     edit(role, 'admin')

@@ -15,10 +15,6 @@ export const meta = {
 
 const basic = await loadExample('form/basic')
 
-const anatomyCode = await highlightSource(
-  'import * as form from \'@remix-run/ui/form\'\n\n<form.Context schema={Contact}>\n  {({ fields, errors }) => (\n    <form method="post" mix={form.root()}>\n      {errors.form && <p role="alert">{errors.form.join(\' \')}</p>}\n      <label mix={form.label(fields.email)}>Email</label>\n      <input type="email" mix={form.control(fields.email)} />\n      {fields.email.errors.length > 0 && (\n        <p role="alert" mix={form.error(fields.email)}>\n          {fields.email.errors.join(\' \')}\n        </p>\n      )}\n    </form>\n  )}\n</form.Context>',
-)
-
 const handlerCode = await highlightSource(
   'let submission = fd.parseSafe(Contact, await request.formData())\nif (!submission.success) {\n  return render(<ContactForm submission={submission} />, { status: 400 })\n}\nawait saveContact(submission.value)',
 )
@@ -33,7 +29,6 @@ export default function FormPage(handle: Handle<PageProps>) {
           describe how browser values are decoded. Pass the same schema to <code>form.Context</code>
           and parse submitted <code>FormData</code> in the handler.
         </p>
-        <CodeBlock html={anatomyCode} />
       </Section>
       <Section id="submissions" title="Server submissions">
         <p>
@@ -116,49 +111,24 @@ export default function FormPage(handle: Handle<PageProps>) {
           numeric step. Date/time bounds remain authored props; hidden and action inputs receive no
           constraints.
         </p>
-        <p>
-          Multiple-select requiredness can enforce a selection. Checkbox groups rely on client
-          schema validation and handler validation; requiring each checkbox would require every
-          option. Without JavaScript, the handler enforces group rules.
-        </p>
         <h3 id="validation-listener-reference">onInputValidation(handler, captureBoolean?)</h3>
         <p>
           Listens for bubbling validation notifications. The handler receives an{' '}
           <code>InputValidationEvent</code> and an abort signal.
         </p>
         <h3 id="validation-event-reference">InputValidationEvent</h3>
-        <ApiTable id="validation-event-properties" label="Property">
-          <ApiEntry name="field" type="string">
-            Logical schema field key.
-          </ApiEntry>
-          <ApiEntry name="errorId" type="string">
-            Generated ID for the field’s error element.
-          </ApiEntry>
-          <ApiEntry name="errors" type="ReadonlyArray&lt;string&gt;">
-            Current visible messages.
-          </ApiEntry>
-          <ApiEntry name="touched" type="boolean">
-            Whether client feedback has been revealed.
-          </ApiEntry>
-        </ApiTable>
+        <p>
+          Provides the logical <code>field</code>, scoped <code>errorId</code>, visible
+          <code>errors</code>, and <code>touched</code> state.
+        </p>
         <h3 id="types-reference">Exported types</h3>
-        <ApiTable id="form-types">
-          <ApiEntry id="type-FieldBinding" name="FieldBinding" type="interface">
-            <p>A live field reference. Pass it to child components through props.</p>
-          </ApiEntry>
-          <ApiEntry name="FieldBindings" type="mapped type">
-            Keeps each schema entry’s form kind on its field binding.
-          </ApiEntry>
-          <ApiEntry name="FormContextProps, FormContextValue" type="interfaces">
-            Context input and render callback value.
-          </ApiEntry>
-          <ApiEntry name="SchemaConstraints, GetConstraintsOptions" type="interfaces">
-            Native constraint output and its control options.
-          </ApiEntry>
-          <ApiEntry name="InputValidationState" type="interface">
-            Field key, error ID, messages, and touched state.
-          </ApiEntry>
-        </ApiTable>
+        <p id="type-FieldBinding">
+          Pass live <code>FieldBinding</code> references through child-component props.
+          <code>FieldBindings</code> retains each entry’s kind. Context and constraint options use
+          <code>FormContextProps</code>, <code>FormContextValue</code>,{' '}
+          <code>SchemaConstraints</code>, and <code>GetConstraintsOptions</code>; notifications use{' '}
+          <code>InputValidationState</code>.
+        </p>
       </Section>
     </PageLayout>
   )

@@ -1,6 +1,6 @@
 # Form
 
-Native form validation with application-owned markup. Define one schema with [`remix/data-schema/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md), then use `Context` and role mixins to connect controls, labels, and errors.
+Native form validation with application-owned markup. Define a schema with [`remix/data-schema/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md), then connect controls, labels, and errors with `Context` and role mixins.
 
 ```tsx
 import * as s from 'remix/data-schema'
@@ -22,14 +22,8 @@ function SignupForm(handle: Handle<{ submission?: FormSubmission }>) {
       {({ fields, errors }) => (
         <form method="post" mix={form.root()}>
           {errors.form && <p role="alert">{errors.form.join(' ')}</p>}
-          <label mix={form.label(fields.email)}>Email</label>
-          <input type="email" autoComplete="email" mix={form.control(fields.email)} />
-          {fields.email.errors.length > 0 && (
-            <p role="alert" mix={form.error(fields.email)}>
-              {fields.email.errors.join(' ')}
-            </p>
-          )}
-          <PasswordField field={fields.password} />
+          <Field field={fields.email} label="Email" type="email" />
+          <Field field={fields.password} label="Password" />
           <button type="submit">Sign up</button>
         </form>
       )}
@@ -37,13 +31,15 @@ function SignupForm(handle: Handle<{ submission?: FormSubmission }>) {
   )
 }
 
-function PasswordField(handle: Handle<{ field: FieldBinding<'password'> }>) {
+function Field(
+  handle: Handle<{ field: FieldBinding<'text' | 'password'>; label: string; type?: 'email' }>,
+) {
   return () => {
-    let field = handle.props.field
+    let { field, label, type } = handle.props
     return (
       <>
-        <label mix={form.label(field)}>Password</label>
-        <input autoComplete="new-password" mix={form.control(field)} />
+        <label mix={form.label(field)}>{label}</label>
+        <input type={type ?? field.kind} mix={form.control(field)} />
         {field.errors.length > 0 && (
           <p role="alert" mix={form.error(field)}>
             {field.errors.join(' ')}
@@ -65,40 +61,35 @@ if (!submission.success) {
 await createAccount(submission.value)
 ```
 
-Pass failed `fd.parseSafe` results directly to Context to restore values and show errors. Sensitive fields and files are never restored; successful parsing still returns their validated values. Handlers can also construct a `FormSubmission` for business failures. See [form schemas](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md) for parsing and sensitivity options.
+Pass failures directly to Context to restore values and show errors. Sensitive fields and files are never restored; success still returns their validated values. Handlers can also construct a `FormSubmission` for business failures. See [form schemas](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md) for decoding, sensitivity, and message options.
 
-## Context and role mixins
+## Context and mixins
 
-`Context` owns one form instance and supplies stable typed `fields` and current grouped errors. Its render prop always receives `errors`; `errors.form` is absent when there are no form-level messages. Changing the schema requires a new keyed Context.
+- `Context` supplies stable typed `fields` and grouped submission `errors`; `errors.form` is absent when there are no form-level messages. Bindings belong to one Context. Changing the schema requires a new keyed Context.
+- `root()` enhances native invalid feedback for unmanaged controls without intercepting submission.
+- `control(field)` provides constraints, restored defaults, native validity, touched state, and ARIA. Compatible authored props win. Existing `aria-describedby` help IDs are retained; custom control IDs need matching labels.
+- `label(field, value?)` supplies `htmlFor`; pass the option value for radio or grouped checkbox labels. `error(field)` supplies an error ID. Content, visibility, roles, and styling remain in JSX.
 
-- `root()` coordinates native invalid feedback for unmanaged controls. It leaves valid submissions to the browser and application.
-- `control(field)` provides constraints, restored defaults, native validity, touched state, and ARIA. It defaults the input type from the decoding kind; compatible authored types override it. Text entries also support single-select and textarea. Repeated text entries support multiple selects and checkbox groups.
-- `label(field, value?)` supplies `htmlFor`; pass the option value for a radio or grouped checkbox label. `error(field)` supplies an error ID. Content, visibility, roles, and styling remain in JSX.
+Use unique Context IDs for multiple forms. Pass a client entry's `handle.id` to preserve IDs during hydration. Pass bindings through ordinary props, and read `field.errors`, `field.touched`, and `handle.props` during rendering. Context rerenders child fields when feedback changes; setup-time destructuring captures a snapshot.
 
-Bindings belong to their Context and cannot be shared between form instances. Pass a client entry's `handle.id` as Context's `id` to preserve IDs during hydration, and use unique scopes for multiple forms. Authored props win; custom control IDs need matching labels. Existing help-text IDs in `aria-describedby` are retained.
+## Control types
 
-Use `getConstraints(schema, { type, multiple? })` for custom integrations. It projects supported native attributes: `required`, `minLength`, `maxLength`, `min`, `max`, and numeric `step="any"`. Author date/time bounds and steps in markup. Hidden and action controls receive no constraints; range, color, and grouped checkboxes do not receive `required`. Schema validation enforces additional rules.
-
-## Native control types
-
-Choose the descriptor for the submitted value, then set presentation types in markup:
+Choose a descriptor for the submitted value and set presentation types in markup:
 
 | Descriptor                             | Native controls                                                                                                |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `fd.text(schema)`                      | text, email, url, search, tel, date, month, week, time, datetime-local, color, hidden, radio, select, textarea |
 | `fd.password(schema)`                  | password                                                                                                       |
 | `fd.number(schema)`                    | number, range                                                                                                  |
-| `fd.checkbox(schema?)`                 | checkbox                                                                                                       |
+| `fd.checkbox(schema?)`                 | one boolean checkbox                                                                                           |
 | `fd.fields(schema)`                    | multiple select or a group of string-valued checkboxes                                                         |
 | `fd.file(schema)` / `fd.files(schema)` | file; `files` supplies `multiple`                                                                              |
 
-Date/time and color values stay strings; range values become numbers. Author buttons and submit/reset/image inputs normally. If an action input needs a text binding, `control(field)` supplies its ID, name, and type without validation or restoration. Hidden inputs retain server validation and failed values but cannot block browser submission.
+Date/time and color stay strings; range becomes a number. Author date/time bounds and steps in markup. Hidden controls retain server validation and restoration but cannot block browser submission. Author buttons and submit/reset/image inputs normally; text bindings on action inputs supply ID, name, and type without validation or restoration.
 
-The following variants use `fields` inside the Context render callback shown above. Radio options share one text binding and submitted name; use a fieldset and legend for the group:
+Radio options share one text binding. For example, define `delivery: fd.text(s.enum_(['email', 'sms']))`, then render this inside Context:
 
 ```tsx
-let Preferences = fd.object({ delivery: fd.text(s.enum_(['email', 'sms'])) })
-
 <fieldset>
   <legend>Delivery method</legend>
   <input type="radio" value="email" mix={form.control(fields.delivery)} />
@@ -108,80 +99,31 @@ let Preferences = fd.object({ delivery: fd.text(s.enum_(['email', 'sms'])) })
 </fieldset>
 ```
 
-Pass the option value to `label` for distinct associations. The group shares feedback and restores its selected option from a failed submission.
-
-File controls validate selected files. Set `encType="multipart/form-data"` on the enclosing form:
+The group shares feedback and restores its selected option. For multiple selections, define `topics: fd.fields(s.array(s.string()))`, then use a select:
 
 ```tsx
-let Upload = fd.object({
-  avatar: fd.file(s.optional(s.instanceof_(Blob))),
-  attachments: fd.files(s.array(s.instanceof_(Blob))),
-})
-
-<>
-  <label mix={form.label(fields.avatar)}>Avatar</label>
-  <input accept="image/*" mix={form.control(fields.avatar)} />
-  <label mix={form.label(fields.attachments)}>Attachments</label>
-  <input mix={form.control(fields.attachments)} />
-</>
+<select mix={form.control(fields.topics)}>
+  <option value="typescript">TypeScript</option>
+  <option value="css">CSS</option>
+</select>
 ```
 
-No selection becomes `undefined` for a single file or `[]` for multiple files. A failed submission clears live file selections; ordinary rerenders preserve them. `accept` is a browser hint; validate files and store uploads in the handler.
+The mixin supplies `multiple`. Alternatively, render the fieldset above with checkbox inputs and the `topics` binding. Disabled options are excluded; no selection is `[]`. Failed arrays restore selected or checked defaults. Author initial selections with array `defaultValue` on a multiple select or `defaultChecked` on checkboxes. Single selects use `defaultValue`, without per-option `selected` flags.
 
-## Multiple values
+Use array validation or refinements to require selections. Native select requiredness can enforce one selection; checkbox-group rules run in JavaScript and in the handler. Without JavaScript, the server enforces them. Repeated free-text inputs and indexed field arrays need application-owned UI handling.
 
-Use `fd.fields` for one multiple select or one same-name checkbox group. The schema validates an array of selected strings; no selection is `[]`, and blank strings remain strings.
+For uploads, define fields with `fd.file` or `fd.files`, render `<input mix={form.control(fields.avatar)} />`, and set `encType="multipart/form-data"` on the form. A new failure clears live selections; ordinary rerenders preserve them. `accept` is a browser hint; validate and store uploads in the handler.
 
-```tsx
-let Preferences = fd.object({
-  topics: fd.fields(
-    s.array(s.string()).refine((values) => values.length > 0, 'Choose a topic'),
-  ),
-})
+## Feedback and restoration
 
-<>
-  <label mix={form.label(fields.topics)}>Topics</label>
-  <select mix={form.control(fields.topics)}>
-    <option value="typescript">TypeScript</option>
-    <option value="css">CSS</option>
-  </select>
-</>
-```
+Client errors appear after blur or blocked submission, then update while editing. Server errors appear immediately; editing replaces them with current client feedback. Programmatic edits need an `input` or `change` event.
 
-The select mixin supplies `multiple`. Alternatively, render a checkbox group using the same binding:
+A new submission object refreshes feedback, restored values, and native reset defaults. Reuse its identity until another submission arrives so unrelated renders preserve user edits. A non-canceled native reset restores defaults and clears touched state and custom errors. Applications own fetching, navigation, and pending state.
 
-```tsx
-<fieldset>
-  <legend>Topics</legend>
-  <input type="checkbox" value="typescript" mix={form.control(fields.topics)} />
-  <label mix={form.label(fields.topics, 'typescript')}>TypeScript</label>
-  <input type="checkbox" value="css" mix={form.control(fields.topics)} />
-  <label mix={form.label(fields.topics, 'css')}>CSS</label>
-</fieldset>
-```
+Descriptor `errorMap` options customize schema messages and supported native messages. Explicit refinement messages keep precedence; native-only pattern and step failures keep browser wording.
 
-Options share errors and touched state; disabled options are excluded from validation. Failed arrays restore selected or checked defaults. Author initial selections with array `defaultValue` on a multiple select or `defaultChecked` on each checkbox; native reset returns to those defaults.
+`field.setCustomErrors(['Already in use'])` adds errors for the current value without replacing native/schema errors or marking the field touched. It blocks native submission immediately; errors clear on a changed value, non-canceled reset, or new submission. Applications own async requests, debouncing, cancellation, stale-result checks, and server enforcement.
 
-Native select requiredness can enforce at least one selection. Checkbox-group rules and more specific collection checks run in JavaScript and in the handler; without JavaScript, the server enforces them. Repeated free-text inputs and indexed field arrays still need application-owned UI handling.
+For custom integrations, `getConstraints(schema, { type, multiple? })` projects supported `required`, length, range, and numeric `step="any"` attributes. `InputValidationEvent` and `onInputValidation(handler)` expose bubbling notifications with `field`, `errorId`, `errors`, and `touched`; Context handles its own updates.
 
-## Live state and component props
-
-Pass `FieldBinding<'text'>`, `FieldBinding<'password'>`, or another supported kind through ordinary props. Read `field.errors`, `field.touched`, and `handle.props` during rendering. Setup-time destructuring captures a snapshot. Context updates rerender child fields even when binding identity is unchanged; no subscriptions or update callbacks are needed.
-
-Client errors appear after blur or blocked submission, then update while editing. Server errors appear immediately; editing replaces them with current client feedback. A non-canceled native reset clears touched state and custom errors after native defaults restore. Programmatic edits need an `input` or `change` event.
-
-Single-select controls render restored values as selected options on the server and update their native reset defaults when a new submission arrives. Use `defaultValue` for an authored initial selection; per-option `selected` flags are unnecessary.
-
-A new submission object refreshes feedback and restored values. Reuse its identity until another submission arrives so unrelated renders preserve user edits. Applications own fetching, navigation, and pending state.
-
-## Shared messages and supplemental errors
-
-Configure `errorMap` on an `fd.text`, `fd.password`, `fd.number`, or `fd.checkbox` descriptor. It customizes schema messages and supported native messages using domain codes such as `value.required`, `type.number`, `string.email`, `string.url`, `string.min_length`, `string.max_length`, `number.min`, and `number.max`. Explicit refinement messages retain precedence; refinements without messages use `refine.failed`. Native-only pattern and step failures keep browser wording.
-
-`field.setCustomErrors(['Already in use'])` adds supplemental errors for the current control value without replacing native/schema errors or marking the field touched. Errors block native submission immediately. They survive same-value revalidation and clear on changed value, non-canceled reset, or a new submission. Applications own async requests, debouncing, cancellation, stale-result checks, and server enforcement.
-
-`InputValidationEvent` and `onInputValidation(handler)` expose bubbling feedback notifications for integrations. Context handles its own updates.
-
-## Without JavaScript
-
-SSR provides native constraints, values, labels, errors, and accessibility associations. Native validation and server validation remain correct without JavaScript. JavaScript adds schema validation before submission and interactive feedback; no-JavaScript timing and tooltips follow browser behavior.
+SSR provides constraints, restored defaults, labels, errors, and ARIA. Native and server validation remain correct without JavaScript; JavaScript adds schema checks and interactive feedback before submission.

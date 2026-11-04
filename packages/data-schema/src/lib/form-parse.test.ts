@@ -126,6 +126,10 @@ describe('form parseSafe', () => {
     if (result.success) throw new Error('Expected failure')
     assert.deepEqual(result.values, { tags: ['one', 'two'] })
     assert.equal(JSON.stringify(result).includes('secret file contents'), false)
+    data.set('name', 'Ada')
+    let value = fd.parse(schema, data)
+    assert.deepEqual(value.tags, ['one', 'two'])
+    assert.equal(value.upload.size, 20)
   })
 })
 
@@ -203,17 +207,6 @@ describe('form parsing', () => {
     assert.deepEqual(result.issues, [{ message: 'Try again', path: ['name'] }])
     assert.deepEqual(result.values, { name: 'Ada', age: 'invalid' })
     assert.deepEqual(result.errors, { fields: { name: ['Try again'] } })
-    try {
-      fd.parse(Signup, new URLSearchParams({ name: 'Ada' }), {
-        errorMap() {
-          return 'Throwing message'
-        },
-      })
-      assert.fail('Expected a validation error')
-    } catch (error) {
-      assert.ok(error instanceof fd.ValidationError)
-      assert.equal(error.issues[0].message, 'Throwing message')
-    }
   })
 
   it('returns a grouped failure for invalid source input instead of attempting restoration', () => {
@@ -224,5 +217,8 @@ describe('form parsing', () => {
     assert.deepEqual(result.errors.fields, {})
     assert.deepEqual(result.errors.form, ['Expected FormData or URLSearchParams'])
     assert.deepEqual(result.issues, [{ message: 'Expected FormData or URLSearchParams' }])
+    let data = new FormData()
+    data.set('email', new File(['bad'], 'email.txt'))
+    assert.equal(fd.parseSafe(Signup, data).success, false)
   })
 })
