@@ -26,6 +26,7 @@ import {
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
 import { composeMixedProps, isBrowserOnlyMixinDescriptor } from '../runtime/core/mix.ts'
+import { getSelectValues } from '../runtime/core/select.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
@@ -165,7 +166,7 @@ interface FrameData {
 }
 
 interface RenderContext {
-  selectValue?: string
+  selectValues?: Set<string>
   optionText?: string
   insideSvg: boolean
   insideHead: boolean
@@ -635,7 +636,7 @@ function buildElementSegment(
     return
   }
 
-  if (!currentIsSvg && tag === 'option' && context.selectValue !== undefined) {
+  if (!currentIsSvg && tag === 'option' && context.selectValues !== undefined) {
     buildSelectedOptionSegment(processedProps, context, frameState, output)
     return
   }
@@ -679,13 +680,13 @@ function buildElementSegment(
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
-  let previousSelectValue = context.selectValue
+  let previousSelectValues = context.selectValues
   if (!currentIsSvg && tag === 'select') {
     let value = processedProps.value ?? processedProps.defaultValue
-    context.selectValue = value == null ? undefined : String(value)
+    context.selectValues = getSelectValues(value)
   }
   if (props.children != null) buildSegment(props.children, context, frameState, output)
-  context.selectValue = previousSelectValue
+  context.selectValues = previousSelectValues
   context.insideSvg = previousInsideSvg
   output.push(`</${tag}>`)
 }
@@ -707,7 +708,7 @@ function buildSelectedOptionSegment(
   context.optionText = previousOptionText
   let attrs = renderAttributes(
     'option',
-    { ...props, selected: String(value) === context.selectValue },
+    { ...props, selected: context.selectValues?.has(String(value)) },
     false,
   )
   output.push(`<option${attrs}>`)

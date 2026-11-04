@@ -1,4 +1,5 @@
 import type { ElementProps } from '../jsx.ts'
+import { setSelectDefaultValue, setSelectValue } from './select.ts'
 import {
   canUseProperty,
   getMergedClassName,
@@ -114,16 +115,14 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
   }
 }
 
-export function setSelectDefaultValue(select: HTMLSelectElement, value: unknown): void {
-  let defaultValue = value == null ? undefined : String(value)
-  for (let option of select.options) {
-    option.defaultSelected = defaultValue !== undefined && option.value === defaultValue
-  }
-}
-
 function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolean): void {
   let { ns, attr } = normalizeAttributeName(name, isSvg)
   value = sanitizeUrlAttribute(dom.localName, attr, value)
+
+  if (name === 'value' && dom instanceof HTMLSelectElement) {
+    setSelectValue(dom, value)
+    return
+  }
 
   if (attr === 'style' && isStyleObject(value)) {
     patchStyleObject(dom, undefined, value)

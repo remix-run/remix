@@ -320,6 +320,20 @@ function ArticleBody(handle: Handle<{ html: string }>) {
 
 When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` is an authorization boundary and does not sanitize input; only pass trusted or already-sanitized HTML.
 
+## Select values
+
+Use `value` to control a select or `defaultValue` to set its initial selection and native reset defaults. Multiple selects accept arrays:
+
+```tsx
+<select multiple defaultValue={['typescript', 'css']}>
+  <option value="typescript">TypeScript</option>
+  <option value="css">CSS</option>
+  <option value="html">HTML</option>
+</select>
+```
+
+Selections render into option markup on the server, including options inside components and optgroups. Updating `defaultValue` changes reset defaults while preserving live edits. An empty array clears all defaults; controlled `value={[]}` clears the current selection.
+
 ## Cascade Layers
 
 The component runtime emits generated `css(...)` rules under the `rmx` cascade layer. Unlayered CSS outranks layered CSS, so use explicit layer order when mixing generated styles with global styles.

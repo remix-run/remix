@@ -341,6 +341,18 @@ describe('stream', () => {
               A
             </option>
           </select>
+          <select multiple defaultValue={['a', 'B & C']}>
+            <option value="a">A</option>
+            <optgroup label="Other">
+              <Choice />
+            </optgroup>
+            <option value="c">C</option>
+          </select>
+          <select multiple value={[]} defaultValue={['a']}>
+            <option value="a" selected>
+              A
+            </option>
+          </select>
         </>,
       )
       let container = document.createElement('div')
@@ -350,6 +362,9 @@ describe('stream', () => {
       expect(selects[0].options[1].defaultSelected).toBe(true)
       expect(selects[1].value).toBe('b')
       expect(selects[2].value).toBe('a')
+      expect([...selects[3].selectedOptions].map((option) => option.value)).toEqual(['a', 'B & C'])
+      expect(selects[3].options[1].defaultSelected).toBe(true)
+      expect(selects[4].selectedOptions.length).toBe(0)
       expect(html).not.toContain('defaultvalue=')
     })
 

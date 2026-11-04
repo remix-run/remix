@@ -39,6 +39,98 @@ async function type(field: HTMLInputElement, text: string): Promise<void> {
 }
 
 describe('vdom controlled props', () => {
+  it('preserves native scalar assignment and value removal on multiple selects', async (t) => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    function markup(value?: string | ReadonlyArray<string>) {
+      return (
+        <select multiple value={value}>
+          <option value="">Empty</option>
+          <option value="a">First A</option>
+          <option value="a">Second A</option>
+          <option value="b">B</option>
+        </select>
+      )
+    }
+    root.render(markup('b'))
+    root.flush()
+    let select = container.querySelector('select')
+    if (!select) throw new Error('Missing select')
+    root.render(markup('a'))
+    root.flush()
+    expect([...select.options].map((option) => option.selected)).toEqual([
+      false,
+      true,
+      false,
+      false,
+    ])
+    select.value = 'b'
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(select.options[1].selected).toBe(true)
+    expect(select.options[2].selected).toBe(false)
+    root.render(markup(['a', 'b']))
+    root.flush()
+    expect([...select.selectedOptions].map((option) => option.value)).toEqual(['a', 'a', 'b'])
+    root.render(markup())
+    root.flush()
+    expect([...select.selectedOptions].map((option) => option.value)).toEqual([''])
+  })
+
+  it('handles array select defaults and controlled values through edits, option changes, and reset', async (t) => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    let defaults = ['a', 'b']
+    let showB = false
+    function markup(value?: ReadonlyArray<string>) {
+      return (
+        <form>
+          <select multiple defaultValue={defaults} value={value}>
+            <option value="a">A</option>
+            {showB && <option value="b">B</option>}
+            <option value="c">C</option>
+          </select>
+        </form>
+      )
+    }
+    root.render(markup())
+    root.flush()
+    let select = container.querySelector('select')
+    let form = container.querySelector('form')
+    if (!select || !form) throw new Error('Missing form controls')
+    function selected(node: HTMLSelectElement) {
+      return [...node.selectedOptions].map((option) => option.value)
+    }
+    expect(selected(select)).toEqual(['a'])
+    select.options[0].selected = false
+    select.options[1].selected = true
+    showB = true
+    root.render(markup())
+    root.flush()
+    expect(select.options[0].selected).toBe(false)
+    expect(select.options[1].defaultSelected).toBe(true)
+    form.reset()
+    expect(selected(select)).toEqual(['a', 'b'])
+    defaults = ['c']
+    root.render(markup())
+    root.flush()
+    form.reset()
+    expect(selected(select)).toEqual(['c'])
+    root.render(markup(['a', 'c']))
+    root.flush()
+    expect(selected(select)).toEqual(['a', 'c'])
+    select.options[1].selected = true
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+    await Promise.resolve()
+    expect(selected(select)).toEqual(['a', 'c'])
+    root.render(markup([]))
+    root.flush()
+    expect(selected(select)).toEqual([])
+  })
+
   it('initializes uncontrolled select defaults and preserves edits until native reset', (t) => {
     let container = document.createElement('div')
     let root = createRoot(container)

@@ -36,7 +36,8 @@ import {
   findContextFromAncestry,
 } from './vnode.ts'
 import { invariant } from './invariant.ts'
-import { patchHostProps, setSelectDefaultValue } from './core/props.ts'
+import { patchHostProps } from './core/props.ts'
+import { setSelectDefaultValue, setSelectValue } from './core/select.ts'
 import type { StyleManager } from '../style/index.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
@@ -176,6 +177,9 @@ function syncControlledReflection(node: CommittedHostNode, props: RuntimeHostPro
   state.managesChecked = canReflectProperty(node._dom, 'checked')
   state.hasControlledValue = state.managesValue && hasControlledValueProp(props)
   state.controlledValue = props.value
+  if (state.hasControlledValue && node._dom instanceof HTMLSelectElement) {
+    setSelectValue(node._dom, props.value)
+  }
   state.hasControlledChecked = state.managesChecked && hasControlledCheckedProp(props)
   state.controlledChecked = props.checked
   state.pendingRestoreVersion++
@@ -258,6 +262,10 @@ function readDomProp(element: Element, key: string): unknown {
 }
 
 function setPropertyReflection(element: Element, key: string, value: unknown): void {
+  if (key === 'value' && element instanceof HTMLSelectElement) {
+    setSelectValue(element, value)
+    return
+  }
   if (!canReflectProperty(element, key)) return
   element[key] = value == null ? '' : value
 }
@@ -619,6 +627,9 @@ function diffHost(
   committed._controlledState = curr._controlledState
   committed._children = diffChildren(curr._children, childInputs, curr._dom, committed, context)
   patchHostProps(currProps, nextProps, curr._dom)
+  if (nextProps.defaultValue != null && curr._dom instanceof HTMLSelectElement) {
+    setSelectDefaultValue(curr._dom, nextProps.defaultValue)
+  }
 
   syncDirectEventListeners(committed)
 

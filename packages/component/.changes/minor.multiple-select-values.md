@@ -1,0 +1,1 @@
+Multiple selects accept arrays in `value` and `defaultValue`, rendering selected options on the server and restoring native reset defaults in the browser (see #11630). Controlled arrays restore all selections after a change event; uncontrolled defaults preserve live edits and apply to newly rendered options. Use an empty array to represent no selections.
