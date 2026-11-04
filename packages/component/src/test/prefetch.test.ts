@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import { Frame } from '../runtime/component.ts'
-import { jsx } from '../runtime/jsx.ts'
+import { Frame } from '../runtime/frame.ts'
+import { jsx } from '../runtime/core/vnode.ts'
 import {
   createDefaultPrefetch,
   prefetch,
@@ -125,6 +125,15 @@ function collectHints(t: TestContext): HTMLLinkElement[] {
   observer.observe(document.head, { childList: true })
   t.after(() => observer.disconnect())
   return hints
+}
+
+// Safari can't prefetch links, so the runtime skips asset hints there. Tests that load hints
+// themselves stand in for a browser that can, and one checks what Safari gets.
+function stubLinkPrefetchSupport(t: TestContext, supported: boolean) {
+  let supports = DOMTokenList.prototype.supports
+  t.mock.method(DOMTokenList.prototype, 'supports', function (this: DOMTokenList, token: string) {
+    return token === 'prefetch' ? supported : supports.call(this, token)
+  })
 }
 
 function htmlResponse(html: string) {
@@ -821,6 +830,7 @@ describe('prefetch', () => {
 
 describe('default frame prefetch', () => {
   it('discovers explicit assets in inert HTML and nested templates without using its import map', async (t) => {
+    stubLinkPrefetchSupport(t, true)
     t.mock.method(globalThis, 'fetch', async () =>
       htmlResponse(`<!doctype html><html><head>
         <base href="/resources/">
@@ -858,6 +868,7 @@ describe('default frame prefetch', () => {
   })
 
   it('honors final response URLs, skips active assets, and retains request attributes', async (t) => {
+    stubLinkPrefetchSupport(t, true)
     let active = document.createElement('script')
     active.type = 'module'
     active.src = new URL('/products/active.js', location.href).href
@@ -884,6 +895,7 @@ describe('default frame prefetch', () => {
   })
 
   it('prefetches explicit image preload URLs, including nested templates', async (t) => {
+    stubLinkPrefetchSupport(t, true)
     t.mock.method(globalThis, 'fetch', async () =>
       htmlResponse(`<base href="/images/">
         <link rel="preload" as="image" href="hero.jpg" crossorigin="anonymous"
@@ -909,6 +921,7 @@ describe('default frame prefetch', () => {
   })
 
   it('skips active image preloads, responsive candidates, and unmatched image media', async (t) => {
+    stubLinkPrefetchSupport(t, true)
     let active = document.createElement('link')
     active.rel = 'preload'
     active.as = 'image'
@@ -933,6 +946,7 @@ describe('default frame prefetch', () => {
   })
 
   it('prefetches explicit font preload URLs, honoring media, active assets, and CORS', async (t) => {
+    stubLinkPrefetchSupport(t, true)
     let active = document.createElement('link')
     active.rel = 'preload'
     active.as = 'font'
@@ -1016,16 +1030,23 @@ describe('default frame prefetch', () => {
   })
 
   it('deduplicates pending asset hints across pages and targets and removes failed hints', async (t) => {
-    t.mock.method(globalThis, 'fetch', async () =>
-      htmlResponse('<script src="/shared.js"></script>'),
-    )
+    stubLinkPrefetchSupport(t, true)
+    let html = Promise.withResolvers<string>()
+    t.mock.method(globalThis, 'fetch', async () => {
+      let response = htmlResponse('')
+      // Discover all three responses together while their shared asset hint is still pending.
+      t.mock.method(response, 'text', () => html.promise)
+      return response
+    })
     let { prefetch } = createPrefetch(t)
+    let linked = Promise.withResolvers<void>()
     let hints: HTMLLinkElement[] = []
     let observer = new MutationObserver((records) => {
       for (let record of records) {
         for (let node of record.addedNodes) {
           if (node instanceof HTMLLinkElement && node.rel === 'prefetch') {
             hints.push(node)
+            linked.resolve()
           }
         }
       }
@@ -1038,14 +1059,17 @@ describe('default frame prefetch', () => {
       prefetch(new URL('/second', location.href).href),
       prefetch(new URL('/first', location.href).href, { target: 'details' }),
     ])
-    await new Promise(requestAnimationFrame)
+    html.resolve('<script src="/shared.js"></script>')
+    await linked.promise
     expect(hints).toHaveLength(1)
     hints[0].dispatchEvent(new Event('error'))
     await ready
+    expect(hints).toHaveLength(1)
     expect(hints[0].isConnected).toBe(false)
   })
 
   it('ignores non-HTML and failed responses and allows later attempts', async (t) => {
+    stubLinkPrefetchSupport(t, true)
     let response = new Response('<script src="/ignored.js"></script>', { status: 503 })
     let fetch = t.mock.method(globalThis, 'fetch', async () => response)
     let hints = collectHints(t)
@@ -1064,7 +1088,22 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/recovered.js'])
   })
 
+  it('prefetches only the HTML in browsers that cannot prefetch links', async (t) => {
+    stubLinkPrefetchSupport(t, false)
+    let fetch = t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse('<script src="/entry.js"></script><link rel="stylesheet" href="/styles.css">'),
+    )
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t)
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(hints).toEqual([])
+  })
+
   it('cancels speculative HTML and removes pending asset links on disposal', async (t) => {
+    stubLinkPrefetchSupport(t, true)
     let fetchedSignal: AbortSignal | null | undefined
     t.mock.method(globalThis, 'fetch', async (_src: RequestInfo | URL, init?: RequestInit) => {
       fetchedSignal = init?.signal

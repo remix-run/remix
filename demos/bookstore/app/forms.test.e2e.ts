@@ -49,6 +49,14 @@ async function registrationFlow(
   page.on('pageerror', (error) => pageErrors.push(error.message))
   let emailAddress = `form-${crypto.randomUUID()}@example.com`
   await page.goto('/register')
+  if (javaScriptEnabled) {
+    await page.evaluate(async () => {
+      let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
+      if (!script) throw new Error('Missing app entry')
+      let { app } = await import(script.src)
+      await app.ready()
+    })
+  }
   let name = page.getByRole('textbox', { name: 'Name', exact: true })
   let email = page.getByRole('textbox', { name: 'Email', exact: true })
   let password = page.getByLabel('Password', { exact: true })

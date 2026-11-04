@@ -292,12 +292,13 @@ describe('s3 file storage', () => {
 
     await storage.set('video', file)
 
-    assert.deepEqual(requests, [
-      'POST ?uploads',
+    assert.equal(requests[0], 'POST ?uploads')
+    assert.equal(requests.at(-1), 'POST ?uploadId=upload-1')
+    // Concurrent parts can finish signing in any order before reaching fetch.
+    assert.deepEqual(requests.slice(1, -1).sort(), [
       'PUT ?partNumber=1&uploadId=upload-1',
       'PUT ?partNumber=2&uploadId=upload-1',
       'PUT ?partNumber=3&uploadId=upload-1',
-      'POST ?uploadId=upload-1',
     ])
 
     let retrieved = await storage.get('video')

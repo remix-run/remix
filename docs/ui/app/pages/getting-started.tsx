@@ -35,7 +35,7 @@ export default function GettingStarted() {
             your own styles and motion.
           </p>
         </header>
-        <aside class="ui-notice" aria-label="Stability">
+        <aside class="docs-notice" data-notice="warning" aria-label="Stability">
           <StabilityIcon />
           <p>
             <code>@remix-run/ui</code> is currently unstable and versioned in the v0.x range
@@ -67,9 +67,9 @@ export default function GettingStarted() {
           <p>
             Render your UI as Remix components and hydrate it with <code>clientEntry</code> and{' '}
             <code>run</code> for browser interaction. Follow the{' '}
-            <a href="https://guides.remix.run/rendering-ui/">rendering UI guide</a> and{' '}
-            <a href="https://guides.remix.run/interactivity/">interactivity guide</a> for
-            application setup.
+            <a href="https://docs.remix.run/rendering-ui/">rendering UI guide</a> and{' '}
+            <a href="https://docs.remix.run/interactivity/">interactivity guide</a> for application
+            setup.
           </p>
           <p>
             The animation utilities also work with CSS transitions and the browser's Web Animations

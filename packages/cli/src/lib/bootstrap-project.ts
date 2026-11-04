@@ -22,6 +22,7 @@ export interface BootstrapProjectOptions {
   appName: string | null
   cwd?: string
   force: boolean
+  platform?: NodeJS.Platform
   remixVersion?: string
   targetDir: string
 }
@@ -74,7 +75,7 @@ export async function bootstrapProject(
     }),
   )
   await runProgressStep(progress, 'finalize-package-json', () =>
-    writeScaffoldPackageJson(targetDir, config),
+    writeScaffoldPackageJson(targetDir, config, options.platform ?? process.platform),
   )
 
   return {
@@ -135,13 +136,18 @@ async function isDirectory(directory: string): Promise<boolean> {
   }
 }
 
-async function writeScaffoldPackageJson(targetDir: string, config: BootstrapConfig): Promise<void> {
+async function writeScaffoldPackageJson(
+  targetDir: string,
+  config: BootstrapConfig,
+  platform: NodeJS.Platform,
+): Promise<void> {
   let packageJsonPath = path.join(targetDir, 'package.json')
   let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8')) as {
     dependencies?: Record<string, string>
     devDependencies?: Record<string, string>
     engines?: Record<string, string>
     name?: string
+    scripts?: Record<string, string>
   }
 
   packageJson.name = config.packageName
@@ -157,6 +163,16 @@ async function writeScaffoldPackageJson(targetDir: string, config: BootstrapConf
   packageJson.engines = {
     ...packageJson.engines,
     node: `>=${MINIMUM_SUPPORTED_NODE_VERSION}`,
+  }
+
+  if (platform === 'win32' && packageJson.scripts != null) {
+    for (let [name, script] of Object.entries(packageJson.scripts)) {
+      if (script.startsWith('NODE_ENV=')) {
+        let [environment, command] = script.split(/ (.+)/)
+        packageJson.scripts[name] = `cross-env-shell ${environment} "${command}"`
+        packageJson.dependencies['cross-env'] = '^10.1.0'
+      }
+    }
   }
 
   await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8')

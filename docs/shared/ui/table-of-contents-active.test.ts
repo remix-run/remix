@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { getActiveHeadingIndex } from './public/table-of-contents-active.ts'
+import { getActivationLine, getActiveHeadingIndex } from './public/table-of-contents-active.ts'
 
 describe('getActiveHeadingIndex', () => {
   it('selects the first heading before any heading crosses the activation line', () => {
@@ -18,5 +18,16 @@ describe('getActiveHeadingIndex', () => {
 
   it('returns -1 when there are no headings', () => {
     assert.equal(getActiveHeadingIndex([], 116, false), -1)
+  })
+})
+
+describe('getActivationLine', () => {
+  it('adds part of the viewport below the header', () => {
+    assert.equal(getActivationLine(800, true), 236)
+    assert.equal(getActivationLine(600, false), 178)
+  })
+
+  it('caps the extra distance on tall viewports', () => {
+    assert.equal(getActivationLine(2000, true), 276)
   })
 })

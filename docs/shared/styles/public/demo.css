@@ -94,6 +94,16 @@
   outline-offset: 3px;
 }
 
+/* A code block that fills a tab panel inside a bordered container. */
+.docs-code-tabs-panel [data-code-block] {
+  margin: 0;
+}
+
+.docs-code-tabs-panel [data-code-block] pre {
+  border: 0;
+  border-radius: 0;
+}
+
 @media (width >= 640px) {
   .docs-demo-preview {
     padding: 64px 32px;
