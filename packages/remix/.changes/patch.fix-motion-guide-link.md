@@ -1,1 +1,0 @@
-The guides installed with `remix` are revised as standalone chapters, including a complete Files and Assets chapter and expanded component coverage in Rendering UI. Their links now point to the consolidated docs site, and the Motion link in the animation examples is fixed.

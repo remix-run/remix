@@ -2,6 +2,16 @@
 
 This is the changelog for [`session`](https://github.com/remix-run/remix/tree/main/packages/session). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Fix `createFsSessionStorage` corrupting a session file when overlapping requests save the same session. A corrupted file made every later request for that session throw. Saves now write a temporary file and rename it over the session file, so reads always see a complete session. Replaced session files keep their existing permissions. ([#12148](https://github.com/remix-run/remix/pull/12148))
+
+  On Windows, where replacing a file can fail while another program such as a virus scanner has it open, a save retries for about a second before failing.
+
+- `createFsSessionStorage` now starts a new session when a session file isn't valid JSON, as it does when the file is missing, instead of throwing on every request that sends that session's cookie. Visitors whose session files were corrupted by overlapping saves in earlier versions, or by a crash during a save, get a fresh session instead of an error until their cookie expires. ([#12148](https://github.com/remix-run/remix/pull/12148))
+
 ## v1.0.0
 
 ### Major Changes

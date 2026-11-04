@@ -1,1 +1,0 @@
-The browser runtime is about 10% smaller when minified, with no behavior changes. Duplicated logic is merged, dead code is removed, and small internal modules are folded into their owners so the asset server serves fewer modules.

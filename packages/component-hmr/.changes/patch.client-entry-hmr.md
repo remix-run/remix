@@ -1,1 +1,0 @@
-Fix stale hydration boundaries in fresh server responses after adding or removing `clientEntry` during HMR ([#11966](https://github.com/remix-run/remix/issues/11966)). These edits restart the app server automatically, while ordinary render-only edits continue to update in place.
