@@ -32,18 +32,46 @@ export default function ExampleSpring(handle: Handle) {
   }
 
   return () => (
-    <div mix={styles.root}>
-      <div mix={styles.header}>
+    <div
+      mix={css({
+        '--surface': 'light-dark(#fff, #1b1b20)',
+
+        colorScheme: 'light dark',
+        '&, & *, &::before, &::after, & *::before, & *::after': {
+          boxSizing: 'border-box',
+        },
+        width: '28rem',
+        maxWidth: '100%',
+        display: 'grid',
+        gap: '20px',
+        color: 'light-dark(#202027, #eeeef2)',
+        font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+      })}
+    >
+      <div
+        mix={css({
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        })}
+      >
         <strong>Highlights</strong>
-        <div mix={styles.actions}>
-          <span mix={styles.muted}>
+        <div
+          mix={css({
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          })}
+        >
+          <span mix={mutedStyle}>
             {active + 1} / {slides.length}
           </span>
           <button
             type="button"
             aria-label="Previous slide"
             disabled={active === 0}
-            mix={[on('click', () => goTo(active - 1)), styles.button]}
+            mix={[on('click', () => goTo(active - 1)), buttonStyle]}
           >
             <Arrow back />
           </button>
@@ -51,15 +79,23 @@ export default function ExampleSpring(handle: Handle) {
             type="button"
             aria-label="Next slide"
             disabled={active === slides.length - 1}
-            mix={[on('click', () => goTo(active + 1)), styles.button]}
+            mix={[on('click', () => goTo(active + 1)), buttonStyle]}
           >
             <Arrow />
           </button>
         </div>
       </div>
-      <div mix={styles.viewport}>
+      <div
+        mix={css({
+          overflow: 'hidden',
+          borderRadius: '12px',
+          border: '1px solid light-dark(#e0e0e6, #393940)',
+        })}
+      >
         <div
-          mix={styles.track}
+          mix={css({
+            display: 'flex',
+          })}
           style={{
             transform: `translateX(-${position}%)`,
           }}
@@ -69,10 +105,15 @@ export default function ExampleSpring(handle: Handle) {
               key={slide.title}
               aria-hidden={active !== index}
               inert={active !== index}
-              mix={styles.slide}
+              mix={css({
+                flex: '0 0 100%',
+                minWidth: 0,
+                padding: '24px',
+                background: 'var(--surface)',
+              })}
             >
               <strong>{slide.title}</strong>
-              <p mix={styles.muted}>{slide.description}</p>
+              <p mix={mutedStyle}>{slide.description}</p>
             </div>
           ))}
         </div>
@@ -81,87 +122,40 @@ export default function ExampleSpring(handle: Handle) {
   )
 }
 
-const styles = {
-  root: css({
-    '--surface': 'light-dark(#fff, #1b1b20)',
+const mutedStyle = css({
+  color: 'light-dark(#62626c, #b0b0bb)',
+  margin: 0,
+  fontSize: '12px',
+})
 
-    colorScheme: 'light dark',
-    '&, & *, &::before, &::after, & *::before, & *::after': {
-      boxSizing: 'border-box',
-    },
-    width: '28rem',
-    maxWidth: '100%',
-    display: 'grid',
-    gap: '20px',
-    color: 'light-dark(#202027, #eeeef2)',
-    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  }),
-
-  header: css({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '12px',
-  }),
-
-  actions: css({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  }),
-
-  muted: css({
-    color: 'light-dark(#62626c, #b0b0bb)',
-    margin: 0,
-    fontSize: '12px',
-  }),
-
-  button: css({
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '8px',
-    border: '1px solid light-dark(#d8d8df, #44444c)',
-    borderRadius: '8px',
-    background: 'var(--surface)',
-    color: 'inherit',
-    font: 'inherit',
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'background-color 160ms ease, color 160ms ease',
-    '&:disabled': {
-      opacity: 0.4,
-      cursor: 'not-allowed',
-    },
-    '&:hover:not(:disabled)': {
-      background: 'light-dark(#f0f0f5, #303038)',
-    },
-    '&:focus-visible': {
-      outline: '2px solid light-dark(#70707c, #a0a0ac)',
-      outlineOffset: '3px',
-    },
-    '@media (prefers-reduced-motion: reduce)': {
-      transition: 'none',
-    },
-  }),
-
-  viewport: css({
-    overflow: 'hidden',
-    borderRadius: '12px',
-    border: '1px solid light-dark(#e0e0e6, #393940)',
-  }),
-
-  track: css({
-    display: 'flex',
-  }),
-
-  slide: css({
-    flex: '0 0 100%',
-    minWidth: 0,
-    padding: '24px',
-    background: 'var(--surface)',
-  }),
-}
+const buttonStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '8px',
+  border: '1px solid light-dark(#d8d8df, #44444c)',
+  borderRadius: '8px',
+  background: 'var(--surface)',
+  color: 'inherit',
+  font: 'inherit',
+  fontWeight: 600,
+  cursor: 'pointer',
+  transition: 'background-color 160ms ease, color 160ms ease',
+  '&:disabled': {
+    opacity: 0.4,
+    cursor: 'not-allowed',
+  },
+  '&:hover:not(:disabled)': {
+    background: 'light-dark(#f0f0f5, #303038)',
+  },
+  '&:focus-visible': {
+    outline: '2px solid light-dark(#70707c, #a0a0ac)',
+    outlineOffset: '3px',
+  },
+  '@media (prefers-reduced-motion: reduce)': {
+    transition: 'none',
+  },
+})
 
 function Arrow(handle: Handle<{ back?: boolean }>) {
   return () => (

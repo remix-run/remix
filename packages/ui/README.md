@@ -19,19 +19,6 @@ import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 import * as popover from '@remix-run/ui/popover'
 
-let triggerCss = css({
-  border: '1px solid #d1d5db',
-  borderRadius: '6px',
-  padding: '6px 10px',
-})
-
-let surfaceCss = css({
-  background: 'white',
-  border: '1px solid #d1d5db',
-  borderRadius: '6px',
-  padding: '8px',
-})
-
 function ViewOptions(handle: Handle) {
   let open = false
 
@@ -39,7 +26,11 @@ function ViewOptions(handle: Handle) {
     <popover.Context>
       <button
         mix={[
-          triggerCss,
+          css({
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            padding: '6px 10px',
+          }),
           popover.anchor({ placement: 'bottom-end' }),
           popover.focusOnHide(),
           on('click', () => {
@@ -53,7 +44,12 @@ function ViewOptions(handle: Handle) {
       </button>
       <div
         mix={[
-          surfaceCss,
+          css({
+            background: 'white',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            padding: '8px',
+          }),
           popover.surface({
             open,
             onHide() {
