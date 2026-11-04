@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import { css, on, type Handle } from '@remix-run/component'
 import * as popover from '@remix-run/ui/popover'
 
@@ -30,30 +31,32 @@ export default function Example(handle: Handle) {
           View options
         </button>
 
-        <div
-          mix={[
-            surfaceCss,
-            popover.surface({
-              open,
-              onHide() {
-                setOpen(false)
-              },
-            }),
-          ]}
-        >
-          <button
-            type="button"
+        <Portal>
+          <div
             mix={[
-              popover.focusOnShow(),
-              on('click', () => {
-                setOpen(false)
+              surfaceCss,
+              popover.surface({
+                open,
+                onHide() {
+                  setOpen(false)
+                },
               }),
             ]}
           >
-            Close
-          </button>
-          <div mix={surfaceBodyCss}>Popover content stays app-owned.</div>
-        </div>
+            <button
+              type="button"
+              mix={[
+                popover.focusOnShow(),
+                on('click', () => {
+                  setOpen(false)
+                }),
+              ]}
+            >
+              Close
+            </button>
+            <div mix={surfaceBodyCss}>Popover content stays app-owned.</div>
+          </div>
+        </Portal>
       </div>
     </popover.Context>
   )
@@ -76,7 +79,7 @@ const surfaceCss = css({
   boxShadow: '0 16px 40px rgba(0, 0, 0, 0.14)',
   color: 'light-dark(#151515, #ececec)',
   padding: '8px',
-  '&:popover-open': {
+  '&[data-open]': {
     display: 'grid',
     gap: '8px',
   },

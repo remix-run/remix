@@ -426,25 +426,23 @@ const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
   let context = getSelectContext(handle)
   let popoverState = handle.context.get(popover.Context)
 
-  return () => [
-    ref((node: HTMLElement, signal) => {
-      context.registerSurface(node)
-      context.registerPopoverContext(popoverState)
-      signal.addEventListener('abort', () => {
-        context.unregisterSurface(node)
-        context.unregisterPopoverContext(popoverState)
-      })
-    }),
-    popover.surface({
-      open: context.isOpen,
-      onHide: context.close,
-    }),
-    on('beforetoggle', (event) => {
-      if (event.newState === 'open') {
-        context.syncPopoverMinWidth()
-      }
-    }),
-  ]
+  return () => {
+    handle.queueTask(() => context.syncPopoverMinWidth())
+    return [
+      ref((node: HTMLElement, signal) => {
+        context.registerSurface(node)
+        context.registerPopoverContext(popoverState)
+        signal.addEventListener('abort', () => {
+          context.unregisterSurface(node)
+          context.unregisterPopoverContext(popoverState)
+        })
+      }),
+      popover.surface({
+        open: context.isOpen,
+        onHide: context.close,
+      }),
+    ]
+  }
 })
 
 const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<

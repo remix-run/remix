@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import { css, type Handle } from '@remix-run/component'
 import * as menu from '@remix-run/ui/menu'
 
@@ -10,27 +11,30 @@ export default function Example(handle: Handle) {
   let selected = 'none'
 
   return () => (
-    <div
-      mix={[
-        demoCss,
-        menu.onMenuSelect((event) => {
-          selected = event.item.name
-          void handle.update()
-        }),
-      ]}
-    >
+    <div mix={demoCss}>
       <menu.Context label="Project actions">
         <button mix={[triggerCss, menu.trigger()]} type="button">
           Actions
         </button>
 
-        <div mix={[surfaceCss, menu.popover()]}>
-          <div mix={[listCss, menu.list()]}>
-            <div mix={[itemCss, menu.item({ name: 'rename' })]}>Rename</div>
-            <div mix={[itemCss, menu.item({ name: 'duplicate' })]}>Duplicate</div>
-            <div mix={[itemCss, menu.item({ disabled: true, name: 'archive' })]}>Archive</div>
+        <Portal>
+          <div
+            mix={[
+              surfaceCss,
+              menu.popover(),
+              menu.onMenuSelect((event) => {
+                selected = event.item.name
+                void handle.update()
+              }),
+            ]}
+          >
+            <div mix={[listCss, menu.list()]}>
+              <div mix={[itemCss, menu.item({ name: 'rename' })]}>Rename</div>
+              <div mix={[itemCss, menu.item({ name: 'duplicate' })]}>Duplicate</div>
+              <div mix={[itemCss, menu.item({ disabled: true, name: 'archive' })]}>Archive</div>
+            </div>
           </div>
-        </div>
+        </Portal>
       </menu.Context>
 
       <p mix={valueCss}>{`selected=${selected}`}</p>
@@ -70,7 +74,7 @@ const surfaceCss = css({
   background: 'light-dark(#ffffff, #1a1a1a)',
   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
   padding: '4px',
-  '&:popover-open': {
+  '&[data-open]': {
     display: 'block',
   },
 })

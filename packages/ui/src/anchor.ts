@@ -740,7 +740,10 @@ export function anchor(
 
   let anchorIsAbsolutePositioned =
     anchorTarget instanceof HTMLElement && getComputedStyle(anchorTarget).position !== 'fixed'
-  let isFixed = floating.hasAttribute('popover') || !anchorIsAbsolutePositioned
+  let isFixed =
+    floating.hasAttribute('popover') ||
+    getComputedStyle(floating).position === 'fixed' ||
+    !anchorIsAbsolutePositioned
   let animationFrameId = 0
 
   function updatePosition(

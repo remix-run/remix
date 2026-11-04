@@ -53,7 +53,9 @@ const anatomyCode = await highlightSource(`
         }),
         popover.focusOnShow(),
         css({
-          '&:popover-open': {},
+          '&[data-open]': {},
+          '&[data-state="open"]': {},
+          '&[data-state="closed"]': {},
           '&:focus-visible': {},
         }),
       ]}
@@ -81,6 +83,20 @@ const anchorInteractionCode = await highlightSource(`
   popover.surface({ open, onHide, closeOnAnchorClick: false })
 `)
 
+const portalCode = await highlightSource(`
+  import { Portal } from '@remix-run/ui/portal'
+  import * as popover from '@remix-run/ui/popover'
+
+  <popover.Context>
+    <button mix={popover.anchor({ placement: 'bottom-start' })}>Filters</button>
+    <Portal>
+      <div mix={popover.surface({ open, onHide })}>
+        Filter controls
+      </div>
+    </Portal>
+  </popover.Context>
+`)
+
 const focusCode = await highlightSource(`
   <>
     <button mix={popover.focusOnHide()}>Open filters</button>
@@ -105,8 +121,8 @@ const motionCode = await highlightSource(`
       }),
       css({
         opacity: 0,
-        transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-        '&:popover-open': {
+        transition: 'opacity 140ms ease',
+        '&[data-state="open"]': {
           opacity: 1,
           '@starting-style': {
             opacity: 0,
@@ -139,20 +155,20 @@ const accessibilityCode = await highlightSource(`
 
 const typeDefinitions = {
   PopoverProps: await highlightSource(
-    `export interface PopoverProps {
+    `export type PopoverProps = {
   children?: RemixNode
 }`,
   ),
   PopoverContext: await highlightSource(
-    `export interface PopoverContext {
+    `export type PopoverContext = {
   hideFocusTarget: HTMLElement | null
   showFocusTarget: HTMLElement | null
   surface: HTMLElement | null
-  anchor: { target: AnchorTarget; options: AnchorOptions } | null
+  anchor: { source?: HTMLElement; target: AnchorTarget; options: AnchorOptions } | null
 }`,
   ),
   PopoverSurfaceOptions: await highlightSource(
-    `export interface PopoverSurfaceOptions {
+    `export type PopoverSurfaceOptions = {
   open: boolean
   onHide: (request?: PopoverHideRequest) => void
   closeOnAnchorClick?: boolean
@@ -161,7 +177,7 @@ const typeDefinitions = {
 }`,
   ),
   PopoverHideRequest: await highlightSource(
-    `export interface PopoverHideRequest {
+    `export type PopoverHideRequest = {
   reason: 'escape-key' | 'outside-click'
   target?: Node | null
 }`,
@@ -178,8 +194,9 @@ export default function PopoverPage(handle: Handle<PageProps>) {
       <Section id="state" title="Opening and dismissal">
         <p>
           <code>surface()</code> requires an <code>open</code> boolean. <code>onHide</code> requests
-          closure for Escape from within the surface or an outside click. Update <code>open</code>{' '}
-          to accept the request. Opening uses the browser’s top layer and locks page scrolling.
+          closure for Escape or an outside click. Update <code>open</code> to accept the request.
+          Opening shows an ordinary DOM surface and locks page scrolling. Escape closes the topmost
+          Remix popup or dialog first.
         </p>
         <CodeBlock html={stateCode} />
         <h3 id="anchor-interaction">Interactive anchors</h3>
@@ -195,6 +212,22 @@ export default function PopoverPage(handle: Handle<PageProps>) {
           Anchor API. The surface tracks geometry changes and flips when needed to fit the viewport.
         </p>
         <CodeBlock html={positionCode} />
+        <h3 id="portals">Portals and stacking</h3>
+        <p>
+          Wrap the surface in <code>Portal</code> to render it under the document body and escape
+          clipping, transforms and stacking contexts on its authored ancestors. An optional{' '}
+          <code>container</code> selects another element in the same document. Component context,
+          frame and child state are preserved. DOM events and inherited styles follow the
+          destination, so apply local theme variables and typography to the surface too.
+        </p>
+        <CodeBlock html={portalCode} />
+        <p>
+          Inline surfaces are supported where ancestors do not constrain them. Remix overlays share
+          visual stacking and dismissal order. Set <code>--rmx-layer-base</code> on a common
+          ancestor such as the document root to offset their z-index as a group. Ordinary
+          third-party overlays can appear above them with z-index, but do not automatically join a
+          dialog's focus or dismissal coordination.
+        </p>
       </Section>
       <Section id="focus" title="Focus targets">
         <p>
@@ -207,10 +240,10 @@ export default function PopoverPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="motion" title="Transitions">
         <p>
-          Native popover transitions can use <code>:popover-open</code>,{' '}
-          <code>@starting-style</code> and discrete transitions for <code>display</code> and{' '}
-          <code>overlay</code>. Keeping the surface in the top layer through exit lets opacity
-          finish animating.
+          Use <code>data-state="open"</code> and <code>data-state="closed"</code> for motion, with{' '}
+          <code>@starting-style</code> for entrance transitions. The surface retains{' '}
+          <code>data-open</code> and its layer while finite exit animations finish. Respect
+          reduced-motion preferences.
         </p>
         <CodeBlock html={motionCode} />
       </Section>
@@ -250,8 +283,8 @@ export default function PopoverPage(handle: Handle<PageProps>) {
             Controlled open state.
           </ApiEntry>
           <ApiEntry name="onHide" type="(request?: PopoverHideRequest) => void" required>
-            Requests closure for Escape within the surface or an outside click. The surface stays
-            open until open becomes false.
+            Requests closure for Escape or an outside click. The surface stays open until open
+            becomes false.
           </ApiEntry>
           <ApiEntry name="closeOnAnchorClick" type="boolean" defaultValue="true">
             False excludes anchor clicks from outside dismissal.
@@ -265,8 +298,14 @@ export default function PopoverPage(handle: Handle<PageProps>) {
           </ApiEntry>
         </ApiTable>
         <ApiTable id="surface-attributes" label="Attribute" typeLabel="Value">
-          <ApiEntry name="popover" type="manual">
-            Controls the native top-layer surface.
+          <ApiEntry name="data-popover" type="present">
+            Identifies the popup surface.
+          </ApiEntry>
+          <ApiEntry name="data-open" type="present | absent">
+            Present while the surface is shown.
+          </ApiEntry>
+          <ApiEntry name="data-state" type="open | closed">
+            Requested open state.
           </ApiEntry>
         </ApiTable>
         <h3 id="focus-on-show-reference">focusOnShow()</h3>
@@ -284,19 +323,19 @@ export default function PopoverPage(handle: Handle<PageProps>) {
         </ApiTable>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable id="types-types">
-          <ApiEntry id="type-PopoverProps" name="PopoverProps" type="interface">
+          <ApiEntry id="type-PopoverProps" name="PopoverProps" type="type">
             <p>Provider children.</p>
             <CodeBlock html={typeDefinitions.PopoverProps} />
           </ApiEntry>
-          <ApiEntry id="type-PopoverContext" name="PopoverContext" type="interface">
+          <ApiEntry id="type-PopoverContext" name="PopoverContext" type="type">
             <p>Registered surface, anchor and focus targets.</p>
             <CodeBlock html={typeDefinitions.PopoverContext} />
           </ApiEntry>
-          <ApiEntry id="type-PopoverSurfaceOptions" name="PopoverSurfaceOptions" type="interface">
+          <ApiEntry id="type-PopoverSurfaceOptions" name="PopoverSurfaceOptions" type="type">
             <p>Controlled state and dismissal options.</p>
             <CodeBlock html={typeDefinitions.PopoverSurfaceOptions} />
           </ApiEntry>
-          <ApiEntry id="type-PopoverHideRequest" name="PopoverHideRequest" type="interface">
+          <ApiEntry id="type-PopoverHideRequest" name="PopoverHideRequest" type="type">
             <p>Reason and target supplied to onHide.</p>
             <CodeBlock html={typeDefinitions.PopoverHideRequest} />
           </ApiEntry>

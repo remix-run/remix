@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as select from '@remix-run/ui/select'
 import * as popover from '@remix-run/ui/popover'
 import { css } from 'remix/component'
@@ -5,7 +6,7 @@ import type { Handle } from 'remix/component'
 
 export default function ExampleSelect(handle: Handle) {
   return () => (
-    <div mix={styles.root}>
+    <div mix={[styles.theme, styles.root]}>
       <select.Context defaultLabel="Standard delivery" defaultValue="standard" disabled>
         <button
           type="button"
@@ -17,15 +18,17 @@ export default function ExampleSelect(handle: Handle) {
           <ChevronDownIcon />
         </button>
         <popover.Context>
-          <div mix={[select.popover(), styles.surface]}>
-            <div aria-label="Delivery methods" mix={[select.list(), styles.list]}>
-              {options.map((option) => (
-                <div key={option.value} mix={[select.option(option), styles.option]}>
-                  {option.label}
-                </div>
-              ))}
+          <Portal>
+            <div mix={[select.popover(), styles.theme, styles.surface]}>
+              <div aria-label="Delivery methods" mix={[select.list(), styles.list]}>
+                {options.map((option) => (
+                  <div key={option.value} mix={[select.option(option), styles.option]}>
+                    {option.label}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </Portal>
         </popover.Context>
         <input mix={select.hiddenInput()} />
       </select.Context>
@@ -37,17 +40,19 @@ export default function ExampleSelect(handle: Handle) {
 }
 
 const styles = {
-  root: css({
+  theme: css({
     '--text': 'light-dark(#202027, #eeeef2)',
-
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {
       boxSizing: 'border-box',
     },
-    width: '320px',
-    maxWidth: '100%',
     color: 'var(--text)',
     font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+
+  root: css({
+    width: '320px',
+    maxWidth: '100%',
   }),
 
   trigger: css({
@@ -78,7 +83,6 @@ const styles = {
   }),
 
   surface: css({
-    colorScheme: 'light dark',
     margin: 0,
     padding: '6px',
     minWidth: '220px',
@@ -86,12 +90,10 @@ const styles = {
     border: '1px solid light-dark(#e0e0e6, #393940)',
     borderRadius: '10px',
     background: 'light-dark(#fff, #1b1b20)',
-    color: 'var(--text)',
     boxShadow: '0 12px 32px #00000024',
-    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
     opacity: 0,
-    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-    '&:popover-open': {
+    transition: 'opacity 140ms ease',
+    '&[data-state="open"]': {
       opacity: 1,
       '@starting-style': {
         opacity: 0,

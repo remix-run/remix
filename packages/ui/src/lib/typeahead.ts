@@ -8,7 +8,7 @@ type HiddenTypeaheadHandler = (text: string) => void
 
 export const hiddenTypeahead = createMixin<
   HTMLElement,
-  [onTypeahead: HiddenTypeaheadHandler],
+  [onTypeahead: HiddenTypeaheadHandler, shouldHandleEvent?: (event: KeyboardEvent) => boolean],
   ElementProps
 >(
   (handle) => {
@@ -28,7 +28,7 @@ export const hiddenTypeahead = createMixin<
 
     handle.addEventListener('remove', clearTypeahead)
 
-    return (onTypeahead) => [
+    return (onTypeahead, shouldHandleEvent) => [
       on('focusout', (event) => {
         if (
           event.relatedTarget instanceof Node &&
@@ -40,6 +40,10 @@ export const hiddenTypeahead = createMixin<
         clearTypeahead()
       }),
       on('keydown', (event) => {
+        if (typeof shouldHandleEvent === 'function' && !shouldHandleEvent(event)) {
+          return
+        }
+
         if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
           clearTimeout(timeoutId)
           updateTypeahead(text + event.key.toLowerCase(), onTypeahead)

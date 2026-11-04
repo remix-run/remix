@@ -6,10 +6,10 @@ import { button, element, input, mount } from '../test-helpers.ts'
 describe('Disabled select example', () => {
   it('keeps the dispatched delivery method unchanged', async (t) => {
     let result = await mount(t, <Example />)
-    let trigger = button(result.container, 'Delivery method')
+    let trigger = button(document.body, 'Delivery method')
     assert.equal(trigger.disabled, true)
     await result.act(() => trigger.click())
-    assert.equal(element(result.container, '[popover]').matches(':popover-open'), false)
-    assert.equal(input(result.container, 'input[type="hidden"]').value, 'standard')
+    assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), false)
+    assert.equal(input(document.body, 'input[type="hidden"]').value, 'standard')
   })
 })

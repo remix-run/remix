@@ -1,9 +1,10 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as menu from '@remix-run/ui/menu'
 import { css } from 'remix/component'
 
 export default function ExampleMenu() {
   return () => (
-    <div mix={styles.root}>
+    <div mix={[styles.theme, styles.root]}>
       <menu.Context label="File">
         <button
           type="button"
@@ -16,106 +17,112 @@ export default function ExampleMenu() {
         >
           File <ChevronDownIcon />
         </button>
-        <div mix={[menu.popover(), styles.surface]}>
-          <div mix={[menu.list(), styles.list]}>
-            <div
-              mix={[
-                menu.item({
-                  name: 'new',
-                }),
-                styles.item,
-              ]}
-            >
-              New file
-            </div>
-            <div
-              mix={[
-                menu.item({
-                  name: 'open',
-                }),
-                styles.item,
-              ]}
-            >
-              Open file
-            </div>
-            <menu.Context label="Export as">
+        <Portal>
+          <div mix={[menu.popover(), styles.theme, styles.surface]}>
+            <div mix={[menu.list(), styles.list]}>
               <div
                 mix={[
-                  menu.submenuTrigger({
-                    label: 'Export as',
+                  menu.item({
+                    name: 'new',
                   }),
                   styles.item,
                 ]}
               >
-                Export as <ChevronRightIcon />
+                New file
               </div>
-              <div mix={[menu.popover(), styles.surface]}>
-                <div mix={[menu.list(), styles.list]}>
-                  <div
-                    mix={[
-                      menu.item({
-                        name: 'export',
-                        value: 'pdf',
-                      }),
-                      styles.item,
-                    ]}
-                  >
-                    PDF
-                  </div>
-                  <div
-                    mix={[
-                      menu.item({
-                        name: 'export',
-                        value: 'png',
-                      }),
-                      styles.item,
-                    ]}
-                  >
-                    PNG
-                  </div>
-                  <div
-                    mix={[
-                      menu.item({
-                        name: 'export',
-                        value: 'svg',
-                      }),
-                      styles.item,
-                    ]}
-                  >
-                    SVG
-                  </div>
+              <div
+                mix={[
+                  menu.item({
+                    name: 'open',
+                  }),
+                  styles.item,
+                ]}
+              >
+                Open file
+              </div>
+              <menu.Context label="Export as">
+                <div
+                  mix={[
+                    menu.submenuTrigger({
+                      label: 'Export as',
+                    }),
+                    styles.item,
+                  ]}
+                >
+                  Export as <ChevronRightIcon />
                 </div>
+                <Portal>
+                  <div mix={[menu.popover(), styles.theme, styles.surface]}>
+                    <div mix={[menu.list(), styles.list]}>
+                      <div
+                        mix={[
+                          menu.item({
+                            name: 'export',
+                            value: 'pdf',
+                          }),
+                          styles.item,
+                        ]}
+                      >
+                        PDF
+                      </div>
+                      <div
+                        mix={[
+                          menu.item({
+                            name: 'export',
+                            value: 'png',
+                          }),
+                          styles.item,
+                        ]}
+                      >
+                        PNG
+                      </div>
+                      <div
+                        mix={[
+                          menu.item({
+                            name: 'export',
+                            value: 'svg',
+                          }),
+                          styles.item,
+                        ]}
+                      >
+                        SVG
+                      </div>
+                    </div>
+                  </div>
+                </Portal>
+              </menu.Context>
+              <div
+                mix={[
+                  menu.item({
+                    name: 'print',
+                  }),
+                  styles.item,
+                ]}
+              >
+                Print
               </div>
-            </menu.Context>
-            <div
-              mix={[
-                menu.item({
-                  name: 'print',
-                }),
-                styles.item,
-              ]}
-            >
-              Print
             </div>
           </div>
-        </div>
+        </Portal>
       </menu.Context>
     </div>
   )
 }
 
 const styles = {
-  root: css({
+  theme: css({
     '--text': 'light-dark(#202027, #eeeef2)',
-
     colorScheme: 'light dark',
     '&, & *, &::before, &::after, & *::before, & *::after': {
       boxSizing: 'border-box',
     },
-    width: 'fit-content',
-    maxWidth: '100%',
     color: 'var(--text)',
     font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+
+  root: css({
+    width: 'fit-content',
+    maxWidth: '100%',
   }),
 
   button: css({
@@ -145,7 +152,6 @@ const styles = {
   }),
 
   surface: css({
-    colorScheme: 'light dark',
     margin: 0,
     padding: '6px',
     minWidth: '220px',
@@ -153,15 +159,13 @@ const styles = {
     border: '1px solid light-dark(#e0e0e6, #393940)',
     borderRadius: '10px',
     background: 'light-dark(#fff, #1b1b20)',
-    color: 'var(--text)',
     boxShadow: '0 12px 32px #00000024',
-    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
     opacity: 0,
-    transition: 'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
+    transition: 'opacity 140ms ease',
     '&[data-close-animation="none"]': {
       transition: 'none',
     },
-    '&:popover-open': {
+    '&[data-state="open"]': {
       opacity: 1,
       '@starting-style': {
         opacity: 0,
