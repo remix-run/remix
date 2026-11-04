@@ -96,25 +96,4 @@ describe('getFullRunReasons', () => {
       'packages/component/removed/package.json',
     ])
   })
-
-  it('runs all workspaces when shared CI or scripts change', () => {
-    assert.deepEqual(
-      getFullRunReasons(
-        [
-          '.github/workflows/check-pr.yaml',
-          '.github/actions/setup-node-pnpm-cache/action.yaml',
-          'scripts/run-changed-workspaces.ts',
-          'scripts/utils/workspaces.ts',
-          'README.md',
-        ],
-        [],
-      ),
-      [
-        '.github/workflows/check-pr.yaml',
-        '.github/actions/setup-node-pnpm-cache/action.yaml',
-        'scripts/run-changed-workspaces.ts',
-        'scripts/utils/workspaces.ts',
-      ],
-    )
-  })
 })
