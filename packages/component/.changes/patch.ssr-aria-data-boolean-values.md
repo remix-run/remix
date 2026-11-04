@@ -1,3 +1,0 @@
-Boolean `aria-*` and `data-*` values now render the same way on the server and in the browser. Server rendering previously dropped them: `<a aria-current={true} aria-hidden={false}>` rendered as `<a aria-current>`, which assistive technology reads as `aria-current="false"`. They now render as `"true"` and `"false"`. `data-rmx-document` and `data-rmx-preserve-dom` are the exception: `true` renders an empty attribute and `false` omits it. Previously the browser rendered `false` as `"false"`, which still turned document navigation or DOM preservation on.
-
-MathML boolean attributes such as `displaystyle`, `stretchy`, and `largeop` now render as `"true"` and `"false"` on the server and in the browser, preserving their layout behavior during hydration and updates.
