@@ -79,7 +79,6 @@ export default function App(handle: Handle) {
           <input
             value={controlledText}
             mix={[
-              inlineControlStyle,
               on('input', (event) => {
                 let nextValue = event.currentTarget.value
                 if (/\d/.test(nextValue)) {
@@ -88,6 +87,7 @@ export default function App(handle: Handle) {
                 controlledText = nextValue
                 rerender()
               }),
+              inlineControlStyle,
             ]}
           />
         </label>
@@ -111,11 +111,11 @@ export default function App(handle: Handle) {
           <select
             value={controlledChoice}
             mix={[
-              inlineControlStyle,
               on('change', (event) => {
                 controlledChoice = event.currentTarget.value
                 rerender()
               }),
+              inlineControlStyle,
             ]}
           >
             <option value="alpha">Alpha</option>
@@ -143,11 +143,11 @@ export default function App(handle: Handle) {
           <input
             defaultValue="type to update this"
             mix={[
-              inlineControlStyle,
               on('input', (event) => {
                 uncontrolledTextSnapshot = event.currentTarget.value
                 rerender()
               }),
+              inlineControlStyle,
             ]}
           />
         </label>

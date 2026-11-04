@@ -20,6 +20,7 @@ export function DraggableMixinDemo(_handle: Handle) {
       >
         <div
           mix={[
+            draggable(true),
             css({
               position: "absolute",
               width: "180px",
@@ -32,7 +33,6 @@ export function DraggableMixinDemo(_handle: Handle) {
               touchAction: "none",
               cursor: "grab",
             }),
-            draggable(true),
           ]}
           // `draggable` reads and writes inline `left`/`top`, so the starting
           // offsets have to live in the style prop.

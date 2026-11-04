@@ -9,6 +9,10 @@ export function BouncySwitchDemo(handle: Handle) {
     <button
       aria-pressed={isOn}
       mix={[
+        on("click", () => {
+          isOn = !isOn;
+          handle.update();
+        }),
         css({
           display: "flex",
           width: 80,
@@ -20,10 +24,6 @@ export function BouncySwitchDemo(handle: Handle) {
           backgroundColor: "#ff6b35",
           cursor: "pointer",
           padding: 10,
-        }),
-        on("click", () => {
-          isOn = !isOn;
-          handle.update();
         }),
       ]}
       type="button"

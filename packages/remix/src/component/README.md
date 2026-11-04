@@ -52,12 +52,6 @@ export function LikeButton(handle: Handle<{ href: string; initialLikes: number }
       type="button"
       disabled={saving}
       mix={[
-        css({
-          padding: '8px 12px',
-          borderRadius: '6px',
-          '&:hover': { background: '#f3f0ff' },
-          '&:disabled': { opacity: 0.6 },
-        }),
         on('click', async (_event, signal) => {
           likes++
           saving = true
@@ -75,6 +69,12 @@ export function LikeButton(handle: Handle<{ href: string; initialLikes: number }
 
           saving = false
           handle.update()
+        }),
+        css({
+          padding: '8px 12px',
+          borderRadius: '6px',
+          '&:hover': { background: '#f3f0ff' },
+          '&:disabled': { opacity: 0.6 },
         }),
       ]}
     >
@@ -517,6 +517,10 @@ function FavoriteToggle(handle: Handle) {
       type="button"
       aria-pressed={pressed}
       mix={[
+        on('click', () => {
+          pressed = !pressed
+          handle.update()
+        }),
         css({
           display: 'inline-flex',
           gap: '6px',
@@ -544,10 +548,6 @@ function FavoriteToggle(handle: Handle) {
           '@media (max-width: 40rem)': {
             padding: '12px 16px',
           },
-        }),
-        on('click', () => {
-          pressed = !pressed
-          handle.update()
         }),
       ]}
     >

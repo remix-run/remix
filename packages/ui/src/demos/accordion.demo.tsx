@@ -11,6 +11,7 @@ export default function Example() {
     <accordion.Context defaultValue="shipping">
       <div
         mix={[
+          accordion.root(),
           css({
             display: 'grid',
             width: '24rem',
@@ -19,43 +20,42 @@ export default function Example() {
             borderRadius: '8px',
             background: 'light-dark(#ffffff, #1a1a1a)',
           }),
-          accordion.root(),
         ]}
       >
         <accordion.ItemContext value="shipping">
-          <div mix={[itemCss, accordion.item()]}>
+          <div mix={[accordion.item(), itemCss]}>
             <h3 mix={headingCss}>
-              <button mix={[triggerCss, accordion.trigger()]} type="button">
+              <button mix={[accordion.trigger(), triggerCss]} type="button">
                 Shipping
               </button>
             </h3>
-            <div mix={[contentCss, accordion.content()]}>
+            <div mix={[accordion.content(), contentCss]}>
               Default carrier, cutoff time, and delivery windows.
             </div>
           </div>
         </accordion.ItemContext>
 
         <accordion.ItemContext value="billing">
-          <div mix={[itemCss, accordion.item()]}>
+          <div mix={[accordion.item(), itemCss]}>
             <h3 mix={headingCss}>
-              <button mix={[triggerCss, accordion.trigger()]} type="button">
+              <button mix={[accordion.trigger(), triggerCss]} type="button">
                 Billing
               </button>
             </h3>
-            <div mix={[contentCss, accordion.content()]}>
+            <div mix={[accordion.content(), contentCss]}>
               Invoice cadence, billing contact, and tax settings.
             </div>
           </div>
         </accordion.ItemContext>
 
         <accordion.ItemContext disabled value="archived">
-          <div mix={[itemCss, accordion.item()]}>
+          <div mix={[accordion.item(), itemCss]}>
             <h3 mix={headingCss}>
-              <button mix={[triggerCss, accordion.trigger()]} type="button">
+              <button mix={[accordion.trigger(), triggerCss]} type="button">
                 Archived
               </button>
             </h3>
-            <div mix={[contentCss, accordion.content()]}>Unavailable settings.</div>
+            <div mix={[accordion.content(), contentCss]}>Unavailable settings.</div>
           </div>
         </accordion.ItemContext>
       </div>

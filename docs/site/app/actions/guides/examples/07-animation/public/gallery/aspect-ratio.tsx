@@ -72,13 +72,13 @@ export function AspectRatio(handle: Handle) {
             max={3}
             step={0.1}
             mix={[
-              css(rangeInputCss),
               on("input", (event) => {
                 let value = event.currentTarget.value;
 
                 aspectRatio = parseFloat(value);
                 handle.update();
               }),
+              css(rangeInputCss),
             ]}
           />
           <span
@@ -112,13 +112,13 @@ export function AspectRatio(handle: Handle) {
             max={160}
             step={5}
             mix={[
-              css(rangeInputCss),
               on("input", (event) => {
                 let value = event.currentTarget.value;
 
                 width = parseFloat(value);
                 handle.update();
               }),
+              css(rangeInputCss),
             ]}
           />
           <span

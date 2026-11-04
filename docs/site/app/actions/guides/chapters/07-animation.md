@@ -87,12 +87,6 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
         <p
           key="notice"
           mix={[
-            css({
-              borderRadius: "12px",
-              background: "#ecfdf5",
-              color: "#065f46",
-              padding: "0.75rem 1rem",
-            }),
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -102,6 +96,12 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
               opacity: 0,
               transform: "translateY(-8px)",
               ...spring("snappy"),
+            }),
+            css({
+              borderRadius: "12px",
+              background: "#ecfdf5",
+              color: "#065f46",
+              padding: "0.75rem 1rem",
             }),
           ]}
         >
@@ -158,12 +158,12 @@ export const ReorderList = clientEntry(import.meta.url, function ReorderList(han
           <li
             key={item}
             mix={[
+              animateLayout({ ...spring("bouncy") }),
               css({
                 border: "1px solid #d6d6d6",
                 borderRadius: "10px",
                 padding: "0.7rem 1rem",
               }),
-              animateLayout({ ...spring("bouncy") }),
             ]}
           >
             {item}
@@ -197,6 +197,10 @@ export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(h
     <button
       aria-pressed={enabled}
       mix={[
+        on("click", () => {
+          enabled = !enabled;
+          handle.update();
+        }),
         css({
           border: 0,
           borderRadius: "999px",
@@ -204,10 +208,6 @@ export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(h
           cursor: "pointer",
           padding: "0.25rem",
           width: "5rem",
-        }),
-        on("click", () => {
-          enabled = !enabled;
-          handle.update();
         }),
       ]}
       type="button"
@@ -292,6 +292,13 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
     <button
       mix={[
         ref((element) => (node = element)),
+        on("pointerdown", () => {
+          currentAnimation?.cancel();
+          currentAnimation = node.animate(
+            [{ transform: "scale(0.96)" }, { transform: "scale(1)" }],
+            { ...spring("snappy") },
+          );
+        }),
         css({
           border: 0,
           borderRadius: "999px",
@@ -301,13 +308,6 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
           font: "inherit",
           fontWeight: "700",
           padding: "0.8rem 1.1rem",
-        }),
-        on("pointerdown", () => {
-          currentAnimation?.cancel();
-          currentAnimation = node.animate(
-            [{ transform: "scale(0.96)" }, { transform: "scale(1)" }],
-            { ...spring("snappy") },
-          );
         }),
       ]}
       type="button"

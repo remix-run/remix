@@ -448,6 +448,9 @@ function SaveButton(_handle: Handle) {
   return () => (
     <button
       mix={[
+        attrs({ type: "button" }),
+        ref((node) => console.log("Mounted", node)),
+        on("click", () => console.log("Save album")),
         css({
           minWidth: "8rem",
           minHeight: "2.5rem",
@@ -456,9 +459,6 @@ function SaveButton(_handle: Handle) {
           background: "#111",
           color: "#fff",
         }),
-        attrs({ type: "button" }),
-        ref((node) => console.log("Mounted", node)),
-        on("click", () => console.log("Save album")),
       ]}
     >
       Save

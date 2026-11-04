@@ -49,6 +49,7 @@ export default function Example(handle: Handle) {
         <div
           aria-label="Framework"
           mix={[
+            listbox.list(),
             css({
               display: 'grid',
               gap: '2px',
@@ -64,7 +65,6 @@ export default function Example(handle: Handle) {
                   '0 10px 28px rgba(0, 0, 0, 0.08), 0 0 0 1px light-dark(#3573F6, #6eaaff), 0 0 0 4px rgba(53, 115, 246, 0.1)',
               },
             }),
-            listbox.list(),
           ]}
           tabIndex={0}
         >
@@ -72,6 +72,7 @@ export default function Example(handle: Handle) {
             <div
               key={option.value}
               mix={[
+                listbox.option(option),
                 css({
                   borderRadius: '6px',
                   color: 'light-dark(#151515, #ececec)',
@@ -92,7 +93,6 @@ export default function Example(handle: Handle) {
                     color: 'light-dark(rgb(16 16 16 / 0.36), rgb(236 236 236 / 0.36))',
                   },
                 }),
-                listbox.option(option),
               ]}
             >
               {option.label}

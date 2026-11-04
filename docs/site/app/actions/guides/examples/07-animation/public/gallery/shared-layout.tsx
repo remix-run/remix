@@ -138,6 +138,10 @@ export function SharedLayout(handle: Handle) {
       </div>
       <button
         mix={[
+          on("click", () => {
+            state = !state;
+            handle.update();
+          }),
           css({
             backgroundColor: "#0f1115",
             color: "#f5f5f5",
@@ -151,10 +155,6 @@ export function SharedLayout(handle: Handle) {
             "&:active": {
               transform: "scale(0.95)",
             },
-          }),
-          on("click", () => {
-            state = !state;
-            handle.update();
           }),
         ]}
       >

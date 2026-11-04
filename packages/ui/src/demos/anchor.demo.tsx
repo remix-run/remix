@@ -60,6 +60,20 @@ export default function Example() {
 
       <div
         mix={[
+          ref((node, signal) => {
+            if (!(node instanceof HTMLElement)) return
+
+            floatingNode = node
+            positionFloating()
+
+            signal.addEventListener('abort', () => {
+              if (floatingNode === node) {
+                floatingNode = null
+              }
+
+              clearFloating()
+            })
+          }),
           css({
             boxSizing: 'border-box',
             width: '12rem',
@@ -74,20 +88,6 @@ export default function Example() {
             fontWeight: 500,
             letterSpacing: 0,
             padding: '10px 12px',
-          }),
-          ref((node, signal) => {
-            if (!(node instanceof HTMLElement)) return
-
-            floatingNode = node
-            positionFloating()
-
-            signal.addEventListener('abort', () => {
-              if (floatingNode === node) {
-                floatingNode = null
-              }
-
-              clearFloating()
-            })
           }),
         ]}
       >

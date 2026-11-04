@@ -12,21 +12,22 @@ export default function Example(handle: Handle) {
   return () => (
     <div
       mix={[
+        menu.onMenuSelect((event) => {
+          selected = event.item.name
+          void handle.update()
+        }),
         css({
           display: 'grid',
           justifyItems: 'start',
           gap: '8px',
           width: 'min(100%, 16rem)',
         }),
-        menu.onMenuSelect((event) => {
-          selected = event.item.name
-          void handle.update()
-        }),
       ]}
     >
       <menu.Context label="Project actions">
         <button
           mix={[
+            menu.trigger(),
             css({
               appearance: 'none',
               height: '30px',
@@ -42,7 +43,6 @@ export default function Example(handle: Handle) {
                 outlineOffset: '2px',
               },
             }),
-            menu.trigger(),
           ]}
           type="button"
         >
@@ -51,6 +51,7 @@ export default function Example(handle: Handle) {
 
         <div
           mix={[
+            menu.popover(),
             css({
               boxSizing: 'border-box',
               minWidth: '10rem',
@@ -64,22 +65,21 @@ export default function Example(handle: Handle) {
                 display: 'block',
               },
             }),
-            menu.popover(),
           ]}
         >
           <div
             mix={[
+              menu.list(),
               css({
                 display: 'grid',
                 gap: '2px',
                 outline: 0,
               }),
-              menu.list(),
             ]}
           >
-            <div mix={[itemCss, menu.item({ name: 'rename' })]}>Rename</div>
-            <div mix={[itemCss, menu.item({ name: 'duplicate' })]}>Duplicate</div>
-            <div mix={[itemCss, menu.item({ disabled: true, name: 'archive' })]}>Archive</div>
+            <div mix={[menu.item({ name: 'rename' }), itemCss]}>Rename</div>
+            <div mix={[menu.item({ name: 'duplicate' }), itemCss]}>Duplicate</div>
+            <div mix={[menu.item({ disabled: true, name: 'archive' }), itemCss]}>Archive</div>
           </div>
         </div>
       </menu.Context>

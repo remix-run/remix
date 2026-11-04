@@ -39,6 +39,12 @@ export default function Example(handle: Handle) {
 
         <div
           mix={[
+            popover.surface({
+              open,
+              onHide() {
+                setOpen(false)
+              },
+            }),
             css({
               boxSizing: 'border-box',
               width: '14rem',
@@ -52,12 +58,6 @@ export default function Example(handle: Handle) {
               '&:popover-open': {
                 display: 'grid',
                 gap: '8px',
-              },
-            }),
-            popover.surface({
-              open,
-              onHide() {
-                setOpen(false)
               },
             }),
           ]}

@@ -33,11 +33,11 @@ export function Counter(handle: Handle) {
       >
         <button
           mix={[
-            buttonStyles,
             on("click", () => {
               count--;
               handle.update();
             }),
+            buttonStyles,
           ]}
           type="button"
         >
@@ -45,11 +45,11 @@ export function Counter(handle: Handle) {
         </button>
         <button
           mix={[
-            buttonStyles,
             on("click", () => {
               count++;
               handle.update();
             }),
+            buttonStyles,
           ]}
           type="button"
         >

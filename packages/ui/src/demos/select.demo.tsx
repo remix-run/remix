@@ -13,15 +13,15 @@ export default function Example(handle: Handle) {
   return () => (
     <div
       mix={[
+        select.onSelectChange((event) => {
+          value = event.value ?? 'none'
+          void handle.update()
+        }),
         css({
           display: 'grid',
           justifyItems: 'start',
           gap: '8px',
           width: 'min(100%, 18rem)',
-        }),
-        select.onSelectChange((event) => {
-          value = event.value ?? 'none'
-          void handle.update()
         }),
       ]}
     >
@@ -33,6 +33,7 @@ export default function Example(handle: Handle) {
       >
         <button
           mix={[
+            select.trigger(),
             css({
               appearance: 'none',
               display: 'inline-flex',
@@ -51,7 +52,6 @@ export default function Example(handle: Handle) {
                 outlineOffset: '2px',
               },
             }),
-            select.trigger(),
           ]}
           type="button"
         >
@@ -61,6 +61,7 @@ export default function Example(handle: Handle) {
         <popover.Context>
           <div
             mix={[
+              select.popover(),
               css({
                 boxSizing: 'border-box',
                 margin: 0,
@@ -73,11 +74,11 @@ export default function Example(handle: Handle) {
                   display: 'block',
                 },
               }),
-              select.popover(),
             ]}
           >
             <div
               mix={[
+                select.list(),
                 css({
                   display: 'grid',
                   gap: '2px',
@@ -85,13 +86,13 @@ export default function Example(handle: Handle) {
                   overflow: 'auto',
                   outline: 0,
                 }),
-                select.list(),
               ]}
             >
               {frameworks.map((option) => (
                 <div
                   key={option.value}
                   mix={[
+                    select.option(option),
                     css({
                       borderRadius: '4px',
                       color: 'light-dark(#151515, #ececec)',
@@ -109,7 +110,6 @@ export default function Example(handle: Handle) {
                         color: 'light-dark(#9a9a9a, #666666)',
                       },
                     }),
-                    select.option(option),
                   ]}
                 >
                   {option.label}
@@ -121,10 +121,10 @@ export default function Example(handle: Handle) {
 
         <input
           mix={[
+            select.hiddenInput(),
             css({
               display: 'none',
             }),
-            select.hiddenInput(),
           ]}
         />
       </select.Context>

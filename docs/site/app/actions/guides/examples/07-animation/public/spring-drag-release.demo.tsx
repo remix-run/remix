@@ -51,6 +51,10 @@ export function SpringDragReleaseDemo(handle: Handle) {
     >
       <div
         mix={[
+          ref((node: HTMLDivElement) => {
+            stage = node;
+          }),
+          on<HTMLDivElement, "click">("click", setTarget),
           css({
             position: "relative",
             overflow: "hidden",
@@ -63,10 +67,6 @@ export function SpringDragReleaseDemo(handle: Handle) {
             cursor: "crosshair",
             touchAction: "none",
           }),
-          ref((node: HTMLDivElement) => {
-            stage = node;
-          }),
-          on<HTMLDivElement, "click">("click", setTarget),
         ]}
       >
         <div
@@ -92,21 +92,6 @@ export function SpringDragReleaseDemo(handle: Handle) {
           role="button"
           tabIndex={0}
           mix={[
-            css({
-              position: "absolute",
-              width: `${dotSize}px`,
-              height: `${dotSize}px`,
-              borderRadius: "50%",
-              backgroundColor: "#0ea5e9",
-              boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
-              transform: "translate(-50%, -50%)",
-              userSelect: "none",
-              touchAction: "none",
-              "&:focus-visible": {
-                outline: "3px solid rgba(255, 255, 255, 0.8)",
-                outlineOffset: "3px",
-              },
-            }),
             dragVelocityEvents(),
             on<HTMLDivElement, "pointerdown">("pointerdown", (event) => {
               event.preventDefault();
@@ -138,6 +123,21 @@ export function SpringDragReleaseDemo(handle: Handle) {
             on<HTMLDivElement, "transitionend">("transitionend", () => {
               animating = false;
               handle.update();
+            }),
+            css({
+              position: "absolute",
+              width: `${dotSize}px`,
+              height: `${dotSize}px`,
+              borderRadius: "50%",
+              backgroundColor: "#0ea5e9",
+              boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
+              transform: "translate(-50%, -50%)",
+              userSelect: "none",
+              touchAction: "none",
+              "&:focus-visible": {
+                outline: "3px solid rgba(255, 255, 255, 0.8)",
+                outlineOffset: "3px",
+              },
             }),
           ]}
           style={{

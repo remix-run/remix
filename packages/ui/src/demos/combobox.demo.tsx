@@ -12,14 +12,14 @@ export default function Example(handle: Handle) {
   return () => (
     <div
       mix={[
+        combobox.onComboboxChange((event) => {
+          value = event.value ?? 'none'
+          void handle.update()
+        }),
         css({
           display: 'grid',
           gap: '8px',
           width: 'min(100%, 18rem)',
-        }),
-        combobox.onComboboxChange((event) => {
-          value = event.value ?? 'none'
-          void handle.update()
         }),
       ]}
     >
@@ -38,6 +38,7 @@ export default function Example(handle: Handle) {
         <input
           id={`${handle.id}-field`}
           mix={[
+            combobox.input(),
             css({
               boxSizing: 'border-box',
               width: '100%',
@@ -53,13 +54,13 @@ export default function Example(handle: Handle) {
                 outline: '2px solid light-dark(#1A72FF, #6eaaff)',
               },
             }),
-            combobox.input(),
           ]}
           placeholder="Search frameworks"
         />
 
         <div
           mix={[
+            combobox.popover(),
             css({
               boxSizing: 'border-box',
               margin: 0,
@@ -72,11 +73,11 @@ export default function Example(handle: Handle) {
                 display: 'block',
               },
             }),
-            combobox.popover(),
           ]}
         >
           <div
             mix={[
+              combobox.list(),
               css({
                 display: 'grid',
                 gap: '2px',
@@ -84,13 +85,13 @@ export default function Example(handle: Handle) {
                 overflow: 'auto',
                 outline: 0,
               }),
-              combobox.list(),
             ]}
           >
             {frameworks.map((option) => (
               <div
                 key={option.value}
                 mix={[
+                  combobox.option(option),
                   css({
                     borderRadius: '4px',
                     color: 'light-dark(#151515, #ececec)',
@@ -108,7 +109,6 @@ export default function Example(handle: Handle) {
                       color: 'light-dark(#9a9a9a, #666666)',
                     },
                   }),
-                  combobox.option(option),
                 ]}
               >
                 {option.label}
@@ -119,10 +119,10 @@ export default function Example(handle: Handle) {
 
         <input
           mix={[
+            combobox.hiddenInput(),
             css({
               display: 'none',
             }),
-            combobox.hiddenInput(),
           ]}
         />
       </combobox.Context>

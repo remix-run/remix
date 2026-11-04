@@ -55,15 +55,15 @@ export function MultiStateBadge(handle: Handle) {
     >
       <button
         mix={[
+          on('click', () => {
+            state = getNextState(state)
+            handle.update()
+          }),
           css({
             background: 'none',
             border: 'none',
             cursor: 'pointer',
             padding: 0,
-          }),
-          on('click', () => {
-            state = getNextState(state)
-            handle.update()
           }),
         ]}
       >
@@ -153,9 +153,9 @@ function Icon(handle: Handle<{ state: State }>) {
         <span
           key="loader"
           mix={[
-            css({ position: 'absolute', left: 0, top: 0 }),
             animateEntrance(iconEnterAnimation),
             animateExit(iconExitAnimation),
+            css({ position: 'absolute', left: 0, top: 0 }),
           ]}
         >
           <Loader />
@@ -165,9 +165,9 @@ function Icon(handle: Handle<{ state: State }>) {
         <span
           key="check"
           mix={[
-            css({ position: 'absolute', left: 0, top: 0 }),
             animateEntrance(iconEnterAnimation),
             animateExit(iconExitAnimation),
+            css({ position: 'absolute', left: 0, top: 0 }),
           ]}
         >
           <Check />
@@ -177,9 +177,9 @@ function Icon(handle: Handle<{ state: State }>) {
         <span
           key="x"
           mix={[
-            css({ position: 'absolute', left: 0, top: 0 }),
             animateEntrance(iconEnterAnimation),
             animateExit(iconExitAnimation),
+            css({ position: 'absolute', left: 0, top: 0 }),
           ]}
         >
           <X />
@@ -380,8 +380,8 @@ function Label(handle: Handle<{ state: State }>) {
           <span
             key="idle"
             mix={[
-              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
               ...labelMix,
+              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
             ]}
           >
             {STATES.idle}
@@ -391,8 +391,8 @@ function Label(handle: Handle<{ state: State }>) {
           <span
             key="processing"
             mix={[
-              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
               ...labelMix,
+              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
             ]}
           >
             {STATES.processing}
@@ -402,8 +402,8 @@ function Label(handle: Handle<{ state: State }>) {
           <span
             key="success"
             mix={[
-              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
               ...labelMix,
+              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
             ]}
           >
             {STATES.success}
@@ -413,8 +413,8 @@ function Label(handle: Handle<{ state: State }>) {
           <span
             key="error"
             mix={[
-              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
               ...labelMix,
+              css({ whiteSpace: 'nowrap', position: 'absolute', left: 0, top: 0 }),
             ]}
           >
             {STATES.error}

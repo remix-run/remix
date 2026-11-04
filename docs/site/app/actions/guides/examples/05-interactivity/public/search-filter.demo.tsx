@@ -27,6 +27,10 @@ export function SearchFilterDemo(handle: Handle) {
           Search projects
           <input
             mix={[
+              on("input", (event) => {
+                query = event.currentTarget.value;
+                handle.update();
+              }),
               css({
                 boxSizing: "border-box",
                 width: "100%",
@@ -39,10 +43,6 @@ export function SearchFilterDemo(handle: Handle) {
                   outline: "2px solid #d83a5a",
                   outlineOffset: "2px",
                 },
-              }),
-              on("input", (event) => {
-                query = event.currentTarget.value;
-                handle.update();
               }),
             ]}
             type="search"

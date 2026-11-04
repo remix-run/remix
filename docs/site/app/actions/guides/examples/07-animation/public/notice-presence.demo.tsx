@@ -15,6 +15,10 @@ export function NoticePresenceDemo(handle: Handle) {
     >
       <button
         mix={[
+          on("click", () => {
+            visible = !visible;
+            handle.update();
+          }),
           css({
             border: "1px solid #d83a5a",
             borderRadius: "999px",
@@ -24,10 +28,6 @@ export function NoticePresenceDemo(handle: Handle) {
             font: "inherit",
             fontWeight: "700",
             padding: "0.7rem 1rem",
-          }),
-          on("click", () => {
-            visible = !visible;
-            handle.update();
           }),
         ]}
         type="button"
@@ -39,13 +39,6 @@ export function NoticePresenceDemo(handle: Handle) {
         <p
           key="notice"
           mix={[
-            css({
-              margin: 0,
-              borderRadius: "12px",
-              background: "#ecfdf5",
-              color: "#065f46",
-              padding: "0.75rem 1rem",
-            }),
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -55,6 +48,13 @@ export function NoticePresenceDemo(handle: Handle) {
               opacity: 0,
               transform: "translateY(-8px)",
               ...spring("snappy"),
+            }),
+            css({
+              margin: 0,
+              borderRadius: "12px",
+              background: "#ecfdf5",
+              color: "#065f46",
+              padding: "0.75rem 1rem",
             }),
           ]}
         >

@@ -11,44 +11,44 @@ export default function Example() {
     <tabs.Context defaultActiveTab="overview">
       <div
         mix={[
+          tabs.root(),
           css({
             display: 'grid',
             gap: '12px',
             width: 'min(100%, 28rem)',
             fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
           }),
-          tabs.root(),
         ]}
       >
         <div
           aria-label="Project sections"
           mix={[
+            tabs.list(),
             css({
               display: 'flex',
               gap: '4px',
               borderBlockEnd: '1px solid light-dark(#d1d1d1, #444444)',
             }),
-            tabs.list(),
           ]}
         >
-          <button mix={[tabCss, tabs.tab({ name: 'overview' })]} type="button">
+          <button mix={[tabs.tab({ name: 'overview' }), tabCss]} type="button">
             Overview
           </button>
-          <button mix={[tabCss, tabs.tab({ name: 'activity' })]} type="button">
+          <button mix={[tabs.tab({ name: 'activity' }), tabCss]} type="button">
             Activity
           </button>
-          <button mix={[tabCss, tabs.tab({ disabled: true, name: 'settings' })]} type="button">
+          <button mix={[tabs.tab({ disabled: true, name: 'settings' }), tabCss]} type="button">
             Settings
           </button>
         </div>
 
-        <div mix={[panelCss, tabs.panel({ name: 'overview' })]}>
+        <div mix={[tabs.panel({ name: 'overview' }), panelCss]}>
           Project health, owner notes, and current milestones.
         </div>
-        <div mix={[panelCss, tabs.panel({ name: 'activity' })]}>
+        <div mix={[tabs.panel({ name: 'activity' }), panelCss]}>
           Recent commits, deploys, and review handoffs.
         </div>
-        <div mix={[panelCss, tabs.panel({ name: 'settings' })]}>
+        <div mix={[tabs.panel({ name: 'settings' }), panelCss]}>
           Visibility, notifications, and billing preferences.
         </div>
       </div>

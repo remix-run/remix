@@ -74,6 +74,12 @@ export function PressStateDemo(handle: Handle) {
     <div
       tabIndex={0}
       mix={[
+        onPressDown(() => {
+          setPressed(true);
+        }),
+        onPressUp(() => {
+          setPressed(false);
+        }),
         css({
           display: "grid",
           width: 120,
@@ -92,12 +98,6 @@ export function PressStateDemo(handle: Handle) {
           "&:hover, &:focus": {
             transform: "scale(1.12)",
           },
-        }),
-        onPressDown(() => {
-          setPressed(true);
-        }),
-        onPressUp(() => {
-          setPressed(false);
         }),
       ]}
     >
@@ -159,12 +159,6 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
         <p
           key="notice"
           mix={[
-            css({
-              borderRadius: "12px",
-              background: "#ecfdf5",
-              color: "#065f46",
-              padding: "0.75rem 1rem",
-            }),
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -174,6 +168,12 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
               opacity: 0,
               transform: "translateY(-8px)",
               ...spring("snappy"),
+            }),
+            css({
+              borderRadius: "12px",
+              background: "#ecfdf5",
+              color: "#065f46",
+              padding: "0.75rem 1rem",
             }),
           ]}
         >
@@ -207,6 +207,10 @@ export function NoticePresenceDemo(handle: Handle) {
     >
       <button
         mix={[
+          on("click", () => {
+            visible = !visible;
+            handle.update();
+          }),
           css({
             border: "1px solid #d83a5a",
             borderRadius: "999px",
@@ -216,10 +220,6 @@ export function NoticePresenceDemo(handle: Handle) {
             font: "inherit",
             fontWeight: "700",
             padding: "0.7rem 1rem",
-          }),
-          on("click", () => {
-            visible = !visible;
-            handle.update();
           }),
         ]}
         type="button"
@@ -231,13 +231,6 @@ export function NoticePresenceDemo(handle: Handle) {
         <p
           key="notice"
           mix={[
-            css({
-              margin: 0,
-              borderRadius: "12px",
-              background: "#ecfdf5",
-              color: "#065f46",
-              padding: "0.75rem 1rem",
-            }),
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -247,6 +240,13 @@ export function NoticePresenceDemo(handle: Handle) {
               opacity: 0,
               transform: "translateY(-8px)",
               ...spring("snappy"),
+            }),
+            css({
+              margin: 0,
+              borderRadius: "12px",
+              background: "#ecfdf5",
+              color: "#065f46",
+              padding: "0.75rem 1rem",
             }),
           ]}
         >
@@ -297,12 +297,12 @@ export const ReorderList = clientEntry(import.meta.url, function ReorderList(han
           <li
             key={item}
             mix={[
+              animateLayout({ ...spring("bouncy") }),
               css({
                 border: "1px solid #d6d6d6",
                 borderRadius: "10px",
                 padding: "0.7rem 1rem",
               }),
-              animateLayout({ ...spring("bouncy") }),
             ]}
           >
             {item}
@@ -361,13 +361,13 @@ export function ReorderingDemo(handle: Handle) {
         <li
           key={backgroundColor}
           mix={[
+            animateLayout({
+              ...spring({ duration: 600, bounce: 0.2 }),
+            }),
             css({
               width: 100,
               height: 100,
               borderRadius: 10,
-            }),
-            animateLayout({
-              ...spring({ duration: 600, bounce: 0.2 }),
             }),
           ]}
           style={{ backgroundColor }}
@@ -407,6 +407,10 @@ export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(h
     <button
       aria-pressed={enabled}
       mix={[
+        on("click", () => {
+          enabled = !enabled;
+          handle.update();
+        }),
         css({
           border: 0,
           borderRadius: "999px",
@@ -414,10 +418,6 @@ export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(h
           cursor: "pointer",
           padding: "0.25rem",
           width: "5rem",
-        }),
-        on("click", () => {
-          enabled = !enabled;
-          handle.update();
         }),
       ]}
       type="button"
@@ -529,6 +529,10 @@ export function SpringDragReleaseDemo(handle: Handle) {
     >
       <div
         mix={[
+          ref((node: HTMLDivElement) => {
+            stage = node;
+          }),
+          on<HTMLDivElement, "click">("click", setTarget),
           css({
             position: "relative",
             overflow: "hidden",
@@ -541,10 +545,6 @@ export function SpringDragReleaseDemo(handle: Handle) {
             cursor: "crosshair",
             touchAction: "none",
           }),
-          ref((node: HTMLDivElement) => {
-            stage = node;
-          }),
-          on<HTMLDivElement, "click">("click", setTarget),
         ]}
       >
         <div
@@ -570,21 +570,6 @@ export function SpringDragReleaseDemo(handle: Handle) {
           role="button"
           tabIndex={0}
           mix={[
-            css({
-              position: "absolute",
-              width: `${dotSize}px`,
-              height: `${dotSize}px`,
-              borderRadius: "50%",
-              backgroundColor: "#0ea5e9",
-              boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
-              transform: "translate(-50%, -50%)",
-              userSelect: "none",
-              touchAction: "none",
-              "&:focus-visible": {
-                outline: "3px solid rgba(255, 255, 255, 0.8)",
-                outlineOffset: "3px",
-              },
-            }),
             dragVelocityEvents(),
             on<HTMLDivElement, "pointerdown">("pointerdown", (event) => {
               event.preventDefault();
@@ -616,6 +601,21 @@ export function SpringDragReleaseDemo(handle: Handle) {
             on<HTMLDivElement, "transitionend">("transitionend", () => {
               animating = false;
               handle.update();
+            }),
+            css({
+              position: "absolute",
+              width: `${dotSize}px`,
+              height: `${dotSize}px`,
+              borderRadius: "50%",
+              backgroundColor: "#0ea5e9",
+              boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
+              transform: "translate(-50%, -50%)",
+              userSelect: "none",
+              touchAction: "none",
+              "&:focus-visible": {
+                outline: "3px solid rgba(255, 255, 255, 0.8)",
+                outlineOffset: "3px",
+              },
             }),
           ]}
           style={{
@@ -705,6 +705,10 @@ export function BouncySwitchDemo(handle: Handle) {
     <button
       aria-pressed={isOn}
       mix={[
+        on("click", () => {
+          isOn = !isOn;
+          handle.update();
+        }),
         css({
           display: "flex",
           width: 80,
@@ -716,10 +720,6 @@ export function BouncySwitchDemo(handle: Handle) {
           backgroundColor: "#ff6b35",
           cursor: "pointer",
           padding: 10,
-        }),
-        on("click", () => {
-          isOn = !isOn;
-          handle.update();
         }),
       ]}
       type="button"
@@ -793,6 +793,10 @@ function Tile(handle: Handle<{ title: string; children: RemixNode; notes?: strin
       >
         <button
           mix={[
+            on("click", () => {
+              remountKey++;
+              handle.update();
+            }),
             css({
               position: "absolute",
               bottom: 8,
@@ -807,10 +811,6 @@ function Tile(handle: Handle<{ title: string; children: RemixNode; notes?: strin
               "&:hover": {
                 opacity: 1,
               },
-            }),
-            on("click", () => {
-              remountKey++;
-              handle.update();
             }),
           ]}
           title="Replay animation"
@@ -958,6 +958,13 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
     <button
       mix={[
         ref((element) => (node = element)),
+        on("pointerdown", () => {
+          currentAnimation?.cancel();
+          currentAnimation = node.animate(
+            [{ transform: "scale(0.96)" }, { transform: "scale(1)" }],
+            { ...spring("snappy") },
+          );
+        }),
         css({
           border: 0,
           borderRadius: "999px",
@@ -967,13 +974,6 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
           font: "inherit",
           fontWeight: "700",
           padding: "0.8rem 1.1rem",
-        }),
-        on("pointerdown", () => {
-          currentAnimation?.cancel();
-          currentAnimation = node.animate(
-            [{ transform: "scale(0.96)" }, { transform: "scale(1)" }],
-            { ...spring("snappy") },
-          );
         }),
       ]}
       type="button"

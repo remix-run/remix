@@ -15,6 +15,12 @@ export function PressStateDemo(handle: Handle) {
     <div
       tabIndex={0}
       mix={[
+        onPressDown(() => {
+          setPressed(true);
+        }),
+        onPressUp(() => {
+          setPressed(false);
+        }),
         css({
           display: "grid",
           width: 120,
@@ -33,12 +39,6 @@ export function PressStateDemo(handle: Handle) {
           "&:hover, &:focus": {
             transform: "scale(1.12)",
           },
-        }),
-        onPressDown(() => {
-          setPressed(true);
-        }),
-        onPressUp(() => {
-          setPressed(false);
         }),
       ]}
     >

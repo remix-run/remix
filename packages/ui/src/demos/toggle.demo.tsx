@@ -30,6 +30,7 @@ export default function Example() {
       >
         <input
           mix={[
+            toggle({ defaultChecked: true }),
             css({
               appearance: 'none',
               boxSizing: 'border-box',
@@ -61,7 +62,6 @@ export default function Example() {
                 outlineOffset: '2px',
               },
             }),
-            toggle({ defaultChecked: true }),
           ]}
           name="notifications"
           type="checkbox"
@@ -69,11 +69,11 @@ export default function Example() {
         Email notifications
       </label>
 
-      <button mix={[customControlCss, toggle()]} type="button">
+      <button mix={[toggle(), customControlCss]} type="button">
         Desktop alerts
       </button>
 
-      <button disabled mix={[customControlCss, toggle()]} type="button">
+      <button disabled mix={[toggle(), customControlCss]} type="button">
         Weekly digest
       </button>
     </div>

@@ -21,12 +21,6 @@ export function InterruptibleKeyframes() {
     <div
       mix={[
         ref((node) => (box = node)),
-        css({
-          width: 100,
-          height: 100,
-          backgroundColor: '#0cdcf7',
-          borderRadius: 5,
-        }),
         on('pointerenter', () => {
           interruptAnimation()
           let startScale = getCurrentScale()
@@ -55,6 +49,12 @@ export function InterruptibleKeyframes() {
               fill: 'forwards',
             },
           )
+        }),
+        css({
+          width: 100,
+          height: 100,
+          backgroundColor: '#0cdcf7',
+          borderRadius: 5,
         }),
       ]}
     />

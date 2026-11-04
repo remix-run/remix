@@ -41,6 +41,10 @@ export const InstallTabs = clientEntry(
                 aria-label="Package manager"
                 mix={[
                   select.trigger(),
+                  select.onSelectChange((event) => {
+                    selected = event.value ?? selected;
+                    handle.update();
+                  }),
                   css({
                     display: "inline-flex",
                     alignItems: "center",
@@ -62,10 +66,6 @@ export const InstallTabs = clientEntry(
                       outline: "2px solid currentColor",
                       outlineOffset: "-2px",
                     },
-                  }),
-                  select.onSelectChange((event) => {
-                    selected = event.value ?? selected;
-                    handle.update();
                   }),
                 ]}
               >
