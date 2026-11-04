@@ -7,8 +7,8 @@ import {
   isTestShard,
   selectTestWorkspaces,
   testShardNames,
-} from './ci-tests.ts'
-import type { WorkspaceInfo } from './workspaces.ts'
+} from './run-ci-tests.ts'
+import type { WorkspaceInfo } from './utils/workspaces.ts'
 
 function workspace(dir: string, name = dir, dependencies: string[] = []): WorkspaceInfo {
   return { dir, name, dependencies, scripts: ['test'] }
@@ -91,7 +91,7 @@ describe('CI test shards', () => {
 describe('CI workflow test coverage', () => {
   it('runs every supported shard and requires successful shard results', () => {
     let workflow = YAML.parseDocument(
-      fs.readFileSync(new URL('../../.github/workflows/check-pr.yaml', import.meta.url), 'utf8'),
+      fs.readFileSync(new URL('../.github/workflows/check-pr.yaml', import.meta.url), 'utf8'),
     )
     let matrix = workflow.getIn(['jobs', 'test_ubuntu_shard', 'strategy', 'matrix', 'shard'])
     assert.ok(YAML.isSeq(matrix))
