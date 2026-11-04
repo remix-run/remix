@@ -33,7 +33,7 @@ catalogs:
 
 patchedDependencies:
   playwright-core@1.63.0:
-    hash: 799550f433317bb54f4e793adfc4ebe04b974d28dc33bb342c4d332caaf0eb5a
+    hash: 9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb
     path: patches/playwright-core@1.63.0.patch
 
 importers:
@@ -9669,7 +9669,7 @@ snapshots:
 
   playwright-core@1.60.0: {}
 
-  playwright-core@1.63.0(patch_hash=799550f433317bb54f4e793adfc4ebe04b974d28dc33bb342c4d332caaf0eb5a): {}
+  playwright-core@1.63.0(patch_hash=9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb): {}
 
   playwright@1.60.0:
     dependencies:
@@ -9679,7 +9679,7 @@ snapshots:
 
   playwright@1.63.0:
     dependencies:
-      playwright-core: 1.63.0(patch_hash=799550f433317bb54f4e793adfc4ebe04b974d28dc33bb342c4d332caaf0eb5a)
+      playwright-core: 1.63.0(patch_hash=9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb)
 
   postcss@8.5.14:
     dependencies:

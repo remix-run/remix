@@ -1,3 +1,8 @@
+# Backports https://github.com/microsoft/playwright/pull/43605, which disables Chromium
+# TCP port randomization on Windows to avoid intermittent ERR_NO_BUFFER_SPACE failures
+# during loopback requests. Updates both bundled copies of the default Chromium feature list.
+# Remove when upgrading to a stable Playwright release that includes this fix.
+
 diff --git a/lib/coreBundle.js b/lib/coreBundle.js
 --- a/lib/coreBundle.js
 +++ b/lib/coreBundle.js

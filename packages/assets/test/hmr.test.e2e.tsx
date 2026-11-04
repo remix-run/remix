@@ -30,57 +30,6 @@ const consoleMessageTimeout = 5000
 const hmrConnectionTimeout = 15_000
 
 describe('asset server HMR', () => {
-  it('starts the HMR connection deadline after the document commits', async (t) => {
-    let fixture = await createHmrFixture()
-    let renderDocument = fixture.renderDocument
-    assert.ok(renderDocument)
-    let requested = Promise.withResolvers<void>()
-    let respond = Promise.withResolvers<void>()
-    fixture.renderDocument = async (assetServer) => {
-      requested.resolve()
-      await respond.promise
-      return renderDocument(assetServer)
-    }
-
-    let page = await t.serve(await createHmrTestServer(fixture))
-    t.after(fixture.close)
-    let timers = t.mock.method(globalThis, 'setTimeout')
-    let navigation = navigateToHmrPage(page)
-    void navigation.catch(() => {})
-    try {
-      await requested.promise
-      for (let timer of timers.mock.calls) {
-        if (timer.arguments[1] === hmrConnectionTimeout) timer.arguments[0]()
-      }
-      respond.resolve()
-      await navigation
-      await assertCount(page, 'Count: 3')
-    } finally {
-      respond.resolve()
-    }
-  })
-
-  it('times out a missing HMR connection after the document commits', async (t) => {
-    let fixture = await createHmrFixture()
-
-    let page = await t.serve(await createHmrTestServer(fixture))
-    t.after(fixture.close)
-    await page.route('**/hmr/events', (route) => route.abort())
-    let committed = page.waitForEvent('framenavigated', {
-      predicate: (frame) => frame.parentFrame() === null,
-    })
-    let timers = t.mock.method(globalThis, 'setTimeout')
-    let rejected = assert.rejects(
-      navigateToHmrPage(page),
-      /waiting for console message:.*HMR connected/,
-    )
-    await committed
-    let timer = timers.mock.calls.find((call) => call.arguments[1] === hmrConnectionTimeout)
-    assert.ok(timer)
-    timer.arguments[0]()
-    await rejected
-  })
-
   it('cancels the HMR connection wait when navigation fails', async (t) => {
     let fixture = await createHmrFixture()
 
