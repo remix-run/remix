@@ -2402,8 +2402,18 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
       usePolling: true,
     })
 
-    browserHmrWatcher.on('all', (event, filePath) => {
+    // Match node-hmr's duplicate change suppression too. A poll that lands between a write's
+    // truncate and its data reports the change again on the next poll, with identical stats, which
+    // would apply one edit as two HMR updates.
+    let changeStatsByFilePath = new Map<string, string>()
+    browserHmrWatcher.on('all', (event, filePath, stats) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
+      if (event === 'change' && stats) {
+        let { birthtimeMs, ctimeMs, ino, mtimeMs, size } = stats
+        let changeStats = [birthtimeMs, ctimeMs, ino, mtimeMs, size].join(':')
+        if (changeStatsByFilePath.get(filePath) === changeStats) return
+        changeStatsByFilePath.set(filePath, changeStats)
+      }
       pendingBrowserHmrEvents = pendingBrowserHmrEvents
         .then(() => handleBrowserHmrFileEvent({ event, filePath }))
         .catch((error: unknown) => {
