@@ -1,1 +1,1 @@
-Fix `context.render()` responding with `200` when a component throws while rendering the shell. The `render()` middleware now waits for the first chunk of HTML, so these errors reject `router.fetch()` and the server can respond with a `500`.
+Fix `context.render()` responding with `200` when a component throws while rendering the shell. The `render()` middleware now waits for the first chunk of HTML, so these errors reject `router.fetch()` for both `GET` and `HEAD` requests and the server can respond with a `500`.

@@ -21,6 +21,8 @@ const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
 const internalFrameRequests = new WeakSet<Request>()
 // Keyed by body so responses rebuilt with `new Response(response.body, response)` keep waiting.
 const pendingShells = new WeakMap<ReadableStream<Uint8Array>, Promise<void>>()
+// The router replaces HEAD response bodies, so HEAD shells are tracked by request instead.
+const pendingHeadShells = new WeakMap<Request, Promise<void>[]>()
 const MAX_FRAME_REDIRECTS = 20
 const FRAME_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const FRAME_REQUEST_HEADERS_TO_REMOVE = [
@@ -97,6 +99,11 @@ export function render(
       )
       let response = createHtmlResponse(stream, init)
       if (response.body != null) pendingShells.set(response.body, shell)
+      if (request.method === 'HEAD') {
+        let headShells = pendingHeadShells.get(request)
+        if (headShells) headShells.push(shell)
+        else pendingHeadShells.set(request, [shell])
+      }
       return response
     }
   })
@@ -104,7 +111,11 @@ export function render(
   return async (context, next) => {
     let response = await installRenderer(context, next)
     // Wait for the shell so render errors reject the request before the status is sent.
-    if (response.body != null) await pendingShells.get(response.body)
+    if (context.request.method === 'HEAD') {
+      await Promise.all(pendingHeadShells.get(context.request) ?? [])
+    } else if (response.body != null) {
+      await pendingShells.get(response.body)
+    }
     return response
   }
 }

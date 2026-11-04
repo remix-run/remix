@@ -577,7 +577,7 @@ describe('render', () => {
     assert.deepEqual(errors, [renderError])
   })
 
-  it('reports shell errors without rejecting HEAD requests', async () => {
+  it('rejects HEAD requests when the shell fails', async () => {
     let errors: unknown[] = []
     let middleware = render({ onError: (error) => errors.push(error) })
     let router = createRouter({ middleware: [middleware] as const })
@@ -591,16 +591,42 @@ describe('render', () => {
 
     router.get('/', (context) => context.render(createElement(Broken)))
 
+    await assert.rejects(router.fetch('https://remix.run/', { method: 'HEAD' }), renderError)
+    assert.deepEqual(errors, [renderError])
+  })
+
+  it('reports shell errors without rejecting when inner middleware replaces the body', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    let replaceBody: Middleware = async (_context, next) => {
+      let response = await next()
+      await response.body?.cancel()
+      return new Response('Replaced', response)
+    }
+
+    router.get('/', {
+      middleware: [replaceBody],
+      handler: (context) => context.render(createElement(Broken)),
+    })
+
     let unhandledRejections: unknown[] = []
     let onUnhandledRejection = (reason: unknown) => unhandledRejections.push(reason)
     process.on('unhandledRejection', onUnhandledRejection)
 
     try {
-      let response = await router.fetch('https://remix.run/', { method: 'HEAD' })
+      let response = await router.fetch('https://remix.run/')
       await new Promise((resolve) => setTimeout(resolve, 0))
 
-      assert.equal(response.status, 200)
-      assert.equal(response.body, null)
+      assert.equal(await response.text(), 'Replaced')
       assert.deepEqual(errors, [renderError])
       assert.deepEqual(unhandledRejections, [])
     } finally {
