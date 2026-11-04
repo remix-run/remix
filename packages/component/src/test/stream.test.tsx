@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Handle, RemixNode } from '../runtime/component.ts'
-import { createMixin, css, on, unsafeHTML } from '../index.ts'
+import { createMixin, createRoot, css, on, unsafeHTML } from '../index.ts'
 import { createElement } from '../runtime/create-element.ts'
 
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
@@ -47,6 +47,61 @@ describe('stream', () => {
   }
 
   describe('basic nodes', () => {
+    it('keeps scalar and array multiple-select submissions consistent through hydration', async (t) => {
+      let markup = (
+        <form>
+          <select name="scalar" multiple value="a">
+            <option value="a">First A</option>
+            <option value="a">Second A</option>
+            <option value="b">B</option>
+          </select>
+          <select name="array" multiple value={['a']}>
+            <option value="a">First A</option>
+            <option value="a">Second A</option>
+            <option value="b">B</option>
+          </select>
+        </form>
+      )
+      let container = document.createElement('div')
+      container.innerHTML = await renderToString(markup)
+      let form = container.querySelector('form')
+      if (!form) throw new Error('Missing form')
+      expect(new FormData(form).getAll('scalar')).toEqual(['a'])
+      expect(new FormData(form).getAll('array')).toEqual(['a', 'a'])
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(markup)
+      root.flush()
+      expect(new FormData(form).getAll('scalar')).toEqual(['a'])
+      expect(new FormData(form).getAll('array')).toEqual(['a', 'a'])
+    })
+
+    it('restores implicit select values from raw option HTML through hydration and reset', async (t) => {
+      let markup = (
+        <form>
+          <select defaultValue="B & C">
+            <option value="a">A</option>
+            <option innerHTML={unsafeHTML('  B &amp; &#67;  ')} />
+          </select>
+        </form>
+      )
+      let container = document.createElement('div')
+      container.innerHTML = await renderToString(markup)
+      let select = container.querySelector('select')
+      let form = container.querySelector('form')
+      if (!select || !form) throw new Error('Missing select')
+      expect(select.value).toBe('B & C')
+      expect(select.options[1].defaultSelected).toBe(true)
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(markup)
+      root.flush()
+      expect(select.value).toBe('B & C')
+      select.value = 'a'
+      form.reset()
+      expect(select.value).toBe('B & C')
+    })
+
     it('should render to a stream', () => {
       let stream = renderToStream(<div>Hello, world!</div>)
       expect(stream).toBeDefined()

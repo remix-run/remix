@@ -418,6 +418,8 @@ Use `value` to control a select or `defaultValue` to set its initial selection a
 
 Selections render into option markup on the server, including options inside components and optgroups. Updating `defaultValue` changes reset defaults while preserving live edits. An empty array clears all defaults; controlled `value={[]}` clears the current selection.
 
+A scalar controlled value selects the first matching option; arrays select every match. Options without an explicit value use their text, including text rendered with trusted `innerHTML`.
+
 ## Keys
 
 Give list items a `key` when a list can be reordered, filtered, or added to. Elements and components with matching keys are moved instead of recreated, so they keep:

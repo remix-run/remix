@@ -1,3 +1,5 @@
+import { defaultTreeAdapter, html, parseFragment } from 'parse5'
+import type { DefaultTreeAdapterMap } from 'parse5'
 import type {
   ComponentHandle,
   FrameHandle,
@@ -207,6 +209,7 @@ interface FrameData {
 
 interface RenderContext {
   selectValues?: Set<string>
+  selectScalar?: boolean
   optionText?: string
   insideSvg: boolean
   insideHead: boolean
@@ -730,14 +733,17 @@ function buildElementSegment(
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
   let previousSelectValues = context.selectValues
+  let previousSelectScalar = context.selectScalar
   if (!currentIsSvg && tag === 'select') {
     let value = processedProps.value ?? processedProps.defaultValue
     context.selectValues = getSelectValues(value)
+    context.selectScalar = processedProps.value != null && !Array.isArray(value)
   }
   context.elementDepth++
   if (props.children != null) buildSegment(props.children, context, frameState, output)
   context.elementDepth--
   context.selectValues = previousSelectValues
+  context.selectScalar = previousSelectScalar
   context.insideSvg = previousInsideSvg
   output.push(close)
 }
@@ -756,17 +762,26 @@ function buildSelectedOptionSegment(
       ? buildSegment(props.children, context, frameState)
       : [props.innerHTML]
   context.elementDepth--
+  if (props.value == null && props.innerHTML !== undefined) {
+    let option = defaultTreeAdapter.createElement('option', html.NS.HTML, [])
+    context.optionText = getOptionText(parseFragment(option, props.innerHTML, {}))
+  }
   // Native options without a value use their text with ASCII whitespace collapsed.
   let value = props.value ?? context.optionText.replace(/[\t\n\f\r ]+/g, ' ').replace(/^ | $/g, '')
   context.optionText = previousOptionText
-  let attrs = renderAttributes(
-    'option',
-    { ...props, selected: context.selectValues?.has(String(value)) },
-    false,
-  )
+  let selected = context.selectValues?.has(String(value))
+  // Assigning a scalar select.value chooses the first match, even on multiple selects.
+  if (selected && context.selectScalar) context.selectValues?.clear()
+  let attrs = renderAttributes('option', { ...props, selected }, false)
   output.push(`<option${attrs}>`)
   output.push(...children)
   output.push('</option>')
+}
+
+function getOptionText(node: DefaultTreeAdapterMap['node']): string {
+  if (defaultTreeAdapter.isTextNode(node)) return node.value
+  if (defaultTreeAdapter.isElementNode(node) && node.tagName === 'script') return ''
+  return 'childNodes' in node ? node.childNodes.map(getOptionText).join('') : ''
 }
 
 function buildTextareaElementSegment(tag: string, props: any): Segment {
