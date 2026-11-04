@@ -95,6 +95,22 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   return `v0.${date}.${time}-${suffix}`
 }
 
+export function getPreviewReleaseTitle(
+  build: PreviewBuild,
+  pr?: { headRef: string; title: string },
+): string {
+  if (build.channel.startsWith('pr-')) {
+    let version = pr?.headRef === 'release-pr/main' ? /^Release v(\S+)$/.exec(pr.title)?.[1] : null
+    return version ? `Remix ${version} preview` : `PR #${build.channel.slice(3)}`
+  }
+  return `${build.channel} (${build.sha.slice(0, 8)})`
+}
+
+function getPreviewTagTime(tag: string): number {
+  let match = /^v0\.(\d{8})\.(\d{1,6})-/.exec(tag)
+  return match ? Number(match[1]) * 1_000_000 + Number(match[2]) : 0
+}
+
 export function validatePreviewRepository(repository: string): string {
   if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repository)) {
     throw new Error(`Invalid preview repository: ${repository}`)
@@ -364,6 +380,12 @@ export function publishPreview(
     files.some((filename) => !filename.endsWith(`-${build.sha.slice(0, 8)}.tgz`))
   )
     throw new Error('Preview tarballs do not match the source SHA')
+  if (build.channel === 'main') {
+    // Lets `releases/latest/download/remix.url` resolve to a lockfile-safe, SHA-specific URL.
+    let filename = path.join(directory, 'remix.url')
+    fs.writeFileSync(filename, `${getPreviewTarballUrl(build, 'remix', github.repository)}\n`)
+    files.push(filename)
+  }
   let expected = files.map((filename) => {
     let data = fs.readFileSync(filename)
     if (!data.length) throw new Error(`Empty preview asset: ${filename}`)
@@ -374,9 +396,10 @@ export function publishPreview(
     }
   })
   let url = `https://github.com/${github.repository}/releases/tag/${build.tag}`
+  let title = getPreviewReleaseTitle(build)
   if (dryRun) {
     console.log(
-      `Would publish ${url} with assets: ${expected.map((asset) => asset.name).join(', ')}`,
+      `Would publish ${url} as "${title}" with assets: ${expected.map((asset) => asset.name).join(', ')}`,
     )
     return url
   }
@@ -387,7 +410,11 @@ export function publishPreview(
   )
   let repositoryUrl = `https://github.com/${sourceRepository}`
   if (SHARED_PR_TAG.test(build.tag)) {
-    return publishPrPreview(github, build, release, files, expected, repositoryUrl)
+    title = getPreviewReleaseTitle(
+      build,
+      readPullRequest(sourceRepository, Number(build.channel.slice(3))),
+    )
+    return publishPrPreview(github, build, release, files, expected, repositoryUrl, title)
   }
   let commitUrl = `${repositoryUrl}/commit/${build.sha}`
   let prNumber = /^pr-([1-9]\d*)$/.exec(build.channel)?.[1]
@@ -408,6 +435,7 @@ export function publishPreview(
   }
   if (release && !release.draft) {
     verifyAssets(github.listAssets(release), expected, false)
+    github.api('PATCH', `releases/${release.id}`, { name: title })
     console.log(`Reusing published preview: ${url}`)
     return url
   }
@@ -415,7 +443,7 @@ export function publishPreview(
     release = readRelease(
       github.api('POST', 'releases', {
         tag_name: build.tag,
-        name: build.tag,
+        name: title,
         draft: true,
         prerelease: true,
         make_latest: 'false',
@@ -427,10 +455,22 @@ export function publishPreview(
   for (let asset of github.listAssets(release)) github.delete(`releases/assets/${asset.id}`)
   for (let filename of files) github.upload(release, filename)
   verifyAssets(github.listAssets(release), expected, true)
+  // Builds can finish out of order, so only the newest main commit becomes the latest release.
+  let latest =
+    build.channel === 'main' &&
+    github
+      .listReleases()
+      .every(
+        (item) =>
+          item.draft ||
+          getPreviewChannel(item.tag_name) !== 'main' ||
+          getPreviewTagTime(item.tag_name) <= getPreviewTagTime(build.tag),
+      )
   github.api('PATCH', `releases/${release.id}`, {
+    name: title,
     draft: false,
-    prerelease: true,
-    make_latest: 'false',
+    prerelease: build.channel !== 'main',
+    make_latest: String(latest),
   })
   console.log(`Published preview: ${url}`)
   return url
@@ -443,6 +483,7 @@ function publishPrPreview(
   files: string[],
   expected: { name: string; size: number; digest: string }[],
   repositoryUrl: string,
+  title: string,
 ): string {
   let prNumber = build.channel.slice('pr-'.length)
   let prUrl = `${repositoryUrl}/pull/${prNumber}`
@@ -457,7 +498,7 @@ function publishPrPreview(
     release = readRelease(
       github.api('POST', 'releases', {
         tag_name: build.tag,
-        name: build.tag,
+        name: title,
         draft: true,
         prerelease: true,
         make_latest: 'false',
@@ -505,6 +546,7 @@ function publishPrPreview(
     return `| [${sha.slice(0, 8)}](${prUrl}/commits/${sha}) | ${asset.updated_at} | \`pnpm add "${url}"\` |`
   })
   github.api('PATCH', `releases/${release.id}`, {
+    name: title,
     draft: false,
     prerelease: true,
     make_latest: 'false',
@@ -569,21 +611,29 @@ export function readPullRequest(
   repository: string,
   number: number,
   run = createGitHubRunner(process.env.GITHUB_TOKEN),
-): { closed: boolean; sha: string; createdAt: string } {
+): { closed: boolean; sha: string; headRef: string; title: string; createdAt: string } {
   validatePreviewRepository(repository)
   if (!Number.isSafeInteger(number) || number < 1) throw new Error('Invalid PR number')
   let value: unknown = JSON.parse(run(['api', `repos/${repository}/pulls/${number}`]))
   if (
     !isRecord(value) ||
     (value.state !== 'open' && value.state !== 'closed') ||
+    typeof value.title !== 'string' ||
     typeof value.created_at !== 'string' ||
     !Number.isFinite(Date.parse(value.created_at)) ||
     !isRecord(value.head) ||
+    typeof value.head.ref !== 'string' ||
     typeof value.head.sha !== 'string'
   ) {
     throw new Error(`Invalid PR response: ${number}`)
   }
-  return { closed: value.state === 'closed', sha: value.head.sha, createdAt: value.created_at }
+  return {
+    closed: value.state === 'closed',
+    sha: value.head.sha,
+    headRef: value.head.ref,
+    title: value.title,
+    createdAt: value.created_at,
+  }
 }
 
 function verifyAssets(

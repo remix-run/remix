@@ -6,6 +6,7 @@ import { createElement } from '../runtime/create-element.ts'
 
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
+import type { SerializableObject } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 import { Fragment } from '../runtime/component.ts'
 import { Frame } from '../runtime/frame.ts'
@@ -1600,6 +1601,250 @@ describe('stream', () => {
     })
   })
 
+  describe('nonce', () => {
+    it('keeps literal document tags in script data when inserting nonce metadata', async () => {
+      let data = { html: '</head></body></html>' }
+      let html = await renderToString(
+        <html>
+          <head>
+            <script id="config" type="application/json">
+              {JSON.stringify(data)}
+            </script>
+          </head>
+          <body>Hello</body>
+        </html>,
+        { nonce: 'document-nonce' },
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+
+      expect(JSON.parse(doc.querySelector('#config')?.textContent ?? '')).toEqual(data)
+      expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+        'document-nonce',
+      )
+      expect(doc.body.textContent).toBe('Hello')
+    })
+
+    it('creates a missing head without treating script data as document markup', async () => {
+      let data = { html: '<html lang="fake"></head></body></html>' }
+      let html = await renderToString(
+        <html lang="en">
+          <body>
+            <script id="config" type="application/json">
+              {JSON.stringify(data)}
+            </script>
+          </body>
+        </html>,
+        { nonce: 'document-nonce' },
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+
+      expect(JSON.parse(doc.querySelector('#config')?.textContent ?? '')).toEqual(data)
+      expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+        'document-nonce',
+      )
+      expect(doc.documentElement.lang).toBe('en')
+    })
+
+    it('inserts generated resources and hydration data outside authored scripts', async () => {
+      let data = { html: '</head></body></html>' }
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Island</p>
+      })
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <script id="head-config" type="application/json">
+                {JSON.stringify(data)}
+              </script>
+            </head>
+            <body>
+              <script id="body-config" type="application/json">
+                {JSON.stringify(data)}
+              </script>
+              <Entry />
+            </body>
+          </html>,
+          {
+            nonce: 'document-nonce',
+            resolveClientEntry() {
+              return { href: '/entry.js', exportName: 'Entry', preloads: ['/entry.js'] }
+            },
+          },
+        ),
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+
+      expect(JSON.parse(doc.querySelector('#head-config')?.textContent ?? '')).toEqual(data)
+      expect(JSON.parse(doc.querySelector('#body-config')?.textContent ?? '')).toEqual(data)
+      expect(doc.head.querySelector<HTMLLinkElement>('link[rel="modulepreload"]')?.nonce).toBe(
+        'document-nonce',
+      )
+      expect(doc.body.lastElementChild?.id).toBe('rmx-data')
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+      expect(entry).toEqual({ moduleUrl: '/entry.js', exportName: 'Entry', props: {} })
+    })
+
+    it('forwards the nonce through nested blocking frame renders', async () => {
+      let nonce = 'document-"&<nonce>'
+      let html = await drain(
+        renderToStream(<Frame src="/child" />, {
+          nonce,
+          resolveFrame(_src, _target, context) {
+            return renderToStream(
+              <>
+                <p mix={[css({ color: 'red' })]}>Child</p>
+                <Frame src="/grandchild" />
+              </>,
+              {
+                nonce: context?.nonce,
+                resolveFrame(_src, _target, context) {
+                  return renderToStream(<p mix={[css({ color: 'blue' })]}>Grandchild</p>, {
+                    nonce: context?.nonce,
+                  })
+                },
+              },
+            )
+          },
+        }),
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      let styles = Array.from(doc.querySelectorAll<HTMLStyleElement>('style[data-rmx-style]'))
+
+      expect(styles).toHaveLength(2)
+      expect(styles.map((style) => style.nonce)).toEqual([nonce, nonce])
+      expect(html).toContain('nonce="document-&quot;&amp;&lt;nonce&gt;"')
+    })
+
+    it('forwards the nonce to non-blocking frame renders', async () => {
+      let html = await drain(
+        renderToStream(<Frame src="/child" fallback={<p>Loading</p>} />, {
+          nonce: 'document-nonce',
+          resolveFrame(_src, _target, context) {
+            return renderToStream(<p mix={[css({ color: 'red' })]}>Child</p>, {
+              nonce: context?.nonce,
+            })
+          },
+        }),
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      let template = doc.querySelector('template')
+      invariant(template)
+      let styles = template.content.querySelectorAll<HTMLStyleElement>('style[data-rmx-style]')
+
+      expect(styles).toHaveLength(1)
+      expect(styles[0].nonce).toBe('document-nonce')
+    })
+
+    function Island() {
+      return () => <section>Island</section>
+    }
+
+    let NonceIsland = clientEntry('/nonce-island.ts#Island', Island)
+
+    function resolveNonceIsland() {
+      return {
+        href: '/assets/nonce-island.js',
+        exportName: 'Island',
+        importMap: { imports: { '/assets/nonce-island.js': '/assets/nonce-island.hash.js' } },
+        preloads: ['/assets/nonce-island.hash.js'],
+      }
+    }
+
+    it('renderToString applies nonce to styles, import maps, and metadata', async () => {
+      let html = await renderToString(
+        <html>
+          <head>
+            <ImportMap value={{ imports: { app: '/app.js' } }} />
+          </head>
+          <body>
+            <div mix={[css({ color: 'red' })]}>Styled</div>
+          </body>
+        </html>,
+        { nonce: 'r4nd0m' },
+      )
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      let map = doc.head.querySelector<HTMLScriptElement>('script[data-rmx-import-map]')
+
+      expect(doc.head.querySelector<HTMLStyleElement>('style[data-rmx-style]')?.nonce).toBe(
+        'r4nd0m',
+      )
+      expect(doc.querySelectorAll('script[data-rmx-import-map]')).toHaveLength(1)
+      expect(map?.nonce).toBe('r4nd0m')
+      expect(JSON.parse(map?.textContent ?? '{}')).toEqual({
+        imports: { app: '/app.js' },
+      })
+      expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+        'r4nd0m',
+      )
+      expect(html).not.toContain('<!-- rmx:flush')
+    })
+
+    it('stamps streamed resources when a nonce is provided and omits it otherwise', async () => {
+      let node = (
+        <html>
+          <head />
+          <body>
+            <div mix={[css({ color: 'red' })]}>Styled</div>
+            <NonceIsland />
+          </body>
+        </html>
+      )
+      let html = await drain(
+        renderToStream(node, { nonce: 'r4nd0m', resolveClientEntry: resolveNonceIsland }),
+      )
+
+      let doc = new DOMParser().parseFromString(html, 'text/html')
+      expect(doc.querySelector<HTMLStyleElement>('style[data-rmx-style]')?.nonce).toBe('r4nd0m')
+      expect(doc.querySelector<HTMLLinkElement>('link[rel="modulepreload"]')?.nonce).toBe('r4nd0m')
+      expect(doc.head.querySelector<HTMLMetaElement>('meta[name="rmx-nonce"]')?.nonce).toBe(
+        'r4nd0m',
+      )
+      expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="r4nd0m">')
+
+      let withoutNonce = await drain(
+        renderToStream(node, { resolveClientEntry: resolveNonceIsland }),
+      )
+      expect(withoutNonce).toContain('<style data-rmx-style=')
+      expect(withoutNonce).toContain('<script data-rmx-import-map type="importmap">')
+      expect(withoutNonce).not.toContain('nonce=')
+    })
+
+    it('emits nonce metadata only for documents without adding an empty import map', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <body>Hello</body>
+          </html>,
+          { nonce: 'r4nd0m' },
+        ),
+      )
+
+      expect(html).toContain('<head><meta name="rmx-nonce" content="" nonce="r4nd0m"></head>')
+      expect(html).not.toContain('data-rmx-import-map')
+
+      let fragment = await drain(renderToStream(<p>Hello</p>, { nonce: 'r4nd0m' }))
+      expect(fragment).toBe('<p>Hello</p>')
+    })
+
+    it('keeps a nonce authored on the import map', async () => {
+      let html = await drain(
+        renderToStream(
+          <html>
+            <head>
+              <ImportMap nonce="authored" value={{ imports: { app: '/assets/app.js' } }} />
+            </head>
+            <body>Hello</body>
+          </html>,
+          { nonce: 'r4nd0m' },
+        ),
+      )
+
+      expect(html).toContain('<script data-rmx-import-map type="importmap" nonce="authored">')
+      expect(html).toContain('<meta name="rmx-nonce" content="" nonce="r4nd0m">')
+    })
+  })
+
   describe('client entry preloads', () => {
     function Island() {
       return () => <section>Island</section>
@@ -2367,6 +2612,65 @@ describe('stream', () => {
         items: ['one', 'two', 'three'],
         nested: { value: 99 },
       })
+    })
+
+    it('keeps genuine wire descriptors distinct from escaped application props', async () => {
+      let Entry = clientEntry(
+        '/entry.js#Entry',
+        function Entry(_handle: Handle<{ data: SerializableObject; content: RemixNode }>) {
+          return () => <p>Content</p>
+        },
+      )
+      function Content() {
+        return () => <span>Real</span>
+      }
+      let elementData = { $rmx: 'data', type: 'div', props: { innerHTML: '<b>Data</b>' }, key: {} }
+      let mixinData = { $rmxMixin: 'css', args: [{ color: 'red' }] }
+      let data = { element: elementData, mixin: mixinData }
+      let html = await drain(renderToStream(<Entry data={data} content={<Content />} />))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(entry.props).toEqual({
+        data: {
+          element: { $rmxObject: elementData },
+          mixin: { $rmxObject: mixinData },
+        },
+        content: { $rmx: true, type: 'span', props: { children: 'Real' } },
+      })
+    })
+
+    it('still rejects circular escaped data', async () => {
+      let Entry = clientEntry(
+        '/entry.js#Entry',
+        function Entry(_handle: Handle<{ data: SerializableObject }>) {
+          return () => <p>Content</p>
+        },
+      )
+      let data: SerializableObject = { $rmxMixin: 'css' }
+      data.self = data
+
+      await expect(drain(renderToStream(<Entry data={data} />, { onError() {} }))).rejects.toThrow(
+        /circular|cyclic/i,
+      )
+    })
+
+    it('reads plain data props only during JSON serialization', async () => {
+      let reads = 0
+      let Entry = clientEntry('/entry.js#Entry', function Entry() {
+        return () => <p>Content</p>
+      })
+      let data = {
+        $rmx: 'data',
+        get props() {
+          reads++
+          return { label: 'Data' }
+        },
+      }
+      let html = await drain(renderToStream(createElement(Entry, { data })))
+      let [, entry] = getSingleEntry(parseRmxDataFromHtml(html).h)
+
+      expect(reads).toBe(1)
+      expect(entry.props.data).toEqual({ $rmxObject: { $rmx: 'data', props: { label: 'Data' } } })
     })
 
     it('serializes virtual host elements', async () => {
@@ -4826,11 +5130,13 @@ describe('stream', () => {
           src: '/settings',
           currentFrameSrc: 'https://example.com/app',
           topFrameSrc: 'https://example.com/app',
+          nonce: undefined,
         },
         {
           src: '/settings/profile',
           currentFrameSrc: 'https://example.com/settings',
           topFrameSrc: 'https://example.com/app',
+          nonce: undefined,
         },
       ])
 

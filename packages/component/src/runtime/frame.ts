@@ -1,3 +1,4 @@
+import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import { jsx } from './core/vnode.ts'
 import {
   Fragment,
@@ -71,6 +72,8 @@ import {
   type ClientEntryIdentity,
 } from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
+import { parseDocument, removeNoscriptContents } from './parse-document.ts'
+import { ESCAPED_OBJECT } from './props-serialization.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -197,6 +200,7 @@ export function reloadFrameForNavigation(
 }
 
 export type FrameContext = {
+  nonce?: string
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
   errorTarget: EventTarget
@@ -222,6 +226,7 @@ export type FrameContext = {
 }
 
 type FrameInit = {
+  nonce?: string
   name?: string
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
@@ -265,6 +270,7 @@ export type FrameInstance = {
 }
 
 type RenderOptions = {
+  nonce?: string
   documentHref?: string
   flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
@@ -281,6 +287,7 @@ type ActiveRenderOptions = RenderOptions & {
 
 export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let container = createContainer(root)
+  let nonceManager = getNonceManager()
   let contentRoot: VirtualRoot | undefined
   let reloadController: AbortController | undefined
   // The style registry is document-level and shared by every frame; only the
@@ -304,7 +311,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   async function consumeClientEntryResources(
     source: ParentNode,
     documentHref?: string,
+    responseNonce?: string,
   ): Promise<boolean> {
+    nonceManager.prepareResponse(source, responseNonce)
     let importMapStatus = importMapManager.consumeImportMaps(source)
     if (importMapStatus !== 'ready') {
       lifecycleController.abort()
@@ -319,6 +328,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   function shouldPreserveManagedHeadNode(node: Node): boolean {
     return (
       pendingPrefetchLinks.has(node) ||
+      nonceManager.shouldPreserveHeadNode(node) ||
       importMapManager.shouldPreserveHeadNode(node) ||
       (modulePreloader.hasActivePreloads() && modulePreloader.isActivePreload(node))
     )
@@ -355,6 +365,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   let context: FrameContext = {
+    nonce: init.nonce,
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
@@ -396,6 +407,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
             if (isRenderAborted(options.signal)) return
             await render(html, { ...options, flushKind })
           },
+          options.nonce,
           linkedAbort.controller.signal,
         )
       } finally {
@@ -446,7 +458,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       contentRoot = undefined
     }
 
-    let source: Document | DocumentFragment
+    let source: HTMLElement | DocumentFragment
     if (typeof content === 'string') {
       let flushed = await consumeFlushBatches(content, async (html, flushKind) => {
         await render(html, { ...options, flushKind })
@@ -460,29 +472,31 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       source =
         container.root instanceof Document &&
         (options.flushKind ?? inferFlushKind(content)) === 'document'
-          ? new DOMParser().parseFromString(content, 'text/html')
+          ? parseDocument(container.doc, content)
           : createFragmentFromString(container.doc, content)
     } else {
       source = content
     }
 
-    if (!(await consumeClientEntryResources(source, options.documentHref))) return
+    if (!(await consumeClientEntryResources(source, options.documentHref, options.nonce))) return
     if (isRenderAborted(options.signal)) return
-    context.styleManager.adoptServerStyles(
-      collectFrameServerStyleTags(createElementContainer(source)),
-    )
-    if (!isDocumentNode(source)) removeEmptyHeads(source)
+    adoptFrameServerStyles(createElementContainer(source), context.styleManager)
+    if (source instanceof DocumentFragment) removeEmptyHeads(source)
     mergeRmxDataFrom(options.data, source)
     let responseContext = {
       ...context,
+      nonce: options.nonce,
       data: options.data,
       reconciliationTracker: options.reconciliationTracker,
       blockingFrameTracker: options.blockingFrameTracker,
     }
     let hydrationContainer = container
 
-    if (isDocumentNode(source)) {
-      diffElementAttributes(container.doc.documentElement, source.documentElement)
+    if (source instanceof HTMLElement) {
+      let head = source.querySelector('head')
+      let body = source.querySelector('body')
+      invariant(head && body, 'Missing document head or body')
+      diffElementAttributes(container.doc.documentElement, source)
 
       let documentContext = {
         ...responseContext,
@@ -490,11 +504,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         regionTailRef: null,
         signal: options.signal,
       }
-      diffNodes([container.doc.head], [source.head], {
+      diffNodes([container.doc.head], [head], {
         ...documentContext,
         shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
       })
-      diffNodes([container.doc.body], [source.body], documentContext)
+      diffNodes([container.doc.body], [body], documentContext)
 
       hydrationContainer = createElementContainer(container.doc.body)
       if (isRenderAborted(options.signal)) return
@@ -537,8 +551,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     if ((await initialClientEntryResources) === false) return
     if (isRenderAborted()) return
-    context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
-    let subFramesReady = hydrateContainer(container, context, { reconciliationTracker })
+    adoptFrameServerStyles(container, context.styleManager)
+    let subFramesReady = hydrateContainer(container, context, {
+      reconciliationTracker,
+      nonce: context.nonce,
+    })
 
     try {
       await subFramesReady
@@ -546,7 +563,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       if (isRenderAborted()) return
 
       if (currentMarker?.status === 'pending') {
-        await watchPendingFrameTemplate(currentMarker, reconciliationTracker)
+        await watchPendingFrameTemplate(currentMarker, {
+          reconciliationTracker,
+          nonce: context.nonce,
+        })
       }
 
       reconciliationTracker.finalize()
@@ -620,8 +640,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (marker.status === 'pending') {
       await watchPendingFrameTemplate(
         marker,
-        options?.reconciliationTracker,
-        options?.signal,
+        options,
         isInheritedReload
           ? () => {
               completeInheritedReload()
@@ -766,12 +785,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         target: frameName,
       })
       if (isStale()) return { signal: controller.signal }
-      let { content, redirectedTo } = await unwrapFrameResolution(resolution)
+      let { content, redirectedTo, nonce } = await unwrapFrameResolution(resolution)
       if (isStale()) return { signal: controller.signal }
       let reconciliationTracker = createReconciliationTracker()
       let blockingFrameTracker = createReconciliationTracker()
       let commitStarted = false
       await render(content, {
+        nonce,
         documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
         signal: controller.signal,
         reconciliationTracker,
@@ -859,10 +879,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   async function watchPendingFrameTemplate(
     marker: FrameMarkerData,
-    reconciliationTracker?: ReconciliationTracker,
-    signal?: AbortSignal,
+    options: RenderOptions = {},
     onResolved?: () => void,
   ): Promise<void> {
+    let { reconciliationTracker, signal, nonce } = options
     if (isRenderAborted(signal)) return
     if (pendingTemplateMarkerId === marker.id) return
 
@@ -881,7 +901,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         if (isRenderAborted(signal)) return
         if (pendingTemplateMarkerId !== marker.id) return
         clearPendingFrameTemplateWatch()
-        await render(fragment, { signal, contentStatus: 'resolved' })
+        await render(fragment, { nonce, signal, contentStatus: 'resolved' })
         if (!isRenderAborted(signal)) onResolved?.()
       })
 
@@ -900,7 +920,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     clearPendingFrameTemplateWatch()
-    await render(template, { reconciliationTracker, signal, contentStatus: 'resolved' })
+    await render(template, { nonce, reconciliationTracker, signal, contentStatus: 'resolved' })
     if (!isRenderAborted(signal)) onResolved?.()
   }
 }
@@ -967,6 +987,7 @@ function diffFrame(
   }
 
   if (!committed._state.resolved && committed._state.fallbackRoot) {
+    getNonceManager().inheritRootResourceNonces(committed._state.fallbackRoot, vParent)
     committed._state.fallbackRoot.render(committed.props.fallback ?? null)
   }
   return committed
@@ -1026,6 +1047,7 @@ function insertFrame(
     getContext,
     styleManager: styles,
   })
+  getNonceManager().inheritRootResourceNonces(fallbackRoot, vParent)
   fallbackRoot.render(node.props.fallback ?? null)
 
   let instance = createFrameInstance(node, start, end, runtime, getContext)
@@ -1118,12 +1140,13 @@ function resolveClientFrame(
     )
     .then(async (resolution) => {
       if (isStale()) return
-      let { content } = await unwrapFrameResolution(resolution)
+      let { content, nonce } = await unwrapFrameResolution(resolution)
       if (isStale()) return
       state.fallbackRoot?.dispose()
       state.fallbackRoot = undefined
       let nextContent = asAbortableFrameContent(content, resolveController.signal)
       await instance.render(nextContent, {
+        nonce,
         signal: resolveController.signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
@@ -1326,7 +1349,7 @@ function removeEmptyHeads(fragment: DocumentFragment): void {
   }
 }
 
-function collectFrameServerStyleTags(container: FrameContainer): HTMLStyleElement[] {
+function adoptFrameServerStyles(container: FrameContainer, styleManager: StyleManager): void {
   let styles: HTMLStyleElement[] = []
   let nodes =
     container.root instanceof Document
@@ -1340,7 +1363,21 @@ function collectFrameServerStyleTags(container: FrameContainer): HTMLStyleElemen
       return node
     }
   })
-  return styles
+  for (let style of styles) {
+    let parent = style.parentNode
+    let nextSibling = style.nextSibling
+    let wasConnected = style.isConnected
+
+    // Let the active document enforce CSP before copying rules into a constructed
+    // sheet. Keep this synchronous with the DOM diff so no intermediate state paints.
+    if (!wasConnected) document.head.append(style)
+    try {
+      styleManager.adoptServerStyles([style])
+    } finally {
+      // Blocked styles and failed adoptions retain their original DOM position.
+      if (!wasConnected && style.parentNode) parent?.insertBefore(style, nextSibling)
+    }
+  }
 }
 
 function parseRmxDataScript(script: HTMLScriptElement): RmxData {
@@ -1454,7 +1491,7 @@ function scheduleHydrationMarker(
     let pending = context.pendingClientEntries.get(marker.start)
     let vElement = pending?.[1] ?? createElement(component, props)
     context.pendingClientEntries.set(marker.start, [marker.end, vElement])
-    hydrateRegion(vElement, marker.start, marker.end, identity, context, signal)
+    hydrateRegion(vElement, marker.start, marker.end, identity, context, signal, pending?.[2])
   }
 
   let parentHydration = marker.parent && pendingClientEntryHydrations.get(marker.parent)
@@ -1540,11 +1577,17 @@ function reviveSerializedValue(value: unknown): unknown {
   if (!isRecord(value)) return value
   let record = value
 
+  // Revive the fields, but never interpret the escaped object's own tags.
+  if (isRecord(record[ESCAPED_OBJECT])) {
+    return reviveSerializedProperties(record[ESCAPED_OBJECT])
+  }
+
   if (record.$rmxFrame === true) return reviveSerializedElement(Frame, record)
   if (record.$rmxFragment === true) return reviveSerializedElement(Fragment, record)
 
   if (record.$rmxMixin === 'css') {
-    let styles: unknown = Array.isArray(record.args) ? record.args[0] : undefined
+    let args = reviveSerializedValue(record.args)
+    let styles: unknown = Array.isArray(args) ? args[0] : undefined
     return css(isCSSProps(styles) ? styles : {})
   }
 
@@ -1556,11 +1599,13 @@ function reviveSerializedValue(value: unknown): unknown {
     return reviveSerializedElement(record.type, record)
   }
 
-  let revived: Record<string, unknown> = {}
-  for (let key in record) {
-    revived[key] = reviveSerializedValue(record[key])
-  }
-  return revived
+  return reviveSerializedProperties(record)
+}
+
+function reviveSerializedProperties(record: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(record).map(([key, value]) => [key, reviveSerializedValue(value)]),
+  )
 }
 
 function reviveSerializedElement(
@@ -1599,6 +1644,7 @@ function hydrateRegion(
   identity: ClientEntryIdentity,
   context: FrameContext,
   signal?: AbortSignal,
+  resourceNonces?: ResourceNonces,
 ): void {
   if (signal?.aborted) return
 
@@ -1608,6 +1654,9 @@ function hydrateRegion(
   // tracker to client frames created while this entry renders so blocking
   // frames keep the reload pending until their content arrives.
   let renderEntry = (root: Pick<VirtualRoot, 'render'>) => {
+    let nonceManager = getNonceManager()
+    nonceManager.addRootResourceNonces(root, resourceNonces)
+    nonceManager.addRootResponseNonce(root, context.nonce)
     if (!signal) {
       root.render(vElement)
       return
@@ -1694,6 +1743,7 @@ async function createSubFrames(
         if (marker) {
           let frameMarker: FrameMarkerData = { ...marker, id }
           let subFrame = createFrame([node, end], {
+            nonce: context.nonce,
             src: frameMarker.src,
             marker: frameMarker,
             topFrame: context.topFrame,
@@ -1839,7 +1889,11 @@ function collectFrameTemplates(node: Node, collect: (template: HTMLTemplateEleme
   }
 }
 
-export function publishFrameTemplate(id: string, fragment: DocumentFragment): void {
+export function publishFrameTemplate(
+  id: string,
+  fragment: DocumentFragment,
+  options?: { inertScripts?: boolean },
+): void {
   let listeners = frameTemplateListeners.get(id)
   if (!listeners || listeners.size === 0) {
     let queue = bufferedFrameTemplates.get(id)
@@ -1854,7 +1908,31 @@ export function publishFrameTemplate(id: string, fragment: DocumentFragment): vo
   for (let listener of listeners) {
     let clone = fragment.cloneNode(true)
     invariant(isDocumentFragmentNode(clone), 'Expected cloned frame template fragment')
+    if (options?.inertScripts) makeSvgScriptsInert(clone)
     listener(clone)
+  }
+}
+
+function makeSvgScriptsInert(source: ParentNode): void {
+  // Work around browser bugs that make fragment-parsed SVG scripts executable after cloning.
+  // Recreate the script shell with the fragment parser after cloning to keep it inert.
+  // https://crbug.com/538197148
+  for (let script of source.querySelectorAll('script')) {
+    if (!(script instanceof SVGScriptElement)) continue
+    let doc = script.ownerDocument
+    let svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.innerHTML = '<script></script>'
+    let replacement = svg.firstElementChild
+    invariant(replacement, 'Missing SVG script')
+    for (let attribute of script.attributes) {
+      replacement.setAttributeNodeNS(doc.importNode(attribute, true))
+    }
+    if (script.hasAttribute('nonce')) replacement.setAttribute('nonce', script.nonce)
+    replacement.replaceChildren(...script.childNodes)
+    script.replaceWith(replacement)
+  }
+  for (let template of source.querySelectorAll('template')) {
+    makeSvgScriptsInert(template.content)
   }
 }
 
@@ -1933,6 +2011,7 @@ async function renderFrameStream(
   stream: ReadableStream<Uint8Array>,
   doc: Document,
   applyHtml: (html: string, flushKind: FlushKind) => Promise<void>,
+  responseNonce: string | undefined,
   signal?: AbortSignal,
 ): Promise<void> {
   let reader = stream.getReader()
@@ -1950,13 +2029,18 @@ async function renderFrameStream(
   }
   signal?.addEventListener('abort', abort, { once: true })
 
+  function rewriteAndPublishTemplate(id: string, fragment: DocumentFragment): void {
+    getNonceManager().prepareResponse(fragment, responseNonce)
+    publishFrameTemplate(id, fragment, { inertScripts: true })
+  }
+
   try {
     while (true) {
       let { done, value } = await reader.read()
       if (done) break
 
       buffer += decoder.decode(value, { stream: true })
-      let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
+      let parsed = extractTemplatesFromBuffer(doc, buffer, rewriteAndPublishTemplate)
       buffer = parsed.remainder
 
       if (parsed.html !== '') {
@@ -2048,6 +2132,7 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
 function createFragmentFromString(doc: Document, content: string): DocumentFragment {
   let template = doc.createElement('template')
   template.innerHTML = content.trim()
+  removeNoscriptContents(template.content)
   return template.content
 }
 
