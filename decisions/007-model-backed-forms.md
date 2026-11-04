@@ -38,4 +38,4 @@ Field-level `errorMap` uses schema/domain codes on server and client. Native-onl
 
 Root refinements/transforms do not retain the inspectable form contract. Cross-field business checks remain explicit in handlers; scalar refinements and transforms work normally. Revisit root-rule preservation, standalone validation, custom widgets, and field arrays when concrete workflows establish their contracts.
 
-See the [form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md) and [form demo](https://github.com/remix-run/remix/tree/main/demos/data-model-forms).
+See the [form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md) and [bookstore demo](https://github.com/remix-run/remix/tree/main/demos/bookstore).
