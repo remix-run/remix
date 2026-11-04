@@ -23,27 +23,6 @@ export const PromptButton = clientEntry(
         <button
           type="button"
           mix={[
-            css({
-              appearance: 'none',
-              font: 'inherit',
-              textAlign: 'left',
-              cursor: 'pointer',
-              width: '100%',
-              display: 'flex',
-              gap: '16px',
-              alignItems: 'center',
-              padding: '16px',
-              border: 0,
-              borderRadius: '12px',
-              color: 'var(--text-primary)',
-              background: 'transparent',
-              transition: 'background-color 150ms ease, color 150ms ease',
-              '&:hover, &:focus-visible': {
-                background: 'var(--surface-4)',
-                color: 'var(--brand-blue)',
-                outline: 'none',
-              },
-            }),
             on('click', async (_event, signal) => {
               try {
                 await navigator.clipboard.writeText(handle.props.text)
@@ -74,6 +53,27 @@ export const PromptButton = clientEntry(
 
               state = 'idle'
               await handle.update()
+            }),
+            css({
+              appearance: 'none',
+              font: 'inherit',
+              textAlign: 'left',
+              cursor: 'pointer',
+              width: '100%',
+              display: 'flex',
+              gap: '16px',
+              alignItems: 'center',
+              padding: '16px',
+              border: 0,
+              borderRadius: '12px',
+              color: 'var(--text-primary)',
+              background: 'transparent',
+              transition: 'background-color 150ms ease, color 150ms ease',
+              '&:hover, &:focus-visible': {
+                background: 'var(--surface-4)',
+                color: 'var(--brand-blue)',
+                outline: 'none',
+              },
             }),
           ]}
           style={
