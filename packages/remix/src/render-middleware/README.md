@@ -70,6 +70,8 @@ router.get('/missing', (context) =>
 
 The middleware forwards request credentials and session headers to internal frame requests, converts them to safe `GET` requests, follows redirects, preserves application error bodies, propagates frame targets and top-frame URLs, and cancels frame rendering when the original request is aborted.
 
+If a component throws before the first chunk of HTML is ready, `router.fetch()` rejects with that error so the server can respond with a `500`. Errors in non-blocking frame content streamed later are reported to `onError` and leave the fallback in place.
+
 ### Options
 
 - **`assets`** - An asset server that resolves source-based client entry IDs to browser module URLs, import maps, and preload URLs. Omit it when client entries already use public URLs or the app has no client entries.
