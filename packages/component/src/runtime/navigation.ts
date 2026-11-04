@@ -38,13 +38,18 @@ interface FrameRedirectNavigationInfo {
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
-interface PendingUrlUpdates {
-  entry: NavigationHistoryEntry | null
-  destinationUrl: string | null | undefined
-  finished?: Promise<void>
+interface UrlUpdateQueue {
+  navigation: Navigation | undefined
+  url: string
+  destinationUrl: string | undefined
+  controller: AbortController
+  finished: Promise<void> | undefined
+  pending: number
+  updateHistory(href: string, history: UpdateUrlOptions['history']): NavigateEvent | undefined
+  dispose(): void
 }
 
-const pendingUrlUpdates = new WeakMap<NavigationTransition, PendingUrlUpdates>()
+const urlUpdateQueues = new WeakMap<Navigation, UrlUpdateQueue>()
 
 // Lets the navigation handler tell the WebKit workaround once it has reset scroll.
 const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
@@ -194,14 +199,14 @@ export interface UpdateUrlOptions {
 /**
  * Updates the current URL without fetching, rendering, or changing scroll and focus.
  * Replaces the current history entry by default; use `history: 'push'` to add an entry.
- * Waits for the current navigation, rejecting if it fails, is superseded, or changes destination.
- * Precommit waits reject with `AbortError` when the browser does not expose the destination.
+ * Captures the browser URL at invocation and waits for the active navigation to finish.
+ * Rejects if that navigation fails, an unrelated navigation starts, or the browser URL changes.
+ * Preceding queued URL updates are allowed; calls apply in order so the last applicable call wins.
  * Keeps Remix history state and the top-frame source in sync. Cross-origin URLs reject with
- * `SecurityError`; superseded, redirected, or natively canceled updates reject with `AbortError`.
+ * `SecurityError`; invalidated or natively canceled updates reject with `AbortError`.
  * An aborted signal rejects with its reason without aborting the navigation.
  * Native interception is awaited; cancellation or failure after dispatch does not roll back history.
- * Calls waiting for the same navigation apply in call order. Without frame navigation,
- * applications must restore locally rendered state on Back/Forward themselves.
+ * Without frame navigation, applications restore locally rendered state on Back/Forward themselves.
  * Do not await this inside the active navigation's own interception handler.
  *
  * @param href Same-origin URL, resolved against the document base URL when the update executes.
@@ -214,156 +219,138 @@ export async function updateUrl(href: string, options?: UpdateUrlOptions): Promi
   let signal = options?.signal
   signal?.throwIfAborted()
   let navigation = window.navigation
-  let transition: (NavigationTransition & { to?: NavigationDestination }) | null | undefined =
-    navigation?.transition
-  let pending: PendingUrlUpdates | undefined
-  if (navigation && transition) {
-    let destinationUrl = transition.to?.url
-    // Reload retains its entry after commit, but its requested URL is known from that entry.
-    if (!destinationUrl && transition.navigationType === 'reload') {
-      destinationUrl = transition.from.url ?? undefined
-    }
-    if (!destinationUrl && navigation.currentEntry?.id === transition.from.id) {
-      throw new DOMException('Precommit navigation destination is unavailable', 'AbortError')
-    }
-    // After commit, the current entry identifies the destination in older browsers.
-    pending = pendingUrlUpdates.get(transition)
-    if (!pending) {
-      pending = {
-        entry: navigation.currentEntry,
-        destinationUrl: destinationUrl ?? navigation.currentEntry?.url,
-      }
-      pendingUrlUpdates.set(transition, pending)
-    }
-    let captured = pending
-    let superseded = false
-    let listeners = new AbortController()
-    function changedNavigation() {
-      return new DOMException('Navigation changed before URL update', 'AbortError')
-    }
-    try {
-      await new Promise<void>((resolve, reject) => {
-        signal?.addEventListener('abort', () => reject(signal.reason), {
-          once: true,
-          signal: listeners.signal,
-        })
-        navigation.addEventListener(
-          'navigate',
-          () => {
-            superseded = true
-            reject(changedNavigation())
-          },
-          { signal: listeners.signal },
-        )
-        void transition.committed?.then(() => {
-          captured.entry = navigation.currentEntry
-        }, reject)
-        void transition.finished.then(() => {
-          // Release all waiters before their continuations apply URL-only history updates.
-          listeners.abort()
-          resolve()
-        }, reject)
-      })
-      signal?.throwIfAborted()
-      if (
-        superseded ||
-        navigation.transition ||
-        navigation.currentEntry?.id !== captured.entry?.id ||
-        navigation.currentEntry?.url !== captured.destinationUrl
-      ) {
-        throw changedNavigation()
-      }
-    } finally {
-      listeners.abort()
-    }
+  let existingQueue = navigation && urlUpdateQueues.get(navigation)
+  let queue: UrlUpdateQueue
+  if (
+    !existingQueue ||
+    existingQueue.controller.signal.aborted ||
+    (window.location.href !== existingQueue.url &&
+      window.location.href !== existingQueue.destinationUrl)
+  ) {
+    existingQueue?.controller.abort(urlUpdateAborted())
+    queue = createUrlUpdateQueue(navigation)
+  } else {
+    queue = existingQueue
   }
 
-  async function applyUpdate() {
-    signal?.throwIfAborted()
-    if (
-      pending &&
-      (navigation?.transition ||
-        navigation?.currentEntry?.id !== pending.entry?.id ||
-        navigation?.currentEntry?.url !== pending.destinationUrl)
-    ) {
-      throw new DOMException('Navigation changed before URL update', 'AbortError')
-    }
+  queue.pending++
+  let previous = queue.finished
+  let settled = Promise.withResolvers<void>()
+  queue.finished = settled.promise
+  let updating = previous
+    ? previous.then(() => applyUrlUpdate(queue, href, options))
+    : applyUrlUpdate(queue, href, options)
+  function settle() {
+    if (--queue.pending === 0) queue.dispose()
+    settled.resolve()
+  }
+  void updating.then(settle, settle)
+  let waitingSignal = signal
+    ? AbortSignal.any([signal, queue.controller.signal])
+    : queue.controller.signal
+  await waitForUrlUpdate(updating, waitingSignal)
+}
+
+function createUrlUpdateQueue(navigation: Navigation | undefined): UrlUpdateQueue {
+  let controller = new AbortController()
+  let dispatching = false
+  let updateEvent: NavigateEvent | undefined
+  let queue: UrlUpdateQueue = {
+    navigation,
+    url: window.location.href,
+    destinationUrl: undefined,
+    controller,
+    finished: navigation?.transition?.finished.catch((error: unknown) => {
+      controller.abort(error)
+      throw error
+    }),
+    pending: 0,
+    updateHistory(href, history) {
+      updateEvent = undefined
+      dispatching = true
+      try {
+        if (history === 'push') window.history.pushState(window.history.state, '', href)
+        else window.history.replaceState(window.history.state, '', href)
+      } finally {
+        dispatching = false
+      }
+      return updateEvent
+    },
+    dispose() {
+      navigation?.removeEventListener('navigate', observeNavigation, { capture: true })
+      if (navigation && urlUpdateQueues.get(navigation) === queue)
+        urlUpdateQueues.delete(navigation)
+    },
+  }
+  function observeNavigation(event: NavigateEvent) {
+    if (dispatching && !updateEvent) updateEvent = event
+    else controller.abort(urlUpdateAborted())
+  }
+  navigation?.addEventListener('navigate', observeNavigation, {
+    capture: true,
+    signal: controller.signal,
+  })
+  if (navigation) urlUpdateQueues.set(navigation, queue)
+  return queue
+}
+
+async function applyUrlUpdate(
+  queue: UrlUpdateQueue,
+  href: string,
+  options?: UpdateUrlOptions,
+): Promise<void> {
+  let navigation = queue.navigation
+  try {
+    options?.signal?.throwIfAborted()
+    queue.controller.signal.throwIfAborted()
+    if (navigation?.transition || window.location.href !== queue.url) throw urlUpdateAborted()
     let entry = navigation?.currentEntry
     let state = entry?.getState()
     let destination = document.createElement('a')
     destination.href = href
-    let destinationUrl = href === '' ? window.location.href : destination.href
-    let events: NavigateEvent[] = []
-    function observeUpdate(event: NavigateEvent) {
-      events.push(event)
+    queue.destinationUrl = href === '' ? window.location.href : destination.href
+    let event = queue.updateHistory(href, options?.history)
+    queue.controller.signal.throwIfAborted()
+    if (event?.defaultPrevented || event?.signal.aborted) throw urlUpdateAborted()
+    let transition = navigation?.transition
+    if (transition && navigation?.currentEntry?.id === entry?.id) await transition.committed
+    queue.controller.signal.throwIfAborted()
+    let updatedEntry = navigation?.currentEntry
+    if (entry && (updatedEntry?.id === entry.id || updatedEntry?.url !== queue.destinationUrl)) {
+      queue.controller.abort(urlUpdateAborted())
+      throw queue.controller.signal.reason
     }
-    navigation?.addEventListener('navigate', observeUpdate, { capture: true })
-    try {
-      if (options?.history === 'push') {
-        window.history.pushState(window.history.state, '', href)
-      } else {
-        window.history.replaceState(window.history.state, '', href)
-      }
-      // A canceled mutation can leave a guard's pending precommit transition active instead.
-      if (
-        events.length > 1 ||
-        events.some((event) => event.defaultPrevented || event.signal.aborted)
-      ) {
-        throw new DOMException('URL update was canceled or superseded', 'AbortError')
-      }
-      let updateTransition = navigation?.transition
-      if (updateTransition && navigation?.currentEntry?.id === entry?.id) {
-        await updateTransition.committed
-      }
-      let updatedEntry = navigation?.currentEntry
-      // A native listener can cancel this update and synchronously install its own entry.
-      if (
-        entry &&
-        (events.length > 1 ||
-          events.some((event) => event.defaultPrevented || event.signal.aborted) ||
-          updatedEntry?.id === entry.id ||
-          updatedEntry?.url !== destinationUrl ||
-          (navigation?.transition && navigation.transition !== updateTransition))
-      ) {
-        throw new DOMException('URL update was canceled or superseded', 'AbortError')
-      }
-      let src = window.location.href
-      if (navigation && state !== undefined) {
-        navigation.updateCurrentEntry({
-          state: isRuntimeNavigation(state) ? { ...state, target: undefined, src } : state,
-        })
-      }
+    let src = window.location.href
+    if (navigation && state !== undefined) {
+      navigation.updateCurrentEntry({
+        state: isRuntimeNavigation(state) ? { ...state, target: undefined, src } : state,
+      })
+    }
+    queue.controller.signal.throwIfAborted()
+    if (navigation?.currentEntry?.id !== updatedEntry?.id) throw urlUpdateAborted()
+    setTopFrameSource(src)
+    queue.url = src
+    if (transition) {
+      await transition.finished
+      queue.controller.signal.throwIfAborted()
       if (
         navigation?.currentEntry?.id !== updatedEntry?.id ||
-        (navigation?.transition && navigation.transition !== updateTransition)
+        window.location.href !== src ||
+        navigation?.transition
       ) {
-        throw new DOMException('URL update was superseded', 'AbortError')
+        queue.controller.abort(urlUpdateAborted())
+        throw queue.controller.signal.reason
       }
-      setTopFrameSource(src)
-      if (pending) {
-        pending.entry = navigation?.currentEntry ?? null
-        pending.destinationUrl = src
-      }
-      if (updateTransition) {
-        await updateTransition.finished
-        if (
-          events.length > 1 ||
-          navigation?.currentEntry?.id !== updatedEntry?.id ||
-          window.location.href !== src ||
-          navigation?.transition
-        ) {
-          throw new DOMException('URL update was superseded', 'AbortError')
-        }
-      }
-    } finally {
-      navigation?.removeEventListener('navigate', observeUpdate, { capture: true })
     }
+  } finally {
+    queue.destinationUrl = undefined
+    // Release an idle queue synchronously so consecutive idle calls still update immediately.
+    if (queue.pending === 1) queue.dispose()
   }
+}
 
-  let updating = pending ? (pending.finished ?? Promise.resolve()).then(applyUpdate) : applyUpdate()
-  // A canceled or failed update settles its queue slot so later requests can still run.
-  if (pending) pending.finished = updating.catch(() => {})
-  await waitForUrlUpdate(updating, signal)
+function urlUpdateAborted(): DOMException {
+  return new DOMException('Navigation or URL changed before update completed', 'AbortError')
 }
 
 async function waitForUrlUpdate(updating: Promise<void>, signal?: AbortSignal): Promise<void> {

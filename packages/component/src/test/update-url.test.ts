@@ -38,6 +38,32 @@ function startPendingApp(t: TestContext) {
   return { app, started, complete, rejectPending, resolveFrame }
 }
 
+function startPrecommitNavigation(t: TestContext, href: string, redirect?: string) {
+  let [started, resolveStarted] = withResolvers<void>()
+  let [precommit, commit] = withResolvers<void>()
+  let listener = new AbortController()
+  window.navigation.addEventListener(
+    'navigate',
+    (event) => {
+      event.intercept({
+        async precommitHandler(controller) {
+          resolveStarted()
+          await precommit
+          if (redirect !== undefined) controller.redirect(redirect)
+        },
+      })
+    },
+    { once: true, signal: listener.signal },
+  )
+  let navigating = window.navigation.navigate(href)
+  t.after(async () => {
+    commit()
+    await navigating.finished?.catch(() => {})
+    listener.abort()
+  })
+  return { started, commit, navigating }
+}
+
 function stubGlobal(t: TestContext, name: string, value: unknown): void {
   let descriptor = Object.getOwnPropertyDescriptor(window, name)
   Object.defineProperty(window, name, { configurable: true, value })
@@ -686,6 +712,137 @@ describe('updateUrl', () => {
     expect(app.frames.top.src).toBe(window.location.href)
   })
 
+  it('queues a call from the native commit before synchronizing the previous update', async (t) => {
+    let { app } = startApp(t)
+    await app.ready()
+    let [precommit, commit] = withResolvers<void>()
+    let [second, resolveSecond, rejectSecond] = withResolvers<void>()
+    let listener = new AbortController()
+    t.after(() => {
+      commit()
+      listener.abort()
+    })
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => event.intercept({ precommitHandler: () => precommit }),
+      { once: true, signal: listener.signal },
+    )
+    window.navigation.addEventListener(
+      'currententrychange',
+      () => {
+        void updateUrl('?variant=red', { history: 'push' }).then(resolveSecond, rejectSecond)
+      },
+      { once: true, signal: listener.signal },
+    )
+    let first = updateUrl('?variant=blue', { history: 'push' })
+    let updates = Promise.all([first, second])
+
+    commit()
+    await updates
+    expect(window.location.search).toBe('?variant=red')
+    expect(app.frames.top.src).toBe(window.location.href)
+    expect(window.navigation.currentEntry?.getState()).toMatchObject({ src: window.location.href })
+  })
+
+  it('applies a queued successor after the previous committed native handler fails', async (t) => {
+    let { app } = startApp(t)
+    await app.ready()
+    let [handler, finish, fail] = withResolvers<void>()
+    let reason = new Error('Native handler failed after commit')
+    let listener = new AbortController()
+    t.after(() => {
+      finish()
+      listener.abort()
+    })
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => event.intercept({ handler: () => handler }),
+      { once: true, signal: listener.signal },
+    )
+    let first = updateUrl('?variant=blue')
+    let second = updateUrl('?variant=red')
+    let updates = Promise.allSettled([first, second])
+
+    fail(reason)
+    expect(await updates).toEqual([
+      { status: 'rejected', reason },
+      { status: 'fulfilled', value: undefined },
+    ])
+    expect(window.location.search).toBe('?variant=red')
+    expect(app.frames.top.src).toBe(window.location.href)
+  })
+
+  it('keeps a queued successor waiting after canceling an issued native precommit update', async (t) => {
+    let { app } = startApp(t)
+    await app.ready()
+    let original = window.location.href
+    let [precommit, commit] = withResolvers<void>()
+    let [handler, finish] = withResolvers<void>()
+    let listener = new AbortController()
+    t.after(() => {
+      commit()
+      finish()
+      listener.abort()
+    })
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        event.intercept({ precommitHandler: () => precommit, handler: () => handler })
+      },
+      { once: true, signal: listener.signal },
+    )
+    let controller = new AbortController()
+    let reason = new Error('Stale selection')
+    let rejected = expect(updateUrl('?variant=blue', { signal: controller.signal })).rejects.toBe(
+      reason,
+    )
+    let second = updateUrl('?variant=red')
+    let transition = window.navigation.transition
+    if (!transition) throw new Error('Expected native interception')
+
+    controller.abort(reason)
+    await rejected
+    expect(window.location.href).toBe(original)
+    commit()
+    await transition.committed
+    expect(window.location.search).toBe('?variant=blue')
+    expect(app.frames.top.src).toBe(window.location.href)
+    finish()
+    await second
+    expect(window.location.search).toBe('?variant=red')
+    expect(app.frames.top.src).toBe(window.location.href)
+  })
+
+  it('invalidates queued calls when an unrelated same-URL navigation interrupts an update', async (t) => {
+    let { app } = startApp(t)
+    await app.ready()
+    let [handler, finish] = withResolvers<void>()
+    let listener = new AbortController()
+    t.after(() => {
+      finish()
+      listener.abort()
+    })
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => event.intercept({ handler: () => handler }),
+      { once: true, signal: listener.signal },
+    )
+    let first = updateUrl('?variant=blue')
+    let second = updateUrl('?variant=red')
+    let updates = Promise.allSettled([first, second])
+    let href = window.location.href
+
+    await navigate(href, { history: 'replace' })
+    let results = await updates
+    expect(results.map((result) => result.status)).toEqual(['rejected', 'rejected'])
+    for (let result of results) {
+      if (result.status !== 'rejected') throw new Error('Expected a rejected URL update')
+      expect(result.reason).toHaveProperty('name', 'AbortError')
+    }
+    expect(window.location.href).toBe(href)
+    expect(app.frames.top.src).toBe(href)
+  })
+
   it('cancels one queued update without blocking later replacements', async (t) => {
     let { app, started, complete } = startPendingApp(t)
     await app.ready()
@@ -858,116 +1015,46 @@ describe('updateUrl', () => {
     expect(window.location.search).toBe('?variant=after-reload')
   })
 
-  it('only applies a precommit-waiting update when its destination is available', async (t) => {
-    let [started, resolveStarted] = withResolvers<void>()
-    let [precommit, commit] = withResolvers<void>()
-    let [pending, finish] = withResolvers<void>()
-    let listener = new AbortController()
-    t.after(() => {
-      commit()
-      finish()
-      listener.abort()
-    })
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => {
-        event.intercept({
-          async precommitHandler() {
-            resolveStarted()
-            await precommit
-          },
-          handler: () => pending,
-        })
-      },
-      { once: true, signal: listener.signal },
+  it('rejects when precommit navigation changes the browser URL captured at invocation', async (t) => {
+    let { started, commit, navigating } = startPrecommitNavigation(
+      t,
+      '/update-url/product?variant=pending',
     )
-    let navigating = window.navigation.navigate('/update-url/product?variant=pending')
     await started
-    let transition = window.navigation.transition
-    if (!transition) throw new Error('Expected an active transition')
-    if (!('to' in transition) || !transition.to) {
-      await expect(updateUrl('details?variant=settled')).rejects.toHaveProperty(
-        'name',
-        'AbortError',
-      )
-      commit()
-      finish()
-      await navigating.finished
-      expect(window.location.pathname).toBe('/update-url/product')
-      expect(window.location.search).toBe('?variant=pending')
-      return
-    }
-    let updating = updateUrl('details?variant=settled')
+    let rejected = expect(updateUrl('details?variant=stale')).rejects.toHaveProperty(
+      'name',
+      'AbortError',
+    )
     expect(window.location.href).toBe(originalHref)
 
     commit()
-    await navigating.committed
+    await navigating.finished
+    await rejected
     expect(window.location.pathname).toBe('/update-url/product')
     expect(window.location.search).toBe('?variant=pending')
-    finish()
-    await navigating.finished
-    await updating
-    expect(window.location.pathname).toBe('/update-url/details')
-    expect(window.location.search).toBe('?variant=settled')
   })
 
-  it('rejects an active precommit wait when the browser does not expose its destination', async (t) => {
-    let [started, resolveStarted] = withResolvers<void>()
-    let [precommit, commit] = withResolvers<void>()
-    let listener = new AbortController()
-    t.after(() => {
-      commit()
-      listener.abort()
-    })
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => {
-        event.intercept({
-          async precommitHandler() {
-            resolveStarted()
-            await precommit
-          },
-        })
-      },
-      { once: true, signal: listener.signal },
-    )
-    let navigating = window.navigation.navigate('/update-url/product?variant=pending')
+  it('waits for an uncommitted legacy navigation when the browser URL stays the same', async (t) => {
+    let { started, commit, navigating } = startPrecommitNavigation(t, originalHref)
     await started
     let transition = window.navigation.transition
     if (!transition) throw new Error('Expected an active transition')
     Object.defineProperty(transition, 'to', { value: undefined })
+    let updating = updateUrl('?variant=settled')
+    let result = updating.catch((error: unknown) => error)
 
-    await expect(updateUrl('?variant=stale')).rejects.toHaveProperty('name', 'AbortError')
-
-    expect(window.location.href).toBe(originalHref)
     commit()
     await navigating.finished
-    expect(window.location.pathname).toBe('/update-url/product')
-    expect(window.location.search).toBe('?variant=pending')
+    expect(await result).toBeUndefined()
+    expect(window.location.search).toBe('?variant=settled')
   })
 
-  it('rejects if precommit redirects the captured transition to another destination', async (t) => {
-    let [started, resolveStarted] = withResolvers<void>()
-    let [precommit, commit] = withResolvers<void>()
-    let listener = new AbortController()
-    t.after(() => {
-      commit()
-      listener.abort()
-    })
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => {
-        event.intercept({
-          async precommitHandler(controller) {
-            resolveStarted()
-            await precommit
-            controller.redirect('/update-url/redirected')
-          },
-        })
-      },
-      { once: true, signal: listener.signal },
+  it('rejects a captured transition redirect that changes the browser URL', async (t) => {
+    let { started, commit, navigating } = startPrecommitNavigation(
+      t,
+      '/update-url/requested',
+      '/update-url/redirected',
     )
-    let navigating = window.navigation.navigate('/update-url/requested')
     await started
     let rejected = expect(updateUrl('?variant=stale')).rejects.toHaveProperty('name', 'AbortError')
 
@@ -976,6 +1063,22 @@ describe('updateUrl', () => {
     await rejected
     expect(window.location.pathname).toBe('/update-url/redirected')
     expect(window.location.search).toBe('')
+  })
+
+  it('allows a captured transition redirect that commits the browser URL from invocation', async (t) => {
+    let { started, commit, navigating } = startPrecommitNavigation(
+      t,
+      '/update-url/requested',
+      originalHref,
+    )
+    await started
+    let updating = updateUrl('?variant=settled')
+    let result = updating.catch((error: unknown) => error)
+
+    commit()
+    await navigating.finished
+    expect(await result).toBeUndefined()
+    expect(window.location.search).toBe('?variant=settled')
   })
 
   it('rejects an update when another navigation supersedes the captured transition', async (t) => {
