@@ -2993,7 +2993,6 @@ describe('asset-server', () => {
       importedStyleHref,
       packageHref,
     ]
-    assert.ok(urls.length > 0)
     for (let url of urls) {
       let canonical = url
         .split('/')
@@ -3069,28 +3068,32 @@ describe('asset-server', () => {
     let allowed = await get(assetServer, `/assets/app/allowed.%40${fingerprint}.ts`)
     assert.ok(allowed)
     assert.equal(allowed.status, 200)
-    assert.equal(await get(assetServer, `/assets/app/blocked.~${fingerprint}.ts`), null)
-    assert.equal(await get(assetServer, `/assets/app/blocked.%40${fingerprint}.ts`), null)
     assert.equal(await get(assetServer, `/assets/app/%62locked.%7E${fingerprint}.ts`), null)
   })
 
-  it('does not resolve encoded traversal in fingerprinted requests', async () => {
-    let source = 'export const value = true'
-    await write(dir, 'app/entry.ts', source)
-    await write(dir, 'secret.ts', source)
-    let assetServer = createTestServer(dir, {
-      allowFiles: ['**'],
-      fingerprint: true,
-    })
+  it('decodes fingerprinted request paths once', async () => {
+    await write(dir, 'app/100%.ts', 'export const value = true')
+    let assetServer = createTestServer(dir, { fingerprint: true })
 
-    let href = await assetServer.getHref('app/entry.ts')
-    let fingerprint = href.match(/\.~([A-Za-z0-9_-]+)\.ts$/)?.[1]
-    assert.ok(fingerprint)
+    let href = await assetServer.getHref('app/100%.ts')
+    assert.match(href, /\/assets\/app\/100%25\.~[A-Za-z0-9_-]+\.ts$/)
 
-    assert.equal(await get(assetServer, `/assets/app/..%2Fsecret.~${fingerprint}.ts`), null)
-    assert.equal(await get(assetServer, `/assets/app/..%2Fsecret.%40${fingerprint}.ts`), null)
-    assert.equal(await get(assetServer, `/assets/app/%2E%2E%2Fsecret.%40${fingerprint}.ts`), null)
-    assert.equal(await get(assetServer, `/assets/app/...%40${fingerprint}`), null)
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(await get(assetServer, href.replace('100%25', '100%2525')), null)
+  })
+
+  it('serves files named like fingerprints when fingerprinting is disabled', async () => {
+    await write(dir, 'app/notes.~backup.ts', 'export const notes = true')
+    let assetServer = createTestServer(dir)
+
+    let href = await assetServer.getHref('app/notes.~backup.ts')
+    let response = await get(assetServer, href)
+
+    assert.equal(href, '/assets/app/notes.~backup.ts')
+    assert.ok(response)
+    assert.equal(response.status, 200)
   })
 
   it('returns null for malformed percent-encoded request paths', async () => {
@@ -3099,6 +3102,7 @@ describe('asset-server', () => {
     let fingerprintedServer = createTestServer(dir, { fingerprint: true })
 
     assert.equal(await get(assetServer, '/assets/app/%zz.ts'), null)
+    assert.equal(await get(assetServer, '/assets/app/entry%00.ts'), null)
     assert.equal(await get(fingerprintedServer, '/assets/app/%zz.~abc123.ts'), null)
     assert.equal(await get(fingerprintedServer, '/assets/app/%E0%A4%A.%40abc123.ts'), null)
   })

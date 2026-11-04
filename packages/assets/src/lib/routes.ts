@@ -68,7 +68,7 @@ export function compileRoutes(
       let relativePathname = getPathWithinRoot(mount.urlRoot, normalizedPathname)
       if (relativePathname === null) continue
       let decodedPathname = safeDecodeURIComponent(relativePathname)
-      if (decodedPathname === null) return null
+      if (decodedPathname === null || decodedPathname.includes('\0')) return null
       let filePath = resolveFilePath(mount.fileRoot, decodedPathname)
       if (getPathWithinRoot(mount.fileRoot, filePath) === null) return null
 

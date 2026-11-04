@@ -5,8 +5,7 @@ import { safeDecodeURIComponent } from './paths.ts'
 // Workers Static Assets) serve them without redirecting. `.@` is still accepted so URLs
 // emitted by earlier versions keep resolving.
 const fingerprintSeparator = '.~'
-const fingerprintedExtensionRE = /^(.+)\.[~@]([A-Za-z0-9_-]+)(\.[^./]+)$/
-const fingerprintedBasenameRE = /^(.+)\.[~@]([A-Za-z0-9_-]+)$/
+const fingerprintedBasenameRE = /^(.+)\.[~@]([A-Za-z0-9_-]{6})(\.[^./]+)?$/
 
 export async function hashContent(content: string | Uint8Array<ArrayBufferLike>): Promise<string> {
   let bytes =
@@ -26,21 +25,12 @@ export function parseFingerprintSuffix(pathname: string): {
   let lastSlashIndex = pathname.lastIndexOf('/')
   let directory = lastSlashIndex >= 0 ? pathname.slice(0, lastSlashIndex + 1) : ''
   let encodedBasename = lastSlashIndex >= 0 ? pathname.slice(lastSlashIndex + 1) : pathname
-  let basename = safeDecodeURIComponent(encodedBasename)
-  let match =
-    basename === null
-      ? null
-      : (basename.match(fingerprintedExtensionRE) ?? basename.match(fingerprintedBasenameRE))
+  let match = safeDecodeURIComponent(encodedBasename)?.match(fingerprintedBasenameRE)
+  let stem = match?.[1]
+  let extension = match?.[3] ?? ''
 
-  if (!match) {
-    return {
-      pathname,
-      requestedFingerprint: null,
-    }
-  }
-
-  let stem = match[1]
-  if (stem === '.' || stem === '..') {
+  // Without an extension, a `.` or `..` stem would resolve to a directory
+  if (!match || !stem || (!extension && (stem === '.' || stem === '..'))) {
     return {
       pathname,
       requestedFingerprint: null,
@@ -48,8 +38,8 @@ export function parseFingerprintSuffix(pathname: string): {
   }
 
   return {
-    pathname: `${directory}${encodeURIComponent(`${stem}${match[3] ?? ''}`)}`,
-    requestedFingerprint: match[2],
+    pathname: `${directory}${encodeURIComponent(stem + extension)}`,
+    requestedFingerprint: match[2] ?? null,
   }
 }
 

@@ -402,7 +402,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     },
 
     parseRequestPathname(pathname) {
-      let parsedPathname = parseServedPathname(pathname)
+      let parsedPathname = parseServedPathname(pathname, resolvedOptions.fingerprintAssets)
       let filePath = resolvedOptions.routes.resolveUrlPathname(parsedPathname.stablePathname)
       if (!filePath) return null
       if (resolvedOptions.fingerprintAssets && parsedPathname.requestedFingerprint === null)
@@ -1006,14 +1006,19 @@ function getFileSnapshot(filePath: string): FileSnapshot | null {
   }
 }
 
-function parseServedPathname(pathname: string): {
+function parseServedPathname(
+  pathname: string,
+  fingerprintAssets: boolean,
+): {
   isSourceMapRequest: boolean
   requestedFingerprint: string | null
   stablePathname: string
 } {
   let isSourceMapRequest = pathname.endsWith('.map')
   let pathWithoutMap = isSourceMapRequest ? pathname.slice(0, -4) : pathname
-  let fingerprint = parseFingerprintSuffix(pathWithoutMap)
+  let fingerprint = fingerprintAssets
+    ? parseFingerprintSuffix(pathWithoutMap)
+    : { pathname: pathWithoutMap, requestedFingerprint: null }
 
   return {
     isSourceMapRequest,
