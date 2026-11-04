@@ -30,7 +30,7 @@ Without JavaScript, native constraints and server validation still work. Failed 
 
 The component runtime preserves client-entry handle IDs across hydration, while nested local components receive new IDs. Context accepts an initial `id` scope so an entry can pass `handle.id` and retain exact server associations without new runtime infrastructure.
 
-Client errors become visible after blur or native invalid submission. Server errors appear immediately and are replaced on editing. Non-canceled native reset clears feedback after defaults restore. A new submission identity refreshes failed values; ordinary rerenders preserve edits. Changing schemas requires a keyed remount.
+Client errors become visible after blur or native invalid submission. Server errors appear immediately and are replaced on editing. Non-canceled native reset clears feedback after defaults restore. Single selects use the component renderer’s `defaultValue` handling to render selected options and update native reset defaults. A new submission identity refreshes failed values; ordinary rerenders preserve edits. Changing schemas requires a keyed remount.
 
 ## Shared messages and application checks
 

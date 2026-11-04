@@ -36,7 +36,7 @@ import {
   findContextFromAncestry,
 } from './vnode.ts'
 import { invariant } from './invariant.ts'
-import { patchHostProps } from './core/props.ts'
+import { patchHostProps, setSelectDefaultValue } from './core/props.ts'
 import type { StyleManager } from '../style/index.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
@@ -639,6 +639,9 @@ function diffHost(
 
 function setupHostNode(node: CommittedHostNode, scheduler: Scheduler): void {
   let props = getHostProps(node)
+  if (props.defaultValue != null && node._dom instanceof HTMLSelectElement) {
+    setSelectDefaultValue(node._dom, props.defaultValue)
+  }
 
   syncDirectEventListeners(node)
 

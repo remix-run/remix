@@ -209,6 +209,56 @@ describe('form.Context', () => {
     expect(field.errors).toEqual(['Second error'])
   })
 
+  it('restores select defaults through SSR, hydration, and replacement submissions', async (t) => {
+    let schema = fd.object({
+      name: fd.text(s.string().pipe(minLength(2))),
+      role: fd.text(s.enum_(['customer', 'admin'])),
+    })
+    let first = fd.parseSafe(schema, new URLSearchParams({ name: 'A', role: 'admin' }))
+    if (first.success) throw new Error('Expected failure')
+    function markup(submission: fd.FormSubmission) {
+      return (
+        <form.Context id="select-restoration" schema={schema} submission={submission}>
+          {({ fields }) => (
+            <form mix={form.root()}>
+              <select mix={form.control(fields.role)}>
+                <option value="customer">Customer</option>
+                <optgroup label="Staff">
+                  <option value="admin">Admin</option>
+                </optgroup>
+              </select>
+            </form>
+          )}
+        </form.Context>
+      )
+    }
+    let container = document.createElement('div')
+    container.innerHTML = await renderToString(markup(first))
+    document.body.appendChild(container)
+    let role = container.querySelector('select[name="role"]')
+    let native = container.querySelector('form')
+    if (!(role instanceof HTMLSelectElement) || !native) throw new Error('Missing form controls')
+    expect(role.value).toBe('admin')
+    expect(role.options[1].defaultSelected).toBe(true)
+    let view = render(markup(first), { container })
+    t.after(view.cleanup)
+    expect(container.querySelector('select[name="role"]')).toBe(role)
+    expect(role.value).toBe('admin')
+    edit(role, 'customer')
+    view.root.render(markup(first))
+    view.root.flush()
+    expect(role.value).toBe('customer')
+    edit(role, 'admin')
+    view.root.render(markup({ values: { role: 'customer' }, errors: { fields: {} } }))
+    view.root.flush()
+    expect(role.value).toBe('customer')
+    edit(role, 'admin')
+    native.reset()
+    await Promise.resolve()
+    view.root.flush()
+    expect(role.value).toBe('customer')
+  })
+
   it('supports select and textarea validity, canceled reset, and native reset timing', async (t) => {
     let schema = fd.object({
       choice: fd.text(s.string()),

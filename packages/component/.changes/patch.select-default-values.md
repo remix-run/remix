@@ -1,0 +1,1 @@
+Restore `<select>` selections from `value` or `defaultValue` during server rendering, including options inside components and optgroups (see #11630). In the browser, `defaultValue` initializes the selection and native reset defaults without controlling user edits.

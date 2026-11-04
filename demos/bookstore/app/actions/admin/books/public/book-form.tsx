@@ -84,13 +84,9 @@ export const AdminBookFields = clientEntry(
                 defaultValue={restored('publishedYear', book?.published_year ?? 2024)}
               />
               <Field field={fields.inStock} label="In Stock">
-                <select mix={form.control(fields.inStock)}>
-                  <option value="true" selected={stock === 'true'}>
-                    Yes
-                  </option>
-                  <option value="false" selected={stock === 'false'}>
-                    No
-                  </option>
+                <select defaultValue={stock} mix={form.control(fields.inStock)}>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
                 </select>
               </Field>
               <Field field={fields.cover} label="Book Cover Image">

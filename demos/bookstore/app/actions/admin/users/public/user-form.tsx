@@ -43,13 +43,9 @@ export const AdminUserFields = clientEntry(
                 defaultValue={typeof submittedEmail === 'string' ? submittedEmail : email}
               />
               <Field field={fields.role} label="Role">
-                <select mix={form.control(fields.role)}>
-                  <option value="customer" selected={selectedRole === 'customer'}>
-                    Customer
-                  </option>
-                  <option value="admin" selected={selectedRole === 'admin'}>
-                    Admin
-                  </option>
+                <select defaultValue={selectedRole} mix={form.control(fields.role)}>
+                  <option value="customer">Customer</option>
+                  <option value="admin">Admin</option>
                 </select>
               </Field>
               <button type="submit" class="btn">

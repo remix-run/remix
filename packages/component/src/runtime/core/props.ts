@@ -77,6 +77,9 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
       clearRuntimePropertyOnRemoval(dom, name)
     }
 
+    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) {
+      setSelectDefaultValue(dom, undefined)
+    }
     if (ns) dom.removeAttributeNS(ns, toLocalName(attr))
     else dom.removeAttribute(attr)
   }
@@ -92,6 +95,11 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
     let prevValue = curr[name]
     if (prevValue === nextValue) continue
 
+    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) {
+      setSelectDefaultValue(dom, nextValue)
+      continue
+    }
+
     if (name === 'style' && isStyleObject(nextValue)) {
       if (isStyleObject(prevValue)) {
         patchStyleObject(dom, prevValue, nextValue)
@@ -103,6 +111,13 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
     }
 
     patchHostProp(dom, name, nextValue, isSvg)
+  }
+}
+
+export function setSelectDefaultValue(select: HTMLSelectElement, value: unknown): void {
+  let defaultValue = value == null ? undefined : String(value)
+  for (let option of select.options) {
+    option.defaultSelected = defaultValue !== undefined && option.value === defaultValue
   }
 }
 

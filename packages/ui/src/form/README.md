@@ -87,6 +87,8 @@ Pass `FieldBinding<'text'>`, `FieldBinding<'password'>`, or another scalar kind 
 
 Client errors appear after blur or blocked submission, then update while editing. Server errors appear immediately; editing replaces them with current client feedback. A non-canceled native reset clears touched state and custom errors after native defaults restore. Programmatic edits need an `input` or `change` event.
 
+Single-select controls render restored values as selected options on the server and update their native reset defaults when a new submission arrives. Use `defaultValue` for an authored initial selection; per-option `selected` flags are unnecessary.
+
 A new submission object refreshes feedback and restored values. Reuse its identity until another submission arrives so unrelated renders preserve user edits. Applications own fetching, navigation, and pending state.
 
 ## Shared messages and supplemental errors

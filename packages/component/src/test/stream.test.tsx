@@ -318,6 +318,41 @@ describe('stream', () => {
       expect(error.message).toBe('script elements with children must have a single string child')
     })
 
+    it('renders select values as selected options through composed children', async () => {
+      function Choice() {
+        return () => <option>{'  B & C  '}</option>
+      }
+      let html = await renderToString(
+        <>
+          <select defaultValue="B & C">
+            <option value="a" selected>
+              A
+            </option>
+            <optgroup label="Other">
+              <Choice />
+            </optgroup>
+          </select>
+          <select value="b" defaultValue="a">
+            <option value="a">A</option>
+            <option value="b">B</option>
+          </select>
+          <select>
+            <option value="a" selected>
+              A
+            </option>
+          </select>
+        </>,
+      )
+      let container = document.createElement('div')
+      container.innerHTML = html
+      let selects = container.querySelectorAll('select')
+      expect(selects[0].value).toBe('B & C')
+      expect(selects[0].options[1].defaultSelected).toBe(true)
+      expect(selects[1].value).toBe('b')
+      expect(selects[2].value).toBe('a')
+      expect(html).not.toContain('defaultvalue=')
+    })
+
     it('renders textarea defaultValue as escaped text content', async () => {
       let stream = renderToStream(<textarea defaultValue={'Hello <Ryan> & friends'} />)
       let html = await drain(stream)

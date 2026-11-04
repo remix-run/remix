@@ -3357,7 +3357,7 @@ export interface PartialSelectHTMLProps<
   autocomplete?: Trackable<string | undefined>
   /** The `autoComplete` HTML attribute. */
   autoComplete?: Trackable<string | undefined>
-  /** The `defaultValue` HTML attribute. */
+  /** Initial selected value and native reset default; user edits remain uncontrolled. */
   defaultValue?: Trackable<string | number | undefined>
   /** The `disabled` HTML attribute. */
   disabled?: Trackable<boolean | undefined>

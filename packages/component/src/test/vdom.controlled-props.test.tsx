@@ -39,6 +39,39 @@ async function type(field: HTMLInputElement, text: string): Promise<void> {
 }
 
 describe('vdom controlled props', () => {
+  it('initializes uncontrolled select defaults and preserves edits until native reset', (t) => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    function markup(defaultValue: string) {
+      return (
+        <form>
+          <select defaultValue={defaultValue}>
+            <option value="a">A</option>
+            <option value="b">B</option>
+          </select>
+        </form>
+      )
+    }
+    root.render(markup('b'))
+    root.flush()
+    let select = container.querySelector('select')
+    let form = container.querySelector('form')
+    if (!select || !form) throw new Error('Missing form controls')
+    expect(select.value).toBe('b')
+    expect(select.hasAttribute('defaultvalue')).toBe(false)
+    select.value = 'a'
+    root.render(markup('b'))
+    root.flush()
+    expect(select.value).toBe('a')
+    form.reset()
+    expect(select.value).toBe('b')
+    root.render(markup('a'))
+    root.flush()
+    form.reset()
+    expect(select.value).toBe('a')
+  })
+
   it('restores controlled value on native input when no update happens', async () => {
     let container = document.createElement('div')
     let root = createRoot(container)

@@ -163,7 +163,6 @@ export const fieldValidity = createMixin<
         delete attrs.type
         delete attrs.defaultChecked
       }
-      if (hostType === 'select') delete attrs.defaultValue
       let describedBy =
         typeof attrs['aria-describedby'] === 'string'
           ? attrs['aria-describedby'].split(/\s+/).filter((id) => id && id !== config.errorId)
