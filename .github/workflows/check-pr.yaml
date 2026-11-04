@@ -133,11 +133,18 @@ jobs:
         run: pnpm build
 
   test_ubuntu:
-    name: test (ubuntu-latest)
+    name: test (ubuntu-latest, changed packages)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Fetch base and head history
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -172,7 +179,10 @@ jobs:
         run: pnpm --filter @remix-run/component exec playwright install-deps
 
       - name: Run tests
-        run: pnpm test
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node ./scripts/run-changed-workspaces.ts test "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
   test_bun_changed:
     name: test (bun, ubuntu-latest, changed packages)
