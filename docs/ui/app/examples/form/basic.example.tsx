@@ -28,7 +28,7 @@ export default function ExampleForm(handle: Handle) {
             }),
             on('submit', (event) => {
               event.preventDefault()
-              let result = Contact.parseSafe(new FormData(event.currentTarget))
+              let result = fd.parseSafe(Contact, new FormData(event.currentTarget))
               checked = result.success
               handle.update()
             }),

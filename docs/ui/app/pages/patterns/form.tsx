@@ -20,7 +20,7 @@ const anatomyCode = await highlightSource(
 )
 
 const handlerCode = await highlightSource(
-  'let submission = Contact.parseSafe(await request.formData())\nif (!submission.success) {\n  return render(<ContactForm submission={submission} />, { status: 400 })\n}\nawait saveContact(submission.value)',
+  'let submission = fd.parseSafe(Contact, await request.formData())\nif (!submission.success) {\n  return render(<ContactForm submission={submission} />, { status: 400 })\n}\nawait saveContact(submission.value)',
 )
 
 const typeDefinitions = {
@@ -44,10 +44,10 @@ export default function FormPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="submissions" title="Server submissions">
         <p>
-          Call <code>schema.parseSafe()</code> in the handler. Success contains the validated value.
-          Pass a failed submission back to Context to restore non-sensitive values and show field or
-          form errors. Passwords and files are never restored. Use the same submission shape for
-          application errors such as an email address already in use.
+          Call <code>fd.parseSafe(schema, data)</code> in the handler. Success contains the
+          validated value. Pass a failed submission back to Context to restore non-sensitive values
+          and show field or form errors. Passwords and files are never restored. Use the same
+          submission shape for application errors such as an email address already in use.
         </p>
         <CodeBlock html={handlerCode} />
       </Section>

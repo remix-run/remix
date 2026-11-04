@@ -1,3 +1,4 @@
+import * as fd from 'remix/data-schema/form'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
@@ -33,7 +34,7 @@ export default createController(routes.checkout, {
         return redirect(routes.cart.index.href())
       }
 
-      let submission = ShippingAddressForm.parseSafe(formData)
+      let submission = fd.parseSafe(ShippingAddressForm, formData)
       if (!submission.success) {
         return render(
           <CheckoutPage cart={cart} total={getCartTotal(cart)} submission={submission} />,

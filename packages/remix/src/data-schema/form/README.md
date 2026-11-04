@@ -14,15 +14,15 @@ export const Signup = fd.object({
   terms: fd.checkbox(s.literal(true)),
 })
 
-let result = Signup.parseSafe(await request.formData())
+let result = fd.parseSafe(Signup, await request.formData())
 if (result.success) await createAccount(result.value)
 ```
 
-`Signup.parse(data)` returns validated output or throws `ValidationError`. `Signup.parseSafe(data)` returns `{ success: true, value }` or a failure with `success: false`, `issues`, `values`, and grouped errors. `errors.fields` contains only fields with messages, and `errors.form` is absent when there are no form-level messages. Both methods accept ordinary parse options and preserve error-map precedence and inferred transforms. Validation runs once, after form decoding.
+`fd.parse(Signup, data)` returns validated output or throws `ValidationError`. `fd.parseSafe(Signup, data)` returns `{ success: true, value }` or a failure with `success: false`, `issues`, `values`, and grouped errors. `errors.fields` contains only fields with messages, and `errors.form` is absent when there are no form-level messages. Both functions accept ordinary parse options and preserve error-map precedence and inferred transforms. Validation runs once, after form decoding.
 
 On failure, `values` retains raw text, number text, checkbox states, and repeated text for restoration. Passwords and files are omitted. Issues retain messages and logical paths; raw inputs and arbitrary metadata are omitted. Application-authored messages must avoid embedding secrets. Invalid source inputs produce a form-level failure with empty restoration values.
 
-The functional calls `fd.parse(Signup, data)` and `fd.parseSafe(Signup, data)` are also available. `fd.parse` re-exports the ordinary throwing parser; `fd.parseSafe` adds the same form failure adaptation as the schema method. The form object implements Standard Schema, so `s.parse` and `s.parseSafe` also work with it and keep their ordinary contracts. Core `s.parseSafe` does not add restoration data or project issues. The instance parsing methods belong to `fd.object()`; ordinary schemas retain their existing functional API.
+`fd.parse` re-exports the ordinary throwing parser; `fd.parseSafe` uses the core safe parser and prepares failures for rendering. The form object implements Standard Schema, so `s.parse` and `s.parseSafe` also work with it and keep their ordinary contracts. Core `s.parseSafe` does not add restoration data or project issues. Form and ordinary schemas use functional parsing APIs; neither exposes instance parsing methods.
 
 ## Reuse domain rules
 
@@ -74,6 +74,6 @@ The lower-level `remix/data-schema/form-data` export stays available with its ex
 
 Form objects expose readonly `.entries` with the original scalar schemas, kinds, names, and decoding options. `isFormField()` distinguishes scalar entries; `validateField()` applies the same decoding and validation to an individual control value.
 
-`password` returns validated passwords normally on success. Pass a failed `Signup.parseSafe(data)` result directly to [`form.Context`](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). This module owns the `FormSubmission`, `FormErrors`, and parsing-result types; UI imports them without a reverse dependency. Handlers can also construct a `FormSubmission` for business failures.
+`password` returns validated passwords normally on success. Pass a failed `fd.parseSafe(Signup, data)` result directly to [`form.Context`](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). This module owns the `FormSubmission`, `FormErrors`, and parsing-result types; UI imports them without a reverse dependency. Handlers can also construct a `FormSubmission` for business failures.
 
 `form.Context` accepts the inspectable `fd.object()` result. Root refinements/transforms produce general schemas without that inspection contract; keep cross-field business checks in the handler. Scalar refinements and transforms are supported.

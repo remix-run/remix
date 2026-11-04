@@ -1,3 +1,4 @@
+import * as fd from 'remix/data-schema/form'
 import { createController } from 'remix/router'
 
 import { routes } from '../../routes.ts'
@@ -12,7 +13,7 @@ export default createController(routes.contact, {
     },
 
     async action({ formData, render }) {
-      let submission = ContactForm.parseSafe(formData)
+      let submission = fd.parseSafe(ContactForm, formData)
       if (!submission.success) {
         return render(<ContactPage submission={submission} />, { status: 400 })
       }

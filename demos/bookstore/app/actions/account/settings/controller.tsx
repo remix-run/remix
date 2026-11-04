@@ -1,3 +1,4 @@
+import * as fd from 'remix/data-schema/form'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
@@ -20,7 +21,7 @@ export default createController(routes.account.settings, {
 
     async update({ auth, db, formData, render }) {
       let user = getCurrentUser(auth)
-      let submission = AccountSettingsForm.parseSafe(formData)
+      let submission = fd.parseSafe(AccountSettingsForm, formData)
       if (!submission.success) {
         return render(<AccountSettingsPage user={user} submission={submission} />, { status: 400 })
       }

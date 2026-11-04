@@ -1,3 +1,4 @@
+import * as fd from 'remix/data-schema/form'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
@@ -44,7 +45,7 @@ export default createController(routes.admin.books, {
     },
 
     async create({ db, formData, render }) {
-      let submission = AdminBookForm.parseSafe(formData)
+      let submission = fd.parseSafe(AdminBookForm, formData)
       if (!submission.success) {
         return render(
           <AdminBookFormPage
@@ -106,7 +107,7 @@ export default createController(routes.admin.books, {
         return new Response('Book not found', { status: 404 })
       }
 
-      let submission = AdminBookForm.parseSafe(formData)
+      let submission = fd.parseSafe(AdminBookForm, formData)
       if (!submission.success) {
         book = await resolveBookCover(book)
         return render(

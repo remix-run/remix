@@ -6,13 +6,13 @@ One inspectable form schema connects transport decoding, ordinary validation, an
 
 `fd.object({ email: fd.text(Account.shape.email) })` reuses domain rules without another UI definition. A separate domain schema is optional; inline rules and fields from multiple models work the same way. Only configured fields are parsed. Handlers supply generated values, run business checks, and select values for persistence.
 
-Explicit `text`, `password`, `number`, and `checkbox` descriptions identify transport semantics without inspecting DOM input types or changing ordinary `s.object` parsing. They normalize absence and blanks before running the original schema. The schema exposes `parse` and form-aware `parseSafe` methods that reuse core validation, options, messages, and inferred transforms. The existing `data-schema/form-data` adapter retains its lower-level extraction behavior.
+Explicit `text`, `password`, `number`, and `checkbox` descriptions identify transport semantics without inspecting DOM input types or changing ordinary `s.object` parsing. They normalize absence and blanks before running the original schema. The functional `fd.parse` and form-aware `fd.parseSafe` APIs reuse core validation, options, messages, and inferred transforms. The existing `data-schema/form-data` adapter retains its lower-level extraction behavior.
 
 Readonly `.entries` preserves original scalar schemas and decoding metadata for adapters. Form kinds and sensitivity belong here; labels, IDs, ARIA, feedback, and browser validity flags remain in UI. Package dependencies flow from UI to data-schema.
 
 ## Form-aware safe parsing carries failed submissions
 
-We chose `Signup.parseSafe(data)` as the handler's safe parsing API. It keeps the familiar `success`, `value`, and `issues` result shape, while failures also contain raw restorable `values` and grouped errors. `errors.fields` includes only fields with messages, and `errors.form` is absent without form-level messages. `fd.parseSafe(Signup, data)` uses the same implementation. `Signup.parse(data)` and `fd.parse(Signup, data)` retain ordinary throwing behavior.
+We chose `fd.parseSafe(Signup, data)` as the handler's safe parsing API. It keeps the familiar `success`, `value`, and `issues` result shape, while failures also contain raw restorable `values` and grouped errors. `errors.fields` includes only fields with messages, and `errors.form` is absent without form-level messages. `fd.parse(Signup, data)` retains ordinary throwing behavior. We chose functional parsing to match ordinary data-schema APIs and avoid introducing instance methods only on form schemas.
 
 We considered a separate `ui/form.parseSubmission(Signup, data)` adapter. That would make handlers choose between two safe parsing calls for the same schema and split submission handling across packages. The `fd.object` schema already knows logical and submitted names, control kinds, and which values are passwords or files. `packages/data-schema/src/lib/form.ts` now validates once and constructs the failure result there; `ui/form` imports that plain-data contract for rendering. Dependencies continue to flow from UI to data-schema.
 

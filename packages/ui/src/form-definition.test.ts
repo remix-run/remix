@@ -34,10 +34,6 @@ expectType<
     }
   >
 >()
-expectType<Equal<ReturnType<typeof Profile.parse>, fd.InferOutput<typeof Profile>>>()
-expectType<
-  Equal<ReturnType<typeof Profile.parseSafe>, fd.FormParseResult<fd.InferOutput<typeof Profile>>>
->()
 expectType<Equal<FieldBindings<typeof Profile.entries>['password'], FieldBinding<'password'>>>()
 const mutableEntries = { name: fd.text(s.string()) }
 const MutableForm = fd.object(mutableEntries)

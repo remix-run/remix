@@ -1,3 +1,4 @@
+import * as fd from 'remix/data-schema/form'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
@@ -15,7 +16,7 @@ export default createController(routes.auth.register, {
     },
 
     async action({ db, formData, render, session }) {
-      let submission = RegistrationForm.parseSafe(formData)
+      let submission = fd.parseSafe(RegistrationForm, formData)
       if (!submission.success) {
         return render(<RegisterPage submission={submission} />, { status: 400 })
       }

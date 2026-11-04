@@ -1,3 +1,4 @@
+import * as fd from 'remix/data-schema/form'
 import { createController } from 'remix/router'
 
 import { passwordResetTokens, users } from '../../../data/schema.ts'
@@ -12,7 +13,7 @@ export default createController(routes.auth.forgotPassword, {
     },
 
     async action({ db, formData, render }) {
-      let submission = ForgotPasswordForm.parseSafe(formData)
+      let submission = fd.parseSafe(ForgotPasswordForm, formData)
       if (!submission.success) {
         return render(<ForgotPasswordPage submission={submission} />, { status: 400 })
       }

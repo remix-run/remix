@@ -1,11 +1,6 @@
 import { object as formDataObject } from './form-data.ts'
 import type { FormDataEntrySchema, FormDataSource } from './form-data.ts'
-import {
-  boolean,
-  createSchema,
-  parse as parseValue,
-  parseSafe as parseValueSafe,
-} from './schema.ts'
+import { boolean, createSchema, parseSafe as parseValueSafe } from './schema.ts'
 import type { ErrorMap, Issue, ParseOptions, Schema, ValidationResult } from './schema.ts'
 import { coerceNumber } from './coerce.ts'
 
@@ -106,20 +101,6 @@ export type FormSchema<entries extends FormEntries = FormEntries> = Schema<
 > & {
   /** Immutable descriptions of the form's submitted fields. */
   readonly entries: Readonly<entries>
-  /**
-   * Parses form data, returning validated output or throwing ValidationError.
-   * @param value The FormData or URLSearchParams input to validate.
-   * @param options Ordinary schema parsing options.
-   * @returns The validated and transformed form output.
-   */
-  parse(value: unknown, options?: ParseOptions): FormValue<entries>
-  /**
-   * Parses form data without throwing validation errors and prepares failures for rendering.
-   * @param value The FormData or URLSearchParams input to validate.
-   * @param options Ordinary schema parsing options.
-   * @returns Validated output or restorable values and grouped errors, omitting passwords and files.
-   */
-  parseSafe(value: unknown, options?: ParseOptions): FormParseResult<FormValue<entries>>
 }
 
 const numeric = coerceNumber()
@@ -275,18 +256,9 @@ export function object<const entries extends FormEntries>(entries: entries): For
     ]),
   )
   // Each extracted entry delegates to the corresponding original schema, preserving its output.
-  let schema = Object.defineProperties(formDataObject(extracted), {
-    entries: { value: Object.freeze(descriptions), enumerable: true },
-    parse: {
-      value(value: unknown, options?: ParseOptions): FormValue<entries> {
-        return parseValue(schema, value, options)
-      },
-    },
-    parseSafe: {
-      value(value: unknown, options?: ParseOptions): FormParseResult<FormValue<entries>> {
-        return parseSafe(schema, value, options)
-      },
-    },
+  let schema = Object.defineProperty(formDataObject(extracted), 'entries', {
+    value: Object.freeze(descriptions),
+    enumerable: true,
   }) as FormSchema<entries>
   return schema
 }

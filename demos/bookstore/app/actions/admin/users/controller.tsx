@@ -1,3 +1,4 @@
+import * as fd from 'remix/data-schema/form'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
@@ -55,7 +56,7 @@ export default createController(routes.admin.users, {
     async update({ db, formData, params, render }) {
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
-      let submission = AdminUserForm.parseSafe(formData)
+      let submission = fd.parseSafe(AdminUserForm, formData)
       if (!submission.success && targetUser) {
         return render(
           <AdminUserFormPage

@@ -99,7 +99,7 @@ describe('form parseSafe', () => {
   })
 })
 
-describe('form schema parsing methods', () => {
+describe('form parsing', () => {
   it('shares typed transformed success output and parses once per call', () => {
     let calls = 0
     let Signup = fd.object({
@@ -112,15 +112,14 @@ describe('form schema parsing methods', () => {
     })
     let data = new FormData()
     data.set('name', 'Ada')
-    let { parse, parseSafe } = Signup
-    let value: { readonly name: number } = parse(data)
+    assert.equal('parse' in Signup, false)
+    assert.equal('parseSafe' in Signup, false)
+    let value: { readonly name: number } = fd.parse(Signup, data)
     assert.deepEqual(value, { name: 3 })
     assert.equal(calls, 1)
-    let result: fd.FormParseResult<{ readonly name: number }> = parseSafe(data)
+    let result: fd.FormParseResult<{ readonly name: number }> = fd.parseSafe(Signup, data)
     assert.deepEqual(result, { success: true, value: { name: 3 } })
     assert.equal(calls, 2)
-    assert.deepEqual(fd.parseSafe(Signup, data), result)
-    assert.equal(calls, 3)
   })
 
   it('keeps throwing parsing and core safe parsing contracts unchanged', () => {
@@ -132,16 +131,15 @@ describe('form schema parsing methods', () => {
       ),
     })
     let data = new URLSearchParams({ password: 'private-secret' })
-    assert.throws(() => Signup.parse(data), fd.ValidationError)
+    assert.throws(() => fd.parse(Signup, data), fd.ValidationError)
     let ordinary = s.parseSafe(Signup, data)
     if (ordinary.success) throw new Error('Expected failure')
     assert.equal('values' in ordinary, false)
     assert.equal(JSON.stringify(ordinary).includes('private-secret'), true)
-    let submission = Signup.parseSafe(data)
+    let submission = fd.parseSafe(Signup, data)
     if (submission.success) throw new Error('Expected failure')
     assert.deepEqual(submission.values, {})
     assert.equal(JSON.stringify(submission).includes('private-secret'), false)
-    assert.deepEqual(submission, fd.parseSafe(Signup, data))
   })
 
   it('forwards parsing options and restores raw values independently of abortEarly', () => {
@@ -156,7 +154,8 @@ describe('form schema parsing methods', () => {
       age: fd.number(s.number()),
       password: fd.password(s.string()),
     })
-    let result = Signup.parseSafe(
+    let result = fd.parseSafe(
+      Signup,
       new URLSearchParams({
         name: 'Ada',
         age: 'invalid',
@@ -175,7 +174,7 @@ describe('form schema parsing methods', () => {
     assert.deepEqual(result.values, { name: 'Ada', age: 'invalid' })
     assert.deepEqual(result.errors, { fields: { name: ['Try again'] } })
     try {
-      Signup.parse(new URLSearchParams({ name: 'Ada' }), {
+      fd.parse(Signup, new URLSearchParams({ name: 'Ada' }), {
         errorMap() {
           return 'Throwing message'
         },
@@ -189,7 +188,7 @@ describe('form schema parsing methods', () => {
 
   it('returns a grouped failure for invalid source input instead of attempting restoration', () => {
     let Signup = fd.object({ email: fd.text(s.string()) })
-    let result = Signup.parseSafe({ email: 'untrusted' })
+    let result = fd.parseSafe(Signup, { email: 'untrusted' })
     if (result.success) throw new Error('Expected failure')
     assert.deepEqual(result.values, {})
     assert.deepEqual(result.errors.fields, {})
