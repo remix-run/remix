@@ -509,6 +509,14 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('script[type="importmap"]').count(), 2)
   })
 
+  it('uses the startup managed import map nonce for HMR import maps', async (t) => {
+    await assertHmrImportMapNonce(t, 'import-map')
+  })
+
+  it('uses the startup document metadata nonce for HMR import maps', async (t) => {
+    await assertHmrImportMapNonce(t, 'meta')
+  })
+
   it('applies updates with new import map entries', async (t) => {
     let fixture = await createHmrFixture({ counterBareImportConfigured: true })
 
@@ -1253,6 +1261,70 @@ describe('asset server HMR', () => {
     }
   })
 })
+
+async function assertHmrImportMapNonce(
+  t: TestContext,
+  source: 'import-map' | 'meta',
+): Promise<void> {
+  let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+  t.after(fixture.close)
+  let page = await t.serve(await createHmrTestServer(fixture))
+  let nonce = 'hmr-document-nonce'
+  await page.route('**/', async (route) => {
+    let response = await route.fetch()
+    let html = (await response.text())
+      .replace(
+        '<script type="importmap">',
+        `<meta name="rmx-nonce" nonce="${source === 'meta' ? nonce : 'other-nonce'}">` +
+          `<script ${source === 'import-map' ? 'data-rmx-import-map ' : ''}nonce="${nonce}" type="importmap">`,
+      )
+      .replace('<script type="module"', `<script nonce="${nonce}" type="module"`)
+    await route.fulfill({
+      response,
+      body: html,
+      headers: {
+        ...response.headers(),
+        'Content-Security-Policy': `script-src 'self' 'nonce-${nonce}' blob:`,
+      },
+    })
+  })
+  await page.addInitScript(() => {
+    let violations: string[] = []
+    Reflect.set(window, 'cspViolations', violations)
+    document.addEventListener('securitypolicyviolation', (event) => {
+      violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+    })
+  })
+  await navigateToHmrPage(page)
+  await waitForText(page, '[data-testid="increment"]', 'Increment')
+  await page.locator('[data-testid="field"]').fill('keep me')
+  await page.evaluate(() => {
+    for (let element of document.querySelectorAll<HTMLElement>(
+      'meta[name="rmx-nonce"],script[type="importmap"]',
+    )) {
+      element.nonce = 'later-response-nonce'
+    }
+  })
+
+  await write(
+    fixture.rootDir,
+    'app/counter.ts',
+    getCounterModuleSource({ bareImport: true, buttonText: 'Increment with CSP' }),
+  )
+
+  await waitForText(page, '[data-testid="increment"]', 'Package: Increment with CSP')
+  assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  assert.equal(
+    await page.evaluate(
+      () =>
+        Array.from(document.querySelectorAll<HTMLScriptElement>('script[type="importmap"]')).at(-1)
+          ?.nonce,
+    ),
+    nonce,
+  )
+  assert.deepEqual(await page.evaluate(() => Reflect.get(window, 'cspViolations')), [])
+}
 
 type HmrFixture = {
   close(): Promise<void>

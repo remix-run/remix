@@ -27,6 +27,7 @@
     "./cache-control": "./src/lib/cache-control.ts",
     "./content-disposition": "./src/lib/content-disposition.ts",
     "./content-range": "./src/lib/content-range.ts",
+    "./content-security-policy": "./src/lib/content-security-policy.ts",
     "./content-type": "./src/lib/content-type.ts",
     "./cookie": "./src/lib/cookie.ts",
     "./if-match": "./src/lib/if-match.ts",
@@ -67,6 +68,10 @@
       "./content-range": {
         "types": "./dist/lib/content-range.d.ts",
         "default": "./dist/lib/content-range.js"
+      },
+      "./content-security-policy": {
+        "types": "./dist/lib/content-security-policy.d.ts",
+        "default": "./dist/lib/content-security-policy.js"
       },
       "./content-type": {
         "types": "./dist/lib/content-type.d.ts",

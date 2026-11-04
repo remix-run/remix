@@ -93,14 +93,7 @@ describe('clientEntry', () => {
 
       if (typeof renderFn === 'function') {
         let element = renderFn()
-        expect(element).toEqual({
-          $rmx: true,
-          type: 'button',
-          props: {
-            children: ['Count', ': ', 5],
-          },
-          key: undefined,
-        })
+        expect(element).toEqual(<button children={['Count', ': ', 5]} />)
       }
     })
   })

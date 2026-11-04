@@ -22,8 +22,8 @@ catalogs:
       specifier: 1.5.2
       version: 1.5.2
     playwright:
-      specifier: ^1.60.0
-      version: 1.60.0
+      specifier: ^1.63.0
+      version: 1.63.0
     shiki:
       specifier: 4.4.1
       version: 4.4.1
@@ -32,9 +32,9 @@ catalogs:
       version: 7.0.2
 
 patchedDependencies:
-  playwright-core@1.60.0:
-    hash: df2bd762f946ea43d88354dde0800ec9d8807703827f90fed7a071c16565b506
-    path: patches/playwright-core@1.60.0.patch
+  playwright-core@1.63.0:
+    hash: 799550f433317bb54f4e793adfc4ebe04b974d28dc33bb342c4d332caaf0eb5a
+    path: patches/playwright-core@1.63.0.patch
 
 importers:
 
@@ -92,7 +92,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -114,7 +114,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -149,7 +149,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -197,7 +197,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -506,7 +506,7 @@ importers:
         version: 4.0.3
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -766,7 +766,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -821,7 +821,7 @@ importers:
         version: 5.0.0
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -996,6 +996,28 @@ importers:
         version: link:../assert
       '@remix-run/test':
         specifier: workspace:*
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  packages/csp-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:^
         version: link:../test
       '@types/node':
         specifier: 'catalog:'
@@ -1704,7 +1726,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -1829,6 +1851,9 @@ importers:
       '@remix-run/cors-middleware':
         specifier: workspace:^
         version: link:../cors-middleware
+      '@remix-run/csp-middleware':
+        specifier: workspace:^
+        version: link:../csp-middleware
       '@remix-run/csrf-middleware':
         specifier: workspace:^
         version: link:../csrf-middleware
@@ -1945,7 +1970,7 @@ importers:
         version: 8.18.0
       playwright:
         specifier: ^1.60.0
-        version: 1.60.0
+        version: 1.63.0
       redis:
         specifier: ^5.10.0
         version: 5.11.0
@@ -1968,6 +1993,9 @@ importers:
       '@remix-run/component':
         specifier: workspace:^
         version: link:../component
+      '@remix-run/csp-middleware':
+        specifier: workspace:^
+        version: link:../csp-middleware
       '@remix-run/fetch-router':
         specifier: workspace:^
         version: link:../fetch-router
@@ -1978,6 +2006,12 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/multiple-import-maps-polyfill':
+        specifier: workspace:^
+        version: link:../multiple-import-maps-polyfill
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -2331,7 +2365,7 @@ importers:
         version: 6.0.1
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -2356,7 +2390,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -5900,9 +5934,19 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   playwright@1.60.0:
     resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
     engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
     hasBin: true
 
   postcss@8.5.14:
@@ -9623,13 +9667,19 @@ snapshots:
 
   picomatch@4.0.4: {}
 
-  playwright-core@1.60.0(patch_hash=df2bd762f946ea43d88354dde0800ec9d8807703827f90fed7a071c16565b506): {}
+  playwright-core@1.60.0: {}
+
+  playwright-core@1.63.0(patch_hash=799550f433317bb54f4e793adfc4ebe04b974d28dc33bb342c4d332caaf0eb5a): {}
 
   playwright@1.60.0:
     dependencies:
-      playwright-core: 1.60.0(patch_hash=df2bd762f946ea43d88354dde0800ec9d8807703827f90fed7a071c16565b506)
+      playwright-core: 1.60.0
     optionalDependencies:
       fsevents: 2.3.2
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0(patch_hash=799550f433317bb54f4e793adfc4ebe04b974d28dc33bb342c4d332caaf0eb5a)
 
   postcss@8.5.14:
     dependencies:

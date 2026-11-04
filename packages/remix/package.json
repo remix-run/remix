@@ -75,6 +75,7 @@
     "./headers/cache-control": "./src/headers/cache-control.ts",
     "./headers/content-disposition": "./src/headers/content-disposition.ts",
     "./headers/content-range": "./src/headers/content-range.ts",
+    "./headers/content-security-policy": "./src/headers/content-security-policy.ts",
     "./headers/content-type": "./src/headers/content-type.ts",
     "./headers/cookie": "./src/headers/cookie.ts",
     "./headers/if-match": "./src/headers/if-match.ts",
@@ -91,6 +92,7 @@
     "./middleware/compression": "./src/compression-middleware.ts",
     "./middleware/cop": "./src/cop-middleware.ts",
     "./middleware/cors": "./src/cors-middleware.ts",
+    "./middleware/csp": "./src/csp-middleware.ts",
     "./middleware/csrf": "./src/csrf-middleware.ts",
     "./middleware/form-data": "./src/form-data-middleware.ts",
     "./middleware/form-data/future": "./src/form-data-middleware/future.ts",
@@ -325,6 +327,10 @@
         "types": "./dist/headers/content-range.d.ts",
         "default": "./dist/headers/content-range.js"
       },
+      "./headers/content-security-policy": {
+        "types": "./dist/headers/content-security-policy.d.ts",
+        "default": "./dist/headers/content-security-policy.js"
+      },
       "./headers/content-type": {
         "types": "./dist/headers/content-type.d.ts",
         "default": "./dist/headers/content-type.js"
@@ -388,6 +394,10 @@
       "./middleware/cors": {
         "types": "./dist/cors-middleware.d.ts",
         "default": "./dist/cors-middleware.js"
+      },
+      "./middleware/csp": {
+        "types": "./dist/csp-middleware.d.ts",
+        "default": "./dist/csp-middleware.js"
       },
       "./middleware/csrf": {
         "types": "./dist/csrf-middleware.d.ts",
@@ -615,7 +625,8 @@
     "@remix-run/node-hmr": "workspace:^",
     "@remix-run/spa": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
-    "@remix-run/multiple-import-maps-polyfill": "workspace:^"
+    "@remix-run/multiple-import-maps-polyfill": "workspace:^",
+    "@remix-run/csp-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",

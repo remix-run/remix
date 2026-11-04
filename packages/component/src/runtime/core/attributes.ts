@@ -1,6 +1,6 @@
 import { camelToKebab, normalizeCssValue } from '../../style/style.ts'
 import { normalizeSvgAttribute } from '../svg-attributes.ts'
-import type { ElementProps } from '../jsx.ts'
+import type { ElementProps } from './vnode.ts'
 
 const ATTRIBUTE_FALLBACK_NAMES = new Set([
   'width',

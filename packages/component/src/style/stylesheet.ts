@@ -132,6 +132,12 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
     let selector = getStyleSelector(styleEl)
     if (!selector) return undefined
 
+    // Only the active document can authorize these styles under its CSP.
+    // Detached and CSP-blocked tags have no associated stylesheet.
+    if (!styleEl.isConnected || styleEl.ownerDocument !== document || !styleEl.sheet) {
+      return undefined
+    }
+
     let entry = ruleMap.get(selector)
     if (entry) {
       // The rule already exists — either a previous adoption or a client-side
