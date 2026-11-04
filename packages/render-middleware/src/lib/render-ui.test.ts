@@ -1,7 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createRouter, type MiddlewareContext } from '@remix-run/fetch-router'
+import { createRouter, type Middleware, type MiddlewareContext } from '@remix-run/fetch-router'
 import { csp, getCspNonce } from '@remix-run/csp-middleware'
 import { jsx } from '@remix-run/component/jsx-runtime'
 import {
@@ -546,6 +546,32 @@ describe('render', () => {
     }
 
     router.get('/', (context) => context.render(createElement('main', {}, createElement(Broken))))
+
+    await assert.rejects(router.fetch('https://remix.run/'), renderError)
+    assert.deepEqual(errors, [renderError])
+  })
+
+  it('rejects the request when inner middleware rebuilds a response whose shell fails', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    let rebuildResponse: Middleware = async (_context, next) => {
+      let response = await next()
+      return new Response(response.body, response)
+    }
+
+    router.get('/', {
+      middleware: [rebuildResponse],
+      handler: (context) => context.render(createElement('main', {}, createElement(Broken))),
+    })
 
     await assert.rejects(router.fetch('https://remix.run/'), renderError)
     assert.deepEqual(errors, [renderError])
