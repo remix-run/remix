@@ -19,6 +19,18 @@ const handlerCode = await highlightSource(
   'let submission = fd.parseSafe(Contact, await request.formData())\nif (!submission.success) {\n  return render(<ContactForm submission={submission} />, { status: 400 })\n}\nawait saveContact(submission.value)',
 )
 
+const fieldBindingCode = await highlightSource(`
+export interface FieldBinding<kind extends string = FormFieldKind | 'fields' | 'file' | 'files'> {
+  readonly kind: kind
+  readonly name: string
+  readonly id: string
+  readonly errorId: string
+  readonly errors: ReadonlyArray<string>
+  readonly touched: boolean
+  setCustomErrors(messages: ReadonlyArray<string>): void
+}
+`)
+
 export default function FormPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
@@ -122,8 +134,13 @@ export default function FormPage(handle: Handle<PageProps>) {
           <code>errors</code>, and <code>touched</code> state.
         </p>
         <h3 id="types-reference">Exported types</h3>
-        <p id="type-FieldBinding">
-          Pass live <code>FieldBinding</code> references through child-component props.
+        <ApiTable id="form-types">
+          <ApiEntry id="type-FieldBinding" name="FieldBinding" type="interface">
+            <p>Pass live field references through child-component props.</p>
+            <CodeBlock html={fieldBindingCode} />
+          </ApiEntry>
+        </ApiTable>
+        <p>
           <code>FieldBindings</code> retains each entry’s kind. Context and constraint options use
           <code>FormContextProps</code>, <code>FormContextValue</code>,{' '}
           <code>SchemaConstraints</code>, and <code>GetConstraintsOptions</code>; notifications use{' '}
