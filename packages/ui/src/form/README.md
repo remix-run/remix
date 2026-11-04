@@ -65,21 +65,19 @@ if (!submission.success) {
 await createAccount(submission.value)
 ```
 
-`fd.parseSafe(Signup, data)` is server-safe and delegates to the shared schema parser once. Success contains typed, transformed `value`. Failure contains `values`, grouped `errors.fields` and optional `errors.form`, and issues projected to messages and logical paths. Failed values preserve raw text, number text, checkbox states, and repeated text. Sensitive fields, files, and arbitrary issue metadata are omitted. Passwords are always sensitive; other scalar fields can opt in with `{ sensitive: true }`. Successful parsing still returns their validated values. Keep secrets out of application-authored messages.
-
-`FormSubmission` and the result types belong to `remix/data-schema/form`. Context consumes failed results directly, including application-authored business failures using the same values/errors shape. `fd.parse` returns validated output or throws; core `s.parseSafe` keeps its ordinary issues-only failure contract. Handlers own business checks, generated values, persistence, authentication, and request handling.
+Pass failed `fd.parseSafe` results directly to Context to restore values and show errors. Sensitive fields and files are never restored; successful parsing still returns their validated values. Handlers can also construct a `FormSubmission` for business failures. See [form schemas](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md) for parsing and sensitivity options.
 
 ## Context and role mixins
 
-`Context` owns one form instance and supplies stable typed `fields` and current grouped errors. Its render prop always receives `errors`; `errors.form` is absent when there are no form-level messages. A separate domain schema is optional: reuse `Account.shape.email` inside `fd.text()` or define validations inline. Changing the schema requires a new keyed Context.
+`Context` owns one form instance and supplies stable typed `fields` and current grouped errors. Its render prop always receives `errors`; `errors.form` is absent when there are no form-level messages. Changing the schema requires a new keyed Context.
 
 - `root()` coordinates native invalid feedback for unmanaged controls. It leaves valid submissions to the browser and application.
 - `control(field)` provides constraints, restored defaults, native validity, touched state, and ARIA. It defaults the input type from the decoding kind; compatible authored types override it. Text entries also support single-select and textarea. Repeated text entries support multiple selects and checkbox groups.
 - `label(field, value?)` supplies `htmlFor`; pass the option value for a radio or grouped checkbox label. `error(field)` supplies an error ID. Content, visibility, roles, and styling remain in JSX.
 
-Bindings belong to their Context and cannot be shared between form instances. IDs default to the Context's instance scope. The component runtime only preserves a client entry's own handle ID during hydration: pass that entry's `handle.id` as Context's `id`, as above, when exact SSR IDs must persist. Explicit scopes must be unique. Authored props win; an explicit control ID needs matching label/error associations. Existing help-text IDs in `aria-describedby` are retained.
+Bindings belong to their Context and cannot be shared between form instances. Pass a client entry's `handle.id` as Context's `id` to preserve IDs during hydration, and use unique scopes for multiple forms. Authored props win; custom control IDs need matching labels. Existing help-text IDs in `aria-describedby` are retained.
 
-`getConstraints(schema, { type, multiple? })` exposes recognized native constraints for custom integrations: `required`, `minLength`, `maxLength`, `min`, and `max`, plus `step="any"` for number and range inputs. Its `type` option accepts the supported native input literals, `select`, and `textarea`. It only derives attributes supported by the native control. Date/time bounds and steps remain authored props. Hidden and action controls receive no validation constraints; range and color inputs do not receive `required`. Arbitrary refinements are checked with `setCustomValidity` after native constraints pass. Requiredness may evaluate schemas when metadata cannot determine it; multiple-value controls use `[]` as their missing value. Checkbox groups do not receive per-option `required`, which would require every option.
+Use `getConstraints(schema, { type, multiple? })` for custom integrations. It projects supported native attributes: `required`, `minLength`, `maxLength`, `min`, `max`, and numeric `step="any"`. Author date/time bounds and steps in markup. Hidden and action controls receive no constraints; range, color, and grouped checkboxes do not receive `required`. Schema validation enforces additional rules.
 
 ## Native control types
 
@@ -96,35 +94,23 @@ Choose the descriptor for the submitted value, then set presentation types in ma
 
 Date/time and color values stay strings; range values become numbers. Author buttons and submit/reset/image inputs normally. If an action input needs a text binding, `control(field)` supplies its ID, name, and type without validation or restoration. Hidden inputs retain server validation and failed values but cannot block browser submission.
 
-Radio options share one text binding, feedback, and submitted name. Use a fieldset and legend for the group:
+The following variants use `fields` inside the Context render callback shown above. Radio options share one text binding and submitted name; use a fieldset and legend for the group:
 
 ```tsx
 let Preferences = fd.object({ delivery: fd.text(s.enum_(['email', 'sms'])) })
 
-<form.Context schema={Preferences}>
-  {({ fields }) => (
-    <form method="post" mix={form.root()}>
-      <fieldset>
-        <legend>Delivery method</legend>
-        <input type="radio" value="email" mix={form.control(fields.delivery)} />
-        <label mix={form.label(fields.delivery, 'email')}>Email</label>
-        <input type="radio" value="sms" mix={form.control(fields.delivery)} />
-        <label mix={form.label(fields.delivery, 'sms')}>SMS</label>
-        {fields.delivery.errors.length > 0 && (
-          <p role="alert" mix={form.error(fields.delivery)}>
-            {fields.delivery.errors.join(' ')}
-          </p>
-        )}
-      </fieldset>
-      <button type="submit">Save</button>
-    </form>
-  )}
-</form.Context>
+<fieldset>
+  <legend>Delivery method</legend>
+  <input type="radio" value="email" mix={form.control(fields.delivery)} />
+  <label mix={form.label(fields.delivery, 'email')}>Email</label>
+  <input type="radio" value="sms" mix={form.control(fields.delivery)} />
+  <label mix={form.label(fields.delivery, 'sms')}>SMS</label>
+</fieldset>
 ```
 
-Option values produce distinct scoped control IDs. Authored IDs require matching label associations. A failed value restores the selected option and its native reset default; ordinary rerenders preserve the current selection. Client validation reads the selected enabled option in the native form/name group.
+Pass the option value to `label` for distinct associations. The group shares feedback and restores its selected option from a failed submission.
 
-File controls validate selected files with the original schema:
+File controls validate selected files. Set `encType="multipart/form-data"` on the enclosing form:
 
 ```tsx
 let Upload = fd.object({
@@ -132,24 +118,19 @@ let Upload = fd.object({
   attachments: fd.files(s.array(s.instanceof_(Blob))),
 })
 
-<form.Context schema={Upload}>
-  {({ fields }) => (
-    <form method="post" encType="multipart/form-data" mix={form.root()}>
-      <label mix={form.label(fields.avatar)}>Avatar</label>
-      <input accept="image/*" mix={form.control(fields.avatar)} />
-      <label mix={form.label(fields.attachments)}>Attachments</label>
-      <input mix={form.control(fields.attachments)} />
-      <button type="submit">Upload</button>
-    </form>
-  )}
-</form.Context>
+<>
+  <label mix={form.label(fields.avatar)}>Avatar</label>
+  <input accept="image/*" mix={form.control(fields.avatar)} />
+  <label mix={form.label(fields.attachments)}>Attachments</label>
+  <input mix={form.control(fields.attachments)} />
+</>
 ```
 
-No selection becomes `undefined` for a single file or `[]` for multiple files. Use a refinement rejecting `[]` to require multiple uploads. Files are omitted from failed values, and a new failed submission clears live selections. Ordinary rerenders preserve selections. The application owns upload storage and server enforcement; `accept` is a browser hint.
+No selection becomes `undefined` for a single file or `[]` for multiple files. A failed submission clears live file selections; ordinary rerenders preserve them. `accept` is a browser hint; validate files and store uploads in the handler.
 
 ## Multiple values
 
-Use `fd.fields` for one multiple select or one same-name checkbox group. The schema validates an array of selected strings; no selection is `[]`. Blank strings remain strings, following the repeated-entry parser's existing behavior.
+Use `fd.fields` for one multiple select or one same-name checkbox group. The schema validates an array of selected strings; no selection is `[]`, and blank strings remain strings.
 
 ```tsx
 let Preferences = fd.object({
@@ -158,23 +139,13 @@ let Preferences = fd.object({
   ),
 })
 
-<form.Context schema={Preferences}>
-  {({ fields }) => (
-    <form method="post" mix={form.root()}>
-      <label mix={form.label(fields.topics)}>Topics</label>
-      <select multiple mix={form.control(fields.topics)}>
-        <option value="typescript">TypeScript</option>
-        <option value="css">CSS</option>
-      </select>
-      {fields.topics.errors.length > 0 && (
-        <p role="alert" mix={form.error(fields.topics)}>
-          {fields.topics.errors.join(' ')}
-        </p>
-      )}
-      <button type="submit">Save</button>
-    </form>
-  )}
-</form.Context>
+<>
+  <label mix={form.label(fields.topics)}>Topics</label>
+  <select mix={form.control(fields.topics)}>
+    <option value="typescript">TypeScript</option>
+    <option value="css">CSS</option>
+  </select>
+</>
 ```
 
 The select mixin supplies `multiple`. Alternatively, render a checkbox group using the same binding:
@@ -189,7 +160,7 @@ The select mixin supplies `multiple`. Alternatively, render a checkbox group usi
 </fieldset>
 ```
 
-Checkbox options share errors and touched state, with distinct IDs for their labels. Client validation reads checked enabled options in the native form/name group. Disabled options are also excluded from multiple-select validation. Failed arrays restore selected or checked defaults on the server and on new submissions; ordinary rerenders preserve edits, and native reset returns to those defaults. Author initial selections with array `defaultValue` on a multiple select or `defaultChecked` on each checkbox.
+Options share errors and touched state; disabled options are excluded from validation. Failed arrays restore selected or checked defaults. Author initial selections with array `defaultValue` on a multiple select or `defaultChecked` on each checkbox; native reset returns to those defaults.
 
 Native select requiredness can enforce at least one selection. Checkbox-group rules and more specific collection checks run in JavaScript and in the handler; without JavaScript, the server enforces them. Repeated free-text inputs and indexed field arrays still need application-owned UI handling.
 

@@ -23,13 +23,6 @@ const handlerCode = await highlightSource(
   'let submission = fd.parseSafe(Contact, await request.formData())\nif (!submission.success) {\n  return render(<ContactForm submission={submission} />, { status: 400 })\n}\nawait saveContact(submission.value)',
 )
 
-const typeDefinitions = {
-  FieldBinding: await highlightSource(
-    "export interface FieldBinding<kind extends string = FormFieldKind | 'fields' | 'file' | 'files'> {\n  readonly kind: kind\n  readonly name: string\n  readonly id: string\n  readonly errorId: string\n  readonly errors: ReadonlyArray<string>\n  readonly touched: boolean\n  setCustomErrors(messages: ReadonlyArray<string>): void\n}",
-    'ts',
-  ),
-}
-
 export default function FormPage(handle: Handle<PageProps>) {
   return () => (
     <PageLayout page={meta} pages={handle.props.pages}>
@@ -60,16 +53,6 @@ export default function FormPage(handle: Handle<PageProps>) {
           each binding’s <code>errors</code> and <code>touched</code> during rendering. Use{' '}
           <code>setCustomErrors()</code> for supplemental asynchronous feedback. The application
           owns the request, cancellation, and server check.
-        </p>
-        <p>
-          <code>root()</code> coordinates native invalid feedback but leaves valid submission and
-          navigation to the browser or application. String-valued controls, including date/time,
-          color, hidden, radio, select, and textarea, use text entries. Range uses a number entry.
-          File entries validate selected uploads and supply <code>multiple</code> for file lists;
-          failed submissions clear selections. Repeated text entries from <code>fd.fields</code>
-          support multiple selects and same-name checkbox groups, validating arrays and restoring
-          selected or checked defaults. Empty selections are <code>[]</code>. Author action buttons
-          normally.
         </p>
       </Section>
       <Section id="accessibility" title="Accessibility">
@@ -114,6 +97,9 @@ export default function FormPage(handle: Handle<PageProps>) {
         <p>
           Apply to an input, select, or textarea. Supplies constraints, restored defaults, native
           validity, touched state, and error associations. Compatible authored control props win.
+          Use text entries for string controls, number entries for number/range inputs, and file
+          entries for uploads. <code>fd.fields</code> supports multiple selects and checkbox groups;
+          empty selections are <code>[]</code>.
         </p>
         <h3 id="label-reference">label(field, value?)</h3>
         <p>
@@ -159,7 +145,6 @@ export default function FormPage(handle: Handle<PageProps>) {
         <ApiTable id="form-types">
           <ApiEntry id="type-FieldBinding" name="FieldBinding" type="interface">
             <p>A live field reference. Pass it to child components through props.</p>
-            <CodeBlock html={typeDefinitions.FieldBinding} />
           </ApiEntry>
           <ApiEntry name="FieldBindings" type="mapped type">
             Keeps each schema entry’s form kind on its field binding.

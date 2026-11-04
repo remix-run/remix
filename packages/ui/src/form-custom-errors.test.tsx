@@ -9,7 +9,7 @@ import { renderForm, input, edit, blur } from './test/form.tsx'
 const username = fd.text(s.string())
 
 describe('setCustomErrors', () => {
-  it('updates native validity and feedback, blocks submission, and clears messages', (t) => {
+  it('blocks submission and clears supplemental feedback on edits, reset, and new submissions', async (t) => {
     let events: InputValidationEvent[] = []
     let validity: boolean[] = []
     let view = renderForm(fd.object({ username }), ({ fields }) => (
@@ -61,23 +61,12 @@ describe('setCustomErrors', () => {
     expect(node.hasAttribute('aria-describedby')).toBe(false)
     native.requestSubmit()
     expect(submissions).toBe(1)
-  })
-
-  it('clears supplemental messages on changed values, reset, and a new submission', async (t) => {
-    let view = renderForm(fd.object({ username }), ({ fields }) => (
-      <form mix={form.root()}>
-        <input defaultValue="ada" mix={form.control(fields.username)} />
-      </form>
-    ))
-    t.after(view.cleanup)
-    let node = input(view.container)
-    let field = view.fields.username
     field.setCustomErrors(['Taken'])
     blur(node)
     edit(node, 'grace')
     expect(field.errors).toEqual([])
     field.setCustomErrors(['Taken'])
-    view.container.querySelector('form')?.reset()
+    native.reset()
     await Promise.resolve()
     view.root.flush()
     expect(node.value).toBe('ada')

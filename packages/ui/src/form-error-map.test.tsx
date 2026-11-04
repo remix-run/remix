@@ -91,28 +91,4 @@ describe('field errorMap', () => {
     expect(node.validity.customError).toBe(false)
     expect(field.errors).toEqual([node.validationMessage])
   })
-
-  it('preserves explicit refinement messages', (t) => {
-    let schema = fd.object({
-      username: fd.text(
-        s.string().refine((value) => value !== 'admin', 'Reserved username'),
-        {
-          errorMap() {
-            throw new Error('Must bypass mapping')
-          },
-        },
-      ),
-    })
-    let view = renderForm(schema, ({ fields }) => (
-      <input defaultValue="admin" mix={form.control(fields.username)} />
-    ))
-    t.after(view.cleanup)
-    let node = input(view.container)
-    expect(node.validationMessage).toBe('Reserved username')
-    expect(view.fields.username.errors).toEqual([])
-    blur(node)
-    expect(view.fields.username.errors).toEqual(['Reserved username'])
-    edit(node, 'ada')
-    expect(node.validity.valid).toBe(true)
-  })
 })

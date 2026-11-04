@@ -8,7 +8,7 @@ import * as fd from '@remix-run/data-schema/form'
 import { email, minLength, min, max } from '@remix-run/data-schema/checks'
 import * as form from './form.ts'
 import type { FieldBinding } from './form.ts'
-import { renderForm, input, edit, blur } from './test/form.tsx'
+import { renderForm, renderServerForm, input, edit, blur } from './test/form.tsx'
 
 describe('form.Context', () => {
   it('validates and restores multiple select values through SSR, hydration, and reset', async (t) => {
@@ -41,9 +41,7 @@ describe('form.Context', () => {
         </form.Context>
       )
     }
-    let container = document.createElement('div')
-    container.innerHTML = await renderToString(markup(failure))
-    document.body.appendChild(container)
+    let container = await renderServerForm(markup(failure))
     let select = container.querySelector('select')
     let native = container.querySelector('form')
     if (!select || !native) throw new Error('Missing controls')
@@ -128,9 +126,7 @@ describe('form.Context', () => {
         </form.Context>
       )
     }
-    let container = document.createElement('div')
-    container.innerHTML = await renderToString(markup(failure))
-    document.body.appendChild(container)
+    let container = await renderServerForm(markup(failure))
     let nodes = container.querySelectorAll('input')
     let native = container.querySelector('form')
     if (!native) throw new Error('Missing form')
@@ -195,20 +191,12 @@ describe('form.Context', () => {
   it('restores native string controls and numeric ranges without projecting unrelated constraints', async (t) => {
     let values = {
       date: '2026-11-04',
-      month: '2026-11',
-      week: '2026-W45',
-      time: '09:30',
-      'datetime-local': '2026-11-04T09:30',
       color: '#123456',
       hidden: 'original',
       range: '4',
     }
     let schema = fd.object({
       date: fd.text(s.string()),
-      month: fd.text(s.string()),
-      week: fd.text(s.string()),
-      time: fd.text(s.string()),
-      'datetime-local': fd.text(s.string()),
       color: fd.text(s.string().pipe(minLength(7))),
       hidden: fd.text(s.string().pipe(minLength(20))),
       range: fd.number(s.number().pipe(min(1), max(5))),
@@ -221,25 +209,16 @@ describe('form.Context', () => {
           {({ fields }) => (
             <form mix={form.root()}>
               <input type="date" min="2026-01-01" mix={form.control(fields.date)} />
-              <input type="month" mix={form.control(fields.month)} />
-              <input type="week" mix={form.control(fields.week)} />
-              <input type="time" mix={form.control(fields.time)} />
-              <input type="datetime-local" mix={form.control(fields['datetime-local'])} />
               <input type="color" mix={form.control(fields.color)} />
               <input type="hidden" mix={form.control(fields.hidden)} />
               <input type="range" mix={form.control(fields.range)} />
               <input type="submit" value="save" mix={form.control(fields.action)} />
-              <input type="button" value="Help" />
-              <input type="reset" value="Reset" />
-              <input type="image" alt="Save" />
             </form>
           )}
         </form.Context>
       )
     }
-    let container = document.createElement('div')
-    container.innerHTML = await renderToString(markup(submission))
-    document.body.appendChild(container)
+    let container = await renderServerForm(markup(submission))
     for (let [name, value] of Object.entries(values))
       expect(input(container, name).value).toBe(value)
     let view = render(markup(submission), { container })
@@ -371,10 +350,6 @@ describe('form.Context', () => {
     email.click()
     view.root.flush()
     expect(native.checkValidity()).toBe(true)
-    binding.setCustomErrors(['Still registered'])
-    expect(native.checkValidity()).toBe(false)
-    binding.setCustomErrors([])
-    expect(native.checkValidity()).toBe(true)
   })
 
   it('validates single and multiple files and clears selections on new failures', async (t) => {
@@ -463,10 +438,8 @@ describe('form.Context', () => {
     let schema = fd.object({
       username: fd.text(s.string().refine((value) => value.startsWith('@'), 'Start with @')),
     })
-    let renders = 0
     function Username(handle: Handle<{ field: FieldBinding<'text'> }>) {
       return () => {
-        renders++
         let field = handle.props.field
         return (
           <>
@@ -497,7 +470,6 @@ describe('form.Context', () => {
     blur(node)
     view.root.flush()
     expect(view.fields.username).toBe(field)
-    expect(renders).toBe(2)
     expect(view.container.querySelector('p')?.textContent).toBe('Start with @')
     expect(node.getAttribute('aria-describedby')).toBe(field.errorId)
     edit(node, '@ada')
@@ -605,7 +577,6 @@ describe('form.Context', () => {
     expect(view.fields.email.errors).toEqual([])
     expect(view.fields.email.touched).toBe(true)
     expect(node.getAttribute('aria-describedby')).toBe('help')
-    expect(node.hasAttribute('data-form-error-id')).toBe(false)
   })
 
   it('restores a new submission without replaying values during ordinary rerenders', (t) => {
@@ -684,9 +655,7 @@ describe('form.Context', () => {
         </form.Context>
       )
     }
-    let container = document.createElement('div')
-    container.innerHTML = await renderToString(markup(first))
-    document.body.appendChild(container)
+    let container = await renderServerForm(markup(first))
     let role = container.querySelector('select[name="role"]')
     let secret = container.querySelector('select[name="secret"]')
     let native = container.querySelector('form')

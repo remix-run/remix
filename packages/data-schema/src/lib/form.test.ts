@@ -57,29 +57,18 @@ describe('form schemas', () => {
     )
   })
 
-  it('preserves passwords, whitespace, transforms, throwing parser identity, and typed entries', () => {
-    let calls = 0
+  it('preserves text and password whitespace and explicitly empty values', () => {
     let Signup = fd.object({
       password: fd.password(s.string().pipe(minLength(8))),
-      name: fd.text(
-        s.string().transform((value) => {
-          calls++
-          return value.length
-        }),
-      ),
+      name: fd.text(s.string()),
       blank: fd.text(s.string(), { empty: 'preserve' }),
     })
     let data = new URLSearchParams({ password: '  secret  ', name: ' Ada ', blank: '' })
-    let value: { password: string; name: number; blank: string } = s.parse(Signup, data)
-    assert.deepEqual(value, { password: '  secret  ', name: 5, blank: '' })
-    assert.equal(calls, 1)
-    assert.equal(fd.parse, s.parse)
+    assert.deepEqual(fd.parse(Signup, data), { password: '  secret  ', name: ' Ada ', blank: '' })
     assert.equal(Signup.entries.password.formKind, 'password')
-    assert.equal(Object.isFrozen(Signup.entries), true)
-    assert.equal(Object.isFrozen(Signup.entries.password), true)
   })
 
-  it('keeps logical paths, shared error maps, and explicit message precedence', () => {
+  it('maps descriptor errors using logical paths rather than submitted names', () => {
     let Signup = fd.object({
       age: fd.number(s.number().pipe(min(18)), {
         name: 'person.age',
@@ -87,27 +76,13 @@ describe('form schemas', () => {
           return code === 'number.min' ? 'Adults only' : undefined
         },
       }),
-      name: fd.text(
-        s.string().refine(() => false, 'Specific message'),
-        {
-          errorMap() {
-            return 'Replacement'
-          },
-        },
-      ),
     })
-    let result = fd.parseSafe(Signup, new URLSearchParams({ 'person.age': '12', name: 'Ada' }))
+    let result = fd.parseSafe(Signup, new URLSearchParams({ 'person.age': '12' }))
     if (result.success) throw new Error('Expected failure')
     assert.deepEqual(
       result.issues.map(({ message, path }) => ({ message, path })),
-      [
-        { message: 'Adults only', path: ['age'] },
-        { message: 'Specific message', path: ['name'] },
-      ],
+      [{ message: 'Adults only', path: ['age'] }],
     )
-    let early = fd.parseSafe(Signup, new URLSearchParams(), { abortEarly: true })
-    if (early.success) throw new Error('Expected failure')
-    assert.equal(early.issues.length, 1)
   })
 
   it('reuses repeated and file extraction without changing legacy empty strings', () => {

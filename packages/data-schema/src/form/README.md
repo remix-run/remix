@@ -79,7 +79,7 @@ let Settings = fd.object({
 })
 ```
 
-Issues use logical keys such as `email`, independently of transport names. Field error maps compose with parse options; explicit schema messages keep precedence. Repeated text defaults to `[]`. `fields`, `file`, and `files` reuse the existing FormData extraction helpers. Form objects normalize the browser's empty upload placeholder (an unnamed zero-byte File) to `undefined` for `file` and remove it from `files` arrays. Named zero-byte files remain valid inputs. The supplied schema decides whether a missing file or empty list is accepted. Files are never included in failed restoration values.
+Issues use logical keys such as `email`, independently of transport names. Field error maps compose with parse options; explicit schema messages keep precedence. Repeated text defaults to `[]`. An unnamed zero-byte File means no upload: `file` receives `undefined`, and `files` excludes it. Named zero-byte files remain valid inputs. The supplied schema decides whether a missing file or empty list is accepted. Files are never included in failed restoration values.
 
 `fd.fields` also describes multiple selects and same-name checkbox groups for `form.control`. The parser reads all submitted strings in order, preserves blanks, and returns `[]` when no values are submitted. Failed submissions preserve the raw array so UI can restore selected or checked defaults. Use array validation or a refinement to require a selection; `fd.checkbox` remains the helper for one boolean checkbox.
 
@@ -89,6 +89,6 @@ The lower-level `remix/data-schema/form-data` export stays available with its ex
 
 Form objects expose readonly `.entries` with the original scalar schemas, kinds, names, and decoding and sensitivity options. `isFormField()` distinguishes scalar entries; `validateField()` applies the same decoding and validation to an individual control value.
 
-`password` returns validated passwords normally on success. Pass a failed `fd.parseSafe(Signup, data)` result directly to [`form.Context`](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). This module owns the `FormSubmission`, `FormErrors`, and parsing-result types; UI imports them without a reverse dependency. Handlers can also construct a `FormSubmission` for business failures.
+Pass a failed `fd.parseSafe(Signup, data)` result directly to [`form.Context`](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). Handlers can also construct a `FormSubmission` for business failures.
 
 `form.Context` accepts the inspectable `fd.object()` result. Root refinements/transforms produce general schemas without that inspection contract; keep cross-field business checks in the handler. Scalar refinements and transforms are supported.
