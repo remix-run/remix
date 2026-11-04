@@ -324,11 +324,11 @@ await updateUrl('/products/shirt?color=blue')
 await updateUrl('/products/shirt?color=red', { history: 'push' })
 ```
 
-When no navigation is active, the URL changes synchronously without fetching or rendering. Otherwise, the update waits for the current Navigation API transition to finish. The returned promise resolves after the URL update. `history` defaults to `'replace'`, which replaces the current entry. Use `'push'` to add an entry so Back returns to the previous URL. Scroll position and focus stay where they are in both modes, including when only the fragment changes.
+When no navigation is active, the URL changes synchronously without fetching or rendering, unless a native precommit handler delays the commit. Otherwise, the update waits for the current Navigation API transition to finish. The returned promise resolves after the URL update and any native interception finish. `history` defaults to `'replace'`, which replaces the current entry. Use `'push'` to add an entry so Back returns to the previous URL. Scroll position and focus stay where they are in both modes, including when only the fragment changes.
 
-`history.state` and Navigation API state are carried into the updated entry. A push leaves the previous entry unchanged. Back/Forward performs normal frame navigation when the path or query string changes; fragment-only traversals keep the browser's native behavior without fetching or rendering. The update also sets the mounted top-frame source, so `handle.frames.top.reload()` uses the new URL. Each URL that reloads the frame must render the state the page displayed for that entry.
+`history.state` and Navigation API state are carried into the updated entry. A push leaves the previous entry unchanged. With frame navigation running, Back/Forward performs normal frame navigation when the path or query string changes; fragment-only traversals keep the browser's native behavior without fetching or rendering. The update also sets the mounted top-frame source, so `handle.frames.top.reload()` uses the new URL. Each URL that reloads the frame must render the state the page displayed for that entry.
 
-Relative URLs resolve against `document.baseURI` when the update executes, after any wait. Cross-origin URLs reject with a `SecurityError` instead of navigating away. Updates work even when frame navigation is unavailable or `run()` hasn't started.
+Relative URLs resolve against `document.baseURI` when the update executes, after any wait. Cross-origin URLs reject with a `SecurityError` instead of navigating away. An empty string keeps the current URL, matching the History API. Updates work even when frame navigation is unavailable or `run()` hasn't started. In that mode, pushing an entry still lets Back/Forward change the URL, but the application must restore the displayed state itself, for example with a `popstate` listener.
 
 Pass an `AbortSignal` to cancel a pending update. For example, `handle.signal` aborts when the component disconnects:
 
@@ -336,13 +336,15 @@ Pass an `AbortSignal` to cancel a pending update. For example, `handle.signal` a
 await updateUrl('/products/shirt?color=blue', { history: 'push', signal: handle.signal })
 ```
 
-You can also pass a render or event signal to cancel when that work becomes stale. An already aborted signal prevents the update; aborting while waiting rejects promptly with `signal.reason`. Cancellation leaves the navigation running and does not add or replace a history entry.
+You can also pass a render or event signal to cancel when that work becomes stale. An already aborted signal prevents the update; aborting while waiting rejects promptly with `signal.reason`. Cancellation before the History API call leaves the navigation running and does not add or replace a history entry. Once the update has been dispatched, cancellation stops waiting but does not abort native interception or roll back history; a delayed native commit can still apply the URL, and Remix synchronizes its metadata when it commits.
 
-The wait is bound to the captured navigation. Navigation failures reject with their original error. If another navigation supersedes it or its destination changes, the update rejects with an `AbortError` and leaves the destination URL intact. A component can stay mounted across navigation, so the destination check applies even when its signal has not aborted.
+Calls waiting for the same navigation apply in call order, so the last requested URL wins. Each push adds an entry; replacing updates only the current entry. The wait is bound to the captured navigation. Navigation failures reject with their original error. If another navigation supersedes it or its destination changes, the update rejects with an `AbortError` and leaves the destination URL intact. A component can stay mounted across navigation, so the destination check applies even when its signal has not aborted.
+
+If a navigation is still in precommit and the browser does not expose `transition.to`, the update rejects with an `AbortError` because its destination cannot be verified. This includes Firefox 155. Call `updateUrl()` after that navigation commits or finishes instead. Reloads can still be awaited because their requested URL is known from the existing entry. Native interception of the URL update itself is also supported because its requested destination is known.
 
 Do not await `updateUrl()` inside the active navigation's own interception handler: the update waits for that handler to finish.
 
-Like `history.pushState()` and `history.replaceState()`, this still fires native Navigation API events in browsers that support them. If a `navigate` listener cancels the update with `event.preventDefault()`, the promise rejects with an `AbortError` and leaves the existing history entry and frame source unchanged.
+Like `history.pushState()` and `history.replaceState()`, this still fires native Navigation API events in browsers that support them. Native listeners can intercept the update, and `updateUrl()` waits for their handlers to finish. An interception failure rejects with the original error; failures after commit leave the committed URL and Remix metadata in place. If a `navigate` listener cancels the update with `event.preventDefault()`, the promise rejects with an `AbortError` without applying the requested update. A replacement navigation started by that listener retains its own history state.
 
 ### Disabling frame navigation
 

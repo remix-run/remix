@@ -187,6 +187,16 @@ export function run(init: RunInit): AppRuntime {
       return namedFrames.get(name)
     },
   }
+  window.addEventListener('popstate', () => (frames.top.src = window.location.href), {
+    signal: appController.signal,
+  })
+  window.navigation?.addEventListener(
+    'currententrychange',
+    (event) => {
+      if (event.navigationType === 'traverse') frames.top.src = window.location.href
+    },
+    { signal: appController.signal },
+  )
   startNavigationListener(appController.signal)
   startPrefetching(appController.signal, init.prefetch)
   let readyPromise = topFrame.ready().catch((error) => {
