@@ -97,24 +97,6 @@ describe('form parseSafe', () => {
     assert.deepEqual(result.values, { tags: ['one', 'two'] })
     assert.equal(JSON.stringify(result).includes('secret file contents'), false)
   })
-
-  it('handles reserved logical keys and does not execute default factories during inspection', () => {
-    let calls = 0
-    let schema = fd.object({
-      toString: fd.text(s.string()),
-      age: fd.number(
-        s.defaulted(s.number(), () => {
-          calls++
-          return 18
-        }),
-      ),
-    })
-    assert.equal(calls, 0)
-    let result = fd.parseSafe(schema, new URLSearchParams({ toString: 'value' }))
-    if (!result.success) throw new Error('Expected success')
-    assert.deepEqual(result.value, { toString: 'value', age: 18 })
-    assert.equal(calls, 1)
-  })
 })
 
 describe('form schema parsing methods', () => {

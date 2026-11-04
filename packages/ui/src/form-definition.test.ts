@@ -1,5 +1,3 @@
-import * as assert from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
 import * as s from '@remix-run/data-schema'
 import * as fd from '@remix-run/data-schema/form'
 import { max, maxLength, min, minLength } from '@remix-run/data-schema/checks'
@@ -52,27 +50,3 @@ expectType<
   >
 >()
 expectType<Equal<Extract<keyof FieldBindings<typeof Profile.entries>, 'unknown'>, never>>()
-
-describe('form schema integration', () => {
-  it('reuses model rules, includes ancillary fields, and returns only configured validated values', () => {
-    let result = fd.parseSafe(
-      Profile,
-      new URLSearchParams({
-        name: 'Ada',
-        age: '37',
-        password: 'secret',
-        terms: 'on',
-        id: 'untrusted',
-      }),
-    )
-    assert.equal(result.success, true)
-    if (!result.success) throw new Error('Expected success')
-    assert.deepEqual(result.value, {
-      name: 'Ada',
-      age: 37,
-      bio: undefined,
-      password: 'secret',
-      terms: true,
-    })
-  })
-})

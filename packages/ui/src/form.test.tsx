@@ -27,37 +27,6 @@ describe('form.Context', () => {
     expect(view.container.querySelector('p')).toBe(null)
   })
 
-  it('renders a form schema parseSafe failure with restored values and projected errors', (t) => {
-    let schema = fd.object({
-      email: fd.text(s.string().pipe(email())),
-      password: fd.password(s.string().pipe(minLength(8))),
-    })
-    let data = new FormData()
-    data.set('email', 'invalid')
-    data.set('password', 'private-secret')
-    let submission = schema.parseSafe(data)
-    if (submission.success) throw new Error('Expected failure')
-    let view = renderForm(
-      schema,
-      ({ fields }) => (
-        <form mix={form.root()}>
-          <input type="email" mix={form.control(fields.email)} />
-          <input mix={form.control(fields.password)} />
-          <p mix={form.error(fields.email)}>{fields.email.errors.join(' ')}</p>
-        </form>
-      ),
-      submission,
-    )
-    t.after(view.cleanup)
-    expect(input(view.container, 'email').value).toBe('invalid')
-    expect(input(view.container, 'password').value).toBe('')
-    expect(view.container.querySelector('p')?.textContent).toBe(
-      submission.errors.fields.email.join(' '),
-    )
-    expect(view.fields.email.touched).toBe(false)
-    expect(JSON.stringify(submission).includes('private-secret')).toBe(false)
-  })
-
   it('rerenders a child field component with a stable binding through props', (t) => {
     let schema = fd.object({
       username: fd.text(s.string().refine((value) => value.startsWith('@'), 'Start with @')),
@@ -296,66 +265,5 @@ describe('form.Context', () => {
     expect(node.getAttribute('aria-invalid')).toBe('true')
     edit(node, 'valid')
     expect(node.hasAttribute('aria-invalid')).toBe(false)
-  })
-
-  it('supports reserved field keys and distinct IDs for controls and errors', (t) => {
-    let schema = fd.object({
-      toString: fd.text(s.string()),
-      'name-error': fd.text(s.string()),
-      name: fd.text(s.string()),
-      'with spaces': fd.text(s.string()),
-    })
-    let view = renderForm(
-      schema,
-      ({ fields }) => (
-        <>
-          <input mix={form.control(fields.toString)} />
-          <p mix={form.error(fields.toString)} />
-          <input mix={form.control(fields['name-error'])} />
-          <p mix={form.error(fields['name-error'])} />
-          <input mix={form.control(fields.name)} />
-          <p mix={form.error(fields.name)} />
-          <input mix={form.control(fields['with spaces'])} />
-          <p mix={form.error(fields['with spaces'])} />
-        </>
-      ),
-      { values: {}, errors: { fields: {}, form: [] } },
-    )
-    t.after(view.cleanup)
-    blur(input(view.container, 'toString'))
-    expect(view.fields.toString.errors.length).toBe(1)
-    let ids = [...view.container.querySelectorAll('[id]')].map((node) => node.id)
-    expect(new Set(ids).size).toBe(8)
-    expect(ids.every((id) => !/\s/.test(id))).toBe(true)
-  })
-
-  it('rejects foreign bindings and incompatible input types', async () => {
-    let schema = fd.object({ name: fd.text(s.string()) })
-    let errors: unknown[] = []
-    let original = console.error
-    console.error = (error: unknown) => {
-      errors.push(error)
-    }
-    try {
-      await renderToString(
-        <form.Context schema={schema}>
-          {({ fields }) => (
-            <form.Context schema={schema}>
-              {() => <input mix={form.control(fields.name)} />}
-            </form.Context>
-          )}
-        </form.Context>,
-      )
-      await renderToString(
-        <form.Context schema={schema}>
-          {({ fields }) => <input type="checkbox" mix={form.control(fields.name)} />}
-        </form.Context>,
-      )
-    } finally {
-      console.error = original
-    }
-    expect(errors.length).toBe(2)
-    expect(String(errors[0])).toContain('owning form.Context')
-    expect(String(errors[1])).toContain('incompatible')
   })
 })

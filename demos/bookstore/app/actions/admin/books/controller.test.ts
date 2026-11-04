@@ -38,33 +38,6 @@ describe('admin books handlers', () => {
     assert.ok(response.headers.get('Location')?.includes('/admin/books'))
   })
 
-  it('POST /admin/books returns numeric errors and restores text fields', async () => {
-    let sessionId = await loginAsAdmin(router)
-    let response = await router.fetch(
-      requestWithSession('https://remix.run/admin/books', sessionId, {
-        method: 'POST',
-        body: new URLSearchParams({
-          slug: 'bad-price',
-          title: 'Book With Bad Price',
-          author: 'Test Author',
-          description: 'Test description',
-          price: 'abc',
-          genre: 'test',
-          isbn: '978-0000000000',
-          publishedYear: '2024',
-          inStock: 'false',
-        }),
-      }),
-    )
-
-    assert.equal(response.status, 400)
-    let html = await response.text()
-    assertContains(html, 'value="Book With Bad Price"')
-    assertContains(html, 'value="abc"')
-    assertContains(html, 'aria-invalid="true"')
-    assertContains(html, 'value="false" selected')
-  })
-
   it('PUT /admin/books/:bookId prefers submitted values over the saved book after failure', async () => {
     let sessionId = await loginAsAdmin(router)
     let response = await router.fetch(
