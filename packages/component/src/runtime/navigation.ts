@@ -199,8 +199,8 @@ export interface UpdateUrlOptions {
  * Reflects locally rendered state in the URL without fetching, rendering, or changing scroll/focus.
  * Preserves history state and synchronizes Remix metadata and the top-frame source.
  * Waits for the active transition and requires the captured browser URL to remain current.
- * Supersession, navigation/URL changes, and native cancellation reject with `AbortError`.
- * Newer calls supersede waiting calls. An aborted signal rejects with its reason.
+ * Supersession, navigation/URL changes, and cancellation resolve with an aborted signal.
+ * Newer calls supersede waiting calls. Cancellation reasons are available on the returned signal.
  * Native interception of this update is unsupported (`NotSupportedError`); it may still commit.
  * Cross-origin URLs reject with `SecurityError`; other failures propagate.
  * Do not await this inside the captured transition's interception handler.
@@ -208,11 +208,11 @@ export interface UpdateUrlOptions {
  * @param href Same-origin URL, resolved against `document.baseURI` when applied. An empty string
  * retains the current URL.
  * @param options History mode (default: `"replace"`) and cancellation signal.
- * @returns A promise that resolves after updating the URL and Remix state.
+ * @returns The update's signal: aborted on cancellation, otherwise permanently non-aborted.
  */
-export async function updateUrl(href: string, options?: UpdateUrlOptions): Promise<void> {
+export async function updateUrl(href: string, options?: UpdateUrlOptions): Promise<AbortSignal> {
   let signal = options?.signal
-  signal?.throwIfAborted()
+  if (signal?.aborted) return AbortSignal.abort(signal.reason)
   let previous = pendingUrlUpdates.get(window)
   let previousState = previous?.controller.signal.aborted ? undefined : previous?.state
   previous?.controller.abort(new DOMException('URL update was superseded', 'AbortError'))
@@ -227,7 +227,7 @@ export async function updateUrl(href: string, options?: UpdateUrlOptions): Promi
   let updateEvent: NavigateEvent | undefined
   function observeNavigation(event: NavigateEvent) {
     if (dispatching && !updateEvent) updateEvent = event
-    else controller.abort(urlUpdateAborted())
+    else abortUrlUpdate(controller)
   }
   function updateHistory(): NavigateEvent | undefined {
     dispatching = true
@@ -246,7 +246,8 @@ export async function updateUrl(href: string, options?: UpdateUrlOptions): Promi
     })
     if (capturedTransition) await waitForUrlUpdate(capturedTransition.finished, waitingSignal)
     waitingSignal.throwIfAborted()
-    if (navigation?.transition || window.location.href !== capturedUrl) throw urlUpdateAborted()
+    if (navigation?.transition || window.location.href !== capturedUrl)
+      return abortUrlUpdate(controller)
     let entry = navigation?.currentEntry
     let state = entry?.getState()
     // A reentrant call can run after History API commit clears state, before we restore it.
@@ -257,7 +258,7 @@ export async function updateUrl(href: string, options?: UpdateUrlOptions): Promi
     let destinationUrl = href === '' ? window.location.href : destination.href
     let event = updateHistory()
     controller.signal.throwIfAborted()
-    if (event?.defaultPrevented || event?.signal.aborted) throw urlUpdateAborted()
+    if (event?.defaultPrevented || event?.signal.aborted) return abortUrlUpdate(controller)
     if (navigation?.transition) {
       throw new DOMException(
         'Native interception of URL updates is not supported',
@@ -266,7 +267,7 @@ export async function updateUrl(href: string, options?: UpdateUrlOptions): Promi
     }
     let updatedEntry = navigation?.currentEntry
     if (entry && (updatedEntry?.id === entry.id || updatedEntry?.url !== destinationUrl)) {
-      throw urlUpdateAborted()
+      return abortUrlUpdate(controller)
     }
     let src = window.location.href
     if (navigation && state !== undefined) {
@@ -275,16 +276,28 @@ export async function updateUrl(href: string, options?: UpdateUrlOptions): Promi
       })
     }
     controller.signal.throwIfAborted()
-    if (navigation?.currentEntry?.id !== updatedEntry?.id) throw urlUpdateAborted()
+    if (navigation?.currentEntry?.id !== updatedEntry?.id) return abortUrlUpdate(controller)
     setTopFrameSource(src)
+    return controller.signal
+  } catch (error) {
+    if (
+      (controller.signal.aborted && error === controller.signal.reason) ||
+      (signal?.aborted && error === signal.reason)
+    ) {
+      return AbortSignal.abort(error)
+    }
+    throw error
   } finally {
     navigation?.removeEventListener('navigate', observeNavigation, { capture: true })
     if (pendingUrlUpdates.get(window) === update) pendingUrlUpdates.delete(window)
   }
 }
 
-function urlUpdateAborted(): DOMException {
-  return new DOMException('Navigation or URL changed before update completed', 'AbortError')
+function abortUrlUpdate(controller: AbortController): AbortSignal {
+  controller.abort(
+    new DOMException('Navigation or URL changed before update completed', 'AbortError'),
+  )
+  return controller.signal
 }
 
 async function waitForUrlUpdate(updating: Promise<void>, signal?: AbortSignal): Promise<void> {

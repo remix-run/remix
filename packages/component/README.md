@@ -1323,19 +1323,19 @@ Use `updateUrl(href, options?)` to reflect state the page already displays, such
 ```ts
 import { updateUrl } from 'remix/component'
 
-await updateUrl('/products/shirt?color=blue')
+let signal = await updateUrl('/products/shirt?color=blue')
 await updateUrl('/products/shirt?color=red', { history: 'push' })
 ```
 
-The update replaces the current entry by default; `history: 'push'` adds an entry. It preserves scroll, focus, and application history state without fetching or rendering. Remix synchronizes its entry metadata and top-frame source so later reloads and Back/Forward use the matching URL. Path/query traversal performs normal frame navigation; fragment-only traversal retains native behavior. Without frame navigation, the application restores displayed state itself.
+The update replaces the current entry by default; `history: 'push'` adds an entry. It preserves scroll, focus, and application history state without fetching or rendering. Remix synchronizes its entry metadata and top-frame source for later reloads and Back/Forward. Relative URLs resolve against `document.baseURI` when applied; an empty string retains the current URL.
 
-Each call captures the browser URL. When idle, the update completes synchronously. Otherwise, it waits for the captured transition and rejects with `AbortError` if an unrelated navigation starts or the browser URL changes, including through a redirect. Call after commit to update a navigation's destination. Other navigation failures propagate. Do not await `updateUrl()` inside that transition's interception handler.
+Each call captures the browser URL and waits for the active transition, or completes synchronously when idle. The promise resolves with an `AbortSignal`: `signal.aborted` means cancellation, supersession, an unrelated navigation, or a changed browser URL, including through a redirect. A successful signal stays non-aborted. Actual failures reject, including `SecurityError` for cross-origin URLs. Call after commit to update a navigation's destination, and don't await this inside the captured transition's interception handler.
 
-Newer calls supersede waiting updates with `AbortError`; only the latest waiting call applies. Superseded calls are not retried if the latest fails or is canceled. Consecutive idle calls can all resolve, leaving the last requested URL in the browser.
+Only the latest waiting call applies; superseded calls aren't retried if it fails or is canceled. Consecutive idle calls can all succeed, leaving the last URL in the browser. Pass `{ signal: handle.signal }` to cancel stale work without aborting navigation. An already aborted signal prevents the update without superseding a valid waiting call. Cancellation preserves the signal's `reason`; completed updates aren't rolled back.
 
-Pass `{ signal: handle.signal }` to cancel when a component disconnects. An already aborted signal prevents the update; cancellation while waiting rejects with `signal.reason` without aborting navigation. Completed updates are not rolled back. Relative URLs resolve against `document.baseURI` when applied; an empty string retains the current URL. Cross-origin URLs reject with `SecurityError`.
+Back/Forward between path or query changes performs normal frame navigation; fragment-only traversal retains native behavior. Without frame navigation, the application restores displayed state itself.
 
-Native listeners can cancel the History API event with `event.preventDefault()`; the update rejects with `AbortError` and preserves any replacement navigation's state. Calling `event.intercept()` on that event is unsupported. Detected interception rejects immediately with `NotSupportedError`; the native mutation may still commit, and Remix does not await its handlers or synchronize a delayed commit. Remix itself does not intercept these URL-only updates.
+Native listeners can cancel the History API event with `event.preventDefault()`. Calling `event.intercept()` on that event is unsupported and rejects immediately with `NotSupportedError` when detected. The native mutation may still commit; Remix doesn't await its handlers or synchronize a delayed commit. Remix itself doesn't intercept these URL-only updates.
 
 ### Opting Out
 
