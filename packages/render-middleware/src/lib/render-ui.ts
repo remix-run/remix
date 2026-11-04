@@ -19,7 +19,8 @@ const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
 // Internal subrequests report errors through the enclosing render.
 // Browser frame requests use the same headers, so identify internal requests by object identity.
 const internalFrameRequests = new WeakSet<Request>()
-const pendingShells = new WeakMap<Response, Promise<void>>()
+// Keyed by body so responses rebuilt with `new Response(response.body, response)` keep waiting.
+const pendingShells = new WeakMap<ReadableStream<Uint8Array>, Promise<void>>()
 const MAX_FRAME_REDIRECTS = 20
 const FRAME_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const FRAME_REQUEST_HEADERS_TO_REMOVE = [
@@ -95,7 +96,7 @@ export function render(
         }),
       )
       let response = createHtmlResponse(stream, init)
-      pendingShells.set(response, shell)
+      if (response.body != null) pendingShells.set(response.body, shell)
       return response
     }
   })
@@ -103,7 +104,7 @@ export function render(
   return async (context, next) => {
     let response = await installRenderer(context, next)
     // Wait for the shell so render errors reject the request before the status is sent.
-    await pendingShells.get(response)
+    if (response.body != null) await pendingShells.get(response.body)
     return response
   }
 }
