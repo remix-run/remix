@@ -113,6 +113,10 @@ export function getAppTopFrame(): FrameInstance {
   return appTopFrame
 }
 
+export function setTopFrameSource(src: string): void {
+  if (appTopFrame) appTopFrame.handle.src = src
+}
+
 /**
  * Returns the top-level frame handle for the running application.
  *
