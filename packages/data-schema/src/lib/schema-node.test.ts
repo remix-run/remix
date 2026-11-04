@@ -392,6 +392,13 @@ describe('schema nodes', () => {
       assert.deepEqual(schema['~standard'].validate({ name: 'Ada' }), { value: { name: 'Ada' } })
       assert.deepEqual(schema['~standard'].validate({ name: 'Ada' }), { value: { name: 'Ada' } })
     })
+
+    it('validates schemas after `~standard` is read from their prototype', () => {
+      let schema = object({ name: string() })
+      Reflect.get(Object.getPrototypeOf(schema), '~standard')
+
+      assert.deepEqual(schema['~standard'].validate({ name: 'Ada' }), { value: { name: 'Ada' } })
+    })
   })
 
   describe('createSchema', () => {
