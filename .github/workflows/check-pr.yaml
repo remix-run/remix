@@ -177,7 +177,7 @@ jobs:
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node ./scripts/run-ci-tests.ts "$PR_BASE_SHA" "$PR_HEAD_SHA"
+        run: node ./scripts/run-changed-workspaces.ts test "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
   test_bun_changed:
     name: test (bun, ubuntu-latest, changed packages)

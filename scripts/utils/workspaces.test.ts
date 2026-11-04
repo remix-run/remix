@@ -66,6 +66,22 @@ test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', (
 })
 
 describe('getFullRunReasons', () => {
+  it('requires a full run for each shared configuration, script, and CI change', () => {
+    for (let file of [
+      'package.json',
+      'pnpm-lock.yaml',
+      'pnpm-workspace.yaml',
+      'tsconfig.json',
+      'tsconfig.shared.json',
+      'scripts/run-changed-workspaces.ts',
+      'scripts/utils/workspaces.ts',
+      '.github/workflows/check-pr.yaml',
+      '.github/actions/setup-node-pnpm-cache/action.yaml',
+    ]) {
+      assert.deepEqual(getFullRunReasons([file], []), [file])
+    }
+  })
+
   it('flags root-wide config changes and deleted workspace manifests', () => {
     let workspaces: WorkspaceInfo[] = [
       {
