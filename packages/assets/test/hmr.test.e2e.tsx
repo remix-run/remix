@@ -30,6 +30,57 @@ const consoleMessageTimeout = 5000
 const hmrConnectionTimeout = 15_000
 
 describe('asset server HMR', () => {
+  it('starts the HMR connection deadline after the document commits', async (t) => {
+    let fixture = await createHmrFixture()
+    let renderDocument = fixture.renderDocument
+    assert.ok(renderDocument)
+    let requested = Promise.withResolvers<void>()
+    let respond = Promise.withResolvers<void>()
+    fixture.renderDocument = async (assetServer) => {
+      requested.resolve()
+      await respond.promise
+      return renderDocument(assetServer)
+    }
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    let timers = t.mock.method(globalThis, 'setTimeout')
+    let navigation = navigateToHmrPage(page)
+    void navigation.catch(() => {})
+    try {
+      await requested.promise
+      for (let timer of timers.mock.calls) {
+        if (timer.arguments[1] === hmrConnectionTimeout) timer.arguments[0]()
+      }
+      respond.resolve()
+      await navigation
+      await assertCount(page, 'Count: 3')
+    } finally {
+      respond.resolve()
+    }
+  })
+
+  it('times out a missing HMR connection after the document commits', async (t) => {
+    let fixture = await createHmrFixture()
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    t.after(fixture.close)
+    await page.route('**/hmr/events', (route) => route.abort())
+    let committed = page.waitForEvent('framenavigated', {
+      predicate: (frame) => frame.parentFrame() === null,
+    })
+    let timers = t.mock.method(globalThis, 'setTimeout')
+    let rejected = assert.rejects(
+      navigateToHmrPage(page),
+      /waiting for console message:.*HMR connected/,
+    )
+    await committed
+    let timer = timers.mock.calls.find((call) => call.arguments[1] === hmrConnectionTimeout)
+    assert.ok(timer)
+    timer.arguments[0]()
+    await rejected
+  })
+
   it('cancels the HMR connection wait when navigation fails', async (t) => {
     let fixture = await createHmrFixture()
 
@@ -2715,7 +2766,7 @@ async function writeFetchResponse(
 function waitForConsoleMessage(
   page: TestPage,
   text: string,
-  options: { signal?: AbortSignal } = {},
+  options: { signal?: AbortSignal; startAfterNavigation?: boolean } = {},
 ): Promise<void> {
   attachPageDiagnostics(page)
   let startedAt = Date.now()
@@ -2723,18 +2774,29 @@ function waitForConsoleMessage(
     let consoleMessages: string[] = []
     let pageErrors: string[] = []
     let timeoutMs = text === '[remix] HMR connected' ? hmrConnectionTimeout : consoleMessageTimeout
-    let timeout = setTimeout(() => {
-      rejectWait(
-        new Error(
-          [
-            `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
-            ...consoleMessages.map((message) => `console: ${message}`),
-            ...pageErrors.map((message) => `pageerror: ${message}`),
-            formatPageDiagnostics(page),
-          ].join('\n'),
-        ),
-      )
-    }, timeoutMs)
+    let timeout: ReturnType<typeof setTimeout> | undefined
+
+    function startTimeout() {
+      startedAt = Date.now()
+      timeout = setTimeout(() => {
+        rejectWait(
+          new Error(
+            [
+              `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
+              ...consoleMessages.map((message) => `console: ${message}`),
+              ...pageErrors.map((message) => `pageerror: ${message}`),
+              formatPageDiagnostics(page),
+            ].join('\n'),
+          ),
+        )
+      }, timeoutMs)
+    }
+
+    if (options.startAfterNavigation) {
+      page.on('framenavigated', handleNavigation)
+    } else {
+      startTimeout()
+    }
 
     page.on('close', handlePageClose)
     page.on('console', handleConsole)
@@ -2745,6 +2807,7 @@ function waitForConsoleMessage(
 
     function cleanup() {
       clearTimeout(timeout)
+      page.off('framenavigated', handleNavigation)
       page.off('close', handlePageClose)
       page.off('console', handleConsole)
       page.off('pageerror', handlePageError)
@@ -2763,6 +2826,12 @@ function waitForConsoleMessage(
 
     function handlePageClose() {
       rejectWait(new Error(`Page closed while waiting for console message: ${text}`))
+    }
+
+    function handleNavigation(frame: { parentFrame(): unknown }) {
+      if (frame.parentFrame() !== null) return
+      page.off('framenavigated', handleNavigation)
+      startTimeout()
     }
 
     function handleConsole(message: { text(): string }) {
@@ -2788,6 +2857,8 @@ async function navigateToHmrPage(page: TestPage) {
   let controller = new AbortController()
   let connected = waitForConsoleMessage(page, '[remix] HMR connected', {
     signal: controller.signal,
+    // The document request has its own navigation deadline; HMR starts after it commits.
+    startAfterNavigation: true,
   })
 
   try {
