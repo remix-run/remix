@@ -1327,15 +1327,11 @@ let signal = await updateUrl('/products/shirt?color=blue')
 await updateUrl('/products/shirt?color=red', { history: 'push' })
 ```
 
-The update replaces the current entry by default; `history: 'push'` adds an entry. It preserves scroll, focus, and application history state without fetching or rendering. Remix synchronizes its entry metadata and top-frame source for later reloads and Back/Forward. Relative URLs resolve against `document.baseURI` when applied; an empty string retains the current URL.
+The update replaces the current history entry by default; `history: 'push'` adds one. It preserves scroll, focus, and history state without fetching or rendering, and keeps the top-frame source in sync for later reloads.
 
-Each call captures the browser URL and waits for the active transition, or completes synchronously when idle. The promise resolves with an `AbortSignal`: `signal.aborted` means cancellation, supersession, an unrelated navigation, or a changed browser URL, including through a redirect. A successful signal stays non-aborted. Actual failures reject, including `SecurityError` for cross-origin URLs. Call after commit to update a navigation's destination, and don't await this inside the captured transition's interception handler.
+Calls wait for active navigation. Only the latest waiting call applies, and its captured browser URL must remain current. The promise resolves with an `AbortSignal`, aborted if the update was canceled, superseded, or invalidated by navigation; otherwise it stays non-aborted. Actual failures reject. Pass `{ signal: handle.signal }` to cancel stale work without aborting navigation.
 
-Only the latest waiting call applies; superseded calls aren't retried if it fails or is canceled. Consecutive idle calls can all succeed, leaving the last URL in the browser. Pass `{ signal: handle.signal }` to cancel stale work without aborting navigation. An already aborted signal prevents the update without superseding a valid waiting call. Cancellation preserves the signal's `reason`; completed updates aren't rolled back.
-
-Back/Forward between path or query changes performs normal frame navigation; fragment-only traversal retains native behavior. Without frame navigation, the application restores displayed state itself.
-
-Native listeners can cancel the History API event with `event.preventDefault()`. Calling `event.intercept()` on that event is unsupported and rejects immediately with `NotSupportedError` when detected. The native mutation may still commit; Remix doesn't await its handlers or synchronize a delayed commit. Remix itself doesn't intercept these URL-only updates.
+Native interception of these URL updates is unsupported (`NotSupportedError`) and may still commit the URL. Don't await `updateUrl()` inside the active transition's interception handler. Without frame navigation, applications restore displayed state on Back/Forward themselves.
 
 ### Opting Out
 
