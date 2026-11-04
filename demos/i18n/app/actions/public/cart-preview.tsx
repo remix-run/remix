@@ -105,7 +105,7 @@ function CartQuantity(handle: Handle) {
         type="button"
         aria-label={cart.t('pluralization.cart_demo.decrease')}
         disabled={!cart.interactive || cart.quantity === 0}
-        mix={[quantityButtonStyle, on('click', () => cart.setQuantity(cart.quantity - 1))]}
+        mix={[on('click', () => cart.setQuantity(cart.quantity - 1)), quantityButtonStyle]}
       >
         −
       </button>
@@ -126,6 +126,7 @@ function CartQuantity(handle: Handle) {
           value={cart.quantity}
           disabled={!cart.interactive}
           mix={[
+            on('input', (event) => cart.setQuantity(event.currentTarget.valueAsNumber)),
             css({
               inlineSize: '88px',
               minHeight: '38px',
@@ -137,7 +138,6 @@ function CartQuantity(handle: Handle) {
               font: 'inherit',
               textAlign: 'center',
             }),
-            on('input', (event) => cart.setQuantity(event.currentTarget.valueAsNumber)),
           ]}
         />
       </label>
@@ -145,7 +145,7 @@ function CartQuantity(handle: Handle) {
         type="button"
         aria-label={cart.t('pluralization.cart_demo.increase')}
         disabled={!cart.interactive}
-        mix={[quantityButtonStyle, on('click', () => cart.setQuantity(cart.quantity + 1))]}
+        mix={[on('click', () => cart.setQuantity(cart.quantity + 1)), quantityButtonStyle]}
       >
         +
       </button>

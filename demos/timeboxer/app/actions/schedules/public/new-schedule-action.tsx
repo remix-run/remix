@@ -109,10 +109,6 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
           type="button"
           mix={[
             button(),
-            css({
-              height: '100%',
-              width: '100%',
-            }),
             ref((node) => (buttonNode = node)),
             on('click', async () => {
               errorMessage = null
@@ -120,6 +116,10 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
               state = 'creating'
               await handle.update()
               input?.focus()
+            }),
+            css({
+              height: '100%',
+              width: '100%',
             }),
           ]}
         >
@@ -139,6 +139,11 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
           aria-live="polite"
           key="new-schedule-loading"
           mix={[
+            animateEntrance({
+              opacity: 0,
+              transform: 'scale(0.5)',
+              ...spring('snappy'),
+            }),
             css({
               alignItems: 'center',
               color: theme.colors.text.secondary,
@@ -151,11 +156,6 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
               minHeight: 0,
               paddingInline: theme.space.md,
               width: '100%',
-            }),
-            animateEntrance({
-              opacity: 0,
-              transform: 'scale(0.5)',
-              ...spring('snappy'),
             }),
           ]}
         >
@@ -184,9 +184,6 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
           autoComplete="off"
           key="new-schedule-form"
           mix={[
-            css({
-              display: 'block',
-            }),
             animateExit({
               opacity: 0,
               transform: 'scale(0.5)',
@@ -211,6 +208,9 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
                 cancelCreate()
               }
             }),
+            css({
+              display: 'block',
+            }),
           ]}
         >
           <input
@@ -224,6 +224,13 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
             type="text"
             defaultValue={submittedName}
             mix={[
+              ref((node) => (input = node)),
+              on('input', () => {
+                if (!errorMessage) return
+
+                errorMessage = null
+                handle.update()
+              }),
               css({
                 border: `1px solid ${theme.colors.border.default}`,
                 borderRadius: theme.radius,
@@ -239,13 +246,6 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
                   outline: `2px solid ${theme.colors.focusRing}`,
                   outlineOffset: '2px',
                 },
-              }),
-              ref((node) => (input = node)),
-              on('input', () => {
-                if (!errorMessage) return
-
-                errorMessage = null
-                handle.update()
               }),
             ]}
           />

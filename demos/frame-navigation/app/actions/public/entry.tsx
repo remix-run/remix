@@ -135,6 +135,9 @@ app.addEventListener('error', async (event) => {
         action={
           <button
             mix={[
+              on('click', () => {
+                window.location.reload()
+              }),
               css({
                 marginTop: '24px',
                 padding: '12px 18px',
@@ -149,9 +152,6 @@ app.addEventListener('error', async (event) => {
                 '&:hover': {
                   background: '#1e293b',
                 },
-              }),
-              on('click', () => {
-                window.location.reload()
               }),
             ]}
           >
@@ -190,6 +190,7 @@ function ErrorCard(handle: Handle<ErrorCardProps>) {
     return (
       <div
         mix={[
+          animated && animateGentlyIn,
           css({
             width: '100%',
             maxWidth: '560px',
@@ -199,7 +200,6 @@ function ErrorCard(handle: Handle<ErrorCardProps>) {
             borderRadius: '20px',
             boxShadow: '0 20px 45px rgba(15, 23, 42, 0.08)',
           }),
-          animated && animateGentlyIn,
         ]}
       >
         <p

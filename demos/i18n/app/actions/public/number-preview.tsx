@@ -32,6 +32,10 @@ export const NumberPreview = clientEntry(
           type="button"
           disabled={!interactive}
           mix={[
+            on('click', () => {
+              value += 1_000
+              handle.update()
+            }),
             css({
               minHeight: '36px',
               padding: '4px 12px',
@@ -46,10 +50,6 @@ export const NumberPreview = clientEntry(
                 outlineOffset: '2px',
               },
               '&:disabled': { opacity: 0.5, cursor: 'default' },
-            }),
-            on('click', () => {
-              value += 1_000
-              handle.update()
             }),
           ]}
         >

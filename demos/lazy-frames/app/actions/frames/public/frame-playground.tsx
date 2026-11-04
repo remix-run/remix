@@ -76,6 +76,10 @@ export const FramePlayground = clientEntry(
           <button
             type="button"
             mix={[
+              on('click', () => {
+                count++
+                handle.update()
+              }),
               css({
                 border: 0,
                 borderRadius: '6px',
@@ -94,10 +98,6 @@ export const FramePlayground = clientEntry(
                 },
               }),
               accentStyles[handle.props.accent],
-              on('click', () => {
-                count++
-                handle.update()
-              }),
             ]}
           >
             {handle.props.actionLabel}
@@ -105,6 +105,9 @@ export const FramePlayground = clientEntry(
           <button
             type="button"
             mix={[
+              on('click', async () => {
+                await handle.frame.reload()
+              }),
               css({
                 border: '1px solid var(--interactive-button-border)',
                 borderRadius: '6px',
@@ -123,9 +126,6 @@ export const FramePlayground = clientEntry(
                   outline: '3px solid var(--interactive-accent)',
                   outlineOffset: '3px',
                 },
-              }),
-              on('click', async () => {
-                await handle.frame.reload()
               }),
             ]}
           >

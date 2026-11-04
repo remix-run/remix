@@ -12,6 +12,9 @@ export const CourseFilterInput = clientEntry(
         value={handle.props.query}
         placeholder="Search by course name"
         mix={[
+          on('input', (event) => {
+            event.currentTarget.form?.requestSubmit()
+          }),
           css({
             flex: '1 1 16rem',
             minWidth: 0,
@@ -26,9 +29,6 @@ export const CourseFilterInput = clientEntry(
               outline: '2px solid #bfdbfe',
               outlineOffset: '1px',
             },
-          }),
-          on('input', (event) => {
-            event.currentTarget.form?.requestSubmit()
           }),
         ]}
       />

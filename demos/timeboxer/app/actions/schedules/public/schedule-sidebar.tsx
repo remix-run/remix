@@ -284,6 +284,11 @@ function scheduleSidebarRow({
           disabled={deleting}
           type="button"
           mix={[
+            on('click', (event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onDelete()
+            }),
             css({
               alignItems: 'center',
               backgroundColor: 'transparent',
@@ -307,11 +312,6 @@ function scheduleSidebarRow({
               '&:disabled': {
                 cursor: 'default',
               },
-            }),
-            on('click', (event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              onDelete()
             }),
           ]}
         >

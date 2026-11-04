@@ -25,6 +25,7 @@ export const DashboardStatGrid = clientEntry(
         {handle.props.cards.map((card) => (
           <article
             mix={[
+              link(card.href),
               css({
                 border: '1px solid #e2e8f0',
                 borderRadius: '12px',
@@ -42,7 +43,6 @@ export const DashboardStatGrid = clientEntry(
                   borderColor: '#2563eb',
                 },
               }),
-              link(card.href),
             ]}
           >
             <p

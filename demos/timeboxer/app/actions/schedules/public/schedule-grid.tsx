@@ -270,29 +270,29 @@ export const ScheduleGrid = clientEntry(
 
           <div
             mix={[
-              css({
-                minHeight: 0,
-                overflowY: 'auto',
-              }),
               ref((node, signal) => {
                 scrollerElement = node
                 signal.addEventListener('abort', () => {
                   if (scrollerElement === node) scrollerElement = null
                 })
               }),
+              css({
+                minHeight: 0,
+                overflowY: 'auto',
+              }),
             ]}
           >
             <div
               mix={[
-                css({
-                  minWidth: '760px',
-                  position: 'relative',
-                }),
                 ref((node, signal) => {
                   gridElement = node
                   signal.addEventListener('abort', () => {
                     if (gridElement === node) gridElement = null
                   })
+                }),
+                css({
+                  minWidth: '760px',
+                  position: 'relative',
                 }),
               ]}
             >
@@ -339,11 +339,6 @@ export const ScheduleGrid = clientEntry(
                         aria-label={`${day} ${time}`}
                         key={`${day}-${time}`}
                         mix={[
-                          css({
-                            borderLeft: `1px dashed ${theme.colors.border.default}`,
-                            borderTop: `1px dashed ${theme.colors.border.default}`,
-                            minHeight: `${gridRowHeight}px`,
-                          }),
                           on('pointerdown', (event) => {
                             if (event.button === 0 && clearBlockFocusOrSelection()) {
                               suppressDraftClickUntil = performance.now() + 250
@@ -353,6 +348,11 @@ export const ScheduleGrid = clientEntry(
                             if (performance.now() < suppressDraftClickUntil) return
                             if (clearBlockFocusOrSelection()) return
                             startDraft(day, time)
+                          }),
+                          css({
+                            borderLeft: `1px dashed ${theme.colors.border.default}`,
+                            borderTop: `1px dashed ${theme.colors.border.default}`,
+                            minHeight: `${gridRowHeight}px`,
                           }),
                           isHourSlot(time)
                             ? css({
@@ -1069,6 +1069,7 @@ function ScheduleBlock(
         data-dragging={handle.props.isDragging ? 'true' : undefined}
         key={block.id}
         mix={[
+          animateLayout(handle.props.shouldAnimateLayout ? scheduleBlockLayoutAnimation : false),
           css({
             display: 'grid',
             minHeight: 0,
@@ -1079,7 +1080,6 @@ function ScheduleBlock(
               zIndex: 2,
             },
           }),
-          animateLayout(handle.props.shouldAnimateLayout ? scheduleBlockLayoutAnimation : false),
         ]}
         style={{
           gridColumn: block.dayOfWeek + 2,
@@ -1100,59 +1100,6 @@ function ScheduleBlock(
           data-schedule-block-id={block.id}
           data-selected={handle.props.isSelected ? 'true' : undefined}
           mix={[
-            css({
-              alignItems: 'center',
-              backgroundColor: theme.surface.lvl1,
-              border: `1px solid ${theme.colors.border.default}`,
-              borderRadius: theme.radius,
-              boxShadow: '0 1px 1px rgb(0 0 0 / 0.05)',
-              color: '#111111',
-              cursor: 'grab',
-              display: 'flex',
-              fontSize: theme.fontSize.xs,
-              fontWeight: theme.fontWeight.medium,
-              justifyContent: 'center',
-              margin: '2px 4px',
-              overflow: 'hidden',
-              padding: theme.space.xs,
-              pointerEvents: 'auto',
-              position: 'relative',
-              textAlign: 'center',
-              touchAction: 'none',
-              transition: 'background-color 120ms ease, border-color 120ms ease',
-              userSelect: 'none',
-              '&:not([data-dragging="true"])': {
-                transition:
-                  'background-color 120ms ease, border-color 120ms ease, translate 120ms ease',
-              },
-              '&:hover .resize-handle': {
-                opacity: 1,
-              },
-              '&[data-resizing="true"] .resize-handle': {
-                opacity: 1,
-              },
-              '&[data-editing="true"]': {
-                cursor: 'text',
-              },
-              '&:focus, &[data-selected="true"]': {
-                borderColor: theme.colors.focusRing,
-                outline: `2px solid ${theme.colors.focusRing}`,
-                outlineOffset: 0,
-              },
-            }),
-            css({
-              '&[data-dragging="true"]': {
-                backgroundColor: theme.surface.lvl2,
-                borderColor: theme.colors.focusRing,
-                cursor: 'grabbing',
-                outline: `2px solid ${theme.colors.focusRing}`,
-                outlineOffset: 0,
-                zIndex: 2,
-                '& .resize-handle': {
-                  opacity: 0,
-                },
-              },
-            }),
             blockDragVisual(),
             ref((node) => {
               blockElement = node
@@ -1214,6 +1161,59 @@ function ScheduleBlock(
               }
               handle.props.onDragStart(block, event)
             }),
+            css({
+              alignItems: 'center',
+              backgroundColor: theme.surface.lvl1,
+              border: `1px solid ${theme.colors.border.default}`,
+              borderRadius: theme.radius,
+              boxShadow: '0 1px 1px rgb(0 0 0 / 0.05)',
+              color: '#111111',
+              cursor: 'grab',
+              display: 'flex',
+              fontSize: theme.fontSize.xs,
+              fontWeight: theme.fontWeight.medium,
+              justifyContent: 'center',
+              margin: '2px 4px',
+              overflow: 'hidden',
+              padding: theme.space.xs,
+              pointerEvents: 'auto',
+              position: 'relative',
+              textAlign: 'center',
+              touchAction: 'none',
+              transition: 'background-color 120ms ease, border-color 120ms ease',
+              userSelect: 'none',
+              '&:not([data-dragging="true"])': {
+                transition:
+                  'background-color 120ms ease, border-color 120ms ease, translate 120ms ease',
+              },
+              '&:hover .resize-handle': {
+                opacity: 1,
+              },
+              '&[data-resizing="true"] .resize-handle': {
+                opacity: 1,
+              },
+              '&[data-editing="true"]': {
+                cursor: 'text',
+              },
+              '&:focus, &[data-selected="true"]': {
+                borderColor: theme.colors.focusRing,
+                outline: `2px solid ${theme.colors.focusRing}`,
+                outlineOffset: 0,
+              },
+            }),
+            css({
+              '&[data-dragging="true"]': {
+                backgroundColor: theme.surface.lvl2,
+                borderColor: theme.colors.focusRing,
+                cursor: 'grabbing',
+                outline: `2px solid ${theme.colors.focusRing}`,
+                outlineOffset: 0,
+                zIndex: 2,
+                '& .resize-handle': {
+                  opacity: 0,
+                },
+              },
+            }),
           ]}
           tabIndex={0}
           style={{
@@ -1224,31 +1224,6 @@ function ScheduleBlock(
             aria-label={handle.props.isDraft ? 'New block name' : `${label} name`}
             data-editable={isEditing ? 'true' : undefined}
             mix={[
-              css({
-                backgroundColor: 'transparent',
-                border: 0,
-                boxSizing: 'border-box',
-                color: 'inherit',
-                cursor: 'inherit',
-                font: 'inherit',
-                fontWeight: 'inherit',
-                height: '100%',
-                inset: 0,
-                lineHeight: 1.2,
-                outline: 0,
-                padding: theme.space.xs,
-                pointerEvents: 'none',
-                position: 'absolute',
-                textAlign: 'center',
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-                width: '100%',
-                '&[data-editable="true"]': {
-                  pointerEvents: 'auto',
-                  userSelect: 'text',
-                  WebkitUserSelect: 'text',
-                },
-              }),
               ref((node) => {
                 inputElement = node
                 if (handle.props.isDraft) node.focus({ preventScroll: true })
@@ -1277,6 +1252,31 @@ function ScheduleBlock(
               }),
               on('blur', () => {
                 if (state === 'editing') finishEditing()
+              }),
+              css({
+                backgroundColor: 'transparent',
+                border: 0,
+                boxSizing: 'border-box',
+                color: 'inherit',
+                cursor: 'inherit',
+                font: 'inherit',
+                fontWeight: 'inherit',
+                height: '100%',
+                inset: 0,
+                lineHeight: 1.2,
+                outline: 0,
+                padding: theme.space.xs,
+                pointerEvents: 'none',
+                position: 'absolute',
+                textAlign: 'center',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                width: '100%',
+                '&[data-editable="true"]': {
+                  pointerEvents: 'auto',
+                  userSelect: 'text',
+                  WebkitUserSelect: 'text',
+                },
               }),
             ]}
             defaultValue={name}
@@ -1377,6 +1377,11 @@ function ResizeHandle(
       class="resize-handle"
       data-active-resize-handle={handle.props.isActive ? 'true' : undefined}
       mix={[
+        on('pointerdown', (event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          handle.props.onResizeStart(handle.props.block, handle.props.edge, event)
+        }),
         css({
           cursor: 'ns-resize',
           height: '12px',
@@ -1413,11 +1418,6 @@ function ResizeHandle(
               bottom: 0,
               transform: 'translateY(4px)',
             }),
-        on('pointerdown', (event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          handle.props.onResizeStart(handle.props.block, handle.props.edge, event)
-        }),
       ]}
     />
   )
@@ -1441,6 +1441,11 @@ function HorizontalResizeHandle(
       class="resize-handle"
       data-active-resize-handle={handle.props.isActive ? 'true' : undefined}
       mix={[
+        on('pointerdown', (event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          handle.props.onResizeStart(handle.props.block, handle.props.edge, event)
+        }),
         css({
           bottom: theme.space.sm,
           cursor: 'ew-resize',
@@ -1477,11 +1482,6 @@ function HorizontalResizeHandle(
               right: 0,
               transform: 'translateX(4px)',
             }),
-        on('pointerdown', (event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          handle.props.onResizeStart(handle.props.block, handle.props.edge, event)
-        }),
       ]}
     />
   )

@@ -19,6 +19,13 @@ export const ThemeToggle = clientEntry(
           type="button"
           aria-label={`Switch to ${nextTheme} mode`}
           mix={[
+            on('click', () => {
+              theme = nextTheme
+              document.documentElement.dataset.theme = theme
+              document.body.dataset.theme = theme
+              document.cookie = `${themeCookieName}=${theme}; Max-Age=${themeCookieMaxAge}; Path=/; SameSite=Lax`
+              handle.update()
+            }),
             css({
               display: 'inline-flex',
               alignItems: 'center',
@@ -45,13 +52,6 @@ export const ThemeToggle = clientEntry(
                 outline: '3px solid var(--focus-ring)',
                 outlineOffset: '2px',
               },
-            }),
-            on('click', () => {
-              theme = nextTheme
-              document.documentElement.dataset.theme = theme
-              document.body.dataset.theme = theme
-              document.cookie = `${themeCookieName}=${theme}; Max-Age=${themeCookieMaxAge}; Path=/; SameSite=Lax`
-              handle.update()
             }),
           ]}
         >
