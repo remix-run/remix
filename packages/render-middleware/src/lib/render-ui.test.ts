@@ -577,6 +577,63 @@ describe('render', () => {
     assert.deepEqual(errors, [renderError])
   })
 
+  it('reports shell errors without rejecting HEAD requests', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    router.get('/', (context) => context.render(createElement(Broken)))
+
+    let unhandledRejections: unknown[] = []
+    let onUnhandledRejection = (reason: unknown) => unhandledRejections.push(reason)
+    process.on('unhandledRejection', onUnhandledRejection)
+
+    try {
+      let response = await router.fetch('https://remix.run/', { method: 'HEAD' })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      assert.equal(response.status, 200)
+      assert.equal(response.body, null)
+      assert.deepEqual(errors, [renderError])
+      assert.deepEqual(unhandledRejections, [])
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection)
+    }
+  })
+
+  it('returns the shell before non-blocking frame content resolves', async () => {
+    let router = createRouter({ middleware: [render()] as const })
+    let releaseFrame: (() => void) | undefined
+    let frameReleased = new Promise<void>((resolve) => {
+      releaseFrame = resolve
+    })
+
+    router.get('/', (context) =>
+      context.render(
+        createElement(Frame, { src: '/pending', fallback: createElement('p', {}, 'Loading') }),
+      ),
+    )
+    router.get('/pending', async (context) => {
+      await frameReleased
+      return context.render(createElement('p', {}, 'Loaded'))
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(response.status, 200)
+
+    releaseFrame?.()
+    let html = await response.text()
+    assert.match(html, /<p>Loading<\/p>/)
+    assert.match(html, /Loaded/)
+  })
+
   it('keeps the shell response when streamed frame content throws', async () => {
     let errors: unknown[] = []
     let middleware = render({ onError: (error) => errors.push(error) })

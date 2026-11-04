@@ -70,7 +70,7 @@ router.get('/missing', (context) =>
 
 The middleware forwards request credentials and session headers to internal frame requests, converts them to safe `GET` requests, follows redirects, preserves application error bodies, propagates frame targets and top-frame URLs, and cancels frame rendering when the original request is aborted.
 
-If a component throws before the first chunk of HTML is ready, `router.fetch()` rejects with that error so the server can respond with a `500`. Errors in non-blocking frame content streamed later are reported to `onError` and leave the fallback in place.
+If a component throws before the first chunk of HTML is ready, `router.fetch()` rejects with that error so the server can respond with a `500`. The `render()` middleware throws the error itself, so only middleware that runs before `render()` can catch it. Inner middleware may rebuild the response around the same body, but if the body is replaced or transformed, as with `HEAD` requests or compression inside `render()`, the error is only reported to `onError`. Errors in non-blocking frame content streamed later are reported to `onError` and leave the fallback in place.
 
 ### Options
 
