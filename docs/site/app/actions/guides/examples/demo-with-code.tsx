@@ -31,21 +31,7 @@ export async function loadDemoSource(moduleUrl: URL): Promise<string> {
 // highlighted source code, which starts collapsed.
 export function Demo(handle: Handle<DemoProps>) {
   return () => (
-    <div
-      data-demo-frame
-      mix={css({
-        margin: "var(--rmx-space-xl) 0",
-        // Some guide demos are full mini apps, so keep them scrollable instead of
-        // stretching the chapter.
-        "& .docs-demo-preview": {
-          contain: "layout paint",
-          transform: "translateZ(0)",
-          maxHeight: "36rem",
-          overflow: "auto",
-          overscrollBehavior: "contain",
-        },
-      })}
-    >
+    <div data-demo-frame mix={frameStyles}>
       <DocsDemo sourceHtml={handle.props.sourceHtml}>{handle.props.children}</DocsDemo>
     </div>
   );
@@ -95,3 +81,16 @@ export function demoPreview(
 
   return handler;
 }
+
+const frameStyles = css({
+  margin: "var(--rmx-space-xl) 0",
+  // Some guide demos are full mini apps, so keep them scrollable instead of
+  // stretching the chapter.
+  "& .docs-demo-preview": {
+    contain: "layout paint",
+    transform: "translateZ(0)",
+    maxHeight: "36rem",
+    overflow: "auto",
+    overscrollBehavior: "contain",
+  },
+});

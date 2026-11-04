@@ -43,6 +43,13 @@ A component receives a `handle` and returns a render function. State is a variab
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
+const buttonStyle = css({
+  padding: '8px 12px',
+  borderRadius: '6px',
+  '&:hover': { background: '#f3f0ff' },
+  '&:disabled': { opacity: 0.6 },
+})
+
 export function LikeButton(handle: Handle<{ href: string; initialLikes: number }>) {
   let likes = handle.props.initialLikes
   let saving = false
@@ -52,12 +59,7 @@ export function LikeButton(handle: Handle<{ href: string; initialLikes: number }
       type="button"
       disabled={saving}
       mix={[
-        css({
-          padding: '8px 12px',
-          borderRadius: '6px',
-          '&:hover': { background: '#f3f0ff' },
-          '&:disabled': { opacity: 0.6 },
-        }),
+        buttonStyle,
         on('click', async (_event, signal) => {
           likes++
           saving = true
@@ -509,6 +511,35 @@ To listen for your own events with full types, declare them on `HTMLElementEvent
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
+const toggleStyle = css({
+  display: 'inline-flex',
+  gap: '6px',
+  padding: '8px 12px',
+  border: '1px solid #d6d6d6',
+  borderRadius: '6px',
+  background: 'white',
+  '&:hover': {
+    borderColor: '#6d28d9',
+  },
+  '&[aria-pressed="true"]': {
+    background: '#6d28d9',
+    color: 'white',
+  },
+  '&::after': {
+    content: '"✓"',
+    visibility: 'hidden',
+  },
+  '&[aria-pressed="true"]::after': {
+    visibility: 'visible',
+  },
+  '.label': {
+    fontWeight: 600,
+  },
+  '@media (max-width: 40rem)': {
+    padding: '12px 16px',
+  },
+})
+
 function FavoriteToggle(handle: Handle) {
   let pressed = false
 
@@ -517,34 +548,7 @@ function FavoriteToggle(handle: Handle) {
       type="button"
       aria-pressed={pressed}
       mix={[
-        css({
-          display: 'inline-flex',
-          gap: '6px',
-          padding: '8px 12px',
-          border: '1px solid #d6d6d6',
-          borderRadius: '6px',
-          background: 'white',
-          '&:hover': {
-            borderColor: '#6d28d9',
-          },
-          '&[aria-pressed="true"]': {
-            background: '#6d28d9',
-            color: 'white',
-          },
-          '&::after': {
-            content: '"✓"',
-            visibility: 'hidden',
-          },
-          '&[aria-pressed="true"]::after': {
-            visibility: 'visible',
-          },
-          '.label': {
-            fontWeight: 600,
-          },
-          '@media (max-width: 40rem)': {
-            padding: '12px 16px',
-          },
-        }),
+        toggleStyle,
         on('click', () => {
           pressed = !pressed
           handle.update()
@@ -575,13 +579,10 @@ Each distinct style object becomes its own class and rule. Use `css(...)` for st
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
+const barStyle = css({ height: '4px', background: '#6d28d9', transformOrigin: 'left' })
+
 function ProgressBar(handle: Handle<{ value: number }>) {
-  return () => (
-    <div
-      mix={css({ height: '4px', background: '#6d28d9', transformOrigin: 'left' })}
-      style={{ transform: `scaleX(${handle.props.value})` }}
-    />
-  )
+  return () => <div mix={barStyle} style={{ transform: `scaleX(${handle.props.value})` }} />
 }
 ```
 
@@ -609,17 +610,16 @@ Combine styles that set different properties, such as layout and appearance. For
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
+const buttonStyle = css({
+  background: 'gray',
+  '&[data-variant="danger"]': {
+    background: 'red',
+  },
+})
+
 function Button(handle: Handle<{ label: string; variant?: 'danger' }>) {
   return () => (
-    <button
-      data-variant={handle.props.variant}
-      mix={css({
-        background: 'gray',
-        '&[data-variant="danger"]': {
-          background: 'red',
-        },
-      })}
-    >
+    <button data-variant={handle.props.variant} mix={buttonStyle}>
       {handle.props.label}
     </button>
   )

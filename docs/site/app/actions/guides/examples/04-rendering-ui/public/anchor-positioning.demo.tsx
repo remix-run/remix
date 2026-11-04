@@ -28,24 +28,10 @@ export function AnchorPositioning() {
   }
 
   return () => (
-    <div
-      mix={css({
-        display: "grid",
-        placeItems: "center",
-        minHeight: "9rem",
-        width: "min(100%, 24rem)",
-      })}
-    >
+    <div mix={demoCss}>
       <button
         mix={[
-          css({
-            minHeight: "30px",
-            paddingInline: "12px",
-            border: "1px solid #d1d1d1",
-            borderRadius: "999px",
-            background: "#fff",
-            color: "#101010",
-          }),
+          buttonCss,
           ref((node, signal) => {
             if (!(node instanceof HTMLElement)) return;
 
@@ -67,21 +53,7 @@ export function AnchorPositioning() {
 
       <div
         mix={[
-          css({
-            boxSizing: "border-box",
-            width: "12rem",
-            border: "1px solid rgba(0, 0, 0, 0.12)",
-            borderRadius: "8px",
-            background: "#FFFFFF",
-            boxShadow: "0 12px 32px rgba(0, 0, 0, 0.12)",
-            color: "#101010",
-            fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-            fontSize: "13px",
-            lineHeight: "18px",
-            fontWeight: 500,
-            letterSpacing: 0,
-            padding: "10px 12px",
-          }),
+          floatingCss,
           ref((node, signal) => {
             if (!(node instanceof HTMLElement)) return;
 
@@ -103,3 +75,35 @@ export function AnchorPositioning() {
     </div>
   );
 }
+
+const demoCss = css({
+  display: "grid",
+  placeItems: "center",
+  minHeight: "9rem",
+  width: "min(100%, 24rem)",
+});
+
+const buttonCss = css({
+  minHeight: "30px",
+  paddingInline: "12px",
+  border: "1px solid #d1d1d1",
+  borderRadius: "999px",
+  background: "#fff",
+  color: "#101010",
+});
+
+const floatingCss = css({
+  boxSizing: "border-box",
+  width: "12rem",
+  border: "1px solid rgba(0, 0, 0, 0.12)",
+  borderRadius: "8px",
+  background: "#FFFFFF",
+  boxShadow: "0 12px 32px rgba(0, 0, 0, 0.12)",
+  color: "#101010",
+  fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  fontSize: "13px",
+  lineHeight: "18px",
+  fontWeight: 500,
+  letterSpacing: 0,
+  padding: "10px 12px",
+});

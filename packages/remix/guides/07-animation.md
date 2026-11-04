@@ -26,32 +26,31 @@ import type { Handle, RemixNode } from "remix/component";
 
 export function PressableCard(handle: Handle<{ children: RemixNode }>) {
   return () => (
-    <button
-      mix={css({
-        border: "1px solid #d6d6d6",
-        borderRadius: "16px",
-        background: "white",
-        cursor: "pointer",
-        font: "inherit",
-        padding: "1rem",
-        transition: "transform 160ms ease, box-shadow 160ms ease",
-        "&:hover, &:focus-visible": {
-          boxShadow: "0 12px 32px rgba(15, 17, 21, 0.14)",
-          transform: "translateY(-2px)",
-        },
-        "&:active": {
-          transform: "translateY(0)",
-        },
-        "@media (prefers-reduced-motion: reduce)": {
-          transition: "none",
-        },
-      })}
-      type="button"
-    >
+    <button mix={cardStyle} type="button">
       {handle.props.children}
     </button>
   );
 }
+
+const cardStyle = css({
+  border: "1px solid #d6d6d6",
+  borderRadius: "16px",
+  background: "white",
+  cursor: "pointer",
+  font: "inherit",
+  padding: "1rem",
+  transition: "transform 160ms ease, box-shadow 160ms ease",
+  "&:hover, &:focus-visible": {
+    boxShadow: "0 12px 32px rgba(15, 17, 21, 0.14)",
+    transform: "translateY(-2px)",
+  },
+  "&:active": {
+    transform: "translateY(0)",
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+  },
+});
 ```
 
 Use the animation helpers from [`@remix-run/ui/animation`](/api/ui/animation/) when the motion depends on rendering state, such as a node entering, a node exiting, a keyed item moving, or an event that needs an interruptible animation.
@@ -74,25 +73,7 @@ export function PressStateDemo(handle: Handle) {
     <div
       tabIndex={0}
       mix={[
-        css({
-          display: "grid",
-          width: 120,
-          height: 120,
-          placeItems: "center",
-          borderRadius: 12,
-          backgroundColor: "#9911ff",
-          color: "white",
-          cursor: "pointer",
-          fontWeight: "800",
-          transition: `transform ${spring()}`,
-          "&:focus": {
-            outline: "4px solid rgba(0,120,255,0.7)",
-            outlineOffset: 2,
-          },
-          "&:hover, &:focus": {
-            transform: "scale(1.12)",
-          },
-        }),
+        pressableStyles,
         onPressDown(() => {
           setPressed(true);
         }),
@@ -128,6 +109,26 @@ const onPressUp = createMixin<HTMLElement, [handler: () => void]>(() => (handler
   }),
   on("blur", handler),
 ]);
+
+const pressableStyles = css({
+  display: "grid",
+  width: 120,
+  height: 120,
+  placeItems: "center",
+  borderRadius: 12,
+  backgroundColor: "#9911ff",
+  color: "white",
+  cursor: "pointer",
+  fontWeight: "800",
+  transition: `transform ${spring()}`,
+  "&:focus": {
+    outline: "4px solid rgba(0,120,255,0.7)",
+    outlineOffset: 2,
+  },
+  "&:hover, &:focus": {
+    transform: "scale(1.12)",
+  },
+});
 ```
 
 ## Entrance and exit animations {#entrance-and-exit-animations}
@@ -159,12 +160,7 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
         <p
           key="notice"
           mix={[
-            css({
-              borderRadius: "12px",
-              background: "#ecfdf5",
-              color: "#065f46",
-              padding: "0.75rem 1rem",
-            }),
+            noticeStyle,
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -183,6 +179,13 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
     </div>
   );
 });
+
+const noticeStyle = css({
+  borderRadius: "12px",
+  background: "#ecfdf5",
+  color: "#065f46",
+  padding: "0.75rem 1rem",
+});
 ```
 
 Keep keys stable when toggling between related elements. A stable key tells Remix which node is entering, exiting, or being replaced.
@@ -198,25 +201,10 @@ export function NoticePresenceDemo(handle: Handle) {
   let visible = true;
 
   return () => (
-    <div
-      mix={css({
-        display: "grid",
-        gap: "1rem",
-        minWidth: "16rem",
-      })}
-    >
+    <div mix={stackStyles}>
       <button
         mix={[
-          css({
-            border: "1px solid #d83a5a",
-            borderRadius: "999px",
-            background: "#d83a5a",
-            color: "white",
-            cursor: "pointer",
-            font: "inherit",
-            fontWeight: "700",
-            padding: "0.7rem 1rem",
-          }),
+          buttonStyles,
           on("click", () => {
             visible = !visible;
             handle.update();
@@ -231,13 +219,7 @@ export function NoticePresenceDemo(handle: Handle) {
         <p
           key="notice"
           mix={[
-            css({
-              margin: 0,
-              borderRadius: "12px",
-              background: "#ecfdf5",
-              color: "#065f46",
-              padding: "0.75rem 1rem",
-            }),
+            noticeStyles,
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -256,6 +238,31 @@ export function NoticePresenceDemo(handle: Handle) {
     </div>
   );
 }
+
+const stackStyles = css({
+  display: "grid",
+  gap: "1rem",
+  minWidth: "16rem",
+});
+
+const buttonStyles = css({
+  border: "1px solid #d83a5a",
+  borderRadius: "999px",
+  background: "#d83a5a",
+  color: "white",
+  cursor: "pointer",
+  font: "inherit",
+  fontWeight: "700",
+  padding: "0.7rem 1rem",
+});
+
+const noticeStyles = css({
+  margin: 0,
+  borderRadius: "12px",
+  background: "#ecfdf5",
+  color: "#065f46",
+  padding: "0.75rem 1rem",
+});
 ```
 
 ## Layout animations {#layout-animations}
@@ -285,32 +292,28 @@ export const ReorderList = clientEntry(import.meta.url, function ReorderList(han
       >
         Reverse
       </button>
-      <ul
-        mix={css({
-          display: "grid",
-          gap: "0.5rem",
-          listStyle: "none",
-          padding: 0,
-        })}
-      >
+      <ul mix={listStyle}>
         {items.map((item) => (
-          <li
-            key={item}
-            mix={[
-              css({
-                border: "1px solid #d6d6d6",
-                borderRadius: "10px",
-                padding: "0.7rem 1rem",
-              }),
-              animateLayout({ ...spring("bouncy") }),
-            ]}
-          >
+          <li key={item} mix={[itemStyle, animateLayout({ ...spring("bouncy") })]}>
             {item}
           </li>
         ))}
       </ul>
     </div>
   );
+});
+
+const listStyle = css({
+  display: "grid",
+  gap: "0.5rem",
+  listStyle: "none",
+  padding: 0,
+});
+
+const itemStyle = css({
+  border: "1px solid #d6d6d6",
+  borderRadius: "10px",
+  padding: "0.7rem 1rem",
 });
 ```
 
@@ -342,30 +345,12 @@ export function ReorderingDemo(handle: Handle) {
   handle.queueTask(scheduleNextShuffle);
 
   return () => (
-    <ul
-      mix={css({
-        display: "flex",
-        position: "relative",
-        flexDirection: "row",
-        flexWrap: "wrap",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 220,
-        gap: 10,
-        margin: 0,
-        padding: 0,
-        listStyle: "none",
-      })}
-    >
+    <ul mix={listStyles}>
       {order.map((backgroundColor) => (
         <li
           key={backgroundColor}
           mix={[
-            css({
-              width: 100,
-              height: 100,
-              borderRadius: 10,
-            }),
+            itemStyles,
             animateLayout({
               ...spring({ duration: 600, bounce: 0.2 }),
             }),
@@ -389,6 +374,26 @@ function shuffle<item>(array: item[]): item[] {
   }
   return result;
 }
+
+const listStyles = css({
+  display: "flex",
+  position: "relative",
+  flexDirection: "row",
+  flexWrap: "wrap",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 220,
+  gap: 10,
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+});
+
+const itemStyles = css({
+  width: 100,
+  height: 100,
+  borderRadius: 10,
+});
 ```
 
 ## Springs, tweens, and easing {#springs-tweens-and-easing}
@@ -407,14 +412,7 @@ export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(h
     <button
       aria-pressed={enabled}
       mix={[
-        css({
-          border: 0,
-          borderRadius: "999px",
-          background: "#ff6b35",
-          cursor: "pointer",
-          padding: "0.25rem",
-          width: "5rem",
-        }),
+        switchStyle,
         on("click", () => {
           enabled = !enabled;
           handle.update();
@@ -423,20 +421,31 @@ export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(h
       type="button"
     >
       <span
-        mix={css({
-          display: "block",
-          width: "2rem",
-          height: "2rem",
-          borderRadius: "50%",
-          background: "white",
-          transition: spring.transition("transform", "bouncy"),
-        })}
+        mix={thumbStyle}
         style={{
           transform: enabled ? "translateX(2.25rem)" : "translateX(0)",
         }}
       />
     </button>
   );
+});
+
+const switchStyle = css({
+  border: 0,
+  borderRadius: "999px",
+  background: "#ff6b35",
+  cursor: "pointer",
+  padding: "0.25rem",
+  width: "5rem",
+});
+
+const thumbStyle = css({
+  display: "block",
+  width: "2rem",
+  height: "2rem",
+  borderRadius: "50%",
+  background: "white",
+  transition: spring.transition("transform", "bouncy"),
 });
 ```
 
@@ -520,27 +529,10 @@ export function SpringDragReleaseDemo(handle: Handle) {
   }
 
   return () => (
-    <div
-      mix={css({
-        display: "grid",
-        gap: "0.75rem",
-        width: "min(100%, 30rem)",
-      })}
-    >
+    <div mix={layoutStyle}>
       <div
         mix={[
-          css({
-            position: "relative",
-            overflow: "hidden",
-            width: "100%",
-            maxWidth: `${stageWidth}px`,
-            height: `${stageHeight}px`,
-            borderRadius: "18px",
-            background:
-              "radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.2), transparent 35%), #17172a",
-            cursor: "crosshair",
-            touchAction: "none",
-          }),
+          stageStyle,
           ref((node: HTMLDivElement) => {
             stage = node;
           }),
@@ -549,15 +541,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
       >
         <div
           aria-hidden="true"
-          mix={css({
-            position: "absolute",
-            width: `${dotSize + 18}px`,
-            height: `${dotSize + 18}px`,
-            border: "2px dashed rgba(233, 69, 96, 0.65)",
-            borderRadius: "50%",
-            transform: "translate(-50%, -50%)",
-            pointerEvents: "none",
-          })}
+          mix={targetStyle}
           style={{
             left: `${targetX}px`,
             top: `${targetY}px`,
@@ -570,21 +554,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
           role="button"
           tabIndex={0}
           mix={[
-            css({
-              position: "absolute",
-              width: `${dotSize}px`,
-              height: `${dotSize}px`,
-              borderRadius: "50%",
-              backgroundColor: "#0ea5e9",
-              boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
-              transform: "translate(-50%, -50%)",
-              userSelect: "none",
-              touchAction: "none",
-              "&:focus-visible": {
-                outline: "3px solid rgba(255, 255, 255, 0.8)",
-                outlineOffset: "3px",
-              },
-            }),
+            dotStyle,
             dragVelocityEvents(),
             on<HTMLDivElement, "pointerdown">("pointerdown", (event) => {
               event.preventDefault();
@@ -627,27 +597,9 @@ export function SpringDragReleaseDemo(handle: Handle) {
         />
       </div>
 
-      <div
-        class="spring-demo-controls"
-        mix={css({
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "0.35rem",
-        })}
-      >
+      <div class="spring-demo-controls" mix={controlsStyle}>
         {(Object.keys(spring.presets) as SpringPreset[]).map((preset) => (
-          <label
-            key={preset}
-            mix={css({
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.35rem",
-              border: "1px solid #d1d5db",
-              borderRadius: "999px",
-              padding: "0.4rem 0.65rem",
-              fontSize: "0.85rem",
-            })}
-          >
+          <label key={preset} mix={controlLabelStyle}>
             <input
               type="radio"
               name="spring-preset"
@@ -665,16 +617,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
         ))}
       </div>
 
-      <p
-        mix={css({
-          margin: 0,
-          color: "#6b7280",
-          fontSize: "0.85rem",
-          textAlign: "center",
-        })}
-      >
-        Click the panel to move the target. Drag and release the dot.
-      </p>
+      <p mix={hintStyle}>Click the panel to move the target. Drag and release the dot.</p>
     </div>
   );
 }
@@ -691,6 +634,74 @@ function readVelocitySpring(preset: SpringPreset, velocity: number, distance: nu
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
+
+const layoutStyle = css({
+  display: "grid",
+  gap: "0.75rem",
+  width: "min(100%, 30rem)",
+});
+
+const stageStyle = css({
+  position: "relative",
+  overflow: "hidden",
+  width: "100%",
+  maxWidth: `${stageWidth}px`,
+  height: `${stageHeight}px`,
+  borderRadius: "18px",
+  background:
+    "radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.2), transparent 35%), #17172a",
+  cursor: "crosshair",
+  touchAction: "none",
+});
+
+const targetStyle = css({
+  position: "absolute",
+  width: `${dotSize + 18}px`,
+  height: `${dotSize + 18}px`,
+  border: "2px dashed rgba(233, 69, 96, 0.65)",
+  borderRadius: "50%",
+  transform: "translate(-50%, -50%)",
+  pointerEvents: "none",
+});
+
+const dotStyle = css({
+  position: "absolute",
+  width: `${dotSize}px`,
+  height: `${dotSize}px`,
+  borderRadius: "50%",
+  backgroundColor: "#0ea5e9",
+  boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
+  transform: "translate(-50%, -50%)",
+  userSelect: "none",
+  touchAction: "none",
+  "&:focus-visible": {
+    outline: "3px solid rgba(255, 255, 255, 0.8)",
+    outlineOffset: "3px",
+  },
+});
+
+const controlsStyle = css({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "0.35rem",
+});
+
+const controlLabelStyle = css({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.35rem",
+  border: "1px solid #d1d5db",
+  borderRadius: "999px",
+  padding: "0.4rem 0.65rem",
+  fontSize: "0.85rem",
+});
+
+const hintStyle = css({
+  margin: 0,
+  color: "#6b7280",
+  fontSize: "0.85rem",
+  textAlign: "center",
+});
 ```
 
 ```tsx
@@ -705,18 +716,7 @@ export function BouncySwitchDemo(handle: Handle) {
     <button
       aria-pressed={isOn}
       mix={[
-        css({
-          display: "flex",
-          width: 80,
-          height: 180,
-          flexDirection: "column",
-          justifyContent: "flex-end",
-          border: 0,
-          borderRadius: 50,
-          backgroundColor: "#ff6b35",
-          cursor: "pointer",
-          padding: 10,
-        }),
+        switchStyles,
         on("click", () => {
           isOn = !isOn;
           handle.update();
@@ -725,13 +725,7 @@ export function BouncySwitchDemo(handle: Handle) {
       type="button"
     >
       <span
-        mix={css({
-          width: 60,
-          height: 60,
-          borderRadius: 30,
-          backgroundColor: "white",
-          willChange: "transform",
-        })}
+        mix={thumbStyles}
         style={{
           transform: isOn ? "translateY(-100px)" : "translateY(0)",
           transition: isOn ? `transform ${spring()}` : `transform 800ms ${bounceEasing}`,
@@ -742,6 +736,27 @@ export function BouncySwitchDemo(handle: Handle) {
 }
 
 const bounceEasing = `linear(0, 0.258 12%, 0.424 18.3%, 0.633 24.4%, 0.999 33.3%, 0.783 39.8%, 0.733 42.5%, 0.716 45.1%, 0.731 47.6%, 0.777 50.2%, 0.999 57.7%, 0.906 61.7%, 0.883 63.5%, 0.876 65.2%, 0.901 68.7%, 0.999 74.5%, 0.964 77.4%, 0.953 80.1%, 0.961 82.6%, 1 88.2%, 0.99 91.9%, 1)`;
+
+const switchStyles = css({
+  display: "flex",
+  width: 80,
+  height: 180,
+  flexDirection: "column",
+  justifyContent: "flex-end",
+  border: 0,
+  borderRadius: 50,
+  backgroundColor: "#ff6b35",
+  cursor: "pointer",
+  padding: 10,
+});
+
+const thumbStyles = css({
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  backgroundColor: "white",
+  willChange: "transform",
+});
 ```
 
 The gallery below collects smaller motion experiments built with the same helpers.
@@ -958,16 +973,7 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
     <button
       mix={[
         ref((element) => (node = element)),
-        css({
-          border: 0,
-          borderRadius: "999px",
-          background: "#9911ff",
-          color: "white",
-          cursor: "pointer",
-          font: "inherit",
-          fontWeight: "700",
-          padding: "0.8rem 1.1rem",
-        }),
+        buttonStyle,
         on("pointerdown", () => {
           currentAnimation?.cancel();
           currentAnimation = node.animate(
@@ -982,6 +988,17 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
     </button>
   );
 });
+
+const buttonStyle = css({
+  border: 0,
+  borderRadius: "999px",
+  background: "#9911ff",
+  color: "white",
+  cursor: "pointer",
+  font: "inherit",
+  fontWeight: "700",
+  padding: "0.8rem 1.1rem",
+});
 ```
 
 CSS transitions are also interruptible. Changing the target value while a transition is running makes the browser animate from the current visual state to the new one.
@@ -995,22 +1012,18 @@ import { css } from "remix/component";
 import type { Handle, RemixNode } from "remix/component";
 
 export function MotionSafePanel(handle: Handle<{ children: RemixNode }>) {
-  return () => (
-    <section
-      mix={css({
-        opacity: 1,
-        transform: "translateY(0)",
-        transition: "opacity 180ms ease, transform 180ms ease",
-        "@media (prefers-reduced-motion: reduce)": {
-          transition: "none",
-          transform: "none",
-        },
-      })}
-    >
-      {handle.props.children}
-    </section>
-  );
+  return () => <section mix={panelStyle}>{handle.props.children}</section>;
 }
+
+const panelStyle = css({
+  opacity: 1,
+  transform: "translateY(0)",
+  transition: "opacity 180ms ease, transform 180ms ease",
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+    transform: "none",
+  },
+});
 ```
 
 For JavaScript-driven motion, check the same media query before starting work:

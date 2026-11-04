@@ -13,32 +13,7 @@ export default function ExampleSpring(handle: Handle) {
           saved = !saved
           handle.update()
         }),
-        css({
-          colorScheme: 'light dark',
-          '&, & *, &::before, &::after, & *::before, & *::after': {
-            boxSizing: 'border-box',
-          },
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-          minWidth: '120px',
-          padding: '12px 20px',
-          border: '1px solid light-dark(#d8d8df, #44444c)',
-          borderRadius: '8px',
-          background: 'light-dark(#fff, #1b1b20)',
-          color: 'light-dark(#202027, #eeeef2)',
-          font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-          fontWeight: 600,
-          cursor: 'pointer',
-          '&:hover': {
-            background: 'light-dark(#f0f0f5, #303038)',
-          },
-          '&:focus-visible': {
-            outline: `2px solid light-dark(#70707c, #a0a0ac)`,
-            outlineOffset: '3px',
-          },
-        }),
+        styles.button,
         css({
           '& svg': {
             color: saved ? 'light-dark(#62626c, #b0b0bb)' : 'inherit',
@@ -58,6 +33,35 @@ export default function ExampleSpring(handle: Handle) {
       Bookmark
     </button>
   )
+}
+
+const styles = {
+  button: css({
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+    minWidth: '120px',
+    padding: '12px 20px',
+    border: '1px solid light-dark(#d8d8df, #44444c)',
+    borderRadius: '8px',
+    background: 'light-dark(#fff, #1b1b20)',
+    color: 'light-dark(#202027, #eeeef2)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+    fontWeight: 600,
+    cursor: 'pointer',
+    '&:hover': {
+      background: 'light-dark(#f0f0f5, #303038)',
+    },
+    '&:focus-visible': {
+      outline: `2px solid light-dark(#70707c, #a0a0ac)`,
+      outlineOffset: '3px',
+    },
+  }),
 }
 
 function BookmarkIcon(handle: Handle<{ saved: boolean }>) {

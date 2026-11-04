@@ -9,28 +9,8 @@ import * as tabs from '@remix-run/ui/tabs'
 export default function Example() {
   return () => (
     <tabs.Context defaultActiveTab="overview">
-      <div
-        mix={[
-          css({
-            display: 'grid',
-            gap: '12px',
-            width: 'min(100%, 28rem)',
-            fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-          }),
-          tabs.root(),
-        ]}
-      >
-        <div
-          aria-label="Project sections"
-          mix={[
-            css({
-              display: 'flex',
-              gap: '4px',
-              borderBlockEnd: '1px solid light-dark(#d1d1d1, #444444)',
-            }),
-            tabs.list(),
-          ]}
-        >
+      <div mix={[rootCss, tabs.root()]}>
+        <div aria-label="Project sections" mix={[listCss, tabs.list()]}>
           <button mix={[tabCss, tabs.tab({ name: 'overview' })]} type="button">
             Overview
           </button>
@@ -55,6 +35,19 @@ export default function Example() {
     </tabs.Context>
   )
 }
+
+const rootCss = css({
+  display: 'grid',
+  gap: '12px',
+  width: 'min(100%, 28rem)',
+  fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+})
+
+const listCss = css({
+  display: 'flex',
+  gap: '4px',
+  borderBlockEnd: '1px solid light-dark(#d1d1d1, #444444)',
+})
 
 const tabCss = css({
   appearance: 'none',

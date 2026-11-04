@@ -42,27 +42,10 @@ export function SpringDragReleaseDemo(handle: Handle) {
   }
 
   return () => (
-    <div
-      mix={css({
-        display: "grid",
-        gap: "0.75rem",
-        width: "min(100%, 30rem)",
-      })}
-    >
+    <div mix={layoutStyle}>
       <div
         mix={[
-          css({
-            position: "relative",
-            overflow: "hidden",
-            width: "100%",
-            maxWidth: `${stageWidth}px`,
-            height: `${stageHeight}px`,
-            borderRadius: "18px",
-            background:
-              "radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.2), transparent 35%), #17172a",
-            cursor: "crosshair",
-            touchAction: "none",
-          }),
+          stageStyle,
           ref((node: HTMLDivElement) => {
             stage = node;
           }),
@@ -71,15 +54,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
       >
         <div
           aria-hidden="true"
-          mix={css({
-            position: "absolute",
-            width: `${dotSize + 18}px`,
-            height: `${dotSize + 18}px`,
-            border: "2px dashed rgba(233, 69, 96, 0.65)",
-            borderRadius: "50%",
-            transform: "translate(-50%, -50%)",
-            pointerEvents: "none",
-          })}
+          mix={targetStyle}
           style={{
             left: `${targetX}px`,
             top: `${targetY}px`,
@@ -92,21 +67,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
           role="button"
           tabIndex={0}
           mix={[
-            css({
-              position: "absolute",
-              width: `${dotSize}px`,
-              height: `${dotSize}px`,
-              borderRadius: "50%",
-              backgroundColor: "#0ea5e9",
-              boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
-              transform: "translate(-50%, -50%)",
-              userSelect: "none",
-              touchAction: "none",
-              "&:focus-visible": {
-                outline: "3px solid rgba(255, 255, 255, 0.8)",
-                outlineOffset: "3px",
-              },
-            }),
+            dotStyle,
             dragVelocityEvents(),
             on<HTMLDivElement, "pointerdown">("pointerdown", (event) => {
               event.preventDefault();
@@ -149,27 +110,9 @@ export function SpringDragReleaseDemo(handle: Handle) {
         />
       </div>
 
-      <div
-        class="spring-demo-controls"
-        mix={css({
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "0.35rem",
-        })}
-      >
+      <div class="spring-demo-controls" mix={controlsStyle}>
         {(Object.keys(spring.presets) as SpringPreset[]).map((preset) => (
-          <label
-            key={preset}
-            mix={css({
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.35rem",
-              border: "1px solid #d1d5db",
-              borderRadius: "999px",
-              padding: "0.4rem 0.65rem",
-              fontSize: "0.85rem",
-            })}
-          >
+          <label key={preset} mix={controlLabelStyle}>
             <input
               type="radio"
               name="spring-preset"
@@ -187,16 +130,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
         ))}
       </div>
 
-      <p
-        mix={css({
-          margin: 0,
-          color: "#6b7280",
-          fontSize: "0.85rem",
-          textAlign: "center",
-        })}
-      >
-        Click the panel to move the target. Drag and release the dot.
-      </p>
+      <p mix={hintStyle}>Click the panel to move the target. Drag and release the dot.</p>
     </div>
   );
 }
@@ -213,3 +147,71 @@ function readVelocitySpring(preset: SpringPreset, velocity: number, distance: nu
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
+
+const layoutStyle = css({
+  display: "grid",
+  gap: "0.75rem",
+  width: "min(100%, 30rem)",
+});
+
+const stageStyle = css({
+  position: "relative",
+  overflow: "hidden",
+  width: "100%",
+  maxWidth: `${stageWidth}px`,
+  height: `${stageHeight}px`,
+  borderRadius: "18px",
+  background:
+    "radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.2), transparent 35%), #17172a",
+  cursor: "crosshair",
+  touchAction: "none",
+});
+
+const targetStyle = css({
+  position: "absolute",
+  width: `${dotSize + 18}px`,
+  height: `${dotSize + 18}px`,
+  border: "2px dashed rgba(233, 69, 96, 0.65)",
+  borderRadius: "50%",
+  transform: "translate(-50%, -50%)",
+  pointerEvents: "none",
+});
+
+const dotStyle = css({
+  position: "absolute",
+  width: `${dotSize}px`,
+  height: `${dotSize}px`,
+  borderRadius: "50%",
+  backgroundColor: "#0ea5e9",
+  boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
+  transform: "translate(-50%, -50%)",
+  userSelect: "none",
+  touchAction: "none",
+  "&:focus-visible": {
+    outline: "3px solid rgba(255, 255, 255, 0.8)",
+    outlineOffset: "3px",
+  },
+});
+
+const controlsStyle = css({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "0.35rem",
+});
+
+const controlLabelStyle = css({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.35rem",
+  border: "1px solid #d1d5db",
+  borderRadius: "999px",
+  padding: "0.4rem 0.65rem",
+  fontSize: "0.85rem",
+});
+
+const hintStyle = css({
+  margin: 0,
+  color: "#6b7280",
+  fontSize: "0.85rem",
+  textAlign: "center",
+});

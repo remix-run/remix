@@ -21,30 +21,12 @@ export function ReorderingDemo(handle: Handle) {
   handle.queueTask(scheduleNextShuffle);
 
   return () => (
-    <ul
-      mix={css({
-        display: "flex",
-        position: "relative",
-        flexDirection: "row",
-        flexWrap: "wrap",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 220,
-        gap: 10,
-        margin: 0,
-        padding: 0,
-        listStyle: "none",
-      })}
-    >
+    <ul mix={listStyles}>
       {order.map((backgroundColor) => (
         <li
           key={backgroundColor}
           mix={[
-            css({
-              width: 100,
-              height: 100,
-              borderRadius: 10,
-            }),
+            itemStyles,
             animateLayout({
               ...spring({ duration: 600, bounce: 0.2 }),
             }),
@@ -68,3 +50,23 @@ function shuffle<item>(array: item[]): item[] {
   }
   return result;
 }
+
+const listStyles = css({
+  display: "flex",
+  position: "relative",
+  flexDirection: "row",
+  flexWrap: "wrap",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 220,
+  gap: 10,
+  margin: 0,
+  padding: 0,
+  listStyle: "none",
+});
+
+const itemStyles = css({
+  width: 100,
+  height: 100,
+  borderRadius: 10,
+});
