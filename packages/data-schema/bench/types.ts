@@ -35,6 +35,13 @@ export type ImportResult = {
   externalDelta: number
 }
 
+export type ConstructionResult = {
+  mode: 'construct'
+  library: LibraryId
+  iterations: number
+  operationsPerSecond: number
+}
+
 export type SchemaResult = {
   mode: 'schema'
   library: LibraryId
@@ -62,4 +69,9 @@ export type RetainedResult = {
   retainedHeapBytesPerResult: number
 }
 
-export type WorkerResult = ImportResult | SchemaResult | ValidationResult | RetainedResult
+export type WorkerResult =
+  | ImportResult
+  | ConstructionResult
+  | SchemaResult
+  | ValidationResult
+  | RetainedResult

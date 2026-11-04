@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process'
 
 import { libraryIds, workloadIds } from './types.ts'
 import type {
+  ConstructionResult,
   ImportResult,
   LibraryId,
   RetainedResult,
@@ -106,6 +107,13 @@ function parseWorkerResult(value: unknown): WorkerResult {
         rssDelta: readNumber(value, 'rssDelta'),
         externalDelta: readNumber(value, 'externalDelta'),
       }
+    case 'construct':
+      return {
+        mode,
+        library,
+        iterations: readNumber(value, 'iterations'),
+        operationsPerSecond: readNumber(value, 'operationsPerSecond'),
+      }
     case 'schema':
       return {
         mode,
@@ -150,6 +158,12 @@ function repeat(
   library: LibraryId,
   workload?: WorkloadId,
 ): Promise<ImportResult[]>
+function repeat(
+  trials: number,
+  mode: 'construct',
+  library: LibraryId,
+  workload?: WorkloadId,
+): Promise<ConstructionResult[]>
 function repeat(
   trials: number,
   mode: 'schema',
@@ -203,6 +217,16 @@ async function main(): Promise<void> {
   }
   console.log('Cold module import footprint')
   console.table(importTable)
+
+  let constructionTable: Record<string, Record<string, string>> = {}
+  for (let library of libraryIds) {
+    let results = await repeat(trials, 'construct', library)
+    constructionTable[library] = {
+      throughput: formatOps(median(results.map((result) => result.operationsPerSecond))),
+    }
+  }
+  console.log('\nSchema construction')
+  console.table(constructionTable)
 
   let schemaTable: Record<string, Record<string, string>> = {}
   for (let library of libraryIds) {

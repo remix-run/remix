@@ -4,6 +4,7 @@ import { performance } from 'node:perf_hooks'
 import { libraryIds, workloadIds } from './types.ts'
 import type {
   BenchmarkAdapter,
+  ConstructionResult,
   ImportResult,
   LibraryId,
   MemorySnapshot,
@@ -17,6 +18,7 @@ import type {
 type Mode = WorkerResult['mode']
 
 const schemaCount = 2_000
+const constructionIterations = 20_000
 const warmupIterations = 2_000
 const objectIterations = 20_000
 const arrayIterations = 500
@@ -65,6 +67,30 @@ async function measureImport(library: LibraryId): Promise<ImportResult> {
     heapTotalDelta: after.heapTotal - before.heapTotal,
     rssDelta: after.rss - before.rss,
     externalDelta: after.external - before.external,
+  }
+}
+
+async function measureConstruction(library: LibraryId): Promise<ConstructionResult> {
+  let adapter = await loadAdapter(library)
+  // Keep recent schemas reachable so the engine cannot skip building them.
+  let schemas: object[] = new Array(256)
+  for (let index = 0; index < warmupIterations; index++) {
+    schemas[index % schemas.length] = adapter.createSchema()
+  }
+
+  collectGarbage()
+  let startedAt = performance.now()
+  for (let index = 0; index < constructionIterations; index++) {
+    schemas[index % schemas.length] = adapter.createSchema()
+  }
+  let elapsed = performance.now() - startedAt
+  assert.ok(schemas[0] !== schemas[1])
+
+  return {
+    mode: 'construct',
+    library,
+    iterations: constructionIterations,
+    operationsPerSecond: constructionIterations / (elapsed / 1_000),
   }
 }
 
@@ -213,6 +239,7 @@ function parseWorkload(value: string | undefined): WorkloadId {
 function parseMode(value: string | undefined): Mode {
   switch (value) {
     case 'import':
+    case 'construct':
     case 'schema':
     case 'validate':
     case 'retain':
@@ -230,6 +257,9 @@ async function main(): Promise<void> {
   switch (mode) {
     case 'import':
       result = await measureImport(library)
+      break
+    case 'construct':
+      result = await measureConstruction(library)
       break
     case 'schema':
       result = await measureSchema(library)
