@@ -107,6 +107,7 @@ function getChangedFiles(baseRef: string, headRef: string): string[] {
   for (let file of runGitFiles([
     'diff',
     '--name-only',
+    '--no-renames',
     '-z',
     `${baseRef}...${headRef}`,
     '--',
@@ -116,7 +117,15 @@ function getChangedFiles(baseRef: string, headRef: string): string[] {
   }
 
   if (headRef === 'HEAD') {
-    for (let file of runGitFiles(['diff', '--name-only', '-z', 'HEAD', '--', '.'])) {
+    for (let file of runGitFiles([
+      'diff',
+      '--name-only',
+      '--no-renames',
+      '-z',
+      'HEAD',
+      '--',
+      '.',
+    ])) {
       changedFiles.add(file)
     }
 

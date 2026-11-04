@@ -7,26 +7,28 @@ import {
 } from './workspaces.ts'
 import type { WorkspaceInfo } from './workspaces.ts'
 
-test('getChangedWorkspaceDirs prefers the most specific nested workspace', () => {
-  let workspaces: WorkspaceInfo[] = [
-    {
-      dir: 'packages/component',
-      name: '@remix-run/component',
-      dependencies: [],
-      scripts: ['test', 'typecheck'],
-    },
-    {
-      dir: 'packages/component/bench',
-      name: 'component-bench',
-      dependencies: ['@remix-run/component'],
-      scripts: ['typecheck'],
-    },
-  ]
+describe('getChangedWorkspaceDirs', () => {
+  it('includes a nested benchmark and its enclosing package without a dependency edge', () => {
+    let workspaces: WorkspaceInfo[] = [
+      {
+        dir: 'packages/component',
+        name: '@remix-run/component',
+        dependencies: [],
+        scripts: ['test', 'typecheck'],
+      },
+      {
+        dir: 'packages/component/bench',
+        name: 'component-bench',
+        dependencies: [],
+        scripts: ['typecheck'],
+      },
+    ]
 
-  assert.deepEqual(
-    [...getChangedWorkspaceDirs(['packages/component/bench/runner.ts'], workspaces)],
-    ['packages/component/bench'],
-  )
+    assert.deepEqual(
+      [...getChangedWorkspaceDirs(['packages/component/bench/runner.ts'], workspaces)].sort(),
+      ['packages/component', 'packages/component/bench'],
+    )
+  })
 })
 
 test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', () => {
@@ -63,6 +65,55 @@ test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', (
     'packages/headers',
     'packages/remix',
   ])
+})
+
+describe('workspace test inputs', () => {
+  it('includes the parent suite and dependents for a nested fixture without test scripts', () => {
+    let workspaces: WorkspaceInfo[] = [
+      { dir: 'packages/cli', name: '@remix-run/cli', dependencies: [], scripts: ['test'] },
+      {
+        dir: 'packages/cli/test/fixtures/routes-basic',
+        name: 'routes-basic-fixture',
+        dependencies: [],
+        scripts: [],
+      },
+      {
+        dir: 'demos/app',
+        name: 'app',
+        dependencies: ['@remix-run/cli'],
+        scripts: ['test'],
+      },
+    ]
+    let changed = getChangedWorkspaceDirs(
+      ['packages/cli/test/fixtures/routes-basic/app/routes.ts'],
+      workspaces,
+    )
+    let affected = getAffectedWorkspaceDirs(changed, workspaces)
+
+    assert.deepEqual(
+      workspaces
+        .filter(
+          (workspace) => affected.includes(workspace.dir) && workspace.scripts.includes('test'),
+        )
+        .map((workspace) => workspace.dir),
+      ['packages/cli', 'demos/app'],
+    )
+  })
+
+  it('includes CLI scaffolding tests when the app template changes', () => {
+    let workspaces: WorkspaceInfo[] = [
+      { dir: 'packages/cli', name: '@remix-run/cli', dependencies: [], scripts: ['test'] },
+      { dir: 'template', name: 'remix-template', dependencies: [], scripts: ['test'] },
+    ]
+
+    assert.deepEqual(
+      getAffectedWorkspaceDirs(
+        getChangedWorkspaceDirs(['template/package.json'], workspaces),
+        workspaces,
+      ),
+      ['packages/cli', 'template'],
+    )
+  })
 })
 
 describe('getFullRunReasons', () => {

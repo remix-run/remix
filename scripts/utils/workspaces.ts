@@ -40,6 +40,13 @@ export function getChangedWorkspaceDirs(
     if (workspace != null) {
       changedWorkspaceDirs.add(workspace.dir)
     }
+
+    // Changes in nested workspaces also affect their enclosing package workspaces.
+    for (let parent of workspaces) {
+      if (parent.dir.startsWith('packages/') && file.startsWith(`${parent.dir}/`)) {
+        changedWorkspaceDirs.add(parent.dir)
+      }
+    }
   }
 
   return changedWorkspaceDirs
@@ -74,6 +81,11 @@ export function getAffectedWorkspaceDirs(
         reverseDependencies.get(dependencyWorkspace.dir)?.add(workspace.dir)
       }
     }
+  }
+
+  // CLI scaffolding copies the app template instead of importing it as a package.
+  if (workspacesByDir.has('packages/cli')) {
+    reverseDependencies.get('template')?.add('packages/cli')
   }
 
   let affectedWorkspaceDirs = new Set(changedWorkspaceDirs)
