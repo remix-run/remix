@@ -166,6 +166,11 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
+      # Cached browsers lack the system libraries that --with-deps installs, which WebKit needs.
+      - name: Install Playwright System Dependencies
+        if: steps.cache-browsers.outputs.cache-hit == 'true'
+        run: pnpm --filter @remix-run/component exec playwright install-deps
+
       - name: Run tests
         run: pnpm test
 
@@ -175,18 +180,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Fetch base and head refs
+      - name: Fetch base and head history
         shell: bash
         env:
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch --no-tags origin \
-            "$PR_BASE_REF" \
-            "+refs/pull/$PR_NUMBER/head"
+          # Three-dot diffs need ancestry, but no other branches or tags.
+          git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -218,6 +220,11 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
+      # Cached browsers lack the system libraries that --with-deps installs, which WebKit needs.
+      - name: Install Playwright System Dependencies
+        if: steps.cache-browsers.outputs.cache-hit == 'true'
+        run: pnpm --filter @remix-run/component exec playwright install-deps
+
       - name: Run changed package Bun tests
         shell: bash
         env:
@@ -231,18 +238,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Fetch base and head refs
+      - name: Fetch base and head history
         shell: bash
         env:
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch --no-tags origin \
-            "$PR_BASE_REF" \
-            "+refs/pull/$PR_NUMBER/head"
+          # Three-dot diffs need ancestry, but no other branches or tags.
+          git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6

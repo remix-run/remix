@@ -114,7 +114,8 @@ data it needs as props, or connect them through an ordinary TypeScript module, a
 Client-entry props cross from the server to the browser, so they must be serializable. They may
 contain strings, numbers, booleans, `null`, `undefined`, plain objects and arrays, and JSX elements.
 Do not pass functions, class instances, database records with custom prototypes, or other opaque
-runtime values.
+runtime values. Elements in props may use `css()`, but not other mixins such as `on()`, `ref()`, or
+custom mixins from `createMixin()`. Render elements that need those inside the client entry.
 
 Mark a boundary around interactive UI, not an entire page by habit. Static ancestors and siblings do
 not need to hydrate just because a button below them does. Keep the database, authenticated user,
@@ -256,7 +257,8 @@ schedule that work with `handle.queueTask()`.
 
 Components rendered on the server run their setup and render functions there too. On the server,
 `handle.update()` throws and queued tasks never run. Start timers, read the DOM, and use browser
-globals such as `window` in event handlers or queued tasks, which only run in the browser.
+globals such as `window` in event handlers or queued tasks, which only run in the browser. The
+Rendering UI guide shows [what each part of the handle does on the server and in the browser](/rendering-ui/#server-and-browser-work).
 
 `handle.update()` schedules work and returns a promise. Await it when the next step needs the updated
 DOM:

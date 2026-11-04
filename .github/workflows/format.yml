@@ -19,7 +19,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           token: ${{ secrets.FORMAT_PAT }}
-          fetch-depth: 0
 
       - name: Detect formatting-relevant changes
         id: changes
@@ -29,6 +28,7 @@ jobs:
           if [ "$base" = "0000000000000000000000000000000000000000" ]; then
             files="$(git ls-files)"
           else
+            git fetch --no-tags --depth=1 origin "$base"
             files="$(git diff --name-only "$base" "$GITHUB_SHA")"
           fi
 

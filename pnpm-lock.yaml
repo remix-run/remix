@@ -22,8 +22,8 @@ catalogs:
       specifier: 1.5.2
       version: 1.5.2
     playwright:
-      specifier: ^1.60.0
-      version: 1.60.0
+      specifier: ^1.63.0
+      version: 1.63.0
     shiki:
       specifier: 4.4.1
       version: 4.4.1
@@ -87,7 +87,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -109,7 +109,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -144,7 +144,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -192,7 +192,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -448,8 +448,8 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       es-module-lexer:
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^2.3.0
+        version: 2.3.2
       get-tsconfig:
         specifier: ^4.13.6
         version: 4.13.6
@@ -501,7 +501,7 @@ importers:
         version: 4.0.3
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -761,7 +761,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -816,7 +816,7 @@ importers:
         version: 5.0.0
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -991,6 +991,28 @@ importers:
         version: link:../assert
       '@remix-run/test':
         specifier: workspace:*
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  packages/csp-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:^
         version: link:../test
       '@types/node':
         specifier: 'catalog:'
@@ -1682,8 +1704,8 @@ importers:
   packages/multiple-import-maps-polyfill:
     dependencies:
       es-module-lexer:
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^2.3.0
+        version: 2.3.2
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:^
@@ -1699,7 +1721,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -1843,6 +1865,9 @@ importers:
       '@remix-run/cors-middleware':
         specifier: workspace:^
         version: link:../cors-middleware
+      '@remix-run/csp-middleware':
+        specifier: workspace:^
+        version: link:../csp-middleware
       '@remix-run/csrf-middleware':
         specifier: workspace:^
         version: link:../csrf-middleware
@@ -1962,7 +1987,7 @@ importers:
         version: 8.18.0
       playwright:
         specifier: ^1.60.0
-        version: 1.60.0
+        version: 1.63.0
       redis:
         specifier: ^5.10.0
         version: 5.11.0
@@ -1985,6 +2010,9 @@ importers:
       '@remix-run/component':
         specifier: workspace:^
         version: link:../component
+      '@remix-run/csp-middleware':
+        specifier: workspace:^
+        version: link:../csp-middleware
       '@remix-run/fetch-router':
         specifier: workspace:^
         version: link:../fetch-router
@@ -1995,6 +2023,12 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/multiple-import-maps-polyfill':
+        specifier: workspace:^
+        version: link:../multiple-import-maps-polyfill
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -2289,8 +2323,8 @@ importers:
         specifier: workspace:^
         version: link:../terminal
       es-module-lexer:
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^2.3.0
+        version: 2.3.2
       esbuild:
         specifier: ^0.27.1
         version: 0.27.1
@@ -2348,7 +2382,7 @@ importers:
         version: 6.0.1
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -2373,7 +2407,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -5149,8 +5183,8 @@ packages:
   es-module-lexer@1.7.0:
     resolution: {integrity: sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==}
 
-  es-module-lexer@2.0.0:
-    resolution: {integrity: sha512-5POEcUuZybH7IdmGsD8wlf0AI55wMecM9rVBTI/qEAy2c1kTOm3DjFYjrBdI2K3BaJjJYfYFeRtM0t9ssnRuxw==}
+  es-module-lexer@2.3.2:
+    resolution: {integrity: sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==}
 
   es-object-atoms@1.1.1:
     resolution: {integrity: sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==}
@@ -5917,9 +5951,19 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   playwright@1.60.0:
     resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
     engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
     hasBin: true
 
   postcss@8.5.14:
@@ -8485,7 +8529,7 @@ snapshots:
 
   es-module-lexer@1.7.0: {}
 
-  es-module-lexer@2.0.0: {}
+  es-module-lexer@2.3.2: {}
 
   es-object-atoms@1.1.1:
     dependencies:
@@ -9642,11 +9686,17 @@ snapshots:
 
   playwright-core@1.60.0: {}
 
+  playwright-core@1.63.0: {}
+
   playwright@1.60.0:
     dependencies:
       playwright-core: 1.60.0
     optionalDependencies:
       fsevents: 2.3.2
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
 
   postcss@8.5.14:
     dependencies:
@@ -10299,7 +10349,7 @@ snapshots:
       '@vitest/snapshot': 4.1.6
       '@vitest/spy': 4.1.6
       '@vitest/utils': 4.1.6
-      es-module-lexer: 2.0.0
+      es-module-lexer: 2.3.2
       expect-type: 1.3.0
       magic-string: 0.30.21
       obug: 2.1.1

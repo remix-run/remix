@@ -22,6 +22,11 @@ The design of Remix comes from six core principles:
 
 The fastest way to understand Remix is to build one feature across the stack: define a route, return a server-rendered page, handle a form submission, and hydrate one component for browser interaction.
 
+> [!NOTE]
+> This chapter is a tutorial. Each step builds on the one before it, so start from the beginning and follow along in your own app.
+>
+> The rest of the chapters are guides. Each one covers a single topic in depth, such as routing, forms, or testing, and you can read them in any order.
+
 ## Quickstart: create and run a Remix app {#quickstart}
 
 The quickest way to start a Remix app is with the `remix` CLI. It creates a small full-stack application with a Node server, typed routes, render middleware, a server-rendered home page, source-served assets, and one hydrated component.

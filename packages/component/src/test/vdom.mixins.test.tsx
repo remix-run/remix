@@ -482,6 +482,22 @@ describe('vnode mixins', () => {
     expect(calls).toEqual(['before:0', 'commit:1'])
   })
 
+  it('keeps running commit listeners after removing a listener that was never added', () => {
+    let commits = 0
+    let withCommit = createMixin((handle) => {
+      handle.addEventListener('commit', () => commits++)
+      handle.removeEventListener('commit', () => {})
+    })
+
+    let root = createRoot(document.createElement('div'))
+    root.render(<div mix={withCommit()} />)
+    root.flush()
+    root.render(<div mix={withCommit()} />)
+    root.flush()
+
+    expect(commits).toBe(1)
+  })
+
   it('composes ref callbacks across mixins and base mix', () => {
     let calls: string[] = []
 

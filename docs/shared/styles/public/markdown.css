@@ -101,6 +101,18 @@
   color: var(--rmx-color-text-secondary);
 }
 
+.docs-markdown .docs-notice {
+  margin: var(--rmx-space-xl) 0;
+}
+
+.docs-markdown .docs-notice p {
+  margin: 0;
+}
+
+.docs-markdown .docs-notice p + p {
+  margin-top: var(--rmx-space-sm);
+}
+
 .docs-markdown hr {
   margin: var(--rmx-space-xl) 0;
   border: 0;

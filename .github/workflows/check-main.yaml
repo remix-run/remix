@@ -21,7 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       - name: Detect integration test changes
         id: detect
@@ -34,6 +34,8 @@ jobs:
 
           if [ "$before_sha" = "0000000000000000000000000000000000000000" ]; then
             before_sha="$(git rev-parse "$AFTER_SHA^")"
+          elif ! git cat-file -e "$before_sha^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$before_sha"
           fi
 
           changed_files="$(git diff --name-only "$before_sha" "$AFTER_SHA" -- .)"
@@ -136,6 +138,11 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
 
+      # Cached browsers lack the system libraries that --with-deps installs, which WebKit needs.
+      - name: Install Playwright System Dependencies
+        if: steps.cache-browsers.outputs.cache-hit == 'true'
+        run: pnpm --filter @remix-run/component exec playwright install-deps
+
       - name: Run tests
         run: pnpm test
 
@@ -175,6 +182,11 @@ jobs:
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps
+
+      # Cached browsers lack the system libraries that --with-deps installs, which WebKit needs.
+      - name: Install Playwright System Dependencies
+        if: steps.cache-browsers.outputs.cache-hit == 'true'
+        run: pnpm --filter @remix-run/component exec playwright install-deps
 
       - name: Run Bun tests
         run: pnpm test:bun
