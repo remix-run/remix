@@ -133,7 +133,7 @@ jobs:
         run: pnpm build
 
   test_ubuntu:
-    name: test (ubuntu-latest)
+    name: test (ubuntu-latest, changed packages)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
