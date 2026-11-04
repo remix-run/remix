@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/ui",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Headless, accessible UI primitives and animation utilities for Remix components",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

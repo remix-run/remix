@@ -2,6 +2,84 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v1.2.0
+
+### Minor Changes
+
+- Render under a nonce-based Content Security Policy with the `nonce` option on `renderToStream()` and `renderToString()`. Generated import maps, module preloads, and CSS mixin styles receive the nonce; explicitly authored `<ImportMap>` nonces are preserved. ([#12098](https://github.com/remix-run/remix/pull/12098))
+
+  ```diff
+  +let nonce = crypto.getRandomValues(new Uint8Array(16)).toBase64()
+  +
+   let stream = renderToStream(<App />, {
+     frameSrc: request.url,
+     signal: request.signal,
+  +  nonce,
+   })
+  ```
+
+  Client navigation preserves the document nonce across frame and island updates. See [CSP integration](https://github.com/remix-run/remix/tree/main/packages/component/src/server#content-security-policy) for nested rendering and custom resolver setup.
+
+### Patch Changes
+
+- Fix plain data in `clientEntry` props being treated as JSX elements, frames, fragments, or `css()` mixins during hydration when it contains keys Remix uses for serialization, such as `$rmx` or `$rmxMixin`. These objects now reach the client entry unchanged at any nesting level, including the top-level props object. Own `__proto__` properties are kept as data instead of changing the object's prototype. ([#12151](https://github.com/remix-run/remix/pull/12151))
+
+  Only elements created with JSX or `createElement()` now render. Objects built by hand or parsed from JSON with the same shape as an element, such as `{ $rmx: true, type: 'div', props: { innerHTML } }`, are no longer rendered as elements and throw `Invalid child node` when passed as children. This keeps data from a database or API from injecting markup. Spread copies of elements, such as `{ ...element }`, still render.
+
+- Apps that render with `createRoot()` or `createRangeRoot()` and never use `<Frame>` no longer load the frame runtime, which includes frame streaming, DOM diffing for frame reloads, and import map handling. Their component runtime is about 40% smaller. The frame runtime still loads when an app imports `Frame` or calls `run()`, and frames behave as before. ([#12161](https://github.com/remix-run/remix/pull/12161))
+
+- Fix `css()` applying the wrong styles when two style objects contain the same properties in a different order. Generated classes ignored key order, so `css({ marginTop: '5px', margin: 0 })` could reuse the class generated for `css({ margin: 0, marginTop: '5px' })` and render a 5px top margin instead of 0. Each order now gets its own class with its declarations in the order written. ([#12176](https://github.com/remix-run/remix/pull/12176))
+
+  Generated classes also no longer depend on the default locale. Style keys were sorted with locale-aware comparison, so a browser using a locale like Estonian, which sorts `z` before `t`, could generate a different class than the server for styles like `{ top: 0, zIndex: 1 }` and insert a duplicate rule at a different position in the cascade during hydration.
+
+  Generated `rmxc-*` class names change with this release, so update any tests or selectors that hard-code them.
+
+- `css()` is faster. In a benchmark of 200 product cards with eight `css()` styles each, rerenders take about 50% less time, first renders about 20% less, and server rendering about 27% less. ([#12176](https://github.com/remix-run/remix/pull/12176))
+  - A style that was already generated is looked up by its contents instead of being hashed again.
+  - Elements no longer create `beforeUpdate` and `commit` events when none of their mixins listen for them. This also speeds up other mixins that don't listen, such as `attrs()` and `link()`.
+
+- Preserve literal doctype-looking text in scripts, styles, textareas, attributes, and comments when parsing frame HTML in the browser, including full-document reloads and streamed frame templates. ([#12107](https://github.com/remix-run/remix/pull/12107))
+
+- Fix flashes of unstyled content during client navigation when page-specific `<head>` links are added or removed ahead of keyed stylesheets. DOM diffs now move only the elements whose order changed, so keyed elements that keep their order, such as `<link data-rmx-key rel="stylesheet">` or keyed iframes, are no longer detached and re-inserted. Sibling reordering respects `data-rmx-preserve-dom`, keeping preserved elements connected while moving other siblings around them. Unkeyed `<link>` elements are also no longer repurposed for a link with a different `rel` or `href`, which could turn a `modulepreload` into an `alternate` link or swap the stylesheet an existing link loads ([#12064](https://github.com/remix-run/remix/issues/12064)). ([#12128](https://github.com/remix-run/remix/pull/12128))
+
+- Keep keyed `<head>` stylesheets in place on the first client navigation of a server-rendered document. The server renders the managed import map as the first child of `<head>`, and the head diff used to move every other head node in front of it. Moving a `<link rel="stylesheet">` made the browser drop and reload it, which caused a flash of unstyled content. ([#12127](https://github.com/remix-run/remix/pull/12127))
+
+- Fix Safari restoring a shorter scroll position than the visitor left on a back or forward navigation. Safari restored the position against the page as it was before the restored content rendered, so a page taller than the one the visitor came back from scrolled only as far as that one allowed. ([#12162](https://github.com/remix-run/remix/pull/12162))
+
+- Fix hydration of `clientEntry` components whose props contain JSX elements styled with `css()`. Hydration used to fail with `Framework invariant: Invalid mix prop`, and the client entry never became interactive. `css()` mixins in client entry props, including arrays like `mix={[css(base), css(active)]}`, now reach the browser with their styles, and content from those props that the server didn't render is styled when the client entry renders it later. Styles with `undefined` properties keep the same generated classes and cascade order through hydration. ([#12125](https://github.com/remix-run/remix/pull/12125))
+
+  Other mixins, such as `on()`, `ref()`, and custom mixins from `createMixin()`, are not supported in serialized client entry props. When a client entry renders an element from its props that uses one, it now reports an error explaining that only `css()` mixins can be serialized and that those elements should be rendered inside the client entry instead, rather than failing with `Invalid mix prop`.
+
+- The browser runtime is about 10% smaller when minified, with no behavior changes. Duplicated logic is merged, dead code is removed, and small internal modules are folded into their owners so the asset server serves fewer modules. ([#12192](https://github.com/remix-run/remix/pull/12192))
+
+- Boolean `aria-*` and `data-*` values now render the same way on the server and in the browser. Server rendering previously dropped them: `<a aria-current={true} aria-hidden={false}>` rendered as `<a aria-current>`, which assistive technology reads as `aria-current="false"`. They now render as `"true"` and `"false"`. `data-rmx-document` and `data-rmx-preserve-dom` are the exception: `true` renders an empty attribute and `false` omits it. Previously the browser rendered `false` as `"false"`, which still turned document navigation or DOM preservation on. ([#12152](https://github.com/remix-run/remix/pull/12152))
+
+  MathML boolean attributes such as `displaystyle`, `stretchy`, and `largeop` now render as `"true"` and `"false"` on the server and in the browser, preserving their layout behavior during hydration and updates.
+
+- Fix how `css()` and the `style` prop serialize property names and numeric values. Previously `css({ WebkitLineClamp: 4 })` rendered the invalid `-webkit-line-clamp: 4px`, and the `webkitLineClamp` key suggested by the DOM types rendered `webkit-line-clamp`, which browsers ignore. ([#12121](https://github.com/remix-run/remix/pull/12121))
+  - Numeric values stay unitless wherever the supported CSS grammar accepts a bare number, including vendor-prefixed forms, mask borders, hyphenation limits, `shapeImageThreshold`, `readingOrder`, and numeric shorthands such as `animation` and `borderImage`. The list covers current and draft grammars as well as legacy properties; browser support still depends on the property.
+  - Vendor-prefixed camelCase keys get their leading dash, so `webkitLineClamp` and `msFlex` render as `-webkit-line-clamp` and `-ms-flex`.
+  - Custom property names keep their casing, so `'--gapSize'` renders as `--gapSize` instead of `--gap-size`.
+  - `css()` drops `NaN` and `Infinity` values instead of rendering `NaNpx` or `Infinitypx`, matching the `style` prop.
+
+  **Behavior change:** these fixes change some existing output. Apps that relied on the old output need to update:
+  - Custom property names written in camelCase are no longer converted to kebab case. If a stylesheet or `var()` reads the kebab-case name, write the property the way you reference it:
+
+    ```diff
+    -css({ '--gapSize': '8px', gap: 'var(--gap-size)' })
+    +css({ '--gap-size': '8px', gap: 'var(--gap-size)' })
+    ```
+
+  - `css()` adds `px` to plain numbers, but it also added it to `flex`, where a number means a grow factor. `flex: 2` rendered as `flex: 2px`, which grows like `flex: 1` with a `2px` basis, so numbers other than `1` had no effect on growth. `flex` numbers are now grow factors, and `flex: 1` renders `1 1 0%` instead of `1 1 1px`.
+  - `tabSize: 4` now means four spaces instead of `4px`. Numbers for `borderImageWidth`, `borderImageOutset`, `maskBorderWidth`, and `maskBorderOutset` multiply the border width instead of being pixels; the WebKit mask-box-image aliases follow the same convention.
+  - Numeric shorthands select their unitless meaning: `animation: 2` sets two iterations, and `borderImage: 2` / `maskBorder: 2` set the slice. Use strings with units for durations and angles, such as `'200ms'` and `'45deg'`.
+  - To request pixels explicitly, use a string:
+
+    ```diff
+    -css({ tabSize: 4, borderImageWidth: 2 })
+    +css({ tabSize: '4px', borderImageWidth: '2px' })
+    ```
+
 ## v1.1.0
 
 ### Minor Changes
