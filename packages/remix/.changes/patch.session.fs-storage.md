@@ -1,0 +1,1 @@
+`remix/session-storage/fs` no longer corrupts a session file when overlapping requests save the same session. Session files that were already corrupted now start a fresh session instead of throwing on every request.

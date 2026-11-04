@@ -1,1 +1,1 @@
-Hydration boundaries now update when adding or removing `clientEntry` during HMR (see #11982).
+Adding or removing `clientEntry` during HMR now restarts the app server, so fresh server responses no longer use stale hydration boundaries.

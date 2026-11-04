@@ -1,0 +1,1 @@
+Apps created with `remix new` now fingerprint assets in production, close the asset server on shutdown, and run their `package.json` scripts in Windows command shells. See the [`@remix-run/cli` changelog](https://github.com/remix-run/remix/blob/main/packages/cli/CHANGELOG.md) to apply the same setup to an existing app.
