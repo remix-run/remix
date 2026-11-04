@@ -204,146 +204,60 @@ describe('updateUrl', () => {
     expect(resolveFrame).not.toHaveBeenCalled()
   })
 
-  it('waits for native interception while synchronizing the committed URL immediately', async (t) => {
+  it('rejects native interception without waiting for its postcommit handler', async (t) => {
     let { app } = startApp(t)
     await app.ready()
+    let original = window.location.href
     let [handler, finish] = withResolvers<void>()
     let listener = new AbortController()
-    t.after(() => {
+    t.after(async () => {
+      let transition = window.navigation.transition
       finish()
+      await transition?.finished.catch(() => {})
       listener.abort()
     })
     window.navigation.addEventListener(
       'navigate',
-      (event) => {
-        event.intercept({ handler: () => handler, scroll: 'manual', focusReset: 'manual' })
-      },
+      (event) =>
+        event.intercept({ handler: () => handler, scroll: 'manual', focusReset: 'manual' }),
       { once: true, signal: listener.signal },
     )
-    let settled = false
-    let updating = updateUrl('?variant=intercepted').then(() => {
-      settled = true
-    })
 
+    await expect(updateUrl('?variant=intercepted')).rejects.toHaveProperty(
+      'name',
+      'NotSupportedError',
+    )
     expect(window.location.search).toBe('?variant=intercepted')
-    expect(app.frames.top.src).toBe(window.location.href)
-    expect(window.navigation.currentEntry?.getState()).toMatchObject({ src: window.location.href })
-    await Promise.resolve()
-    expect(settled).toBe(false)
-    finish()
-    await updating
-    expect(settled).toBe(true)
+    expect(app.frames.top.src).toBe(original)
   })
 
-  it('synchronizes a native precommit update after it commits', async (t) => {
+  it('rejects native precommit interception without coordinating its delayed commit', async (t) => {
     let { app } = startApp(t)
     await app.ready()
     let original = window.location.href
     let [precommit, commit] = withResolvers<void>()
     let listener = new AbortController()
-    t.after(() => {
+    t.after(async () => {
+      let transition = window.navigation.transition
       commit()
+      await transition?.finished.catch(() => {})
       listener.abort()
     })
     window.navigation.addEventListener(
       'navigate',
-      (event) => {
-        event.intercept({
-          precommitHandler: () => precommit,
-          scroll: 'manual',
-          focusReset: 'manual',
-        })
-      },
+      (event) => event.intercept({ precommitHandler: () => precommit }),
       { once: true, signal: listener.signal },
     )
     let updating = updateUrl('?variant=precommit')
-
-    expect(window.location.href).toBe(original)
-    expect(app.frames.top.src).toBe(original)
-    commit()
-    await updating
-    expect(window.location.search).toBe('?variant=precommit')
-    expect(app.frames.top.src).toBe(window.location.href)
-    expect(window.navigation.currentEntry?.getState()).toMatchObject({ src: window.location.href })
-  })
-
-  it('propagates native interception failure while keeping the committed URL synchronized', async (t) => {
-    let { app } = startApp(t)
-    await app.ready()
-    let reason = new Error('Native handler failed')
-    let listener = new AbortController()
-    t.after(() => listener.abort())
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => {
-        event.intercept({ handler: () => Promise.reject(reason) })
-      },
-      { once: true, signal: listener.signal },
-    )
-
-    await expect(updateUrl('?variant=committed')).rejects.toBe(reason)
-
-    expect(window.location.search).toBe('?variant=committed')
-    expect(app.frames.top.src).toBe(window.location.href)
-    expect(window.navigation.currentEntry?.getState()).toMatchObject({ src: window.location.href })
-  })
-
-  it('rejects native precommit failure without changing the URL or state', async (t) => {
-    let { app } = startApp(t)
-    await app.ready()
-    let href = window.location.href
-    let state = window.navigation.currentEntry?.getState()
-    let reason = new Error('Native precommit failed')
-    let listener = new AbortController()
-    t.after(() => listener.abort())
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => {
-        event.intercept({ precommitHandler: () => Promise.reject(reason) })
-      },
-      { once: true, signal: listener.signal },
-    )
-
-    await expect(updateUrl('?variant=failed')).rejects.toBe(reason)
-
-    expect(window.location.href).toBe(href)
-    expect(app.frames.top.src).toBe(href)
-    expect(window.navigation.currentEntry?.getState()).toEqual(state)
-  })
-
-  it('cancels a native precommit wait while keeping its later commit synchronized', async (t) => {
-    let { app } = startApp(t)
-    await app.ready()
-    let href = window.location.href
-    let [precommit, commit] = withResolvers<void>()
-    let listener = new AbortController()
-    t.after(() => {
-      commit()
-      listener.abort()
-    })
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => {
-        event.intercept({ precommitHandler: () => precommit })
-      },
-      { once: true, signal: listener.signal },
-    )
-    let controller = new AbortController()
-    let reason = new Error('Owner disconnected')
-    let rejected = expect(updateUrl('?variant=late', { signal: controller.signal })).rejects.toBe(
-      reason,
-    )
     let transition = window.navigation.transition
     if (!transition) throw new Error('Expected native interception')
 
-    controller.abort(reason)
-    await rejected
-    expect(window.location.href).toBe(href)
+    await expect(updating).rejects.toHaveProperty('name', 'NotSupportedError')
+    expect(window.location.href).toBe(original)
     commit()
     await transition.finished
-    expect(window.location.search).toBe('?variant=late')
-    expect(app.frames.top.src).toBe(window.location.href)
-    expect(window.navigation.currentEntry?.getState()).toMatchObject({ src: window.location.href })
+    expect(window.location.search).toBe('?variant=precommit')
+    expect(app.frames.top.src).toBe(original)
   })
 
   it('applies consecutive idle updates synchronously without superseding settled calls', async (t) => {
@@ -651,251 +565,97 @@ describe('updateUrl', () => {
     expect(resolveFrame).toHaveBeenCalledTimes(1)
   })
 
-  it('applies updates waiting for the same navigation in call order', async (t) => {
+  it('applies only the latest call waiting for navigation and rejects superseded calls', async (t) => {
     let { app, started, complete, resolveFrame } = startPendingApp(t)
     await app.ready()
     let navigating = navigate('?variant=pending')
     await started
+    let index = window.navigation.currentEntry?.index
+    if (index === undefined) throw new Error('Expected a current entry')
     let first = updateUrl('?variant=blue', { history: 'push' })
-    let second = updateUrl('?variant=red', { history: 'push' })
-    // Observe both rejections immediately so a failing implementation cannot leak one.
-    let updates = Promise.allSettled([first, second])
+    let second = updateUrl('?variant=green', { history: 'push' })
+    let last = updateUrl('?variant=red', { history: 'push' })
+    let updates = Promise.allSettled([first, second, last])
 
     complete()
     await navigating
-    expect(await updates).toEqual([
-      { status: 'fulfilled', value: undefined },
-      { status: 'fulfilled', value: undefined },
-    ])
+    let results = await updates
+    for (let result of results.slice(0, 2)) {
+      if (result.status !== 'rejected') throw new Error('Expected the superseded call to reject')
+      expect(result.reason).toHaveProperty('name', 'AbortError')
+    }
+    expect(results[2]).toEqual({ status: 'fulfilled', value: undefined })
     expect(window.location.search).toBe('?variant=red')
+    expect(window.navigation.currentEntry?.index).toBe(index + 1)
     expect(app.frames.top.src).toBe(window.location.href)
     expect(resolveFrame).toHaveBeenCalledTimes(1)
-    await window.navigation.back().finished
-    expect(window.location.search).toBe('?variant=blue')
   })
 
-  it('waits for the previous queued update native handler before applying the next URL', async (t) => {
-    let { app, started, complete } = startPendingApp(t)
-    await app.ready()
-    let navigating = navigate('?variant=pending')
-    await started
-    let [intercepted, resolveIntercepted] = withResolvers<void>()
-    let [handler, finish] = withResolvers<void>()
-    let listener = new AbortController()
-    t.after(() => {
-      finish()
-      listener.abort()
-    })
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => {
-        event.intercept({
-          handler: () => {
-            resolveIntercepted()
-            return handler
-          },
-        })
-      },
-      { once: true, signal: listener.signal },
-    )
-    let first = updateUrl('?variant=blue', { history: 'push' })
-    let second = updateUrl('?variant=red', { history: 'push' })
-    let updates = Promise.all([first, second])
-
-    complete()
-    await navigating
-    await intercepted
-    expect(window.location.search).toBe('?variant=blue')
-    finish()
-    await updates
-    expect(window.location.search).toBe('?variant=red')
-    expect(app.frames.top.src).toBe(window.location.href)
-  })
-
-  it('queues a call from the native commit before synchronizing the previous update', async (t) => {
+  it('allows a later call from currententrychange to supersede synchronization of the earlier URL', async (t) => {
     let { app } = startApp(t)
     await app.ready()
-    let [precommit, commit] = withResolvers<void>()
     let [second, resolveSecond, rejectSecond] = withResolvers<void>()
     let listener = new AbortController()
-    t.after(() => {
-      commit()
-      listener.abort()
-    })
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => event.intercept({ precommitHandler: () => precommit }),
-      { once: true, signal: listener.signal },
-    )
+    t.after(() => listener.abort())
     window.navigation.addEventListener(
       'currententrychange',
       () => {
-        void updateUrl('?variant=red', { history: 'push' }).then(resolveSecond, rejectSecond)
+        void updateUrl('?variant=red').then(resolveSecond, rejectSecond)
       },
       { once: true, signal: listener.signal },
     )
-    let first = updateUrl('?variant=blue', { history: 'push' })
-    let updates = Promise.all([first, second])
-
-    commit()
-    await updates
+    let first = updateUrl('?variant=blue')
+    let results = await Promise.allSettled([first, second])
+    let superseded = results[0]
+    if (superseded?.status !== 'rejected') throw new Error('Expected the earlier call to reject')
+    expect(superseded.reason).toHaveProperty('name', 'AbortError')
+    expect(results[1]).toEqual({ status: 'fulfilled', value: undefined })
     expect(window.location.search).toBe('?variant=red')
     expect(app.frames.top.src).toBe(window.location.href)
     expect(window.navigation.currentEntry?.getState()).toMatchObject({ src: window.location.href })
   })
 
-  it('applies a queued successor after the previous committed native handler fails', async (t) => {
-    let { app } = startApp(t)
+  it('does not revive superseded updates when the latest waiting call is canceled', async (t) => {
+    let { app, started, complete } = startPendingApp(t)
     await app.ready()
-    let [handler, finish, fail] = withResolvers<void>()
-    let reason = new Error('Native handler failed after commit')
-    let listener = new AbortController()
-    t.after(() => {
-      finish()
-      listener.abort()
-    })
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => event.intercept({ handler: () => handler }),
-      { once: true, signal: listener.signal },
-    )
+    let navigating = navigate('?variant=pending')
+    await started
     let first = updateUrl('?variant=blue')
-    let second = updateUrl('?variant=red')
-    let updates = Promise.allSettled([first, second])
+    let controller = new AbortController()
+    let reason = new Error('Stale selection')
+    let last = updateUrl('?variant=red', { signal: controller.signal })
+    let updates = Promise.allSettled([first, last])
 
-    fail(reason)
-    expect(await updates).toEqual([
-      { status: 'rejected', reason },
-      { status: 'fulfilled', value: undefined },
-    ])
-    expect(window.location.search).toBe('?variant=red')
+    controller.abort(reason)
+    let results = await updates
+    let superseded = results[0]
+    if (superseded?.status !== 'rejected') throw new Error('Expected the earlier call to reject')
+    expect(superseded.reason).toHaveProperty('name', 'AbortError')
+    expect(results[1]).toEqual({ status: 'rejected', reason })
+    complete()
+    await navigating
+    expect(window.location.search).toBe('?variant=pending')
+    await updateUrl('?variant=green')
+    expect(window.location.search).toBe('?variant=green')
     expect(app.frames.top.src).toBe(window.location.href)
   })
 
-  it('keeps a queued successor waiting after canceling an issued native precommit update', async (t) => {
-    let { app } = startApp(t)
+  it('does not supersede a pending update with an already aborted call', async (t) => {
+    let { app, started, complete } = startPendingApp(t)
     await app.ready()
-    let original = window.location.href
-    let [precommit, commit] = withResolvers<void>()
-    let [handler, finish] = withResolvers<void>()
-    let listener = new AbortController()
-    t.after(() => {
-      commit()
-      finish()
-      listener.abort()
-    })
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => {
-        event.intercept({ precommitHandler: () => precommit, handler: () => handler })
-      },
-      { once: true, signal: listener.signal },
-    )
-    let controller = new AbortController()
-    let reason = new Error('Stale selection')
-    let rejected = expect(updateUrl('?variant=blue', { signal: controller.signal })).rejects.toBe(
+    let navigating = navigate('?variant=pending')
+    await started
+    let first = updateUrl('?variant=blue')
+    let reason = new Error('Already canceled')
+
+    await expect(updateUrl('?variant=red', { signal: AbortSignal.abort(reason) })).rejects.toBe(
       reason,
     )
-    let second = updateUrl('?variant=red')
-    let transition = window.navigation.transition
-    if (!transition) throw new Error('Expected native interception')
-
-    controller.abort(reason)
-    await rejected
-    expect(window.location.href).toBe(original)
-    commit()
-    await transition.committed
+    complete()
+    await navigating
+    await first
     expect(window.location.search).toBe('?variant=blue')
     expect(app.frames.top.src).toBe(window.location.href)
-    finish()
-    await second
-    expect(window.location.search).toBe('?variant=red')
-    expect(app.frames.top.src).toBe(window.location.href)
-  })
-
-  it('invalidates queued calls when an unrelated same-URL navigation interrupts an update', async (t) => {
-    let { app } = startApp(t)
-    await app.ready()
-    let [handler, finish] = withResolvers<void>()
-    let listener = new AbortController()
-    t.after(() => {
-      finish()
-      listener.abort()
-    })
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => event.intercept({ handler: () => handler }),
-      { once: true, signal: listener.signal },
-    )
-    let first = updateUrl('?variant=blue')
-    let second = updateUrl('?variant=red')
-    let updates = Promise.allSettled([first, second])
-    let href = window.location.href
-
-    await navigate(href, { history: 'replace' })
-    let results = await updates
-    expect(results.map((result) => result.status)).toEqual(['rejected', 'rejected'])
-    for (let result of results) {
-      if (result.status !== 'rejected') throw new Error('Expected a rejected URL update')
-      expect(result.reason).toHaveProperty('name', 'AbortError')
-    }
-    expect(window.location.href).toBe(href)
-    expect(app.frames.top.src).toBe(href)
-  })
-
-  it('cancels one queued update without blocking later replacements', async (t) => {
-    let { app, started, complete } = startPendingApp(t)
-    await app.ready()
-    let navigating = navigate('?variant=pending')
-    await started
-    let controller = new AbortController()
-    let reason = new Error('Stale selection')
-    let first = updateUrl('?variant=blue', { signal: controller.signal })
-    let second = updateUrl('?variant=red')
-    let updates = Promise.allSettled([first, second])
-
-    controller.abort(reason)
-    complete()
-    await navigating
-    expect(await updates).toEqual([
-      { status: 'rejected', reason },
-      { status: 'fulfilled', value: undefined },
-    ])
-    expect(window.location.search).toBe('?variant=red')
-    expect(app.frames.top.src).toBe(window.location.href)
-  })
-
-  it('rejects later queued updates when a native guard replaces the first update', async (t) => {
-    let { app, started, complete } = startPendingApp(t)
-    await app.ready()
-    let navigating = navigate('?variant=pending')
-    await started
-    let first = updateUrl('?variant=blue')
-    let second = updateUrl('?variant=red')
-    let updates = Promise.allSettled([first, second])
-    let listener = new AbortController()
-    t.after(() => listener.abort())
-    let guardState = { application: 'guard' }
-    window.navigation.addEventListener(
-      'navigate',
-      (event) => {
-        event.preventDefault()
-        window.history.replaceState(guardState, '', '?variant=guard')
-        window.navigation.updateCurrentEntry({ state: guardState })
-      },
-      { once: true, signal: listener.signal },
-    )
-
-    complete()
-    await navigating
-    let results = await updates
-    expect(results.map((result) => result.status)).toEqual(['rejected', 'rejected'])
-    for (let result of results) {
-      if (result.status !== 'rejected') throw new Error('Expected a rejected URL update')
-      expect(result.reason).toHaveProperty('name', 'AbortError')
-    }
-    expect(window.location.search).toBe('?variant=guard')
-    expect(window.navigation.currentEntry?.getState()).toEqual(guardState)
   })
 
   it('rejects an already aborted signal without changing the URL or state', async (t) => {

@@ -319,34 +319,18 @@ Use `updateUrl(href, options?)` to reflect state the page already displays, such
 import { updateUrl } from 'remix/component'
 
 await updateUrl('/products/shirt?color=blue')
-
-// Preserve the previous URL for Back/Forward:
 await updateUrl('/products/shirt?color=red', { history: 'push' })
 ```
 
-When no navigation is active, the URL changes synchronously without fetching or rendering, unless a native precommit handler delays the commit. Otherwise, the update waits for the current Navigation API transition to finish. The returned promise resolves after the URL update and any native interception finish. `history` defaults to `'replace'`, which replaces the current entry. Use `'push'` to add an entry so Back returns to the previous URL. Scroll position and focus stay where they are in both modes, including when only the fragment changes.
+The update replaces the current entry by default; `history: 'push'` adds an entry. It preserves scroll, focus, and application history state without fetching or rendering. Remix synchronizes its entry metadata and top-frame source so later reloads and Back/Forward use the matching URL. Path/query traversal performs normal frame navigation; fragment-only traversal retains native behavior. Without frame navigation, the application restores displayed state itself.
 
-`history.state` and Navigation API state are carried into the updated entry. A push leaves the previous entry unchanged. With frame navigation running, Back/Forward performs normal frame navigation when the path or query string changes; fragment-only traversals keep the browser's native behavior without fetching or rendering. The update also sets the mounted top-frame source, so `handle.frames.top.reload()` uses the new URL. Each URL that reloads the frame must render the state the page displayed for that entry.
+Each call captures the browser URL. When idle, the update completes synchronously. Otherwise, it waits for the captured transition and rejects with `AbortError` if an unrelated navigation starts or the browser URL changes, including through a redirect. Call after commit to update a navigation's destination. Other navigation failures propagate. Do not await `updateUrl()` inside that transition's interception handler.
 
-Relative URLs resolve against `document.baseURI` when the update executes, after any wait. Cross-origin URLs reject with a `SecurityError` instead of navigating away. An empty string keeps the current URL, matching the History API. Updates work even when frame navigation is unavailable or `run()` hasn't started. In that mode, pushing an entry still lets Back/Forward change the URL, but the application must restore the displayed state itself, for example with a `popstate` listener.
+Newer calls supersede waiting updates with `AbortError`; only the latest waiting call applies. Superseded calls are not retried if the latest fails or is canceled. Consecutive idle calls can all resolve, leaving the last requested URL in the browser.
 
-Pass an `AbortSignal` to cancel a pending update. For example, `handle.signal` aborts when the component disconnects:
+Pass `{ signal: handle.signal }` to cancel when a component disconnects. An already aborted signal prevents the update; cancellation while waiting rejects with `signal.reason` without aborting navigation. Completed updates are not rolled back. Relative URLs resolve against `document.baseURI` when applied; an empty string retains the current URL. Cross-origin URLs reject with `SecurityError`.
 
-```ts
-await updateUrl('/products/shirt?color=blue', { history: 'push', signal: handle.signal })
-```
-
-You can also pass a render or event signal to cancel when that work becomes stale. An already aborted signal prevents the update; aborting while waiting rejects promptly with `signal.reason`. Cancellation before the History API call leaves the navigation running and does not add or replace a history entry. Once the update has been dispatched, cancellation stops waiting but does not abort native interception or roll back history; a delayed native commit can still apply the URL, and Remix synchronizes its metadata when it commits.
-
-Each call captures the URL in the browser at invocation. If a navigation is active, the update waits for that captured transition to finish. Navigation failures reject with their original error. An unrelated navigation started after the call rejects with an `AbortError`, even if it uses the same URL. A redirect or other change that leaves the browser at a different URL also rejects; the helper does not follow a replacement navigation or retry the update there.
-
-Construct the new URL and call `updateUrl()` while the intended browser URL is current. If an active navigation has not committed and later changes that URL, the update rejects. Call after commit or completion to reflect state for the destination instead. A redirect completed before the call is already part of the captured URL; a redirect that finishes at that captured URL does not invalidate it by itself.
-
-Queued calls apply in invocation order, so the last applicable call wins. Changes committed by preceding `updateUrl()` calls advance the queue's expected URL and do not invalidate its remaining calls. Each push adds an entry; replacing updates only the current entry. A canceled or failed call does not block later calls while the URL context remains valid. The helper waits for an earlier issued mutation to settle before applying the next call, even if that earlier caller has stopped waiting due to its signal.
-
-Do not await `updateUrl()` inside the active navigation's own interception handler: the update waits for that handler to finish.
-
-Like `history.pushState()` and `history.replaceState()`, this still fires native Navigation API events in browsers that support them. Native listeners can intercept the update, and `updateUrl()` waits for their handlers to finish. An interception failure rejects with the original error; failures after commit leave the committed URL and Remix metadata in place. If a `navigate` listener cancels the update with `event.preventDefault()`, the promise rejects with an `AbortError` without applying the requested update. A replacement navigation started by that listener retains its own history state.
+Native listeners can cancel the History API event with `event.preventDefault()`; the update rejects with `AbortError` and preserves any replacement navigation's state. Calling `event.intercept()` on that event is unsupported. Detected interception rejects immediately with `NotSupportedError`; the native mutation may still commit, and Remix does not await its handlers or synchronize a delayed commit. Remix itself does not intercept these URL-only updates.
 
 ### Disabling frame navigation
 
