@@ -69,6 +69,7 @@ This is the changelog for [`component`](https://github.com/remix-run/remix/tree/
     -css({ '--gapSize': '8px', gap: 'var(--gap-size)' })
     +css({ '--gap-size': '8px', gap: 'var(--gap-size)' })
     ```
+
   - `css()` adds `px` to plain numbers, but it also added it to `flex`, where a number means a grow factor. `flex: 2` rendered as `flex: 2px`, which grows like `flex: 1` with a `2px` basis, so numbers other than `1` had no effect on growth. `flex` numbers are now grow factors, and `flex: 1` renders `1 1 0%` instead of `1 1 1px`.
   - `tabSize: 4` now means four spaces instead of `4px`. Numbers for `borderImageWidth`, `borderImageOutset`, `maskBorderWidth`, and `maskBorderOutset` multiply the border width instead of being pixels; the WebKit mask-box-image aliases follow the same convention.
   - Numeric shorthands select their unitless meaning: `animation: 2` sets two iterations, and `borderImage: 2` / `maskBorder: 2` set the slice. Use strings with units for durations and angles, such as `'200ms'` and `'45deg'`.
