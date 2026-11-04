@@ -379,7 +379,6 @@ export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
         border: "1px solid #d6d6d6",
         borderRadius: "12px",
         padding: "1rem",
-        transition: "border-color 120ms ease",
         "&:hover": {
           borderColor: "#6d28d9",
         },
