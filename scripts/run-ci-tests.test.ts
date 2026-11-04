@@ -1,9 +1,7 @@
-import * as fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import * as YAML from 'yaml'
 import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { getTestShardWorkspaces, selectTestWorkspaces, testShardNames } from './run-ci-tests.ts'
+import { selectTestWorkspaces } from './run-ci-tests.ts'
 import { getWorkspaceInfos } from './utils/workspaces.ts'
 import type { WorkspaceInfo } from './utils/workspaces.ts'
 
@@ -27,7 +25,9 @@ describe('CI test workspace selection', () => {
   })
 
   it('runs all test workspaces for shared configuration, scripts, and CI changes', () => {
-    let workspaces = [workspace('packages/one'), workspace('docs/site')]
+    let workspaces = getWorkspaceInfos(fileURLToPath(new URL('../', import.meta.url)))
+    let testWorkspaces = workspaces.filter((workspace) => workspace.scripts.includes('test'))
+    assert.ok(testWorkspaces.length > 0)
     for (let file of [
       'package.json',
       'pnpm-lock.yaml',
@@ -40,42 +40,9 @@ describe('CI test workspace selection', () => {
       '.github/actions/setup-node-pnpm-cache/action.yaml',
     ]) {
       assert.deepEqual(selectTestWorkspaces([file], workspaces), {
-        workspaces,
+        workspaces: testWorkspaces,
         fullRunReasons: [file],
       })
     }
-  })
-})
-
-describe('CI workflow test coverage', () => {
-  it('schedules every test workspace exactly once and requires successful shard results', () => {
-    let root = new URL('../', import.meta.url)
-    let workflow = YAML.parseDocument(
-      fs.readFileSync(new URL('.github/workflows/check-pr.yaml', root), 'utf8'),
-    )
-    let matrix = workflow.getIn(['jobs', 'test_ubuntu_shard', 'strategy', 'matrix', 'shard'])
-    assert.ok(YAML.isSeq(matrix))
-    assert.deepEqual(matrix.toJSON(), [...testShardNames])
-
-    let workspaces = getWorkspaceInfos(fileURLToPath(root)).filter((workspace) =>
-      workspace.scripts.includes('test'),
-    )
-    assert.ok(workspaces.length > 0)
-    let scheduled = testShardNames.flatMap((shard) => getTestShardWorkspaces(workspaces, shard))
-    assert.deepEqual(
-      scheduled.map((workspace) => workspace.dir).sort(),
-      workspaces.map((workspace) => workspace.dir).sort(),
-    )
-
-    assert.equal(workflow.getIn(['jobs', 'test_ubuntu', 'needs']), 'test_ubuntu_shard')
-    assert.equal(workflow.getIn(['jobs', 'test_ubuntu', 'if']), 'always()')
-    assert.equal(
-      workflow.getIn(['jobs', 'test_ubuntu', 'steps', 0, 'env', 'TEST_RESULT']),
-      '${{ needs.test_ubuntu_shard.result }}',
-    )
-    assert.equal(
-      workflow.getIn(['jobs', 'test_ubuntu', 'steps', 0, 'run']),
-      'test "$TEST_RESULT" = success',
-    )
   })
 })

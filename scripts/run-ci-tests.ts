@@ -7,20 +7,10 @@ import {
 } from './utils/workspaces.ts'
 import type { WorkspaceInfo } from './utils/workspaces.ts'
 
-export const testShardNames = ['browser', 'apps', 'other', 'hmr'] as const
-export type TestShard = (typeof testShardNames)[number]
-
-const browserPackages = new Set([
-  '@remix-run/assets',
-  '@remix-run/component',
-  '@remix-run/multiple-import-maps-polyfill',
-  '@remix-run/ui',
-])
-
 function main() {
-  let [shard, baseRef, headRef] = process.argv.slice(2)
-  if (process.argv.length !== 5 || shard == null || !isTestShard(shard) || !baseRef || !headRef) {
-    throw new Error('Usage: node scripts/run-ci-tests.ts <shard> <base-ref> <head-ref>')
+  let [baseRef, headRef] = process.argv.slice(2)
+  if (process.argv.length !== 4 || !baseRef || !headRef) {
+    throw new Error('Usage: node scripts/run-ci-tests.ts <base-ref> <head-ref>')
   }
 
   let changedFiles = cp
@@ -36,13 +26,13 @@ function main() {
     for (let reason of selection.fullRunReasons) console.log(`- ${reason}`)
   }
 
-  let workspaces = getTestShardWorkspaces(selection.workspaces, shard)
+  let workspaces = selection.workspaces
   if (workspaces.length === 0) {
-    console.log(`No affected tests for shard "${shard}". Skipping.`)
+    console.log('No affected test workspaces. Skipping.')
     return
   }
 
-  console.log(`Running tests for shard "${shard}":`)
+  console.log('Running tests in affected workspaces:')
   for (let workspace of workspaces) console.log(`- ${workspace.dir} (${workspace.name})`)
 
   let args = [
@@ -57,10 +47,6 @@ function main() {
   let result = cp.spawnSync('pnpm', args, { stdio: 'inherit' })
   if (result.error) throw result.error
   if (result.status !== 0) process.exit(result.status ?? 1)
-}
-
-export function isTestShard(value: string): value is TestShard {
-  return testShardNames.some((shard) => shard === value)
 }
 
 export function selectTestWorkspaces(
@@ -80,28 +66,6 @@ export function selectTestWorkspaces(
     ),
     fullRunReasons,
   }
-}
-
-export function getTestShardWorkspaces(
-  workspaces: WorkspaceInfo[],
-  shard: TestShard,
-): WorkspaceInfo[] {
-  return workspaces.filter(
-    (workspace) => workspace.scripts.includes('test') && getWorkspaceShard(workspace) === shard,
-  )
-}
-
-function getWorkspaceShard(workspace: WorkspaceInfo): TestShard {
-  if (workspace.name === '@remix-run/component-hmr') return 'hmr'
-  if (browserPackages.has(workspace.name)) return 'browser'
-  if (
-    workspace.dir.startsWith('demos/') ||
-    workspace.dir.startsWith('docs/') ||
-    workspace.dir === 'template'
-  ) {
-    return 'apps'
-  }
-  return 'other'
 }
 
 if (import.meta.main) main()

@@ -132,13 +132,9 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-  test_ubuntu_shard:
-    name: test (ubuntu-latest, ${{ matrix.shard }})
+  test_ubuntu:
+    name: test (ubuntu-latest)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [browser, apps, other, hmr]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -179,21 +175,9 @@ jobs:
 
       - name: Run tests
         env:
-          TEST_SHARD: ${{ matrix.shard }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node ./scripts/run-ci-tests.ts "$TEST_SHARD" "$PR_BASE_SHA" "$PR_HEAD_SHA"
-
-  test_ubuntu:
-    name: test (ubuntu-latest)
-    runs-on: ubuntu-latest
-    needs: test_ubuntu_shard
-    if: always()
-    steps:
-      - name: Check test results
-        env:
-          TEST_RESULT: ${{ needs.test_ubuntu_shard.result }}
-        run: test "$TEST_RESULT" = success
+        run: node ./scripts/run-ci-tests.ts "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
   test_bun_changed:
     name: test (bun, ubuntu-latest, changed packages)
