@@ -146,9 +146,10 @@ function runRootScript(scriptName: string) {
 }
 
 function runWorkspaceScript(scriptName: string, workspaceDirs: string[]) {
-  let args = ['--recursive', '--workspace-concurrency=4', '--stream']
-  if (scriptName === 'test') args.push('--no-sort')
-  args.push(...workspaceDirs.flatMap((workspaceDir) => ['--filter', `./${workspaceDir}`]))
+  let args = workspaceDirs.flatMap((workspaceDir) => ['--filter', `./${workspaceDir}`])
+  if (scriptName === 'test') {
+    args.unshift('--recursive', '--no-sort', '--workspace-concurrency=4', '--stream')
+  }
   args.push('run', scriptName)
 
   let result = cp.spawnSync('pnpm', args, {
