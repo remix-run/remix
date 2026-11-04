@@ -389,6 +389,12 @@ const schemaPrototype = {
         return schema['~run'](value, context)
       },
     }
+    // Caching on the shared prototype would shadow this getter for every schema without its own
+    // copy, and their `validate` would then call the prototype's missing `~run`.
+    if (this === schemaPrototype) {
+      return props
+    }
+
     // Only schemas validated directly need these props, so create them on first access. Unlike
     // `Object.defineProperty()`, this does not throw for frozen schemas; they skip the cache.
     Reflect.defineProperty(schema, '~standard', { value: props })
