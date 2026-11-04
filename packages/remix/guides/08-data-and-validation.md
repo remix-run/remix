@@ -276,7 +276,7 @@ Browser form encoding changes what these schemas receive:
 
 - An unchecked checkbox is absent. For a checkbox with `value="yes"`, `s.optional(s.literal("yes")).transform((value) => value === "yes")` produces a boolean. `coerce.boolean()` accepts `"true"` and `"false"`, not the browser's default `"on"` value.
 - An empty text input is `""`, not `undefined`, so `optional()` and `defaulted()` do not make a blank string valid automatically.
-- Use `f.file(...)` or `f.files(...)` for file entries, and [parse multipart uploads with limits](/files-and-assets/#file-uploads) before the schema sees them.
+- Use `f.file(...)` or `f.files(...)` for file entries, and [parse multipart uploads with limits](/files-and-assets/#limit-upload-size) before the schema sees them.
 
 ### Compose queries and load relations
 

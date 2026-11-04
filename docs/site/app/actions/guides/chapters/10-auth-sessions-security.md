@@ -59,3 +59,7 @@ Use `cop()` when the deployment can rely on `Sec-Fetch-Site` and `Origin`, or la
 ## CORS is not authentication or CSRF protection {#cors}
 
 Use `cors()` only for endpoints browsers must call cross-origin. Configure exact origin, credential, header, and preflight policies; CORS response headers do not authorize a caller and do not stop non-browser clients from reaching an endpoint.
+
+## Trust the HTML and modules the browser loads {#browser-trust-boundaries}
+
+The initial document and HTML returned by a frame resolver are trusted application content. They can select client entry modules and add import maps, styles, and nested frames. The default resolver only fetches from the document origin, but Remix does not sanitize the HTML it returns, and same-origin user-generated content is not safe by default. Render user content as escaped text, pass raw HTML through [`unsafeHTML()`](/rendering-ui/#raw-html-with-unsafehtml) only after sanitizing it, and enforce any module source policy in `loadModule`. See [trusted content and module loading](/api/component/#trusted-content-and-module-loading).

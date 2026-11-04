@@ -285,7 +285,7 @@ export const router = createRouter({
 
 Global middleware is convenient when most routes use it. If only one action accepts a form or upload, put `formData()` on that action instead so other requests skip body parsing.
 
-`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by [`remix/assets`](../src/assets/README.md) lives in colocated `public/` directories under `app/` and goes through a separate [source-served asset pipeline](/files-and-assets/#remix-s-unbundled-asset-server).
+`staticFiles()` serves files exactly as they exist under the root `public/` directory. Browser source compiled by [`remix/assets`](../src/assets/README.md) lives in colocated `public/` directories under `app/` and goes through a separate [source-served asset pipeline](/files-and-assets/#how-the-asset-server-works).
 
 `render()` from [`remix/middleware/render`](../src/render-middleware/README.md) is what lets actions [render component pages](/rendering-ui/#rendering-pages-through-request-context) with `context.render(...)`, backed by the [streaming renderer](/streaming-ui-with-frames/#server-rendering-with-rendertostream-and-rendertostring).
 

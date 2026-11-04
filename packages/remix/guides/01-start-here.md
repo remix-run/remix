@@ -22,6 +22,11 @@ The design of Remix comes from six core principles:
 
 The fastest way to understand Remix is to build one feature across the stack: define a route, return a server-rendered page, handle a form submission, and hydrate one component for browser interaction.
 
+> [!NOTE]
+> This chapter is a tutorial. Each step builds on the one before it, so start from the beginning and follow along in your own app.
+>
+> The rest of the chapters are guides. Each one covers a single topic in depth, such as routing, forms, or testing, and you can read them in any order.
+
 ## Quickstart: create and run a Remix app {#quickstart}
 
 The quickest way to start a Remix app is with the `remix` CLI. It creates a small full-stack application with a Node server, typed routes, render middleware, a server-rendered home page, source-served assets, and one hydrated component.
@@ -630,7 +635,7 @@ mkdir -p app/actions/albums/edit/public
 touch app/actions/albums/edit/public/album-edit-form.tsx
 ```
 
-The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory. `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which [starts the Remix component client runtime](/interactivity/#browser-entry-with-run). You can [configure the asset server boundary](/files-and-assets/#remix-s-unbundled-asset-server) if your app needs different rules.
+The colocated `public/` directory is the explicit browser-source boundary. The template's asset server allows source beneath `app/**/public/**`, so Remix can turn this component and its local dependencies into browser modules. Keep those local dependencies inside the same `public/` directory. `app/routes.ts` is allowed separately for type-safe links. The template also loads `app/actions/public/entry.ts`, which [starts the Remix component client runtime](/interactivity/#browser-entry-with-run). You can [configure the asset server boundary](/files-and-assets/#control-what-the-browser-can-reach) if your app needs different rules.
 
 Now that we have a place for the form to live, let's pull it into its own component.
 

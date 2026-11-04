@@ -363,7 +363,7 @@ const menuToggleCss = css({
   '@supports selector(:popover-open)': {
     display: 'inline-flex',
   },
-  [media.sm]: {
+  [media.md]: {
     display: 'none',
   },
 })
@@ -410,30 +410,26 @@ const navigationCss = css({
   boxShadow: 'var(--docs-menu-shadow)',
   fontSize: 'var(--rmx-font-size-md)',
   flexWrap: 'nowrap',
-  [media.sm]: {
+  [media.md]: {
     position: 'absolute',
-    inset: '0 24px auto auto',
+    inset: '0 var(--docs-edge-inset) auto auto',
     zIndex: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
     width: 'auto',
     height: 'var(--site-header-height)',
-    gap: '20px',
+    gap: '24px',
     padding: 0,
     border: 0,
     background: 'none',
     boxShadow: 'none',
   },
-  [media.md]: {
-    right: 'var(--docs-edge-inset)',
-    gap: '24px',
-  },
 })
 
 const desktopNavigationCss = css({
   display: 'none',
-  [media.sm]: {
+  [media.md]: {
     display: 'flex',
   },
 })
@@ -445,7 +441,7 @@ const mobileNavigationCss = css({
       display: 'flex',
     },
   },
-  [media.sm]: {
+  [media.md]: {
     '&, &:popover-open': {
       display: 'none',
     },
@@ -469,7 +465,7 @@ const navigationLinkCss = css({
   '&:hover, &:focus-visible': {
     background: 'var(--docs-nav-hover-background)',
   },
-  [media.sm]: {
+  [media.md]: {
     display: 'inline',
     alignItems: 'normal',
     minHeight: 'auto',

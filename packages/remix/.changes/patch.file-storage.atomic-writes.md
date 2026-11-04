@@ -1,0 +1,1 @@
+Prevent failed upload streams from corrupting existing files in `remix/file-storage/fs`, without changing the API or disk format. See the [filesystem storage documentation](https://github.com/remix-run/remix/tree/main/packages/file-storage#replacement-writes) for publication limits and filesystem requirements.
