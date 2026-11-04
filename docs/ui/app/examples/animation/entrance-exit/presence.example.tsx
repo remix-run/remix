@@ -7,7 +7,22 @@ export default function ExampleEntranceExit(handle: Handle) {
   return () => {
     let timing = prefersReducedMotion() ? { duration: 0 } : spring('snappy')
     return (
-      <div mix={styles.root}>
+      <div
+        mix={css({
+          '--surface': 'light-dark(#fff, #1b1b20)',
+
+          colorScheme: 'light dark',
+          '&, & *, &::before, &::after, & *::before, & *::after': {
+            boxSizing: 'border-box',
+          },
+          display: 'grid',
+          gap: '24px',
+          width: '360px',
+          maxWidth: '100%',
+          color: 'light-dark(#202027, #eeeef2)',
+          font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+        })}
+      >
         <button
           type="button"
           aria-expanded={visible}
@@ -17,7 +32,29 @@ export default function ExampleEntranceExit(handle: Handle) {
               visible = !visible
               handle.update()
             }),
-            styles.button,
+            css({
+              justifySelf: 'center',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              minWidth: '200px',
+              padding: '9px 14px',
+              border: '1px solid light-dark(#d8d8df, #44444c)',
+              borderRadius: '8px',
+              background: 'var(--surface)',
+              color: 'inherit',
+              font: 'inherit',
+              fontWeight: 600,
+              cursor: 'pointer',
+              '&:hover': {
+                background: 'light-dark(#f0f0f5, #303038)',
+              },
+              '&:focus-visible': {
+                outline: '2px solid light-dark(#70707c, #a0a0ac)',
+                outlineOffset: '3px',
+              },
+            }),
           ]}
         >
           <PlusIcon expanded={visible} />
@@ -45,7 +82,15 @@ export default function ExampleEntranceExit(handle: Handle) {
                   transform: 'translateY(-8px) scale(0.98)',
                   ...timing,
                 }),
-                styles.notification,
+                css({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  padding: '18px',
+                  border: '1px solid light-dark(#e0e0e6, #393940)',
+                  borderRadius: '12px',
+                  background: 'var(--surface)',
+                }),
               ]}
             >
               <SuccessIcon />
@@ -67,57 +112,6 @@ export default function ExampleEntranceExit(handle: Handle) {
       </div>
     )
   }
-}
-
-const styles = {
-  root: css({
-    '--surface': 'light-dark(#fff, #1b1b20)',
-
-    colorScheme: 'light dark',
-    '&, & *, &::before, &::after, & *::before, & *::after': {
-      boxSizing: 'border-box',
-    },
-    display: 'grid',
-    gap: '24px',
-    width: '360px',
-    maxWidth: '100%',
-    color: 'light-dark(#202027, #eeeef2)',
-    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  }),
-
-  button: css({
-    justifySelf: 'center',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    minWidth: '200px',
-    padding: '9px 14px',
-    border: '1px solid light-dark(#d8d8df, #44444c)',
-    borderRadius: '8px',
-    background: 'var(--surface)',
-    color: 'inherit',
-    font: 'inherit',
-    fontWeight: 600,
-    cursor: 'pointer',
-    '&:hover': {
-      background: 'light-dark(#f0f0f5, #303038)',
-    },
-    '&:focus-visible': {
-      outline: '2px solid light-dark(#70707c, #a0a0ac)',
-      outlineOffset: '3px',
-    },
-  }),
-
-  notification: css({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-    padding: '18px',
-    border: '1px solid light-dark(#e0e0e6, #393940)',
-    borderRadius: '12px',
-    background: 'var(--surface)',
-  }),
 }
 
 function PlusIcon(handle: Handle<{ expanded: boolean }>) {

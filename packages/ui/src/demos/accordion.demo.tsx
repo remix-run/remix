@@ -9,7 +9,19 @@ import * as accordion from '@remix-run/ui/accordion'
 export default function Example() {
   return () => (
     <accordion.Context defaultValue="shipping">
-      <div mix={[rootCss, accordion.root()]}>
+      <div
+        mix={[
+          css({
+            display: 'grid',
+            width: '24rem',
+            maxWidth: '100%',
+            border: '1px solid light-dark(#d1d1d1, #444444)',
+            borderRadius: '8px',
+            background: 'light-dark(#ffffff, #1a1a1a)',
+          }),
+          accordion.root(),
+        ]}
+      >
         <accordion.ItemContext value="shipping">
           <div mix={[itemCss, accordion.item()]}>
             <h3 mix={headingCss}>
@@ -50,15 +62,6 @@ export default function Example() {
     </accordion.Context>
   )
 }
-
-const rootCss = css({
-  display: 'grid',
-  width: '24rem',
-  maxWidth: '100%',
-  border: '1px solid light-dark(#d1d1d1, #444444)',
-  borderRadius: '8px',
-  background: 'light-dark(#ffffff, #1a1a1a)',
-})
 
 const itemCss = css({
   borderBlockStart: '1px solid light-dark(#e7e7e7, #333333)',

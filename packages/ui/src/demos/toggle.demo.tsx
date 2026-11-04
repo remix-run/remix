@@ -8,10 +8,61 @@ import { toggle } from '@remix-run/ui/toggle'
  */
 export default function Example() {
   return () => (
-    <div mix={rootCss}>
-      <label mix={optionCss}>
+    <div
+      mix={css({
+        display: 'grid',
+        gap: '12px',
+        width: 'min(100%, 22rem)',
+        color: 'light-dark(#151515, #ececec)',
+        fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+        fontSize: '13px',
+        lineHeight: '18px',
+        fontWeight: 500,
+        letterSpacing: 0,
+      })}
+    >
+      <label
+        mix={css({
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        })}
+      >
         <input
-          mix={[nativeControlCss, toggle({ defaultChecked: true })]}
+          mix={[
+            css({
+              appearance: 'none',
+              boxSizing: 'border-box',
+              width: '32px',
+              height: '18px',
+              margin: 0,
+              border: '1px solid light-dark(#b8b8b8, #666666)',
+              borderRadius: '999px',
+              background: 'light-dark(#e7e7e7, #333333)',
+              padding: '2px',
+              '&::after': {
+                content: '""',
+                display: 'block',
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                background: 'light-dark(#ffffff, #ececec)',
+                transition: 'translate 120ms ease',
+              },
+              '&:checked': {
+                borderColor: 'light-dark(#3573f6, #6eaaff)',
+                background: 'light-dark(#3573f6, #6eaaff)',
+              },
+              '&:checked::after': {
+                translate: '14px 0',
+              },
+              '&:focus-visible': {
+                outline: '2px solid light-dark(#3573f6, #6eaaff)',
+                outlineOffset: '2px',
+              },
+            }),
+            toggle({ defaultChecked: true }),
+          ]}
           name="notifications"
           type="checkbox"
         />
@@ -28,56 +79,6 @@ export default function Example() {
     </div>
   )
 }
-
-const rootCss = css({
-  display: 'grid',
-  gap: '12px',
-  width: 'min(100%, 22rem)',
-  color: 'light-dark(#151515, #ececec)',
-  fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  fontSize: '13px',
-  lineHeight: '18px',
-  fontWeight: 500,
-  letterSpacing: 0,
-})
-
-const optionCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-})
-
-const nativeControlCss = css({
-  appearance: 'none',
-  boxSizing: 'border-box',
-  width: '32px',
-  height: '18px',
-  margin: 0,
-  border: '1px solid light-dark(#b8b8b8, #666666)',
-  borderRadius: '999px',
-  background: 'light-dark(#e7e7e7, #333333)',
-  padding: '2px',
-  '&::after': {
-    content: '""',
-    display: 'block',
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%',
-    background: 'light-dark(#ffffff, #ececec)',
-    transition: 'translate 120ms ease',
-  },
-  '&:checked': {
-    borderColor: 'light-dark(#3573f6, #6eaaff)',
-    background: 'light-dark(#3573f6, #6eaaff)',
-  },
-  '&:checked::after': {
-    translate: '14px 0',
-  },
-  '&:focus-visible': {
-    outline: '2px solid light-dark(#3573f6, #6eaaff)',
-    outlineOffset: '2px',
-  },
-})
 
 const customControlCss = css({
   appearance: 'none',
