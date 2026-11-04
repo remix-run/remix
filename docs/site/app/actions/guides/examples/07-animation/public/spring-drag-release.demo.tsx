@@ -3,7 +3,7 @@ import type { Handle } from "remix/component";
 import { spring } from "@remix-run/ui/animation";
 import type { SpringPreset } from "@remix-run/ui/animation";
 
-import { dragVelocityEvents } from "./gallery/drag-release.ts";
+import { dragVelocityEvents } from "./drag-release.ts";
 
 const stageWidth = 420;
 const stageHeight = 260;
@@ -150,7 +150,6 @@ export function SpringDragReleaseDemo(handle: Handle) {
       </div>
 
       <div
-        class="spring-demo-controls"
         mix={css({
           display: "flex",
           flexWrap: "wrap",
@@ -164,7 +163,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
               display: "inline-flex",
               alignItems: "center",
               gap: "0.35rem",
-              border: "1px solid #d1d5db",
+              border: "1px solid light-dark(#d1d5db, #3f3f46)",
               borderRadius: "999px",
               padding: "0.4rem 0.65rem",
               fontSize: "0.85rem",
@@ -190,7 +189,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
       <p
         mix={css({
           margin: 0,
-          color: "#6b7280",
+          color: "light-dark(#6b7280, #a1a1aa)",
           fontSize: "0.85rem",
           textAlign: "center",
         })}

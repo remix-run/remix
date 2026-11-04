@@ -263,15 +263,11 @@ card.style.transition = `transform ${spring("bouncy", { velocity })}`;
 card.style.transform = "translateX(0)";
 ```
 
-The demo below releases a dragged card with the velocity of the drag.
+The demo below releases a dragged dot with the velocity of the drag.
 
 ::frame{src="/examples/07-animation/spring-drag-release/"}
 
 ::frame{src="/examples/07-animation/bouncy-switch/"}
-
-The gallery below collects smaller motion experiments built with the same helpers.
-
-::frame{src="/examples/07-animation/animation-gallery/"}
 
 ## Interruptible interactions {#interruptible-interactions}
 

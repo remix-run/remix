@@ -473,7 +473,7 @@ card.style.transition = `transform ${spring("bouncy", { velocity })}`;
 card.style.transform = "translateX(0)";
 ```
 
-The demo below releases a dragged card with the velocity of the drag.
+The demo below releases a dragged dot with the velocity of the drag.
 
 ```tsx
 import { css, on, ref } from "remix/component";
@@ -481,7 +481,7 @@ import type { Handle } from "remix/component";
 import { spring } from "@remix-run/ui/animation";
 import type { SpringPreset } from "@remix-run/ui/animation";
 
-import { dragVelocityEvents } from "./gallery/drag-release.ts";
+import { dragVelocityEvents } from "./drag-release.ts";
 
 const stageWidth = 420;
 const stageHeight = 260;
@@ -628,7 +628,6 @@ export function SpringDragReleaseDemo(handle: Handle) {
       </div>
 
       <div
-        class="spring-demo-controls"
         mix={css({
           display: "flex",
           flexWrap: "wrap",
@@ -642,7 +641,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
               display: "inline-flex",
               alignItems: "center",
               gap: "0.35rem",
-              border: "1px solid #d1d5db",
+              border: "1px solid light-dark(#d1d5db, #3f3f46)",
               borderRadius: "999px",
               padding: "0.4rem 0.65rem",
               fontSize: "0.85rem",
@@ -668,7 +667,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
       <p
         mix={css({
           margin: 0,
-          color: "#6b7280",
+          color: "light-dark(#6b7280, #a1a1aa)",
           fontSize: "0.85rem",
           textAlign: "center",
         })}
@@ -742,201 +741,6 @@ export function BouncySwitchDemo(handle: Handle) {
 }
 
 const bounceEasing = `linear(0, 0.258 12%, 0.424 18.3%, 0.633 24.4%, 0.999 33.3%, 0.783 39.8%, 0.733 42.5%, 0.716 45.1%, 0.731 47.6%, 0.777 50.2%, 0.999 57.7%, 0.906 61.7%, 0.883 63.5%, 0.876 65.2%, 0.901 68.7%, 0.999 74.5%, 0.964 77.4%, 0.953 80.1%, 0.961 82.6%, 1 88.2%, 0.99 91.9%, 1)`;
-```
-
-The gallery below collects smaller motion experiments built with the same helpers.
-
-```tsx
-import { css, on, type Handle, type RemixNode } from "remix/component";
-import { DefaultAnimate } from "./gallery/default-animate.tsx";
-import { EnterAnimation } from "./gallery/enter.tsx";
-import { ExitAnimation } from "./gallery/exit.tsx";
-import { Press } from "./gallery/press.tsx";
-import { HTMLContent } from "./gallery/html-content.tsx";
-import { Keyframes } from "./gallery/keyframes.tsx";
-import { InterruptibleKeyframes } from "./gallery/interruptible-keyframes.tsx";
-import { RollingSquare } from "./gallery/rolling-square.tsx";
-import { Rotate } from "./gallery/rotate.tsx";
-import { TransitionOptions } from "./gallery/transition-options.tsx";
-import { Cube } from "./gallery/cube.tsx";
-import { SharedLayout } from "./gallery/shared-layout.tsx";
-import { AspectRatio } from "./gallery/aspect-ratio.tsx";
-import { BouncySwitch } from "./gallery/bouncy-switch.tsx";
-import { ColorInterpolation } from "./gallery/color-interpolation.tsx";
-import { FlipToggle } from "./gallery/flip-toggle.tsx";
-import { Reordering } from "./gallery/reordering.tsx";
-import { MultiStateBadge } from "./gallery/multi-state-badge.tsx";
-import { HoldToConfirm } from "./gallery/hold-to-confirm.tsx";
-import { MaterialRipple } from "./gallery/material-ripple.tsx";
-
-function Tile(handle: Handle<{ title: string; children: RemixNode; notes?: string }>) {
-  let remountKey = 0;
-
-  return () => {
-    let { title, children, notes } = handle.props;
-
-    return (
-      <div
-        mix={[
-          css({
-            backgroundColor: "white",
-            padding: "40px",
-            borderRadius: 12,
-            boxShadow: "0 0 10px 0 rgba(0, 0, 0, 0.1)",
-            display: "flex",
-            alignItems: "center",
-            flexDirection: "column",
-            gap: 12,
-            position: "relative",
-          }),
-        ]}
-      >
-        <button
-          mix={[
-            on("click", () => {
-              remountKey++;
-              handle.update();
-            }),
-            css({
-              position: "absolute",
-              bottom: 8,
-              right: 8,
-              width: 18,
-              height: 18,
-              padding: 0,
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              opacity: 0.4,
-              "&:hover": {
-                opacity: 1,
-              },
-            }),
-          ]}
-          title="Replay animation"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M1 4v6h6M23 20v-6h-6" />
-            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-          </svg>
-        </button>
-        <h3 mix={[css({ margin: 0 })]}>{title}</h3>
-        <div
-          key={remountKey}
-          mix={[
-            css({
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: 280,
-            }),
-          ]}
-        >
-          {children}
-        </div>
-        {notes && (
-          <p
-            mix={[
-              css({
-                margin: 0,
-                fontSize: 12,
-                color: "#666",
-                textAlign: "center",
-                maxWidth: "200px",
-              }),
-            ]}
-          >
-            {notes}
-          </p>
-        )}
-      </div>
-    );
-  };
-}
-
-export function AnimationGallery() {
-  return () => (
-    <>
-      <h1 mix={[css({ marginBottom: 0, "& + p": { marginTop: 0 } })]}>Animations</h1>
-      <p>
-        Most animations are adapted from <a href="https://motion.dev">Motion</a>. Thank you for your
-        work <a href="https://motion.dev/@matt">Matt Perry</a>!
-      </p>
-      <div
-        mix={[
-          css({
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-            gap: 24,
-            marginTop: 40,
-          }),
-        ]}
-      >
-        <Tile title="Default Animate" notes="animateEntrance + animateLayout defaults">
-          <DefaultAnimate />
-        </Tile>
-        <Tile title="Rolling Square" notes="CSS transition with spring() timing function">
-          <RollingSquare />
-        </Tile>
-        <Tile title="Enter Animation" notes="animateEntrance() with spring physics">
-          <EnterAnimation />
-        </Tile>
-        <Tile title="Exit Animation" notes="animateEntrance() + animateExit()">
-          <ExitAnimation />
-        </Tile>
-        <Tile title="Press Interaction" notes="CSS transition + pointer/keyboard events">
-          <Press />
-        </Tile>
-        <Tile title="HTML Content" notes="rAF loop with spring iterator for text">
-          <HTMLContent />
-        </Tile>
-        <Tile title="Keyframes" notes="CSS @keyframes with infinite loop">
-          <Keyframes />
-        </Tile>
-        <Tile title="Interruptible Keyframes" notes="Web Animations API with commitStyles()">
-          <InterruptibleKeyframes />
-        </Tile>
-        <Tile title="Rotate" notes="CSS @keyframes (one-shot)">
-          <Rotate />
-        </Tile>
-        <Tile title="Transition Options" notes="animateEntrance() with cubic-bezier + delay">
-          <TransitionOptions />
-        </Tile>
-        <Tile title="3D Cube" notes="rAF loop with direct style manipulation">
-          <Cube />
-        </Tile>
-        <Tile title="Shared Layout" notes="CSS Grid overlap for simultaneous enter/exit">
-          <SharedLayout />
-        </Tile>
-        <Tile title="Aspect Ratio">
-          <AspectRatio />
-        </Tile>
-        <Tile title="Bouncy Switch" notes="Spring up, bounce down with CSS linear()">
-          <BouncySwitch />
-        </Tile>
-        <Tile title="FLIP Toggle" notes="animateLayout() with interruptible WAAPI">
-          <FlipToggle />
-        </Tile>
-        <Tile title="Reordering" notes="animateLayout() with auto-shuffling list">
-          <Reordering />
-        </Tile>
-        <Tile title="Color Interpolation" notes="sRGB vs OKLCH color space">
-          <ColorInterpolation />
-        </Tile>
-        <Tile title="Multi-State Badge" notes="Animated icon/label swap with WAAPI shake">
-          <MultiStateBadge />
-        </Tile>
-        <Tile title="Hold to Confirm" notes="Custom interaction with progress tracking">
-          <HoldToConfirm />
-        </Tile>
-        <Tile title="Material Ripple" notes="Pointer-tracked ripples with enter/exit animations">
-          <MaterialRipple />
-        </Tile>
-      </div>
-    </>
-  );
-}
 ```
 
 ## Interruptible interactions {#interruptible-interactions}
