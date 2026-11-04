@@ -124,6 +124,6 @@ Descriptor `errorMap` options customize schema messages and supported native mes
 
 `field.setCustomErrors(['Already in use'])` adds errors for the current value without replacing native/schema errors or marking the field touched. It blocks native submission immediately; errors clear on a changed value, non-canceled reset, or new submission. Applications own async requests, debouncing, cancellation, stale-result checks, and server enforcement.
 
-For custom integrations, `getConstraints(schema, { type, multiple? })` projects supported `required`, length, range, and numeric `step="any"` attributes. `InputValidationEvent` and `onInputValidation(handler)` expose bubbling notifications with `field`, `errorId`, `errors`, and `touched`; Context handles its own updates.
+For custom integrations, `getConstraints(schema, { type, multiple? })` projects supported `required`, length, range, and numeric `step="any"` attributes. Bounds and length checks after an output transform stay in schema validation instead of restricting raw input. `InputValidationEvent` and `onInputValidation(handler)` expose bubbling notifications with `field`, `errorId`, `errors`, and `touched`; Context handles its own updates.
 
 SSR provides constraints, restored defaults, labels, errors, and ARIA. Native and server validation remain correct without JavaScript; JavaScript adds schema checks and interactive feedback before submission.

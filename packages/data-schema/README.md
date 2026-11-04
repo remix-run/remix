@@ -109,7 +109,7 @@ let metadata = getSchemaMetadata(Account.shape.username)
 // metadata.checks: [{ code: 'string.min_length', values: { min: 3 } }]
 ```
 
-Metadata also reports known undefined handling from schema wrappers. It does not describe arbitrary refinements or replace validation.
+Metadata also reports known undefined handling from schema wrappers. After an output transform, `inputChecks` identifies the checks that apply to the original input, while `checks` retains all described checks. Metadata does not describe arbitrary refinements or replace validation.
 
 For form kinds, blank-value normalization, and reusable submission schemas, see the [form schema guide](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md). For native constraints and browser feedback, see the [UI form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). The UI adapter lives in `@remix-run/ui/form`; schema validation stays in `data-schema`.
 

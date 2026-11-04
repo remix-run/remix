@@ -255,7 +255,7 @@ export const fieldValidity = createMixin<
     }
     feedback.refreshControls.add(refreshControl)
     resetControl = (control) => updateFeedback(control, 'reset')
-    if (config.repeated) {
+    if (config.repeated || config.attrs.type === 'radio') {
       handle.queueTask(() => {
         if (mountedControl && previousConfig === config) updateFeedback(mountedControl, 'sync')
       })

@@ -11,6 +11,75 @@ import type { FieldBinding } from './form.ts'
 import { renderForm, renderServerForm, input, edit, blur } from './test/form.tsx'
 
 describe('form.Context', () => {
+  it('validates transformed outputs without projecting their bounds onto raw inputs', (t) => {
+    let schema = fd.object({
+      count: fd.number(
+        s
+          .number()
+          .pipe(min(1))
+          .transform((value) => value * 2)
+          .pipe(min(10), max(20)),
+      ),
+    })
+    let view = renderForm(schema, ({ fields }) => (
+      <form mix={form.root()}>
+        <input defaultValue="6" mix={form.control(fields.count)} />
+      </form>
+    ))
+    t.after(view.cleanup)
+    let node = input(view.container)
+    let native = view.container.querySelector('form')
+    if (!native) throw new Error('Missing form')
+    expect(node.min).toBe('1')
+    expect(node.max).toBe('')
+    expect(native.checkValidity()).toBe(true)
+    expect(fd.parseSafe(schema, new FormData(native))).toEqual({
+      success: true,
+      value: { count: 12 },
+    })
+    edit(node, '3')
+    expect(native.checkValidity()).toBe(false)
+    edit(node, '12')
+    expect(native.checkValidity()).toBe(false)
+  })
+
+  it('revalidates a selected radio when its JSX value changes before submission', (t) => {
+    let value = 'sms'
+    let schema = fd.object({
+      delivery: fd.text(s.string().refine((value) => value === 'email', 'Email only')),
+    })
+    let view = renderForm(schema, ({ fields }) => (
+      <form mix={form.root()}>
+        <fieldset>
+          <legend>Delivery</legend>
+          <input type="radio" value={value} defaultChecked mix={form.control(fields.delivery)} />
+          <label mix={form.label(fields.delivery, value)}>Delivery option</label>
+        </fieldset>
+      </form>
+    ))
+    t.after(view.cleanup)
+    let native = view.container.querySelector('form')
+    if (!native) throw new Error('Missing form')
+    expect(native.checkValidity()).toBe(false)
+    value = 'email'
+    view.rerender()
+    let node = input(view.container)
+    expect(node.validationMessage).toBe('')
+    expect(view.fields.delivery.errors).toEqual([])
+    expect(view.container.querySelector('label')?.control).toBe(node)
+    let submissions = 0
+    native.addEventListener('submit', (event) => {
+      event.preventDefault()
+      submissions++
+    })
+    native.requestSubmit()
+    expect(submissions).toBe(1)
+    expect(fd.parseSafe(schema, new FormData(native))).toEqual({
+      success: true,
+      value: { delivery: 'email' },
+    })
+  })
+
   it('validates and restores multiple select values through SSR, hydration, and reset', async (t) => {
     let schema = fd.object({
       topics: fd.fields(s.array(s.string()).refine((values) => values.length >= 2, 'Choose two')),

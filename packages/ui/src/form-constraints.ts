@@ -89,7 +89,8 @@ export function getConstraints<input, output>(
       constraints.required = true
   }
 
-  for (let check of getSchemaMetadata(schema).checks) {
+  let metadata = getSchemaMetadata(schema)
+  for (let check of metadata.inputChecks ?? metadata.checks) {
     switch (check.code) {
       case 'string.min_length': {
         let minLength = getConstraintValue(check.values, 'min')

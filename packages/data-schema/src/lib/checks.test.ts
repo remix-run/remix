@@ -90,6 +90,20 @@ describe('getSchemaMetadata', () => {
     let metadata = getSchemaMetadata(schema)
     assert.equal(metadata.acceptsUndefined, true)
     assert.deepEqual(metadata.checks, [{ code: 'string.min_length', values: { min: 2 } }])
+    let transformed = optional(
+      string()
+        .pipe(minLength(2))
+        .transform((value) => value.repeat(2))
+        .pipe(maxLength(10)),
+    ).refine((value) => value !== 'admin')
+    let transformedMetadata = getSchemaMetadata(transformed)
+    assert.deepEqual(transformedMetadata.checks, [
+      { code: 'string.min_length', values: { min: 2 } },
+      { code: 'string.max_length', values: { max: 10 } },
+    ])
+    assert.deepEqual(transformedMetadata.inputChecks, [
+      { code: 'string.min_length', values: { min: 2 } },
+    ])
   })
 
   it('inspects defaulted schemas without evaluating their defaults', () => {

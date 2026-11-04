@@ -1,1 +1,1 @@
-Reuse property schemas through `.shape` and inspect generic check metadata with `getSchemaMetadata()` from `remix/data-schema`, without running validation (see #11630).
+Reuse property schemas through `.shape` and inspect generic check metadata with `getSchemaMetadata()` from `remix/data-schema`, without running validation. Metadata distinguishes original-input checks from checks on transformed outputs.

@@ -87,6 +87,8 @@ export interface SchemaCheckMetadata {
 export interface SchemaMetadata {
   /** Checks retained through schema composition. Arbitrary refinements are not described. */
   readonly checks: readonly SchemaCheckMetadata[]
+  /** Checks on the original input; present when transforms separate later output checks. */
+  readonly inputChecks?: readonly SchemaCheckMetadata[]
   /** Known undefined handling from schema wrappers; absent when validation must be evaluated. */
   readonly acceptsUndefined?: boolean
 }
@@ -263,11 +265,11 @@ export function createSchema<input, output>(
 
       let existingChecks = getSchemaChecks(schema)
       setSchemaMetadata(pipedSchema, {
+        ...readSchemaMetadata(schema),
         checks: [
           ...existingChecks,
           ...checks.map((check) => ({ code: check.code, values: check.values })),
         ],
-        acceptsUndefined: readSchemaMetadata(schema)?.acceptsUndefined,
       })
 
       return pipedSchema
@@ -319,7 +321,11 @@ export function createSchema<input, output>(
         },
       )
 
-      copySchemaMetadata(schema, transformedSchema)
+      let metadata = getSchemaMetadata(schema)
+      setSchemaMetadata(transformedSchema, {
+        ...metadata,
+        inputChecks: metadata.inputChecks ?? metadata.checks,
+      })
       return transformedSchema
     },
   }
@@ -331,8 +337,8 @@ export function createSchema<input, output>(
 
 function copySchemaMetadata(source: object, target: object): void {
   setSchemaMetadata(target, {
+    ...readSchemaMetadata(source),
     checks: getSchemaChecks(source),
-    acceptsUndefined: readSchemaMetadata(source)?.acceptsUndefined,
   })
 }
 
@@ -341,6 +347,7 @@ function setAcceptsUndefined<input, output>(
   acceptsUndefined: boolean,
 ): Schema<input, output> {
   setSchemaMetadata(schema, {
+    ...readSchemaMetadata(schema),
     checks: getSchemaChecks(schema),
     acceptsUndefined,
   })
