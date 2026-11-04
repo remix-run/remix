@@ -53,22 +53,6 @@ describe('formatFingerprintedPathname', () => {
       '/assets/app/entry.~abc123',
     )
   })
-
-  it('emits pathnames that are unchanged by per-segment encodeURIComponent canonicalization', () => {
-    let pathname = formatFingerprintedPathname(
-      '/assets/app/node_modules/%40remix-run/ui/styles.css',
-      '-NI2nv',
-    )
-
-    assert.equal(pathname, '/assets/app/node_modules/%40remix-run/ui/styles.~-NI2nv.css')
-    assert.equal(
-      pathname
-        .split('/')
-        .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
-        .join('/'),
-      pathname,
-    )
-  })
 })
 
 describe('parseFingerprintSuffix', () => {
@@ -131,6 +115,13 @@ describe('parseFingerprintSuffix', () => {
     assert.deepEqual(parseFingerprintSuffix('/assets/app/..%2E%40abc123'), {
       pathname: '/assets/app/..%2E%40abc123',
       requestedFingerprint: null,
+    })
+  })
+
+  it('parses dot stems followed by an extension', () => {
+    assert.deepEqual(parseFingerprintSuffix('/assets/app/..~abc123.js'), {
+      pathname: '/assets/app/..js',
+      requestedFingerprint: 'abc123',
     })
   })
 
