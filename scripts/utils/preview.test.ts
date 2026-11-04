@@ -16,7 +16,7 @@ import {
   preparePreviewPackage,
   readPullRequest,
 } from './preview.ts'
-import type { PreviewRelease } from './preview.ts'
+import type { PreviewAsset, PreviewRelease } from './preview.ts'
 
 describe('preview packages', () => {
   it('uses UTC date and time as SemVer, with a fixed tag per PR', () => {
@@ -52,7 +52,7 @@ describe('preview packages', () => {
     )
   })
 
-  it('uses eight-character SHA filenames within the shared PR release', () => {
+  it('uses full SHA filenames within the shared PR release', () => {
     let sha = 'a'.repeat(40)
     let other = sha.slice(0, 8) + 'b'.repeat(32)
     let tag = getPreviewTag('pr-123', sha, '2026-11-02T12:00:00Z')
@@ -60,9 +60,9 @@ describe('preview packages', () => {
     assert.equal(build.channel, 'pr-123')
     assert.equal(
       getPreviewTarballUrl(build, 'remix'),
-      `https://github.com/remix-run/previews/releases/download/${tag}/remix-${sha.slice(0, 8)}.tgz`,
+      `https://github.com/remix-run/previews/releases/download/${tag}/remix-${sha}.tgz`,
     )
-    assert.equal(
+    assert.notEqual(
       getPreviewTarballUrl(build, 'remix'),
       getPreviewTarballUrl({ ...build, sha: other }, 'remix'),
     )
@@ -320,7 +320,7 @@ describe('shared PR preview releases', () => {
       return [
         {
           id: index * 2,
-          name: `remix-${sha.slice(0, 8)}.tgz`,
+          name: `remix-${sha}.tgz`,
           label: `Complete preview build: ${sha}`,
           updated_at,
           state: 'uploaded',
@@ -329,7 +329,7 @@ describe('shared PR preview releases', () => {
         },
         {
           id: index * 2 + 1,
-          name: `assert-${sha.slice(0, 8)}.tgz`,
+          name: `assert-${sha}.tgz`,
           label: null,
           updated_at,
           state: 'uploaded',
@@ -338,13 +338,62 @@ describe('shared PR preview releases', () => {
         },
       ]
     })
-    let incomplete = { ...builds[0][1], id: 30, name: `assert-${'f'.repeat(8)}.tgz` }
+    let incomplete = { ...builds[0][1], id: 30, name: `assert-${'f'.repeat(40)}.tgz` }
     let unrelated = { ...incomplete, id: 31, name: 'notes.txt' }
     assert.deepEqual(
       getExpiredPrPreviewAssets([...builds.flat().reverse(), incomplete, unrelated])
         .map((asset) => asset.id)
         .toSorted((a, b) => a - b),
       [0, 1, 2, 3, 30],
+    )
+  })
+
+  it('retains legacy short SHA builds until they leave the retention window', () => {
+    let legacySha = 'a'.repeat(40)
+    let fullSha = legacySha.slice(0, 8) + 'b'.repeat(32)
+    let assets = [
+      previewAsset(
+        1,
+        `remix-${legacySha.slice(0, 8)}.tgz`,
+        now,
+        `Complete preview build: ${legacySha}`,
+      ),
+      previewAsset(2, `assert-${legacySha.slice(0, 8)}.tgz`, now),
+      previewAsset(3, `remix-${fullSha}.tgz`, now + 1000, `Complete preview build: ${fullSha}`),
+      previewAsset(4, `assert-${fullSha}.tgz`, now + 1000),
+    ]
+    assert.deepEqual(getExpiredPrPreviewAssets(assets), [])
+
+    let newer = Array.from({ length: 9 }, (_, index) => {
+      let sha = index.toString(16).padStart(40, '0')
+      let updatedAt = now + (index + 2) * 1000
+      return [
+        previewAsset(
+          10 + index * 2,
+          `remix-${sha}.tgz`,
+          updatedAt,
+          `Complete preview build: ${sha}`,
+        ),
+        previewAsset(11 + index * 2, `assert-${sha}.tgz`, updatedAt),
+      ]
+    })
+    assert.deepEqual(
+      getExpiredPrPreviewAssets([...assets, ...newer.flat()]).map((asset) => asset.id),
+      [1, 2],
+    )
+  })
+
+  it('expires a legacy build after its full SHA replacement completes', () => {
+    let sha = 'a'.repeat(40)
+    let assets = [
+      previewAsset(1, `remix-${sha.slice(0, 8)}.tgz`, now, `Complete preview build: ${sha}`),
+      previewAsset(2, `assert-${sha.slice(0, 8)}.tgz`, now),
+      previewAsset(3, `remix-${sha}.tgz`, now + 1000, `Complete preview build: ${sha}`),
+      previewAsset(4, `assert-${sha}.tgz`, now + 1000),
+    ]
+    assert.deepEqual(
+      getExpiredPrPreviewAssets(assets).map((asset) => asset.id),
+      [1, 2],
     )
   })
 })
@@ -357,5 +406,22 @@ function release(id: number, channel: string, timestamp: string): PreviewRelease
     draft: false,
     created_at: timestamp,
     published_at: timestamp,
+  }
+}
+
+function previewAsset(
+  id: number,
+  name: string,
+  updatedAt: number,
+  label: string | null = null,
+): PreviewAsset {
+  return {
+    id,
+    name,
+    label,
+    updated_at: new Date(updatedAt).toISOString(),
+    state: 'uploaded',
+    size: 1,
+    digest: null,
   }
 }
