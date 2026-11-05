@@ -289,8 +289,8 @@ interface TestContext {
     ): MockFunction
   }
 
-  // Replace global timer functions with controllable fakes
-  useFakeTimers(): FakeTimers
+  // Replace global timers, Date, and performance.now() with controllable fakes
+  useFakeTimers(options?: { now?: number | Date }): FakeTimers
 
   // E2E only: connect a running test server to a Playwright Page
   serve(server: { baseUrl: string; close(): Promise<void> }): Promise<Page>
@@ -388,7 +388,7 @@ beforeEach(
 
 #### Fake Timers
 
-`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes that are automatically restored after the test. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, `clearTimeout`, `clearInterval`), `Date`, and `performance.now()` with controllable fakes that are automatically restored after the test. Time only moves when the test advances the clock. It works in any test environment — server unit tests, browser tests, or E2E setup code.
 
 ```ts
 it('debounces a callback', (t) => {
@@ -408,6 +408,20 @@ it('debounces a callback', (t) => {
 | ------------- | --------------------------------------------------------------------------- |
 | `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
 | `restore()`   | Restore the original timer functions (called automatically after each test) |
+
+`Date.now()` and `new Date()` start at the Unix epoch (`0`), like Node's and Sinon's mock timers, and `performance.now()` starts at `0`. Pass `now` to start the fake `Date` at a specific time. `new Date(value)`, `Date.parse()`, `Date.UTC()`, and `instanceof Date` keep working as usual.
+
+```ts
+it('expires a session after one hour', (t) => {
+  let timers = t.useFakeTimers({ now: new Date('2030-01-01T00:00:00Z') })
+  let session = createSession()
+
+  timers.advance(60 * 60 * 1000)
+  assert.equal(session.isExpired(), true)
+})
+```
+
+Timers created before `t.useFakeTimers()` stay real, and `clearTimeout`/`clearInterval` still cancel them. In Node, fake timers return handles that support `ref()`, `unref()`, `hasRef()`, and `refresh()`.
 
 #### E2E
 
