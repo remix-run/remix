@@ -4,9 +4,9 @@ import { defineConfig } from 'playwright/test'
 
 let projects: PlaywrightTestProject[]
 
-if (platform === 'win32') {
+if (process.env.CI !== 'true' || platform === 'win32') {
   projects = [{ name: 'chromium', use: { browserName: 'chromium' } }]
-} else if (process.env.CI === 'true' && platform === 'linux') {
+} else if (platform === 'linux') {
   projects = [
     { name: 'chromium', use: { browserName: 'chromium' } },
     { name: 'firefox', use: { browserName: 'firefox' } },
