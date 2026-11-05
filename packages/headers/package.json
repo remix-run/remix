@@ -21,22 +21,22 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./accept": "./src/lib/accept.ts",
-    "./accept-encoding": "./src/lib/accept-encoding.ts",
-    "./accept-language": "./src/lib/accept-language.ts",
-    "./cache-control": "./src/lib/cache-control.ts",
-    "./content-disposition": "./src/lib/content-disposition.ts",
-    "./content-range": "./src/lib/content-range.ts",
-    "./content-security-policy": "./src/lib/content-security-policy.ts",
-    "./content-type": "./src/lib/content-type.ts",
-    "./cookie": "./src/lib/cookie.ts",
-    "./if-match": "./src/lib/if-match.ts",
-    "./if-none-match": "./src/lib/if-none-match.ts",
-    "./if-range": "./src/lib/if-range.ts",
-    "./range": "./src/lib/range.ts",
-    "./raw-headers": "./src/lib/raw-headers.ts",
-    "./set-cookie": "./src/lib/set-cookie.ts",
-    "./vary": "./src/lib/vary.ts",
+    "./accept": "./src/accept.ts",
+    "./accept-encoding": "./src/accept-encoding.ts",
+    "./accept-language": "./src/accept-language.ts",
+    "./cache-control": "./src/cache-control.ts",
+    "./content-disposition": "./src/content-disposition.ts",
+    "./content-range": "./src/content-range.ts",
+    "./content-security-policy": "./src/content-security-policy.ts",
+    "./content-type": "./src/content-type.ts",
+    "./cookie": "./src/cookie.ts",
+    "./if-match": "./src/if-match.ts",
+    "./if-none-match": "./src/if-none-match.ts",
+    "./if-range": "./src/if-range.ts",
+    "./range": "./src/range.ts",
+    "./raw-headers": "./src/raw-headers.ts",
+    "./set-cookie": "./src/set-cookie.ts",
+    "./vary": "./src/vary.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -46,68 +46,68 @@
         "default": "./dist/index.js"
       },
       "./accept": {
-        "types": "./dist/lib/accept.d.ts",
-        "default": "./dist/lib/accept.js"
+        "types": "./dist/accept.d.ts",
+        "default": "./dist/accept.js"
       },
       "./accept-encoding": {
-        "types": "./dist/lib/accept-encoding.d.ts",
-        "default": "./dist/lib/accept-encoding.js"
+        "types": "./dist/accept-encoding.d.ts",
+        "default": "./dist/accept-encoding.js"
       },
       "./accept-language": {
-        "types": "./dist/lib/accept-language.d.ts",
-        "default": "./dist/lib/accept-language.js"
+        "types": "./dist/accept-language.d.ts",
+        "default": "./dist/accept-language.js"
       },
       "./cache-control": {
-        "types": "./dist/lib/cache-control.d.ts",
-        "default": "./dist/lib/cache-control.js"
+        "types": "./dist/cache-control.d.ts",
+        "default": "./dist/cache-control.js"
       },
       "./content-disposition": {
-        "types": "./dist/lib/content-disposition.d.ts",
-        "default": "./dist/lib/content-disposition.js"
+        "types": "./dist/content-disposition.d.ts",
+        "default": "./dist/content-disposition.js"
       },
       "./content-range": {
-        "types": "./dist/lib/content-range.d.ts",
-        "default": "./dist/lib/content-range.js"
+        "types": "./dist/content-range.d.ts",
+        "default": "./dist/content-range.js"
       },
       "./content-security-policy": {
-        "types": "./dist/lib/content-security-policy.d.ts",
-        "default": "./dist/lib/content-security-policy.js"
+        "types": "./dist/content-security-policy.d.ts",
+        "default": "./dist/content-security-policy.js"
       },
       "./content-type": {
-        "types": "./dist/lib/content-type.d.ts",
-        "default": "./dist/lib/content-type.js"
+        "types": "./dist/content-type.d.ts",
+        "default": "./dist/content-type.js"
       },
       "./cookie": {
-        "types": "./dist/lib/cookie.d.ts",
-        "default": "./dist/lib/cookie.js"
+        "types": "./dist/cookie.d.ts",
+        "default": "./dist/cookie.js"
       },
       "./if-match": {
-        "types": "./dist/lib/if-match.d.ts",
-        "default": "./dist/lib/if-match.js"
+        "types": "./dist/if-match.d.ts",
+        "default": "./dist/if-match.js"
       },
       "./if-none-match": {
-        "types": "./dist/lib/if-none-match.d.ts",
-        "default": "./dist/lib/if-none-match.js"
+        "types": "./dist/if-none-match.d.ts",
+        "default": "./dist/if-none-match.js"
       },
       "./if-range": {
-        "types": "./dist/lib/if-range.d.ts",
-        "default": "./dist/lib/if-range.js"
+        "types": "./dist/if-range.d.ts",
+        "default": "./dist/if-range.js"
       },
       "./range": {
-        "types": "./dist/lib/range.d.ts",
-        "default": "./dist/lib/range.js"
+        "types": "./dist/range.d.ts",
+        "default": "./dist/range.js"
       },
       "./raw-headers": {
-        "types": "./dist/lib/raw-headers.d.ts",
-        "default": "./dist/lib/raw-headers.js"
+        "types": "./dist/raw-headers.d.ts",
+        "default": "./dist/raw-headers.js"
       },
       "./set-cookie": {
-        "types": "./dist/lib/set-cookie.d.ts",
-        "default": "./dist/lib/set-cookie.js"
+        "types": "./dist/set-cookie.d.ts",
+        "default": "./dist/set-cookie.js"
       },
       "./vary": {
-        "types": "./dist/lib/vary.d.ts",
-        "default": "./dist/lib/vary.js"
+        "types": "./dist/vary.d.ts",
+        "default": "./dist/vary.js"
       },
       "./package.json": "./package.json"
     }
