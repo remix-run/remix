@@ -1,4 +1,5 @@
 import * as cp from 'node:child_process'
+import { parseArgs as parseCliArgs } from 'node:util'
 import {
   getAffectedWorkspaceDirs,
   getChangedWorkspaceDirs,
@@ -10,11 +11,18 @@ type CliOptions = {
   scriptName: string
   baseRef: string
   headRef: string
+  workspaceDirs: string[]
+  scriptArgs: string[]
 }
 
 function main() {
   let options = parseArgs(process.argv.slice(2))
   let workspaceInfos = getWorkspaceInfos(process.cwd())
+  for (let dir of options.workspaceDirs) {
+    if (!workspaceInfos.some((workspace) => workspace.dir === dir)) {
+      throw new Error(`Unknown workspace: ${dir}`)
+    }
+  }
   let changedFiles = getChangedFiles(options.baseRef, options.headRef)
   let fullRunReasons = getFullRunReasons(changedFiles, workspaceInfos)
 
@@ -31,16 +39,22 @@ function main() {
       console.log(`- ${reason}`)
     }
     console.log()
-    runRootScript(options.scriptName)
-    return
+    if (options.workspaceDirs.length === 0) {
+      runRootScript(options.scriptName, options.scriptArgs)
+      return
+    }
   }
 
   let changedWorkspaceDirs = getChangedWorkspaceDirs(changedFiles, workspaceInfos)
-  let affectedWorkspaceDirs = getAffectedWorkspaceDirs(changedWorkspaceDirs, workspaceInfos)
+  let affectedWorkspaceDirs =
+    fullRunReasons.length > 0
+      ? workspaceInfos.map((workspace) => workspace.dir)
+      : getAffectedWorkspaceDirs(changedWorkspaceDirs, workspaceInfos)
   let selectedWorkspaces = workspaceInfos.filter(
     (workspace) =>
       affectedWorkspaceDirs.includes(workspace.dir) &&
-      workspace.scripts.includes(options.scriptName),
+      workspace.scripts.includes(options.scriptName) &&
+      (options.workspaceDirs.length === 0 || options.workspaceDirs.includes(workspace.dir)),
   )
 
   if (selectedWorkspaces.length === 0) {
@@ -61,16 +75,31 @@ function main() {
   runWorkspaceScript(
     options.scriptName,
     selectedWorkspaces.map((workspace) => workspace.dir),
+    options.scriptArgs,
   )
 }
 
 function parseArgs(args: string[]): CliOptions {
-  let normalizedArgs = args.filter((arg) => arg !== '--')
-  let [scriptName, baseRef, headRef] = normalizedArgs
+  let normalizedArgs = args[0] === '--' ? args.slice(1) : args
+  // Preserve `pnpm test:changed -- base-ref head-ref`, which presets the script name.
+  if (
+    normalizedArgs[1] === '--' &&
+    normalizedArgs[2] != null &&
+    !normalizedArgs[2].startsWith('--')
+  ) {
+    normalizedArgs = [normalizedArgs[0], ...normalizedArgs.slice(2)]
+  }
+  let separator = normalizedArgs.indexOf('--')
+  let { values, positionals } = parseCliArgs({
+    args: separator === -1 ? normalizedArgs : normalizedArgs.slice(0, separator),
+    allowPositionals: true,
+    options: { workspace: { type: 'string', multiple: true } },
+  })
+  let [scriptName, baseRef, headRef] = positionals
 
-  if (scriptName == null || scriptName === '') {
+  if (scriptName == null || scriptName === '' || positionals.length > 3) {
     throw new Error(
-      'Usage: node ./scripts/run-changed-workspaces.ts <script-name> [base-ref] [head-ref]',
+      'Usage: node ./scripts/run-changed-workspaces.ts <script-name> [base-ref] [head-ref] [--workspace <dir>]... [-- <script-args>...]',
     )
   }
 
@@ -78,6 +107,8 @@ function parseArgs(args: string[]): CliOptions {
     scriptName,
     baseRef: baseRef ?? resolveDefaultBaseRef(),
     headRef: headRef ?? 'HEAD',
+    workspaceDirs: values.workspace ?? [],
+    scriptArgs: separator === -1 ? [] : normalizedArgs.slice(separator + 1),
   }
 }
 
@@ -143,8 +174,8 @@ function runGitFiles(args: string[]): string[] {
   return output.split('\0').filter(Boolean)
 }
 
-function runRootScript(scriptName: string) {
-  let result = cp.spawnSync('pnpm', ['run', scriptName], {
+function runRootScript(scriptName: string, scriptArgs: string[]) {
+  let result = cp.spawnSync('pnpm', ['run', scriptName, ...scriptArgs], {
     stdio: 'inherit',
     shell: process.platform === 'win32',
   })
@@ -154,12 +185,12 @@ function runRootScript(scriptName: string) {
   }
 }
 
-function runWorkspaceScript(scriptName: string, workspaceDirs: string[]) {
+function runWorkspaceScript(scriptName: string, workspaceDirs: string[], scriptArgs: string[]) {
   let args = workspaceDirs.flatMap((workspaceDir) => ['--filter', `./${workspaceDir}`])
   if (scriptName === 'test') {
     args.unshift('--recursive', '--no-sort', '--workspace-concurrency=4', '--stream')
   }
-  args.push('run', scriptName)
+  args.push('run', scriptName, ...scriptArgs)
 
   let result = cp.spawnSync('pnpm', args, {
     stdio: 'inherit',

@@ -135,6 +135,42 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+  test_webkit_macos:
+    name: test (WebKit, macOS, changed packages)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Fetch base and head history
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node-pnpm-cache
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install WebKit
+        run: pnpm --filter @remix-run/component exec playwright install webkit
+
+      - name: Run WebKit tests
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          node ./scripts/run-changed-workspaces.ts test "$PR_BASE_SHA" "$PR_HEAD_SHA"
+          --workspace packages/component
+          --workspace demos/bookstore
+          -- --project webkit --type browser --type e2e
+
   test_ubuntu:
     name: test (ubuntu-latest, changed packages)
     needs: detect_changes
@@ -171,16 +207,16 @@ jobs:
         with:
           path: |
             ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-chromium-firefox-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
-      # Cached browsers lack the system libraries that --with-deps installs, which WebKit needs.
+      # Browser caches do not include system libraries.
       - name: Install Playwright System Dependencies
         if: steps.cache-browsers.outputs.cache-hit == 'true'
-        run: pnpm --filter @remix-run/component exec playwright install-deps
+        run: pnpm --filter @remix-run/component exec playwright install-deps chromium firefox
 
       - name: Run tests
         env:
@@ -229,16 +265,16 @@ jobs:
         with:
           path: |
             ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-chromium-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium
 
-      # Cached browsers lack the system libraries that --with-deps installs, which WebKit needs.
+      # Browser caches do not include system libraries.
       - name: Install Playwright System Dependencies
         if: steps.cache-browsers.outputs.cache-hit == 'true'
-        run: pnpm --filter @remix-run/component exec playwright install-deps
+        run: pnpm --filter @remix-run/component exec playwright install-deps chromium
 
       - name: Run changed package Bun tests
         shell: bash
