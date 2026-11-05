@@ -164,7 +164,99 @@ suite('ScheduleGrid', () => {
       },
     ])
   })
+
+  test('drags a block to another day and time and saves the schedule', async (t) => {
+    let saves = captureScheduleSaves(t)
+    let { act, cleanup, container } = renderScheduleGrid()
+    t.after(cleanup)
+
+    let delta = cellDelta(container, 'Monday 9:00am', 'Tuesday 10:00am')
+    await act(async () => {
+      await dragPointer(getByLabel(container, 'Morning focus'), delta)
+      await saves.next()
+    })
+
+    deepEqual(blockSummaries(saves[0]!.body.blocks), [
+      { dayOfWeek: 0, endMinute: 750, name: 'Lunch', startMinute: 720 },
+      { dayOfWeek: 1, endMinute: 630, name: 'Morning focus', startMinute: 600 },
+    ])
+  })
+
+  test('resizes a block end time and saves the schedule', async (t) => {
+    let saves = captureScheduleSaves(t)
+    let { act, cleanup, container } = renderScheduleGrid()
+    t.after(cleanup)
+
+    let delta = cellDelta(container, 'Monday 9:00am', 'Monday 9:30am')
+    await act(async () => {
+      await dragPointer(
+        getByLabel(getByLabel(container, 'Morning focus'), 'End resize handle'),
+        delta,
+      )
+      await saves.next()
+    })
+
+    deepEqual(blockSummaries(saves[0]!.body.blocks), [
+      { dayOfWeek: 0, endMinute: 600, name: 'Morning focus', startMinute: 540 },
+      { dayOfWeek: 0, endMinute: 750, name: 'Lunch', startMinute: 720 },
+    ])
+  })
+
+  test('copies a block across days with the last day resize handle', async (t) => {
+    let saves = captureScheduleSaves(t)
+    let { act, cleanup, container } = renderScheduleGrid(
+      scheduleDocument([block('morning-focus', 'Morning focus', 0, 540, 570)]),
+    )
+    t.after(cleanup)
+
+    let delta = cellDelta(container, 'Monday 9:00am', 'Wednesday 9:00am')
+    await act(async () => {
+      await dragPointer(
+        getByLabel(getByLabel(container, 'Morning focus'), 'Last day resize handle'),
+        delta,
+      )
+      await saves.next()
+    })
+
+    deepEqual(
+      blockSummaries(saves[0]!.body.blocks).sort((a, b) => a.dayOfWeek - b.dayOfWeek),
+      [
+        { dayOfWeek: 0, endMinute: 570, name: 'Morning focus', startMinute: 540 },
+        { dayOfWeek: 1, endMinute: 570, name: 'Morning focus', startMinute: 540 },
+        { dayOfWeek: 2, endMinute: 570, name: 'Morning focus', startMinute: 540 },
+      ],
+    )
+  })
 })
+
+function cellDelta(container: HTMLElement, fromLabel: string, toLabel: string) {
+  let from = getByLabel(container, fromLabel).getBoundingClientRect()
+  let to = getByLabel(container, toLabel).getBoundingClientRect()
+  return { x: to.left - from.left, y: to.top - from.top }
+}
+
+async function dragPointer(target: HTMLElement, delta: { x: number; y: number }) {
+  let rect = target.getBoundingClientRect()
+  let start = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+  let end = { x: start.x + delta.x, y: start.y + delta.y }
+
+  target.dispatchEvent(pointerEvent('pointerdown', start))
+  await Promise.resolve()
+  window.dispatchEvent(pointerEvent('pointermove', end))
+  await Promise.resolve()
+  window.dispatchEvent(pointerEvent('pointerup', end))
+}
+
+function pointerEvent(type: string, point: { x: number; y: number }) {
+  return new PointerEvent(type, {
+    bubbles: true,
+    button: 0,
+    cancelable: true,
+    clientX: point.x,
+    clientY: point.y,
+    pointerId: 1,
+  })
+}
 
 function renderScheduleGrid(schedule = scheduleDocument()) {
   return renderComponent(
