@@ -4,8 +4,9 @@ import type { RemixNode } from '../runtime/component.ts'
 import { createMixin, on, unsafeHTML } from '../index.ts'
 import type { MixinDescriptor } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
-import { renderToString } from '../server/stream.ts'
+import { renderToStream, renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
+import { drain } from './utils.ts'
 
 function getClientAttributes(element: RemixNode): Record<string, string> {
   let container = document.createElement('div')
@@ -198,8 +199,7 @@ describe('mixin composition ssr/client parity', () => {
     expect(runs).toBe(1024)
   })
 
-  it('isolates a throwing mixin during ssr but aborts the render on the client', async (t) => {
-    let errorSpy = t.mock.method(console, 'error', () => {})
+  it('isolates a throwing mixin during ssr but aborts the render on the client', async () => {
     let boom = createMixin(() => () => {
       throw new Error('mixin boom')
     })
@@ -209,11 +209,12 @@ describe('mixin composition ssr/client parity', () => {
 
     let element = <div mix={[boom(), withTitle('ok')]} />
 
-    expect(await getServerAttributes(element)).toEqual({ title: 'ok' })
-    expect(errorSpy).toHaveBeenCalledTimes(1)
-    let error = errorSpy.mock.calls[0]?.arguments[0]
-    invariant(error instanceof Error)
-    expect(error.message).toBe('mixin boom')
+    let errors: unknown[] = []
+    let html = await drain(renderToStream(element, { onError: (error) => errors.push(error) }))
+    expect(html).toContain('title="ok"')
+    expect(errors).toHaveLength(1)
+    invariant(errors[0] instanceof Error)
+    expect(errors[0].message).toBe('mixin boom')
 
     let container = document.createElement('div')
     let root = createRoot(container)
@@ -230,5 +231,29 @@ describe('mixin composition ssr/client parity', () => {
     } finally {
       root.dispose()
     }
+  })
+
+  it('reports a mixin that throws while being set up to onError during ssr', async () => {
+    let broken = createMixin(() => {
+      throw new Error('setup boom')
+    })
+
+    let errors: unknown[] = []
+    let html = await drain(
+      renderToStream(<div id="root" mix={broken()} />, { onError: (error) => errors.push(error) }),
+    )
+
+    expect(html).toContain('id="root"')
+    expect(errors).toHaveLength(1)
+    invariant(errors[0] instanceof Error)
+    expect(errors[0].message).toBe('setup boom')
+  })
+
+  it('rejects renderToString when a mixin throws', async () => {
+    let boom = createMixin(() => () => {
+      throw new Error('mixin boom')
+    })
+
+    await expect(renderToString(<div mix={boom()} />)).rejects.toThrow('mixin boom')
   })
 })

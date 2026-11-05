@@ -81,7 +81,12 @@ export interface RenderToStreamOptions {
   topFrameSrc?: string | URL
   /** Signal that cancels pending server rendering work. */
   signal?: AbortSignal
-  /** Error hook invoked when rendering work throws. */
+  /**
+   * Error hook invoked when rendering work throws, including errors from mixins and nested frames
+   * that are isolated so the rest of the stream can continue.
+   *
+   * @default console.error
+   */
   onError?: (error: unknown) => void
   /**
    * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
@@ -918,7 +923,7 @@ function resolveSsrMixedProps(
     try {
       return runner(...descriptor.args, mixinProps)
     } catch (error) {
-      console.error(error)
+      context.onError(error)
       return undefined
     }
   })
@@ -937,7 +942,7 @@ function resolveSsrMixinRunner(
     if (typeof runner !== 'function') return null
     return runner
   } catch (error) {
-    console.error(error)
+    context.onError(error)
     return null
   }
 }
