@@ -49,6 +49,11 @@ export interface RedisSessionStorageOptions {
    *
    * @default undefined
    */
+  ttlSeconds?: number
+
+  /**
+   * @deprecated Use `ttlSeconds` instead, which matches the Memcache session storage option.
+   */
   ttl?: number
 
   /**
@@ -72,10 +77,10 @@ export function createRedisSessionStorage(
 ): SessionStorage {
   let keyPrefix = options?.keyPrefix ?? 'session:'
   let useUnknownIds = options?.useUnknownIds ?? false
-  let ttl = normalizeTtl(options?.ttl)
+  let ttl = normalizeTtl(options?.ttlSeconds ?? options?.ttl)
 
   if (ttl != null && client.setEx == null && client.expire == null) {
-    throw new Error('Redis client must implement setEx() or expire() when ttl is configured')
+    throw new Error('Redis client must implement setEx() or expire() when ttlSeconds is configured')
   }
 
   function keyForSession(id: string): string {
@@ -119,7 +124,7 @@ export function createRedisSessionStorage(
 
           if (expire == null) {
             throw new Error(
-              'Redis client must implement setEx() or expire() when ttl is configured',
+              'Redis client must implement setEx() or expire() when ttlSeconds is configured',
             )
           }
 

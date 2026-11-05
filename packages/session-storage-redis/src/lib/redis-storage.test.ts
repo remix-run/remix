@@ -240,7 +240,7 @@ describe('redis session storage', () => {
     assert.ok(values.has('my-app:' + session.id))
   })
 
-  it('uses setEx when ttl is configured and the client supports setEx', async () => {
+  it('uses setEx when ttlSeconds is configured and the client supports setEx', async () => {
     let setCallCount = 0
     let setExArgs: [string, number, string] | undefined
 
@@ -257,7 +257,7 @@ describe('redis session storage', () => {
       },
     }
 
-    let storage = createRedisSessionStorage(client, { ttl: 60.9, keyPrefix: 'session:' })
+    let storage = createRedisSessionStorage(client, { ttlSeconds: 60.9, keyPrefix: 'session:' })
     let session = await storage.read(null)
     session.set('count', 1)
     let cookie = await storage.save(session)
@@ -267,7 +267,7 @@ describe('redis session storage', () => {
     assert.deepEqual(setExArgs, ['session:' + session.id, 60, JSON.stringify(session.data)])
   })
 
-  it('uses expire when ttl is configured and setEx is unavailable', async () => {
+  it('uses expire when ttlSeconds is configured and setEx is unavailable', async () => {
     let setCalls: Array<[string, string]> = []
     let expireCalls: Array<[string, number]> = []
 
@@ -284,7 +284,7 @@ describe('redis session storage', () => {
       },
     }
 
-    let storage = createRedisSessionStorage(client, { ttl: 180 })
+    let storage = createRedisSessionStorage(client, { ttlSeconds: 180 })
     let session = await storage.read(null)
     session.set('count', 1)
     let cookie = await storage.save(session)
@@ -294,7 +294,7 @@ describe('redis session storage', () => {
     assert.deepEqual(expireCalls, [['session:' + session.id, 180]])
   })
 
-  it('throws when ttl is configured and the client does not support expiration', () => {
+  it('throws when ttlSeconds is configured and the client does not support expiration', () => {
     let client: RedisSessionStorageClient = {
       async get() {
         return null
@@ -304,9 +304,31 @@ describe('redis session storage', () => {
     }
 
     assert.throws(
-      () => createRedisSessionStorage(client, { ttl: 60 }),
-      new Error('Redis client must implement setEx() or expire() when ttl is configured'),
+      () => createRedisSessionStorage(client, { ttlSeconds: 60 }),
+      new Error('Redis client must implement setEx() or expire() when ttlSeconds is configured'),
     )
+  })
+
+  it('accepts the deprecated ttl option as an alias for ttlSeconds', async () => {
+    let setExArgs: [string, number, string] | undefined
+
+    let client: RedisSessionStorageClient = {
+      async get() {
+        return null
+      },
+      async set() {},
+      async del() {},
+      async setEx(key, ttlSeconds, value) {
+        setExArgs = [key, ttlSeconds, value]
+      },
+    }
+
+    let storage = createRedisSessionStorage(client, { ttl: 120 })
+    let session = await storage.read(null)
+    session.set('count', 1)
+    await storage.save(session)
+
+    assert.deepEqual(setExArgs, ['session:' + session.id, 120, JSON.stringify(session.data)])
   })
 
   it('throws if session data in redis is invalid JSON', async () => {
