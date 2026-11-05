@@ -240,30 +240,37 @@ const urlJsString = (url: string): string => `'${url.replace(/'/g, "\\'")}'`
 
 let resolvedSource = ''
 let lastIndex = 0
-const pushStringTo = (load: Load, originalIndex: number, dynamicImportEndStack: number[]) => {
+const pushStringTo = (
+  source: string,
+  load: Load,
+  originalIndex: number,
+  dynamicImportEndStack: number[],
+) => {
   while (dynamicImportEndStack[dynamicImportEndStack.length - 1] < originalIndex) {
     let dynamicImportEnd = dynamicImportEndStack.pop()!
-    resolvedSource += `${load.S!.slice(lastIndex, dynamicImportEnd)}, ${urlJsString(load.r)}`
+    resolvedSource += `${source.slice(lastIndex, dynamicImportEnd)}, ${urlJsString(load.r)}`
     lastIndex = dynamicImportEnd
   }
-  resolvedSource += load.S!.slice(lastIndex, originalIndex)
+  resolvedSource += source.slice(lastIndex, originalIndex)
   lastIndex = originalIndex
 }
 
 const pushSourceURL = (
+  source: string,
   load: Load,
   commentPrefix: string,
   commentStart: number,
   dynamicImportEndStack: number[],
 ) => {
   let urlStart = commentStart + commentPrefix.length
-  let commentEnd = load.S!.indexOf('\n', urlStart)
-  let urlEnd = commentEnd !== -1 ? commentEnd : load.S!.length
-  let sourceUrl = load.S!.slice(urlStart, urlEnd)
+  let commentEnd = source.indexOf('\n', urlStart)
+  let urlEnd = commentEnd !== -1 ? commentEnd : source.length
+  let sourceUrl = source.slice(urlStart, urlEnd)
+  // Keep the original comment URL when it cannot be resolved against the module URL.
   try {
     sourceUrl = new URL(sourceUrl, load.r).href
-  } catch (e) {}
-  pushStringTo(load, urlStart, dynamicImportEndStack)
+  } catch {}
+  pushStringTo(source, load, urlStart, dynamicImportEndStack)
   resolvedSource += sourceUrl
   lastIndex = urlEnd
 }
@@ -313,7 +320,7 @@ const resolveDeps = (load: Load, seen: Seen): void => {
     // source phase
     if (t === 4) {
       let { l: depLoad } = load.d[depIndex++]
-      pushStringTo(load, start - 1, dynamicImportEndStack)
+      pushStringTo(source, load, start - 1, dynamicImportEndStack)
       resolvedSource += `/*${source.slice(start - 1, end + 1)}*/'${depLoad.b}'`
       lastIndex = end + 1
     } else if (t === 5 || t === 6) {
@@ -347,7 +354,7 @@ const resolveDeps = (load: Load, seen: Seen): void => {
         }
       }
 
-      pushStringTo(load, start - 1, dynamicImportEndStack)
+      pushStringTo(source, load, start - 1, dynamicImportEndStack)
       resolvedSource += `/*${source.slice(start - 1, end + 1)}*/'${blobUrl}'`
 
       // circular shell execution
@@ -360,13 +367,13 @@ const resolveDeps = (load: Load, seen: Seen): void => {
     // import.meta
     else if (dynamicImportIndex === -2) {
       load.m = { url: load.r, resolve: metaResolve }
-      pushStringTo(load, start, dynamicImportEndStack)
+      pushStringTo(source, load, start, dynamicImportEndStack)
       resolvedSource += `${bridgeExpression}.registry[${urlJsString(load.u)}].m`
       lastIndex = statementEnd
     }
     // dynamic import
     else {
-      pushStringTo(load, statementStart, dynamicImportEndStack)
+      pushStringTo(source, load, statementStart, dynamicImportEndStack)
       resolvedSource += `${bridgeExpression}.importShim(`
       dynamicImportEndStack.push(statementEnd - 1)
       lastIndex = start
@@ -392,17 +399,35 @@ const resolveDeps = (load: Load, seen: Seen): void => {
     sourceURLCommentStart !== -1 &&
     (sourceMapURLCommentStart === -1 || sourceMapURLCommentStart > sourceURLCommentStart)
   ) {
-    pushSourceURL(load, sourceURLCommentPrefix, sourceURLCommentStart, dynamicImportEndStack)
+    pushSourceURL(
+      source,
+      load,
+      sourceURLCommentPrefix,
+      sourceURLCommentStart,
+      dynamicImportEndStack,
+    )
   }
   // sourceMappingURL
   if (sourceMapURLCommentStart !== -1) {
-    pushSourceURL(load, sourceMapURLCommentPrefix, sourceMapURLCommentStart, dynamicImportEndStack)
+    pushSourceURL(
+      source,
+      load,
+      sourceMapURLCommentPrefix,
+      sourceMapURLCommentStart,
+      dynamicImportEndStack,
+    )
     // sourceURL last
     if (sourceURLCommentStart !== -1 && sourceURLCommentStart > sourceMapURLCommentStart)
-      pushSourceURL(load, sourceURLCommentPrefix, sourceURLCommentStart, dynamicImportEndStack)
+      pushSourceURL(
+        source,
+        load,
+        sourceURLCommentPrefix,
+        sourceURLCommentStart,
+        dynamicImportEndStack,
+      )
   }
 
-  pushStringTo(load, source.length, dynamicImportEndStack)
+  pushStringTo(source, load, source.length, dynamicImportEndStack)
 
   if (sourceURLCommentStart === -1) resolvedSource += sourceURLCommentPrefix + load.r
 

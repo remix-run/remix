@@ -2,13 +2,15 @@ import { DataTableQueryError } from '../errors.ts'
 import type { QueryColumnName, QueryColumns, QueryColumnTypeMap } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { and, eq, inList, or } from '../operators.ts'
-import type { Query } from '../query.ts'
-import { query as createQuery } from '../query.ts'
+import type { SelectColumn, SelectOperation } from '../driver.ts'
+import type { AnyQuery, Query, QueryState } from '../query.ts'
+import { cloneQueryState, query as createQuery, querySnapshot } from '../query.ts'
 import type { AnyRelation, AnyTable, Relation } from '../table.ts'
 import { getCompositeKey, getTableName, getTablePrimaryKey } from '../table.ts'
 
 import type { QueryExecutionContext } from './execution-context.ts'
-import { loadRowsWithRelationsForQuery } from './query-execution.ts'
+import { executeOperation } from './execution-context.ts'
+import { normalizeRows } from './write-lifecycle.ts'
 
 type RelationQuery = Query<
   any,
@@ -17,6 +19,30 @@ type RelationQuery = Query<
   any,
   { binding: 'unbound'; mode: 'all' }
 >
+
+export async function loadRowsWithRelationsForQuery(
+  database: QueryExecutionContext,
+  input: AnyQuery,
+): Promise<Record<string, unknown>[]> {
+  let snapshot = input[querySnapshot]()
+  return loadRowsWithRelationsForState(database, snapshot.table, snapshot.state)
+}
+
+export async function loadRowsWithRelationsForState(
+  database: QueryExecutionContext,
+  table: AnyTable,
+  state: QueryState,
+): Promise<Record<string, unknown>[]> {
+  let operation = createSelectOperation(table, state)
+  let result = await database[executeOperation](operation)
+  let rows = normalizeRows(result.rows)
+
+  if (Object.keys(state.with).length === 0) {
+    return rows
+  }
+
+  return loadRelationsForRows(database, table, rows, state.with)
+}
 
 export async function loadRelationsForRows(
   database: QueryExecutionContext,
@@ -358,4 +384,30 @@ function stringifyForKey(value: unknown): string {
   }
 
   return JSON.stringify(value)
+}
+
+function createSelectOperation(table: AnyTable, state: QueryState): SelectOperation<AnyTable> {
+  let clonedState = cloneQueryState(state)
+
+  return {
+    kind: 'select',
+    table,
+    select: cloneSelection(clonedState.select),
+    distinct: clonedState.distinct,
+    joins: clonedState.joins,
+    where: clonedState.where,
+    groupBy: clonedState.groupBy,
+    having: clonedState.having,
+    orderBy: clonedState.orderBy,
+    limit: clonedState.limit,
+    offset: clonedState.offset,
+  }
+}
+
+function cloneSelection(selection: '*' | SelectColumn[]): '*' | SelectColumn[] {
+  if (selection === '*') {
+    return '*'
+  }
+
+  return selection.map((column) => ({ ...column }))
 }

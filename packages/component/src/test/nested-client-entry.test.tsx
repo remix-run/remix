@@ -1,11 +1,12 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 import { createMixin, on } from '../index.ts'
-import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import type { Handle, RemixNode } from '../runtime/component.ts'
-import { invariant } from '../runtime/invariant.ts'
-import { run } from '../runtime/run.ts'
-import { renderToStream } from '../server/stream.ts'
+import { clientEntry } from '../lib/client-entries.ts'
+import type { EntryComponent } from '../lib/client-entries.ts'
+import type { Handle, RemixNode } from '../lib/component.ts'
+import { invariant } from '../lib/invariant.ts'
+import { run } from '../lib/run.ts'
+import { renderToStream } from '../lib/server/stream.ts'
 import { drain } from './utils.ts'
 
 async function expectSingleClick(renderContent: (Inner: EntryComponent) => RemixNode) {

@@ -1,4 +1,5 @@
-import { css, createMixin, on, ref, type Handle } from 'remix/component'
+import { css, createMixin, on, ref } from 'remix/component'
+import type { Handle } from 'remix/component'
 import { Drummer } from './drummer.ts'
 import { tempoEvents } from './tempo-interaction.tsx'
 import {

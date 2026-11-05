@@ -2,7 +2,8 @@ import * as fs from 'node:fs'
 import { once } from 'node:events'
 import { detectMimeType } from '@remix-run/mime'
 
-import { type LazyContent, LazyFile } from '@remix-run/lazy-file'
+import { LazyFile } from '@remix-run/lazy-file'
+import type { LazyContent } from '@remix-run/lazy-file'
 
 /**
  * Options for opening a lazy file from the local filesystem.

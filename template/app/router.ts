@@ -1,4 +1,5 @@
-import { createRouter, type RouterContext } from 'remix/router'
+import { createRouter } from 'remix/router'
+import type { RouterContext } from 'remix/router'
 import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 

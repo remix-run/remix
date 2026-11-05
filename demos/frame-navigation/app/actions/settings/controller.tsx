@@ -6,7 +6,8 @@ import { redirect } from 'remix/response/redirect'
 import { requireAuth } from '../../middleware/auth.ts'
 import { frames, routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
-import { SettingsLayout, type SettingsNavItem } from './layout.tsx'
+import { SettingsLayout } from './layout.tsx'
+import type { SettingsNavItem } from './layout.tsx'
 
 import { Grading } from './grading-page.tsx'
 import { Index } from './index-page.tsx'
@@ -16,7 +17,7 @@ import { Privacy } from './privacy-page.tsx'
 import { Profile } from './profile-page.tsx'
 
 export default createController(routes.settings, {
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   actions: {
     index() {
       return redirect(routes.settings.overview.href(), 303)

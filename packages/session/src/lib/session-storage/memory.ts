@@ -1,4 +1,5 @@
-import { createSession, type SessionData } from '../session.ts'
+import { createSession } from '../session.ts'
+import type { SessionData } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
 
 export interface MemorySessionStorageOptions {

@@ -3,7 +3,6 @@ import { describe, it } from 'node:test'
 
 import {
   callComponentRenderForHmr,
-  type ComponentHmrRefresh,
   getComponentHandleForHmr,
   getComponentHmrState,
   getCurrentComponentForHmr,
@@ -12,6 +11,7 @@ import {
   setupComponentForHmr,
   updateComponentModuleForHmr,
 } from './browser-runtime.ts'
+import type { ComponentHmrRefresh } from './browser-runtime.ts'
 
 let componentStalenessCheck: ((component: Function) => boolean) | undefined
 let reconciliationCount = 0

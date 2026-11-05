@@ -114,7 +114,7 @@ function parse256(buf: Uint8Array): number | null {
   return positive ? sum : -1 * sum
 }
 
-export function overflow(size: number): number {
+export function blockPaddingSize(size: number): number {
   size &= 511
   return size && 512 - size
 }

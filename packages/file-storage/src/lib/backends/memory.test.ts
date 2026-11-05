@@ -28,9 +28,9 @@ describe('createMemoryFileStorage', () => {
     let retrieved = await storage.get('hello')
 
     assert.ok(retrieved)
-    assert.equal(retrieved!.name, 'hello.txt')
-    assert.equal(retrieved!.type, file.type)
-    assert.equal(retrieved!.size, 13)
+    assert.equal(retrieved.name, 'hello.txt')
+    assert.equal(retrieved.type, file.type)
+    assert.equal(retrieved.size, 13)
 
     let text = await retrieved.text()
 

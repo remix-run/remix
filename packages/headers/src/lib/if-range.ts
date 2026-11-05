@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import type { HeaderValue } from './header-value.ts'
 import { parseHttpDate, removeMilliseconds } from './utils.ts'
 
 function isStrongEntityTag(value: string): boolean {

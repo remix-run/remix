@@ -23,6 +23,17 @@ describe('router', () => {
     assert.equal(response.status, 404)
   })
 
+  it('rejects cross-site form submissions', async () => {
+    let response = await router.fetch('https://remix.run/login', {
+      method: 'POST',
+      headers: { 'Sec-Fetch-Site': 'cross-site' },
+      body: new URLSearchParams({ email: 'admin@bookstore.com', password: 'admin123' }),
+    })
+
+    assert.equal(response.status, 403)
+    assert.equal(response.headers.get('Set-Cookie'), null)
+  })
+
   it('serves fingerprinted, immutable images shared by catalog and product pages', async () => {
     let response = await router.fetch('https://remix.run/')
     let html = await response.text()

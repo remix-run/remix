@@ -1,8 +1,6 @@
 {
-  "include": ["server.js"],
+  "include": ["server.ts"],
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "NodeNext",

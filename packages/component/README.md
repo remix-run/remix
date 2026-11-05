@@ -1193,11 +1193,11 @@ if (form.reportValidity()) {
 
 `run()` installs a default frame resolver. It's used for `<Frame>` elements first rendered in the browser, `frame.reload()` calls, link navigations, and form navigations. Pending frames from the server response are filled in by the streamed HTML, not the resolver. A normal browser document load doesn't use the resolver either.
 
-The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`. Top-frame and unnamed frame requests omit the target, so give a frame a name when its route needs to tell it apart. The route decides whether to return a full document or a fragment.
+The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`. Top-frame and unnamed frame requests omit the target, so give a frame a name when its route needs to tell it apart. The route decides whether to return a full document or a fragment. Servers can import the header names as `FRAME_REQUEST_HEADER` and `FRAME_TARGET_HEADER` from `remix/component/server`.
 
 The default resolver doesn't tell the server which page contains the frame. If frame content depends on the containing page, include that context explicitly in the frame's `src`.
 
-The default resolver is a short `fetch()` call ([source](https://github.com/remix-run/remix/blob/main/packages/component/src/runtime/run.ts)), so a custom resolver can start from a copy of it. It also follows these rules:
+The default resolver is a short `fetch()` call ([source](https://github.com/remix-run/remix/blob/main/packages/component/src/lib/run.ts)), so a custom resolver can start from a copy of it. It also follows these rules:
 
 - GET form values are already encoded in `src`. `application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use CRLF-delimited text, and `multipart/form-data` submissions use `FormData`.
 - It accepts `2xx` responses, and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text.

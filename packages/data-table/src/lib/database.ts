@@ -10,19 +10,13 @@ import type {
 } from './driver.ts'
 import type { ColumnBuilder } from './column.ts'
 import { DataTableDatabaseError, DataTableQueryError } from './errors.ts'
+import { executeOperation, runInTransaction } from './database/execution-context.ts'
+import type { QueryExecutionContext } from './database/execution-context.ts'
 import {
-  executeOperation,
-  runInTransaction,
-  type QueryExecutionContext,
-} from './database/execution-context.ts'
-import {
-  asQueryTableInput,
   getPrimaryKeyWhere,
   getPrimaryKeyWhereFromRow,
-  normalizeOrderByInput,
   resolveCreateRowWhere,
-  toWriteResult,
-} from './database/helpers.ts'
+} from './database/primary-key-scope.ts'
 import { executeQuery } from './database/query-execution.ts'
 import type {
   AnyQuery,
@@ -332,6 +326,9 @@ export type CreateManyResultOptions = {
 
 /**
  * Options for bulk-create operations that return inserted rows.
+ *
+ * Requires a database that supports `RETURNING`; `createMany()` throws otherwise (for example,
+ * on MySQL). Use `create({ returnRow: true })` per row for code that must run on any database.
  */
 export type CreateManyRowsOptions = {
   touch?: boolean
@@ -797,7 +794,11 @@ export class Database<dialect extends string = string> {
       touch: options?.touch,
     })
 
-    let loaded = await this.find(table, value, { with: options?.with })
+    // The changes may include a new primary key, so re-read by the updated key.
+    let loaded = await this.findOne(table, {
+      where: getPrimaryKeyWhereFromRow(table, { ...where, ...changes }),
+      with: options?.with,
+    })
 
     if (!loaded) {
       throw new DataTableQueryError(
@@ -980,4 +981,39 @@ export class Database<dialect extends string = string> {
 
 function defaultNow(): Date {
   return new Date()
+}
+
+function asQueryTableInput<table extends AnyTable>(
+  table: table,
+): QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>> {
+  return table as unknown as QueryTableInput<
+    TableName<table>,
+    TableRow<table>,
+    TablePrimaryKey<table>
+  >
+}
+
+function normalizeOrderByInput<table extends AnyTable>(
+  input: OrderByInput<table> | undefined,
+): OrderByTuple<table>[] {
+  if (!input) {
+    return []
+  }
+
+  if (input.length === 0) {
+    return []
+  }
+
+  if (Array.isArray(input[0])) {
+    return input as OrderByTuple<table>[]
+  }
+
+  return [input as OrderByTuple<table>]
+}
+
+function toWriteResult(result: WriteResult | WriteRowsResult<unknown>): WriteResult {
+  return {
+    affectedRows: result.affectedRows,
+    insertId: result.insertId,
+  }
 }

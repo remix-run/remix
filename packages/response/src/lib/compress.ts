@@ -1,12 +1,5 @@
-import {
-  constants,
-  createBrotliCompress,
-  createDeflate,
-  createGzip,
-  type BrotliCompress,
-  type Gzip,
-  type Deflate,
-} from 'node:zlib'
+import { constants, createBrotliCompress, createDeflate, createGzip } from 'node:zlib'
+import type { BrotliCompress, Gzip, Deflate } from 'node:zlib'
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 
 import { AcceptEncoding } from '@remix-run/headers/accept-encoding'

@@ -1,28 +1,26 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it, type TestContext } from '@remix-run/test'
+import { afterEach, describe, it } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 
-import type { Handle } from '../runtime/component.ts'
-import { clientEntry } from '../runtime/client-entries.ts'
+import type { Handle } from '../lib/component.ts'
+import { clientEntry } from '../lib/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
   Frame,
   publishFrameTemplate,
   reloadFrameForNavigation,
-} from '../runtime/frame.ts'
-import {
-  NamedFrameRegistry,
-  type LoadModule,
-  type ResolveFrameOptions,
-} from '../runtime/frame-runtime.ts'
-import { jsx } from '../runtime/core/vnode.ts'
-import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
-import { resetNonceManager } from '../runtime/nonce.ts'
-import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
-import { createScheduler } from '../runtime/scheduler.ts'
-import { appendFlushMarker } from '../runtime/stream-protocol.ts'
-import { ImportMap, renderToString, renderToStream } from '../server/stream.ts'
-import { createStyleManager } from '../style/index.ts'
+} from '../lib/frame.ts'
+import { NamedFrameRegistry } from '../lib/frame-runtime.ts'
+import type { LoadModule, ResolveFrameOptions } from '../lib/frame-runtime.ts'
+import { jsx } from '../lib/core/vnode.ts'
+import { resetDocumentImportMapManager } from '../lib/import-map-manager.ts'
+import { resetNonceManager } from '../lib/nonce.ts'
+import { getDocumentModulePreloader } from '../lib/module-preloader.ts'
+import { createScheduler } from '../lib/scheduler.ts'
+import { appendFlushMarker } from '../lib/stream-protocol.ts'
+import { ImportMap, renderToString, renderToStream } from '../lib/server/stream.ts'
+import { createStyleManager } from '../lib/style/stylesheet.ts'
 import { drain, withResolvers } from './utils.ts'
 
 const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
@@ -39,7 +37,7 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
     errorTarget: new EventTarget(),
     loadModule: () => () => () => null,
     pendingClientEntries: new Map(),
-    scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+    scheduler: createScheduler(document, new EventTarget()),
     data: {},
     moduleCache: new Map(),
     moduleLoads: new Map(),
@@ -154,7 +152,7 @@ describe('frames', () => {
 
     let errorTarget = new EventTarget()
     let styleManager = createStyleManager()
-    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let scheduler = createScheduler(document, errorTarget)
     let loadModule = ((moduleUrl: string, exportName: string) => {
       expect(moduleUrl).toBe('/entry.js')
       expect(exportName).toBe('StreamingEntry')
@@ -311,7 +309,7 @@ describe('frames', () => {
         ])
       },
       pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      scheduler: createScheduler(document, new EventTarget()),
       data: {},
       moduleCache: new Map(),
       moduleLoads: new Map(),
@@ -1041,7 +1039,7 @@ describe('frames', () => {
       loadModule: () => modulePromise,
       resolveFrame: () => '',
       pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      scheduler: createScheduler(document, new EventTarget()),
       data,
       moduleCache: new Map(),
       moduleLoads: new Map(),
@@ -1081,7 +1079,7 @@ describe('frames', () => {
       },
       resolveFrame: () => '',
       pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, errorTarget, styleManager),
+      scheduler: createScheduler(document, errorTarget),
       styleManager,
       data: {},
       moduleCache: new Map(),
@@ -1130,7 +1128,7 @@ describe('frames', () => {
         return response
       },
       pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      scheduler: createScheduler(document, new EventTarget()),
       data: {},
       moduleCache: new Map(),
       moduleLoads: new Map(),
@@ -1168,7 +1166,7 @@ describe('frames', () => {
         })
       },
       pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, errorTarget, createStyleManager()),
+      scheduler: createScheduler(document, errorTarget),
       data: {},
       moduleCache: new Map(),
       moduleLoads: new Map(),
@@ -1205,7 +1203,7 @@ describe('frames', () => {
         })
       },
       pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, errorTarget, createStyleManager()),
+      scheduler: createScheduler(document, errorTarget),
       data: {},
       moduleCache: new Map(),
       moduleLoads: new Map(),
@@ -1240,7 +1238,7 @@ describe('frames', () => {
         return htmlStream(['<main id="result">Saved</main>'])
       },
       pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      scheduler: createScheduler(document, new EventTarget()),
       data: {},
       moduleCache: new Map(),
       moduleLoads: new Map(),
@@ -1574,7 +1572,7 @@ describe('frames', () => {
         })
       },
       pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      scheduler: createScheduler(document, new EventTarget()),
       data: {},
       moduleCache: new Map(),
       moduleLoads: new Map(),
@@ -1617,7 +1615,7 @@ describe('frames', () => {
         })
       },
       pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
+      scheduler: createScheduler(document, new EventTarget()),
       data: {},
       moduleCache: new Map(),
       moduleLoads: new Map(),
@@ -2200,7 +2198,7 @@ describe('frames', () => {
 
     let errorTarget = new EventTarget()
     let styleManager = createStyleManager()
-    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let scheduler = createScheduler(document, errorTarget)
     let frame = createFrame([outerStart, outerEnd], {
       src: 'https://example.com/outer',
       errorTarget,
@@ -2236,7 +2234,7 @@ describe('frames', () => {
     let preloadWasPresent = false
     let errorTarget = new EventTarget()
     let styleManager = createStyleManager()
-    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let scheduler = createScheduler(document, errorTarget)
     let frame = createFrame(document, {
       src: 'https://example.com/initial',
       errorTarget,
@@ -2344,7 +2342,7 @@ describe('frames', () => {
     let preloadWasPresent = false
     let errorTarget = new EventTarget()
     let styleManager = createStyleManager()
-    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let scheduler = createScheduler(document, errorTarget)
     let frame = createFrame([start, end], {
       src: 'https://example.com/frame',
       errorTarget,
@@ -2422,7 +2420,7 @@ describe('frames', () => {
 
     let errorTarget = new EventTarget()
     let styleManager = createStyleManager()
-    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let scheduler = createScheduler(document, errorTarget)
     let frame = createFrame(document, {
       src: 'https://example.com/initial',
       errorTarget,
@@ -2470,7 +2468,7 @@ describe('frames', () => {
 
     let errorTarget = new EventTarget()
     let styleManager = createStyleManager()
-    let scheduler = createScheduler(document, errorTarget, styleManager)
+    let scheduler = createScheduler(document, errorTarget)
     let frame = createFrame(document, {
       src: 'https://example.com/initial',
       errorTarget,
@@ -2526,7 +2524,7 @@ function mockDocumentNavigation(t: TestContext) {
 function createClientEntryResourceTestFrame(): ReturnType<typeof createFrame> {
   let errorTarget = new EventTarget()
   let styleManager = createStyleManager()
-  let scheduler = createScheduler(document, errorTarget, styleManager)
+  let scheduler = createScheduler(document, errorTarget)
   let loadModule = (() => {
     throw new Error('Unexpected module load')
   }) satisfies LoadModule

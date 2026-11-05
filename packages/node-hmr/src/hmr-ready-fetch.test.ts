@@ -1,7 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createHmrReadyFetch, type NodeHmrRunner } from './index.ts'
+import { createHmrReadyFetch } from './index.ts'
+import type { NodeHmrRunner } from './index.ts'
 
 describe('createHmrReadyFetch', () => {
   it('waits for the runner to be ready before fetching', async () => {

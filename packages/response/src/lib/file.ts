@@ -1,8 +1,9 @@
-import { type ContentRangeInit, ContentRange } from '@remix-run/headers/content-range'
+import { ContentRange } from '@remix-run/headers/content-range'
+import type { ContentRangeInit } from '@remix-run/headers/content-range'
 import { IfMatch } from '@remix-run/headers/if-match'
 import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 import { IfRange } from '@remix-run/headers/if-range'
-import { type RangeInit, Range } from '@remix-run/headers/range'
+import { Range } from '@remix-run/headers/range'
 import { isCompressibleMimeType, mimeTypeToContentType } from '@remix-run/mime'
 
 /**

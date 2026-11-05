@@ -1,11 +1,18 @@
 import { createCredentialsAuthProvider } from 'remix/auth'
-import { auth, createSessionAuthScheme } from 'remix/middleware/auth'
+import {
+  auth,
+  createSessionAuthScheme,
+  requireAuth as requireAuthenticated,
+} from 'remix/middleware/auth'
 import type { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 
 import { verifyPassword } from '../data/passwords.ts'
-import { userPasswords, users, type User } from '../data/schema.ts'
+import { userPasswords, users } from '../data/schema.ts'
+import type { User } from '../data/schema.ts'
+import { routes } from '../routes.ts'
+import { wantsJson } from '../utils/wants-json.ts'
 import { databaseContext } from './database.ts'
 
 export interface AuthSession {
@@ -65,6 +72,19 @@ export function loadAuth() {
         },
       }),
     ],
+  })
+}
+
+// Page navigations go to the login page; API requests get a JSON 401.
+export function requireAuth() {
+  return requireAuthenticated<User>({
+    onFailure(context) {
+      if (context.request.method === 'GET' && !wantsJson(context.request)) {
+        return Response.redirect(new URL(routes.auth.login.index.href(), context.request.url), 302)
+      }
+
+      return Response.json({ error: 'Authentication required.' }, { status: 401 })
+    },
   })
 }
 

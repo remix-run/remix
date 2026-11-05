@@ -7,7 +7,7 @@ This repository includes the source code for Remix 3, a web framework for buildi
 - **Monorepo**: pnpm workspace with most product code under `packages/`
 - **Public API layout**: every `exports` entry in `package.json` should map to a dedicated top-level `src/*.ts` file
 - **Implementation layout**: `src/lib` is implementation-only; do not add barrel re-exports or thin pass-through wrappers inside `src/lib`
-- **Cross-package boundaries**: do not re-export APIs or types from another package; import from the owning package directly
+- **Cross-package boundaries**: do not re-export APIs or types from another package; import from the owning package directly. The exception is errors and types that are part of a package's own API contract, such as errors its functions throw (`form-data-parser` re-exports `multipart-parser` errors, and `form-data-middleware` re-exports `FormDataParseError` and the `FileUpload` types)
 - **Platform stance**: prefer Web APIs and standards-aligned primitives over Node-specific APIs whenever possible
 
 ## Git Workflow
@@ -83,7 +83,7 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 - `write-api-docs` at `.agents/skills/write-api-docs/SKILL.md`: Write or tighten JSDoc for exported public APIs.
 - `write-readme` at `.agents/skills/write-readme/SKILL.md`: Draft or revise package READMEs in the repo's style.
 - `write-tests` at `.agents/skills/write-tests/SKILL.md`: Write, refactor, or review tests with repo runner, fixture, assertion, dependency, and validation conventions.
-- `write-ui-module-readme` at `.agents/skills/write-ui-module-readme/SKILL.md`: Write concise module README files for `packages/ui/src/lib/*` primitives.
+- `write-ui-module-readme` at `.agents/skills/write-ui-module-readme/SKILL.md`: Write concise module README files for `packages/ui` primitives (`packages/ui/src/<primitive>/README.md`).
 - `write-ui-examples` at `.agents/skills/write-ui-examples/SKILL.md`: Design, document and review focused UI library examples, including an adversarial product UX review.
 
 ## App And Demo Skills

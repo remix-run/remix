@@ -1,10 +1,7 @@
 import MagicString from 'magic-string'
 import { parseSync } from 'oxc-parser'
-import {
-  SourceMapConsumer,
-  SourceMapGenerator,
-  type RawSourceMap,
-} from 'source-map-js/source-map.js'
+import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js/source-map.js'
+import type { RawSourceMap } from 'source-map-js/source-map.js'
 
 /**
  * Result of analyzing and optionally rewriting a Remix component module for HMR.

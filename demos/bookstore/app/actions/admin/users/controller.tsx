@@ -7,7 +7,6 @@ import { users } from '../../../data/schema.ts'
 import { requireAdmin } from '../../../middleware/admin.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
-import { getCurrentUser } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 import { AdminUserFormPage } from './form.tsx'
 import { AdminUsersIndexPage } from './index-page.tsx'
@@ -27,7 +26,7 @@ export default createController(routes.admin.users, {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
     async index({ auth, db, render }) {
-      let currentUser = getCurrentUser(auth)
+      let currentUser = auth.identity
       let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
 
       return render(<AdminUsersIndexPage users={allUsers} currentUserId={currentUser.id} />)

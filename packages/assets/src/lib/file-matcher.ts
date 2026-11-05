@@ -2,6 +2,7 @@ import * as fs from 'node:fs'
 import picomatch from 'picomatch'
 
 import { normalizeFilePath, resolveFilePath } from './paths.ts'
+import { isPathNotFoundError } from './fs-errors.ts'
 
 export type FileMatcher = (filePath: string) => boolean
 
@@ -49,15 +50,4 @@ function isSameOrDescendantPath(filePath: string, directoryPath: string): boolea
 
 function containsGlobSyntax(pattern: string): boolean {
   return /[*?[\]{}()!+@]/.test(pattern)
-}
-
-function isPathNotFoundError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }

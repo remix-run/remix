@@ -20,7 +20,7 @@ export type AsyncRequestContext = RouterTypes extends {
   ? RequestContextWithAnyParams<context>
   : RequestContext<AnyParams>
 
-const storage = new AsyncLocalStorage<RequestContext<any, any>>()
+const storage = new AsyncLocalStorage<RequestContext<AnyParams, ContextEntries>>()
 
 /**
  * Middleware that stores the request context in `AsyncLocalStorage` so it is available

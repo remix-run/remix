@@ -2,7 +2,7 @@ import type { Handle, RemixNode } from 'remix/component'
 import type { Route } from 'remix/routes'
 
 type NavLinkProps = {
-  route: Route<any, string>
+  route: Route
   active?: boolean
   target?: string
   frameSrc?: string

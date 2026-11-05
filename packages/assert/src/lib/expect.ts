@@ -71,11 +71,10 @@ interface MockShape {
 }
 
 function isMockFn(value: unknown): value is MockShape {
+  if (typeof value !== 'function') return false
+  let mock: unknown = (value as { mock?: unknown }).mock
   return (
-    typeof value === 'function' &&
-    typeof (value as any).mock === 'object' &&
-    (value as any).mock != null &&
-    Array.isArray((value as any).mock.calls)
+    typeof mock === 'object' && mock != null && Array.isArray((mock as { calls?: unknown }).calls)
   )
 }
 
@@ -89,22 +88,28 @@ function getMockCalls(received: unknown, matcherName: string): Array<{ arguments
   return received.mock.calls
 }
 
-function checkErrorMatch(error: any, expected: unknown): boolean {
+function getErrorMessage(error: unknown): unknown {
+  return error == null ? undefined : (error as { message?: unknown }).message
+}
+
+function checkErrorMatch(error: unknown, expected: unknown): boolean {
   if (expected === undefined) return true
   if (typeof expected === 'function') {
     if (expected.prototype != null && expected.prototype instanceof Error) {
-      return error instanceof (expected as new (...args: any[]) => Error)
+      return error instanceof expected
     }
     return Boolean((expected as (e: unknown) => unknown)(error))
   }
   if (expected instanceof Error) {
-    return error?.message === expected.message
+    return getErrorMessage(error) === expected.message
   }
   if (expected instanceof RegExp) {
-    return expected.test(error?.message ?? String(error))
+    let message = getErrorMessage(error)
+    return expected.test(message == null ? String(error) : String(message))
   }
   if (typeof expected === 'string') {
-    return typeof error?.message === 'string' && error.message.includes(expected)
+    let message = getErrorMessage(error)
+    return typeof message === 'string' && message.includes(expected)
   }
   return false
 }
@@ -255,7 +260,7 @@ function createMatchers(received: unknown, negated: boolean): Matchers {
     },
     toBeInstanceOf(ctor) {
       check(
-        received instanceof (ctor as any),
+        received instanceof ctor,
         () => `${stringify(received)} to be instance of ${ctor.name || ctor}`,
         ctor,
         'toBeInstanceOf',
@@ -310,7 +315,10 @@ function createMatchers(received: unknown, negated: boolean): Matchers {
       } else if (Array.isArray(received) || received instanceof Set) {
         let arr = Array.isArray(received) ? received : Array.from(received)
         contained = arr.some((v) => Object.is(v, item) || v === item)
-      } else if (received != null && typeof (received as any)[Symbol.iterator] === 'function') {
+      } else if (
+        received != null &&
+        typeof (received as { [Symbol.iterator]?: unknown })[Symbol.iterator] === 'function'
+      ) {
         contained = Array.from(received as Iterable<unknown>).some(
           (v) => Object.is(v, item) || v === item,
         )
@@ -344,14 +352,14 @@ function createMatchers(received: unknown, negated: boolean): Matchers {
     },
     toHaveProperty(key, value) {
       let path = key.split('.')
-      let current: any = received
+      let current: unknown = received
       let exists = true
       for (let segment of path) {
-        if (current == null || !(segment in current)) {
+        if (current == null || !(segment in (current as object))) {
           exists = false
           break
         }
-        current = current[segment]
+        current = (current as Record<string, unknown>)[segment]
       }
       let pass = exists && (arguments.length < 2 || isDeepEqual(current, value))
       check(
@@ -446,6 +454,11 @@ function createMatchers(received: unknown, negated: boolean): Matchers {
   }
 }
 
+function callMatcher(matchers: Matchers, matcher: keyof Matchers, args: unknown[]): void {
+  let fn = matchers[matcher] as (...args: unknown[]) => void
+  fn(...args)
+}
+
 function createAsyncMatchers(
   promise: Promise<unknown> | (() => unknown),
   mode: 'resolves' | 'rejects',
@@ -471,8 +484,7 @@ function createAsyncMatchers(
             operator: `resolves.${matcher}`,
           })
         }
-        let m = createMatchers(result.value, negated) as any
-        m[matcher](...args)
+        callMatcher(createMatchers(result.value, negated), matcher, args)
       } else {
         if (result.resolved) {
           throw new AssertionError({
@@ -496,8 +508,7 @@ function createAsyncMatchers(
           }
           return
         }
-        let m = createMatchers(result.error, negated) as any
-        m[matcher](...args)
+        callMatcher(createMatchers(result.error, negated), matcher, args)
       }
     }
   }
@@ -544,8 +555,12 @@ function expectImpl(received: unknown): Expectation {
   return {
     ...createMatchers(received, false),
     not: createMatchers(received, true),
-    rejects: createAsyncMatchers(received as any, 'rejects', false),
-    resolves: createAsyncMatchers(received as any, 'resolves', false),
+    rejects: createAsyncMatchers(received as Promise<unknown> | (() => unknown), 'rejects', false),
+    resolves: createAsyncMatchers(
+      received as Promise<unknown> | (() => unknown),
+      'resolves',
+      false,
+    ),
   }
 }
 

@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { createTerminal, type TerminalOutputStream } from './terminal.ts'
+import { createTerminal } from './terminal.ts'
+import type { TerminalOutputStream } from './terminal.ts'
 
 describe('createTerminal', () => {
   it('writes to injected output streams', () => {

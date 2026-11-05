@@ -8,8 +8,8 @@ import {
   MaxHeaderSizeExceededError,
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
-  type FileUploadHandler,
 } from '@remix-run/form-data-parser'
+import type { FileUploadHandler } from '@remix-run/form-data-parser'
 import { createRouter } from '@remix-run/fetch-router'
 import type { ContextEntries, Middleware, RequestContext } from '@remix-run/fetch-router'
 

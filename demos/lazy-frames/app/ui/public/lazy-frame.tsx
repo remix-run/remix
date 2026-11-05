@@ -1,12 +1,5 @@
-import {
-  Frame,
-  clientEntry,
-  css,
-  ref,
-  type Handle,
-  type RemixElement,
-  type RemixNode,
-} from 'remix/component'
+import { Frame, clientEntry, css, ref } from 'remix/component'
+import type { Handle, RemixElement, RemixNode } from 'remix/component'
 
 export type LazyFrameProps = {
   src: string

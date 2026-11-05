@@ -1,5 +1,7 @@
-import { createRouter, type RouterContext } from 'remix/router'
+import { createRouter } from 'remix/router'
+import type { RouterContext } from 'remix/router'
 import type { Cookie } from 'remix/cookie'
+import { cop } from 'remix/middleware/cop'
 import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'
 import type { SessionStorage } from 'remix/session'
@@ -18,7 +20,8 @@ import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
-import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
+import { externalProviderRegistry } from './utils/external-auth.ts'
+import type { ExternalProviderRegistry } from './utils/external-auth.ts'
 
 type AppContext = RouterContext<ReturnType<typeof createSocialAuthRouter>>
 
@@ -45,6 +48,7 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
         etag: false,
         lastModified: false,
       }),
+      cop(),
       formData(),
       session(cookie, storage),
       loadDatabase(),

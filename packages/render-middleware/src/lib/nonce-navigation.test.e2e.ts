@@ -5,7 +5,8 @@ import { jsx } from '@remix-run/component/jsx-runtime'
 import { csp, getCspNonce } from '@remix-run/csp-middleware'
 import { createRouter } from '@remix-run/fetch-router'
 import { createTestServer } from '@remix-run/node-fetch-server/test'
-import { describe, it, type TestContext } from '@remix-run/test'
+import { describe, it } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 import { fileURLToPath } from 'node:url'
 
 import { render } from '../index.ts'
@@ -131,7 +132,7 @@ async function createNavigationFixture(t: TestContext, mode: 'enforced' | 'repor
     fingerprint: false,
   })
   t.after(() => assets.close())
-  let entry = await assets.getScriptEntry('packages/component/src/runtime/run.ts')
+  let entry = await assets.getScriptEntry('packages/component/src/lib/run.ts')
   let reports = 0
   let scriptRequests: string[] = []
   let lateFrame = Promise.withResolvers<void>()

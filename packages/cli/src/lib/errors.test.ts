@@ -6,6 +6,7 @@ import {
   projectRootNotFound,
   renderCliError,
   routesFileNotFound,
+  toCliError,
   UsageError,
 } from './errors.ts'
 
@@ -41,5 +42,28 @@ describe('errors', () => {
       output,
       /Try:\n  Choose an app name that can be normalized into a valid npm package name\./,
     )
+  })
+
+  it('keeps unexpected errors as the cause of internal errors', async () => {
+    let original = new TypeError('Cannot read properties of undefined')
+    let error = toCliError(original)
+
+    assert.equal(error.code, 'RMX_INTERNAL_ERROR')
+    assert.equal(error.message, 'Cannot read properties of undefined')
+    assert.equal(error.cause, original)
+  })
+
+  it('renders the original stack for unexpected errors', async () => {
+    let original = new TypeError('Cannot read properties of undefined')
+    let output = renderCliError(original)
+
+    assert.match(output, /Error \[RMX_INTERNAL_ERROR\] Unexpected Remix CLI error/)
+    assert.ok(output.includes(`Stack trace:\n${original.stack}`))
+  })
+
+  it('does not render stacks for expected errors', async () => {
+    let output = renderCliError(invalidPackageName('My Remix App'))
+
+    assert.equal(output.includes('Stack trace:'), false)
   })
 })

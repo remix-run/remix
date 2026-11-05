@@ -9,9 +9,8 @@ import {
   PackageNotFoundError,
   VersionNotFoundError,
   InvalidPathError,
-  type PackageMetadata,
-  type PackageFile,
 } from './npm.ts'
+import type { PackageMetadata, PackageFile } from './npm.ts'
 
 describe('parsePackagePath', () => {
   it('parses simple package name', () => {

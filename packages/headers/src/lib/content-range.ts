@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import type { HeaderValue } from './header-value.ts'
 
 /**
  * Checks that the parsed parts of a `Content-Range` form a range RFC 9110 allows.

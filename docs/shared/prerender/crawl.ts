@@ -1,6 +1,6 @@
 import { parse } from './html-parser.ts'
 import type { HTMLElement } from './html-parser.ts'
-import type { RequestContext, Router } from 'remix/router'
+import type { Router } from 'remix/router'
 
 const BASE_URL = 'http://localhost'
 
@@ -16,8 +16,8 @@ export interface CrawlOptions {
   concurrency?: number
 }
 
-export async function* crawl<T extends RequestContext<any, any>>(
-  router: Router<T>,
+export async function* crawl(
+  router: Pick<Router, 'fetch'>,
   options: CrawlOptions = {},
 ): AsyncIterableIterator<CrawlResult> {
   let { paths = ['/'], spider = true, concurrency = 1 } = options

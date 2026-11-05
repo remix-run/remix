@@ -1,6 +1,6 @@
 import type { RoutePatternParts } from './route-pattern.ts'
 import type { Match } from './match/types.ts'
-import { decodeHostname } from './match/decode.ts'
+import { toUnicode } from './match/punycode.ts'
 
 /**
  * Returns true if match `a` is less specific than match `b`.
@@ -74,7 +74,7 @@ export function compare(a: Match, b: Match): -1 | 0 | 1 {
   let portResult = comparePort(aParts.port, bParts.port)
   if (portResult !== 0) return portResult
 
-  let hostname = decodeHostname(a.url.hostname)
+  let hostname = toUnicode(a.url.hostname)
 
   let hostnameResult = compareHostname(hostname, a.paramsMeta.hostname, b.paramsMeta.hostname)
   if (hostnameResult !== 0) return hostnameResult

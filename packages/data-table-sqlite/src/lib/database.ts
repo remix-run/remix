@@ -1,10 +1,8 @@
-import { Database, type DatabaseOptions } from '@remix-run/data-table'
+import { Database } from '@remix-run/data-table'
+import type { DatabaseOptions } from '@remix-run/data-table'
 
-import {
-  SqliteDatabaseDriver,
-  type SqliteDatabaseClient,
-  type SqliteDatabaseConfig,
-} from './driver.ts'
+import { SqliteDatabaseDriver } from './driver.ts'
+import type { SqliteDatabaseClient, SqliteDatabaseConfig } from './driver.ts'
 
 /** A {@link Database} backed by SQLite. */
 export class SqliteDatabase extends Database<'sqlite'> {

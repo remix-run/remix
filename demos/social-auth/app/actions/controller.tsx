@@ -5,11 +5,8 @@ import { getReturnToHrefOptions, requireAuth } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
 import { AccountPage } from '../ui/account-page.tsx'
 import { LoginPage } from '../ui/home/page.tsx'
-import {
-  externalProviderRegistry,
-  readExternalProviderLinks,
-  type ExternalProviderRegistry,
-} from '../utils/external-auth.ts'
+import { externalProviderRegistry, readExternalProviderLinks } from '../utils/external-auth.ts'
+import type { ExternalProviderRegistry } from '../utils/external-auth.ts'
 
 export function createRootController(
   registry: ExternalProviderRegistry = externalProviderRegistry,
@@ -42,6 +39,8 @@ export function createRootController(
       account: {
         middleware: [requireAuth()],
         handler({ auth, render }) {
+          // requireAuth() already rejected anonymous requests, but middleware on a single
+          // controller action doesn't narrow the context type, so narrow it here.
           if (!auth.ok) {
             return new Response('Unauthorized', { status: 401 })
           }

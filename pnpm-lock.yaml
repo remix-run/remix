@@ -1442,6 +1442,9 @@ importers:
 
   packages/form-data-parser/demos/node:
     dependencies:
+      '@remix-run/data-schema':
+        specifier: workspace:^
+        version: link:../../../data-schema
       '@remix-run/file-storage':
         specifier: workspace:^
         version: link:../../../file-storage
@@ -1515,10 +1518,6 @@ importers:
         version: 7.0.2
 
   packages/lazy-file:
-    dependencies:
-      '@remix-run/mime':
-        specifier: workspace:^
-        version: link:../mime
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*

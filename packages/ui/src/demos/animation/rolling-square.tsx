@@ -1,4 +1,4 @@
-import { type Handle } from '@remix-run/component'
+import type { Handle } from '@remix-run/component'
 import { css, on } from '@remix-run/component'
 
 import { spring } from '@remix-run/ui/animation'

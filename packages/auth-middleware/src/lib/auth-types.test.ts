@@ -5,12 +5,12 @@ import {
   createController,
   createMiddleware,
   createRouter,
-  type GetContextValue,
-  type MiddlewareContext,
 } from '@remix-run/fetch-router'
+import type { GetContextValue, MiddlewareContext } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
 
-import { Auth, auth, type AuthState, type GoodAuth } from './auth.ts'
+import { Auth, auth } from './auth.ts'
+import type { AuthState, GoodAuth } from './auth.ts'
 import { requireAuth } from './require-auth.ts'
 import { createAPIAuthScheme } from './schemes/api-key.ts'
 import { createBearerTokenAuthScheme } from './schemes/bearer.ts'
@@ -148,7 +148,6 @@ const adminController = createController(routes.admin, {
 
 type SessionIdentity = { kind: 'session'; id: string }
 const sessionAuthMiddleware = createMiddleware(requireAuth<SessionIdentity>())
-type SessionAuthContext = MiddlewareContext<typeof sessionAuthMiddleware>
 
 const sessionAction = createAction('/session/:id', {
   middleware: sessionAuthMiddleware,

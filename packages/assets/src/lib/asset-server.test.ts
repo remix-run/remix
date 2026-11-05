@@ -30,9 +30,6 @@ import { defineFileTransform } from './files/config.ts'
 import { hashContent } from './fingerprint.ts'
 import type { ModuleLoader } from './loaders.ts'
 
-type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
-
-const packageRoot = path.resolve(import.meta.dirname, '../..')
 const virtualStorePackageDir =
   '@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package'
 const virtualStorePackageUrlPath =
@@ -43,14 +40,14 @@ function createAssetServerForTest(
     basePath?: string
   },
 ): AssetServer<AssetRequestTransformMap> {
-  return createAssetServer({
-    basePath: options.basePath ?? '/assets',
+  return createAssetServer<AssetRequestTransformMap>({
     ...options,
+    basePath: options.basePath ?? '/assets',
     watch: options.watch ?? false,
-  } as any) as AssetServer<AssetRequestTransformMap>
+  })
 }
 
-async function makeTmpDir(): Promise<string> {
+function makeTmpDir(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), 'asset-server-test-'))
 }
 
@@ -82,7 +79,10 @@ function getLineAndColumn(source: string, search: string): { line: number; colum
   }
 }
 
-function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions<any>> = {}) {
+function createTestServer(
+  rootDir: string,
+  overrides: Partial<AssetServerOptions<AssetRequestTransformMap>> = {},
+) {
   return createAssetServerForTest({
     allowFiles: ['app/**', 'app/node_modules/**'],
     basePath: '/assets',
@@ -94,7 +94,7 @@ function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions
 
 function createWatchedTestServer(
   rootDir: string,
-  overrides: Partial<AssetServerOptions<any>> = {},
+  overrides: Partial<AssetServerOptions<AssetRequestTransformMap>> = {},
 ) {
   return createTestServer(rootDir, {
     ...overrides,
@@ -337,7 +337,7 @@ async function withTsconfigTransformCase(
     caseDir: string
     assetServer: AssetServer<AssetRequestTransformMap>
   }) => Promise<void>,
-  serverOverrides: Partial<AssetServerOptions<any>> = {},
+  serverOverrides: Partial<AssetServerOptions<AssetRequestTransformMap>> = {},
 ): Promise<void> {
   let caseDir = await makeTmpDir()
   let assetServer: AssetServer<AssetRequestTransformMap> | null = null
@@ -11407,7 +11407,10 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.equal(consoleError.mock.calls.length, 1)
-    assert.match(String(consoleError.mock.calls[0]?.arguments[0]), /error handler failed/)
+    let [message, error] = consoleError.mock.calls[0]?.arguments ?? []
+    assert.equal(message, 'There was an error in the asset server error handler:')
+    assert.ok(error instanceof Error)
+    assert.equal(error.message, 'error handler failed')
   })
 
   it('logs watcher errors', async (t) => {

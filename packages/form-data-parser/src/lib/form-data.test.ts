@@ -1,13 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import {
-  type FileUploadHandler,
-  type FileUpload,
-  FormDataParseError,
-  MaxFilesExceededError,
-  parseFormData,
-} from './form-data.ts'
+import { FormDataParseError, MaxFilesExceededError, parseFormData } from './form-data.ts'
+import type { FileUploadHandler, FileUpload } from './form-data.ts'
 import {
   MultipartParseError,
   MaxFileSizeExceededError,
@@ -353,7 +348,7 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     })
 
-    let uploadedFile: File | null = null
+    let uploadedFile: File | undefined
     let formData = await parseFormData(request, async (upload) => {
       uploadedFile = new File([await upload.text()], 'example.txt', { type: 'text/plain' })
       return uploadedFile
@@ -362,8 +357,9 @@ describe('parseFormData', () => {
     let file = formData.get('file')
 
     assert.ok(file instanceof File)
+    assert.ok(uploadedFile)
     assert.equal(file.name, 'example.txt')
-    assert.equal(file.type, uploadedFile!.type)
+    assert.equal(file.type, uploadedFile.type)
     assert.equal(await file.text(), 'This is an example file.')
   })
 

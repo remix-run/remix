@@ -445,69 +445,82 @@ function getOppositePlacement(placement: ExtendedAnchorPlacement): ExtendedAncho
   return opposites[placement]
 }
 
+type PlacementMeasurement = {
+  anchorRect: DOMRect
+  placementWidth: number
+  placementHeight: number
+  collisionWidth: number
+  collisionHeight: number
+  scrollContainerOffsetX: number
+  scrollContainerOffsetY: number
+  relativeOffsetX: number | null
+  relativeOffsetY: number | null
+}
+
+type PlacementOffsets = {
+  inset: boolean
+  offset: number
+  offsetX: number
+  offsetY: number
+}
+
+function measurePlacement(
+  anchorRect: DOMRect,
+  dimensions: FloatingDimensions,
+  relativeTo?: string,
+): PlacementMeasurement {
+  return {
+    anchorRect,
+    placementWidth:
+      relativeTo && dimensions.relativeWidth ? dimensions.relativeWidth : dimensions.width,
+    placementHeight:
+      relativeTo && dimensions.relativeHeight ? dimensions.relativeHeight : dimensions.height,
+    collisionWidth: dimensions.width,
+    collisionHeight: dimensions.height,
+    scrollContainerOffsetX: dimensions.scrollContainerOffsetX,
+    scrollContainerOffsetY: dimensions.scrollContainerOffsetY,
+    relativeOffsetX: dimensions.relativeOffsetX,
+    relativeOffsetY: dimensions.relativeOffsetY,
+  }
+}
+
 function calculateFloatingBounds(
   placement: ExtendedAnchorPlacement,
-  anchorRect: DOMRect,
-  placementWidth: number,
-  placementHeight: number,
-  collisionWidth: number,
-  collisionHeight: number,
-  inset: boolean,
-  offset: number,
-  offsetX: number,
-  offsetY: number,
-  relativeOffsetX?: number | null,
-  relativeOffsetY?: number | null,
+  measurement: PlacementMeasurement,
+  offsets: PlacementOffsets,
 ) {
-  let position = calculatePosition(placement, anchorRect, placementWidth, placementHeight, inset)
-  position = applyOffset(position, placement, offset, offsetX, offsetY)
+  let position = calculatePosition(
+    placement,
+    measurement.anchorRect,
+    measurement.placementWidth,
+    measurement.placementHeight,
+    offsets.inset,
+  )
+  position = applyOffset(position, placement, offsets.offset, offsets.offsetX, offsets.offsetY)
 
-  if (relativeOffsetX !== null && relativeOffsetX !== undefined) {
-    position.left -= relativeOffsetX
+  if (measurement.relativeOffsetX !== null) {
+    position.left -= measurement.relativeOffsetX
   }
 
-  if (relativeOffsetY !== null && relativeOffsetY !== undefined) {
-    position.top -= relativeOffsetY
+  if (measurement.relativeOffsetY !== null) {
+    position.top -= measurement.relativeOffsetY
   }
 
   return {
     top: position.top,
     left: position.left,
-    right: position.left + collisionWidth,
-    bottom: position.top + collisionHeight,
+    right: position.left + measurement.collisionWidth,
+    bottom: position.top + measurement.collisionHeight,
   }
 }
 
 function getPlacementScore(
   placement: ExtendedAnchorPlacement,
-  anchorRect: DOMRect,
-  placementWidth: number,
-  placementHeight: number,
-  collisionWidth: number,
-  collisionHeight: number,
-  inset: boolean,
-  offset: number,
-  offsetX: number,
-  offsetY: number,
-  relativeOffsetX?: number | null,
-  relativeOffsetY?: number | null,
+  measurement: PlacementMeasurement,
+  offsets: PlacementOffsets,
 ) {
   let viewport = getClientViewportBounds(viewportPaddingPx)
-
-  let bounds = calculateFloatingBounds(
-    placement,
-    anchorRect,
-    placementWidth,
-    placementHeight,
-    collisionWidth,
-    collisionHeight,
-    inset,
-    offset,
-    offsetX,
-    offsetY,
-    relativeOffsetX,
-    relativeOffsetY,
-  )
+  let bounds = calculateFloatingBounds(placement, measurement, offsets)
 
   let constraints = {
     leftOk: bounds.left >= viewport.left,
@@ -527,61 +540,26 @@ function getPlacementScore(
 
 function getFlippedPlacement(
   placement: ExtendedAnchorPlacement,
-  anchorRect: DOMRect,
-  placementWidth: number,
-  placementHeight: number,
-  collisionWidth: number,
-  collisionHeight: number,
+  measurement: PlacementMeasurement,
+  offsets: PlacementOffsets,
   anchorIsAbsolutePositioned: boolean,
-  inset: boolean,
-  offset: number,
-  offsetX: number,
-  offsetY: number,
-  relativeOffsetX?: number | null,
-  relativeOffsetY?: number | null,
 ) {
   let hasScroll = window.scrollY > 0
 
   if (placement.startsWith('top') && anchorIsAbsolutePositioned && hasScroll) {
-    if (anchorRect.top - placementHeight < 0) {
+    if (measurement.anchorRect.top - measurement.placementHeight < 0) {
       return placement
     }
   }
 
-  let original = getPlacementScore(
-    placement,
-    anchorRect,
-    placementWidth,
-    placementHeight,
-    collisionWidth,
-    collisionHeight,
-    inset,
-    offset,
-    offsetX,
-    offsetY,
-    relativeOffsetX,
-    relativeOffsetY,
-  )
+  let original = getPlacementScore(placement, measurement, offsets)
 
   if (original.perfect) {
     return placement
   }
 
   let flippedPlacement = getOppositePlacement(placement)
-  let flipped = getPlacementScore(
-    flippedPlacement,
-    anchorRect,
-    placementWidth,
-    placementHeight,
-    collisionWidth,
-    collisionHeight,
-    inset,
-    offset,
-    offsetX,
-    offsetY,
-    relativeOffsetX,
-    relativeOffsetY,
-  )
+  let flipped = getPlacementScore(flippedPlacement, measurement, offsets)
 
   if (
     flipped.perfect ||
@@ -630,37 +608,34 @@ function getAvailableHeightForPlacement(
 
 function calculateDocumentPosition(
   placement: ExtendedAnchorPlacement,
-  anchorRect: DOMRect,
-  placementWidth: number,
-  placementHeight: number,
-  inset: boolean,
-  offset: number,
-  offsetX: number,
-  offsetY: number,
+  measurement: PlacementMeasurement,
+  offsets: PlacementOffsets,
   isFixed: boolean,
-  scrollContainerOffsetX = 0,
-  scrollContainerOffsetY = 0,
-  relativeOffsetX?: number | null,
-  relativeOffsetY?: number | null,
 ) {
-  let position = calculatePosition(placement, anchorRect, placementWidth, placementHeight, inset)
+  let position = calculatePosition(
+    placement,
+    measurement.anchorRect,
+    measurement.placementWidth,
+    measurement.placementHeight,
+    offsets.inset,
+  )
 
   if (!isFixed) {
     position.top += window.scrollY
     position.left += window.scrollX
   }
 
-  position = applyOffset(position, placement, offset, offsetX, offsetY)
+  position = applyOffset(position, placement, offsets.offset, offsets.offsetX, offsets.offsetY)
 
-  position.left -= scrollContainerOffsetX
-  position.top -= scrollContainerOffsetY
+  position.left -= measurement.scrollContainerOffsetX
+  position.top -= measurement.scrollContainerOffsetY
 
-  if (relativeOffsetX !== null && relativeOffsetX !== undefined) {
-    position.left -= relativeOffsetX
+  if (measurement.relativeOffsetX !== null) {
+    position.left -= measurement.relativeOffsetX
   }
 
-  if (relativeOffsetY !== null && relativeOffsetY !== undefined) {
-    position.top -= relativeOffsetY
+  if (measurement.relativeOffsetY !== null) {
+    position.top -= measurement.relativeOffsetY
   }
 
   return position
@@ -749,52 +724,24 @@ export function anchor(
       ignoreInlineMaxSize: true,
     }),
   ) {
-    let offset = resolveOffsetValue(rawOffset, floating)
-    let offsetX = resolveOffsetValue(rawOffsetX, floating)
-    let offsetY = resolveOffsetValue(rawOffsetY, floating)
+    let offsets: PlacementOffsets = {
+      inset,
+      offset: resolveOffsetValue(rawOffset, floating),
+      offsetX: resolveOffsetValue(rawOffsetX, floating),
+      offsetY: resolveOffsetValue(rawOffsetY, floating),
+    }
     let viewport = getDocumentViewportBounds(isFixed, viewportPaddingPx)
-
-    let placementWidth =
-      relativeTo && naturalDimensions.relativeWidth
-        ? naturalDimensions.relativeWidth
-        : naturalDimensions.width
-    let placementHeight =
-      relativeTo && naturalDimensions.relativeHeight
-        ? naturalDimensions.relativeHeight
-        : naturalDimensions.height
+    let naturalMeasurement = measurePlacement(anchorRect, naturalDimensions, relativeTo)
 
     let finalPlacement = getFlippedPlacement(
       placement,
-      anchorRect,
-      placementWidth,
-      placementHeight,
-      naturalDimensions.width,
-      naturalDimensions.height,
+      naturalMeasurement,
+      offsets,
       anchorIsAbsolutePositioned,
-      inset,
-      offset,
-      offsetX,
-      offsetY,
-      naturalDimensions.relativeOffsetX,
-      naturalDimensions.relativeOffsetY,
     )
     floating.setAttribute('data-anchor-placement', finalPlacement)
 
-    let position = calculateDocumentPosition(
-      finalPlacement,
-      anchorRect,
-      placementWidth,
-      placementHeight,
-      inset,
-      offset,
-      offsetX,
-      offsetY,
-      isFixed,
-      naturalDimensions.scrollContainerOffsetX,
-      naturalDimensions.scrollContainerOffsetY,
-      naturalDimensions.relativeOffsetX,
-      naturalDimensions.relativeOffsetY,
-    )
+    let position = calculateDocumentPosition(finalPlacement, naturalMeasurement, offsets, isFixed)
 
     let availableWidth = Math.max(
       getAvailableWidthForPlacement(
@@ -821,25 +768,11 @@ export function anchor(
       availableHeight < naturalDimensions.height ? `${Math.floor(availableHeight)}px` : ''
 
     let dimensions = getFloatingDimensions(floating, relativeTo)
-    placementWidth =
-      relativeTo && dimensions.relativeWidth ? dimensions.relativeWidth : dimensions.width
-    placementHeight =
-      relativeTo && dimensions.relativeHeight ? dimensions.relativeHeight : dimensions.height
-
     position = calculateDocumentPosition(
       finalPlacement,
-      anchorRect,
-      placementWidth,
-      placementHeight,
-      inset,
-      offset,
-      offsetX,
-      offsetY,
+      measurePlacement(anchorRect, dimensions, relativeTo),
+      offsets,
       isFixed,
-      dimensions.scrollContainerOffsetX,
-      dimensions.scrollContainerOffsetY,
-      dimensions.relativeOffsetX,
-      dimensions.relativeOffsetY,
     )
 
     let minX = viewport.left

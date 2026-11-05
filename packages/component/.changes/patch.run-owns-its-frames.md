@@ -1,0 +1,1 @@
+Scope each `run()` runtime to its own top frame and named frames. `flush()` and `dispose()` previously acted on whichever runtime started most recently, so disposing an older runtime tore down the newer runtime's top frame.

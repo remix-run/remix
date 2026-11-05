@@ -1,17 +1,39 @@
-import { clientEntry, createMixin, css, on, ref, type Handle } from 'remix/component'
+import { clientEntry, createMixin, css, on, ref } from 'remix/component'
+import type { Handle } from 'remix/component'
 import { animateLayout, spring } from '@remix-run/ui/animation'
 import { button } from '../../../ui/public/button.ts'
 import { theme } from '../../../ui/public/design.ts'
 
+import { previewDeleteBlock } from './schedule-layout.ts'
+import type { ResizeEdge, ScheduleLayoutBlock, ScheduleLayoutResult } from './schedule-layout.ts'
 import {
-  previewCopyBlockAcrossDays,
-  previewDeleteBlock,
-  previewMoveBlock,
-  previewMoveBlockGroup,
-  previewResizeBlockTime,
-  type ScheduleLayoutBlock,
-  type ScheduleLayoutResult,
-} from './schedule-layout.ts'
+  adjacentSelection,
+  createDragState,
+  createHorizontalResizeState,
+  createResizeState,
+  durationToSlotSpan,
+  gridLabelWidth,
+  gridRowHeight,
+  initialScrollMinute,
+  isHalfHourSlot,
+  isHourSlot,
+  measureGrid,
+  moveDrag,
+  moveHorizontalResize,
+  moveResize,
+  sameBlocks,
+  slotMinutes,
+  startMinuteToSlotIndex,
+  timeSlots,
+  timeToMinute,
+  weekDays,
+} from './schedule-grid-gestures.ts'
+import type {
+  DragVisualOffset,
+  Gesture,
+  GridInputId,
+  HorizontalResizeEdge,
+} from './schedule-grid-gestures.ts'
 
 export type GridScheduleDocument = {
   blocks: ScheduleLayoutBlock[]
@@ -21,83 +43,8 @@ export type GridScheduleDocument = {
   updatedAt: number
 }
 
-type GridInputId = string
-
 type DraftBlock = ScheduleLayoutBlock & {
   id: string
-}
-
-type DragVisualOffset = {
-  x: number
-  y: number
-}
-
-type DragState = {
-  active: boolean
-  blockId: GridInputId
-  blockIds: GridInputId[]
-  duration: number
-  grid: GridMeasurement
-  moved: boolean
-  offsetX: number
-  offsetY: number
-  originalBlocks: ScheduleLayoutBlock[]
-  placement: BlockPlacement
-  pointerId: number
-  startX: number
-  startY: number
-}
-
-type ResizeEdge = 'start' | 'end'
-
-type ResizeState = {
-  active: boolean
-  blockId: GridInputId
-  edge: ResizeEdge
-  grid: GridMeasurement
-  moved: boolean
-  offsetY: number
-  originalBlock: ScheduleLayoutBlock
-  originalBlocks: ScheduleLayoutBlock[]
-  pointerId: number
-  startY: number
-}
-
-type HorizontalResizeEdge = 'dayStart' | 'dayEnd'
-
-type HorizontalResizeState = {
-  active: boolean
-  activeBlockId: GridInputId
-  blockId: GridInputId
-  edge: HorizontalResizeEdge
-  grid: GridMeasurement
-  idPrefix: string
-  moved: boolean
-  offsetX: number
-  originalBlock: ScheduleLayoutBlock
-  originalBlocks: ScheduleLayoutBlock[]
-  pointerId: number
-  startX: number
-}
-
-type GestureKind = 'drag' | 'horizontal-resize' | 'resize'
-
-type GridMeasurement = {
-  dayWidth: number
-  labelWidth: number
-  left: number
-  rowHeight: number
-  top: number
-}
-
-type BlockPlacement = {
-  dayOfWeek: number
-  startMinute: number
-}
-
-type DragPreview = {
-  placement: BlockPlacement
-  visualOffset: DragVisualOffset
 }
 
 const dragVisualOffsetEventType = 'timebox:schedule-block-drag-visual-offset'
@@ -122,13 +69,10 @@ export const ScheduleGrid = clientEntry(
   ) {
     let schedule = handle.props.schedule
     let draftBlock: DraftBlock | null = null
-    let dragState: DragState | null = null
-    let horizontalResizeState: HorizontalResizeState | null = null
+    let gesture: Gesture | null = null
     let preview: ScheduleLayoutResult | null = null
-    let resizeState: ResizeState | null = null
     let gridElement: HTMLDivElement | null = null
     let scrollerElement: HTMLDivElement | null = null
-    let activeGesture: GestureKind | null = null
     let horizontalResizeSequence = 0
     let saveSequence = 0
     let latestAppliedSaveSequence = 0
@@ -142,11 +86,8 @@ export const ScheduleGrid = clientEntry(
       if (handle.props.schedule.id !== schedule.id) {
         schedule = handle.props.schedule
         draftBlock = null
-        dragState = null
-        horizontalResizeState = null
+        gesture = null
         preview = null
-        resizeState = null
-        activeGesture = null
         horizontalResizeSequence = 0
         saveSequence = 0
         latestAppliedSaveSequence = 0
@@ -167,15 +108,17 @@ export const ScheduleGrid = clientEntry(
       }
 
       let visibleBlocks = preview?.blocks ?? schedule.blocks
-      let activeDragState = dragState?.active === true ? dragState : null
-      let dragGhostBlocks = activeDragState
-        ? visibleBlocks.filter((block) => activeDragState.blockIds.includes(block.id))
+      let dragState = gesture?.kind === 'drag' ? gesture : null
+      let resizeState = gesture?.kind === 'resize' ? gesture : null
+      let horizontalResizeState = gesture?.kind === 'horizontal-resize' ? gesture : null
+      let dragGhostBlocks = dragState
+        ? visibleBlocks.filter((block) => dragState.blockIds.includes(block.id))
         : []
 
       return (
         <section
           aria-label="Weekly schedule"
-          data-schedule-dragging={dragState?.active === true ? 'true' : undefined}
+          data-schedule-dragging={dragState ? 'true' : undefined}
           data-schedule-resizing={
             resizeState ? 'vertical' : horizontalResizeState ? 'horizontal' : undefined
           }
@@ -267,14 +210,14 @@ export const ScheduleGrid = clientEntry(
                     activeHorizontalResizeEdge={horizontalResizeState?.edge}
                     activeResizeEdge={resizeState?.edge}
                     block={block}
-                    isDragging={dragState?.active === true && dragState.blockIds.includes(block.id)}
+                    isDragging={dragState?.blockIds.includes(block.id) === true}
                     isDraft={draftBlock?.id === block.id}
                     isHorizontalResizing={horizontalResizeState?.activeBlockId === block.id}
                     isResizing={resizeState?.blockId === block.id}
                     isSelected={selectedBlockIds.has(block.id)}
                     key={block.id}
                     shouldAnimateLayout={
-                      dragState?.active === true && !dragState.blockIds.includes(block.id)
+                      dragState !== null && !dragState.blockIds.includes(block.id)
                     }
                     onCancelDraft={cancelDraft}
                     onClearSelection={clearBlockFocusOrSelection}
@@ -355,123 +298,8 @@ export const ScheduleGrid = clientEntry(
       saveSchedule()
     }
 
-    function startDrag(block: ScheduleLayoutBlock, event: PointerEvent) {
-      if (
-        draftBlock ||
-        activeGesture ||
-        horizontalResizeState ||
-        resizeState ||
-        event.button !== 0 ||
-        !gridElement
-      ) {
-        return
-      }
-
-      let grid = measureGrid(gridElement)
-      let blockLeft = grid.left + grid.labelWidth + block.dayOfWeek * grid.dayWidth
-      let blockTop = grid.top + (startMinuteToSlotIndex(block.startMinute) + 1) * grid.rowHeight
-      let blockIds = selectedBlockIds.has(block.id) ? Array.from(selectedBlockIds) : [block.id]
-      if (!selectedBlockIds.has(block.id)) {
-        selectedBlockIds = new Set(blockIds)
-        selectionAnchorId = block.id
-      }
-      let placement = {
-        dayOfWeek: block.dayOfWeek,
-        startMinute: block.startMinute,
-      }
-
-      dragState = {
-        active: true,
-        blockId: block.id,
-        blockIds,
-        duration: block.endMinute - block.startMinute,
-        grid,
-        moved: false,
-        offsetX: event.clientX - blockLeft,
-        offsetY: event.clientY - blockTop,
-        originalBlocks: schedule.blocks.map(copyBlock),
-        placement,
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-      }
-      bindGesture('drag')
-      handle.update()
-    }
-
-    function moveDrag(event: PointerEvent) {
-      if (!dragState || dragState.pointerId !== event.pointerId) return
-
-      let distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY)
-      if (!dragState.moved && distance < dragThreshold) return
-
-      dragState.moved = true
-      event.preventDefault()
-
-      let nextDrag = pointerToDragPreview(event, dragState)
-      if (samePlacement(dragState.placement, nextDrag.placement)) {
-        dispatchDragVisualOffset(dragState.blockIds, nextDrag.visualOffset)
-        return
-      }
-
-      let nextPreview =
-        dragState.blockIds.length > 1
-          ? previewMoveBlockGroup(
-              dragState.originalBlocks,
-              dragState.blockIds,
-              dragState.blockId,
-              nextDrag.placement,
-              scheduleLayoutPolicy,
-            )
-          : previewMoveBlock(
-              dragState.originalBlocks,
-              dragState.blockId,
-              nextDrag.placement,
-              scheduleLayoutPolicy,
-            )
-
-      if (nextPreview.unresolved) {
-        dispatchDragVisualOffset(dragState.blockIds, visualOffsetFromPlacement(nextDrag, dragState))
-        return
-      }
-
-      dragState.placement = nextDrag.placement
-      dispatchDragVisualOffset(dragState.blockIds, nextDrag.visualOffset)
-      updatePreview(nextPreview)
-    }
-
-    function endDrag(event: PointerEvent) {
-      if (!dragState || dragState.pointerId !== event.pointerId) return
-
-      unbindGesture()
-      let finalPreview = dragState.moved && preview && !preview.unresolved ? preview : null
-      let didMove = dragState.moved
-      if (didMove) suppressSelectionClickUntil = performance.now() + 250
-      let draggedBlockIds = dragState.blockIds
-      dispatchDragVisualOffset(draggedBlockIds, { x: 0, y: 0 })
-      dragState = null
-
-      if (finalPreview) {
-        event.preventDefault()
-        schedule.blocks = finalPreview.blocks
-        selectedBlockIds = new Set(draggedBlockIds)
-        preview = null
-        saveSchedule()
-        handle.update()
-        return
-      }
-
-      if (preview) {
-        preview = null
-        handle.update()
-        return
-      }
-
-      handle.update()
-    }
-
     function selectBlock(block: ScheduleLayoutBlock, event: MouseEvent) {
-      if (draftBlock || activeGesture) return
+      if (draftBlock || gesture) return
       if (!event.shiftKey && performance.now() < suppressSelectionClickUntil) return
 
       if (!event.shiftKey || !selectionAnchorId) {
@@ -486,7 +314,7 @@ export const ScheduleGrid = clientEntry(
     }
 
     function focusBlock(block: ScheduleLayoutBlock) {
-      if (draftBlock || activeGesture) return
+      if (draftBlock || gesture) return
       if (selectedBlockIds.size === 1 && selectedBlockIds.has(block.id)) return
       if (selectedBlockIds.size > 1 && selectedBlockIds.has(block.id)) return
 
@@ -496,7 +324,7 @@ export const ScheduleGrid = clientEntry(
     }
 
     function prepareBlockPointerDown(block: ScheduleLayoutBlock, event: PointerEvent) {
-      if (draftBlock || activeGesture || event.shiftKey) {
+      if (draftBlock || gesture || event.shiftKey) {
         return
       }
 
@@ -541,83 +369,25 @@ export const ScheduleGrid = clientEntry(
       return true
     }
 
-    function startResize(block: ScheduleLayoutBlock, edge: ResizeEdge, event: PointerEvent) {
-      if (
-        (draftBlock && draftBlock.id !== block.id) ||
-        dragState ||
-        horizontalResizeState ||
-        event.button !== 0 ||
-        !gridElement
-      ) {
-        return
+    function startDrag(block: ScheduleLayoutBlock, event: PointerEvent) {
+      if (draftBlock || gesture || event.button !== 0 || !gridElement) return
+
+      let blockIds = selectedBlockIds.has(block.id) ? Array.from(selectedBlockIds) : [block.id]
+      if (!selectedBlockIds.has(block.id)) {
+        selectedBlockIds = new Set(blockIds)
+        selectionAnchorId = block.id
       }
 
-      clearOtherBlockFocusOrSelection(block.id)
-      let grid = measureGrid(gridElement)
-      let edgeMinute = edge === 'start' ? block.startMinute : block.endMinute
-      let edgeTop = grid.top + (startMinuteToSlotIndex(edgeMinute) + 1) * grid.rowHeight
-
-      resizeState = {
-        active: true,
-        blockId: block.id,
-        edge,
-        grid,
-        moved: false,
-        offsetY: event.clientY - edgeTop,
-        originalBlock: copyBlock(block),
-        originalBlocks: schedule.blocks.map(copyBlock),
-        pointerId: event.pointerId,
-        startY: event.clientY,
-      }
-      bindGesture('resize')
-      handle.update()
-    }
-
-    function moveResize(event: PointerEvent) {
-      if (!resizeState || resizeState.pointerId !== event.pointerId) return
-
-      let distance = Math.abs(event.clientY - resizeState.startY)
-      if (!resizeState.moved && distance < dragThreshold) return
-
-      resizeState.moved = true
-      event.preventDefault()
-
-      updatePreview(
-        previewResizeBlockTime(
-          resizeState.originalBlocks,
-          resizeState.blockId,
-          {
-            edge: resizeState.edge,
-            minute: pointerToResizeMinute(event, resizeState),
-          },
-          scheduleLayoutPolicy,
-        ),
+      startGesture(
+        createDragState(block, blockIds, schedule.blocks, measureGrid(gridElement), event),
       )
     }
 
-    function endResize(event: PointerEvent) {
-      if (!resizeState || resizeState.pointerId !== event.pointerId) return
+    function startResize(block: ScheduleLayoutBlock, edge: ResizeEdge, event: PointerEvent) {
+      if (!canStartResize(block, event) || !gridElement) return
 
-      unbindGesture()
-      let finalPreview = resizeState.moved && preview && !preview.unresolved ? preview : null
-      resizeState = null
-
-      if (finalPreview) {
-        event.preventDefault()
-        schedule.blocks = finalPreview.blocks
-        preview = null
-        saveSchedule()
-        handle.update()
-        return
-      }
-
-      if (preview) {
-        preview = null
-        handle.update()
-        return
-      }
-
-      handle.update()
+      clearOtherBlockFocusOrSelection(block.id)
+      startGesture(createResizeState(block, edge, schedule.blocks, measureGrid(gridElement), event))
     }
 
     function startHorizontalResize(
@@ -625,144 +395,71 @@ export const ScheduleGrid = clientEntry(
       edge: HorizontalResizeEdge,
       event: PointerEvent,
     ) {
-      if (
-        (draftBlock && draftBlock.id !== block.id) ||
-        dragState ||
-        horizontalResizeState ||
-        resizeState ||
-        event.button !== 0 ||
-        !gridElement
-      ) {
-        return
-      }
+      if (!canStartResize(block, event) || !gridElement) return
 
       clearOtherBlockFocusOrSelection(block.id)
-      let grid = measureGrid(gridElement)
-      let edgeColumn = edge === 'dayStart' ? block.dayOfWeek : block.dayOfWeek + 1
-      let edgeLeft = grid.left + grid.labelWidth + edgeColumn * grid.dayWidth
-
-      horizontalResizeState = {
-        active: true,
-        activeBlockId: block.id,
-        blockId: block.id,
-        edge,
-        grid,
-        idPrefix: `repeat-${++horizontalResizeSequence}-${Date.now().toString(36)}`,
-        moved: false,
-        offsetX: event.clientX - edgeLeft,
-        originalBlock: copyBlock(block),
-        originalBlocks: schedule.blocks.map(copyBlock),
-        pointerId: event.pointerId,
-        startX: event.clientX,
-      }
-      bindGesture('horizontal-resize')
-      handle.update()
-    }
-
-    function moveHorizontalResize(event: PointerEvent) {
-      if (!horizontalResizeState || horizontalResizeState.pointerId !== event.pointerId) {
-        return
-      }
-
-      let state = horizontalResizeState
-      let distance = Math.abs(event.clientX - state.startX)
-      if (!state.moved && distance < dragThreshold) return
-
-      state.moved = true
-      event.preventDefault()
-      let resizeDay = pointerToResizeDay(event, state)
-      let firstDay = state.edge === 'dayStart' ? resizeDay : state.originalBlock.dayOfWeek
-      let lastDay = state.edge === 'dayEnd' ? resizeDay : state.originalBlock.dayOfWeek
-      let activeDay = state.edge === 'dayStart' ? firstDay : lastDay
-      state.activeBlockId = horizontalResizeBlockId(state, activeDay)
-
-      updatePreview(
-        previewCopyBlockAcrossDays(
-          state.originalBlocks,
-          state.blockId,
-          {
-            createId: (_source, dayOfWeek) => `${state.idPrefix}-${dayOfWeek}`,
-            firstDay,
-            lastDay,
-          },
-          scheduleLayoutPolicy,
+      let idPrefix = `repeat-${++horizontalResizeSequence}-${Date.now().toString(36)}`
+      startGesture(
+        createHorizontalResizeState(
+          block,
+          edge,
+          idPrefix,
+          schedule.blocks,
+          measureGrid(gridElement),
+          event,
         ),
       )
     }
 
-    function endHorizontalResize(event: PointerEvent) {
-      if (!horizontalResizeState || horizontalResizeState.pointerId !== event.pointerId) {
-        return
-      }
-
-      unbindGesture()
-      let finalPreview =
-        horizontalResizeState.moved && preview && !preview.unresolved ? preview : null
-      horizontalResizeState = null
-
-      if (finalPreview) {
-        event.preventDefault()
-        schedule.blocks = finalPreview.blocks
-        preview = null
-        saveSchedule()
-        handle.update()
-        return
-      }
-
-      if (preview) {
-        preview = null
-        handle.update()
-        return
-      }
-
-      handle.update()
+    function canStartResize(block: ScheduleLayoutBlock, event: PointerEvent) {
+      return (!draftBlock || draftBlock.id === block.id) && !gesture && event.button === 0
     }
 
-    function bindGesture(kind: GestureKind) {
-      activeGesture = kind
-
+    function startGesture(nextGesture: Gesture) {
+      gesture = nextGesture
       window.addEventListener('pointermove', handleWindowPointerMove)
       window.addEventListener('pointerup', handleWindowPointerEnd)
       window.addEventListener('pointercancel', handleWindowPointerEnd)
-    }
-
-    function unbindGesture() {
-      window.removeEventListener('pointermove', handleWindowPointerMove)
-      window.removeEventListener('pointerup', handleWindowPointerEnd)
-      window.removeEventListener('pointercancel', handleWindowPointerEnd)
-      activeGesture = null
+      handle.update()
     }
 
     function handleWindowPointerMove(event: PointerEvent) {
-      if (activeGesture === 'drag') {
-        moveDrag(event)
-        return
-      }
+      if (!gesture || gesture.pointerId !== event.pointerId) return
 
-      if (activeGesture === 'resize') {
-        moveResize(event)
-        return
-      }
+      let nextPreview =
+        gesture.kind === 'drag'
+          ? moveDrag(gesture, event, dispatchDragVisualOffset)
+          : gesture.kind === 'resize'
+            ? moveResize(gesture, event)
+            : moveHorizontalResize(gesture, event)
 
-      if (activeGesture === 'horizontal-resize') {
-        moveHorizontalResize(event)
-      }
+      if (nextPreview) updatePreview(nextPreview)
     }
 
     function handleWindowPointerEnd(event: PointerEvent) {
-      if (activeGesture === 'drag') {
-        endDrag(event)
-        return
+      if (!gesture || gesture.pointerId !== event.pointerId) return
+
+      let endedGesture = gesture
+      gesture = null
+      window.removeEventListener('pointermove', handleWindowPointerMove)
+      window.removeEventListener('pointerup', handleWindowPointerEnd)
+      window.removeEventListener('pointercancel', handleWindowPointerEnd)
+
+      let finalPreview = endedGesture.moved && preview && !preview.unresolved ? preview : null
+
+      if (endedGesture.kind === 'drag') {
+        if (endedGesture.moved) suppressSelectionClickUntil = performance.now() + 250
+        dispatchDragVisualOffset(endedGesture.blockIds, { x: 0, y: 0 })
+        if (finalPreview) selectedBlockIds = new Set(endedGesture.blockIds)
       }
 
-      if (activeGesture === 'resize') {
-        endResize(event)
-        return
+      preview = null
+      if (finalPreview) {
+        event.preventDefault()
+        schedule.blocks = finalPreview.blocks
+        saveSchedule()
       }
-
-      if (activeGesture === 'horizontal-resize') {
-        endHorizontalResize(event)
-      }
+      handle.update()
     }
 
     function updatePreview(nextPreview: ScheduleLayoutResult) {
@@ -1197,233 +894,11 @@ function HorizontalResizeHandle(
   )
 }
 
-const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-
-const firstSlotMinute = 0
-const initialScrollMinute = 6 * 60 + 30
-const slotMinutes = 15
-const lastSlotMinute = 24 * 60
-const timeSlots = Array.from(
-  { length: (lastSlotMinute - firstSlotMinute) / slotMinutes },
-  (_, index) => formatTimeSlot(firstSlotMinute + index * slotMinutes),
-)
-
-function isHourSlot(time: string) {
-  return time.includes(':00')
-}
-
-function isHalfHourSlot(time: string) {
-  return time.includes(':30')
-}
-
-function timeToMinute(time: string) {
-  let match = /^(\d{1,2}):(\d{2})\s*(am|pm)?$/i.exec(time)
-  if (!match) return firstSlotMinute
-
-  let hour = Number(match[1])
-  let minute = Number(match[2])
-  let period = match[3]?.toLowerCase()
-
-  if (period === 'pm' && hour !== 12) hour += 12
-  if (period === 'am' && hour === 12) hour = 0
-
-  return hour * 60 + minute
-}
-
-const scheduleLayoutPolicy = {
-  dayMinutes: lastSlotMinute,
-  minimumMinute: firstSlotMinute,
-  slotMinutes,
-}
-const gridLabelWidth = 72
-const gridRowHeight = 36
-const dragThreshold = 4
-const horizontalResizeThreshold = 0.15
-
-function measureGrid(element: HTMLElement): GridMeasurement {
-  let rect = element.getBoundingClientRect()
-  let labelWidth = gridLabelWidth
-  let rowHeight = Math.max(
-    1,
-    rect.height > 0 ? rect.height / (timeSlots.length + 1) : gridRowHeight,
-  )
-
-  return {
-    dayWidth: Math.max(1, (rect.width - labelWidth) / weekDays.length),
-    labelWidth,
-    left: rect.left,
-    rowHeight,
-    top: rect.top,
-  }
-}
-
-function pointerToDragPreview(event: PointerEvent, dragState: DragState): DragPreview {
-  let blockLeft = event.clientX - dragState.offsetX
-  let blockTop = event.clientY - dragState.offsetY
-  let rawDay =
-    (blockLeft - dragState.grid.left - dragState.grid.labelWidth) / dragState.grid.dayWidth
-  let rawSlot =
-    (blockTop - dragState.grid.top - dragState.grid.rowHeight) / dragState.grid.rowHeight
-  let snappedDay = clamp(Math.round(rawDay), 0, weekDays.length - 1)
-  let snappedStartMinute = clampToSlot(
-    firstSlotMinute + Math.round(rawSlot) * slotMinutes,
-    firstSlotMinute,
-    lastSlotMinute - dragState.duration,
-  )
-  let snappedSlot = (snappedStartMinute - firstSlotMinute) / slotMinutes
-
-  return {
-    placement: {
-      dayOfWeek: snappedDay,
-      startMinute: snappedStartMinute,
-    },
-    visualOffset: {
-      x: (rawDay - snappedDay) * dragState.grid.dayWidth,
-      y: (rawSlot - snappedSlot) * dragState.grid.rowHeight,
-    },
-  }
-}
-
-function visualOffsetFromPlacement(
-  dragPreview: DragPreview,
-  dragState: DragState,
-): DragVisualOffset {
-  let placementSlot = (dragState.placement.startMinute - firstSlotMinute) / slotMinutes
-  let previewSlot = (dragPreview.placement.startMinute - firstSlotMinute) / slotMinutes
-
-  return {
-    x:
-      dragPreview.visualOffset.x +
-      (dragPreview.placement.dayOfWeek - dragState.placement.dayOfWeek) * dragState.grid.dayWidth,
-    y: dragPreview.visualOffset.y + (previewSlot - placementSlot) * dragState.grid.rowHeight,
-  }
-}
-
-function pointerToResizeMinute(event: PointerEvent, resizeState: ResizeState) {
-  let edgeTop = event.clientY - resizeState.offsetY
-  let rawMinute =
-    firstSlotMinute +
-    Math.round(
-      (edgeTop - resizeState.grid.top - resizeState.grid.rowHeight) / resizeState.grid.rowHeight,
-    ) *
-      slotMinutes
-
-  if (resizeState.edge === 'start') {
-    return clampToSlot(
-      rawMinute,
-      firstSlotMinute,
-      resizeState.originalBlock.endMinute - slotMinutes,
-    )
-  }
-
-  return clampToSlot(rawMinute, resizeState.originalBlock.startMinute + slotMinutes, lastSlotMinute)
-}
-
-function pointerToResizeDay(event: PointerEvent, resizeState: HorizontalResizeState) {
-  let edgeLeft = event.clientX - resizeState.offsetX
-  let rawEdgeColumn =
-    (edgeLeft - resizeState.grid.left - resizeState.grid.labelWidth) / resizeState.grid.dayWidth
-
-  if (resizeState.edge === 'dayStart') {
-    return clamp(
-      Math.floor(rawEdgeColumn + horizontalResizeThreshold),
-      0,
-      resizeState.originalBlock.dayOfWeek,
-    )
-  }
-
-  return clamp(
-    Math.ceil(rawEdgeColumn - horizontalResizeThreshold) - 1,
-    resizeState.originalBlock.dayOfWeek,
-    weekDays.length - 1,
-  )
-}
-
-function horizontalResizeBlockId(state: HorizontalResizeState, dayOfWeek: number): GridInputId {
-  return dayOfWeek === state.originalBlock.dayOfWeek
-    ? state.blockId
-    : `${state.idPrefix}-${dayOfWeek}`
-}
-
-function copyBlock(block: ScheduleLayoutBlock): ScheduleLayoutBlock {
-  return { ...block }
-}
-
-function adjacentSelection(
-  blocks: ScheduleLayoutBlock[],
-  anchorId: GridInputId,
-  targetId: GridInputId,
-) {
-  let anchorBlock = blocks.find((block) => block.id === anchorId)
-  let targetBlock = blocks.find((block) => block.id === targetId)
-  if (!anchorBlock || !targetBlock || anchorBlock.dayOfWeek !== targetBlock.dayOfWeek) {
-    return new Set<GridInputId>([targetId])
-  }
-
-  let dayBlocks = blocks
-    .filter((block) => block.dayOfWeek === targetBlock.dayOfWeek)
-    .sort((left, right) => left.startMinute - right.startMinute || left.id.localeCompare(right.id))
-  let anchorIndex = dayBlocks.findIndex((block) => block.id === anchorId)
-  let targetIndex = dayBlocks.findIndex((block) => block.id === targetId)
-  if (anchorIndex === -1 || targetIndex === -1) return new Set<GridInputId>([targetId])
-
-  let startIndex = Math.min(anchorIndex, targetIndex)
-  let endIndex = Math.max(anchorIndex, targetIndex)
-
-  return new Set(dayBlocks.slice(startIndex, endIndex + 1).map((block) => block.id))
-}
-
 function focusedScheduleBlockElement() {
   let activeElement = document.activeElement
   if (!(activeElement instanceof HTMLElement)) return null
 
   return activeElement.closest('[data-schedule-block="true"]') as HTMLElement | null
-}
-
-function sameBlocks(
-  leftBlocks: ReadonlyArray<ScheduleLayoutBlock>,
-  rightBlocks: ReadonlyArray<ScheduleLayoutBlock>,
-) {
-  if (leftBlocks.length !== rightBlocks.length) return false
-
-  for (let index = 0; index < leftBlocks.length; index++) {
-    let left = leftBlocks[index]!
-    let right = rightBlocks[index]!
-
-    if (
-      left.color !== right.color ||
-      left.dayOfWeek !== right.dayOfWeek ||
-      left.endMinute !== right.endMinute ||
-      left.id !== right.id ||
-      left.name !== right.name ||
-      left.startMinute !== right.startMinute
-    ) {
-      return false
-    }
-  }
-
-  return true
-}
-
-function samePlacement(left: BlockPlacement, right: BlockPlacement) {
-  return left.dayOfWeek === right.dayOfWeek && left.startMinute === right.startMinute
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
-}
-
-function clampToSlot(value: number, min: number, max: number) {
-  let snapped = Math.round(value / slotMinutes) * slotMinutes
-  return clamp(snapped, min, Math.max(min, max))
-}
-
-function startMinuteToSlotIndex(startMinute: number) {
-  return Math.max(0, Math.round((startMinute - firstSlotMinute) / slotMinutes))
-}
-
-function durationToSlotSpan(startMinute: number, endMinute: number) {
-  return Math.max(1, Math.round((endMinute - startMinute) / slotMinutes))
 }
 
 function blockBackgroundColor(block: ScheduleLayoutBlock) {
@@ -1434,15 +909,6 @@ function blockBackgroundColor(block: ScheduleLayoutBlock) {
 function dragVisualTranslate(offset: DragVisualOffset | undefined) {
   if (!offset) return 'none'
   return `${offset.x.toFixed(2)}px ${offset.y.toFixed(2)}px`
-}
-
-function formatTimeSlot(minuteOfDay: number) {
-  let hour24 = Math.floor(minuteOfDay / 60) % 24
-  let minute = minuteOfDay % 60
-  let period = hour24 < 12 ? 'am' : 'pm'
-  let hour12 = hour24 % 12 || 12
-
-  return `${hour12}:${String(minute).padStart(2, '0')}${period}`
 }
 
 function hashString(value: string) {

@@ -11,7 +11,7 @@ import {
   parsePreviewBuild,
   publishPreviewBuild,
   readPullRequest,
-} from './utils/preview.ts'
+} from './utils/release/preview.ts'
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,

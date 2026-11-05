@@ -1,7 +1,8 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { getDocsUrlPath } from '../../app/routes.ts'
-import { WEBSITE_DOCS_PATH, type DocumentedAPI } from './documented-api.ts'
+import { WEBSITE_DOCS_PATH } from './documented-api.ts'
+import type { DocumentedAPI } from './documented-api.ts'
 import { info, warn } from './utils.ts'
 
 export async function writeLookupFile(apis: DocumentedAPI[], docsDir: string) {

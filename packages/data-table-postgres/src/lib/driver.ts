@@ -11,6 +11,7 @@ import type {
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
+import { normalizeCountRows } from '@remix-run/data-table/sql-helpers'
 import pg from 'pg'
 import type {
   Client as PostgresClient,
@@ -124,7 +125,7 @@ export class PostgresDatabaseDriver implements DatabaseDriver<'postgres'> {
     return {
       rows,
       affectedRows: normalizeAffectedRows(request.operation.kind, result.rowCount, rows),
-      insertId: normalizeInsertId(request.operation.kind, request.operation, rows),
+      insertId: normalizeInsertId(request.operation, rows),
     }
   }
 
@@ -649,32 +650,6 @@ function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
   })
 }
 
-function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-  return rows.map((row) => {
-    let count = row.count
-
-    if (typeof count === 'string') {
-      let numeric = Number(count)
-
-      if (!Number.isNaN(numeric)) {
-        return {
-          ...row,
-          count: numeric,
-        }
-      }
-    }
-
-    if (typeof count === 'bigint') {
-      return {
-        ...row,
-        count: Number(count),
-      }
-    }
-
-    return row
-  })
-}
-
 function normalizeAffectedRows(
   kind: DataManipulationRequest['operation']['kind'],
   rowCount: number | null,
@@ -696,11 +671,10 @@ function normalizeAffectedRows(
 }
 
 function normalizeInsertId(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   rows: Record<string, unknown>[],
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+  if (!isInsertOperation(operation)) {
     return undefined
   }
 
@@ -742,10 +716,6 @@ function toBooleanExists(value: unknown): boolean {
   }
 
   return false
-}
-
-function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
 }
 
 function isInsertOperation(

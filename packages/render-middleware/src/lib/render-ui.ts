@@ -3,18 +3,18 @@ import { CspNonce, getCspNonce, inheritCspNonce } from '@remix-run/csp-middlewar
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
 import {
+  FRAME_REQUEST_HEADER,
+  FRAME_TARGET_HEADER,
   renderToStream,
-  type ImportMapData,
-  type ResolveFrameContext,
 } from '@remix-run/component/server'
+import type { ImportMapData, ResolveFrameContext } from '@remix-run/component/server'
 
-import { renderWith, type Renderer } from './render.ts'
+import { renderWith } from './render.ts'
+import type { Renderer } from './render.ts'
 
 type RenderRequestContext = Pick<RequestContext, 'headers' | 'request' | 'router' | 'url'>
 type RemixNode = Parameters<typeof renderToStream>[0]
 
-const FRAME_HEADER = 'X-Remix-Frame'
-const FRAME_TARGET_HEADER = 'X-Remix-Target'
 const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
 // Internal subrequests report errors through the enclosing render.
 // Browser frame requests use the same headers, so identify internal requests by object identity.
@@ -47,7 +47,7 @@ const FRAME_REQUEST_HEADERS_TO_REMOVE = [
 const CROSS_ORIGIN_FRAME_HEADERS = [
   'Accept',
   'Accept-Encoding',
-  FRAME_HEADER,
+  FRAME_REQUEST_HEADER,
   FRAME_TARGET_HEADER,
 ] as const
 
@@ -98,7 +98,7 @@ export function render(
 }
 
 function getTopFrameSrc(request: Request): string {
-  if (request.headers.get(FRAME_HEADER) !== 'true') return request.url
+  if (request.headers.get(FRAME_REQUEST_HEADER) !== 'true') return request.url
   return request.headers.get(TOP_FRAME_SRC_HEADER) ?? request.url
 }
 
@@ -144,7 +144,7 @@ function createFrameRequestHeaders(
 
   headers.set('Accept', 'text/html')
   headers.set('Accept-Encoding', 'identity')
-  headers.set(FRAME_HEADER, 'true')
+  headers.set(FRAME_REQUEST_HEADER, 'true')
   headers.set(TOP_FRAME_SRC_HEADER, topFrameSrc)
 
   if (target == null) {

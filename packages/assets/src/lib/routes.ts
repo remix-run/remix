@@ -6,6 +6,7 @@ import {
   normalizePathname,
   resolveFilePath,
 } from './paths.ts'
+import { isPathNotFoundError } from './fs-errors.ts'
 
 interface MountConfig {
   mounts: Readonly<Record<string, string>>
@@ -209,10 +210,10 @@ function rootsOverlap(root: string, otherRoot: string): boolean {
 function isUnresolvedPathError(error: unknown, filePath: string): boolean {
   // Windows reports UNKNOWN rather than ENOENT when a UNC share cannot be reached.
   return (
-    error instanceof Error &&
-    'code' in error &&
-    (error.code === 'ENOENT' ||
-      error.code === 'ENOTDIR' ||
-      (error.code === 'UNKNOWN' && filePath.startsWith('//')))
+    isPathNotFoundError(error) ||
+    (error instanceof Error &&
+      'code' in error &&
+      error.code === 'UNKNOWN' &&
+      filePath.startsWith('//'))
   )
 }

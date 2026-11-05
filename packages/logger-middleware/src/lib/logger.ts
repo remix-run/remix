@@ -1,4 +1,5 @@
-import { createContextKey, type Middleware } from '@remix-run/fetch-router'
+import { createContextKey } from '@remix-run/fetch-router'
+import type { Middleware } from '@remix-run/fetch-router'
 
 import { createStyles } from '@remix-run/terminal'
 

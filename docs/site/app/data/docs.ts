@@ -2,8 +2,10 @@ import * as path from 'node:path'
 
 import { loadDocsNavigationItems } from '../actions/guides/markdown-chapters.tsx'
 import { discoverDemoFiles } from './demos.tsx'
-import { discoverMarkdownFiles, type DocFile as MarkdownDocFile } from './markdown.ts'
-import { buildRegistry, type DocFile, type DocsRegistry } from './registry.ts'
+import { discoverMarkdownFiles } from './markdown.ts'
+import type { DocFile as MarkdownDocFile } from './markdown.ts'
+import { buildRegistry } from './registry.ts'
+import type { DocFile, DocsRegistry } from './registry.ts'
 
 const siteDir = path.resolve(import.meta.dirname, '..', '..')
 const markdownDir = path.join(siteDir, 'build', 'md')

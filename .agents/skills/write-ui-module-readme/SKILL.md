@@ -1,13 +1,13 @@
 ---
 name: write-ui-module-readme
-description: Write concise module README files for `packages/ui/src/lib/*` primitives. Use when drafting or revising README docs for UI package modules like popover, press, or other first-party UI helpers, especially when the main goal is agent-friendly usage guidance and a short explanation of each exported value.
+description: Write concise module README files for `packages/ui` primitives (`packages/ui/src/<primitive>/README.md`). Use when drafting or revising README docs for UI package modules like popover, press, or other first-party UI helpers, especially when the main goal is agent-friendly usage guidance and a short explanation of each exported value.
 ---
 
 # Write UI Module Readme
 
 ## Overview
 
-Write module README files for `packages/ui/src/lib/*` as practical usage guides for agents and developers.
+Write module README files at `packages/ui/src/<primitive>/README.md` as practical usage guides for agents and developers.
 
 Optimize for fast, correct adoption:
 

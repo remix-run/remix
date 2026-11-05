@@ -1,26 +1,24 @@
-import { fork, type ChildProcess } from 'node:child_process'
+import { fork } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
-import { IS_RUNNING_FROM_SRC, type RemixTestPool, type SerializedOnlyPattern } from './config.ts'
-import {
-  collectCoverageMapFromPlaywright,
-  collectServerCoverageMap,
-  type CoverageConfig,
-  type CoverageMap,
-  type V8CoverageEntry,
-} from './coverage.ts'
+import { IS_RUNNING_FROM_SRC } from './config.ts'
+import type { RemixTestPool, SerializedOnlyPattern } from './config.ts'
+import { collectCoverageMapFromPlaywright, collectServerCoverageMap } from './coverage.ts'
+import type { CoverageConfig, CoverageMap, V8CoverageEntry } from './coverage.ts'
 import type { PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts, TestResults } from './reporters/results.ts'
+import { isRecord } from './is-record.ts'
 
 // Ensure we load the right file whether we're running in the monorepo (TS) or
 // from a published package (JS)
 const ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
-const workerUrl = new URL(`./worker${ext}`, import.meta.url)
-const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
-const workerProcessUrl = new URL(`./worker-process${ext}`, import.meta.url)
+const workerUrl = new URL(`./worker/server-thread${ext}`, import.meta.url)
+const workerE2EUrl = new URL(`./worker/e2e-thread${ext}`, import.meta.url)
+const workerProcessUrl = new URL(`./worker/server-process${ext}`, import.meta.url)
 const DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS = 10_000
 
 interface WorkerRun {
@@ -390,8 +388,4 @@ function isTestResults(value: unknown): value is TestResults {
     typeof value.todo === 'number' &&
     Array.isArray(value.tests)
   )
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }

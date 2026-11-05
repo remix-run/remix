@@ -93,8 +93,7 @@ export class Drummer extends TypedEventTarget<DrummerEventMap> {
 
   #ensureContext() {
     if (!this.#audioCtx) {
-      let Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
-      let ctx: AudioContext = new Ctx()
+      let ctx = new AudioContext()
       this.#audioCtx = ctx
       this.#masterGain = ctx.createGain()
       this.#masterGain.gain.value = 0.8

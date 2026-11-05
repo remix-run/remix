@@ -7,15 +7,24 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as url from 'node:url'
-import { buildSpecifierToRemixPath, readRemixManifest } from '../../scripts/utils/manifest.ts'
-import { getPackageExportSideEffects } from '../../scripts/utils/package-side-effects.ts'
-import { getRemixGuideCopies, syncRemixGuides } from '../../scripts/utils/remix-guides.ts'
-import { createRemixIndex, getRemixIndexEntries } from '../../scripts/utils/remix-index.ts'
+import {
+  buildSpecifierToRemixPath,
+  readRemixManifest,
+} from '../../scripts/utils/remix-package/manifest.ts'
+import { getPackageExportSideEffects } from '../../scripts/utils/remix-package/package-side-effects.ts'
+import {
+  getRemixGuideCopies,
+  syncRemixGuides,
+} from '../../scripts/utils/remix-package/remix-guides.ts'
+import {
+  createRemixIndex,
+  getRemixIndexEntries,
+} from '../../scripts/utils/remix-package/remix-index.ts'
 import {
   getRemixReadmeCopies,
   getRemixReadmeMappings,
   rewriteLinksToRemixReadmes,
-} from '../../scripts/utils/remix-readmes.ts'
+} from '../../scripts/utils/remix-package/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')

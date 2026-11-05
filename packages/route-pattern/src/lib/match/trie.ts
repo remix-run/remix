@@ -1,6 +1,6 @@
-import type { RoutePatternParts, RoutePattern } from '../route-pattern.ts'
-import { parsePattern } from '../route-pattern/parse.ts'
-import { decodeHostname } from './decode.ts'
+import { RoutePattern } from '../route-pattern.ts'
+import type { RoutePatternParts } from '../route-pattern.ts'
+import { toUnicode } from './punycode.ts'
 import {
   canonicalizeUrlPart,
   compilePart,
@@ -9,18 +9,16 @@ import {
   hasStaticSuffix,
   matchPart,
   unitKey,
-  type CanonicalText,
-  type PartProgram,
 } from './program.ts'
+import type { CanonicalText, PartProgram } from './program.ts'
 import type { Match, MatchParamMeta } from './types.ts'
 import {
   checkMatcherLimit,
   consumeMatchWork,
   createMatchWorkBudget,
   resolveMatcherLimits,
-  type MatchWorkBudget,
-  type MatcherLimits,
 } from './limits.ts'
+import type { MatchWorkBudget, MatcherLimits } from './limits.ts'
 
 type Entry<data> = {
   readonly pattern: RoutePattern
@@ -57,7 +55,7 @@ export class Trie<data = unknown> {
     if (typeof pattern === 'string') {
       let source = pattern
       patternSize = this.#checkSizeLimits(source)
-      pattern = parsePattern(pattern)
+      pattern = RoutePattern.parse(pattern)
       if (pattern.source !== source) patternSize = this.#checkSizeLimits(pattern.source)
     } else {
       patternSize = this.#checkSizeLimits(pattern.source)
@@ -147,7 +145,7 @@ export class Trie<data = unknown> {
     if (candidates.length === 0) return []
     candidates.sort((a, b) => a.insertion - b.insertion)
 
-    let decodedHostname = decodeHostname(url.hostname)
+    let decodedHostname = toUnicode(url.hostname)
     let hostname: CanonicalText | undefined
     if (needsHostnameProgram) {
       let canonicalHostname = canonicalizeUrlPart(decodedHostname, 'hostname', {

@@ -1,12 +1,10 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { invariant } from '../runtime/invariant.ts'
-import { diffNodes } from '../runtime/diff-dom.ts'
-import type { FrameContext } from '../runtime/frame.ts'
-import {
-  setClientEntryBoundaryOwner,
-  type ClientEntryIdentity,
-} from '../runtime/client-entry-boundary.ts'
+import { invariant } from '../lib/invariant.ts'
+import { diffNodes } from '../lib/diff-dom.ts'
+import type { FrameContext } from '../lib/frame.ts'
+import { setClientEntryBoundaryOwner } from '../lib/client-entry-boundary.ts'
+import type { ClientEntryIdentity } from '../lib/client-entry-boundary.ts'
 
 function attachClientEntryOwner(
   marker: Comment,
@@ -17,11 +15,7 @@ function attachClientEntryOwner(
 }
 
 function diffDomNodes(current: Node[], next: Node[], data: FrameContext['data'] = {}) {
-  diffNodes(current, next, {
-    frameInstances: new WeakMap(),
-    pendingClientEntries: new Map(),
-    data,
-  } as any)
+  diffNodes(current, next, createDiffContext({ data }))
 }
 
 function parseHead(html: string): Document {
@@ -36,12 +30,11 @@ function diffHead(
   nextHead: string,
   shouldPreserveHeadNode?: (node: Node) => boolean,
 ) {
-  diffNodes([current.head], [parseHead(nextHead).head], {
-    frameInstances: new WeakMap(),
-    pendingClientEntries: new Map(),
-    data: {},
-    shouldPreserveHeadNode,
-  } as any)
+  diffNodes(
+    [current.head],
+    [parseHead(nextHead).head],
+    createDiffContext({ data: {}, shouldPreserveHeadNode }),
+  )
 }
 
 function recordMutations(target: Node) {
@@ -66,6 +59,21 @@ type TestFrame = {
   renderMarkerContent(): Promise<void>
 }
 
+type DiffContextInit = Pick<FrameContext, 'data'> &
+  Partial<Omit<FrameContext, 'frameInstances'>> & {
+    frameInstances?: WeakMap<Comment, TestFrame>
+  }
+
+// diffNodes only reads the diffing fields, so tests skip the rest of the frame runtime and
+// stand in lightweight frames for real frame instances.
+function createDiffContext(init: DiffContextInit): FrameContext {
+  return {
+    frameInstances: new WeakMap(),
+    pendingClientEntries: new Map(),
+    ...init,
+  } as unknown as FrameContext
+}
+
 function diffDom(
   container: HTMLElement,
   next: string,
@@ -74,11 +82,11 @@ function diffDom(
 ) {
   let template = document.createElement('template')
   template.innerHTML = next
-  diffNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), {
-    frameInstances,
-    pendingClientEntries: new Map(),
-    data: data ?? {},
-  } as any)
+  diffNodes(
+    Array.from(container.childNodes),
+    Array.from(template.content.childNodes),
+    createDiffContext({ data: data ?? {}, frameInstances }),
+  )
 }
 
 describe('diffNodes', () => {

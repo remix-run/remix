@@ -1,7 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { parseDocument } from '../runtime/parse-document.ts'
+import { parseDocument } from '../lib/parse-document.ts'
 
 describe('parseDocument', () => {
   it('preserves document attributes and head content with native HTML parsing', () => {

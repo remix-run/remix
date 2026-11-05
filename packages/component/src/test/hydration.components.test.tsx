@@ -1,10 +1,10 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
-import type { Handle, RemixNode } from '../runtime/component.ts'
-import { createRoot } from '../runtime/vdom.ts'
-import { renderToString } from '../server/stream.ts'
-import { clientEntry } from '../runtime/client-entries.ts'
-import { invariant } from '../runtime/invariant.ts'
+import type { Handle, RemixNode } from '../lib/component.ts'
+import { createRoot } from '../lib/vdom.ts'
+import { renderToString } from '../lib/server/stream.ts'
+import { clientEntry } from '../lib/client-entries.ts'
+import { invariant } from '../lib/invariant.ts'
 import { on, ref, unsafeHTML } from '../index.ts'
 
 describe('hydration', () => {

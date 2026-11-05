@@ -1,4 +1,5 @@
-import { css, type Handle } from 'remix/component'
+import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'

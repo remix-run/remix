@@ -3,7 +3,8 @@ import { createHtmlResponse } from '@remix-run/response/html'
 import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 import { renderToStream } from '@remix-run/component/server'
-import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
 import * as fs from 'node:fs/promises'
 import * as http from 'node:http'
@@ -11,8 +12,10 @@ import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import type { Request as PlaywrightRequest } from 'playwright'
-import { watch, type FSWatcher } from 'chokidar'
-import { createAssetServer, type AssetServer, type BrowserHmrChannel } from '@remix-run/assets'
+import { watch } from 'chokidar'
+import type { FSWatcher } from 'chokidar'
+import { createAssetServer } from '@remix-run/assets'
+import type { AssetServer, BrowserHmrChannel } from '@remix-run/assets'
 import { componentHmr } from '../src/assets.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -1680,8 +1683,7 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
       let clientFieldPath = path.join(rootDir, 'app/ClientField.tsx')
       let ClientField = createTestClientEntry(
         pathToFileURL(clientFieldPath).href,
-        function ClientField(handle: unknown) {
-          void handle
+        function ClientField() {
           return () => (
             <>
               <input data-testid="server-client-field" />
@@ -2807,15 +2809,6 @@ function waitForNavigation(
   return result
 }
 
-async function ignoreAbortedNavigation(navigation: Promise<unknown>): Promise<void> {
-  try {
-    await navigation
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('net::ERR_ABORTED')) return
-    throw error
-  }
-}
-
 function monitorLocalRequestFailures(
   page: TestPage,
   baseUrl: string,
@@ -2937,11 +2930,6 @@ function waitForStylesheetResponse(
     },
     { timeout: options.timeout ?? 5000 },
   )
-}
-
-async function get(page: TestPage, pathname: string): Promise<void> {
-  let response = await page.request.get(pathname)
-  assert.ok(response.ok())
 }
 
 async function waitFor(

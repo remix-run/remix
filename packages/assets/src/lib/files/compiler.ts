@@ -17,12 +17,8 @@ import { parseAssetTransformInvocations } from './config.ts'
 import { createTransformCacheKey } from './cache.ts'
 import type { FileCache } from './file-cache.ts'
 import { createSourceFileStore } from './store.ts'
-import type {
-  FileSnapshot,
-  SourceFileMetadata,
-  SourceFileRecord,
-  SourceFileStore,
-} from './store.ts'
+import type { FileSnapshot, SourceFileRecord, SourceFileStore } from './store.ts'
+import { isPathNotFoundError } from '../fs-errors.ts'
 
 type EmittedFile = {
   body: Uint8Array
@@ -298,13 +294,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     }
   }
 
-  async function getOrCreateSourceFileMetadata(
-    record: SourceFileRecord,
-  ): Promise<SourceFileMetadata> {
-    if (record.metadata) return record.metadata
-    return toEmittedFileMetadata(await getOrCreateSourceFile(record))
-  }
-
   async function getOrCreateTransformedFile(
     record: SourceFileRecord,
     parsedTransforms: readonly ParsedRequestTransform[],
@@ -350,7 +339,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     }
   }
 
-  async function createSourceFile(body: Uint8Array, identityPath: string): Promise<EmittedFile> {
+  function createSourceFile(body: Uint8Array, identityPath: string): Promise<EmittedFile> {
     return createEmittedFile(body, {
       extension: path.extname(identityPath).toLowerCase(),
       filePath: identityPath,
@@ -593,7 +582,7 @@ function getFileSnapshot(filePath: string): FileSnapshot | null {
       size: stats.size,
     }
   } catch (error) {
-    if (isNoEntityError(error)) return null
+    if (isPathNotFoundError(error)) return null
     throw error
   }
 }
@@ -803,20 +792,9 @@ function resolveExistingFilePath(filePath: string): string | null {
   try {
     return normalizeFilePath(fs.realpathSync(filePath))
   } catch (error) {
-    if (isNoEntityError(error)) return null
+    if (isPathNotFoundError(error)) return null
     throw error
   }
-}
-
-function isNoEntityError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }
 
 async function readFileContents(identityPath: string): Promise<Uint8Array> {
@@ -824,7 +802,7 @@ async function readFileContents(identityPath: string): Promise<Uint8Array> {
     let bytes = await fsp.readFile(identityPath)
     return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   } catch (error) {
-    if (isNoEntityError(error)) {
+    if (isPathNotFoundError(error)) {
       throw createAssetServerCompilationError(`File not found: ${identityPath}`, {
         cause: error,
         code: 'FILE_NOT_FOUND',

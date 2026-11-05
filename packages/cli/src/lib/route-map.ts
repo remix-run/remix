@@ -4,13 +4,8 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 import { findAppRoot } from './app-root.ts'
-import {
-  ROOT_ROUTE_NAME,
-  inspectControllerOwnership,
-  type ControllerOwnership,
-  type OwnedSubtree,
-  type RouteDirectory,
-} from './controller-ownership.ts'
+import { ROOT_ROUTE_NAME, inspectControllerOwnership } from './controller-ownership.ts'
+import type { ControllerOwnership, OwnedSubtree, RouteDirectory } from './controller-ownership.ts'
 import {
   routeMapLoaderFailed,
   routeMapLoaderInvalidJson,

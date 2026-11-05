@@ -1,4 +1,5 @@
-import { clientEntry, type Handle } from 'remix/component'
+import { clientEntry } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 import { clearSelectionIndicator, positionSelectionIndicator } from './selection-indicator.ts'
 import { getActivationLine, getActiveHeadingIndex } from './table-of-contents-active.ts'

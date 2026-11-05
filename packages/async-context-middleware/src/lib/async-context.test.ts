@@ -1,12 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import {
-  createContextKey,
-  createRouter,
-  type ContextWithEntries,
-  type RequestContext,
-} from '@remix-run/fetch-router'
+import { createContextKey, createRouter } from '@remix-run/fetch-router'
+import type { ContextWithEntries, RequestContext } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
 
 import { asyncContext, getContext } from './async-context.ts'

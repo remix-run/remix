@@ -1,8 +1,8 @@
 # spa
 
 Client-rendered application routing for Remix. It connects a standard fetch router to the browser
-component runtime without exposing the response carrier used to associate route responses with
-Remix nodes.
+component runtime, so routes return Remix nodes through `context.render()` instead of building the
+low-level `spaResponse` carrier from `remix/component` themselves.
 
 ## Features
 

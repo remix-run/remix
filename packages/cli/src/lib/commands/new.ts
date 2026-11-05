@@ -11,11 +11,8 @@ import { renderCliError, missingTargetDirectory, toCliError } from '../errors.ts
 import { getDisplayPath } from '../display-path.ts'
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
-import {
-  createCommandReporter,
-  createStepProgressReporter,
-  type CommandReporter,
-} from '../reporter.ts'
+import { createCommandReporter, createStepProgressReporter } from '../reporter.ts'
+import type { CommandReporter } from '../reporter.ts'
 
 const NEW_PROGRESS_LABELS = {
   'finalize-package-json': 'Finalize package.json',

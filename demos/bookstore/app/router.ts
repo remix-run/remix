@@ -1,6 +1,8 @@
-import { createRouter, type MiddlewareContext } from 'remix/router'
+import { createRouter } from 'remix/router'
+import type { MiddlewareContext } from 'remix/router'
 import { asyncContext } from 'remix/middleware/async-context'
 import { compression } from 'remix/middleware/compression'
+import { cop } from 'remix/middleware/cop'
 import { csp } from 'remix/middleware/csp'
 import { formData } from 'remix/middleware/form-data'
 import type { Cookie } from 'remix/cookie'
@@ -79,6 +81,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
       lastModified: false,
     }),
   )
+  middleware.push(cop())
   middleware.push(formData({ uploadHandler }))
   middleware.push(methodOverride())
   middleware.push(session(cookie, storage))

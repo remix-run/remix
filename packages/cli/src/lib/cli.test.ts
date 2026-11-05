@@ -10,7 +10,8 @@ import { cleanCliTemplate, syncCliTemplate } from '../../../../scripts/utils/cli
 import { getFixturePath } from '../../test/fixtures.ts'
 import { captureOutput } from '../../test/capture-output.ts'
 import { withEnv } from '../../test/with-env.ts'
-import { runRemix, type RunRemixOptions } from '../index.ts'
+import { runRemix } from '../index.ts'
+import type { RunRemixOptions } from '../index.ts'
 import { getTestCommandHelpText } from './commands/test.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')

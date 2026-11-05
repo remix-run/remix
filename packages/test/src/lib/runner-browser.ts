@@ -2,17 +2,14 @@ import * as path from 'node:path'
 import type { Browser, Page, Request } from 'playwright'
 import { colors } from './colors.ts'
 import { getBrowserTestRootDir } from './config.ts'
-import {
-  collectCoverageMapFromPlaywright,
-  type CoverageMap,
-  type V8CoverageEntry,
-} from './coverage.ts'
+import { collectCoverageMapFromPlaywright } from './coverage.ts'
+import type { CoverageMap, V8CoverageEntry } from './coverage.ts'
 import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
   getPlaywrightPageOptions,
-  type PlaywrightUseOpts,
 } from './playwright.ts'
+import type { PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { TestResults } from './reporters/results.ts'
 
@@ -62,7 +59,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     browser = await getBrowserLauncher(options.playwrightUseOpts).launch(
       getPlaywrightLaunchOptions(options.playwrightUseOpts),
     )
-    page = await browser.newPage(getPlaywrightPageOptions(options.playwrightUseOpts))
+    let activePage = await browser.newPage(getPlaywrightPageOptions(options.playwrightUseOpts))
+    page = activePage
     // Cap individual browser operations, then separately watch for per-file
     // progress so large suites can run longer than this without hiding hangs.
     page.setDefaultTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
@@ -131,12 +129,12 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     let errorPromise = new Promise((_, reject) => {
       let isScriptRequest = (request: Request) =>
         new URL(request.url()).pathname.startsWith('/scripts/')
-      page!.on('response', (response) => {
+      activePage.on('response', (response) => {
         if (!response.ok() && isScriptRequest(response.request())) {
           reject(new Error(`Failed to load script: ${response.request().url()}`))
         }
       })
-      page!.on('requestfailed', (request) => {
+      activePage.on('requestfailed', (request) => {
         if (isScriptRequest(request)) {
           let failureText = request.failure()?.errorText
           if (failureText === 'net::ERR_ABORTED') return
@@ -195,11 +193,14 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
   }
 
   if (options.open) {
+    let openBrowser = browser
     return {
       results,
       coverageMap,
       close,
-      disconnected: new Promise((r) => browser!.on('disconnected', () => r())),
+      disconnected: openBrowser
+        ? new Promise((r) => openBrowser.on('disconnected', () => r()))
+        : Promise.resolve(),
     }
   } else {
     await close()

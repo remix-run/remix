@@ -7,6 +7,7 @@ import { createMemcacheSessionStorage } from './memcache-storage.ts'
 
 type FakeMemcacheServer = {
   address: string
+  store: Map<string, FakeMemcacheEntry>
   close: () => Promise<void>
 }
 
@@ -143,6 +144,21 @@ describe('memcache session storage', () => {
 
     let response2 = await requests.requestIndex(response1.cookie)
     assert.equal(response2.session.get('count'), 2)
+  })
+
+  it('starts a new session when stored session data is invalid JSON', async () => {
+    let storage = createMemcacheSessionStorage(server.address)
+    let session = await storage.read(null)
+    session.set('count', 1)
+    let cookie = await storage.save(session)
+
+    for (let entry of server.store.values()) {
+      entry.value = Buffer.from('{invalid-json')
+    }
+
+    let next = await storage.read(cookie)
+    assert.notEqual(next.id, session.id)
+    assert.equal(next.get('count'), undefined)
   })
 
   it('throws for invalid configuration', () => {
@@ -320,6 +336,7 @@ async function startFakeMemcacheServer(): Promise<FakeMemcacheServer> {
 
       resolve({
         address: `127.0.0.1:${address.port}`,
+        store,
         close: async () => {
           await new Promise<void>((resolveClose, rejectClose) => {
             server.close((error) => {

@@ -2,11 +2,8 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 
 import { resolveDefaultRemixVersion } from './remix-version.ts'
-import {
-  loadConfig as loadProjectConfig,
-  loadRemixConfig,
-  type RemixConfig,
-} from './remix-config.ts'
+import { loadConfig as loadProjectConfig, loadRemixConfig } from './remix-config.ts'
+import type { RemixConfig } from './remix-config.ts'
 
 interface ResolveCliContextOptions {
   configPath?: string

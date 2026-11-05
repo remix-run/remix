@@ -106,6 +106,38 @@ describe('refreshExternalAuth()', () => {
     }
   })
 
+  it('reports the fallback error when the token endpoint returns a non-JSON body', async () => {
+    let provider = createGoogleAuthProvider({
+      clientId: 'google-client-id',
+      clientSecret: 'google-client-secret',
+      redirectUri: 'https://app.example.com/auth/google/callback',
+    })
+    let restoreFetch = mockFetch(
+      async () => new Response('<html>Bad Gateway</html>', { status: 502 }),
+    )
+
+    try {
+      await assert.rejects(
+        () =>
+          refreshExternalAuth(provider, {
+            accessToken: 'google-access-token-1',
+            refreshToken: 'google-refresh-token',
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof Error)
+          assert.equal(
+            error.message,
+            'OAuth refresh token exchange failed. The provider responded with status 502 and a non-JSON body.',
+          )
+          assert.ok(error.cause instanceof SyntaxError)
+          return true
+        },
+      )
+    } finally {
+      restoreFetch()
+    }
+  })
+
   it('fails for providers that do not implement refresh-token exchange', async () => {
     let provider = createGitHubAuthProvider({
       clientId: 'github-client-id',

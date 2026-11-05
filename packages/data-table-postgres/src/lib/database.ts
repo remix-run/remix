@@ -1,6 +1,8 @@
-import { Database, type DatabaseOptions } from '@remix-run/data-table'
+import { Database } from '@remix-run/data-table'
+import type { DatabaseOptions } from '@remix-run/data-table'
 
-import { PostgresDatabaseDriver, type PostgresDatabaseInput } from './driver.ts'
+import { PostgresDatabaseDriver } from './driver.ts'
+import type { PostgresDatabaseInput } from './driver.ts'
 
 /** Options for creating a PostgreSQL database. */
 export interface PostgresDatabaseOptions extends DatabaseOptions {

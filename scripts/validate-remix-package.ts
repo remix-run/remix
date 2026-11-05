@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
-import { cliSchemaPath } from './utils/remix-schema.ts'
+import { cliSchemaPath } from './utils/remix-package/remix-schema.ts'
 
 const rootDir = path.resolve(import.meta.dirname, '..')
 const remixDir = path.join(rootDir, 'packages', 'remix')

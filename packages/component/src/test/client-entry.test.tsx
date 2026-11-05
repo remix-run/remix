@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import type { Handle } from '../runtime/component.ts'
-import { clientEntry, isEntry } from '../runtime/client-entries.ts'
+import type { Handle } from '../lib/component.ts'
+import { clientEntry, isEntry } from '../lib/client-entries.ts'
 
 describe('clientEntry', () => {
   /* oxlint-disable eslint/no-unused-vars */
@@ -149,7 +149,6 @@ describe('clientEntry', () => {
       }
 
       function Game(handle: Handle<GameProps>) {
-        void handle
         return () => <div>Valid</div>
       }
 
@@ -190,28 +189,23 @@ describe('clientEntry', () => {
     // Type-level rejection: non-serializable props should be disallowed
     it('rejects components with non-serializable props', () => {
       function InvalidFunctionComponent(handle: Handle<{ func: () => void }>) {
-        void handle
         return () => <div>Invalid</div>
       }
 
       function InvalidDateComponent(handle: Handle<{ createdAt: Date }>) {
-        void handle
         return () => <div>Invalid</div>
       }
 
       function InvalidObjectComponent(handle: Handle<{ value: object }>) {
-        void handle
         return () => <div>Invalid</div>
       }
 
       function InvalidOptionalFunction(handle: Handle<{ options: { onScore?: () => void } }>) {
-        void handle
         return () => <div>Invalid</div>
       }
 
       class ExampleClass {}
       function InvalidConstructorComponent(handle: Handle<{ value: typeof ExampleClass }>) {
-        void handle
         return () => <div>Invalid</div>
       }
 

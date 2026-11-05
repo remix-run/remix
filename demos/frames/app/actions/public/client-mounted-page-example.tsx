@@ -1,4 +1,5 @@
-import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
+import { clientEntry, Frame, css, on } from 'remix/component'
+import type { Handle } from 'remix/component'
 import { routes } from '../../routes.ts'
 
 export const ClientMountedPageExample = clientEntry(

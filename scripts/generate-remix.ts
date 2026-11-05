@@ -14,12 +14,12 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
 import { parseSync } from 'oxc-parser'
-import { readRemixManifest } from './utils/manifest.ts'
-import { getPackageExportSideEffects } from './utils/package-side-effects.ts'
+import { readRemixManifest } from './utils/remix-package/manifest.ts'
+import { getPackageExportSideEffects } from './utils/remix-package/package-side-effects.ts'
 import { logAndExec } from './utils/process.ts'
-import { syncRemixGuides } from './utils/remix-guides.ts'
-import { syncRemixIndex } from './utils/remix-index.ts'
-import { syncRemixReadmes } from './utils/remix-readmes.ts'
+import { syncRemixGuides } from './utils/remix-package/remix-guides.ts'
+import { syncRemixIndex } from './utils/remix-package/remix-index.ts'
+import { syncRemixReadmes } from './utils/remix-package/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '../packages')

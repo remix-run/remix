@@ -3,14 +3,8 @@ import { describe, it } from '@remix-run/test'
 import { createRouter } from '@remix-run/fetch-router'
 import { ContentSecurityPolicy } from '@remix-run/headers/content-security-policy'
 
-import {
-  csp,
-  CspNonce,
-  getCspNonce,
-  inheritCspNonce,
-  type CspOptions,
-  type CspPolicyFactory,
-} from '../index.ts'
+import { csp, CspNonce, getCspNonce, inheritCspNonce } from '../index.ts'
+import type { CspOptions, CspPolicyFactory } from '../index.ts'
 
 describe('csp', () => {
   it('checks policy directives and preserves inferred factory context', () => {

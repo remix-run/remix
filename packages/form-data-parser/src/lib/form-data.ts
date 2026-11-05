@@ -1,8 +1,6 @@
 import { ContentType } from '@remix-run/headers/content-type'
 
 import {
-  type MultipartParserOptions,
-  type MultipartPart,
   MaxFileSizeExceededError,
   MaxHeaderSizeExceededError,
   MaxPartsExceededError,
@@ -10,6 +8,7 @@ import {
   isMultipartRequest,
   parseMultipartRequest,
 } from '@remix-run/multipart-parser'
+import type { MultipartParserOptions, MultipartPart } from '@remix-run/multipart-parser'
 
 /**
  * The base class for errors thrown by the form data parser.

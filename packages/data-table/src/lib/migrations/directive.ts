@@ -1,6 +1,7 @@
 import type { MigrationTransactionMode } from '../migrations.ts'
 
-const directivePattern = /^\s*--\s*data-table\/transaction\s*:\s*(auto|required|none)\s*$/i
+const directivePattern = /^\s*--\s*data-table\/transaction\s*:(.*)$/i
+const transactionModes = new Set<string>(['auto', 'required', 'none'])
 
 /**
  * Parses an optional `-- data-table/transaction: auto|required|none` directive
@@ -31,7 +32,15 @@ export function parseTransactionDirective(sql: string): MigrationTransactionMode
       throw new Error('Migration script declares more than one transaction directive')
     }
 
-    match = result[1].toLowerCase() as MigrationTransactionMode
+    let mode = result[1].trim().toLowerCase()
+
+    if (!transactionModes.has(mode)) {
+      throw new Error(
+        `Invalid transaction directive value "${result[1].trim()}". Expected auto, required, or none`,
+      )
+    }
+
+    match = mode as MigrationTransactionMode
   }
 
   return match

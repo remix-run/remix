@@ -1,4 +1,5 @@
-import { css, type Handle } from '@remix-run/component'
+import { css } from '@remix-run/component'
+import type { Handle } from '@remix-run/component'
 import { animateLayout, spring } from '@remix-run/ui/animation'
 
 const initialOrder = ['#ff0088', '#dd00ee', '#9911ff', '#0d63f8']

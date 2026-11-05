@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { after, before, describe, it } from '@remix-run/test'
-import { createPool, type Pool } from 'mysql2/promise'
+import { createPool } from 'mysql2/promise'
+import type { Pool } from 'mysql2/promise'
 
 import {
   resetDriverIntegrationSchema,

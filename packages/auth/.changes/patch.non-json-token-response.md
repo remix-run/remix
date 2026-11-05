@@ -1,0 +1,1 @@
+Report the provider's fallback error, with the response status, when an OAuth token or user info endpoint returns a non-JSON body. Previously the raw `SyntaxError` from `JSON.parse()` escaped instead.

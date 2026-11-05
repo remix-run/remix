@@ -7,14 +7,15 @@ import { describe, it } from '@remix-run/test'
 import { concat, createMultipartMessage, getRandomBytes } from '../../../test/utils.ts'
 
 import {
-  type MultipartParserOptions,
   MaxFileSizeExceededError,
   MaxHeaderSizeExceededError,
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
   MultipartParseError,
 } from '../multipart.ts'
-import { type MultipartPart, parseMultipartStream } from './multipart.ts'
+import type { MultipartParserOptions } from '../multipart.ts'
+import { parseMultipartStream } from './multipart.ts'
+import type { MultipartPart } from './multipart.ts'
 
 const boundary = '----WebKitFormBoundaryPMcT9NSv6M3P8D4Q'
 const execFileAsync = promisify(execFile)

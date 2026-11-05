@@ -1,9 +1,11 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createRouter, type MiddlewareContext } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
+import type { MiddlewareContext } from '@remix-run/fetch-router'
 
-import { Renderer, renderWith, type AnyRenderer, type Renderer as RendererType } from '../index.ts'
+import { Renderer, renderWith } from '../index.ts'
+import type { AnyRenderer, Renderer as RendererType } from '../index.ts'
 
 type IsEqual<left, right> =
   (<type>() => type extends left ? 1 : 2) extends <type>() => type extends right ? 1 : 2

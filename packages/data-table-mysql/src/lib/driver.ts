@@ -11,6 +11,7 @@ import type {
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
+import { normalizeCountRows } from '@remix-run/data-table/sql-helpers'
 import mysql from 'mysql2/promise'
 import type {
   Connection as MysqlConnection,
@@ -137,7 +138,7 @@ export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
 
     return {
       affectedRows: header.affectedRows,
-      insertId: normalizeInsertId(request.operation.kind, request.operation, header),
+      insertId: normalizeInsertId(request.operation, header),
     }
   }
 
@@ -702,38 +703,11 @@ function normalizeHeader(result: unknown): MysqlQueryResultHeader {
   }
 }
 
-function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-  return rows.map((row) => {
-    let count = row.count
-
-    if (typeof count === 'string') {
-      let numeric = Number(count)
-
-      if (!Number.isNaN(numeric)) {
-        return {
-          ...row,
-          count: numeric,
-        }
-      }
-    }
-
-    if (typeof count === 'bigint') {
-      return {
-        ...row,
-        count: Number(count),
-      }
-    }
-
-    return row
-  })
-}
-
 function normalizeInsertId(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   header: MysqlQueryResultHeader,
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+  if (!isInsertOperation(operation)) {
     return undefined
   }
 
@@ -746,10 +720,6 @@ function normalizeInsertId(
 
 function quoteIdentifier(value: string): string {
   return '`' + value.replace(/`/g, '``') + '`'
-}
-
-function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
 }
 
 function isInsertOperation(

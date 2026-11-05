@@ -1,13 +1,11 @@
 import * as cp from 'node:child_process'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import {
+  getAffectedWorkspaceDirs,
+  getChangedWorkspaceDirs,
+  getWorkspaceInfos,
+} from './utils/workspaces.ts'
 
-type PackageInfo = {
-  dirName: string
-  name: string
-  dependencies: string[]
-  scripts: string[]
-}
+const PACKAGE_WORKSPACE_PATTERN = /^packages\/[^/]+$/
 
 type CliOptions = {
   baseRef: string
@@ -18,9 +16,7 @@ type CliOptions = {
 
 function main() {
   let options = parseArgs(process.argv.slice(2))
-  let packageInfos = getPackageInfos()
-  let changedPackages = getChangedPackageNames(options.baseRef, options.headRef, packageInfos)
-  let selectedPackages = getSelectedPackageNames(changedPackages, packageInfos, options.scriptName)
+  let selectedPackages = getSelectedPackageNames(options)
 
   if (options.listOnly) {
     console.log(JSON.stringify(selectedPackages, null, 2))
@@ -99,130 +95,25 @@ function parseArgs(args: string[]): CliOptions {
   return { baseRef, headRef, listOnly, scriptName }
 }
 
-function getPackageInfos(): PackageInfo[] {
-  let packagesDir = path.join(process.cwd(), 'packages')
-  let infos: PackageInfo[] = []
-
-  for (let dirName of fs.readdirSync(packagesDir)) {
-    let packageJsonPath = path.join(packagesDir, dirName, 'package.json')
-    if (!fs.existsSync(packageJsonPath)) {
-      continue
-    }
-
-    let packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
-      name?: string
-      scripts?: Record<string, string>
-      dependencies?: Record<string, string>
-      devDependencies?: Record<string, string>
-      optionalDependencies?: Record<string, string>
-      peerDependencies?: Record<string, string>
-    }
-
-    if (typeof packageJson.name !== 'string') {
-      continue
-    }
-
-    let dependencyNames = new Set<string>()
-
-    for (let field of [
-      packageJson.dependencies,
-      packageJson.devDependencies,
-      packageJson.optionalDependencies,
-      packageJson.peerDependencies,
-    ]) {
-      for (let dependencyName of Object.keys(field ?? {})) {
-        dependencyNames.add(dependencyName)
-      }
-    }
-
-    infos.push({
-      dirName,
-      name: packageJson.name,
-      dependencies: [...dependencyNames],
-      scripts: Object.keys(packageJson.scripts ?? {}),
+function getSelectedPackageNames(options: CliOptions): string[] {
+  let workspaces = getWorkspaceInfos(process.cwd())
+  let changedFiles = cp
+    .execFileSync('git', ['diff', '--name-only', `${options.baseRef}...${options.headRef}`], {
+      encoding: 'utf8',
     })
-  }
+    .split('\n')
+    .filter(Boolean)
+  let changedWorkspaceDirs = getChangedWorkspaceDirs(changedFiles, workspaces)
+  let affectedWorkspaceDirs = getAffectedWorkspaceDirs(changedWorkspaceDirs, workspaces)
 
-  return infos
-}
-
-function getChangedPackageNames(
-  baseRef: string,
-  headRef: string,
-  packageInfos: PackageInfo[],
-): Set<string> {
-  let diffOutput = cp.execFileSync(
-    'git',
-    ['diff', '--name-only', `${baseRef}...${headRef}`, '--', 'packages/*'],
-    { encoding: 'utf8' },
-  )
-
-  let dirNameToPackageName = new Map(packageInfos.map((info) => [info.dirName, info.name]))
-  let changedPackages = new Set<string>()
-
-  for (let file of diffOutput.split('\n')) {
-    if (!file.startsWith('packages/')) {
-      continue
-    }
-
-    let [, dirName] = file.split('/', 3)
-    let packageName = dirNameToPackageName.get(dirName)
-    if (packageName != null) {
-      changedPackages.add(packageName)
-    }
-  }
-
-  return changedPackages
-}
-
-function getSelectedPackageNames(
-  changedPackages: Set<string>,
-  packageInfos: PackageInfo[],
-  scriptName: string,
-): string[] {
-  if (changedPackages.size === 0) {
-    return []
-  }
-
-  let knownPackageNames = new Set(packageInfos.map((info) => info.name))
-  let reverseDependencies = new Map<string, Set<string>>()
-
-  for (let info of packageInfos) {
-    reverseDependencies.set(info.name, new Set())
-  }
-
-  for (let info of packageInfos) {
-    for (let dependencyName of info.dependencies) {
-      if (!knownPackageNames.has(dependencyName)) {
-        continue
-      }
-
-      reverseDependencies.get(dependencyName)?.add(info.name)
-    }
-  }
-
-  let selectedPackages = new Set(changedPackages)
-  let queue = [...changedPackages]
-
-  while (queue.length > 0) {
-    let packageName = queue.shift()
-    if (packageName == null) {
-      continue
-    }
-
-    for (let dependentName of reverseDependencies.get(packageName) ?? []) {
-      if (selectedPackages.has(dependentName)) {
-        continue
-      }
-
-      selectedPackages.add(dependentName)
-      queue.push(dependentName)
-    }
-  }
-
-  return packageInfos
-    .filter((info) => selectedPackages.has(info.name) && info.scripts.includes(scriptName))
-    .map((info) => info.name)
+  return workspaces
+    .filter(
+      (workspace) =>
+        PACKAGE_WORKSPACE_PATTERN.test(workspace.dir) &&
+        affectedWorkspaceDirs.includes(workspace.dir) &&
+        workspace.scripts.includes(options.scriptName),
+    )
+    .map((workspace) => workspace.name)
 }
 
 main()

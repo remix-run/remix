@@ -1,4 +1,11 @@
-import type { FileStorage, FileLike, ListOptions, ListResult } from '../file-storage.ts'
+import type {
+  FileKey,
+  FileLike,
+  FileMetadata,
+  FileStorage,
+  ListOptions,
+  ListResult,
+} from '../file-storage.ts'
 
 /**
  * Creates a simple, in-memory implementation of the {@link FileStorage} interface.
@@ -28,7 +35,7 @@ export function createMemoryFileStorage(): FileStorage<File> {
     list<opts extends ListOptions>(options?: opts): ListResult<opts> {
       let { cursor, includeMetadata = false, limit = Infinity, prefix } = options ?? {}
 
-      let files: any[] = []
+      let files: Array<FileKey | FileMetadata> = []
       let foundCursor = cursor === undefined
       let nextCursor: string | undefined
 
@@ -61,7 +68,7 @@ export function createMemoryFileStorage(): FileStorage<File> {
 
       return {
         cursor: nextCursor,
-        files,
+        files: files as ListResult<opts>['files'],
       }
     },
     put(key: string, file: FileLike): Promise<File> {

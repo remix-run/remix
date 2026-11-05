@@ -10,6 +10,7 @@
     "typescript": "catalog:"
   },
   "scripts": {
+    "start": "node server.ts",
     "typecheck": "tsc --noEmit"
   }
 }

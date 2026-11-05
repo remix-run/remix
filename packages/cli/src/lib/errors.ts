@@ -8,6 +8,7 @@ export interface CliErrorDefinition {
 export type CliErrorContext = Record<string, boolean | number | string | null | undefined>
 
 export interface CliErrorOptions {
+  cause?: unknown
   code: string
   context?: CliErrorContext
   docsUrl?: string
@@ -18,6 +19,7 @@ export interface CliErrorOptions {
 }
 
 interface CreateErrorOptions {
+  cause?: unknown
   context?: CliErrorContext
   message: string
 }
@@ -174,7 +176,7 @@ export class CliError extends Error {
   title: string
 
   constructor(options: CliErrorOptions) {
-    super(options.message)
+    super(options.message, options.cause === undefined ? undefined : { cause: options.cause })
     this.code = options.code
     this.context = options.context
     this.docsUrl = options.docsUrl
@@ -357,11 +359,10 @@ export function toCliError(error: unknown): CliError {
     return error
   }
 
-  if (error instanceof Error) {
-    return createCliError(CLI_ERROR_DEFINITIONS.internalError, { message: error.message })
-  }
-
-  return createCliError(CLI_ERROR_DEFINITIONS.internalError, { message: String(error) })
+  return createCliError(CLI_ERROR_DEFINITIONS.internalError, {
+    cause: error,
+    message: error instanceof Error ? error.message : String(error),
+  })
 }
 
 export function unknownArgument(argument: string): UsageError {
@@ -411,6 +412,15 @@ export function renderCliError(error: unknown, options: { helpText?: string } = 
     lines.push('', 'Documentation:', `  ${cliError.docsUrl}`)
   }
 
+  // Unexpected errors are CLI bugs, so include the original stack for bug reports.
+  if (
+    cliError.code === CLI_ERROR_DEFINITIONS.internalError.code &&
+    cliError.cause instanceof Error &&
+    cliError.cause.stack != null
+  ) {
+    lines.push('', 'Stack trace:', cliError.cause.stack)
+  }
+
   let output = `${lines.join('\n')}\n`
 
   if (cliError.showHelp && options.helpText != null) {
@@ -422,6 +432,7 @@ export function renderCliError(error: unknown, options: { helpText?: string } = 
 
 function createCliError(definition: CliErrorDefinition, options: CreateErrorOptions): CliError {
   return new CliError({
+    cause: options.cause,
     code: definition.code,
     context: options.context,
     docsUrl: definition.docsUrl,
@@ -433,6 +444,7 @@ function createCliError(definition: CliErrorDefinition, options: CreateErrorOpti
 
 function createUsageError(definition: CliErrorDefinition, options: CreateErrorOptions): UsageError {
   return new UsageError({
+    cause: options.cause,
     code: definition.code,
     context: options.context,
     docsUrl: definition.docsUrl,

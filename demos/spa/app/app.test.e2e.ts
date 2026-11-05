@@ -1,7 +1,8 @@
 import { fileURLToPath } from 'node:url'
 import * as assert from 'remix/assert'
 import { beforeAll, describe, it } from 'remix/test'
-import { build, createServer, preview, type PreviewServer, type ViteDevServer } from 'vite'
+import { build, createServer, preview } from 'vite'
+import type { PreviewServer, ViteDevServer } from 'vite'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const mode: 'development' | 'production' = 'production'

@@ -1,16 +1,18 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
-import { Fragment } from '../runtime/component.ts'
-import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { Frame, getNamedFrame, getTopFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
-import { run } from '../runtime/run.ts'
-import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
-import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
-import { renderToStream } from '../server/stream.ts'
+import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
+import type { FrameHandle, Handle, RemixNode } from '../lib/component.ts'
+import { Fragment, getComponentError } from '../lib/component.ts'
+import { clientEntry } from '../lib/client-entries.ts'
+import type { EntryComponent } from '../lib/client-entries.ts'
+import { Frame, getNamedFrame, getTopFrame, reloadFrameForNavigation } from '../lib/frame.ts'
+import { run } from '../lib/run.ts'
+import { createRangeRoot, createRoot } from '../lib/vdom.ts'
+import { invariant } from '../lib/invariant.ts'
+import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../lib/stream-protocol.ts'
+import { renderToStream } from '../lib/server/stream.ts'
 import { css, navigate, on } from '../index.ts'
-import { jsx } from '../runtime/core/vnode.ts'
+import { jsx } from '../lib/core/vnode.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
 async function setupReloadBodyTest(t: TestContext) {
@@ -3380,6 +3382,32 @@ describe('run', () => {
     }
   })
 
+  it('clears the app frame accessors when the runtime is disposed', async () => {
+    document.body.innerHTML = await drain(renderToStream(<main />))
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    expect(getTopFrame()).toBe(app.frames.top)
+
+    app.dispose()
+    expect(() => getTopFrame()).toThrow('app runtime not initialized')
+  })
+
+  it('keeps a newer runtime registered when an older runtime is disposed', async () => {
+    document.body.innerHTML = await drain(renderToStream(<main />))
+
+    let first = run({ loadModule: mock.fn() })
+    let second = run({ loadModule: mock.fn() })
+
+    try {
+      await Promise.all([first.ready(), second.ready()])
+      first.dispose()
+      expect(getTopFrame()).toBe(second.frames.top)
+    } finally {
+      second.dispose()
+    }
+  })
+
   it('restores the previous named frame when the latest duplicate unmounts', async () => {
     let showLatest = true
     let getDuplicateFrame: undefined | (() => ReturnType<Handle['frames']['get']>)
@@ -5439,8 +5467,9 @@ describe('run', () => {
     root.render(<CaptureRuntime />)
     root.flush()
 
-    expect(runtime).toBeDefined()
-    expect(() => runtime!.resolveFrame('/missing-runtime')).toThrow(
+    invariant(runtime, 'Expected frame runtime to be captured')
+    let capturedRuntime = runtime
+    expect(() => capturedRuntime.resolveFrame('/missing-runtime')).toThrow(
       'Cannot render <Frame /> without frame runtime',
     )
   })
@@ -5467,7 +5496,7 @@ describe('run', () => {
     root.dispose()
   })
 
-  it('logs a clear error when hydrating client entries without loadModule', async () => {
+  it('reports a clear error when hydrating client entries without loadModule', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',
       function Counter(handle: Handle<{ initialCount: number }>) {
@@ -5487,10 +5516,17 @@ describe('run', () => {
         },
       })
 
+      let errors: unknown[] = []
+      root.addEventListener('error', (event) => errors.push(getComponentError(event)))
+
       root.render(<Frame src="/counter-frame" fallback={<p>Loading…</p>} />)
       root.flush()
       await new Promise((resolve) => setTimeout(resolve, 0))
 
+      expect(errors).toHaveLength(1)
+      expect(String(errors[0])).toContain(
+        'loadModule is required to hydrate client entries inside <Frame />',
+      )
       expect(consoleError).toHaveBeenCalled()
       expect(
         consoleError.mock.calls.some((call) =>
@@ -5528,7 +5564,8 @@ describe('run', () => {
       let root = createRoot(container, {
         frameInit: {
           resolveFrame: async () => html,
-          loadModule: async () => ({ not: 'a function' }) as any,
+          // @ts-expect-error loadModule must resolve a function; this covers the runtime guard
+          loadModule: async () => ({ not: 'a function' }),
         },
       })
 

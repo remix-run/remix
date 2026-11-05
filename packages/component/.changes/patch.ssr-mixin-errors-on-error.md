@@ -1,0 +1,1 @@
+Server-rendered mixin failures are now reported to the `renderToStream()` `onError` hook (which defaults to `console.error`) instead of always being logged with `console.error`. The mixin is still isolated so the stream continues. `renderToString()` now rejects when a mixin throws, matching its documented behavior for render errors.

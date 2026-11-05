@@ -1,7 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createModuleStore, type ModuleRecord, type ModuleStore } from './module-store.ts'
+import { createModuleStore } from './module-store.ts'
+import type { ModuleRecord, ModuleStore } from './module-store.ts'
 
 describe('createModuleStore', () => {
   describe('reachable files', () => {

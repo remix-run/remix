@@ -25,12 +25,10 @@ describe('buildChildProcessArgs', () => {
       entryArgs: ['--debug'],
       nodeArgs: ['--import', 'remix/node-tsx', '--enable-source-maps'],
       registerPath,
-      rootPath: path.resolve('app'),
     })
 
     let registerUrl = pathToFileURL(registerPath)
     registerUrl.searchParams.set('browserEventUrl', 'http://127.0.0.1:1234/hmr')
-    registerUrl.searchParams.set('rootPath', path.resolve('app'))
 
     assert.deepEqual(args, [
       '--import',
@@ -66,11 +64,9 @@ describe('buildChildProcessArgs', () => {
       entryArgs: [],
       nodeArgs: [],
       registerPath,
-      rootPath: path.resolve('app'),
     })
 
     let registerUrl = pathToFileURL(registerPath)
-    registerUrl.searchParams.set('rootPath', path.resolve('app'))
 
     assert.deepEqual(args, ['--conditions=node-hmr', '--import', registerUrl.href, 'server.ts'])
   })

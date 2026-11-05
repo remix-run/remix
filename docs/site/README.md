@@ -7,7 +7,7 @@ The Remix docs and guides run as one Remix app. The docs overview is at `/`, the
 - `app/actions/overview.md` is the docs overview at `/`, and `app/actions/api-overview.md` is the API reference overview at `/api/`.
 - `app/actions/reference/` contains API-only page content.
 - `app/actions/guides/chapters/` contains guide chapters.
-- `app/actions/examples/` contains live guide examples.
+- `app/actions/guides/examples/` contains live guide examples.
 - `app/actions/guides/markdown/` contains guide frame and frontmatter extensions.
 - `app/actions/public/` contains the shared browser entry and site styles.
 - `app/data/` builds one guide and API page registry.

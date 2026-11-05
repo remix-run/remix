@@ -2,8 +2,8 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createMixin, createRoot, on, ref } from '../index.ts'
 import type { ElementProps, MixinHandle, MixinOptions } from '../index.ts'
-import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { renderToString } from '../lib/server/stream.ts'
+import { invariant } from '../lib/invariant.ts'
 
 describe('createMixin server rendering options', () => {
   it('keeps options separate for factories using the same setup function', async () => {

@@ -1,4 +1,5 @@
-import { RoutePattern, type RoutePatternParts, type PartPattern } from './route-pattern.ts'
+import { RoutePattern } from './route-pattern.ts'
+import type { RoutePatternParts, PartPattern } from './route-pattern.ts'
 import type { ParseParams } from './types/params.ts'
 import type { Split, SplitPattern } from './types/split.ts'
 import type { Simplify } from './types/utils.ts'

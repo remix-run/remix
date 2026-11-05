@@ -93,9 +93,8 @@ export function createMemcacheSessionStorage(
     try {
       return JSON.parse(value) as SessionData
     } catch (error) {
-      throw new Error(
-        `Failed to parse session data for session ID ${id}: ${getErrorMessage(error)}`,
-      )
+      if (error instanceof SyntaxError) return null
+      throw error
     }
   }
 
@@ -131,10 +130,6 @@ function assertValidTtl(ttlSeconds: number): void {
   if (!Number.isInteger(ttlSeconds) || ttlSeconds < 0) {
     throw new Error(`Memcache ttlSeconds must be a non-negative integer. Received: ${ttlSeconds}`)
   }
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }
 
 async function computeHash(id: string, algorithm = 'SHA-256'): Promise<string> {

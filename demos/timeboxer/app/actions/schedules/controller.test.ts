@@ -40,6 +40,20 @@ describe('schedule endpoints', () => {
     assert.equal(deleteResponse.status, 401)
   })
 
+  it('redirects anonymous page navigations to the login page', async () => {
+    let response = await router.fetch(
+      new Request(url(routes.schedules.show.href({ scheduleId: '1' })), {
+        headers: { Accept: 'text/html' },
+      }),
+    )
+
+    assert.equal(response.status, 302)
+    assert.equal(
+      new URL(response.headers.get('Location')!).pathname,
+      routes.auth.login.index.href(),
+    )
+  })
+
   it('creates schedules and replaces the full schedule document', async () => {
     let client = await createAuthenticatedClient()
 

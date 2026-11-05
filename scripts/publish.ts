@@ -28,10 +28,10 @@ import {
   getLocalTagTarget,
   getRemoteTagTarget,
   tagExists,
-} from './utils/git.ts'
-import { createRelease, releaseExists } from './utils/github.ts'
+} from './utils/release/git.ts'
+import { createRelease, releaseExists } from './utils/release/github.ts'
 import { getRootDir, logAndExec } from './utils/process.ts'
-import { readChangesConfig, getChangelogEntries } from './utils/changes.ts'
+import { readChangesConfig, getChangelogEntries } from './utils/release/changes.ts'
 import {
   getAllPackageDirNames,
   getPackageFile,
@@ -48,7 +48,7 @@ import {
   getDocsReleaseTag,
   getReleaseNotes,
   isPackageVersionPublished,
-} from './utils/publish.ts'
+} from './utils/release/publish.ts'
 
 const rootDir = getRootDir()
 

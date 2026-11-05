@@ -1,4 +1,5 @@
-import { column as c, table, type TableRow } from 'remix/data-table'
+import { column as c, table } from 'remix/data-table'
+import type { TableRow } from 'remix/data-table'
 
 export const users = table({
   name: 'users',

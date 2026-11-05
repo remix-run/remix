@@ -14,7 +14,7 @@ import {
   formatValidationErrors,
   generateChangelogContent,
   generateCommitMessage,
-} from './utils/changes.ts'
+} from './utils/release/changes.ts'
 import { colors, colorize } from './utils/color.ts'
 import { getPackageFile, getPackagePath } from './utils/packages.ts'
 import { readJson, writeJson, readFile, writeFile } from './utils/fs.ts'

@@ -1,6 +1,8 @@
 import { ansi } from './ansi.ts'
-import { getDefaultEnvironment, type TerminalEnvironment } from './env.ts'
-import { createStyles, type CreateStylesOptions, type TerminalStyles } from './styles.ts'
+import { getDefaultEnvironment } from './env.ts'
+import type { TerminalEnvironment } from './env.ts'
+import { createStyles } from './styles.ts'
+import type { CreateStylesOptions, TerminalStyles } from './styles.ts'
 
 /**
  * Input stream shape used for terminal interactivity detection.

@@ -1,11 +1,13 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
-import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot } from '@remix-run/component'
+import type { Handle, RemixNode } from '@remix-run/component'
 import { renderToString } from '@remix-run/component/server'
 
 import * as tabs from './tabs.ts'
-import { TabsChangeEvent, onTabsChange, type TabsContextProps } from './tabs.ts'
+import { TabsChangeEvent, onTabsChange } from './tabs.ts'
+import type { TabsContextProps } from './tabs.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 

@@ -1,8 +1,6 @@
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
-import {
-  ContentSecurityPolicy,
-  type ContentSecurityPolicyInit,
-} from '@remix-run/headers/content-security-policy'
+import { ContentSecurityPolicy } from '@remix-run/headers/content-security-policy'
+import type { ContentSecurityPolicyInit } from '@remix-run/headers/content-security-policy'
 
 import { CspNonce, getCspNonce } from './nonce.ts'
 

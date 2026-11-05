@@ -1,6 +1,8 @@
-import { clientEntry, css, on, type Handle } from 'remix/component'
+import { clientEntry, css, on } from 'remix/component'
+import type { Handle } from 'remix/component'
 
-import { themeCookieMaxAge, themeCookieName, type Theme } from './theme.ts'
+import { themeCookieMaxAge, themeCookieName } from './theme.ts'
+import type { Theme } from './theme.ts'
 
 type ThemeToggleProps = {
   theme: Theme

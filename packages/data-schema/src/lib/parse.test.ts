@@ -1,5 +1,6 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import { minLength } from './checks.ts'
 import { number, object, parse, parseSafe, string } from './schema.ts'
@@ -28,6 +29,30 @@ describe('parse', () => {
           Array.isArray((error as { issues: unknown }).issues)
         )
       },
+    )
+  })
+})
+
+describe('async schemas', () => {
+  let asyncSchema: StandardSchemaV1<string, string> = {
+    '~standard': {
+      version: 1,
+      vendor: 'test',
+      validate: async (value) => ({ value: String(value) }),
+    },
+  }
+
+  it('rejects async schemas in parse()', () => {
+    assert.throws(
+      () => parse(asyncSchema, 'a'),
+      new TypeError('parse() and parseSafe() only support synchronous schemas'),
+    )
+  })
+
+  it('rejects async schemas in parseSafe()', () => {
+    assert.throws(
+      () => parseSafe(asyncSchema, 'a'),
+      new TypeError('parse() and parseSafe() only support synchronous schemas'),
     )
   })
 })

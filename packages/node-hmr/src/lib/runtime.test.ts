@@ -6,7 +6,8 @@ import * as path from 'node:path'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
 
-import { emitServerReady, installNodeHmrRuntime, type RemixNodeHmrRuntime } from './runtime.ts'
+import { emitServerReady, installNodeHmrRuntime } from './runtime.ts'
+import type { RemixNodeHmrRuntime } from './runtime.ts'
 import { serverHmrEvents } from './events.ts'
 
 type TestRuntimeGlobal = typeof globalThis & {

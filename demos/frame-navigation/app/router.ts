@@ -1,4 +1,5 @@
-import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
+import { createMiddleware, createRouter } from 'remix/router'
+import type { MiddlewareContext } from 'remix/router'
 import { asyncContext } from 'remix/middleware/async-context'
 import { logger } from 'remix/middleware/logger'
 import { render } from 'remix/middleware/render'

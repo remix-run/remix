@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import type * as http from 'node:http'
 import * as stream from 'node:stream'
 
-import { type ClientAddress, type FetchHandler } from './fetch-handler.ts'
+import type { ClientAddress, FetchHandler } from './fetch-handler.ts'
 import { createRequest, createRequestListener } from './request-listener.ts'
 
 describe('createRequestListener', () => {

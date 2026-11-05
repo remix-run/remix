@@ -1,4 +1,5 @@
-import { clientEntry, css, link, type Handle } from 'remix/component'
+import { clientEntry, css, link } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 type StatCard = {
   label: string

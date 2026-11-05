@@ -63,10 +63,8 @@ let router = createRouter({
 router.get(routes.app.dashboard, {
   middleware: [requireAuth<User>()],
   handler(context) {
+    // requireAuth() has already rejected anonymous requests, so context.auth is narrowed
     let auth = context.auth
-    if (!auth.ok) {
-      return new Response('Unauthorized', { status: 401 })
-    }
 
     return Response.json({
       id: auth.identity.id,

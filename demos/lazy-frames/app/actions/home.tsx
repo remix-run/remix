@@ -1,6 +1,8 @@
-import { Frame, css, type Handle } from 'remix/component'
+import { Frame, css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
-import { exhibits, motionArtifact, type Exhibit } from '../data/exhibits.ts'
+import { exhibits, motionArtifact } from '../data/exhibits.ts'
+import type { Exhibit } from '../data/exhibits.ts'
 import type { DemoLatency } from '../middleware/demo-latency.ts'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'

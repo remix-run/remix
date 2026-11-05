@@ -7,7 +7,7 @@ import { itemsByOrder, orders, orderItemsWithBook } from '../../data/schema.ts'
 import { requireAuth } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
 import { clearCart, getCartTotal } from '../../utils/cart.ts'
-import { getCurrentUser, getCurrentCart } from '../../utils/context.ts'
+import { getCurrentCart } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
 import { CheckoutConfirmationPage, CheckoutOrderNotFoundPage } from './confirmation-page.tsx'
 import { CheckoutPage, EmptyCheckoutPage } from './checkout-page.tsx'
@@ -35,7 +35,7 @@ export default createController(routes.checkout, {
     },
 
     async action({ auth, db, formData, session }) {
-      let user = getCurrentUser(auth)
+      let user = auth.identity
       let cart = getCurrentCart(session)
 
       if (cart.items.length === 0) {
@@ -84,7 +84,7 @@ export default createController(routes.checkout, {
     },
 
     async confirmation({ auth, db, params, render }) {
-      let user = getCurrentUser(auth)
+      let user = auth.identity
       let orderId = parseId(params.orderId)
       let order =
         orderId === undefined

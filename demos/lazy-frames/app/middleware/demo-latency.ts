@@ -1,5 +1,6 @@
 import { createCookie } from 'remix/cookie'
-import { createContextKey, type Middleware } from 'remix/router'
+import { createContextKey } from 'remix/router'
+import type { Middleware } from 'remix/router'
 
 export interface DemoLatency {
   enabled: boolean

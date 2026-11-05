@@ -11,11 +11,11 @@ import type {
 import type { AnyQuery, Query } from './query.ts'
 import { query } from './query.ts'
 import type { executeOperation, runInTransaction } from './database/execution-context.ts'
-import {
-  Database,
-  type AnyQuery as PublicAnyQuery,
-  type DataManipulationRequest,
-  type DatabaseDriver,
+import { Database } from '../index.ts'
+import type {
+  AnyQuery as PublicAnyQuery,
+  DataManipulationRequest,
+  DatabaseDriver,
 } from '../index.ts'
 import { table, hasMany } from './table.ts'
 import type { TableReference, TableRow } from './table.ts'

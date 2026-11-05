@@ -1,4 +1,5 @@
-import { css, type Handle } from 'remix/component'
+import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 import { MessageStream } from './public/message-stream.tsx'
 import { Layout } from '../ui/layout.tsx'

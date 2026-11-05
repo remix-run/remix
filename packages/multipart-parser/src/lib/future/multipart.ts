@@ -1,16 +1,9 @@
 import { ContentDisposition } from '@remix-run/headers/content-disposition'
 import { ContentType } from '@remix-run/headers/content-type'
 
+import { encodeAsciiPattern, createSearch, createPartialTailSearch } from '../buffer-search.ts'
+import type { SearchFunction, PartialTailSearchFunction } from '../buffer-search.ts'
 import {
-  encodeAsciiPattern,
-  createSearch,
-  createPartialTailSearch,
-  type SearchFunction,
-  type PartialTailSearchFunction,
-} from '../buffer-search.ts'
-import {
-  type MultipartHeaders,
-  type ParseMultipartOptions,
   MaxFileSizeExceededError,
   MaxHeaderSizeExceededError,
   MaxPartsExceededError,
@@ -19,6 +12,7 @@ import {
   decodeUtf8,
   parseMultipartHeaders,
 } from '../multipart.ts'
+import type { MultipartHeaders, ParseMultipartOptions } from '../multipart.ts'
 
 /**
  * Parse a `multipart/*` message stream and yield each part as a {@link MultipartPart} as soon as

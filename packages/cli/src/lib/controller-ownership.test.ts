@@ -6,8 +6,8 @@ import {
   buildOwnedSubtrees,
   buildRouteDirectories,
   inspectControllerOwnership,
-  type OwnershipRouteNode,
 } from './controller-ownership.ts'
+import type { OwnershipRouteNode } from './controller-ownership.ts'
 import { loadRouteManifest } from './route-map.ts'
 
 describe('controller ownership', () => {

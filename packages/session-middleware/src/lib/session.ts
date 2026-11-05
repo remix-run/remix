@@ -1,6 +1,7 @@
 import type { Cookie } from '@remix-run/cookie'
 import type { Middleware } from '@remix-run/fetch-router'
-import { Session, type SessionStorage } from '@remix-run/session'
+import { Session } from '@remix-run/session'
+import type { SessionStorage } from '@remix-run/session'
 
 /**
  * Middleware that manages request session state on request context.

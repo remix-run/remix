@@ -2,8 +2,6 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import {
-  type FileUploadHandler,
-  type FileUpload,
   FormDataParseError,
   MaxFilesExceededError,
   MultipartParseError,
@@ -13,6 +11,7 @@ import {
   MaxTotalSizeExceededError,
   parseFormData,
 } from '../../future.ts'
+import type { FileUploadHandler, FileUpload } from '../../future.ts'
 
 // Native File normalizes some MIME types differently across runtimes (for example
 // Bun adds charset for text types and rewrites application/javascript), so derive
@@ -351,7 +350,7 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     })
 
-    let uploadedFile: File | null = null
+    let uploadedFile: File | undefined
     let formData = await parseFormData(request, async (upload) => {
       uploadedFile = new File([await upload.text()], 'example.txt', { type: 'text/plain' })
       return uploadedFile
@@ -360,8 +359,9 @@ describe('parseFormData', () => {
     let file = formData.get('file')
 
     assert.ok(file instanceof File)
+    assert.ok(uploadedFile)
     assert.equal(file.name, 'example.txt')
-    assert.equal(file.type, uploadedFile!.type)
+    assert.equal(file.type, uploadedFile.type)
     assert.equal(await file.text(), 'This is an example file.')
   })
 
@@ -899,15 +899,16 @@ describe('FileUpload', () => {
 
   it('throws when its contents are read after the upload handler returns', async () => {
     let request = createRequest(filePart('file', 'example.txt', 'contents'))
-    let upload: FileUpload | undefined
+    let uploads: FileUpload[] = []
 
     await parseFormData(request, (file) => {
-      upload = file
+      uploads.push(file)
     })
 
-    assert.ok(upload)
-    assert.throws(() => upload!.stream(), TypeError)
-    await assert.rejects(() => upload!.text(), TypeError)
+    assert.equal(uploads.length, 1)
+    let [upload] = uploads
+    assert.throws(() => upload.stream(), TypeError)
+    await assert.rejects(() => upload.text(), TypeError)
   })
 
   it('throws instead of converting to a string', async () => {

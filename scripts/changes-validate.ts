@@ -1,5 +1,5 @@
 import * as fs from 'node:fs'
-import { parseAllChangeFiles, formatValidationErrors } from './utils/changes.ts'
+import { parseAllChangeFiles, formatValidationErrors } from './utils/release/changes.ts'
 import { colors, colorize } from './utils/color.ts'
 import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
 

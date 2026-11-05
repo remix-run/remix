@@ -1,15 +1,13 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createHref, type CreateHrefErrorDetails } from '../href.ts'
+import { createHref } from '../href.ts'
+import type { CreateHrefErrorDetails } from '../href.ts'
 import { joinPatterns } from '../join.ts'
-import { createMatcher, type MatchParamMeta } from '../match.ts'
-import {
-  getRoutePatternCaptures,
-  RoutePattern,
-  type RoutePatternCapture,
-  type RoutePatternJSON,
-} from '../route-pattern.ts'
+import { createMatcher } from '../match.ts'
+import type { MatchParamMeta } from '../match.ts'
+import { getRoutePatternCaptures, RoutePattern } from '../route-pattern.ts'
+import type { RoutePatternCapture, RoutePatternJSON } from '../route-pattern.ts'
 
 describe('RoutePattern', () => {
   it('exports public route pattern support types', () => {

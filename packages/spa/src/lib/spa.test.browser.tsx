@@ -1,10 +1,13 @@
 import { expect } from '@remix-run/assert'
-import { createContextKey, createRouter, type Middleware } from '@remix-run/fetch-router'
+import { createContextKey, createRouter } from '@remix-run/fetch-router'
+import type { Middleware } from '@remix-run/fetch-router'
 import { afterEach, describe, it, mock } from '@remix-run/test'
-import { on, type Handle } from '@remix-run/component'
+import { on } from '@remix-run/component'
+import type { Handle } from '@remix-run/component'
 import { spaResponse } from '@remix-run/component'
 
-import { render, run, type Router } from './spa.ts'
+import { render, run } from './spa.ts'
+import type { Router } from './spa.ts'
 
 const Greeting = createContextKey<string>()
 

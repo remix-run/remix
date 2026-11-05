@@ -1,5 +1,6 @@
 import * as path from 'node:path'
-import { createContextKey, type Middleware } from 'remix/router'
+import { createContextKey } from 'remix/router'
+import type { Middleware } from 'remix/router'
 import { getContext } from 'remix/middleware/async-context'
 import type { ScriptEntry } from 'remix/assets'
 

@@ -8,11 +8,8 @@ import { loadMigrations, loadSeed } from '@remix-run/data-table/migrations/node'
 
 import { findAppRoot } from '../app-root.ts'
 import type { CliContext } from '../cli-context.ts'
-import {
-  isDatabaseCommand,
-  type DatabaseCommandInvocation,
-  type DatabaseCommandPlan,
-} from '../database-command.ts'
+import { isDatabaseCommand } from '../database-command.ts'
+import type { DatabaseCommandInvocation, DatabaseCommandPlan } from '../database-command.ts'
 import {
   dbConfigRequired,
   dbForceRequired,
@@ -24,11 +21,7 @@ import {
 } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
-import {
-  type RemixDbAdapterConfig,
-  type RemixDbCommandConfig,
-  type RemixDbString,
-} from '../remix-config.ts'
+import type { RemixDbAdapterConfig, RemixDbCommandConfig, RemixDbString } from '../remix-config.ts'
 
 const connectionOption = { flag: '--connection-env', type: 'string' } as const
 const journalOption = { flag: '--journal-table', type: 'string' } as const

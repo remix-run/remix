@@ -399,7 +399,7 @@ async function reloadStylesheet(path, timestamp) {
   return (await Promise.all(updates)).some(Boolean)
 }
 
-async function queueStylesheetUpdate(path, timestamp) {
+function queueStylesheetUpdate(path, timestamp) {
   let update = stylesheetUpdatePromise.then(() => reloadStylesheet(path, timestamp))
   stylesheetUpdatePromise = update.catch(() => {})
   return update

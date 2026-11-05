@@ -1,7 +1,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as process from 'node:process'
-import { createAssetServer, type AssetDetails } from '@remix-run/assets'
+import { createAssetServer } from '@remix-run/assets'
+import type { AssetDetails } from '@remix-run/assets'
 
 import type { CliContext } from '../cli-context.ts'
 import {

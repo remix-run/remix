@@ -1,17 +1,12 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createRouter, type MiddlewareContext } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
+import type { MiddlewareContext } from '@remix-run/fetch-router'
 import { csp, getCspNonce } from '@remix-run/csp-middleware'
 import { jsx } from '@remix-run/component/jsx-runtime'
-import {
-  clientEntry,
-  createElement,
-  css,
-  Frame,
-  type Handle,
-  type RemixNode,
-} from '@remix-run/component'
+import { clientEntry, createElement, css, Frame } from '@remix-run/component'
+import type { Handle, RemixNode } from '@remix-run/component'
 
 import { render } from '../index.ts'
 

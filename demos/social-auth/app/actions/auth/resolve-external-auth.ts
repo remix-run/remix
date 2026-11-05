@@ -120,7 +120,7 @@ function extractProfile(result: ExternalAuthResult): ExternalProfileDetails {
   }
 }
 
-async function createUserFromProfile(db: Database, profile: ExternalProfileDetails): Promise<User> {
+function createUserFromProfile(db: Database, profile: ExternalProfileDetails): Promise<User> {
   return db.create(
     users,
     {

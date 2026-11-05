@@ -11,7 +11,8 @@ import { completeAuth } from './complete-auth.ts'
 import { finishExternalAuth } from './finish-external-auth.ts'
 import { createOIDCAuthProvider } from './providers/oidc.ts'
 import { startExternalAuth } from './start-external-auth.ts'
-import { createRequest, startFakeOAuthServer, type FakeOAuthServer } from './test-utils.ts'
+import { createRequest, startFakeOAuthServer } from './test-utils.ts'
+import type { FakeOAuthServer } from './test-utils.ts'
 
 describe('OAuth flow integration', () => {
   let server: FakeOAuthServer

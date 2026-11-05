@@ -2,10 +2,8 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import type { SessionStorage } from '@remix-run/session'
-import {
-  createMemcacheSessionStorage,
-  type MemcacheSessionStorageOptions,
-} from './memcache-storage.ts'
+import { createMemcacheSessionStorage } from './memcache-storage.ts'
+import type { MemcacheSessionStorageOptions } from './memcache-storage.ts'
 
 const integrationEnabled =
   process.env.SESSION_MEMCACHE_INTEGRATION === '1' &&

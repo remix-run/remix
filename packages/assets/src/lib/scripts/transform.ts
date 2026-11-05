@@ -38,6 +38,7 @@ import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
 import { scriptLoaderConditions } from './conditions.ts'
 import { isBareImportSpecifier } from './specifiers.ts'
+import { isNoEntityError } from '../fs-errors.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -332,7 +333,7 @@ export function getHmrAnalysis(rawCode: string): TransformedModule['hmr'] {
           return
         }
 
-        acceptedDeps.push(...getAcceptedDependencies(firstArgument, rawCode))
+        acceptedDeps.push(...getAcceptedDependencies(firstArgument))
       })
     } catch (error) {
       if (isAssetServerCompilationError(error)) throw error
@@ -386,29 +387,13 @@ function isAcceptedDependencyArgument(node: Node): boolean {
   return isStringLiteralNode(node) || node.type === 'ArrayExpression'
 }
 
-function getAcceptedDependencies(node: Node, source: string): HmrAcceptedDependency[] {
-  if (isStringLiteralNode(node)) {
-    return [
-      {
-        end: node.end - 1,
-        specifier: node.value,
-        start: node.start + 1,
-      },
-    ]
-  }
-
-  if (node.type !== 'ArrayExpression') return []
-
-  let deps: HmrAcceptedDependency[] = []
-  for (let element of node.elements) {
-    if (!isStringLiteralNode(element)) continue
-    deps.push({
-      end: element.end - 1,
-      specifier: element.value,
-      start: element.start + 1,
-    })
-  }
-  return deps
+function getAcceptedDependencies(node: Node): HmrAcceptedDependency[] {
+  let candidates = node.type === 'ArrayExpression' ? node.elements : [node]
+  return candidates.filter(isStringLiteralNode).map((literal) => ({
+    end: literal.end - 1,
+    specifier: literal.value,
+    start: literal.start + 1,
+  }))
 }
 
 function findNearestTsconfigPath(directory: string): string | null {
@@ -961,11 +946,5 @@ function toTransformFailedError(error: unknown, resolvedPath: string): AssetServ
       cause: error,
       code: 'TRANSFORM_FAILED',
     },
-  )
-}
-
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
-  return (
-    error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT'
   )
 }

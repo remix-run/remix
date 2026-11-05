@@ -8,7 +8,6 @@ import type { NodeHmrAnalysis } from './hmr-analysis.ts'
 describe('analyzeNodeHmrSource', () => {
   it('detects self-accepting modules from accept calls with no arguments', () => {
     let analysis = analyzeNodeHmrSource(
-      'file:///app/message.ts',
       [`if (import.meta.hot) {`, `  import.meta.hot.accept()`, `}`].join('\n'),
     )
 
@@ -21,7 +20,6 @@ describe('analyzeNodeHmrSource', () => {
 
   it('detects self-accepting modules from accept calls with a callback', () => {
     let analysis = analyzeNodeHmrSource(
-      'file:///app/message.ts',
       [
         `if (import.meta.hot) {`,
         `  import.meta.hot.accept((module) => {`,
@@ -40,7 +38,6 @@ describe('analyzeNodeHmrSource', () => {
 
   it('detects self-accepting modules from accept calls with undefined', () => {
     let analysis = analyzeNodeHmrSource(
-      'file:///app/message.ts',
       [`if (import.meta.hot) {`, `  import.meta.hot.accept(undefined)`, `}`].join('\n'),
     )
 
@@ -53,7 +50,6 @@ describe('analyzeNodeHmrSource', () => {
 
   it('detects accepted dependencies from real accept calls', () => {
     let analysis = analyzeNodeHmrSource(
-      'file:///app/routes/root.ts',
       [
         `if (import.meta.hot) {`,
         `  import.meta.hot.accept('./message.ts', () => {})`,
@@ -71,7 +67,6 @@ describe('analyzeNodeHmrSource', () => {
 
   it('detects import.meta.hot usage without treating dispose callbacks as accept boundaries', () => {
     let analysis = analyzeNodeHmrSource(
-      'file:///app/message.ts',
       [`if (import.meta.hot) {`, `  import.meta.hot.dispose(() => {})`, `}`].join('\n'),
     )
 
@@ -84,7 +79,6 @@ describe('analyzeNodeHmrSource', () => {
 
   it('detects bare accepted dependencies from real accept calls', () => {
     let analysis = analyzeNodeHmrSource(
-      'file:///app/routes/root.ts',
       [`if (import.meta.hot) {`, `  import.meta.hot.accept('fixture-package', () => {})`, `}`].join(
         '\n',
       ),
@@ -98,7 +92,7 @@ describe('analyzeNodeHmrSource', () => {
   })
 
   it('detects self-accepting modules from optional chaining accept calls', () => {
-    let analysis = analyzeNodeHmrSource('file:///app/message.ts', `import.meta.hot?.accept()`)
+    let analysis = analyzeNodeHmrSource(`import.meta.hot?.accept()`)
 
     assert.deepEqual(toComparableAnalysis(analysis), {
       acceptedDeps: [],
@@ -108,10 +102,7 @@ describe('analyzeNodeHmrSource', () => {
   })
 
   it('detects accepted dependencies from optional chaining accept calls', () => {
-    let analysis = analyzeNodeHmrSource(
-      'file:///app/message.ts',
-      `import.meta.hot?.accept('./dep.ts', () => {})`,
-    )
+    let analysis = analyzeNodeHmrSource(`import.meta.hot?.accept('./dep.ts', () => {})`)
 
     assert.deepEqual(toComparableAnalysis(analysis), {
       acceptedDeps: ['./dep.ts'],
@@ -122,7 +113,6 @@ describe('analyzeNodeHmrSource', () => {
 
   it('ignores comments and strings that mention the hot API', () => {
     let analysis = analyzeNodeHmrSource(
-      'file:///app/message.ts',
       [
         `// import.meta.hot.accept()`,
         `const text = "import.meta.hot.accept('./dep.ts')"`,
@@ -138,7 +128,7 @@ describe('analyzeNodeHmrSource', () => {
   })
 
   it('skips parsing source that does not mention the hot API', () => {
-    let analysis = analyzeNodeHmrSource('file:///app/message.ts', `export function broken( {`)
+    let analysis = analyzeNodeHmrSource(`export function broken( {`)
 
     assert.deepEqual(toComparableAnalysis(analysis), {
       acceptedDeps: [],
@@ -149,7 +139,6 @@ describe('analyzeNodeHmrSource', () => {
 
   it('fails closed when source cannot be parsed', () => {
     let analysis = analyzeNodeHmrSource(
-      'file:///app/message.ts',
       [`const hot = "import.meta.hot"`, `export function broken( {`].join('\n'),
     )
 
@@ -164,7 +153,6 @@ describe('analyzeNodeHmrSource', () => {
     nodeAssert.throws(
       () =>
         analyzeNodeHmrSource(
-          'file:///app/message.ts',
           [`let dep = './dep.ts'`, `import.meta.hot.accept(dep, () => {})`].join('\n'),
         ),
       /import\.meta\.hot\.accept\(\) can only accept/,
@@ -173,21 +161,21 @@ describe('analyzeNodeHmrSource', () => {
 
   it('throws when the first accept argument is an unsupported literal', () => {
     nodeAssert.throws(
-      () => analyzeNodeHmrSource('file:///app/message.ts', `import.meta.hot.accept(123)`),
+      () => analyzeNodeHmrSource(`import.meta.hot.accept(123)`),
       /import\.meta\.hot\.accept\(\) can only accept/,
     )
   })
 
   it('throws when the first accept argument is null', () => {
     nodeAssert.throws(
-      () => analyzeNodeHmrSource('file:///app/message.ts', `import.meta.hot.accept(null)`),
+      () => analyzeNodeHmrSource(`import.meta.hot.accept(null)`),
       /import\.meta\.hot\.accept\(\) can only accept/,
     )
   })
 
   it('throws when the first accept argument is an object', () => {
     nodeAssert.throws(
-      () => analyzeNodeHmrSource('file:///app/message.ts', `import.meta.hot.accept({})`),
+      () => analyzeNodeHmrSource(`import.meta.hot.accept({})`),
       /import\.meta\.hot\.accept\(\) can only accept/,
     )
   })
@@ -196,7 +184,6 @@ describe('analyzeNodeHmrSource', () => {
     nodeAssert.throws(
       () =>
         analyzeNodeHmrSource(
-          'file:///app/message.ts',
           [`let dep = './dep.ts'`, `import.meta.hot.accept(['./one.ts', dep], () => {})`].join(
             '\n',
           ),
@@ -207,22 +194,31 @@ describe('analyzeNodeHmrSource', () => {
 
   it('throws when an accepted dependency array contains a non-string item', () => {
     nodeAssert.throws(
-      () =>
-        analyzeNodeHmrSource(
-          'file:///app/message.ts',
-          `import.meta.hot.accept(['./one.ts', 123], () => {})`,
-        ),
+      () => analyzeNodeHmrSource(`import.meta.hot.accept(['./one.ts', 123], () => {})`),
       /import\.meta\.hot\.accept\(\) can only accept/,
     )
   })
 
   it('throws when an accepted dependency array contains a spread element', () => {
     nodeAssert.throws(
-      () =>
-        analyzeNodeHmrSource(
-          'file:///app/message.ts',
-          `import.meta.hot.accept(['./one.ts', ...deps], () => {})`,
-        ),
+      () => analyzeNodeHmrSource(`import.meta.hot.accept(['./one.ts', ...deps], () => {})`),
+      /import\.meta\.hot\.accept\(\) can only accept/,
+    )
+  })
+
+  it('does not treat computed accept members as accept calls', () => {
+    let analysis = analyzeNodeHmrSource(`import.meta.hot['accept']()`)
+
+    assert.deepEqual(toComparableAnalysis(analysis), {
+      acceptedDeps: [],
+      selfAccepting: false,
+      usesImportMetaHot: true,
+    })
+  })
+
+  it('throws when the accept callback is passed by reference', () => {
+    nodeAssert.throws(
+      () => analyzeNodeHmrSource(`function onUpdate() {}\nimport.meta.hot.accept(onUpdate)`),
       /import\.meta\.hot\.accept\(\) can only accept/,
     )
   })

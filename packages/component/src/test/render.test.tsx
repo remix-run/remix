@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { on, type Handle } from '../index.ts'
+import { on } from '../index.ts'
+import type { Handle } from '../index.ts'
 import { render } from '../test.ts'
 
 describe('render', () => {

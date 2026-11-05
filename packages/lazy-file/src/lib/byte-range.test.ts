@@ -1,7 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { type ByteRange, getByteLength, getIndexes } from './byte-range.ts'
+import { getByteLength, getIndexes } from './byte-range.ts'
+import type { ByteRange } from './byte-range.ts'
 
 describe('getByteLength', () => {
   it('returns the correct length', () => {

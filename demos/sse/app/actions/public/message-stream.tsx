@@ -1,4 +1,5 @@
-import { clientEntry, css, type Handle } from 'remix/component'
+import { clientEntry, css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 import { routes } from '../../routes.ts'
 

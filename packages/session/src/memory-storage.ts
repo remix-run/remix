@@ -1,1 +1,4 @@
-export { createMemorySessionStorage } from './lib/session-storage/memory.ts'
+export {
+  type MemorySessionStorageOptions,
+  createMemorySessionStorage,
+} from './lib/session-storage/memory.ts'

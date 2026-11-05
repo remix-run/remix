@@ -2,14 +2,8 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import {
-  findNodeAtLocation,
-  getNodeValue,
-  parseTree,
-  printParseErrorCode,
-  type Node as JsonNode,
-  type ParseError,
-} from 'jsonc-parser'
+import { findNodeAtLocation, getNodeValue, parseTree, printParseErrorCode } from 'jsonc-parser'
+import type { Node as JsonNode, ParseError } from 'jsonc-parser'
 import type { AssetServerOptions } from '@remix-run/assets'
 import type { RemixTestPool } from '@remix-run/test/cli'
 

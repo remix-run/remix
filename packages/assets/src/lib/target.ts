@@ -51,7 +51,7 @@ type NormalizedAssetTarget = Partial<Record<BrowserTargetName, AssetTargetVersio
 export function resolveScriptTarget(
   target: AssetTarget | undefined,
 ): ResolvedScriptTarget | undefined {
-  let resolvedTarget = normalizeScriptTargetObject(target, 'target')
+  let resolvedTarget = normalizeTargetObject(target, 'target', 'script')
   if (!resolvedTarget) return undefined
 
   let oxcTarget: ResolvedScriptTarget = []
@@ -71,7 +71,7 @@ export function resolveScriptTarget(
 export function resolveStyleTarget(
   target: AssetTarget | undefined,
 ): ResolvedStyleTarget | undefined {
-  let resolvedTarget = normalizeStyleTargetObject(target, 'target')
+  let resolvedTarget = normalizeTargetObject(target, 'target', 'style')
   if (!resolvedTarget) return undefined
 
   let lightningCssTargets: ResolvedStyleTarget = {}
@@ -85,9 +85,11 @@ export function resolveStyleTarget(
   return lightningCssTargets
 }
 
-function normalizeScriptTargetObject(
+// Style targets accept the same object as script targets but ignore `es`.
+function normalizeTargetObject(
   target: AssetTarget | undefined,
   optionPath: string,
+  kind: 'script' | 'style',
 ): NormalizedAssetTarget | undefined {
   if (target == null) return undefined
   if (!isPlainObject(target)) {
@@ -98,36 +100,9 @@ function normalizeScriptTargetObject(
 
   for (let [key, value] of Object.entries(target)) {
     if (key === 'es') {
-      normalizedTarget.es = normalizeScriptTargetVersion(value, `${optionPath}.es`)
-      continue
-    }
-
-    if (!browserTargetNameSet.has(key)) {
-      throw new TypeError(`${optionPath}.${key} is not a supported target`)
-    }
-
-    normalizedTarget[key as BrowserTargetName] = normalizeBrowserTargetVersion(
-      value,
-      `${optionPath}.${key}`,
-    )
-  }
-
-  return Object.keys(normalizedTarget).length === 0 ? undefined : normalizedTarget
-}
-
-function normalizeStyleTargetObject(
-  target: AssetTarget | undefined,
-  optionPath: string,
-): NormalizedAssetTarget | undefined {
-  if (target == null) return undefined
-  if (!isPlainObject(target)) {
-    throw new TypeError(`${optionPath} must be an object`)
-  }
-
-  let normalizedTarget: NormalizedAssetTarget = {}
-
-  for (let [key, value] of Object.entries(target)) {
-    if (key === 'es') {
+      if (kind === 'script') {
+        normalizedTarget.es = normalizeScriptTargetVersion(value, `${optionPath}.es`)
+      }
       continue
     }
 

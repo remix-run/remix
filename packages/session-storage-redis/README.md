@@ -19,7 +19,7 @@ await redis.connect()
 
 let sessionStorage = createRedisSessionStorage(redis, {
   keyPrefix: 'session:',
-  ttl: 60 * 60 * 24,
+  ttlSeconds: 60 * 60 * 24,
 })
 ```
 
@@ -28,7 +28,8 @@ let sessionStorage = createRedisSessionStorage(redis, {
 `createRedisSessionStorage(client, options)` supports:
 
 - `keyPrefix` (`string`, default: `'session:'`)
-- `ttl` (`number` seconds)
+- `ttlSeconds` (`number`, default: no expiration)
+- `ttl` (deprecated alias for `ttlSeconds`)
 - `useUnknownIds` (`boolean`, default: `false`)
 
 ## License

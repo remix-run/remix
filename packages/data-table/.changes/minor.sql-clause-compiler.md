@@ -1,0 +1,1 @@
+Added `createSqlClauseCompiler()` to `@remix-run/data-table/sql-helpers`. It compiles the `from`, `where`, `group by`, `having`, `order by`, `limit`, `offset`, and `returning` clauses and predicates shared by SQL dialects, so adapters supply only identifier quoting, value binding, and case-insensitive `like`. The built-in MySQL, PostgreSQL, and SQLite adapters now use it.

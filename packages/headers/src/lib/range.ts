@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import type { HeaderValue } from './header-value.ts'
 
 const maxRangeBound = String(Number.MAX_SAFE_INTEGER)
 

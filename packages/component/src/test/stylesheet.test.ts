@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { createStyleManager } from '../style/stylesheet.ts'
+import { createStyleManager } from '../lib/style/stylesheet.ts'
 
 describe('createStyleManager', () => {
   it('does not adopt an empty stylesheet until styles are inserted', () => {

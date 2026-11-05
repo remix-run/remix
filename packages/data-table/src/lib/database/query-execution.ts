@@ -5,12 +5,10 @@ import type {
   ExistsOperation,
   InsertManyOperation,
   InsertOperation,
-  SelectColumn,
-  SelectOperation,
   UpdateOperation,
   UpsertOperation,
 } from '../driver.ts'
-import { DataTableQueryError } from '../errors.ts'
+import { DataTableDatabaseError, DataTableQueryError } from '../errors.ts'
 import type { ReturningInput, WriteResult, WriteRowResult, WriteRowsResult } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { normalizeWhereInput } from '../operators.ts'
@@ -19,22 +17,20 @@ import { cloneQueryState, querySnapshot } from '../query.ts'
 import type { AnyTable } from '../table.ts'
 import { getPrimaryKeyObject, getTableName } from '../table.ts'
 
-import {
-  executeOperation,
-  runInTransaction,
-  type QueryExecutionContext,
-} from './execution-context.ts'
+import { executeOperation, runInTransaction } from './execution-context.ts'
+import type { QueryExecutionContext } from './execution-context.ts'
 import {
   buildPrimaryKeyPredicate,
   hasScopedWriteModifiers,
   loadPrimaryKeyRowsForScope,
-} from './helpers.ts'
-import { loadRelationsForRows } from './relations.ts'
+} from './primary-key-scope.ts'
+import { loadRowsWithRelationsForState } from './relations.ts'
 import {
   applyAfterReadHooksToLoadedRows,
   applyAfterReadHooksToRows,
   assertReturningCapability,
   normalizeReturningSelection,
+  normalizeRows,
   prepareInsertValues,
   prepareUpdateValues,
   runAfterDeleteHook,
@@ -121,30 +117,6 @@ export async function executeQuery<input extends AnyQuery>(
   }
 }
 
-export async function loadRowsWithRelationsForQuery(
-  database: QueryExecutionContext,
-  input: AnyQuery,
-): Promise<Record<string, unknown>[]> {
-  let snapshot = input[querySnapshot]()
-  return loadRowsWithRelationsForState(database, snapshot.table, snapshot.state)
-}
-
-export async function loadRowsWithRelationsForState(
-  database: QueryExecutionContext,
-  table: AnyTable,
-  state: QueryState,
-): Promise<Record<string, unknown>[]> {
-  let operation = createSelectOperation(table, state)
-  let result = await database[executeOperation](operation)
-  let rows = normalizeRows(result.rows)
-
-  if (Object.keys(state.with).length === 0) {
-    return rows
-  }
-
-  return loadRelationsForRows(database, table, rows, state.with)
-}
-
 async function executeAll(
   database: QueryExecutionContext,
   table: AnyTable,
@@ -197,15 +169,7 @@ async function executeCount(
 
   let result = await database[executeOperation](operation)
 
-  if (result.rows && result.rows[0] && typeof result.rows[0].count === 'number') {
-    return result.rows[0].count as number
-  }
-
-  if (result.rows) {
-    return result.rows.length
-  }
-
-  return 0
+  return readCountResult(result.rows) ?? result.rows?.length ?? 0
 }
 
 async function executeExists(
@@ -228,11 +192,32 @@ async function executeExists(
     return result.rows[0].exists as boolean
   }
 
-  if (result.rows && result.rows[0] && typeof result.rows[0].count === 'number') {
-    return Number(result.rows[0].count) > 0
-  }
+  let count = readCountResult(result.rows)
+  if (count !== undefined) return count > 0
 
   return Boolean(result.rows && result.rows.length > 0)
+}
+
+// SQL drivers return `count` as whatever the database client produces: a number, a numeric string
+// (Postgres, MySQL), or a bigint. Adapters that return plain rows without `count` fall back to the
+// row count.
+function readCountResult(rows: Record<string, unknown>[] | undefined): number | undefined {
+  let row = rows?.[0]
+  if (!row || !('count' in row)) return undefined
+
+  let count = row.count
+  let numeric =
+    typeof count === 'number' || typeof count === 'string' || typeof count === 'bigint'
+      ? Number(count)
+      : Number.NaN
+
+  if (Number.isNaN(numeric)) {
+    throw new DataTableDatabaseError('Expected a numeric count result from the database adapter', {
+      metadata: { count },
+    })
+  }
+
+  return numeric
 }
 
 async function executeInsert(
@@ -329,7 +314,7 @@ async function executeInsertMany(
       returning: normalizeReturningSelection(returning),
     }
 
-    let result = await database[executeOperation](operation)
+    let result = await runInsertMany(database, operation)
     let affectedRows = result.affectedRows ?? 0
     runAfterWriteHook(table, {
       operation: 'create',
@@ -352,7 +337,7 @@ async function executeInsertMany(
     values: preparedValues,
   }
 
-  let result = await database[executeOperation](operation)
+  let result = await runInsertMany(database, operation)
   let affectedRows = result.affectedRows ?? 0
   runAfterWriteHook(table, {
     operation: 'create',
@@ -366,6 +351,19 @@ async function executeInsertMany(
     affectedRows,
     insertId: result.insertId,
   }
+}
+
+// An empty batch has nothing to insert, so skip the adapter rather than relying on each adapter to
+// avoid compiling an empty `insert` statement.
+async function runInsertMany(
+  database: QueryExecutionContext,
+  operation: InsertManyOperation<AnyTable>,
+): Promise<DataManipulationResult> {
+  if (operation.values.length === 0) {
+    return { affectedRows: 0, insertId: undefined, rows: operation.returning ? [] : undefined }
+  }
+
+  return database[executeOperation](operation)
 }
 
 async function executeUpdate(
@@ -640,38 +638,4 @@ async function executeUpsert(
     affectedRows,
     insertId: result.insertId,
   }
-}
-
-function createSelectOperation(table: AnyTable, state: QueryState): SelectOperation<AnyTable> {
-  let clonedState = cloneQueryState(state)
-
-  return {
-    kind: 'select',
-    table,
-    select: cloneSelection(clonedState.select),
-    distinct: clonedState.distinct,
-    joins: clonedState.joins,
-    where: clonedState.where,
-    groupBy: clonedState.groupBy,
-    having: clonedState.having,
-    orderBy: clonedState.orderBy,
-    limit: clonedState.limit,
-    offset: clonedState.offset,
-  }
-}
-
-function cloneSelection(selection: '*' | SelectColumn[]): '*' | SelectColumn[] {
-  if (selection === '*') {
-    return '*'
-  }
-
-  return selection.map((column) => ({ ...column }))
-}
-
-function normalizeRows(rows: DataManipulationResult['rows']): Record<string, unknown>[] {
-  if (!rows) {
-    return []
-  }
-
-  return rows.map((row) => ({ ...row }))
 }

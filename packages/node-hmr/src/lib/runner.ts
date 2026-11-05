@@ -1,6 +1,8 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import type { Stats } from 'node:fs'
-import { createServer, type Server, type ServerResponse } from 'node:http'
+import { createServer } from 'node:http'
+import type { Server, ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
@@ -9,13 +11,10 @@ import { dirname, relative, resolve } from 'node:path'
 import { createStyles } from '@remix-run/terminal'
 import { watch } from 'chokidar'
 
-import {
-  type BrowserHmrFileEvent,
-  defaultBrowserHmrPathname,
-  type BrowserHmrEvent,
-  type HmrEventPayload,
-} from './browser-events.ts'
-import { createModuleStore, type ModuleRecord } from './module-store.ts'
+import { defaultBrowserHmrPathname } from './browser-events.ts'
+import type { BrowserHmrFileEvent, BrowserHmrEvent, HmrEventPayload } from './browser-events.ts'
+import { createModuleStore } from './module-store.ts'
+import type { ModuleRecord } from './module-store.ts'
 
 interface NodeHmrUpdate {
   acceptedUrl: string
@@ -155,14 +154,6 @@ export function createFileChangeEventDeduper(): (
   }
 }
 
-const chokidarWatcherBySupervisor = new WeakMap<object, ReturnType<typeof watch>>()
-
-export function getSupervisorChokidarWatcher(
-  supervisor: object,
-): ReturnType<typeof watch> | undefined {
-  return chokidarWatcherBySupervisor.get(supervisor)
-}
-
 interface BrowserHmrChannelOptions {
   host?: string
   port?: number
@@ -217,6 +208,7 @@ export function createHmrSupervisor(options: {
   nodeArgs: string[]
   registerPath: string
   watch?: NodeHmrWatchOptions
+  createWatcher?: typeof watch
 }): {
   readonly generation: number
   ready(): Promise<void>
@@ -288,7 +280,6 @@ export function createHmrSupervisor(options: {
         entryArgs: options.entryArgs,
         nodeArgs: options.nodeArgs,
         registerPath: options.registerPath,
-        rootPath: options.cwd,
       }),
       {
         cwd: options.cwd,
@@ -956,7 +947,8 @@ export function createHmrSupervisor(options: {
     }
   }
 
-  let watcher = watch([], {
+  let createWatcher = options.createWatcher ?? watch
+  let watcher = createWatcher([], {
     cwd: options.cwd,
     ...resolveChokidarWatchOptions(options.watch),
   })
@@ -1023,7 +1015,6 @@ export function createHmrSupervisor(options: {
 
     stop,
   }
-  chokidarWatcherBySupervisor.set(supervisor, watcher)
   return supervisor
 }
 
@@ -1190,14 +1181,10 @@ export function buildChildProcessArgs(options: {
   entryArgs: Array<string>
   nodeArgs: Array<string>
   registerPath: string
-  rootPath?: string
 }): Array<string> {
   let registerUrl = pathToFileURL(options.registerPath)
   if (options.browserEventUrl !== undefined) {
     registerUrl.searchParams.set('browserEventUrl', options.browserEventUrl)
-  }
-  if (options.rootPath !== undefined) {
-    registerUrl.searchParams.set('rootPath', options.rootPath)
   }
 
   return [

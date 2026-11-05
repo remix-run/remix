@@ -1,7 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { split, type SplitResult } from './split.ts'
+import { split } from './split.ts'
+import type { SplitResult } from './split.ts'
 
 function assertSplit(source: string, expected: Partial<SplitResult>) {
   expected.protocol = expected.protocol ?? null

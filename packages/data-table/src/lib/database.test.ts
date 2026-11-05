@@ -212,6 +212,39 @@ describe('queries', () => {
     )
   })
 
+  it('re-reads by the new primary key when an update changes it on non-RETURNING drivers', async () => {
+    let currentId = 1
+    let recording = createRecordingDriver({
+      capabilities: { returning: false },
+      async execute(request) {
+        if (request.operation.kind === 'update') {
+          currentId = request.operation.changes.id as number
+          return { affectedRows: 1 }
+        }
+
+        if (request.operation.kind === 'select') {
+          let matches = request.operation.where.some(
+            (predicate) =>
+              predicate.type === 'logical' &&
+              predicate.predicates.some(
+                (inner) => inner.type === 'comparison' && inner.value === currentId,
+              ),
+          )
+          return {
+            rows: matches ? [{ id: currentId, email: 'amy@studio.test', status: 'active' }] : [],
+          }
+        }
+
+        throw new Error('unexpected operation kind: ' + request.operation.kind)
+      },
+    })
+
+    let db = createTestDatabase(recording.driver)
+    let updated = await db.update(accounts, 1, { id: 2 })
+
+    assert.equal(updated.id, 2)
+  })
+
   it('throws for createMany() batches with only empty rows', async () => {
     let recording = createRecordingDriver()
     let db = createTestDatabase(recording.driver)
@@ -227,6 +260,18 @@ describe('queries', () => {
         )
       },
     )
+  })
+
+  it('returns an empty result for insertMany([]) without calling the adapter', async () => {
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
+
+    let result = await db.query(tasks).insertMany([])
+    let returningResult = await db.query(tasks).insertMany([], { returning: ['id'] })
+
+    assert.deepEqual(result, { affectedRows: 0, insertId: undefined })
+    assert.deepEqual(returningResult, { affectedRows: 0, insertId: undefined, rows: [] })
+    assert.equal(recording.requests.length, 0)
   })
 
   it('throws for insertMany() batches with only empty rows', async () => {
@@ -1130,6 +1175,43 @@ describe('writes and validation', () => {
       .groupBy('status')
       .having(eq('status', 123 as never))
       .count()
+  })
+})
+
+describe('count and exists results', () => {
+  it('coerces numeric string and bigint counts from adapters', async () => {
+    let counts: unknown[] = ['3', 0n]
+    let recording = createRecordingDriver({
+      async execute() {
+        return { rows: [{ count: counts.shift() }] }
+      },
+    })
+    let db = createTestDatabase(recording.driver)
+
+    assert.equal(await db.query(accounts).count(), 3)
+    assert.equal(await db.query(accounts).exists(), false)
+  })
+
+  it('falls back to the row count when adapter rows have no count', async () => {
+    let recording = createRecordingDriver({
+      async execute() {
+        return { rows: [{ id: 1 }, { id: 2 }] }
+      },
+    })
+    let db = createTestDatabase(recording.driver)
+
+    assert.equal(await db.query(accounts).count(), 2)
+  })
+
+  it('rejects non-numeric counts from adapters', async () => {
+    let recording = createRecordingDriver({
+      async execute() {
+        return { rows: [{ count: 'oops' }] }
+      },
+    })
+    let db = createTestDatabase(recording.driver)
+
+    await assert.rejects(() => db.query(accounts).count(), DataTableDatabaseError)
   })
 })
 

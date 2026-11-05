@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { syncRemixSchema } from './utils/remix-schema.ts'
+import { syncRemixSchema } from './utils/remix-package/remix-schema.ts'
 
 const PLAYWRIGHT_CLI_PATH = fileURLToPath(
   new URL('../packages/component/node_modules/playwright/cli.js', import.meta.url),

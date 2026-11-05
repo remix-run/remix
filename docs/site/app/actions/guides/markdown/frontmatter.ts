@@ -1,4 +1,5 @@
-import { boolean, object, optional, parseSafe, string, type Check } from 'remix/data-schema'
+import { boolean, object, optional, parseSafe, string } from 'remix/data-schema'
+import type { Check } from 'remix/data-schema'
 
 import type { ChapterMetadata, MarkdownOptions } from './types.ts'
 

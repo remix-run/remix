@@ -7,10 +7,10 @@
  * Environment:
  *   GITHUB_TOKEN - Required (unless --preview)
  */
-import { parseAllChangeFiles, generateCommitMessage } from './utils/changes.ts'
-import { generatePrBody, generatePrTitle } from './utils/release-pr.ts'
+import { parseAllChangeFiles, generateCommitMessage } from './utils/release/changes.ts'
+import { generatePrBody, generatePrTitle } from './utils/release/release-pr.ts'
 import { logAndExec } from './utils/process.ts'
-import { findOpenPr, createPr, updatePr, closePr } from './utils/github.ts'
+import { findOpenPr, createPr, updatePr, closePr } from './utils/release/github.ts'
 
 const args = process.argv.slice(2)
 const preview = args.includes('--preview')

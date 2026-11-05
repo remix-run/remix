@@ -33,9 +33,7 @@ export default {
 
         for await (let part of parseMultipartRequest(request)) {
           if (part.isFile) {
-            let uniqueKey = `upload-${new Date().getTime()}-${Math.random()
-              .toString(36)
-              .slice(2, 8)}`
+            let uniqueKey = `upload-${crypto.randomUUID()}`
 
             await bucket.put(uniqueKey, part.bytes, {
               httpMetadata: {

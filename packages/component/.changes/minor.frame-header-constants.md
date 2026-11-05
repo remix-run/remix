@@ -1,0 +1,1 @@
+Export `FRAME_REQUEST_HEADER` (`X-Remix-Frame`) and `FRAME_TARGET_HEADER` (`X-Remix-Target`) from `@remix-run/component/server`, so servers can read frame requests with the same header names the client runtime sends.

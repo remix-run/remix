@@ -1,6 +1,7 @@
 import type { RoutePattern } from '@remix-run/route-pattern'
 
-import { type BuildRouteMap, createRoutes } from '../route-map.ts'
+import { createRoutes } from '../route-map.ts'
+import type { BuildRouteMap } from '../route-map.ts'
 
 /**
  * Named CRUD routes available for singleton resources.
@@ -64,10 +65,11 @@ export function createResourceRoutes<base extends string, const options extends 
 
   // Resolve which methods to include
   let only: readonly ResourceMethod[]
+  let exclude = options?.exclude
   if (options?.only) {
     only = options.only
-  } else if (options?.exclude) {
-    only = ResourceMethods.filter((m) => !options.exclude!.includes(m))
+  } else if (exclude) {
+    only = ResourceMethods.filter((m) => !exclude.includes(m))
   } else {
     only = ResourceMethods
   }

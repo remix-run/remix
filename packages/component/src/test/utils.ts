@@ -1,7 +1,7 @@
 import type { TestContext } from '@remix-run/test'
 
-import { invariant } from '../runtime/invariant.ts'
-import { stripFlushMarkers } from '../runtime/stream-protocol.ts'
+import { invariant } from '../lib/invariant.ts'
+import { stripFlushMarkers } from '../lib/stream-protocol.ts'
 
 export type Assert<T extends true> = T
 

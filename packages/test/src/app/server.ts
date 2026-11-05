@@ -7,11 +7,8 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ResolverFactory } from 'oxc-resolver'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
-import {
-  getBrowserTestRootDir,
-  IS_RUNNING_FROM_SRC,
-  type SerializedOnlyPattern,
-} from '../lib/config.ts'
+import { getBrowserTestRootDir, IS_RUNNING_FROM_SRC } from '../lib/config.ts'
+import type { SerializedOnlyPattern } from '../lib/config.ts'
 import { transformTypeScript } from '../lib/ts-transform.ts'
 
 const log = (str: string) => console.log(`[remix:test] ${str}`)

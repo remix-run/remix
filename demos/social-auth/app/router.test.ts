@@ -57,6 +57,18 @@ describe('social-auth router', () => {
     assertContains(html, 'Credentials')
   })
 
+  it('rejects cross-site login submissions', async () => {
+    let router = await createTestRouter()
+    let response = await router.fetch('https://social-auth.test/auth/login', {
+      method: 'POST',
+      headers: { 'Sec-Fetch-Site': 'cross-site' },
+      body: new URLSearchParams({ email: 'user@example.com', password: 'password123' }),
+    })
+
+    assert.equal(response.status, 403)
+    assert.equal(getSessionCookie(response), null)
+  })
+
   it('shows an error after invalid credentials', async () => {
     let router = await createTestRouter()
     let loginResponse = await router.fetch('https://social-auth.test/auth/login', {

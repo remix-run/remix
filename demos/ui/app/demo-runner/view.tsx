@@ -1,5 +1,5 @@
 import { css } from 'remix/component'
-import type { Handle } from 'remix/component'
+import type { EntryComponent, Handle } from 'remix/component'
 import { theme } from './design.ts'
 
 import type { DemoFile } from './discovery.ts'
@@ -58,7 +58,7 @@ export function DemoIndexDocument(handle: Handle<{ demos: DemoFile[] }>) {
   }
 }
 
-export function DemoDocument(handle: Handle<{ DemoComponent: any; demo: DemoFile }>) {
+export function DemoDocument(handle: Handle<{ DemoComponent: EntryComponent; demo: DemoFile }>) {
   return () => {
     let { DemoComponent, demo } = handle.props
     return (

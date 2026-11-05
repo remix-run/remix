@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it, mock } from '../index.ts'
-import { createTestContext, type TestContext } from '../lib/context.ts'
+import { createTestContext } from '../lib/context.ts'
+import type { TestContext } from '../lib/context.ts'
 import { runTests } from '../lib/executor.ts'
 
 describe('mock function controls', () => {

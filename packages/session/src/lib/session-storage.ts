@@ -11,6 +11,9 @@ export interface SessionStorage {
   /**
    * Retrieve a session from storage using a value read from the session cookie.
    *
+   * Returns a new session when the cookie is missing, refers to no stored session, or refers to
+   * stored data that can't be parsed. Rejects only when the backing store itself fails.
+   *
    * @param cookie The stored session cookie value, or `null` if no session cookie is available
    * @returns The session
    */

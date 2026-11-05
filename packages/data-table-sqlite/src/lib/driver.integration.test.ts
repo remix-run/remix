@@ -6,7 +6,8 @@ import {
   teardownDriverIntegrationSchema,
 } from '../../../data-table/test/driver-integration-schema.ts'
 import { runDriverIntegrationContract } from '../../../data-table/test/driver-integration-contract.ts'
-import { createNativeSqliteDatabase, type NativeSqliteDatabase } from '../../test/native-sqlite.ts'
+import { createNativeSqliteDatabase } from '../../test/native-sqlite.ts'
+import type { NativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
 import { createSqliteDatabase } from './database.ts'
 

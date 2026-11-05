@@ -34,8 +34,10 @@ export function loadAuth() {
   })
 }
 
-export const requireAuth = requireAuthenticated<FrameAuthIdentity>({
-  onFailure(context) {
-    return redirect(routes.auth.login.index.href())
-  },
-})
+export function requireAuth() {
+  return requireAuthenticated<FrameAuthIdentity>({
+    onFailure() {
+      return redirect(routes.auth.login.index.href())
+    },
+  })
+}

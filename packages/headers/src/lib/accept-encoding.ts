@@ -1,6 +1,10 @@
-import { type HeaderValue } from './header-value.ts'
-import { parseParams } from './param-values.ts'
-import { isIterable, splitList } from './utils.ts'
+import type { HeaderValue } from './header-value.ts'
+import {
+  getPreferredValue,
+  parseWeightedValues,
+  sortByWeight,
+  stringifyWeightedValues,
+} from './weighted-values.ts'
 
 /**
  * Initializer for an `Accept-Encoding` header value.
@@ -23,7 +27,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
   }
 
   #sort() {
-    this.#map = new Map([...this.#map].sort((a, b) => b[1] - a[1]))
+    this.#map = sortByWeight(this.#map)
   }
 
   /**
@@ -82,13 +86,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
    * @returns The most preferred encoding or `null` if none match
    */
   getPreferred<encoding extends string>(encodings: readonly encoding[]): encoding | null {
-    let sorted = encodings
-      .map((encoding) => [encoding, this.getWeight(encoding)] as const)
-      .sort((a, b) => b[1] - a[1])
-
-    let first = sorted[0]
-
-    return first !== undefined && first[1] > 0 ? first[0] : null
+    return getPreferredValue(encodings, (encoding) => this.getWeight(encoding))
   }
 
   /**
@@ -177,13 +175,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
    * @returns The header value as a string
    */
   toString(): string {
-    let pairs: string[] = []
-
-    for (let [encoding, weight] of this.#map) {
-      pairs.push(`${encoding}${weight === 1 ? '' : `;q=${weight}`}`)
-    }
-
-    return pairs.join(',')
+    return stringifyWeightedValues(this.#map)
   }
 
   /**
@@ -196,39 +188,7 @@ export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
     let header = new AcceptEncoding()
 
     if (value !== null) {
-      if (typeof value === 'string') {
-        for (let piece of splitList(value)) {
-          let params = parseParams(piece)
-          if (params.length < 1) continue
-
-          let encoding = params[0][0]
-          let weight = 1
-
-          for (let i = 1; i < params.length; i++) {
-            let [key, val] = params[i]
-            if (key === 'q') {
-              weight = Number(val)
-              break
-            }
-          }
-
-          header.#map.set(encoding.toLowerCase(), weight)
-        }
-      } else if (isIterable(value)) {
-        for (let item of value) {
-          if (Array.isArray(item)) {
-            header.#map.set(item[0].toLowerCase(), item[1])
-          } else {
-            header.#map.set(item.toLowerCase(), 1)
-          }
-        }
-      } else {
-        for (let encoding of Object.getOwnPropertyNames(value)) {
-          header.#map.set(encoding.toLowerCase(), value[encoding])
-        }
-      }
-
-      header.#sort()
+      header.#map = parseWeightedValues(value)
     }
 
     return header

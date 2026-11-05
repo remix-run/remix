@@ -5,6 +5,8 @@ import { createMemorySessionStorage } from 'remix/session-storage/memory'
 import { db, loadAppMigrations, loadAppSeed } from '../app/db.ts'
 import { createBookstoreRouter } from '../app/router.ts'
 
+export type TestRouter = Awaited<ReturnType<typeof createTestRouter>>
+
 export async function createTestRouter() {
   await db.reset({ migrations: await loadAppMigrations(), seed: await loadAppSeed() })
 
@@ -86,7 +88,7 @@ export function assertNotContains(html: string, text: string): void {
 /**
  * Login and return the session cookie
  */
-export async function login(router: any, email: string, password: string): Promise<string> {
+export async function login(router: TestRouter, email: string, password: string): Promise<string> {
   let loginResponse = await router.fetch('https://remix.run/login', {
     method: 'POST',
     body: new URLSearchParams({ email, password }),
@@ -104,13 +106,13 @@ export async function login(router: any, email: string, password: string): Promi
 /**
  * Login as admin and return the session cookie
  */
-export function loginAsAdmin(router: any): Promise<string> {
+export function loginAsAdmin(router: TestRouter): Promise<string> {
   return login(router, 'admin@bookstore.com', 'admin123')
 }
 
 /**
  * Login as customer and return the session cookie
  */
-export function loginAsCustomer(router: any): Promise<string> {
+export function loginAsCustomer(router: TestRouter): Promise<string> {
   return login(router, 'customer@example.com', 'password123')
 }

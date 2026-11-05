@@ -1,11 +1,11 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { normalizeCssValue, processStyleClass } from '../style/style.ts'
+import { normalizeCssValue, compileStyleClass } from '../lib/style/style.ts'
 
-describe('processStyleClass', () => {
+describe('compileStyleClass', () => {
   it('returns class selectors and css text', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    let result = processStyleClass({ color: 'red', fontSize: '16px' }, cache)
+    let result = compileStyleClass({ color: 'red', fontSize: '16px' }, cache)
 
     expect(result.selector).toMatch(/^rmxc-/)
     expect(result.css).toContain(`.${result.selector}`)
@@ -15,8 +15,8 @@ describe('processStyleClass', () => {
 
   it('deduplicates identical style objects', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    let first = processStyleClass({ color: 'red', '&:hover': { color: 'blue' } }, cache)
-    let second = processStyleClass({ color: 'red', '&:hover': { color: 'blue' } }, cache)
+    let first = compileStyleClass({ color: 'red', '&:hover': { color: 'blue' } }, cache)
+    let second = compileStyleClass({ color: 'red', '&:hover': { color: 'blue' } }, cache)
 
     expect(first.selector).toBe(second.selector)
     expect(first.css).toBe(second.css)
@@ -24,11 +24,11 @@ describe('processStyleClass', () => {
 
   it('deduplicates omitted and undefined style properties', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    let first = processStyleClass(
+    let first = compileStyleClass(
       { color: 'red', backgroundColor: undefined, '&:hover': undefined },
       cache,
     )
-    let second = processStyleClass({ color: 'red' }, cache)
+    let second = compileStyleClass({ color: 'red' }, cache)
 
     expect(first.selector).toBe(second.selector)
     expect(first.css).toBe(second.css)
@@ -37,22 +37,22 @@ describe('processStyleClass', () => {
 
   it('keeps declaration order for the same properties written in a different order', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    processStyleClass({ margin: 0, marginTop: '5px' }, cache)
-    let reordered = processStyleClass({ marginTop: '5px', margin: 0 }, cache)
+    compileStyleClass({ margin: 0, marginTop: '5px' }, cache)
+    let reordered = compileStyleClass({ marginTop: '5px', margin: 0 }, cache)
 
     expect(reordered.css).toContain('margin-top: 5px;\n  margin: 0;')
   })
 
   it('returns empty selector/css for empty objects', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    let result = processStyleClass({}, cache)
+    let result = compileStyleClass({}, cache)
     expect(result.selector).toBe('')
     expect(result.css).toBe('')
   })
 
   it('only appends px to numeric values of length properties', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    let result = processStyleClass({ webkitLineClamp: 4, flex: 1, marginTop: 4 }, cache)
+    let result = compileStyleClass({ webkitLineClamp: 4, flex: 1, marginTop: 4 }, cache)
 
     expect(result.css).toContain('  -webkit-line-clamp: 4;')
     expect(result.css).toContain('flex: 1;')
@@ -61,13 +61,13 @@ describe('processStyleClass', () => {
 
   it('keeps custom property names as written', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    let result = processStyleClass({ '--gapSize': 4 }, cache)
+    let result = compileStyleClass({ '--gapSize': 4 }, cache)
 
     expect(result.css).toContain('--gapSize: 4;')
   })
 
   it('preserves numeric values in nested rules and keyframes', () => {
-    let result = processStyleClass(
+    let result = compileStyleClass(
       {
         animation: 2,
         borderImage: 3,
@@ -93,7 +93,7 @@ describe('processStyleClass', () => {
 
   it('drops non-finite numbers', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    let result = processStyleClass({ color: 'red', width: Number.NaN, height: Infinity }, cache)
+    let result = compileStyleClass({ color: 'red', width: Number.NaN, height: Infinity }, cache)
 
     expect(result.css).toContain('color: red;')
     expect(result.css).not.toContain('width')
@@ -102,7 +102,7 @@ describe('processStyleClass', () => {
 
   it('keeps nested selectors and media queries', () => {
     let cache = new Map<string, { selector: string; css: string }>()
-    let result = processStyleClass(
+    let result = compileStyleClass(
       {
         color: 'black',
         ':hover': { color: 'red' },

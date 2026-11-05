@@ -13,12 +13,8 @@ import { EventEmitter } from 'node:events'
 import { describe, it } from '@remix-run/test'
 
 import { Vary } from '@remix-run/headers/vary'
-import {
-  compressResponse,
-  compressStream,
-  createCompressionOptions,
-  type Encoding,
-} from './compress.ts'
+import { compressResponse, compressStream, createCompressionOptions } from './compress.ts'
+import type { Encoding } from './compress.ts'
 
 const gunzipAsync = promisify(gunzip)
 const brotliDecompressAsync = promisify(brotliDecompress)

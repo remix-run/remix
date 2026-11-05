@@ -7,8 +7,8 @@ import {
   previewMoveBlock,
   previewMoveBlockGroup,
   previewResizeBlockTime,
-  type ScheduleLayoutBlock,
 } from './schedule-layout.ts'
+import type { ScheduleLayoutBlock } from './schedule-layout.ts'
 
 describe('ScheduleLayout', () => {
   it('moves a block later in a stack by reordering the stack', () => {

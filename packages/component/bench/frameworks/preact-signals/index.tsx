@@ -1,8 +1,8 @@
 import { signal, batch, useComputed, type Signal } from '@preact/signals'
 import { For } from '@preact/signals/utils'
 import { render } from 'preact'
-import { buildData as buildPlainData, sortRows as sortPlainRows, get1000Rows } from '../shared.ts'
-import type { Benchmark, Row as PlainRow } from '../shared.ts'
+import { buildData as buildPlainData, sortRows as sortPlainRows } from '../shared.ts'
+import type { Row as PlainRow } from '../shared.ts'
 
 export const name = 'preact-signals'
 
@@ -132,11 +132,11 @@ function MetricCard({
       onClick={() => (selected.value = !selected.value)}
       onMouseEnter={() => (hovered.value = true)}
       onMouseLeave={() => (hovered.value = false)}
-      onFocus={(e: any) => {
+      onFocus={(e) => {
         e.currentTarget.style.outline = '2px solid #222'
         e.currentTarget.style.outlineOffset = '2px'
       }}
-      onBlur={(e: any) => {
+      onBlur={(e) => {
         e.currentTarget.style.outline = ''
       }}
       tabIndex={0}
@@ -180,11 +180,11 @@ function ChartBar({ value, index }: { value: number; index: number }) {
       onClick={() => {}}
       onMouseEnter={() => (hovered.value = true)}
       onMouseLeave={() => (hovered.value = false)}
-      onFocus={(e: any) => {
+      onFocus={(e) => {
         e.currentTarget.style.outline = '2px solid #222'
         e.currentTarget.style.outlineOffset = '2px'
       }}
-      onBlur={(e: any) => {
+      onBlur={(e) => {
         e.currentTarget.style.outline = ''
       }}
       tabIndex={0}
@@ -261,17 +261,17 @@ function DropdownMenu({ rowId }: { rowId: number }) {
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <button
         class="btn btn-primary"
-        onClick={(e: any) => {
+        onClick={(e) => {
           e.stopPropagation()
           open.value = !open.value
         }}
         onMouseEnter={() => (hovered.value = true)}
         onMouseLeave={() => (hovered.value = false)}
-        onFocus={(e: any) => {
+        onFocus={(e) => {
           e.currentTarget.style.outline = '2px solid #222'
           e.currentTarget.style.outlineOffset = '2px'
         }}
-        onBlur={(e: any) => {
+        onBlur={(e) => {
           e.currentTarget.style.outline = ''
         }}
         style={{
@@ -301,14 +301,14 @@ function DropdownMenu({ rowId }: { rowId: number }) {
           {actions.map((action, idx) => (
             <div
               key={idx}
-              onClick={(e: any) => {
+              onClick={(e) => {
                 e.stopPropagation()
                 open.value = false
               }}
-              onMouseEnter={(e: any) => {
+              onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#f5f5f5'
               }}
-              onMouseLeave={(e: any) => {
+              onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = '#fff'
               }}
               style={{
@@ -367,7 +367,7 @@ function SearchInput() {
       type="text"
       placeholder="Search..."
       value={value.value}
-      onInput={(e: any) => (value.value = e.target.value)}
+      onInput={(e) => (value.value = e.currentTarget.value)}
       onFocus={() => (focused.value = true)}
       onBlur={() => (focused.value = false)}
       style={{
@@ -400,13 +400,13 @@ function FormWidgets() {
         </label>
         <select
           value={selectValue.value}
-          onChange={(e: any) => (selectValue.value = e.target.value)}
-          onFocus={(e: any) => {
+          onChange={(e) => (selectValue.value = e.currentTarget.value)}
+          onFocus={(e) => {
             e.currentTarget.style.borderColor = '#337ab7'
             e.currentTarget.style.outline = '2px solid #337ab7'
             e.currentTarget.style.outlineOffset = '2px'
           }}
-          onBlur={(e: any) => {
+          onBlur={(e) => {
             e.currentTarget.style.borderColor = '#ddd'
             e.currentTarget.style.outline = 'none'
           }}
@@ -433,20 +433,20 @@ function FormWidgets() {
             type="checkbox"
             id={`checkbox-${idx}`}
             checked={checkboxValues.value.has(`checkbox-${idx}`)}
-            onChange={(e: any) => {
+            onChange={(e) => {
               let next = new Set(checkboxValues.value)
-              if (e.target.checked) {
+              if (e.currentTarget.checked) {
                 next.add(`checkbox-${idx}`)
               } else {
                 next.delete(`checkbox-${idx}`)
               }
               checkboxValues.value = next
             }}
-            onFocus={(e: any) => {
+            onFocus={(e) => {
               e.currentTarget.style.outline = '2px solid #337ab7'
               e.currentTarget.style.outlineOffset = '2px'
             }}
-            onBlur={(e: any) => {
+            onBlur={(e) => {
               e.currentTarget.style.outline = ''
             }}
           />
@@ -463,12 +463,12 @@ function FormWidgets() {
               name="radio-group"
               value={`radio${idx + 1}`}
               checked={radioValue.value === `radio${idx + 1}`}
-              onChange={(e: any) => (radioValue.value = e.target.value)}
-              onFocus={(e: any) => {
+              onChange={(e) => (radioValue.value = e.currentTarget.value)}
+              onFocus={(e) => {
                 e.currentTarget.style.outline = '2px solid #337ab7'
                 e.currentTarget.style.outlineOffset = '2px'
               }}
-              onBlur={(e: any) => {
+              onBlur={(e) => {
                 e.currentTarget.style.outline = ''
               }}
               style={{ marginRight: '8px' }}
@@ -493,12 +493,12 @@ function FormWidgets() {
           <input
             type="checkbox"
             checked={toggleValue.value}
-            onChange={(e: any) => (toggleValue.value = e.target.checked)}
-            onFocus={(e: any) => {
+            onChange={(e) => (toggleValue.value = e.currentTarget.checked)}
+            onFocus={(e) => {
               e.currentTarget.style.outline = '2px solid #222'
               e.currentTarget.style.outlineOffset = '2px'
             }}
-            onBlur={(e: any) => {
+            onBlur={(e) => {
               e.currentTarget.style.outline = ''
             }}
             style={{ opacity: 0, width: 0, height: 0 }}
@@ -633,11 +633,11 @@ function Dashboard({ onSwitchToTable }: { onSwitchToTable: () => void }) {
           class="btn btn-primary"
           type="button"
           onClick={onSwitchToTable}
-          onFocus={(e: any) => {
+          onFocus={(e) => {
             e.currentTarget.style.outline = '2px solid #222'
             e.currentTarget.style.outlineOffset = '2px'
           }}
-          onBlur={(e: any) => {
+          onBlur={(e) => {
             e.currentTarget.style.outline = ''
           }}
         >

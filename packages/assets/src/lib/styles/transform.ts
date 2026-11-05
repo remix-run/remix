@@ -10,6 +10,7 @@ import { rewriteSourceMapSources, stringifySourceMap } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolvedStyleTarget } from '../target.ts'
+import { isNoEntityError } from '../fs-errors.ts'
 
 type TransformedStyleDependency =
   | {
@@ -206,11 +207,5 @@ function toTransformFailedError(error: unknown, resolvedPath: string): AssetServ
       cause: error,
       code: 'TRANSFORM_FAILED',
     },
-  )
-}
-
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
-  return (
-    error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT'
   )
 }

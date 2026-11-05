@@ -1,15 +1,15 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import {
-  type DocumentedAPI,
-  type DocumentedClass,
-  type DocumentedFunction,
-  type DocumentedInterface,
-  type DocumentedInterfaceFunction,
-  type DocumentedType,
-  type DocumentedVariable,
-  type DocumentedVariableFunction,
-  type ParameterOrProperty,
+import type {
+  DocumentedAPI,
+  DocumentedClass,
+  DocumentedFunction,
+  DocumentedInterface,
+  DocumentedInterfaceFunction,
+  DocumentedType,
+  DocumentedVariable,
+  DocumentedVariableFunction,
+  ParameterOrProperty,
 } from './documented-api.ts'
 import { formatWithOxfmt } from '../../app/utils/format.ts'
 import { debug, info, verbose, warn } from './utils.ts'

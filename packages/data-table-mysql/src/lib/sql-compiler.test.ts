@@ -18,7 +18,7 @@ import {
   notNull,
   or,
 } from '@remix-run/data-table'
-import { type DataManipulationOperation } from '@remix-run/data-table'
+import type { DataManipulationOperation } from '@remix-run/data-table'
 
 import { createRecordingDriver, TestDatabase } from '../../../data-table/test/recording-driver.ts'
 import { compileMysqlOperation } from './sql-compiler.ts'
@@ -395,10 +395,12 @@ describe('mysql sql-compiler', () => {
       })
     })
 
-    it('compile for many without data', async () => {
-      await db.createMany(accounts, [])
-
-      let compiled = compileMysqlOperation(statements[0])
+    it('compile for many without data', () => {
+      let compiled = compileMysqlOperation({
+        kind: 'insertMany',
+        table: accounts,
+        values: [],
+      })
       assert.deepEqual(compiled, {
         text: 'select 0 where 1 = 0',
         values: [],

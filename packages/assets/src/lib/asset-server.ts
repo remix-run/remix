@@ -29,7 +29,8 @@ import { createResponseForStyle, createStyleCompiler, isStyleFilePath } from './
 import { resolveScriptTarget, resolveStyleTarget } from './target.ts'
 import type { AssetTarget, ResolvedScriptTarget, ResolvedStyleTarget } from './target.ts'
 import { createAssetServerWatcher } from './watch.ts'
-import { createAssetInspector, type AssetDetails } from './inspection.ts'
+import { createAssetInspector } from './inspection.ts'
+import type { AssetDetails } from './inspection.ts'
 import type { AssetServerWatcher, ChokidarWatcher } from './watch.ts'
 import { getVirtualStoreMountConfigs } from './virtual-store.ts'
 
@@ -350,7 +351,7 @@ export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
   close(): Promise<void>
 }
 
-type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
+type ResolvedAssetServerOptions = {
   allowFiles: readonly string[]
   allowPackages?: readonly string[]
   basePath: string
@@ -565,7 +566,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     try {
       return (await resolvedOptions.onError(error)) ?? internalServerError()
     } catch (error) {
-      console.error(`There was an error in the asset server error handler: ${error}`)
+      console.error('There was an error in the asset server error handler:', error)
       return internalServerError()
     }
   }
@@ -579,7 +580,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       styleCompiler.invalidateFileEvent(normalizedFilePath, event)
       await fileCompiler?.handleFileEvent(normalizedFilePath, event)
     } catch (error) {
-      console.error(`There was an error invalidating the asset server cache: ${error}`)
+      console.error('There was an error invalidating the asset server cache:', error)
     }
   }
 
@@ -670,7 +671,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
         channel?.updateWatchedFiles(delta)
       })
       .catch((error: unknown) => {
-        console.error(`There was an error updating browser HMR watched files: ${error}`)
+        console.error('There was an error updating browser HMR watched files:', error)
       })
   }
 
@@ -929,16 +930,14 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       }
 
       // Mixed asset type preloads need to be merged, so we merge in order of first asset type seen.
-      let preloadLayerGroupPromises = groupedAssetTypes.flatMap((assetType) => {
+      let preloadLayerGroupPromises = groupedAssetTypes.map((assetType) => {
         switch (assetType) {
           case 'script':
-            return scriptFiles.length > 0 ? [scriptCompiler.getPreloadLayers(scriptFiles)] : []
+            return scriptCompiler.getPreloadLayers(scriptFiles)
           case 'style':
-            return styleFiles.length > 0 ? [styleCompiler.getPreloadLayers(styleFiles)] : []
+            return styleCompiler.getPreloadLayers(styleFiles)
           case 'file':
-            return fileAssetFiles.length > 0
-              ? [getFilePreloadLayers(fileCompiler, fileAssetFiles)]
-              : []
+            return getFilePreloadLayers(fileCompiler, fileAssetFiles)
         }
       })
 
@@ -1139,7 +1138,7 @@ function flattenPreloadLayers(preloadLayers: readonly (readonly string[])[]): st
   return preloadLayers.flatMap((layer) => layer)
 }
 
-async function getFilePreloadLayers<transforms extends AssetRequestTransformMap>(
+async function getFilePreloadLayers(
   fileCompiler: FileCompiler | null,
   filePaths: readonly string[],
 ): Promise<string[][]> {
@@ -1170,7 +1169,7 @@ function defaultErrorHandler(error: unknown): void {
 
 function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
   options: AssetServerCreateOptions<transforms>,
-): ResolvedAssetServerOptions<transforms> {
+): ResolvedAssetServerOptions {
   let rootDir = normalizeFilePath(fs.realpathSync(path.resolve(options.rootDir ?? process.cwd())))
   let basePath = normalizeBasePath(options.basePath)
   let scriptOptions = options.scripts ?? {}

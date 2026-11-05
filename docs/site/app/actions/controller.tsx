@@ -93,7 +93,7 @@ async function servePagefindAsset(
     }
   }
 
-  console.warn(`[WARN] Pagefind asset not found: ${new URL(request.url).pathname}`)
+  console.warn(`Pagefind asset not found: ${new URL(request.url).pathname}`)
   return new Response(null, { status: 204 })
 }
 

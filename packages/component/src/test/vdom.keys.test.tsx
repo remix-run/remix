@@ -1,8 +1,9 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
-import { Fragment, type Handle } from '../runtime/component.ts'
+import { createRoot } from '../lib/vdom.ts'
+import { invariant } from '../lib/invariant.ts'
+import { Fragment } from '../lib/component.ts'
+import type { Handle } from '../lib/component.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {

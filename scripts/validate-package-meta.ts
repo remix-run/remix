@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 import { colors, colorize } from './utils/color.ts'
-import { getSideEffectPatternPairingIssues } from './utils/package-side-effects.ts'
+import { getSideEffectPatternPairingIssues } from './utils/remix-package/package-side-effects.ts'
 import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
 
 const CONSUMER_DEPENDENCY_FIELDS = [
@@ -24,6 +24,8 @@ interface PublishedPackageJson {
   optionalDependencies?: PackageDependencyMap
   peerDependencies?: PackageDependencyMap
   sideEffects?: unknown
+  exports?: unknown
+  publishConfig?: unknown
 }
 
 interface DependencyUsage {
@@ -39,6 +41,8 @@ type RawPackageJson = {
   description?: unknown
   private?: unknown
   sideEffects?: unknown
+  exports?: unknown
+  publishConfig?: unknown
 } & {
   [field in ConsumerDependencyField]?: unknown
 }
@@ -61,6 +65,12 @@ function main() {
       name: 'Published package.json files declare valid sideEffects metadata',
       validate() {
         return validateSideEffects(packageInfos)
+      },
+    },
+    {
+      name: 'Published package.json exports point at top-level entry files, not src/lib or dist/lib',
+      validate() {
+        return validateExportTargets(packageInfos)
       },
     },
     {
@@ -120,6 +130,8 @@ function getPublishedPackageInfos(): PublishedPackageInfo[] {
         description:
           typeof packageJson.description === 'string' ? packageJson.description : undefined,
         sideEffects: packageJson.sideEffects,
+        exports: packageJson.exports,
+        publishConfig: packageJson.publishConfig,
         ...readConsumerDependencies(packageJson, packageJsonPath),
       },
     })
@@ -163,6 +175,37 @@ function validateSideEffects(packageInfos: PublishedPackageInfo[]): string[] {
   }
 
   return violations
+}
+
+function validateExportTargets(packageInfos: PublishedPackageInfo[]): string[] {
+  let violations: string[] = []
+
+  for (let packageInfo of packageInfos) {
+    let { exports, publishConfig } = packageInfo.packageJson
+    let publishExports = isRecord(publishConfig) ? publishConfig.exports : undefined
+
+    for (let [field, value] of [
+      ['exports', exports],
+      ['publishConfig.exports', publishExports],
+    ] as const) {
+      for (let target of collectExportTargets(value)) {
+        if (/^\.\/(src|dist)\/lib\//.test(target)) {
+          violations.push(
+            `${packageInfo.dir}/package.json ${field} target ${JSON.stringify(target)} must point at a top-level entry file instead of src/lib or dist/lib.`,
+          )
+        }
+      }
+    }
+  }
+
+  return violations
+}
+
+function collectExportTargets(value: unknown): string[] {
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value)) return value.flatMap(collectExportTargets)
+  if (isRecord(value)) return Object.values(value).flatMap(collectExportTargets)
+  return []
 }
 
 function validatePackageDescriptions(packageInfos: PublishedPackageInfo[]): string[] {

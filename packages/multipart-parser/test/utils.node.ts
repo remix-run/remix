@@ -1,7 +1,8 @@
 import type * as http from 'node:http'
 import { Readable } from 'node:stream'
 
-import { type PartValue, createMultipartMessage } from './utils.ts'
+import { createMultipartMessage } from './utils.ts'
+import type { PartValue } from './utils.ts'
 
 export function createMultipartRequest(
   boundary: string,

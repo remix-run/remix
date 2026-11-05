@@ -3,6 +3,7 @@ import { createFsFileStorage } from '@remix-run/file-storage/fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import type { FileCache } from './file-cache.ts'
+import { isNoEntityError } from '../fs-errors.ts'
 
 /** Directory and limits for a filesystem file cache. */
 export interface FsFileCacheOptions {
@@ -57,7 +58,7 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
   async function initialize(): Promise<CacheState> {
     await fs.mkdir(rootDir, { recursive: true })
     let pending = await fs.stat(pendingPath).catch((error: unknown) => {
-      if (isFileError(error, 'ENOENT')) return null
+      if (isNoEntityError(error)) return null
       throw error
     })
     // A partial storage write may leave a body without metadata to account for it.
@@ -69,7 +70,7 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
         .files
       if (!records.every(isCacheRecordMetadata)) throw new SyntaxError('Invalid cache metadata')
     } catch (error) {
-      if (!(error instanceof SyntaxError) && !isFileError(error, 'ENOENT')) throw error
+      if (!(error instanceof SyntaxError) && !isNoEntityError(error)) throw error
       await fs.writeFile(pendingPath, '')
       await fs.rm(dataDir, { recursive: true, force: true })
       await fs.mkdir(dataDir, { recursive: true })
@@ -139,7 +140,7 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
       state.entries.delete(digest)
       state.entries.set(digest, entry)
       let file = await readRecord(state.storage, digest, maxFileSize).catch((error: unknown) => {
-        if (isFileError(error, 'ENOENT')) return null
+        if (isNoEntityError(error)) return null
         throw error
       })
       if (!file) {
@@ -194,7 +195,7 @@ async function readRecord(
     file = await storage.get(digest)
   } catch (error) {
     // Invalid storage metadata cannot be used to recover a cached record.
-    if (error instanceof SyntaxError || isFileError(error, 'ENOENT')) return null
+    if (error instanceof SyntaxError || isNoEntityError(error)) return null
     throw error
   }
   if (!file || file.size > maxFileSize) return null
@@ -246,10 +247,6 @@ function isCacheRecordMetadata(value: unknown): boolean {
     typeof value.lastModified === 'number' &&
     Number.isFinite(value.lastModified)
   )
-}
-
-function isFileError(error: unknown, code: string): boolean {
-  return error instanceof Error && 'code' in error && error.code === code
 }
 
 async function hash(bytes: Uint8Array<ArrayBuffer>): Promise<string> {

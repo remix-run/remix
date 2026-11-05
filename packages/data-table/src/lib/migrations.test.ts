@@ -754,6 +754,20 @@ describe('transaction directive parser', () => {
     assert.equal(parseTransactionDirective('-- regular comment\nselect 1'), undefined)
   })
 
+  it('throws when a directive value is invalid', () => {
+    assert.throws(
+      () => parseTransactionDirective('-- data-table/transaction: requried\nselect 1'),
+      /Invalid transaction directive value "requried"/,
+    )
+  })
+
+  it('throws when a directive value is missing', () => {
+    assert.throws(
+      () => parseTransactionDirective('-- data-table/transaction:\nselect 1'),
+      /Invalid transaction directive value ""/,
+    )
+  })
+
   it('throws when more than one directive is present', () => {
     assert.throws(
       () =>

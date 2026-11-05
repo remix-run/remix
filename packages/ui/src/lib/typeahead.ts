@@ -1,4 +1,5 @@
-import { createMixin, on, type ElementProps } from '@remix-run/component'
+import { createMixin, on } from '@remix-run/component'
+import type { ElementProps } from '@remix-run/component'
 
 const HIDDEN_TYPEAHEAD_TIMEOUT = 750
 

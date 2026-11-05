@@ -1,7 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createStepProgressReporter, runProgressStep, type StatusChannel } from './reporter.ts'
+import { createStepProgressReporter, runProgressStep } from './reporter.ts'
+import type { StatusChannel } from './reporter.ts'
 
 describe('progress adapter', () => {
   it('maps running and complete step labels onto the reporter status channel', async () => {

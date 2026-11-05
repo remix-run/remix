@@ -1,0 +1,68 @@
+import type { TestResults } from '../reporters/results.ts'
+import { runServerTestFile } from './server-file.ts'
+import { createFailedResults } from './results.ts'
+import { isRecord } from '../is-record.ts'
+
+const workerData = await readWorkerData()
+
+const results = await runWorkerProcessFile(workerData)
+
+if (results) {
+  await sendResults(results)
+}
+
+if (process.connected) {
+  process.disconnect()
+}
+
+process.exitCode = 0
+
+function readWorkerData(): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    function cleanup() {
+      process.off('message', onMessage)
+      process.off('disconnect', onDisconnect)
+    }
+
+    function onMessage(value: unknown) {
+      cleanup()
+      resolve(value)
+    }
+
+    function onDisconnect() {
+      cleanup()
+      reject(new Error('Test worker process disconnected'))
+    }
+
+    process.once('message', onMessage)
+    process.once('disconnect', onDisconnect)
+  })
+}
+
+async function runWorkerProcessFile(value: unknown): Promise<TestResults | undefined> {
+  try {
+    if (!isRecord(value) || (value.type !== 'server' && value.type !== 'e2e')) {
+      throw new Error('Invalid test worker process data')
+    }
+
+    if (value.type === 'e2e') {
+      let { runE2ETestFile } = await import('./e2e-file.ts')
+      return await runE2ETestFile(value, sendResults)
+    }
+
+    return await runServerTestFile(value)
+  } catch (error) {
+    return createFailedResults(error)
+  }
+}
+
+async function sendResults(results: TestResults): Promise<void> {
+  if (!process.send) {
+    throw new Error('Test worker process is missing an IPC channel')
+  }
+
+  let send = process.send.bind(process)
+  await new Promise<void>((resolve, reject) => {
+    send(results, undefined, undefined, (error) => (error ? reject(error) : resolve()))
+  })
+}

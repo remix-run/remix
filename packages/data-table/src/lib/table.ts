@@ -829,26 +829,7 @@ export function hasMany<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: HasManyOptions<source, target>,
 ): Relation<source, target, 'many'> {
-  let sourceKey = normalizeKeySelector(
-    source,
-    relationOptions?.targetKey,
-    'targetKey',
-    getTablePrimaryKey(source) as string[],
-  )
-  let targetKey = normalizeKeySelector(target, relationOptions?.foreignKey, 'foreignKey', [
-    inferForeignKey(getTableName(source)),
-  ])
-
-  assertKeyLengths(getTableName(source), getTableName(target), sourceKey, targetKey)
-
-  return createRelation({
-    relationKind: 'hasMany',
-    cardinality: 'many',
-    sourceTable: source,
-    targetTable: target,
-    sourceKey,
-    targetKey,
-  })
+  return createForeignKeyOnTargetRelation(source, target, relationOptions, 'hasMany', 'many')
 }
 
 /**
@@ -863,26 +844,7 @@ export function hasOne<source extends AnyTable, target extends AnyTable>(
   target: target,
   relationOptions?: HasOneOptions<source, target>,
 ): Relation<source, target, 'one'> {
-  let sourceKey = normalizeKeySelector(
-    source,
-    relationOptions?.targetKey,
-    'targetKey',
-    getTablePrimaryKey(source) as string[],
-  )
-  let targetKey = normalizeKeySelector(target, relationOptions?.foreignKey, 'foreignKey', [
-    inferForeignKey(getTableName(source)),
-  ])
-
-  assertKeyLengths(getTableName(source), getTableName(target), sourceKey, targetKey)
-
-  return createRelation({
-    relationKind: 'hasOne',
-    cardinality: 'one',
-    sourceTable: source,
-    targetTable: target,
-    sourceKey,
-    targetKey,
-  })
+  return createForeignKeyOnTargetRelation(source, target, relationOptions, 'hasOne', 'one')
 }
 
 /**
@@ -1081,6 +1043,39 @@ export function stableSerialize(value: unknown): string {
   }
 
   return JSON.stringify(value)
+}
+
+function createForeignKeyOnTargetRelation<
+  source extends AnyTable,
+  target extends AnyTable,
+  cardinality extends RelationCardinality,
+>(
+  source: source,
+  target: target,
+  relationOptions: HasManyOptions<source, target> | HasOneOptions<source, target> | undefined,
+  relationKind: 'hasMany' | 'hasOne',
+  cardinality: cardinality,
+): Relation<source, target, cardinality> {
+  let sourceKey = normalizeKeySelector(
+    source,
+    relationOptions?.targetKey,
+    'targetKey',
+    getTablePrimaryKey(source) as string[],
+  )
+  let targetKey = normalizeKeySelector(target, relationOptions?.foreignKey, 'foreignKey', [
+    inferForeignKey(getTableName(source)),
+  ])
+
+  assertKeyLengths(getTableName(source), getTableName(target), sourceKey, targetKey)
+
+  return createRelation({
+    relationKind,
+    cardinality,
+    sourceTable: source,
+    targetTable: target,
+    sourceKey,
+    targetKey,
+  })
 }
 
 function normalizePrimaryKey(

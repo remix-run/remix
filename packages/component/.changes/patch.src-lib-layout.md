@@ -1,0 +1,1 @@
+Move the package's internal modules under `src/lib` (and `dist/lib` in the published build), matching the other Remix packages. Public entry points are unchanged. Code that deep-imported files under `dist/runtime`, `dist/style`, `dist/server`, or `dist/dev` must import from the package's public exports instead.

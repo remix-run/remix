@@ -105,7 +105,7 @@ function walkForCommonJS(
         ? walkForCommonJS(node.local, nodeScopes, nextScope, node, 'local')
         : false
     case 'Identifier':
-      if (!isIdentifier(node) || !isReferenceIdentifier(node, parent, key)) return false
+      if (!isIdentifier(node) || !isReferenceIdentifier(parent, key)) return false
       if (resolveBindingKind(node.name, nextScope) !== null) return false
       return isCommonJSReference(node, parent, key)
   }
@@ -379,11 +379,7 @@ function getFunctionScope(scope: Scope): Scope {
   return current
 }
 
-function isReferenceIdentifier(
-  node: IdentifierNode,
-  parent: AstNode | null,
-  key?: string,
-): boolean {
+function isReferenceIdentifier(parent: AstNode | null, key?: string): boolean {
   if (parent === null) return false
   if (parent.type === 'ClassDeclaration' || parent.type === 'ClassExpression') {
     return key !== 'id'
