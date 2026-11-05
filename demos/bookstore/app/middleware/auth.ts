@@ -95,10 +95,7 @@ export function getPostAuthRedirect(url: URL, fallback = routes.account.index.hr
   return getSafeReturnTo(url.searchParams.get('returnTo')) ?? fallback
 }
 
-export function getLoginRedirectURL(
-  url: URL,
-  route: Route<any, any> = routes.auth.login.index,
-): string {
+export function getLoginRedirectURL(url: URL, route: Route = routes.auth.login.index): string {
   return route.href(undefined, {
     searchParams: { returnTo: getSafeReturnTo(url.searchParams.get('returnTo')) },
   })
