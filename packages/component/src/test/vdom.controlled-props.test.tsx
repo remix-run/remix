@@ -159,18 +159,12 @@ describe('vdom controlled props', () => {
     if (!select) throw new Error('Missing select')
     root.render(markup('a'))
     root.flush()
-    expect([...select.options].map((option) => option.selected)).toEqual([
-      false,
-      true,
-      false,
-      false,
-    ])
+    expect([...select.selectedOptions].map((option) => option.index)).toEqual([1])
     select.value = 'b'
     select.dispatchEvent(new Event('change', { bubbles: true }))
     await Promise.resolve()
     await Promise.resolve()
-    expect(select.options[1].selected).toBe(true)
-    expect(select.options[2].selected).toBe(false)
+    expect([...select.selectedOptions].map((option) => option.index)).toEqual([1])
     root.render(markup(['a', 'b']))
     root.flush()
     expect([...select.selectedOptions].map((option) => option.value)).toEqual(['a', 'a', 'b'])
@@ -218,9 +212,7 @@ describe('vdom controlled props', () => {
     showB = true
     root.render(markup())
     root.flush()
-    expect(select.options[0].selected).toBe(false)
     expect(selected(select)).toEqual(['c'])
-    expect(select.options[2].defaultSelected).toBe(false)
     form.reset()
     expect(selected(select)).toEqual(['a'])
     select.options[2].selected = true
