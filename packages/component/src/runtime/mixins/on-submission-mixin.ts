@@ -12,7 +12,7 @@ type SubmissionListener<target extends HTMLElement> = (
  *
  * The handler receives a noncancelable {@link FormSubmissionEvent}. Its signal aborts when the
  * same element receives another submission or the mixin is removed, as with {@link on}.
- * Reload cancellation resolves `event.finished` with `aborted: true` and no error.
+ * Reload cancellation resolves `event.finished` with an aborted signal; failures reject it.
  * Use `on('submit', handler)` to intercept or cancel a native form submission.
  *
  * @param handler Submission handler with the host element as `event.currentTarget`.

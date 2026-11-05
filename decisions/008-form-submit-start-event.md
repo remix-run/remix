@@ -24,7 +24,7 @@ The [reload event contract](https://github.com/remix-run/remix/tree/main/package
 
 ## Completion outcomes
 
-`finished` always resolves with `{ error, aborted }`. Separating cancellation from failure keeps error-name checks out of components. Cancellation carries no error; a resolver failure remains a failure even if its error is named `AbortError`. Non-Error failures are wrapped with the original value as `cause`, so even `throw undefined` remains distinguishable from success. The promise returned by `frame.reload()` retains its rejection behavior.
+`finished` follows the existing `frame.reload()` contract as a `Promise<AbortSignal>`. It resolves after rendering, resolves with an aborted signal on cancellation, and rejects with the original failure. This gives event listeners and imperative callers the same completion API. Cancellation follows the reload lifecycle, so a resolver that throws `AbortError` without cancellation still rejects. Components can catch failures without inspecting error names.
 
 On success, completion follows the response render. Optimistic values can stay applied until the updated props are available, then be cleared in another component render. The handler's signal independently prevents stale updates after another submission or removal.
 
@@ -32,7 +32,7 @@ On success, completion follows the response render. Optimistic values can stay a
 
 - A handle-based state accessor would need another subscription model. Events already provide the submitted data, completion, and moment to update.
 - A mixin around `reloadStart`, or an `event.isFrom(form)` method, could hide filtering but would still need source matching and latest-submission tracking. An element event uses the existing event path and reentry signal.
-- Rejecting `finished`, as the Navigation API does, makes each UI distinguish cancellation from failure. A resolved outcome keeps that classification in the runtime.
+- A resolved `{ error, aborted }` outcome would avoid `try`/`catch` but introduce a second completion contract beside `frame.reload()`. Returning an `AbortSignal` and rejecting on failure keeps the APIs aligned.
 
 ## Scope
 

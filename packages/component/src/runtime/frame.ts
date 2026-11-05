@@ -16,7 +16,6 @@ import {
   type FrameReloadStartEventInit,
 } from './reload-start-event.ts'
 import { createFormSubmissionEvent } from './form-submission-event.ts'
-import type { FrameReloadOutcome } from './reload-details.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
@@ -150,6 +149,8 @@ type ReloadOrigin = Omit<FrameReloadStartEventInit, 'finished'>
 
 type ReloadFailure = { error: unknown; aborted?: false } | { aborted: true }
 
+type ReloadFinished = PromiseWithResolvers<AbortSignal> & { controller: AbortController }
+
 type FrameTemplateListener = (fragment: DocumentFragment) => void
 
 const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
@@ -270,7 +271,7 @@ type FrameReloadState =
   | {
       status: 'inherited'
       disconnect: (() => void) | undefined
-      finished: PromiseWithResolvers<FrameReloadOutcome>
+      finished: ReloadFinished
       origin?: ReloadOrigin
     }
   // This frame is resolving its own source, either for `frame.reload()` or because an ancestor
@@ -279,7 +280,7 @@ type FrameReloadState =
       status: 'direct' | 'ancestor'
       controller: AbortController
       disconnect: () => void
-      finished: PromiseWithResolvers<FrameReloadOutcome>
+      finished: ReloadFinished
       origin?: ReloadOrigin
     }
 
@@ -335,6 +336,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   // The latest reload's controller outlives the reload so a later reload, cancellation, or
   // disposal still aborts the signal returned by `frame.reload()`.
   let reloadController: AbortController | undefined
+  let reloadEventController: AbortController | undefined
   let reloadState: FrameReloadState = { status: 'idle' }
   // The style registry is document-level and shared by every frame; only the
   // frame that created it (the runtime root) disposes it.
@@ -623,6 +625,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     clearRmxData(context.data)
     reloadController?.abort()
     reloadController = undefined
+    reloadEventController?.abort()
+    reloadEventController = undefined
     if (reloadState.status !== 'idle') {
       settleReloadFinished(reloadState.finished, { aborted: true })
     }
@@ -813,7 +817,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     status: 'direct' | 'ancestor',
     signal?: AbortSignal,
     origin?: ReloadOrigin,
-  ): { controller: AbortController; finished: Promise<FrameReloadOutcome> } {
+  ): { controller: AbortController; finished: Promise<AbortSignal> } {
     let previous = reloadState
     reloadController?.abort()
     leaveReloadState()
@@ -825,9 +829,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       status === 'ancestor' && (previous.status === 'inherited' || previous.status === 'ancestor')
         ? previous
         : undefined
-    let finished = continued
-      ? continued.finished
-      : createReloadFinished(status === 'direct' ? controller.signal : signal)
+    let finished = continued?.finished
+    if (!finished) {
+      reloadEventController?.abort()
+      let eventReload =
+        status === 'direct'
+          ? { controller, disconnect: undefined }
+          : createLinkedAbortController(signal)
+      finished = createReloadFinished(eventReload.controller, eventReload.disconnect)
+    }
+    reloadEventController = finished.controller
     if (!continued && previous.status !== 'idle') {
       settleReloadFinished(previous.finished, { aborted: true })
     }
@@ -940,8 +951,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       signal.addEventListener('abort', abort, { once: true })
       disconnect = () => signal.removeEventListener('abort', abort)
     }
-    let finished =
-      previous.status === 'inherited' ? previous.finished : createReloadFinished(signal)
+    let finished = previous.status === 'inherited' ? previous.finished : undefined
+    if (!finished) {
+      reloadEventController?.abort()
+      let eventReload = createLinkedAbortController(signal)
+      finished = createReloadFinished(eventReload.controller, eventReload.disconnect)
+    }
+    reloadEventController = finished.controller
     reloadState = { status: 'inherited', disconnect, finished, origin }
 
     if (previous.status === 'idle') {
@@ -1184,29 +1200,31 @@ function insertFrame(
   return committed
 }
 
-function createReloadFinished(signal?: AbortSignal): PromiseWithResolvers<FrameReloadOutcome> {
-  let finished = Promise.withResolvers<FrameReloadOutcome>()
-  let abort = () => finished.resolve({ error: undefined, aborted: true })
-  if (signal?.aborted) abort()
-  else signal?.addEventListener('abort', abort, { once: true })
-  let disconnect = () => signal?.removeEventListener('abort', abort)
-  void finished.promise.then(disconnect)
-  return finished
+function createReloadFinished(
+  controller: AbortController,
+  disconnect?: () => void,
+): ReloadFinished {
+  let finished = Promise.withResolvers<AbortSignal>()
+  let abort = () => finished.resolve(controller.signal)
+  if (controller.signal.aborted) abort()
+  else controller.signal.addEventListener('abort', abort, { once: true })
+  let cleanup = () => {
+    controller.signal.removeEventListener('abort', abort)
+    disconnect?.()
+  }
+  // Events are notifications: a failure still reaches the app's error target even with no listener.
+  void finished.promise.then(cleanup, cleanup)
+  return Object.assign(finished, { controller })
 }
 
-function settleReloadFinished(
-  finished: PromiseWithResolvers<FrameReloadOutcome> | undefined,
-  failure?: ReloadFailure,
-): void {
+function settleReloadFinished(finished: ReloadFinished | undefined, failure?: ReloadFailure): void {
   if (!finished) return
-  if (failure === undefined || failure.aborted) {
-    finished.resolve({ error: undefined, aborted: failure?.aborted ?? false })
+  if (failure?.aborted) {
+    finished.controller.abort()
+  } else if (failure === undefined) {
+    finished.resolve(finished.controller.signal)
   } else {
-    let error =
-      failure.error instanceof Error
-        ? failure.error
-        : new Error('The frame reload failed.', { cause: failure.error })
-    finished.resolve({ error, aborted: false })
+    finished.reject(failure.error)
   }
 }
 

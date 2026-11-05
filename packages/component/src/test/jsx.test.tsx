@@ -7,7 +7,6 @@ import { createMixin, on, onSubmission, ref, unsafeHTML } from '../index.ts'
 import type {
   Dispatched,
   FormSubmissionEvent,
-  FrameReloadOutcome,
   MixInput,
   MixinDescriptor,
   MixinHandle,
@@ -453,12 +452,7 @@ describe('jsx', () => {
           mix={onSubmission((event) => {
             type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLFormElement>>
             type inferredData = Assert<Equal<typeof event.formData, FormData | null>>
-            type inferredFinished = Assert<
-              Equal<typeof event.finished, Promise<FrameReloadOutcome>>
-            >
-            type inferredError = Assert<
-              Equal<Awaited<typeof event.finished>['error'], Error | undefined>
-            >
+            type inferredFinished = Assert<Equal<typeof event.finished, Promise<AbortSignal>>>
             type inferredAborted = Assert<Equal<Awaited<typeof event.finished>['aborted'], boolean>>
           })}
         />

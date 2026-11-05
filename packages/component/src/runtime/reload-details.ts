@@ -19,19 +19,10 @@ export interface ReloadDetails {
   /** The actual submit button, or `null` when there is no submitter. */
   readonly submitter: HTMLElement | null
   /**
-   * Resolves with this reload's outcome after rendering, failure, or cancellation. Never rejects.
-   * On success, retained components have updated props. Failures carry an `Error`; other thrown
-   * values are wrapped in an `Error` with the original value as its `cause`. Aborted reloads have
-   * no error.
-   * Descendant frame events track their own reload completion.
+   * Follows this reload like `frame.reload()`: resolves with its signal after rendering, or with
+   * an aborted signal on cancellation, supersession, or frame removal. Rejects on failure.
+   * On success, retained components have updated props. Descendant frame events track their
+   * own reload completion.
    */
-  readonly finished: Promise<FrameReloadOutcome>
-}
-
-/** Completion of a frame reload, reported without rejecting the event's `finished` promise. */
-export interface FrameReloadOutcome {
-  /** Failure of the reload, or `undefined` when it completed or was aborted. */
-  readonly error: Error | undefined
-  /** Whether the reload was cancelled, superseded, or its frame was removed. */
-  readonly aborted: boolean
+  readonly finished: Promise<AbortSignal>
 }

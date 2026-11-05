@@ -1201,17 +1201,17 @@ if (form.reportValidity()) {
 | `formData`  | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                              |
 | `element`   | The initiating anchor, area, or owning form. `null` for `frame.reload()`, programmatic navigation, and history traversal.                |
 | `submitter` | The actual submit button, or `null` when there is no submitter.                                                                          |
-| `finished`  | Resolves with a `FrameReloadOutcome` containing `error` and `aborted` when the reload ends. Never rejects.                               |
+| `finished`  | A `Promise<AbortSignal>` that follows this reload like `frame.reload()`. Rejects on failure.                                             |
 
-`await event.finished` always resolves with a `FrameReloadOutcome`:
+`event.finished` follows the same contract as `frame.reload()`:
 
-| Outcome                               | `error`     | `aborted` |
-| ------------------------------------- | ----------- | --------- |
-| Content rendered                      | `undefined` | `false`   |
-| Reload failed                         | `Error`     | `false`   |
-| Cancelled, replaced, or frame removed | `undefined` | `true`    |
+| Outcome                               | `finished`                         |
+| ------------------------------------- | ---------------------------------- |
+| Content rendered                      | Resolves with the reload's signal. |
+| Reload failed                         | Rejects with the original failure. |
+| Cancelled, replaced, or frame removed | Resolves with an aborted signal.   |
 
-Failures preserve the thrown `Error`; other thrown values are wrapped in an `Error` with the original value as its `cause`. The promise returned by `frame.reload()` still rejects on failure.
+For a direct reload, `await event.finished` and `await frame.reload()` return the same signal. It can become aborted later when another reload starts or the frame is disposed. Catch failures with `try`/`catch`; cancellation does not reject, so no error-name check is needed.
 
 Rendering a validation response counts as a completed reload. The response carries its field errors.
 
@@ -1241,10 +1241,13 @@ export const TitleForm = clientEntry(
           submission = event
           failed = false
           handle.update()
-          let { error } = await event.finished
+          try {
+            await event.finished
+          } catch {
+            if (!signal.aborted) failed = true
+          }
           if (signal.aborted) return
           submission = undefined
-          failed = error !== undefined
           handle.update()
         })}
       >
@@ -1263,7 +1266,7 @@ export const TitleForm = clientEntry(
 )
 ```
 
-The handler's signal aborts on the host's next submission or removal, so the check prevents stale updates. A cancelled reload resolves `finished` with no error, letting this example clear pending state without showing a failure. Check the result's `aborted` flag before success-only behavior, such as announcing “Saved!”. If submitting removes the form itself, listen on an ancestor that stays mounted.
+The handler's signal aborts on the host's next submission or removal, so the check prevents stale updates. A cancelled reload resolves `finished` with an aborted signal, letting this example clear pending state without showing a failure. For success-only behavior such as announcing “Saved!”, use `let reloadSignal = await event.finished` and check `reloadSignal.aborted` first. If submitting removes the form itself, listen on an ancestor that stays mounted.
 
 The event extends `SubmitEvent` and shares the [reload details](#following-a-reload), including the same `FormData` object and `finished` promise as the target frame's `reloadStart`. `element` is the owning form and `submitter` is the actual submit button or `null`.
 

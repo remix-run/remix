@@ -56,7 +56,7 @@ describe('onSubmission mixin', () => {
         formData: new FormData(),
         element: form,
         submitter: button,
-        finished: Promise.resolve({ error: undefined, aborted: false }),
+        finished: Promise.resolve(new AbortController().signal),
       }),
     )
 

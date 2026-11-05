@@ -248,10 +248,13 @@ export const SaveButton = clientEntry(import.meta.url, function SaveButton(handl
           saving = true;
           failed = false;
           handle.update();
-          let { error } = await event.finished;
+          try {
+            await event.finished;
+          } catch {
+            if (!signal.aborted) failed = true;
+          }
           if (signal.aborted) return;
           saving = false;
-          failed = error !== undefined;
           handle.update();
         })}
       >
@@ -275,10 +278,10 @@ import { SaveButton } from "./public/save-button.tsx";
 </form>;
 ```
 
-`finished` always resolves with `{ error, aborted }`. The button clears pending state when the
-response renders, including validation responses. A failed reload carries an `error`, while a
-cancelled reload has no error, so cancellation clears “Saving…” without showing a failure. Check
-`aborted` as well before showing success feedback such as “Saved!”.
+`finished` follows the same contract as `frame.reload()`. It resolves with an `AbortSignal` when
+the response renders, including validation responses, and rejects when the reload fails. Cancellation
+resolves with an aborted signal, so it clears “Saving…” without showing a failure. Before showing
+success feedback such as “Saved!”, check the returned signal's `aborted` flag.
 
 The button stays enabled so the visitor can submit again. The next submission, or removal of the
 button, aborts the earlier handler's signal and prevents it from overwriting newer state.

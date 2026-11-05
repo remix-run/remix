@@ -5,7 +5,6 @@ export { run } from './runtime/run.ts'
 export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
 export type { ComponentErrorEvent } from './runtime/component.ts'
 export type { FrameReloadStartEvent } from './runtime/reload-start-event.ts'
-export type { FrameReloadOutcome } from './runtime/reload-details.ts'
 export type { FormSubmissionEvent } from './runtime/form-submission-event.ts'
 
 export { createRoot, createRangeRoot, createScheduler } from './runtime/vdom.ts'

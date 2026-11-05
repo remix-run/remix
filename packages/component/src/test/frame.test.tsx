@@ -475,9 +475,10 @@ describe('run', () => {
     expect(event.formData?.get('name')).toBe('Ada')
     expect(event.element).toBeNull()
     expect(event.submitter).toBeNull()
-    expect(await event.finished).toEqual({ error: undefined, aborted: false })
+    let signal = await event.finished
+    expect(signal).toBe(await reload)
+    expect(signal.aborted).toBe(false)
     expect(document.querySelector('main')?.textContent).toBe('Saved')
-    await reload
   })
 
   it('identifies the anchor when a nested element starts a link navigation', async (t) => {
@@ -665,7 +666,7 @@ describe('run', () => {
     await replacement
 
     expect(events).toHaveLength(0)
-    expect(await reloadEvents[0]!.finished).toEqual({ error: undefined, aborted: true })
+    expect((await reloadEvents[0]!.finished).aborted).toBe(true)
     await reloadEvents[1]!.finished
   })
 
@@ -809,7 +810,7 @@ describe('run', () => {
     expect(events).toHaveLength(0)
   })
 
-  it('resolves the submission’s finished with the failure when its reload fails', async (t) => {
+  it('rejects the submission’s finished with the failure when its reload fails', async (t) => {
     document.body.innerHTML = '<main>Initial</main>'
     t.mock.method(
       globalThis,
@@ -842,10 +843,7 @@ describe('run', () => {
     expect(events).toHaveLength(1)
     expect(reloadEvents).toHaveLength(1)
     expect(events[0]!.finished).toBe(reloadEvents[0]!.finished)
-    let { error, aborted } = await events[0]!.finished
-    expect(error).toBeInstanceOf(Error)
-    expect(error?.message).toContain('500 Internal Server Error')
-    expect(aborted).toBe(false)
+    await expect(events[0]!.finished).rejects.toThrow('500 Internal Server Error')
     await expect(reload.finished).rejects.toThrow('500 Internal Server Error')
     expect(document.querySelector('main')?.textContent).toBe('Initial')
   })
@@ -905,7 +903,7 @@ describe('run', () => {
     ])
     expect(submissions[0]!.signal.aborted).toBe(true)
     expect(submissions[1]!.signal.aborted).toBe(false)
-    expect(await submissions[0]!.event.finished).toEqual({ error: undefined, aborted: true })
+    expect((await submissions[0]!.event.finished).aborted).toBe(true)
     await submissions[1]!.event.finished
     expect(document.querySelector('main')?.textContent).toBe('Second')
     resolveFirstResponse(
@@ -940,7 +938,7 @@ describe('run', () => {
     let second = app.frames.top.reload()
 
     expect(events).toHaveLength(2)
-    expect(await events[0]!.finished).toEqual({ error: undefined, aborted: true })
+    expect((await events[0]!.finished).aborted).toBe(true)
     resolveFirstResponse(
       new Response(
         '<!DOCTYPE html><html><head></head><body><main>First</main></body></html><!-- rmx:flush document -->',
@@ -965,7 +963,7 @@ describe('run', () => {
     app.dispose()
 
     expect(events).toHaveLength(1)
-    expect(await events[0]!.finished).toEqual({ error: undefined, aborted: true })
+    expect((await events[0]!.finished).aborted).toBe(true)
   })
 
   it('resolves finished immediately when navigation aborts before its resolver settles', async (t) => {
@@ -977,10 +975,10 @@ describe('run', () => {
       app.dispose()
     })
     await app.ready()
-    let outcome: unknown = 'pending'
+    let signal: AbortSignal | undefined
     app.frames.top.addEventListener('reloadStart', (event) => {
       void event.finished.then((result) => {
-        outcome = result
+        signal = result
       })
     })
     let controller = new AbortController()
@@ -989,13 +987,13 @@ describe('run', () => {
     controller.abort(new Error('Navigation stopped'))
     await Promise.resolve()
 
-    expect(outcome).toEqual({ error: undefined, aborted: true })
+    expect(signal?.aborted).toBe(true)
     response.resolve('<!DOCTYPE html><html><head></head><body>Stale</body></html>')
     await reload.finished
     expect(document.querySelector('main')?.textContent).toBe('Initial')
   })
 
-  it('wraps non-Error reload failures with their original cause in finished', async (t) => {
+  it('preserves non-Error reload rejections in finished', async (t) => {
     document.body.innerHTML = '<main>Initial</main>'
     let failure: unknown
     let app = run({ loadModule: mock.fn(), resolveFrame: () => Promise.reject(failure) })
@@ -1006,16 +1004,10 @@ describe('run', () => {
     app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
 
     await expect(app.frames.top.reload()).rejects.toBe(undefined)
-    let first = await events[0]!.finished
-    expect(first.aborted).toBe(false)
-    expect(first.error).toBeInstanceOf(Error)
-    expect(first.error?.cause).toBe(undefined)
+    await expect(events[0]!.finished).rejects.toBe(undefined)
     failure = null
     await expect(app.frames.top.reload()).rejects.toBe(null)
-    let second = await events[1]!.finished
-    expect(second.aborted).toBe(false)
-    expect(second.error).toBeInstanceOf(Error)
-    expect(second.error?.cause).toBe(null)
+    await expect(events[1]!.finished).rejects.toBe(null)
   })
 
   it('reports a resolver AbortError as a failure when the reload was not aborted', async (t) => {
@@ -1030,10 +1022,10 @@ describe('run', () => {
 
     await expect(app.frames.top.reload()).rejects.toBe(failure)
 
-    expect(await events[0]!.finished).toEqual({ error: failure, aborted: false })
+    await expect(events[0]!.finished).rejects.toBe(failure)
   })
 
-  it('resolves a client child frame’s finished with its ancestor-driven request failure', async (t) => {
+  it('rejects a client child frame’s finished with its ancestor-driven request failure', async (t) => {
     document.body.innerHTML = '<main>Initial</main>'
     let failure = new Error('Child request failed')
     let failChild = false
@@ -1066,7 +1058,7 @@ describe('run', () => {
     await app.frames.top.reload()
 
     expect(events).toHaveLength(1)
-    expect(await events[0]!.finished).toEqual({ error: failure, aborted: false })
+    await expect(events[0]!.finished).rejects.toBe(failure)
     expect(order).toEqual(['error', 'complete'])
     expect(document.querySelector('main')?.textContent).toBe('Initial child')
   })
@@ -1104,7 +1096,7 @@ describe('run', () => {
 
     expect(events).toHaveLength(2)
     expect(submissions).toHaveLength(0)
-    expect(await events[0]!.finished).toEqual({ error: undefined, aborted: true })
+    expect((await events[0]!.finished).aborted).toBe(true)
     await events[1]!.finished
     expect(document.querySelector('main')?.textContent).toBe('Child')
   })
@@ -4712,11 +4704,14 @@ describe('run', () => {
     expect(events[0]!.formData).toBe(formData)
     expect(events[0]!.element).toBe(form)
     expect(events[0]!.submitter).toBe(button)
-    await events[0]!.finished
+    let childSignal = await events[0]!.finished
+    expect(childSignal.aborted).toBe(false)
     expect(document.getElementById('child-label')?.textContent).toBe('Saved child')
+    app.dispose()
+    expect(childSignal.aborted).toBe(true)
   })
 
-  it('resolves child frames’ finished with the failure when the reload of an ancestor fails', async (t) => {
+  it('rejects child frames’ finished with the failure when the reload of an ancestor fails', async (t) => {
     let initialDocument = new DOMParser().parseFromString(
       await drainWithProtocol(
         renderToStream(
@@ -4749,10 +4744,7 @@ describe('run', () => {
     await expect(app.frames.top.reload()).rejects.toThrow('500 Internal Server Error')
 
     expect(events).toHaveLength(1)
-    let { error, aborted } = await events[0]!.finished
-    expect(error).toBeInstanceOf(Error)
-    expect(error?.message).toContain('500 Internal Server Error')
-    expect(aborted).toBe(false)
+    await expect(events[0]!.finished).rejects.toThrow('500 Internal Server Error')
     expect(completions).toBe(1)
     expect(document.getElementById('child-label')?.textContent).toBe('Initial child')
   })

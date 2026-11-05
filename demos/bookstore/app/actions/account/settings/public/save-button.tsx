@@ -15,11 +15,14 @@ export const SaveButton = clientEntry(
             saving = true
             failed = false
             handle.update()
-            let { error } = await event.finished
+            try {
+              await event.finished
+            } catch {
+              if (!signal.aborted) failed = true
+            }
             // The button's next submission, or its removal, aborts the signal.
             if (signal.aborted) return
             saving = false
-            failed = error !== undefined
             handle.update()
           })}
         >

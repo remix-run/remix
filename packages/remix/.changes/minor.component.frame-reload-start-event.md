@@ -1,1 +1,1 @@
-Follow frame reloads with `FrameReloadStartEvent` from `remix/component`, carrying request and origin details aligned with `frame.reload()`. Its `finished` promise resolves with `{ error, aborted }`, and descendant frames track their own completion.
+Follow frame reloads with `FrameReloadStartEvent` from `remix/component`, carrying request and origin details aligned with `frame.reload()`. Its `finished` promise follows the `Promise<AbortSignal>` contract of `frame.reload()`, and descendant frames track their own completion.

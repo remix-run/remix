@@ -947,9 +947,9 @@ for disabled controls, pending labels, progress indicators, and duplicate-submis
 
 For forms Remix handles as [frame navigations](#client-navigation), use
 [`onSubmission()`](/api/component/#following-a-form-submission) to follow a button's or form's own
-submissions. The handler receives the submitted `formData` and a `finished` promise that resolves
-with `{ error, aborted }`. [Add pending feedback](/forms-and-mutations/#add-pending-feedback) shows
-how to use it for a save button.
+submissions. The handler receives the submitted `formData` and a `finished` promise that follows
+the same `Promise<AbortSignal>` contract as `frame.reload()`.
+[Add pending feedback](/forms-and-mutations/#add-pending-feedback) shows how to use it for a save button.
 
 Optimistic UI renders the expected result before the request completes. A hydrated form can render
 what it just submitted, and let the response replace it:
@@ -974,10 +974,13 @@ export const FavoriteForm = clientEntry(
             submitted = event.formData?.get("favorite") === "true";
             failed = false;
             handle.update();
-            let { error } = await event.finished;
+            try {
+              await event.finished;
+            } catch {
+              if (!signal.aborted) failed = true;
+            }
             if (signal.aborted) return;
             submitted = undefined;
-            failed = error !== undefined;
             handle.update();
           })}
         >
@@ -995,9 +998,9 @@ export const FavoriteForm = clientEntry(
 
 On success, `finished` resolves after the response renders and updates the component's props.
 Keep the submitted value as an override until then. Clearing it schedules another component render
-using those updated props. Failure or cancellation falls back to the current props, and only a
-failure carries an `error`. The handler's signal prevents an older submission, or a removed
-component, from updating state.
+using those updated props. Failure or cancellation falls back to the current props. Failures reject
+`finished`, while cancellation resolves with an aborted signal. The handler's signal prevents an
+older submission, or a removed component, from updating state.
 
 Optimistic state works best for reversible, predictable changes such as toggles, reordering, and
 adding a known item. Wait for the response when the server chooses the final value, performs a

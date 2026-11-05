@@ -8,10 +8,13 @@ Follow a form's own submissions with `onSubmission(handler, captureBoolean?)`, a
     saving = true
     failed = false
     handle.update()
-    let { error } = await event.finished
+    try {
+      await event.finished
+    } catch {
+      if (!signal.aborted) failed = true
+    }
     if (signal.aborted) return
     saving = false
-    failed = error !== undefined
     handle.update()
   })}
 >
@@ -19,4 +22,4 @@ Follow a form's own submissions with `onSubmission(handler, captureBoolean?)`, a
 </button>
 ```
 
-`finished` always resolves with `{ error, aborted }`; cancellation has no error. The handler's signal aborts on another submission or removal. The event extends `SubmitEvent` with `cancelable: false`, so cancel through native `submit`. Links, programmatic reloads or navigations, and document navigations don't emit it. See [following a form submission](https://github.com/remix-run/remix/tree/main/packages/component#following-a-form-submission) for request fields and external-submitter delivery.
+`finished` follows `frame.reload()` as a `Promise<AbortSignal>`: it resolves after rendering, resolves with an aborted signal on cancellation, and rejects on failure. The handler's signal aborts on another submission or removal. The event extends `SubmitEvent` with `cancelable: false`, so cancel through native `submit`. Links, programmatic reloads or navigations, and document navigations don't emit it. See [following a form submission](https://github.com/remix-run/remix/tree/main/packages/component#following-a-form-submission) for request fields and external-submitter delivery.
