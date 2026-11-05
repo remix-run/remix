@@ -85,7 +85,13 @@ function stubAnimationFrames(t: TestContext) {
   })
   return {
     pending: () => callbacks.length,
-    next: () => callbacks.shift()?.(0),
+    // Runs a frame: the callbacks queued so far, but not the ones they request.
+    next() {
+      for (let callback of callbacks.splice(0)) callback(0)
+    },
+    flush() {
+      while (callbacks.length > 0) this.next()
+    },
   }
 }
 
@@ -1139,6 +1145,7 @@ describe('navigate', () => {
   })
 
   it('ignores legacy boolean scroll and focus settings on traverse navigations', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
@@ -1162,6 +1169,7 @@ describe('navigate', () => {
     let transition = dispatchNavigation(event)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -1169,6 +1177,7 @@ describe('navigate', () => {
   })
 
   it('ignores manual scroll and focus settings on traverse navigations', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let event = createTraverseNavigateEvent({
       target: undefined,
@@ -1184,6 +1193,7 @@ describe('navigate', () => {
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -1191,6 +1201,7 @@ describe('navigate', () => {
   })
 
   it('honors legacy true settings on traverse navigations', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let event = createTraverseNavigateEvent({
       target: undefined,
@@ -1204,6 +1215,7 @@ describe('navigate', () => {
     let transition = dispatchNavigation(event)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -1211,6 +1223,7 @@ describe('navigate', () => {
   })
 
   it('defaults missing reset settings when Safari reads traversal state from entries', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     stubGlobalMethod(t, 'navigation', 'entries', () => [
       { key: 'previous', getState: () => ({ target: undefined, src: '/previous', $rmx: true }) },
@@ -1221,6 +1234,7 @@ describe('navigate', () => {
     let transition = dispatchNavigation(event)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -1246,6 +1260,7 @@ describe('navigate', () => {
   })
 
   it('preserves legacy history state while using default reset settings for traversal redirects', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let redirectedTo = new URL('/redirected', window.location.origin).href
     let dispatchNavigation = startStubNavigationListener(t, {
       ...stubFrames,
@@ -1268,6 +1283,7 @@ describe('navigate', () => {
     let transition = dispatchNavigation(event)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(navigateMock).toHaveBeenCalledWith(redirectedTo, {
       history: 'replace',
@@ -1398,7 +1414,7 @@ describe('navigate', () => {
       await handler
 
       expect(scroll).toHaveBeenCalledTimes(1)
-      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      expect(document.adoptedStyleSheets).toContain(stylesheet)
       resolveTransitionFinished()
       await transitionFinished
       // Scroll anchoring stays disabled while the page shrinks back to its own height.
@@ -1407,9 +1423,9 @@ describe('navigate', () => {
       expect(getComputedStyle(document.body).overflowAnchor).toBe('none')
 
       animationFrames.next()
-      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      expect(document.adoptedStyleSheets).toContain(stylesheet)
       animationFrames.next()
-      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
+      expect(document.adoptedStyleSheets).not.toContain(stylesheet)
     } finally {
       eventController.abort()
       controller.abort()
@@ -1430,11 +1446,12 @@ describe('navigate', () => {
       }),
     )
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+    let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
 
     await transition.runHandler()
     await transition.fail()
 
-    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
+    expect(document.adoptedStyleSheets).not.toContain(stylesheet)
     expect(animationFrames.pending()).toBe(0)
   })
 
