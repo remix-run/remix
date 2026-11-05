@@ -34,16 +34,15 @@ function stubGlobalMethod(t: TestContext, api: string, method: string, impl: any
   return t.mock.method((globalThis as any)[api], method, impl)
 }
 
-// Replaces a property on `globalThis` and returns a function that restores the
-// previous value. Used for tests that swap `navigation` for a fake instance.
+// Replaces a property on `globalThis` and restores the previous value after the test. Used for
+// tests that swap `navigation` for a fake instance.
 function stubGlobalField(t: TestContext, name: string, value: unknown): void {
-  let key = name as keyof typeof globalThis
   let hadOwn = Object.prototype.hasOwnProperty.call(globalThis, name)
-  let previous = (globalThis as any)[key]
-  ;(globalThis as any)[key] = value
+  let previous: unknown = Reflect.get(globalThis, name)
+  Reflect.set(globalThis, name, value)
   t.after(() => {
-    if (hadOwn) (globalThis as any)[key] = previous
-    else delete (globalThis as any)[key]
+    if (hadOwn) Reflect.set(globalThis, name, previous)
+    else Reflect.deleteProperty(globalThis, name)
   })
 }
 

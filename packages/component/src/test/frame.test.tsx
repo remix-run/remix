@@ -5467,8 +5467,9 @@ describe('run', () => {
     root.render(<CaptureRuntime />)
     root.flush()
 
-    expect(runtime).toBeDefined()
-    expect(() => runtime!.resolveFrame('/missing-runtime')).toThrow(
+    invariant(runtime, 'Expected frame runtime to be captured')
+    let capturedRuntime = runtime
+    expect(() => capturedRuntime.resolveFrame('/missing-runtime')).toThrow(
       'Cannot render <Frame /> without frame runtime',
     )
   })
@@ -5563,7 +5564,8 @@ describe('run', () => {
       let root = createRoot(container, {
         frameInit: {
           resolveFrame: async () => html,
-          loadModule: async () => ({ not: 'a function' }) as any,
+          // @ts-expect-error loadModule must resolve a function; this covers the runtime guard
+          loadModule: async () => ({ not: 'a function' }),
         },
       })
 

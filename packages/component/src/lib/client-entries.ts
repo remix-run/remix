@@ -124,7 +124,7 @@ export function clientEntry(entryId: string, component: any): any {
  * @returns True if the component has entry metadata
  */
 export function isEntry(component: unknown): component is EntryComponent {
-  return Boolean(component && typeof component === 'function' && (component as any).$entry === true)
+  return typeof component === 'function' && '$entry' in component && component.$entry === true
 }
 
 /**

@@ -86,12 +86,12 @@ describe('css mixin', () => {
               from: {
                 opacity: 0,
                 transform: 'translateY(8px)',
-                '&:hover': { color: 'red' } as any,
+                '&:hover': { color: 'red' },
               },
               to: {
                 opacity: 1,
               },
-              skipped: null as any,
+              skipped: null,
             },
             '@media (min-width: 1px)': {
               color: 'rgb(1, 2, 3)',
@@ -155,7 +155,7 @@ describe('css mixin', () => {
             animationDuration: '1s',
             '@keyframes empty-frames': {
               from: {
-                '&:hover': { color: 'red' } as any,
+                '&:hover': { color: 'red' },
               },
               to: {},
             },
