@@ -331,19 +331,13 @@ describe('redis session storage', () => {
     assert.deepEqual(setExArgs, ['session:' + session.id, 120, JSON.stringify(session.data)])
   })
 
-  it('throws if session data in redis is invalid JSON', async () => {
+  it('starts a new session when session data in redis is invalid JSON', async () => {
     let { client, values } = createMapRedisClient()
     let storage = createRedisSessionStorage(client)
 
     values.set('session:bad', '{invalid-json')
 
-    await assert.rejects(
-      async () => {
-        await storage.read('bad')
-      },
-      {
-        name: 'SyntaxError',
-      },
-    )
+    let session = await storage.read('bad')
+    assert.notEqual(session.id, 'bad')
   })
 })

@@ -95,8 +95,12 @@ export function createRedisSessionStorage(
         let value = await client.get(keyForSession(id))
 
         if (value != null) {
-          let data = JSON.parse(value) as SessionData
-          return createSession(id, data)
+          try {
+            let data = JSON.parse(value) as SessionData
+            return createSession(id, data)
+          } catch (error) {
+            if (!(error instanceof SyntaxError)) throw error
+          }
         }
       }
 

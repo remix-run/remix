@@ -1,0 +1,1 @@
+Fixed `createRedisSessionStorage()` rejecting every request that sends a session cookie whose stored data isn't valid JSON. `read()` now starts a new session instead, matching the filesystem and cookie session storage.
