@@ -193,6 +193,7 @@ function runInDocument(
     let iframe: HTMLIFrameElement | undefined
     let testWindow: Window | null
     if (new URLSearchParams(location.search).get('isolation') === 'window') {
+      params.set('isolation', 'window')
       testWindow = window.open(`/iframe?${params}`, '_blank', 'width=800,height=400')
       if (!testWindow) throw new Error('Could not open the browser test window')
     } else {
