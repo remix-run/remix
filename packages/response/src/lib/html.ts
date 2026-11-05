@@ -71,27 +71,21 @@ function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStr
   return new ReadableStream({
     async start(controller) {
       try {
-        // Read first chunk to check for DOCTYPE
         let firstChunk = await reader.read()
 
         if (firstChunk.done) {
-          // Empty stream, just add DOCTYPE
           controller.enqueue(doctypeBytes)
           controller.close()
           return
         }
 
-        // Check if the first chunk starts with DOCTYPE
         if (startsWithDoctypeBytes(firstChunk.value)) {
-          // Already has DOCTYPE, pass through
           controller.enqueue(firstChunk.value)
         } else {
-          // Prepend DOCTYPE
           controller.enqueue(doctypeBytes)
           controller.enqueue(firstChunk.value)
         }
 
-        // Pass through remaining chunks
         while (true) {
           // Keep the result intact so TypeScript 7 can narrow value from done. The abortable UI
           // stream uses the same pattern.
