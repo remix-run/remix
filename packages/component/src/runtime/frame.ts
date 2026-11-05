@@ -14,14 +14,13 @@ import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
-import type { Scheduler, VirtualRoot } from './vdom.ts'
+import type { VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import {
   createFrameRuntime,
   getFrameRuntime,
   getSharedFrameRuntime,
   isFrameRuntime,
-  NamedFrameRegistry,
 } from './frame-runtime.ts'
 import type {
   FrameMountState,
@@ -29,10 +28,9 @@ import type {
   FrameReloadResult,
   FrameReloadTransition,
   FrameRuntime,
-  LoadModule,
-  PendingClientEntries,
+  NamedFrameRegistry,
   ReconciliationTracker,
-  ResolveFrame,
+  SharedFrameRuntime,
 } from './frame-runtime.ts'
 import { findContextFromAncestry, insertDomNode, isFrameStartComment, remove } from './reconcile.ts'
 import type {
@@ -63,7 +61,6 @@ import type { CSSProps } from '../style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER } from './stream-protocol.ts'
 import type { FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader } from './module-preloader.ts'
-import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './spa-response.ts'
 import {
   disposeClientEntryBoundary,
@@ -208,23 +205,12 @@ export function reloadFrameForNavigation(
   return reload(options)
 }
 
-export type FrameContext = {
+export type FrameContext = SharedFrameRuntime & {
   nonce?: string
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
   frame: FrameHandle
-  styleManager: StyleManager
   data: RmxData
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, FrameInstance>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
   lifecycleSignal: AbortSignal
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
@@ -234,25 +220,16 @@ export type FrameContext = {
   blockingFrameTracker?: ReconciliationTracker
 }
 
-type FrameInit = {
+// A frame without its own style manager creates (and owns) one.
+type FrameInit = Omit<SharedFrameRuntime, 'styleManager'> & {
   nonce?: string
   name?: string
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
   src: string
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
   styleManager?: StyleManager
   marker?: FrameMarkerData
   data: RmxData
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, FrameInstance>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
 }
 
 // Whether reloadStart has been dispatched without a matching reloadComplete, and why. Each frame
@@ -1112,18 +1089,8 @@ function createFrameInstance(
     name: getFrameName(node),
     src: getFrameSrc(node),
     getContext,
-    errorTarget: runtime.errorTarget,
-    loadModule: runtime.loadModule,
-    resolveFrame: runtime.resolveFrame,
-    pendingClientEntries: runtime.pendingClientEntries,
-    scheduler: runtime.scheduler,
-    styleManager: runtime.styleManager,
+    ...getSharedFrameRuntime(runtime),
     data: {},
-    moduleCache: runtime.moduleCache,
-    moduleLoads: runtime.moduleLoads,
-    frameInstances: runtime.frameInstances,
-    namedFrames: runtime.namedFrames,
-    processClientEntryPreloads: runtime.processClientEntryPreloads,
   })
   runtime.frameInstances.set(start, instance)
   return instance

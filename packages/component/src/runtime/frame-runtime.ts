@@ -202,22 +202,13 @@ export function getFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
   return isFrameRuntime(runtime) ? runtime : undefined
 }
 
-export function createFrameRuntime(init: {
-  topFrame?: FrameHandle
-  getContext?: (type: ElementFunction) => unknown
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
-  styleManager: StyleManager
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, FrameInstance>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
-  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
-}): FrameRuntime {
+export function createFrameRuntime(
+  init: SharedFrameRuntime & {
+    topFrame?: FrameHandle
+    getContext?: (type: ElementFunction) => unknown
+    reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
+  },
+): FrameRuntime {
   return {
     [FRAME_RUNTIME]: true,
     topFrame: init.topFrame,
