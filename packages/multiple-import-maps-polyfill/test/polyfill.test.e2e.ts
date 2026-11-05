@@ -235,6 +235,32 @@ describe('multiple import map polyfill', () => {
     assert.equal(requests.get('/dist/lib/core.js') ?? 0, supportsMultiple ? 0 : 1)
   })
 
+  it('runs feature detection once', async (t) => {
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let url = new URL(request.url)
+        if (url.pathname === '/') return html(detectionDocument)
+        if (url.pathname === '/dist/index.js') return file('dist/index.js')
+        if (url.pathname.startsWith('/dist/lib/')) return file(url.pathname.slice(1))
+        if (url.pathname === '/vendor/es-module-lexer.js') {
+          return javascript(await fs.readFile(lexerPath, 'utf8'))
+        }
+        return new Response('Not Found', { status: 404 })
+      }),
+    )
+
+    // Retriggering the detection iframe's early onload after setting srcdoc ran the feature test
+    // in the initial about:blank document, and the srcdoc navigation canceled its module import.
+    let failedRequests: string[] = []
+    page.on('requestfailed', (request) => {
+      failedRequests.push(`${request.url()}: ${request.failure()?.errorText}`)
+    })
+    await page.goto('/')
+    await page.locator('#support').waitFor({ state: 'attached' })
+
+    assert.deepEqual(failedRequests, [])
+  })
+
   it('detects support when Trusted Types enforcement allows its policy', async (t) => {
     let page = await t.serve(
       await createTestServer(async (request) => {

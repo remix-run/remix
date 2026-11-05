@@ -66,4 +66,28 @@ describe('checkout handlers', () => {
     let orderDetailsHtml = await orderDetailsResponse.text()
     assertContains(orderDetailsHtml, 'Ash &amp; Smoke')
   })
+
+  it('POST /checkout returns shipping errors without clearing the cart', async () => {
+    let sessionCookie = await loginAsCustomer(router)
+    let addResponse = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
+        method: 'POST',
+        body: new URLSearchParams({ bookId: '1', slug: 'bbq' }),
+      }),
+    )
+    sessionCookie = getSessionCookie(addResponse) ?? sessionCookie
+
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/checkout', sessionCookie, {
+        method: 'POST',
+        body: new URLSearchParams({ street: '123 Test St', city: '', state: 'TS', zip: '12345' }),
+      }),
+    )
+
+    assert.equal(response.status, 400)
+    let html = await response.text()
+    assertContains(html, 'value="123 Test St"')
+    assertContains(html, 'aria-invalid="true"')
+    assertContains(html, 'Ash &amp; Smoke')
+  })
 })

@@ -1,4 +1,5 @@
 import type { ElementProps } from './vnode.ts'
+import { setSelectDefaultValue, setSelectValue } from './select.ts'
 import {
   canUseProperty,
   getMergedClassName,
@@ -55,6 +56,7 @@ function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, n
  */
 export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Element): void {
   let isSvg = dom.namespaceURI === SVG_NS
+  let wasMultiple = dom instanceof HTMLSelectElement ? dom.multiple : undefined
   let currClassName = getMergedClassName(curr)
   let nextClassName = getMergedClassName(next)
 
@@ -68,6 +70,8 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
   for (let name in curr) {
     if (isFrameworkProp(name)) continue
+    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
+    if (name === 'value' && dom instanceof HTMLSelectElement && curr.value === undefined) continue
     if (!isAllowedHostPropName(name)) continue
     if (name === 'class' || name === 'className') continue
     if (name in next && next[name] != null) continue
@@ -83,6 +87,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
   for (let name in next) {
     if (isFrameworkProp(name)) continue
+    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
     if (!isAllowedHostPropName(name)) continue
     if (name === 'class' || name === 'className') continue
 
@@ -104,11 +109,20 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
     patchHostProp(dom, name, nextValue, isSvg)
   }
+
+  if (dom instanceof HTMLSelectElement && wasMultiple !== dom.multiple && next.value == null) {
+    setSelectDefaultValue(dom, next.defaultValue)
+  }
 }
 
 function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolean): void {
   let { ns, attr } = normalizeAttributeName(name, isSvg)
   value = sanitizeUrlAttribute(dom.localName, attr, value)
+
+  if (name === 'value' && dom instanceof HTMLSelectElement) {
+    setSelectValue(dom, value)
+    return
+  }
 
   if (attr === 'style' && isStyleObject(value)) {
     patchStyleObject(dom, undefined, value)

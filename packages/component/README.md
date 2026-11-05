@@ -402,6 +402,39 @@ function ArticleBody(handle: Handle<{ html: string }>) {
 
 When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` marks the HTML as trusted but does not sanitize it, so only pass trusted or already-sanitized HTML.
 
+### Form controls
+
+Use `defaultValue` to initialize text inputs, textareas, and selects, or `defaultChecked` for checkboxes and radio buttons. These defaults also determine what native form reset restores:
+
+```tsx
+<form>
+  <input name="name" aria-label="Name" defaultValue="Ada" />
+  <textarea name="bio" aria-label="Bio" defaultValue="Building for the web." />
+  <label>
+    <input type="checkbox" name="updates" defaultChecked />
+    Email updates
+  </label>
+  <select name="topics" aria-label="Topics" multiple defaultValue={['typescript', 'css']}>
+    <option value="typescript">TypeScript</option>
+    <option value="css">CSS</option>
+    <option value="html">HTML</option>
+  </select>
+  <button type="reset">Reset</button>
+</form>
+```
+
+To control the current value, supply `value` on a text input, textarea, or select, or `checked` on a checkbox or radio button. Update that prop from an [event handler](#events) and call `handle.update()` to accept edits; otherwise Remix restores the supplied value after interaction. Omitting the prop or setting it to `undefined` leaves that state uncontrolled.
+
+For inputs and textareas, changing `defaultValue` updates the native reset default while preserving user edits. `defaultChecked` does the same for checkboxes and radio buttons.
+
+#### Select values
+
+Selects apply `defaultValue` only during initialization; later changes or removal are ignored. Changing `multiple` on an uncontrolled select reapplies its current `defaultValue`, or resets selection if no default is provided. Use `defaultValue={[]}` for an initially empty multiple select, or controlled `value={[]}` to clear the current selection.
+
+Initial selection follows this precedence: select `value`, then `defaultValue`, then option `selected`. Selections render into option markup on the server, including options inside components and optgroups. Hydration preserves server-rendered reset defaults and user edits to uncontrolled selects.
+
+A scalar controlled value selects the first matching option; arrays on multiple selects select every match. Options without an explicit value use their text children. When a select supplies `value` or `defaultValue`, using `innerHTML` on the select or its optgroups throws during server rendering; render options as JSX children instead. Individual options using `innerHTML` must supply an explicit `value` for server rendering when their select supplies `value` or `defaultValue`.
+
 ## Keys
 
 Give list items a `key` when a list can be reordered, filtered, or added to. Elements and components with matching keys are moved instead of recreated, so they keep:
