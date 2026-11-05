@@ -23,7 +23,7 @@ import {
   buildPrimaryKeyPredicate,
   hasScopedWriteModifiers,
   loadPrimaryKeyRowsForScope,
-} from './helpers.ts'
+} from './primary-key-scope.ts'
 import { loadRowsWithRelationsForState } from './relations.ts'
 import {
   applyAfterReadHooksToLoadedRows,

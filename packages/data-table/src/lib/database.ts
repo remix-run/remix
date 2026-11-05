@@ -13,13 +13,10 @@ import { DataTableDatabaseError, DataTableQueryError } from './errors.ts'
 import { executeOperation, runInTransaction } from './database/execution-context.ts'
 import type { QueryExecutionContext } from './database/execution-context.ts'
 import {
-  asQueryTableInput,
   getPrimaryKeyWhere,
   getPrimaryKeyWhereFromRow,
-  normalizeOrderByInput,
   resolveCreateRowWhere,
-  toWriteResult,
-} from './database/helpers.ts'
+} from './database/primary-key-scope.ts'
 import { executeQuery } from './database/query-execution.ts'
 import type {
   AnyQuery,
@@ -984,4 +981,39 @@ export class Database<dialect extends string = string> {
 
 function defaultNow(): Date {
   return new Date()
+}
+
+function asQueryTableInput<table extends AnyTable>(
+  table: table,
+): QueryTableInput<TableName<table>, TableRow<table>, TablePrimaryKey<table>> {
+  return table as unknown as QueryTableInput<
+    TableName<table>,
+    TableRow<table>,
+    TablePrimaryKey<table>
+  >
+}
+
+function normalizeOrderByInput<table extends AnyTable>(
+  input: OrderByInput<table> | undefined,
+): OrderByTuple<table>[] {
+  if (!input) {
+    return []
+  }
+
+  if (input.length === 0) {
+    return []
+  }
+
+  if (Array.isArray(input[0])) {
+    return input as OrderByTuple<table>[]
+  }
+
+  return [input as OrderByTuple<table>]
+}
+
+function toWriteResult(result: WriteResult | WriteRowsResult<unknown>): WriteResult {
+  return {
+    affectedRows: result.affectedRows,
+    insertId: result.insertId,
+  }
 }
