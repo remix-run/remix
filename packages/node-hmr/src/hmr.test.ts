@@ -1447,7 +1447,7 @@ describe('node-hmr', () => {
     { skip: isWindows && 'Windows terminates child processes without delivering SIGTERM handlers' },
     async () => {
       await using fixture = await createFixture({
-        'server.ts': getDelayedShutdownServerSource('one'),
+        'server.ts': getSlowShutdownServerSource('one', { ignoredSigterms: 1 }),
       })
       let server = startFixtureServer(fixture.path)
 
@@ -1455,13 +1455,27 @@ describe('node-hmr', () => {
         let ready = await server.waitForReady(0)
         assert.equal(await fetchText(ready.port), 'one')
 
-        await writeFileAtomically(fixture.entryPath, getDelayedShutdownServerSource('two'))
-        await waitForOutput(server, /"type":"child-sigterm"/)
-        await writeFileAtomically(fixture.entryPath, getDelayedShutdownServerSource('three'))
+        await writeFileAtomically(
+          fixture.entryPath,
+          getSlowShutdownServerSource('two', { ignoredSigterms: 0 }),
+        )
+        await waitForOutput(server, /"type":"child-sigterm","count":1/)
+        // The old child ignores the first SIGTERM, so this change arrives while it is exiting.
+        await writeFileAtomically(
+          fixture.entryPath,
+          getSlowShutdownServerSource('three', { ignoredSigterms: 0 }),
+        )
+        await server.waitUntil(
+          () => (server.output.match(/restart\S* server\.ts/g) ?? []).length >= 2,
+          () => `Timed out waiting for the second restart.\n${server.output}`,
+        )
+        process.kill(ready.pid, 'SIGTERM')
 
         ready = await server.waitForReady(1)
         assert.equal(await fetchText(ready.port), 'three')
-        await assertNoReadyEvent(server, 2, 1_500)
+        // runner.ready() waits for any scheduled restart, so a second replacement would show here.
+        await server.waitForRunnerReady()
+        assert.equal(server.readyCount, 2)
       } finally {
         await server.stop()
       }
@@ -1573,8 +1587,11 @@ function getSlowShutdownServerSource(
   message: string,
   options: { ignoredSigterms: number },
 ): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+
   return [
     `import { createServer } from 'node:http'`,
+    `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     ``,
     `let sigtermCount = 0`,
     `let server = createServer((_request, response) => {`,
@@ -1592,30 +1609,7 @@ function getSlowShutdownServerSource(
     `  if (address && typeof address === 'object') {`,
     `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
     `  }`,
-    `})`,
-    ``,
-    `setInterval(() => {}, 1_000)`,
-  ].join('\n')
-}
-
-function getDelayedShutdownServerSource(message: string): string {
-  return [
-    `import { createServer } from 'node:http'`,
-    ``,
-    `let server = createServer((_request, response) => {`,
-    `  response.end(${JSON.stringify(message)})`,
-    `})`,
-    ``,
-    `process.on('SIGTERM', () => {`,
-    `  console.log(JSON.stringify({ type: 'child-sigterm', pid: process.pid }))`,
-    `  setTimeout(() => process.exit(0), 1_000)`,
-    `})`,
-    ``,
-    `server.listen(0, '127.0.0.1', () => {`,
-    `  let address = server.address()`,
-    `  if (address && typeof address === 'object') {`,
-    `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
-    `  }`,
+    `  emitServerReady()`,
     `})`,
     ``,
     `setInterval(() => {}, 1_000)`,

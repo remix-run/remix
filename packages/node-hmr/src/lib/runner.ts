@@ -412,7 +412,7 @@ export function createHmrSupervisor(options: {
     if (message.type === 'node-hmr:child:hot-module-updated') {
       // An accept handler can request a restart and still finish accepting the update. Once a
       // restart is pending, counting that late acceptance would leave the runner never ready.
-      if (childRestartGeneration !== pendingRestartGeneration) return
+      if (state.status === 'restart-scheduled' || state.status === 'restarting') return
       acceptedHotUpdateCount += 1
       serverGeneration += 1
       if (state.status === 'running') {
