@@ -123,18 +123,17 @@ export function getWatchedDirectoriesForFiles(filePaths: Iterable<string>): Set<
   return watchedDirectories
 }
 
-export function getAncestorDirectoriesToKeep(
-  directoriesToRemove: Iterable<string>,
-  watchedDirectories: Iterable<string>,
-): Set<string> {
-  let watched = [...watchedDirectories]
-  let ancestors = new Set<string>()
-  for (let directory of directoriesToRemove) {
-    if (watched.some((watchedDirectory) => isDescendantPath(directory, watchedDirectory))) {
-      ancestors.add(directory)
-    }
-  }
-  return ancestors
+// Chokidar ignores everything below an unwatched directory, so a directory that still contains a
+// watched directory stays watched until that descendant is unwatched too.
+export function getDirectoriesToUnwatch(
+  activeDirectories: Iterable<string>,
+  nextDirectories: ReadonlySet<string>,
+): string[] {
+  return [...activeDirectories].filter(
+    (directory) =>
+      !nextDirectories.has(directory) &&
+      ![...nextDirectories].some((nextDirectory) => isDescendantPath(directory, nextDirectory)),
+  )
 }
 
 function isDescendantPath(ancestor: string, descendant: string): boolean {
@@ -410,9 +409,6 @@ export function createHmrSupervisor(options: {
     }
 
     if (message.type === 'node-hmr:child:hot-module-updated') {
-      // An accept handler can request a restart and still finish accepting the update. Once a
-      // restart is pending, counting that late acceptance would leave the runner never ready.
-      if (state.status === 'restart-scheduled' || state.status === 'restarting') return
       acceptedHotUpdateCount += 1
       serverGeneration += 1
       if (state.status === 'running') {
@@ -434,9 +430,9 @@ export function createHmrSupervisor(options: {
     if (message.type === 'node-hmr:child:server-ready') {
       if (state.status !== 'starting' && state.status !== 'running') return
       state = { status: 'running', child: state.child }
-      resolveReadyWaiters()
       flushPendingServerUpdateEvent()
       flushAcceptedHotUpdateBrowserEvent()
+      resolveReadyWaiters()
       return
     }
 
@@ -549,19 +545,9 @@ export function createHmrSupervisor(options: {
     let directoriesToAdd = [...nextWatchedDirectories].filter(
       (directory) => !activeWatchedDirectories.has(directory),
     )
-    let directoriesToRemove = [...activeWatchedDirectories].filter(
-      (directory) => !nextWatchedDirectories.has(directory),
-    )
-    // Chokidar ignores everything below an unwatched path, which silences change events in
-    // directories that are still watched. Keep ancestors watched until their descendants are not.
-    for (let directory of getAncestorDirectoriesToKeep(
-      directoriesToRemove,
+    let directoriesToRemove = getDirectoriesToUnwatch(
+      activeWatchedDirectories,
       nextWatchedDirectories,
-    )) {
-      nextWatchedDirectories.add(directory)
-    }
-    directoriesToRemove = directoriesToRemove.filter(
-      (directory) => !nextWatchedDirectories.has(directory),
     )
 
     if (directoriesToRemove.length > 0) {
@@ -571,7 +557,8 @@ export function createHmrSupervisor(options: {
       watcher.add(directoriesToAdd)
     }
 
-    activeWatchedDirectories = nextWatchedDirectories
+    for (let directory of directoriesToRemove) activeWatchedDirectories.delete(directory)
+    for (let directory of directoriesToAdd) activeWatchedDirectories.add(directory)
     browserWatchedFilePaths = nextBrowserWatchedFilePaths
   }
 

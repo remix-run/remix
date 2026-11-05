@@ -178,6 +178,45 @@ describe('node-hmr', () => {
     }
   })
 
+  it('resolves pending ready() calls after an accept handler requests a restart', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getGatedReplacementServerSource(),
+      'message.ts': getRestartRequestingMessageSource('one'),
+    })
+    await using gates = await createFixtureGateServer()
+    let supervisor = createHmrSupervisor({
+      browserHmrChannel: null,
+      cwd: fixture.path,
+      entry: 'server.ts',
+      entryArgs: [],
+      env: { ...process.env, GATE_URL: gates.url },
+      nodeArgs: ['--import', nodeTsxImportUrl],
+      registerPath: path.join(packageRoot, 'src/register.ts'),
+      watch: { poll: true, pollInterval: 10 },
+    })
+    let closed = supervisor.start()
+
+    try {
+      await supervisor.ready()
+
+      let replacement = gates.hold('replacement')
+      await writeFileAtomically(
+        path.join(fixture.path, 'message.ts'),
+        getRestartRequestingMessageSource('two'),
+      )
+      // The old child accepted the update after requesting the restart, and the replacement is
+      // held before it reports ready, so this call must wait for the replacement.
+      await replacement.arrived
+      let ready = supervisor.ready()
+
+      replacement.release()
+      await withFailureBound(ready, () => 'Timed out waiting for runner.ready()')
+    } finally {
+      await supervisor.stop()
+      await closed
+    }
+  })
+
   it('coalesces rapid restart-causing file changes', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -288,7 +327,6 @@ describe('node-hmr', () => {
         fixture.entryPath,
         getHmrProxyHotChildServerSource('two', { gate: 'listen-two' }),
       )
-      await waitForOutput(server, /"type":"entry-scheduled","message":"two"/)
       await listen.arrived
 
       // The request reaches the proxy while the updated entry is not listening yet.
@@ -364,7 +402,6 @@ describe('node-hmr', () => {
       await ready
       assert.equal(readyResolved, true)
     } finally {
-      await gates[Symbol.asyncDispose]()
       await events?.close()
       await supervisor.stop()
       await closed
@@ -1422,8 +1459,9 @@ describe('node-hmr', () => {
 
         await waitForOutput(server, /"type":"child-sigterm","count":1/)
         // The old child ignores the first SIGTERM, so the restart must stay blocked on its exit.
-        assert.equal(server.readyCount, 1)
-        process.kill(ready.pid, 0)
+        // The runner spawns synchronously after signaling, so a replacement would already exist.
+        let { stdout } = await promisify(execFile)('pgrep', ['-P', String(server.pid)])
+        assert.deepEqual(stdout.trim().split('\n'), [String(ready.pid)])
 
         // A second SIGTERM releases the old child. The replacement must only start after it exits.
         process.kill(ready.pid, 'SIGTERM')
@@ -1583,6 +1621,39 @@ function getSelfAcceptingMessageSource(message: string): string {
   ].join('\n')
 }
 
+function getGatedReplacementServerSource(): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+
+  return [
+    `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import { getMessage } from './message.ts'`,
+    ``,
+    `if (getMessage() !== 'one') {`,
+    `  // The test holds this request open until it releases the replacement child.`,
+    `  await fetch(process.env.GATE_URL + '/replacement')`,
+    `}`,
+    `emitServerReady()`,
+    `setInterval(() => {}, 1_000)`,
+  ].join('\n')
+}
+
+function getRestartRequestingMessageSource(message: string): string {
+  return [
+    `export let message = ${JSON.stringify(message)}`,
+    `export function getMessage() {`,
+    `  return message`,
+    `}`,
+    `if (import.meta.hot) {`,
+    `  import.meta.hot.accept((module) => {`,
+    `    // Spoofs the runtime's internal restart request, as an accept handler that decides the`,
+    `    // update needs a restart would, and then finishes accepting the update.`,
+    `    process.send?.({ type: 'node-hmr:child:restart-requested', message: 'restart requested' })`,
+    `    message = String(module?.message)`,
+    `  })`,
+    `}`,
+  ].join('\n')
+}
+
 function getSlowShutdownServerSource(
   message: string,
   options: { ignoredSigterms: number },
@@ -1696,7 +1767,8 @@ function getEventChannelGreetingServerSource(): string {
     ``,
     `let server = createServer((request, response) => {`,
     `  if (request.url === '/marker') {`,
-    `    // Emit a browser event through the parent so tests can observe the end of the event stream.`,
+    `    // Spoofs the runtime's internal browser-event IPC message so the test can append a known`,
+    `    // event to the parent's HMR stream and prove no other event was sent before it.`,
     `    process.send?.({ type: 'node-hmr:child:browser-event-emitted', payload: { type: 'test:marker' } })`,
     `    response.end('marker')`,
     `    return`,
@@ -1951,6 +2023,10 @@ function getHmrProxyChildServerSource(message: string): string {
 }
 
 function getHmrProxyHotChildServerSource(message: string, options: { gate?: string } = {}): string {
+  let listenGate =
+    options.gate === undefined
+      ? 'Promise.resolve()'
+      : `fetch(process.env.GATE_URL + ${JSON.stringify(`/${options.gate}`)})`
   let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
   let nodeFetchServerImportUrl = pathToFileURL(
     path.join(packageRoot, '../node-fetch-server/src/index.ts'),
@@ -1968,12 +2044,8 @@ function getHmrProxyHotChildServerSource(message: string, options: { gate?: stri
     ``,
     `const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 0`,
     ``,
-    ...(options.gate === undefined
-      ? [`Promise.resolve().then(() => {`]
-      : [
-          `// The test holds this request open to keep the entry update from listening yet.`,
-          `fetch(process.env.GATE_URL + ${JSON.stringify(`/${options.gate}`)}).then(() => {`,
-        ]),
+    `// The test can hold the gate request open to keep an entry update from listening yet.`,
+    `${listenGate}.then(() => {`,
     `  server.listen(port, '127.0.0.1', async () => {`,
     `    let address = server.address()`,
     `    if (address && typeof address === 'object') {`,
@@ -2027,7 +2099,7 @@ async function createFixture(
       `readyServer.unref()`,
       `readyServer.listen(0, '127.0.0.1', () => {`,
       `  let address = readyServer.address()`,
-      `  console.log(JSON.stringify({ type: 'runner-ready-url', url: \`http://127.0.0.1:\${address.port}/\` }))`,
+      `  console.log(JSON.stringify({ type: 'runner-ready-url', url: \`http://127.0.0.1:\${address.port}/\`, pid: process.pid }))`,
       `})`,
     ].join('\n'),
   })
@@ -2193,17 +2265,19 @@ async function createFixtureGateServer(): Promise<
   AsyncDisposable & { hold(name: string): FixtureGate; url: string }
 > {
   let holds = new Map<string, { arrived: () => void; released: Promise<void> }>()
-  let releases = new Set<() => void>()
 
   let server = http.createServer(async (request, response) => {
-    let name = decodeURIComponent(new URL(request.url ?? '/', 'http://127.0.0.1').pathname.slice(1))
+    let name = new URL(request.url ?? '/', 'http://127.0.0.1').pathname.slice(1)
     let hold = holds.get(name)
-    if (hold) {
-      holds.delete(name)
-      hold.arrived()
-      await hold.released
+    if (!hold) {
+      response.writeHead(500, { Connection: 'close' })
+      response.end(`Unregistered fixture gate ${name}`)
+      return
     }
-    response.writeHead(hold ? 204 : 404, { Connection: 'close' })
+    holds.delete(name)
+    hold.arrived()
+    await hold.released
+    response.writeHead(204, { Connection: 'close' })
     response.end()
   })
 
@@ -2217,32 +2291,33 @@ async function createFixtureGateServer(): Promise<
     hold(name) {
       let arrived = Promise.withResolvers<void>()
       let released = Promise.withResolvers<void>()
-      releases.add(released.resolve)
       holds.set(name, { arrived: arrived.resolve, released: released.promise })
       return {
-        arrived: withFailureBound(arrived.promise, `Timed out waiting for fixture gate ${name}`),
-        release() {
-          releases.delete(released.resolve)
-          released.resolve()
-        },
+        arrived: withFailureBound(
+          arrived.promise,
+          () => `Timed out waiting for fixture gate ${name}`,
+        ),
+        release: released.resolve,
       }
     },
     async [Symbol.asyncDispose]() {
-      for (let release of releases) release()
+      // Destroys requests that are still held, so fixtures do not wait on them during cleanup.
       server.closeAllConnections()
       await new Promise<void>((resolve) => server.close(() => resolve()))
     },
   }
 }
 
-// The timeout only bounds failures; the promise resolves as soon as the awaited signal arrives.
-async function withFailureBound<value>(promise: Promise<value>, message: string): Promise<value> {
+async function withFailureBound<value>(
+  promise: Promise<value>,
+  getMessage: () => string,
+): Promise<value> {
   let timeout: ReturnType<typeof setTimeout> | undefined
   try {
     return await Promise.race([
       promise,
       new Promise<never>((_resolve, reject) => {
-        timeout = setTimeout(() => reject(new Error(message)), failureTimeout)
+        timeout = setTimeout(() => reject(new Error(getMessage())), failureTimeout)
       }),
     ])
   } finally {
@@ -2295,16 +2370,13 @@ function startFixtureServer(cwd: string, options: { env?: Record<string, string>
         continue
       }
 
-      let hmrUrlEvent = parseHmrUrlEvent(line)
+      let hmrUrlEvent = parseUrlEvent(line, 'hmr-url')
       if (hmrUrlEvent !== null) {
         hmrUrlEvents.push(hmrUrlEvent)
         continue
       }
 
-      let runnerReadyUrlEvent = parseRunnerReadyUrlEvent(line)
-      if (runnerReadyUrlEvent !== null) {
-        runnerReadyUrl = runnerReadyUrlEvent
-      }
+      runnerReadyUrl ??= parseUrlEvent(line, 'runner-ready-url')?.url
     }
 
     notifyOutputListeners()
@@ -2327,7 +2399,7 @@ function startFixtureServer(cwd: string, options: { env?: Record<string, string>
     }
   }
 
-  // Resolves as soon as the fixture's output satisfies `check`. The timeout only bounds failures.
+  // Resolves as soon as the fixture's output satisfies `check`.
   function waitUntil(
     check: () => boolean,
     getTimeoutMessage: () => string,
@@ -2351,6 +2423,7 @@ function startFixtureServer(cwd: string, options: { env?: Record<string, string>
   }
 
   return {
+    pid: child.pid,
     waitUntil,
 
     get readyCount() {
@@ -2395,10 +2468,10 @@ function startFixtureServer(cwd: string, options: { env?: Record<string, string>
         () => runnerReadyUrl !== undefined,
         () => `Timed out waiting for the runner readiness URL.\n${processOutput}`,
       )
-      let response = await fetch(runnerReadyUrl!, {
-        headers: { Connection: 'close' },
-        signal: AbortSignal.timeout(failureTimeout),
-      })
+      let response = await withFailureBound(
+        fetch(runnerReadyUrl!, { headers: { Connection: 'close' } }),
+        () => `Timed out waiting for runner.ready().\n${processOutput}`,
+      )
       assert.equal(await response.text(), 'ready')
     },
 
@@ -2474,16 +2547,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function parseRunnerReadyUrlEvent(line: string): string | null {
-  try {
-    let event: unknown = JSON.parse(line)
-    if (isRecord(event) && event.type === 'runner-ready-url' && typeof event.url === 'string') {
-      return event.url
-    }
-  } catch {}
-  return null
-}
-
 function parseReadyEvent(line: string): { pid: number; port: number } | null {
   try {
     let event: unknown = JSON.parse(line)
@@ -2509,23 +2572,19 @@ function parseReadyEvent(line: string): { pid: number; port: number } | null {
   return null
 }
 
-function parseHmrUrlEvent(line: string): { pid: number; url: string } | null {
+function parseUrlEvent(
+  line: string,
+  type: 'hmr-url' | 'runner-ready-url',
+): { pid: number; url: string } | null {
   try {
     let event: unknown = JSON.parse(line)
     if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'hmr-url' &&
-      'url' in event &&
+      isRecord(event) &&
+      event.type === type &&
       typeof event.url === 'string' &&
-      'pid' in event &&
       typeof event.pid === 'number'
     ) {
-      return {
-        pid: event.pid,
-        url: event.url,
-      }
+      return { pid: event.pid, url: event.url }
     }
   } catch {
     // Ignore non-JSON process output.

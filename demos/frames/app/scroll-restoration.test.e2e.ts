@@ -1,6 +1,6 @@
 import * as assert from 'remix/assert'
 import { createTestServer } from 'remix/node-fetch-server/test'
-import { describe, it } from 'remix/test'
+import { describe, it, type TestContext } from 'remix/test'
 
 import { router } from './router.ts'
 import { routes } from './routes.ts'
@@ -39,13 +39,8 @@ describe('scroll restoration', () => {
         window.navigation.transition === null && Math.abs(window.scrollY - expected) < tolerance,
       { expected: scrollPosition, tolerance: 50 },
     )
-    // The restored position must survive the frames in which the page shrinks to its own height.
-    let restoredPosition = await page.evaluate(
-      () =>
-        new Promise<number>((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve(window.scrollY))),
-        ),
-    )
+    // The restored position must survive the page shrinking to its own height.
+    let restoredPosition = await readScrollAfterAnchoringRestored(page)
 
     assert.ok(
       Math.abs(restoredPosition - scrollPosition) < 50,
@@ -112,12 +107,7 @@ describe('scroll restoration', () => {
         window.navigation.transition === null && Math.abs(window.scrollY - expected) < tolerance,
       { expected: detailScrollPosition, tolerance: 50 },
     )
-    let detailRestoredPosition = await page.evaluate(
-      () =>
-        new Promise<number>((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve(window.scrollY))),
-        ),
-    )
+    let detailRestoredPosition = await readScrollAfterAnchoringRestored(page)
 
     assert.ok(
       Math.abs(detailRestoredPosition - detailScrollPosition) < 50,
@@ -125,3 +115,20 @@ describe('scroll restoration', () => {
     )
   })
 })
+
+type Page = Awaited<ReturnType<TestContext['serve']>>
+
+async function readScrollAfterAnchoringRestored(page: Page): Promise<number> {
+  // Traversals suppress scroll anchoring until after a paint. Wait for that suppression to be
+  // removed, then read scroll in the next frame, where re-enabled anchoring would move it.
+  await page.waitForFunction(
+    () =>
+      window.navigation.transition === null &&
+      !document.adoptedStyleSheets.some((sheet) =>
+        Array.from(sheet.cssRules).some((rule) => rule.cssText.includes('overflow-anchor')),
+      ),
+  )
+  return page.evaluate(
+    () => new Promise<number>((resolve) => requestAnimationFrame(() => resolve(window.scrollY))),
+  )
+}

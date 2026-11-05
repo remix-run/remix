@@ -26,13 +26,12 @@ describe('abort signal support', () => {
   it('throws AbortError when signal is aborted during request processing', async () => {
     let router = createRouter()
     let controller = new AbortController()
-    let work = Promise.withResolvers<void>()
 
     router.get('/', async () => {
       // Abort while handler is running
       controller.abort()
       // Async work that is still pending when the abort happens
-      await work.promise
+      await new Promise(() => {})
       return new Response('Home')
     })
 
@@ -46,8 +45,6 @@ describe('abort signal support', () => {
         return true
       },
     )
-
-    work.resolve()
   })
 
   it('handles signal from Request object passed to fetch()', async () => {
@@ -109,12 +106,11 @@ describe('abort signal support', () => {
     })
 
     let handlerStarted = Promise.withResolvers<void>()
-    let work = Promise.withResolvers<void>()
 
     router.get('/', async () => {
       handlerStarted.resolve()
       // Async work that is still pending when the abort happens
-      await work.promise
+      await new Promise(() => {})
       return new Response('Home')
     })
 
@@ -128,8 +124,6 @@ describe('abort signal support', () => {
       assert.equal(error.name, 'AbortError')
       return true
     })
-
-    work.resolve()
 
     // Middleware should have caught the error
     assert.equal(errorCaught, true)
@@ -149,13 +143,12 @@ describe('abort signal support', () => {
 
   it('throws AbortError when aborted before middleware completes', async () => {
     let controller = new AbortController()
-    let upstreamWork = Promise.withResolvers<void>()
 
     let router = createRouter({
       middleware: [
         async () => {
           controller.abort()
-          await upstreamWork.promise
+          await new Promise(() => {})
         },
       ] as any,
     })
@@ -171,28 +164,26 @@ describe('abort signal support', () => {
         return true
       },
     )
-
-    upstreamWork.resolve()
   })
 
   it('does not call downstream middleware or handler when aborted in upstream middleware', async () => {
     let controller = new AbortController()
-    let upstreamWork = Promise.withResolvers<void>()
     let downstreamMiddlewareCalled = false
     let handlerCalled = false
 
     let router = createRouter({
       middleware: [
-        // Upstream middleware that aborts
-        async () => {
+        // Upstream middleware that aborts and then tries to continue the chain
+        (_, next) => {
           controller.abort()
-          await upstreamWork.promise
+          return next()
         },
         // Downstream middleware that should NOT be called
-        async () => {
+        (_, next) => {
           downstreamMiddlewareCalled = true
+          return next()
         },
-      ] as any,
+      ],
     })
 
     // Handler that should NOT be called
@@ -213,7 +204,5 @@ describe('abort signal support', () => {
 
     assert.equal(downstreamMiddlewareCalled, false)
     assert.equal(handlerCalled, false)
-
-    upstreamWork.resolve()
   })
 })

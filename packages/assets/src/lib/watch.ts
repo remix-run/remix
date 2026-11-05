@@ -56,7 +56,7 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
       return [...watchedTargets]
     },
     async settled() {
-      await Promise.allSettled(pendingFileEvents)
+      while (pendingFileEvents.size > 0) await Promise.allSettled(pendingFileEvents)
     },
     updateWatchedDirectories(delta, updateOptions = {}) {
       let includeAncestors = updateOptions.includeAncestors ?? true

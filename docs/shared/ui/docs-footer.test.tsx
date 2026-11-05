@@ -5,14 +5,15 @@ import { renderToString } from 'remix/component/server'
 import { DocsFooter } from './docs-footer.tsx'
 
 describe('DocsFooter', () => {
-  it('renders the Remix brand, social links, and legal copy', async () => {
+  it('renders the Remix brand, social links, and legal copy', async (t) => {
+    t.mock.method(Date.prototype, 'getFullYear', () => 2030)
     let html = await renderToString(<DocsFooter />)
 
     assert.match(html, /src="\/remix-wordmark-light-mode\.svg"/)
     assert.match(html, /href="https:\/\/github\.com\/remix-run"[^>]*aria-label="GitHub"/)
     assert.match(html, /href="\/icons\.svg#github"/)
     assert.match(html, /docs and examples licensed under mit/)
-    assert.match(html, new RegExp(`©${new Date().getFullYear()} Shopify, Inc.`))
+    assert.match(html, /©2030 Shopify, Inc\./)
     assert.doesNotMatch(html, /class="[^"]*site-footer/)
     assert.doesNotMatch(html, /\[object Object\]/)
   })

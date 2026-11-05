@@ -59,70 +59,47 @@ function createViewportLink(href: string, visible = true): HTMLAnchorElement {
 }
 
 const NativeIntersectionObserver = globalThis.IntersectionObserver
-
-// The runtime's viewport observers, tracked so tests can wait for them to see each intersection.
-type TrackedTarget = {
-  delivered: boolean
-  isIntersecting?: boolean
-  waiters: Array<() => void>
-}
-const trackedObservers = new Set<Map<Element, TrackedTarget>>()
+// Each runtime viewport observer's targets, mapped to the last intersection state it delivered.
+const runtimeTargets = new Set<Map<Element, boolean | undefined>>()
+const runtimeTargetsChanged = new EventTarget()
 
 class TrackedIntersectionObserver extends NativeIntersectionObserver {
-  #targets: Map<Element, TrackedTarget>
+  #targets: Map<Element, boolean | undefined>
 
   constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
-    let targets = new Map<Element, TrackedTarget>()
+    let targets = new Map<Element, boolean | undefined>()
     super((entries, observer) => {
-      // Look up targets first because the callback may unobserve them.
-      let delivered = entries.map((entry) => [entry, targets.get(entry.target)] as const)
-      try {
-        callback(entries, observer)
-      } finally {
-        for (let [entry, target] of delivered) {
-          if (!target) continue
-          target.delivered = true
-          target.isIntersecting = entry.isIntersecting
-          for (let resolve of target.waiters.splice(0)) resolve()
-        }
+      callback(entries, observer)
+      for (let entry of entries) {
+        if (targets.has(entry.target)) targets.set(entry.target, entry.isIntersecting)
       }
+      runtimeTargetsChanged.dispatchEvent(new Event('change'))
     }, options)
     this.#targets = targets
-    trackedObservers.add(targets)
+    runtimeTargets.add(targets)
   }
 
   observe(target: Element) {
-    this.#targets.set(target, { delivered: false, waiters: [] })
+    this.#targets.set(target, undefined)
     super.observe(target)
   }
 
   unobserve(target: Element) {
-    // An unobserved target gets no more notifications for the runtime to react to.
-    for (let resolve of this.#targets.get(target)?.waiters ?? []) resolve()
     this.#targets.delete(target)
     super.unobserve(target)
+    runtimeTargetsChanged.dispatchEvent(new Event('change'))
   }
 
   disconnect() {
-    for (let target of this.#targets.values()) {
-      for (let resolve of target.waiters) resolve()
-    }
-    this.#targets.clear()
-    trackedObservers.delete(this.#targets)
+    runtimeTargets.delete(this.#targets)
     super.disconnect()
+    runtimeTargetsChanged.dispatchEvent(new Event('change'))
   }
 }
 
-function trackViewportObservers() {
-  globalThis.IntersectionObserver = TrackedIntersectionObserver
-  return () => {
-    globalThis.IntersectionObserver = NativeIntersectionObserver
-    trackedObservers.clear()
-  }
-}
-
-// Reads the anchor's intersection state once every runtime observer watching it has seen the same
-// state, so the runtime has already reacted to it.
+// Reads the anchor's intersection state once every runtime observer watching it has delivered the
+// same state, so the runtime has already reacted to it. Browsers don't reliably deliver a new
+// observer's entries after the runtime's, so a plain observer can't prove that.
 async function readIntersection(anchor: HTMLAnchorElement): Promise<boolean> {
   let isIntersecting = await new Promise<boolean>((resolve) => {
     let observer = new NativeIntersectionObserver(([entry]) => {
@@ -131,13 +108,15 @@ async function readIntersection(anchor: HTMLAnchorElement): Promise<boolean> {
     })
     observer.observe(anchor)
   })
-  let pending: Promise<void>[] = []
-  for (let targets of trackedObservers) {
-    let target = targets.get(anchor)
-    if (!target || (target.delivered && target.isIntersecting === isIntersecting)) continue
-    pending.push(new Promise((resolve) => target.waiters.push(resolve)))
+  let settled = () =>
+    Array.from(runtimeTargets).every(
+      (targets) => !targets.has(anchor) || targets.get(anchor) === isIntersecting,
+    )
+  while (!settled()) {
+    await new Promise((resolve) =>
+      runtimeTargetsChanged.addEventListener('change', resolve, { once: true }),
+    )
   }
-  await Promise.all(pending)
   return isIntersecting
 }
 
@@ -212,14 +191,13 @@ function htmlResponse(html: string) {
 }
 
 describe('prefetch', () => {
-  let restoreIntersectionObserver: () => void
-
   beforeEach(() => {
-    restoreIntersectionObserver = trackViewportObservers()
+    globalThis.IntersectionObserver = TrackedIntersectionObserver
   })
 
   afterEach(() => {
-    restoreIntersectionObserver()
+    globalThis.IntersectionObserver = NativeIntersectionObserver
+    runtimeTargets.clear()
     document.body.textContent = ''
   })
 

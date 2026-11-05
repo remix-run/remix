@@ -8,8 +8,8 @@ import {
   buildChildProcessEnv,
   buildChildProcessArgs,
   createFileChangeEventDeduper,
-  getAncestorDirectoriesToKeep,
   getBrowserHmrFileEventsForWatchedFiles,
+  getDirectoriesToUnwatch,
   getWatchedDirectoriesForFiles,
   normalizeBrowserHmrFilePath,
   resolveChokidarWatchOptions,
@@ -160,14 +160,14 @@ describe('getWatchedDirectoriesForFiles', () => {
   })
 })
 
-describe('getAncestorDirectoriesToKeep', () => {
+describe('getDirectoriesToUnwatch', () => {
   it('keeps unneeded directories that contain a watched directory', () => {
     assert.deepEqual(
-      getAncestorDirectoriesToKeep(
+      getDirectoriesToUnwatch(
         [path.resolve('/project'), path.resolve('/project/app'), path.resolve('/project-other')],
-        [path.resolve('/project/server'), path.resolve('/project/app')],
+        new Set([path.resolve('/project/server'), path.resolve('/project/app')]),
       ),
-      new Set([path.resolve('/project')]),
+      [path.resolve('/project-other')],
     )
   })
 })

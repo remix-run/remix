@@ -10,12 +10,20 @@ describe('Layout size example', () => {
     let initial = highlight.getBoundingClientRect()
     let activityButton = button(result.container, 'Activity log')
     await result.act(() => activityButton.click())
+    let animation: Animation | undefined
     await waitFor(() => {
-      let width = highlight.getBoundingClientRect().width
-      assert.ok(
-        width > initial.width + 1 && width < activityButton.getBoundingClientRect().width - 1,
-      )
+      animation = highlight.getAnimations()[0]
+      assert.ok(animation)
     })
+    assert.ok(animation)
+    // Seek into the animation instead of hoping a real frame lands mid-flight.
+    animation.pause()
+    animation.currentTime = Number(animation.effect?.getComputedTiming().duration) * 0.1
+    let width = highlight.getBoundingClientRect().width
+    assert.ok(
+      width > initial.width + 1 && width < activityButton.getBoundingClientRect().width - 1,
+      `Expected an intermediate highlight width, got ${width}`,
+    )
     await expectAnimation(highlight)
     let activity = highlight.getBoundingClientRect()
     assert.ok(activity.width > initial.width)

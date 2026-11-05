@@ -77,7 +77,14 @@ describe('frame navigation', () => {
             async handler() {
               let nextFrame = () =>
                 new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-              while (!document.querySelector('#courses-heading')) await nextFrame()
+              await new Promise<void>((resolve) => {
+                let observer = new MutationObserver(() => {
+                  if (!document.querySelector('#courses-heading')) return
+                  observer.disconnect()
+                  resolve()
+                })
+                observer.observe(document, { childList: true, subtree: true })
+              })
               await nextFrame()
               // Chromium does not select an anchor at the exact scroll boundary. Moving one pixel
               // exposes reconciliation-driven anchoring without moving the destination visibly.

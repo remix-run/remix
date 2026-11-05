@@ -127,6 +127,7 @@ describe('animate entrance/exit mixins', () => {
     let reclaimed = container.querySelector('#persist-after-interrupt')
     let animations = reclaimed?.getAnimations() ?? []
     expect(animations.length).toBeGreaterThan(0)
+    for (let animation of animations) animation.finish()
     await Promise.all(animations.map((animation) => animation.finished))
 
     root.render(null)
