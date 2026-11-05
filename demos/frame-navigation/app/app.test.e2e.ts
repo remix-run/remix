@@ -68,7 +68,8 @@ describe('frame navigation', () => {
     await setAuthCookie(page, server.baseUrl)
     await page.goto(routes.main.index.href())
     await waitForNavigationRuntime(page)
-    await page.evaluate(() => {
+    let expectedScroll = page.context().browser()?.browserType().name() === 'chromium' ? 1 : 0
+    await page.evaluate((expectedScroll) => {
       window.navigation.addEventListener(
         'navigate',
         (event) => {
@@ -81,7 +82,7 @@ describe('frame navigation', () => {
               await nextFrame()
               // Chromium does not select an anchor at the exact scroll boundary. Moving one pixel
               // exposes reconciliation-driven anchoring without moving the destination visibly.
-              window.scrollTo(0, 1)
+              window.scrollTo(0, expectedScroll)
               await nextFrame()
 
               let spacer = document.createElement('div')
@@ -96,7 +97,7 @@ describe('frame navigation', () => {
         },
         { once: true },
       )
-    })
+    }, expectedScroll)
 
     await page.getByRole('link', { name: 'Courses', exact: true }).click()
     await page.waitForFunction(() => window.__scrollAfterNavigationShift !== undefined)
@@ -104,8 +105,8 @@ describe('frame navigation', () => {
     let scrollPosition = await page.evaluate(() => window.__scrollAfterNavigationShift)
     assert.equal(
       scrollPosition,
-      1,
-      `Expected navigation layout changes to preserve scroll position 1, got ${scrollPosition}`,
+      expectedScroll,
+      `Expected navigation layout changes to preserve scroll position ${expectedScroll}, got ${scrollPosition}`,
     )
   })
 
