@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
-import type { RequestContext, Router } from 'remix/router'
+import type { Router } from 'remix/router'
 
 export interface DocsServerResource {
   close(): void | Promise<void>
@@ -15,8 +15,8 @@ export interface StartDocsServerOptions {
   port?: number
 }
 
-export function startDocsServer<context extends RequestContext<any, any>>(
-  router: Router<context>,
+export function startDocsServer(
+  router: Pick<Router, 'fetch'>,
   options: StartDocsServerOptions,
 ): http.Server {
   let { assetServer, content, label, port = readPort() } = options

@@ -2,7 +2,7 @@ import * as cp from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
-import type { RequestContext, Router } from 'remix/router'
+import type { Router } from 'remix/router'
 
 import { crawl } from './crawl.ts'
 import type { CrawlOptions } from './crawl.ts'
@@ -21,8 +21,8 @@ export interface PrerenderOptions {
   onFinally?: () => void | Promise<void>
 }
 
-export async function prerender<context extends RequestContext<any, any>>(
-  router: Router<context>,
+export async function prerender(
+  router: Pick<Router, 'fetch'>,
   options: PrerenderOptions,
 ): Promise<void> {
   let {
