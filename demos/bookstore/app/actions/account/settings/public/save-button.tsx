@@ -1,9 +1,9 @@
-import { type FormSubmitStartEvent, type Handle, clientEntry, css, on } from 'remix/component'
+import { type Handle, clientEntry, css, onSubmission } from 'remix/component'
 
 export const SaveButton = clientEntry(
   import.meta.url,
   function SaveButton(handle: Handle<{ children: string }>) {
-    let save: FormSubmitStartEvent | undefined
+    let saving = false
     let failed = false
 
     return () => (
@@ -11,23 +11,19 @@ export const SaveButton = clientEntry(
         <button
           type="submit"
           class="btn"
-          mix={on('rmx:form-submit-start', async (event, signal) => {
-            save = event
+          mix={onSubmission(async (event, signal) => {
+            saving = true
             failed = false
             handle.update()
-            try {
-              await event.finished
-            } catch (error) {
-              // An `AbortError` means a newer navigation replaced this one, which shows its own state.
-              failed = !(error instanceof DOMException && error.name === 'AbortError')
-            }
+            let { error } = await event.finished
             // The button's next submission, or its removal, aborts the signal.
             if (signal.aborted) return
-            save = undefined
+            saving = false
+            failed = error !== undefined
             handle.update()
           })}
         >
-          {save ? 'Saving…' : handle.props.children}
+          {saving ? 'Saving…' : handle.props.children}
         </button>
         {/* Announced without moving focus. */}
         <span

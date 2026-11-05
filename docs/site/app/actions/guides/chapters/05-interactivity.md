@@ -945,20 +945,27 @@ output reads it. Set it in the submit handler before the request and clear it wh
 settles, as in the [enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough
 for disabled controls, pending labels, progress indicators, and duplicate-submission prevention.
 
-When Remix submits the form as a [frame navigation](#client-navigation), listen for
-`rmx:form-submit-start` instead. Remix dispatches it on the submit button, or on the form when
-nothing submitted it, once the submission starts reloading the frame. It bubbles to the form, and
-carries the submission's `formData` and a `finished` promise that resolves once the response renders
-and rejects when the submission fails or a newer navigation replaces it. The signal `on()` passes is
+When Remix submits the form as a [frame navigation](#client-navigation), use `onSubmission()` to follow its
+`rmx:submission` event. Remix dispatches it on the submit button, or on the form when
+nothing submitted it, once the submission starts reloading the frame. It bubbles to the form. Its
+`element` is the owning form and its nullable `submitter` is the actual submit button. It shares
+`src`, `method`, `encType`, `formData`, and `finished` with the target frame's `reloadStart`.
+The `finished` promise resolves with `{ error, aborted }` when the reload ends. A rendered
+response has no error and `aborted: false`; failures carry an error, and cancellation or
+replacement sets `aborted: true` with no error. The signal `onSubmission()` passes is
 aborted when the same element receives its next submission, so only the latest handler updates
 state. [Add pending feedback](/forms-and-mutations/#add-pending-feedback) builds a save button this
 way.
+
+`rmx:submission` extends the DOM `SubmitEvent` with these reload details and is noncancelable. Cancel a
+submission in the native `submit` event. For GET submissions, `formData` and `encType` are `null`
+and `src` includes the submitted query.
 
 Optimistic UI renders the expected result before the request completes. A hydrated form can render
 what it just submitted, and let the response replace it:
 
 ```tsx filename=app/actions/albums/public/favorite-form.tsx
-import { clientEntry, on } from "remix/component";
+import { clientEntry, onSubmission } from "remix/component";
 import type { Handle } from "remix/component";
 
 export const FavoriteForm = clientEntry(
@@ -973,19 +980,16 @@ export const FavoriteForm = clientEntry(
         <form
           method="post"
           action={handle.props.action}
-          mix={on("rmx:form-submit-start", async (event, signal) => {
+          mix={onSubmission(async (event, signal) => {
             submitted = event.formData?.get("favorite") === "true";
             failed = false;
             handle.update();
-            try {
-              await event.finished;
-            } catch (error) {
-              failed = !(error instanceof DOMException && error.name === "AbortError");
-            }
+            let { error } = await event.finished;
             // A newer submission of this form owns the state from here.
             if (signal.aborted) return;
             // The response's props now hold the saved value, or the old one after a failure.
             submitted = undefined;
+            failed = error !== undefined;
             handle.update();
           })}
         >

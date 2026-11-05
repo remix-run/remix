@@ -24,6 +24,7 @@ type SourceElementNavigateEvent = NavigateEvent & {
 type NavigationSource = {
   element: Element
   form?: HTMLFormElement
+  submitter?: HTMLElement | null
 }
 
 type RuntimeNavigation = {
@@ -310,7 +311,8 @@ export function startNavigationListenerImpl(
         if (frame !== topFrame) frame.src = state.src
         let reload = options.reloadFrame(frame, {
           ...submission,
-          sourceElement: source?.element,
+          element: source?.element,
+          submitter: source?.submitter,
           form: source?.form,
           signal: event.signal,
         })
@@ -700,7 +702,7 @@ function getSourceElementNavigation(
 
     return {
       ...getElementNavigation(linkElement, event, false),
-      source: { element: sourceElement },
+      source: { element: linkElement },
     }
   }
 
@@ -713,7 +715,11 @@ function getSourceElementNavigation(
 
   return {
     ...getElementNavigation(formNavigation, event, replaceHistoryByDefault),
-    source: { element: sourceElement, form: formNavigation.form },
+    source: {
+      element: formNavigation.form,
+      form: formNavigation.form,
+      submitter: formNavigation.submitter,
+    },
     getSubmission: formNavigation.getSubmission,
   }
 }

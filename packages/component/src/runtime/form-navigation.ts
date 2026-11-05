@@ -30,6 +30,8 @@ export interface FormSubmission {
 export interface FormNavigation {
   /** The owning form captured before its submitter can be detached. */
   form: HTMLFormElement
+  /** The native submit event's submitter, or `null` for a submission without one. */
+  submitter: SubmitterElement | null
   /** Checks the submitter before the form for a submission attribute. */
   hasAttribute(name: string): boolean
   /** Reads a submission attribute, preferring the submitter-specific name when provided. */
@@ -109,7 +111,12 @@ export function createFormNavigationResolver(
     if (!form) return
 
     let pending = pendingSubmissions.get(form)
-    let submitter = pending?.submitter ?? null
+    // Some browsers dispatch `navigate` before `formdata` records the pending submission.
+    let submitter = pending
+      ? pending.submitter
+      : sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
+        ? sourceElement
+        : null
     let method = getFormMethod(form, submitter)
     let encType = getFormEncType(form, submitter)
     let target = getSubmissionAttribute(form, submitter, 'target', 'formtarget')
@@ -131,6 +138,7 @@ export function createFormNavigationResolver(
     }
     return {
       form,
+      submitter,
       hasAttribute(name) {
         return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
       },

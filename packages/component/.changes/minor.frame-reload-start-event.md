@@ -1,14 +1,16 @@
-Follow a frame reload from its `reloadStart` event, which is now a `FrameReloadStartEvent` that says what started the reload and how it ended. `sourceElement` and `formData` are those of the Navigation API's `NavigateEvent`, and `finished` settles like `NavigationTransition.finished`. `sourceElement` is the link, form, or submit button whose navigation started the reload, `formData` holds the entries that a non-GET form submission or a POST `frame.reload()` sends, and `finished` resolves once the reload's content renders. Frames inside the reloading frame get the same `sourceElement` and `formData`, so a component in a nested frame can follow a submission that reloads the page.
+Follow a frame reload from its `reloadStart` event, which is now a `FrameReloadStartEvent` describing the effective request and how it ends. Its `src`, lowercase `method`, and `encType` align with `frame.reload()` options, with `body` exposed as `formData`. GET entries are included in `src`, while `formData` and `encType` are `null`. `element` identifies the initiating anchor, area, or owning form, and `submitter` identifies the actual submit button or is `null`. Programmatic reloads, programmatic navigations, and history traversal have no initiating element. Frames inside the reloading frame inherit these details while tracking their own reload completion.
 
 ```tsx
-let pending: Promise<void> | undefined
+import type { FrameReloadOutcome } from 'remix/component'
+
+let pending: Promise<FrameReloadOutcome> | undefined
 
 handle.frame.addEventListener(
   'reloadStart',
   async (event) => {
     pending = event.finished
     handle.update()
-    await event.finished.catch(() => {})
+    await event.finished
     if (pending !== event.finished) return
     pending = undefined
     handle.update()
@@ -17,4 +19,4 @@ handle.frame.addEventListener(
 )
 ```
 
-`finished` rejects with the failure when the reload fails, and with an `AbortError` `DOMException` when the reload is cancelled, a newer reload replaces it, or its frame is removed. A replaced reload gets no `reloadComplete`, so `finished` is how a listener learns how its own reload ended.
+`finished` always resolves with a `FrameReloadOutcome`: `{ error: undefined, aborted: false }` after rendering, `{ error, aborted: false }` on failure, or `{ error: undefined, aborted: true }` on cancellation, replacement, or frame removal. Failures carry an `Error`, wrapping other thrown values with the original as `cause`. The promise returned by `frame.reload()` retains its rejection behavior. A replaced reload gets no `reloadComplete`, so `finished` is how a listener learns how its own reload ended.

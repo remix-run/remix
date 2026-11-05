@@ -564,7 +564,7 @@ describe('navigate', () => {
     await intercept.mock.calls[0]?.arguments[0]?.handler?.()
     await transition.succeed()
 
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.sourceElement).toBe(anchor)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(anchor)
     expect(reloadFrame.mock.calls[0]?.arguments[1]?.form).toBeUndefined()
     expect(reloadFrame.mock.calls[0]?.arguments[1]?.formData).toBeUndefined()
   })
@@ -1636,7 +1636,7 @@ describe('navigate', () => {
       expect(topFrame.src).toBe(destination.href)
       expect(reload).toHaveBeenCalledTimes(1)
       // The replacement navigation has no source element of its own.
-      expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(anchor)
+      expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(anchor)
       expect(reload.mock.calls[0]?.arguments[0]?.form).toBeUndefined()
       expect(document.activeElement).toBe(anchor)
     } finally {
@@ -1676,7 +1676,8 @@ describe('navigate', () => {
 
       expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation)
       expect(reload).toHaveBeenCalledTimes(1)
-      expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(button)
+      expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(form)
+      expect(reload.mock.calls[0]?.arguments[0]?.submitter).toBe(button)
       expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
     } finally {
       if (didNavigate) await navigate(originalUrl, { history: 'replace' })
@@ -2169,7 +2170,7 @@ describe('form navigation', () => {
     expect(entryAfterSubmission.url).toBe(entryBeforeSubmission.url)
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
-    expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(form)
+    expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(form)
     expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
   })
 
@@ -2211,7 +2212,7 @@ describe('form navigation', () => {
     expect(entryAfterSubmission.url).toBe(entryBeforeSubmission.url)
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
-    expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(form)
+    expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(form)
     expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
   })
 

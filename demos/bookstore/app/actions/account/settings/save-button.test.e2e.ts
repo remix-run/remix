@@ -86,6 +86,34 @@ describe('settings save button', () => {
     leave.resolve()
     await page.getByRole('heading', { name: 'My Account' }).waitFor()
   })
+
+  it('clears a pending save without an error when a link replaces it', async (t) => {
+    let save = Promise.withResolvers<void>()
+    let leave = Promise.withResolvers<void>()
+    t.after(() => {
+      save.resolve()
+      leave.resolve()
+    })
+    let leaving = Promise.withResolvers<void>()
+    let page = await serveSettings(t, async (request) => {
+      if (request.method === 'POST') await save.promise
+      if (new URL(request.url).pathname === routes.account.index.href()) {
+        leaving.resolve()
+        await leave.promise
+      }
+    })
+
+    await page.getByRole('button', { name: 'Update Settings' }).click()
+    await page.getByRole('button', { name: 'Saving…' }).waitFor()
+    await page.getByRole('link', { name: 'Cancel' }).click()
+    await leaving.promise
+
+    await page.getByRole('button', { name: 'Update Settings' }).waitFor()
+    assert.equal(await page.getByRole('status').textContent(), '')
+
+    leave.resolve()
+    await page.getByRole('heading', { name: 'My Account' }).waitFor()
+  })
 })
 
 /**

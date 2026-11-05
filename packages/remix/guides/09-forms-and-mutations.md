@@ -219,41 +219,37 @@ To show "Album saved" on the destination page, store the message as [session fla
 
 Once the page [boots the browser runtime with `run()`](/interactivity/#browser-entry-with-run), Remix handles the form submission as a [frame navigation](/streaming-ui-with-frames/#navigate-a-frame-with-a-form). It renders validation responses into the page and follows redirects after a successful save.
 
-To show that a save is in progress, hydrate only the submit button and listen for its `rmx:form-submit-start` event. The rest of the form stays server-rendered. Remix dispatches the event on the button that submitted the form once the submission starts reloading the page, or on the form when code calls `requestSubmit()` without a submitter, so the button follows only its own submissions. Other forms and links leave it alone, even links inside its form. The event's `finished` promise resolves once the response renders, including a validation error that keeps the form on the page, and rejects when the save fails.
+To show that a save is in progress, hydrate only the submit button and follow its `rmx:submission` event with `onSubmission()`. The rest of the form stays server-rendered. Remix dispatches the event on the button that submitted the form once the submission starts reloading the page, or on the form when code calls `requestSubmit()` without a submitter, so the button follows only its own submissions. Other forms and links leave it alone, even links inside its form. The event's `finished` promise resolves with `{ error, aborted }` once the reload ends. A rendered response, including a validation error that keeps the form on the page, has no error and `aborted: false`.
 
 Setting pending state from a hydrated form's `submit` handler, as the [hydrated album form](/start-here/#add-your-first-hydrated-component) does, only resets when the page replaces the form. A validation response can re-render the same form component in place, leaving it stuck on "Saving…". Use a `submit` handler when you [send the request yourself with `fetch()`](/interactivity/#enhancing-forms-with-fetch-and-navigation) and can reset the state when the response arrives.
 
 Put the button in the edit action's `public/` directory so the [asset server can serve it to the browser](/files-and-assets/#control-what-the-browser-can-reach):
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
-import { clientEntry, on } from "remix/component";
-import type { FormSubmitStartEvent, Handle } from "remix/component";
+import { clientEntry, onSubmission } from "remix/component";
+import type { Handle } from "remix/component";
 
 export const SaveButton = clientEntry(import.meta.url, function SaveButton(handle: Handle) {
-  let save: FormSubmitStartEvent | undefined;
+  let saving = false;
   let failed = false;
 
   return () => (
     <>
       <button
         type="submit"
-        mix={on("rmx:form-submit-start", async (event, signal) => {
-          save = event;
+        mix={onSubmission(async (event, signal) => {
+          saving = true;
           failed = false;
           handle.update();
-          try {
-            await event.finished;
-          } catch (error) {
-            // An `AbortError` means a newer navigation replaced this one, which shows its own state.
-            failed = !(error instanceof DOMException && error.name === "AbortError");
-          }
+          let { error } = await event.finished;
           // The button's next submission, or its removal, aborts the signal.
           if (signal.aborted) return;
-          save = undefined;
+          saving = false;
+          failed = error !== undefined;
           handle.update();
         })}
       >
-        {save ? "Saving…" : "Save album"}
+        {saving ? "Saving…" : "Save album"}
       </button>
       <span role="status">{failed ? "Couldn’t save the album. Try again." : ""}</span>
     </>
@@ -273,9 +269,11 @@ import { SaveButton } from "./public/save-button.tsx";
 </form>;
 ```
 
-The button shows "Saving…" from its `rmx:form-submit-start` until `finished` settles. When the request fails, `finished` rejects, and the status says so without moving focus. When another navigation replaces the save, such as a link, `finished` rejects with an `AbortError` and the newer one takes over. The button stays enabled, so the visitor can submit again: the new submission replaces the pending save, and [`on()`](/interactivity/#events-with-on) aborts the earlier handler's signal so only the latest one updates the button.
+The button shows "Saving…" from its `rmx:submission` until `finished` settles. When the request fails, `finished` resolves with an `error`, and the status says so without moving focus. When another navigation replaces the save, such as a link, `finished` resolves with `aborted: true` and no error, so the button clears its pending state without showing a failure. The button stays enabled, so the visitor can submit again: the new submission replaces the pending save, and [`onSubmission()`](../src/component/README.md#following-a-form-submission) aborts the earlier handler's signal so only the latest one updates the button.
 
-The event also carries the submission's `formData`, so a component can render what the save will change before the response arrives. See [Pending and optimistic UI](/interactivity/#optimistic-ui).
+The event extends the DOM `SubmitEvent`. Its `element` is the owning form and `submitter` is the actual submit button or `null`. It shares `src`, lowercase `method`, `encType`, `formData`, and the `finished` promise with the target frame's `reloadStart`, so a component can render what the save will change before the response arrives. GET submissions put the entries in `src` and leave `formData` and `encType` null. See [Pending and optimistic UI](/interactivity/#optimistic-ui).
+
+`rmx:submission` is noncancelable. To cancel a submission, call `preventDefault()` on the native `submit` event.
 
 ## Use other HTTP methods when the route calls for them
 
