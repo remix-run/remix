@@ -219,7 +219,6 @@ export function processStyleClass(
   selector: string
   css: string
 } {
-  // Check if the object is empty
   if (Object.keys(styleObj).length === 0) {
     return { selector: '', css: '' }
   }
@@ -235,7 +234,6 @@ export function processStyleClass(
   let css = styleToCss(styleObj, `.${selector}`)
   let result = { selector, css }
 
-  // Store in cache
   styleCache.set(serialized, result)
 
   return result

@@ -184,7 +184,6 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
       return
     }
 
-    // New rule - insert and track
     let sheet = getStylesheet()
     let index = sheet.cssRules.length
     // This may throw for invalid CSS. If it does, we intentionally let it
@@ -198,25 +197,18 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
 
     if (!entry || entry.pinned) return
 
-    // Decrement count
     entry.count--
 
-    if (entry.count > 0) {
-      // Still in use, keep the rule
-      return
-    }
+    if (entry.count > 0) return
 
-    // Count reached zero, remove the rule
     let indexToDelete = entry.index
 
-    // Remove from tracking
     ruleMap.delete(className)
 
     if (!stylesheet) return
     stylesheet.deleteRule(indexToDelete)
 
-    // Update indices for all rules that came after the deleted one
-    // They all shift down by 1
+    // deleteRule shifts every later rule down by one index.
     for (let [, data] of ruleMap.entries()) {
       if (data.index > indexToDelete) {
         data.index--
@@ -249,7 +241,6 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
 
   function dispose() {
     removeStylesheet()
-    // Clear internal state
     ruleMap.clear()
     generation++
   }
