@@ -164,7 +164,7 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
 
   void (async () => {
     for (let testFile of setup.testPaths) {
-      let fileResults = await runInDocument(testFile, setup.only)
+      let fileResults = await runInIframe(testFile, setup.only)
       await fetch('/file-results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,35 +183,29 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
   })()
 }
 
-function runInDocument(
+function runInIframe(
   testFile: string,
   only: SerializedOnlyPattern[] | undefined,
 ): Promise<FileResults> {
   return new Promise((resolve) => {
+    let iframe = document.createElement('iframe')
     let params = new URLSearchParams({ file: testFile })
     if (only) params.set('only', JSON.stringify(only))
-    let iframe: HTMLIFrameElement | undefined
-    let testWindow: Window | null
-    if (new URLSearchParams(location.search).get('isolation') === 'window') {
-      testWindow = window.open(`/iframe?${params}`, '_blank', 'width=800,height=400')
-      if (!testWindow) throw new Error('Could not open the browser test window')
-    } else {
-      iframe = document.createElement('iframe')
-      iframe.src = `/iframe?${params}`
-      iframe.width = '800'
-      iframe.height = '400'
-      // Keep the running file visible so WebKit does not throttle its timers.
-      document.body.prepend(iframe)
-      testWindow = iframe.contentWindow
-    }
+    iframe.src = `/iframe?${params}`
+    // Make the iframe as big so we don't get unintentional scrolling in test UIs
+    let parentBody = iframe.contentWindow?.document.body
+    iframe.width = Math.max(parentBody?.scrollWidth ?? 0, 800).toString()
+    iframe.height = Math.max(Math.round((parentBody?.scrollHeight ?? 0) / 2), 400).toString()
+    // Earlier files' results render ahead of an appended iframe and push it out of view, where
+    // WebKit throttles its timers, so the running file goes first.
+    document.body.prepend(iframe)
 
     function onMessage(event: MessageEvent) {
-      if (event.source !== testWindow) return
+      if (event.source !== iframe.contentWindow) return
       window.removeEventListener('message', onMessage)
       // Hide instead of remove so when coverage is enabled the iframe remains attached
       // so V8 retains its scripts and Playwright can collect coverage at run end.
-      if (iframe) iframe.style.display = 'none'
-      else testWindow?.close()
+      iframe.style.display = 'none'
       if (event.data.type === 'test-results') {
         let { passed, failed, skipped, todo, tests } = event.data.results as TestResults
         resolve({

@@ -1,1 +1,0 @@
-Fix Firefox browser tests stalling during history navigation. Tests start after their document finishes loading and run in separate top-level windows to avoid Firefox committing intercepted iframe traversals twice.

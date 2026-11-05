@@ -68,13 +68,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     page.setDefaultTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
     page.setDefaultNavigationTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
 
-    let context = page.context()
     if (options.console) {
-      function logConsole(page: Page) {
-        page.on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))
-      }
-      logConsole(page)
-      context.on('page', logConsole)
+      page.on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))
     }
 
     // Playwright's JS coverage is Chromium-only. Start before navigation so
@@ -136,24 +131,20 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     let errorPromise = new Promise((_, reject) => {
       let isScriptRequest = (request: Request) =>
         new URL(request.url()).pathname.startsWith('/scripts/')
-      function observeScriptRequests(testPage: Page) {
-        testPage.on('response', (response) => {
-          if (!response.ok() && isScriptRequest(response.request())) {
-            reject(new Error(`Failed to load script: ${response.request().url()}`))
-          }
-        })
-        testPage.on('requestfailed', (request) => {
-          if (isScriptRequest(request)) {
-            let failureText = request.failure()?.errorText
-            if (failureText === 'net::ERR_ABORTED') return
+      page!.on('response', (response) => {
+        if (!response.ok() && isScriptRequest(response.request())) {
+          reject(new Error(`Failed to load script: ${response.request().url()}`))
+        }
+      })
+      page!.on('requestfailed', (request) => {
+        if (isScriptRequest(request)) {
+          let failureText = request.failure()?.errorText
+          if (failureText === 'net::ERR_ABORTED') return
 
-            let reason = failureText ? ` (${failureText})` : ''
-            reject(new Error(`Failed to load script: ${request.url()}${reason}`))
-          }
-        })
-      }
-      for (let testPage of context.pages()) observeScriptRequests(testPage)
-      context.on('page', observeScriptRequests)
+          let reason = failureText ? ` (${failureText})` : ''
+          reject(new Error(`Failed to load script: ${request.url()}${reason}`))
+        }
+      })
     })
 
     // Prevent unhandled rejection if we fail before setting up the listener
@@ -162,12 +153,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     resetProgressTimeout()
     try {
-      let harnessUrl = new URL(options.baseUrl)
-      // Firefox commits intercepted iframe traversals twice: https://bugzilla.mozilla.org/2080513
-      if (browser.browserType().name() === 'firefox') {
-        harnessUrl.searchParams.set('isolation', 'window')
-      }
-      await page.goto(harnessUrl.href)
+      await page.goto(options.baseUrl)
       await Promise.race([
         page.waitForFunction('window.__testsDone', undefined, { timeout: 0 }),
         errorPromise,
