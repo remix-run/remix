@@ -566,7 +566,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     try {
       return (await resolvedOptions.onError(error)) ?? internalServerError()
     } catch (error) {
-      console.error(`There was an error in the asset server error handler: ${error}`)
+      console.error('There was an error in the asset server error handler:', error)
       return internalServerError()
     }
   }
@@ -580,7 +580,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       styleCompiler.invalidateFileEvent(normalizedFilePath, event)
       await fileCompiler?.handleFileEvent(normalizedFilePath, event)
     } catch (error) {
-      console.error(`There was an error invalidating the asset server cache: ${error}`)
+      console.error('There was an error invalidating the asset server cache:', error)
     }
   }
 
@@ -671,7 +671,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
         channel?.updateWatchedFiles(delta)
       })
       .catch((error: unknown) => {
-        console.error(`There was an error updating browser HMR watched files: ${error}`)
+        console.error('There was an error updating browser HMR watched files:', error)
       })
   }
 

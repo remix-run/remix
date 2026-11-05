@@ -258,7 +258,7 @@ async function createErrorResponse(onError: ErrorHandler, error: unknown): Promi
       ? new Response('Bad Request', { status: 400 })
       : internalServerError()
   } catch (error) {
-    console.error(`There was an error in the error handler: ${error}`)
+    console.error('There was an error in the error handler:', error)
     return internalServerError()
   }
 }

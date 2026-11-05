@@ -11407,7 +11407,10 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.equal(consoleError.mock.calls.length, 1)
-    assert.match(String(consoleError.mock.calls[0]?.arguments[0]), /error handler failed/)
+    let [message, error] = consoleError.mock.calls[0]?.arguments ?? []
+    assert.equal(message, 'There was an error in the asset server error handler:')
+    assert.ok(error instanceof Error)
+    assert.equal(error.message, 'error handler failed')
   })
 
   it('logs watcher errors', async (t) => {
