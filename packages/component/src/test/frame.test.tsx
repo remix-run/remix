@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
-import { Fragment } from '../runtime/component.ts'
+import { Fragment, getComponentError } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { EntryComponent } from '../runtime/client-entries.ts'
 import { Frame, getNamedFrame, getTopFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
@@ -5469,7 +5469,7 @@ describe('run', () => {
     root.dispose()
   })
 
-  it('logs a clear error when hydrating client entries without loadModule', async () => {
+  it('reports a clear error when hydrating client entries without loadModule', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',
       function Counter(handle: Handle<{ initialCount: number }>) {
@@ -5489,10 +5489,17 @@ describe('run', () => {
         },
       })
 
+      let errors: unknown[] = []
+      root.addEventListener('error', (event) => errors.push(getComponentError(event)))
+
       root.render(<Frame src="/counter-frame" fallback={<p>Loading…</p>} />)
       root.flush()
       await new Promise((resolve) => setTimeout(resolve, 0))
 
+      expect(errors).toHaveLength(1)
+      expect(String(errors[0])).toContain(
+        'loadModule is required to hydrate client entries inside <Frame />',
+      )
       expect(consoleError).toHaveBeenCalled()
       expect(
         consoleError.mock.calls.some((call) =>
