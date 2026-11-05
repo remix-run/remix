@@ -11,6 +11,9 @@ let spaResponses: WeakMap<Response, SPAResponseData> | undefined
 
 /**
  * Creates and finalizes responses carrying renderable Remix nodes for the SPA runtime.
+ *
+ * This is low-level plumbing for `remix/spa`. Apps should return `context.render(node)` from SPA
+ * routes instead of calling `spaResponse` directly.
  */
 export const spaResponse = {
   /**
