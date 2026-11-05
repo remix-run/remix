@@ -314,7 +314,7 @@ async function executeInsertMany(
       returning: normalizeReturningSelection(returning),
     }
 
-    let result = await database[executeOperation](operation)
+    let result = await runInsertMany(database, operation)
     let affectedRows = result.affectedRows ?? 0
     runAfterWriteHook(table, {
       operation: 'create',
@@ -337,7 +337,7 @@ async function executeInsertMany(
     values: preparedValues,
   }
 
-  let result = await database[executeOperation](operation)
+  let result = await runInsertMany(database, operation)
   let affectedRows = result.affectedRows ?? 0
   runAfterWriteHook(table, {
     operation: 'create',
@@ -351,6 +351,19 @@ async function executeInsertMany(
     affectedRows,
     insertId: result.insertId,
   }
+}
+
+// An empty batch has nothing to insert, so skip the adapter rather than relying on each adapter to
+// avoid compiling an empty `insert` statement.
+async function runInsertMany(
+  database: QueryExecutionContext,
+  operation: InsertManyOperation<AnyTable>,
+): Promise<DataManipulationResult> {
+  if (operation.values.length === 0) {
+    return { affectedRows: 0, insertId: undefined, rows: operation.returning ? [] : undefined }
+  }
+
+  return database[executeOperation](operation)
 }
 
 async function executeUpdate(

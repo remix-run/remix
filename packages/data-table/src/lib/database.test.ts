@@ -262,6 +262,18 @@ describe('queries', () => {
     )
   })
 
+  it('returns an empty result for insertMany([]) without calling the adapter', async () => {
+    let recording = createRecordingDriver()
+    let db = createTestDatabase(recording.driver)
+
+    let result = await db.query(tasks).insertMany([])
+    let returningResult = await db.query(tasks).insertMany([], { returning: ['id'] })
+
+    assert.deepEqual(result, { affectedRows: 0, insertId: undefined })
+    assert.deepEqual(returningResult, { affectedRows: 0, insertId: undefined, rows: [] })
+    assert.equal(recording.requests.length, 0)
+  })
+
   it('throws for insertMany() batches with only empty rows', async () => {
     let recording = createRecordingDriver()
     let db = createTestDatabase(recording.driver)
