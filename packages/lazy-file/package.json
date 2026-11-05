@@ -32,9 +32,6 @@
       "./package.json": "./package.json"
     }
   },
-  "dependencies": {
-    "@remix-run/mime": "workspace:^"
-  },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",

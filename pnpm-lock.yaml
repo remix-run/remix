@@ -1515,10 +1515,6 @@ importers:
         version: 7.0.2
 
   packages/lazy-file:
-    dependencies:
-      '@remix-run/mime':
-        specifier: workspace:^
-        version: link:../mime
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
