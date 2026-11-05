@@ -1,13 +1,13 @@
 import * as mod from 'node:module'
-import { IS_RUNNING_FROM_SRC } from './config.ts'
-import type { SerializedOnlyPattern } from './config.ts'
-import { importModule } from './import-module.ts'
-import type { CoverageConfig } from './coverage.ts'
-import type { TestResults } from './reporters/results.ts'
-import { runTests } from './executor.ts'
-import { IS_BUN } from './runtime.ts'
-import { createFailedResults } from './worker-results.ts'
-import { isRecord } from './is-record.ts'
+import { IS_RUNNING_FROM_SRC } from '../config.ts'
+import type { SerializedOnlyPattern } from '../config.ts'
+import { importModule } from '../import-module.ts'
+import type { CoverageConfig } from '../coverage.ts'
+import type { TestResults } from '../reporters/results.ts'
+import { runTests } from '../executor.ts'
+import { IS_BUN } from '../runtime.ts'
+import { createFailedResults } from './results.ts'
+import { isRecord } from '../is-record.ts'
 
 export interface ServerTestWorkerData {
   file: string
@@ -28,7 +28,7 @@ export async function runServerTestFile(value: unknown): Promise<TestResults> {
       // Ensure we load the right file whether we're running in the monorepo (TS) or
       // from a published package (JS)
       let ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
-      mod.register(new URL(`./coverage-loader${ext}`, import.meta.url), import.meta.url)
+      mod.register(new URL(`../coverage-loader${ext}`, import.meta.url), import.meta.url)
       await import(workerData.file)
     } else {
       await importModule(workerData.file, import.meta)

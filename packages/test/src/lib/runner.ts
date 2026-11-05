@@ -16,9 +16,9 @@ import { isRecord } from './is-record.ts'
 // Ensure we load the right file whether we're running in the monorepo (TS) or
 // from a published package (JS)
 const ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
-const workerUrl = new URL(`./worker${ext}`, import.meta.url)
-const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
-const workerProcessUrl = new URL(`./worker-process${ext}`, import.meta.url)
+const workerUrl = new URL(`./worker/server-thread${ext}`, import.meta.url)
+const workerE2EUrl = new URL(`./worker/e2e-thread${ext}`, import.meta.url)
+const workerProcessUrl = new URL(`./worker/server-process${ext}`, import.meta.url)
 const DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS = 10_000
 
 interface WorkerRun {

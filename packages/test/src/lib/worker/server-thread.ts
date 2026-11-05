@@ -1,5 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads'
-import { runServerTestFile } from './worker-server.ts'
+import { runServerTestFile } from './server-file.ts'
 
 if (!parentPort) {
   throw new Error('Server test worker is missing a parent port')

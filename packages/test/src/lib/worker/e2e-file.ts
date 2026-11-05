@@ -1,17 +1,17 @@
-import { runTests } from './executor.ts'
-import { importModule } from './import-module.ts'
+import { runTests } from '../executor.ts'
+import { importModule } from '../import-module.ts'
 import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
   getPlaywrightPageOptions,
-} from './playwright.ts'
-import type { PlaywrightUseOpts } from './playwright.ts'
-import type { CoverageConfig } from './coverage.ts'
-import type { TestResults } from './reporters/results.ts'
-import { createFailedResults } from './worker-results.ts'
-import { isRecord } from './is-record.ts'
-import { parseCoverageConfig, parseOnlyPatterns } from './worker-server.ts'
-import type { SerializedOnlyPattern } from './config.ts'
+} from '../playwright.ts'
+import type { PlaywrightUseOpts } from '../playwright.ts'
+import type { CoverageConfig } from '../coverage.ts'
+import type { TestResults } from '../reporters/results.ts'
+import { createFailedResults } from './results.ts'
+import { isRecord } from '../is-record.ts'
+import { parseCoverageConfig, parseOnlyPatterns } from './server-file.ts'
+import type { SerializedOnlyPattern } from '../config.ts'
 
 export interface E2ETestWorkerData {
   file: string

@@ -1,5 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads'
-import { runE2ETestFile } from './worker-e2e-file.ts'
+import { runE2ETestFile } from './e2e-file.ts'
 
 if (!parentPort) {
   throw new Error('E2E test worker is missing a parent port')

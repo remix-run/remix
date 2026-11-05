@@ -1,4 +1,4 @@
-import type { TestResults } from './reporters/results.ts'
+import type { TestResults } from '../reporters/results.ts'
 
 export function createFailedResults(error: unknown): TestResults {
   return {
