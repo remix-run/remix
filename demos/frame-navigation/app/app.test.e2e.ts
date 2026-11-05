@@ -326,7 +326,7 @@ async function waitForNavigationRuntime(page: Page): Promise<void> {
   })
 }
 
-async function markDocument(page: Page): Promise<string> {
+function markDocument(page: Page): Promise<string> {
   return page.evaluate(() => {
     let marker = crypto.randomUUID()
     window.__frameNavigationTestDocument = marker

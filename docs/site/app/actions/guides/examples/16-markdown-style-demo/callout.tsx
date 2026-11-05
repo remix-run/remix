@@ -3,7 +3,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import type { AppContext } from "../../../../router.ts";
 
-export async function handler(context: AppContext) {
+export function handler(context: AppContext) {
   return context.render(<Callouts />);
 }
 

@@ -96,7 +96,7 @@ describe('renderMarkdownFile()', () => {
   })
 })
 
-async function renderMarkdown(
+function renderMarkdown(
   t: TestContext,
   source: string,
   options: {

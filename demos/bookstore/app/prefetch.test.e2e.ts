@@ -397,11 +397,11 @@ function reusesPrefetchedHtml(page: Page): boolean {
 }
 
 // Safari can't prefetch links, so the runtime prefetches only a destination's HTML there.
-async function prefetchesAssets(page: Page): Promise<boolean> {
+function prefetchesAssets(page: Page): Promise<boolean> {
   return page.evaluate(() => document.createElement('link').relList.supports('prefetch'))
 }
 
-async function isInViewport(link: Locator): Promise<boolean> {
+function isInViewport(link: Locator): Promise<boolean> {
   return link.evaluate(
     (anchor) =>
       new Promise<boolean>((resolve) => {
