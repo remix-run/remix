@@ -7,7 +7,7 @@ This repository includes the source code for Remix 3, a web framework for buildi
 - **Monorepo**: pnpm workspace with most product code under `packages/`
 - **Public API layout**: every `exports` entry in `package.json` should map to a dedicated top-level `src/*.ts` file
 - **Implementation layout**: `src/lib` is implementation-only; do not add barrel re-exports or thin pass-through wrappers inside `src/lib`
-- **Cross-package boundaries**: do not re-export APIs or types from another package; import from the owning package directly
+- **Cross-package boundaries**: do not re-export APIs or types from another package; import from the owning package directly. The exception is errors and types that are part of a package's own API contract, such as errors its functions throw (`form-data-parser` re-exports `multipart-parser` errors, and `form-data-middleware` re-exports `FormDataParseError` and the `FileUpload` types)
 - **Platform stance**: prefer Web APIs and standards-aligned primitives over Node-specific APIs whenever possible
 
 ## Git Workflow
