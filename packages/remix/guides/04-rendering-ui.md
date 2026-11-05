@@ -68,69 +68,51 @@ import type { Handle } from "remix/component";
 
 export function ComponentModelDemo() {
   return () => (
-    <div mix={counterDemoStyles}>
-      <Counter initialCount={2} label="Inbox" />
-      <Counter initialCount={8} label="Deploys" />
+    <div mix={css({ display: "flex", gap: "0.75rem" })}>
+      <VoteButton album="Thriller" initialVotes={12} />
+      <VoteButton album="Bad" initialVotes={9} />
     </div>
   );
 }
 
-function Counter(handle: Handle<{ initialCount: number; label: string }>) {
-  let count = handle.props.initialCount;
+function VoteButton(handle: Handle<{ album: string; initialVotes: number }>) {
+  let votes = handle.props.initialVotes;
 
   return () => (
     <button
+      type="button"
       mix={[
-        counterStyles,
         on("click", () => {
-          count++;
+          votes++;
           handle.update();
         }),
+        css({
+          display: "grid",
+          gap: "0.25rem",
+          minWidth: "9rem",
+          padding: "1rem",
+          border: 0,
+          borderRadius: "12px",
+          background: "light-dark(white, #2a2a30)",
+          color: "light-dark(#151515, #f4f4f5)",
+          font: "inherit",
+          textAlign: "left",
+          cursor: "pointer",
+          transition: "box-shadow 150ms ease, transform 150ms ease",
+          "&:hover, &:focus-visible": {
+            boxShadow: "0 8px 24px light-dark(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.5))",
+            transform: "translateY(-2px)",
+          },
+        }),
       ]}
-      type="button"
     >
-      <span mix={counterValueStyles}>{count}</span>
-      <span>{handle.props.label}</span>
+      <strong mix={css({ color: "light-dark(#d83a5a, #ff6b88)", fontSize: "2rem" })}>
+        {votes}
+      </strong>
+      <span>{handle.props.album}</span>
     </button>
   );
 }
-
-const counterDemoStyles = css({
-  display: "flex",
-  flexWrap: "wrap",
-  justifyContent: "center",
-  gap: "0.75rem",
-});
-
-const counterStyles = css({
-  display: "grid",
-  minWidth: "9rem",
-  gap: "0.35rem",
-  padding: "1rem",
-  border: "1px solid #d6d6d6",
-  borderRadius: "16px",
-  background: "white",
-  color: "#151515",
-  cursor: "pointer",
-  font: "inherit",
-  textAlign: "left",
-  boxShadow: "0 8px 24px rgba(15, 17, 21, 0.08)",
-  "&:hover": {
-    boxShadow: "0 12px 32px rgba(15, 17, 21, 0.12)",
-    transform: "translateY(-2px)",
-  },
-  "&:active": {
-    transform: "translateY(0)",
-  },
-});
-
-const counterValueStyles = css({
-  color: "#d83a5a",
-  fontSize: "2.75rem",
-  fontWeight: "900",
-  lineHeight: "0.9",
-  letterSpacing: "-0.08em",
-});
 ```
 
 ## Props, local state, context, and updates {#handle-props-setup-render-and-updates}
@@ -434,31 +416,32 @@ one, and returns a normal Web `Response`.
 ## Styling with css and dynamic style values {#styling-with-css}
 
 Use `css(...)` for static rules. It supports pseudo-selectors, pseudo-elements, descendant and
-attribute selectors, and media queries with normal CSS nesting:
+attribute selectors, and media queries with normal CSS nesting. Keep a style used at one JSX site
+inline in that element's `mix`, with any explanatory comment beside the relevant rule:
 
 ```tsx filename=app/ui/album-card.tsx
 import { css } from "remix/component";
 import type { Handle } from "remix/component";
 
-const cardStyle = css({
-  border: "1px solid #d6d6d6",
-  borderRadius: "12px",
-  padding: "1rem",
-  transition: "border-color 120ms ease",
-  "&:hover": {
-    borderColor: "#6d28d9",
-  },
-  "& .title": {
-    marginBlock: "0 0.25rem",
-  },
-  "@media (max-width: 40rem)": {
-    borderRadius: 0,
-  },
-});
-
 export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
   return () => (
-    <article mix={cardStyle} style={{ opacity: handle.props.soldOut ? 0.55 : 1 }}>
+    <article
+      mix={css({
+        border: "1px solid #d6d6d6",
+        borderRadius: "12px",
+        padding: "1rem",
+        "&:hover": {
+          borderColor: "#6d28d9",
+        },
+        "& .title": {
+          marginBlock: "0 0.25rem",
+        },
+        "@media (max-width: 40rem)": {
+          borderRadius: 0,
+        },
+      })}
+      style={{ opacity: handle.props.soldOut ? 0.55 : 1 }}
+    >
       <h2 class="title">{handle.props.title}</h2>
       <p>{handle.props.soldOut ? "Sold out" : "In stock"}</p>
     </article>
@@ -467,9 +450,13 @@ export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
 ```
 
 The `css(...)` call creates a generated class and static rule, and the element's
-[`mix` prop](/interactivity/#the-mix-prop) applies it. The `style` prop is better for values
-such as progress, coordinates, opacity, or transforms that can change on every update. Putting those
-values in `css(...)` would create another generated rule for each value.
+[`mix` prop](/interactivity/#the-mix-prop) applies it. Name a style when multiple JSX sites share
+it or when a variant map makes the supported choices clear. Keep named styles in the component's
+module, and extract when the second use appears.
+
+The `style` prop is better for values such as progress, coordinates, opacity, or transforms that
+can change on every update. Putting those values in `css(...)` would create another generated rule
+for each value.
 
 Prefer state selectors such as `"&:hover .title"` or `'&[aria-expanded="true"]'` over tracking hover
 or focus in JavaScript. The browser applies them without a render, and they work before the page
@@ -495,123 +482,155 @@ export function StylingCardDemo() {
   );
 }
 
-function ProductCard(handle: Handle<{ description: string; price: number; title: string }>) {
+type Product = { description: string; price: number; title: string };
+
+function ProductCard(handle: Handle<Product>) {
   return () => (
-    <article mix={productCardStyles}>
-      <div mix={productImageStyles} aria-hidden="true">
-        <svg viewBox="0 0 120 80" fill="none">
-          <path
-            d="M30 43c0-18 12-31 30-31s30 13 30 31"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-width="8"
-          />
-          <rect width="24" height="34" x="18" y="38" fill="currentColor" rx="12" />
-          <rect width="24" height="34" x="78" y="38" fill="currentColor" rx="12" />
-        </svg>
-      </div>
-      <div mix={productBodyStyles}>
-        <h4 class="title" mix={productTitleStyles}>
-          {handle.props.title}
-        </h4>
-        <p mix={productDescriptionStyles}>{handle.props.description}</p>
-        <div mix={productFooterStyles}>
-          <span mix={productPriceStyles}>${handle.props.price}</span>
-          <button mix={productButtonStyles} type="button">
-            Add to cart
-          </button>
-        </div>
-      </div>
+    <article
+      mix={css({
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 10rem) minmax(0, 1fr)",
+        maxWidth: "34rem",
+        overflow: "hidden",
+        border: "1px solid light-dark(#d6d6d6, #3f3f46)",
+        borderRadius: "18px",
+        background: "light-dark(white, #2a2a30)",
+        color: "light-dark(#151515, #f4f4f5)",
+        boxShadow: "0 12px 32px light-dark(rgb(15 17 21 / 0.08), rgb(0 0 0 / 0.4))",
+        transition: "transform 180ms ease, box-shadow 180ms ease",
+        // Hovering the card restyles the title and button inside its child components.
+        "&:hover": {
+          boxShadow: "0 18px 44px light-dark(rgb(15 17 21 / 0.14), rgb(0 0 0 / 0.6))",
+          transform: "translateY(-3px)",
+          "& .title": {
+            color: "light-dark(#d83a5a, #ff6b88)",
+          },
+          "& button": {
+            backgroundColor: "#b8324d",
+          },
+        },
+        "@media (max-width: 560px)": {
+          gridTemplateColumns: "1fr",
+        },
+      })}
+    >
+      <ProductImage />
+      <ProductDetails {...handle.props} />
     </article>
   );
 }
 
-const productCardStyles = css({
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 10rem) minmax(0, 1fr)",
-  maxWidth: "34rem",
-  overflow: "hidden",
-  border: "1px solid #d6d6d6",
-  borderRadius: "18px",
-  background: "white",
-  boxShadow: "0 12px 32px rgba(15, 17, 21, 0.08)",
-  transition: "transform 180ms ease, box-shadow 180ms ease",
-  "&:hover": {
-    boxShadow: "0 18px 44px rgba(15, 17, 21, 0.14)",
-    transform: "translateY(-3px)",
-    "& .title": {
-      color: "#d83a5a",
-    },
-    "& button": {
-      backgroundColor: "#b8324d",
-    },
-  },
-  "@media (max-width: 560px)": {
-    gridTemplateColumns: "1fr",
-  },
-});
+function ProductImage() {
+  return () => (
+    <div
+      aria-hidden="true"
+      mix={css({
+        display: "grid",
+        placeItems: "center",
+        minHeight: "12rem",
+        background:
+          "linear-gradient(135deg, light-dark(#ffe5eb, #4a2733), light-dark(#f8fafc, #2a2a30))",
+        color: "light-dark(#d83a5a, #ff6b88)",
+      })}
+    >
+      <HeadphonesIcon />
+    </div>
+  );
+}
 
-const productImageStyles = css({
-  display: "grid",
-  placeItems: "center",
-  minHeight: "12rem",
-  background: "linear-gradient(135deg, #ffe5eb, #f8fafc)",
-  color: "#d83a5a",
-  "& svg": {
-    width: "7rem",
-    height: "auto",
-  },
-});
+function ProductDetails(handle: Handle<Product>) {
+  return () => (
+    <div
+      mix={css({
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.75rem",
+        padding: "1rem",
+      })}
+    >
+      <h4
+        class="title"
+        mix={css({
+          margin: 0,
+          fontSize: "1.15rem",
+          fontWeight: "800",
+          letterSpacing: "-0.03em",
+          transition: "color 180ms ease",
+        })}
+      >
+        {handle.props.title}
+      </h4>
+      <p
+        mix={css({
+          margin: 0,
+          color: "light-dark(#4f4f4f, #a1a1aa)",
+          lineHeight: "1.6",
+        })}
+      >
+        {handle.props.description}
+      </p>
+      <div
+        mix={css({
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "1rem",
+          marginTop: "auto",
+        })}
+      >
+        <span
+          mix={css({
+            fontSize: "1.5rem",
+            fontWeight: "900",
+            letterSpacing: "-0.06em",
+          })}
+        >
+          ${handle.props.price}
+        </span>
+        <AddToCartButton />
+      </div>
+    </div>
+  );
+}
 
-const productBodyStyles = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "0.75rem",
-  padding: "1rem",
-});
+function AddToCartButton() {
+  return () => (
+    <button
+      type="button"
+      mix={css({
+        border: "1px solid #d83a5a",
+        borderRadius: "999px",
+        background: "#d83a5a",
+        color: "white",
+        cursor: "pointer",
+        font: "inherit",
+        fontWeight: "700",
+        padding: "0.7rem 1rem",
+        transition: "background-color 180ms ease, transform 120ms ease",
+        "&:active": {
+          transform: "scale(0.98)",
+        },
+      })}
+    >
+      Add to cart
+    </button>
+  );
+}
 
-const productTitleStyles = css({
-  margin: 0,
-  fontSize: "1.15rem",
-  fontWeight: "800",
-  letterSpacing: "-0.03em",
-  transition: "color 180ms ease",
-});
-
-const productDescriptionStyles = css({
-  margin: 0,
-  color: "#4f4f4f",
-  lineHeight: "1.6",
-});
-
-const productFooterStyles = css({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "1rem",
-  marginTop: "auto",
-});
-
-const productPriceStyles = css({
-  fontSize: "1.5rem",
-  fontWeight: "900",
-  letterSpacing: "-0.06em",
-});
-
-const productButtonStyles = css({
-  border: "1px solid #d83a5a",
-  borderRadius: "999px",
-  background: "#d83a5a",
-  color: "white",
-  cursor: "pointer",
-  font: "inherit",
-  fontWeight: "700",
-  padding: "0.7rem 1rem",
-  transition: "background-color 180ms ease, transform 120ms ease",
-  "&:active": {
-    transform: "scale(0.98)",
-  },
-});
+function HeadphonesIcon() {
+  return () => (
+    <svg viewBox="0 0 120 80" fill="none" width="112">
+      <path
+        d="M30 43c0-18 12-31 30-31s30 13 30 31"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-width="8"
+      />
+      <rect width="24" height="34" x="18" y="38" fill="currentColor" rx="12" />
+      <rect width="24" height="34" x="78" y="38" fill="currentColor" rx="12" />
+    </svg>
+  );
+}
 ```
 
 ## Cascade layers and app-owned design tokens {#theme-tokens-and-cascade-layers}
@@ -689,104 +708,101 @@ import * as accordion from "@remix-run/ui/accordion";
 export function AccordionPrimitives() {
   return () => (
     <accordion.Context defaultValue="shipping">
-      <div mix={[rootCss, accordion.root()]}>
-        <accordion.ItemContext value="shipping">
-          <div mix={[itemCss, accordion.item()]}>
-            <h3 mix={headingCss}>
-              <button mix={[triggerCss, accordion.trigger()]} type="button">
-                Shipping
-              </button>
-            </h3>
-            <div mix={[contentCss, accordion.content()]}>
-              Default carrier, cutoff time, and delivery windows.
+      <div
+        mix={[
+          accordion.root(),
+          css({
+            width: "24rem",
+            maxWidth: "100%",
+            border: "1px solid light-dark(#d6d6d6, #3f3f46)",
+            borderRadius: "8px",
+            background: "light-dark(white, #2a2a30)",
+            color: "light-dark(#151515, #f4f4f5)",
+          }),
+        ]}
+      >
+        {items.map((item) => (
+          <accordion.ItemContext key={item.value} value={item.value} disabled={item.disabled}>
+            <div
+              mix={[
+                accordion.item(),
+                css({
+                  "& + &": {
+                    borderTop: "1px solid light-dark(#e8e8e8, #3f3f46)",
+                  },
+                  "&[data-disabled]": {
+                    opacity: 0.45,
+                  },
+                }),
+              ]}
+            >
+              <h3 mix={css({ margin: 0, fontSize: "inherit" })}>
+                <button
+                  type="button"
+                  mix={[
+                    accordion.trigger(),
+                    css({
+                      display: "flex",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      border: 0,
+                      background: "none",
+                      color: "inherit",
+                      font: "inherit",
+                      fontWeight: 600,
+                      "&::after": {
+                        content: '"+"',
+                      },
+                      '&[data-state="open"]::after': {
+                        content: '"−"',
+                      },
+                    }),
+                  ]}
+                >
+                  {item.label}
+                </button>
+              </h3>
+              <div
+                mix={[
+                  accordion.content(),
+                  css({
+                    padding: "0 1rem 0.75rem",
+                    color: "light-dark(#4f4f4f, #a1a1aa)",
+                    '&[data-state="closed"]': {
+                      display: "none",
+                    },
+                  }),
+                ]}
+              >
+                {item.details}
+              </div>
             </div>
-          </div>
-        </accordion.ItemContext>
-
-        <accordion.ItemContext value="billing">
-          <div mix={[itemCss, accordion.item()]}>
-            <h3 mix={headingCss}>
-              <button mix={[triggerCss, accordion.trigger()]} type="button">
-                Billing
-              </button>
-            </h3>
-            <div mix={[contentCss, accordion.content()]}>
-              Invoice cadence, billing contact, and tax settings.
-            </div>
-          </div>
-        </accordion.ItemContext>
-
-        <accordion.ItemContext disabled value="archived">
-          <div mix={[itemCss, accordion.item()]}>
-            <h3 mix={headingCss}>
-              <button mix={[triggerCss, accordion.trigger()]} type="button">
-                Archived
-              </button>
-            </h3>
-            <div mix={[contentCss, accordion.content()]}>Unavailable settings.</div>
-          </div>
-        </accordion.ItemContext>
+          </accordion.ItemContext>
+        ))}
       </div>
     </accordion.Context>
   );
 }
 
-const rootCss = css({
-  display: "grid",
-  width: "24rem",
-  maxWidth: "100%",
-  border: "1px solid #d8d8d8",
-  borderRadius: "8px",
-  background: "#ffffff",
-});
-
-const itemCss = css({
-  borderBlockStart: "1px solid #e8e8e8",
-  "&:first-child": {
-    borderBlockStart: 0,
+const items = [
+  {
+    value: "shipping",
+    label: "Shipping",
+    details: "Default carrier, cutoff time, and delivery windows.",
   },
-  "&[data-disabled]": {
-    opacity: 0.45,
+  {
+    value: "billing",
+    label: "Billing",
+    details: "Invoice cadence, billing contact, and tax settings.",
   },
-});
-
-const headingCss = css({
-  margin: 0,
-});
-
-const triggerCss = css({
-  appearance: "none",
-  display: "flex",
-  justifyContent: "space-between",
-  width: "100%",
-  border: 0,
-  background: "transparent",
-  color: "#101010",
-  font: '600 13px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  letterSpacing: 0,
-  padding: "10px 12px",
-  textAlign: "left",
-  "&::after": {
-    content: '"+"',
+  {
+    value: "archived",
+    label: "Archived",
+    details: "Unavailable settings.",
+    disabled: true,
   },
-  '&[data-state="open"]::after': {
-    content: '"-"',
-  },
-  "&:focus-visible": {
-    outline: "2px solid #3573f6",
-    outlineOffset: "-2px",
-  },
-});
-
-const contentCss = css({
-  color: "#4f4f4f",
-  font: '500 13px/20px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  letterSpacing: 0,
-  padding: "0 12px 12px",
-  '&[data-state="closed"]': {
-    display: "none",
-  },
-});
+];
 ```
 
 ## Raw HTML with unsafeHTML {#raw-html-with-unsafehtml}

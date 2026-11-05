@@ -1,35 +1,29 @@
+import type { ReloadDetails } from './reload-details.ts'
+
 /**
  * Event dispatched when a direct or ancestor-driven reload of a frame starts.
  */
-export type FrameReloadStartEvent = Event & {
-  /**
-   * Submitted form entries, for a non-GET form submission or a POST reload with a body. `null`
-   * otherwise, as on `NavigateEvent`.
-   */
-  readonly formData: FormData | null
-  /**
-   * The link, form or submit button whose navigation started this reload, as on `NavigateEvent`.
-   * `null` for a reload that no element's navigation started, such as `frame.reload()`.
-   */
-  readonly sourceElement: Element | null
-  /**
-   * Resolves once this reload's content has rendered, as `NavigationTransition.finished` does once
-   * a navigation finishes. Rejects with the failure when the reload fails, and with an
-   * `AbortError` `DOMException` when it is cancelled, a newer reload of the frame replaces it, or
-   * the frame is removed. A newer reload doesn't dispatch `reloadComplete` for the one it replaces, so
-   * this is how a listener learns how its own reload ended.
-   */
-  readonly finished: Promise<void>
-}
+export type FrameReloadStartEvent = Event &
+  ReloadDetails & {
+    /**
+     * The initiating anchor, area, or owning form. `null` for programmatic reloads, programmatic
+     * navigations, and history traversal.
+     */
+    readonly element: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement | null
+  }
 
 /**
  * What a `reloadStart` event describes: the navigation that started the reload, if any, and the
  * reload's outcome.
  */
 export type FrameReloadStartEventInit = {
+  src: string
+  method: string
+  encType: string | null
   formData?: FormData
-  sourceElement?: Element
-  finished: Promise<void>
+  element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  submitter?: HTMLElement | null
+  finished: ReloadDetails['finished']
 }
 
 /**
@@ -42,8 +36,12 @@ export function createFrameReloadStartEvent(
   init: FrameReloadStartEventInit,
 ): FrameReloadStartEvent {
   return Object.assign(new Event('reloadStart'), {
+    src: init.src,
+    method: init.method,
+    encType: init.encType,
     formData: init.formData ?? null,
-    sourceElement: init.sourceElement ?? null,
+    element: init.element ?? null,
+    submitter: init.submitter ?? null,
     finished: init.finished,
   })
 }

@@ -1,5 +1,5 @@
-import type { FormSubmitStartEvent, FrameReloadStartEvent, Handle } from 'remix/component'
-import { css, clientEntry, link, on, ref } from 'remix/component'
+import type { FormSubmissionEvent, FrameReloadStartEvent, Handle } from 'remix/component'
+import { css, clientEntry, link, on, onSubmission, ref } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
 
@@ -31,23 +31,23 @@ export const CartItems = clientEntry(
     let reload: FrameReloadStartEvent | undefined
     let failed: 'change' | 'reload' | undefined
 
-    // Links don't dispatch `rmx:form-submit-start`, so the cart follows its reload link's loads
+    // Links don't dispatch `rmx:submission`, so the cart follows its reload link's loads
     // through its frame. Any newer load of the frame replaces one, including a change, or a page
     // navigation, which reloads the frame with the page.
     handle.frame.addEventListener(
       'reloadStart',
       async (event) => {
-        reload = event.sourceElement === reloadLink ? event : undefined
+        reload = event.element === reloadLink ? event : undefined
         if (reload !== event) return
         failed = undefined
         handle.update()
         try {
           await event.finished
-        } catch (error) {
-          if (!(error instanceof DOMException && error.name === 'AbortError')) failed = 'reload'
+        } catch {
+          if (reload === event) failed = 'reload'
         }
-        if (handle.signal.aborted) return
-        if (reload === event) reload = undefined
+        if (handle.signal.aborted || reload !== event) return
+        reload = undefined
         handle.update()
       },
       { signal: handle.signal },
@@ -56,7 +56,7 @@ export const CartItems = clientEntry(
     // Shows a change as soon as its submission starts, until the cart it saved renders. The cart
     // listens around its rows, because removing a row removes its form, which would abort the
     // form's signal and leave the change pending.
-    async function follow(event: FormSubmitStartEvent, signal: AbortSignal) {
+    async function follow(event: FormSubmissionEvent, signal: AbortSignal) {
       let { formData } = event
       if (!formData) return
       change = {
@@ -67,9 +67,8 @@ export const CartItems = clientEntry(
       handle.update()
       try {
         await event.finished
-      } catch (error) {
-        // An `AbortError` means a newer navigation replaced this one, which shows its own state.
-        if (!(error instanceof DOMException && error.name === 'AbortError')) failed = 'change'
+      } catch {
+        if (!signal.aborted) failed = 'change'
       }
       if (signal.aborted) return
       change = undefined
@@ -91,7 +90,7 @@ export const CartItems = clientEntry(
       return (
         <div
           mix={[
-            on('rmx:form-submit-start', (event, signal) => follow(event, signal)),
+            onSubmission((event, signal) => follow(event, signal)),
             on('submit', (event) => {
               // Keep pending controls focusable without allowing another session write.
               if (change) event.preventDefault()

@@ -53,23 +53,109 @@ function MetricFrame(handle: Handle<{ exhibit: UiExhibit; servedAt: string }>) {
     let { exhibit, servedAt } = handle.props
 
     return (
-      <article mix={uiFrameStyle}>
+      <article
+        mix={css({
+          borderRadius: '6px',
+          padding: 'clamp(24px, 4vw, 42px)',
+          backgroundColor: 'var(--server-frame-bg)',
+          color: 'var(--server-frame-text)',
+          transition: 'background-color 180ms ease, color 180ms ease',
+        })}
+      >
         <div mix={uiFrameHeaderStyle}>
-          <h3 mix={uiHeadingStyle}>{exhibit.metricLabel}</h3>
-          <p mix={servedTimeStyle}>
+          <h3
+            mix={css({
+              maxWidth: '520px',
+              margin: 0,
+              fontSize: 'clamp(22px, 3vw, 34px)',
+              lineHeight: 1.08,
+              letterSpacing: '-0.03em',
+            })}
+          >
+            {exhibit.metricLabel}
+          </h3>
+          <p
+            mix={css({
+              margin: 0,
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontSize: '11px',
+              color: 'var(--server-frame-muted)',
+              whiteSpace: 'nowrap',
+            })}
+          >
             Delivered at <time>{servedAt}</time>
           </p>
         </div>
 
-        <div mix={metricGridStyle}>
-          <p mix={metricStyle}>{exhibit.metric}</p>
-          <p mix={trendStyle}>{exhibit.trend}</p>
+        <div
+          mix={css({
+            display: 'grid',
+            gap: '16px',
+            marginTop: '42px',
+            paddingBottom: '32px',
+            borderBottom: '1px solid var(--server-frame-rule)',
+          })}
+        >
+          <p
+            mix={css({
+              margin: 0,
+              fontSize: 'clamp(48px, 8vw, 86px)',
+              fontWeight: 800,
+              lineHeight: 0.9,
+              letterSpacing: '-0.07em',
+              color: 'var(--server-frame-highlight)',
+            })}
+          >
+            {exhibit.metric}
+          </p>
+          <p
+            mix={css({
+              margin: 0,
+              paddingBottom: '5px',
+              fontSize: '15px',
+              lineHeight: 1.5,
+              color: 'var(--server-frame-copy)',
+            })}
+          >
+            {exhibit.trend}
+          </p>
         </div>
 
-        <ul mix={detailListStyle}>
+        <ul
+          mix={css({
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: '12px',
+            margin: '28px 0 0',
+            padding: 0,
+            listStyle: 'none',
+            '@media (max-width: 720px)': {
+              gridTemplateColumns: '1fr',
+            },
+          })}
+        >
           {exhibit.details.map((detail) => (
-            <li key={detail} mix={detailItemStyle}>
-              <span aria-hidden="true" mix={detailMarkStyle} />
+            <li
+              key={detail}
+              mix={css({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '13px',
+                lineHeight: 1.4,
+                color: 'var(--server-frame-detail)',
+              })}
+            >
+              <span
+                aria-hidden="true"
+                mix={css({
+                  flex: '0 0 auto',
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--server-frame-accent)',
+                })}
+              />
               {detail}
             </li>
           ))}
@@ -84,9 +170,28 @@ function InteractiveFrame(handle: Handle<{ exhibit: InteractiveExhibit; servedAt
     let { exhibit, servedAt } = handle.props
 
     return (
-      <article mix={interactiveFrameStyle}>
+      <article
+        mix={css({
+          border: '1px solid var(--interactive-border)',
+          borderRadius: '6px',
+          padding: 'clamp(24px, 4vw, 42px)',
+          backgroundColor: 'var(--interactive-bg)',
+          color: 'var(--interactive-text)',
+          transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
+        })}
+      >
         <div mix={uiFrameHeaderStyle}>
-          <h3 mix={interactiveHeadingStyle}>{exhibit.prompt}</h3>
+          <h3
+            mix={css({
+              maxWidth: '520px',
+              margin: 0,
+              fontSize: 'clamp(22px, 3vw, 34px)',
+              lineHeight: 1.08,
+              letterSpacing: '-0.03em',
+            })}
+          >
+            {exhibit.prompt}
+          </h3>
         </div>
 
         <FramePlayground
@@ -131,14 +236,6 @@ const frameResponseInit = {
   headers: { 'Cache-Control': frameCacheControl },
 } satisfies ResponseInit
 
-const uiFrameStyle = css({
-  borderRadius: '6px',
-  padding: 'clamp(24px, 4vw, 42px)',
-  backgroundColor: 'var(--server-frame-bg)',
-  color: 'var(--server-frame-text)',
-  transition: 'background-color 180ms ease, color 180ms ease',
-})
-
 const uiFrameHeaderStyle = css({
   display: 'flex',
   justifyContent: 'space-between',
@@ -147,91 +244,4 @@ const uiFrameHeaderStyle = css({
   '@media (max-width: 640px)': {
     flexDirection: 'column',
   },
-})
-
-const uiHeadingStyle = css({
-  maxWidth: '520px',
-  margin: 0,
-  fontSize: 'clamp(22px, 3vw, 34px)',
-  lineHeight: 1.08,
-  letterSpacing: '-0.03em',
-})
-
-const servedTimeStyle = css({
-  margin: 0,
-  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-  fontSize: '11px',
-  color: 'var(--server-frame-muted)',
-  whiteSpace: 'nowrap',
-})
-
-const metricGridStyle = css({
-  display: 'grid',
-  gap: '16px',
-  marginTop: '42px',
-  paddingBottom: '32px',
-  borderBottom: '1px solid var(--server-frame-rule)',
-})
-
-const metricStyle = css({
-  margin: 0,
-  fontSize: 'clamp(48px, 8vw, 86px)',
-  fontWeight: 800,
-  lineHeight: 0.9,
-  letterSpacing: '-0.07em',
-  color: 'var(--server-frame-highlight)',
-})
-
-const trendStyle = css({
-  margin: 0,
-  paddingBottom: '5px',
-  fontSize: '15px',
-  lineHeight: 1.5,
-  color: 'var(--server-frame-copy)',
-})
-
-const detailListStyle = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  gap: '12px',
-  margin: '28px 0 0',
-  padding: 0,
-  listStyle: 'none',
-  '@media (max-width: 720px)': {
-    gridTemplateColumns: '1fr',
-  },
-})
-
-const detailItemStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  fontSize: '13px',
-  lineHeight: 1.4,
-  color: 'var(--server-frame-detail)',
-})
-
-const detailMarkStyle = css({
-  flex: '0 0 auto',
-  width: '7px',
-  height: '7px',
-  borderRadius: '50%',
-  backgroundColor: 'var(--server-frame-accent)',
-})
-
-const interactiveFrameStyle = css({
-  border: '1px solid var(--interactive-border)',
-  borderRadius: '6px',
-  padding: 'clamp(24px, 4vw, 42px)',
-  backgroundColor: 'var(--interactive-bg)',
-  color: 'var(--interactive-text)',
-  transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
-})
-
-const interactiveHeadingStyle = css({
-  maxWidth: '520px',
-  margin: 0,
-  fontSize: 'clamp(22px, 3vw, 34px)',
-  lineHeight: 1.08,
-  letterSpacing: '-0.03em',
 })

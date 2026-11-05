@@ -43,13 +43,6 @@ A component receives a `handle` and returns a render function. State is a variab
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const buttonStyle = css({
-  padding: '8px 12px',
-  borderRadius: '6px',
-  '&:hover': { background: '#f3f0ff' },
-  '&:disabled': { opacity: 0.6 },
-})
-
 export function LikeButton(handle: Handle<{ href: string; initialLikes: number }>) {
   let likes = handle.props.initialLikes
   let saving = false
@@ -59,7 +52,6 @@ export function LikeButton(handle: Handle<{ href: string; initialLikes: number }
       type="button"
       disabled={saving}
       mix={[
-        buttonStyle,
         on('click', async (_event, signal) => {
           likes++
           saving = true
@@ -77,6 +69,12 @@ export function LikeButton(handle: Handle<{ href: string; initialLikes: number }
 
           saving = false
           handle.update()
+        }),
+        css({
+          padding: '8px 12px',
+          borderRadius: '6px',
+          '&:hover': { background: '#f3f0ff' },
+          '&:disabled': { opacity: 0.6 },
         }),
       ]}
     >
@@ -404,6 +402,39 @@ function ArticleBody(handle: Handle<{ html: string }>) {
 
 When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` marks the HTML as trusted but does not sanitize it, so only pass trusted or already-sanitized HTML.
 
+### Form controls
+
+Use `defaultValue` to initialize text inputs, textareas, and selects, or `defaultChecked` for checkboxes and radio buttons. These defaults also determine what native form reset restores:
+
+```tsx
+<form>
+  <input name="name" aria-label="Name" defaultValue="Ada" />
+  <textarea name="bio" aria-label="Bio" defaultValue="Building for the web." />
+  <label>
+    <input type="checkbox" name="updates" defaultChecked />
+    Email updates
+  </label>
+  <select name="topics" aria-label="Topics" multiple defaultValue={['typescript', 'css']}>
+    <option value="typescript">TypeScript</option>
+    <option value="css">CSS</option>
+    <option value="html">HTML</option>
+  </select>
+  <button type="reset">Reset</button>
+</form>
+```
+
+To control the current value, supply `value` on a text input, textarea, or select, or `checked` on a checkbox or radio button. Update that prop from an [event handler](#events) and call `handle.update()` to accept edits; otherwise Remix restores the supplied value after interaction. Omitting the prop or setting it to `undefined` leaves that state uncontrolled.
+
+For inputs and textareas, changing `defaultValue` updates the native reset default while preserving user edits. `defaultChecked` does the same for checkboxes and radio buttons.
+
+#### Select values
+
+Selects apply `defaultValue` only during initialization; later changes or removal are ignored. Changing `multiple` on an uncontrolled select reapplies its current `defaultValue`, or resets selection if no default is provided. Use `defaultValue={[]}` for an initially empty multiple select, or controlled `value={[]}` to clear the current selection.
+
+Initial selection follows this precedence: select `value`, then `defaultValue`, then option `selected`. Selections render into option markup on the server, including options inside components and optgroups. Hydration preserves server-rendered reset defaults and user edits to uncontrolled selects.
+
+A scalar controlled value selects the first matching option; arrays on multiple selects select every match. Options without an explicit value use their text children. When a select supplies `value` or `defaultValue`, using `innerHTML` on the select or its optgroups throws during server rendering; render options as JSX children instead. Individual options using `innerHTML` must supply an explicit `value` for server rendering when their select supplies `value` or `defaultValue`.
+
 ## Keys
 
 Give list items a `key` when a list can be reordered, filtered, or added to. Elements and components with matching keys are moved instead of recreated, so they keep:
@@ -511,35 +542,6 @@ To listen for your own events with full types, declare them on `HTMLElementEvent
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const toggleStyle = css({
-  display: 'inline-flex',
-  gap: '6px',
-  padding: '8px 12px',
-  border: '1px solid #d6d6d6',
-  borderRadius: '6px',
-  background: 'white',
-  '&:hover': {
-    borderColor: '#6d28d9',
-  },
-  '&[aria-pressed="true"]': {
-    background: '#6d28d9',
-    color: 'white',
-  },
-  '&::after': {
-    content: '"✓"',
-    visibility: 'hidden',
-  },
-  '&[aria-pressed="true"]::after': {
-    visibility: 'visible',
-  },
-  '.label': {
-    fontWeight: 600,
-  },
-  '@media (max-width: 40rem)': {
-    padding: '12px 16px',
-  },
-})
-
 function FavoriteToggle(handle: Handle) {
   let pressed = false
 
@@ -548,10 +550,37 @@ function FavoriteToggle(handle: Handle) {
       type="button"
       aria-pressed={pressed}
       mix={[
-        toggleStyle,
         on('click', () => {
           pressed = !pressed
           handle.update()
+        }),
+        css({
+          display: 'inline-flex',
+          gap: '6px',
+          padding: '8px 12px',
+          border: '1px solid #d6d6d6',
+          borderRadius: '6px',
+          background: 'white',
+          '&:hover': {
+            borderColor: '#6d28d9',
+          },
+          '&[aria-pressed="true"]': {
+            background: '#6d28d9',
+            color: 'white',
+          },
+          '&::after': {
+            content: '"✓"',
+            visibility: 'hidden',
+          },
+          '&[aria-pressed="true"]::after': {
+            visibility: 'visible',
+          },
+          '.label': {
+            fontWeight: 600,
+          },
+          '@media (max-width: 40rem)': {
+            padding: '12px 16px',
+          },
         }),
       ]}
     >
@@ -579,10 +608,13 @@ Each distinct style object becomes its own class and rule. Use `css(...)` for st
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const barStyle = css({ height: '4px', background: '#6d28d9', transformOrigin: 'left' })
-
 function ProgressBar(handle: Handle<{ value: number }>) {
-  return () => <div mix={barStyle} style={{ transform: `scaleX(${handle.props.value})` }} />
+  return () => (
+    <div
+      mix={css({ height: '4px', background: '#6d28d9', transformOrigin: 'left' })}
+      style={{ transform: `scaleX(${handle.props.value})` }}
+    />
+  )
 }
 ```
 
@@ -610,16 +642,17 @@ Combine styles that set different properties, such as layout and appearance. For
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const buttonStyle = css({
-  background: 'gray',
-  '&[data-variant="danger"]': {
-    background: 'red',
-  },
-})
-
 function Button(handle: Handle<{ label: string; variant?: 'danger' }>) {
   return () => (
-    <button data-variant={handle.props.variant} mix={buttonStyle}>
+    <button
+      data-variant={handle.props.variant}
+      mix={css({
+        background: 'gray',
+        '&[data-variant="danger"]': {
+          background: 'red',
+        },
+      })}
+    >
       {handle.props.label}
     </button>
   )
@@ -628,7 +661,7 @@ function Button(handle: Handle<{ label: string; variant?: 'danger' }>) {
 
 ### Cascade Layers
 
-The component runtime emits generated `css(...)` rules under the `rmx` cascade layer. Each generated class gets its own sublayer, so a class such as `rmxc-k4a9f` is emitted as `@layer rmx.rmxc-k4a9f { ... }`. That keeps each class's place in the cascade the same across every root and frame on the page.
+The component runtime emits generated `css(...)` rules inside the `rmx` cascade layer.
 
 Unlayered CSS outranks layered CSS, so use explicit layer order when mixing generated styles with global styles. Put layers that should lose to generated styles before `rmx`:
 
@@ -1191,55 +1224,61 @@ if (form.reportValidity()) {
 
 ### Following a Reload
 
-`reloadStart` is a `FrameReloadStartEvent`, which says what started the reload and how it ended. Its `formData` and `sourceElement` are those of the Navigation API's [`NavigateEvent`](https://developer.mozilla.org/en-US/docs/Web/API/NavigateEvent), and its `finished` settles like [`NavigationTransition.finished`](https://developer.mozilla.org/en-US/docs/Web/API/NavigationTransition/finished):
+`reloadStart` is a `FrameReloadStartEvent`, which describes the effective request and how the reload ends. Its request fields correspond to `frame.reload()` options, with `body` exposed as `formData` and GET fields included in `src`:
 
-| Property        | Value                                                                                                                                                                                    |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `formData`      | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                                                              |
-| `sourceElement` | The link, form, or submit button whose navigation started the reload, otherwise `null`, as for `frame.reload()`.                                                                         |
-| `finished`      | Resolves once the reload's content renders. Rejects with the failure when it fails, and with an `AbortError` `DOMException` when it's cancelled, replaced by a newer reload, or removed. |
+| Property    | Value                                                                                                                                                     |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src`       | The initiating reload's source, including any GET submission query. Relative values use the document base URL, as with `frame.reload()`.                  |
+| `method`    | The effective request method in lowercase: `get` or `post`.                                                                                               |
+| `encType`   | The effective POST encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`, or `text/plain`. `null` for GET.                       |
+| `formData`  | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                               |
+| `element`   | The initiating `HTMLAnchorElement`, `HTMLAreaElement`, or `HTMLFormElement`. `null` for `frame.reload()`, programmatic navigation, and history traversal. |
+| `submitter` | The actual submit button, or `null` when there is no submitter.                                                                                           |
+| `finished`  | A `Promise<AbortSignal>` that follows this reload like `frame.reload()`. Rejects on failure.                                                              |
 
-Frames inside a reloading frame reload with it, and their `reloadStart` has the same `formData` and `sourceElement`, so a component in a nested frame can follow a form submission that reloads the page.
+`event.finished` follows the same contract as `frame.reload()`:
 
-A newer reload replaces the one in progress without a `reloadComplete` for it, so listeners that need to know how their own reload ended follow `finished`. `reloadStart` suits components that follow every reload of their frame, or a form they don't render. A component that renders the form follows its submissions with `rmx:form-submit-start`.
+| Outcome                               | `finished`                         |
+| ------------------------------------- | ---------------------------------- |
+| Content rendered                      | Resolves with the reload's signal. |
+| Reload failed                         | Rejects with the original failure. |
+| Cancelled, replaced, or frame removed | Resolves with an aborted signal.   |
+
+For a direct reload, `await event.finished` and `await frame.reload()` return the same signal. It can become aborted later when another reload starts or the frame is disposed. Catch failures with `try`/`catch`; cancellation does not reject, so no error-name check is needed.
+
+Rendering a validation response counts as a completed reload. The response carries its field errors.
+
+Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `onSubmission()` for a form's own submissions.
 
 ### Following a Form Submission
 
-When a form submission reloads a frame, the submit button receives an `rmx:form-submit-start` event after the frame's `reloadStart`, or the form does when no button submitted it. The event bubbles, so listen on a button for its own submissions, or on the form for all of them. It's a `FormSubmitStartEvent`, with the same `formData` and `finished` as the reload's `reloadStart`, and the button or form as its `sourceElement`.
+`onSubmission(handler, captureBoolean?)` follows form submissions that start Remix frame reloads. Its handler receives a typed `FormSubmissionEvent` (`rmx:submission`), with the host inferred as `event.currentTarget`. Listen on a submit button for its submissions, or on the form for all of them.
 
-If the submit button is outside its owning form, or was removed during submission, it receives a non-bubbling event and the form receives a separate bubbling event. Both carry the same `sourceElement` and `finished`. Bubbling listeners on ancestors receive the form's event once; capture listeners on shared ancestors can receive both events.
-
-- GET and non-GET submissions dispatch it, and `formData` is `null` for GET, as on `NavigateEvent`.
-- Links, `frame.reload()`, and forms that load a new document, such as those marked `data-rmx-document`, don't dispatch it.
-- The signal `on()` passes is aborted when the same element receives its next submission or is removed. When the submission removes what it submitted, such as a list item, listen on an ancestor that stays, such as the list: a removed form's handler would see its signal aborted and stop following the submission. Any other newer reload of the frame, such as a link's, rejects `finished` with an `AbortError`.
-
-Render what the submission will change as soon as it starts, then let the response replace it:
+To display submitted values while a save is pending:
 
 ```tsx
-import { clientEntry, on } from 'remix/component'
-import type { FormSubmitStartEvent, Handle } from 'remix/component'
+import { clientEntry, onSubmission } from 'remix/component'
+import type { FormSubmissionEvent, Handle } from 'remix/component'
 
 export const TitleForm = clientEntry(
   import.meta.url,
   function TitleForm(handle: Handle<{ action: string; title: string }>) {
-    let submission: FormSubmitStartEvent | undefined
+    let submission: FormSubmissionEvent | undefined
     let failed = false
 
     return () => (
       <form
         method="post"
         action={handle.props.action}
-        mix={on('rmx:form-submit-start', async (event, signal) => {
+        mix={onSubmission(async (event, signal) => {
           submission = event
           failed = false
           handle.update()
           try {
             await event.finished
-          } catch (error) {
-            // A newer reload, such as a link's, aborts this one and shows its own state.
-            failed = !(error instanceof DOMException && error.name === 'AbortError')
+          } catch {
+            if (!signal.aborted) failed = true
           }
-          // The form's next submission owns the state from here.
           if (signal.aborted) return
           submission = undefined
           handle.update()
@@ -1259,6 +1298,15 @@ export const TitleForm = clientEntry(
   },
 )
 ```
+
+The handler's signal aborts on the host's next submission or removal, so the check prevents stale updates. A cancelled reload resolves `finished` with an aborted signal, letting this example clear pending state without showing a failure. For success-only behavior such as announcing “Saved!”, use `let reloadSignal = await event.finished` and check `reloadSignal.aborted` first. If submitting removes the form itself, listen on an ancestor that stays mounted.
+
+The event extends `SubmitEvent` and shares the [reload request and completion details](#following-a-reload), including the same `FormData` object and `finished` promise as the target frame's `reloadStart`. Its `form` property is always the owning `HTMLFormElement`, even when the submitter is external or detached. `submitter` is the actual submit button or `null`.
+
+- Remix dispatches the event after the target and descendant frames' `reloadStart` events. It starts on the submit button and bubbles through the form, or starts on the form when there is no submitter, including `requestSubmit()` and `form.submit()` without one.
+- An external or detached submitter receives a non-bubbling event, followed by a separate bubbling event on its owning form. Capture listeners on shared ancestors can receive both; bubbling listeners receive the form's event once.
+- The event is noncancelable. Cancel through native `submit`; `stopPropagation()` still controls delivery of `rmx:submission`.
+- Links, `navigate()`, `frame.reload()`, and forms that load a new document don't dispatch it.
 
 ### Resolving Frames
 
@@ -1382,7 +1430,7 @@ The action answers the frame's request with the frame's content, and a document 
 return redirect(request.headers.get('X-Remix-Target') === 'cart' ? '/cart/items' : '/cart')
 ```
 
-- The URL, history, scroll position, focus, and the rest of the page stay as they are. The frame still dispatches `reloadStart` and `reloadComplete`, and forms dispatch [`rmx:form-submit-start`](#following-a-form-submission), so components can follow the load and render its result early.
+- The URL, history, scroll position, focus, and the rest of the page stay as they are. The frame still dispatches `reloadStart` and `reloadComplete`, and forms dispatch [`rmx:submission`](#following-a-form-submission), so components can follow the load and render its result early.
 - The frame's `src` moves to the destination, or to where the request redirected, so its next `reload()` fetches what it now shows. Back and forward don't revisit the load, because it isn't in history.
 - The frame renders whatever the response contains. A route that redirects a frame request, for example to a login page, should send it to content that fits the frame.
 - A link opened elsewhere, such as with a modifier key or `target="_blank"`, opens as it would without `none`.
@@ -1422,6 +1470,23 @@ function SortSelect(handle: Handle<{ hrefs: Record<string, string> }>) {
 - Both accept the same options: `target` and `src` to load a named frame, `history` (`'push'`, `'replace'`, or `'none'`), and `resetScroll` and `resetFocus`. They match the `data-rmx-*` attributes above.
 - `navigate()` returns a promise that settles when the Navigation API transition finishes, or for `history: 'none'`, when the frame's content renders. Invalid or cross-origin destinations, and targets that don't match a mounted frame, fall back to document navigation.
 - On anchors and `<area>` elements, `link()` sets `href` and the matching `data-rmx-*` attributes. On other elements it adds `role="link"`, makes the element focusable, sets `type="button"` on buttons, handles Enter, and opens the destination in a new tab for Ctrl-click, Cmd-click, and middle clicks.
+
+### Updating the URL
+
+Use `updateUrl(href, options?)` to reflect state the page already displays, such as a selected product variant:
+
+```ts
+import { updateUrl } from 'remix/component'
+
+let signal = await updateUrl('/products/shirt?color=blue')
+await updateUrl('/products/shirt?color=red', { history: 'push' })
+```
+
+The update replaces the current history entry by default; `history: 'push'` adds one. It preserves scroll, focus, and history state without fetching or rendering, and keeps the top-frame source in sync for later reloads.
+
+Calls wait for active navigation. Only the latest waiting call applies, and its captured browser URL must remain current. The promise resolves with an `AbortSignal`, aborted if the update was canceled, superseded, or invalidated by navigation; otherwise it stays non-aborted. Actual failures reject. Pass `{ signal: handle.signal }` to cancel stale work without aborting navigation.
+
+Native interception of these URL updates is unsupported (`NotSupportedError`) and may still commit the URL. Don't await `updateUrl()` inside the active transition's interception handler. Without frame navigation, applications restore displayed state on Back/Forward themselves.
 
 ### Opting Out
 

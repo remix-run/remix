@@ -295,7 +295,7 @@ The frame's `src` follows the redirect, so its next reload fetches what it now s
 same attributes, and `navigate()` and `link()` accept `history: "none"`. Without a mounted target,
 `none` doesn't apply, because the page has to match its URL. To render the change before the
 response arrives, follow the submission with
-[`rmx:form-submit-start`](/interactivity/#optimistic-ui).
+[`rmx:submission`](/interactivity/#optimistic-ui).
 
 ## Coordinate a mutation and a separate frame reload {#coordinating-forms-fetches-frame-reloads-and-navigation}
 

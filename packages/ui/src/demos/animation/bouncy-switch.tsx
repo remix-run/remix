@@ -11,6 +11,10 @@ export function BouncySwitch(handle: Handle) {
   return () => (
     <div
       mix={[
+        on('click', () => {
+          isOn = !isOn
+          handle.update()
+        }),
         css({
           height: 160,
           backgroundColor: '#ff6b35',
@@ -20,10 +24,6 @@ export function BouncySwitch(handle: Handle) {
           borderRadius: 50,
           padding: 10,
           cursor: 'pointer',
-        }),
-        on('click', () => {
-          isOn = !isOn
-          handle.update()
         }),
       ]}
     >

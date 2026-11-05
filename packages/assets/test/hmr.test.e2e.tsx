@@ -2402,8 +2402,18 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
       usePolling: true,
     })
 
-    browserHmrWatcher.on('all', (event, filePath) => {
+    // Match node-hmr's duplicate change suppression. A poll that lands between a write's truncate
+    // and its data reports the change again on the next poll, with identical stats, which would
+    // apply one edit as two HMR updates.
+    let changeStatsByFilePath = new Map<string, string>()
+    browserHmrWatcher.on('all', (event, filePath, stats) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
+      if (event === 'change' && stats) {
+        let { birthtimeMs, ctimeMs, ino, mtimeMs, size } = stats
+        let changeStats = [birthtimeMs, ctimeMs, ino, mtimeMs, size].join(':')
+        if (changeStatsByFilePath.get(filePath) === changeStats) return
+        changeStatsByFilePath.set(filePath, changeStats)
+      }
       pendingBrowserHmrEvents = pendingBrowserHmrEvents
         .then(() => handleBrowserHmrFileEvent({ event, filePath }))
         .catch((error: unknown) => {
@@ -2715,7 +2725,7 @@ async function writeFetchResponse(
 function waitForConsoleMessage(
   page: TestPage,
   text: string,
-  options: { signal?: AbortSignal } = {},
+  options: { signal?: AbortSignal; startAfterNavigation?: boolean } = {},
 ): Promise<void> {
   attachPageDiagnostics(page)
   let startedAt = Date.now()
@@ -2723,18 +2733,29 @@ function waitForConsoleMessage(
     let consoleMessages: string[] = []
     let pageErrors: string[] = []
     let timeoutMs = text === '[remix] HMR connected' ? hmrConnectionTimeout : consoleMessageTimeout
-    let timeout = setTimeout(() => {
-      rejectWait(
-        new Error(
-          [
-            `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
-            ...consoleMessages.map((message) => `console: ${message}`),
-            ...pageErrors.map((message) => `pageerror: ${message}`),
-            formatPageDiagnostics(page),
-          ].join('\n'),
-        ),
-      )
-    }, timeoutMs)
+    let timeout: ReturnType<typeof setTimeout> | undefined
+
+    function startTimeout() {
+      startedAt = Date.now()
+      timeout = setTimeout(() => {
+        rejectWait(
+          new Error(
+            [
+              `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
+              ...consoleMessages.map((message) => `console: ${message}`),
+              ...pageErrors.map((message) => `pageerror: ${message}`),
+              formatPageDiagnostics(page),
+            ].join('\n'),
+          ),
+        )
+      }, timeoutMs)
+    }
+
+    if (options.startAfterNavigation) {
+      page.on('framenavigated', handleNavigation)
+    } else {
+      startTimeout()
+    }
 
     page.on('close', handlePageClose)
     page.on('console', handleConsole)
@@ -2745,6 +2766,7 @@ function waitForConsoleMessage(
 
     function cleanup() {
       clearTimeout(timeout)
+      page.off('framenavigated', handleNavigation)
       page.off('close', handlePageClose)
       page.off('console', handleConsole)
       page.off('pageerror', handlePageError)
@@ -2763,6 +2785,12 @@ function waitForConsoleMessage(
 
     function handlePageClose() {
       rejectWait(new Error(`Page closed while waiting for console message: ${text}`))
+    }
+
+    function handleNavigation(frame: { parentFrame(): unknown }) {
+      if (frame.parentFrame() !== null) return
+      page.off('framenavigated', handleNavigation)
+      startTimeout()
     }
 
     function handleConsole(message: { text(): string }) {
@@ -2788,6 +2816,8 @@ async function navigateToHmrPage(page: TestPage) {
   let controller = new AbortController()
   let connected = waitForConsoleMessage(page, '[remix] HMR connected', {
     signal: controller.signal,
+    // The document request has its own navigation deadline; HMR starts after it commits.
+    startAfterNavigation: true,
   })
 
   try {

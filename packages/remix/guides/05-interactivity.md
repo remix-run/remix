@@ -345,6 +345,9 @@ export function KeyedList(handle: Handle) {
   ];
 
   let shuffleInterval: ReturnType<typeof setInterval> | null = null;
+  handle.signal.addEventListener("abort", () => {
+    if (shuffleInterval !== null) clearInterval(shuffleInterval);
+  });
 
   let moveUp = (index: number) => {
     if (index === 0) return;
@@ -391,7 +394,8 @@ export function KeyedList(handle: Handle) {
 
   return () => (
     <div>
-      <div class="controls">
+      <p>Type in a field, then shuffle the list. Each field keeps its text.</p>
+      <div>
         <button mix={[on("click", reverse)]}>Reverse List</button>
         <button mix={[on("click", shuffle)]}>Shuffle List</button>
         <button mix={[on("click", toggleAutoShuffle)]}>
@@ -400,20 +404,10 @@ export function KeyedList(handle: Handle) {
       </div>
 
       {items.map((item, index) => (
-        <div key={item.id} class="list-item">
+        <div key={item.id}>
           <input type="text" placeholder={item.label} defaultValue={item.label} />
-          <button
-            // disabled={index === 0}
-            mix={[on("click", () => moveUp(index))]}
-          >
-            ↑
-          </button>
-          <button
-            // disabled={index === items.length - 1}
-            mix={[on("click", () => moveDown(index))]}
-          >
-            ↓
-          </button>
+          <button mix={[on("click", () => moveUp(index))]}>↑</button>
+          <button mix={[on("click", () => moveDown(index))]}>↓</button>
         </div>
       ))}
     </div>
@@ -531,23 +525,21 @@ array when the element needs several:
 import { attrs, css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-const saveButtonStyle = css({
-  minWidth: "8rem",
-  minHeight: "2.5rem",
-  border: 0,
-  borderRadius: "999px",
-  background: "#111",
-  color: "#fff",
-});
-
 function SaveButton(_handle: Handle) {
   return () => (
     <button
       mix={[
-        saveButtonStyle,
         attrs({ type: "button" }),
         ref((node) => console.log("Mounted", node)),
         on("click", () => console.log("Save album")),
+        css({
+          minWidth: "8rem",
+          minHeight: "2.5rem",
+          border: 0,
+          borderRadius: "999px",
+          background: "#111",
+          color: "#fff",
+        }),
       ]}
     >
       Save
@@ -1035,20 +1027,17 @@ output reads it. Set it in the submit handler before the request and clear it wh
 settles, as in the [enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough
 for disabled controls, pending labels, progress indicators, and duplicate-submission prevention.
 
-When Remix submits the form as a [frame navigation](#client-navigation), listen for
-`rmx:form-submit-start` instead. Remix dispatches it on the submit button, or on the form when
-nothing submitted it, once the submission starts reloading the frame. It bubbles to the form, and
-carries the submission's `formData` and a `finished` promise that resolves once the response renders
-and rejects when the submission fails or a newer navigation replaces it. The signal `on()` passes is
-aborted when the same element receives its next submission, so only the latest handler updates
-state. [Add pending feedback](/forms-and-mutations/#add-pending-feedback) builds a save button this
-way.
+For forms Remix handles as [frame navigations](#client-navigation), use
+[`onSubmission()`](../src/component/README.md#following-a-form-submission) to follow a button's or form's own
+submissions. The handler receives the submitted `formData` and a `finished` promise that follows
+the same `Promise<AbortSignal>` contract as `frame.reload()`.
+[Add pending feedback](/forms-and-mutations/#add-pending-feedback) shows how to use it for a save button.
 
 Optimistic UI renders the expected result before the request completes. A hydrated form can render
 what it just submitted, and let the response replace it:
 
 ```tsx filename=app/actions/albums/public/favorite-form.tsx
-import { clientEntry, on } from "remix/component";
+import { clientEntry, onSubmission } from "remix/component";
 import type { Handle } from "remix/component";
 
 export const FavoriteForm = clientEntry(
@@ -1063,18 +1052,16 @@ export const FavoriteForm = clientEntry(
         <form
           method="post"
           action={handle.props.action}
-          mix={on("rmx:form-submit-start", async (event, signal) => {
+          mix={onSubmission(async (event, signal) => {
             submitted = event.formData?.get("favorite") === "true";
             failed = false;
             handle.update();
             try {
               await event.finished;
-            } catch (error) {
-              failed = !(error instanceof DOMException && error.name === "AbortError");
+            } catch {
+              if (!signal.aborted) failed = true;
             }
-            // A newer submission of this form owns the state from here.
             if (signal.aborted) return;
-            // The response's props now hold the saved value, or the old one after a failure.
             submitted = undefined;
             handle.update();
           })}
@@ -1090,6 +1077,12 @@ export const FavoriteForm = clientEntry(
   },
 );
 ```
+
+On success, `finished` resolves after the response renders and updates the component's props.
+Keep the submitted value as an override until then. Clearing it schedules another component render
+using those updated props. Failure or cancellation falls back to the current props. Failures reject
+`finished`, while cancellation resolves with an aborted signal. The handler's signal prevents an
+older submission, or a removed component, from updating state.
 
 Without a target, the submission reloads the whole page in place. When the form renders inside a
 named frame, add `data-rmx-target` with that frame's name and `data-rmx-history="none"` so only the

@@ -46,25 +46,16 @@ describe('settings save button', () => {
     await page.getByRole('heading', { name: 'My Account' }).waitFor()
   })
 
-  it('says when a save fails and keeps what the visitor typed', async (t) => {
+  it('reports a failed save while preserving the visitor’s input and focus', async (t) => {
     let page = await serveSettings(t, (request) => {
       if (request.method === 'POST') return new Response('Server error', { status: 500 })
     })
 
     await page.getByLabel('Name').fill('Jane Doe')
-    await page.getByRole('button', { name: 'Update Settings' }).click()
+    await page.getByLabel('Name').press('Enter')
     await page.getByRole('status').getByText('Couldn’t save your settings. Try again.').waitFor()
     await page.getByRole('button', { name: 'Update Settings' }).waitFor()
     assert.equal(await page.getByLabel('Name').inputValue(), 'Jane Doe')
-  })
-
-  it('keeps focus in the form when a save fails', async (t) => {
-    let page = await serveSettings(t, (request) => {
-      if (request.method === 'POST') return new Response('Server error', { status: 500 })
-    })
-
-    await page.getByLabel('Name').press('Enter')
-    await page.getByRole('status').getByText('Couldn’t save your settings. Try again.').waitFor()
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('name')), 'name')
   })
 
@@ -82,6 +73,34 @@ describe('settings save button', () => {
     await received.promise
     assert.equal(await page.getByRole('button', { name: 'Saving…' }).count(), 0)
     await page.getByRole('button', { name: 'Update Settings' }).waitFor()
+
+    leave.resolve()
+    await page.getByRole('heading', { name: 'My Account' }).waitFor()
+  })
+
+  it('clears a pending save without an error when a link replaces it', async (t) => {
+    let save = Promise.withResolvers<void>()
+    let leave = Promise.withResolvers<void>()
+    t.after(() => {
+      save.resolve()
+      leave.resolve()
+    })
+    let leaving = Promise.withResolvers<void>()
+    let page = await serveSettings(t, async (request) => {
+      if (request.method === 'POST') await save.promise
+      if (new URL(request.url).pathname === routes.account.index.href()) {
+        leaving.resolve()
+        await leave.promise
+      }
+    })
+
+    await page.getByRole('button', { name: 'Update Settings' }).click()
+    await page.getByRole('button', { name: 'Saving…' }).waitFor()
+    await page.getByRole('link', { name: 'Cancel' }).click()
+    await leaving.promise
+
+    await page.getByRole('button', { name: 'Update Settings' }).waitFor()
+    assert.equal(await page.getByRole('status').textContent(), '')
 
     leave.resolve()
     await page.getByRole('heading', { name: 'My Account' }).waitFor()
