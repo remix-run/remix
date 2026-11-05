@@ -27,3 +27,5 @@ autoresearch-results/
 /.agents/worktrees/
 
 /.preview/
+
+.desloppify/
