@@ -100,6 +100,15 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
+    it('compile distinct selection', async () => {
+      await db.query(accounts).select('status').distinct().all()
+      let compiled = compileSqliteOperation(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select distinct "status" as "status" from "accounts"',
+        values: [],
+      })
+    })
+
     it('compile inner join', async () => {
       await db.query(accounts).join(tasks, eq(accounts.id, tasks.account_id)).all()
 
@@ -531,6 +540,18 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
+    it('compile for many with sparse rows', () => {
+      let compiled = compileSqliteOperation({
+        kind: 'insertMany',
+        table: accounts,
+        values: [{ id: 1, email: 'info@remix.run' }, { id: 2 }],
+      })
+      assert.deepEqual(compiled, {
+        text: 'insert into "accounts" ("id", "email") values (?, ?), (?, ?)',
+        values: [1, 'info@remix.run', 2, null],
+      })
+    })
+
     it('compile for many without data', () => {
       let compiled = compileSqliteOperation({
         kind: 'insertMany',
@@ -628,6 +649,20 @@ describe('sqlite sql-compiler', () => {
         values: ['enabled', 'info@remix.run'],
       })
     })
+
+    it('targets the primary key and does nothing when no update columns are given', () => {
+      let compiled = compileSqliteOperation({
+        kind: 'upsert',
+        table: accounts,
+        values: { id: 1, email: 'info@remix.run' },
+        update: {},
+        returning: ['id'],
+      })
+      assert.deepEqual(compiled, {
+        text: 'insert into "accounts" ("id", "email") values (?, ?) on conflict ("id") do nothing returning "id"',
+        values: [1, 'info@remix.run'],
+      })
+    })
   })
 
   describe('delete statement', () => {
@@ -650,6 +685,19 @@ describe('sqlite sql-compiler', () => {
       assert.deepEqual(compiled, {
         text: 'delete from "accounts" where (("status" = ?))',
         values: ['enabled'],
+      })
+    })
+
+    it('compile with returning columns', () => {
+      let compiled = compileSqliteOperation({
+        kind: 'delete',
+        table: accounts,
+        where: [],
+        returning: '*',
+      })
+      assert.deepEqual(compiled, {
+        text: 'delete from "accounts" returning *',
+        values: [],
       })
     })
   })
