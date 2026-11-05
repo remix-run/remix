@@ -8,6 +8,7 @@ import {
   resolveFilePath,
 } from './paths.ts'
 import { resolveMountFileRoot } from './routes.ts'
+import { isPathNotFoundError } from './fs-errors.ts'
 
 const modulesStateFileName = '.modules.yaml'
 const virtualStoreBasePath = '/__@remix/virtual-store'
@@ -112,13 +113,4 @@ function realpathDirectory(filePath: string): string | null {
     if (isPathNotFoundError(error)) return null
     throw error
   }
-}
-
-function isPathNotFoundError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }

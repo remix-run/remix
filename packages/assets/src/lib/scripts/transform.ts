@@ -38,6 +38,7 @@ import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
 import { scriptLoaderConditions } from './conditions.ts'
 import { isBareImportSpecifier } from './specifiers.ts'
+import { isNoEntityError } from '../fs-errors.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -961,11 +962,5 @@ function toTransformFailedError(error: unknown, resolvedPath: string): AssetServ
       cause: error,
       code: 'TRANSFORM_FAILED',
     },
-  )
-}
-
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
-  return (
-    error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT'
   )
 }

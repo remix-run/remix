@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import { createFileMatcher } from './file-matcher.ts'
 import { isInjectedPackageFilePath } from './injected-packages.ts'
 import { normalizeFilePath } from './paths.ts'
+import { isPathNotFoundError } from './fs-errors.ts'
 
 /** Access-policy result for an inspected asset file. */
 export interface AssetAccessDetails {
@@ -445,16 +446,5 @@ function isValidPackageName(packageName: string): boolean {
 
   return packageNameParts.every(
     (part) => part.length > 0 && part !== '.' && part !== '..' && packageNamePartPattern.test(part),
-  )
-}
-
-function isPathNotFoundError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
   )
 }

@@ -39,6 +39,7 @@ import type { ResolveModuleResult, TransformArgs, TransformedModule } from './tr
 import { ResolverFactory } from 'oxc-resolver'
 import type { NapiResolveOptions } from 'oxc-resolver'
 import type { EmittedAsset, EmittedModule } from './emit.ts'
+import { isPathNotFoundError } from '../fs-errors.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 type ScriptStore = ModuleStore<TransformedModule, ResolvedModule, EmittedModule>
@@ -1001,7 +1002,7 @@ function getFileSnapshot(filePath: string): FileSnapshot | null {
       size: stats.size,
     }
   } catch (error) {
-    if (isNoEntityError(error)) return null
+    if (isPathNotFoundError(error)) return null
     throw error
   }
 }
@@ -1069,7 +1070,7 @@ function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
   try {
     resolvedPath = normalizeFilePath(fs.realpathSync(normalizeFilePath(absolutePath)))
   } catch (error) {
-    if (isNoEntityError(error)) return null
+    if (isPathNotFoundError(error)) return null
     throw error
   }
 
@@ -1087,20 +1088,9 @@ function resolveActualPath(identityPath: string): string | null {
   try {
     return normalizeFilePath(fs.realpathSync(identityPath))
   } catch (error) {
-    if (isNoEntityError(error)) return null
+    if (isPathNotFoundError(error)) return null
     throw error
   }
-}
-
-function isNoEntityError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }
 
 export function createResponseForScript(

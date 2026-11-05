@@ -10,6 +10,7 @@ import { isAbsoluteFilePath, normalizeFilePath, resolveFilePath } from './paths.
 import type { AssetRouteMatch, CompiledRoutes } from './routes.ts'
 import { supportedScriptExtensions } from './scripts/resolve.ts'
 import { isStyleFilePath } from './styles/compiler.ts'
+import { isPathNotFoundError } from './fs-errors.ts'
 
 const scriptExtensions = new Set<string>(supportedScriptExtensions)
 const globSyntaxPattern = /[*?[\]{}()!+@]/
@@ -216,14 +217,4 @@ async function pathExists(filePath: string): Promise<boolean> {
     if (isPathNotFoundError(error)) return false
     throw error
   }
-}
-
-function isPathNotFoundError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    (error.code === 'ENOENT' || error.code === 'ENOTDIR')
-  )
 }
