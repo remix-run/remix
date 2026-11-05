@@ -9,56 +9,59 @@ import * as accordion from '@remix-run/ui/accordion'
 export default function Example() {
   return () => (
     <accordion.Context defaultValue="shipping">
-      <div mix={[rootCss, accordion.root()]}>
+      <div
+        mix={[
+          accordion.root(),
+          css({
+            display: 'grid',
+            width: '24rem',
+            maxWidth: '100%',
+            border: '1px solid light-dark(#d1d1d1, #444444)',
+            borderRadius: '8px',
+            background: 'light-dark(#ffffff, #1a1a1a)',
+          }),
+        ]}
+      >
         <accordion.ItemContext value="shipping">
-          <div mix={[itemCss, accordion.item()]}>
+          <div mix={[accordion.item(), itemCss]}>
             <h3 mix={headingCss}>
-              <button mix={[triggerCss, accordion.trigger()]} type="button">
+              <button mix={[accordion.trigger(), triggerCss]} type="button">
                 Shipping
               </button>
             </h3>
-            <div mix={[contentCss, accordion.content()]}>
+            <div mix={[accordion.content(), contentCss]}>
               Default carrier, cutoff time, and delivery windows.
             </div>
           </div>
         </accordion.ItemContext>
 
         <accordion.ItemContext value="billing">
-          <div mix={[itemCss, accordion.item()]}>
+          <div mix={[accordion.item(), itemCss]}>
             <h3 mix={headingCss}>
-              <button mix={[triggerCss, accordion.trigger()]} type="button">
+              <button mix={[accordion.trigger(), triggerCss]} type="button">
                 Billing
               </button>
             </h3>
-            <div mix={[contentCss, accordion.content()]}>
+            <div mix={[accordion.content(), contentCss]}>
               Invoice cadence, billing contact, and tax settings.
             </div>
           </div>
         </accordion.ItemContext>
 
         <accordion.ItemContext disabled value="archived">
-          <div mix={[itemCss, accordion.item()]}>
+          <div mix={[accordion.item(), itemCss]}>
             <h3 mix={headingCss}>
-              <button mix={[triggerCss, accordion.trigger()]} type="button">
+              <button mix={[accordion.trigger(), triggerCss]} type="button">
                 Archived
               </button>
             </h3>
-            <div mix={[contentCss, accordion.content()]}>Unavailable settings.</div>
+            <div mix={[accordion.content(), contentCss]}>Unavailable settings.</div>
           </div>
         </accordion.ItemContext>
       </div>
     </accordion.Context>
   )
 }
-
-const rootCss = css({
-  display: 'grid',
-  width: '24rem',
-  maxWidth: '100%',
-  border: '1px solid light-dark(#d1d1d1, #444444)',
-  borderRadius: '8px',
-  background: 'light-dark(#ffffff, #1a1a1a)',
-})
 
 const itemCss = css({
   borderBlockStart: '1px solid light-dark(#e7e7e7, #333333)',

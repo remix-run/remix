@@ -1,18 +1,25 @@
-Follow a form's own submissions with `rmx:form-submit-start`. When a form submission reloads a frame, Remix dispatches a `FormSubmitStartEvent` on the submit button, or on the form when no button submitted it, after the frame's `reloadStart`. It bubbles, and carries the submission's `formData`, its `sourceElement`, and the reload's `finished` promise, so a button or form can show pending or optimistic UI for its own submissions without checking where a reload came from. External or detached submitters receive a non-bubbling event, followed by a separate bubbling event on their owning form. `formData` is `null` for GET submissions. Links, `frame.reload()`, and document navigations don't dispatch it.
+Follow a form's own submissions with `onSubmission(handler, captureBoolean?)`, a typed mixin for the new `rmx:submission` event. It runs when a form submission starts a Remix frame reload, on the submit button or on the form without a submitter, and bubbles through the form. Its `FormSubmissionEvent` exposes the owning form as `form: HTMLFormElement` and shares request details, the `FormData` object, and the `finished` promise with the target frame's `reloadStart`.
 
 ```tsx
+// Inside a hydrated component:
 <button
   type="submit"
-  mix={on('rmx:form-submit-start', async (event, signal) => {
-    saving = event
+  mix={onSubmission(async (event, signal) => {
+    saving = true
+    failed = false
     handle.update()
-    await event.finished.catch(() => {})
-    // The button's next submission, or its removal, aborts the signal.
+    try {
+      await event.finished
+    } catch {
+      if (!signal.aborted) failed = true
+    }
     if (signal.aborted) return
-    saving = undefined
+    saving = false
     handle.update()
   })}
 >
-  {saving ? `Saving ${saving.formData?.get('title')}…` : 'Save'}
+  {saving ? 'Saving…' : 'Save'}
 </button>
 ```
+
+`finished` follows `frame.reload()` as a `Promise<AbortSignal>`: it resolves after rendering, resolves with an aborted signal on cancellation, and rejects on failure. The handler's signal aborts on another submission or removal. The event extends `SubmitEvent` with `cancelable: false`, so cancel through native `submit`. Links, programmatic reloads or navigations, and document navigations don't emit it. See [following a form submission](https://github.com/remix-run/remix/tree/main/packages/component#following-a-form-submission) for request fields and external-submitter delivery.

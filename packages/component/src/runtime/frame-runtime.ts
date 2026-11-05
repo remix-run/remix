@@ -67,8 +67,10 @@ export type PendingClientEntries = Map<
 >
 
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
-  /** The link, form or submit button whose navigation started the reload. */
-  sourceElement?: Element
+  /** The initiating anchor, area, or owning form. */
+  element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  /** The actual submitter captured by the native submit event. */
+  submitter?: HTMLElement | null
   /** The owning form for a submission, even when its submitter has been detached. */
   form?: HTMLFormElement
 }

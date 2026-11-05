@@ -5,7 +5,7 @@ export { run } from './runtime/run.ts'
 export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
 export type { ComponentErrorEvent } from './runtime/component.ts'
 export type { FrameReloadStartEvent } from './runtime/reload-start-event.ts'
-export type { FormSubmitStartEvent } from './runtime/form-submit-start-event.ts'
+export type { FormSubmissionEvent } from './runtime/form-submission-event.ts'
 
 export { createRoot, createRangeRoot, createScheduler } from './runtime/vdom.ts'
 export type {
@@ -68,6 +68,7 @@ export type {
 export { TypedEventTarget } from './runtime/component.ts'
 export type { Dispatched } from './runtime/event-types.ts'
 export { on } from './runtime/mixins/on-mixin.ts'
+export { onSubmission } from './runtime/mixins/on-submission-mixin.ts'
 export { link } from './runtime/mixins/link-mixin.ts'
 export { ref } from './runtime/mixins/ref-mixin.ts'
 export type { RefCallback } from './runtime/mixins/ref-mixin.ts'
@@ -76,7 +77,7 @@ export { css } from './style/css-mixin.ts'
 export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 
 // -- Navigation --
-export { navigate } from './runtime/navigation.ts'
-export type { NavigationOptions } from './runtime/navigation.ts'
+export { navigate, updateUrl } from './runtime/navigation.ts'
+export type { NavigationOptions, UpdateUrlOptions } from './runtime/navigation.ts'
 export { prefetch } from './runtime/prefetch.ts'
 export type { PrefetchFrame, PrefetchOptions } from './runtime/prefetch.ts'

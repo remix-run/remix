@@ -1,1 +1,0 @@
-Fix Safari restoring a shorter scroll position than the visitor left on a back or forward navigation. Safari restored the position against the page as it was before the restored content rendered, so a page taller than the one the visitor came back from scrolled only as far as that one allowed.

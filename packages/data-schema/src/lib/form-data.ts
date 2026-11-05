@@ -121,7 +121,12 @@ export function object<schema extends FormDataSchema>(
         continue
       }
 
-      output[key] = result.value
+      Object.defineProperty(output, key, {
+        value: result.value,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      })
     }
 
     if (issues.length > 0) {
@@ -160,7 +165,7 @@ export function field<schema extends Schema<any, any>>(
 export function fields<schema extends Schema<any, any>>(
   schema: schema,
   options?: FormDataFieldsOptions,
-): FormDataEntrySchema<InferOutput<schema>> {
+): FormDataEntrySchema<InferOutput<schema>> & { kind: 'fields' } {
   return {
     kind: 'fields',
     name: options?.name,
@@ -178,7 +183,7 @@ export function fields<schema extends Schema<any, any>>(
 export function file<schema extends Schema<any, any>>(
   schema: schema,
   options?: FormDataFileOptions,
-): FormDataEntrySchema<InferOutput<schema>> {
+): FormDataEntrySchema<InferOutput<schema>> & { kind: 'file' } {
   return {
     kind: 'file',
     name: options?.name,
@@ -196,7 +201,7 @@ export function file<schema extends Schema<any, any>>(
 export function files<schema extends Schema<any, any>>(
   schema: schema,
   options?: FormDataFilesOptions,
-): FormDataEntrySchema<InferOutput<schema>> {
+): FormDataEntrySchema<InferOutput<schema>> & { kind: 'files' } {
   return {
     kind: 'files',
     name: options?.name,

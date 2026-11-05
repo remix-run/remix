@@ -14,6 +14,18 @@ type Equal<left, right> =
 function expectType<condition extends true>(_value?: condition): void {}
 
 describe('form-data.object', () => {
+  it('retains reserved logical keys as own output properties', () => {
+    let schema = f.object({ ['__proto__']: f.field(s.string()), toString: f.field(s.string()) })
+    let value = s.parse(
+      schema,
+      new URLSearchParams({ ['__proto__']: 'prototype', toString: 'text' }),
+    )
+    assert.equal(Object.hasOwn(value, '__proto__'), true)
+    assert.equal(value.__proto__, 'prototype')
+    assert.equal(value.toString, 'text')
+    assert.equal(Object.getPrototypeOf(value), Object.prototype)
+  })
+
   it('parses single text fields', () => {
     let formData = new FormData()
     formData.set('email', 'ada@example.com')

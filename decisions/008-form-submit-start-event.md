@@ -1,78 +1,43 @@
 # Follow a form's own submissions with an element event
 
-Optimistic UI renders what a submission will produce before the server answers, and replaces it with the server's answer when the reload finishes. A Remix form submission is a navigation: the runtime intercepts the Navigation API's `navigate` event, reloads the target frame with the form's entries, and renders the response. Components need three things from that: the entries the visitor submitted, how the reload ended, and whether the submission was theirs.
-
-`FrameReloadStartEvent` gives every frame the first two. `reloadStart` carries `formData` and `sourceElement` as `NavigateEvent` does, and a `finished` promise that settles as `NavigationTransition.finished` does. We chose to also dispatch a `FormSubmitStartEvent` (`rmx:form-submit-start`) on the submit button, or on the form when no button submitted it, when its submission starts a frame reload. It carries the same three properties and bubbles to the form, so a component listens on the element it renders with `on()`:
-
-```tsx
-<button
-  type="submit"
-  mix={on('rmx:form-submit-start', async (event, signal) => {
-    save = event
-    failed = false
-    handle.update()
-    try {
-      await event.finished
-    } catch (error) {
-      failed = !(error instanceof DOMException && error.name === 'AbortError')
-    }
-    if (signal.aborted) return
-    save = undefined
-    handle.update()
-  })}
->
-```
-
-## Why the frame event wasn't enough
-
-A frame's `reloadStart` fires for every reload of the frame: other forms, links (including links inside the form), `frame.reload()`, and reloads an ancestor frame starts. A component that only wants its own form's submissions has to filter them, then track which of its submissions is the latest so an older one finishing doesn't clear a newer one's state. The README's `SaveStatus` example and the bookstore's `SaveButton` each repeated the same check:
-
-```tsx
-let submitted = source === form || (source != null && 'form' in source && source.form === form)
-```
-
-Each copy is a chance to get it wrong, for example by testing `source.closest('form') === form`, which matches links inside the form.
+Use `reloadStart` to observe every reload of a frame and `rmx:submission` to observe the form submissions that start one. Both carry the initiating request details and share the target frame's `finished` promise. The typed `onSubmission(handler, captureBoolean?)` mixin follows the same signature and reentry behavior as `on()`.
 
 ## Why an element event
 
-Remix already has both halves of the answer:
+A frame's `reloadStart` also fires for links, programmatic reloads, and reloads of an ancestor frame. Filtering those events for a particular form repeats source checks and latest-submission tracking in each component. Checking `source.closest('form')` also mistakes links inside a form for submissions.
 
-- **Element events dispatched by Remix**, such as `@remix-run/ui`'s `TabsChangeEvent` (`rmx:tabs-change`), typed through `HTMLElementEventMap` and listened to with `on()`.
-- **`on()`'s reentry signal**, which aborts when the same element receives the next event of that type (`packages/component/src/runtime/mixins/on-mixin.ts`). That is "a newer submission of this form replaced mine".
+Dispatching on the submit button and bubbling through the owning form lets a component listen on the element it renders. The form hears submissions from any of its buttons, while a button hears only its own, including implicit submissions through the form's default button. Without a submitter, the event starts on the form.
 
-Dispatching on the submitter and bubbling to the form means a submit button hears only its own submissions, including implicit ones, whose submitter is the form's [default button](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#implicit-submission). The form hears all of its own submissions, including `requestSubmit()` and `form.submit()` without a submitter. Links never dispatch it, so a link inside the form can't be mistaken for a submission.
+External or detached submitters have no event path through their owning form. They receive a non-bubbling event followed by a separate bubbling event on the form. This preserves delivery to both while preventing duplicate bubbling events on shared ancestors. Capture listeners can receive both events.
 
-An external submitter associated through its `form` attribute, or a submitter removed during submission, has no DOM event path through its owning form. The navigation resolver retains that form. The submitter receives a non-bubbling event, then the form receives a separate bubbling event with the same `sourceElement` and `finished`. This keeps bubbling listeners on shared ancestors from receiving the submission twice. Capture listeners on shared ancestors can receive both events.
+## Naming and cancellation
 
-## Naming
+`FormSubmissionEvent` extends the native `SubmitEvent` with `cancelable: false`. The name describes an operation already underway and distinguishes it from native `submit`, where applications can still prevent submission. `stopPropagation()` controls delivery without cancelling the reload.
 
-The name follows the conventions the event sits between:
+`onSubmission()` wraps `on('rmx:submission', handler, captureBoolean)`, preserving inferred `currentTarget` types and the signal aborted on reentry or removal. `reloadStart` and `reloadComplete` retain their existing names.
 
-- Remix's DOM events are `rmx:<owner>-<event>` in kebab case, such as `rmx:tabs-change` and `rmx:menu-select`. Events on Remix's own targets drop the prefix, such as the frame handle's `reloadStart` and the mixin handle's `insert`, but this one goes on DOM elements and into `HTMLElementEventMap`.
-- Event types are `<Owner><EventType>Event`, such as `FrameReloadStartEvent`, `MixinInsertEvent`, and `TabsChangeEvent`.
-- The verb is the platform's: the form's own event is `submit`. As with `reloadStart`, `Start` marks an event whose `finished` reports the end.
+## Shared request and origin details
 
-It's an `Event &` type made by `createFormSubmitStartEvent()`, as the component package's other events are, rather than a class like `@remix-run/ui`'s.
+The [reload event contract](https://github.com/remix-run/remix/tree/main/packages/component#following-a-reload) defines `src`, `method`, `encType`, `formData`, `element`, `submitter`, and `finished`. Request fields align with `frame.reload()` options, with `body` exposed as `formData`. GET entries are encoded in `src`; `formData` and `encType` are null. Other body formats remain out of scope, and future encodings can have separate `json` or `text` fields.
 
-## What we kept
+On `reloadStart`, `element` is an `HTMLAnchorElement`, `HTMLAreaElement`, or `HTMLFormElement`, and is null for programmatic calls and history traversal. On `rmx:submission`, the origin is always a form, so `form: HTMLFormElement` replaces `element` for convenient access without narrowing. Both events' `submitter` identifies the actual submit button or is null. This avoids the ambiguity of the Navigation API's `sourceElement`, which can identify either a form or its button. Descendant frame events inherit the initiating details while tracking their own completion.
 
-`reloadStart`'s `formData`, `sourceElement`, and `finished` stay. They serve components that don't own the form but render what it changes, such as a header's cart count after an "add to cart" form in a book card, and components in child frames that a submission reloads.
+## Completion outcomes
+
+`finished` follows the existing `frame.reload()` contract as a `Promise<AbortSignal>`. It resolves after rendering, resolves with an aborted signal on cancellation, and rejects with the original failure. This gives event listeners and imperative callers the same completion API. Cancellation follows the reload lifecycle, so a resolver that throws `AbortError` without cancellation still rejects. Components can catch failures without inspecting error names.
+
+On success, completion follows the response render. Optimistic values can stay applied until the updated props are available, then be cleared in another component render. The handler's signal independently prevents stale updates after another submission or removal.
 
 ## Alternatives we considered
 
-- **A hook-style state accessor**, like React's `useFormStatus()` and `useOptimistic()` or Remix 2's `useNavigation().formData`. Remix 3 components have no hooks. A handle API such as `handle.submissions` would need its own subscription model, where an event already gives the moment of change, the data, and the signal.
-- **A mixin that wraps `reloadStart`**, such as `submission(handler)`. It would hide the source check, but it adds a second listener API for something `on()` already expresses, and it can't use the element's own event path.
-- **A method on `FrameReloadStartEvent`**, such as `event.isFrom(form)`. It removes the check, but leaves the latest-submission tracking to each component.
+- A handle-based state accessor would need another subscription model. Events already provide the submitted data, completion, and moment to update.
+- A mixin around `reloadStart`, or an `event.isFrom(form)` method, could hide filtering but would still need source matching and latest-submission tracking. An element event uses the existing event path and reentry signal.
+- A resolved `{ error, aborted }` outcome would avoid `try`/`catch` but introduce a second completion contract beside `frame.reload()`. Returning an `AbortSignal` and rejecting on failure keeps the APIs aligned.
 
 ## Scope
 
-- It's dispatched for form submissions the runtime handles as frame navigations, both GET and non-GET. `formData` is `null` for GET, as on `NavigateEvent`.
-- It's not dispatched when the submission falls back to a document navigation (`data-rmx-document`, another origin, a missing named frame), or without the Navigation API, because the page unloads.
-- It's dispatched after the target frame's `reloadStart` and those of the frames inside it, and not when one of those listeners already started a newer reload.
-- When an unrelated navigation replaces the submission, `finished` rejects with an `AbortError`. The component shows the previous state until the new page renders whatever the server applied.
-- It's opt-in: with no listener, nothing changes.
+Only native form submissions that start Remix frame reloads emit `rmx:submission`. Links, direct `frame.reload()` and `navigate()` calls, and forms that fall back to document navigation do not emit it. Dispatch follows the target and descendant frames' `reloadStart` events and is suppressed if a listener has already started a newer reload.
 
 ## When to revisit
 
-1. Remix adds mutations that aren't navigations, such as a `fetch()`-based submit API. Those need the same three properties and may share this event.
-2. The Navigation API gains a way to follow a single navigation from its source element.
+Revisit this contract if Remix adds mutations outside navigation or the Navigation API gains a way to follow a navigation from its source element.

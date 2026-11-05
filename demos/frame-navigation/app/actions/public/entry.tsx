@@ -66,7 +66,25 @@ async function resolveFrameResponse(url: URL, options?: ResolveFrameOptions) {
         title="Reload required"
         message="An unexpected error occurred. Please reload the page to try again."
         action={
-          <a data-rmx-document href={window.location.href} mix={actionLinkCss}>
+          <a
+            data-rmx-document
+            href={window.location.href}
+            mix={css({
+              display: 'inline-flex',
+              marginTop: '24px',
+              padding: '12px 18px',
+              borderRadius: '999px',
+              background: '#0f172a',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: '600',
+              lineHeight: '1',
+              textDecoration: 'none',
+              '&:hover': {
+                background: '#1e293b',
+              },
+            })}
+          >
             Reload
           </a>
         }
@@ -98,7 +116,17 @@ app.addEventListener('error', async (event) => {
 
   let message = 'message' in event.error ? event.error.message : 'Unknown error'
   createRoot(document.body).render(
-    <div mix={pageCss}>
+    <div
+      mix={css({
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        padding: '32px',
+        background: '#f8fafc',
+        color: '#0f172a',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+      })}
+    >
       <ErrorCard
         eyebrow="Unexpected Error"
         title="Something went wrong"
@@ -107,9 +135,23 @@ app.addEventListener('error', async (event) => {
         action={
           <button
             mix={[
-              reloadButtonCss,
               on('click', () => {
                 window.location.reload()
+              }),
+              css({
+                marginTop: '24px',
+                padding: '12px 18px',
+                border: 'none',
+                borderRadius: '999px',
+                background: '#0f172a',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '600',
+                lineHeight: '1',
+                cursor: 'pointer',
+                '&:hover': {
+                  background: '#1e293b',
+                },
               }),
             ]}
           >
@@ -146,93 +188,60 @@ function ErrorCard(handle: Handle<ErrorCardProps>) {
   return () => {
     let { eyebrow, title, message, action, animated } = handle.props
     return (
-      <div mix={animated ? [cardCss, animateGentlyIn] : cardCss}>
-        <p mix={eyebrowCss}>{eyebrow}</p>
-        <h1 mix={titleCss}>{title}</h1>
-        <p mix={messageCss}>{message}</p>
+      <div
+        mix={[
+          animated && animateGentlyIn,
+          css({
+            width: '100%',
+            maxWidth: '560px',
+            padding: '40px 36px',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '20px',
+            boxShadow: '0 20px 45px rgba(15, 23, 42, 0.08)',
+          }),
+        ]}
+      >
+        <p
+          mix={css({
+            margin: '0 0 12px',
+            fontSize: '12px',
+            fontWeight: '600',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: '#64748b',
+          })}
+        >
+          {eyebrow}
+        </p>
+        <h1
+          mix={css({
+            margin: '0 0 12px',
+            fontSize: '32px',
+            lineHeight: '1.1',
+            fontWeight: '700',
+          })}
+        >
+          {title}
+        </h1>
+        <p
+          mix={css({
+            margin: '0',
+            fontSize: '16px',
+            lineHeight: '1.6',
+            color: '#475569',
+          })}
+        >
+          {message}
+        </p>
         {action}
       </div>
     )
   }
 }
 
-const pageCss = css({
-  minHeight: '100vh',
-  display: 'grid',
-  placeItems: 'center',
-  padding: '32px',
-  background: '#f8fafc',
-  color: '#0f172a',
-  fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-})
-
-const cardCss = css({
-  width: '100%',
-  maxWidth: '560px',
-  padding: '40px 36px',
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '20px',
-  boxShadow: '0 20px 45px rgba(15, 23, 42, 0.08)',
-})
-
 const animateGentlyIn = animateEntrance({
   opacity: 0,
   transform: 'translateY(-14px) scale(0.97)',
   ...spring('smooth'),
-})
-
-const eyebrowCss = css({
-  margin: '0 0 12px',
-  fontSize: '12px',
-  fontWeight: '600',
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  color: '#64748b',
-})
-
-const titleCss = css({
-  margin: '0 0 12px',
-  fontSize: '32px',
-  lineHeight: '1.1',
-  fontWeight: '700',
-})
-
-const messageCss = css({
-  margin: '0',
-  fontSize: '16px',
-  lineHeight: '1.6',
-  color: '#475569',
-})
-
-const reloadButtonCss = css({
-  marginTop: '24px',
-  padding: '12px 18px',
-  border: 'none',
-  borderRadius: '999px',
-  background: '#0f172a',
-  color: '#ffffff',
-  fontSize: '14px',
-  fontWeight: '600',
-  lineHeight: '1',
-  cursor: 'pointer',
-  '&:hover': {
-    background: '#1e293b',
-  },
-})
-
-const actionLinkCss = css({
-  display: 'inline-flex',
-  marginTop: '24px',
-  padding: '12px 18px',
-  borderRadius: '999px',
-  background: '#0f172a',
-  color: '#ffffff',
-  fontSize: '14px',
-  fontWeight: '600',
-  lineHeight: '1',
-  textDecoration: 'none',
-  '&:hover': {
-    background: '#1e293b',
-  },
 })

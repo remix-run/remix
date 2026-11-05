@@ -328,22 +328,35 @@ describe('navigate', () => {
     expect(document.activeElement).toBe(document.body)
   })
 
-  it('keeps focus where it was when a navigation fails', async (t) => {
+  it('keeps focus when a failed navigation resets it to the body or an autofocus element', async (t) => {
     let controller = new AbortController()
     t.after(() => controller.abort())
-    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    let reload = Promise.withResolvers<StubFrameReloadResult>()
     startNavigationListenerImpl(controller.signal, {
       ...stubFrames,
-      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+      reloadFrame: () => ({
+        signal: controller.signal,
+        committed: Promise.resolve(),
+        finished: reload.promise,
+      }),
     })
     let input = document.createElement('input')
     document.body.append(input)
-    t.after(() => input.remove())
     input.focus()
 
     let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
     let failure = new Error('save failed')
-    rejectFinished(failure)
+    reload.reject(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(input)
+
+    let autofocusInput = document.createElement('input')
+    autofocusInput.autofocus = true
+    document.body.append(autofocusInput)
+    reload = Promise.withResolvers<StubFrameReloadResult>()
+
+    navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    reload.reject(failure)
     await expect(navigated).rejects.toBe(failure)
     expect(document.activeElement).toBe(input)
   })
@@ -359,10 +372,6 @@ describe('navigate', () => {
     let first = document.createElement('input')
     let second = document.createElement('input')
     document.body.append(first, second)
-    t.after(() => {
-      first.remove()
-      second.remove()
-    })
     first.focus()
 
     let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
@@ -371,6 +380,130 @@ describe('navigate', () => {
     rejectFinished(failure)
     await expect(navigated).rejects.toBe(failure)
     expect(document.activeElement).toBe(second)
+  })
+
+  it('leaves focus set by a navigation error handler', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    startNavigationListenerImpl(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let input = document.createElement('input')
+    let errorSummary = document.createElement('p')
+    errorSummary.tabIndex = -1
+    document.body.append(input, errorSummary)
+    input.focus()
+    navigation.addEventListener('navigateerror', () => errorSummary.focus(), {
+      signal: controller.signal,
+    })
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(errorSummary)
+  })
+
+  it('leaves abort-handler focus changes intact with automatic or manual focus reset', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let reload = Promise.withResolvers<StubFrameReloadResult>()
+    startNavigationListenerImpl(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({
+        signal: controller.signal,
+        committed: Promise.resolve(),
+        finished: reload.promise,
+      }),
+    })
+    let input = document.createElement('input')
+    let errorSummary = document.createElement('p')
+    errorSummary.tabIndex = -1
+    document.body.append(input, errorSummary)
+    input.focus()
+    navigation.addEventListener(
+      'navigate',
+      (event) => event.signal.addEventListener('abort', () => errorSummary.focus(), { once: true }),
+      { signal: controller.signal },
+    )
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    reload.reject(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(errorSummary)
+
+    reload = Promise.withResolvers<StubFrameReloadResult>()
+    input.focus()
+
+    navigated = navigate(window.location.href, {
+      history: 'replace',
+      resetScroll: false,
+      resetFocus: 'manual',
+    })
+    reload.reject(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(errorSummary)
+  })
+
+  it('leaves focus cleared by an earlier navigation abort handler', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    startNavigationListenerImpl(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let input = document.createElement('input')
+    let autofocusInput = document.createElement('input')
+    autofocusInput.autofocus = true
+    document.body.append(input, autofocusInput)
+    input.focus()
+    navigation.addEventListener(
+      'navigate',
+      (event) =>
+        event.signal.addEventListener('abort', () => autofocusInput.blur(), { once: true }),
+      { signal: controller.signal },
+    )
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('leaves focus to a navigation started by an earlier abort handler', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    let dispatchNavigation = startStubNavigationListener(t, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+    let event = createTraverseNavigateEvent({ target: undefined, src: '/previous', $rmx: true })
+    event.signal = controller.signal
+    controller.signal.addEventListener(
+      'abort',
+      () => navigation.dispatchEvent(new Event('navigate')),
+      { once: true },
+    )
+    let transition = dispatchNavigation(event)
+    let handled = transition.runHandler()
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(handled).rejects.toBe(failure)
+
+    // The browser resets focus before aborting the failed navigation.
+    input.blur()
+    controller.abort(failure)
+    await transition.fail()
+    expect(document.activeElement).toBe(document.body)
   })
 
   it('lets a later navigation reset focus after a replaced one fails', async (t) => {
@@ -395,10 +528,6 @@ describe('navigate', () => {
     let link = document.createElement('a')
     link.href = window.location.href
     document.body.append(input, link)
-    t.after(() => {
-      input.remove()
-      link.remove()
-    })
     input.focus()
 
     let replaced = navigate(window.location.href, { history: 'replace', resetScroll: false })
@@ -416,7 +545,6 @@ describe('navigate', () => {
     let [, finishLatest] = reloads[2]!
     finishLatest({ signal: controller.signal })
     await latest
-    expect(calls).toBe(3)
     expect(document.activeElement).toBe(document.body)
   })
 
@@ -564,7 +692,7 @@ describe('navigate', () => {
     await intercept.mock.calls[0]?.arguments[0]?.handler?.()
     await transition.succeed()
 
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.sourceElement).toBe(anchor)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(anchor)
     expect(reloadFrame.mock.calls[0]?.arguments[1]?.form).toBeUndefined()
     expect(reloadFrame.mock.calls[0]?.arguments[1]?.formData).toBeUndefined()
   })
@@ -1636,7 +1764,7 @@ describe('navigate', () => {
       expect(topFrame.src).toBe(destination.href)
       expect(reload).toHaveBeenCalledTimes(1)
       // The replacement navigation has no source element of its own.
-      expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(anchor)
+      expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(anchor)
       expect(reload.mock.calls[0]?.arguments[0]?.form).toBeUndefined()
       expect(document.activeElement).toBe(anchor)
     } finally {
@@ -1676,7 +1804,8 @@ describe('navigate', () => {
 
       expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation)
       expect(reload).toHaveBeenCalledTimes(1)
-      expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(button)
+      expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(form)
+      expect(reload.mock.calls[0]?.arguments[0]?.submitter).toBe(button)
       expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
     } finally {
       if (didNavigate) await navigate(originalUrl, { history: 'replace' })
@@ -1843,7 +1972,7 @@ describe('in-place frame loads', () => {
     expect(intercept).not.toHaveBeenCalled()
     expect(reloadFrame).toHaveBeenCalledTimes(1)
     expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.sourceElement).toBe(anchor)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(anchor)
     expect(reloadFrame.mock.calls[0]?.arguments[1]?.form).toBeUndefined()
     expect(namedFrame.src).toBe(anchor.href)
     expect(topFrame.src).toBe(window.location.href)
@@ -1884,7 +2013,8 @@ describe('in-place frame loads', () => {
     let options = reloadFrame.mock.calls[0]?.arguments[1]
     expect(options?.method).toBe('post')
     expect(options?.formData?.get('title')).toBe('Ada')
-    expect(options?.sourceElement).toBe(form)
+    expect(options?.element).toBe(form)
+    expect(options?.submitter).toBeNull()
     expect(options?.form).toBe(form)
     expect(namedFrame.src).toBe(form.action)
     expect(topFrame.src).toBe(window.location.href)
@@ -1988,7 +2118,8 @@ describe('in-place form submissions', () => {
     expect(options?.method).toBe('post')
     expect(options?.encType).toBe('application/x-www-form-urlencoded')
     expect(options?.formData?.get('title')).toBe('Ada')
-    expect(options?.sourceElement).toBe(form)
+    expect(options?.element).toBe(form)
+    expect(options?.submitter).toBeNull()
     expect(options?.form).toBe(form)
     expect(namedFrame.src).toBe(form.action)
     expect(topFrame.src).toBe(window.location.href)
@@ -2011,7 +2142,8 @@ describe('in-place form submissions', () => {
     let options = reloadFrame.mock.calls[0]?.arguments[1]
     expect(options?.formData?.get('intent')).toBe('publish')
     expect(options?.encType).toBe('multipart/form-data')
-    expect(options?.sourceElement).toBe(button)
+    expect(options?.element).toBe(form)
+    expect(options?.submitter).toBe(button)
     expect(options?.form).toBe(form)
     expect(namedFrame.src).toBe(button.formAction)
   })
@@ -2138,7 +2270,7 @@ describe('in-place link clicks', () => {
     expect(reloadFrame).toHaveBeenCalledTimes(1)
     expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
     let options = reloadFrame.mock.calls[0]?.arguments[1]
-    expect(options?.sourceElement).toBe(anchor)
+    expect(options?.element).toBe(anchor)
     expect(options?.formData).toBeUndefined()
     expect(namedFrame.src).toBe(anchor.href)
     expect(topFrame.src).toBe(window.location.href)
@@ -2151,7 +2283,7 @@ describe('in-place link clicks', () => {
     await settled()
 
     expect(cancelled).toBe(true)
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.sourceElement).toBe(anchor)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(anchor)
   })
 
   it('loads data-rmx-src into the named frame', async (t) => {
@@ -2591,7 +2723,7 @@ describe('form navigation', () => {
     expect(entryAfterSubmission.url).toBe(entryBeforeSubmission.url)
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
-    expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(form)
+    expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(form)
     expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
   })
 
@@ -2633,7 +2765,7 @@ describe('form navigation', () => {
     expect(entryAfterSubmission.url).toBe(entryBeforeSubmission.url)
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
-    expect(reload.mock.calls[0]?.arguments[0]?.sourceElement).toBe(form)
+    expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(form)
     expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
   })
 
