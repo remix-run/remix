@@ -3,66 +3,48 @@ import type { Handle } from "remix/component";
 
 export function ComponentModelDemo() {
   return () => (
-    <div mix={counterDemoStyles}>
-      <Counter initialCount={2} label="Inbox" />
-      <Counter initialCount={8} label="Deploys" />
+    <div mix={css({ display: "flex", gap: "0.75rem" })}>
+      <VoteButton album="Thriller" initialVotes={12} />
+      <VoteButton album="Bad" initialVotes={9} />
     </div>
   );
 }
 
-function Counter(handle: Handle<{ initialCount: number; label: string }>) {
-  let count = handle.props.initialCount;
+function VoteButton(handle: Handle<{ album: string; initialVotes: number }>) {
+  let votes = handle.props.initialVotes;
 
   return () => (
     <button
+      type="button"
       mix={[
-        counterStyles,
         on("click", () => {
-          count++;
+          votes++;
           handle.update();
         }),
+        css({
+          display: "grid",
+          gap: "0.25rem",
+          minWidth: "9rem",
+          padding: "1rem",
+          border: 0,
+          borderRadius: "12px",
+          background: "light-dark(white, #2a2a30)",
+          color: "light-dark(#151515, #f4f4f5)",
+          font: "inherit",
+          textAlign: "left",
+          cursor: "pointer",
+          transition: "box-shadow 150ms ease, transform 150ms ease",
+          "&:hover, &:focus-visible": {
+            boxShadow: "0 8px 24px light-dark(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.5))",
+            transform: "translateY(-2px)",
+          },
+        }),
       ]}
-      type="button"
     >
-      <span mix={counterValueStyles}>{count}</span>
-      <span>{handle.props.label}</span>
+      <strong mix={css({ color: "light-dark(#d83a5a, #ff6b88)", fontSize: "2rem" })}>
+        {votes}
+      </strong>
+      <span>{handle.props.album}</span>
     </button>
   );
 }
-
-const counterDemoStyles = css({
-  display: "flex",
-  flexWrap: "wrap",
-  justifyContent: "center",
-  gap: "0.75rem",
-});
-
-const counterStyles = css({
-  display: "grid",
-  minWidth: "9rem",
-  gap: "0.35rem",
-  padding: "1rem",
-  border: "1px solid #d6d6d6",
-  borderRadius: "16px",
-  background: "white",
-  color: "#151515",
-  cursor: "pointer",
-  font: "inherit",
-  textAlign: "left",
-  boxShadow: "0 8px 24px rgba(15, 17, 21, 0.08)",
-  "&:hover": {
-    boxShadow: "0 12px 32px rgba(15, 17, 21, 0.12)",
-    transform: "translateY(-2px)",
-  },
-  "&:active": {
-    transform: "translateY(0)",
-  },
-});
-
-const counterValueStyles = css({
-  color: "#d83a5a",
-  fontSize: "2.75rem",
-  fontWeight: "900",
-  lineHeight: "0.9",
-  letterSpacing: "-0.08em",
-});

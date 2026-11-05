@@ -444,23 +444,21 @@ array when the element needs several:
 import { attrs, css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-const saveButtonStyle = css({
-  minWidth: "8rem",
-  minHeight: "2.5rem",
-  border: 0,
-  borderRadius: "999px",
-  background: "#111",
-  color: "#fff",
-});
-
 function SaveButton(_handle: Handle) {
   return () => (
     <button
       mix={[
-        saveButtonStyle,
         attrs({ type: "button" }),
         ref((node) => console.log("Mounted", node)),
         on("click", () => console.log("Save album")),
+        css({
+          minWidth: "8rem",
+          minHeight: "2.5rem",
+          border: 0,
+          borderRadius: "999px",
+          background: "#111",
+          color: "#fff",
+        }),
       ]}
     >
       Save

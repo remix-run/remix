@@ -43,13 +43,6 @@ A component receives a `handle` and returns a render function. State is a variab
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const buttonStyle = css({
-  padding: '8px 12px',
-  borderRadius: '6px',
-  '&:hover': { background: '#f3f0ff' },
-  '&:disabled': { opacity: 0.6 },
-})
-
 export function LikeButton(handle: Handle<{ href: string; initialLikes: number }>) {
   let likes = handle.props.initialLikes
   let saving = false
@@ -59,7 +52,6 @@ export function LikeButton(handle: Handle<{ href: string; initialLikes: number }
       type="button"
       disabled={saving}
       mix={[
-        buttonStyle,
         on('click', async (_event, signal) => {
           likes++
           saving = true
@@ -77,6 +69,12 @@ export function LikeButton(handle: Handle<{ href: string; initialLikes: number }
 
           saving = false
           handle.update()
+        }),
+        css({
+          padding: '8px 12px',
+          borderRadius: '6px',
+          '&:hover': { background: '#f3f0ff' },
+          '&:disabled': { opacity: 0.6 },
         }),
       ]}
     >
@@ -544,35 +542,6 @@ To listen for your own events with full types, declare them on `HTMLElementEvent
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const toggleStyle = css({
-  display: 'inline-flex',
-  gap: '6px',
-  padding: '8px 12px',
-  border: '1px solid #d6d6d6',
-  borderRadius: '6px',
-  background: 'white',
-  '&:hover': {
-    borderColor: '#6d28d9',
-  },
-  '&[aria-pressed="true"]': {
-    background: '#6d28d9',
-    color: 'white',
-  },
-  '&::after': {
-    content: '"✓"',
-    visibility: 'hidden',
-  },
-  '&[aria-pressed="true"]::after': {
-    visibility: 'visible',
-  },
-  '.label': {
-    fontWeight: 600,
-  },
-  '@media (max-width: 40rem)': {
-    padding: '12px 16px',
-  },
-})
-
 function FavoriteToggle(handle: Handle) {
   let pressed = false
 
@@ -581,10 +550,37 @@ function FavoriteToggle(handle: Handle) {
       type="button"
       aria-pressed={pressed}
       mix={[
-        toggleStyle,
         on('click', () => {
           pressed = !pressed
           handle.update()
+        }),
+        css({
+          display: 'inline-flex',
+          gap: '6px',
+          padding: '8px 12px',
+          border: '1px solid #d6d6d6',
+          borderRadius: '6px',
+          background: 'white',
+          '&:hover': {
+            borderColor: '#6d28d9',
+          },
+          '&[aria-pressed="true"]': {
+            background: '#6d28d9',
+            color: 'white',
+          },
+          '&::after': {
+            content: '"✓"',
+            visibility: 'hidden',
+          },
+          '&[aria-pressed="true"]::after': {
+            visibility: 'visible',
+          },
+          '.label': {
+            fontWeight: 600,
+          },
+          '@media (max-width: 40rem)': {
+            padding: '12px 16px',
+          },
         }),
       ]}
     >
@@ -612,10 +608,13 @@ Each distinct style object becomes its own class and rule. Use `css(...)` for st
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const barStyle = css({ height: '4px', background: '#6d28d9', transformOrigin: 'left' })
-
 function ProgressBar(handle: Handle<{ value: number }>) {
-  return () => <div mix={barStyle} style={{ transform: `scaleX(${handle.props.value})` }} />
+  return () => (
+    <div
+      mix={css({ height: '4px', background: '#6d28d9', transformOrigin: 'left' })}
+      style={{ transform: `scaleX(${handle.props.value})` }}
+    />
+  )
 }
 ```
 
@@ -643,16 +642,17 @@ Combine styles that set different properties, such as layout and appearance. For
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const buttonStyle = css({
-  background: 'gray',
-  '&[data-variant="danger"]': {
-    background: 'red',
-  },
-})
-
 function Button(handle: Handle<{ label: string; variant?: 'danger' }>) {
   return () => (
-    <button data-variant={handle.props.variant} mix={buttonStyle}>
+    <button
+      data-variant={handle.props.variant}
+      mix={css({
+        background: 'gray',
+        '&[data-variant="danger"]': {
+          background: 'red',
+        },
+      })}
+    >
       {handle.props.label}
     </button>
   )
@@ -661,7 +661,7 @@ function Button(handle: Handle<{ label: string; variant?: 'danger' }>) {
 
 ### Cascade Layers
 
-The component runtime emits generated `css(...)` rules under the `rmx` cascade layer. Each generated class gets its own sublayer, so a class such as `rmxc-k4a9f` is emitted as `@layer rmx.rmxc-k4a9f { ... }`. That keeps each class's place in the cascade the same across every root and frame on the page.
+The component runtime emits generated `css(...)` rules inside the `rmx` cascade layer.
 
 Unlayered CSS outranks layered CSS, so use explicit layer order when mixing generated styles with global styles. Put layers that should lose to generated styles before `rmx`:
 
@@ -1348,6 +1348,23 @@ function SortSelect(handle: Handle<{ hrefs: Record<string, string> }>) {
 - Both accept the same options: `target` and `src` to load a named frame, `history` (`'push'` or `'replace'`), and `resetScroll` and `resetFocus`. They match the `data-rmx-*` attributes above.
 - `navigate()` returns a promise that settles when the Navigation API transition finishes. Invalid or cross-origin destinations, and targets that don't match a mounted frame, fall back to document navigation.
 - On anchors and `<area>` elements, `link()` sets `href` and the matching `data-rmx-*` attributes. On other elements it adds `role="link"`, makes the element focusable, sets `type="button"` on buttons, handles Enter, and opens the destination in a new tab for Ctrl-click, Cmd-click, and middle clicks.
+
+### Updating the URL
+
+Use `updateUrl(href, options?)` to reflect state the page already displays, such as a selected product variant:
+
+```ts
+import { updateUrl } from 'remix/component'
+
+let signal = await updateUrl('/products/shirt?color=blue')
+await updateUrl('/products/shirt?color=red', { history: 'push' })
+```
+
+The update replaces the current history entry by default; `history: 'push'` adds one. It preserves scroll, focus, and history state without fetching or rendering, and keeps the top-frame source in sync for later reloads.
+
+Calls wait for active navigation. Only the latest waiting call applies, and its captured browser URL must remain current. The promise resolves with an `AbortSignal`, aborted if the update was canceled, superseded, or invalidated by navigation; otherwise it stays non-aborted. Actual failures reject. Pass `{ signal: handle.signal }` to cancel stale work without aborting navigation.
+
+Native interception of these URL updates is unsupported (`NotSupportedError`) and may still commit the URL. Don't await `updateUrl()` inside the active transition's interception handler. Without frame navigation, applications restore displayed state on Back/Forward themselves.
 
 ### Opting Out
 
