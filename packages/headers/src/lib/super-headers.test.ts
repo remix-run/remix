@@ -1,10 +1,6 @@
 import * as assert from '@remix-run/assert'
-import DefaultHeaders, {
-  ContentType,
-  stringify,
-  SuperHeaders,
-  type SuperHeadersInit,
-} from '../index.ts'
+import DefaultHeaders, { ContentType, stringify, SuperHeaders } from '../index.ts'
+import type { SuperHeadersInit } from '../index.ts'
 import { describe, it } from '@remix-run/test'
 
 function getResponseHeaders(headers: Headers): Headers {

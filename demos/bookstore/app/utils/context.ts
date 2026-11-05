@@ -3,7 +3,8 @@ import type { AuthState } from 'remix/middleware/auth'
 import type { Session } from 'remix/session'
 
 import type { User } from '../data/schema.ts'
-import { getCart, type Cart } from './cart.ts'
+import { getCart } from './cart.ts'
+import type { Cart } from './cart.ts'
 
 export function getCurrentUser(): User {
   let auth = getContext().auth

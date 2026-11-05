@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'

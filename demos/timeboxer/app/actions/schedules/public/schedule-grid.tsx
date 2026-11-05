@@ -1,4 +1,5 @@
-import { clientEntry, createMixin, css, on, ref, type Handle } from 'remix/component'
+import { clientEntry, createMixin, css, on, ref } from 'remix/component'
+import type { Handle } from 'remix/component'
 import { animateLayout, spring } from '@remix-run/ui/animation'
 import { button } from '../../../ui/public/button.ts'
 import { theme } from '../../../ui/public/design.ts'
@@ -9,9 +10,8 @@ import {
   previewMoveBlock,
   previewMoveBlockGroup,
   previewResizeBlockTime,
-  type ScheduleLayoutBlock,
-  type ScheduleLayoutResult,
 } from './schedule-layout.ts'
+import type { ScheduleLayoutBlock, ScheduleLayoutResult } from './schedule-layout.ts'
 
 export type GridScheduleDocument = {
   blocks: ScheduleLayoutBlock[]

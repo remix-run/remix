@@ -1,7 +1,8 @@
 import * as process from 'node:process'
 
 import type { CliContext } from '../cli-context.ts'
-import { runRemixDoctor, type RunRemixDoctorOptions } from '../doctor/run.ts'
+import { runRemixDoctor } from '../doctor/run.ts'
+import type { RunRemixDoctorOptions } from '../doctor/run.ts'
 import { renderCliError, toCliError } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'

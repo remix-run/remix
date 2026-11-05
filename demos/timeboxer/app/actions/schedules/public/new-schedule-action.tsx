@@ -1,4 +1,5 @@
-import { css, navigate, on, ref, type Handle, type Props } from 'remix/component'
+import { css, navigate, on, ref } from 'remix/component'
+import type { Handle, Props } from 'remix/component'
 import { animateEntrance, animateExit, spring } from '@remix-run/ui/animation'
 import { button } from '../../../ui/public/button.ts'
 import { theme } from '../../../ui/public/design.ts'

@@ -1,5 +1,6 @@
 import type { RemixNode } from './core/vnode.ts'
-import { createRoot, type VirtualRoot, type VirtualRootOptions } from './vdom.ts'
+import { createRoot } from './vdom.ts'
+import type { VirtualRoot, VirtualRootOptions } from './vdom.ts'
 
 /**
  * Options for {@link render}.

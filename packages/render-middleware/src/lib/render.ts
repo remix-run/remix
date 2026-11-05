@@ -1,4 +1,5 @@
-import { createContextKey, type Middleware, type RequestContext } from '@remix-run/fetch-router'
+import { createContextKey } from '@remix-run/fetch-router'
+import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 
 /**
  * A function that converts application data into a `Response`.

@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import type { HeaderValue } from './header-value.ts'
 import { parseParams } from './param-values.ts'
 import { isIterable, splitList } from './utils.ts'
 

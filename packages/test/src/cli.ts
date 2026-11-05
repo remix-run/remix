@@ -2,12 +2,8 @@ import * as fsp from 'node:fs/promises'
 import type * as http from 'node:http'
 import * as path from 'node:path'
 import type * as browserTestRunner from './lib/runner-browser.ts'
-import {
-  IS_RUNNING_FROM_SRC,
-  resolveConfig,
-  type RemixTestConfig,
-  type ResolvedRemixTestConfig,
-} from './lib/config.ts'
+import { IS_RUNNING_FROM_SRC, resolveConfig } from './lib/config.ts'
+import type { RemixTestConfig, ResolvedRemixTestConfig } from './lib/config.ts'
 
 export { remixTestPools, type RemixTestConfig, type RemixTestPool } from './lib/config.ts'
 import type * as playwrightSupport from './lib/playwright.ts'

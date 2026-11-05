@@ -1,7 +1,8 @@
 import { asyncContext } from 'remix/middleware/async-context'
 import { logger } from 'remix/middleware/logger'
 import { render } from 'remix/middleware/render'
-import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
+import { createMiddleware, createRouter } from 'remix/router'
+import type { MiddlewareContext } from 'remix/router'
 
 import rootController from './actions/controller.tsx'
 import { framesController } from './actions/frames/controller.tsx'

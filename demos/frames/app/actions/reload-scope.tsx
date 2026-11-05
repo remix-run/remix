@@ -1,4 +1,5 @@
-import { Frame, css, type Handle } from 'remix/component'
+import { Frame, css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 import { Counter } from '../ui/public/counter.tsx'
 import { ReloadTopFrame } from '../ui/public/reload-scope.tsx'

@@ -1,13 +1,10 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
+import { afterEach, describe, it, mock } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 import { Frame } from '../runtime/frame.ts'
 import { jsx } from '../runtime/core/vnode.ts'
-import {
-  createDefaultPrefetch,
-  prefetch,
-  startPrefetching,
-  type PrefetchFrame,
-} from '../runtime/prefetch.ts'
+import { createDefaultPrefetch, prefetch, startPrefetching } from '../runtime/prefetch.ts'
+import type { PrefetchFrame } from '../runtime/prefetch.ts'
 import { run } from '../runtime/run.ts'
 import { renderToStream } from '../server/stream.ts'
 import { drain } from './utils.ts'

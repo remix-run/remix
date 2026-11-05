@@ -2,13 +2,11 @@ import type { AssetServer } from '@remix-run/assets'
 import { CspNonce, getCspNonce, inheritCspNonce } from '@remix-run/csp-middleware'
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
-import {
-  renderToStream,
-  type ImportMapData,
-  type ResolveFrameContext,
-} from '@remix-run/component/server'
+import { renderToStream } from '@remix-run/component/server'
+import type { ImportMapData, ResolveFrameContext } from '@remix-run/component/server'
 
-import { renderWith, type Renderer } from './render.ts'
+import { renderWith } from './render.ts'
+import type { Renderer } from './render.ts'
 
 type RenderRequestContext = Pick<RequestContext, 'headers' | 'request' | 'router' | 'url'>
 type RemixNode = Parameters<typeof renderToStream>[0]

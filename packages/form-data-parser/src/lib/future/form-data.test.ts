@@ -2,8 +2,6 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import {
-  type FileUploadHandler,
-  type FileUpload,
   FormDataParseError,
   MaxFilesExceededError,
   MultipartParseError,
@@ -13,6 +11,7 @@ import {
   MaxTotalSizeExceededError,
   parseFormData,
 } from '../../future.ts'
+import type { FileUploadHandler, FileUpload } from '../../future.ts'
 
 // Native File normalizes some MIME types differently across runtimes (for example
 // Bun adds charset for text types and rewrites application/javascript), so derive

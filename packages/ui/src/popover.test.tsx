@@ -1,7 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock } from '@remix-run/test'
 
-import { createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot, on } from '@remix-run/component'
+import type { Handle, RemixNode } from '@remix-run/component'
 
 import * as popover from './popover.ts'
 import type { PopoverHideRequest } from './popover.ts'

@@ -1,6 +1,8 @@
-import { inspectControllerOwnership, type OwnershipRouteNode } from '../controller-ownership.ts'
+import { inspectControllerOwnership } from '../controller-ownership.ts'
+import type { OwnershipRouteNode } from '../controller-ownership.ts'
 import { getControllerFindings } from './controller-findings.ts'
-import { createDoctorSuite, type DoctorSuiteResult } from './types.ts'
+import { createDoctorSuite } from './types.ts'
+import type { DoctorSuiteResult } from './types.ts'
 
 export interface ControllerDoctorResult {
   suite: DoctorSuiteResult

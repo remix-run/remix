@@ -1,10 +1,13 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
+import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
+import type { FakeTimers } from '@remix-run/test'
 
-import { createRoot, ref, type Handle, type Props, type RemixNode } from '@remix-run/component'
+import { createRoot, ref } from '@remix-run/component'
+import type { Handle, Props, RemixNode } from '@remix-run/component'
 
 import * as menu from './menu.tsx'
-import { onMenuSelect, type MenuSelectEvent } from './menu.tsx'
+import { onMenuSelect } from './menu.tsx'
+import type { MenuSelectEvent } from './menu.tsx'
 
 const flashDurationMs = 60
 let roots: Array<ReturnType<typeof createRoot>> = []

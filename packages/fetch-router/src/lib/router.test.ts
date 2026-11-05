@@ -1,12 +1,14 @@
 import * as assert from '@remix-run/assert'
-import { createMultiMatcher, type MultiMatcher } from '@remix-run/route-pattern/match'
+import { createMultiMatcher } from '@remix-run/route-pattern/match'
+import type { MultiMatcher } from '@remix-run/route-pattern/match'
 import { describe, it } from '@remix-run/test'
 
 import { createRoutes as route } from '../routes.ts'
 import type { Action, Controller } from './controller.ts'
 import type { NextFunction } from './middleware.ts'
 import type { RequestContext } from './request-context.ts'
-import { createRouter, type MatchData } from './router.ts'
+import { createRouter } from './router.ts'
+import type { MatchData } from './router.ts'
 
 describe('router.fetch()', () => {
   it('can be passed as a direct function reference', async () => {

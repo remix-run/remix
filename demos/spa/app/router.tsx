@@ -1,4 +1,5 @@
-import { createRouter, type Middleware, type RouterContext } from 'remix/router'
+import { createRouter } from 'remix/router'
+import type { Middleware, RouterContext } from 'remix/router'
 import { render } from 'remix/spa'
 
 import rootController from './actions/controller.tsx'

@@ -1,9 +1,11 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createRouter, type Middleware } from '@remix-run/fetch-router'
+import { createRouter } from '@remix-run/fetch-router'
+import type { Middleware } from '@remix-run/fetch-router'
 
-import { Auth, auth, type AuthState } from './auth.ts'
+import { Auth, auth } from './auth.ts'
+import type { AuthState } from './auth.ts'
 import { requireAuth } from './require-auth.ts'
 
 describe('requireAuth middleware', () => {

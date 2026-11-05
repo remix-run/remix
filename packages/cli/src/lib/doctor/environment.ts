@@ -5,12 +5,8 @@ import { createRequire } from 'node:module'
 import * as semver from 'semver'
 
 import { MINIMUM_SUPPORTED_NODE_VERSION } from '../bootstrap-project.ts'
-import {
-  createDoctorSuite,
-  type DoctorFinding,
-  type DoctorFixPlan,
-  type DoctorSuiteResult,
-} from './types.ts'
+import { createDoctorSuite } from './types.ts'
+import type { DoctorFinding, DoctorFixPlan, DoctorSuiteResult } from './types.ts'
 
 interface DoctorPackageJson {
   dependencies?: Record<string, string>

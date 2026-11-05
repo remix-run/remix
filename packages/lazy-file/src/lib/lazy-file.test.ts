@@ -1,7 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { type LazyContent, LazyBlob, LazyFile } from './lazy-file.ts'
+import { LazyBlob, LazyFile } from './lazy-file.ts'
+import type { LazyContent } from './lazy-file.ts'
 
 // Compile-time API contract checks. These expressions are never executed, but TypeScript will
 // fail this file if LazyBlob or LazyFile stop satisfying the native Blob/File interfaces.

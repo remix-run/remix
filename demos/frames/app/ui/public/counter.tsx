@@ -1,4 +1,5 @@
-import { clientEntry, css, on, type Handle } from 'remix/component'
+import { clientEntry, css, on } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 export const Counter = clientEntry(
   import.meta.url,

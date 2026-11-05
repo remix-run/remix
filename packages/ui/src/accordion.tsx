@@ -1,14 +1,5 @@
-import {
-  attrs,
-  createMixin,
-  on,
-  ref,
-  type Dispatched,
-  type ElementProps,
-  type Handle,
-  type MixinHandle,
-  type RemixNode,
-} from '@remix-run/component'
+import { attrs, createMixin, on, ref } from '@remix-run/component'
+import type { Dispatched, ElementProps, Handle, MixinHandle, RemixNode } from '@remix-run/component'
 
 const ACCORDION_CHANGE_EVENT = 'rmx:accordion-change' as const
 

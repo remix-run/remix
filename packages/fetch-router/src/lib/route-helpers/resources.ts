@@ -1,6 +1,7 @@
 import type { RoutePattern } from '@remix-run/route-pattern'
 
-import { type BuildRouteMap, createRoutes } from '../route-map.ts'
+import { createRoutes } from '../route-map.ts'
+import type { BuildRouteMap } from '../route-map.ts'
 
 /**
  * Named CRUD routes available for resource collections.

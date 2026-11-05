@@ -5,21 +5,10 @@ import { checkControllerConventions } from './controllers.ts'
 import { checkEnvironment, getEnvironmentFixPlans } from './environment.ts'
 import { applyDoctorFixPlans } from './fixes.ts'
 import { checkProject, getProjectFixPlans } from './project.ts'
-import {
-  createDoctorSuite,
-  createSkippedDoctorSuite,
-  hasWarningFindings,
-  type DoctorAppliedFix,
-  type DoctorReport,
-  type DoctorSuiteName,
-  type DoctorSuiteResult,
-} from './types.ts'
-import {
-  createCommandReporter,
-  createStepProgressReporter,
-  type CommandReporter,
-  type StepProgressReporter,
-} from '../reporter.ts'
+import { createDoctorSuite, createSkippedDoctorSuite, hasWarningFindings } from './types.ts'
+import type { DoctorAppliedFix, DoctorReport, DoctorSuiteName, DoctorSuiteResult } from './types.ts'
+import { createCommandReporter, createStepProgressReporter } from '../reporter.ts'
+import type { CommandReporter, StepProgressReporter } from '../reporter.ts'
 
 const DOCTOR_SUITE_LABELS = {
   actions: {

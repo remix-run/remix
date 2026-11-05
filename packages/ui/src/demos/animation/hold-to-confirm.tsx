@@ -1,4 +1,5 @@
-import { createMixin, css, on, type Handle } from '@remix-run/component'
+import { createMixin, css, on } from '@remix-run/component'
+import type { Handle } from '@remix-run/component'
 import { animateEntrance, animateExit, spring } from '@remix-run/ui/animation'
 
 // Demo

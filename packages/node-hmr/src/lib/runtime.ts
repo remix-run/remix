@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'node:url'
 
-import {
-  type BrowserHmrChannel,
-  type BrowserHmrEvent,
-  type BrowserHmrFileEvent,
-  type BrowserHmrFileEventHandler,
-  type BrowserHmrWatchedFileDelta,
-  sendHmrEventPayload,
+import { sendHmrEventPayload } from './browser-events.ts'
+import type {
+  BrowserHmrChannel,
+  BrowserHmrEvent,
+  BrowserHmrFileEvent,
+  BrowserHmrFileEventHandler,
+  BrowserHmrWatchedFileDelta,
 } from './browser-events.ts'
 import { emitServerHmrEvent, emitServerHmrUpdate } from './events.ts'
 import { hasNodeHmrParentProcess } from './process-state.ts'

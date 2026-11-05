@@ -3,7 +3,8 @@ import { promises as fsp } from 'node:fs'
 import { openLazyFile } from '@remix-run/fs'
 import type { Middleware } from '@remix-run/fetch-router'
 import { detectMimeType } from '@remix-run/mime'
-import { createFileResponse as sendFile, type FileResponseOptions } from '@remix-run/response/file'
+import { createFileResponse as sendFile } from '@remix-run/response/file'
+import type { FileResponseOptions } from '@remix-run/response/file'
 
 import { generateDirectoryListing } from './directory-listing.ts'
 

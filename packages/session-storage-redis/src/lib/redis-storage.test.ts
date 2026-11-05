@@ -1,7 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createRedisSessionStorage, type RedisSessionStorageClient } from './redis-storage.ts'
+import { createRedisSessionStorage } from './redis-storage.ts'
+import type { RedisSessionStorageClient } from './redis-storage.ts'
 
 function createMapRedisClient() {
   let values = new Map<string, string>()

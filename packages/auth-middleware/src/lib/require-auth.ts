@@ -1,6 +1,7 @@
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 
-import { Auth, type BadAuth, type GoodAuth } from './auth.ts'
+import { Auth } from './auth.ts'
+import type { BadAuth, GoodAuth } from './auth.ts'
 
 /**
  * Options for enforcing authentication on a route.

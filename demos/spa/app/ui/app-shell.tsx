@@ -1,4 +1,5 @@
-import { type Handle, css } from 'remix/component'
+import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
 import type { RemixNode } from 'remix/component/jsx-runtime'
 
 import { routes } from '../routes.ts'

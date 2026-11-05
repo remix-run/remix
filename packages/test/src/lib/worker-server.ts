@@ -1,5 +1,6 @@
 import * as mod from 'node:module'
-import { IS_RUNNING_FROM_SRC, type SerializedOnlyPattern } from './config.ts'
+import { IS_RUNNING_FROM_SRC } from './config.ts'
+import type { SerializedOnlyPattern } from './config.ts'
 import { importModule } from './import-module.ts'
 import type { CoverageConfig } from './coverage.ts'
 import type { TestResults } from './reporters/results.ts'

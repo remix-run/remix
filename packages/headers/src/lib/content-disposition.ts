@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import type { HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 
 /**

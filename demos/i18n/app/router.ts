@@ -1,7 +1,8 @@
 import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
-import { createRouter, type RouterContext } from 'remix/router'
+import { createRouter } from 'remix/router'
+import type { RouterContext } from 'remix/router'
 
 import { rootController } from './actions/controller.tsx'
 import { assetServer } from './assets.ts'

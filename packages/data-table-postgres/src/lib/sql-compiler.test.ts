@@ -19,7 +19,7 @@ import {
   notNull,
   or,
 } from '@remix-run/data-table'
-import { type DataManipulationOperation } from '@remix-run/data-table'
+import type { DataManipulationOperation } from '@remix-run/data-table'
 
 import { createRecordingDriver, TestDatabase } from '../../../data-table/test/recording-driver.ts'
 import { compilePostgresOperation } from './sql-compiler.ts'

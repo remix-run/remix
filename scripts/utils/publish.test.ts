@@ -10,9 +10,8 @@ import {
   getDocsReleaseTag,
   getReleaseNotes,
   isPackageVersionPublished,
-  type PublishCandidate,
-  type RegistryRequest,
 } from './publish.ts'
+import type { PublishCandidate, RegistryRequest } from './publish.ts'
 
 function makePackage(packageName: string): PublishCandidate {
   return {

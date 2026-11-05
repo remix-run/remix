@@ -7,9 +7,8 @@ import {
   MaxPartsExceededError,
   MaxTotalSizeExceededError,
   parseFormData,
-  type FileUploadHandler,
-  type ParseFormDataOptions,
 } from '@remix-run/form-data-parser'
+import type { FileUploadHandler, ParseFormDataOptions } from '@remix-run/form-data-parser'
 import type { Middleware } from '@remix-run/fetch-router'
 
 function isMultipartLimitError(error: unknown): boolean {

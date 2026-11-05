@@ -2,9 +2,11 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as assert from 'remix/assert'
-import { describe, it, type TestContext } from 'remix/test'
+import { describe, it } from 'remix/test'
+import type { TestContext } from 'remix/test'
 
-import { renderMarkdownFile, type DocFile } from './markdown.ts'
+import { renderMarkdownFile } from './markdown.ts'
+import type { DocFile } from './markdown.ts'
 
 describe('renderMarkdownFile()', () => {
   it('adds linked heading IDs and collects h2 and h3 headings for the table of contents', async (t) => {

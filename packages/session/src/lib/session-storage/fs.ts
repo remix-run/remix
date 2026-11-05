@@ -2,7 +2,8 @@ import * as fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
-import { createSession, type SessionData } from '../session.ts'
+import { createSession } from '../session.ts'
+import type { SessionData } from '../session.ts'
 import type { SessionStorage } from '../session-storage.ts'
 
 /**

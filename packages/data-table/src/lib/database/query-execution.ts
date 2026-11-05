@@ -19,11 +19,8 @@ import { cloneQueryState, querySnapshot } from '../query.ts'
 import type { AnyTable } from '../table.ts'
 import { getPrimaryKeyObject, getTableName } from '../table.ts'
 
-import {
-  executeOperation,
-  runInTransaction,
-  type QueryExecutionContext,
-} from './execution-context.ts'
+import { executeOperation, runInTransaction } from './execution-context.ts'
+import type { QueryExecutionContext } from './execution-context.ts'
 import {
   buildPrimaryKeyPredicate,
   hasScopedWriteModifiers,

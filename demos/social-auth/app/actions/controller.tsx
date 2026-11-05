@@ -5,11 +5,8 @@ import { getReturnToHrefOptions, requireAuth } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
 import { AccountPage } from '../ui/account-page.tsx'
 import { LoginPage } from '../ui/home/page.tsx'
-import {
-  externalProviderRegistry,
-  readExternalProviderLinks,
-  type ExternalProviderRegistry,
-} from '../utils/external-auth.ts'
+import { externalProviderRegistry, readExternalProviderLinks } from '../utils/external-auth.ts'
+import type { ExternalProviderRegistry } from '../utils/external-auth.ts'
 
 export function createRootController(
   registry: ExternalProviderRegistry = externalProviderRegistry,

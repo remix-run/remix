@@ -1,16 +1,13 @@
-import { fork, type ChildProcess } from 'node:child_process'
+import { fork } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
-import { IS_RUNNING_FROM_SRC, type RemixTestPool, type SerializedOnlyPattern } from './config.ts'
-import {
-  collectCoverageMapFromPlaywright,
-  collectServerCoverageMap,
-  type CoverageConfig,
-  type CoverageMap,
-  type V8CoverageEntry,
-} from './coverage.ts'
+import { IS_RUNNING_FROM_SRC } from './config.ts'
+import type { RemixTestPool, SerializedOnlyPattern } from './config.ts'
+import { collectCoverageMapFromPlaywright, collectServerCoverageMap } from './coverage.ts'
+import type { CoverageConfig, CoverageMap, V8CoverageEntry } from './coverage.ts'
 import type { PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts, TestResults } from './reporters/results.ts'

@@ -7,7 +7,8 @@ import { compressResponse } from '@remix-run/response/compress'
 import { describe, it } from '@remix-run/test'
 import { fetch as undiciFetch } from 'undici'
 
-import { type FetchProxyOptions, createFetchProxy } from './fetch-proxy.ts'
+import { createFetchProxy } from './fetch-proxy.ts'
+import type { FetchProxyOptions } from './fetch-proxy.ts'
 
 const isBun = 'Bun' in globalThis
 

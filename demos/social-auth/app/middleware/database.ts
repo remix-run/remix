@@ -1,5 +1,6 @@
 import type { Database } from 'remix/data-table'
-import { createContextKey, type Middleware } from 'remix/router'
+import { createContextKey } from 'remix/router'
+import type { Middleware } from 'remix/router'
 
 import { db } from '../db.ts'
 

@@ -6,7 +6,8 @@ import type {
   TransactionOptions,
   TransactionToken,
 } from '../src/lib/driver.ts'
-import { Database, type DatabaseOptions } from '../src/lib/database.ts'
+import { Database } from '../src/lib/database.ts'
+import type { DatabaseOptions } from '../src/lib/database.ts'
 
 export type RecordingDriverOptions = {
   dialect?: string

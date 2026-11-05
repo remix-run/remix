@@ -12,7 +12,8 @@ import {
   GITHUB_REPO_URL,
 } from './packages.ts'
 import { fileExists, readFile, readJson } from './fs.ts'
-import { inc, major, prerelease, type ReleaseType } from './semver.ts'
+import { inc, major, prerelease } from './semver.ts'
+import type { ReleaseType } from './semver.ts'
 import { getFileIntroductionCommit, parsePrNumber } from './git.ts'
 
 const bumpTypes = ['major', 'minor', 'patch'] as const

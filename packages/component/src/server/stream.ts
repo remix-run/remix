@@ -9,7 +9,8 @@ import type {
 import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
 import type { ElementFunction } from '../runtime/element-function.ts'
 import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
-import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
+import { isEntry } from '../runtime/client-entries.ts'
+import type { EntryComponent } from '../runtime/client-entries.ts'
 import {
   FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
   SELF_CLOSING_TAGS,
@@ -23,9 +24,9 @@ import {
   appendFlushMarker,
   DOCUMENT_NONCE_META_NAME,
   FRAME_TEMPLATE_END_MARKER,
-  type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
+import type { FlushKind } from '../runtime/stream-protocol.ts'
 import {
   composeMixedProps,
   isBrowserOnlyMixinDescriptor,

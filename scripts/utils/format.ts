@@ -1,4 +1,5 @@
-import { format, type FormatConfig } from 'oxfmt'
+import { format } from 'oxfmt'
+import type { FormatConfig } from 'oxfmt'
 import oxfmtConfig from '../../oxfmt.config.ts'
 
 export async function formatWithOxfmt(

@@ -1,4 +1,5 @@
-import { isSafeHtml, type SafeHtml } from '@remix-run/html-template'
+import { isSafeHtml } from '@remix-run/html-template'
+import type { SafeHtml } from '@remix-run/html-template'
 
 const DOCTYPE = '<!DOCTYPE html>'
 const DOCTYPE_SNIFF_BYTES = 64

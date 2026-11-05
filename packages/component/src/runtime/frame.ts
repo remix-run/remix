@@ -1,4 +1,5 @@
-import { getNonceManager, type ResourceNonces } from './nonce.ts'
+import { getNonceManager } from './nonce.ts'
+import type { ResourceNonces } from './nonce.ts'
 import { jsx } from './core/vnode.ts'
 import {
   Fragment,
@@ -6,11 +7,8 @@ import {
   createComponentErrorEvent,
   createFrameHandle,
   getComponentError,
-  type FrameContent,
-  type FrameProps,
-  type Handle,
-  type RenderFn,
 } from './component.ts'
+import type { FrameContent, FrameProps, Handle, RenderFn } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
@@ -23,27 +21,26 @@ import {
   getSharedFrameRuntime,
   isFrameRuntime,
   NamedFrameRegistry,
-  type FrameMountState,
-  type FrameNavigationOptions,
-  type FrameReloadResult,
-  type FrameReloadTransition,
-  type FrameRuntime,
-  type LoadModule,
-  type PendingClientEntries,
-  type ReconciliationTracker,
-  type ResolveFrame,
 } from './frame-runtime.ts'
-import {
-  findContextFromAncestry,
-  insertDomNode,
-  isFrameStartComment,
-  remove,
-  type CommittedFrameNode,
-  type FrameNode,
-  type FrameNodeRenderer,
-  type HydrationCursor,
-  type ReconcileContext,
-  type VNodeParent,
+import type {
+  FrameMountState,
+  FrameNavigationOptions,
+  FrameReloadResult,
+  FrameReloadTransition,
+  FrameRuntime,
+  LoadModule,
+  PendingClientEntries,
+  ReconciliationTracker,
+  ResolveFrame,
+} from './frame-runtime.ts'
+import { findContextFromAncestry, insertDomNode, isFrameStartComment, remove } from './reconcile.ts'
+import type {
+  CommittedFrameNode,
+  FrameNode,
+  FrameNodeRenderer,
+  HydrationCursor,
+  ReconcileContext,
+  VNodeParent,
 } from './reconcile.ts'
 import {
   collectNodesBetween,
@@ -57,20 +54,23 @@ import {
   isHydrationEnd,
   isHydrationStart,
 } from './diff-dom.ts'
-import { createStyleManager, type StyleManager } from '../style/index.ts'
+import { createStyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/index.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'
-import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
-import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
+import { findFlushMarker, FRAME_TEMPLATE_END_MARKER } from './stream-protocol.ts'
+import type { FlushKind } from './stream-protocol.ts'
+import { getDocumentModulePreloader } from './module-preloader.ts'
+import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './spa-response.ts'
 import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
   getClientEntryKey,
   setClientEntryBoundaryOwner,
-  type ClientEntryIdentity,
 } from './client-entry-boundary.ts'
+import type { ClientEntryIdentity } from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
 import { parseDocument, removeNoscriptContents } from './parse-document.ts'
 import { ESCAPED_OBJECT } from './props-serialization.ts'

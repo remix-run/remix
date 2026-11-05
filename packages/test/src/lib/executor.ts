@@ -1,4 +1,5 @@
-import { createTestContext, type CreateTestContextE2EOptions, type TestContext } from './context.ts'
+import { createTestContext } from './context.ts'
+import type { CreateTestContextE2EOptions, TestContext } from './context.ts'
 import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 import type { SerializedOnlyPattern } from './config.ts'

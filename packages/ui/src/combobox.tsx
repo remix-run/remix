@@ -1,19 +1,16 @@
-import {
-  attrs,
-  createMixin,
-  on,
-  ref,
-  type Dispatched,
-  type ElementProps,
-  type Handle,
-  type MixinHandle,
-  type MixinFactory,
-  type RemixNode,
+import { attrs, createMixin, on, ref } from '@remix-run/component'
+import type {
+  Dispatched,
+  ElementProps,
+  Handle,
+  MixinHandle,
+  MixinFactory,
+  RemixNode,
 } from '@remix-run/component'
 
 import * as listbox from './listbox.ts'
 import * as popover from './popover.ts'
-import { type SearchValue } from './lib/typeahead.ts'
+import type { SearchValue } from './lib/typeahead.ts'
 import { waitForCssTransition } from './lib/wait-for-css-transition.ts'
 import { wait } from './lib/wait.ts'
 

@@ -1,5 +1,6 @@
 import { Cookie as CookieHeader } from '@remix-run/headers/cookie'
-import { SetCookie as SetCookieHeader, type CookieProperties } from '@remix-run/headers/set-cookie'
+import { SetCookie as SetCookieHeader } from '@remix-run/headers/set-cookie'
+import type { CookieProperties } from '@remix-run/headers/set-cookie'
 
 import { sign, unsign } from './cookie-signing.ts'
 

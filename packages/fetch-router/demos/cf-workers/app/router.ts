@@ -1,4 +1,5 @@
-import { createContextKey, createRouter, type Middleware } from '@remix-run/fetch-router'
+import { createContextKey, createRouter } from '@remix-run/fetch-router'
+import type { Middleware } from '@remix-run/fetch-router'
 import { createCookie } from '@remix-run/cookie'
 import * as s from '@remix-run/data-schema'
 import * as f from '@remix-run/data-schema/form-data'

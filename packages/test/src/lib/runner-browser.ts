@@ -2,17 +2,14 @@ import * as path from 'node:path'
 import type { Browser, Page, Request } from 'playwright'
 import { colors } from './colors.ts'
 import { getBrowserTestRootDir } from './config.ts'
-import {
-  collectCoverageMapFromPlaywright,
-  type CoverageMap,
-  type V8CoverageEntry,
-} from './coverage.ts'
+import { collectCoverageMapFromPlaywright } from './coverage.ts'
+import type { CoverageMap, V8CoverageEntry } from './coverage.ts'
 import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
   getPlaywrightPageOptions,
-  type PlaywrightUseOpts,
 } from './playwright.ts'
+import type { PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { TestResults } from './reporters/results.ts'
 

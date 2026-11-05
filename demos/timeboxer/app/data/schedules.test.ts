@@ -8,8 +8,8 @@ import {
   getScheduleDocument,
   listSchedules,
   replaceScheduleDocument,
-  type ScheduleBlockInput,
 } from './schedules.ts'
+import type { ScheduleBlockInput } from './schedules.ts'
 import { db, loadAppMigrations } from '../db.ts'
 import { scheduleBlocks, schedules, users } from './schema.ts'
 

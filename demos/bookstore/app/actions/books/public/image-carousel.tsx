@@ -1,4 +1,5 @@
-import { css, type Handle, clientEntry, on } from 'remix/component'
+import { css, clientEntry, on } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 export const ImageCarousel = clientEntry(
   import.meta.url,

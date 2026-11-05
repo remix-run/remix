@@ -4,7 +4,8 @@ import { describe, it } from '@remix-run/test'
 import { createRouter } from '@remix-run/fetch-router'
 
 import { auth } from './auth.ts'
-import { Auth, type AuthScheme } from './auth.ts'
+import { Auth } from './auth.ts'
+import type { AuthScheme } from './auth.ts'
 
 describe('auth middleware', () => {
   it('throws when no schemes are configured', () => {

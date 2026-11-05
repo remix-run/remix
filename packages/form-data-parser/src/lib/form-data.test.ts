@@ -1,13 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import {
-  type FileUploadHandler,
-  type FileUpload,
-  FormDataParseError,
-  MaxFilesExceededError,
-  parseFormData,
-} from './form-data.ts'
+import { FormDataParseError, MaxFilesExceededError, parseFormData } from './form-data.ts'
+import type { FileUploadHandler, FileUpload } from './form-data.ts'
 import {
   MultipartParseError,
   MaxFileSizeExceededError,

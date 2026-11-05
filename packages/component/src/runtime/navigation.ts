@@ -6,7 +6,8 @@ import {
   reloadFrameForNavigation,
   setTopFrameSource,
 } from './frame.ts'
-import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
+import { createFormNavigationResolver } from './form-navigation.ts'
+import type { FormSubmission } from './form-navigation.ts'
 import type { FrameHandle } from './component.ts'
 
 type NavigationState = {

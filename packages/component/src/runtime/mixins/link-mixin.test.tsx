@@ -1,5 +1,6 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it, type TestContext } from '@remix-run/test'
+import { afterEach, describe, it } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'

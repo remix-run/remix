@@ -1,4 +1,5 @@
-import { css, type CSSMixinDescriptor } from 'remix/component'
+import { css } from 'remix/component'
+import type { CSSMixinDescriptor } from 'remix/component'
 
 export type ButtonSize = 'md' | 'lg'
 export type ButtonTone = 'neutral' | 'primary' | 'ghost'

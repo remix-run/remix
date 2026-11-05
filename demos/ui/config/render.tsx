@@ -1,5 +1,6 @@
 import type { RemixNode } from 'remix/component'
-import { renderToStream, type ResolveFrameContext } from 'remix/component/server'
+import { renderToStream } from 'remix/component/server'
+import type { ResolveFrameContext } from 'remix/component/server'
 import { createHtmlResponse } from 'remix/response/html'
 import type { RequestContext, Router } from 'remix/router'
 

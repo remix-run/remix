@@ -1,4 +1,5 @@
-import { css, on, type Handle } from '@remix-run/component'
+import { css, on } from '@remix-run/component'
+import type { Handle } from '@remix-run/component'
 import { animateEntrance, animateLayout } from '@remix-run/ui/animation'
 
 let nextId = 1

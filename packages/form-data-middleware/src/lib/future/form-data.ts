@@ -1,8 +1,5 @@
-import {
-  parseFormData,
-  type FileUploadHandler,
-  type ParseFormDataOptions,
-} from '@remix-run/form-data-parser/future'
+import { parseFormData } from '@remix-run/form-data-parser/future'
+import type { FileUploadHandler, ParseFormDataOptions } from '@remix-run/form-data-parser/future'
 import type { Middleware } from '@remix-run/fetch-router'
 
 import { createFormDataMiddleware } from '../form-data.ts'

@@ -1,7 +1,9 @@
 import type { Browser, Page } from 'playwright'
 import type { V8CoverageEntry } from './coverage.ts'
-import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
-import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
+import { createFakeTimers } from './fake-timers.ts'
+import type { FakeTimers } from './fake-timers.ts'
+import { mock } from './mock.ts'
+import type { MockCall, MockContext, MockFunction } from './mock.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
 
 /**

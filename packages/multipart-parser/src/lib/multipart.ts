@@ -1,13 +1,8 @@
 import { ContentDisposition } from '@remix-run/headers/content-disposition'
 import { ContentType } from '@remix-run/headers/content-type'
 
-import {
-  encodeAsciiPattern,
-  createSearch,
-  createPartialTailSearch,
-  type SearchFunction,
-  type PartialTailSearchFunction,
-} from './buffer-search.ts'
+import { encodeAsciiPattern, createSearch, createPartialTailSearch } from './buffer-search.ts'
+import type { SearchFunction, PartialTailSearchFunction } from './buffer-search.ts'
 import { readStream } from './read-stream.ts'
 
 /**

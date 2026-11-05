@@ -1,5 +1,6 @@
 import { expect } from '@remix-run/assert'
-import { describe, it, type TestContext } from '@remix-run/test'
+import { describe, it } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { Handle } from '../runtime/component.ts'

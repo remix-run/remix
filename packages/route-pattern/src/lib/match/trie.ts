@@ -9,18 +9,16 @@ import {
   hasStaticSuffix,
   matchPart,
   unitKey,
-  type CanonicalText,
-  type PartProgram,
 } from './program.ts'
+import type { CanonicalText, PartProgram } from './program.ts'
 import type { Match, MatchParamMeta } from './types.ts'
 import {
   checkMatcherLimit,
   consumeMatchWork,
   createMatchWorkBudget,
   resolveMatcherLimits,
-  type MatchWorkBudget,
-  type MatcherLimits,
 } from './limits.ts'
+import type { MatchWorkBudget, MatcherLimits } from './limits.ts'
 
 type Entry<data> = {
   readonly pattern: RoutePattern

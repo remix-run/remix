@@ -1,4 +1,4 @@
-import { type HeaderValue } from './header-value.ts'
+import type { HeaderValue } from './header-value.ts'
 import { quote } from './param-values.ts'
 import { isIterable } from './utils.ts'
 

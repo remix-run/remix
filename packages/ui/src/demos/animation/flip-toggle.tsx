@@ -1,4 +1,5 @@
-import { css, on, type Handle } from '@remix-run/component'
+import { css, on } from '@remix-run/component'
+import type { Handle } from '@remix-run/component'
 import { animateLayout } from '@remix-run/ui/animation'
 
 export function FlipToggle(handle: Handle) {

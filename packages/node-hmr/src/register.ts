@@ -3,11 +3,8 @@ import { isAbsolute, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js/source-map.js'
 
-import {
-  analyzeNodeHmrSource,
-  type NodeHmrAnalysis,
-  type ResolvedNodeHmrAnalysis,
-} from './lib/hmr-analysis.ts'
+import { analyzeNodeHmrSource } from './lib/hmr-analysis.ts'
+import type { NodeHmrAnalysis, ResolvedNodeHmrAnalysis } from './lib/hmr-analysis.ts'
 import { markNodeHmrParentProcess } from './lib/process-state.ts'
 import { installNodeHmrRuntime } from './lib/runtime.ts'
 

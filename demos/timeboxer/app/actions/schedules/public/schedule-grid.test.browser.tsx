@@ -2,7 +2,8 @@ import { deepEqual, equal, ok } from 'remix/assert'
 import { describe as suite, it as test } from 'remix/test'
 import { render as renderComponent } from 'remix/component/test'
 
-import { ScheduleGrid, type GridScheduleDocument } from './schedule-grid.tsx'
+import { ScheduleGrid } from './schedule-grid.tsx'
+import type { GridScheduleDocument } from './schedule-grid.tsx'
 
 type ScheduleBlockDocument = GridScheduleDocument['blocks'][number]
 

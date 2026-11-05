@@ -1,6 +1,7 @@
 import type { PartPattern, PartPatternToken } from '../route-pattern.ts'
 import type { MatchParamMeta } from './types.ts'
-import { consumeMatchWork, type MatchWorkBudget } from './limits.ts'
+import { consumeMatchWork } from './limits.ts'
+import type { MatchWorkBudget } from './limits.ts'
 
 type Unit = {
   readonly value: string

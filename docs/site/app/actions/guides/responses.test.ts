@@ -1,5 +1,6 @@
 import * as assert from 'remix/assert'
-import { describe, it, type TestContext } from 'remix/test'
+import { describe, it } from 'remix/test'
+import type { TestContext } from 'remix/test'
 
 import { buildRegistry } from '../../data/registry.ts'
 import { createDocsRouter } from '../../router.ts'

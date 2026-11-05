@@ -7,7 +7,8 @@ import { requireAuth } from '../../../../middleware/auth.ts'
 import { frames, routes } from '../../../../routes.ts'
 import { Layout } from '../../../../ui/layout.tsx'
 import { AccountDocument } from '../account-page.tsx'
-import { AccountEditor, type AccountFormErrors } from './edit-page.tsx'
+import { AccountEditor } from './edit-page.tsx'
+import type { AccountFormErrors } from './edit-page.tsx'
 
 export default createController(routes.main.account.edit, {
   middleware: [requireAuth()],

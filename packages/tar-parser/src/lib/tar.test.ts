@@ -3,7 +3,8 @@ import { describe, it } from '@remix-run/test'
 
 import { fixtures, readFixture } from '../../test/utils.ts'
 
-import { type TarHeader, parseTar } from './tar.ts'
+import { parseTar } from './tar.ts'
+import type { TarHeader } from './tar.ts'
 
 async function bufferBytes(stream: ReadableStream<Uint8Array>): Promise<Uint8Array<ArrayBuffer>> {
   let chunks: Uint8Array[] = []

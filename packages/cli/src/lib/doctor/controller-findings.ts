@@ -1,9 +1,5 @@
-import {
-  ROOT_ROUTE_NAME,
-  type ControllerOwnership,
-  type OwnedSubtree,
-  type RouteDirectory,
-} from '../controller-ownership.ts'
+import { ROOT_ROUTE_NAME } from '../controller-ownership.ts'
+import type { ControllerOwnership, OwnedSubtree, RouteDirectory } from '../controller-ownership.ts'
 import type { DoctorFinding } from './types.ts'
 
 export function getControllerFindings(ownership: ControllerOwnership): DoctorFinding[] {

@@ -1,5 +1,6 @@
 import { transform } from 'esbuild'
-import { getTsconfig, type TsConfigResult } from 'get-tsconfig'
+import { getTsconfig } from 'get-tsconfig'
+import type { TsConfigResult } from 'get-tsconfig'
 import * as path from 'node:path'
 
 const tsconfigCache = new Map<string, TsConfigResult | null>()

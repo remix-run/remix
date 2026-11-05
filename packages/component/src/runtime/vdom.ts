@@ -8,8 +8,10 @@ import {
 } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './core/vnode.ts'
-import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame-runtime.ts'
-import { createScheduler, type Scheduler } from './scheduler.ts'
+import { createFrameRuntime, NamedFrameRegistry } from './frame-runtime.ts'
+import type { ResolveFrame } from './frame-runtime.ts'
+import { createScheduler } from './scheduler.ts'
+import type { Scheduler } from './scheduler.ts'
 import {
   defaultStyleManager,
   diffVNodes,
@@ -17,10 +19,8 @@ import {
   resetStyleState,
   ROOT_VNODE,
   toVNode,
-  type CommittedVNode,
-  type ReconcileContext,
-  type RootVNode,
 } from './reconcile.ts'
+import type { CommittedVNode, ReconcileContext, RootVNode } from './reconcile.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
 import type { StyleManager } from '../style/index.ts'
 import type { ElementFunction } from './element-function.ts'

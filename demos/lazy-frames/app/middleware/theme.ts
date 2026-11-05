@@ -1,7 +1,9 @@
 import { createCookie } from 'remix/cookie'
-import { createContextKey, type Middleware } from 'remix/router'
+import { createContextKey } from 'remix/router'
+import type { Middleware } from 'remix/router'
 
-import { isTheme, themeCookieMaxAge, themeCookieName, type Theme } from '../ui/public/theme.ts'
+import { isTheme, themeCookieMaxAge, themeCookieName } from '../ui/public/theme.ts'
+import type { Theme } from '../ui/public/theme.ts'
 
 export const themeContext = createContextKey<Theme>()
 

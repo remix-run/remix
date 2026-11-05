@@ -1,4 +1,5 @@
-import { createRouter, type RouterContext } from 'remix/router'
+import { createRouter } from 'remix/router'
+import type { RouterContext } from 'remix/router'
 import { csrf } from 'remix/middleware/csrf'
 import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'

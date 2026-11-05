@@ -1,5 +1,7 @@
-import { ansiResetCode, ansiStyleCodes, type TerminalStyleName } from './ansi.ts'
-import { shouldUseColors, type ColorSupportOptions } from './env.ts'
+import { ansiResetCode, ansiStyleCodes } from './ansi.ts'
+import type { TerminalStyleName } from './ansi.ts'
+import { shouldUseColors } from './env.ts'
+import type { ColorSupportOptions } from './env.ts'
 
 interface StyleCode {
   readonly open: string

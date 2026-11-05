@@ -5,11 +5,8 @@ import { redirect } from 'remix/response/redirect'
 import { resolveExternalAuth } from '../resolve-external-auth.ts'
 import { getReturnToHrefOptions } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
-import {
-  externalProviderRegistry,
-  getExternalProviderLabel,
-  type ExternalProviderRegistry,
-} from '../../../utils/external-auth.ts'
+import { externalProviderRegistry, getExternalProviderLabel } from '../../../utils/external-auth.ts'
+import type { ExternalProviderRegistry } from '../../../utils/external-auth.ts'
 
 const label = getExternalProviderLabel('github')
 

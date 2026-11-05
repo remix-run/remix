@@ -29,7 +29,8 @@ import { createResponseForStyle, createStyleCompiler, isStyleFilePath } from './
 import { resolveScriptTarget, resolveStyleTarget } from './target.ts'
 import type { AssetTarget, ResolvedScriptTarget, ResolvedStyleTarget } from './target.ts'
 import { createAssetServerWatcher } from './watch.ts'
-import { createAssetInspector, type AssetDetails } from './inspection.ts'
+import { createAssetInspector } from './inspection.ts'
+import type { AssetDetails } from './inspection.ts'
 import type { AssetServerWatcher, ChokidarWatcher } from './watch.ts'
 import { getVirtualStoreMountConfigs } from './virtual-store.ts'
 

@@ -1,7 +1,9 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
+import { afterEach, describe, it, mock } from '@remix-run/test'
+import type { FakeTimers } from '@remix-run/test'
 
-import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot } from '@remix-run/component'
+import type { Handle, RemixNode } from '@remix-run/component'
 
 import * as listbox from './listbox.ts'
 import type { ListboxOption, ListboxRef, ListboxValue } from './listbox.ts'

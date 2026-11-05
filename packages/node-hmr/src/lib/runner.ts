@@ -1,6 +1,8 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import type { Stats } from 'node:fs'
-import { createServer, type Server, type ServerResponse } from 'node:http'
+import { createServer } from 'node:http'
+import type { Server, ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
@@ -9,13 +11,10 @@ import { dirname, relative, resolve } from 'node:path'
 import { createStyles } from '@remix-run/terminal'
 import { watch } from 'chokidar'
 
-import {
-  type BrowserHmrFileEvent,
-  defaultBrowserHmrPathname,
-  type BrowserHmrEvent,
-  type HmrEventPayload,
-} from './browser-events.ts'
-import { createModuleStore, type ModuleRecord } from './module-store.ts'
+import { defaultBrowserHmrPathname } from './browser-events.ts'
+import type { BrowserHmrFileEvent, BrowserHmrEvent, HmrEventPayload } from './browser-events.ts'
+import { createModuleStore } from './module-store.ts'
+import type { ModuleRecord } from './module-store.ts'
 
 interface NodeHmrUpdate {
   acceptedUrl: string

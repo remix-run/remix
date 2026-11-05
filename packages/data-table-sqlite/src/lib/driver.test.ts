@@ -9,7 +9,8 @@ import { column, Database, table, eq } from '@remix-run/data-table'
 
 import { createNativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
-import { SqliteDatabaseDriver, type SqliteDatabaseClient } from './driver.ts'
+import { SqliteDatabaseDriver } from './driver.ts'
+import type { SqliteDatabaseClient } from './driver.ts'
 
 function createSqliteTestDatabase(
   ...args: ConstructorParameters<typeof SqliteDatabaseDriver>

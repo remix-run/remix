@@ -1,4 +1,5 @@
-import { clientEntry, css, navigate, on, type Handle } from 'remix/component'
+import { clientEntry, css, navigate, on } from 'remix/component'
+import type { Handle } from 'remix/component'
 import { button } from '../../../ui/public/button.ts'
 import { theme } from '../../../ui/public/design.ts'
 

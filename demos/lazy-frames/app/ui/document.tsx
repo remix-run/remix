@@ -1,4 +1,5 @@
-import { css, type Handle, type RemixNode } from 'remix/component'
+import { css } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { ImportMap } from 'remix/component/server'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'

@@ -1,4 +1,5 @@
-import { html, type SafeHtml } from 'remix/html-template'
+import { html } from 'remix/html-template'
+import type { SafeHtml } from 'remix/html-template'
 
 import { styles } from './styles.ts'
 

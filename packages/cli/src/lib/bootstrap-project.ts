@@ -10,7 +10,8 @@ import {
   targetDirectoryNotEmpty,
   targetPathNotDirectory,
 } from './errors.ts'
-import { runProgressStep, type StepProgressReporter } from './reporter.ts'
+import { runProgressStep } from './reporter.ts'
+import type { StepProgressReporter } from './reporter.ts'
 
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url))
 const PACKAGE_TEMPLATE_DIRECTORY = path.resolve(MODULE_DIRECTORY, '../../template')

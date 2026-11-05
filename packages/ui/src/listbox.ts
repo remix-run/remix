@@ -1,13 +1,7 @@
-import {
-  attrs,
-  createMixin,
-  on,
-  type ElementProps,
-  type Handle,
-  type MixinFactory,
-  type RemixNode,
-} from '@remix-run/component'
-import { hiddenTypeahead, matchNextItemBySearchText, type SearchValue } from './lib/typeahead.ts'
+import { attrs, createMixin, on } from '@remix-run/component'
+import type { ElementProps, Handle, MixinFactory, RemixNode } from '@remix-run/component'
+import { hiddenTypeahead, matchNextItemBySearchText } from './lib/typeahead.ts'
+import type { SearchValue } from './lib/typeahead.ts'
 import { flashAttribute } from './lib/flash-attribute.ts'
 
 export type ListboxValue = string | null

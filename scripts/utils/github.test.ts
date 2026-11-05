@@ -1,6 +1,7 @@
 import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { createRelease, type GitHubRequest } from './github.ts'
+import { createRelease } from './github.ts'
+import type { GitHubRequest } from './github.ts'
 
 interface MockCall {
   route: string

@@ -1,4 +1,5 @@
-import { clientEntry, css, on, type Handle } from 'remix/component'
+import { clientEntry, css, on } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 const FADE_MS = 180
 const HOLD_MS = 1200

@@ -1,4 +1,5 @@
-import { split, type Span } from './split.ts'
+import { split } from './split.ts'
+import type { Span } from './split.ts'
 import { createRoutePattern } from '../route-pattern.ts'
 import type {
   RoutePatternParts,

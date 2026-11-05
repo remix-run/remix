@@ -1,18 +1,14 @@
-import {
-  type MultipartParserOptions,
-  type MultipartPart,
-  isMultipartRequest,
-  parseMultipartRequest,
-} from '@remix-run/multipart-parser/future'
+import { isMultipartRequest, parseMultipartRequest } from '@remix-run/multipart-parser/future'
+import type { MultipartParserOptions, MultipartPart } from '@remix-run/multipart-parser/future'
 
 import {
-  type ParseFormDataOptions,
   FormDataParseError,
   MaxFilesExceededError,
   isParserLimitError,
   isUrlEncodedRequest,
   parseUrlEncodedFormData,
 } from '../form-data.ts'
+import type { ParseFormDataOptions } from '../form-data.ts'
 
 /**
  * A file that was uploaded as part of a `multipart/form-data` request, passed to a

@@ -3,7 +3,8 @@ import { describe, it } from '@remix-run/test'
 
 import { LazyFile } from '@remix-run/lazy-file'
 
-import { createFileResponse, type FileLike } from './file.ts'
+import { createFileResponse } from './file.ts'
+import type { FileLike } from './file.ts'
 
 // Bun's Blob/File `slice().stream()` still returns the full body instead of the
 // sliced body here, so these ranged body assertions fail under Bun.

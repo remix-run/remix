@@ -2,13 +2,10 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
 import { CliError } from '../errors.ts'
-import { loadRouteManifestFromAppRoot, type LoadedRouteManifest } from '../route-map.ts'
-import {
-  createDoctorSuite,
-  type DoctorFinding,
-  type DoctorFixPlan,
-  type DoctorSuiteResult,
-} from './types.ts'
+import { loadRouteManifestFromAppRoot } from '../route-map.ts'
+import type { LoadedRouteManifest } from '../route-map.ts'
+import { createDoctorSuite } from './types.ts'
+import type { DoctorFinding, DoctorFixPlan, DoctorSuiteResult } from './types.ts'
 
 export interface ProjectDoctorResult {
   routesFile: string

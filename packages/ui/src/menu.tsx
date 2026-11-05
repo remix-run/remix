@@ -1,17 +1,15 @@
-import {
-  attrs,
-  createMixin,
-  on,
-  ref,
-  type Dispatched,
-  type ElementProps,
-  type Handle,
-  type MixinFactory,
-  type RemixNode,
+import { attrs, createMixin, on, ref } from '@remix-run/component'
+import type {
+  Dispatched,
+  ElementProps,
+  Handle,
+  MixinFactory,
+  RemixNode,
 } from '@remix-run/component'
-import { type AnchorOptions, type AnchorPoint } from './anchor.ts'
+import type { AnchorOptions, AnchorPoint } from './anchor.ts'
 import * as popover from './popover.ts'
-import { hiddenTypeahead, matchNextItemBySearchText, type SearchValue } from './lib/typeahead.ts'
+import { hiddenTypeahead, matchNextItemBySearchText } from './lib/typeahead.ts'
+import type { SearchValue } from './lib/typeahead.ts'
 import { waitForCssTransition } from './lib/wait-for-css-transition.ts'
 import { wait } from './lib/wait.ts'
 import { createHoverAim } from './lib/hover-aim.ts'

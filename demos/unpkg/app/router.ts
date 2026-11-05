@@ -1,4 +1,5 @@
-import { createRouter, type RouterContext } from 'remix/router'
+import { createRouter } from 'remix/router'
+import type { RouterContext } from 'remix/router'
 
 import rootController from './actions/controller.ts'
 import { render } from './middleware/render.ts'

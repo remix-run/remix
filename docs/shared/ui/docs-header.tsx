@@ -1,4 +1,5 @@
-import { css, type Handle } from 'remix/component'
+import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 import { button } from './button.ts'
 import { Icon } from './icon.tsx'

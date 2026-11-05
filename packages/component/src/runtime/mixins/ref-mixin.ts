@@ -1,4 +1,5 @@
-import { createMixin, type MixinFactory } from './mixin.ts'
+import { createMixin } from './mixin.ts'
+import type { MixinFactory } from './mixin.ts'
 import type { ElementProps } from '../core/vnode.ts'
 
 /**

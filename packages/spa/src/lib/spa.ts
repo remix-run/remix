@@ -1,12 +1,8 @@
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
-import { renderWith, type Renderer } from '@remix-run/render-middleware'
-import {
-  run as runRuntime,
-  spaResponse,
-  type AppRuntime,
-  type RemixNode,
-  type ResolveFrameOptions,
-} from '@remix-run/component'
+import { renderWith } from '@remix-run/render-middleware'
+import type { Renderer } from '@remix-run/render-middleware'
+import { run as runRuntime, spaResponse } from '@remix-run/component'
+import type { AppRuntime, RemixNode, ResolveFrameOptions } from '@remix-run/component'
 
 /** Creates a response that the SPA runtime can render. */
 export interface Render {

@@ -3,7 +3,8 @@ import { Vary } from 'remix/headers'
 import { describe, it } from 'remix/test'
 
 import { scriptEntry } from './assets.ts'
-import { localeCookie, type SupportedLanguage } from './i18n/config.ts'
+import { localeCookie } from './i18n/config.ts'
+import type { SupportedLanguage } from './i18n/config.ts'
 import { createAppRouter } from './router.ts'
 import { routes } from './routes.ts'
 

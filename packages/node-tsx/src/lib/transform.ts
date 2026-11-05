@@ -1,5 +1,7 @@
-import { transformSync, type OxcError, type TransformOptions } from 'oxc-transform'
-import { getTsconfig, type TsConfigResult } from 'get-tsconfig'
+import { transformSync } from 'oxc-transform'
+import type { OxcError, TransformOptions } from 'oxc-transform'
+import { getTsconfig } from 'get-tsconfig'
+import type { TsConfigResult } from 'get-tsconfig'
 import * as path from 'node:path'
 
 import { getModuleFormat } from './package-type.ts'

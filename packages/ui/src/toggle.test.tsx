@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
-import { createRoot, type RemixNode } from '@remix-run/component'
+import { createRoot } from '@remix-run/component'
+import type { RemixNode } from '@remix-run/component'
 
 import { ToggleChangeEvent, onToggleChange, toggle } from './toggle.ts'
 

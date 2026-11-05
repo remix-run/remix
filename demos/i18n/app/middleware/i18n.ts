@@ -1,7 +1,8 @@
 import { createInstance } from 'i18next'
 import { Vary } from 'remix/headers'
 import { AcceptLanguage } from 'remix/headers/accept-language'
-import { createContextKey, type Middleware } from 'remix/router'
+import { createContextKey } from 'remix/router'
+import type { Middleware } from 'remix/router'
 
 import {
   createTranslator,
@@ -10,9 +11,8 @@ import {
   localeCookie,
   resources,
   supportedLanguages,
-  type DetectionResult,
-  type I18nState,
 } from '../i18n/config.ts'
+import type { DetectionResult, I18nState } from '../i18n/config.ts'
 
 const requestI18n = createContextKey<I18nState>()
 

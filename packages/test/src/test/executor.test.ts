@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import type { TestContext } from '../lib/context.ts'
-import { runTests, type RunTestsOptions } from '../lib/executor.ts'
+import { runTests } from '../lib/executor.ts'
+import type { RunTestsOptions } from '../lib/executor.ts'
 import { describe, it } from '../lib/framework.ts'
 import type { TestResults } from '../lib/reporters/results.ts'
 

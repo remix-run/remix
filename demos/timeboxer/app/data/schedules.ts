@@ -1,6 +1,7 @@
 import type { Database } from 'remix/data-table'
 
-import { scheduleBlocks, schedules, type Schedule, type ScheduleBlock } from './schema.ts'
+import { scheduleBlocks, schedules } from './schema.ts'
+import type { Schedule, ScheduleBlock } from './schema.ts'
 
 export type ScheduleInputId = string
 

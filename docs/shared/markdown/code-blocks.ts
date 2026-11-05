@@ -4,7 +4,8 @@ import type {
   RootContent as HastRootContent,
   Root as HastRoot,
 } from 'hast'
-import { codeToHast, type ShikiTransformer } from 'shiki'
+import { codeToHast } from 'shiki'
+import type { ShikiTransformer } from 'shiki'
 import { visit } from 'unist-util-visit'
 
 import type { CodeBlock, CodeBlockInfo, HighlightCodeOptions } from './types.ts'

@@ -1,30 +1,20 @@
 import { RoutePattern } from '@remix-run/route-pattern'
 import { joinPatterns } from '@remix-run/route-pattern/join'
-import {
-  createMultiMatcher,
-  type Match,
-  type MatchParams,
-  type MultiMatcher,
-} from '@remix-run/route-pattern/match'
+import { createMultiMatcher } from '@remix-run/route-pattern/match'
+import type { Match, MatchParams, MultiMatcher } from '@remix-run/route-pattern/match'
 import * as Specificity from '@remix-run/route-pattern/specificity'
 
-import { type AnyMiddleware, type MiddlewareContext, runMiddleware } from './middleware.ts'
+import { runMiddleware } from './middleware.ts'
+import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
-import {
-  type ContextWithParams,
-  RequestContext,
-  type requestContextTypes,
-} from './request-context.ts'
-import { RequestMethods, type RequestMethod } from './request-methods.ts'
-import { type RouteMap, Route } from './route-map.ts'
-import {
-  type RequestHandler,
-  type Action,
-  type Controller,
-  isRequestHandler,
-  isActionObject,
-  isController,
-} from './controller.ts'
+import { RequestContext } from './request-context.ts'
+import type { ContextWithParams, requestContextTypes } from './request-context.ts'
+import { RequestMethods } from './request-methods.ts'
+import type { RequestMethod } from './request-methods.ts'
+import { Route } from './route-map.ts'
+import type { RouteMap } from './route-map.ts'
+import { isRequestHandler, isActionObject, isController } from './controller.ts'
+import type { RequestHandler, Action, Controller } from './controller.ts'
 
 type AnyContext = RequestContext<any, any>
 

@@ -1,13 +1,7 @@
-import {
-  attrs,
-  createMixin,
-  on,
-  type ElementProps,
-  type Handle,
-  type MixinFactory,
-  type RemixNode,
-} from '@remix-run/component'
-import { anchor as positionAnchor, type AnchorOptions, type AnchorTarget } from './anchor.ts'
+import { attrs, createMixin, on } from '@remix-run/component'
+import type { ElementProps, Handle, MixinFactory, RemixNode } from '@remix-run/component'
+import { anchor as positionAnchor } from './anchor.ts'
+import type { AnchorOptions, AnchorTarget } from './anchor.ts'
 import { onOutsideClick } from './lib/outside-click.ts'
 import { lockScroll } from './lib/scroll-lock.ts'
 

@@ -3,14 +3,11 @@ import { fileURLToPath } from 'node:url'
 import { openLazyFile } from 'remix/fs'
 import { createFileResponse } from 'remix/response/file'
 import { createController } from 'remix/router'
-import { css, type Handle } from 'remix/component'
+import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
-import {
-  getExhibit,
-  motionArtifact,
-  type InteractiveExhibit,
-  type UiExhibit,
-} from '../../data/exhibits.ts'
+import { getExhibit, motionArtifact } from '../../data/exhibits.ts'
+import type { InteractiveExhibit, UiExhibit } from '../../data/exhibits.ts'
 import { routes } from '../../routes.ts'
 import { FramePlayground } from './public/frame-playground.tsx'
 

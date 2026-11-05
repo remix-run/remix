@@ -4,8 +4,8 @@ import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
   getPlaywrightPageOptions,
-  type PlaywrightUseOpts,
 } from './playwright.ts'
+import type { PlaywrightUseOpts } from './playwright.ts'
 import type { CoverageConfig } from './coverage.ts'
 import type { TestResults } from './reporters/results.ts'
 import { createFailedResults } from './worker-results.ts'

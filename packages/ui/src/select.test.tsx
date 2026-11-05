@@ -1,7 +1,9 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
+import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
+import type { FakeTimers } from '@remix-run/test'
 
-import { createRoot, on, type Handle, type Props, type RemixNode } from '@remix-run/component'
+import { createRoot, on } from '@remix-run/component'
+import type { Handle, Props, RemixNode } from '@remix-run/component'
 
 import * as popover from '@remix-run/ui/popover'
 import { onSelectChange, SelectChangeEvent } from './select.tsx'

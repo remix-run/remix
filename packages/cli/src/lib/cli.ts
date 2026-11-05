@@ -1,7 +1,8 @@
 import * as process from 'node:process'
 
 import { getCliHelpText, runHelpCommand } from './commands/help.ts'
-import { resolveCliContext, type CliContext } from './cli-context.ts'
+import { resolveCliContext } from './cli-context.ts'
+import type { CliContext } from './cli-context.ts'
 import { missingOptionValue, renderCliError, toCliError, unknownCommand } from './errors.ts'
 import { configureColors, restoreTerminalFormatting } from './terminal.ts'
 

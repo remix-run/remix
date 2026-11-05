@@ -1,5 +1,6 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
+import { afterEach, describe, it, mock } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 import {
   navigate,
   startNavigationListener,

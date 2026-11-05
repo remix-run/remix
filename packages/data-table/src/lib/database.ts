@@ -10,11 +10,8 @@ import type {
 } from './driver.ts'
 import type { ColumnBuilder } from './column.ts'
 import { DataTableDatabaseError, DataTableQueryError } from './errors.ts'
-import {
-  executeOperation,
-  runInTransaction,
-  type QueryExecutionContext,
-} from './database/execution-context.ts'
+import { executeOperation, runInTransaction } from './database/execution-context.ts'
+import type { QueryExecutionContext } from './database/execution-context.ts'
 import {
   asQueryTableInput,
   getPrimaryKeyWhere,
