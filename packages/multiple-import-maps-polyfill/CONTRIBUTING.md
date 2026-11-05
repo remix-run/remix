@@ -34,6 +34,7 @@ The fork keeps ES Module Shims' graph fetching, parsing, resolution, rewriting, 
 - The runtime is an ES module with explicit `importShim` and `preloadShim` exports. `preloadShim` accepts one or more module specifiers, exposes upstream's `processPreload` fetch-cache path without requiring declarative preload links, and ignores preload failures at the public wrapper boundary.
 - Rewritten dynamic imports use a private symbol-keyed bridge instead of a public `globalThis.importShim` API.
 - Multiple import map detection retains upstream's iframe feature test and resolves conservatively after one second when the test cannot complete, such as when blocked by Content Security Policy.
+- Multiple import map detection retriggers the iframe's early `onload` only when the test document is written without `srcdoc`. Chromium, Firefox and WebKit all fire `onload` synchronously when the iframe is appended, so upstream's retrigger after setting `srcdoc` runs the test a second time in the initial `about:blank` document, and the `srcdoc` navigation then cancels that run's blob module import. The `srcdoc` document's own `load` event still runs the fallback for browsers that don't execute `srcdoc` scripts.
 - Import maps are read from standard `<script type="importmap">` elements, including maps appended at runtime.
 - Processed import map elements are tracked in a `WeakSet` instead of writing upstream's shared `ep` marker onto the elements.
 - Declarative module scripts and module preload elements are not intercepted.

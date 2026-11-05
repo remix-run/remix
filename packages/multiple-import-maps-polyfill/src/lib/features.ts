@@ -75,6 +75,8 @@ export const featureDetectionPromise: Promise<void> = (async function () {
     if ('srcdoc' in (iframe as object)) iframe.srcdoc = maybeTrustedInnerHTML(importMapTest)
     else iframe.contentDocument!.write(importMapTest)
     // retrigger onload for Safari only if necessary
-    if (onloadCalledWhileNotReady) doOnload()
+    // srcdoc's own load event runs the fallback, and retriggering here would run the test in the
+    // initial about:blank document, whose import srcdoc's navigation then cancels
+    if (onloadCalledWhileNotReady && !('srcdoc' in (iframe as object))) doOnload()
   })
 })().catch(() => {})

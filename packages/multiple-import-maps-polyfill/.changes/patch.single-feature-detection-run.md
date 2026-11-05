@@ -1,0 +1,1 @@
+Multiple import map detection no longer runs its feature test twice in Chromium, Firefox and WebKit. Every full page load showed a canceled `blob:` script request in the network panel, from a second test run in the detection iframe's initial `about:blank` document that the iframe's `srcdoc` navigation then canceled. Detection results are unchanged.
