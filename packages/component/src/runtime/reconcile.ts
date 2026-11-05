@@ -506,6 +506,8 @@ function ensureControlledReflection(
   return state
 }
 
+const controlledSelectStates = new WeakMap<HTMLSelectElement, ControlledReflectionState>()
+
 function syncControlledReflection(node: CommittedHostNode, scheduler: Scheduler): void {
   let props = getHostProps(node)
   if (!node._controlledState && props.value === undefined && props.checked === undefined) return
@@ -515,13 +517,26 @@ function syncControlledReflection(node: CommittedHostNode, scheduler: Scheduler)
 
   state.hasControlledValue = canManageValue(node.type, node._dom) && props.value !== undefined
   state.controlledValue = props.value
-  if (state.hasControlledValue && node._dom instanceof HTMLSelectElement) {
-    setSelectValue(node._dom, props.value)
+  if (node._dom instanceof HTMLSelectElement) {
+    if (state.hasControlledValue) {
+      controlledSelectStates.set(node._dom, state)
+      setSelectValue(node._dom, props.value)
+    } else {
+      controlledSelectStates.delete(node._dom)
+    }
   }
   state.hasControlledChecked =
     canReflectProperty(node._dom, 'checked') && props.checked !== undefined
   state.controlledChecked = props.checked
   state.pendingRestoreVersion++
+}
+
+// Options can update through components, mixins, or separately hydrated client entries.
+export function restoreAncestorSelect(parent: ParentNode): void {
+  let select = parent instanceof Element ? parent.closest('select') : null
+  if (!(select instanceof HTMLSelectElement)) return
+  let state = controlledSelectStates.get(select)
+  if (state && !state.disposed) setSelectValue(select, state.controlledValue)
 }
 
 function scheduleControlledRestore(
@@ -555,6 +570,7 @@ function disposeControlledReflection(node: CommittedHostNode, detach: boolean): 
   let state = node._controlledState
   if (!state) return
   state.disposed = true
+  if (node._dom instanceof HTMLSelectElement) controlledSelectStates.delete(node._dom)
   state.pendingRestoreVersion++
   if (detach && state.listenersAttached) {
     node._dom.removeEventListener('input', state.onInput)
@@ -677,6 +693,7 @@ function enqueueMixinBindingUpdate(
       applyResolvedHostProps(node, resolved)
       patchHostProps(prevProps, resolved.props, this.node)
       syncControlledReflection(node, this.scheduler)
+      if (this.node.parentNode) restoreAncestorSelect(this.node.parentNode)
 
       dispatchMixinCommit(state)
       done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
@@ -965,11 +982,6 @@ function commitRetainedHostNode(
 }
 
 function setupHostNode(node: CommittedHostNode, scheduler: Scheduler): void {
-  let props = getHostProps(node)
-  if (props.defaultValue != null && node._dom instanceof HTMLSelectElement) {
-    setSelectDefaultValue(node._dom, props.defaultValue)
-  }
-
   syncDirectEventListeners(node)
   syncControlledReflection(node, scheduler)
 }
@@ -1107,6 +1119,15 @@ function mountHostNode(
     dom.innerHTML = hostProps.innerHTML
   } else {
     committed._children = diffChildren(null, childInputs, dom, committed, context, childCursor)
+  }
+
+  if (
+    !childCursor &&
+    dom instanceof HTMLSelectElement &&
+    hostProps.value == null &&
+    hostProps.defaultValue != null
+  ) {
+    setSelectDefaultValue(dom, hostProps.defaultValue)
   }
 
   setupHostNode(committed, context.scheduler)
@@ -1387,6 +1408,7 @@ export function renderComponent(
   let content = diffVNodes(currContent, toVNode(element), domParent, next, context, anchor, cursor)
   let committed = commitComponentNode(next, content)
   handle.setScheduleUpdate(scheduler, committed, domParent)
+  restoreAncestorSelect(domParent)
 
   scheduler.enqueueTasks(tasks)
 
