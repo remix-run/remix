@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./app/browser": "./app/public/run-docs-app.ts",
     "./hmr/assets": "./hmr/assets.ts",
     "./hmr/browser": "./hmr/public/server-update.ts",
     "./markdown/code-blocks": "./markdown/code-blocks.ts",
