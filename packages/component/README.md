@@ -43,13 +43,6 @@ A component receives a `handle` and returns a render function. State is a variab
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const buttonStyle = css({
-  padding: '8px 12px',
-  borderRadius: '6px',
-  '&:hover': { background: '#f3f0ff' },
-  '&:disabled': { opacity: 0.6 },
-})
-
 export function LikeButton(handle: Handle<{ href: string; initialLikes: number }>) {
   let likes = handle.props.initialLikes
   let saving = false
@@ -59,7 +52,6 @@ export function LikeButton(handle: Handle<{ href: string; initialLikes: number }
       type="button"
       disabled={saving}
       mix={[
-        buttonStyle,
         on('click', async (_event, signal) => {
           likes++
           saving = true
@@ -77,6 +69,12 @@ export function LikeButton(handle: Handle<{ href: string; initialLikes: number }
 
           saving = false
           handle.update()
+        }),
+        css({
+          padding: '8px 12px',
+          borderRadius: '6px',
+          '&:hover': { background: '#f3f0ff' },
+          '&:disabled': { opacity: 0.6 },
         }),
       ]}
     >
@@ -404,6 +402,39 @@ function ArticleBody(handle: Handle<{ html: string }>) {
 
 When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` marks the HTML as trusted but does not sanitize it, so only pass trusted or already-sanitized HTML.
 
+### Form controls
+
+Use `defaultValue` to initialize text inputs, textareas, and selects, or `defaultChecked` for checkboxes and radio buttons. These defaults also determine what native form reset restores:
+
+```tsx
+<form>
+  <input name="name" aria-label="Name" defaultValue="Ada" />
+  <textarea name="bio" aria-label="Bio" defaultValue="Building for the web." />
+  <label>
+    <input type="checkbox" name="updates" defaultChecked />
+    Email updates
+  </label>
+  <select name="topics" aria-label="Topics" multiple defaultValue={['typescript', 'css']}>
+    <option value="typescript">TypeScript</option>
+    <option value="css">CSS</option>
+    <option value="html">HTML</option>
+  </select>
+  <button type="reset">Reset</button>
+</form>
+```
+
+To control the current value, supply `value` on a text input, textarea, or select, or `checked` on a checkbox or radio button. Update that prop from an [event handler](#events) and call `handle.update()` to accept edits; otherwise Remix restores the supplied value after interaction. Omitting the prop or setting it to `undefined` leaves that state uncontrolled.
+
+For inputs and textareas, changing `defaultValue` updates the native reset default while preserving user edits. `defaultChecked` does the same for checkboxes and radio buttons.
+
+#### Select values
+
+Selects apply `defaultValue` only during initialization; later changes or removal are ignored. Changing `multiple` on an uncontrolled select reapplies its current `defaultValue`, or resets selection if no default is provided. Use `defaultValue={[]}` for an initially empty multiple select, or controlled `value={[]}` to clear the current selection.
+
+Initial selection follows this precedence: select `value`, then `defaultValue`, then option `selected`. Selections render into option markup on the server, including options inside components and optgroups. Hydration preserves server-rendered reset defaults and user edits to uncontrolled selects.
+
+A scalar controlled value selects the first matching option; arrays on multiple selects select every match. Options without an explicit value use their text children. When a select supplies `value` or `defaultValue`, using `innerHTML` on the select or its optgroups throws during server rendering; render options as JSX children instead. Individual options using `innerHTML` must supply an explicit `value` for server rendering when their select supplies `value` or `defaultValue`.
+
 ## Keys
 
 Give list items a `key` when a list can be reordered, filtered, or added to. Elements and components with matching keys are moved instead of recreated, so they keep:
@@ -511,35 +542,6 @@ To listen for your own events with full types, declare them on `HTMLElementEvent
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const toggleStyle = css({
-  display: 'inline-flex',
-  gap: '6px',
-  padding: '8px 12px',
-  border: '1px solid #d6d6d6',
-  borderRadius: '6px',
-  background: 'white',
-  '&:hover': {
-    borderColor: '#6d28d9',
-  },
-  '&[aria-pressed="true"]': {
-    background: '#6d28d9',
-    color: 'white',
-  },
-  '&::after': {
-    content: '"✓"',
-    visibility: 'hidden',
-  },
-  '&[aria-pressed="true"]::after': {
-    visibility: 'visible',
-  },
-  '.label': {
-    fontWeight: 600,
-  },
-  '@media (max-width: 40rem)': {
-    padding: '12px 16px',
-  },
-})
-
 function FavoriteToggle(handle: Handle) {
   let pressed = false
 
@@ -548,10 +550,37 @@ function FavoriteToggle(handle: Handle) {
       type="button"
       aria-pressed={pressed}
       mix={[
-        toggleStyle,
         on('click', () => {
           pressed = !pressed
           handle.update()
+        }),
+        css({
+          display: 'inline-flex',
+          gap: '6px',
+          padding: '8px 12px',
+          border: '1px solid #d6d6d6',
+          borderRadius: '6px',
+          background: 'white',
+          '&:hover': {
+            borderColor: '#6d28d9',
+          },
+          '&[aria-pressed="true"]': {
+            background: '#6d28d9',
+            color: 'white',
+          },
+          '&::after': {
+            content: '"✓"',
+            visibility: 'hidden',
+          },
+          '&[aria-pressed="true"]::after': {
+            visibility: 'visible',
+          },
+          '.label': {
+            fontWeight: 600,
+          },
+          '@media (max-width: 40rem)': {
+            padding: '12px 16px',
+          },
         }),
       ]}
     >
@@ -579,10 +608,13 @@ Each distinct style object becomes its own class and rule. Use `css(...)` for st
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const barStyle = css({ height: '4px', background: '#6d28d9', transformOrigin: 'left' })
-
 function ProgressBar(handle: Handle<{ value: number }>) {
-  return () => <div mix={barStyle} style={{ transform: `scaleX(${handle.props.value})` }} />
+  return () => (
+    <div
+      mix={css({ height: '4px', background: '#6d28d9', transformOrigin: 'left' })}
+      style={{ transform: `scaleX(${handle.props.value})` }}
+    />
+  )
 }
 ```
 
@@ -610,16 +642,17 @@ Combine styles that set different properties, such as layout and appearance. For
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
-const buttonStyle = css({
-  background: 'gray',
-  '&[data-variant="danger"]': {
-    background: 'red',
-  },
-})
-
 function Button(handle: Handle<{ label: string; variant?: 'danger' }>) {
   return () => (
-    <button data-variant={handle.props.variant} mix={buttonStyle}>
+    <button
+      data-variant={handle.props.variant}
+      mix={css({
+        background: 'gray',
+        '&[data-variant="danger"]': {
+          background: 'red',
+        },
+      })}
+    >
       {handle.props.label}
     </button>
   )

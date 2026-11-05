@@ -654,9 +654,14 @@ function interceptNavigation(
 
   let interceptOptions: NavigationInterceptOptions = {
     ...options,
-    handler() {
+    async handler() {
       bindTransition()
-      return options.handler?.()
+      try {
+        await options.handler?.()
+      } catch (error) {
+        if (options.focusReset !== 'manual') keepFocusAfterFailure(navigation, event)
+        throw error
+      }
     },
   }
   let precommitHandler = options.precommitHandler
@@ -673,6 +678,40 @@ function interceptNavigation(
     scrollStyleWorkarounds?.remove()
     throw error
   }
+}
+
+// The Navigation API resets focus once a navigation settles, even when its handler fails and the
+// page stays as it was, which would take the visitor away from a form whose save failed. The reset
+// runs before the signal aborts. Restore focus then, before `navigateerror` listeners run, unless
+// an earlier abort listener has already moved focus or started another navigation. A navigation
+// that was already replaced leaves focus to its successor.
+function keepFocusAfterFailure(navigation: Navigation, event: NavigateEvent): void {
+  let focused = document.activeElement
+  if (event.signal.aborted || focused === document.body) return
+  if (!(focused instanceof HTMLElement || focused instanceof SVGElement)) return
+
+  let controller = new AbortController()
+  let { signal } = controller
+  function stop() {
+    controller.abort()
+  }
+  function onFocusChange() {
+    // The browser's reset happens before abort; focus changes during abort belong to app code.
+    if (event.signal.aborted) stop()
+  }
+  document.addEventListener('focus', onFocusChange, { capture: true, signal })
+  document.addEventListener('blur', onFocusChange, { capture: true, signal })
+  navigation.addEventListener('navigate', stop, { signal })
+  event.signal.addEventListener(
+    'abort',
+    () => {
+      stop()
+      if (focused.isConnected && document.activeElement !== focused) {
+        focused.focus({ preventScroll: true })
+      }
+    },
+    { once: true, signal },
+  )
 }
 
 const disableScrollAnchoringCssText = 'html, body { overflow-anchor: none !important; }'

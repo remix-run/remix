@@ -186,14 +186,6 @@ export default function SpringDemo(handle: Handle) {
           dragY = targetY
           handle.update()
         }),
-        css({
-          position: 'relative',
-          width: '100%',
-          height: '480px',
-          backgroundColor: '#1a1a2e',
-          cursor: 'crosshair',
-          overflow: 'hidden',
-        }),
         on('click', (event) => {
           if (!(event.target instanceof Element)) return
           if (event.target.closest('.controls, .draggable')) return
@@ -202,6 +194,14 @@ export default function SpringDemo(handle: Handle) {
           targetX = point.x
           targetY = point.y
           handle.update()
+        }),
+        css({
+          position: 'relative',
+          width: '100%',
+          height: '480px',
+          backgroundColor: '#1a1a2e',
+          cursor: 'crosshair',
+          overflow: 'hidden',
         }),
       ]}
     >
@@ -233,18 +233,6 @@ export default function SpringDemo(handle: Handle) {
       <div
         class="draggable"
         mix={[
-          css({
-            position: 'absolute',
-            width: '60px',
-            height: '60px',
-            borderRadius: '50%',
-            backgroundColor: '#0ea5e9',
-            boxShadow: '0 0 20px rgba(14, 165, 233, 0.5)',
-            transform: 'translate(-50%, -50%)',
-            userSelect: 'none',
-            touchAction: 'none',
-            zIndex: 10,
-          }),
           on('transitionend', () => {
             isAnimating = false
             handle.update()
@@ -299,6 +287,18 @@ export default function SpringDemo(handle: Handle) {
             dragX = targetX
             dragY = targetY
             handle.update()
+          }),
+          css({
+            position: 'absolute',
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            backgroundColor: '#0ea5e9',
+            boxShadow: '0 0 20px rgba(14, 165, 233, 0.5)',
+            transform: 'translate(-50%, -50%)',
+            userSelect: 'none',
+            touchAction: 'none',
+            zIndex: 10,
           }),
         ]}
         style={{
@@ -357,12 +357,12 @@ export default function SpringDemo(handle: Handle) {
               value={preset}
               checked={selectedPreset === preset}
               mix={[
-                css({ accentColor: '#0ea5e9' }),
                 on('change', () => {
                   selectedPreset = preset
                   springValue = spring(selectedPreset)
                   handle.update()
                 }),
+                css({ accentColor: '#0ea5e9' }),
               ]}
             />
             {preset}

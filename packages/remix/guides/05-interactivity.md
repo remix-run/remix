@@ -345,6 +345,9 @@ export function KeyedList(handle: Handle) {
   ];
 
   let shuffleInterval: ReturnType<typeof setInterval> | null = null;
+  handle.signal.addEventListener("abort", () => {
+    if (shuffleInterval !== null) clearInterval(shuffleInterval);
+  });
 
   let moveUp = (index: number) => {
     if (index === 0) return;
@@ -391,7 +394,8 @@ export function KeyedList(handle: Handle) {
 
   return () => (
     <div>
-      <div class="controls">
+      <p>Type in a field, then shuffle the list. Each field keeps its text.</p>
+      <div>
         <button mix={[on("click", reverse)]}>Reverse List</button>
         <button mix={[on("click", shuffle)]}>Shuffle List</button>
         <button mix={[on("click", toggleAutoShuffle)]}>
@@ -400,20 +404,10 @@ export function KeyedList(handle: Handle) {
       </div>
 
       {items.map((item, index) => (
-        <div key={item.id} class="list-item">
+        <div key={item.id}>
           <input type="text" placeholder={item.label} defaultValue={item.label} />
-          <button
-            // disabled={index === 0}
-            mix={[on("click", () => moveUp(index))]}
-          >
-            ↑
-          </button>
-          <button
-            // disabled={index === items.length - 1}
-            mix={[on("click", () => moveDown(index))]}
-          >
-            ↓
-          </button>
+          <button mix={[on("click", () => moveUp(index))]}>↑</button>
+          <button mix={[on("click", () => moveDown(index))]}>↓</button>
         </div>
       ))}
     </div>
@@ -531,23 +525,21 @@ array when the element needs several:
 import { attrs, css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-const saveButtonStyle = css({
-  minWidth: "8rem",
-  minHeight: "2.5rem",
-  border: 0,
-  borderRadius: "999px",
-  background: "#111",
-  color: "#fff",
-});
-
 function SaveButton(_handle: Handle) {
   return () => (
     <button
       mix={[
-        saveButtonStyle,
         attrs({ type: "button" }),
         ref((node) => console.log("Mounted", node)),
         on("click", () => console.log("Save album")),
+        css({
+          minWidth: "8rem",
+          minHeight: "2.5rem",
+          border: 0,
+          borderRadius: "999px",
+          background: "#111",
+          color: "#fff",
+        }),
       ]}
     >
       Save

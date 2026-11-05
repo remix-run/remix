@@ -80,6 +80,9 @@ importers:
 
   demos/bookstore:
     dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -2375,6 +2378,9 @@ importers:
       '@remix-run/component':
         specifier: workspace:^
         version: link:../component
+      '@remix-run/data-schema':
+        specifier: workspace:*
+        version: link:../data-schema
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
