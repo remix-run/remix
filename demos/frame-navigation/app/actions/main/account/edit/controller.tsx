@@ -10,7 +10,7 @@ import { AccountDocument } from '../account-page.tsx'
 import { AccountEditor, type AccountFormErrors } from './edit-page.tsx'
 
 export default createController(routes.main.account.edit, {
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   actions: {
     index({ render, request }) {
       let editor = <AccountEditor values={getAccount()} />

@@ -9,7 +9,7 @@ import { MainCoursesPage } from './courses-page.tsx'
 import { MainIndexPage } from './index-page.tsx'
 
 export default createController(routes.main, {
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   actions: {
     index({ render }) {
       return render(

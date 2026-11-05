@@ -16,7 +16,7 @@ import { Privacy } from './privacy-page.tsx'
 import { Profile } from './profile-page.tsx'
 
 export default createController(routes.settings, {
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   actions: {
     index() {
       return redirect(routes.settings.overview.href(), 303)

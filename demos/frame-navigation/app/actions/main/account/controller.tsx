@@ -6,7 +6,7 @@ import { frames, routes } from '../../../routes.ts'
 import { AccountDocument, AccountPage } from './account-page.tsx'
 
 export default createController(routes.main.account, {
-  middleware: [requireAuth],
+  middleware: [requireAuth()],
   actions: {
     index({ render, request, url }) {
       let page = <AccountPage account={getAccount()} saved={url.searchParams.has('saved')} />
