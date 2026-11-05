@@ -67,6 +67,8 @@ export type PendingClientEntries = Map<
 >
 
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
+  /** Retain the final redirect URL after a successful public frame reload. */
+  adoptRedirectSrc?: boolean
   /** The initiating anchor, area, or owning form. */
   element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
   /** The actual submitter captured by the native submit event. */

@@ -746,6 +746,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
     frame.src = src
     let reloadOptions: FrameNavigationOptions = {}
+    if (options?.adoptRedirectSrc) reloadOptions.adoptRedirectSrc = true
     if (method !== undefined) reloadOptions.method = method
     if (encType !== undefined) reloadOptions.encType = encType
     if (formData !== undefined) reloadOptions.formData = formData
@@ -877,7 +878,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let failure: ReloadFailure | undefined
     try {
       // The source is for the reload's events; resolvers get the options they document.
-      let { element: _, submitter: __, form: ___, ...resolveOptions } = options ?? {}
+      let {
+        adoptRedirectSrc,
+        element: _,
+        submitter: __,
+        form: ___,
+        ...resolveOptions
+      } = options ?? {}
       let resolution = await init.resolveFrame(frame.src, {
         ...resolveOptions,
         signal: controller.signal,
@@ -904,6 +911,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       })
       reconciliationTracker.finalize()
       await reconciliationTracker.ready()
+      if (adoptRedirectSrc && redirectedTo && !isStale()) frame.src = redirectedTo
       return {
         signal: controller.signal,
         redirectedTo: isStale() ? undefined : redirectedTo,

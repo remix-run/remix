@@ -1,0 +1,1 @@
+Use `frame.reload({ adoptRedirectSrc: true })` through `remix/component` to retain a followed redirect's final URL for later reloads. Native forms can use ordinary document redirects while an application submit handler loads the frame's updated content and adopts its source without changing browser history.

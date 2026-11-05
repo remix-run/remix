@@ -218,6 +218,24 @@ await handle.frames.top.reload();
 updates the region with the route's current HTML. Client entries inside matching content keep their
 setup state and receive current server props.
 
+Pass `adoptRedirectSrc: true` when a reload should retain the final redirect destination as its
+source. For example, a cart mutation can redirect its frame request to the updated cart items:
+
+```tsx
+await handle.frames.get("cart")?.reload({
+  src: "/cart/update",
+  method: "post",
+  body: formData,
+  adoptRedirectSrc: true,
+});
+```
+
+If the request redirects to `/cart/items`, later reloads GET `/cart/items` without resending the
+mutation. Adoption happens after a successful reload, before completion events and promises settle.
+It does not change the browser URL or history. Omit the option to retain the requested source, such
+as `/reports/latest`, even when its response redirects. Custom resolvers must return the followed
+`Response` to preserve its redirect metadata.
+
 ## Navigate a frame with a form
 
 Once `run()` starts, an eligible same-origin form follows the same frame navigation path as a link.

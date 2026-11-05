@@ -285,6 +285,11 @@ export type FrameHandleEventMap = {
 export interface FrameReloadOptions {
   /** Source to reload and retain for subsequent reloads. Defaults to the current source. */
   src?: string
+  /**
+   * Retain the final redirect URL as the source after a successful reload. Defaults to `false`.
+   * The source updates before completion events and promises settle, without changing history.
+   */
+  adoptRedirectSrc?: boolean
   /** Form request method: `GET` or `POST`, case-insensitive. Other values default to `GET`. */
   method?: string
   /**

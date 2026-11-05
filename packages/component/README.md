@@ -1205,7 +1205,7 @@ await handle.frame.reload({
 - POST defaults to `application/x-www-form-urlencoded`. Use `encType` to select `multipart/form-data` or `text/plain`. For `multipart/form-data`, Fetch generates the boundary. URL-encoded and plain-text submissions use file names in place of file contents and normalize line breaks to CRLF.
 - Methods and encodings are case-insensitive, and unsupported values use the defaults.
 - Each reload makes one resolver request. Custom resolvers receive the requested `src`, `method`, and `signal`, plus `formData` and a normalized `encType` for POST.
-- Redirect responses render their final content without changing the frame's requested source or the browser URL.
+- Redirect responses render their final content and retain the requested source by default. Set `adoptRedirectSrc: true` to retain the final redirect URL after a successful reload, before completion events and promises settle. Failed, cancelled, or superseded reloads don't adopt a redirect URL. The browser URL and history stay unchanged.
 - A newer reload cancels earlier client work for that frame, including pending requests and streamed content. Cancelling client work can't undo a mutation the server has already performed.
 
 Reloads don't run constraint validation or dispatch a submit event. To reload with a form's values, validate and build the form data yourself:
@@ -1221,6 +1221,36 @@ if (form.reportValidity()) {
   })
 }
 ```
+
+To enhance a native form with an in-place update, intercept its submission and reload the target frame:
+
+```tsx
+<form
+  method="post"
+  action="/cart/update"
+  mix={on('submit', async (event) => {
+    if (event.defaultPrevented) return
+    let frame = handle.frames.get('cart')
+    if (!frame) return
+    event.preventDefault()
+    try {
+      await frame.reload({
+        src: '/cart/update',
+        method: 'post',
+        body: new FormData(event.currentTarget, event.submitter),
+        adoptRedirectSrc: true,
+      })
+    } catch (error) {
+      console.error(error)
+    }
+  })}
+>
+  <input type="number" name="quantity" min="1" required />
+  <button type="submit">Update cart</button>
+</form>
+```
+
+The action can redirect requests with `X-Remix-Target: cart` to `/cart/items` and native document submissions to `/cart`. The enhanced submission renders the cart items and retains `/cart/items` as the frame's source. Later `frame.reload()` calls GET that source without resending the mutation. This example handles ordinary URL-encoded POST forms; application adapters can also honor submitter overrides and other native form behaviors.
 
 ### Following a Reload
 
@@ -1322,7 +1352,7 @@ The default resolver is a short `fetch()` call ([source](https://github.com/remi
 - It accepts `2xx` responses, and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text.
 - It uses the `same-origin` Fetch mode, so cross-origin sources and redirects fail, even when the destination allows CORS.
 
-Pass a custom `resolveFrame` to `run()` when the server requires additional headers, another body encoding, or a different response policy. A custom resolver can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it. When `fetch()` followed a redirect, frames other than the top frame render the response without changing either URL.
+Pass a custom `resolveFrame` to `run()` when the server requires additional headers, another body encoding, or a different response policy. A custom resolver can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it and exposes its final redirect URL to `adoptRedirectSrc`. Returning only the response body loses that redirect metadata. Public frame reloads preserve the browser URL and retain the requested frame source unless they opt into redirect-source adoption.
 
 ### Preserving Client-Owned DOM
 
