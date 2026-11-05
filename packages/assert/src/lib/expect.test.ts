@@ -41,7 +41,7 @@ describe('expect.toBe', () => {
 
   it('fails for non-equal values', () => {
     expectFails(() => expect(1).toBe(2))
-    expectFails(() => expect({} as any).toBe({}))
+    expectFails(() => expect({}).toBe({}))
   })
 
   it('supports .not', () => {

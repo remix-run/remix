@@ -58,9 +58,9 @@ describe('assert.equal', () => {
   })
 
   it('throws for type-coerced values', () => {
-    nodeAssert.throws(() => assert.equal(1 as any, '1'), assert.AssertionError)
-    nodeAssert.throws(() => assert.equal(null as any, undefined), assert.AssertionError)
-    nodeAssert.throws(() => assert.equal(0 as any, false), assert.AssertionError)
+    nodeAssert.throws(() => assert.equal(1, '1'), assert.AssertionError)
+    nodeAssert.throws(() => assert.equal(null, undefined), assert.AssertionError)
+    nodeAssert.throws(() => assert.equal(0, false), assert.AssertionError)
     nodeAssert.throws(() => assert.equal(0, -0), assert.AssertionError)
   })
 
@@ -77,8 +77,8 @@ describe('assert.equal', () => {
 describe('assert.notEqual', () => {
   it('passes for strictly unequal values', () => {
     assert.notEqual(1, 2)
-    assert.notEqual(1 as any, '1')
-    assert.notEqual(null as any, undefined)
+    assert.notEqual(1, '1')
+    assert.notEqual(null, undefined)
     assert.notEqual(0, -0)
   })
 
@@ -99,8 +99,8 @@ describe('assert.deepEqual', () => {
   })
 
   it('throws for type-coerced values', () => {
-    nodeAssert.throws(() => assert.deepEqual({ a: 1 } as any, { a: '1' }), assert.AssertionError)
-    nodeAssert.throws(() => assert.deepEqual(1 as any, '1'), assert.AssertionError)
+    nodeAssert.throws(() => assert.deepEqual({ a: 1 }, { a: '1' }), assert.AssertionError)
+    nodeAssert.throws(() => assert.deepEqual(1, '1'), assert.AssertionError)
   })
 
   it('throws for structurally unequal objects', () => {
@@ -263,7 +263,7 @@ describe('assert.partialDeepEqual', () => {
 describe('assert.notDeepEqual', () => {
   it('passes for objects that differ', () => {
     assert.notDeepEqual({ a: 1 }, { a: 2 })
-    assert.notDeepEqual({ a: 1 } as any, { a: '1' })
+    assert.notDeepEqual({ a: 1 }, { a: '1' })
     assert.notDeepEqual({ a: undefined }, { b: undefined })
   })
 
@@ -303,7 +303,8 @@ describe('assert.match', () => {
   })
 
   it('throws AssertionError when the input is not a string', () => {
-    nodeAssert.throws(() => assert.match(123 as any, /foo/), assert.AssertionError)
+    // @ts-expect-error -- verifies runtime validation of a non-string argument
+    nodeAssert.throws(() => assert.match(123, /foo/), assert.AssertionError)
   })
 })
 
@@ -317,7 +318,8 @@ describe('assert.doesNotMatch', () => {
   })
 
   it('throws AssertionError when the input is not a string', () => {
-    nodeAssert.throws(() => assert.doesNotMatch(123 as any, /foo/), assert.AssertionError)
+    // @ts-expect-error -- verifies runtime validation of a non-string argument
+    nodeAssert.throws(() => assert.doesNotMatch(123, /foo/), assert.AssertionError)
   })
 })
 
@@ -419,7 +421,8 @@ describe('assert.throws', () => {
   })
 
   it('validates expected error argument shapes', () => {
-    nodeAssert.throws(() => assert.throws(123 as any), TypeError)
+    // @ts-expect-error -- verifies runtime validation of a non-function argument
+    nodeAssert.throws(() => assert.throws(123), TypeError)
     nodeAssert.throws(
       () =>
         assert.throws(() => {
@@ -466,7 +469,8 @@ describe('assert.doesNotThrow', () => {
   })
 
   it('validates arguments after an unwanted throw', () => {
-    nodeAssert.throws(() => assert.doesNotThrow(123 as any), TypeError)
+    // @ts-expect-error -- verifies runtime validation of a non-function argument
+    nodeAssert.throws(() => assert.doesNotThrow(123), TypeError)
     nodeAssert.throws(
       () =>
         assert.doesNotThrow(() => {
@@ -542,8 +546,10 @@ describe('assert.rejects', () => {
   })
 
   it('validates promise and expected error argument shapes', async () => {
-    await nodeAssert.rejects(() => assert.rejects(123 as any), TypeError)
-    await nodeAssert.rejects(() => assert.rejects(() => 123 as any), TypeError)
+    // @ts-expect-error -- verifies runtime validation of an invalid promise argument
+    await nodeAssert.rejects(() => assert.rejects(123), TypeError)
+    // @ts-expect-error -- verifies runtime validation of an invalid promise argument
+    await nodeAssert.rejects(() => assert.rejects(() => 123), TypeError)
     await nodeAssert.rejects(
       () => assert.rejects(() => Promise.reject(new Error('oops')), {}),
       TypeError,
@@ -568,8 +574,10 @@ describe('assert.doesNotReject', () => {
   })
 
   it('validates promise and expected error argument shapes', async () => {
-    await nodeAssert.rejects(() => assert.doesNotReject(123 as any), TypeError)
-    await nodeAssert.rejects(() => assert.doesNotReject(() => 123 as any), TypeError)
+    // @ts-expect-error -- verifies runtime validation of an invalid promise argument
+    await nodeAssert.rejects(() => assert.doesNotReject(123), TypeError)
+    // @ts-expect-error -- verifies runtime validation of an invalid promise argument
+    await nodeAssert.rejects(() => assert.doesNotReject(() => 123), TypeError)
     await nodeAssert.rejects(
       () => assert.doesNotReject(() => Promise.reject(new Error('oops')), {}),
       TypeError,
@@ -616,8 +624,8 @@ describe('node:assert/strict compatibility', () => {
       capture(() => nodeAssert.strictEqual(1, 2)),
     )
     assertCompatibleError(
-      capture(() => assert.equal(1 as any, '1')),
-      capture(() => nodeAssert.strictEqual(1, '1' as any)),
+      capture(() => assert.equal(1, '1')),
+      capture(() => nodeAssert.strictEqual(1, '1')),
     )
   })
 
@@ -631,8 +639,8 @@ describe('node:assert/strict compatibility', () => {
       capture(() => nodeAssert.notStrictEqual(1, 1)),
     )
     assertCompatibleError(
-      capture(() => assert.notEqual(1 as any, '1')),
-      capture(() => nodeAssert.notStrictEqual(1, '1' as any)),
+      capture(() => assert.notEqual(1, '1')),
+      capture(() => nodeAssert.notStrictEqual(1, '1')),
     )
   })
 
@@ -646,8 +654,8 @@ describe('node:assert/strict compatibility', () => {
       capture(() => nodeAssert.deepStrictEqual({ x: 1 }, { x: 2 })),
     )
     assertCompatibleError(
-      capture(() => assert.deepEqual({ x: 1 } as any, { x: '1' })),
-      capture(() => nodeAssert.deepStrictEqual({ x: 1 }, { x: '1' } as any)),
+      capture(() => assert.deepEqual({ x: 1 }, { x: '1' })),
+      capture(() => nodeAssert.deepStrictEqual({ x: 1 }, { x: '1' })),
     )
   })
 
@@ -661,8 +669,8 @@ describe('node:assert/strict compatibility', () => {
       capture(() => nodeAssert.notDeepStrictEqual({ x: 1 }, { x: 1 })),
     )
     assertCompatibleError(
-      capture(() => assert.notDeepEqual({ x: 1 } as any, { x: '1' })),
-      capture(() => nodeAssert.notDeepStrictEqual({ x: 1 }, { x: '1' } as any)),
+      capture(() => assert.notDeepEqual({ x: 1 }, { x: '1' })),
+      capture(() => nodeAssert.notDeepStrictEqual({ x: 1 }, { x: '1' })),
     )
   })
 
