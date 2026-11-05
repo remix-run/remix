@@ -418,7 +418,7 @@ Use `value` to control a select or `defaultValue` to set its initial selection a
 
 Selections render into option markup on the server, including options inside components and optgroups. `defaultValue` sets the initial selection and reset defaults; later changes or removal are ignored. Changing `multiple` reapplies the current `defaultValue`, or resets the selection if no default is provided. Use `defaultValue={[]}` for an initially empty multiple select, or controlled `value={[]}` to clear the current selection.
 
-For initial selection, an explicit option `selected` prop overrides `defaultValue`. On a single select, an explicitly selected option wins regardless of its position. On a multiple select, `selected` adds that option and `selected={false}` excludes it from the defaults. A controlled select’s `value` takes precedence over option `selected` props.
+A select’s `value` takes precedence over `defaultValue` and option `selected` props. For uncontrolled selects, `defaultValue` takes precedence over option `selected` when initializing the selection and reset defaults. Without either select prop, option `selected` sets the initial selection. Hydration preserves server-rendered reset defaults and user edits to uncontrolled selects.
 
 A scalar controlled value selects the first matching option; arrays select every match. Options without an explicit value use their text, including text rendered with trusted `innerHTML`.
 

@@ -1,5 +1,5 @@
 import type { ElementProps } from './vnode.ts'
-import { optionSelectedProps, setSelectDefaultValue, setSelectValue } from './select.ts'
+import { setSelectDefaultValue, setSelectValue } from './select.ts'
 import {
   canUseProperty,
   getMergedClassName,
@@ -57,13 +57,6 @@ function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, n
 export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Element): void {
   let isSvg = dom.namespaceURI === SVG_NS
   let wasMultiple = dom instanceof HTMLSelectElement ? dom.multiple : undefined
-  if (dom instanceof HTMLOptionElement) {
-    let selected = next.selected == null ? undefined : Boolean(next.selected)
-    optionSelectedProps.set(dom, selected)
-    if (curr.selected !== next.selected && (curr.selected != null || next.selected != null)) {
-      dom.defaultSelected = selected ?? false
-    }
-  }
   let currClassName = getMergedClassName(curr)
   let nextClassName = getMergedClassName(next)
 

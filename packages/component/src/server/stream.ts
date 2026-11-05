@@ -33,7 +33,7 @@ import {
   isBrowserOnlyMixinDescriptor,
   isMixinDescriptor,
 } from '../runtime/core/mix.ts'
-import { getSelectSelection } from '../runtime/core/select.ts'
+import { getSelectValues } from '../runtime/core/select.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -208,12 +208,8 @@ interface FrameData {
 }
 
 interface RenderContext {
-  select?: {
-    value?: unknown
-    defaultValue?: unknown
-    multiple: boolean
-    options: Array<{ value: string; selected?: boolean; props: ElementProps; open: StaticSegment }>
-  }
+  selectValues?: Set<string>
+  selectScalar?: boolean
   optionText?: string
   insideSvg: boolean
   insideHead: boolean
@@ -685,7 +681,7 @@ function buildElementSegment(
     return
   }
 
-  if (!currentIsSvg && tag === 'option' && context.select !== undefined) {
+  if (!currentIsSvg && tag === 'option' && context.selectValues !== undefined) {
     buildSelectedOptionSegment(processedProps, context, frameState, output)
     return
   }
@@ -736,30 +732,19 @@ function buildElementSegment(
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
-  let previousSelect = context.select
+  let previousSelectValues = context.selectValues
+  let previousSelectScalar = context.selectScalar
   if (!currentIsSvg && tag === 'select') {
-    context.select =
-      processedProps.value != null || processedProps.defaultValue != null
-        ? {
-            value: processedProps.value,
-            defaultValue: processedProps.defaultValue,
-            multiple: Boolean(processedProps.multiple),
-            options: [],
-          }
-        : undefined
+    let value = processedProps.value ?? processedProps.defaultValue
+    context.selectValues = getSelectValues(value)
+    context.selectScalar =
+      !processedProps.multiple || (processedProps.value != null && !Array.isArray(value))
   }
   context.elementDepth++
   if (props.children != null) buildSegment(props.children, context, frameState, output)
   context.elementDepth--
-  if (context.select && context.select !== previousSelect) {
-    let selection = getSelectSelection(context.select.options, context.select)
-    for (let index = 0; index < context.select.options.length; index++) {
-      let option = context.select.options[index]
-      let attrs = renderAttributes('option', { ...option.props, selected: selection[index] }, false)
-      option.open.html = `<option${attrs}>`
-    }
-  }
-  context.select = previousSelect
+  context.selectValues = previousSelectValues
+  context.selectScalar = previousSelectScalar
   context.insideSvg = previousInsideSvg
   output.push(close)
 }
@@ -785,14 +770,10 @@ function buildSelectedOptionSegment(
   // Native options without a value use their text with ASCII whitespace collapsed.
   let value = props.value ?? context.optionText.replace(/[\t\n\f\r ]+/g, ' ').replace(/^ | $/g, '')
   context.optionText = previousOptionText
-  let open: StaticSegment = { kind: 'static', html: '' }
-  context.select?.options.push({
-    value: String(value),
-    selected: props.selected == null ? undefined : Boolean(props.selected),
-    props,
-    open,
-  })
-  output.push(open)
+  let selected = context.selectValues?.has(String(value))
+  if (selected && context.selectScalar) context.selectValues?.clear()
+  let attrs = renderAttributes('option', { ...props, selected }, false)
+  output.push(`<option${attrs}>`)
   output.push(...children)
   output.push('</option>')
 }

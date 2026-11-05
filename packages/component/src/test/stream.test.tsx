@@ -47,7 +47,7 @@ describe('stream', () => {
   }
 
   describe('basic nodes', () => {
-    it('gives explicit option selections precedence over defaults through mount, hydration, and reset', async (t) => {
+    it('gives select props precedence through mount, hydration, and reset', async (t) => {
       function SelectedChoice() {
         return () => (
           <option value="a" selected>
@@ -79,30 +79,41 @@ describe('stream', () => {
             </option>
             <option value="c">C</option>
           </select>
+          <select name="standalone">
+            <option value="b">B</option>
+            <SelectedChoice />
+          </select>
         </form>
       )
+      let initialEntries = [
+        ['single', 'b'],
+        ['later', 'b'],
+        ['multiple', 'b'],
+        ['multiple', 'c'],
+        ['controlled', 'b'],
+        ['standalone', 'a'],
+      ]
       let serverContainer = document.createElement('div')
       serverContainer.innerHTML = await renderToString(markup)
       let serverForm = serverContainer.querySelector('form')
       if (!serverForm) throw new Error('Missing server form')
-      expect([...new FormData(serverForm)]).toEqual([
-        ['single', 'a'],
-        ['later', 'a'],
-        ['multiple', 'a'],
-        ['multiple', 'c'],
-        ['controlled', 'b'],
-      ])
+      expect([...new FormData(serverForm)]).toEqual(initialEntries)
+      let serverSelects = serverForm.querySelectorAll('select')
+      serverSelects[0].value = 'a'
+      serverSelects[2].value = 'a'
+      serverSelects[3].value = 'c'
+      serverSelects[4].value = 'b'
       let hydratedRoot = createRoot(serverContainer)
       t.after(() => hydratedRoot.dispose())
       hydratedRoot.render(markup)
       hydratedRoot.flush()
-      expect([...new FormData(serverForm)]).toEqual([
-        ['single', 'a'],
-        ['later', 'a'],
-        ['multiple', 'a'],
-        ['multiple', 'c'],
-        ['controlled', 'b'],
-      ])
+      expect(new FormData(serverForm).get('single')).toBe('a')
+      expect(new FormData(serverForm).getAll('multiple')).toEqual(['a'])
+      expect(new FormData(serverForm).get('controlled')).toBe('b')
+      expect(new FormData(serverForm).get('standalone')).toBe('b')
+      serverForm.reset()
+      expect([...new FormData(serverForm)]).toEqual(initialEntries)
+
       let clientContainer = document.createElement('div')
       let clientRoot = createRoot(clientContainer)
       t.after(() => clientRoot.dispose())
@@ -110,34 +121,14 @@ describe('stream', () => {
       clientRoot.flush()
       let clientForm = clientContainer.querySelector('form')
       if (!clientForm) throw new Error('Missing client form')
-      expect([...new FormData(clientForm)]).toEqual([
-        ['single', 'a'],
-        ['later', 'a'],
-        ['multiple', 'a'],
-        ['multiple', 'c'],
-        ['controlled', 'b'],
-      ])
-      let clientSingle = clientForm.querySelector('select')
-      let serverSingle = serverForm.querySelector('select')
-      if (!clientSingle || !serverSingle) throw new Error('Missing selects')
-      clientSingle.value = 'b'
-      serverSingle.value = 'b'
-      let clientMultiple = clientForm.querySelector('select[multiple]')
-      let serverMultiple = serverForm.querySelector('select[multiple]')
-      if (
-        !(clientMultiple instanceof HTMLSelectElement) ||
-        !(serverMultiple instanceof HTMLSelectElement)
-      ) {
-        throw new Error('Missing multiple selects')
-      }
-      clientMultiple.value = 'b'
-      serverMultiple.value = 'b'
+      expect([...new FormData(clientForm)]).toEqual(initialEntries)
+      let clientSelects = clientForm.querySelectorAll('select')
+      clientSelects[0].value = 'a'
+      clientSelects[2].value = 'a'
+      clientSelects[3].value = 'c'
+      clientSelects[4].value = 'b'
       clientForm.reset()
-      serverForm.reset()
-      expect(clientSingle.value).toBe('a')
-      expect(serverSingle.value).toBe('a')
-      expect(new FormData(clientForm).getAll('multiple')).toEqual(['a', 'c'])
-      expect(new FormData(serverForm).getAll('multiple')).toEqual(['a', 'c'])
+      expect([...new FormData(clientForm)]).toEqual(initialEntries)
     })
 
     it('keeps scalar and array multiple-select submissions consistent through hydration', async (t) => {
@@ -516,8 +507,8 @@ describe('stream', () => {
       let container = document.createElement('div')
       container.innerHTML = html
       let selects = container.querySelectorAll('select')
-      expect(selects[0].value).toBe('a')
-      expect(selects[0].options[1].defaultSelected).toBe(false)
+      expect(selects[0].value).toBe('B & C')
+      expect(selects[0].options[1].defaultSelected).toBe(true)
       expect(selects[1].value).toBe('b')
       expect(selects[2].value).toBe('a')
       expect([...selects[3].selectedOptions].map((option) => option.value)).toEqual(['a', 'B & C'])

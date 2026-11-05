@@ -3231,7 +3231,7 @@ export interface OptionHTMLProps<
   label?: Trackable<string | undefined>
   /** The `role` HTML attribute. */
   role?: Trackable<'option' | undefined>
-  /** Selected state; overrides the select’s initial default, but not its controlled `value`. */
+  /** Selected state; the select’s `value` or initial `defaultValue` takes precedence. */
   selected?: Trackable<boolean | undefined>
   /** The `value` HTML attribute. */
   value?: Trackable<string | number | undefined>
@@ -3359,7 +3359,7 @@ export interface PartialSelectHTMLProps<
   autoComplete?: Trackable<string | undefined>
   /**
    * Initial selection and native reset defaults; arrays apply to multiple selects.
-   * Explicit option `selected` props take precedence.
+   * Takes precedence over option `selected` props during initialization.
    * Later changes are ignored unless `multiple` changes.
    */
   defaultValue?: Trackable<string | number | ReadonlyArray<string | number> | undefined>

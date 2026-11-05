@@ -1112,7 +1112,14 @@ function mountHostNode(
 ): CommittedHostNode {
   let hostProps = resolved.props
   let childInputs = node._children
-  patchHostProps({}, hostProps, dom)
+  // Server option attributes already reflect the select's winning value. Preserve them and edits.
+  patchHostProps(
+    {},
+    childCursor && dom instanceof HTMLOptionElement
+      ? { ...hostProps, selected: undefined }
+      : hostProps,
+    dom,
+  )
   let committed = commitHostNode(node, vParent, svg, dom, resolved)
 
   if (hostProps.innerHTML != null) {
@@ -1121,13 +1128,16 @@ function mountHostNode(
     committed._children = diffChildren(null, childInputs, dom, committed, context, childCursor)
   }
 
-  if (
-    !childCursor &&
-    dom instanceof HTMLSelectElement &&
-    hostProps.value == null &&
-    hostProps.defaultValue != null
-  ) {
-    setSelectDefaultValue(dom, hostProps.defaultValue)
+  if (!childCursor) {
+    if (dom instanceof HTMLSelectElement) {
+      let value = hostProps.value ?? hostProps.defaultValue
+      if (value != null) {
+        let scalar = !dom.multiple || (hostProps.value != null && !Array.isArray(value))
+        setSelectDefaultValue(dom, value, scalar)
+      }
+    } else if (dom instanceof HTMLOptionElement) {
+      dom.defaultSelected = Boolean(hostProps.selected)
+    }
   }
 
   setupHostNode(committed, context.scheduler)
