@@ -1,4 +1,4 @@
-import { removeRemixSchema, syncRemixSchema } from './utils/remix-schema.ts'
+import { removeRemixSchema, syncRemixSchema } from './utils/remix-package/remix-schema.ts'
 
 const clean = process.argv.includes('--clean')
 

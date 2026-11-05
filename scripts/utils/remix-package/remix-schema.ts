@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
-const packagesDir = path.resolve(import.meta.dirname, '..', '..', 'packages')
+const packagesDir = path.resolve(import.meta.dirname, '..', '..', '..', 'packages')
 
 export const cliSchemaPath = path.join(packagesDir, 'cli', 'schema', 'remix.json')
 export const remixSchemaPath = path.join(packagesDir, 'remix', 'schema', 'remix.json')

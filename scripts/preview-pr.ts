@@ -7,7 +7,7 @@ import {
   getPreviewTarballUrl,
   parsePreviewBuild,
   readPullRequest,
-} from './utils/preview.ts'
+} from './utils/release/preview.ts'
 
 const STICKY_MARKER = '<!-- pr-preview-comment-sticky -->'
 const CLEANUP_MARKER = '<!-- pr-preview-comment-cleanup -->'

@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 import { colors, colorize } from './utils/color.ts'
-import { getSideEffectPatternPairingIssues } from './utils/package-side-effects.ts'
+import { getSideEffectPatternPairingIssues } from './utils/remix-package/package-side-effects.ts'
 import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
 
 const CONSUMER_DEPENDENCY_FIELDS = [

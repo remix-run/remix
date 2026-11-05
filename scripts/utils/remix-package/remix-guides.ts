@@ -7,7 +7,7 @@ import { parse } from 'yaml'
 
 import { getRemixReadmeMappings, rewriteLinksToRemixReadmes } from './remix-readmes.ts'
 
-const rootDir = path.resolve(import.meta.dirname, '..', '..')
+const rootDir = path.resolve(import.meta.dirname, '..', '..', '..')
 const defaultSourceGuidesDir = path.join(
   rootDir,
   'docs',

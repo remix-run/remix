@@ -1,7 +1,7 @@
 import { request } from '@octokit/request'
 
 import { getChangelogEntry } from './changes.ts'
-import { getGitTag, getPackageShortName } from './packages.ts'
+import { getGitTag, getPackageShortName } from '../packages.ts'
 import { prerelease } from './semver.ts'
 
 const owner = 'remix-run'

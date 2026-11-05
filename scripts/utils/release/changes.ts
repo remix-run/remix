@@ -10,8 +10,8 @@ import {
   getPackageDependencies,
   getGitTag,
   GITHUB_REPO_URL,
-} from './packages.ts'
-import { fileExists, readFile, readJson } from './fs.ts'
+} from '../packages.ts'
+import { fileExists, readFile, readJson } from '../fs.ts'
 import { inc, major, prerelease } from './semver.ts'
 import type { ReleaseType } from './semver.ts'
 import { getFileIntroductionCommit, parsePrNumber } from './git.ts'

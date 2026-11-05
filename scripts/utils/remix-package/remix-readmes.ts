@@ -5,7 +5,7 @@ import * as path from 'node:path'
 import { rewriteMarkdownLinkDestinations } from 'remix-docs-shared/markdown/parser'
 import { readRemixManifest } from './manifest.ts'
 
-const packagesDir = path.resolve(import.meta.dirname, '..', '..', 'packages')
+const packagesDir = path.resolve(import.meta.dirname, '..', '..', '..', 'packages')
 const remixDir = path.join(packagesDir, 'remix')
 const remixSrcDir = path.join(remixDir, 'src')
 const cliPackageName = '@remix-run/cli'

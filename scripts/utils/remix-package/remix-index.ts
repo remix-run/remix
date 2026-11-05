@@ -6,7 +6,7 @@ import { getRemixGuideCopies } from './remix-guides.ts'
 import { readRemixManifest } from './manifest.ts'
 import { getRemixReadmeMappings } from './remix-readmes.ts'
 
-const packagesDir = path.resolve(import.meta.dirname, '..', '..', 'packages')
+const packagesDir = path.resolve(import.meta.dirname, '..', '..', '..', 'packages')
 const remixDir = path.join(packagesDir, 'remix')
 
 export const remixIndexPath = path.join(remixDir, 'INDEX.md')
