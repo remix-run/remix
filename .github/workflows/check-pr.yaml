@@ -302,16 +302,19 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
-      - name: Check for WebKit test changes
+      - name: Check for UI package changes
         id: changes
         shell: bash
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          changed_files="$(git diff --name-only --no-renames "$PR_BASE_SHA...$PR_HEAD_SHA" -- .)"
-          # Browser suites can depend on any package and share the root Playwright configuration.
-          if grep -Eq '^(packages/|demos/|docs/|scripts/|\.github/|patches/|playwright\.config\.[jt]s$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig(\.[^/]+)?\.json$)' <<< "$changed_files"; then
+          # Other changes get full WebKit coverage on main.
+          changed_files="$(git diff --name-only --no-renames "$PR_BASE_SHA...$PR_HEAD_SHA" -- \
+            packages/assets packages/component packages/component-hmr \
+            packages/multiple-import-maps-polyfill packages/render-middleware \
+            packages/spa packages/test packages/ui)"
+          if [ -n "$changed_files" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
