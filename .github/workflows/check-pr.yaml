@@ -289,6 +289,7 @@ jobs:
 
   test_webkit_macos:
     name: test (WebKit, macOS, changed packages)
+    needs: detect_changes
     runs-on: macos-15
     steps:
       - name: Checkout
