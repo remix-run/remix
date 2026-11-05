@@ -18,6 +18,8 @@ describe('createFakeTimers', () => {
     let originalClearTimeout = globalThis.clearTimeout
     let originalSetInterval = globalThis.setInterval
     let originalClearInterval = globalThis.clearInterval
+    let originalDate = globalThis.Date
+    let originalPerformanceNow = globalThis.performance.now
 
     let timers = createFakeTimers()
     try {
@@ -25,6 +27,8 @@ describe('createFakeTimers', () => {
       assert.notEqual(globalThis.clearTimeout, originalClearTimeout)
       assert.notEqual(globalThis.setInterval, originalSetInterval)
       assert.notEqual(globalThis.clearInterval, originalClearInterval)
+      assert.notEqual(globalThis.Date, originalDate)
+      assert.notEqual(globalThis.performance.now, originalPerformanceNow)
     } finally {
       timers.restore()
     }
@@ -33,6 +37,8 @@ describe('createFakeTimers', () => {
     assert.equal(globalThis.clearTimeout, originalClearTimeout)
     assert.equal(globalThis.setInterval, originalSetInterval)
     assert.equal(globalThis.clearInterval, originalClearInterval)
+    assert.equal(globalThis.Date, originalDate)
+    assert.equal(globalThis.performance.now, originalPerformanceNow)
   })
 })
 
@@ -86,6 +92,39 @@ describe('FakeTimers#advance — setTimeout', () => {
     })
   })
 
+  it('passes extra arguments to the callback', () => {
+    withFakeTimers((timers) => {
+      let received: unknown[] = []
+      setTimeout((...args: unknown[]) => received.push(...args), 100, 'a', 1)
+      timers.advance(100)
+      assert.deepEqual(received, ['a', 1])
+    })
+  })
+
+  it('returns a Node Timeout-like handle with ref, unref, and hasRef', () => {
+    withFakeTimers(() => {
+      let handle = setTimeout(() => {}, 100)
+      assert.equal(handle.hasRef(), true)
+      assert.equal(handle.unref(), handle)
+      assert.equal(handle.hasRef(), false)
+      assert.equal(handle.ref(), handle)
+      assert.equal(handle.hasRef(), true)
+    })
+  })
+
+  it('reschedules a timeout from the current time when refreshed', () => {
+    withFakeTimers((timers) => {
+      let fired = 0
+      let handle = setTimeout(() => fired++, 100)
+      timers.advance(60)
+      handle.refresh()
+      timers.advance(60)
+      assert.equal(fired, 0)
+      timers.advance(40)
+      assert.equal(fired, 1)
+    })
+  })
+
   it('fires timeouts scheduled inside a callback during the same advance', () => {
     withFakeTimers((timers) => {
       let order: string[] = []
@@ -107,6 +146,113 @@ describe('FakeTimers#advance — clearTimeout', () => {
       clearTimeout(id)
       timers.advance(1000)
       assert.equal(fired, 0)
+    })
+  })
+})
+
+describe('FakeTimers — real timers created before faking', () => {
+  it('passes real timer handles through to the real clear functions', (t) => {
+    let realSetTimeout = globalThis.setTimeout
+    let realSetInterval = globalThis.setInterval
+    let clearTimeoutSpy = t.mock.method(globalThis, 'clearTimeout')
+    let clearIntervalSpy = t.mock.method(globalThis, 'clearInterval')
+    let realTimeout = realSetTimeout(() => {}, 60_000)
+    let realInterval = realSetInterval(() => {}, 60_000)
+
+    withFakeTimers(() => {
+      clearTimeout(realTimeout)
+      clearInterval(realInterval)
+    })
+
+    assert.ok(clearTimeoutSpy.mock.calls.some((call) => call.arguments[0] === realTimeout))
+    assert.ok(clearIntervalSpy.mock.calls.some((call) => call.arguments[0] === realInterval))
+  })
+
+  it('does not pass fake timer handles or their numeric IDs to the real clear functions', (t) => {
+    let clearTimeoutSpy = t.mock.method(globalThis, 'clearTimeout')
+
+    withFakeTimers(() => {
+      let first = setTimeout(() => {}, 100)
+      let second = setTimeout(() => {}, 100)
+      clearTimeout(first)
+      clearTimeout(Number(second))
+    })
+
+    // The only real call is the one createFakeTimers() makes while probing the
+    // platform's handle type, before the fakes are installed.
+    assert.equal(clearTimeoutSpy.mock.calls.length, 1)
+  })
+})
+
+describe('FakeTimers — Date', () => {
+  it('starts the fake clock at the Unix epoch by default', () => {
+    withFakeTimers(() => {
+      assert.equal(Date.now(), 0)
+      assert.equal(new Date().getTime(), 0)
+    })
+  })
+
+  it('starts the fake clock at the now option', () => {
+    let timers = createFakeTimers({ now: new Date('2030-01-01T00:00:00Z') })
+    try {
+      assert.equal(new Date().toISOString(), '2030-01-01T00:00:00.000Z')
+    } finally {
+      timers.restore()
+    }
+
+    let numeric = createFakeTimers({ now: 1_000 })
+    try {
+      assert.equal(Date.now(), 1_000)
+    } finally {
+      numeric.restore()
+    }
+  })
+
+  it('moves Date forward with advance and advanceAsync', async () => {
+    let timers = createFakeTimers({ now: 1_000 })
+    try {
+      let firedAt: number | undefined
+      setTimeout(() => (firedAt = Date.now()), 100)
+      timers.advance(250)
+      assert.equal(firedAt, 1_100)
+      assert.equal(Date.now(), 1_250)
+      await timers.advanceAsync(50)
+      assert.equal(new Date().getTime(), 1_300)
+    } finally {
+      timers.restore()
+    }
+  })
+
+  it('returns the fake time as a string when Date is called without new', () => {
+    withFakeTimers(() => {
+      assert.equal(Date(), new Date(0).toString())
+    })
+  })
+
+  it('keeps explicit dates, Date.parse, Date.UTC, and instanceof working', () => {
+    let before = new Date(5)
+    withFakeTimers(() => {
+      let date = new Date('2030-01-01T00:00:00Z')
+      assert.equal(date.getTime(), Date.UTC(2030, 0, 1))
+      assert.equal(new Date(2030, 0, 1).getFullYear(), 2030)
+      assert.equal(Date.parse('2030-01-01T00:00:00Z'), Date.UTC(2030, 0, 1))
+      assert.ok(date instanceof Date)
+      assert.ok(before instanceof Date)
+
+      class Day extends Date {}
+      let day = new Day()
+      assert.ok(day instanceof Day)
+      assert.equal(day.getTime(), 0)
+    })
+  })
+})
+
+describe('FakeTimers — performance.now', () => {
+  it('starts at zero and moves forward with advance', () => {
+    withFakeTimers((timers) => {
+      assert.equal(performance.now(), 0)
+      timers.advance(125)
+      assert.equal(performance.now(), 125)
     })
   })
 })

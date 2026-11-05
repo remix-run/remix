@@ -220,6 +220,31 @@ describe('runTests lifecycle hook failures', () => {
 })
 
 describe('runTests timeouts and signals', () => {
+  it('clears the real timeout timer of a test that enables fake timers', async (t) => {
+    let setTimeoutSpy = t.mock.method(globalThis, 'setTimeout')
+    let clearTimeoutSpy = t.mock.method(globalThis, 'clearTimeout')
+
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'fake timers test',
+            timeout: 60_000,
+            fn(t) {
+              t.useFakeTimers()
+            },
+          },
+        ],
+      },
+    ])
+
+    assert.equal(results.passed, 1)
+    let timeoutCall = setTimeoutSpy.mock.calls.find((call) => call.arguments[1] === 60_000)
+    assert.ok(timeoutCall)
+    assert.ok(clearTimeoutSpy.mock.calls.some((call) => call.arguments[0] === timeoutCall.result))
+  })
+
   it('fails tests that exceed their timeout and aborts the test signal', async () => {
     let aborted = false
 

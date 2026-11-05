@@ -1,6 +1,6 @@
 import type { Browser, Page } from 'playwright'
 import type { V8CoverageEntry } from './coverage.ts'
-import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
+import { createFakeTimers, type FakeTimers, type FakeTimersOptions } from './fake-timers.ts'
 import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
 
@@ -68,11 +68,15 @@ export interface TestContext {
   }
 
   /**
-   * Activates fake timers for testing time-dependent code.
+   * Activates fake timers for testing time-dependent code. Replaces
+   * `setTimeout`, `setInterval`, `clearTimeout`, `clearInterval`, `Date`, and
+   * `performance.now()` with fakes driven by the returned handle, and restores
+   * them after the test.
    *
+   * @param options Optional settings, such as the `now` time the fake `Date` starts at.
    * @returns {FakeTimers} A fake timers instance for controlling time
    */
-  useFakeTimers(): FakeTimers
+  useFakeTimers(options?: FakeTimersOptions): FakeTimers
 
   /**
    * Wires a running test server up to a Playwright page so the test can drive
@@ -127,8 +131,8 @@ export function createTestContext(options?: CreateTestContextOptions): {
     after(fn) {
       cleanups.push(fn)
     },
-    useFakeTimers() {
-      let timers = createFakeTimers()
+    useFakeTimers(options) {
+      let timers = createFakeTimers(options)
       cleanups.push(timers.restore)
       return timers
     },
