@@ -104,7 +104,6 @@ describe('frame css style ownership', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 20))
 
     let aDiv = document.getElementById('a-shared')
     let bDiv = document.getElementById('b-shared')
@@ -117,7 +116,6 @@ describe('frame css style ownership', () => {
     // Reload frame A to content that no longer uses the shared style.
     invariant(reloadFrameA, 'expected ATrigger to hydrate')
     await reloadFrameA('/a2')
-    await new Promise((resolve) => setTimeout(resolve, 20))
 
     expect(document.getElementById('a-plain')).not.toBeNull()
     expect(document.getElementById('a-shared')).toBeNull()
@@ -167,7 +165,6 @@ describe('frame css style ownership', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 10))
 
     function countTotalRules(): number {
       return Array.from(document.adoptedStyleSheets).reduce(
@@ -181,13 +178,10 @@ describe('frame css style ownership', () => {
     expect(stableFrame.src).toBe('/stable')
     let reload = () => stableFrame.reload()
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 10))
     let rulesAfterFirstReload = countTotalRules()
 
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 10))
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 10))
 
     expect(countTotalRules()).toBe(rulesAfterFirstReload)
 
