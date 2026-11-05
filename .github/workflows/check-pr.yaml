@@ -301,27 +301,47 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Install Node.js
-        uses: ./.github/actions/setup-node-pnpm-cache
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install WebKit
-        run: pnpm --filter @remix-run/component exec playwright install webkit
-
-      - name: Run WebKit tests
+      - name: Check for WebKit test changes
+        id: changes
+        shell: bash
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed_files="$(git diff --name-only --no-renames "$PR_BASE_SHA...$PR_HEAD_SHA" -- .)"
+          # Bookstore uses the umbrella remix package, so any package change can affect it.
+          if grep -Eq '^(packages/|demos/bookstore/|scripts/|\.github/|patches/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig(\.[^/]+)?\.json$)' <<< "$changed_files"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install pnpm
+        if: steps.changes.outputs.run == 'true'
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        if: steps.changes.outputs.run == 'true'
+        uses: ./.github/actions/setup-node-pnpm-cache
+
+      - name: Install dependencies
+        if: steps.changes.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install WebKit
+        if: steps.changes.outputs.run == 'true'
+        run: pnpm --filter @remix-run/component exec playwright install webkit
+
+      - name: Run WebKit tests
+        if: steps.changes.outputs.run == 'true'
         run: >-
-          node ./scripts/run-changed-workspaces.ts test "$PR_BASE_SHA" "$PR_HEAD_SHA"
-          --workspace packages/component
-          --workspace demos/bookstore
-          -- --project webkit --type browser --type e2e
+          pnpm
+          --filter @remix-run/component
+          --filter bookstore-demo
+          run test
+          --project webkit
+          --type browser
+          --type e2e
 
   lint:
     name: Lint
