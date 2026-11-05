@@ -102,14 +102,14 @@ export interface AuthScheme<identity = unknown> {
 
 type AuthSchemeIdentity<scheme> = scheme extends AuthScheme<infer identity> ? identity : never
 
-type AuthForSchemes<schemes extends readonly AuthScheme<any>[]> = AuthState<
+type AuthForSchemes<schemes extends readonly AuthScheme[]> = AuthState<
   AuthSchemeIdentity<schemes[number]>
 >
 
 /**
  * Options for loading auth state for each request.
  */
-export interface AuthOptions<schemes extends readonly AuthScheme<any>[] = AuthScheme<any>[]> {
+export interface AuthOptions<schemes extends readonly AuthScheme[] = AuthScheme<any>[]> {
   /** Auth schemes to run in order for each request. */
   schemes: readonly [...schemes]
 }
@@ -120,7 +120,7 @@ export interface AuthOptions<schemes extends readonly AuthScheme<any>[] = AuthSc
  * @param options Auth scheme configuration for the middleware.
  * @returns Middleware that resolves auth state into `context.auth` and `context.get(Auth)`.
  */
-export function auth<schemes extends readonly AuthScheme<any>[]>(
+export function auth<schemes extends readonly AuthScheme[]>(
   options: AuthOptions<schemes>,
 ): Middleware<{ key: typeof Auth; value: AuthForSchemes<schemes>; property: 'auth' }> {
   if (options.schemes.length === 0) {
@@ -167,11 +167,11 @@ export function auth<schemes extends readonly AuthScheme<any>[]>(
   }
 }
 
-function setAuthState(context: RequestContext<any, any>, auth: AuthState): void {
+function setAuthState(context: RequestContext, auth: AuthState): void {
   context.set(Auth, auth, { property: 'auth' })
 }
 
-function createFailure(scheme: AuthScheme<any>, result: AuthSchemeFailure): AuthFailure {
+function createFailure(scheme: AuthScheme, result: AuthSchemeFailure): AuthFailure {
   return {
     method: scheme.name,
     code: result.code ?? 'invalid_credentials',

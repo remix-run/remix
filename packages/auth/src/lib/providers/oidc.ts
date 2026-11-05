@@ -205,7 +205,7 @@ export function createOIDCAuthProvider<
 }
 
 async function discoverOIDCMetadata(
-  options: OIDCAuthProviderOptions<any, any>,
+  options: Pick<OIDCAuthProviderOptions, 'discoveryUrl' | 'issuer'>,
   name: string,
 ): Promise<OIDCAuthProviderMetadata> {
   let metadata = await fetchJson<OIDCAuthProviderMetadata>(

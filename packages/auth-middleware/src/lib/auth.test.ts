@@ -225,8 +225,9 @@ describe('auth middleware', () => {
           schemes: [
             {
               name: 'legacy',
+              // @ts-expect-error -- verifies runtime rejection of the removed skip result
               authenticate() {
-                return { status: 'skip' } as any
+                return { status: 'skip' }
               },
             },
           ],
