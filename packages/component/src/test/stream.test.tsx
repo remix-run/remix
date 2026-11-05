@@ -175,38 +175,58 @@ describe('stream', () => {
       expect(new FormData(form).getAll('empty')).toEqual([])
     })
 
-    it('restores implicit select values from raw option HTML through hydration and reset', async (t) => {
-      function markup(defaultValue: string) {
+    it('requires explicit option values to select raw HTML labels', async () => {
+      function markup(value?: string) {
         return (
-          <form>
-            <select defaultValue={defaultValue}>
-              <option value="a">A</option>
-              <option innerHTML={unsafeHTML('  B &amp; &#67;  ')} />
-              <option value="B & C">Another B &amp; C</option>
-            </select>
-          </form>
+          <select defaultValue="b">
+            <option value="a">A</option>
+            <option value={value} innerHTML={unsafeHTML('  B &amp; &#67;  ')} />
+          </select>
         )
       }
-      let container = document.createElement('div')
-      container.innerHTML = await renderToString(markup('B & C'))
-      let select = container.querySelector('select')
-      let form = container.querySelector('form')
-      if (!select || !form) throw new Error('Missing select')
-      expect(select.value).toBe('B & C')
-      expect(select.options[1].defaultSelected).toBe(true)
-      expect(select.selectedIndex).toBe(1)
-      let root = createRoot(container)
-      t.after(() => root.dispose())
-      select.value = 'a'
-      root.render(markup('B & C'))
-      root.flush()
-      expect(select.value).toBe('a')
-      root.render(markup('a'))
-      root.flush()
-      expect(select.value).toBe('a')
-      form.reset()
-      expect(select.value).toBe('B & C')
-      expect(select.selectedIndex).toBe(1)
+      await expect(drain(renderToStream(markup(), { onError() {} }))).rejects.toThrow(
+        'option elements with innerHTML must have an explicit value when their select has a value or defaultValue',
+      )
+      expect(await renderToString(markup('b'))).toBe(
+        '<select><option value="a">A</option><option value="b" selected>  B &amp; &#67;  </option></select>',
+      )
+    })
+
+    it('requires JSX options when select props determine selection', async () => {
+      let html = '<option value="a">A</option><option value="b" selected>B</option>'
+      let options = unsafeHTML(html)
+      async function rejectsRawOptions(node: RemixNode) {
+        await expect(drain(renderToStream(node, { onError() {} }))).rejects.toThrow(
+          'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
+        )
+      }
+
+      await rejectsRawOptions(<select value="" innerHTML={options} />)
+      await rejectsRawOptions(<select defaultValue="b" innerHTML={options} />)
+      await rejectsRawOptions(
+        <select multiple value={[]}>
+          <optgroup label="Choices" innerHTML={options} />
+        </select>,
+      )
+      await rejectsRawOptions(
+        <select defaultValue="b">
+          <option value="b">B</option>
+          <optgroup label="Choices" innerHTML={options} />
+        </select>,
+      )
+
+      expect(
+        await renderToString(
+          <>
+            <select innerHTML={options} />
+            <select>
+              <optgroup label="Choices" innerHTML={options} />
+            </select>
+          </>,
+        ),
+      ).toBe(
+        `<select>${html}</select><select><optgroup label="Choices">${html}</optgroup></select>`,
+      )
     })
 
     it('should render to a stream', () => {

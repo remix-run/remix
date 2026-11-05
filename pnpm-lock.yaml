@@ -754,9 +754,6 @@ importers:
       '@types/dom-navigation':
         specifier: ^1.0.7
         version: 1.0.7
-      parse5:
-        specifier: ^7.3.0
-        version: 7.3.0
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
