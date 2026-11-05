@@ -96,10 +96,10 @@ function buildRouteMap<base extends string, defs extends RouteDefs>(
   base: RoutePattern<base>,
   defs: defs,
 ): BuildRouteMap<base, defs> {
-  let routes: any = {}
+  let routes: RouteMap = {}
 
   for (let key in defs) {
-    let def = defs[key]
+    let def: RouteDefs[string] = defs[key]
 
     if (def instanceof Route) {
       routes[key] = new Route(def.method, joinPatterns(base, def.pattern))
@@ -107,16 +107,22 @@ function buildRouteMap<base extends string, defs extends RouteDefs>(
       routes[key] = new Route('ANY', joinPatterns(base, RoutePattern.parse(def)))
     } else if (def instanceof RoutePattern) {
       routes[key] = new Route('ANY', joinPatterns(base, def))
-    } else if (typeof def === 'object' && def != null && 'pattern' in def) {
-      let defPattern: RoutePattern =
-        typeof def.pattern === 'string' ? RoutePattern.parse(def.pattern) : (def as any).pattern
-      routes[key] = new Route((def as any).method ?? 'ANY', joinPatterns(base, defPattern))
+    } else if (isRouteObjectDef(def)) {
+      let defPattern =
+        typeof def.pattern === 'string' ? RoutePattern.parse(def.pattern) : def.pattern
+      routes[key] = new Route(def.method ?? 'ANY', joinPatterns(base, defPattern))
     } else {
-      routes[key] = buildRouteMap(base, def as any)
+      routes[key] = buildRouteMap(base, def)
     }
   }
 
-  return routes
+  return routes as BuildRouteMap<base, defs>
+}
+
+type RouteObjectDef = Extract<RouteDef, { pattern: unknown }>
+
+function isRouteObjectDef(def: RouteObjectDef | RouteDefs): def is RouteObjectDef {
+  return typeof def === 'object' && def != null && 'pattern' in def
 }
 
 // oxfmt-ignore

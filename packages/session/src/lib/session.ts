@@ -12,9 +12,9 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
   #originalId: string
   #currentId: string
   #deleteId: string | undefined = undefined
-  #valueMap: Map<keyof valueData, valueData[keyof valueData]>
-  #flashMap: Map<keyof flashData, flashData[keyof flashData]>
-  #nextMap: Map<keyof flashData, flashData[keyof flashData]>
+  #valueMap: Map<PropertyKey, unknown>
+  #flashMap: Map<PropertyKey, unknown>
+  #nextMap = new Map<PropertyKey, unknown>()
   #destroyed = false
   #dirty: boolean
 
@@ -27,7 +27,6 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
     this.#currentId = id
     this.#valueMap = toMap(initialData?.[0])
     this.#flashMap = toMap(initialData?.[1])
-    this.#nextMap = new Map<keyof flashData, flashData[keyof flashData]>()
     // Mark as dirty if flash data exists so it gets cleared on save
     this.#dirty = this.#flashMap.size > 0
   }
@@ -101,8 +100,8 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
   get<key extends keyof flashData>(key: key): flashData[key] | undefined
   get(key: string): undefined
   get(key: string) {
-    if (this.#destroyed) return undefined as any
-    return this.#valueMap.get(key as any) ?? this.#flashMap.get(key as any)
+    if (this.#destroyed) return undefined
+    return this.#valueMap.get(key) ?? this.#flashMap.get(key)
   }
 
   /**
@@ -113,7 +112,7 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
    */
   has(key: keyof valueData | keyof flashData): boolean {
     if (this.#destroyed) return false
-    return this.#valueMap.has(key as any) || this.#flashMap.has(key as any)
+    return this.#valueMap.has(key) || this.#flashMap.has(key)
   }
 
   /**
@@ -147,9 +146,9 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
   set<key extends keyof valueData>(key: key, value: valueData[key]): void {
     this.#checkDestroyed()
     if (value == null) {
-      this.#valueMap.delete(key as any)
+      this.#valueMap.delete(key)
     } else {
-      this.#valueMap.set(key as any, value)
+      this.#valueMap.set(key, value)
     }
     this.#dirty = true
   }
@@ -168,14 +167,13 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
    */
   unset(key: keyof valueData): void {
     this.#checkDestroyed()
-    this.#valueMap.delete(key as any)
+    this.#valueMap.delete(key)
     this.#dirty = true
   }
 }
 
-function toMap<data extends Data>(data?: data): Map<keyof data, data[keyof data]> {
-  if (!data) return new Map()
-  return new Map(Object.entries(data) as [keyof data, data[keyof data]][])
+function toMap(data?: Data): Map<PropertyKey, unknown> {
+  return new Map(data ? Object.entries(data) : [])
 }
 
 /**
