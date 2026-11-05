@@ -2,7 +2,7 @@ import type { RemixNode } from 'remix/component'
 import { renderToStream } from 'remix/component/server'
 import type { ResolveFrameContext } from 'remix/component/server'
 import { createHtmlResponse } from 'remix/response/html'
-import type { RequestContext, Router } from 'remix/router'
+import type { RequestContext } from 'remix/router'
 
 export function render(context: RequestContext, node: RemixNode, init?: ResponseInit) {
   let stream = renderToStream(node, {
@@ -48,7 +48,7 @@ async function resolveFrame(
 }
 
 async function followFrameRedirects(
-  router: Router<any>,
+  router: RequestContext['router'],
   request: Request,
   url: URL,
   headers: Headers,
