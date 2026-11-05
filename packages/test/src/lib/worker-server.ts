@@ -7,6 +7,7 @@ import type { TestResults } from './reporters/results.ts'
 import { runTests } from './executor.ts'
 import { IS_BUN } from './runtime.ts'
 import { createFailedResults } from './worker-results.ts'
+import { isRecord } from './is-record.ts'
 
 export interface ServerTestWorkerData {
   file: string
@@ -59,10 +60,6 @@ function parseServerTestWorkerData(value: unknown): ServerTestWorkerData {
     coverage: parseCoverageConfig(value.coverage),
     only: parseOnlyPatterns(value.only),
   }
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 export function parseCoverageConfig(value: unknown): CoverageConfig | undefined {

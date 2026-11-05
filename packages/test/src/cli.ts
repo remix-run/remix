@@ -15,6 +15,7 @@ import { importModule } from './lib/import-module.ts'
 import type { Counts } from './lib/reporters/results.ts'
 import { IS_BUN } from './lib/runtime.ts'
 import { isMainThread } from 'node:worker_threads'
+import { isRecord } from './lib/is-record.ts'
 
 const MISSING_PLAYWRIGHT_MESSAGE =
   'Playwright is required to run browser and E2E tests. Install it with `npm i -D playwright`.'
@@ -383,10 +384,6 @@ function isMissingPlaywrightImport(error: unknown): boolean {
     (error.message.includes("Cannot find package 'playwright'") ||
       error.message.includes("Cannot find module 'playwright'"))
   )
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 async function resolveCwd(cwd: string): Promise<string> {

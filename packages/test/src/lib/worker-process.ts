@@ -1,6 +1,7 @@
 import type { TestResults } from './reporters/results.ts'
 import { runServerTestFile } from './worker-server.ts'
 import { createFailedResults } from './worker-results.ts'
+import { isRecord } from './is-record.ts'
 
 const workerData = await readWorkerData()
 
@@ -64,8 +65,4 @@ async function sendResults(results: TestResults): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     send(results, undefined, undefined, (error) => (error ? reject(error) : resolve()))
   })
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }

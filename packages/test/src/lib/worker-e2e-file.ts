@@ -9,7 +9,8 @@ import type { PlaywrightUseOpts } from './playwright.ts'
 import type { CoverageConfig } from './coverage.ts'
 import type { TestResults } from './reporters/results.ts'
 import { createFailedResults } from './worker-results.ts'
-import { isRecord, parseCoverageConfig, parseOnlyPatterns } from './worker-server.ts'
+import { isRecord } from './is-record.ts'
+import { parseCoverageConfig, parseOnlyPatterns } from './worker-server.ts'
 import type { SerializedOnlyPattern } from './config.ts'
 
 export interface E2ETestWorkerData {

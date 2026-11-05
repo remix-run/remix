@@ -11,6 +11,7 @@ import type { CoverageConfig, CoverageMap, V8CoverageEntry } from './coverage.ts
 import type { PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts, TestResults } from './reporters/results.ts'
+import { isRecord } from './is-record.ts'
 
 // Ensure we load the right file whether we're running in the monorepo (TS) or
 // from a published package (JS)
@@ -387,8 +388,4 @@ function isTestResults(value: unknown): value is TestResults {
     typeof value.todo === 'number' &&
     Array.isArray(value.tests)
   )
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
