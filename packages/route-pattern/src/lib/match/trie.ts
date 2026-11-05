@@ -1,6 +1,6 @@
 import type { RoutePatternParts, RoutePattern } from '../route-pattern.ts'
 import { parsePattern } from '../route-pattern/parse.ts'
-import { decodeHostname } from './decode.ts'
+import { toUnicode } from './punycode.ts'
 import {
   canonicalizeUrlPart,
   compilePart,
@@ -147,7 +147,7 @@ export class Trie<data = unknown> {
     if (candidates.length === 0) return []
     candidates.sort((a, b) => a.insertion - b.insertion)
 
-    let decodedHostname = decodeHostname(url.hostname)
+    let decodedHostname = toUnicode(url.hostname)
     let hostname: CanonicalText | undefined
     if (needsHostnameProgram) {
       let canonicalHostname = canonicalizeUrlPart(decodedHostname, 'hostname', {
