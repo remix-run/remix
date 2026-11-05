@@ -332,6 +332,9 @@ export type CreateManyResultOptions = {
 
 /**
  * Options for bulk-create operations that return inserted rows.
+ *
+ * Requires a database that supports `RETURNING`; `createMany()` throws otherwise (for example,
+ * on MySQL). Use `create({ returnRow: true })` per row for code that must run on any database.
  */
 export type CreateManyRowsOptions = {
   touch?: boolean
