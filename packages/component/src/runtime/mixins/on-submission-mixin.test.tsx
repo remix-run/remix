@@ -15,6 +15,7 @@ describe('onSubmission mixin', () => {
       container.remove()
     })
     let order: string[] = []
+    container.addEventListener('rmx:submission', () => order.push('ancestor'))
     let signals: AbortSignal[] = []
     root.render(
       <form

@@ -46,25 +46,16 @@ describe('settings save button', () => {
     await page.getByRole('heading', { name: 'My Account' }).waitFor()
   })
 
-  it('says when a save fails and keeps what the visitor typed', async (t) => {
+  it('reports a failed save while preserving the visitor’s input and focus', async (t) => {
     let page = await serveSettings(t, (request) => {
       if (request.method === 'POST') return new Response('Server error', { status: 500 })
     })
 
     await page.getByLabel('Name').fill('Jane Doe')
-    await page.getByRole('button', { name: 'Update Settings' }).click()
+    await page.getByLabel('Name').press('Enter')
     await page.getByRole('status').getByText('Couldn’t save your settings. Try again.').waitFor()
     await page.getByRole('button', { name: 'Update Settings' }).waitFor()
     assert.equal(await page.getByLabel('Name').inputValue(), 'Jane Doe')
-  })
-
-  it('keeps focus in the form when a save fails', async (t) => {
-    let page = await serveSettings(t, (request) => {
-      if (request.method === 'POST') return new Response('Server error', { status: 500 })
-    })
-
-    await page.getByLabel('Name').press('Enter')
-    await page.getByRole('status').getByText('Couldn’t save your settings. Try again.').waitFor()
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('name')), 'name')
   })
 
