@@ -72,10 +72,11 @@ export function createResourcesRoutes<base extends string, const options extends
 
   // Resolve which methods to include
   let only: readonly ResourcesMethod[]
+  let exclude = options?.exclude
   if (options?.only) {
     only = options.only
-  } else if (options?.exclude) {
-    only = ResourcesMethods.filter((m) => !options.exclude!.includes(m))
+  } else if (exclude) {
+    only = ResourcesMethods.filter((m) => !exclude.includes(m))
   } else {
     only = ResourcesMethods
   }

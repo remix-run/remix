@@ -581,13 +581,14 @@ export class TarParser {
 
     while (this.#buffer !== null && this.#buffer.length > 0) {
       if (this.#missing > 0) {
-        if (this.#bodyController !== null) {
-          this.#parseBody()
+        let header = this.#header
+        if (header !== null && this.#bodyController !== null) {
+          this.#parseBody(this.#buffer, this.#bodyController, header)
           continue
         }
 
-        if (this.#longHeader) {
-          this.#parseLongHeader()
+        if (header !== null && this.#longHeader) {
+          this.#parseLongHeader(this.#buffer, header)
           continue
         }
 
@@ -602,12 +603,12 @@ export class TarParser {
       }
 
       if (this.#buffer.length < TarBlockSize) break
-      this.#parseHeader(handler)
+      this.#parseHeader(this.#buffer, handler)
     }
   }
 
-  #parseHeader(handler: TarEntryHandler): void {
-    let block = this.#read(TarBlockSize)
+  #parseHeader(buffer: Uint8Array, handler: TarEntryHandler): void {
+    let block = this.#read(buffer, TarBlockSize)
 
     if (isZeroBlock(block)) {
       this.#header = null
@@ -685,16 +686,16 @@ export class TarParser {
     this.#missing = this.#header.size
   }
 
-  #parseLongHeader(): void {
-    let offset = this.#header!.size - this.#missing
-    let chunk = this.#read(Math.min(this.#missing, this.#buffer!.length))
+  #parseLongHeader(input: Uint8Array, header: TarHeader): void {
+    let offset = header.size - this.#missing
+    let chunk = this.#read(input, Math.min(this.#missing, input.length))
     let length = offset + chunk.length
     let buffer = this.#longHeaderBuffer
 
     if (buffer !== null || chunk.length < this.#missing) {
       if (buffer === null || buffer.length < length) {
         // Grow with received bytes so fragmented metadata takes linear copying work.
-        let capacity = Math.min(this.#header!.size, Math.max(length, (buffer?.length ?? 0) * 2))
+        let capacity = Math.min(header.size, Math.max(length, (buffer?.length ?? 0) * 2))
         let next = new Uint8Array(capacity)
         if (buffer !== null) next.set(buffer.subarray(0, offset))
         buffer = next
@@ -714,7 +715,7 @@ export class TarParser {
     this.#longHeader = false
     this.#longHeaderBuffer = null
 
-    switch (this.#header!.type) {
+    switch (header.type) {
       case 'gnu-long-path':
         this.#gnuLongPath = decodeLongPath(buffer)
         break
@@ -729,27 +730,30 @@ export class TarParser {
         break
     }
 
-    this.#missing = blockPaddingSize(this.#header!.size)
+    this.#missing = blockPaddingSize(header.size)
   }
 
-  #parseBody(): void {
-    if (this.#missing > this.#buffer!.length) {
-      this.#bodyController!.enqueue(this.#buffer!)
-      this.#missing -= this.#buffer!.length
+  #parseBody(
+    buffer: Uint8Array,
+    controller: ReadableStreamDefaultController<Uint8Array>,
+    header: TarHeader,
+  ): void {
+    if (this.#missing > buffer.length) {
+      controller.enqueue(buffer)
+      this.#missing -= buffer.length
       this.#buffer = null
       return
     }
 
-    this.#bodyController!.enqueue(this.#read(this.#missing))
-    this.#bodyController!.close()
+    controller.enqueue(this.#read(buffer, this.#missing))
+    controller.close()
     this.#bodyController = null
-    this.#missing = blockPaddingSize(this.#header!.size)
+    this.#missing = blockPaddingSize(header.size)
   }
 
-  #read(size: number): Uint8Array {
-    let result = this.#buffer!.subarray(0, size)
-    this.#buffer = this.#buffer!.subarray(size)
-    return result
+  #read(buffer: Uint8Array, size: number): Uint8Array {
+    this.#buffer = buffer.subarray(size)
+    return buffer.subarray(0, size)
   }
 }
 

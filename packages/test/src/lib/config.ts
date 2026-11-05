@@ -27,7 +27,7 @@ export function getBrowserTestRootDir(): string {
     : process.cwd()
 }
 
-const defaultValues: ResolvedRemixTestConfig = {
+const defaultValues = {
   browser: {
     echo: false,
     open: false,
@@ -57,7 +57,7 @@ const defaultValues: ResolvedRemixTestConfig = {
   setup: undefined,
   type: ['server', 'browser', 'e2e'],
   watch: false,
-}
+} satisfies ResolvedRemixTestConfig
 
 /**
  * Worker pools supported by the Remix test runner.
@@ -232,9 +232,9 @@ export function resolveConfig(config: RemixTestConfig = {}): ResolvedRemixTestCo
     concurrency: resolveConcurrency(config.concurrency ?? defaultValues.concurrency),
     coverage: coverageEnabled
       ? {
-          dir: coverageOptions.dir ?? defaultValues.coverage!.dir,
-          include: optionalArray(coverageOptions.include ?? defaultValues.coverage!.include),
-          exclude: optionalArray(coverageOptions.exclude ?? defaultValues.coverage!.exclude),
+          dir: coverageOptions.dir ?? defaultValues.coverage.dir,
+          include: optionalArray(coverageOptions.include ?? defaultValues.coverage.include),
+          exclude: optionalArray(coverageOptions.exclude ?? defaultValues.coverage.exclude),
           statements: optionalNumber(coverageOptions.statements, 'coverage.statements'),
           lines: optionalNumber(coverageOptions.lines, 'coverage.lines'),
           branches: optionalNumber(coverageOptions.branches, 'coverage.branches'),
