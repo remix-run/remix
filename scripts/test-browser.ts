@@ -7,29 +7,31 @@ if (refs.length !== 0 && refs.length !== 2) {
 
 const workspaces = ['packages/component', 'packages/ui', 'demos/bookstore']
 
+let selectedWorkspaces = workspaces
+
 if (refs.length === 2) {
-  let [baseRef, headRef] = refs
+  // check-pr.yml runs
   let changedFiles = cp
     .execFileSync(
       'git',
-      ['diff', '--name-only', '--no-renames', '-z', `${baseRef}...${headRef}`, '--', '.'],
-      {
-        encoding: 'utf8',
-      },
+      ['diff', '--name-only', '--no-renames', '-z', `${refs[0]}...${refs[1]}`, '--', '.'],
+      { encoding: 'utf8' },
     )
     .split('\0')
     .filter(Boolean)
-  let browserWorkspaceChanged = changedFiles.some((file) =>
-    workspaces.some((workspace) => file.startsWith(`${workspace}/`)),
+
+  selectedWorkspaces = selectedWorkspaces.filter((workspace) =>
+    changedFiles.some((file) => file.startsWith(`${workspace}/`)),
   )
-  if (!browserWorkspaceChanged) {
-    console.log('No browser workspace changes. Skipping browser tests.')
-    process.exit(0)
-  }
+}
+
+if (selectedWorkspaces.length === 0) {
+  console.log('No browser workspaces selected. Skipping browser tests.')
+  process.exit(0)
 }
 
 const args = ['--recursive', '--no-sort', '--workspace-concurrency=4', '--stream']
-for (let workspace of workspaces) {
+for (let workspace of selectedWorkspaces) {
   args.push('--filter', `./${workspace}`)
 }
 args.push('run', 'test', '--type', 'browser', '--type', 'e2e')
