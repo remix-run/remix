@@ -18,7 +18,7 @@ import type { AnyTable, PrimaryKeyInput, TableName, TablePrimaryKey, TableRow } 
 import { getPrimaryKeyObject, getTableName, getTablePrimaryKey } from '../table.ts'
 
 import type { QueryExecutionContext } from './execution-context.ts'
-import { loadRowsWithRelationsForQuery } from './query-execution.ts'
+import { loadRowsWithRelationsForQuery } from './relations.ts'
 
 export function asQueryTableInput<table extends AnyTable>(
   table: table,

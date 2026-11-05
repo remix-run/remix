@@ -5,8 +5,6 @@ import type {
   ExistsOperation,
   InsertManyOperation,
   InsertOperation,
-  SelectColumn,
-  SelectOperation,
   UpdateOperation,
   UpsertOperation,
 } from '../driver.ts'
@@ -26,12 +24,13 @@ import {
   hasScopedWriteModifiers,
   loadPrimaryKeyRowsForScope,
 } from './helpers.ts'
-import { loadRelationsForRows } from './relations.ts'
+import { loadRowsWithRelationsForState } from './relations.ts'
 import {
   applyAfterReadHooksToLoadedRows,
   applyAfterReadHooksToRows,
   assertReturningCapability,
   normalizeReturningSelection,
+  normalizeRows,
   prepareInsertValues,
   prepareUpdateValues,
   runAfterDeleteHook,
@@ -116,30 +115,6 @@ export async function executeQuery<input extends AnyQuery>(
     default:
       throw new DataTableQueryError('Unknown query execution mode')
   }
-}
-
-export async function loadRowsWithRelationsForQuery(
-  database: QueryExecutionContext,
-  input: AnyQuery,
-): Promise<Record<string, unknown>[]> {
-  let snapshot = input[querySnapshot]()
-  return loadRowsWithRelationsForState(database, snapshot.table, snapshot.state)
-}
-
-export async function loadRowsWithRelationsForState(
-  database: QueryExecutionContext,
-  table: AnyTable,
-  state: QueryState,
-): Promise<Record<string, unknown>[]> {
-  let operation = createSelectOperation(table, state)
-  let result = await database[executeOperation](operation)
-  let rows = normalizeRows(result.rows)
-
-  if (Object.keys(state.with).length === 0) {
-    return rows
-  }
-
-  return loadRelationsForRows(database, table, rows, state.with)
 }
 
 async function executeAll(
@@ -637,38 +612,4 @@ async function executeUpsert(
     affectedRows,
     insertId: result.insertId,
   }
-}
-
-function createSelectOperation(table: AnyTable, state: QueryState): SelectOperation<AnyTable> {
-  let clonedState = cloneQueryState(state)
-
-  return {
-    kind: 'select',
-    table,
-    select: cloneSelection(clonedState.select),
-    distinct: clonedState.distinct,
-    joins: clonedState.joins,
-    where: clonedState.where,
-    groupBy: clonedState.groupBy,
-    having: clonedState.having,
-    orderBy: clonedState.orderBy,
-    limit: clonedState.limit,
-    offset: clonedState.offset,
-  }
-}
-
-function cloneSelection(selection: '*' | SelectColumn[]): '*' | SelectColumn[] {
-  if (selection === '*') {
-    return '*'
-  }
-
-  return selection.map((column) => ({ ...column }))
-}
-
-function normalizeRows(rows: DataManipulationResult['rows']): Record<string, unknown>[] {
-  if (!rows) {
-    return []
-  }
-
-  return rows.map((row) => ({ ...row }))
 }

@@ -1,4 +1,4 @@
-import type { DatabaseCapabilities, ReturningSelection } from '../driver.ts'
+import type { DataManipulationResult, DatabaseCapabilities, ReturningSelection } from '../driver.ts'
 import { DataTableQueryError, DataTableValidationError } from '../errors.ts'
 import type { ReturningInput } from '../database.ts'
 import type {
@@ -484,4 +484,12 @@ function normalizeReadObject(tableName: string, value: unknown): Record<string, 
   return {
     ...(value as Record<string, unknown>),
   }
+}
+
+export function normalizeRows(rows: DataManipulationResult['rows']): Record<string, unknown>[] {
+  if (!rows) {
+    return []
+  }
+
+  return rows.map((row) => ({ ...row }))
 }
