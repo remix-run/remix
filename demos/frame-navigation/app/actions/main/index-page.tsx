@@ -24,33 +24,37 @@ const statCards = [
 export function MainIndexPage() {
   return () => (
     <section>
-      <h1 mix={titleStyle}>Learning dashboard</h1>
-      <p mix={descriptionStyle}>
+      <h1
+        mix={css({
+          marginTop: 0,
+          fontSize: '1.8rem',
+          color: '#0f172a',
+        })}
+      >
+        Learning dashboard
+      </h1>
+      <p
+        mix={css({
+          marginTop: '0.5rem',
+          color: '#475569',
+          lineHeight: 1.7,
+          maxWidth: '65ch',
+        })}
+      >
         Keep up with coursework, deadlines, and instructor updates from one central place.
       </p>
 
       <DashboardStatGrid cards={statCards} />
 
-      <p mix={hintStyle}>Try tabbing to a card, pressing Enter, or Cmd/Ctrl-clicking one.</p>
+      <p
+        mix={css({
+          marginTop: '0.85rem',
+          color: '#64748b',
+          fontSize: '0.9rem',
+        })}
+      >
+        Try tabbing to a card, pressing Enter, or Cmd/Ctrl-clicking one.
+      </p>
     </section>
   )
 }
-
-const titleStyle = css({
-  marginTop: 0,
-  fontSize: '1.8rem',
-  color: '#0f172a',
-})
-
-const descriptionStyle = css({
-  marginTop: '0.5rem',
-  color: '#475569',
-  lineHeight: 1.7,
-  maxWidth: '65ch',
-})
-
-const hintStyle = css({
-  marginTop: '0.85rem',
-  color: '#64748b',
-  fontSize: '0.9rem',
-})
