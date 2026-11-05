@@ -171,7 +171,7 @@ jobs:
         with:
           path: |
             ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-chromium-firefox-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
@@ -224,11 +224,11 @@ jobs:
         with:
           path: |
             ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-chromium-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
       - name: Run changed package Bun tests
         shell: bash
@@ -274,7 +274,7 @@ jobs:
         continue-on-error: true
         with:
           path: ~/AppData/Local/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-chromium-firefox-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
@@ -322,7 +322,7 @@ jobs:
         continue-on-error: true
         with:
           path: ~/Library/Caches/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-webkit-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install WebKit
         if: steps.cache-browsers.outputs.cache-hit != 'true'
