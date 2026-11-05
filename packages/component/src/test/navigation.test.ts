@@ -348,6 +348,27 @@ describe('navigate', () => {
     expect(document.activeElement).toBe(input)
   })
 
+  it('keeps focus when a failed navigation resets it to an autofocus element', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    startNavigationListenerImpl(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let input = document.createElement('input')
+    let autofocusInput = document.createElement('input')
+    autofocusInput.autofocus = true
+    document.body.append(input, autofocusInput)
+    input.focus()
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(input)
+  })
+
   it('leaves focus where the visitor moved it while a failing navigation ran', async (t) => {
     let controller = new AbortController()
     t.after(() => controller.abort())
@@ -397,7 +418,7 @@ describe('navigate', () => {
     expect(document.activeElement).toBe(errorSummary)
   })
 
-  it('leaves manual focus changes to a navigation error handler', async (t) => {
+  it('leaves focus set by an earlier navigation abort handler', async (t) => {
     let controller = new AbortController()
     t.after(() => controller.abort())
     let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
@@ -410,9 +431,37 @@ describe('navigate', () => {
     errorSummary.tabIndex = -1
     document.body.append(input, errorSummary)
     input.focus()
-    navigation.addEventListener('navigateerror', () => errorSummary.focus(), {
-      signal: controller.signal,
+    navigation.addEventListener(
+      'navigate',
+      (event) => event.signal.addEventListener('abort', () => errorSummary.focus(), { once: true }),
+      { signal: controller.signal },
+    )
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(errorSummary)
+  })
+
+  it('leaves manual focus changes to an earlier navigation abort handler', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    startNavigationListenerImpl(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
     })
+    let input = document.createElement('input')
+    let errorSummary = document.createElement('p')
+    errorSummary.tabIndex = -1
+    document.body.append(input, errorSummary)
+    input.focus()
+    navigation.addEventListener(
+      'navigate',
+      (event) => event.signal.addEventListener('abort', () => errorSummary.focus(), { once: true }),
+      { signal: controller.signal },
+    )
 
     let navigated = navigate(window.location.href, {
       history: 'replace',
@@ -423,6 +472,64 @@ describe('navigate', () => {
     rejectFinished(failure)
     await expect(navigated).rejects.toBe(failure)
     expect(document.activeElement).toBe(errorSummary)
+  })
+
+  it('leaves focus cleared by an earlier navigation abort handler', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    startNavigationListenerImpl(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let input = document.createElement('input')
+    let autofocusInput = document.createElement('input')
+    autofocusInput.autofocus = true
+    document.body.append(input, autofocusInput)
+    input.focus()
+    navigation.addEventListener(
+      'navigate',
+      (event) =>
+        event.signal.addEventListener('abort', () => autofocusInput.blur(), { once: true }),
+      { signal: controller.signal },
+    )
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('leaves focus to a navigation started by an earlier abort handler', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    let dispatchNavigation = startStubNavigationListener(t, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+    let event = createTraverseNavigateEvent({ target: undefined, src: '/previous', $rmx: true })
+    event.signal = controller.signal
+    controller.signal.addEventListener(
+      'abort',
+      () => navigation.dispatchEvent(new Event('navigate')),
+      { once: true },
+    )
+    let transition = dispatchNavigation(event)
+    let handled = transition.runHandler()
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(handled).rejects.toBe(failure)
+
+    // The browser resets focus before aborting the failed navigation.
+    input.blur()
+    controller.abort(failure)
+    await transition.fail()
+    expect(document.activeElement).toBe(document.body)
   })
 
   it('lets a later navigation reset focus after a replaced one fails', async (t) => {
