@@ -156,8 +156,12 @@ export class Cookie implements CookieProperties {
   /**
    * Extracts the value of this cookie from a `Cookie` header value.
    *
+   * An empty value is returned as `''` without signature verification, matching how
+   * `serialize('')` clears a cookie. Treat `''` the same as a missing cookie.
+   *
    * @param headerValue The `Cookie` header to parse
-   * @returns The value of this cookie, or `null` if it's not present
+   * @returns The value of this cookie, `''` if its value is empty, or `null` if it's not present,
+   * fails signature verification, or can't be decoded
    */
   async parse(headerValue: string | null): Promise<string | null> {
     if (!headerValue) return null
