@@ -235,7 +235,7 @@ describe('multiple import map polyfill', () => {
     assert.equal(requests.get('/dist/lib/core.js') ?? 0, supportsMultiple ? 0 : 1)
   })
 
-  it('detects support without a canceled request', async (t) => {
+  it('runs feature detection once', async (t) => {
     let page = await t.serve(
       await createTestServer(async (request) => {
         let url = new URL(request.url)
