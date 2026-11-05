@@ -348,17 +348,16 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     })
 
-    let uploadedFile: File | null = null
-    let formData = await parseFormData(request, async (upload) => {
-      uploadedFile = new File([await upload.text()], 'example.txt', { type: 'text/plain' })
-      return uploadedFile
-    })
+    let formData = await parseFormData(
+      request,
+      async (upload) => new File([await upload.text()], 'example.txt', { type: 'text/plain' }),
+    )
 
     let file = formData.get('file')
 
     assert.ok(file instanceof File)
     assert.equal(file.name, 'example.txt')
-    assert.equal(file.type, uploadedFile!.type)
+    assert.equal(file.type, 'text/plain')
     assert.equal(await file.text(), 'This is an example file.')
   })
 

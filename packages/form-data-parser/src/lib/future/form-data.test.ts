@@ -350,17 +350,16 @@ describe('parseFormData', () => {
       ].join('\r\n'),
     })
 
-    let uploadedFile: File | null = null
-    let formData = await parseFormData(request, async (upload) => {
-      uploadedFile = new File([await upload.text()], 'example.txt', { type: 'text/plain' })
-      return uploadedFile
-    })
+    let formData = await parseFormData(
+      request,
+      async (upload) => new File([await upload.text()], 'example.txt', { type: 'text/plain' }),
+    )
 
     let file = formData.get('file')
 
     assert.ok(file instanceof File)
     assert.equal(file.name, 'example.txt')
-    assert.equal(file.type, uploadedFile!.type)
+    assert.equal(file.type, 'text/plain')
     assert.equal(await file.text(), 'This is an example file.')
   })
 
@@ -898,15 +897,16 @@ describe('FileUpload', () => {
 
   it('throws when its contents are read after the upload handler returns', async () => {
     let request = createRequest(filePart('file', 'example.txt', 'contents'))
-    let upload: FileUpload | undefined
+    let uploads: FileUpload[] = []
 
     await parseFormData(request, (file) => {
-      upload = file
+      uploads.push(file)
     })
 
-    assert.ok(upload)
-    assert.throws(() => upload!.stream(), TypeError)
-    await assert.rejects(() => upload!.text(), TypeError)
+    assert.equal(uploads.length, 1)
+    let [upload] = uploads
+    assert.throws(() => upload.stream(), TypeError)
+    await assert.rejects(() => upload.text(), TypeError)
   })
 
   it('throws instead of converting to a string', async () => {
