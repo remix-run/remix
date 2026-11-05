@@ -543,7 +543,7 @@ describe('run', () => {
     expect(submission.method).toBe('post')
     expect(submission.encType).toBe('text/plain')
     expect(submission.formData).toBe(event.formData)
-    expect(submission.element).toBe(form)
+    expect(submission.form).toBe(form)
     expect(submission.submitter).toBe(button)
     expect(submission.finished).toBe(event.finished)
     expect(requests[0]!.headers.get('Content-Type')).toBe('text/plain')
@@ -588,7 +588,8 @@ describe('run', () => {
     let event = events[0]!
     expect(events[1]).toBe(event)
     expect(event.target).toBe(button)
-    expect(event.element).toBe(form)
+    expect(event.form).toBe(form)
+    expect('element' in event).toBe(false)
     expect(event.submitter).toBe(button)
     expect(reloadEvents[0]!.element).toBe(form)
     expect(reloadEvents[0]!.submitter).toBe(button)
@@ -639,7 +640,7 @@ describe('run', () => {
       expect(events).toHaveLength(1)
       let event = events[0]!
       expect(event.target).toBe(by === 'button' ? button : form)
-      expect(event.element).toBe(form)
+      expect(event.form).toBe(form)
       expect(event.submitter).toBe(by === 'button' ? button : null)
       expect(reload.element).toBe(form)
       expect(reload.submitter).toBe(event.submitter)
@@ -689,7 +690,7 @@ describe('run', () => {
     await reload.finished
 
     expect(events).toHaveLength(1)
-    expect(events[0]!.element).toBe(form)
+    expect(events[0]!.form).toBe(form)
     expect(events[0]!.submitter).toBe(button)
     expect(events[0]!.src).toBe(reload.src)
     expect(new URL(events[0]!.src).searchParams.get('q')).toBe('Ada')
@@ -736,7 +737,7 @@ describe('run', () => {
     expect(events[0]?.target).toBe(button)
     expect(events[0]?.bubbles).toBe(false)
     expect(events[1]?.target).toBe(form)
-    expect(events[1]?.element).toBe(form)
+    expect(events[1]?.form).toBe(form)
     expect(events[1]?.submitter).toBe(button)
     expect(events[1]?.finished).toBe(reload.finished)
     expect(events[0]?.finished).toBe(reload.finished)
@@ -760,7 +761,7 @@ describe('run', () => {
     await reload.finished
 
     expect(events).toHaveLength(1)
-    expect(events[0]?.element).toBe(form)
+    expect(events[0]?.form).toBe(form)
     expect(events[0]?.submitter).toBe(button)
     expect(events[0]?.formData).toBeNull()
     expect(events[0]?.finished).toBe(reload.finished)
@@ -786,7 +787,7 @@ describe('run', () => {
     await reload.finished
 
     expect(events).toHaveLength(1)
-    expect(events[0]?.element).toBe(form)
+    expect(events[0]?.form).toBe(form)
     expect(events[0]?.submitter).toBe(button)
     expect(events[0]?.finished).toBe(reload.finished)
   })

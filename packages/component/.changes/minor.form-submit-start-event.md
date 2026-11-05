@@ -1,4 +1,4 @@
-Follow a form's own submissions with `onSubmission(handler, captureBoolean?)`, a typed mixin for the new `rmx:submission` event. It runs when a form submission starts a Remix frame reload, on the submit button or on the form without a submitter, and bubbles through the form. Its `FormSubmissionEvent` shares request details, the `FormData` object, and the `finished` promise with the target frame's `reloadStart`.
+Follow a form's own submissions with `onSubmission(handler, captureBoolean?)`, a typed mixin for the new `rmx:submission` event. It runs when a form submission starts a Remix frame reload, on the submit button or on the form without a submitter, and bubbles through the form. Its `FormSubmissionEvent` exposes the owning form as `form: HTMLFormElement` and shares request details, the `FormData` object, and the `finished` promise with the target frame's `reloadStart`.
 
 ```tsx
 // Inside a hydrated component:

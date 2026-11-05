@@ -3,7 +3,14 @@ import type { ReloadDetails } from './reload-details.ts'
 /**
  * Event dispatched when a direct or ancestor-driven reload of a frame starts.
  */
-export type FrameReloadStartEvent = Event & ReloadDetails
+export type FrameReloadStartEvent = Event &
+  ReloadDetails & {
+    /**
+     * The initiating anchor, area, or owning form. `null` for programmatic reloads, programmatic
+     * navigations, and history traversal.
+     */
+    readonly element: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement | null
+  }
 
 /**
  * What a `reloadStart` event describes: the navigation that started the reload, if any, and the
@@ -14,7 +21,7 @@ export type FrameReloadStartEventInit = {
   method: string
   encType: string | null
   formData?: FormData
-  element?: Element
+  element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
   submitter?: HTMLElement | null
   finished: ReloadDetails['finished']
 }

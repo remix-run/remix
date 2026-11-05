@@ -8,9 +8,14 @@ import type { FrameReloadStartEventInit } from './reload-start-event.ts'
  * when there is no submitter. External or detached submitters receive a non-bubbling event before
  * a separate bubbling event on the form. Cancel submissions with the native `submit` event.
  */
-export type FormSubmissionEvent = SubmitEvent & ReloadDetails
+export type FormSubmissionEvent = SubmitEvent &
+  ReloadDetails & {
+    /** The owning form, including when the submitter is external or detached. */
+    readonly form: HTMLFormElement
+  }
 
-export type FormSubmissionEventInit = FrameReloadStartEventInit & {
+export type FormSubmissionEventInit = Omit<FrameReloadStartEventInit, 'element'> & {
+  form: HTMLFormElement
   bubbles?: boolean
 }
 
@@ -26,7 +31,7 @@ export function createFormSubmissionEvent(init: FormSubmissionEventInit): FormSu
       method: init.method,
       encType: init.encType,
       formData: init.formData ?? null,
-      element: init.element ?? null,
+      form: init.form,
       finished: init.finished,
     },
   )

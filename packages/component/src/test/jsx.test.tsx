@@ -7,6 +7,7 @@ import { createMixin, on, onSubmission, ref, unsafeHTML } from '../index.ts'
 import type {
   Dispatched,
   FormSubmissionEvent,
+  FrameReloadStartEvent,
   MixInput,
   MixinDescriptor,
   MixinHandle,
@@ -436,6 +437,12 @@ describe('jsx', () => {
     })
 
     it('infers onSubmission event and currentTarget types from the host', () => {
+      type reloadElement = Assert<
+        Equal<
+          FrameReloadStartEvent['element'],
+          HTMLAnchorElement | HTMLAreaElement | HTMLFormElement | null
+        >
+      >
       let button = (
         <button
           mix={onSubmission((event, signal) => {
@@ -451,6 +458,8 @@ describe('jsx', () => {
         <form
           mix={onSubmission((event) => {
             type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLFormElement>>
+            type inferredForm = Assert<Equal<typeof event.form, HTMLFormElement>>
+            type noElement = Assert<Equal<Extract<'element', keyof typeof event>, never>>
             type inferredData = Assert<Equal<typeof event.formData, FormData | null>>
             type inferredFinished = Assert<Equal<typeof event.finished, Promise<AbortSignal>>>
             type inferredAborted = Assert<Equal<Awaited<typeof event.finished>['aborted'], boolean>>

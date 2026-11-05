@@ -20,7 +20,7 @@ External or detached submitters have no event path through their owning form. Th
 
 The [reload event contract](https://github.com/remix-run/remix/tree/main/packages/component#following-a-reload) defines `src`, `method`, `encType`, `formData`, `element`, `submitter`, and `finished`. Request fields align with `frame.reload()` options, with `body` exposed as `formData`. GET entries are encoded in `src`; `formData` and `encType` are null. Other body formats remain out of scope, and future encodings can have separate `json` or `text` fields.
 
-`element` identifies the initiating anchor, area, or owning form, and is null for programmatic calls and history traversal. `submitter` identifies the actual submit button or is null. This avoids the ambiguity of the Navigation API's `sourceElement`, which can identify either a form or its button. Descendant frame events inherit these details while tracking their own completion.
+On `reloadStart`, `element` is an `HTMLAnchorElement`, `HTMLAreaElement`, or `HTMLFormElement`, and is null for programmatic calls and history traversal. On `rmx:submission`, the origin is always a form, so `form: HTMLFormElement` replaces `element` for convenient access without narrowing. Both events' `submitter` identifies the actual submit button or is null. This avoids the ambiguity of the Navigation API's `sourceElement`, which can identify either a form or its button. Descendant frame events inherit the initiating details while tracking their own completion.
 
 ## Completion outcomes
 

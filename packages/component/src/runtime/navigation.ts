@@ -23,7 +23,7 @@ type SourceElementNavigateEvent = NavigateEvent & {
 
 // The element whose navigation this is, and the owning form for a submission.
 type NavigationSource = {
-  element: Element
+  element: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
   form?: HTMLFormElement
   submitter?: HTMLElement | null
 }
@@ -838,7 +838,7 @@ function getSourceElementNavigation(
   if (!(sourceElement instanceof Element)) return
 
   let linkElement = sourceElement.closest('a, area')
-  if (linkElement instanceof Element) {
+  if (linkElement instanceof HTMLAnchorElement || linkElement instanceof HTMLAreaElement) {
     if (linkElement.hasAttribute('data-rmx-document')) return
     if (linkElement.hasAttribute('download')) return
 

@@ -786,10 +786,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (form && !controller.signal.aborted) {
       let target = origin.submitter ?? form
       let bubbles = form.contains(target)
-      target.dispatchEvent(createFormSubmissionEvent({ ...origin, finished, bubbles }))
+      target.dispatchEvent(createFormSubmissionEvent({ ...origin, form, finished, bubbles }))
       // External or detached submitters have no event path through their owning form.
       if (!bubbles && !controller.signal.aborted) {
-        form.dispatchEvent(createFormSubmissionEvent({ ...origin, finished }))
+        form.dispatchEvent(createFormSubmissionEvent({ ...origin, form, finished }))
       }
     }
     return controller

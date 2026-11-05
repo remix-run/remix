@@ -11,11 +11,6 @@ export interface ReloadDetails {
   readonly encType: string | null
   /** Submitted form entries for a POST reload. `null` for GET reloads. */
   readonly formData: FormData | null
-  /**
-   * The initiating anchor, area, or owning form. `null` for programmatic reloads, programmatic
-   * navigations, and history traversal.
-   */
-  readonly element: Element | null
   /** The actual submit button, or `null` when there is no submitter. */
   readonly submitter: HTMLElement | null
   /**

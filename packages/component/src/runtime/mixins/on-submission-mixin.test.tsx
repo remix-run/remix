@@ -23,7 +23,7 @@ describe('onSubmission mixin', () => {
           order.push('form')
           signals.push(signal)
           expect(event.currentTarget).toBe(form)
-          expect(event.element).toBe(form)
+          expect(event.form).toBe(form)
           expect(event.submitter).toBe(button)
         }, true)}
       >
@@ -54,7 +54,7 @@ describe('onSubmission mixin', () => {
         method: 'post',
         encType: 'application/x-www-form-urlencoded',
         formData: new FormData(),
-        element: form,
+        form,
         submitter: button,
         finished: Promise.resolve(new AbortController().signal),
       }),
