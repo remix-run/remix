@@ -142,7 +142,7 @@ function createVirtualRoot(
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
   let scheduler =
-    options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget, styles)
+    options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget)
   let frameStub =
     options.frame ??
     createRootFrameHandle({

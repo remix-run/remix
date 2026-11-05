@@ -1,0 +1,1 @@
+Deprecate the ignored `styles` argument of `createScheduler()`. Each root's frame context already supplies its style manager, so `createScheduler()` no longer creates a default style manager when the argument is omitted.
