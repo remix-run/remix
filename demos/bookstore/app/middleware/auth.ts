@@ -122,14 +122,19 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
 }
 
+const returnToBaseURL = 'https://return-to.invalid'
+
 function getSafeReturnTo(returnTo: string | null): string | undefined {
-  if (returnTo == null || returnTo === '') {
+  if (!returnTo?.startsWith('/')) {
     return undefined
   }
 
-  if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
+  // Browsers treat `\` like `/`, so a value like `/\evil.com` would leave the site. Resolve it
+  // against a placeholder origin and only keep paths that stay there.
+  let url = URL.parse(returnTo, returnToBaseURL)
+  if (url == null || url.origin !== returnToBaseURL || url.pathname.startsWith('//')) {
     return undefined
   }
 
-  return returnTo
+  return url.pathname + url.search + url.hash
 }
