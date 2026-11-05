@@ -349,7 +349,7 @@ function getDocumentedInterface(
 function getDocumentedType(fullName: string, node: typedoc.DeclarationReflection): DocumentedType {
   let name = getApiNameFromFullName(fullName)
 
-  //TODO: We my need to do manual signature construction for types with generics
+  // TODO: We may need to do manual signature construction for types with generics
   //
   // The `Action` type here:
   //   https://github.com/remix-run/remix/blob/ffdd2740b07b9c90518617b78831c255fa8aadd6/packages/fetch-router/src/lib/controller.ts#L40
@@ -710,7 +710,7 @@ function getApiParameters(
     return []
   }
 
-  // For now, we assume the class will be documented on it's own and we can just cross-link
+  // For now, we assume the class will be documented on its own and we can just cross-link
   // TODO: Cross-link to the class
   if (api.kind === typedoc.ReflectionKind.Class) {
     let param = getApiParameterOrProperty(node)
