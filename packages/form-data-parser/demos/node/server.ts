@@ -24,8 +24,7 @@ const submittedDataSchema = f.object({
 
 const fileStorage = createFsFileStorage(await fsp.mkdtemp(path.join(os.tmpdir(), 'uploads-')))
 
-/** @type (file: File) => Promise<string> */
-async function getDataUrl(file) {
+async function getDataUrl(file: File): Promise<string> {
   let buffer = Buffer.from(await file.arrayBuffer())
   return `data:${file.type};base64,${buffer.toString('base64')}`
 }
@@ -60,7 +59,7 @@ const server = http.createServer(
       try {
         let formData = await parseFormData(request, { maxFileSize }, async (upload) => {
           let file = await fileStorage.put('image-upload', upload)
-          return file.size === 0 ? null : file
+          return file.size === 0 ? null : file.toFile()
         })
 
         let { image1: image, text1: text } = s.parse(submittedDataSchema, formData)

@@ -6,6 +6,16 @@ import { MultipartParseError, parseMultipartRequest } from '@remix-run/multipart
 
 const PORT = 44100
 
+type PartSummary =
+  | {
+      name: string | undefined
+      filename: string | undefined
+      mediaType: string | undefined
+      size: number
+      file: string
+    }
+  | { name: string | undefined; value: string }
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'text/html' })
@@ -30,8 +40,7 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'POST') {
     try {
-      /** @type any[] */
-      let parts = []
+      let parts: PartSummary[] = []
 
       for await (let part of parseMultipartRequest(req)) {
         if (part.isFile) {

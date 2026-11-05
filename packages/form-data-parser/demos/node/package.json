@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@remix-run/data-schema": "workspace:^",
     "@remix-run/file-storage": "workspace:^",
     "@remix-run/form-data-parser": "workspace:^",
     "@remix-run/multipart-parser": "workspace:^",
@@ -13,7 +14,7 @@
     "typescript": "catalog:"
   },
   "scripts": {
-    "start": "node server.js",
+    "start": "node server.ts",
     "typecheck": "tsc --noEmit"
   }
 }
