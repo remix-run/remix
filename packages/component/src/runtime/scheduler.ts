@@ -2,8 +2,8 @@ import { createDocumentState } from './document-state.ts'
 import type { CommittedComponentNode, VNodeParent } from './reconcile.ts'
 import { createComponentErrorEvent } from './component.ts'
 import {
-  defaultStyleManager,
   findNextSiblingDomAnchor,
+  getDefaultStyleManager,
   isCommittedComponentNode,
   renderComponent,
   setActiveSchedulerUpdateParents,
@@ -61,7 +61,7 @@ function formatComponentCounts(counts: Map<string, number>): string {
 export function createScheduler(
   doc: Document,
   rootTarget: EventTarget,
-  styles: StyleManager = defaultStyleManager,
+  styles: StyleManager = getDefaultStyleManager(),
 ): Scheduler {
   let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()

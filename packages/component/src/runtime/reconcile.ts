@@ -386,22 +386,18 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
-let globalStyleManager =
-  typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
+let defaultStyleManager: StyleManager | undefined
 
-export let defaultStyleManager: StyleManager = globalStyleManager
+export function getDefaultStyleManager(): StyleManager {
+  return (defaultStyleManager ??= createStyleManager())
+}
 
 /**
  * Reset the global style state. For testing only - not exported from index.ts.
  */
 export function resetStyleState() {
-  invariant(
-    typeof window !== 'undefined',
-    'resetStyleState() is only available in a browser environment',
-  )
-  globalStyleManager.dispose()
-  globalStyleManager = createStyleManager()
-  defaultStyleManager = globalStyleManager
+  defaultStyleManager?.dispose()
+  defaultStyleManager = undefined
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg'

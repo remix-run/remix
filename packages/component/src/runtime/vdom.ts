@@ -13,8 +13,8 @@ import type { ResolveFrame } from './frame-runtime.ts'
 import { createScheduler } from './scheduler.ts'
 import type { Scheduler } from './scheduler.ts'
 import {
-  defaultStyleManager,
   diffVNodes,
+  getDefaultStyleManager,
   remove as removeVNode,
   resetStyleState,
   ROOT_VNODE,
@@ -116,7 +116,7 @@ export function createRangeRoot(
  * @returns A virtual root controller.
  */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
-  let styles = options.styleManager ?? defaultStyleManager
+  let styles = options.styleManager ?? getDefaultStyleManager()
   if (container.innerHTML.trim() !== '') {
     // Adopt additively: multiple roots hydrating separate islands may share
     // the default style manager, and adopting a later island must not release
@@ -137,7 +137,7 @@ function createVirtualRoot(
   let nonceManager = getNonceManager()
   let vroot: CommittedVNode | null = null
   let currentElement: RemixNode | undefined
-  let styles = options.styleManager ?? defaultStyleManager
+  let styles = options.styleManager ?? getDefaultStyleManager()
   let hydrationCursor = hydrationStart
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
