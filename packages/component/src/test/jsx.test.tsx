@@ -323,7 +323,6 @@ describe('jsx', () => {
 
     it('rejects component props typed on the render callback', () => {
       function InvalidComponent(handle: Handle) {
-        void handle
         return (props: { label: string }) => <div>{props.label}</div>
       }
 

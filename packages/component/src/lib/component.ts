@@ -639,7 +639,6 @@ export const FRAME_NODE = Symbol('FrameNode')
  * @returns A placeholder render function handled by the reconciler.
  */
 export function Fragment(handle: Handle<FragmentProps>): RenderFn {
-  void handle
   return () => null // reconciler renders
 }
 

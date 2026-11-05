@@ -947,7 +947,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
  * @returns A placeholder render function handled by the reconciler.
  */
 export function Frame(handle: Handle<FrameProps, FrameHandle>): RenderFn {
-  void handle
   return () => null // reconciler renders
 }
 

@@ -5079,7 +5079,6 @@ describe('stream', () => {
         target?: string,
         context?: { currentFrameSrc: string; topFrameSrc: string },
       ) {
-        void target
         invariant(context)
         resolveFrameContexts.push({ src, ...context })
 

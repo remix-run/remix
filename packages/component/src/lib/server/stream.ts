@@ -190,7 +190,6 @@ export type ImportMapProps = Omit<
  * @returns This component is handled directly by the server renderer.
  */
 export function ImportMap(handle: Handle<ImportMapProps>): RenderFn {
-  void handle
   return () => null
 }
 
