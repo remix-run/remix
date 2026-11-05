@@ -1,4 +1,4 @@
-import { parsePattern } from './route-pattern/parse.ts'
+import { parsePatternParts } from './route-pattern/parse.ts'
 import { serializePattern, serializePatternParts } from './route-pattern/serialize.ts'
 
 /** A token in a parsed pattern part (hostname or pathname). */
@@ -102,7 +102,7 @@ export class RoutePattern<source extends string = string> {
    * @returns The parsed route pattern.
    */
   static parse<source extends string>(source: source): RoutePattern<source> {
-    return parsePattern(source)
+    return new RoutePattern<source>(parsePatternParts(source))
   }
 
   /** Normalized string representation of this pattern. */

@@ -1,30 +1,24 @@
 import { split } from './split.ts'
 import type { Span } from './split.ts'
-import { createRoutePattern } from '../route-pattern.ts'
-import type {
-  RoutePatternParts,
-  PartPattern,
-  PartPatternToken,
-  RoutePattern,
-} from '../route-pattern.ts'
+import type { RoutePatternParts, PartPattern, PartPatternToken } from '../route-pattern.ts'
 import type { Mutable } from '../types/utils.ts'
 
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 /**
- * Parse a route pattern source string
+ * Parse a route pattern source string into its parts
  *
  * @param source The pattern source, e.g. `'/users/:id'` or `'https://:tenant.example.com/dashboard?tab'`.
- * @returns The parsed pattern.
+ * @returns The parsed pattern parts.
  * @throws {ParseError} When the source is malformed.
  */
-export function parsePattern<source extends string>(source: source): RoutePattern<source> {
+export function parsePatternParts(source: string): RoutePatternParts {
   let spans = split(source)
   if (spans.port && !spans.hostname) {
     throw new ParseError('missing hostname', source, spans.port[0] - 1)
   }
 
-  return createRoutePattern<source>({
+  return {
     protocol: parseProtocol(source, spans.protocol),
     hostname: parseHostname(source, spans.hostname),
     port: spans.port ? source.slice(...spans.port) : null,
@@ -32,7 +26,7 @@ export function parsePattern<source extends string>(source: source): RoutePatter
       ? parsePart(source, { span: spans.pathname, type: 'pathname' })
       : parsePart('', { span: [0, 0], type: 'pathname' }),
     search: spans.search ? parseSearch(source.slice(...spans.search)) : new Map(),
-  })
+  }
 }
 
 /**

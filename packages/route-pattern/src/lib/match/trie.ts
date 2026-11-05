@@ -1,5 +1,5 @@
-import type { RoutePatternParts, RoutePattern } from '../route-pattern.ts'
-import { parsePattern } from '../route-pattern/parse.ts'
+import { RoutePattern } from '../route-pattern.ts'
+import type { RoutePatternParts } from '../route-pattern.ts'
 import { toUnicode } from './punycode.ts'
 import {
   canonicalizeUrlPart,
@@ -55,7 +55,7 @@ export class Trie<data = unknown> {
     if (typeof pattern === 'string') {
       let source = pattern
       patternSize = this.#checkSizeLimits(source)
-      pattern = parsePattern(pattern)
+      pattern = RoutePattern.parse(pattern)
       if (pattern.source !== source) patternSize = this.#checkSizeLimits(pattern.source)
     } else {
       patternSize = this.#checkSizeLimits(pattern.source)

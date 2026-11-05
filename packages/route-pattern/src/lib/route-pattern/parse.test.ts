@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import dedent from 'dedent'
 
-import { ParseError, parsePart, parsePattern } from './parse.ts'
+import { ParseError, parsePart, parsePatternParts } from './parse.ts'
 import { createRoutePattern, RoutePattern } from '../route-pattern.ts'
 import type { RoutePatternParts, PartPattern } from '../route-pattern.ts'
 
@@ -240,8 +240,8 @@ describe('parsePart', () => {
 })
 
 describe('RoutePattern', () => {
-  it('is returned by parsePattern', () => {
-    assert.equal(parsePattern('/posts/:id') instanceof RoutePattern, true)
+  it('is returned by RoutePattern.parse', () => {
+    assert.equal(RoutePattern.parse('/posts/:id') instanceof RoutePattern, true)
   })
 
   it('derives source from parsed parts', () => {
@@ -291,7 +291,7 @@ describe('RoutePattern', () => {
 
   it('rejects params followed by non-delimiter text after a nested optional', () => {
     assert.throws(
-      () => parsePattern('/:id((/details)-suffix)'),
+      () => parsePatternParts('/:id((/details)-suffix)'),
       new ParseError('invalid param delimiter', '/:id((/details)-suffix)', 15),
     )
   })
@@ -311,7 +311,7 @@ describe('RoutePattern', () => {
   })
 })
 
-describe('parsePattern', () => {
+describe('parsePatternParts', () => {
   function assertParse(
     source: string,
     expected: {
@@ -322,7 +322,7 @@ describe('parsePattern', () => {
       search?: Record<string, Array<string>>
     },
   ) {
-    let pattern = parsePattern(source)
+    let parts = parsePatternParts(source)
     let expectedSearch = new Map<string, Set<string>>()
     if (expected.search) {
       for (let name in expected.search) {
@@ -330,7 +330,7 @@ describe('parsePattern', () => {
         expectedSearch.set(name, value.length === 0 ? new Set() : new Set(value))
       }
     }
-    assert.deepEqual(pattern._parts, {
+    assert.deepEqual(parts, {
       protocol: expected.protocol ?? null,
       hostname: expected.hostname ? parsePart(expected.hostname, { type: 'hostname' }) : null,
       port: expected.port ?? null,
@@ -340,9 +340,9 @@ describe('parsePattern', () => {
   }
 
   it('parses protocol', () => {
-    assert.equal(parsePattern('http://')._parts.protocol, 'http')
-    assert.equal(parsePattern('https://')._parts.protocol, 'https')
-    assert.equal(parsePattern('http(s)://')._parts.protocol, 'http(s)')
+    assert.equal(parsePatternParts('http://').protocol, 'http')
+    assert.equal(parsePatternParts('https://').protocol, 'https')
+    assert.equal(parsePatternParts('http(s)://').protocol, 'http(s)')
   })
 
   it('parses hostname', () => {
@@ -433,30 +433,30 @@ describe('parsePattern', () => {
   })
 
   it('throws on invalid protocol', () => {
-    assert.throws(() => parsePattern('ftp://example.com'), {
+    assert.throws(() => parsePatternParts('ftp://example.com'), {
       name: 'ParseError',
       type: 'invalid protocol',
     })
-    assert.throws(() => parsePattern('ws://example.com/path'), {
+    assert.throws(() => parsePatternParts('ws://example.com/path'), {
       name: 'ParseError',
       type: 'invalid protocol',
     })
-    assert.throws(() => parsePattern('httpx://example.com'), {
+    assert.throws(() => parsePatternParts('httpx://example.com'), {
       name: 'ParseError',
       type: 'invalid protocol',
     })
-    assert.throws(() => parsePattern('http(s)x://example.com'), {
+    assert.throws(() => parsePatternParts('http(s)x://example.com'), {
       name: 'ParseError',
       type: 'invalid protocol',
     })
   })
 
   it('throws on port without hostname', () => {
-    assert.throws(() => parsePattern('://:8080/users'), {
+    assert.throws(() => parsePatternParts('://:8080/users'), {
       name: 'ParseError',
       type: 'missing hostname',
     })
-    assert.throws(() => parsePattern('http://:80/users'), {
+    assert.throws(() => parsePatternParts('http://:80/users'), {
       name: 'ParseError',
       type: 'missing hostname',
     })

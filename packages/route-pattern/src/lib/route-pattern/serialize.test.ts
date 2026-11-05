@@ -1,7 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { parsePattern } from './parse.ts'
+import { parsePatternParts } from './parse.ts'
 import {
   serializeHostname,
   serializePathname,
@@ -13,7 +13,7 @@ import {
 } from './serialize.ts'
 
 function partsOf(source: string) {
-  return parsePattern(source)._parts
+  return parsePatternParts(source)
 }
 
 describe('serializePattern', () => {
