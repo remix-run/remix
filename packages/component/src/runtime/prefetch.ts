@@ -1,4 +1,5 @@
 import { getNamedFrame, pendingPrefetchLinks } from './frame.ts'
+import { FRAME_REQUEST_HEADER, FRAME_TARGET_HEADER } from './frame-headers.ts'
 import { getInterceptableNavigation, getSameOriginUrl } from './navigation.ts'
 
 /** Options for prefetching frame content. */
@@ -306,8 +307,8 @@ export function fetchFrame(
   init: RequestInit,
   contentType?: string,
 ): Promise<Response> {
-  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
-  if (target != null) headers.set('X-Remix-Target', target)
+  let headers = new Headers({ Accept: 'text/html', [FRAME_REQUEST_HEADER]: 'true' })
+  if (target != null) headers.set(FRAME_TARGET_HEADER, target)
   if (contentType) headers.set('Content-Type', contentType)
   return fetch(src, { ...init, headers, mode: 'same-origin' })
 }
