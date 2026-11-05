@@ -1,5 +1,6 @@
 import { readStream } from './read-stream.ts'
 import {
+  blockPaddingSize,
   buffersEqual,
   concatChunks,
   computeChecksum,
@@ -7,7 +8,6 @@ import {
   decodePax,
   getOctal,
   getString,
-  overflow,
 } from './utils.ts'
 
 const TarBlockSize = 512
@@ -729,7 +729,7 @@ export class TarParser {
         break
     }
 
-    this.#missing = overflow(this.#header!.size)
+    this.#missing = blockPaddingSize(this.#header!.size)
   }
 
   #parseBody(): void {
@@ -743,7 +743,7 @@ export class TarParser {
     this.#bodyController!.enqueue(this.#read(this.#missing))
     this.#bodyController!.close()
     this.#bodyController = null
-    this.#missing = overflow(this.#header!.size)
+    this.#missing = blockPaddingSize(this.#header!.size)
   }
 
   #read(size: number): Uint8Array {
