@@ -4,7 +4,7 @@ import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
 import type { ElementProps } from '../runtime/core/vnode.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { isMixinDescriptor } from '../runtime/core/mix.ts'
-import { processStyleClass } from '../style/index.ts'
+import { compileStyleClass } from '../style/index.ts'
 import type { CSSProps } from '../style/style.ts'
 
 type StyleEntry = { selector: string; css: string }
@@ -48,7 +48,7 @@ const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (hand
     }
     invariant(runtime, 'css mixin requires frame runtime')
     let styleTarget = resolveStyleTarget(runtime)
-    let { selector, css: cssText } = processStyleClass(currentStyles, styleTarget.styleCache)
+    let { selector, css: cssText } = compileStyleClass(currentStyles, styleTarget.styleCache)
     let styleGeneration = styleTarget.styleManager?.getGeneration?.() ?? 0
 
     if (styleTarget.styleManager) {

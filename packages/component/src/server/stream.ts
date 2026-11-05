@@ -670,19 +670,19 @@ function buildElementSegment(
   let normalizedProps = normalizeUnsafeHTMLProps(props)
   let innerHTML = normalizedProps.innerHTML
   let mixedProps = resolveSsrMixedProps(tag, normalizedProps, context, frameState)
-  let processedProps = processStyleProps(mixedProps)
+  let attributeProps = normalizeClassAndStyleProps(mixedProps)
   // Determine namespace context for the current element and its children
   let currentIsSvg = context.insideSvg || tag === 'svg'
 
   if (!currentIsSvg && tag === 'textarea') {
-    output.push(buildTextareaElementSegment(tag, processedProps))
+    output.push(buildTextareaElementSegment(tag, attributeProps))
     return
   }
 
   let attrs =
     !currentIsSvg && tag === 'input'
-      ? renderInputAttributes(processedProps)
-      : renderAttributes(tag, processedProps, currentIsSvg)
+      ? renderInputAttributes(attributeProps)
+      : renderAttributes(tag, attributeProps, currentIsSvg)
 
   if (SELF_CLOSING_TAGS.has(tag)) {
     output.push(`<${tag}${attrs} />`)
@@ -704,7 +704,7 @@ function buildElementSegment(
   if (tag === 'script') {
     if (typeof props.children === 'string') {
       if (context.insideHead) {
-        collectAuthoredImportMap(context, tag, processedProps, props.children)
+        collectAuthoredImportMap(context, tag, attributeProps, props.children)
       }
       output.push(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
       return
@@ -827,8 +827,8 @@ function buildHeadElementSegment(
   frameState: SsrFrameState,
   output: Segment[],
 ): void {
-  let processedProps = processStyleProps(props)
-  let attrs = renderAttributes(tag, processedProps, false)
+  let attributeProps = normalizeClassAndStyleProps(props)
+  let attrs = renderAttributes(tag, attributeProps, false)
   let head = createDocumentElementSegments('head', attrs, context)
 
   output.push(head.open)
@@ -1474,7 +1474,7 @@ function hoistClientEntryResourcesFromFrameHead(
   return `${FRAME_HEAD_OPEN_TAG}${remainingHeadHtml}${FRAME_HEAD_CLOSE_TAG}${contentAfterHead}`
 }
 
-function processStyleProps(props: ElementProps): ElementProps {
+function normalizeClassAndStyleProps(props: ElementProps): ElementProps {
   if (
     !('class' in props) &&
     typeof props.style !== 'object' &&
@@ -1488,23 +1488,23 @@ function processStyleProps(props: ElementProps): ElementProps {
   let mergedClassName = classAttr
   if (className) mergedClassName = classAttr ? `${classAttr} ${className}` : className
 
-  let processedProps: ElementProps
+  let attributeProps: ElementProps
   if (mergedClassName) {
     // Copy without `delete`, which would leave the props object in slow dictionary mode.
-    processedProps = {}
+    attributeProps = {}
     for (let key of Object.keys(props)) {
-      if (key !== 'class') processedProps[key] = props[key]
+      if (key !== 'class') attributeProps[key] = props[key]
     }
-    processedProps.className = mergedClassName
+    attributeProps.className = mergedClassName
   } else {
-    processedProps = { ...props }
+    attributeProps = { ...props }
   }
 
   if (typeof props.style === 'object') {
-    processedProps.style = serializeStyleObject(props.style)
+    attributeProps.style = serializeStyleObject(props.style)
   }
 
-  return processedProps
+  return attributeProps
 }
 
 function collectStyleTags(context: RenderContext): string {

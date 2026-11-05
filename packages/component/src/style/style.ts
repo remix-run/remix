@@ -212,7 +212,7 @@ function atRuleBodyToCss(styles: StyleObject): string {
   )
 }
 
-export function processStyleClass(
+export function compileStyleClass(
   styleObj: CSSProps,
   styleCache: Map<string, { selector: string; css: string }>,
 ): {
