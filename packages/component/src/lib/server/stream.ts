@@ -43,6 +43,17 @@ interface VNode {
   _parent?: VNode
 }
 
+function getProviderContextValue(vnode: VNode | undefined, providerType: ElementType): unknown {
+  let current = vnode
+  while (current) {
+    if (current.type === providerType && current._handle) {
+      return current._handle.getContextValue()
+    }
+    current = current._parent
+  }
+  return undefined
+}
+
 /**
  * Creates a server renderer node record from an element type and props.
  *
@@ -967,18 +978,7 @@ function createSsrMixinHandle(
           return undefined
         }
 
-        let current = parentVNode
-        while (current) {
-          if (current.type === providerType) {
-            let providerHandle = current._handle
-            if (providerHandle) {
-              return providerHandle.getContextValue()
-            }
-          }
-          current = current._parent
-        }
-
-        return undefined
+        return getProviderContextValue(parentVNode, providerType)
       },
     },
     frame: createFrameHandle({
@@ -1027,18 +1027,7 @@ function buildComponentSegment(
     frame: frameState.frame,
     signal: ssrSignal,
     getContext(providerType) {
-      let current = vnode._parent
-      while (current) {
-        if (current.type === providerType) {
-          let providerHandle = current._handle
-          // TODO: need better vnode types to avoid defensive checks
-          if (providerHandle) {
-            return providerHandle.getContextValue()
-          }
-        }
-        current = current._parent
-      }
-      return undefined
+      return getProviderContextValue(vnode._parent, providerType)
     },
     getFrameByName() {
       return undefined
@@ -1102,17 +1091,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
         frame: frameState.frame,
         signal: ssrSignal,
         getContext(providerType) {
-          let current = vnode._parent
-          while (current) {
-            if (current.type === providerType) {
-              let providerHandle = current._handle
-              if (providerHandle) {
-                return providerHandle.getContextValue()
-              }
-            }
-            current = current._parent
-          }
-          return undefined
+          return getProviderContextValue(vnode._parent, providerType)
         },
         getFrameByName() {
           return undefined
