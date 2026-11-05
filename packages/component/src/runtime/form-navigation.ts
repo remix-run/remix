@@ -73,7 +73,11 @@ export function createFormNavigationResolver(
       let form = event.target
       if (!(form instanceof HTMLFormElement)) return
 
-      let submitter = getSubmitter(event)
+      let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
+      let submitter =
+        eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
+          ? eventSubmitter
+          : null
       function onFormData(formDataEvent: FormDataEvent) {
         // Native formdata follows an uncanceled submit. Ignore snapshots made in submit handlers
         // or after cancellation, and stop listening before later snapshots can replace this data.
@@ -144,75 +148,6 @@ export function createFormNavigationResolver(
       getSubmission,
     }
   }
-}
-
-/** A form submission read from its `submit` event, before the browser plans its navigation. */
-export type FormSubmit = {
-  form: HTMLFormElement
-  /** The button that submitted the form, or null when nothing did. */
-  submitter: SubmitterElement | null
-  /** Checks the submitter before the form for a submission attribute. */
-  hasAttribute(name: string): boolean
-  /** Reads a submission attribute, preferring the submitter's. */
-  getAttribute(name: string): string | null
-  /**
-   * Reads the form's entries, firing `formdata` as the browser would. Returns the submission's
-   * destination, with GET entries in its query, and the entries of a non-GET submission.
-   */
-  read(): { url: string; submission: FormSubmission | undefined }
-}
-
-/**
- * Reads a `submit` event as the browser would submit it, including submitter overrides.
- *
- * @param event The `submit` event.
- * @returns The submission, or `undefined` when it doesn't navigate this document, such as a
- * dialog's or one into another window.
- */
-export function getFormSubmit(event: Event): FormSubmit | undefined {
-  let form = event.target
-  if (!(form instanceof HTMLFormElement)) return
-
-  let submitter = getSubmitter(event)
-  let method = getFormMethod(form, submitter)
-  let target =
-    getSubmissionAttribute(form, submitter, 'target', 'formtarget') ??
-    form.ownerDocument.querySelector('base[target]')?.getAttribute('target')
-  if (method === 'dialog' || (target && target.toLowerCase() !== '_self')) return
-
-  let encType = getFormEncType(form, submitter)
-  let action = submitter?.hasAttribute('formaction') ? submitter.formAction : form.action
-  return {
-    form,
-    submitter,
-    hasAttribute(name) {
-      return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
-    },
-    getAttribute(name) {
-      return getSubmissionAttribute(form, submitter, name)
-    },
-    read() {
-      let formData = new FormData(form, submitter)
-      if (method !== 'get') return { url: action, submission: { formData, method, encType } }
-
-      // GET submissions replace the action's query with their entries, sending files by name.
-      let url = new URL(action)
-      let query = new URLSearchParams()
-      for (let [name, value] of formData) {
-        query.append(name, typeof value === 'string' ? value : value.name)
-      }
-      // A leading `?` keeps an empty query, as the browser's submission does.
-      url.search = `?${query}`
-      return { url: url.href, submission: undefined }
-    },
-  }
-}
-
-function getSubmitter(event: Event): SubmitterElement | null {
-  let submitter = event instanceof SubmitEvent ? event.submitter : null
-  return submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement
-    ? submitter
-    : null
 }
 
 function getSourceForm(

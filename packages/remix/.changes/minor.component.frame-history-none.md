@@ -1,1 +1,0 @@
-`remix/component` accepts `data-rmx-history="none"` and `history: 'none'`, which load a link's or form's `data-rmx-target` frame in place without changing the URL or history. See the `@remix-run/component` changelog for an example.
