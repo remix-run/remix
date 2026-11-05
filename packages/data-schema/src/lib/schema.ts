@@ -1174,18 +1174,22 @@ export class ValidationError extends Error {
 /**
  * Validate a value and return the typed output or throw a {@link ValidationError}.
  *
+ * Accepts any synchronous Standard Schema. Schemas whose `validate()` returns a promise are not
+ * supported.
+ *
  * @param schema The schema to validate against
  * @param value The value to validate
  * @param options Validation options
  * @returns The validated output value
  * @throws {ValidationError} If validation fails
+ * @throws {TypeError} If the schema validates asynchronously
  */
 export function parse<input, output>(
   schema: StandardSchemaV1<input, output>,
   value: unknown,
   options?: ParseOptions,
 ): output {
-  let result = schema['~standard'].validate(value, options) as ValidationResult<output>
+  let result = validateSync(schema, value, options)
 
   if (result.issues) {
     throw new ValidationError(result.issues)
@@ -1197,10 +1201,14 @@ export function parse<input, output>(
 /**
  * Validate a value without throwing.
  *
+ * Accepts any synchronous Standard Schema. Schemas whose `validate()` returns a promise are not
+ * supported.
+ *
  * @param schema The schema to validate against
  * @param value The value to validate
  * @param options Validation options
  * @returns A success result with the value, or a failure result with issues
+ * @throws {TypeError} If the schema validates asynchronously
  */
 export function parseSafe<input, output>(
   schema: StandardSchemaV1<input, output>,
@@ -1209,11 +1217,25 @@ export function parseSafe<input, output>(
 ):
   | { success: true; value: output }
   | { success: false; issues: ReadonlyArray<StandardSchemaV1.Issue> } {
-  let result = schema['~standard'].validate(value, options) as ValidationResult<output>
+  let result = validateSync(schema, value, options)
 
   if (result.issues) {
     return { success: false, issues: result.issues }
   }
 
   return { success: true, value: result.value }
+}
+
+function validateSync<input, output>(
+  schema: StandardSchemaV1<input, output>,
+  value: unknown,
+  options: ParseOptions | undefined,
+): ValidationResult<output> {
+  let result = schema['~standard'].validate(value, options)
+
+  if (result instanceof Promise) {
+    throw new TypeError('parse() and parseSafe() only support synchronous schemas')
+  }
+
+  return result
 }

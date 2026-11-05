@@ -1,0 +1,1 @@
+`parse()` and `parseSafe()` now throw a `TypeError` when given a Standard Schema that validates asynchronously. Previously they treated the returned promise as a successful result and returned `undefined`.
