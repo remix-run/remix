@@ -9,7 +9,13 @@ export type WorkspaceInfo = {
 }
 
 const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', 'reference'])
-const ROOT_FULL_RUN_FILES = new Set(['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'])
+const ROOT_FULL_RUN_FILES = new Set([
+  'package.json',
+  'playwright.config.ts',
+  'playwright.config.js',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+])
 const ROOT_TSCONFIG_PATTERN = /^tsconfig(?:\..+)?\.json$/
 
 export function getWorkspaceInfos(rootDir: string): WorkspaceInfo[] {

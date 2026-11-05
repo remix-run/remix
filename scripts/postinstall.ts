@@ -11,13 +11,7 @@ const PLAYWRIGHT_CLI_PATH = fileURLToPath(
 const PLAYWRIGHT_WORKING_DIRECTORY = fileURLToPath(
   new URL('../packages/component', import.meta.url),
 )
-const PLAYWRIGHT_INSTALL_ARGS = [
-  'install',
-  '--only-shell',
-  'chromium',
-  'firefox',
-  ...(process.platform === 'win32' ? [] : ['webkit']),
-]
+const PLAYWRIGHT_INSTALL_ARGS = ['install', '--only-shell', 'chromium', 'firefox']
 const INSTALL_TIMEOUT_MS = 5 * 60 * 1000
 
 async function main() {
@@ -56,7 +50,7 @@ async function main() {
           formatPlaywrightInstallError(retryError),
           '',
           'Playwright browser installation failed after one retry.',
-          'Run `pnpm --filter @remix-run/component exec playwright install` to retry manually.',
+          'Run `pnpm --filter @remix-run/component exec playwright install --only-shell chromium firefox` to retry manually.',
         ].join('\n'),
       )
     }
