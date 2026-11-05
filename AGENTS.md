@@ -83,7 +83,7 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 - `write-api-docs` at `.agents/skills/write-api-docs/SKILL.md`: Write or tighten JSDoc for exported public APIs.
 - `write-readme` at `.agents/skills/write-readme/SKILL.md`: Draft or revise package READMEs in the repo's style.
 - `write-tests` at `.agents/skills/write-tests/SKILL.md`: Write, refactor, or review tests with repo runner, fixture, assertion, dependency, and validation conventions.
-- `write-ui-module-readme` at `.agents/skills/write-ui-module-readme/SKILL.md`: Write concise module README files for `packages/ui/src/lib/*` primitives.
+- `write-ui-module-readme` at `.agents/skills/write-ui-module-readme/SKILL.md`: Write concise module README files for `packages/ui` primitives (`packages/ui/src/<primitive>/README.md`).
 - `write-ui-examples` at `.agents/skills/write-ui-examples/SKILL.md`: Design, document and review focused UI library examples, including an adversarial product UX review.
 
 ## App And Demo Skills

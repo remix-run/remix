@@ -249,6 +249,9 @@ Before finishing a `packages/ui` primitive change, verify:
 - the public entry is `packages/ui/src/<name>.ts` or
   `packages/ui/src/<name>.tsx` and exports match `packages/ui/package.json`
 - implementation-only shared helpers live under `packages/ui/src/lib`
+- a primitive split across several modules keeps them in `packages/ui/src/<name>/`
+  next to its README, with `packages/ui/src/<name>.ts` as the public entry (see
+  `animation`)
 - primitives use named exports and are consumed with namespace imports
 - context is a plain getter/method object, not a controller or emitter layer
 - host refs are registered and unregistered with the owning mixin/component
