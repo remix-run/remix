@@ -861,7 +861,7 @@ describe('node-hmr', () => {
 
       await writeFileAtomically(path.join(fixture.path, 'value.ts'), `export const message = 'two'`)
 
-      await waitForResponse(ready.port, 'two')
+      await waitForResponse(ready.port, 'two', () => server.output)
       assert.equal(server.readyCount, 1)
       await waitForOutput(server, /hmr update value\.ts/)
     } finally {
@@ -1379,6 +1379,32 @@ describe('node-hmr', () => {
   )
 
   it(
+    'spawns one replacement when files change while the previous child is exiting',
+    { skip: isWindows && 'Windows terminates child processes without delivering SIGTERM handlers' },
+    async () => {
+      await using fixture = await createFixture({
+        'server.ts': getDelayedShutdownServerSource('one'),
+      })
+      let server = startFixtureServer(fixture.path)
+
+      try {
+        let ready = await server.waitForReady(0)
+        assert.equal(await fetchText(ready.port), 'one')
+
+        await writeFileAtomically(fixture.entryPath, getDelayedShutdownServerSource('two'))
+        await waitForOutput(server, /"type":"child-sigterm"/)
+        await writeFileAtomically(fixture.entryPath, getDelayedShutdownServerSource('three'))
+
+        ready = await server.waitForReady(1)
+        assert.equal(await fetchText(ready.port), 'three')
+        await assertNoReadyEvent(server, 2, 1_500)
+      } finally {
+        await server.stop()
+      }
+    },
+  )
+
+  it(
     'waits for a force-killed child process before completing shutdown',
     { skip: isWindows && 'Windows terminates child processes without delivering SIGTERM handlers' },
     async () => {
@@ -1476,6 +1502,30 @@ function getSlowShutdownServerSource(message: string): string {
     `  sigtermCount += 1`,
     `  console.log(JSON.stringify({ type: 'child-sigterm', count: sigtermCount, pid: process.pid }))`,
     `  if (sigtermCount > 1) process.exit(0)`,
+    `})`,
+    ``,
+    `server.listen(0, '127.0.0.1', () => {`,
+    `  let address = server.address()`,
+    `  if (address && typeof address === 'object') {`,
+    `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
+    `  }`,
+    `})`,
+    ``,
+    `setInterval(() => {}, 1_000)`,
+  ].join('\n')
+}
+
+function getDelayedShutdownServerSource(message: string): string {
+  return [
+    `import { createServer } from 'node:http'`,
+    ``,
+    `let server = createServer((_request, response) => {`,
+    `  response.end(${JSON.stringify(message)})`,
+    `})`,
+    ``,
+    `process.on('SIGTERM', () => {`,
+    `  console.log(JSON.stringify({ type: 'child-sigterm', pid: process.pid }))`,
+    `  setTimeout(() => process.exit(0), 1_000)`,
     `})`,
     ``,
     `server.listen(0, '127.0.0.1', () => {`,
@@ -2142,6 +2192,7 @@ function startFixtureServer(cwd: string) {
             : ''
           return `Timed out waiting for fixture HMR URL.${exitText}\n${processOutput}`
         },
+        fixtureServerReadyTimeout,
       )
       return hmrUrlEvents[index]
     },
@@ -2170,7 +2221,10 @@ async function waitForResponse(
 }
 
 async function fetchText(port: number, pathname = '/'): Promise<string> {
-  let response = await fetch(`http://127.0.0.1:${port}${pathname}`)
+  // Fixture processes may exit between requests; do not reuse their sockets.
+  let response = await fetch(`http://127.0.0.1:${port}${pathname}`, {
+    headers: { Connection: 'close' },
+  })
   return await response.text()
 }
 

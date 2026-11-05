@@ -2326,6 +2326,10 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     try {
       await handleRequest(request, response, fixture, assetServer, hmrEventStream)
     } catch (error) {
+      if (response.headersSent) {
+        response.destroy()
+        return
+      }
       response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
       response.end(error instanceof Error ? error.stack : String(error))
     }
@@ -2558,8 +2562,9 @@ async function handleRequest(
       )
       return
     }
+    let html = await renderStaticIndex(fixture, assetServer)
     response.writeHead(200, headers)
-    response.end(await renderStaticIndex(fixture, assetServer))
+    response.end(html)
     return
   }
 

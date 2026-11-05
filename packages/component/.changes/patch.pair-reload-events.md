@@ -1,0 +1,1 @@
+Keep ancestor-driven reloads in the lifecycle announced by their inherited `reloadStart`, avoiding duplicate starts or completion before the frame finishes rendering. Each direct request still gets its own `reloadStart`; superseded requests resolve `finished` as aborted without dispatching `reloadComplete`.
