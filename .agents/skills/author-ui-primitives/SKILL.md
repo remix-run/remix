@@ -22,6 +22,11 @@ Common files:
 - `demos/<name>.demo.tsx`: demo cases for the shared UI demo app.
 - `lib/*`: shared implementation-only behavior used by multiple primitives.
 
+A primitive implemented in one module keeps it in the flat `<name>.ts` entry,
+so its `<name>/` directory holds only the README. Split a primitive into
+`<name>/*.ts` modules only when it outgrows one file, and keep `<name>.ts` as
+the public entry that exports them (see `animation`).
+
 Current examples:
 
 - low-level behavior modules: `anchor`, `popover`, `listbox`
