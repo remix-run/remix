@@ -1,4 +1,3 @@
-import { Auth } from 'remix/middleware/auth'
 import { getCsrfToken } from 'remix/middleware/csrf'
 import { DataTableConstraintError } from 'remix/data-table'
 import * as s from 'remix/data-schema'
@@ -14,7 +13,9 @@ import {
   ScheduleDataError,
 } from '../../data/schedules.ts'
 import { routes } from '../../routes.ts'
+import { requireAuth } from '../../middleware/auth.ts'
 import { databaseContext } from '../../middleware/database.ts'
+import { wantsJson } from '../../utils/wants-json.ts'
 import { createScheduleIcs } from './ics.ts'
 import { SchedulePage } from './page.tsx'
 
@@ -48,27 +49,26 @@ const replaceScheduleSchema = s.object({
 })
 
 export const schedulesController = createController(routes.schedules, {
+  middleware: [requireAuth()],
   actions: {
     async index(context) {
-      let auth = context.get(Auth)!
-      if (!auth.ok) return unauthorized()
+      let auth = context.auth
 
       let db = context.get(databaseContext)!
-      let userSchedules = await listSchedules(db, authUserId(auth))
+      let userSchedules = await listSchedules(db, auth.identity.id)
 
       return Response.json({ schedules: userSchedules })
     },
 
     async create(context) {
-      let auth = context.get(Auth)!
-      if (!auth.ok) return unauthorized()
+      let auth = context.auth
 
       let parsed = await parseJsonRequest(createScheduleSchema, context.request)
       if (!parsed.success) return validationError(parsed.issues)
 
       try {
         let db = context.get(databaseContext)!
-        let schedule = await createSchedule(db, authUserId(auth), parsed.value.name)
+        let schedule = await createSchedule(db, auth.identity.id, parsed.value.name)
 
         return Response.json({ schedule }, { status: 201 })
       } catch (error) {
@@ -77,15 +77,14 @@ export const schedulesController = createController(routes.schedules, {
     },
 
     async destroy(context) {
-      let auth = context.get(Auth)!
-      if (!auth.ok) return unauthorized()
+      let auth = context.auth
 
       let scheduleId = parseIntegerParam(context.params.scheduleId, 'scheduleId')
       if (scheduleId instanceof Response) return scheduleId
 
       try {
         let db = context.get(databaseContext)!
-        let userId = authUserId(auth)
+        let userId = auth.identity.id
         await deleteSchedule(db, userId, scheduleId)
 
         let schedules = await listSchedules(db, userId)
@@ -103,19 +102,14 @@ export const schedulesController = createController(routes.schedules, {
     },
 
     async downloadIcs(context) {
-      let auth = context.get(Auth)!
-      if (!auth.ok) {
-        return wantsJson(context.request)
-          ? unauthorized()
-          : Response.redirect(new URL(routes.auth.login.index.href(), context.request.url), 302)
-      }
+      let auth = context.auth
 
       let scheduleId = parseIntegerParam(context.params.scheduleId, 'scheduleId')
       if (scheduleId instanceof Response) return scheduleId
 
       try {
         let db = context.get(databaseContext)!
-        let schedule = await getScheduleDocument(db, authUserId(auth), scheduleId)
+        let schedule = await getScheduleDocument(db, auth.identity.id, scheduleId)
 
         return new Response(createScheduleIcs(schedule), {
           headers: {
@@ -130,25 +124,20 @@ export const schedulesController = createController(routes.schedules, {
     },
 
     async show(context) {
-      let auth = context.get(Auth)!
-      if (!auth.ok) {
-        return wantsJson(context.request)
-          ? unauthorized()
-          : Response.redirect(new URL(routes.auth.login.index.href(), context.request.url), 302)
-      }
+      let auth = context.auth
 
       let scheduleId = parseIntegerParam(context.params.scheduleId, 'scheduleId')
       if (scheduleId instanceof Response) return scheduleId
 
       try {
         let db = context.get(databaseContext)!
-        let schedule = await getScheduleDocument(db, authUserId(auth), scheduleId)
+        let schedule = await getScheduleDocument(db, auth.identity.id, scheduleId)
 
         if (wantsJson(context.request)) {
           return Response.json({ schedule })
         }
 
-        let schedules = await listSchedules(db, authUserId(auth))
+        let schedules = await listSchedules(db, auth.identity.id)
 
         return context.render(
           <SchedulePage
@@ -164,8 +153,7 @@ export const schedulesController = createController(routes.schedules, {
     },
 
     async update(context) {
-      let auth = context.get(Auth)!
-      if (!auth.ok) return unauthorized()
+      let auth = context.auth
 
       let scheduleId = parseIntegerParam(context.params.scheduleId, 'scheduleId')
       if (scheduleId instanceof Response) return scheduleId
@@ -175,7 +163,7 @@ export const schedulesController = createController(routes.schedules, {
 
       try {
         let db = context.get(databaseContext)!
-        let schedule = await replaceScheduleDocument(db, authUserId(auth), scheduleId, parsed.value)
+        let schedule = await replaceScheduleDocument(db, auth.identity.id, scheduleId, parsed.value)
 
         return Response.json({ schedule })
       } catch (error) {
@@ -206,14 +194,6 @@ function parseIntegerParam(value: string, name: string): number | Response {
   return parsed
 }
 
-function unauthorized() {
-  return Response.json({ error: 'Authentication required.' }, { status: 401 })
-}
-
-function authUserId(auth: { identity: unknown }) {
-  return (auth.identity as { id: number }).id
-}
-
 function validationError(
   issues: ReadonlyArray<{ message: string; path?: ReadonlyArray<unknown> }>,
 ) {
@@ -225,11 +205,6 @@ function validationError(
     },
     { status: 400 },
   )
-}
-
-function wantsJson(request: Request) {
-  let accept = request.headers.get('Accept') ?? ''
-  return accept.includes('application/json') && !accept.includes('text/html')
 }
 
 function downloadFilename(scheduleName: string) {
