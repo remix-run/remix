@@ -4,7 +4,7 @@ import { uploadsStorage } from '../utils/uploads.ts'
 
 export async function uploadHandler(file: FileUpload): Promise<string> {
   let ext = file.name.split('.').pop() || 'jpg'
-  let key = `${file.fieldName}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`
+  let key = `${file.fieldName}/${crypto.randomUUID()}.${ext}`
 
   await uploadsStorage.set(key, file)
 

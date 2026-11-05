@@ -19,7 +19,7 @@ export default createController(routes.auth.forgotPassword, {
       let token = undefined as string | undefined
 
       if (user) {
-        token = Math.random().toString(36).substring(2, 15)
+        token = crypto.randomUUID()
         await db.create(passwordResetTokens, {
           token,
           user_id: user.id,
