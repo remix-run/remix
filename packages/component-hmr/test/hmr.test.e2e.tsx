@@ -1683,8 +1683,7 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
       let clientFieldPath = path.join(rootDir, 'app/ClientField.tsx')
       let ClientField = createTestClientEntry(
         pathToFileURL(clientFieldPath).href,
-        function ClientField(handle: unknown) {
-          void handle
+        function ClientField() {
           return () => (
             <>
               <input data-testid="server-client-field" />
