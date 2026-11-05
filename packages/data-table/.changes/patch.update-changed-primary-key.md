@@ -1,0 +1,1 @@
+Fixed `db.update()` throwing `update() failed to find row` when the changes include a new primary key on drivers without `RETURNING` support, such as MySQL. The updated row is now re-read by its new primary key.

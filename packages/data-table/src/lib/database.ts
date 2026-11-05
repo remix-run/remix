@@ -800,7 +800,11 @@ export class Database<dialect extends string = string> {
       touch: options?.touch,
     })
 
-    let loaded = await this.find(table, value, { with: options?.with })
+    // The changes may include a new primary key, so re-read by the updated key.
+    let loaded = await this.findOne(table, {
+      where: getPrimaryKeyWhereFromRow(table, { ...where, ...changes }),
+      with: options?.with,
+    })
 
     if (!loaded) {
       throw new DataTableQueryError(

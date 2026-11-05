@@ -212,6 +212,39 @@ describe('queries', () => {
     )
   })
 
+  it('re-reads by the new primary key when an update changes it on non-RETURNING drivers', async () => {
+    let currentId = 1
+    let recording = createRecordingDriver({
+      capabilities: { returning: false },
+      async execute(request) {
+        if (request.operation.kind === 'update') {
+          currentId = request.operation.changes.id as number
+          return { affectedRows: 1 }
+        }
+
+        if (request.operation.kind === 'select') {
+          let matches = request.operation.where.some(
+            (predicate) =>
+              predicate.type === 'logical' &&
+              predicate.predicates.some(
+                (inner) => inner.type === 'comparison' && inner.value === currentId,
+              ),
+          )
+          return {
+            rows: matches ? [{ id: currentId, email: 'amy@studio.test', status: 'active' }] : [],
+          }
+        }
+
+        throw new Error('unexpected operation kind: ' + request.operation.kind)
+      },
+    })
+
+    let db = createTestDatabase(recording.driver)
+    let updated = await db.update(accounts, 1, { id: 2 })
+
+    assert.equal(updated.id, 2)
+  })
+
   it('throws for createMany() batches with only empty rows', async () => {
     let recording = createRecordingDriver()
     let db = createTestDatabase(recording.driver)
