@@ -125,12 +125,12 @@ function parseArgs(argv: string[]): ParsedArgs {
 
 function printUsage(): void {
   process.stdout.write(`Usage:
-  close_superseded_pr.ts <old_pr> <new_pr> [--repo <owner/repo>] [--dry-run]
+  close-superseded-pr.ts <old_pr> <new_pr> [--repo <owner/repo>] [--dry-run]
 
 Examples:
-  close_superseded_pr.ts 11085 11087
-  close_superseded_pr.ts 11085 11087 --repo remix-run/remix
-  close_superseded_pr.ts 11085 11087 --dry-run
+  close-superseded-pr.ts 11085 11087
+  close-superseded-pr.ts 11085 11087 --repo remix-run/remix
+  close-superseded-pr.ts 11085 11087 --dry-run
 `)
 }
 

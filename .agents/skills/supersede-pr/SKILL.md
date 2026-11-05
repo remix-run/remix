@@ -27,7 +27,7 @@ Use this skill to handle PR supersession end-to-end. Do not rely on `Closes #<nu
 - Run:
 
 ```bash
-scripts/close_superseded_pr.ts <old_pr> <new_pr>
+scripts/close-superseded-pr.ts <old_pr> <new_pr>
 ```
 
 - This adds a comment (`Superseded by #<new_pr>.`) and closes the old PR.
@@ -62,4 +62,4 @@ gh pr checks <new_pr>
 
 Use the bundled script for deterministic closure:
 
-- `scripts/close_superseded_pr.ts`
+- `scripts/close-superseded-pr.ts`
