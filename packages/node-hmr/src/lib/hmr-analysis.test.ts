@@ -205,6 +205,23 @@ describe('analyzeNodeHmrSource', () => {
       /import\.meta\.hot\.accept\(\) can only accept/,
     )
   })
+
+  it('does not treat computed accept members as accept calls', () => {
+    let analysis = analyzeNodeHmrSource(`import.meta.hot['accept']()`)
+
+    assert.deepEqual(toComparableAnalysis(analysis), {
+      acceptedDeps: [],
+      selfAccepting: false,
+      usesImportMetaHot: true,
+    })
+  })
+
+  it('throws when the accept callback is passed by reference', () => {
+    nodeAssert.throws(
+      () => analyzeNodeHmrSource(`function onUpdate() {}\nimport.meta.hot.accept(onUpdate)`),
+      /import\.meta\.hot\.accept\(\) can only accept/,
+    )
+  })
 })
 
 function toComparableAnalysis(analysis: NodeHmrAnalysis) {
