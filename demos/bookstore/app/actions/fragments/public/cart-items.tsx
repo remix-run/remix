@@ -1,5 +1,5 @@
-import type { FormSubmissionEvent, FrameReloadStartEvent, Handle } from 'remix/component'
-import { css, clientEntry, link, on, onSubmission, ref } from 'remix/component'
+import type { FrameReloadStartEvent, Handle } from 'remix/component'
+import { css, clientEntry, on } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
 
@@ -27,53 +27,44 @@ export const CartItems = clientEntry(
   import.meta.url,
   function CartItems(handle: Handle<CartItemsProps>) {
     let change: CartChange | undefined
-    let reloadLink: Element | undefined
+    let activeReload: FrameReloadStartEvent | undefined
     let reload: FrameReloadStartEvent | undefined
     let failed: 'change' | 'reload' | undefined
 
-    // Links don't dispatch `rmx:submission`, so the cart follows its reload link's loads
-    // through its frame. Any newer load of the frame replaces one, including a change, or a page
-    // navigation, which reloads the frame with the page.
+    // The stable cart component follows loads even when optimistic removal unmounts the form.
     handle.frame.addEventListener(
       'reloadStart',
       async (event) => {
-        reload = event.element === reloadLink ? event : undefined
-        if (reload !== event) return
+        activeReload = event
+        let formData = event.formData
+        change = formData?.has('bookId')
+          ? {
+              bookId: Number(formData.get('bookId')),
+              quantity: formData.has('quantity') ? Number(formData.get('quantity')) : 0,
+            }
+          : undefined
+        reload =
+          event.method === 'get' && event.src === routes.cart.index.href() ? event : undefined
+        let kind: typeof failed = change ? 'change' : reload ? 'reload' : undefined
+        if (!kind) {
+          handle.update()
+          return
+        }
         failed = undefined
         handle.update()
         try {
           await event.finished
         } catch {
-          if (reload === event) failed = 'reload'
+          if (activeReload === event) failed = kind
         }
-        if (handle.signal.aborted || reload !== event) return
+        if (handle.signal.aborted || activeReload !== event) return
+        activeReload = undefined
+        change = undefined
         reload = undefined
         handle.update()
       },
       { signal: handle.signal },
     )
-
-    // Shows a change as soon as its submission starts, until the cart it saved renders. The cart
-    // listens around its rows, because removing a row removes its form, which would abort the
-    // form's signal and leave the change pending.
-    async function follow(event: FormSubmissionEvent, signal: AbortSignal) {
-      let { formData } = event
-      if (!formData) return
-      change = {
-        bookId: Number(formData.get('bookId')),
-        quantity: formData.has('quantity') ? Number(formData.get('quantity')) : 0,
-      }
-      failed = undefined
-      handle.update()
-      try {
-        await event.finished
-      } catch {
-        if (!signal.aborted) failed = 'change'
-      }
-      if (signal.aborted) return
-      change = undefined
-      handle.update()
-    }
 
     return () => {
       let { canCheckout } = handle.props
@@ -89,13 +80,23 @@ export const CartItems = clientEntry(
 
       return (
         <div
-          mix={[
-            onSubmission((event, signal) => follow(event, signal)),
-            on('submit', (event) => {
-              // Keep pending controls focusable without allowing another session write.
-              if (change) event.preventDefault()
-            }),
-          ]}
+          mix={on('submit', (event) => {
+            if (event.defaultPrevented) return
+            let form = event.target
+            if (!(form instanceof HTMLFormElement)) return
+            event.preventDefault()
+            // Keep pending controls focusable without allowing another session write.
+            if (change) return
+            // The reloadStart listener reports failures and clears the optimistic change.
+            void handle.frame
+              .reload({
+                src: form.action,
+                method: 'post',
+                body: new FormData(form, event.submitter),
+                adoptRedirectSrc: true,
+              })
+              .catch(() => {})
+          })}
         >
           <div
             mix={css({
@@ -131,16 +132,25 @@ export const CartItems = clientEntry(
               // The cart page answers a load for its frame with the frame's items.
               <a
                 aria-disabled={reload ? true : undefined}
+                href={routes.cart.index.href()}
                 class="btn btn-secondary"
                 mix={[
-                  link(routes.cart.index.href(), { target: 'cart', history: 'none' }),
-                  ref((node) => {
-                    reloadLink = node
-                  }),
                   css({ fontSize: '0.875rem', padding: '0.25rem 0.5rem' }),
-                  on('click', (event) => {
-                    // Keep the link focusable while its load is pending without starting another.
-                    if (reload) event.preventDefault()
+                  on('click', async (event) => {
+                    if (
+                      event.defaultPrevented ||
+                      event.button !== 0 ||
+                      event.metaKey ||
+                      event.ctrlKey ||
+                      event.shiftKey ||
+                      event.altKey
+                    )
+                      return
+                    event.preventDefault()
+                    if (reload) return
+                    await handle.frame
+                      .reload({ src: routes.cart.index.href(), adoptRedirectSrc: true })
+                      .catch(() => {})
                   }),
                 ]}
               >
@@ -181,8 +191,6 @@ export const CartItems = clientEntry(
                       <form
                         method="POST"
                         action={routes.cart.api.update.href()}
-                        data-rmx-target="cart"
-                        data-rmx-history="none"
                         mix={css({ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' })}
                       >
                         <input type="hidden" name="_method" value="PUT" />
@@ -221,8 +229,6 @@ export const CartItems = clientEntry(
                       <form
                         method="POST"
                         action={routes.cart.api.remove.href()}
-                        data-rmx-target="cart"
-                        data-rmx-history="none"
                         mix={css({ display: 'inline' })}
                       >
                         <input type="hidden" name="_method" value="DELETE" />

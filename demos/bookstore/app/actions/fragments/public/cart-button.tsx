@@ -1,4 +1,4 @@
-import { type Handle, clientEntry, onSubmission } from 'remix/component'
+import { type Handle, clientEntry, on } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
 
@@ -19,16 +19,24 @@ export const CartButton = clientEntry(
         <form
           method="POST"
           action={routes.api.cartToggle.href()}
-          data-rmx-target={cartButtonFrameName(id)}
-          data-rmx-history="none"
-          mix={onSubmission(async (event, signal) => {
+          mix={on('submit', async (event) => {
+            if (event.defaultPrevented) return
+            let form = event.currentTarget
+            event.preventDefault()
+            if (pending) return
+            let body = new FormData(form, event.submitter)
             pending = true
             handle.update()
-            // The frame's new button shows whether the book is in the cart, or the old one if the
-            // save failed.
-            await event.finished.catch(() => {})
-            // The form's next submission owns the label from here.
-            if (signal.aborted) return
+            // A failed reload leaves the old button in place.
+            await handle.frame
+              .reload({
+                src: routes.api.cartToggle.href(),
+                method: 'post',
+                body,
+                adoptRedirectSrc: true,
+              })
+              .catch(() => {})
+            if (handle.signal.aborted) return
             pending = false
             handle.update()
           })}

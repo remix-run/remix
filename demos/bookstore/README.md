@@ -26,6 +26,8 @@ The demo shows two built-in prefetch triggers. Header navigation links use Remix
 
 The home, books, genre, search, about, contact, and registration pages use `Cache-Control: private, max-age=30` for successful GET frame requests so a navigation can reuse prefetched HTML for 30 seconds. Full document requests to those pages use `no-store`. Cacheable frame responses vary by cookie and frame headers to keep personalized and document/frame variants separate. Cart documents, frames, and fragments explicitly use `no-store`. Checkout, account, and the other auth handlers do not opt into this cache window; cart changes may take up to 30 seconds to appear in cached browsing HTML.
 
+Cart forms work through document redirects without JavaScript. Their browser submit handlers use `frame.reload({ method: 'post', body, adoptRedirectSrc: true })` to render the redirected frame content and retain its URL for later GET reloads. The cart delegates submissions from its rows to a stable ancestor and follows `reloadStart` request data and completion for optimistic quantities, removals, totals, and error recovery. This keeps submissions in place while the form action remains usable as a native navigation.
+
 ## Explore the Code
 
 - Start with [`app/routes.ts`](app/routes.ts) and [`app/router.ts`](app/router.ts) to see the typed route contract and the middleware stack, including the standard UI render middleware.
