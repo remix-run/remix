@@ -4,7 +4,7 @@ import { createServer, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
-import { dirname, relative, resolve } from 'node:path'
+import { dirname, isAbsolute, relative, resolve } from 'node:path'
 
 import { createStyles } from '@remix-run/terminal'
 import { watch } from 'chokidar'
@@ -121,6 +121,25 @@ export function getWatchedDirectoriesForFiles(filePaths: Iterable<string>): Set<
     watchedDirectories.add(dirname(filePath))
   }
   return watchedDirectories
+}
+
+export function getAncestorDirectoriesToKeep(
+  directoriesToRemove: Iterable<string>,
+  watchedDirectories: Iterable<string>,
+): Set<string> {
+  let watched = [...watchedDirectories]
+  let ancestors = new Set<string>()
+  for (let directory of directoriesToRemove) {
+    if (watched.some((watchedDirectory) => isDescendantPath(directory, watchedDirectory))) {
+      ancestors.add(directory)
+    }
+  }
+  return ancestors
+}
+
+function isDescendantPath(ancestor: string, descendant: string): boolean {
+  let relativePath = relative(ancestor, descendant)
+  return relativePath !== '' && !relativePath.startsWith('..') && !isAbsolute(relativePath)
 }
 
 type FileChangeStats = Pick<Stats, 'birthtimeMs' | 'ctimeMs' | 'ino' | 'mtimeMs' | 'size'>
@@ -391,6 +410,9 @@ export function createHmrSupervisor(options: {
     }
 
     if (message.type === 'node-hmr:child:hot-module-updated') {
+      // An accept handler can request a restart and still finish accepting the update. Once a
+      // restart is pending, counting that late acceptance would leave the runner never ready.
+      if (childRestartGeneration !== pendingRestartGeneration) return
       acceptedHotUpdateCount += 1
       serverGeneration += 1
       if (state.status === 'running') {
@@ -528,6 +550,17 @@ export function createHmrSupervisor(options: {
       (directory) => !activeWatchedDirectories.has(directory),
     )
     let directoriesToRemove = [...activeWatchedDirectories].filter(
+      (directory) => !nextWatchedDirectories.has(directory),
+    )
+    // Chokidar ignores everything below an unwatched path, which silences change events in
+    // directories that are still watched. Keep ancestors watched until their descendants are not.
+    for (let directory of getAncestorDirectoriesToKeep(
+      directoriesToRemove,
+      nextWatchedDirectories,
+    )) {
+      nextWatchedDirectories.add(directory)
+    }
+    directoriesToRemove = directoriesToRemove.filter(
       (directory) => !nextWatchedDirectories.has(directory),
     )
 

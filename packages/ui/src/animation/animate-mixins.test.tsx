@@ -104,8 +104,11 @@ describe('animate entrance/exit mixins', () => {
     animateSpy.mock.restore!()
   })
 
-  it('keeps persist behavior after reclaim interruption completes', async () => {
+  it('keeps persist behavior after reclaim interruption completes', async (t) => {
     let container = document.createElement('div')
+    // Connected so the reclaim animation is reported by getAnimations().
+    document.body.append(container)
+    t.after(() => container.remove())
     let root = createRoot(container)
     let mix = [
       animateEntrance({ opacity: 0, duration: 40 }),
@@ -121,7 +124,10 @@ describe('animate entrance/exit mixins', () => {
 
     root.render(<div key="item" id="persist-after-interrupt" mix={mix} />)
     root.flush()
-    await new Promise((resolve) => setTimeout(resolve, 80))
+    let reclaimed = container.querySelector('#persist-after-interrupt')
+    let animations = reclaimed?.getAnimations() ?? []
+    expect(animations.length).toBeGreaterThan(0)
+    await Promise.all(animations.map((animation) => animation.finished))
 
     root.render(null)
     root.flush()

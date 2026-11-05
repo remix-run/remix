@@ -8,6 +8,7 @@ import {
   buildChildProcessEnv,
   buildChildProcessArgs,
   createFileChangeEventDeduper,
+  getAncestorDirectoriesToKeep,
   getBrowserHmrFileEventsForWatchedFiles,
   getWatchedDirectoriesForFiles,
   normalizeBrowserHmrFilePath,
@@ -155,6 +156,18 @@ describe('getWatchedDirectoriesForFiles', () => {
     assert.deepEqual(
       getWatchedDirectoriesForFiles(['/app/routes/home.tsx', '/app/routes/about.tsx']),
       new Set(['/app/routes']),
+    )
+  })
+})
+
+describe('getAncestorDirectoriesToKeep', () => {
+  it('keeps unneeded directories that contain a watched directory', () => {
+    assert.deepEqual(
+      getAncestorDirectoriesToKeep(
+        [path.resolve('/project'), path.resolve('/project/app'), path.resolve('/project-other')],
+        [path.resolve('/project/server'), path.resolve('/project/app')],
+      ),
+      new Set([path.resolve('/project')]),
     )
   })
 })

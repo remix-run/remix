@@ -594,6 +594,7 @@ describe('menu', () => {
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
     let [, childSurface] = getSurfaces(container)
+    timers = t.useFakeTimers()
     let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     key(trigger, 'ArrowDown')
@@ -610,9 +611,7 @@ describe('menu', () => {
 
     expect(submenuDelay).toBeDefined()
 
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, submenuDelay! + 10)
-    })
+    await timers.advanceAsync(submenuDelay!)
     await settleFrames(root)
 
     expect(childSurface.matches(':popover-open')).toBe(true)
@@ -647,6 +646,7 @@ describe('menu', () => {
     click(trigger)
     await settleFrames(root)
 
+    timers = t.useFakeTimers()
     let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     pointerMove(zoom)
@@ -669,9 +669,7 @@ describe('menu', () => {
     pointerMove(zoom)
     await settle(root)
 
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, submenuDelay! + 10)
-    })
+    await timers.advanceAsync(submenuDelay!)
     await settleFrames(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
@@ -689,6 +687,7 @@ describe('menu', () => {
     click(trigger)
     await settleFrames(root)
 
+    timers = t.useFakeTimers()
     let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     pointerMove(zoom)
@@ -711,9 +710,7 @@ describe('menu', () => {
     pointerMove(zoom)
     await settle(root)
 
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, submenuDelay! + 10)
-    })
+    await timers.advanceAsync(submenuDelay!)
     await settleFrames(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')

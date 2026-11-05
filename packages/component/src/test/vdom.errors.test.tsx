@@ -442,6 +442,9 @@ describe('vdom error handling', () => {
       let root = createRoot(container)
       let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
+      let errorDispatched = new Promise((resolve) => {
+        root.addEventListener('error', resolve, { once: true })
+      })
 
       let renderCount = 0
       let shouldLoop = false
@@ -467,7 +470,7 @@ describe('vdom error handling', () => {
 
       shouldLoop = true
       triggerUpdate!()
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await errorDispatched
 
       expect(errorHandler).toHaveBeenCalled()
       let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error

@@ -380,9 +380,12 @@ describe('s3 file storage', () => {
 
   it('holds at most two parts in memory during a multipart upload', async () => {
     let chunkSize = 64 * 1024
-    let { file, pulled } = createStreamingFile(6 * PART_SIZE, chunkSize)
+    let partCount = 6
+    let { file, pulled } = createStreamingFile(partCount * PART_SIZE, chunkSize)
     let uploaded = 0
     let maxAhead = 0
+    let requestedParts = new Set<number>()
+    let heldParts = new Map<number, () => void>()
     let storage = createS3FileStorage({
       accessKeyId: 'test',
       secretAccessKey: 'test',
@@ -394,9 +397,23 @@ describe('s3 file storage', () => {
         async onRequest(request, url) {
           if (request.method !== 'PUT' || !url.searchParams.has('partNumber')) return
           maxAhead = Math.max(maxAhead, pulled() - uploaded)
-          // Simulate a slow network, so reading could get ahead of uploading
-          await new Promise((resolve) => setTimeout(resolve, 5))
-          uploaded += PART_SIZE
+          // Hold each part until the next one is requested, so reading gets every chance to run
+          // ahead of uploading. Parts are keyed by number because consecutive part requests can
+          // arrive in either order. The last part has no successor, so it completes right away.
+          let partNumber = Number(url.searchParams.get('partNumber'))
+          requestedParts.add(partNumber)
+          heldParts.get(partNumber - 1)?.()
+          if (partNumber === partCount || requestedParts.has(partNumber + 1)) {
+            uploaded += PART_SIZE
+            return undefined
+          }
+          await new Promise<void>((resolve) => {
+            heldParts.set(partNumber, () => {
+              heldParts.delete(partNumber)
+              uploaded += PART_SIZE
+              resolve()
+            })
+          })
           return undefined
         },
       }),

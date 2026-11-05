@@ -68,8 +68,8 @@ describe('parseDocument', () => {
     let container = document.createElement('div')
     t.after(() => container.remove())
     container.append(...body.childNodes, template.content.cloneNode(true))
+    // Defined custom elements upgrade, and executable inline scripts run, during insertion.
     document.body.append(container)
-    await new Promise<void>((resolve) => setTimeout(resolve, 0))
     assert.equal(constructions, 1)
     assert.equal(Reflect.get(globalThis, key), undefined)
   })

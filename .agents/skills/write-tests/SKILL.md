@@ -67,6 +67,19 @@ import { describe, it } from '@remix-run/test'
 - For HMR tests, use real file changes, child processes, watchers, and browser assertions when the public behavior depends on runtime coordination.
 - Close spawned processes, asset servers, watchers, and HTTP servers in test cleanup.
 
+## Determinism
+
+Tests must not depend on wall-clock timing. A test that passes because "enough time went by" will flake on a slow CI runner.
+
+- Never sleep: no `await new Promise((resolve) => setTimeout(resolve, ms))`, no `setTimeout(resolve, 0)` tick flushes, no `page.waitForTimeout()`, no `sleep`/`delay`/`wait(ms)` helpers.
+- Never assert on elapsed time with `Date.now()` or `performance.now()`.
+- Await the exact signal that proves the behavior happened: the promise returned by the code under test, an emitted event, or a deferred promise the fixture resolves when the server/handler reaches a specific point.
+- For code that is itself time-based (debounce, retry, timeouts, expiry), use `t.useFakeTimers()` and `advance`/`advanceAsync`. Use `node:test` mock timers in node-runner exception packages.
+- In e2e tests, use Playwright web-first assertions, `waitForFunction`, `waitForResponse`, `waitForEvent`, or a console/log message the app emits at the exact moment of interest.
+- To prove something did _not_ happen, first trigger and await a later, observable event that must come after it, then assert the absence.
+- Timeouts are allowed only as failure bounds on an awaited condition, never as the thing that makes a test pass.
+- If code cannot be tested without sleeping, add a deterministic hook (a returned promise, an event, an injected clock or scheduler) to the code instead.
+
 ## Assertions
 
 - Use `@remix-run/assert` by default.
