@@ -22,6 +22,7 @@
     "prerender": "pnpm run build:browser && node --import remix/node-tsx scripts/prerender.ts",
     "prerender:serve": "npx http-server -p 3000 build/site",
     "start": "pnpm run build:browser && node --import remix/node-tsx server.ts",
+    "test": "remix test",
     "typecheck": "tsc --noEmit"
   }
 }
