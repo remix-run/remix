@@ -124,7 +124,7 @@ export class PostgresDatabaseDriver implements DatabaseDriver<'postgres'> {
     return {
       rows,
       affectedRows: normalizeAffectedRows(request.operation.kind, result.rowCount, rows),
-      insertId: normalizeInsertId(request.operation.kind, request.operation, rows),
+      insertId: normalizeInsertId(request.operation, rows),
     }
   }
 
@@ -696,11 +696,10 @@ function normalizeAffectedRows(
 }
 
 function normalizeInsertId(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   rows: Record<string, unknown>[],
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+  if (!isInsertOperation(operation)) {
     return undefined
   }
 
@@ -742,10 +741,6 @@ function toBooleanExists(value: unknown): boolean {
   }
 
   return false
-}
-
-function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
 }
 
 function isInsertOperation(
