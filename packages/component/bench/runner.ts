@@ -111,6 +111,29 @@ interface AllocationProfile {
   percentage: number
 }
 
+// Subsets of the Chrome DevTools Protocol profile shapes that the reports read.
+interface ProfileCallFrame {
+  functionName: string
+  url: string
+  scriptId: string
+}
+
+interface CpuProfile {
+  nodes: { id: number; callFrame: ProfileCallFrame }[]
+  samples?: number[]
+  timeDeltas?: number[]
+}
+
+interface SamplingHeapProfileNode {
+  callFrame: ProfileCallFrame
+  selfSize: number
+  children: SamplingHeapProfileNode[]
+}
+
+interface SamplingHeapProfile {
+  head: SamplingHeapProfileNode
+}
+
 interface TimingResult {
   scripting: number
   total: number
@@ -219,8 +242,8 @@ async function clickAndMeasure(
   await page.click(selector)
 
   let timing: TimingResult
-  let cpuProfileResult: any
-  let allocProfileResult: any
+  let cpuProfileResult: { profile: CpuProfile } | null = null
+  let allocProfileResult: { profile: SamplingHeapProfile } | null = null
   try {
     let operationLabel = operationName ?? 'unknown'
     timing = (await page.evaluate(`
@@ -277,11 +300,8 @@ async function clickAndMeasure(
 
   // Process profiling data
   let profileData: FunctionProfile[] | undefined
-  if (showProfile && cpuProfileResult && cpuProfileResult.profile) {
-    let profile = cpuProfileResult.profile as any
-    let nodes = profile.nodes || []
-    let samples = profile.samples || []
-    let timeDeltas = profile.timeDeltas || []
+  if (showProfile && cpuProfileResult) {
+    let { nodes, samples = [], timeDeltas = [] } = cpuProfileResult.profile
 
     // Calculate self time for each function
     let functionTimes = new Map<number, number>()
@@ -289,7 +309,7 @@ async function clickAndMeasure(
 
     // Build function name map
     for (let node of nodes) {
-      let name = node.callFrame?.functionName || node.callFrame?.url || 'unknown'
+      let name = node.callFrame.functionName || node.callFrame.url || 'unknown'
       if (name.includes('node_modules')) continue // Skip node_modules
       functionNames.set(node.id, name)
     }
@@ -319,8 +339,8 @@ async function clickAndMeasure(
   }
 
   let allocProfileData: AllocationProfile[] | undefined
-  if (showAllocProfile && allocProfileResult && allocProfileResult.profile) {
-    allocProfileData = buildAllocationProfile(allocProfileResult.profile as any)
+  if (showAllocProfile && allocProfileResult) {
+    allocProfileData = buildAllocationProfile(allocProfileResult.profile)
   }
 
   return { ...timing, profile: profileData, allocProfile: allocProfileData }
@@ -1079,29 +1099,26 @@ main().catch((error) => {
   process.exit(1)
 })
 
-function buildAllocationProfile(rawProfile: any): AllocationProfile[] {
+function buildAllocationProfile(profile: SamplingHeapProfile): AllocationProfile[] {
   let bytesByName = new Map<string, number>()
   let totalBytes = 0
 
-  function walk(node: any) {
-    if (!node || typeof node !== 'object') return
-
-    let selfSize = Number(node.selfSize || 0)
+  function walk(node: SamplingHeapProfileNode) {
+    let selfSize = node.selfSize
     let name =
-      node.callFrame?.functionName || node.callFrame?.url || node.callFrame?.scriptId || 'unknown'
+      node.callFrame.functionName || node.callFrame.url || node.callFrame.scriptId || 'unknown'
     if (!name.includes('node_modules')) {
       let current = bytesByName.get(name) || 0
       bytesByName.set(name, current + selfSize)
       totalBytes += selfSize
     }
 
-    let children = Array.isArray(node.children) ? node.children : []
-    for (let child of children) {
+    for (let child of node.children) {
       walk(child)
     }
   }
 
-  walk(rawProfile.head)
+  walk(profile.head)
 
   return Array.from(bytesByName.entries())
     .map(([name, bytes]) => ({
