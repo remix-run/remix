@@ -1,8 +1,9 @@
 import { getNonceManager } from './nonce.ts'
-import { appNamedFrames, createFrame, getAppTopFrame, setAppTopFrame } from './frame.ts'
+import { createFrame, setAppFrames } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
+import { NamedFrameRegistry } from './frame-runtime.ts'
 import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
 import { fetchFrame, startPrefetching } from './prefetch.ts'
@@ -135,6 +136,7 @@ export function run(init: RunInit): AppRuntime {
   let scheduler = createScheduler(document, errorTarget, styleManager)
 
   let resolveFrame = init.resolveFrame ?? defaultResolveFrame
+  let namedFrames = new NamedFrameRegistry()
 
   let topFrame = createFrame(document, {
     src: document.location.href,
@@ -148,16 +150,16 @@ export function run(init: RunInit): AppRuntime {
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames: appNamedFrames,
+    namedFrames,
     processClientEntryPreloads: init.processClientEntryPreloads,
   })
-  setAppTopFrame(topFrame)
+  let clearAppFrames = setAppFrames(topFrame, namedFrames)
 
   let appController = new AbortController()
   let frames: Handle['frames'] = {
     top: topFrame.handle,
     get(name) {
-      return appNamedFrames.get(name)
+      return namedFrames.get(name)
     },
   }
   if (window.navigation) {
@@ -173,7 +175,10 @@ export function run(init: RunInit): AppRuntime {
       signal: appController.signal,
     })
   }
-  startNavigationListener(appController.signal)
+  startNavigationListener(appController.signal, {
+    getTopFrame: () => topFrame.handle,
+    getNamedFrame: (name) => namedFrames.get(name),
+  })
   startPrefetching(appController.signal, init.prefetch)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
@@ -183,11 +188,12 @@ export function run(init: RunInit): AppRuntime {
   return Object.assign(errorTarget, {
     frames,
     ready: () => readyPromise,
-    flush: () => getAppTopFrame().flush(),
+    flush: () => topFrame.flush(),
     dispose: () => {
       appController.abort()
-      getAppTopFrame().dispose()
+      topFrame.dispose()
       styleManager.dispose()
+      clearAppFrames()
     },
   })
 }

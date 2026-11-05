@@ -3382,6 +3382,32 @@ describe('run', () => {
     }
   })
 
+  it('clears the app frame accessors when the runtime is disposed', async () => {
+    document.body.innerHTML = await drain(renderToStream(<main />))
+
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    expect(getTopFrame()).toBe(app.frames.top)
+
+    app.dispose()
+    expect(() => getTopFrame()).toThrow('app runtime not initialized')
+  })
+
+  it('keeps a newer runtime registered when an older runtime is disposed', async () => {
+    document.body.innerHTML = await drain(renderToStream(<main />))
+
+    let first = run({ loadModule: mock.fn() })
+    let second = run({ loadModule: mock.fn() })
+
+    try {
+      await Promise.all([first.ready(), second.ready()])
+      first.dispose()
+      expect(getTopFrame()).toBe(second.frames.top)
+    } finally {
+      second.dispose()
+    }
+  })
+
   it('restores the previous named frame when the latest duplicate unmounts', async () => {
     let showLatest = true
     let getDuplicateFrame: undefined | (() => ReturnType<Handle['frames']['get']>)
