@@ -138,6 +138,9 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
 
   /**
    * Set a value in the session.
+   *
+   * Setting `null` or `undefined` removes the key, the same as {@link Session.unset}.
+   *
    * @param key The key of the value to set
    * @param value The value to set
    */
