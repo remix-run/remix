@@ -1355,15 +1355,20 @@ describe('compressResponse()', () => {
 
       let streamCancelled = false
       let cancelReason: string | undefined
+      let pulled = Promise.withResolvers<void>()
+      let pullGate = Promise.withResolvers<void>()
 
       let stream = new ReadableStream({
         async pull(controller) {
           controller.enqueue(new TextEncoder().encode('chunk\n'.repeat(100)))
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          pulled.resolve()
+          // Hold the source open so it is still streaming when the output is cancelled
+          await pullGate.promise
         },
         cancel(reason) {
           streamCancelled = true
           cancelReason = reason
+          pullGate.resolve()
         },
       })
 
@@ -1375,16 +1380,14 @@ describe('compressResponse()', () => {
       let reader = compressed.body!.getReader()
 
       // Start reading to activate the stream
-      reader.read()
+      let readPromise = reader.read()
 
       // Wait for streaming to start
-      await new Promise((resolve) => setTimeout(resolve, 30))
+      await pulled.promise
 
-      // Cancel the output stream
+      // Cancel the output stream; this resolves once the source stream's cancel() has run
       await reader.cancel('User cancelled')
-
-      // Wait for cancellation to propagate
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await readPromise
 
       // Verify source stream was cancelled
       assert.equal(streamCancelled, true, 'Source stream should be cancelled')
@@ -1436,9 +1439,7 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending microtasks
-        await Promise.resolve()
-
+        // The data chunk was emitted synchronously right after the error
         // Should not have received the data chunk emitted after error
         assert.equal(chunks.length, 0, 'Should not receive data chunks after error')
         assert.equal(errorEmitted, true, 'Error should have been emitted')
@@ -1447,11 +1448,13 @@ describe('compressResponse()', () => {
       it('ignores data events emitted after cancellation', async () => {
         let dataAfterCancel = false
         let lastChunk: Buffer
+        let writeStarted = Promise.withResolvers<void>()
 
         let mockCompressor = createMockCompressor({
           write: (chunk) => {
             // Store the chunk for later emission
             lastChunk = chunk
+            writeStarted.resolve()
             // Signal backpressure but never call callback or emit drain
             // This will cause the write to hang
             return false
@@ -1480,15 +1483,12 @@ describe('compressResponse()', () => {
         })
 
         // Cancel while blocked
-        await Promise.resolve()
+        await writeStarted.promise
         await reader.cancel()
 
         await readPromise.catch(() => {
           // May error or not, doesn't matter
         })
-
-        // Wait for any pending microtasks
-        await Promise.resolve()
 
         assert.equal(chunks.length, 0, 'Should not receive data chunks after cancel')
         assert.equal(dataAfterCancel, true, 'Data should have been emitted by mock')
@@ -1592,10 +1592,13 @@ describe('compressResponse()', () => {
 
       it('handles cancel while waiting for drain', async () => {
         let destroyed = false
+        let writeStarted = Promise.withResolvers<void>()
         let mockCompressor = createMockCompressor({
-          write: () =>
+          write: () => {
+            writeStarted.resolve()
             // Never call callback or emit drain, forcing the wait
-            false,
+            return false
+          },
           end: () => {},
           destroy: () => {
             destroyed = true
@@ -1615,8 +1618,8 @@ describe('compressResponse()', () => {
         // Start reading (will get stuck waiting for drain)
         let readPromise = reader.read()
 
-        // Cancel after a short delay
-        await Promise.resolve()
+        // Cancel once the write is blocked waiting for drain
+        await writeStarted.promise
         await reader.cancel('User cancelled')
 
         // Wait for the read to complete
@@ -1664,14 +1667,10 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending microtasks
-        await Promise.resolve()
-
-        let finalWriteCount = writeCount
-
+        // The blocked write never completes, so the loop cannot write again
         assert.equal(
           writeCount,
-          finalWriteCount,
+          1,
           `Should only write once before error stops loop (got ${writeCount})`,
         )
       })
@@ -1718,14 +1717,10 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending microtasks
-        await Promise.resolve()
-
-        let finalWriteCount = writeCount
-
+        // The blocked write never completes, so the loop cannot write again
         assert.equal(
           writeCount,
-          finalWriteCount,
+          2,
           `Should only write twice before error stops loop (got ${writeCount})`,
         )
       })
@@ -1777,9 +1772,7 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending microtasks
-        await Promise.resolve()
-
+        // The blocked write never completes, so the loop cannot read again
         assert.equal(
           readCount,
           1,
@@ -1789,8 +1782,10 @@ describe('compressResponse()', () => {
       })
 
       it('propagates reader.cancel() errors', async () => {
+        let writeStarted = Promise.withResolvers<void>()
         let mockCompressor = createMockCompressor({
           write: (_chunk, callback) => {
+            writeStarted.resolve()
             if (callback) setImmediate(callback)
             return true
           },
@@ -1814,8 +1809,8 @@ describe('compressResponse()', () => {
         // Start reading (will be in progress)
         let readPromise = reader.read()
 
-        // Wait a bit for processing to start
-        await new Promise((resolve) => setTimeout(resolve, 10))
+        // Wait for processing to start
+        await writeStarted.promise
 
         // Cancel should propagate the error
         await assert.rejects(
@@ -1870,6 +1865,7 @@ describe('compressResponse()', () => {
 
       it('prevents duplicate error reporting if destroy() also emits error', async () => {
         let errorEmitCount = 0
+        let destroyErrorEmitted = Promise.withResolvers<void>()
         let mockCompressor = createMockCompressor({
           write: (_chunk, callback) => {
             // Call callback with error immediately
@@ -1884,6 +1880,7 @@ describe('compressResponse()', () => {
               setImmediate(() => {
                 errorEmitCount++
                 mockCompressor.emit('error', error)
+                destroyErrorEmitted.resolve()
               })
             }
           },
@@ -1908,8 +1905,8 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending error emissions
-        await new Promise((resolve) => setImmediate(resolve))
+        // Wait for destroy() to emit its error
+        await destroyErrorEmitted.promise
 
         // Error event should have been emitted but ignored (duplicate)
         assert.equal(errorEmitCount, 1, 'Error event should have been emitted by destroy()')

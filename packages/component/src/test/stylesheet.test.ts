@@ -268,7 +268,7 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 
-  it('does not start transitions when adopting server-rendered styles', async () => {
+  it('does not start transitions when adopting server-rendered styles', () => {
     let host = document.createElement('div')
     let serverStyle = document.createElement('style')
     serverStyle.setAttribute('data-rmx-style', 'rmxc-adopt-transition')
@@ -308,19 +308,20 @@ describe('createStyleManager', () => {
     expect(beforeTransform).toBe('matrix(1, 0, 0, 1, 8, 0)')
     expect(beforeWidth).toBe('18px')
 
-    let transitionRuns: string[] = []
-    el.addEventListener('transitionrun', (event) => {
-      let transition = event as TransitionEvent
-      transitionRuns.push(`${transition.pseudoElement}:${transition.propertyName}`)
-    })
-
     let mgr = createStyleManager()
     mgr.adoptServerStyles([host])
-    await waitForTransitionWindow()
 
+    // Reading computed styles flushes the style change that would create any CSS transitions,
+    // and getAnimations() reports them as soon as they are created.
     expect(getComputedStyle(el, '::before').transform).toBe(beforeTransform)
     expect(getComputedStyle(el, '::before').width).toBe(beforeWidth)
-    expect(transitionRuns).toEqual([])
+    expect(
+      el.getAnimations({ subtree: true }).map((animation) => {
+        let transition = animation as CSSTransition
+        let target = animation.effect as KeyframeEffect | null
+        return `${target?.pseudoElement ?? ''}:${transition.transitionProperty}`
+      }),
+    ).toEqual([])
 
     host.remove()
     mgr.dispose()
@@ -548,9 +549,3 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 })
-
-async function waitForTransitionWindow(): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  await new Promise<void>((resolve) => setTimeout(resolve, 120))
-}

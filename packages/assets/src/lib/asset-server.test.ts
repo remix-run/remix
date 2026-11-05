@@ -17,6 +17,7 @@ import { normalizeWindowsPath } from './paths.ts'
 import {
   createAssetServer,
   getInternalChokidarWatcher,
+  waitForInternalWatchEvents,
   getInternalWatchTargets,
 } from './asset-server.ts'
 import type {
@@ -134,7 +135,7 @@ async function emitWatchEvent(
   let chokidarWatcher = getInternalChokidarWatcher(assetServer)
   assert.ok(chokidarWatcher)
   chokidarWatcher.emit(event, getWatchEventFilePath(filePath))
-  await new Promise((resolve) => setTimeout(resolve, 25))
+  await waitForInternalWatchEvents(assetServer)
 }
 
 function createTestBrowserHmrChannel(): BrowserHmrChannel {
@@ -7288,7 +7289,7 @@ describe('asset-server', () => {
         let chokidarWatcher = getInternalChokidarWatcher(assetServer)
         assert.ok(chokidarWatcher)
         chokidarWatcher.emit('unlink', logoWatchPath)
-        await Promise.resolve()
+        await waitForInternalWatchEvents(assetServer)
 
         let after = await get(assetServer, '/assets/app/styles/app.css')
         assert.ok(after)

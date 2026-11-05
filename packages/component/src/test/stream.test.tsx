@@ -4958,9 +4958,14 @@ describe('stream', () => {
       let [frameOne, , rejectFrameOne] = withResolvers<string>()
       let [frameTwo, , rejectFrameTwo] = withResolvers<string>()
       let unhandledRejections: unknown[] = []
+      // Unhandled rejections are reported in rejection order, so a rejection made last is reported
+      // after any the render left unhandled.
+      let lastRejection = new Error('Last rejection')
+      let [lastRejectionReported, markLastRejectionReported] = withResolvers<void>()
       let onUnhandledRejection = (event: PromiseRejectionEvent) => {
         event.preventDefault()
-        unhandledRejections.push(event.reason)
+        if (event.reason === lastRejection) markLastRejectionReported()
+        else unhandledRejections.push(event.reason)
       }
       window.addEventListener('unhandledrejection', onUnhandledRejection)
 
@@ -4990,7 +4995,8 @@ describe('stream', () => {
         rejectFrameTwo(abortError)
 
         await expect(read).resolves.toEqual({ done: true, value: undefined })
-        await new Promise((resolve) => setTimeout(resolve, 50))
+        void Promise.reject(lastRejection)
+        await lastRejectionReported
         expect(errors).toEqual([])
         expect(unhandledRejections).toEqual([])
       } finally {
@@ -5155,6 +5161,7 @@ describe('stream', () => {
     })
 
     it('renders descendant frames returned from resolveFrame', async () => {
+      let [childReleased, releaseChild] = withResolvers<void>()
       async function resolveFrame(src: string) {
         if (src === '/parent') {
           // Parent frame returns content containing a child frame
@@ -5168,8 +5175,8 @@ describe('stream', () => {
           )
         }
         if (src === '/child') {
-          // Simulate async loading of child
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          // The child resolves only after the parent template has streamed
+          await childReleased
           return '<article>Child Content</article>'
         }
         return '<div></div>'
@@ -5215,6 +5222,7 @@ describe('stream', () => {
       expect(parentTemplate).toContain('</template>')
 
       // Third chunk should contain child's resolved content
+      releaseChild()
       let thirdChunk = await chunks.next()
       expect(thirdChunk.done).toBe(false)
       let childTemplate = thirdChunk.value
@@ -5391,6 +5399,7 @@ describe('stream', () => {
     })
 
     it('handles mixed blocking and non-blocking descendant frames', async () => {
+      let [nonBlockingChildReleased, releaseNonBlockingChild] = withResolvers<void>()
       async function resolveFrame(src: string) {
         if (src === '/parent') {
           // Blocking parent returns content with both blocking and non-blocking children
@@ -5406,8 +5415,8 @@ describe('stream', () => {
           return '<div>Blocking Child</div>'
         }
         if (src === '/non-blocking-child') {
-          // Simulate async
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          // The non-blocking child resolves only after the first chunk has streamed
+          await nonBlockingChildReleased
           return '<div>Non-blocking Child</div>'
         }
         return '<div></div>'
@@ -5441,6 +5450,7 @@ describe('stream', () => {
       expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
 
       // Second chunk has non-blocking child resolved
+      releaseNonBlockingChild()
       let secondChunk = await chunks.next()
       console.log('\n\nsecond:\n', secondChunk.value)
       // IDs are local within the returned fragment stream.

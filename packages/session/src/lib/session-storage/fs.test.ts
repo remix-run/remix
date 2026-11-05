@@ -258,7 +258,7 @@ describe('fs session storage', () => {
     assert.deepEqual(failures, [])
   })
 
-  it('saves while another handle has the session file open', async () => {
+  it('saves while another handle has the session file open', async (t) => {
     let storage = createFsSessionStorage(tmpDir)
     let session = await storage.read(null)
     session.set('count', 1)
@@ -267,10 +267,24 @@ describe('fs session storage', () => {
 
     // Windows can refuse to replace a file that another handle has open; the save must still land.
     let handle = await fsp.open(file, 'r')
-    let closed = new Promise((resolve) => setTimeout(resolve, 50)).then(() => handle.close())
+    let closed: Promise<void> | undefined
+    let closeHandle = () => (closed ??= handle.close())
+    let originalRename = fsp.rename
+    t.mock.method(fsp, 'rename', async (...args: Parameters<typeof fsp.rename>) => {
+      try {
+        return await originalRename(...args)
+      } catch (error) {
+        // Release the handle once a replace has been refused, so a retry can land.
+        await closeHandle()
+        throw error
+      }
+    })
     session.set('count', 2)
-    await storage.save(session)
-    await closed
+    try {
+      await storage.save(session)
+    } finally {
+      await closeHandle()
+    }
 
     let saved = await storage.read(cookie)
     assert.equal(saved.get('count'), 2)

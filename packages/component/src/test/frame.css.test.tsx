@@ -7,7 +7,7 @@ import { run } from '../runtime/run.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css } from '../index.ts'
-import { drain } from './utils.ts'
+import { drain, withResolvers } from './utils.ts'
 
 describe('frame css style ownership', () => {
   beforeEach(() => {
@@ -68,11 +68,16 @@ describe('frame css style ownership', () => {
     }
 
     // Frame A resolves first so its template claims the shared style tag if
-    // the server dedupes; frame B resolves on a later tick.
+    // the server dedupes; frame B resolves only after frame A has rendered.
+    let [frameARendered, markFrameARendered] = withResolvers<void>()
     let serverResolveFrame = async (src: string) => {
-      if (src === '/a') return await renderFrameA()
+      if (src === '/a') {
+        let html = await renderFrameA()
+        markFrameARendered()
+        return html
+      }
       if (src === '/b') {
-        await new Promise((resolve) => setTimeout(resolve, 10))
+        await frameARendered
         return await renderFrameB()
       }
       throw new Error(`Unexpected frame src: ${src}`)
@@ -104,7 +109,6 @@ describe('frame css style ownership', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 20))
 
     let aDiv = document.getElementById('a-shared')
     let bDiv = document.getElementById('b-shared')
@@ -117,7 +121,6 @@ describe('frame css style ownership', () => {
     // Reload frame A to content that no longer uses the shared style.
     invariant(reloadFrameA, 'expected ATrigger to hydrate')
     await reloadFrameA('/a2')
-    await new Promise((resolve) => setTimeout(resolve, 20))
 
     expect(document.getElementById('a-plain')).not.toBeNull()
     expect(document.getElementById('a-shared')).toBeNull()
@@ -167,7 +170,6 @@ describe('frame css style ownership', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 10))
 
     function countTotalRules(): number {
       return Array.from(document.adoptedStyleSheets).reduce(
@@ -181,13 +183,10 @@ describe('frame css style ownership', () => {
     expect(stableFrame.src).toBe('/stable')
     let reload = () => stableFrame.reload()
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 10))
     let rulesAfterFirstReload = countTotalRules()
 
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 10))
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 10))
 
     expect(countTotalRules()).toBe(rulesAfterFirstReload)
 

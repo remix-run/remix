@@ -10,6 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { watch, type FSWatcher } from 'chokidar'
 import { createAssetServer, type AssetServer } from '../src/assets.ts'
+import { getInternalChokidarWatcher, waitForInternalWatchEvents } from '../src/lib/asset-server.ts'
 import type { HmrPayload } from '../src/lib/hmr.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -397,18 +398,21 @@ describe('asset server HMR', () => {
   it('recovers an accepted browser module after a failed transform is fixed', async (t) => {
     let fixture = await createHmrFixture()
 
-    let page = await t.serve(await createHmrTestServer(fixture))
+    let server = await createHmrTestServer(fixture)
+    let page = await t.serve(server)
     t.after(fixture.close)
     await navigateToHmrPage(page)
     await assertCount(page, 'Count: 3')
     await page.locator('[data-testid="field"]').fill('hello')
 
+    let counterPath = path.join(fixture.rootDir, 'app/counter.ts')
     let failed = waitForConsoleMessage(page, '[remix] HMR update failed')
+    let assetServerObservedBrokenVersion = server.waitForAssetServerWatchEvent(counterPath)
     await write(fixture.rootDir, 'app/counter.ts', 'export const broken = "\n')
     await failed
-
-    // Let both polling watchers observe the broken version before replacing it.
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    // Both the HMR watcher (above) and the asset server's own watcher must observe the broken
+    // version before it is replaced.
+    await assetServerObservedBrokenVersion
 
     await write(
       fixture.rootDir,
@@ -458,7 +462,8 @@ describe('asset server HMR', () => {
   it('installs a new bare import mapping before applying a browser module update', async (t) => {
     let fixture = await createHmrFixture({ counterBareImportConfigured: true })
 
-    let page = await t.serve(await createHmrTestServer(fixture))
+    let server = await createHmrTestServer(fixture)
+    let page = await t.serve(server)
     t.after(fixture.close)
     await navigateToHmrPage(page)
     await waitForText(page, '[data-testid="increment"]', 'Increment')
@@ -468,6 +473,9 @@ describe('asset server HMR', () => {
     let firstAccepted = waitForConsoleMessage(
       page,
       '[remix] HMR accepted update /assets/app/counter.ts',
+    )
+    let assetServerObservedFirstUpdate = server.waitForAssetServerWatchEvent(
+      path.join(fixture.rootDir, 'app/counter.ts'),
     )
     await write(
       fixture.rootDir,
@@ -483,8 +491,9 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 2)
 
-    // Let both polling watchers observe the first update before replacing it.
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    // Both the HMR watcher (above) and the asset server's own watcher must observe the first
+    // update before it is replaced.
+    await assetServerObservedFirstUpdate
 
     let secondAccepted = waitForConsoleMessage(
       page,
@@ -584,8 +593,17 @@ describe('asset server HMR', () => {
           },
         },
       })
+      // Mutation observers are notified in creation order, so this one runs after the HMR
+      // runtime's observer has recorded the appended import map.
+      let observed = new Promise<void>((resolve) => {
+        let observer = new MutationObserver(() => {
+          observer.disconnect()
+          resolve()
+        })
+        observer.observe(document.head, { childList: true })
+      })
       document.head.appendChild(script)
-      await new Promise((resolve) => setTimeout(resolve))
+      await observed
       script.remove()
     })
 
@@ -920,7 +938,8 @@ describe('asset server HMR', () => {
   it('updates a stylesheet after a failed HMR transform is fixed', async (t) => {
     let fixture = await createHmrFixture()
 
-    let page = await t.serve(await createHmrTestServer(fixture))
+    let server = await createHmrTestServer(fixture)
+    let page = await t.serve(server)
     t.after(fixture.close)
     await navigateToHmrPage(page)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
@@ -928,20 +947,21 @@ describe('asset server HMR', () => {
 
     let stylesheetPath = path.join(fixture.rootDir, 'app/styles.css')
     let failedStyleRequest = waitForStylesheetResponse(page, 500)
+    let assetServerObservedBrokenVersion = server.waitForAssetServerWatchEvent(stylesheetPath)
     await fs.writeFile(stylesheetPath, 'body { background: url("foo); }\n')
     await failedStyleRequest
-
-    // The fixture watcher polls every 50ms, so avoid writing the recovery content
-    // before the watcher has settled after observing the broken content.
-    await page.waitForTimeout(75)
+    // Both the HMR watcher (above) and the asset server's own watcher must observe the broken
+    // content before the recovery content is written.
+    await assetServerObservedBrokenVersion
 
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
 
-    let paddingContinuity = monitorComputedStyle(page, {
-      duration: 750,
+    let paddingContinuity = await monitorComputedStyle(page, {
       property: 'padding-top',
       selector: '[data-testid="increment"]',
+      stylesheetPathname: '/assets/app/styles.css',
+      untilColor: 'rgb(0, 0, 255)',
       value: '13px',
     })
     let fixedStyleRequest = waitForStylesheetResponse(page, 200)
@@ -950,8 +970,8 @@ describe('asset server HMR', () => {
       '[data-testid="increment"] { color: blue; padding: 13px; }\n',
     )
     await fixedStyleRequest
-    // Ensure there wasn't a flash of unstyled content
-    assert.deepEqual(await paddingContinuity, [])
+    // Ensure there wasn't a flash of unstyled content while the stylesheet was swapped
+    assert.deepEqual(await paddingContinuity.result(), [])
 
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
     assert.equal(await getStylesheetLinkHasTimestamp(page, '/assets/app/styles.css'), true)
@@ -1001,7 +1021,7 @@ describe('asset server HMR', () => {
     let updateSent = fixtureServer.waitForBrowserUpdate('/assets/app/inactive.ts')
     await write(fixture.rootDir, 'app/inactive.ts', getInactiveModuleSource('after'))
     await updateSent
-    await page.waitForTimeout(100)
+    await applyLaterBrowserUpdate(page, fixture)
 
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'typed before update')
     assertNoConsoleMessage(page, '[remix] HMR accepted update /assets/app/inactive.ts')
@@ -1021,7 +1041,7 @@ describe('asset server HMR', () => {
     let updateSent = fixtureServer.waitForBrowserUpdate('/assets/app/inactive.css')
     await write(fixture.rootDir, 'app/inactive.css', 'body { color: blue; }\n')
     await updateSent
-    await page.waitForTimeout(100)
+    await applyLaterBrowserUpdate(page, fixture)
 
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'typed before update')
     assertNoConsoleMessage(page, '[remix] HMR updated stylesheet /assets/app/inactive.css')
@@ -1038,20 +1058,22 @@ describe('asset server HMR', () => {
       await navigateToHmrPage(page)
       await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
 
-      let unexpectedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 250 }).then(
-        () => true,
-        () => false,
-      )
-      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
+      let stylesheetRequests = recordStylesheetRequests(page, '/assets/app/styles.css')
+      let serverRestarted = server.waitForReady(1)
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete', {
+        startAfter: serverRestarted,
+      })
       await write(
         fixture.rootDir,
         'server-side-effect.ts',
         `export const sideEffect = 'style-test'\n`,
       )
+      await serverRestarted
+      // The runtime handles the server update after any queued browser updates, so a stylesheet
+      // refresh caused by this update would have been requested before the frame reload finished.
       await serverFrameReloaded
-      await server.waitForReady(1)
 
-      assert.equal(await unexpectedStyleRequest, false)
+      assert.deepEqual(stylesheetRequests.stop(), [])
       await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
       await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(255, 0, 0)')
       assert.equal(server.readyCount, 2)
@@ -1127,10 +1149,13 @@ describe('asset server HMR', () => {
       await waitForComputedStyle(page, '[data-testid="client-label"]', 'color', 'rgb(0, 0, 255)')
       assert.equal(server.readyCount, 1)
 
-      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
+      let serverRestarted = server.waitForReady(1)
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete', {
+        startAfter: serverRestarted,
+      })
       await write(fixture.rootDir, 'server-side-effect.ts', `export const sideEffect = 'mixed'\n`)
+      await serverRestarted
       await serverFrameReloaded
-      await server.waitForReady(1)
       assert.equal(server.readyCount, 2)
     } finally {
       await server?.close()
@@ -1150,14 +1175,18 @@ describe('asset server HMR', () => {
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       await page.locator('[data-testid="client-field"]').fill('typed before reload')
 
-      let serverReload = waitForConsoleMessage(page, 'Server frame reload complete')
+      let serverRestarted = server.waitForReady(1)
+      // The server restart has its own deadline; give the browser refresh a separate one.
+      let serverReload = waitForConsoleMessage(page, 'Server frame reload complete', {
+        startAfter: serverRestarted,
+      })
       await write(
         fixture.rootDir,
         'server-message.ts',
         `export const serverMessage = 'Server: after restart'\n`,
       )
 
-      let restarted = await server.waitForReady(1)
+      let restarted = await serverRestarted
       assert.equal(restarted.pid, ready.pid)
       await serverReload
       await waitForText(page, '[data-testid="server-message"]', 'Server: after restart')
@@ -1183,11 +1212,12 @@ describe('asset server HMR', () => {
       await navigateToHmrPage(page)
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
 
-      await write(fixture.rootDir, 'server-message.ts', `export const serverMessage = \n`)
-      await waitFor(
-        () => /Failed running server\.tsx\. Waiting for file changes/.test(server?.output ?? ''),
-        () => server?.output ?? 'Timed out waiting for failed server restart',
+      let restartFailed = server.waitForOutput(
+        /Failed running server\.tsx\. Waiting for file changes/,
+        { fromIndex: server.output.length },
       )
+      await write(fixture.rootDir, 'server-message.ts', `export const serverMessage = \n`)
+      await restartFailed
 
       let reloadWhileBroken = page.goto('/')
 
@@ -1208,12 +1238,9 @@ describe('asset server HMR', () => {
   })
 
   it('keeps page reload requests successful during rapid node-hmr restarts', async (t) => {
-    let fixture = await createNodeHmrFixture({
-      devProxy: true,
-      slowAssetMs: 75,
-      slowDisposeMs: 400,
-      slowDocumentMs: 150,
-    })
+    let fixture = await createNodeHmrFixture({ devProxy: true, gated: true })
+    let gates = fixture.gates
+    assert.ok(gates)
     let server: NodeHmrTestServer | undefined
 
     try {
@@ -1225,32 +1252,45 @@ describe('asset server HMR', () => {
 
       let serverMessagePath = path.join(fixture.rootDir, 'server-message.ts')
       let initialSource = await fs.readFile(serverMessagePath, 'utf-8')
+      let duringRestartSource = `export const serverMessage = 'Server: during restart'\n`
 
-      await fs.writeFile(
-        serverMessagePath,
-        `export const serverMessage = 'Server: during restart'\n`,
-      )
-      await page.waitForTimeout(250)
-      let reloadDuringRestart = page.goto('/')
+      // Reload while the previous server has closed and its disposal is still in progress.
+      let disposal = gates.hold('dispose')
+      await writeServerMessage(server, serverMessagePath, duringRestartSource)
+      await disposal.arrived
+      let reloadReachedProxy = gates.next('proxy-navigate')
+      let reloadDuringRestart = ignoreAbortedNavigation(page.goto('/'))
+      void reloadDuringRestart.catch(() => {})
+      await reloadReachedProxy
+      disposal.release()
+      await reloadDuringRestart
+      await waitForText(page, '[data-testid="server-message"]', 'Server: during restart')
 
-      for (let index = 0; index < 6; index++) {
-        await fs.writeFile(
-          serverMessagePath,
-          index % 2 === 0
-            ? `export const serverMessage = 'Server: during restart'\n`
-            : initialSource,
-        )
-        await page.waitForTimeout(25)
-      }
-
-      await ignoreAbortedNavigation(reloadDuringRestart)
-
-      await fs.writeFile(
-        serverMessagePath,
+      // Keep one reload in flight while the server restarts repeatedly. Each restart closes the
+      // connection serving the held request, so the proxy must retry it against the next server.
+      let sources = [
+        initialSource,
+        duringRestartSource,
+        initialSource,
+        duringRestartSource,
+        initialSource,
         `export const serverMessage = 'Server: after rapid restarts'\n`,
-      )
-      await page.waitForTimeout(250)
-      await ignoreAbortedNavigation(page.goto('/'))
+      ]
+      let heldReload = gates.hold('navigate')
+      let reloadInFlight = ignoreAbortedNavigation(page.goto('/'))
+      void reloadInFlight.catch(() => {})
+      await heldReload.arrived
+      for (let source of sources) {
+        let retriedReload = gates.hold('navigate')
+        await writeServerMessage(server, serverMessagePath, source)
+        // The retry reaching the next server proves the restart dropped the held request, so
+        // releasing the previous server's handler can no longer complete it.
+        await retriedReload.arrived
+        heldReload.release()
+        heldReload = retriedReload
+      }
+      heldReload.release()
+      await reloadInFlight
 
       await waitForText(page, '[data-testid="server-message"]', 'Server: after rapid restarts')
       await requestFailures.assertNone(server.output)
@@ -1261,6 +1301,32 @@ describe('asset server HMR', () => {
     }
   })
 })
+
+// Writes a server module and waits until node-hmr has observed the change.
+async function writeServerMessage(
+  server: NodeHmrTestServer,
+  filePath: string,
+  source: string,
+): Promise<void> {
+  let observed = server.waitForOutput(/(hmr update|restart) server-message\.ts/, {
+    fromIndex: server.output.length,
+  })
+  await fs.writeFile(filePath, source)
+  await observed
+}
+
+// Sends and applies an accepted update after an earlier one. The browser runtime handles updates in
+// order, so once this resolves any earlier update has been fully handled.
+async function applyLaterBrowserUpdate(page: TestPage, fixture: HmrFixture): Promise<void> {
+  let accepted = waitForConsoleMessage(page, '[remix] HMR accepted update /assets/app/counter.ts')
+  await write(
+    fixture.rootDir,
+    'app/counter.ts',
+    getCounterModuleSource({ buttonText: 'Increment after later update' }),
+  )
+  await accepted
+  await waitForText(page, '[data-testid="increment"]', 'Increment after later update')
+}
 
 async function assertHmrImportMapNonce(
   t: TestContext,
@@ -1335,6 +1401,7 @@ type HmrFixture = {
 type NodeHmrFixture = {
   close(): Promise<void>
   devProxy: boolean
+  gates?: FixtureGateServer
   rootDir: string
 }
 
@@ -1345,6 +1412,7 @@ type HmrTestServer = {
   restartAssets(): Promise<void>
   startAssets(): Promise<void>
   stopAssets(): Promise<void>
+  waitForAssetServerWatchEvent(filePath: string): Promise<void>
   waitForBrowserUpdate(pathname: string): Promise<void>
 }
 
@@ -1373,6 +1441,7 @@ type NodeHmrTestServer = {
   close(): Promise<void>
   output: string
   readyCount: number
+  waitForOutput(pattern: RegExp, options?: { fromIndex?: number }): Promise<void>
   waitForReady(index: number): Promise<{ pid: number; port: number }>
 }
 
@@ -1913,9 +1982,8 @@ function getBrowserInvalidationMessageSource(
 async function createNodeHmrFixture(
   options: {
     devProxy?: boolean
-    slowAssetMs?: number
-    slowDisposeMs?: number
-    slowDocumentMs?: number
+    // Route documents, proxied navigations, and server disposal through test-controlled gates.
+    gated?: boolean
   } = {},
 ): Promise<NodeHmrFixture> {
   let tmpDir = path.join(packageDir, '.tmp')
@@ -1972,7 +2040,8 @@ async function createNodeHmrFixture(
       '',
     ].join('\n'),
   )
-  await write(rootDir, 'server.tsx', getNodeHmrServerSource(rootDir, options))
+  let gates = options.gated ? await createFixtureGateServer() : undefined
+  await write(rootDir, 'server.tsx', getNodeHmrServerSource(rootDir))
   await write(
     rootDir,
     'dev.ts',
@@ -1989,8 +2058,10 @@ async function createNodeHmrFixture(
 
   return {
     devProxy: options.devProxy === true,
+    gates,
     rootDir,
     async close() {
+      await gates?.close()
       await removeFixtureDir(rootDir)
     },
   }
@@ -2026,15 +2097,23 @@ function getNodeHmrProxyDevSource(): string {
     'let proxyFetch = createFetchProxy("http://127.0.0.1:0", {',
     '  xForwardedHeaders: true,',
     '  async fetch(input, init) {',
-    '    let childPort = await waitForPort(process.env.CHILD_PORT_FILE)',
+    '    let childPort = await readPort(process.env.CHILD_PORT_FILE)',
     '    let url = new URL(String(input))',
     '    url.port = String(childPort)',
     '    return await fetch(url, init)',
     '  },',
     '})',
     '',
+    'let readyFetch = createHmrReadyFetch(app, proxyFetch)',
+    'let gateUrl = process.env.TEST_GATE_URL',
+    '',
     'let server = createServer(',
-    '  createRequestListener(createHmrReadyFetch(app, proxyFetch), {',
+    '  createRequestListener(async (request) => {',
+    "    if (gateUrl && request.headers.get('sec-fetch-mode') === 'navigate') {",
+    '      await fetch(`${gateUrl}/proxy-navigate`)',
+    '    }',
+    '    return readyFetch(request)',
+    '  }, {',
     '    onError(error) {',
     "      console.error('[node-hmr-proxy:onError]', formatError(error))",
     "      return new Response('Internal Server Error', {",
@@ -2060,14 +2139,12 @@ function getNodeHmrProxyDevSource(): string {
     '  server.close()',
     '}',
     '',
-    'async function waitForPort(filePath) {',
-    '  while (true) {',
-    '    try {',
-    '      let port = Number(await readFile(filePath, "utf8"))',
-    '      if (port > 0) return port',
-    '    } catch {}',
-    '    await new Promise((resolve) => setTimeout(resolve, 25))',
-    '  }',
+    '// The child writes this file before it reports ready, and createHmrReadyFetch only calls',
+    '// this after the runner is ready.',
+    'async function readPort(filePath) {',
+    '  let port = Number(await readFile(filePath, "utf8"))',
+    '  if (!(port > 0)) throw new Error(`Invalid child port in ${filePath}`)',
+    '  return port',
     '}',
     '',
     'function formatError(error) {',
@@ -2087,15 +2164,7 @@ function getNodeHmrProxyDevSource(): string {
   ].join('\n')
 }
 
-function getNodeHmrServerSource(
-  rootDir: string,
-  options: {
-    slowAssetMs?: number
-    slowDisposeMs?: number
-    slowDocumentMs?: number
-    title?: string
-  } = {},
-): string {
+function getNodeHmrServerSource(rootDir: string, options: { title?: string } = {}): string {
   let appDir = path.relative(workspaceDir, path.join(rootDir, 'app'))
 
   return [
@@ -2107,9 +2176,7 @@ function getNodeHmrServerSource(
     "import { sideEffect } from './server-side-effect.ts'",
     '',
     "let title = '" + (options.title ?? 'Initial') + "'",
-    `let slowAssetMs = ${JSON.stringify(options.slowAssetMs ?? 0)}`,
-    `let slowDisposeMs = ${JSON.stringify(options.slowDisposeMs ?? 0)}`,
-    `let slowDocumentMs = ${JSON.stringify(options.slowDocumentMs ?? 0)}`,
+    'let gateUrl = process.env.TEST_GATE_URL',
     'void sideEffect',
     'let assetServer = createAssetServer({',
     `  allowFiles: [${JSON.stringify(`${appDir}/**`)}],`,
@@ -2156,7 +2223,11 @@ function getNodeHmrServerSource(
     "    let url = new URL(request.url ?? '/', `http://${host}`)",
     '',
     "    if (url.pathname === '/') {",
-    '      await delay(slowDocumentMs)',
+    '      // Proxied requests lose Sec-Fetch-Mode, but only navigations accept XHTML.',
+    "      let isNavigation = String(request.headers.accept).includes('application/xhtml+xml')",
+    "      await gate(isNavigation ? 'navigate' : 'document')",
+    '      // A restart can close this connection while the request waits at the gate.',
+    '      if (!response.socket || response.socket.destroyed) return',
     '      await writeFetchResponse(',
     '        response,',
     '        new Response(renderDocument(), {',
@@ -2170,7 +2241,6 @@ function getNodeHmrServerSource(
     '    }',
     '',
     "    if (url.pathname.startsWith('/assets/')) {",
-    '      await delay(slowAssetMs)',
     '      let assetResponse = await assetServer.fetch(',
     '        new Request(url, {',
     '          headers: toFetchHeaders(request.headers),',
@@ -2219,7 +2289,7 @@ function getNodeHmrServerSource(
     '    await assetServer.close()',
     '    server.closeAllConnections()',
     '    await new Promise((resolve) => server.close(resolve))',
-    '    await delay(slowDisposeMs)',
+    "    await gate('dispose')",
     '  })',
     '}',
     '',
@@ -2255,8 +2325,8 @@ function getNodeHmrServerSource(
     '  }',
     '}',
     '',
-    'async function delay(ms) {',
-    '  if (ms > 0) await new Promise((resolve) => setTimeout(resolve, ms))',
+    'async function gate(name) {',
+    '  if (gateUrl) await fetch(`${gateUrl}/${name}`)',
     '}',
     '',
   ].join('\n')
@@ -2379,6 +2449,10 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
         server.closeAllConnections()
       })
     },
+    waitForAssetServerWatchEvent(filePath) {
+      if (!assetServer) throw new Error('Asset server is not running')
+      return waitForAssetServerWatchEvent(assetServer, filePath)
+    },
     waitForBrowserUpdate(pathname) {
       return new Promise((resolve) => {
         let waiters = browserUpdateWaiters.get(pathname) ?? []
@@ -2451,6 +2525,46 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   }
 }
 
+// Resolves once the asset server's internal watcher has reported and finished handling a change to
+// `filePath`. Call it before writing the file so the event cannot be missed.
+function waitForAssetServerWatchEvent(assetServer: AssetServer, filePath: string): Promise<void> {
+  let watcher = getInternalChokidarWatcher(assetServer)
+  assert.ok(watcher)
+  let expectedPath = getWatchEventFilePath(filePath)
+  let observed = Promise.withResolvers<void>()
+
+  let handleEvent = (eventPath: string) => {
+    Promise.all([expectedPath, getWatchEventFilePath(eventPath)])
+      .then(([expected, actual]) => {
+        if (normalizeTestPath(actual) !== normalizeTestPath(expected)) return
+        watcher.off('add', handleEvent)
+        watcher.off('change', handleEvent)
+        observed.resolve()
+      })
+      .catch(observed.reject)
+  }
+  watcher.on('add', handleEvent)
+  watcher.on('change', handleEvent)
+
+  let timeout = setTimeout(() => {
+    watcher.off('add', handleEvent)
+    watcher.off('change', handleEvent)
+    observed.reject(new Error(`Timed out waiting for the asset server to observe ${filePath}`))
+  }, consoleMessageTimeout)
+
+  let promise = observed.promise
+    .then(() => waitForInternalWatchEvents(assetServer))
+    .finally(() => clearTimeout(timeout))
+  // The triggering write may fail before the test awaits this promise.
+  void promise.catch(() => {})
+  return promise
+}
+
+function normalizeTestPath(filePath: string): string {
+  let normalized = filePath.replace(/\\/g, '/')
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized
+}
+
 function getBrowserHmrUpdatePaths(data: Record<string, unknown>): string[] {
   let paths: string[] = []
   for (let payload of Object.values(data)) {
@@ -2491,19 +2605,23 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
       ...env,
       NODE_ENV: 'development',
       ...(fixture.devProxy ? { CHILD_PORT_FILE: childPortFile, TEST_CHILD_SERVER_PORT: '0' } : {}),
+      ...(fixture.gates ? { TEST_GATE_URL: fixture.gates.url } : {}),
       TEST_SERVER_PORT: '0',
       TEST_SERVER_PORT_FILE: path.join(fixture.rootDir, 'server-port.txt'),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   let readyEvents: Array<{ pid: number; port: number }> = []
-  let readyWaiters: Array<() => void> = []
   let proxyReadyEvents: Array<{ pid: number; port: number }> = []
-  let proxyReadyWaiters: Array<() => void> = []
   let lineBuffer = ''
   let processOutput = ''
   let exit: { code: number | null; signal: NodeJS.Signals | null } | null = null
   let closePromise: Promise<void> | undefined
+  let stateWaiters = new Set<() => void>()
+
+  function notifyStateWaiters() {
+    for (let waiter of stateWaiters) waiter()
+  }
 
   child.stdout?.setEncoding('utf-8')
   child.stdout?.on('data', (chunk: string) => {
@@ -2517,27 +2635,26 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
       let event = parseReadyEvent(line)
       if (event !== null) {
         readyEvents.push(event)
-        for (let waiter of readyWaiters) waiter()
-        readyWaiters = []
         continue
       }
 
       let proxyEvent = parseProxyReadyEvent(line)
       if (proxyEvent !== null) {
         proxyReadyEvents.push(proxyEvent)
-        for (let waiter of proxyReadyWaiters) waiter()
-        proxyReadyWaiters = []
       }
     }
+    notifyStateWaiters()
   })
 
   child.stderr?.setEncoding('utf-8')
   child.stderr?.on('data', (chunk: string) => {
     processOutput += chunk
+    notifyStateWaiters()
   })
 
   child.once('exit', (code, signal) => {
     exit = { code, signal }
+    notifyStateWaiters()
   })
 
   let ready = fixture.devProxy ? await waitForProxyReady() : await waitForReadyEvent(0)
@@ -2555,18 +2672,55 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     get readyCount() {
       return readyEvents.length
     },
+    waitForOutput(pattern, options = {}) {
+      let fromIndex = options.fromIndex ?? 0
+      return waitForState(
+        () => pattern.test(stripAnsi(processOutput.slice(fromIndex))),
+        `Timed out waiting for fixture output matching ${pattern}`,
+      )
+    },
     waitForReady: waitForReadyEvent,
   }
 
+  // Resolves once `check()` passes after a process output or exit event. The timeout is only a
+  // failure bound.
+  function waitForState(check: () => boolean, timeoutMessage: string): Promise<void> {
+    let promise = new Promise<void>((resolve, reject) => {
+      let timeout = setTimeout(() => {
+        stateWaiters.delete(update)
+        reject(new Error(`${timeoutMessage}${getExitText()}\n${processOutput}`))
+      }, consoleMessageTimeout)
+
+      function update() {
+        if (check()) {
+          clearTimeout(timeout)
+          stateWaiters.delete(update)
+          resolve()
+          return
+        }
+        if (exit) {
+          clearTimeout(timeout)
+          stateWaiters.delete(update)
+          reject(new Error(`${timeoutMessage}${getExitText()}\n${processOutput}`))
+        }
+      }
+
+      stateWaiters.add(update)
+      update()
+    })
+    // A triggering file write may fail before the test awaits this promise.
+    void promise.catch(() => {})
+    return promise
+  }
+
+  function getExitText(): string {
+    return exit ? ` Process exited with code ${exit.code} and signal ${exit.signal}.` : ''
+  }
+
   async function waitForReadyEvent(index: number): Promise<{ pid: number; port: number }> {
-    await waitFor(
+    await waitForState(
       () => readyEvents[index] !== undefined,
-      () => {
-        let exitText = exit
-          ? ` Process exited with code ${exit.code} and signal ${exit.signal}.`
-          : ''
-        return `Timed out waiting for node-hmr fixture server.${exitText}\n${processOutput}`
-      },
+      'Timed out waiting for node-hmr fixture server.',
     )
 
     let event = readyEvents[index]
@@ -2575,14 +2729,111 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
   }
 
   async function waitForProxyReady(): Promise<{ pid: number; port: number }> {
-    await waitFor(
+    await waitForState(
       () => proxyReadyEvents[0] !== undefined,
-      () => `Timed out waiting for node-hmr proxy server.\n${processOutput}`,
+      'Timed out waiting for node-hmr proxy server.',
     )
     let event = proxyReadyEvents[0]
     assert.ok(event)
     return event
   }
+}
+
+function stripAnsi(text: string): string {
+  return text.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g'), '')
+}
+
+type FixtureGate = {
+  /** Resolves when a request reaches the gate. The request stays blocked until `release()`. */
+  arrived: Promise<void>
+  release(): void
+}
+
+type FixtureGateServer = {
+  close(): Promise<void>
+  /** Blocks the next request that reaches the named gate. */
+  hold(name: string): FixtureGate
+  /** Resolves when the next request reaches the named gate, without blocking it. */
+  next(name: string): Promise<void>
+  url: string
+}
+
+// Lets fixture processes report that they reached a named point and optionally wait there until the
+// test releases them, replacing fixed delays with explicit ordering.
+async function createFixtureGateServer(): Promise<FixtureGateServer> {
+  let holds = new Map<string, Array<{ arrived: () => void; released: Promise<void> }>>()
+  let arrivals = new Map<string, Array<() => void>>()
+  let releases = new Set<() => void>()
+
+  let server = http.createServer(async (request, response) => {
+    let name = decodeURIComponent(new URL(request.url ?? '/', 'http://127.0.0.1').pathname.slice(1))
+
+    let waiters = arrivals.get(name) ?? []
+    arrivals.delete(name)
+    for (let resolve of waiters) resolve()
+
+    let hold = holds.get(name)?.shift()
+    if (hold) {
+      hold.arrived()
+      await hold.released
+    }
+
+    response.writeHead(204, { Connection: 'close' })
+    response.end()
+  })
+
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject)
+      resolve()
+    })
+  })
+  let address = server.address()
+  assert.ok(address && typeof address === 'object')
+
+  return {
+    async close() {
+      for (let release of releases) release()
+      server.closeAllConnections()
+      await new Promise<void>((resolve) => server.close(() => resolve()))
+    },
+    hold(name) {
+      let arrived = Promise.withResolvers<void>()
+      let released = Promise.withResolvers<void>()
+      releases.add(released.resolve)
+      let queue = holds.get(name) ?? []
+      queue.push({ arrived: arrived.resolve, released: released.promise })
+      holds.set(name, queue)
+      return {
+        arrived: withFailureBound(arrived.promise, `Timed out waiting for fixture gate ${name}`),
+        release() {
+          releases.delete(released.resolve)
+          released.resolve()
+        },
+      }
+    },
+    next(name) {
+      let arrived = Promise.withResolvers<void>()
+      let waiters = arrivals.get(name) ?? []
+      waiters.push(arrived.resolve)
+      arrivals.set(name, waiters)
+      return withFailureBound(arrived.promise, `Timed out waiting for fixture gate ${name}`)
+    },
+    url: `http://127.0.0.1:${address.port}`,
+  }
+}
+
+function withFailureBound<value>(promise: Promise<value>, message: string): Promise<value> {
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  let bounded = Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => reject(new Error(message)), consoleMessageTimeout)
+    }),
+  ]).finally(() => clearTimeout(timeout))
+  void bounded.catch(() => {})
+  return bounded
 }
 
 async function handleRequest(
@@ -2725,7 +2976,12 @@ async function writeFetchResponse(
 function waitForConsoleMessage(
   page: TestPage,
   text: string,
-  options: { signal?: AbortSignal; startAfterNavigation?: boolean } = {},
+  options: {
+    signal?: AbortSignal
+    // Listen immediately, but only start the deadline once this settles.
+    startAfter?: Promise<unknown>
+    startAfterNavigation?: boolean
+  } = {},
 ): Promise<void> {
   attachPageDiagnostics(page)
   let startedAt = Date.now()
@@ -2734,8 +2990,10 @@ function waitForConsoleMessage(
     let pageErrors: string[] = []
     let timeoutMs = text === '[remix] HMR connected' ? hmrConnectionTimeout : consoleMessageTimeout
     let timeout: ReturnType<typeof setTimeout> | undefined
+    let settled = false
 
     function startTimeout() {
+      if (settled) return
       startedAt = Date.now()
       timeout = setTimeout(() => {
         rejectWait(
@@ -2753,6 +3011,8 @@ function waitForConsoleMessage(
 
     if (options.startAfterNavigation) {
       page.on('framenavigated', handleNavigation)
+    } else if (options.startAfter) {
+      options.startAfter.then(startTimeout, startTimeout)
     } else {
       startTimeout()
     }
@@ -2765,6 +3025,7 @@ function waitForConsoleMessage(
     if (options.signal?.aborted) handleAbort()
 
     function cleanup() {
+      settled = true
       clearTimeout(timeout)
       page.off('framenavigated', handleNavigation)
       page.off('close', handlePageClose)
@@ -2993,33 +3254,78 @@ async function waitForComputedStyle(
   )
 }
 
+// Samples a computed style on every stylesheet link mutation and animation frame until the
+// stylesheet swap has finished: the element's color is `untilColor` and only one link for
+// `stylesheetPathname` remains. Monitoring is installed before this function resolves.
 async function monitorComputedStyle(
   page: TestPage,
   options: {
-    duration: number
     property: string
     selector: string
+    stylesheetPathname: string
+    untilColor: string
     value: string
   },
-): Promise<Array<{ elapsed: number; value: string | null }>> {
-  return page.evaluate(async (options) => {
-    let failures: Array<{ elapsed: number; value: string | null }> = []
-    let started = performance.now()
+): Promise<{ result(): Promise<Array<{ sample: number; value: string | null }>> }> {
+  await page.evaluate((options) => {
+    let failures: Array<{ sample: number; value: string | null }> = []
+    let sample = 0
+    let finished = false
+    let done = Promise.withResolvers<typeof failures>()
+    let observer = new MutationObserver(check)
+    observer.observe(document.head, { childList: true })
+    requestAnimationFrame(onFrame)
+    Reflect.set(globalThis, '__computedStyleMonitor', done.promise)
 
-    while (performance.now() - started < options.duration) {
-      let element = document.querySelector(options.selector)
-      let actual = element ? getComputedStyle(element).getPropertyValue(options.property) : null
-      if (actual !== options.value) {
-        failures.push({
-          elapsed: Math.round(performance.now() - started),
-          value: actual,
-        })
-      }
-      await new Promise((resolve) => requestAnimationFrame(resolve))
+    function onFrame() {
+      if (check()) return
+      requestAnimationFrame(onFrame)
     }
 
-    return failures
+    function check(): boolean {
+      if (finished) return true
+      let element = document.querySelector(options.selector)
+      let style = element ? getComputedStyle(element) : null
+      let actual = style ? style.getPropertyValue(options.property) : null
+      sample++
+      if (actual !== options.value) failures.push({ sample, value: actual })
+
+      let linkCount = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).filter(
+        (link) => new URL((link as HTMLLinkElement).href).pathname === options.stylesheetPathname,
+      ).length
+      if (style?.getPropertyValue('color') !== options.untilColor || linkCount !== 1) return false
+
+      finished = true
+      observer.disconnect()
+      done.resolve(failures)
+      return true
+    }
   }, options)
+
+  return {
+    result: () =>
+      page.evaluate(
+        () =>
+          Reflect.get(globalThis, '__computedStyleMonitor') as Promise<
+            Array<{ sample: number; value: string | null }>
+          >,
+      ),
+  }
+}
+
+function recordStylesheetRequests(page: TestPage, pathname: string): { stop(): string[] } {
+  let requests: string[] = []
+  let handleRequest = (request: PageRequest) => {
+    let url = new URL(request.url())
+    if (url.pathname === pathname && url.searchParams.has('t')) requests.push(request.url())
+  }
+  page.on('request', handleRequest)
+  return {
+    stop() {
+      page.off('request', handleRequest)
+      return requests
+    },
+  }
 }
 
 function waitForStylesheetResponse(
@@ -3070,20 +3376,6 @@ async function waitForStylesheetLinkCount(
     { count, pathname },
     { timeout: 5000 },
   )
-}
-
-async function waitFor(
-  check: () => boolean | Promise<boolean>,
-  getTimeoutMessage: () => string = () => 'Timed out waiting for condition',
-): Promise<void> {
-  let start = Date.now()
-
-  while (Date.now() - start < 5_000) {
-    if (await check()) return
-    await new Promise((resolve) => setTimeout(resolve, 25))
-  }
-
-  throw new Error(getTimeoutMessage())
 }
 
 function parseReadyEvent(line: string): { pid: number; port: number } | null {

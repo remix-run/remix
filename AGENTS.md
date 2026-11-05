@@ -53,6 +53,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 
 - **Tests run from source**: no build step required
 - **Test structure**: do not generate tests inside `describe()` with loops or conditionals; it breaks per-test IDE execution
+- **No time-based tests**: never sleep, wait a fixed duration, or assert on elapsed wall-clock time in tests. Banned: `await new Promise((r) => setTimeout(r, ms))`, `setTimeout(r, 0)` "wait a tick" flushes, `page.waitForTimeout()`, `sleep`/`delay`/`wait(ms)` helpers, and `Date.now()`/`performance.now()` duration assertions. Instead, await the exact signal that proves the behavior happened: the promise returned by the code under test, an event, a deferred promise the fixture resolves, a Playwright web-first assertion or `waitForFunction`/`waitForResponse` on real state, or fake timers via `t.useFakeTimers()` for code that is itself time-based. Timeouts may only be failure bounds on an awaited condition, never the mechanism that makes a test pass. If code can't be tested without sleeping, add a deterministic hook to it instead
 - **Test guidance**: use the `write-tests` skill when adding, refactoring, or reviewing tests, fixtures, test scripts, or test-only dependencies
 - **Docs and examples**: if you change a public API, update the related docs, JSDoc, README examples, and tests in the same change
 - **README/install conventions**: use `npm i remix` in install snippets and import from `remix`, not `@remix-run/*`

@@ -383,6 +383,12 @@ export function getInternalChokidarWatcher<transforms extends AssetRequestTransf
   return chokidarWatcherByAssetServer.get(assetServer)
 }
 
+export async function waitForInternalWatchEvents<transforms extends AssetRequestTransformMap>(
+  assetServer: AssetServer<transforms>,
+): Promise<void> {
+  await watcherByAssetServer.get(assetServer)?.settled()
+}
+
 export function getInternalWatchTargets<transforms extends AssetRequestTransformMap>(
   assetServer: AssetServer<transforms>,
 ): readonly string[] {

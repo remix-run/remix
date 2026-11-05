@@ -128,7 +128,7 @@ describe('animate entrance/exit mixins', () => {
     let returning = node.getAnimations()[0]
     assert(returning)
     returning.finish()
-    await new Promise(requestAnimationFrame)
+    await returning.finished
 
     root.render(null)
     root.flush()

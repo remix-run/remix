@@ -352,6 +352,7 @@ describe('runTests timeouts and signals', () => {
   it('aborts the test signal when a user-provided signal aborts', async () => {
     let controller = new AbortController()
     let testSignalAborted = false
+    let testStarted = Promise.withResolvers<void>()
 
     let resultsPromise = runWithSuites([
       {
@@ -368,6 +369,7 @@ describe('runTests timeouts and signals', () => {
                 },
                 { once: true },
               )
+              testStarted.resolve()
               return new Promise(() => {})
             },
           },
@@ -375,7 +377,7 @@ describe('runTests timeouts and signals', () => {
       },
     ])
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await testStarted.promise
     controller.abort(new Error('stop'))
     let results = await resultsPromise
 

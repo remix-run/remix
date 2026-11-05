@@ -729,6 +729,7 @@ describe('vnode mixins', () => {
     let removal = Promise.withResolvers<void>()
     let beforeRemoveCalls = 0
     let removeCalls = 0
+    let removed = Promise.withResolvers<void>()
     let withDeferredRemove = createMixin((handle) => {
       handle.addEventListener('beforeRemove', (event) => {
         beforeRemoveCalls++
@@ -736,6 +737,7 @@ describe('vnode mixins', () => {
       })
       handle.addEventListener('remove', () => {
         removeCalls++
+        removed.resolve()
       })
       return (props: { id?: string }) => <handle.element {...props} id="deferred-remove" />
     })
@@ -756,7 +758,7 @@ describe('vnode mixins', () => {
     expect(container.querySelector('#deferred-remove')).toBe(beforeRemove)
 
     removal.resolve()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await removed.promise
     expect(removeCalls).toBe(1)
     expect(container.querySelector('#deferred-remove')).toBe(null)
   })
