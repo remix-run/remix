@@ -1,4 +1,4 @@
-import * as fs from 'node:fs'
+import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 
 import type { Element } from 'hast'
@@ -36,36 +36,26 @@ export type DocFile = ApiDocFile | PackageDocFile
 export async function discoverMarkdownFiles(
   baseDir: string,
 ): Promise<{ docFiles: DocFile[]; docFilesLookup: Map<string, DocFile> }> {
-  let files: DocFile[] = []
-  walk(baseDir)
+  let entries = await fsp.readdir(baseDir, { recursive: true, withFileTypes: true })
+  let files = await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+      .map((entry) => getDocFile(baseDir, path.join(entry.parentPath, entry.name))),
+  )
   let docFiles = files.sort((a, b) => a.urlPath.localeCompare(b.urlPath))
   let docFilesLookup = new Map<string, DocFile>()
   for (let file of docFiles) {
     docFilesLookup.set(file.name, file)
   }
   return { docFiles, docFilesLookup }
-
-  function walk(dir: string) {
-    let entries = fs.readdirSync(dir, { withFileTypes: true })
-
-    for (let entry of entries) {
-      let fullPath = path.join(dir, entry.name)
-
-      if (entry.isDirectory()) {
-        walk(fullPath)
-      } else if (entry.isFile() && entry.name.endsWith('.md')) {
-        files.push(getDocFile(baseDir, fullPath))
-      }
-    }
-  }
 }
 
-function getDocFile(baseDir: string, fullPath: string): DocFile {
+async function getDocFile(baseDir: string, fullPath: string): Promise<DocFile> {
   let relativePath = path.relative(baseDir, fullPath)
   let parts = relativePath.split(path.sep)
   let name = path.basename(fullPath, '.md')
 
-  let markdown = fs.readFileSync(fullPath, 'utf-8')
+  let markdown = await fsp.readFile(fullPath, 'utf-8')
   let { attributes } = parseMarkdownFrontmatter(markdown)
   let packagePath = parts.slice(0, attributes.type === 'package' ? -1 : -2).join('/')
   let packageName = packagePath.replace(/^remix-run\//, '@remix-run/')
@@ -116,7 +106,7 @@ export async function renderMarkdownFile(
   source?: string
 }> {
   try {
-    let markdown = fs.readFileSync(filePath, 'utf-8')
+    let markdown = await fsp.readFile(filePath, 'utf-8')
     let { attributes, root, headings } = parseMarkdown(markdown)
     let title = typeof attributes.title === 'string' ? attributes.title : ''
     let transformers = addCodeLinks ? [createApiCodeLinkTransformer(title, docFilesLookup)] : []
