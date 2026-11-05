@@ -1166,6 +1166,43 @@ describe('writes and validation', () => {
   })
 })
 
+describe('count and exists results', () => {
+  it('coerces numeric string and bigint counts from adapters', async () => {
+    let counts: unknown[] = ['3', 0n]
+    let recording = createRecordingDriver({
+      async execute() {
+        return { rows: [{ count: counts.shift() }] }
+      },
+    })
+    let db = createTestDatabase(recording.driver)
+
+    assert.equal(await db.query(accounts).count(), 3)
+    assert.equal(await db.query(accounts).exists(), false)
+  })
+
+  it('falls back to the row count when adapter rows have no count', async () => {
+    let recording = createRecordingDriver({
+      async execute() {
+        return { rows: [{ id: 1 }, { id: 2 }] }
+      },
+    })
+    let db = createTestDatabase(recording.driver)
+
+    assert.equal(await db.query(accounts).count(), 2)
+  })
+
+  it('rejects non-numeric counts from adapters', async () => {
+    let recording = createRecordingDriver({
+      async execute() {
+        return { rows: [{ count: 'oops' }] }
+      },
+    })
+    let db = createTestDatabase(recording.driver)
+
+    await assert.rejects(() => db.query(accounts).count(), DataTableDatabaseError)
+  })
+})
+
 describe('transactions and raw sql', () => {
   it('rejects database lifecycle operations from transaction callbacks', async () => {
     let recording = createRecordingDriver()

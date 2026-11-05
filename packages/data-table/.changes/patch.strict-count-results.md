@@ -1,0 +1,1 @@
+`count()` and `exists()` now accept numeric string and bigint `count` values from any adapter, and throw a `DataTableDatabaseError` when an adapter returns a non-numeric `count`. Previously such a value was silently replaced by the number of result rows.

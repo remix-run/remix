@@ -11,6 +11,7 @@ import type {
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
+import { normalizeCountRows } from '@remix-run/data-table/sql-helpers'
 import mysql from 'mysql2/promise'
 import type {
   Connection as MysqlConnection,
@@ -700,32 +701,6 @@ function normalizeHeader(result: unknown): MysqlQueryResultHeader {
     affectedRows: 0,
     insertId: undefined,
   }
-}
-
-function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-  return rows.map((row) => {
-    let count = row.count
-
-    if (typeof count === 'string') {
-      let numeric = Number(count)
-
-      if (!Number.isNaN(numeric)) {
-        return {
-          ...row,
-          count: numeric,
-        }
-      }
-    }
-
-    if (typeof count === 'bigint') {
-      return {
-        ...row,
-        count: Number(count),
-      }
-    }
-
-    return row
-  })
 }
 
 function normalizeInsertId(

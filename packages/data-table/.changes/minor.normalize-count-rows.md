@@ -1,0 +1,1 @@
+Added `normalizeCountRows()` to `@remix-run/data-table/sql-helpers` so adapters convert numeric string and bigint `count` results to numbers in one shared way. The built-in MySQL, PostgreSQL, and SQLite adapters now use it.

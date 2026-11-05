@@ -11,6 +11,7 @@ import type {
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
+import { normalizeCountRows } from '@remix-run/data-table/sql-helpers'
 import pg from 'pg'
 import type {
   Client as PostgresClient,
@@ -646,32 +647,6 @@ function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
     }
 
     return { ...(row as Record<string, unknown>) }
-  })
-}
-
-function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-  return rows.map((row) => {
-    let count = row.count
-
-    if (typeof count === 'string') {
-      let numeric = Number(count)
-
-      if (!Number.isNaN(numeric)) {
-        return {
-          ...row,
-          count: numeric,
-        }
-      }
-    }
-
-    if (typeof count === 'bigint') {
-      return {
-        ...row,
-        count: Number(count),
-      }
-    }
-
-    return row
   })
 }
 

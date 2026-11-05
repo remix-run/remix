@@ -13,6 +13,7 @@ import type {
   TransactionToken,
 } from '@remix-run/data-table'
 import { getTablePrimaryKey } from '@remix-run/data-table'
+import { normalizeCountRows } from '@remix-run/data-table/sql-helpers'
 
 import { compileSqliteOperation } from './sql-compiler.ts'
 
@@ -534,32 +535,6 @@ function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
 
 function normalizeStatementValues(values: unknown[]): unknown[] {
   return values.map((value) => (value === undefined ? null : value))
-}
-
-function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-  return rows.map((row) => {
-    let count = row.count
-
-    if (typeof count === 'string') {
-      let numeric = Number(count)
-
-      if (!Number.isNaN(numeric)) {
-        return {
-          ...row,
-          count: numeric,
-        }
-      }
-    }
-
-    if (typeof count === 'bigint') {
-      return {
-        ...row,
-        count: Number(count),
-      }
-    }
-
-    return row
-  })
 }
 
 function normalizeAffectedRowsForReader(

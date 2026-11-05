@@ -8,7 +8,7 @@ import type {
   UpdateOperation,
   UpsertOperation,
 } from '../driver.ts'
-import { DataTableQueryError } from '../errors.ts'
+import { DataTableDatabaseError, DataTableQueryError } from '../errors.ts'
 import type { ReturningInput, WriteResult, WriteRowResult, WriteRowsResult } from '../database.ts'
 import type { Predicate } from '../operators.ts'
 import { normalizeWhereInput } from '../operators.ts'
@@ -169,15 +169,7 @@ async function executeCount(
 
   let result = await database[executeOperation](operation)
 
-  if (result.rows && result.rows[0] && typeof result.rows[0].count === 'number') {
-    return result.rows[0].count as number
-  }
-
-  if (result.rows) {
-    return result.rows.length
-  }
-
-  return 0
+  return readCountResult(result.rows) ?? result.rows?.length ?? 0
 }
 
 async function executeExists(
@@ -200,11 +192,32 @@ async function executeExists(
     return result.rows[0].exists as boolean
   }
 
-  if (result.rows && result.rows[0] && typeof result.rows[0].count === 'number') {
-    return Number(result.rows[0].count) > 0
-  }
+  let count = readCountResult(result.rows)
+  if (count !== undefined) return count > 0
 
   return Boolean(result.rows && result.rows.length > 0)
+}
+
+// SQL drivers return `count` as whatever the database client produces: a number, a numeric string
+// (Postgres, MySQL), or a bigint. Adapters that return plain rows without `count` fall back to the
+// row count.
+function readCountResult(rows: Record<string, unknown>[] | undefined): number | undefined {
+  let row = rows?.[0]
+  if (!row || !('count' in row)) return undefined
+
+  let count = row.count
+  let numeric =
+    typeof count === 'number' || typeof count === 'string' || typeof count === 'bigint'
+      ? Number(count)
+      : Number.NaN
+
+  if (Number.isNaN(numeric)) {
+    throw new DataTableDatabaseError('Expected a numeric count result from the database adapter', {
+      metadata: { count },
+    })
+  }
+
+  return numeric
 }
 
 async function executeInsert(

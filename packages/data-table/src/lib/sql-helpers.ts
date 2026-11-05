@@ -42,6 +42,31 @@ export function normalizeJoinType(type: string): string {
 }
 
 /**
+ * Converts `count` values in count and exists result rows to numbers.
+ *
+ * Database clients return `count(*)` as a number, a numeric string, or a bigint depending on the
+ * driver. Rows whose `count` is not numeric are returned unchanged.
+ * @param rows Result rows from a count or exists statement.
+ * @returns Rows with numeric `count` values.
+ */
+export function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  return rows.map((row) => {
+    let count = row.count
+
+    if (typeof count === 'bigint') {
+      return { ...row, count: Number(count) }
+    }
+
+    if (typeof count === 'string') {
+      let numeric = Number(count)
+      if (!Number.isNaN(numeric)) return { ...row, count: numeric }
+    }
+
+    return row
+  })
+}
+
+/**
  * Returns stable column order from the union of keys in the provided rows.
  * @param rows Row objects to scan for keys.
  * @returns Deduplicated key list in encounter order.

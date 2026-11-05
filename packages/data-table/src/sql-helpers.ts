@@ -8,6 +8,7 @@ export { createSqlClauseCompiler } from './lib/sql-clause-compiler.ts'
 export {
   collectColumns,
   compileOrderByDirection,
+  normalizeCountRows,
   normalizeJoinType,
   quoteLiteral,
   quotePath,
