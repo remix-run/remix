@@ -2,9 +2,9 @@ import { getTableName, getTablePrimaryKey } from '@remix-run/data-table'
 import type { Predicate, SqlStatement } from '@remix-run/data-table'
 import type { DataManipulationOperation } from '@remix-run/data-table'
 import {
-  collectColumns as collectColumnsHelper,
+  collectColumns,
   compileOrderByDirection,
-  normalizeJoinType as normalizeJoinTypeHelper,
+  normalizeJoinType,
   quotePath as quotePathHelper,
 } from '@remix-run/data-table/sql-helpers'
 
@@ -462,10 +462,6 @@ function compileComparisonValue(
   return pushValue(context, predicate.value)
 }
 
-function normalizeJoinType(type: string): string {
-  return normalizeJoinTypeHelper(type)
-}
-
 function quoteIdentifier(value: string): string {
   return '"' + value.replace(/"/g, '""') + '"'
 }
@@ -485,8 +481,4 @@ function normalizeBoundValue(value: unknown): unknown {
   }
 
   return value
-}
-
-function collectColumns(rows: Record<string, unknown>[]): string[] {
-  return collectColumnsHelper(rows)
 }
