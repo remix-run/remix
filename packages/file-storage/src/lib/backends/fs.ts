@@ -5,6 +5,7 @@ import { openLazyFile } from '@remix-run/fs'
 import type { LazyFile } from '@remix-run/lazy-file'
 
 import type {
+  FileKey,
   FileStorage,
   FileLike,
   FileMetadata,
@@ -162,7 +163,7 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
     async list<opts extends ListOptions>(options?: opts): Promise<ListResult<opts>> {
       let { cursor, includeMetadata = false, limit = 32, prefix } = options ?? {}
 
-      let files: any[] = []
+      let files: Array<FileKey | FileMetadata> = []
       let foundCursor = cursor === undefined
       let nextCursor: string | undefined
       let lastHash: string | undefined
@@ -202,7 +203,7 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
 
       return {
         cursor: nextCursor,
-        files,
+        files: files as ListResult<opts>['files'],
       }
     },
     async put(key: string, file: FileLike): Promise<LazyFile> {
