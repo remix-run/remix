@@ -224,11 +224,11 @@ jobs:
         with:
           path: |
             ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-chromium-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-chromium-firefox-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
       - name: Run changed package Bun tests
         shell: bash
@@ -274,11 +274,11 @@ jobs:
         continue-on-error: true
         with:
           path: ~/AppData/Local/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-chromium-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium
 
       - name: Run changed package tests
         shell: bash
@@ -309,8 +309,8 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           changed_files="$(git diff --name-only --no-renames "$PR_BASE_SHA...$PR_HEAD_SHA" -- .)"
-          # Bookstore uses the umbrella remix package, so any package change can affect it.
-          if grep -Eq '^(packages/|demos/bookstore/|scripts/|\.github/|patches/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig(\.[^/]+)?\.json$)' <<< "$changed_files"; then
+          # Browser suites can depend on any package and share the root Playwright configuration.
+          if grep -Eq '^(packages/|demos/|docs/|scripts/|\.github/|patches/|playwright\.config\.[jt]s$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig(\.[^/]+)?\.json$)' <<< "$changed_files"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -334,14 +334,7 @@ jobs:
 
       - name: Run WebKit tests
         if: steps.changes.outputs.run == 'true'
-        run: >-
-          pnpm
-          --filter @remix-run/component
-          --filter bookstore-demo
-          run test
-          --project webkit
-          --type browser
-          --type e2e
+        run: pnpm test:browser
 
   lint:
     name: Lint

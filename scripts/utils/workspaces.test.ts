@@ -145,10 +145,23 @@ describe('getFullRunReasons', () => {
 
     assert.deepEqual(
       getFullRunReasons(
-        ['package.json', 'pnpm-lock.yaml', 'packages/removed/package.json', 'README.md'],
+        [
+          'package.json',
+          'playwright.config.ts',
+          'playwright.config.js',
+          'pnpm-lock.yaml',
+          'packages/removed/package.json',
+          'README.md',
+        ],
         workspaces,
       ),
-      ['package.json', 'pnpm-lock.yaml', 'packages/removed/package.json'],
+      [
+        'package.json',
+        'playwright.config.ts',
+        'playwright.config.js',
+        'pnpm-lock.yaml',
+        'packages/removed/package.json',
+      ],
     )
   })
 
