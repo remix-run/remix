@@ -1,5 +1,6 @@
 import { createRouter, type RouterContext } from 'remix/router'
 import type { Cookie } from 'remix/cookie'
+import { cop } from 'remix/middleware/cop'
 import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'
 import type { SessionStorage } from 'remix/session'
@@ -45,6 +46,7 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
         etag: false,
         lastModified: false,
       }),
+      cop(),
       formData(),
       session(cookie, storage),
       loadDatabase(),
