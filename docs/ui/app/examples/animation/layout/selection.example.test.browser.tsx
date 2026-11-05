@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import Example from './selection.example.tsx'
-import { button, element, expectAnimation, mount, waitFor } from '../../test-helpers.ts'
+import { button, element, expectAnimation, mount } from '../../test-helpers.ts'
 
 describe('Layout size example', () => {
   it('animates highlight position and width between views', async (t) => {
@@ -10,11 +10,7 @@ describe('Layout size example', () => {
     let initial = highlight.getBoundingClientRect()
     let activityButton = button(result.container, 'Activity log')
     await result.act(() => activityButton.click())
-    let animation: Animation | undefined
-    await waitFor(() => {
-      animation = highlight.getAnimations()[0]
-      assert.ok(animation)
-    })
+    let [animation] = highlight.getAnimations()
     assert.ok(animation)
     // Seek into the animation instead of hoping a real frame lands mid-flight.
     animation.pause()

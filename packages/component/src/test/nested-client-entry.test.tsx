@@ -110,7 +110,6 @@ async function expectDeferredRemoval(nestedEntry: boolean) {
 
     hideInner()
     app.flush()
-    await Promise.resolve()
     let pendingRemoval = {
       beforeRemoveCalls,
       removeCalls,

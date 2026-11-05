@@ -36,18 +36,17 @@ describe('animate entrance/exit mixins', () => {
     let reverse = mock.fn()
     let commitStyles = mock.fn()
     let cancel = mock.fn()
-    let animateSpy = mock.method(
-      HTMLElement.prototype,
-      'animate',
-      () =>
-        ({
-          playState: 'running',
-          reverse,
-          commitStyles,
-          cancel,
-          finished: new Promise(() => {}),
-        }) as unknown as Animation,
-    )
+    let animated = Promise.withResolvers<void>()
+    let animateSpy = mock.method(HTMLElement.prototype, 'animate', () => {
+      animated.resolve()
+      return {
+        playState: 'running',
+        reverse,
+        commitStyles,
+        cancel,
+        finished: new Promise(() => {}),
+      } as unknown as Animation
+    })
 
     let container = document.createElement('div')
     let root = createRoot(container)
@@ -59,14 +58,14 @@ describe('animate entrance/exit mixins', () => {
 
     root.render(null)
     root.flush()
-    await Promise.resolve()
+    // Exit teardowns registered with `persistNode()` start in a later microtask.
+    await animated.promise
     expect(animateSpy).toHaveBeenCalledTimes(1)
 
     root.render(
       <div key="item" id="reverse-target" mix={[animateExit({ opacity: 0, duration: 150 })]} />,
     )
     root.flush()
-    await Promise.resolve()
 
     expect(reverse).toHaveBeenCalledTimes(0)
     expect(commitStyles).toHaveBeenCalledTimes(1)
@@ -136,18 +135,17 @@ describe('animate entrance/exit mixins', () => {
   })
 
   it('skips first entrance when initial is false, but animates on reclaimed add', async () => {
-    let animateSpy = mock.method(
-      HTMLElement.prototype,
-      'animate',
-      () =>
-        ({
-          playState: 'running',
-          reverse: mock.fn(),
-          commitStyles: mock.fn(),
-          cancel: mock.fn(),
-          finished: new Promise(() => {}),
-        }) as unknown as Animation,
-    )
+    let animated = Promise.withResolvers<void>()
+    let animateSpy = mock.method(HTMLElement.prototype, 'animate', () => {
+      animated.resolve()
+      return {
+        playState: 'running',
+        reverse: mock.fn(),
+        commitStyles: mock.fn(),
+        cancel: mock.fn(),
+        finished: new Promise(() => {}),
+      } as unknown as Animation
+    })
 
     let container = document.createElement('div')
     let root = createRoot(container)
@@ -162,12 +160,12 @@ describe('animate entrance/exit mixins', () => {
 
     root.render(null)
     root.flush()
-    await Promise.resolve()
+    // Exit teardowns registered with `persistNode()` start in a later microtask.
+    await animated.promise
     expect(animateSpy).toHaveBeenCalledTimes(1)
 
     root.render(<div key="initial-false" id="initial-false-target" mix={mix} />)
     root.flush()
-    await Promise.resolve()
     expect(animateSpy).toHaveBeenCalledTimes(2)
 
     animateSpy.mock.restore!()

@@ -53,7 +53,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 
 - **Tests run from source**: no build step required
 - **Test structure**: do not generate tests inside `describe()` with loops or conditionals; it breaks per-test IDE execution
-- **No time-based tests**: never sleep, flush "a tick", wait a fixed duration, or assert on elapsed time. Await the exact signal that proves the behavior happened (a returned promise, an event, a fixture-controlled deferred, a real DOM/page condition), or use `t.useFakeTimers()` for code that is itself time-based. Timeouts may only bound failures. See the Determinism section of the `write-tests` skill
+- **No time-based tests**: never sleep or wait a fixed duration; await a deterministic signal or use `t.useFakeTimers()`. See the Determinism section of the `write-tests` skill
 - **Test guidance**: use the `write-tests` skill when adding, refactoring, or reviewing tests, fixtures, test scripts, or test-only dependencies
 - **Docs and examples**: if you change a public API, update the related docs, JSDoc, README examples, and tests in the same change
 - **README/install conventions**: use `npm i remix` in install snippets and import from `remix`, not `@remix-run/*`

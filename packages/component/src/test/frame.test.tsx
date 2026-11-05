@@ -193,17 +193,10 @@ async function waitForTexts(selector: string, texts: string[]) {
   })
 }
 
-function hasCommentMarker(root: Node, data: string): boolean {
-  let walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT)
-  while (walker.nextNode()) {
-    if (walker.currentNode.nodeValue?.trim() === data) return true
-  }
-  return false
-}
-
-// Resolves once a frame start marker from newly streamed content is reconciled into the DOM.
-async function waitForCommentMarker(id: string, root: Node = document) {
-  await waitForDom(() => hasCommentMarker(root, `rmx:f:${id}`), root)
+// Resolves once the frame start marker from a streamed chunk is reconciled into the document.
+async function waitForFrameMarker(chunk: string) {
+  let marker = new RegExp(`<!--\\s*rmx:f:${getCommentMarkerId(chunk, 'rmx:f:')}\\s*-->`)
+  await waitForDom(() => marker.test(document.documentElement.innerHTML))
 }
 
 // Records every text the DOM displays from now on, including text that a later mutation replaced
@@ -3943,7 +3936,7 @@ describe('run', () => {
 
     invariant(reloadTopFromChild)
     let reloadPromise = reloadTopFromChild()
-    await waitForCommentMarker(getCommentMarkerId(firstChunk.value, 'rmx:f:'))
+    await waitForFrameMarker(firstChunk.value)
 
     expect(childReloadStartEvents).toBe(1)
     expect(childReloadCompleteEvents).toBe(0)
@@ -4514,7 +4507,6 @@ describe('run', () => {
     })
 
     await clientFrame.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(frameHandle)
     frameHandle.addEventListener('reloadStart', () => events.push('start'))
@@ -4522,16 +4514,13 @@ describe('run', () => {
 
     let firstReloadPromise = frameHandle.reload()
     let secondReloadPromise = frameHandle.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
     await firstReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(events).toEqual(['start'])
 
     resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
     await secondReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(events).toEqual(['start', 'complete'])
     expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
 
@@ -6243,7 +6232,7 @@ describe('run', () => {
 
     let topFrame = app.frames.top
     let reloadPromise = topFrame.reload()
-    await waitForCommentMarker(getCommentMarkerId(firstChunk.value, 'rmx:f:'))
+    await waitForFrameMarker(firstChunk.value)
 
     expect(document.getElementById('child-frame-fallback')).toBeNull()
     expect(document.getElementById('child-frame-input')).toBe(input)
@@ -6509,7 +6498,7 @@ describe('run', () => {
 
     invariant(reloadParent)
     let reloadPromise = reloadParent()
-    await waitForCommentMarker(getCommentMarkerId(firstChunk.value, 'rmx:f:'))
+    await waitForFrameMarker(firstChunk.value)
 
     expect(document.getElementById('direct-child-frame-fallback')).toBeNull()
     expect(document.getElementById('direct-child-frame-input')).toBe(input)
@@ -7589,7 +7578,7 @@ describe('run', () => {
 
     await app.ready()
     app.flush()
-    await waitForTexts('[data-shared-frame="client"]', ['Client shared frame 1'])
+    await waitForText('[data-shared-frame="client"]', 'Client shared frame 1')
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
     expect(document.getElementById('server-shared-frame')?.textContent).toBe('Initial server frame')

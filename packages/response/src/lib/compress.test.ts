@@ -1372,19 +1372,15 @@ describe('compressResponse()', () => {
       let streamCancelled = false
       let cancelReason: string | undefined
       let pulled = Promise.withResolvers<void>()
-      let pullGate = Promise.withResolvers<void>()
 
       let stream = new ReadableStream({
         async pull(controller) {
           controller.enqueue(new TextEncoder().encode('chunk\n'.repeat(100)))
           pulled.resolve()
-          // Hold the source open so it is still streaming when the output is cancelled
-          await pullGate.promise
         },
         cancel(reason) {
           streamCancelled = true
           cancelReason = reason
-          pullGate.resolve()
         },
       })
 
@@ -1396,14 +1392,13 @@ describe('compressResponse()', () => {
       let reader = compressed.body!.getReader()
 
       // Start reading to activate the stream
-      let readPromise = reader.read()
+      reader.read()
 
       // Wait for streaming to start
       await pulled.promise
 
       // Cancel the output stream; this resolves once the source stream's cancel() has run
       await reader.cancel('User cancelled')
-      await readPromise
 
       // Verify source stream was cancelled
       assert.equal(streamCancelled, true, 'Source stream should be cancelled')

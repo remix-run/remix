@@ -121,13 +121,7 @@ type Page = Awaited<ReturnType<TestContext['serve']>>
 async function readScrollAfterAnchoringRestored(page: Page): Promise<number> {
   // Traversals suppress scroll anchoring until after a paint. Wait for that suppression to be
   // removed, then read scroll in the next frame, where re-enabled anchoring would move it.
-  await page.waitForFunction(
-    () =>
-      window.navigation.transition === null &&
-      !document.adoptedStyleSheets.some((sheet) =>
-        Array.from(sheet.cssRules).some((rule) => rule.cssText.includes('overflow-anchor')),
-      ),
-  )
+  await page.waitForFunction(() => getComputedStyle(document.body).overflowAnchor !== 'none')
   return page.evaluate(
     () => new Promise<number>((resolve) => requestAnimationFrame(() => resolve(window.scrollY))),
   )

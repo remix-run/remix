@@ -128,8 +128,6 @@ export function createRequestListener(
   if (handler.length === 1) {
     let requestHandler = handler as (request: Request) => Response | Promise<Response>
 
-    // Not an async function so sync handlers can start sending without an extra
-    // microtask, but it still returns a promise that settles once handling finishes.
     return (req, res) => {
       let isResponseClosed = observeResponseClose(res)
 
@@ -149,7 +147,7 @@ export function createRequestListener(
       }
 
       if (isPromiseLike(response)) {
-        return Promise.resolve(response).then(
+        return response.then(
           (response) => sendResponseForRequest(res, response, request, onError, isResponseClosed),
           (error) => {
             if (isRequestAbortError(request, error)) return

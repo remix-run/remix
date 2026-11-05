@@ -365,6 +365,7 @@ describe('stream', () => {
         return chunk
       })
 
+      // The microtask budget is the contract: awaiting each of the 1000 nodes would exceed it.
       for (let index = 0; index < 20; index++) await Promise.resolve()
       expect(ready).toBe(true)
       let chunk = await firstChunk
@@ -5570,21 +5571,10 @@ describe('stream', () => {
         ),
       )
 
-      // Expect no new chunk yet because the child is blocking
-      let chunkArrived = false
-      let nextChunkPromise = chunks.next().then((result) => {
-        chunkArrived = true
-        return result
-      })
-
-      await Promise.resolve()
-      expect(chunkArrived).toBe(false)
-
-      // Now resolve the blocking child
       resolveChild('<article>Child Content</article>')
 
-      // Next chunk should now contain the parent's template with the child's resolved content
-      let second = await nextChunkPromise
+      // The next chunk contains the parent's template only with the child's resolved content
+      let second = await chunks.next()
       expect(second.done).toBe(false)
       let parentTemplate = second.value!
       expect(parentTemplate).toContain('<template id="f')

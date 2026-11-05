@@ -249,6 +249,7 @@ describe('vdom error handling', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       let calls = 0
+      let handled = Promise.withResolvers<void>()
 
       root.render(
         <button
@@ -256,6 +257,7 @@ describe('vdom error handling', () => {
             on('click', async () => {
               await Promise.resolve()
               calls++
+              handled.resolve()
             }),
           ]}
         >
@@ -266,10 +268,7 @@ describe('vdom error handling', () => {
 
       let button = container.querySelector('button')!
       button.click()
-
-      // Let the async handler complete
-      await Promise.resolve()
-      await Promise.resolve()
+      await handled.promise
 
       expect(calls).toBe(1)
     })
