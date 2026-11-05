@@ -75,7 +75,11 @@ export type Check<output> = {
   values?: Record<string, unknown>
 }
 
-/** Descriptive metadata for a schema check, independent of its validation function. */
+/**
+ * Descriptive metadata for a schema check, independent of its validation function.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface SchemaCheckMetadata {
   /** The schema/domain issue code, when supplied by the check. */
   readonly code?: string
@@ -83,7 +87,11 @@ export interface SchemaCheckMetadata {
   readonly values?: Record<string, unknown>
 }
 
-/** Schema facts available to adapters without interpreting presentation concerns. */
+/**
+ * Schema facts available to adapters without interpreting presentation concerns.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface SchemaMetadata {
   /** Checks retained through schema composition. Arbitrary refinements are not described. */
   readonly checks: readonly SchemaCheckMetadata[]
@@ -91,21 +99,35 @@ export interface SchemaMetadata {
   readonly inputChecks?: readonly SchemaCheckMetadata[]
   /** Known undefined handling from schema wrappers; absent when validation must be evaluated. */
   readonly acceptsUndefined?: boolean
+  /** Original property schemas when the inspected schema describes an object. */
+  readonly shape?: ObjectShape
 }
 
 const schemaMetadata = Symbol('schemaMetadata')
 
-type SchemaWithMetadata = {
-  [schemaMetadata]: SchemaMetadata
+type SchemaWithMetadata<metadata extends SchemaMetadata = SchemaMetadata> = {
+  [schemaMetadata]: metadata
 }
 
 /**
- * Reads schema check metadata without running validators or default factories.
+ * Reads experimental metadata with the original, typed object property schemas.
+ * This API may change or be removed in patch releases.
  *
  * @param schema The schema to inspect.
- * @returns Generic check descriptions and known undefined handling, not HTML constraints.
+ * @returns Metadata including the object's property schemas.
  */
-export function getSchemaMetadata<input, output>(schema: Schema<input, output>): SchemaMetadata {
+export function getSchemaMetadata<shape extends ObjectShape>(
+  schema: ObjectSchema<shape>,
+): SchemaMetadata & { readonly shape: shape }
+/**
+ * Reads experimental schema metadata without running validators or default factories.
+ * This API may change or be removed in patch releases.
+ *
+ * @param schema The schema to inspect.
+ * @returns Check descriptions, known undefined handling, and property schemas when available.
+ */
+export function getSchemaMetadata<input, output>(schema: Schema<input, output>): SchemaMetadata
+export function getSchemaMetadata(schema: object): SchemaMetadata {
   return readSchemaMetadata(schema) ?? { checks: [] }
 }
 
@@ -154,18 +176,16 @@ export type Schema<input, output = input> = SyncStandardSchema<input, output> & 
 /**
  * A mapping of object property names to their schemas.
  */
-export type ObjectShape = Record<string, Schema<any, any>>
+type ObjectShape = Record<string, Schema<any, any>>
 
 /**
  * A schema created by {@link object} that retains its property schemas for composition.
  */
-export type ObjectSchema<shape extends ObjectShape> = Schema<
+type ObjectSchema<shape extends ObjectShape> = Schema<
   unknown,
   { [key in keyof shape]: InferOutput<shape[key]> }
-> & {
-  /** The property schemas passed to {@link object}. */
-  readonly shape: shape
-}
+> &
+  SchemaWithMetadata<SchemaMetadata & { readonly shape: shape }>
 
 /**
  * Infers the input type of a schema-like value.
@@ -362,7 +382,10 @@ function readSchemaMetadata(schema: object): SchemaMetadata | undefined {
   return hasSchemaMetadata(schema) ? schema[schemaMetadata] : undefined
 }
 
-function setSchemaMetadata(schema: object, metadata: SchemaMetadata): void {
+function setSchemaMetadata<metadata extends SchemaMetadata>(
+  schema: object,
+  metadata: metadata,
+): asserts schema is SchemaWithMetadata<metadata> {
   if (hasSchemaMetadata(schema)) {
     schema[schemaMetadata] = metadata
     return
@@ -935,14 +958,8 @@ export function object<shape extends ObjectShape>(
     return { value: outputValues as { [key in keyof shape]: InferOutput<shape[key]> } }
   })
 
-  Object.defineProperty(objectSchema, 'shape', {
-    value: shape,
-    enumerable: false,
-    writable: false,
-    configurable: false,
-  })
-
-  return objectSchema as ObjectSchema<shape>
+  setSchemaMetadata(objectSchema, { ...getSchemaMetadata(objectSchema), shape })
+  return objectSchema
 }
 
 /**

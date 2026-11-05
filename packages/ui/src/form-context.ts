@@ -1,6 +1,6 @@
 import { attrs, createMixin } from '@remix-run/component'
 import type { ElementProps, Handle, RemixNode } from '@remix-run/component'
-import { isFormField, validateField } from '@remix-run/data-schema/form'
+import { isFormField, validateField } from '@remix-run/data-schema/experimental/form'
 import type {
   FormEntries,
   FormField,
@@ -8,7 +8,7 @@ import type {
   FormSchema,
   FormErrors,
   FormSubmission,
-} from '@remix-run/data-schema/form'
+} from '@remix-run/data-schema/experimental/form'
 import { getConstraints } from './form-constraints.ts'
 import type { GetConstraintsOptions } from './form-constraints.ts'
 import { fieldValidity, formValidity, getGroupControls, getRepeatedValues } from './form-control.ts'
@@ -35,7 +35,11 @@ const textInputTypes = [
   'image',
 ] as const
 
-/** A live form field reference that can be passed to child components through props. */
+/**
+ * A live form field reference that can be passed to child components through props.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FieldBinding<kind extends string = FormFieldKind | 'fields' | 'file' | 'files'> {
   /** The field's form decoding kind. */
   readonly kind: kind
@@ -56,14 +60,22 @@ export interface FieldBinding<kind extends string = FormFieldKind | 'fields' | '
   setCustomErrors(messages: ReadonlyArray<string>): void
 }
 
-/** Typed bindings retaining the form kind of each submitted entry. */
+/**
+ * Typed bindings retaining the form kind of each submitted entry.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export type FieldBindings<entries extends FormEntries> = {
   readonly [key in keyof entries]: FieldBinding<
     entries[key] extends FormField<unknown, infer kind> ? kind : entries[key]['kind']
   >
 }
 
-/** Current field references and grouped server errors for the render callback. */
+/**
+ * Current field references and grouped server errors for the render callback.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormContextValue<entries extends FormEntries> {
   /** Stable typed field bindings; read live properties during rendering. */
   fields: FieldBindings<entries>
@@ -71,7 +83,11 @@ export interface FormContextValue<entries extends FormEntries> {
   errors: FormErrors
 }
 
-/** One rendered form's shared schema and current submission. */
+/**
+ * One rendered form's shared schema and current submission.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormContextProps<entries extends FormEntries> {
   /** Initial unique ID scope. Pass a client entry's handle.id to retain exact SSR IDs on hydration. */
   id?: string
@@ -101,6 +117,9 @@ type InternalBinding = FieldBinding<FormFieldKind | FormEntries[string]['kind']>
 
 /**
  * Owns a form instance's feedback and renders fields without setup factories or subscriptions.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @param handle Shared schema, submission props, component lifetime, and render callback.
  * @returns The application's form markup with live field bindings.
  */
@@ -110,7 +129,7 @@ export function Context<entries extends FormEntries>(
   let schema = handle.props.schema
   let idPrefix = handle.props.id ?? handle.id
   if (!schema.entries)
-    throw new Error('form.Context requires an inspectable data-schema/form object')
+    throw new Error('form.Context requires an inspectable data-schema/experimental/form object')
   let state: FormContextState = {
     getSubmission() {
       return handle.props.submission
@@ -200,13 +219,21 @@ function getBinding(field: FieldBinding<string>, owner: FormContextState): Bindi
   return data
 }
 
-/** Native form coordination without intercepting submission or owning navigation. */
+/**
+ * Native form coordination without intercepting submission or owning navigation.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export const root = createMixin<HTMLFormElement, [], ElementProps>((handle) => {
   if (!handle.context.get(Context)) throw new Error('form.root() requires form.Context')
   return () => formValidity()
 })
 
-/** Native control validation, constraints, restored values, feedback, and error associations. */
+/**
+ * Native control validation, constraints, restored values, feedback, and error associations.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export const control = createMixin<ValidatableControl, [field: FieldBinding], ElementProps>(
   (handle, hostType) => {
     let owner = handle.context.get(Context)
@@ -307,7 +334,11 @@ export const control = createMixin<ValidatableControl, [field: FieldBinding], El
   },
 )
 
-/** Associates a label with a control; pass its value for radio or grouped checkbox options. */
+/**
+ * Associates a label with a control; pass its value for radio or grouped checkbox options.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export const label = createMixin<
   HTMLLabelElement,
   [field: FieldBinding<string>, value?: string | number],
@@ -330,7 +361,11 @@ function optionId(id: string, value: unknown): string {
   return `${id}-option-${encodeURIComponent(String(value))}`
 }
 
-/** Identifies application-owned error content without choosing its role or visibility. */
+/**
+ * Identifies application-owned error content without choosing its role or visibility.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export const error = createMixin<Element, [field: FieldBinding<string>], ElementProps>((handle) => {
   let owner = handle.context.get(Context)
   if (!owner) throw new Error('form.error() requires form.Context')

@@ -1,5 +1,5 @@
 import * as s from 'remix/data-schema'
-import * as fd from 'remix/data-schema/form'
+import * as fd from 'remix/data-schema/experimental/form'
 
 export const AdminBookForm = fd.object({
   slug: fd.text(s.string()),

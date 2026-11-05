@@ -1,7 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import * as s from '../index.ts'
-import * as fd from '../form.ts'
+import * as fd from '@remix-run/data-schema/experimental/form'
+import { getSchemaMetadata } from '../experimental.ts'
 import { max, maxLength, min, minLength } from '../checks.ts'
 
 const User = s.object({
@@ -10,8 +11,8 @@ const User = s.object({
   age: s.number().pipe(min(13), max(120)),
 })
 const Profile = fd.object({
-  name: fd.text(User.shape.name),
-  age: fd.number(User.shape.age),
+  name: fd.text(getSchemaMetadata(User).shape.name),
+  age: fd.number(getSchemaMetadata(User).shape.age),
   bio: fd.text(s.optional(s.string())),
   password: fd.password(s.string()),
   terms: fd.checkbox(s.literal(true)),

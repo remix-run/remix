@@ -2,7 +2,7 @@ import * as form from '@remix-run/ui/form'
 import * as assert from 'remix/assert'
 import { render } from 'remix/component/test'
 import * as s from 'remix/data-schema'
-import * as fd from 'remix/data-schema/form'
+import * as fd from 'remix/data-schema/experimental/form'
 import { describe, it } from 'remix/test'
 
 import { RestfulForm } from '../restful-form.tsx'

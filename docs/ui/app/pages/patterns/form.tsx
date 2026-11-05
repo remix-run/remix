@@ -37,8 +37,9 @@ export default function FormPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>
-          Define a submission schema with <code>remix/data-schema/form</code>. Its field kinds
-          describe how browser values are decoded. Pass the same schema to <code>form.Context</code>
+          Define a submission schema with the experimental{' '}
+          <code>remix/data-schema/experimental/form</code> API. Its field kinds describe how browser
+          values are decoded. Pass the same schema to <code>form.Context</code>
           and parse submitted <code>FormData</code> in the handler.
         </p>
       </Section>

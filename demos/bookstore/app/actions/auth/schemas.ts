@@ -1,6 +1,6 @@
 import { css } from 'remix/component'
 import * as s from 'remix/data-schema'
-import * as fd from 'remix/data-schema/form'
+import * as fd from 'remix/data-schema/experimental/form'
 import { minLength } from 'remix/data-schema/checks'
 
 export const authCardStyle = css({ maxWidth: '500px', margin: '2rem auto' })

@@ -1,8 +1,9 @@
-import { getSchemaMetadata } from '@remix-run/data-schema'
+import { getSchemaMetadata } from '@remix-run/data-schema/experimental'
 import type { Schema } from '@remix-run/data-schema'
 
 /**
  * Native HTML constraints that can be derived from a schema's checks.
+ * This experimental API may change or be removed in patch releases.
  */
 export interface SchemaConstraints {
   /** Whether the input must contain a value or a checkbox must be checked. */
@@ -21,6 +22,7 @@ export interface SchemaConstraints {
 
 /**
  * Input control context used to derive native HTML constraints.
+ * This experimental API may change or be removed in patch releases.
  */
 export interface GetConstraintsOptions {
   /** The native input type, `select`, or `textarea`, with its empty-value semantics. */
@@ -58,6 +60,8 @@ export interface GetConstraintsOptions {
  *
  * Checks without an equivalent native constraint are omitted. Requiredness may evaluate the
  * schema with `undefined`, `false`, or an empty array when metadata cannot determine it.
+ *
+ * This experimental API may change or be removed in patch releases.
  *
  * @param schema The schema to inspect.
  * @param options The input control receiving the constraints.

@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import * as s from '../index.ts'
-import * as fd from '../form.ts'
+import * as fd from '../experimental-form.ts'
 import { min, minLength } from '../checks.ts'
 import * as legacy from '../form-data.ts'
 

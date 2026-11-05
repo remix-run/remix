@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import * as s from '@remix-run/data-schema'
-import * as fd from '@remix-run/data-schema/form'
+import * as fd from '@remix-run/data-schema/experimental/form'
 import { email, min } from '@remix-run/data-schema/checks'
 import * as form from './form.ts'
 import { renderForm, input, edit, blur } from './test/form.tsx'

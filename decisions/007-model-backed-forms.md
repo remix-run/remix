@@ -1,16 +1,24 @@
 # Form schemas with native validation and context-scoped feedback
 
-One inspectable form schema connects transport decoding, ordinary validation, and native UI behavior. `data-schema/form` owns the submission contract; `ui/form` consumes it through a Context and small role mixins. Applications keep control over markup and request handling.
+One inspectable form schema connects transport decoding, ordinary validation, and native UI behavior. `data-schema/experimental/form` owns the submission contract; `ui/form` consumes it through a Context and small role mixins. Applications keep control over markup and request handling.
 
 ## Form schemas describe submissions
 
-`fd.object({ email: fd.text(Account.shape.email) })` reuses domain rules without another UI definition. A separate domain schema is optional; inline rules and fields from multiple models work the same way. Only configured fields are parsed. Handlers supply generated values, run business checks, and select values for persistence.
+`fd.object({ email: fd.text(getSchemaMetadata(Account).shape.email) })` reuses domain rules without another UI definition. A separate domain schema is optional; inline rules and fields from multiple models work the same way. Only configured fields are parsed. Handlers supply generated values, run business checks, and select values for persistence.
 
 Explicit `text`, `password`, `number`, and `checkbox` descriptions identify transport semantics without inspecting DOM input types or changing ordinary `s.object` parsing. They normalize absence and blanks before running the original schema. The functional `fd.parse` and form-aware `fd.parseSafe` APIs reuse core validation, options, messages, and inferred transforms. The existing `data-schema/form-data` adapter retains its lower-level extraction behavior.
 
 We chose descriptors for decoding and sensitive-value policy instead of a helper for every HTML input type. Email, URL, date/time, color, hidden, and radio values use `text`; range uses `number`. The native type stays in markup. Existing `file` and `files` descriptors handle uploads. Form objects normalize unnamed zero-byte browser upload placeholders to missing values while preserving named empty files and the lower-level adapter's behavior.
 
 Readonly `.entries` preserves original scalar schemas and decoding metadata for adapters. Form kinds and sensitivity belong here; labels, IDs, ARIA, feedback, and browser validity flags remain in UI. Package dependencies flow from UI to data-schema.
+
+## Form APIs and schema inspection stay experimental
+
+We chose `remix/data-schema/experimental/form` for the form schema API and reserved `remix/data-schema/form` for eventual stabilization. The import path makes experimental usage explicit, rather than relying only on documentation at the stable-looking form path. Form descriptors, decoding, submission results, and the consuming `ui/form` bindings and mixins may change or be removed in patch releases. Ordinary schema parsing and the existing `data-schema/form-data` export keep their stable contracts.
+
+We chose `getSchemaMetadata()` from `data-schema/experimental` as the single schema inspection API. It exposes typed property schemas through `metadata.shape`, check descriptions, and known undefined handling without running validators or default factories. We removed the direct `.shape` property and kept inspection out of the stable core export. Experimental additions, changes, and removals ship in patch releases. UI is also unstable and uses a `workspace:*` dependency on data-schema, pinning published releases to the exact tested version while the two APIs evolve together.
+
+We considered adding `.shape` and `getSchemaMetadata()` to the stable API. That would commit to their contracts before the broader inspection model settles. [Inspectable schema objects](https://github.com/remix-run/remix/pull/12106) could later replace the metadata storage or provide a different inspection API. This decision lets us ship forms independently, preserve ordinary schema parsing, and revisit inspection when that representation is adopted.
 
 ## Form-aware safe parsing carries failed submissions
 

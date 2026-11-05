@@ -1,6 +1,6 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from 'remix/data-schema/experimental/form'
 
 import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'

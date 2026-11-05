@@ -1,5 +1,5 @@
 import * as s from 'remix/data-schema'
-import * as fd from 'remix/data-schema/form'
+import * as fd from 'remix/data-schema/experimental/form'
 import { email, minLength } from 'remix/data-schema/checks'
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'

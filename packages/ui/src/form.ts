@@ -1,3 +1,7 @@
+/**
+ * Experimental native form validation and feedback.
+ * APIs in this module may change or be removed in patch releases.
+ */
 export { Context, root, control, label, error } from './form-context.ts'
 export type {
   FieldBinding,

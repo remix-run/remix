@@ -1,5 +1,6 @@
 import * as s from '@remix-run/data-schema'
-import * as fd from '@remix-run/data-schema/form'
+import * as fd from '@remix-run/data-schema/experimental/form'
+import { getSchemaMetadata } from '@remix-run/data-schema/experimental'
 import { max, maxLength, min, minLength } from '@remix-run/data-schema/checks'
 import type { FieldBinding, FieldBindings, GetConstraintsOptions } from './form.ts'
 
@@ -29,9 +30,11 @@ const User = s.object({
   name: s.string().pipe(minLength(2), maxLength(50)),
   age: s.number().pipe(min(13), max(120)),
 })
+expectType<Equal<'shape' extends keyof typeof User ? true : false, false>>()
+expectType<Equal<'getSchemaMetadata' extends keyof typeof s ? true : false, false>>()
 const Profile = fd.object({
-  name: fd.text(User.shape.name),
-  age: fd.number(User.shape.age),
+  name: fd.text(getSchemaMetadata(User).shape.name),
+  age: fd.number(getSchemaMetadata(User).shape.age),
   bio: fd.text(s.optional(s.string())),
   password: fd.password(s.string()),
   terms: fd.checkbox(s.literal(true)),

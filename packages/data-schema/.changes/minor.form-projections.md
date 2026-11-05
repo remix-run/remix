@@ -1,1 +1,0 @@
-Reuse object property schemas through `.shape`, and inspect check descriptions and known undefined handling with `getSchemaMetadata()` without running validators or default factories. After output transforms, `inputChecks` identifies the checks on the original input while `checks` retains all described checks.

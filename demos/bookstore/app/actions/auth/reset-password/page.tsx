@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from 'remix/data-schema/experimental/form'
 
 import { routes } from '../../../routes.ts'
 import { Document } from '../../../ui/document.tsx'

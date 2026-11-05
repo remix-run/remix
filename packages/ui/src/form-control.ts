@@ -34,7 +34,11 @@ declare global {
   }
 }
 
-/** Presentation-ready validation state for a model-backed input. */
+/**
+ * Presentation-ready validation state for a model-backed input.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface InputValidationState extends FieldState {
   /** The projected field name, independent of an overridden input name or id. */
   readonly field: string
@@ -42,7 +46,11 @@ export interface InputValidationState extends FieldState {
   readonly errorId: string
 }
 
-/** A bubbling notification for rendering application-owned field errors. */
+/**
+ * A bubbling notification for rendering application-owned field errors.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export class InputValidationEvent extends Event implements InputValidationState {
   /** The projected field name. */
   readonly field: string
@@ -290,6 +298,8 @@ export const fieldValidity = createMixin<
 
 /**
  * Observes field feedback without taking ownership of its markup or disabling default behavior.
+ *
+ * This experimental API may change or be removed in patch releases.
  *
  * @param handler Receives the field, error element id, visible errors, and touched state.
  * @param captureBoolean Whether to listen during capture (false by default).

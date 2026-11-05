@@ -1,14 +1,16 @@
 # Form
 
-Native form validation with application-owned markup. Define a schema with [`remix/data-schema/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md), then connect controls, labels, and errors with `Context` and role mixins.
+**Experimental:** APIs and behavior in this module may change or be removed in patch releases.
+
+Native form validation with application-owned markup. Define a schema with [`remix/data-schema/experimental/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/experimental-form/README.md), then connect controls, labels, and errors with `Context` and role mixins.
 
 ```tsx
 import * as s from 'remix/data-schema'
-import * as fd from 'remix/data-schema/form'
+import * as fd from 'remix/data-schema/experimental/form'
 import { email, minLength } from 'remix/data-schema/checks'
 import * as form from '@remix-run/ui/form'
 import type { FieldBinding } from '@remix-run/ui/form'
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from 'remix/data-schema/experimental/form'
 import type { Handle } from 'remix/component'
 
 export const Signup = fd.object({
@@ -61,7 +63,7 @@ if (!submission.success) {
 await createAccount(submission.value)
 ```
 
-Pass failures directly to Context to restore values and show errors. Sensitive fields and files are never restored; success still returns their validated values. Handlers can also construct a `FormSubmission` for business failures. See [form schemas](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md) for decoding, sensitivity, and message options.
+Pass failures directly to Context to restore values and show errors. Sensitive fields and files are never restored; success still returns their validated values. Handlers can also construct a `FormSubmission` for business failures. See [form schemas](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/experimental-form/README.md) for decoding, sensitivity, and message options.
 
 ## Context and mixins
 
@@ -124,6 +126,6 @@ Descriptor `errorMap` options customize schema messages and supported native mes
 
 `field.setCustomErrors(['Already in use'])` adds errors for the current value without replacing native/schema errors or marking the field touched. It blocks native submission immediately; errors clear on a changed value, non-canceled reset, or new submission. Applications own async requests, debouncing, cancellation, stale-result checks, and server enforcement.
 
-For custom integrations, `getConstraints(schema, { type, multiple? })` projects supported `required`, length, range, and numeric `step="any"` attributes. Bounds and length checks after an output transform stay in schema validation instead of restricting raw input. `InputValidationEvent` and `onInputValidation(handler)` expose bubbling notifications with `field`, `errorId`, `errors`, and `touched`; Context handles its own updates.
+For custom integrations, `getConstraints(schema, { type, multiple? })` projects supported `required`, length, range, and numeric `step="any"` attributes. It reads schema metadata through `remix/data-schema/experimental`. Bounds and length checks after an output transform stay in schema validation instead of restricting raw input. `InputValidationEvent` and `onInputValidation(handler)` expose bubbling notifications with `field`, `errorId`, `errors`, and `touched`; Context handles its own updates.
 
 SSR provides constraints, restored defaults, labels, errors, and ARIA. Native and server validation remain correct without JavaScript; JavaScript adds schema checks and interactive feedback before submission.

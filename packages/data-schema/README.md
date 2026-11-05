@@ -71,7 +71,7 @@ if (!result.success) {
 
 Both `parse` and `parseSafe` accept any [Standard Schema](https://standardschema.dev/) v1 schema, not just data-schema's own schemas. You can pass a Zod, Valibot, or ArkType schema and they'll work.
 
-For native form submissions, [`remix/data-schema/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md) describes input kinds and provides functional `fd.parse(schema, data)` / `fd.parseSafe(schema, data)` APIs. Safe failures include restorable values and grouped errors for UI rendering. For explicit extraction without form kinds or restoration, the lower-level `remix/data-schema/form-data` helpers plug into the ordinary `parse()` / `parseSafe()` flow:
+For native form submissions, [`remix/data-schema/experimental/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/experimental-form/README.md) describes input kinds and provides functional `fd.parse(schema, data)` / `fd.parseSafe(schema, data)` APIs. Safe failures include restorable values and grouped errors for UI rendering. For explicit extraction without form kinds or restoration, the lower-level `remix/data-schema/form-data` helpers plug into the ordinary `parse()` / `parseSafe()` flow:
 
 ```ts
 import * as s from 'remix/data-schema'
@@ -96,22 +96,24 @@ let filters = s.parse(
 
 `f.object(...)` is the root schema for `FormData` and `URLSearchParams`. Use `f.field(...)` for one text value, `f.fields(...)` for repeated text values, `f.file(...)` for one uploaded file, and `f.files(...)` for repeated files. When you want a fallback value, prefer `s.defaulted(s.string(), '')`. File helpers are intended for `FormData`; `URLSearchParams` only supports text values.
 
-## Schema metadata
+## Experimental schema inspection
 
-Object schemas expose their property schemas through `.shape` for reuse. Adapters can inspect generic check descriptions without running validators or default factories:
+`remix/data-schema/experimental` exposes `getSchemaMetadata()` for adapters and field reuse. This export and its metadata types may change or be removed in patch releases. Inspection does not run validators or default factories.
 
 ```ts
-import { getSchemaMetadata, object, string } from 'remix/data-schema'
+import { object, string } from 'remix/data-schema'
+import { getSchemaMetadata } from 'remix/data-schema/experimental'
 import { minLength } from 'remix/data-schema/checks'
 
 let Account = object({ username: string().pipe(minLength(3)) })
-let metadata = getSchemaMetadata(Account.shape.username)
+let { shape } = getSchemaMetadata(Account)
+let metadata = getSchemaMetadata(shape.username)
 // metadata.checks: [{ code: 'string.min_length', values: { min: 3 } }]
 ```
 
-Metadata also reports known undefined handling from schema wrappers. After an output transform, `inputChecks` identifies the checks that apply to the original input, while `checks` retains all described checks. Metadata does not describe arbitrary refinements or replace validation.
+Object metadata retains the original typed property schemas in `shape`. Metadata also reports known undefined handling from schema wrappers. After an output transform, `inputChecks` identifies the checks that apply to the original input, while `checks` retains all described checks. Metadata does not describe arbitrary refinements or replace validation.
 
-For form kinds, blank-value normalization, and reusable submission schemas, see the [form schema guide](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/form/README.md). For native constraints and browser feedback, see the [UI form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). The UI adapter lives in `@remix-run/ui/form`; schema validation stays in `data-schema`.
+For form kinds, blank-value normalization, and reusable submission schemas, see the [form schema guide](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/experimental-form/README.md). For native constraints and browser feedback, see the [UI form guide](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md). The UI adapter lives in `@remix-run/ui/form`; schema validation stays in `data-schema`.
 
 ## Per-parse messages
 

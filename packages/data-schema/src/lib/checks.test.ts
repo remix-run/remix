@@ -2,7 +2,9 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { email, max, maxLength, min, minLength, url } from './checks.ts'
-import { defaulted, getSchemaMetadata, number, optional, string } from '../index.ts'
+import * as s from '../index.ts'
+import { defaulted, number, object, optional, string } from '../index.ts'
+import { getSchemaMetadata } from '../experimental.ts'
 import type { Issue, ValidationResult } from './schema.ts'
 
 function assertSuccess<output>(
@@ -74,6 +76,18 @@ describe('checks', () => {
 })
 
 describe('getSchemaMetadata', () => {
+  it('exposes original object fields through experimental metadata only', () => {
+    let fields = { name: string().pipe(minLength(2)), age: number() }
+    let schema = object(fields)
+    let metadata = getSchemaMetadata(schema)
+    assert.equal(metadata.shape, fields)
+    assert.equal(metadata.shape.name, fields.name)
+    assert.equal(Object.hasOwn(schema, 'shape'), false)
+    assert.equal('getSchemaMetadata' in s, false)
+    assert.deepEqual(getSchemaMetadata(metadata.shape.name).checks, [
+      { code: 'string.min_length', values: { min: 2 } },
+    ])
+  })
   it('exposes domain check metadata without HTML attributes', () => {
     let metadata = getSchemaMetadata(string().pipe(minLength(2), maxLength(50)))
     assert.deepEqual(metadata.checks, [

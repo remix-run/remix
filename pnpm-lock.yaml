@@ -2382,7 +2382,7 @@ importers:
         specifier: workspace:^
         version: link:../component
       '@remix-run/data-schema':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../data-schema
     devDependencies:
       '@remix-run/assert':

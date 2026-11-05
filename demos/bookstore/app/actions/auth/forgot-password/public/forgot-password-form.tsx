@@ -1,5 +1,5 @@
 import * as form from '@remix-run/ui/form'
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from 'remix/data-schema/experimental/form'
 import { clientEntry } from 'remix/component'
 import type { Handle } from 'remix/component'
 

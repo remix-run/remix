@@ -1,10 +1,12 @@
 # Form schemas
 
+**Experimental:** APIs and behavior in this export may change or be removed in patch releases.
+
 Describe native form inputs once, then use ordinary schema parsing on `FormData` or `URLSearchParams`.
 
 ```ts
 import * as s from 'remix/data-schema'
-import * as fd from 'remix/data-schema/form'
+import * as fd from 'remix/data-schema/experimental/form'
 import { email, min, minLength } from 'remix/data-schema/checks'
 
 export const Signup = fd.object({
@@ -26,7 +28,19 @@ Form objects implement Standard Schema, so core `s.parse` and `s.parseSafe` work
 
 ## Reuse domain rules
 
-A domain schema is optional. Reuse existing rules with `fd.text(Account.shape.email)` or `fd.number(Account.shape.age)`. The form schema selects submitted fields and their decoding; labels, layout, and presentation types stay in markup. String-valued controls, including radio and date/time inputs, use `fd.text`; number and range use `fd.number`. Date/time values stay strings unless the supplied schema transforms them.
+A domain schema is optional. Reuse its typed property schemas through the experimental inspection API:
+
+```ts
+import { getSchemaMetadata } from 'remix/data-schema/experimental'
+
+let { shape } = getSchemaMetadata(Account)
+let Profile = fd.object({
+  email: fd.text(shape.email),
+  age: fd.number(shape.age),
+})
+```
+
+The experimental export may change or be removed in patch releases. The form schema selects submitted fields and their decoding; labels, layout, and presentation types stay in markup. String-valued controls, including radio and date/time inputs, use `fd.text`; number and range use `fd.number`. Date/time values stay strings unless the supplied schema transforms them.
 
 ## Missing and empty entries
 
@@ -58,7 +72,7 @@ Sensitivity affects failure restoration only; validated success values and field
 
 ```ts
 let Settings = fd.object({
-  email: fd.text(Account.shape.email, { name: 'account.email' }),
+  email: fd.text(shape.email, { name: 'account.email' }),
   tags: fd.fields(s.array(s.string())),
   avatar: fd.file(s.optional(s.instanceof_(Blob))),
   attachments: fd.files(s.array(s.instanceof_(Blob))),

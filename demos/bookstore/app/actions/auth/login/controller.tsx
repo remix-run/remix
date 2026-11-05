@@ -1,7 +1,7 @@
-import * as fd from 'remix/data-schema/form'
+import * as fd from 'remix/data-schema/experimental/form'
 import { createController } from 'remix/router'
 import { completeAuth, verifyCredentials } from 'remix/auth'
-import type { FormSubmission } from 'remix/data-schema/form'
+import type { FormSubmission } from 'remix/data-schema/experimental/form'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../../routes.ts'

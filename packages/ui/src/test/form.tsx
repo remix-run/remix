@@ -1,7 +1,11 @@
 import { render } from '@remix-run/component/test'
 import { renderToString } from '@remix-run/component/server'
 import type { RemixNode } from '@remix-run/component'
-import type { FormEntries, FormSchema, FormSubmission } from '@remix-run/data-schema/form'
+import type {
+  FormEntries,
+  FormSchema,
+  FormSubmission,
+} from '@remix-run/data-schema/experimental/form'
 import * as form from '../form.ts'
 import type { FormContextValue } from '../form.ts'
 

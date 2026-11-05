@@ -1,4 +1,4 @@
-import * as fd from 'remix/data-schema/form'
+import * as fd from 'remix/data-schema/experimental/form'
 import { createController } from 'remix/router'
 
 import { passwordResetTokens, users } from '../../../data/schema.ts'

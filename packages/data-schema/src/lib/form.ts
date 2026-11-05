@@ -4,10 +4,18 @@ import { boolean, createSchema, parseSafe as parseValueSafe } from './schema.ts'
 import type { ErrorMap, Issue, ParseOptions, Schema, ValidationResult } from './schema.ts'
 import { coerceNumber } from './coerce.ts'
 
-/** Form control kinds supported by scalar form entries. */
+/**
+ * Form control kinds supported by scalar form entries.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export type FormFieldKind = 'text' | 'password' | 'number' | 'checkbox'
 
-/** Shared submission naming, sensitivity, and validation messages for a form field. */
+/**
+ * Shared submission naming, sensitivity, and validation messages for a form field.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormFieldOptions {
   /** Submitted entry name, defaulting to the logical object key. */
   name?: string
@@ -17,13 +25,21 @@ export interface FormFieldOptions {
   sensitive?: boolean
 }
 
-/** Empty-string policy for text and password entries. */
+/**
+ * Empty-string policy for text and password entries.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormTextOptions extends FormFieldOptions {
   /** Preserve empty strings instead of decoding them to undefined. */
   empty?: 'preserve' | 'undefined'
 }
 
-/** An inspectable scalar form entry with its original value schema. */
+/**
+ * An inspectable scalar form entry with its original value schema.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormField<
   output = unknown,
   kind extends FormFieldKind = FormFieldKind,
@@ -44,18 +60,34 @@ export interface FormField<
   readonly sensitive?: boolean
 }
 
-/** Form entries, including existing repeated-text and file extraction descriptors. */
+/**
+ * Form entries, including existing repeated-text and file extraction descriptors.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export type FormEntries = Readonly<Record<string, FormDataEntrySchema<unknown>>>
 
-/** Values produced by the form's configured entry schemas. */
+/**
+ * Values produced by the form's configured entry schemas.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export type FormValue<entries extends FormEntries> = {
   [key in keyof entries]: entries[key] extends FormDataEntrySchema<infer output> ? output : never
 }
 
-/** Raw submitted values that can be serialized and restored to native controls. */
+/**
+ * Raw submitted values that can be serialized and restored to native controls.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export type FormRawValue = string | boolean | ReadonlyArray<string>
 
-/** Grouped messages for application-owned field and form markup. */
+/**
+ * Grouped messages for application-owned field and form markup.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormErrors {
   /** Messages keyed by logical field name. */
   fields: Readonly<Record<string, ReadonlyArray<string>>>
@@ -63,7 +95,11 @@ export interface FormErrors {
   form?: ReadonlyArray<string>
 }
 
-/** Serializable state for rendering a failed submission. */
+/**
+ * Serializable state for rendering a failed submission.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormSubmission {
   /** Raw values, with sensitive fields and files omitted. */
   values: Readonly<Record<string, FormRawValue>>
@@ -71,7 +107,11 @@ export interface FormSubmission {
   errors: FormErrors
 }
 
-/** A validation issue projected to explicitly serializable fields. */
+/**
+ * A validation issue projected to explicitly serializable fields.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormIssue {
   /** The validation message. */
   message: string
@@ -79,7 +119,11 @@ export interface FormIssue {
   path?: ReadonlyArray<string | number>
 }
 
-/** A failed submission safe to pass to rendered UI. */
+/**
+ * A failed submission safe to pass to rendered UI.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormFailure extends FormSubmission {
   /** Failure discriminant. */
   success: false
@@ -87,7 +131,11 @@ export interface FormFailure extends FormSubmission {
   issues: ReadonlyArray<FormIssue>
 }
 
-/** The validated form output. */
+/**
+ * The validated form output.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export interface FormSuccess<value> {
   /** Success discriminant. */
   success: true
@@ -95,10 +143,18 @@ export interface FormSuccess<value> {
   value: value
 }
 
-/** A validated output or restorable form failure. */
+/**
+ * A validated output or restorable form failure.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export type FormParseResult<value> = FormSuccess<value> | FormFailure
 
-/** A FormData schema retaining its typed entry descriptions for UI adapters. */
+/**
+ * A FormData schema retaining its typed entry descriptions for UI adapters.
+ *
+ * This experimental API may change or be removed in patch releases.
+ */
 export type FormSchema<entries extends FormEntries = FormEntries> = Schema<
   FormDataSource,
   FormValue<entries>
@@ -111,6 +167,9 @@ const numeric = coerceNumber()
 
 /**
  * Describes a text field, decoding missing and empty entries to undefined by default.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @param schema Validation applied to the decoded text value.
  * @param options Entry naming, sensitivity, empty-value policy, and shared messages.
  * @returns An immutable text field description.
@@ -124,6 +183,9 @@ export function text<output>(
 
 /**
  * Describes password text that UI submission adapters must omit from restored failures.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @param schema Validation applied to the decoded password.
  * @param options Entry naming, sensitivity, empty-value policy, and shared messages.
  * @returns An immutable sensitive password description.
@@ -137,6 +199,9 @@ export function password<output>(
 
 /**
  * Describes numeric text, decoding blanks to undefined before numeric coercion and validation.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @param schema Validation applied to the coerced number or undefined.
  * @param options Entry naming, sensitivity, and shared messages.
  * @returns An immutable numeric field description.
@@ -150,11 +215,17 @@ export function number<output>(
 
 /**
  * Describes a boolean checkbox, decoding presence to true and absence to false.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @returns An immutable checkbox description.
  */
 export function checkbox(): FormField<boolean, 'checkbox'>
 /**
  * Describes a checkbox with application-supplied boolean-state validation.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @param schema Validation applied to the checkbox state.
  * @param options Entry naming, sensitivity, and shared messages.
  * @returns An immutable checkbox description.
@@ -172,6 +243,9 @@ export function checkbox(
 
 /**
  * Identifies a scalar form description rather than a repeated or file entry.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @param entry An entry from an inspectable form schema.
  * @returns Whether the entry has scalar form decoding metadata.
  */
@@ -187,6 +261,9 @@ export function isFormField(entry: FormDataEntrySchema<unknown>): entry is FormF
 
 /**
  * Decodes and validates one scalar form value for server or native-control adapters.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @param entry The shared field description.
  * @param raw The raw string, checkbox state, or missing value.
  * @param path Logical field path for validation issues.
@@ -235,6 +312,9 @@ function messageOptions(
 
 /**
  * Creates an inspectable form schema using ordinary schema validation and parsing.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @param entries Scalar form descriptions or existing repeated/file entries.
  * @returns A schema accepting FormData or URLSearchParams with immutable typed entries.
  */
@@ -285,6 +365,9 @@ function isEmptyUpload(value: unknown): boolean {
 
 /**
  * Parses a form once and adapts failures for safe value restoration and error rendering.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
  * @param schema The same inspectable schema consumed by the UI context.
  * @param data The FormData or URLSearchParams input to validate.
  * @param options Ordinary schema parsing options.
