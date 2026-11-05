@@ -658,7 +658,7 @@ function enqueueMixinBindingUpdate(
   let state = node._mixState
   this.scheduler.enqueueWork([
     () => {
-      if (state?.aborted) {
+      if (state?.lifecycle.status === 'removed') {
         done(getMixinRuntimeSignal(state))
         return
       }
