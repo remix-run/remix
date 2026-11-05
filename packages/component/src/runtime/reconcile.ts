@@ -1127,7 +1127,7 @@ function insert(
   anchor?: Node,
   cursor?: HydrationCursor,
 ): CommittedVNode {
-  let { frame, scheduler, styles } = context
+  let { frame } = context
   let svg = getSvgContext(vParent, node)
   let hydrationNode = cursor?.current
 
@@ -1172,140 +1172,17 @@ function insert(
   }
 
   if (node.kind === 'text') {
-    if (hydrationNode instanceof Text) {
-      // Handle text node consolidation: server renders adjacent text as single node
-      // e.g., <span>Hello {world}</span> → server: "Hello world", client: ["Hello ", "world"]
-      if (hydrationNode.data !== node._text) {
-        if (
-          hydrationNode.data.startsWith(node._text) &&
-          node._text.length < hydrationNode.data.length
-        ) {
-          // Consolidation case: split the text node at the boundary
-          // cursor becomes the first part (node._text), remainder is returned for next vnode
-          let remainder = hydrationNode.splitText(node._text.length)
-          if (cursor) cursor.current = remainder
-          return commitTextNode(node, vParent, svg, hydrationNode)
-        }
-        if (
-          node._text.startsWith(hydrationNode.data) &&
-          hydrationNode.data.length < node._text.length
-        ) {
-          // Parser-split case: one vnode text spread across several DOM Text nodes
-          // (browser parsed a >64K text node into multiple chunks)
-          let remainder = node._text.slice(hydrationNode.data.length)
-          let sibling = hydrationNode.nextSibling
-          while (
-            remainder.length > 0 &&
-            sibling instanceof Text &&
-            remainder.startsWith(sibling.data)
-          ) {
-            remainder = remainder.slice(sibling.data.length)
-            let next = sibling.nextSibling
-            sibling.remove()
-            sibling = next
-          }
-          if (
-            remainder.length > 0 &&
-            sibling instanceof Text &&
-            sibling.data.startsWith(remainder)
-          ) {
-            // A parser chunk can also contain the start of the next text child.
-            sibling.deleteData(0, remainder.length)
-          }
-          hydrationNode.data = node._text
-          if (cursor) cursor.current = sibling
-          return commitTextNode(node, vParent, svg, hydrationNode)
-        }
-        // Genuine mismatch - correct it
-        logHydrationMismatch('text mismatch', hydrationNode.data, node._text)
-        hydrationNode.data = node._text
-      }
-      if (cursor) cursor.current = hydrationNode.nextSibling
-      return commitTextNode(node, vParent, svg, hydrationNode)
-    }
-    let dom = document.createTextNode(node._text)
-    insertDomNode(dom, domParent, anchor)
-    return commitTextNode(node, vParent, svg, dom)
+    return insertTextNode(node, domParent, vParent, svg, hydrationNode, anchor, cursor)
   }
 
   if (node.kind === 'host') {
-    let resolved = resolveNodeMixProps(node, vParent, frame, scheduler)
-
-    if (isHeadHostNode(node)) {
-      let targetHead = getDocumentHead(domParent)
-      if (targetHead) {
-        let childInputs = node._children
-        let childCursor = cursor ? { current: hydrationNode } : undefined
-        if (hydrationNode instanceof Element && hydrationNode.tagName.toLowerCase() === 'head') {
-          if (childCursor) childCursor.current = hydrationNode.firstChild
-          let nextCursor = hydrationNode.nextSibling
-          if (hydrationNode !== targetHead) {
-            while (hydrationNode.firstChild) {
-              targetHead.appendChild(hydrationNode.firstChild)
-            }
-            hydrationNode.remove()
-          }
-          if (cursor) cursor.current = nextCursor
-        }
-
-        let committed = commitHostNode(node, vParent, svg, targetHead, resolved)
-        // Render explicit <head> children directly into document.head.
-        committed._children = diffChildren(
-          null,
-          childInputs,
-          targetHead,
-          committed,
-          context,
-          undefined,
-          childCursor,
-        )
-        patchHostProps({}, resolved.props, targetHead)
-        setupHostNode(committed, scheduler)
-        bindNodeMixRuntime(committed, context)
-        return committed
-      }
-    }
-
-    // Check for matching mixin-persisted node that can be reclaimed
-    let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
-    if (persistedNode) {
-      return reclaimPersistedMixinNode(persistedNode, node, vParent, context, svg)
-    }
-
-    if (hydrationNode instanceof Element) {
-      let cursorTag = getHydrationTagName(hydrationNode, svg)
-      let match: Element | null = cursorTag === node.type ? hydrationNode : null
-      if (!match) {
-        // Type mismatch - try single-advance retry to handle browser extension injections
-        // at the start of containers. Skip this node and try the next sibling once, and
-        // leave the skipped node in place if the next sibling matches.
-        let nextSibling = skipComments(hydrationNode.nextSibling)
-        if (nextSibling instanceof Element && getHydrationTagName(nextSibling, svg) === node.type) {
-          match = nextSibling
-        }
-      }
-      if (match) {
-        let nextCursor = match.nextSibling
-        // Ignore excess child nodes - browser extensions may inject content
-        let committed = mountHostNode(node, vParent, svg, match, resolved, context, {
-          current: match.firstChild,
-        })
-        if (cursor) cursor.current = nextCursor
-        return committed
-      }
-      // Retry failed - log mismatch and create new element (don't remove mismatched nodes)
-      logHydrationMismatch('tag', cursorTag, node.type)
-      if (cursor) cursor.current = undefined // stop hydration for this tree
-    }
-    let dom = svg ? document.createElementNS(SVG_NS, node.type) : document.createElement(node.type)
-    let committed = mountHostNode(node, vParent, svg, dom, resolved, context, undefined, domParent)
-    insertDomNode(dom, domParent, anchor)
-    return committed
+    return insertHostNode(node, domParent, vParent, context, svg, hydrationNode, anchor, cursor)
   }
 
   if (node.kind === 'fragment') {
     let childInputs = node._children
     let committed = beginFragmentNode(node, vParent, svg)
+    // Reuse the input array for committed children, replacing each input in place.
     let children: Array<VNodeInput | CommittedVNode> = childInputs
     // Insert fragment children in order before the same anchor
     for (let i = 0; i < childInputs.length; i++) {
@@ -1324,6 +1201,174 @@ function insert(
   }
 
   invariant(false, 'Unexpected node type')
+}
+
+function insertTextNode(
+  node: TextNode,
+  domParent: ParentNode,
+  vParent: VNodeParent,
+  svg: boolean,
+  hydrationNode: Node | null | undefined,
+  anchor?: Node,
+  cursor?: HydrationCursor,
+): CommittedVNode {
+  if (hydrationNode instanceof Text) {
+    // Handle text node consolidation: server renders adjacent text as single node
+    // e.g., <span>Hello {world}</span> → server: "Hello world", client: ["Hello ", "world"]
+    if (hydrationNode.data !== node._text) {
+      if (
+        hydrationNode.data.startsWith(node._text) &&
+        node._text.length < hydrationNode.data.length
+      ) {
+        // Consolidation case: split the text node at the boundary
+        // cursor becomes the first part (node._text), remainder is returned for next vnode
+        let remainder = hydrationNode.splitText(node._text.length)
+        if (cursor) cursor.current = remainder
+        return commitTextNode(node, vParent, svg, hydrationNode)
+      }
+      if (
+        node._text.startsWith(hydrationNode.data) &&
+        hydrationNode.data.length < node._text.length
+      ) {
+        // Parser-split case: one vnode text spread across several DOM Text nodes
+        // (browser parsed a >64K text node into multiple chunks)
+        let remainder = node._text.slice(hydrationNode.data.length)
+        let sibling = hydrationNode.nextSibling
+        while (
+          remainder.length > 0 &&
+          sibling instanceof Text &&
+          remainder.startsWith(sibling.data)
+        ) {
+          remainder = remainder.slice(sibling.data.length)
+          let next = sibling.nextSibling
+          sibling.remove()
+          sibling = next
+        }
+        if (remainder.length > 0 && sibling instanceof Text && sibling.data.startsWith(remainder)) {
+          // A parser chunk can also contain the start of the next text child.
+          sibling.deleteData(0, remainder.length)
+        }
+        hydrationNode.data = node._text
+        if (cursor) cursor.current = sibling
+        return commitTextNode(node, vParent, svg, hydrationNode)
+      }
+      // Genuine mismatch - correct it
+      logHydrationMismatch('text mismatch', hydrationNode.data, node._text)
+      hydrationNode.data = node._text
+    }
+    if (cursor) cursor.current = hydrationNode.nextSibling
+    return commitTextNode(node, vParent, svg, hydrationNode)
+  }
+  let dom = document.createTextNode(node._text)
+  insertDomNode(dom, domParent, anchor)
+  return commitTextNode(node, vParent, svg, dom)
+}
+
+function insertHostNode(
+  node: HostNode,
+  domParent: ParentNode,
+  vParent: VNodeParent,
+  context: ReconcileContext,
+  svg: boolean,
+  hydrationNode: Node | null | undefined,
+  anchor?: Node,
+  cursor?: HydrationCursor,
+): CommittedVNode {
+  let { frame, scheduler } = context
+  let resolved = resolveNodeMixProps(node, vParent, frame, scheduler)
+
+  if (isHeadHostNode(node)) {
+    let targetHead = getDocumentHead(domParent)
+    if (targetHead) {
+      return insertHeadNode(
+        node,
+        targetHead,
+        vParent,
+        context,
+        svg,
+        resolved,
+        hydrationNode,
+        cursor,
+      )
+    }
+  }
+
+  // Check for matching mixin-persisted node that can be reclaimed
+  let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
+  if (persistedNode) {
+    return reclaimPersistedMixinNode(persistedNode, node, vParent, context, svg)
+  }
+
+  if (hydrationNode instanceof Element) {
+    let cursorTag = getHydrationTagName(hydrationNode, svg)
+    let match: Element | null = cursorTag === node.type ? hydrationNode : null
+    if (!match) {
+      // Type mismatch - try single-advance retry to handle browser extension injections
+      // at the start of containers. Skip this node and try the next sibling once, and
+      // leave the skipped node in place if the next sibling matches.
+      let nextSibling = skipComments(hydrationNode.nextSibling)
+      if (nextSibling instanceof Element && getHydrationTagName(nextSibling, svg) === node.type) {
+        match = nextSibling
+      }
+    }
+    if (match) {
+      let nextCursor = match.nextSibling
+      // Ignore excess child nodes - browser extensions may inject content
+      let committed = mountHostNode(node, vParent, svg, match, resolved, context, {
+        current: match.firstChild,
+      })
+      if (cursor) cursor.current = nextCursor
+      return committed
+    }
+    // Retry failed - log mismatch and create new element (don't remove mismatched nodes)
+    logHydrationMismatch('tag', cursorTag, node.type)
+    if (cursor) cursor.current = undefined // stop hydration for this tree
+  }
+  let dom = svg ? document.createElementNS(SVG_NS, node.type) : document.createElement(node.type)
+  let committed = mountHostNode(node, vParent, svg, dom, resolved, context, undefined, domParent)
+  insertDomNode(dom, domParent, anchor)
+  return committed
+}
+
+function insertHeadNode(
+  node: HostNode,
+  targetHead: HTMLHeadElement,
+  vParent: VNodeParent,
+  context: ReconcileContext,
+  svg: boolean,
+  resolved: ReturnType<typeof resolveNodeMixProps>,
+  hydrationNode: Node | null | undefined,
+  cursor?: HydrationCursor,
+): CommittedVNode {
+  let childInputs = node._children
+  let childCursor = cursor ? { current: hydrationNode } : undefined
+  if (hydrationNode instanceof Element && hydrationNode.tagName.toLowerCase() === 'head') {
+    if (childCursor) childCursor.current = hydrationNode.firstChild
+    let nextCursor = hydrationNode.nextSibling
+    if (hydrationNode !== targetHead) {
+      while (hydrationNode.firstChild) {
+        targetHead.appendChild(hydrationNode.firstChild)
+      }
+      hydrationNode.remove()
+    }
+    if (cursor) cursor.current = nextCursor
+  }
+
+  let committed = commitHostNode(node, vParent, svg, targetHead, resolved)
+  // Render explicit <head> children directly into document.head.
+  committed._children = diffChildren(
+    null,
+    childInputs,
+    targetHead,
+    committed,
+    context,
+    undefined,
+    childCursor,
+  )
+  patchHostProps({}, resolved.props, targetHead)
+  setupHostNode(committed, context.scheduler)
+  bindNodeMixRuntime(committed, context)
+  return committed
 }
 
 function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
