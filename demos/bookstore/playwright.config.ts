@@ -7,11 +7,7 @@ let projects: PlaywrightTestProject[]
 if (process.env.CI !== 'true' || platform === 'win32') {
   projects = [{ name: 'chromium', use: { browserName: 'chromium' } }]
 } else if (platform === 'darwin') {
-  projects = [
-    { name: 'chromium', use: { browserName: 'chromium' } },
-    { name: 'firefox', use: { browserName: 'firefox' } },
-    { name: 'webkit', use: { browserName: 'webkit' } },
-  ]
+  projects = [{ name: 'webkit', use: { browserName: 'webkit' } }]
 } else {
   projects = [
     { name: 'chromium', use: { browserName: 'chromium' } },
