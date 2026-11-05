@@ -42,6 +42,8 @@ export function createRootController(
       account: {
         middleware: [requireAuth()],
         handler({ auth, render }) {
+          // requireAuth() already rejected anonymous requests, but middleware on a single
+          // controller action doesn't narrow the context type, so narrow it here.
           if (!auth.ok) {
             return new Response('Unauthorized', { status: 401 })
           }

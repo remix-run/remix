@@ -5,7 +5,8 @@ import type { Session } from 'remix/session'
 import type { User } from '../data/schema.ts'
 import { getCart, type Cart } from './cart.ts'
 
-export function getCurrentUser(auth: AuthState<User> = getContext().auth): User {
+export function getCurrentUser(): User {
+  let auth = getContext().auth
   if (!auth.ok) {
     throw new Error(
       'Expected an authenticated user. Make sure requireAuth() runs before this code.',

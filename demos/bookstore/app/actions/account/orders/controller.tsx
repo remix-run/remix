@@ -3,7 +3,6 @@ import { createController } from 'remix/router'
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
-import { getCurrentUser } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 import { AccountOrdersIndexPage } from './index-page.tsx'
 import { AccountOrderNotFoundPage, AccountOrderShowPage } from './show-page.tsx'
@@ -12,7 +11,7 @@ export default createController(routes.account.orders, {
   middleware: [requireAuth()],
   actions: {
     async index({ auth, db, render }) {
-      let user = getCurrentUser(auth)
+      let user = auth.identity
       let userOrders = await db.findMany(orders, {
         where: { user_id: user.id },
         orderBy: ['created_at', 'asc'],
@@ -23,7 +22,7 @@ export default createController(routes.account.orders, {
     },
 
     async show({ auth, db, params, render }) {
-      let user = getCurrentUser(auth)
+      let user = auth.identity
       let orderId = parseId(params.orderId)
       let order =
         orderId === undefined

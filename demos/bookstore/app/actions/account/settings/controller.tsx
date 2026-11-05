@@ -7,7 +7,6 @@ import { redirect } from 'remix/response/redirect'
 import { users } from '../../../data/schema.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
-import { getCurrentUser } from '../../../utils/context.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 import { AccountSettingsPage } from './page.tsx'
 
@@ -25,13 +24,13 @@ export default createController(routes.account.settings, {
   middleware: [requireAuth()],
   actions: {
     index({ auth, render }) {
-      let user = getCurrentUser(auth)
+      let user = auth.identity
 
       return render(<AccountSettingsPage user={user} />)
     },
 
     async update({ auth, db, formData }) {
-      let user = getCurrentUser(auth)
+      let user = auth.identity
       let { email, name, password } = s.parse(accountSettingsSchema, formData)
 
       let updateData = password
