@@ -35,6 +35,10 @@ export function RollingSquare(handle: Handle) {
       />
       <button
         mix={[
+          on('click', () => {
+            toggled = !toggled
+            handle.update()
+          }),
           css({
             backgroundColor: '#8df0cc',
             color: '#0f1115',
@@ -43,10 +47,6 @@ export function RollingSquare(handle: Handle) {
             margin: '10px',
             border: 'none',
             cursor: 'pointer',
-          }),
-          on('click', () => {
-            toggled = !toggled
-            handle.update()
           }),
         ]}
       >

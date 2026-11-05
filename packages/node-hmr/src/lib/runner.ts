@@ -175,6 +175,26 @@ interface NodeHmrWatchOptions {
   pollInterval?: number
 }
 
+// Lifecycle of the supervised child process. Each status owns the data that only makes sense
+// while the supervisor is in it, so stale children, timers, and readiness can't leak across.
+type SupervisorState =
+  // `start()` has not been called yet.
+  | { status: 'idle' }
+  // A child is running but has not reported `server-ready` since it spawned or its entry module
+  // was hot-updated.
+  | { status: 'starting'; child: ChildProcess }
+  // The child reported `server-ready` and can serve requests.
+  | { status: 'running'; child: ChildProcess }
+  // A restart is waiting for file changes to settle. `child` is the process it will replace, or
+  // undefined when that process already exited.
+  | { status: 'restart-scheduled'; child: ChildProcess | undefined; timer: NodeJS.Timeout }
+  // Waiting for the previous child to exit before spawning a replacement.
+  | { status: 'restarting'; child: ChildProcess | undefined }
+  // The child exited unexpectedly. Any file change spawns a replacement.
+  | { status: 'crashed' }
+  // `stop()` was called. Nothing is respawned.
+  | { status: 'stopping' }
+
 interface ResolvedChokidarWatchOptions {
   awaitWriteFinish: {
     pollInterval: number
@@ -205,8 +225,8 @@ export function createHmrSupervisor(options: {
 } {
   let browserHmrEventChannel: BrowserHmrEventChannel | null = null
   let browserHmrEventChannelPromise: Promise<BrowserHmrEventChannel | null> | undefined
-  let child: ChildProcess | undefined
-  let restartTimer: NodeJS.Timeout | undefined
+  let state: SupervisorState = { status: 'idle' }
+  let watchEventFlushTimer: NodeJS.Timeout | undefined
   let resolveRun: (() => void) | undefined
   let moduleStore = createModuleStore()
   let watchedFilePaths = new Set<string>()
@@ -222,13 +242,7 @@ export function createHmrSupervisor(options: {
   let pendingBrowserHmrEvents: BrowserHmrEvent[] = []
   let pendingBrowserHmrEventServerPaths = new Set<string>()
   let browserHmrEventFlushTimer: NodeJS.Timeout | undefined
-  let restartSettleTimer: NodeJS.Timeout | undefined
   let serverGeneration = 0
-  let restartGeneration = 0
-  let pendingRestartGeneration = 0
-  let readyGeneration = -1
-  let serverReadyCount = 0
-  let waitingForEntryServerReady = false
   let readyWaiters: Array<() => void> = []
   let browserHmrRequestId = 0
   let pendingBrowserHmrRequests = new Map<
@@ -238,54 +252,32 @@ export function createHmrSupervisor(options: {
       timer: NodeJS.Timeout
     }
   >()
-  let restarting = false
-  let stopping = false
-  let waitingForFileChangeAfterExit = false
   let pendingServerUpdateEvent = false
   let isDuplicateFileChangeEvent = createFileChangeEventDeduper()
 
-  function setReadyGeneration(generation: number): void {
-    readyGeneration = generation
+  function getChild(): ChildProcess | undefined {
+    return 'child' in state ? state.child : undefined
   }
 
   function isReady(): boolean {
     return (
-      readyGeneration === pendingRestartGeneration &&
-      restartTimer === undefined &&
+      state.status === 'running' &&
+      watchEventFlushTimer === undefined &&
       activeWatchEventFlushCount === 0 &&
-      !waitingForEntryServerReady &&
       pendingHotUpdateCount === acceptedHotUpdateCount
     )
-  }
-
-  function markRestartPending(): number {
-    if (pendingRestartGeneration === restartGeneration) {
-      pendingRestartGeneration += 1
-      serverGeneration += 1
-    }
-    waitingForEntryServerReady = false
-    setReadyGeneration(-1)
-    return pendingRestartGeneration
-  }
-
-  function commitRestartGeneration(): number {
-    restartGeneration = pendingRestartGeneration
-    return restartGeneration
   }
 
   function getEntryPath(): string {
     return resolve(options.cwd, options.entry)
   }
 
-  function start() {
-    setReadyGeneration(-1)
+  function spawnChild() {
     moduleStore.reset()
     browserWatchedFileRefCountsByRuntime = new Map()
     browserWatchedFilePaths = new Set()
     unwatchKnownModuleFiles()
     watchKnownModuleFile(getEntryPath())
-    waitingForFileChangeAfterExit = false
-    let childRestartGeneration = restartGeneration
 
     let entry = getEntryPath()
     let nextChild = spawn(
@@ -305,49 +297,66 @@ export function createHmrSupervisor(options: {
       },
     )
 
-    child = nextChild
+    state = { status: 'starting', child: nextChild }
 
     nextChild.on('message', (message: unknown) => {
-      if (child !== nextChild) return
-      handleChildMessage(message, childRestartGeneration)
+      if (getChild() !== nextChild) return
+      handleChildMessage(message)
     })
 
-    nextChild.once('exit', (code, signal) => {
-      if (stopping || restarting || child !== nextChild) return
-      resolvePendingBrowserHmrRequests([])
-      waitingForFileChangeAfterExit = true
-      pendingServerUpdateEvent = true
-      child = undefined
-      console.log(`Failed running ${options.entry}. Waiting for file changes before restarting...`)
+    nextChild.once('exit', () => {
+      if (getChild() !== nextChild) return
+
+      if (state.status === 'starting' || state.status === 'running') {
+        resolvePendingBrowserHmrRequests([])
+        pendingServerUpdateEvent = true
+        state = { status: 'crashed' }
+        console.log(
+          `Failed running ${options.entry}. Waiting for file changes before restarting...`,
+        )
+      } else if (state.status === 'restart-scheduled') {
+        // The scheduled restart will spawn a replacement, so there is nothing to wait for.
+        resolvePendingBrowserHmrRequests([])
+        state = { ...state, child: undefined }
+      }
     })
   }
 
   async function restart() {
-    if (stopping) return
-    commitRestartGeneration()
-    restarting = true
+    if (state.status !== 'restart-scheduled') return
+    let { child } = state
+    state = { status: 'restarting', child }
     await stopChild(child, { force: false, signal: 'SIGTERM' })
-    restarting = false
-    if (stopping) return
-    start()
+    if (state.status !== 'restarting') return
+    spawnChild()
   }
 
   function scheduleRestart(): void {
-    markRestartPending()
-
-    if (restartSettleTimer !== undefined) {
-      clearTimeout(restartSettleTimer)
+    if (state.status === 'restart-scheduled') {
+      clearTimeout(state.timer)
+      state = { ...state, timer: startRestartSettleTimer() }
+      return
     }
 
-    restartSettleTimer = setTimeout(() => {
-      restartSettleTimer = undefined
+    // The child spawned after a restart in progress already loads the latest files, and there is
+    // nothing to restart once the supervisor is stopping.
+    if (state.status === 'idle' || state.status === 'restarting' || state.status === 'stopping') {
+      return
+    }
+
+    serverGeneration += 1
+    state = { status: 'restart-scheduled', child: getChild(), timer: startRestartSettleTimer() }
+  }
+
+  function startRestartSettleTimer(): NodeJS.Timeout {
+    return setTimeout(() => {
       restart().catch((error: unknown) => {
         console.error(error)
       })
     }, restartSettleDelayMs)
   }
 
-  function handleChildMessage(message: unknown, childRestartGeneration: number) {
+  function handleChildMessage(message: unknown) {
     if (!isChildMessage(message)) return
 
     if (message.type === 'node-hmr:child:browser-event-emitted') {
@@ -384,7 +393,7 @@ export function createHmrSupervisor(options: {
     if (message.type === 'node-hmr:child:hot-module-updated') {
       acceptedHotUpdateCount += 1
       serverGeneration += 1
-      if (!waitingForEntryServerReady) {
+      if (state.status === 'running') {
         flushAcceptedHotUpdateBrowserEvent()
       }
       resolveReadyWaiters()
@@ -401,10 +410,8 @@ export function createHmrSupervisor(options: {
     }
 
     if (message.type === 'node-hmr:child:server-ready') {
-      if (childRestartGeneration !== pendingRestartGeneration) return
-      serverReadyCount += 1
-      waitingForEntryServerReady = false
-      setReadyGeneration(childRestartGeneration)
+      if (state.status !== 'starting' && state.status !== 'running') return
+      state = { status: 'running', child: state.child }
       resolveReadyWaiters()
       flushPendingServerUpdateEvent()
       flushAcceptedHotUpdateBrowserEvent()
@@ -541,14 +548,14 @@ export function createHmrSupervisor(options: {
     if (event === 'change') {
       let normalizedFilePath = normalizeBrowserHmrFilePath(filePath)
       let isRelevantFile =
-        waitingForFileChangeAfterExit ||
+        state.status === 'crashed' ||
         watchedFilePaths.has(filePath) ||
         browserWatchedFilePaths.has(normalizedFilePath)
       if (!isRelevantFile || isDuplicateFileChangeEvent(normalizedFilePath, stats)) return
     }
 
-    if (restartTimer !== undefined) {
-      clearTimeout(restartTimer)
+    if (watchEventFlushTimer !== undefined) {
+      clearTimeout(watchEventFlushTimer)
     }
 
     if (event === 'change') {
@@ -557,7 +564,7 @@ export function createHmrSupervisor(options: {
       pendingRestartPathEvents.set(filePath, event === 'add' ? 'add' : 'unlink')
     }
 
-    restartTimer = setTimeout(() => {
+    watchEventFlushTimer = setTimeout(() => {
       flushPendingWatchEvents().catch((error: unknown) => {
         console.error(error)
       })
@@ -573,7 +580,7 @@ export function createHmrSupervisor(options: {
       let restartPathEvents = new Map(pendingRestartPathEvents)
       let restartPaths = [...restartPathEvents.keys()]
       pendingRestartPathEvents = new Map()
-      restartTimer = undefined
+      watchEventFlushTimer = undefined
 
       let browserFileEvents = getBrowserHmrFileEvents(changedPaths, restartPathEvents)
       let browserHmrEvents = await requestBrowserHmrEvents(browserFileEvents)
@@ -581,10 +588,10 @@ export function createHmrSupervisor(options: {
         queueBrowserHmrEvent(event, { schedule: false })
       }
 
-      if (waitingForFileChangeAfterExit) {
+      if (state.status === 'crashed') {
         logRestart(formatChangedPaths([...restartPaths, ...changedPaths], options.cwd))
         pendingServerUpdateEvent = true
-        start()
+        spawnChild()
         return
       }
 
@@ -812,6 +819,7 @@ export function createHmrSupervisor(options: {
     events: readonly BrowserHmrFileEvent[],
   ): Promise<BrowserHmrEvent[]> {
     if (events.length === 0) return []
+    let child = getChild()
     if (child === undefined || child.send === undefined || !child.connected) return []
 
     let requestId = browserHmrRequestId++
@@ -848,6 +856,7 @@ export function createHmrSupervisor(options: {
   }
 
   function sendBrowserHmrChannelResponse(requestId: number, url: string | undefined): void {
+    let child = getChild()
     if (child === undefined || child.send === undefined || !child.connected) return
 
     child.send({
@@ -910,13 +919,14 @@ export function createHmrSupervisor(options: {
   }
 
   function sendHotUpdate(moduleInfo: NodeHmrUpdate): boolean {
+    let child = getChild()
     if (child === undefined || child.send === undefined || !child.connected) return false
 
-    let shouldWaitForEntryServerReady =
-      serverReadyCount > 0 &&
+    // Re-running the entry module restarts the server in place, so wait for it to be ready again.
+    let isEntryUpdate =
       (moduleInfo.acceptedUrl ?? moduleInfo.url) === pathToFileURL(getEntryPath()).href
-    if (shouldWaitForEntryServerReady) {
-      waitingForEntryServerReady = true
+    if (isEntryUpdate && state.status === 'running') {
+      state = { status: 'starting', child: state.child }
     }
 
     return child.send({
@@ -956,12 +966,14 @@ export function createHmrSupervisor(options: {
   let stopPromise: Promise<void> | undefined
 
   async function stop(signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
-    stopping = true
-    if (restartTimer !== undefined) {
-      clearTimeout(restartTimer)
+    let child = getChild()
+    if (state.status === 'restart-scheduled') {
+      clearTimeout(state.timer)
     }
-    if (restartSettleTimer !== undefined) {
-      clearTimeout(restartSettleTimer)
+    state = { status: 'stopping' }
+
+    if (watchEventFlushTimer !== undefined) {
+      clearTimeout(watchEventFlushTimer)
     }
     if (browserHmrEventFlushTimer !== undefined) {
       clearTimeout(browserHmrEventFlushTimer)
@@ -994,7 +1006,7 @@ export function createHmrSupervisor(options: {
     async start() {
       return await new Promise<void>((resolvePromise) => {
         resolveRun = resolvePromise
-        start()
+        spawnChild()
 
         process.once('SIGINT', () => {
           stop('SIGINT').catch((error: unknown) => {

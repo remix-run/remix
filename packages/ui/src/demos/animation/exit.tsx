@@ -27,12 +27,6 @@ export function ExitAnimation(handle: Handle) {
         <div
           key="exit-animation"
           mix={[
-            css({
-              width: '100px',
-              height: '100px',
-              backgroundColor: '#0cdcf7',
-              borderRadius: '10px',
-            }),
             animateEntrance(
               shouldAnimate && {
                 opacity: 0,
@@ -45,11 +39,21 @@ export function ExitAnimation(handle: Handle) {
               transform: 'scale(0)',
               ...spring(),
             }),
+            css({
+              width: '100px',
+              height: '100px',
+              backgroundColor: '#0cdcf7',
+              borderRadius: '10px',
+            }),
           ]}
         />
       )}
       <button
         mix={[
+          on('click', () => {
+            isVisible = !isVisible
+            handle.update()
+          }),
           css({
             backgroundColor: '#0cdcf7',
             borderRadius: '10px',
@@ -65,10 +69,6 @@ export function ExitAnimation(handle: Handle) {
             '&:active': {
               transform: 'translateY(1px)',
             },
-          }),
-          on('click', () => {
-            isVisible = !isVisible
-            handle.update()
           }),
         ]}
       >

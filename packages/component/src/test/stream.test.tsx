@@ -47,6 +47,98 @@ describe('stream', () => {
   }
 
   describe('basic nodes', () => {
+    it('gives select props precedence through mount, hydration, and reset', async (t) => {
+      function SelectedChoice() {
+        return () => (
+          <option value="a" selected>
+            A
+          </option>
+        )
+      }
+      function ImplicitChoice() {
+        return () => <option>{'  B & C  '}</option>
+      }
+      let markup = (
+        <form>
+          <select name="single" defaultValue="B & C">
+            <SelectedChoice />
+            <optgroup label="Other">
+              <ImplicitChoice />
+            </optgroup>
+          </select>
+          <select name="later" defaultValue="b">
+            <option value="b">B</option>
+            <SelectedChoice />
+          </select>
+          <select name="multiple" multiple defaultValue={['b', 'B & C']}>
+            <SelectedChoice />
+            <option value="b" selected={false}>
+              B
+            </option>
+            <optgroup label="Other">
+              <ImplicitChoice />
+            </optgroup>
+          </select>
+          <select name="controlled" value="b" defaultValue="c">
+            <SelectedChoice />
+            <option value="b" selected={false}>
+              B
+            </option>
+            <option value="c">C</option>
+          </select>
+          <select name="standalone">
+            <option value="b">B</option>
+            <SelectedChoice />
+          </select>
+        </form>
+      )
+      let initialEntries = [
+        ['single', 'B & C'],
+        ['later', 'b'],
+        ['multiple', 'b'],
+        ['multiple', 'B & C'],
+        ['controlled', 'b'],
+        ['standalone', 'a'],
+      ]
+      let serverContainer = document.createElement('div')
+      serverContainer.innerHTML = await renderToString(markup)
+      expect(serverContainer.innerHTML).not.toContain('defaultvalue=')
+      let serverForm = serverContainer.querySelector('form')
+      if (!serverForm) throw new Error('Missing server form')
+      expect([...new FormData(serverForm)]).toEqual(initialEntries)
+      let serverSelects = serverForm.querySelectorAll('select')
+      serverSelects[0].value = 'a'
+      serverSelects[2].value = 'a'
+      serverSelects[3].value = 'c'
+      serverSelects[4].value = 'b'
+      let hydratedRoot = createRoot(serverContainer)
+      t.after(() => hydratedRoot.dispose())
+      hydratedRoot.render(markup)
+      hydratedRoot.flush()
+      expect(new FormData(serverForm).get('single')).toBe('a')
+      expect(new FormData(serverForm).getAll('multiple')).toEqual(['a'])
+      expect(new FormData(serverForm).get('controlled')).toBe('b')
+      expect(new FormData(serverForm).get('standalone')).toBe('b')
+      serverForm.reset()
+      expect([...new FormData(serverForm)]).toEqual(initialEntries)
+
+      let clientContainer = document.createElement('div')
+      let clientRoot = createRoot(clientContainer)
+      t.after(() => clientRoot.dispose())
+      clientRoot.render(markup)
+      clientRoot.flush()
+      let clientForm = clientContainer.querySelector('form')
+      if (!clientForm) throw new Error('Missing client form')
+      expect([...new FormData(clientForm)]).toEqual(initialEntries)
+      let clientSelects = clientForm.querySelectorAll('select')
+      clientSelects[0].value = 'a'
+      clientSelects[2].value = 'a'
+      clientSelects[3].value = 'c'
+      clientSelects[4].value = 'b'
+      clientForm.reset()
+      expect([...new FormData(clientForm)]).toEqual(initialEntries)
+    })
+
     it('keeps scalar and array multiple-select submissions consistent through hydration', async (t) => {
       let markup = (
         <form>
@@ -60,6 +152,11 @@ describe('stream', () => {
             <option value="a">Second A</option>
             <option value="b">B</option>
           </select>
+          <select name="empty" multiple value={[]} defaultValue={['a']}>
+            <option value="a" selected>
+              A
+            </option>
+          </select>
         </form>
       )
       let container = document.createElement('div')
@@ -68,38 +165,68 @@ describe('stream', () => {
       if (!form) throw new Error('Missing form')
       expect(new FormData(form).getAll('scalar')).toEqual(['a'])
       expect(new FormData(form).getAll('array')).toEqual(['a', 'a'])
+      expect(new FormData(form).getAll('empty')).toEqual([])
       let root = createRoot(container)
       t.after(() => root.dispose())
       root.render(markup)
       root.flush()
       expect(new FormData(form).getAll('scalar')).toEqual(['a'])
       expect(new FormData(form).getAll('array')).toEqual(['a', 'a'])
+      expect(new FormData(form).getAll('empty')).toEqual([])
     })
 
-    it('restores implicit select values from raw option HTML through hydration and reset', async (t) => {
-      let markup = (
-        <form>
-          <select defaultValue="B & C">
+    it('requires explicit option values to select raw HTML labels', async () => {
+      function markup(value?: string) {
+        return (
+          <select defaultValue="b">
             <option value="a">A</option>
-            <option innerHTML={unsafeHTML('  B &amp; &#67;  ')} />
+            <option value={value} innerHTML={unsafeHTML('  B &amp; &#67;  ')} />
           </select>
-        </form>
+        )
+      }
+      await expect(drain(renderToStream(markup(), { onError() {} }))).rejects.toThrow(
+        'option elements with innerHTML must have an explicit value when their select has a value or defaultValue',
       )
-      let container = document.createElement('div')
-      container.innerHTML = await renderToString(markup)
-      let select = container.querySelector('select')
-      let form = container.querySelector('form')
-      if (!select || !form) throw new Error('Missing select')
-      expect(select.value).toBe('B & C')
-      expect(select.options[1].defaultSelected).toBe(true)
-      let root = createRoot(container)
-      t.after(() => root.dispose())
-      root.render(markup)
-      root.flush()
-      expect(select.value).toBe('B & C')
-      select.value = 'a'
-      form.reset()
-      expect(select.value).toBe('B & C')
+      expect(await renderToString(markup('b'))).toBe(
+        '<select><option value="a">A</option><option value="b" selected>  B &amp; &#67;  </option></select>',
+      )
+    })
+
+    it('requires JSX options when select props determine selection', async () => {
+      let html = '<option value="a">A</option><option value="b" selected>B</option>'
+      let options = unsafeHTML(html)
+      async function rejectsRawOptions(node: RemixNode) {
+        await expect(drain(renderToStream(node, { onError() {} }))).rejects.toThrow(
+          'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
+        )
+      }
+
+      await rejectsRawOptions(<select value="" innerHTML={options} />)
+      await rejectsRawOptions(<select defaultValue="b" innerHTML={options} />)
+      await rejectsRawOptions(
+        <select multiple value={[]}>
+          <optgroup label="Choices" innerHTML={options} />
+        </select>,
+      )
+      await rejectsRawOptions(
+        <select defaultValue="b">
+          <option value="b">B</option>
+          <optgroup label="Choices" innerHTML={options} />
+        </select>,
+      )
+
+      expect(
+        await renderToString(
+          <>
+            <select innerHTML={options} />
+            <select>
+              <optgroup label="Choices" innerHTML={options} />
+            </select>
+          </>,
+        ),
+      ).toBe(
+        `<select>${html}</select><select><optgroup label="Choices">${html}</optgroup></select>`,
+      )
     })
 
     it('should render to a stream', () => {
@@ -373,56 +500,6 @@ describe('stream', () => {
       let error = errorSpy.mock.calls[0]?.arguments[0]
       invariant(error instanceof Error)
       expect(error.message).toBe('script elements with children must have a single string child')
-    })
-
-    it('renders select values as selected options through composed children', async () => {
-      function Choice() {
-        return () => <option>{'  B & C  '}</option>
-      }
-      let html = await renderToString(
-        <>
-          <select defaultValue="B & C">
-            <option value="a" selected>
-              A
-            </option>
-            <optgroup label="Other">
-              <Choice />
-            </optgroup>
-          </select>
-          <select value="b" defaultValue="a">
-            <option value="a">A</option>
-            <option value="b">B</option>
-          </select>
-          <select>
-            <option value="a" selected>
-              A
-            </option>
-          </select>
-          <select multiple defaultValue={['a', 'B & C']}>
-            <option value="a">A</option>
-            <optgroup label="Other">
-              <Choice />
-            </optgroup>
-            <option value="c">C</option>
-          </select>
-          <select multiple value={[]} defaultValue={['a']}>
-            <option value="a" selected>
-              A
-            </option>
-          </select>
-        </>,
-      )
-      let container = document.createElement('div')
-      container.innerHTML = html
-      let selects = container.querySelectorAll('select')
-      expect(selects[0].value).toBe('B & C')
-      expect(selects[0].options[1].defaultSelected).toBe(true)
-      expect(selects[1].value).toBe('b')
-      expect(selects[2].value).toBe('a')
-      expect([...selects[3].selectedOptions].map((option) => option.value)).toEqual(['a', 'B & C'])
-      expect(selects[3].options[1].defaultSelected).toBe(true)
-      expect(selects[4].selectedOptions.length).toBe(0)
-      expect(html).not.toContain('defaultvalue=')
     })
 
     it('renders textarea defaultValue as escaped text content', async () => {
