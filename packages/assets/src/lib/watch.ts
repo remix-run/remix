@@ -17,7 +17,6 @@ export type ChokidarWatcher = ReturnType<typeof chokidar.watch>
 export type AssetServerWatcher = {
   close(): Promise<void>
   getWatchedTargets(): readonly string[]
-  settled(): Promise<void>
   updateWatchedDirectories(
     delta: { add: readonly string[]; remove: readonly string[] },
     options?: { includeAncestors?: boolean },
@@ -34,14 +33,10 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
   let watchedResolutionDirectories = new Set<string>()
   let watchedFileDirectories = new Set<string>()
   let watchedTargets = new Set<string>()
-  let pendingFileEvents = new Set<Promise<void>>()
 
   for (let event of ['add', 'change', 'unlink'] as const) {
     watcher.on(event, (filePath) => {
-      let pending = options.onFileEvent(filePath, event).finally(() => {
-        pendingFileEvents.delete(pending)
-      })
-      pendingFileEvents.add(pending)
+      options.onFileEvent(filePath, event)
     })
   }
   watcher.on('error', (error) => {
@@ -54,9 +49,6 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
     },
     getWatchedTargets() {
       return [...watchedTargets]
-    },
-    async settled() {
-      while (pendingFileEvents.size > 0) await Promise.allSettled(pendingFileEvents)
     },
     updateWatchedDirectories(delta, updateOptions = {}) {
       let includeAncestors = updateOptions.includeAncestors ?? true

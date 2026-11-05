@@ -384,12 +384,7 @@ describe('s3 file storage', () => {
     let { file, pulled } = createStreamingFile(partCount * PART_SIZE, chunkSize)
     let uploaded = 0
     let maxAhead = 0
-    let partRequests = new Map<number, PromiseWithResolvers<void>>()
-    function partRequested(partNumber: number) {
-      let deferred = partRequests.get(partNumber)
-      if (!deferred) partRequests.set(partNumber, (deferred = Promise.withResolvers<void>()))
-      return deferred
-    }
+    let partRequested = Array.from({ length: partCount + 1 }, () => Promise.withResolvers<void>())
     let storage = createS3FileStorage({
       accessKeyId: 'test',
       secretAccessKey: 'test',
@@ -404,8 +399,8 @@ describe('s3 file storage', () => {
           // Hold each part until the next one is requested, so reading gets every chance to run
           // ahead of uploading. Part requests can arrive in either order.
           let partNumber = Number(url.searchParams.get('partNumber'))
-          partRequested(partNumber).resolve()
-          if (partNumber < partCount) await partRequested(partNumber + 1).promise
+          partRequested[partNumber]!.resolve()
+          if (partNumber < partCount) await partRequested[partNumber + 1]!.promise
           uploaded += PART_SIZE
           return undefined
         },

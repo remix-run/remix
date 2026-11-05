@@ -710,13 +710,11 @@ describe('vnode mixins', () => {
 
     root.render(null)
     root.flush()
-    await Promise.resolve()
     expect(beforeRemoveCalls).toBe(1)
     expect(removeCalls).toBe(0)
 
     root.render(<div key="reclaimed" mix={[withReclaimLifecycle()]} />)
     root.flush()
-    await Promise.resolve()
 
     expect(insertCalls).toBe(1)
     expect(reclaimedCalls).toBe(1)
@@ -752,7 +750,6 @@ describe('vnode mixins', () => {
 
     root.render(null)
     root.flush()
-    await Promise.resolve()
     expect(beforeRemoveCalls).toBe(1)
     expect(removeCalls).toBe(0)
     expect(container.querySelector('#deferred-remove')).toBe(beforeRemove)

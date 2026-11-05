@@ -32,9 +32,9 @@ test('should revoke blob URLs if `esmsInitOptions.revokeBlobURLs` is set to `tru
     fail('blob URLs should be revoked in a non-blocking way, AFTER the import is resolved'),
   )
 
-  // The polyfill schedules blob URL cleanup before importShim() resolves. A callback scheduled
-  // through the same queue now runs after that cleanup.
-  await afterScheduledBlobUrlCleanup()
+  // importShim() schedules blob URL cleanup with requestIdleCallback (or requestAnimationFrame)
+  // before it resolves, so a callback queued the same way now runs after that cleanup.
+  await new Promise((resolve) => (globalThis.requestIdleCallback ?? requestAnimationFrame)(resolve))
 
   await Promise.all(blobURLs.map((url) => fetch(url))).then(
     () => {
@@ -45,14 +45,3 @@ test('should revoke blob URLs if `esmsInitOptions.revokeBlobURLs` is set to `tru
     },
   )
 })
-
-function afterScheduledBlobUrlCleanup(): Promise<void> {
-  // Matches the scheduler fallback order in src/lib/core.ts.
-  let schedule =
-    globalThis.requestIdleCallback ||
-    globalThis.requestAnimationFrame ||
-    ((fn: () => void) => setTimeout(fn, 0))
-  return new Promise((resolve) => {
-    schedule(() => resolve())
-  })
-}

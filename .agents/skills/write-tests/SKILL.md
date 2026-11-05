@@ -69,19 +69,14 @@ import { describe, it } from '@remix-run/test'
 
 ## Determinism
 
-Tests must not depend on wall-clock timing. A test that passes because "enough time went by" will flake on a slow CI runner.
+Tests must not depend on wall-clock timing; a test that passes because enough time went by flakes on slow CI.
 
-- Never sleep: no `await new Promise((resolve) => setTimeout(resolve, ms))`, no `page.waitForTimeout()`, no `sleep`/`delay`/`wait(ms)` helpers.
-- Never flush "a tick" (`setTimeout(resolve, 0)`, `setImmediate`, a few `await Promise.resolve()`s) hoping pending work has finished by then.
-- Never assert on durations measured with `Date.now()` or `performance.now()`.
-- Await the exact signal that proves the behavior happened: the promise returned by the code under test, an emitted event, or a deferred promise the fixture resolves when the server/handler reaches a specific point.
-- Waiting on a real condition is fine: a `MutationObserver`, a web-first assertion, or polling a predicate that checks actual state, as long as any deadline only bounds failure.
-- When the code under test schedules work on `requestAnimationFrame` or similar, wait for that same frame or the state it produces, not an arbitrary number of frames.
-- For code that is itself time-based (debounce, retry, timeouts, expiry), use `t.useFakeTimers()` and `advance`/`advanceAsync`. Use `node:test` mock timers in node-runner exception packages.
-- In e2e tests, use Playwright web-first assertions, `waitForFunction`, `waitForResponse`, `waitForEvent`, or a console/log message the app emits at the exact moment of interest.
-- To prove something did _not_ happen, first trigger and await a later, observable event that must come after it, then assert the absence.
-- Timeouts are allowed only as failure bounds on an awaited condition, never as the thing that makes a test pass.
-- If code cannot be tested without sleeping, add a deterministic hook (a returned promise, an event, an injected clock or scheduler) to the code instead.
+- Never sleep (`setTimeout(resolve, ms)`, `page.waitForTimeout()`, `sleep`/`delay` helpers), flush "a tick" (`setTimeout(resolve, 0)`, `setImmediate`, repeated `await Promise.resolve()`), or assert on durations from `Date.now()`/`performance.now()`.
+- Await the exact signal that proves the behavior happened: a promise returned by the code under test, an emitted event, a deferred the fixture resolves at a specific point, or a real condition (`MutationObserver`, Playwright web-first assertions, `waitForFunction`/`waitForResponse`/`waitForEvent`, a predicate over actual state). For `requestAnimationFrame` work, wait for that frame or the state it produces.
+- Timeouts may only bound failure on an awaited condition, never make a test pass.
+- To prove something did _not_ happen, first await a later observable event that must follow it, then assert the absence.
+- For timer-based code (debounce, retry, timeouts), use `t.useFakeTimers()` with `advance`/`advanceAsync`, or `node:test` mock timers in node-runner exception packages. `t.useFakeTimers()` does not fake `Date`, so for wall-clock code (expiry, dates) inject a clock or mock `Date.now`.
+- If code cannot be tested without sleeping, add a deterministic hook (a returned promise, an event, an injected clock or scheduler).
 
 ## Assertions
 

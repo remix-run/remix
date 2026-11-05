@@ -142,13 +142,11 @@ function startStubNavigationListener(
       async succeed() {
         resolveFinished()
         await finished
-        await Promise.resolve()
         clearTransition()
       },
       async fail() {
         rejectFinished(new Error('Navigation failed'))
         await finished.catch(() => {})
-        await Promise.resolve()
         clearTransition()
       },
     }
@@ -500,11 +498,13 @@ describe('navigate', () => {
     let reloadController = new AbortController()
     let [committed, resolveCommitted] = withResolvers<void>()
     let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
+    let [reloadStarted, startReload] = withResolvers<void>()
     let frame = { src: '' } as FrameHandle
     let dispatchNavigation = startStubNavigationListener(t, {
       getTopFrame: () => frame,
       getNamedFrame: () => frame,
       reloadFrame() {
+        startReload()
         return { signal: reloadController.signal, committed, finished }
       },
     })
@@ -521,7 +521,7 @@ describe('navigate', () => {
     )
 
     let handler = transition.runHandler()
-    await Promise.resolve()
+    await reloadStarted
     reloadController.abort()
     resolveCommitted()
     resolveFinished({ signal: reloadController.signal })
@@ -669,7 +669,6 @@ describe('navigate', () => {
 
     let transition = page.navigate()
     let handler = transition.runHandler()
-    await Promise.resolve()
     page.scroll(2400)
 
     expect(window.scrollY).toBe(2400)
@@ -1119,7 +1118,8 @@ describe('navigate', () => {
     })
 
     let animationFrames = stubAnimationFrames(t)
-    let scroll = mock.fn()
+    let [scrolled, resolveScrolled] = withResolvers<void>()
+    let scroll = mock.fn(resolveScrolled)
     let intercept = mock.fn()
     let eventController = new AbortController()
     let event = Object.assign(new Event('navigate'), {
@@ -1153,7 +1153,6 @@ describe('navigate', () => {
       let handler = interceptOptions.handler().then(() => {
         handlerSettled = true
       })
-      await Promise.resolve()
 
       expect(interceptOptions.scroll).toBe('after-transition')
       expect(handlerSettled).toBe(false)
@@ -1174,7 +1173,7 @@ describe('navigate', () => {
       expect(bodyRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
 
       resolveCommitted()
-      await Promise.resolve()
+      await scrolled
 
       expect(handlerSettled).toBe(false)
       expect(scroll).toHaveBeenCalledTimes(1)
@@ -1186,7 +1185,6 @@ describe('navigate', () => {
       expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
       resolveTransitionFinished()
       await transitionFinished
-      await Promise.resolve()
       // Scroll anchoring stays disabled while the page shrinks back to its own height.
       expect(getComputedStyle(document.documentElement).minHeight).toBe(startingMinHeight)
       expect(getComputedStyle(document.documentElement).overflowAnchor).toBe('none')

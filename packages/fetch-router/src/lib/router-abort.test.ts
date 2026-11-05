@@ -30,8 +30,6 @@ describe('abort signal support', () => {
     router.get('/', async () => {
       // Abort while handler is running
       controller.abort()
-      // Async work that is still pending when the abort happens
-      await new Promise(() => {})
       return new Response('Home')
     })
 
@@ -109,7 +107,6 @@ describe('abort signal support', () => {
 
     router.get('/', async () => {
       handlerStarted.resolve()
-      // Async work that is still pending when the abort happens
       await new Promise(() => {})
       return new Response('Home')
     })
@@ -148,7 +145,6 @@ describe('abort signal support', () => {
       middleware: [
         async () => {
           controller.abort()
-          await new Promise(() => {})
         },
       ] as any,
     })

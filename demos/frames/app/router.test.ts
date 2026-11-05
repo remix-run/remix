@@ -1,21 +1,18 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { DelayedFrame } from './actions/frames/controller.tsx'
-import { createAppRouter } from './router.ts'
+import { latency } from './actions/frames/controller.tsx'
+import { router } from './router.ts'
 
 describe('router', () => {
-  it('streams frame fallbacks and resolved templates incrementally', async () => {
-    let gates = new Map<DelayedFrame, PromiseWithResolvers<void>>()
-    let gate = (frame: DelayedFrame) => {
-      let deferred = gates.get(frame)
-      if (!deferred) {
-        deferred = Promise.withResolvers<void>()
-        gates.set(frame, deferred)
-      }
-      return deferred
+  it('streams frame fallbacks and resolved templates incrementally', async (t) => {
+    // Frames are keyed by their simulated latency in milliseconds.
+    let gates = new Map<number, PromiseWithResolvers<void>>()
+    let gate = (ms: number) => {
+      if (!gates.has(ms)) gates.set(ms, Promise.withResolvers<void>())
+      return gates.get(ms)!
     }
-    let router = createAppRouter({ frames: { delay: (frame) => gate(frame).promise } })
+    t.mock.method(latency, 'wait', (ms: number) => gate(ms).promise)
     let response = await router.fetch(new Request('http://localhost/'))
 
     assert.equal(response.status, 200)
@@ -33,7 +30,7 @@ describe('router', () => {
     assert.ok(!initial.includes('Rendered by <code>/frames/activity</code>'))
     assert.equal(countTemplates(initial), 0)
 
-    gate('sidebar').resolve()
+    gate(400).resolve()
     let sidebar = await readUntil(chunks, (html) =>
       html.includes('This content is rendered by <code>/frames/sidebar</code>.'),
     )
@@ -42,7 +39,7 @@ describe('router', () => {
     assert.ok(!sidebar.includes('Rendered by <code>/frames/activity</code>'))
     assert.ok(!sidebar.includes('Nested frame with a hydrated counter:'))
 
-    gate('activity').resolve()
+    gate(2000).resolve()
     let activity = await readUntil(chunks, (html) =>
       html.includes('Rendered by <code>/frames/activity</code>'),
     )
@@ -50,7 +47,7 @@ describe('router', () => {
     assert.ok(activity.includes('Loading detail…'))
     assert.ok(!activity.includes('Nested frame with a hydrated counter:'))
 
-    gate('activityDetail').resolve()
+    gate(600).resolve()
     let detail = await readUntil(chunks, (html) =>
       html.includes('Nested frame with a hydrated counter:'),
     )
@@ -59,15 +56,15 @@ describe('router', () => {
     assert.ok(!detail.includes('Server time'))
     assert.ok(!detail.includes('<\\/template'))
 
-    gate('time').resolve()
+    gate(1200).resolve()
     let time = await readUntil(chunks, (html) => html.includes('Server time'))
     assert.ok(time.includes('Server time'))
     assert.ok(time.includes('In a frame'))
     assert.ok(!time.includes('<\\/template'))
   })
 
-  it('renders the reload scope page with source-resolved client entries', async () => {
-    let router = createAppRouter({ frames: { delay: async () => {} } })
+  it('renders the reload scope page with source-resolved client entries', async (t) => {
+    t.mock.method(latency, 'wait', async () => {})
     let response = await router.fetch(new Request('http://localhost/reload-scope'))
 
     assert.equal(response.status, 200)
@@ -75,7 +72,6 @@ describe('router', () => {
   })
 
   it('redirects newsletter submissions back to the scroll-preservation example', async () => {
-    let router = createAppRouter()
     let response = await router.fetch(
       new Request('http://localhost/scroll-restoration/newsletter', {
         method: 'POST',

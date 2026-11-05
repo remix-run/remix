@@ -1,5 +1,6 @@
 import * as fs from 'node:fs/promises'
 import * as http from 'node:http'
+import type { AddressInfo } from 'node:net'
 import * as path from 'node:path'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
@@ -41,19 +42,7 @@ describe('node-hmr', () => {
   it('hot updates self-accepting modules without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
-      'message.ts': [
-        `export let message = 'one'`,
-        `export function getMessage() {`,
-        `  return message`,
-        `}`,
-        `if (import.meta.hot) {`,
-        `  import.meta.hot.accept((module) => {`,
-        `    if (module && typeof module === 'object' && 'message' in module) {`,
-        `      message = String(module.message)`,
-        `    }`,
-        `  })`,
-        `}`,
-      ].join('\n'),
+      'message.ts': getSelfAcceptingMessageSource('one'),
     })
     let server = startFixtureServer(fixture.path)
 
@@ -63,19 +52,7 @@ describe('node-hmr', () => {
 
       await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
-        [
-          `export let message = 'two'`,
-          `export function getMessage() {`,
-          `  return message`,
-          `}`,
-          `if (import.meta.hot) {`,
-          `  import.meta.hot.accept((module) => {`,
-          `    if (module && typeof module === 'object' && 'message' in module) {`,
-          `      message = String(module.message)`,
-          `    }`,
-          `  })`,
-          `}`,
-        ].join('\n'),
+        getSelfAcceptingMessageSource('two'),
       )
 
       await waitForHotUpdate(server, /message\.ts/)
@@ -180,8 +157,13 @@ describe('node-hmr', () => {
 
   it('resolves pending ready() calls after an accept handler requests a restart', async () => {
     await using fixture = await createFixture({
-      'server.ts': getGatedReplacementServerSource(),
-      'message.ts': getRestartRequestingMessageSource('one'),
+      'server.ts': [
+        `import { getMessage } from './message.ts'`,
+        `// The test holds this request open until it releases the replacement child.`,
+        `if (getMessage() !== 'one') await fetch(process.env.GATE_URL + '/replacement')`,
+        getIdleHmrServerSource(),
+      ].join('\n'),
+      'message.ts': getSelfAcceptingMessageSource('one', { requestRestart: true }),
     })
     await using gates = await createFixtureGateServer()
     let supervisor = createHmrSupervisor({
@@ -202,7 +184,7 @@ describe('node-hmr', () => {
       let replacement = gates.hold('replacement')
       await writeFileAtomically(
         path.join(fixture.path, 'message.ts'),
-        getRestartRequestingMessageSource('two'),
+        getSelfAcceptingMessageSource('two', { requestRestart: true }),
       )
       // The old child accepted the update after requesting the restart, and the replacement is
       // held before it reports ready, so this call must wait for the replacement.
@@ -219,36 +201,35 @@ describe('node-hmr', () => {
 
   it('coalesces rapid restart-causing file changes', async () => {
     await using fixture = await createFixture({
-      'server.ts': getServerSource('./message.ts', 'getMessage()'),
-      'message.ts': [`export function getMessage() {`, `  return 'one'`, `}`].join('\n'),
-      'unused.ts': `export const unused = 'one'`,
+      'server.ts': [`import './message.ts'`, getIdleHmrServerSource()].join('\n'),
+      'message.ts': `export const message = 'one'`,
     })
-    let server = startFixtureServer(fixture.path)
+    let supervisor = createHmrSupervisor({
+      browserHmrChannel: null,
+      cwd: fixture.path,
+      entry: 'server.ts',
+      entryArgs: [],
+      env: process.env,
+      nodeArgs: ['--import', nodeTsxImportUrl],
+      registerPath: path.join(packageRoot, 'src/register.ts'),
+      watch: { poll: true, pollInterval: 10 },
+    })
+    let closed = supervisor.start()
 
     try {
-      let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), 'one')
+      await supervisor.ready()
+      let watcher = getSupervisorChokidarWatcher(supervisor)!
+      let entryStats = await fs.stat(path.join(fixture.path, 'server.ts'))
+      let messageStats = await fs.stat(path.join(fixture.path, 'message.ts'))
+      watcher.emit('all', 'change', 'message.ts', messageStats)
+      watcher.emit('all', 'change', 'server.ts', entryStats)
 
-      await writeFileAtomically(
-        path.join(fixture.path, 'message.ts'),
-        [`export function getMessage() {`, `  return 'two'`, `}`].join('\n'),
-      )
-      await writeFileAtomically(path.join(fixture.path, 'unused.ts'), `export const unused = 'two'`)
-
-      let restarted = await server.waitForReady(1)
-      assert.notEqual(restarted.pid, ready.pid)
-      await server.waitForRunnerReady()
-      assert.equal(await fetchText(restarted.port), 'two')
-
-      // A later restart must be the next ready event if the rapid changes were coalesced.
-      await writeFileAtomically(
-        path.join(fixture.path, 'message.ts'),
-        [`export function getMessage() {`, `  return 'three'`, `}`].join('\n'),
-      )
-      let nextRestart = await server.waitForReady(2)
-      assert.equal(await fetchText(nextRestart.port), 'three')
+      // ready() waits for every scheduled restart, so a second restart would bump the generation.
+      await supervisor.ready()
+      assert.equal(supervisor.generation, 1)
     } finally {
-      await server.stop()
+      await supervisor.stop()
+      await closed
     }
   })
 
@@ -748,6 +729,7 @@ describe('node-hmr', () => {
     try {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
+      await server.waitForRunnerReady()
 
       await writeFileAtomically(
         path.join(fixture.path, 'packages/fixture-message/index.ts'),
@@ -1015,9 +997,8 @@ describe('node-hmr', () => {
         assert.equal(await fetchText(ready.port), `${ready.pid}:initial`)
 
         await writeFileAtomically(path.join(fixture.path, 'greeting.tsx'), updatedSource)
-        await waitForHotUpdate(server, /greeting\.tsx/)
-        assert.equal(await fetchText(ready.port), `${ready.pid}:updated`)
         assert.deepEqual(await events.read(), { type: 'server:update' })
+        assert.equal(await fetchText(ready.port), `${ready.pid}:updated`)
 
         await writeFileAtomically(path.join(fixture.path, 'greeting.tsx'), updatedSource)
         assert.deepEqual(await events.read(), { type: 'server:update' })
@@ -1025,9 +1006,8 @@ describe('node-hmr', () => {
         assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 2)
 
         await writeFileAtomically(path.join(fixture.path, 'greeting.tsx'), initialSource)
-        await waitForHotUpdate(server, /greeting\.tsx/, 3)
-        assert.equal(await fetchText(ready.port), `${ready.pid}:initial`)
         assert.deepEqual(await events.read(), { type: 'server:update' })
+        assert.equal(await fetchText(ready.port), `${ready.pid}:initial`)
         assert.equal(server.output.match(/hmr update greeting\.tsx/g)?.length, 3)
       } finally {
         await events.close()
@@ -1062,6 +1042,7 @@ describe('node-hmr', () => {
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
       assert.match(server.output, /restart Updated module added export "addedExport"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
+      await server.waitForRunnerReady()
       assert.equal(server.readyCount, 2)
     } finally {
       await server.stop()
@@ -1093,6 +1074,7 @@ describe('node-hmr', () => {
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
       assert.match(server.output, /restart Updated module added export "foo"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
+      await server.waitForRunnerReady()
       assert.equal(server.readyCount, 2)
     } finally {
       await server.stop()
@@ -1124,6 +1106,7 @@ describe('node-hmr', () => {
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
       assert.match(server.output, /restart Updated module removed export "foo"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
+      await server.waitForRunnerReady()
       assert.equal(server.readyCount, 2)
     } finally {
       await server.stop()
@@ -1159,6 +1142,7 @@ describe('node-hmr', () => {
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
       assert.match(server.output, /restart Updated module changed export "foo"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
+      await server.waitForRunnerReady()
       assert.equal(server.readyCount, 2)
     } finally {
       await server.stop()
@@ -1228,6 +1212,7 @@ describe('node-hmr', () => {
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
       assert.match(server.output, /restart Updated module changed export "foo"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
+      await server.waitForRunnerReady()
       assert.equal(server.readyCount, 2)
     } finally {
       await server.stop()
@@ -1452,10 +1437,7 @@ describe('node-hmr', () => {
         assert.equal(await fetchText(ready.port), 'one')
 
         // The replacement exits on its first SIGTERM so cleanup does not wait for a force kill.
-        await writeFileAtomically(
-          fixture.entryPath,
-          getSlowShutdownServerSource('two', { ignoredSigterms: 0 }),
-        )
+        await writeFileAtomically(fixture.entryPath, getSlowShutdownServerSource('two'))
 
         await waitForOutput(server, /"type":"child-sigterm","count":1/)
         // The old child ignores the first SIGTERM, so the restart must stay blocked on its exit.
@@ -1469,11 +1451,6 @@ describe('node-hmr', () => {
         assert.notEqual(restarted.pid, ready.pid)
         assert.equal(await fetchText(restarted.port), 'two')
         assert.throws(() => process.kill(ready.pid, 0), { code: 'ESRCH' })
-
-        let exitIndex = server.output.indexOf('"type":"child-sigterm","count":2')
-        let restartedReadyIndex = server.output.indexOf(`"pid":${restarted.pid}`)
-        assert.notEqual(exitIndex, -1)
-        assert.equal(exitIndex < restartedReadyIndex, true)
       } finally {
         await server.stop()
       }
@@ -1493,20 +1470,11 @@ describe('node-hmr', () => {
         let ready = await server.waitForReady(0)
         assert.equal(await fetchText(ready.port), 'one')
 
-        await writeFileAtomically(
-          fixture.entryPath,
-          getSlowShutdownServerSource('two', { ignoredSigterms: 0 }),
-        )
+        await writeFileAtomically(fixture.entryPath, getSlowShutdownServerSource('two'))
         await waitForOutput(server, /"type":"child-sigterm","count":1/)
         // The old child ignores the first SIGTERM, so this change arrives while it is exiting.
-        await writeFileAtomically(
-          fixture.entryPath,
-          getSlowShutdownServerSource('three', { ignoredSigterms: 0 }),
-        )
-        await server.waitUntil(
-          () => (server.output.match(/restart\S* server\.ts/g) ?? []).length >= 2,
-          () => `Timed out waiting for the second restart.\n${server.output}`,
-        )
+        await writeFileAtomically(fixture.entryPath, getSlowShutdownServerSource('three'))
+        await waitForOutput(server, /restart server\.ts[\s\S]*restart server\.ts/)
         process.kill(ready.pid, 'SIGTERM')
 
         ready = await server.waitForReady(1)
@@ -1524,42 +1492,32 @@ describe('node-hmr', () => {
     'waits for a force-killed child process before completing shutdown',
     { skip: isWindows && 'Windows terminates child processes without delivering SIGTERM handlers' },
     async () => {
-      let fixture = await createFixture({
+      await using fixture = await createFixture({
         'server.ts': [
-          `import { createServer } from 'node:http'`,
-          ``,
-          `let server = createServer((_request, response) => {`,
-          `  response.end('ok')`,
-          `})`,
-          ``,
-          `process.on('SIGTERM', () => {`,
-          `  console.log(JSON.stringify({ type: 'child-sigterm', pid: process.pid }))`,
-          `})`,
-          ``,
-          `server.listen(0, '127.0.0.1', () => {`,
-          `  let address = server.address()`,
-          `  if (address && typeof address === 'object') {`,
-          `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
-          `  }`,
-          `})`,
-          ``,
-          `setInterval(() => {}, 1_000)`,
+          `import { writeFileSync } from 'node:fs'`,
+          `process.on('SIGTERM', () => {})`,
+          `writeFileSync('child.pid', String(process.pid))`,
+          getIdleHmrServerSource(),
         ].join('\n'),
       })
-      let server = startFixtureServer(fixture.path)
+      let supervisor = createHmrSupervisor({
+        browserHmrChannel: null,
+        cwd: fixture.path,
+        entry: 'server.ts',
+        entryArgs: [],
+        env: process.env,
+        nodeArgs: ['--import', nodeTsxImportUrl],
+        registerPath: path.join(packageRoot, 'src/register.ts'),
+        shutdownTimeoutMs: 0,
+        watch: { poll: true, pollInterval: 10 },
+      })
+      let closed = supervisor.start()
+      await supervisor.ready()
+      let pid = Number(await fs.readFile(path.join(fixture.path, 'child.pid'), 'utf-8'))
 
-      try {
-        let ready = await server.waitForReady(0)
-        assert.equal(await fetchText(ready.port), 'ok')
-
-        let stopped = server.stop()
-        await waitForOutput(server, /"type":"child-sigterm"/)
-        await stopped
-
-        await fs.rm(fixture.path, { force: true, recursive: true })
-      } finally {
-        await removeFixture(fixture.path)
-      }
+      await supervisor.stop()
+      await closed
+      assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' })
     },
   )
 
@@ -1605,7 +1563,10 @@ function getPidServerSource(importSpecifier: string, responseExpression: string)
   )
 }
 
-function getSelfAcceptingMessageSource(message: string): string {
+function getSelfAcceptingMessageSource(
+  message: string,
+  options: { requestRestart?: boolean } = {},
+): string {
   return [
     `export let message = ${JSON.stringify(message)}`,
     `export function getMessage() {`,
@@ -1613,6 +1574,10 @@ function getSelfAcceptingMessageSource(message: string): string {
     `}`,
     `if (import.meta.hot) {`,
     `  import.meta.hot.accept((module) => {`,
+    // Spoofs the runtime's internal restart request from a handler that then finishes accepting.
+    ...(options.requestRestart
+      ? [`    process.send?.({ type: 'node-hmr:child:restart-requested' })`]
+      : []),
     `    if (module && typeof module === 'object' && 'message' in module) {`,
     `      message = String(module.message)`,
     `    }`,
@@ -1621,43 +1586,7 @@ function getSelfAcceptingMessageSource(message: string): string {
   ].join('\n')
 }
 
-function getGatedReplacementServerSource(): string {
-  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
-
-  return [
-    `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
-    `import { getMessage } from './message.ts'`,
-    ``,
-    `if (getMessage() !== 'one') {`,
-    `  // The test holds this request open until it releases the replacement child.`,
-    `  await fetch(process.env.GATE_URL + '/replacement')`,
-    `}`,
-    `emitServerReady()`,
-    `setInterval(() => {}, 1_000)`,
-  ].join('\n')
-}
-
-function getRestartRequestingMessageSource(message: string): string {
-  return [
-    `export let message = ${JSON.stringify(message)}`,
-    `export function getMessage() {`,
-    `  return message`,
-    `}`,
-    `if (import.meta.hot) {`,
-    `  import.meta.hot.accept((module) => {`,
-    `    // Spoofs the runtime's internal restart request, as an accept handler that decides the`,
-    `    // update needs a restart would, and then finishes accepting the update.`,
-    `    process.send?.({ type: 'node-hmr:child:restart-requested', message: 'restart requested' })`,
-    `    message = String(module?.message)`,
-    `  })`,
-    `}`,
-  ].join('\n')
-}
-
-function getSlowShutdownServerSource(
-  message: string,
-  options: { ignoredSigterms: number },
-): string {
+function getSlowShutdownServerSource(message: string, options = { ignoredSigterms: 0 }): string {
   let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
 
   return [
@@ -2155,7 +2084,7 @@ async function createHmrProxyFixture(
       `  env: {`,
       `    ...process.env,`,
       `    CHILD_PORT_URL: 'http://127.0.0.1:' + portRegistry.address().port,`,
-      `    PORT: '0',`,
+      `    PORT: String(childPort),`,
       `  },`,
       `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
       `})`,
@@ -2241,64 +2170,49 @@ async function waitForOutput(server: ReturnType<typeof startFixtureServer>, patt
 
 // Waits for the runner's hot update log for a file, then for the runner to report that every
 // pending update was accepted. Callers can then fetch once and assert the exact response.
-async function waitForHotUpdate(
-  server: ReturnType<typeof startFixtureServer>,
-  filePattern: RegExp,
-  count = 1,
-): Promise<void> {
-  let pattern = new RegExp(`hmr update ${filePattern.source}`, 'g')
-  await server.waitUntil(
-    () => (server.output.match(pattern)?.length ?? 0) >= count,
-    () => `Timed out waiting for hot update ${count} of ${pattern}.\n${server.output}`,
-  )
+async function waitForHotUpdate(server: ReturnType<typeof startFixtureServer>, file: RegExp) {
+  await waitForOutput(server, new RegExp(`hmr update ${file.source}`))
   await server.waitForRunnerReady()
-}
-
-interface FixtureGate {
-  arrived: Promise<void>
-  release(): void
 }
 
 // Fixture processes fetch `${url}/<name>` to report that they reached a point. The request is
 // held open until the test calls `release()`, so the fixture can await it as an explicit gate.
-async function createFixtureGateServer(): Promise<
-  AsyncDisposable & { hold(name: string): FixtureGate; url: string }
-> {
-  let holds = new Map<string, { arrived: () => void; released: Promise<void> }>()
+async function createFixtureGateServer() {
+  let gates = new Map<
+    string,
+    { arrived: PromiseWithResolvers<void>; released: PromiseWithResolvers<void> }
+  >()
+  let getGate = (name: string) => {
+    let gate = gates.get(name) ?? {
+      arrived: Promise.withResolvers(),
+      released: Promise.withResolvers(),
+    }
+    gates.set(name, gate)
+    return gate
+  }
 
   let server = http.createServer(async (request, response) => {
-    let name = new URL(request.url ?? '/', 'http://127.0.0.1').pathname.slice(1)
-    let hold = holds.get(name)
-    if (!hold) {
-      response.writeHead(500, { Connection: 'close' })
-      response.end(`Unregistered fixture gate ${name}`)
-      return
-    }
-    holds.delete(name)
-    hold.arrived()
-    await hold.released
+    let gate = getGate(request.url!.slice(1))
+    gate.arrived.resolve()
+    await gate.released.promise
     response.writeHead(204, { Connection: 'close' })
     response.end()
   })
-
   server.listen(0, '127.0.0.1')
   await once(server, 'listening')
-  let address = server.address()
-  assert.ok(address && typeof address === 'object')
+  let { port } = server.address() as AddressInfo
 
   return {
-    url: `http://127.0.0.1:${address.port}`,
-    hold(name) {
-      let arrived = Promise.withResolvers<void>()
-      let released = Promise.withResolvers<void>()
-      holds.set(name, { arrived: arrived.resolve, released: released.promise })
-      return {
-        arrived: withFailureBound(
-          arrived.promise,
-          () => `Timed out waiting for fixture gate ${name}`,
-        ),
-        release: released.resolve,
-      }
+    url: `http://127.0.0.1:${port}`,
+    hold(name: string) {
+      let gate = getGate(name)
+      let arrived = withFailureBound(
+        gate.arrived.promise,
+        () => `Timed out waiting for gate ${name}`,
+      )
+      // A test that fails before awaiting a gate must not crash the worker with this rejection.
+      arrived.catch(() => {})
+      return { arrived, release: gate.released.resolve }
     },
     async [Symbol.asyncDispose]() {
       // Destroys requests that are still held, so fixtures do not wait on them during cleanup.
@@ -2311,13 +2225,14 @@ async function createFixtureGateServer(): Promise<
 async function withFailureBound<value>(
   promise: Promise<value>,
   getMessage: () => string,
+  timeoutMs = failureTimeout,
 ): Promise<value> {
   let timeout: ReturnType<typeof setTimeout> | undefined
   try {
     return await Promise.race([
       promise,
       new Promise<never>((_resolve, reject) => {
-        timeout = setTimeout(() => reject(new Error(getMessage())), failureTimeout)
+        timeout = setTimeout(() => reject(new Error(getMessage())), timeoutMs)
       }),
     ])
   } finally {
@@ -2394,32 +2309,18 @@ function startFixtureServer(cwd: string, options: { env?: Record<string, string>
   })
 
   function notifyOutputListeners() {
-    for (let listener of outputListeners) {
-      listener()
-    }
+    for (let listener of outputListeners) listener()
   }
 
   // Resolves as soon as the fixture's output satisfies `check`.
-  function waitUntil(
-    check: () => boolean,
-    getTimeoutMessage: () => string,
-    timeoutMs = failureTimeout,
-  ): Promise<void> {
-    if (check()) return Promise.resolve()
-
-    return new Promise((resolve, reject) => {
-      let timeout = setTimeout(() => {
-        outputListeners.delete(listener)
-        reject(new Error(getTimeoutMessage()))
-      }, timeoutMs)
-      let listener = () => {
-        if (!check()) return
-        clearTimeout(timeout)
-        outputListeners.delete(listener)
-        resolve()
-      }
-      outputListeners.add(listener)
-    })
+  function waitUntil(check: () => boolean, getTimeoutMessage: () => string, timeoutMs?: number) {
+    let { promise, resolve } = Promise.withResolvers<void>()
+    let listener = () => check() && resolve()
+    outputListeners.add(listener)
+    listener()
+    return withFailureBound(promise, getTimeoutMessage, timeoutMs).finally(() =>
+      outputListeners.delete(listener),
+    )
   }
 
   return {

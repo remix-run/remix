@@ -36,13 +36,12 @@ describe('vnode rendering', () => {
     let root = createRoot(container)
 
     let capturedSignal: AbortSignal | undefined
-    let capturedUpdate = () => {}
+    let capturedUpdate = async () => {}
     function App(handle: Handle) {
-      capturedUpdate = () => {
+      capturedUpdate = () =>
         handle.update().then((signal) => {
           capturedSignal = signal
         })
-      }
 
       return () => <div>Hello, world!</div>
     }
@@ -51,10 +50,10 @@ describe('vnode rendering', () => {
     root.flush()
     expect(capturedSignal).toBe(undefined)
 
-    capturedUpdate()
+    let updated = capturedUpdate()
     expect(capturedSignal).toBe(undefined)
     root.flush()
-    await Promise.resolve()
+    await updated
     expect(capturedSignal).toBeInstanceOf(AbortSignal)
     expect(capturedSignal?.aborted).toBe(false)
   })

@@ -267,15 +267,13 @@ describe('fs session storage', () => {
     // Windows can refuse to replace a file that another handle has open; the save must still land.
     let handle = await fsp.open(file, 'r')
     let originalRename = fsp.rename
-    t.mock.method(fsp, 'rename', async (...args: Parameters<typeof fsp.rename>) => {
-      try {
-        return await originalRename(...args)
-      } catch (error) {
-        // Release the handle once a replace has been refused, so a retry can land.
+    // Release the handle once a replace has been refused, so a retry can land.
+    t.mock.method(fsp, 'rename', (...args: Parameters<typeof fsp.rename>) =>
+      originalRename(...args).catch(async (error) => {
         await handle.close()
         throw error
-      }
-    })
+      }),
+    )
     session.set('count', 2)
     try {
       await storage.save(session)

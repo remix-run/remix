@@ -15,17 +15,22 @@ const demoLatencyCookie = createCookie('lazy-frames-latency', {
   sameSite: 'Lax',
 })
 
-const defaultDuration = process.env.NODE_ENV === 'test' ? 20 : 520
+// Simulated server latency for the demo. Tests replace `wait`.
+export const latency = {
+  wait(duration: number, signal: AbortSignal) {
+    return delay(duration, signal)
+  },
+}
 
 export function demoLatency(
-  duration = defaultDuration,
+  duration = 520,
 ): Middleware<{ key: typeof demoLatencyContext; value: DemoLatency }> {
   return async (context, next) => {
     let enabled = (await demoLatencyCookie.parse(context.headers.get('Cookie'))) === '1'
     context.set(demoLatencyContext, { enabled, duration })
 
     if (enabled) {
-      await delay(duration, context.request.signal)
+      await latency.wait(duration, context.request.signal)
     }
 
     let response = await next()

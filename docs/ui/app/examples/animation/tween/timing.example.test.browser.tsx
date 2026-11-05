@@ -38,24 +38,19 @@ describe('Tween example', () => {
   })
 })
 
-// Drives the example's requestAnimationFrame loop with explicit timestamps.
+// The example keeps at most one requestAnimationFrame pending, so run it with explicit timestamps.
 function mockAnimationFrames(t: TestContext) {
-  let callbacks = new Map<number, FrameRequestCallback>()
-  let nextId = 1
+  let pending: FrameRequestCallback | undefined
   t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
-    let id = nextId++
-    callbacks.set(id, callback)
-    return id
+    pending = callback
+    return 1
   })
-  t.mock.method(window, 'cancelAnimationFrame', (id: number) => {
-    callbacks.delete(id)
-  })
-
+  t.mock.method(window, 'cancelAnimationFrame', () => (pending = undefined))
   return {
     run(timestamp: number) {
-      let pending = [...callbacks.values()]
-      callbacks.clear()
-      for (let callback of pending) callback(timestamp)
+      let callback = pending
+      pending = undefined
+      callback?.(timestamp)
     },
   }
 }

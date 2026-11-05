@@ -35,7 +35,13 @@ async function type(field: HTMLInputElement, text: string): Promise<void> {
     }
     field.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true }))
   }
-  await Promise.resolve()
+  await controlledRestore()
+}
+
+// Controlled restores run in a microtask queued while the event dispatches, so a microtask queued
+// after the dispatch runs once they have finished.
+function controlledRestore(): Promise<void> {
+  return new Promise((resolve) => queueMicrotask(resolve))
 }
 
 describe('vdom controlled props', () => {
@@ -48,8 +54,7 @@ describe('vdom controlled props', () => {
     let input = container.querySelector('input') as HTMLInputElement
     input.value = 'hello123'
     input.dispatchEvent(new Event('input', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.value).toBe('hello')
   })
 
@@ -62,8 +67,7 @@ describe('vdom controlled props', () => {
     let input = container.querySelector('input') as HTMLInputElement
     input.checked = false
     input.dispatchEvent(new Event('change', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.checked).toBe(true)
   })
 
@@ -156,8 +160,7 @@ describe('vdom controlled props', () => {
     expect(output.textContent).toBe('1:helloa')
 
     await type(input, '1')
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.value).toBe('helloa')
     expect(output.textContent).toBe('1:helloa')
 
@@ -193,8 +196,7 @@ describe('vdom controlled props', () => {
     let input = container.querySelector('input') as HTMLInputElement
     input.value = 'helloa'
     input.dispatchEvent(new Event('input', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.value).toBe('helloa')
   })
 
@@ -217,8 +219,7 @@ describe('vdom controlled props', () => {
     check.checked = true
     check.dispatchEvent(new Event('change', { bubbles: true }))
 
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(text.value).toBe('user typed')
     expect(check.checked).toBe(true)
   })
@@ -238,8 +239,7 @@ describe('vdom controlled props', () => {
     select.value = 'a'
     select.dispatchEvent(new Event('change', { bubbles: true }))
 
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(select.value).toBe('b')
   })
 
@@ -276,8 +276,7 @@ describe('vdom controlled props', () => {
 
     select.value = 'beta'
     select.dispatchEvent(new Event('input', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     select.dispatchEvent(new Event('change', { bubbles: true }))
     root.flush()
 
@@ -298,8 +297,7 @@ describe('vdom controlled props', () => {
     input.value = 'post-dispose'
     input.dispatchEvent(new Event('input', { bubbles: true }))
     input.dispatchEvent(new Event('change', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.value).toBe('post-dispose')
   })
 })

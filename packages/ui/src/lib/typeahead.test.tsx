@@ -57,9 +57,6 @@ function key(target: HTMLElement, keyValue: string, options: KeyboardEventInit =
 }
 
 async function settle(root: ReturnType<typeof createRoot>) {
-  await Promise.resolve()
-  root.flush()
-  await Promise.resolve()
   root.flush()
 }
 

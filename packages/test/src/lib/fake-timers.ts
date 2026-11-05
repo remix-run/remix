@@ -1,15 +1,16 @@
 import { mock } from './mock.ts'
 
 /**
- * Handle returned by `mock.timers.enable()` for driving fake timers during a
- * test. While enabled, `setTimeout`, `setInterval`, `clearTimeout`,
- * `clearInterval`, and `Date.now` use the fake clock instead of the real one;
- * timers fire only when the test calls `advance` (or `advanceAsync`).
+ * Handle returned by `t.useFakeTimers()` for driving fake timers during a
+ * test. While enabled, `setTimeout`, `setInterval`, `clearTimeout`, and
+ * `clearInterval` use the fake clock instead of the real one; timers fire only
+ * when the test calls `advance` (or `advanceAsync`). `Date` and
+ * `performance.now()` are not faked and keep reading the real clock.
  *
  * @example
  * ```ts
  * it('debounces save calls', (t) => {
- *   let timers = t.mock.timers.enable()
+ *   let timers = t.useFakeTimers()
  *   let save = t.mock.fn()
  *   let debounced = debounce(save, 100)
  *   debounced(); debounced(); debounced()
@@ -37,9 +38,8 @@ export interface FakeTimers {
    */
   advanceAsync(ms: number): Promise<void>
   /**
-   * Restore the original timer functions and the real clock. Called
-   * automatically after the test finishes; may also be called early to
-   * disable fake timers mid-test.
+   * Restore the original timer functions. Called automatically after the test
+   * finishes; may also be called early to disable fake timers mid-test.
    */
   restore(): void
 }

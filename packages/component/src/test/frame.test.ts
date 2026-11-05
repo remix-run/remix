@@ -1133,8 +1133,7 @@ describe('frames', () => {
     start.remove()
     fallback.remove()
     end.remove()
-    await Promise.resolve()
-    await Promise.resolve()
+    await frame.ready()
 
     let fragment = document.createDocumentFragment()
     let late = document.createElement('p')
@@ -1145,7 +1144,6 @@ describe('frames', () => {
     // The template is buffered, not delivered, because the disposed frame stopped listening.
     expect(consumeFrameTemplate(markerId)).toBe(fragment)
     expect(document.getElementById('late-frame-content')).toBeNull()
-    await frame.ready()
   })
 
   it('renders a redirected response without changing the frame source', async () => {

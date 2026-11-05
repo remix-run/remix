@@ -6,10 +6,7 @@ import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 
 import rootController from './actions/controller.tsx'
-import {
-  createFramesController,
-  type FramesControllerOptions,
-} from './actions/frames/controller.tsx'
+import { framesController } from './actions/frames/controller.tsx'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { routes } from './routes.ts'
 import { assets } from './utils/assets.ts'
@@ -23,32 +20,23 @@ declare module 'remix' {
   }
 }
 
-export interface AppRouterOptions {
-  frames?: FramesControllerOptions
+const middleware = []
+
+if (process.env.NODE_ENV === 'development') {
+  middleware.push(logger())
 }
 
-export function createAppRouter(options: AppRouterOptions = {}) {
-  let middleware = []
+middleware.push(
+  compression(),
+  staticFiles('./public', {
+    cacheControl: 'no-store',
+    etag: false,
+    lastModified: false,
+    index: false,
+  }),
+)
+middleware.push(...appMiddleware)
 
-  if (process.env.NODE_ENV === 'development') {
-    middleware.push(logger())
-  }
-
-  middleware.push(
-    compression(),
-    staticFiles('./public', {
-      cacheControl: 'no-store',
-      etag: false,
-      lastModified: false,
-      index: false,
-    }),
-  )
-  middleware.push(...appMiddleware)
-
-  let router = createRouter<AppContext>({ middleware })
-  router.map(routes, rootController)
-  router.map(routes.frames, createFramesController(options.frames))
-  return router
-}
-
-export const router = createAppRouter()
+export const router = createRouter<AppContext>({ middleware })
+router.map(routes, rootController)
+router.map(routes.frames, framesController)

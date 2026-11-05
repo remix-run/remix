@@ -9,7 +9,6 @@ import {
   buildChildProcessArgs,
   createFileChangeEventDeduper,
   getBrowserHmrFileEventsForWatchedFiles,
-  getDirectoriesToUnwatch,
   getWatchedDirectoriesForFiles,
   normalizeBrowserHmrFilePath,
   resolveChokidarWatchOptions,
@@ -156,18 +155,6 @@ describe('getWatchedDirectoriesForFiles', () => {
     assert.deepEqual(
       getWatchedDirectoriesForFiles(['/app/routes/home.tsx', '/app/routes/about.tsx']),
       new Set(['/app/routes']),
-    )
-  })
-})
-
-describe('getDirectoriesToUnwatch', () => {
-  it('keeps unneeded directories that contain a watched directory', () => {
-    assert.deepEqual(
-      getDirectoriesToUnwatch(
-        [path.resolve('/project'), path.resolve('/project/app'), path.resolve('/project-other')],
-        new Set([path.resolve('/project/server'), path.resolve('/project/app')]),
-      ),
-      [path.resolve('/project-other')],
     )
   })
 })
