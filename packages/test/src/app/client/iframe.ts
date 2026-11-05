@@ -7,23 +7,25 @@ const testFile = params.get('file')!
 const rawOnly = params.get('only')
 const only = rawOnly ? (JSON.parse(rawOnly) as SerializedOnlyPattern[]) : undefined
 
-// Firefox defers history traversal while the test document is still loading.
-window.addEventListener(
-  'load',
-  async () => {
-    try {
-      await import(testFile)
-      let results = await runTests({ only })
-      resultWindow.postMessage({ type: 'test-results', results }, '*')
-    } catch (error: any) {
-      resultWindow.postMessage(
-        {
-          type: 'test-error',
-          error: { message: error?.message ?? String(error), stack: error?.stack },
-        },
-        '*',
-      )
-    }
-  },
-  { once: true },
-)
+if (params.get('isolation') === 'window' && document.readyState !== 'complete') {
+  // Firefox defers history traversal while its isolated test window is loading.
+  window.addEventListener('load', () => void runTestFile(), { once: true })
+} else {
+  await runTestFile()
+}
+
+async function runTestFile(): Promise<void> {
+  try {
+    await import(testFile)
+    let results = await runTests({ only })
+    resultWindow.postMessage({ type: 'test-results', results }, '*')
+  } catch (error: any) {
+    resultWindow.postMessage(
+      {
+        type: 'test-error',
+        error: { message: error?.message ?? String(error), stack: error?.stack },
+      },
+      '*',
+    )
+  }
+}

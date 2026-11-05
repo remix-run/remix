@@ -193,8 +193,12 @@ function runInDocument(
     let iframe: HTMLIFrameElement | undefined
     let testWindow: Window | null
     if (new URLSearchParams(location.search).get('isolation') === 'window') {
+      params.set('isolation', 'window')
       testWindow = window.open(`/iframe?${params}`, '_blank', 'width=800,height=400')
-      if (!testWindow) throw new Error('Could not open the browser test window')
+      if (!testWindow) {
+        fail({ message: 'Could not open the browser test window' })
+        return
+      }
     } else {
       iframe = document.createElement('iframe')
       iframe.src = `/iframe?${params}`
@@ -222,24 +226,27 @@ function runInDocument(
           tests: tests.map((t) => ({ ...t, filePath: testFile })),
         })
       } else {
-        let { message, stack } = event.data.error
-        resolve({
-          passed: 0,
-          failed: 1,
-          skipped: 0,
-          todo: 0,
-          tests: [
-            {
-              name: '',
-              suiteName: testFile,
-              filePath: testFile,
-              status: 'failed',
-              error: { message, stack },
-              duration: 0,
-            },
-          ],
-        })
+        fail(event.data.error)
       }
+    }
+
+    function fail(error: { message: string; stack?: string }) {
+      resolve({
+        passed: 0,
+        failed: 1,
+        skipped: 0,
+        todo: 0,
+        tests: [
+          {
+            name: '',
+            suiteName: testFile,
+            filePath: testFile,
+            status: 'failed',
+            error,
+            duration: 0,
+          },
+        ],
+      })
     }
 
     window.addEventListener('message', onMessage)

@@ -69,12 +69,13 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     page.setDefaultNavigationTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
 
     let context = page.context()
+    let useWindowIsolation = browser.browserType().name() === 'firefox'
     if (options.console) {
       function logConsole(page: Page) {
         page.on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))
       }
       logConsole(page)
-      context.on('page', logConsole)
+      if (useWindowIsolation) context.on('page', logConsole)
     }
 
     // Playwright's JS coverage is Chromium-only. Start before navigation so
@@ -153,7 +154,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
         })
       }
       for (let testPage of context.pages()) observeScriptRequests(testPage)
-      context.on('page', observeScriptRequests)
+      if (useWindowIsolation) context.on('page', observeScriptRequests)
     })
 
     // Prevent unhandled rejection if we fail before setting up the listener
@@ -164,7 +165,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     try {
       let harnessUrl = new URL(options.baseUrl)
       // Firefox commits intercepted iframe traversals twice: https://bugzilla.mozilla.org/2080513
-      if (browser.browserType().name() === 'firefox') {
+      if (useWindowIsolation) {
         harnessUrl.searchParams.set('isolation', 'window')
       }
       await page.goto(harnessUrl.href)

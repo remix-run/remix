@@ -1,1 +1,1 @@
-Fix Firefox browser tests stalling during history navigation. Tests start after their document finishes loading and run in separate top-level windows to avoid Firefox committing intercepted iframe traversals twice.
+Fix Firefox browser tests stalling during history navigation. Firefox test files run in separate windows after loading, while Chromium and WebKit retain their existing iframe startup behavior. If a test window cannot open, report a failed file instead of waiting for the progress timeout.
