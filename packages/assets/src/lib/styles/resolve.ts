@@ -73,11 +73,11 @@ type ParsedRelativeUrl = {
   search: string
 }
 
-export async function resolveStyle(
+export function resolveStyle(
   record: StyleRecord,
   transformed: TransformedStyle,
   args: ResolveArgs,
-): Promise<ResolveResult> {
+): ResolveResult {
   let trackedFiles = new Set(transformed.trackedFiles)
   let dependencies: ResolvedDependency[] = []
   let deps = new Set<string>()

@@ -555,7 +555,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     return getNotModifiedResult(record.staleEmitted, options)
   }
 
-  async function getOrCreateResolvedScripts(records: ScriptRecord[]): Promise<ResolvedModule[]> {
+  function getOrCreateResolvedScripts(records: ScriptRecord[]): Promise<ResolvedModule[]> {
     return mapWithConcurrency(records, scriptConcurrency, (record) =>
       getOrCreateResolvedScript(record),
     )

@@ -339,7 +339,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     }
   }
 
-  async function createSourceFile(body: Uint8Array, identityPath: string): Promise<EmittedFile> {
+  function createSourceFile(body: Uint8Array, identityPath: string): Promise<EmittedFile> {
     return createEmittedFile(body, {
       extension: path.extname(identityPath).toLowerCase(),
       filePath: identityPath,

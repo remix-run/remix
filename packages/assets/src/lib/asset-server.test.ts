@@ -40,14 +40,14 @@ function createAssetServerForTest(
     basePath?: string
   },
 ): AssetServer<AssetRequestTransformMap> {
-  return createAssetServer({
-    basePath: options.basePath ?? '/assets',
+  return createAssetServer<AssetRequestTransformMap>({
     ...options,
+    basePath: options.basePath ?? '/assets',
     watch: options.watch ?? false,
-  } as any) as AssetServer<AssetRequestTransformMap>
+  })
 }
 
-async function makeTmpDir(): Promise<string> {
+function makeTmpDir(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), 'asset-server-test-'))
 }
 
@@ -79,7 +79,10 @@ function getLineAndColumn(source: string, search: string): { line: number; colum
   }
 }
 
-function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions<any>> = {}) {
+function createTestServer(
+  rootDir: string,
+  overrides: Partial<AssetServerOptions<AssetRequestTransformMap>> = {},
+) {
   return createAssetServerForTest({
     allowFiles: ['app/**', 'app/node_modules/**'],
     basePath: '/assets',
@@ -91,7 +94,7 @@ function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions
 
 function createWatchedTestServer(
   rootDir: string,
-  overrides: Partial<AssetServerOptions<any>> = {},
+  overrides: Partial<AssetServerOptions<AssetRequestTransformMap>> = {},
 ) {
   return createTestServer(rootDir, {
     ...overrides,
@@ -334,7 +337,7 @@ async function withTsconfigTransformCase(
     caseDir: string
     assetServer: AssetServer<AssetRequestTransformMap>
   }) => Promise<void>,
-  serverOverrides: Partial<AssetServerOptions<any>> = {},
+  serverOverrides: Partial<AssetServerOptions<AssetRequestTransformMap>> = {},
 ): Promise<void> {
   let caseDir = await makeTmpDir()
   let assetServer: AssetServer<AssetRequestTransformMap> | null = null

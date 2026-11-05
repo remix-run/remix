@@ -236,7 +236,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     let promise = (async () => {
       let startedVersion = record.invalidationVersion
       let transformedStyle = await getOrCreateTransformedStyle(record)
-      let resolvedStyleResult = await resolveStyle(record, transformedStyle, resolveArgs)
+      let resolvedStyleResult = resolveStyle(record, transformedStyle, resolveArgs)
 
       if (!resolvedStyleResult.ok) {
         if (isFresh(record, startedVersion)) {
