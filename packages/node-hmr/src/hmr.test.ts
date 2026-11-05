@@ -17,7 +17,6 @@ const isWindows = process.platform === 'win32'
 // Failure bounds for awaited signals. Tests resolve as soon as the signal arrives.
 const failureTimeout = 5_000
 const fixtureServerReadyTimeout = isWindows ? 15_000 : failureTimeout
-const runnerReadyLine = JSON.stringify({ type: 'runner-ready' })
 
 describe('node-hmr', () => {
   it('stops the fixture child server during cleanup', async () => {
@@ -2016,7 +2015,7 @@ async function createFixture(
   await writeFixtureFiles(fixturePath, {
     ...files,
     'dev.ts': [
-      `import { createInterface } from 'node:readline'`,
+      `import { createServer } from 'node:http'`,
       `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
       ``,
       `let runner = run('server.ts', {`,
@@ -2024,10 +2023,17 @@ async function createFixture(
       ...(options.watch === undefined ? [] : [`  watch: ${JSON.stringify(options.watch)},`]),
       `})`,
       ``,
-      `// Each stdin line asks for the runner to settle, answered with a line on stdout.`,
-      `createInterface({ input: process.stdin }).on('line', async () => {`,
+      `// Each request waits for the runner to settle before responding. This uses HTTP rather`,
+      `// than stdin because the runner's child inherits stdin, and on Windows a pending read on`,
+      `// an inherited pipe blocks the child from starting.`,
+      `let readyServer = createServer(async (_request, response) => {`,
       `  await runner.ready()`,
-      `  console.log(${JSON.stringify(runnerReadyLine)})`,
+      `  response.end('ready')`,
+      `})`,
+      `readyServer.unref()`,
+      `readyServer.listen(0, '127.0.0.1', () => {`,
+      `  let address = readyServer.address()`,
+      `  console.log(JSON.stringify({ type: 'runner-ready-url', url: \`http://127.0.0.1:\${address.port}/\` }))`,
       `})`,
     ].join('\n'),
   })
@@ -2270,12 +2276,10 @@ function startFixtureServer(cwd: string, options: { env?: Record<string, string>
       ...options.env,
       NODE_ENV: 'development',
     },
-    // stdin carries runner readiness requests to fixtures created by `createFixture()`.
-    stdio: ['pipe', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   })
   let readyEvents: Array<{ pid: number; port: number }> = []
-  let runnerReadyCount = 0
-  let runnerReadyRequestCount = 0
+  let runnerReadyUrl: string | undefined
   let hmrUrlEvents: Array<{ pid: number; url: string }> = []
   let outputListeners = new Set<() => void>()
   let lineBuffer = ''
@@ -2303,8 +2307,9 @@ function startFixtureServer(cwd: string, options: { env?: Record<string, string>
         continue
       }
 
-      if (line === runnerReadyLine) {
-        runnerReadyCount += 1
+      let runnerReadyUrlEvent = parseRunnerReadyUrlEvent(line)
+      if (runnerReadyUrlEvent !== null) {
+        runnerReadyUrl = runnerReadyUrlEvent
       }
     }
 
@@ -2390,19 +2395,20 @@ function startFixtureServer(cwd: string, options: { env?: Record<string, string>
       return hmrUrlEvents[index]
     },
 
-    // Asks the fixture's dev process to await `runner.ready()` and report back on stdout.
+    // Asks the fixture's dev process to await `runner.ready()`, which it does before responding.
     async waitForRunnerReady() {
-      runnerReadyRequestCount += 1
-      let requestCount = runnerReadyRequestCount
-      child.stdin?.write('ready\n')
       await waitUntil(
-        () => runnerReadyCount >= requestCount,
-        () => `Timed out waiting for runner readiness.\n${processOutput}`,
+        () => runnerReadyUrl !== undefined,
+        () => `Timed out waiting for the runner readiness URL.\n${processOutput}`,
       )
+      let response = await fetch(runnerReadyUrl!, {
+        headers: { Connection: 'close' },
+        signal: AbortSignal.timeout(failureTimeout),
+      })
+      assert.equal(await response.text(), 'ready')
     },
 
     async stop() {
-      child.stdin?.end()
       await stopProcess(child)
     },
   }
@@ -2472,6 +2478,16 @@ function isHmrEventPayload(value: unknown): value is HmrEventPayload {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function parseRunnerReadyUrlEvent(line: string): string | null {
+  try {
+    let event: unknown = JSON.parse(line)
+    if (isRecord(event) && event.type === 'runner-ready-url' && typeof event.url === 'string') {
+      return event.url
+    }
+  } catch {}
+  return null
 }
 
 function parseReadyEvent(line: string): { pid: number; port: number } | null {
