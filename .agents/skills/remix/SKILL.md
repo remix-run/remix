@@ -99,6 +99,8 @@ Event handlers run only when the component is mounted or hydrated in the browser
 
 ## Work Within the App
 
+- Write for the next reader, who may be an agent. Keep code that changes together in one place so understanding or editing a piece of UI does not require jumping between a use and its definition.
+- Do not introduce a name, constant, helper, type, or file solely to hold a single use. Each extraction adds a lookup for readers and context for agents. Extract when there is actual reuse or a separate responsibility.
 - Preserve the app's package manager, scripts, runtime, middleware order, and import conventions unless the task requires changing them. Do not replace an existing solution merely to match the starter.
 - Change the narrowest owner of the behavior. Keep route-local code together and share it only when multiple areas need it.
 - Prefer Web APIs, native links, buttons, and forms, plus existing first-party Remix primitives, over custom abstractions.
