@@ -5,10 +5,10 @@ import { defineConfig } from 'playwright/test'
 let projects: PlaywrightTestProject[]
 
 if (process.env.CI !== 'true' || platform === 'win32') {
-  // Local development, Windows
+  // Local development, Windows CI
   projects = [{ name: 'chromium', use: { browserName: 'chromium' } }]
 } else if (platform === 'darwin') {
-  // OSX
+  // OSX CI
   projects = [{ name: 'webkit', use: { browserName: 'webkit' } }]
 } else {
   // Ubuntu CI
