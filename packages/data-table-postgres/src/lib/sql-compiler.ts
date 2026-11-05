@@ -97,7 +97,7 @@ export function compilePostgresOperation(operation: DataManipulationOperation): 
         ' set ' +
         assignments +
         clauses.where(operation.where, context) +
-        compileReturningClause(operation.returning),
+        clauses.returning(operation.returning),
       values: context.values,
     }
   }
@@ -108,7 +108,7 @@ export function compilePostgresOperation(operation: DataManipulationOperation): 
         'delete from ' +
         quotePath(getTableName(operation.table)) +
         clauses.where(operation.where, context) +
-        compileReturningClause(operation.returning),
+        clauses.returning(operation.returning),
       values: context.values,
     }
   }
@@ -134,7 +134,7 @@ function compileInsertOperation(
         'insert into ' +
         quotePath(getTableName(table)) +
         ' default values' +
-        compileReturningClause(returning),
+        clauses.returning(returning),
       values: context.values,
     }
   }
@@ -151,7 +151,7 @@ function compileInsertOperation(
       ') values (' +
       placeholders.join(', ') +
       ')' +
-      compileReturningClause(returning),
+      clauses.returning(returning),
     values: context.values,
   }
 }
@@ -177,7 +177,7 @@ function compileInsertManyOperation(
         'insert into ' +
         quotePath(getTableName(table)) +
         ' default values' +
-        compileReturningClause(returning),
+        clauses.returning(returning),
       values: context.values,
     }
   }
@@ -201,7 +201,7 @@ function compileInsertManyOperation(
       quotedColumns.join(', ') +
       ') values ' +
       valueSets.join(', ') +
-      compileReturningClause(returning),
+      clauses.returning(returning),
     values: context.values,
   }
 }
@@ -251,7 +251,7 @@ function compileUpsertOperation(
       insertPlaceholders.join(', ') +
       ')' +
       onConflictClause +
-      compileReturningClause(operation.returning),
+      clauses.returning(operation.returning),
     values: context.values,
   }
 }
@@ -494,18 +494,6 @@ function isAsciiLetter(char: string): boolean {
 function isAsciiDigit(char: string): boolean {
   let code = char.charCodeAt(0)
   return code >= 48 && code <= 57
-}
-
-function compileReturningClause(returning: '*' | string[] | undefined): string {
-  if (!returning) {
-    return ''
-  }
-
-  if (returning === '*') {
-    return ' returning *'
-  }
-
-  return ' returning ' + returning.map((column) => quotePath(column)).join(', ')
 }
 
 function quoteIdentifier(value: string): string {

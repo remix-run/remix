@@ -92,6 +92,12 @@ export interface SqlClauseCompiler {
    */
   offset(offset: number | undefined, context: SqlCompileContext): string
   /**
+   * Compiles a ` returning ...` clause, or `''` when `returning` is undefined.
+   * @param returning `'*'` or the columns to return.
+   * @returns The SQL clause text.
+   */
+  returning(returning: '*' | string[] | undefined): string
+  /**
    * Compiles a single predicate expression.
    * @param predicate Predicate to compile.
    * @param context Compile context for the current statement.
@@ -253,6 +259,13 @@ export function createSqlClauseCompiler(dialect: SqlClauseDialect): SqlClauseCom
     },
     offset(offset, context) {
       return offset === undefined ? '' : ' offset ' + dialect.bindValue(context, offset)
+    },
+    returning(returning) {
+      if (!returning) {
+        return ''
+      }
+
+      return ' returning ' + (returning === '*' ? '*' : returning.map(quote).join(', '))
     },
     predicate: compilePredicate,
   }

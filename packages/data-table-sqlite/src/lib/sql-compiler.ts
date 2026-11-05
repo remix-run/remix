@@ -99,7 +99,7 @@ export function compileSqliteOperation(operation: DataManipulationOperation): Sq
           )
           .join(', ') +
         clauses.where(operation.where, context) +
-        compileReturningClause(operation.returning),
+        clauses.returning(operation.returning),
       values: context.values,
     }
   }
@@ -110,7 +110,7 @@ export function compileSqliteOperation(operation: DataManipulationOperation): Sq
         'delete from ' +
         quotePath(getTableName(operation.table)) +
         clauses.where(operation.where, context) +
-        compileReturningClause(operation.returning),
+        clauses.returning(operation.returning),
       values: context.values,
     }
   }
@@ -136,7 +136,7 @@ function compileInsertOperation(
         'insert into ' +
         quotePath(getTableName(table)) +
         ' default values' +
-        compileReturningClause(returning),
+        clauses.returning(returning),
       values: context.values,
     }
   }
@@ -150,7 +150,7 @@ function compileInsertOperation(
       ') values (' +
       columns.map((column) => pushValue(context, values[column])).join(', ') +
       ')' +
-      compileReturningClause(returning),
+      clauses.returning(returning),
     values: context.values,
   }
 }
@@ -176,7 +176,7 @@ function compileInsertManyOperation(
         'insert into ' +
         quotePath(getTableName(table)) +
         ' default values' +
-        compileReturningClause(returning),
+        clauses.returning(returning),
       values: context.values,
     }
   }
@@ -201,7 +201,7 @@ function compileInsertManyOperation(
             ')',
         )
         .join(', ') +
-      compileReturningClause(returning),
+      clauses.returning(returning),
     values: context.values,
   }
 }
@@ -250,21 +250,9 @@ function compileUpsertOperation(
       insertValues +
       ')' +
       conflictClause +
-      compileReturningClause(operation.returning),
+      clauses.returning(operation.returning),
     values: context.values,
   }
-}
-
-function compileReturningClause(returning: '*' | string[] | undefined): string {
-  if (!returning) {
-    return ''
-  }
-
-  if (returning === '*') {
-    return ' returning *'
-  }
-
-  return ' returning ' + returning.map((column) => quotePath(column)).join(', ')
 }
 
 function quoteIdentifier(value: string): string {

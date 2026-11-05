@@ -51,6 +51,7 @@ describe('createSqlClauseCompiler', () => {
     assert.equal(clauses.orderBy([]), '')
     assert.equal(clauses.limit(undefined, context), '')
     assert.equal(clauses.offset(undefined, context), '')
+    assert.equal(clauses.returning(undefined), '')
     assert.equal(clauses.predicate(and(), context), '1 = 1')
     assert.equal(clauses.predicate(or(), context), '1 = 0')
   })
@@ -65,5 +66,10 @@ describe('createSqlClauseCompiler', () => {
 
     assert.equal(sql, ' from "accounts" order by "accounts"."email" DESC limit $1 offset $2')
     assert.deepEqual(context.values, [10, 20])
+  })
+
+  it('compiles returning clauses', () => {
+    assert.equal(clauses.returning('*'), ' returning *')
+    assert.equal(clauses.returning(['id', 'accounts.email']), ' returning "id", "accounts"."email"')
   })
 })
