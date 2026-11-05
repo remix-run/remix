@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Assert, Equal } from './utils.ts'
-import type { Handle, RemixNode } from '../runtime/component.ts'
+import type { Handle, RemixNode } from '../lib/component.ts'
 import { createMixin, on, ref, unsafeHTML } from '../index.ts'
 
 import type { Dispatched, MixInput, MixinDescriptor, MixinHandle, Props } from '../index.ts'

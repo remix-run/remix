@@ -2,25 +2,25 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 
-import type { Handle } from '../runtime/component.ts'
-import { clientEntry } from '../runtime/client-entries.ts'
+import type { Handle } from '../lib/component.ts'
+import { clientEntry } from '../lib/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
   Frame,
   publishFrameTemplate,
   reloadFrameForNavigation,
-} from '../runtime/frame.ts'
-import { NamedFrameRegistry } from '../runtime/frame-runtime.ts'
-import type { LoadModule, ResolveFrameOptions } from '../runtime/frame-runtime.ts'
-import { jsx } from '../runtime/core/vnode.ts'
-import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
-import { resetNonceManager } from '../runtime/nonce.ts'
-import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
-import { createScheduler } from '../runtime/scheduler.ts'
-import { appendFlushMarker } from '../runtime/stream-protocol.ts'
-import { ImportMap, renderToString, renderToStream } from '../server/stream.ts'
-import { createStyleManager } from '../style/index.ts'
+} from '../lib/frame.ts'
+import { NamedFrameRegistry } from '../lib/frame-runtime.ts'
+import type { LoadModule, ResolveFrameOptions } from '../lib/frame-runtime.ts'
+import { jsx } from '../lib/core/vnode.ts'
+import { resetDocumentImportMapManager } from '../lib/import-map-manager.ts'
+import { resetNonceManager } from '../lib/nonce.ts'
+import { getDocumentModulePreloader } from '../lib/module-preloader.ts'
+import { createScheduler } from '../lib/scheduler.ts'
+import { appendFlushMarker } from '../lib/stream-protocol.ts'
+import { ImportMap, renderToString, renderToStream } from '../lib/server/stream.ts'
+import { createStyleManager } from '../lib/style/stylesheet.ts'
 import { drain, withResolvers } from './utils.ts'
 
 const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'

@@ -1,10 +1,10 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { invariant } from '../runtime/invariant.ts'
-import { diffNodes } from '../runtime/diff-dom.ts'
-import type { FrameContext } from '../runtime/frame.ts'
-import { setClientEntryBoundaryOwner } from '../runtime/client-entry-boundary.ts'
-import type { ClientEntryIdentity } from '../runtime/client-entry-boundary.ts'
+import { invariant } from '../lib/invariant.ts'
+import { diffNodes } from '../lib/diff-dom.ts'
+import type { FrameContext } from '../lib/frame.ts'
+import { setClientEntryBoundaryOwner } from '../lib/client-entry-boundary.ts'
+import type { ClientEntryIdentity } from '../lib/client-entry-boundary.ts'
 
 function attachClientEntryOwner(
   marker: Comment,

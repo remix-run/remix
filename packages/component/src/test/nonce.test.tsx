@@ -2,9 +2,9 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 
-import { clientEntry } from '../runtime/client-entries.ts'
-import { Frame } from '../runtime/frame.ts'
-import { ImportMap, renderToStream } from '../server/stream.ts'
+import { clientEntry } from '../lib/client-entries.ts'
+import { Frame } from '../lib/frame.ts'
+import { ImportMap, renderToStream } from '../lib/server/stream.ts'
 import { drain, renderNonceDocument } from './utils.ts'
 
 describe('CSP nonces', () => {
@@ -166,7 +166,7 @@ async function renderLateEntryUnderCsp(t: TestContext, importMapNonce?: string) 
       },
     }),
   )
-  let runHref = new URL('../runtime/run.ts', import.meta.url).href
+  let runHref = new URL('../lib/run.ts', import.meta.url).href
   let completionMessage = crypto.randomUUID()
   let bootstrap = `
     import { run } from ${JSON.stringify(runHref)}

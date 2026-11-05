@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { normalizeCssValue, compileStyleClass } from '../style/style.ts'
+import { normalizeCssValue, compileStyleClass } from '../lib/style/style.ts'
 
 describe('compileStyleClass', () => {
   it('returns class selectors and css text', () => {

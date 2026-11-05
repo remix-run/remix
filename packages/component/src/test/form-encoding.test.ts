@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { formDataToPlainText, formDataToSearchParams } from '../runtime/form-encoding.ts'
+import { formDataToPlainText, formDataToSearchParams } from '../lib/form-encoding.ts'
 
 function createFormData(): FormData {
   let formData = new FormData()

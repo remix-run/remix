@@ -1,10 +1,10 @@
-import { createMixin, renderMixinElement } from '../runtime/mixins/mixin.ts'
-import type { MixinFactory, MixinType } from '../runtime/mixins/mixin.ts'
-import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
-import type { ElementProps } from '../runtime/core/vnode.ts'
-import { invariant } from '../runtime/invariant.ts'
-import { isMixinDescriptor } from '../runtime/core/mix.ts'
-import { compileStyleClass } from '../style/index.ts'
+import { createMixin, renderMixinElement } from './mixin.ts'
+import type { MixinFactory, MixinType } from './mixin.ts'
+import type { MixinDescriptor } from './mixin.ts'
+import type { ElementProps } from '../core/vnode.ts'
+import { invariant } from '../invariant.ts'
+import { isMixinDescriptor } from '../core/mix.ts'
+import { compileStyleClass } from '../style/style.ts'
 import type { CSSProps } from '../style/style.ts'
 
 type StyleEntry = { selector: string; css: string }

@@ -9,7 +9,7 @@ import {
   shouldStringifyBooleanAttribute,
   styleValueToCss,
 } from './attributes.ts'
-import { camelToKebab } from '../../style/style.ts'
+import { camelToKebab } from '../style/style.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 

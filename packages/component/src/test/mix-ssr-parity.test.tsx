@@ -1,11 +1,11 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import type { RemixNode } from '../runtime/component.ts'
+import type { RemixNode } from '../lib/component.ts'
 import { createMixin, on, unsafeHTML } from '../index.ts'
 import type { MixinDescriptor } from '../index.ts'
-import { createRoot } from '../runtime/vdom.ts'
-import { renderToStream, renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { createRoot } from '../lib/vdom.ts'
+import { renderToStream, renderToString } from '../lib/server/stream.ts'
+import { invariant } from '../lib/invariant.ts'
 import { drain } from './utils.ts'
 
 function getClientAttributes(element: RemixNode): Record<string, string> {

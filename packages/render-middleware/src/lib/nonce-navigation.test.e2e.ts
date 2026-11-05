@@ -132,7 +132,7 @@ async function createNavigationFixture(t: TestContext, mode: 'enforced' | 'repor
     fingerprint: false,
   })
   t.after(() => assets.close())
-  let entry = await assets.getScriptEntry('packages/component/src/runtime/run.ts')
+  let entry = await assets.getScriptEntry('packages/component/src/lib/run.ts')
   let reports = 0
   let scriptRequests: string[] = []
   let lateFrame = Promise.withResolvers<void>()

@@ -455,7 +455,7 @@ export * from '@remix-run/component'
 
 ```ts
 // @remix-run/component/dist/index.js
-export { css } from './style/css-mixin.js'
+export { css } from './lib/mixins/css-mixin.js'
 // ...other exports
 ```
 
@@ -463,7 +463,7 @@ After optimization, the served `entry.ts` module imports the binding directly fr
 
 ```ts
 // entry.ts
-import { css } from '/assets/npm/@remix-run/component/dist/style/css-mixin.js'
+import { css } from '/assets/npm/@remix-run/component/dist/lib/mixins/css-mixin.js'
 ```
 
 ## Script Options

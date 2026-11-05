@@ -1,20 +1,15 @@
 /// <reference types="dom-navigation" preserve="true" />
 
 // -- Roots --
-export { run } from './runtime/run.ts'
-export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
-export type { ComponentErrorEvent } from './runtime/component.ts'
+export { run } from './lib/run.ts'
+export type { AppRuntime, AppRuntimeEventMap, RunInit } from './lib/run.ts'
+export type { ComponentErrorEvent } from './lib/component.ts'
 
-export { createRoot, createRangeRoot, createScheduler } from './runtime/vdom.ts'
-export type {
-  VirtualRoot,
-  VirtualRootEventMap,
-  VirtualRootOptions,
-  Scheduler,
-} from './runtime/vdom.ts'
+export { createRoot, createRangeRoot, createScheduler } from './lib/vdom.ts'
+export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } from './lib/vdom.ts'
 
 // -- Client Entries --
-export { clientEntry } from './runtime/client-entries.ts'
+export { clientEntry } from './lib/client-entries.ts'
 export type {
   SerializablePrimitive,
   SerializableObject,
@@ -22,11 +17,11 @@ export type {
   SerializableValue,
   SerializableProps,
   EntryComponent,
-} from './runtime/client-entries.ts'
+} from './lib/client-entries.ts'
 
 // -- Components --
-export { Fragment } from './runtime/component.ts'
-export { Frame } from './runtime/frame.ts'
+export { Fragment } from './lib/component.ts'
+export { Frame } from './lib/frame.ts'
 export type {
   Task,
   Handle,
@@ -36,12 +31,12 @@ export type {
   FrameHandle,
   FrameReloadOptions,
   FrameProps,
-} from './runtime/component.ts'
-export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './runtime/frame-runtime.ts'
-export { spaResponse } from './runtime/spa-response.ts'
+} from './lib/component.ts'
+export type { LoadModule, ResolveFrame, ResolveFrameOptions } from './lib/frame-runtime.ts'
+export { spaResponse } from './lib/spa-response.ts'
 
 // -- Elements/JSX/Props --
-export { createElement } from './runtime/create-element.ts'
+export { createElement } from './lib/create-element.ts'
 export type {
   ElementType,
   ElementProps,
@@ -49,11 +44,11 @@ export type {
   Renderable,
   RemixNode,
   Props,
-} from './runtime/core/vnode.ts'
-export type { HostProps, LayoutAnimationConfig } from './runtime/dom.ts'
-export { unsafeHTML } from './runtime/unsafe-html.ts'
-export type { UnsafeHTML } from './runtime/unsafe-html.ts'
-export { createMixin } from './runtime/mixins/mixin.ts'
+} from './lib/core/vnode.ts'
+export type { HostProps, LayoutAnimationConfig } from './lib/dom.ts'
+export { unsafeHTML } from './lib/unsafe-html.ts'
+export type { UnsafeHTML } from './lib/unsafe-html.ts'
+export { createMixin } from './lib/mixins/mixin.ts'
 export type {
   MixinDescriptor,
   MixinFactory,
@@ -62,19 +57,19 @@ export type {
   MixinType,
   MixInput,
   MixValue,
-} from './runtime/mixins/mixin.ts'
-export { TypedEventTarget } from './runtime/component.ts'
-export type { Dispatched } from './runtime/event-types.ts'
-export { on } from './runtime/mixins/on-mixin.ts'
-export { link } from './runtime/mixins/link-mixin.ts'
-export { ref } from './runtime/mixins/ref-mixin.ts'
-export type { RefCallback } from './runtime/mixins/ref-mixin.ts'
-export { attrs } from './runtime/mixins/attrs-mixin.ts'
-export { css } from './style/css-mixin.ts'
-export type { CSSMixinDescriptor } from './style/css-mixin.ts'
+} from './lib/mixins/mixin.ts'
+export { TypedEventTarget } from './lib/component.ts'
+export type { Dispatched } from './lib/event-types.ts'
+export { on } from './lib/mixins/on-mixin.ts'
+export { link } from './lib/mixins/link-mixin.ts'
+export { ref } from './lib/mixins/ref-mixin.ts'
+export type { RefCallback } from './lib/mixins/ref-mixin.ts'
+export { attrs } from './lib/mixins/attrs-mixin.ts'
+export { css } from './lib/mixins/css-mixin.ts'
+export type { CSSMixinDescriptor } from './lib/mixins/css-mixin.ts'
 
 // -- Navigation --
-export { navigate, updateUrl } from './runtime/navigation.ts'
-export type { NavigationOptions, UpdateUrlOptions } from './runtime/navigation.ts'
-export { prefetch } from './runtime/prefetch.ts'
-export type { PrefetchFrame, PrefetchOptions } from './runtime/prefetch.ts'
+export { navigate, updateUrl } from './lib/navigation.ts'
+export type { NavigationOptions, UpdateUrlOptions } from './lib/navigation.ts'
+export { prefetch } from './lib/prefetch.ts'
+export type { PrefetchFrame, PrefetchOptions } from './lib/prefetch.ts'

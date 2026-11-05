@@ -1,2 +1,2 @@
-export { render } from './runtime/render.ts'
-export type { RenderOptions, RenderResult } from './runtime/render.ts'
+export { render } from './lib/render.ts'
+export type { RenderOptions, RenderResult } from './lib/render.ts'

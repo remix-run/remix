@@ -2,9 +2,9 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 
-import { Frame } from '../runtime/frame.ts'
-import { invariant } from '../runtime/invariant.ts'
-import { renderToStream, renderToString } from '../server/stream.ts'
+import { Frame } from '../lib/frame.ts'
+import { invariant } from '../lib/invariant.ts'
+import { renderToStream, renderToString } from '../lib/server/stream.ts'
 import { drain, renderNonceDocument } from './utils.ts'
 
 describe('CSP frame navigation', () => {
@@ -115,9 +115,9 @@ async function navigateUnderCsp(
       }),
     ).text()
   }
-  let runHref = new URL('../runtime/run.ts', import.meta.url).href
-  let frameHref = new URL('../runtime/frame.ts', import.meta.url).href
-  let jsxHref = new URL('../runtime/core/vnode.ts', import.meta.url).href
+  let runHref = new URL('../lib/run.ts', import.meta.url).href
+  let frameHref = new URL('../lib/frame.ts', import.meta.url).href
+  let jsxHref = new URL('../lib/core/vnode.ts', import.meta.url).href
   let message = crypto.randomUUID()
   let responseHeaders =
     options.responseCsp === false

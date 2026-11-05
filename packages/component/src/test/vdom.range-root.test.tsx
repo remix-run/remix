@@ -1,8 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import type { Handle } from '../runtime/component.ts'
-import { createRangeRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
+import type { Handle } from '../lib/component.ts'
+import { createRangeRoot } from '../lib/vdom.ts'
+import { invariant } from '../lib/invariant.ts'
 import { on } from '../index.ts'
 
 describe('createRangeRoot', () => {

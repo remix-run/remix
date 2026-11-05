@@ -1,9 +1,9 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { link } from '../index.ts'
-import { createRoot } from '../runtime/vdom.ts'
-import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { createRoot } from '../lib/vdom.ts'
+import { renderToString } from '../lib/server/stream.ts'
+import { invariant } from '../lib/invariant.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement

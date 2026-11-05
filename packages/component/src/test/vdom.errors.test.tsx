@@ -1,8 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { createRoot } from '../runtime/vdom.ts'
+import { createRoot } from '../lib/vdom.ts'
 import { on } from '../index.ts'
-import type { Handle } from '../runtime/component.ts'
+import type { Handle } from '../lib/component.ts'
 
 describe('vdom error handling', () => {
   describe('root event forwarding', () => {

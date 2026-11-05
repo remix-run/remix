@@ -1,4 +1,4 @@
-import { camelToKebab, normalizeCssValue } from '../../style/style.ts'
+import { camelToKebab, normalizeCssValue } from '../style/style.ts'
 import { normalizeSvgAttribute } from '../svg-attributes.ts'
 import type { ElementProps } from './vnode.ts'
 

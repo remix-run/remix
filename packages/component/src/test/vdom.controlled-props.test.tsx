@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import type { Handle } from '../runtime/component.ts'
-import { createRoot } from '../runtime/vdom.ts'
+import type { Handle } from '../lib/component.ts'
+import { createRoot } from '../lib/vdom.ts'
 import { on } from '../index.ts'
 
 // Synthetic per-character `type` against an <input>. Mirrors what a real

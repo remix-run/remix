@@ -53,11 +53,11 @@ import {
   isHydrationEnd,
   isHydrationStart,
 } from './diff-dom.ts'
-import { createStyleManager } from '../style/index.ts'
-import type { StyleManager } from '../style/index.ts'
-import { css } from '../style/css-mixin.ts'
+import { createStyleManager } from './style/stylesheet.ts'
+import type { StyleManager } from './style/stylesheet.ts'
+import { css } from './mixins/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
-import type { CSSProps } from '../style/style.ts'
+import type { CSSProps } from './style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER } from './stream-protocol.ts'
 import type { FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader } from './module-preloader.ts'

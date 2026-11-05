@@ -1,8 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { createRoot } from '../runtime/vdom.ts'
-import type { Handle } from '../runtime/component.ts'
-import { ref } from '../runtime/mixins/ref-mixin.ts'
+import { createRoot } from '../lib/vdom.ts'
+import type { Handle } from '../lib/component.ts'
+import { ref } from '../lib/mixins/ref-mixin.ts'
 
 describe('vnode rendering', () => {
   describe('ref', () => {

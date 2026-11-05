@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
+import { getDocumentModulePreloader } from '../lib/module-preloader.ts'
 
 describe('module preloader', () => {
   it('observes server-rendered preloads and removes framework-owned elements after loading', () => {

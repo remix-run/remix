@@ -5,12 +5,12 @@ import type {
   Key,
   RemixNode,
   RenderFn,
-} from '../runtime/component.ts'
-import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
-import type { ElementFunction } from '../runtime/element-function.ts'
-import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
-import { isEntry } from '../runtime/client-entries.ts'
-import type { EntryComponent } from '../runtime/client-entries.ts'
+} from '../component.ts'
+import type { ElementType, ElementProps, Props, RemixElement } from '../core/vnode.ts'
+import type { ElementFunction } from '../element-function.ts'
+import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../component.ts'
+import { isEntry } from '../client-entries.ts'
+import type { EntryComponent } from '../client-entries.ts'
 import {
   FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
   SELF_CLOSING_TAGS,
@@ -19,25 +19,21 @@ import {
   sanitizeUrlAttribute,
   serializeStyleObject,
   shouldStringifyBooleanAttribute,
-} from '../runtime/core/attributes.ts'
+} from '../core/attributes.ts'
 import {
   appendFlushMarker,
   DOCUMENT_NONCE_META_NAME,
   FRAME_TEMPLATE_END_MARKER,
   stripFlushMarkers,
-} from '../runtime/stream-protocol.ts'
-import type { FlushKind } from '../runtime/stream-protocol.ts'
-import {
-  composeMixedProps,
-  isBrowserOnlyMixinDescriptor,
-  isMixinDescriptor,
-} from '../runtime/core/mix.ts'
+} from '../stream-protocol.ts'
+import type { FlushKind } from '../stream-protocol.ts'
+import { composeMixedProps, isBrowserOnlyMixinDescriptor, isMixinDescriptor } from '../core/mix.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
-import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
-import { invariant } from '../runtime/invariant.ts'
-import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
-import { createRemixElement, isRemixElement } from '../runtime/core/vnode.ts'
-import { ESCAPED_OBJECT, SERIALIZATION_TAGS } from '../runtime/props-serialization.ts'
+import { isCSSMixinDescriptor } from '../mixins/css-mixin.ts'
+import { invariant } from '../invariant.ts'
+import { normalizeUnsafeHTMLProps } from '../unsafe-html.ts'
+import { createRemixElement, isRemixElement } from '../core/vnode.ts'
+import { ESCAPED_OBJECT, SERIALIZATION_TAGS } from '../props-serialization.ts'
 
 interface VNode {
   type: ElementType

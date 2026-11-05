@@ -412,7 +412,7 @@ describe('on mixin', () => {
 
 // Types for type inference testing ----------------------------------------------------------------
 
-declare const ACCORDION_CHANGE_EVENT: 'remix/component::src/runtime/mixins/on-mixin.test.tsx::accordion-change'
+declare const ACCORDION_CHANGE_EVENT: 'remix/component::src/lib/mixins/on-mixin.test.tsx::accordion-change'
 
 type AccordionChangeEvent = Event & {
   accordionType: 'single' | 'multiple'

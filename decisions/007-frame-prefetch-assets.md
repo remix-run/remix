@@ -24,7 +24,7 @@ We chose to ship `data-rmx-prefetch="intent"` and `data-rmx-prefetch="viewport"`
 
 Both automatic triggers check `navigator.connection` before starting work. They skip prefetching when Save-Data is enabled or the effective connection type is `slow-2g` or `2g`, avoiding speculative transfers when the visitor requests reduced data usage or has a slow connection. Browsers without this information retain normal prefetching. Skipped links remain eligible for a later trigger if settings improve; changing connection settings alone does not trigger work or cancel pending requests. Imperative `prefetch()` calls remain under application control and bypass this check.
 
-Viewport support lives in `packages/component/src/runtime/prefetch.ts` and uses the same frame-navigation eligibility checks as intent links. One `IntersectionObserver` tracks visibility, and one `MutationObserver` registers links inserted or changed by streaming, frame navigation, or client rendering. Each mounted link triggers once for its current normalized frame source and target. Leaving and reentering view does not trigger again; a source or target change or a later mount makes the link eligible again. This tracking retains no responses. Runtime disposal disconnects both observers, and browsers without `IntersectionObserver` skip viewport prefetching.
+Viewport support lives in `packages/component/src/lib/prefetch.ts` and uses the same frame-navigation eligibility checks as intent links. One `IntersectionObserver` tracks visibility, and one `MutationObserver` registers links inserted or changed by streaming, frame navigation, or client rendering. Each mounted link triggers once for its current normalized frame source and target. Leaving and reentering view does not trigger again; a source or target change or a later mount makes the link eligible again. This tracking retains no responses. Runtime disposal disconnects both observers, and browsers without `IntersectionObserver` skip viewport prefetching.
 
 Both triggers support `data-rmx-target` and `data-rmx-src`. A named-frame link prefetches its source override, or `href` when no override is present, and sends the selected frame name. The browser navigation destination remains `href`. Both URLs must be same-origin, and the named frame must be mounted when the trigger runs; a missing target would fall back to document navigation, so its frame response is not prefetched. Without a nonempty target, a valid source override is ignored, matching top-frame navigation. Downloads, explicit document navigations, and links opening another browsing context remain excluded. Untargeted requests skip the current page; named-frame sources can use its URL because their target selects different content. `prefetch(src, { target })` provides the same request context imperatively, and `run({ prefetch })` receives that context as an optional second argument.
 
@@ -45,7 +45,7 @@ We chose option 4 because it adds the missing asset discovery without making the
 
 ## How HTML discovery works
 
-The default implementation lives alongside intent, viewport, and eligibility handling in `packages/component/src/runtime/prefetch.ts`. Applications can replace the loading strategy with an override. Only the shared set of pending asset links lives in `frame.ts`, so frame reconciliation can preserve those links without importing the prefetch runtime.
+The default implementation lives alongside intent, viewport, and eligibility handling in `packages/component/src/lib/prefetch.ts`. Applications can replace the loading strategy with an override. Only the shared set of pending asset links lives in `frame.ts`, so frame reconciliation can preserve those links without importing the prefetch runtime.
 
 1. Normalize the same-origin frame source and make a GET with `priority: 'low'` and the normal frame headers, `Accept: text/html` and `X-Remix-Frame: true`, plus `X-Remix-Target` for named frames. Use ordinary fetch caching behavior.
 2. Read a successful HTML response into a detached `<template>`. Resolve asset URLs against the final response URL after redirects, honoring its first `<base href>`.
@@ -125,7 +125,7 @@ We considered both an injected `options.defaultResolveFrame()` callback and an e
 
 The same reasoning applies to exporting `defaultPrefetch`. A cache-first resolver or a prefetch wrapper for filtering or logging could justify helper exports later. Calling the public `prefetch()` function from a custom prefetch hook would recurse, so composition would need access to the default implementation if that use case arises.
 
-The private resolver and its form-encoding helpers remain in `packages/component/src/runtime/run.ts`. There is no separate `runtime/default-resolve-frame.ts` module or additional resolver plumbing.
+The private resolver and its form-encoding helpers remain in `packages/component/src/lib/run.ts`. There is no separate `lib/default-resolve-frame.ts` module or additional resolver plumbing.
 
 ## When to revisit
 

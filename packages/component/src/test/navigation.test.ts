@@ -1,12 +1,12 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
-import { navigate, startNavigationListener } from '../runtime/navigation.ts'
-import type { FrameHandle } from '../runtime/component.ts'
-import type { ResolveFrameOptions } from '../runtime/frame-runtime.ts'
+import { navigate, startNavigationListener } from '../lib/navigation.ts'
+import type { FrameHandle } from '../lib/component.ts'
+import type { ResolveFrameOptions } from '../lib/frame-runtime.ts'
 import { withResolvers } from './utils.ts'
-import { reloadDocument } from '../runtime/frame.ts'
-import { run } from '../runtime/run.ts'
+import { reloadDocument } from '../lib/frame.ts'
+import { run } from '../lib/run.ts'
 
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
 
