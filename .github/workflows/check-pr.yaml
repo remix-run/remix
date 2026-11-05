@@ -302,48 +302,23 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
-      - name: Check for browser workspace changes
-        id: changes
-        shell: bash
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          # Other changes get full WebKit coverage on main.
-          run=false
-          while IFS= read -r -d '' config; do
-            workspace="${config%/*}"
-            if ! git diff --quiet --no-renames "$PR_BASE_SHA...$PR_HEAD_SHA" -- "$workspace"; then
-              run=true
-              break
-            fi
-          done < <(
-            git ls-files -z -- '*/playwright.config.ts' '*/playwright.config.js'
-            # Removed configs still identify a browser-tested workspace.
-            git diff --name-only --no-renames --diff-filter=D -z "$PR_BASE_SHA...$PR_HEAD_SHA" -- \
-              '*/playwright.config.ts' '*/playwright.config.js'
-          )
-          echo "run=$run" >> "$GITHUB_OUTPUT"
-
       - name: Install pnpm
-        if: steps.changes.outputs.run == 'true'
         uses: pnpm/action-setup@v6
 
       - name: Install Node.js
-        if: steps.changes.outputs.run == 'true'
         uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
-        if: steps.changes.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Install WebKit
-        if: steps.changes.outputs.run == 'true'
         run: pnpm --filter @remix-run/component exec playwright install webkit
 
       - name: Run WebKit tests
-        if: steps.changes.outputs.run == 'true'
-        run: pnpm test:browser
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm test:browser "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
   lint:
     name: Lint

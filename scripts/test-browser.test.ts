@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -18,20 +18,52 @@ function createFixture() {
     fs.mkdirSync(dir, { recursive: true })
     fs.writeFileSync(
       path.join(dir, 'package.json'),
-      JSON.stringify({ name, private: true, scripts: script ? { test: script } : {} }),
+      JSON.stringify({
+        name: name.replaceAll(' ', '-'),
+        private: true,
+        scripts: script ? { test: script } : {},
+      }),
     )
     if (config) fs.writeFileSync(path.join(dir, config), '')
   }
 
-  function run() {
-    return spawnSync(process.execPath, [SCRIPT_PATH], {
+  function run(refs: string[] = []) {
+    return spawnSync(process.execPath, [SCRIPT_PATH, ...refs], {
       cwd: root,
       encoding: 'utf8',
       env: { ...process.env, CI: 'true' },
     })
   }
 
-  return { root, workspace, run, cleanup: () => fs.rmSync(root, { recursive: true, force: true }) }
+  function git(...args: string[]) {
+    return execFileSync('git', ['-C', root, '-c', 'core.hooksPath=/dev/null', ...args], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+    }).trim()
+  }
+
+  function commit() {
+    git('add', '.')
+    git(
+      '-c',
+      'user.name=Fixture',
+      '-c',
+      'user.email=fixture@example.test',
+      'commit',
+      '-qm',
+      'fixture',
+    )
+    return git('rev-parse', 'HEAD')
+  }
+
+  return {
+    root,
+    workspace,
+    run,
+    git,
+    commit,
+    cleanup: () => fs.rmSync(root, { recursive: true, force: true }),
+  }
 }
 
 describe('test:browser', () => {
@@ -68,6 +100,55 @@ describe('test:browser', () => {
       assert.notEqual(fixture.run().status, 0)
       fixture.workspace('failing-browser', 'playwright.config.ts', 'node -e "process.exit(2)"')
       assert.notEqual(fixture.run().status, 0)
+    } finally {
+      fixture.cleanup()
+    }
+  })
+
+  it('skips unchanged browser workspaces and unrelated changes when refs are provided', () => {
+    let fixture = createFixture()
+    try {
+      fixture.git('init', '-q')
+      fixture.workspace('browser', 'playwright.config.ts', 'node -e "process.exit(2)"')
+      fixture.workspace('native', undefined, 'node -e "process.exit(2)"')
+      let base = fixture.commit()
+      assert.equal(fixture.run([base, base]).status, 0)
+
+      fs.writeFileSync(path.join(fixture.root, 'packages/native/changed.ts'), '')
+      fs.writeFileSync(path.join(fixture.root, 'playwright.config.ts'), '')
+      let head = fixture.commit()
+      let result = fixture.run([base, head])
+      assert.equal(result.status, 0, result.stdout + result.stderr)
+      assert.ok(result.stdout.includes('No browser workspace changes'))
+      assert.notEqual(fixture.run(['missing-ref', head]).status, 0)
+      assert.notEqual(fixture.run([base]).status, 0)
+    } finally {
+      fixture.cleanup()
+    }
+  })
+
+  it('runs the entire browser suite when a configured workspace changes or loses its config', () => {
+    let fixture = createFixture()
+    try {
+      fixture.git('init', '-q')
+      fixture.workspace('changed browser', 'playwright.config.js', 'node -e "process.exit(0)"')
+      fixture.workspace(
+        'unchanged-browser',
+        'playwright.config.ts',
+        'node -e "console.log(\'unchanged browser ran\'); process.exit(2)"',
+      )
+      let base = fixture.commit()
+      fs.writeFileSync(path.join(fixture.root, 'packages/changed browser/changed.ts'), '')
+      let head = fixture.commit()
+      let result = fixture.run([base, head])
+      assert.notEqual(result.status, 0)
+      assert.ok(result.stdout.includes('unchanged browser ran'), result.stdout + result.stderr)
+
+      fs.unlinkSync(path.join(fixture.root, 'packages/changed browser/playwright.config.js'))
+      head = fixture.commit()
+      result = fixture.run([base, head])
+      assert.notEqual(result.status, 0)
+      assert.ok(result.stdout.includes('unchanged browser ran'), result.stdout + result.stderr)
     } finally {
       fixture.cleanup()
     }
