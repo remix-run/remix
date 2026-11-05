@@ -1,5 +1,4 @@
 import { registerHooks } from 'node:module'
-import { isAbsolute, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js/source-map.js'
 
@@ -12,7 +11,6 @@ markNodeHmrParentProcess()
 const runtime = installNodeHmrRuntime({
   browserEventUrl: getBrowserEventUrl(),
 })
-const rootPath = getRegisterUrlParam('rootPath')
 let invalidatedUrlTimestamps = new Map<string, number>()
 let updateQueue = Promise.resolve()
 
@@ -30,8 +28,7 @@ registerHooks({
     if (!shouldTransformModule(url, result.format, source)) return result
 
     let canonicalUrl = getCanonicalUrl(url)
-    let transformedSource = transformSource(canonicalUrl, source)
-    transformedSource = rewriteInvalidatedImports(canonicalUrl, transformedSource)
+    let transformedSource = rewriteInvalidatedImports(canonicalUrl, source)
     let hmrAnalysis = analyzeNodeHmrSource(transformedSource)
 
     if (!hmrAnalysis.usesImportMetaHot) {
@@ -133,18 +130,6 @@ function getAcceptedDependencyExpression(hmr: NodeHmrAnalysis): string {
     .join(', ')}]`
 }
 
-function transformSource(url: string, source: string): string {
-  let filePath = fileURLToPath(url)
-  if (
-    url.includes('/node_modules/') ||
-    (rootPath !== undefined && !isInsideRoot(filePath, rootPath))
-  ) {
-    return source
-  }
-
-  return source
-}
-
 function rewriteInvalidatedImports(url: string, source: string): string {
   if (invalidatedUrlTimestamps.size === 0) return source
 
@@ -216,11 +201,6 @@ function getCanonicalUrl(url: string): string {
 
 function addTimestampQuery(specifier: string, timestamp: number): string {
   return `${specifier}${specifier.includes('?') ? '&' : '?'}t=${timestamp}`
-}
-
-function isInsideRoot(filePath: string, root: string): boolean {
-  let relativePath = relative(root, filePath)
-  return relativePath === '' || (!relativePath.startsWith('..') && !isAbsolute(relativePath))
 }
 
 function getLineCount(source: string): number {

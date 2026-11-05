@@ -280,7 +280,6 @@ export function createHmrSupervisor(options: {
         entryArgs: options.entryArgs,
         nodeArgs: options.nodeArgs,
         registerPath: options.registerPath,
-        rootPath: options.cwd,
       }),
       {
         cwd: options.cwd,
@@ -1182,14 +1181,10 @@ export function buildChildProcessArgs(options: {
   entryArgs: Array<string>
   nodeArgs: Array<string>
   registerPath: string
-  rootPath?: string
 }): Array<string> {
   let registerUrl = pathToFileURL(options.registerPath)
   if (options.browserEventUrl !== undefined) {
     registerUrl.searchParams.set('browserEventUrl', options.browserEventUrl)
-  }
-  if (options.rootPath !== undefined) {
-    registerUrl.searchParams.set('rootPath', options.rootPath)
   }
 
   return [
