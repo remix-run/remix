@@ -1,1 +1,1 @@
-Multiple selects accept arrays in `value` and `defaultValue`. Selected options render on the server and stay consistent through hydration, user interaction, and native form reset. Use an empty array to represent no selections.
+Multiple selects accept arrays in `value` and `defaultValue`. Use `value={[]}` to clear the current selection, or `defaultValue={[]}` to initialize a select with no selections.

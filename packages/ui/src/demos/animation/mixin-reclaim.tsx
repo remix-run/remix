@@ -29,6 +29,11 @@ export function MixinReclaim(handle: Handle) {
       <div mix={[css({ display: 'flex', gap: 8 })]}>
         <button
           mix={[
+            on('click', () => {
+              clearInterruptTimer()
+              visible = true
+              handle.update()
+            }),
             css({
               flex: 1,
               padding: '8px 10px',
@@ -39,17 +44,13 @@ export function MixinReclaim(handle: Handle) {
               cursor: 'pointer',
               '&:hover': { backgroundColor: '#059669' },
             }),
-            on('click', () => {
-              clearInterruptTimer()
-              visible = true
-              handle.update()
-            }),
           ]}
         >
           Show
         </button>
         <button
           mix={[
+            on('click', scheduleInterrupt),
             css({
               flex: 1,
               padding: '8px 10px',
@@ -60,7 +61,6 @@ export function MixinReclaim(handle: Handle) {
               cursor: 'pointer',
               '&:hover': { backgroundColor: '#d97706' },
             }),
-            on('click', scheduleInterrupt),
           ]}
         >
           Interrupt
@@ -69,6 +69,11 @@ export function MixinReclaim(handle: Handle) {
 
       <button
         mix={[
+          on('click', () => {
+            clearInterruptTimer()
+            visible = false
+            handle.update()
+          }),
           css({
             padding: '8px 10px',
             border: 'none',
@@ -77,11 +82,6 @@ export function MixinReclaim(handle: Handle) {
             color: 'white',
             cursor: 'pointer',
             '&:hover': { backgroundColor: '#dc2626' },
-          }),
-          on('click', () => {
-            clearInterruptTimer()
-            visible = false
-            handle.update()
           }),
         ]}
       >

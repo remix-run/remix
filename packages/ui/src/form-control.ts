@@ -169,11 +169,21 @@ export const fieldValidity = createMixin<
             mountedControl.checked = nextProps.defaultChecked
           } else if (
             mountedControl instanceof HTMLSelectElement &&
-            Array.isArray(nextProps.defaultValue) &&
+            (Array.isArray(nextProps.defaultValue) || typeof nextProps.defaultValue === 'string') &&
             nextProps.value === undefined
           ) {
-            for (let option of mountedControl.options)
-              option.selected = nextProps.defaultValue.includes(option.value)
+            let values = new Set(
+              Array.isArray(nextProps.defaultValue)
+                ? nextProps.defaultValue
+                : [nextProps.defaultValue],
+            )
+            let matched = false
+            for (let option of mountedControl.options) {
+              let selected = values.has(option.value) && (mountedControl.multiple || !matched)
+              option.defaultSelected = selected
+              option.selected = selected
+              if (selected) matched = true
+            }
           } else if (typeof nextProps.defaultValue === 'string' && nextProps.value === undefined) {
             mountedControl.value = nextProps.defaultValue
           }

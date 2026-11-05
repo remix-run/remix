@@ -3,10 +3,23 @@ export function getSelectValues(value: unknown): Set<string> | undefined {
   return new Set(Array.isArray(value) ? value.map(String) : [String(value)])
 }
 
-export function setSelectDefaultValue(select: HTMLSelectElement, value: unknown): void {
+export function setSelectDefaultValue(
+  select: HTMLSelectElement,
+  value: unknown,
+  scalar = !select.multiple,
+): void {
   let values = getSelectValues(value)
-  for (let option of select.options) {
-    option.defaultSelected = values?.has(option.value) ?? false
+  let options = Array.from(select.options)
+  let matched = false
+  for (let option of options) {
+    let selected = (values?.has(option.value) ?? false) && !(scalar && matched)
+    if (selected) matched = true
+    option.defaultSelected = selected
+    option.selected = selected
+  }
+  if (!select.multiple && !matched) {
+    let firstEnabled = options.find((option) => !option.disabled)
+    if (firstEnabled) firstEnabled.selected = true
   }
 }
 

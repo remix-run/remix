@@ -88,8 +88,7 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@types/dom-navigation": "^1.0.7",
-    "parse5": "^7.3.0"
+    "@types/dom-navigation": "^1.0.7"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

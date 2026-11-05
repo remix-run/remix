@@ -20,15 +20,36 @@ export const NumberPreview = clientEntry(
     })
 
     return () => (
-      <div mix={previewStyle}>
+      <div
+        mix={css({
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px',
+        })}
+      >
         <button
           type="button"
           disabled={!interactive}
           mix={[
-            buttonStyle,
             on('click', () => {
               value += 1_000
               handle.update()
+            }),
+            css({
+              minHeight: '36px',
+              padding: '4px 12px',
+              border: '1px solid currentColor',
+              borderRadius: '8px',
+              background: 'transparent',
+              color: 'inherit',
+              font: 'inherit',
+              cursor: 'pointer',
+              '&:focus-visible': {
+                outline: '2px solid light-dark(#0578be, #2dacf9)',
+                outlineOffset: '2px',
+              },
+              '&:disabled': { opacity: 0.5, cursor: 'default' },
             }),
           ]}
         >
@@ -41,26 +62,3 @@ export const NumberPreview = clientEntry(
     )
   },
 )
-
-const previewStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  flexWrap: 'wrap',
-  gap: '12px',
-})
-
-const buttonStyle = css({
-  minHeight: '36px',
-  padding: '4px 12px',
-  border: '1px solid currentColor',
-  borderRadius: '8px',
-  background: 'transparent',
-  color: 'inherit',
-  font: 'inherit',
-  cursor: 'pointer',
-  '&:focus-visible': {
-    outline: '2px solid light-dark(#0578be, #2dacf9)',
-    outlineOffset: '2px',
-  },
-  '&:disabled': { opacity: 0.5, cursor: 'default' },
-})
