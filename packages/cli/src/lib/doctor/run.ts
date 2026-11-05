@@ -171,7 +171,8 @@ async function collectDoctorReport(
   writeDoctorSuiteDetails(reporter, project.suite)
   progress?.writeSummaryGap()
 
-  if (hasWarningFindings(project.suite.findings)) {
+  let routeManifest = project.routeManifest
+  if (routeManifest == null || hasWarningFindings(project.suite.findings)) {
     let actionsSuite = createSkippedDoctorSuite('actions', 'Blocked by project warnings.')
     suites.push(actionsSuite)
     progress?.skip(actionsSuite.name, actionsSuite.reason)
@@ -190,8 +191,8 @@ async function collectDoctorReport(
 
   let actions = await runDoctorSuite(progress, 'actions', async () => {
     let controllerResult = await checkControllerConventions(
-      project.routeManifest!.appRoot,
-      project.routeManifest!.tree,
+      routeManifest.appRoot,
+      routeManifest.tree,
     )
     return { suite: controllerResult.suite }
   })
@@ -261,8 +262,8 @@ function writeDoctorReport(reporter: CommandReporter, report: DoctorReport): voi
   let warningCount = report.findings.filter((finding) => finding.severity === 'warn').length
   let adviceCount = report.findings.length - warningCount
 
-  if ((report.appliedFixes?.length ?? 0) > 0) {
-    let fixCount = report.appliedFixes!.length
+  let fixCount = report.appliedFixes?.length ?? 0
+  if (fixCount > 0) {
     reporter.out.line(`Applied ${fixCount} ${fixCount === 1 ? 'fix' : 'fixes'}.`)
   }
 
