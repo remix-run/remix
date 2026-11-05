@@ -1203,28 +1203,25 @@ if (form.reportValidity()) {
 | `submitter` | The actual submit button, or `null` when there is no submitter.                                                                          |
 | `finished`  | Resolves with a `FrameReloadOutcome` containing `error` and `aborted` when the reload ends. Never rejects.                               |
 
-`await event.finished` returns `{ error: undefined, aborted: false }` after the content renders, `{ error, aborted: false }` on failure, or `{ error: undefined, aborted: true }` on cancellation, replacement, or frame removal. Failures carry an `Error`; other thrown values are wrapped in an `Error` with the original value as its `cause`. The promise returned by `frame.reload()` still rejects on failure.
+`await event.finished` always resolves with a `FrameReloadOutcome`:
 
-Frames inside a reloading frame reload with it, and their `reloadStart` has the same `src`, `method`, `encType`, `formData`, `element`, and `submitter`. These describe the initiating reload, so a component in a nested frame can follow a form submission that reloads the page. Each descendant's `finished` tracks its own reload completion.
+| Outcome                               | `error`     | `aborted` |
+| ------------------------------------- | ----------- | --------- |
+| Content rendered                      | `undefined` | `false`   |
+| Reload failed                         | `Error`     | `false`   |
+| Cancelled, replaced, or frame removed | `undefined` | `true`    |
 
-A newer reload replaces the one in progress without a `reloadComplete` for it, so listeners that need to know how their own reload ended follow `finished`. `reloadStart` suits components that follow every reload of their frame, or a form they don't render. A component that renders the form follows its submissions with `onSubmission()`.
+Failures preserve the thrown `Error`; other thrown values are wrapped in an `Error` with the original value as its `cause`. The promise returned by `frame.reload()` still rejects on failure.
+
+Rendering a validation response counts as a completed reload. The response carries its field errors.
+
+Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `onSubmission()` for a form's own submissions.
 
 ### Following a Form Submission
 
-`onSubmission(handler, captureBoolean?)` listens for Remix form submissions with a typed `FormSubmissionEvent` and the host element inferred as `event.currentTarget`. It uses the same reentry and removal signals as `on()`.
+`onSubmission(handler, captureBoolean?)` follows form submissions that start Remix frame reloads. Its handler receives a typed `FormSubmissionEvent` (`rmx:submission`), with the host inferred as `event.currentTarget`. Listen on a submit button for its submissions, or on the form for all of them.
 
-When a form submission reloads a frame, the submit button receives an `rmx:submission` event after the target and descendant frames' `reloadStart` events, or the form does when no button submitted it. The event bubbles, so listen on a button for its own submissions, or on the form for all of them. It's a `FormSubmissionEvent` extending the DOM `SubmitEvent`, with the same `src`, `method`, `encType`, `formData`, `element`, `submitter`, and `finished` as the target frame's `reloadStart`. Both events share the same `FormData` object and `finished` promise.
-
-`element` identifies the owning form, and `submitter` identifies the actual submit button or is `null`. The DOM event's `target` is the button or form it was dispatched on; the frame event's `target` is the frame.
-
-If the submit button is outside its owning form, or was removed during submission, it receives a non-bubbling event and the form receives a separate bubbling event. Both carry the same request details, `element`, `submitter`, and `finished`. Bubbling listeners on ancestors receive the form's event once; capture listeners on shared ancestors can receive both events.
-
-- GET and POST submissions dispatch it, including `requestSubmit()` and `form.submit()`. For GET, `formData` and `encType` are `null` and the submitted entries are in `src`.
-- The event is noncancelable. Calling `preventDefault()` has no effect; cancel a submission in the native `submit` event. `stopPropagation()` still stops propagation.
-- Links, `navigate()`, `frame.reload()`, and forms that load a new document, such as those marked `data-rmx-document`, don't dispatch it.
-- The signal `onSubmission()` passes is aborted when the same element receives its next submission or is removed. When the submission removes what it submitted, such as a list item, listen on an ancestor that stays, such as the list: a removed form's handler would see its signal aborted and stop following the submission. Any other newer reload of the frame, such as a link's, resolves `finished` with `aborted: true` and no error.
-
-Render what the submission will change as soon as it starts, then let the response replace it:
+To display submitted values while a save is pending:
 
 ```tsx
 import { clientEntry, onSubmission } from 'remix/component'
@@ -1245,7 +1242,6 @@ export const TitleForm = clientEntry(
           failed = false
           handle.update()
           let { error } = await event.finished
-          // The form's next submission owns the state from here.
           if (signal.aborted) return
           submission = undefined
           failed = error !== undefined
@@ -1266,6 +1262,15 @@ export const TitleForm = clientEntry(
   },
 )
 ```
+
+The handler's signal aborts on the host's next submission or removal, so the check prevents stale updates. A cancelled reload resolves `finished` with no error, letting this example clear pending state without showing a failure. Check the result's `aborted` flag before success-only behavior, such as announcing “Saved!”. If submitting removes the form itself, listen on an ancestor that stays mounted.
+
+The event extends `SubmitEvent` and shares the [reload details](#following-a-reload), including the same `FormData` object and `finished` promise as the target frame's `reloadStart`. `element` is the owning form and `submitter` is the actual submit button or `null`.
+
+- Remix dispatches the event after the target and descendant frames' `reloadStart` events. It starts on the submit button and bubbles through the form, or starts on the form when there is no submitter, including `requestSubmit()` and `form.submit()` without one.
+- An external or detached submitter receives a non-bubbling event, followed by a separate bubbling event on its owning form. Capture listeners on shared ancestors can receive both; bubbling listeners receive the form's event once.
+- The event is noncancelable. Cancel through native `submit`; `stopPropagation()` still controls delivery of `rmx:submission`.
+- Links, `navigate()`, `frame.reload()`, and forms that load a new document don't dispatch it.
 
 ### Resolving Frames
 

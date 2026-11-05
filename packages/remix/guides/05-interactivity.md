@@ -1032,21 +1032,11 @@ output reads it. Set it in the submit handler before the request and clear it wh
 settles, as in the [enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough
 for disabled controls, pending labels, progress indicators, and duplicate-submission prevention.
 
-When Remix submits the form as a [frame navigation](#client-navigation), use `onSubmission()` to follow its
-`rmx:submission` event. Remix dispatches it on the submit button, or on the form when
-nothing submitted it, once the submission starts reloading the frame. It bubbles to the form. Its
-`element` is the owning form and its nullable `submitter` is the actual submit button. It shares
-`src`, `method`, `encType`, `formData`, and `finished` with the target frame's `reloadStart`.
-The `finished` promise resolves with `{ error, aborted }` when the reload ends. A rendered
-response has no error and `aborted: false`; failures carry an error, and cancellation or
-replacement sets `aborted: true` with no error. The signal `onSubmission()` passes is
-aborted when the same element receives its next submission, so only the latest handler updates
-state. [Add pending feedback](/forms-and-mutations/#add-pending-feedback) builds a save button this
-way.
-
-`rmx:submission` extends the DOM `SubmitEvent` with these reload details and is noncancelable. Cancel a
-submission in the native `submit` event. For GET submissions, `formData` and `encType` are `null`
-and `src` includes the submitted query.
+For forms Remix handles as [frame navigations](#client-navigation), use
+[`onSubmission()`](../src/component/README.md#following-a-form-submission) to follow a button's or form's own
+submissions. The handler receives the submitted `formData` and a `finished` promise that resolves
+with `{ error, aborted }`. [Add pending feedback](/forms-and-mutations/#add-pending-feedback) shows
+how to use it for a save button.
 
 Optimistic UI renders the expected result before the request completes. A hydrated form can render
 what it just submitted, and let the response replace it:
@@ -1072,9 +1062,7 @@ export const FavoriteForm = clientEntry(
             failed = false;
             handle.update();
             let { error } = await event.finished;
-            // A newer submission of this form owns the state from here.
             if (signal.aborted) return;
-            // The response's props now hold the saved value, or the old one after a failure.
             submitted = undefined;
             failed = error !== undefined;
             handle.update();
@@ -1091,6 +1079,12 @@ export const FavoriteForm = clientEntry(
   },
 );
 ```
+
+On success, `finished` resolves after the response renders and updates the component's props.
+Keep the submitted value as an override until then. Clearing it schedules another component render
+using those updated props. Failure or cancellation falls back to the current props, and only a
+failure carries an `error`. The handler's signal prevents an older submission, or a removed
+component, from updating state.
 
 Optimistic state works best for reversible, predictable changes such as toggles, reordering, and
 adding a known item. Wait for the response when the server chooses the final value, performs a
