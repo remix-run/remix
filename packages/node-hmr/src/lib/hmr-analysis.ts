@@ -22,7 +22,7 @@ export interface NodeHmrAcceptedDependency {
 const invalidAcceptMessage =
   'import.meta.hot.accept() can only accept a callback, a string literal, or an array of string literals.'
 
-export function analyzeNodeHmrSource(importerUrl: string, source: string): NodeHmrAnalysis {
+export function analyzeNodeHmrSource(source: string): NodeHmrAnalysis {
   if (!source.includes('import.meta.hot')) {
     return {
       acceptedDeps: [],

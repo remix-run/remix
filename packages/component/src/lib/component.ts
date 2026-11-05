@@ -1,6 +1,5 @@
 import type { ElementProps, ElementType, RemixNode, Renderable } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
-import type { Key } from './key.ts'
 
 /**
  * An `EventTarget` subclass with typed event maps.

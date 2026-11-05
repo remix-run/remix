@@ -32,7 +32,7 @@ registerHooks({
     let canonicalUrl = getCanonicalUrl(url)
     let transformedSource = transformSource(canonicalUrl, source)
     transformedSource = rewriteInvalidatedImports(canonicalUrl, transformedSource)
-    let hmrAnalysis = analyzeNodeHmrSource(canonicalUrl, transformedSource)
+    let hmrAnalysis = analyzeNodeHmrSource(transformedSource)
 
     if (!hmrAnalysis.usesImportMetaHot) {
       reportModuleUpdate(canonicalUrl, {
