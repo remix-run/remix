@@ -1,4 +1,5 @@
 import { getNonceManager } from './nonce.ts'
+import { formDataToPlainText, formDataToSearchParams } from './form-encoding.ts'
 import { createFrame, setAppFrames } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
@@ -83,27 +84,11 @@ function getRequestBody(options?: ResolveFrameOptions): {
   if (encType === 'multipart/form-data') return { body: formData }
 
   if (encType === 'text/plain') {
-    let body = ''
-    for (let [name, value] of formData) {
-      name = normalizeLineBreaks(name)
-      value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
-      body += `${name}=${value}\r\n`
-    }
-    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
+    let body = new Blob([formDataToPlainText(formData)], { type: 'text/plain' })
+    return { body, encType: 'text/plain' }
   }
 
-  let body = new URLSearchParams()
-  for (let [name, value] of formData) {
-    body.append(
-      normalizeLineBreaks(name),
-      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
-    )
-  }
-  return { body, encType: 'application/x-www-form-urlencoded' }
-}
-
-function normalizeLineBreaks(value: string): string {
-  return value.replace(/\r\n|\r|\n/g, '\r\n')
+  return { body: formDataToSearchParams(formData), encType: 'application/x-www-form-urlencoded' }
 }
 
 async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {

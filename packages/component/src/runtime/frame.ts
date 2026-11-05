@@ -1,5 +1,6 @@
 import { getNonceManager } from './nonce.ts'
 import type { ResourceNonces } from './nonce.ts'
+import { formDataToSearchParams } from './form-encoding.ts'
 import { jsx } from './core/vnode.ts'
 import {
   Fragment,
@@ -802,15 +803,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (formData) {
       if (method !== 'post') {
         let url = new URL(src, container.doc.baseURI)
-        let query = new URLSearchParams()
-        let normalizeNewlines = (value: string) => value.replace(/\r\n|\r|\n/g, '\r\n')
-        for (let [name, value] of formData) {
-          query.append(
-            normalizeNewlines(name),
-            normalizeNewlines(typeof value === 'string' ? value : value.name),
-          )
-        }
-        url.search = `?${query}`
+        url.search = `?${formDataToSearchParams(formData)}`
         src = url.href
         formData = undefined
       } else {
