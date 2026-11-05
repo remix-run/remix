@@ -6,15 +6,11 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const SCRIPT_PATH = fileURLToPath(new URL('./test-browser.sh', import.meta.url))
+const SCRIPT_PATH = fileURLToPath(new URL('./test-browser.ts', import.meta.url))
 
 function createFixture() {
   let root = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-test-browser-'))
-  fs.writeFileSync(
-    path.join(root, 'package.json'),
-    JSON.stringify({ private: true, scripts: { test: 'node -e "process.exit(2)"' } }),
-  )
-  fs.writeFileSync(path.join(root, 'playwright.config.ts'), '')
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ private: true }))
   fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n')
 
   function workspace(name: string, config?: string, script?: string) {
@@ -28,7 +24,7 @@ function createFixture() {
   }
 
   function run() {
-    return spawnSync('bash', [SCRIPT_PATH], {
+    return spawnSync(process.execPath, [SCRIPT_PATH], {
       cwd: root,
       encoding: 'utf8',
       env: { ...process.env, CI: 'true' },
