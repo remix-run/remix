@@ -245,7 +245,7 @@ export async function fetchJson<json>(
   fallbackError: string,
 ): Promise<json> {
   let response = await fetch(input, init)
-  let json = await readJson(response)
+  let json = await readJson(response, fallbackError)
 
   if (!response.ok || hasOAuthError(json)) {
     throw new Error(getOAuthErrorMessage(json, fallbackError))
@@ -288,7 +288,7 @@ async function exchangeOAuthTokens(
     },
     body: params,
   })
-  let json = await readJson(response)
+  let json = await readJson(response, options.fallbackError)
 
   if (!response.ok || hasOAuthError(json)) {
     throw new Error(getOAuthErrorMessage(json, options.fallbackError))
@@ -364,13 +364,18 @@ function parseScope(value: unknown): string[] | undefined {
     .filter((scope) => scope.length > 0)
 }
 
-async function readJson(response: Response): Promise<unknown> {
+async function readJson(response: Response, fallbackError: string): Promise<unknown> {
   let text = await response.text()
   if (text.length === 0) {
     return {}
   }
 
-  return JSON.parse(text)
+  try {
+    return JSON.parse(text)
+  } catch (error) {
+    let message = `${fallbackError} The provider responded with status ${response.status} and a non-JSON body.`
+    throw new Error(message, { cause: error })
+  }
 }
 
 function toURLString(value: string | URL): string {
