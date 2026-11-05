@@ -930,16 +930,14 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       }
 
       // Mixed asset type preloads need to be merged, so we merge in order of first asset type seen.
-      let preloadLayerGroupPromises = groupedAssetTypes.flatMap((assetType) => {
+      let preloadLayerGroupPromises = groupedAssetTypes.map((assetType) => {
         switch (assetType) {
           case 'script':
-            return scriptFiles.length > 0 ? [scriptCompiler.getPreloadLayers(scriptFiles)] : []
+            return scriptCompiler.getPreloadLayers(scriptFiles)
           case 'style':
-            return styleFiles.length > 0 ? [styleCompiler.getPreloadLayers(styleFiles)] : []
+            return styleCompiler.getPreloadLayers(styleFiles)
           case 'file':
-            return fileAssetFiles.length > 0
-              ? [getFilePreloadLayers(fileCompiler, fileAssetFiles)]
-              : []
+            return getFilePreloadLayers(fileCompiler, fileAssetFiles)
         }
       })
 
