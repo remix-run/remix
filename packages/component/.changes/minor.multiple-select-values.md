@@ -1,0 +1,1 @@
+Multiple selects accept arrays in `value` and `defaultValue`. Selected options render on the server and stay consistent through hydration, user interaction, and native form reset. Use an empty array to represent no selections.

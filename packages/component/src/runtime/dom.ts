@@ -3357,8 +3357,8 @@ export interface PartialSelectHTMLProps<
   autocomplete?: Trackable<string | undefined>
   /** The `autoComplete` HTML attribute. */
   autoComplete?: Trackable<string | undefined>
-  /** The `defaultValue` HTML attribute. */
-  defaultValue?: Trackable<string | number | undefined>
+  /** Initial selected value(s) and native reset defaults; arrays apply to multiple selects. */
+  defaultValue?: Trackable<string | number | ReadonlyArray<string | number> | undefined>
   /** The `disabled` HTML attribute. */
   disabled?: Trackable<boolean | undefined>
   /** The `form` HTML attribute. */
@@ -3369,8 +3369,8 @@ export interface PartialSelectHTMLProps<
   required?: Trackable<boolean | undefined>
   /** The `size` HTML attribute. */
   size?: Trackable<number | undefined>
-  /** The `value` HTML attribute. */
-  value?: Trackable<string | number | undefined>
+  /** Selected value(s); arrays apply to multiple selects. */
+  value?: Trackable<string | number | ReadonlyArray<string | number> | undefined>
 }
 
 export type SelectAriaRoles =

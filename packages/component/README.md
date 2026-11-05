@@ -404,6 +404,22 @@ function ArticleBody(handle: Handle<{ html: string }>) {
 
 When `innerHTML` is set, the element's `children` are ignored. `unsafeHTML()` marks the HTML as trusted but does not sanitize it, so only pass trusted or already-sanitized HTML.
 
+### Select values
+
+Use `value` to control a select or `defaultValue` to set its initial selection and native reset defaults. Multiple selects accept arrays:
+
+```tsx
+<select multiple defaultValue={['typescript', 'css']}>
+  <option value="typescript">TypeScript</option>
+  <option value="css">CSS</option>
+  <option value="html">HTML</option>
+</select>
+```
+
+Selections render into option markup on the server, including options inside components and optgroups. Updating `defaultValue` changes reset defaults while preserving live edits. An empty array clears all defaults; controlled `value={[]}` clears the current selection.
+
+A scalar controlled value selects the first matching option; arrays select every match. Options without an explicit value use their text, including text rendered with trusted `innerHTML`.
+
 ## Keys
 
 Give list items a `key` when a list can be reordered, filtered, or added to. Elements and components with matching keys are moved instead of recreated, so they keep:

@@ -4,6 +4,7 @@ import { createComponent, Fragment, FRAME_NODE } from './component.ts'
 import { getFrameRuntime, type FrameMountState } from './frame-runtime.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps } from './core/props.ts'
+import { setSelectDefaultValue, setSelectValue } from './core/select.ts'
 import { isMixinDescriptor } from './core/mix.ts'
 import {
   isEmptyChild,
@@ -514,6 +515,9 @@ function syncControlledReflection(node: CommittedHostNode, scheduler: Scheduler)
 
   state.hasControlledValue = canManageValue(node.type, node._dom) && props.value !== undefined
   state.controlledValue = props.value
+  if (state.hasControlledValue && node._dom instanceof HTMLSelectElement) {
+    setSelectValue(node._dom, props.value)
+  }
   state.hasControlledChecked =
     canReflectProperty(node._dom, 'checked') && props.checked !== undefined
   state.controlledChecked = props.checked
@@ -577,6 +581,10 @@ function readDomProp(element: Element, key: string): unknown {
 }
 
 function setPropertyReflection(element: Element, key: string, value: unknown): void {
+  if (key === 'value' && element instanceof HTMLSelectElement) {
+    setSelectValue(element, value)
+    return
+  }
   if (!canReflectProperty(element, key)) return
   element[key] = value == null ? '' : value
 }
@@ -957,6 +965,11 @@ function commitRetainedHostNode(
 }
 
 function setupHostNode(node: CommittedHostNode, scheduler: Scheduler): void {
+  let props = getHostProps(node)
+  if (props.defaultValue != null && node._dom instanceof HTMLSelectElement) {
+    setSelectDefaultValue(node._dom, props.defaultValue)
+  }
+
   syncDirectEventListeners(node)
   syncControlledReflection(node, scheduler)
 }

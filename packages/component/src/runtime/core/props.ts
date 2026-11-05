@@ -1,4 +1,5 @@
 import type { ElementProps } from './vnode.ts'
+import { setSelectDefaultValue, setSelectValue } from './select.ts'
 import {
   canUseProperty,
   getMergedClassName,
@@ -77,6 +78,9 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
       clearRuntimePropertyOnRemoval(dom, name)
     }
 
+    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) {
+      setSelectDefaultValue(dom, undefined)
+    }
     if (ns) dom.removeAttributeNS(ns, toLocalName(attr))
     else dom.removeAttribute(attr)
   }
@@ -91,6 +95,11 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
     let prevValue = curr[name]
     if (prevValue === nextValue) continue
+
+    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) {
+      setSelectDefaultValue(dom, nextValue)
+      continue
+    }
 
     if (name === 'style' && isStyleObject(nextValue)) {
       if (isStyleObject(prevValue)) {
@@ -109,6 +118,11 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolean): void {
   let { ns, attr } = normalizeAttributeName(name, isSvg)
   value = sanitizeUrlAttribute(dom.localName, attr, value)
+
+  if (name === 'value' && dom instanceof HTMLSelectElement) {
+    setSelectValue(dom, value)
+    return
+  }
 
   if (attr === 'style' && isStyleObject(value)) {
     patchStyleObject(dom, undefined, value)
