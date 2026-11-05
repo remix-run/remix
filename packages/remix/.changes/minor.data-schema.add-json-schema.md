@@ -1,0 +1,1 @@
+Add JSON Schema support to `remix/data-schema`. The new `remix/data-schema/json-schema` entrypoint exports `toJSONSchema()`, schemas implement the [Standard JSON Schema v1](https://standardschema.dev/json-schema) interface, and `schema.meta()` attaches a title, a description, or an explicit JSON Schema fragment.
