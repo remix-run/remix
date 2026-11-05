@@ -4,7 +4,6 @@ import { IfMatch } from '@remix-run/headers/if-match'
 import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 import { IfRange } from '@remix-run/headers/if-range'
 import { Range } from '@remix-run/headers/range'
-import type { RangeInit } from '@remix-run/headers/range'
 import { isCompressibleMimeType, mimeTypeToContentType } from '@remix-run/mime'
 
 /**

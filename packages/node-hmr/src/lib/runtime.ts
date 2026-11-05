@@ -1,6 +1,5 @@
 import { fileURLToPath } from 'node:url'
 
-import { sendHmrEventPayload } from './browser-events.ts'
 import type {
   BrowserHmrChannel,
   BrowserHmrEvent,

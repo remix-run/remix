@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import {
   get1000Rows,
   get10000Rows,
@@ -8,9 +8,8 @@ import {
   updatedEvery10thRow,
   buildData,
 } from '../shared.ts'
-import type { Benchmark, Row } from '../shared.ts'
+import type { Row } from '../shared.ts'
 import { render } from 'preact'
-import { act } from 'preact/test-utils'
 
 export const name = 'preact'
 

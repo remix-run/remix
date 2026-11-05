@@ -80,7 +80,7 @@ export function NewScheduleActionComponent(handle: Handle<{ csrfToken: string }>
       errorMessage = null
       submittedName = ''
       await handle.update()
-    } catch (error) {
+    } catch {
       if (handle.signal.aborted) return
 
       errorMessage = 'Could not create schedule. Please try again.'

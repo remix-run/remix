@@ -15,7 +15,7 @@ export interface ImportMapJson {
 export const asURL = (url: string): string | undefined => {
   try {
     if (url.indexOf(':') !== -1) return new URL(url).href
-  } catch (_) {}
+  } catch {}
 }
 
 export const resolveUrl = (relUrl: string, parentUrl: string): string =>

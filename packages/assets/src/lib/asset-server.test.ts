@@ -30,9 +30,6 @@ import { defineFileTransform } from './files/config.ts'
 import { hashContent } from './fingerprint.ts'
 import type { ModuleLoader } from './loaders.ts'
 
-type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
-
-const packageRoot = path.resolve(import.meta.dirname, '../..')
 const virtualStorePackageDir =
   '@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package'
 const virtualStorePackageUrlPath =

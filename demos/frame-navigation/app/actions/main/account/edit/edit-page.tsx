@@ -3,7 +3,7 @@ import { css } from 'remix/component'
 
 import type { Account } from '../../../../data/account.ts'
 import { accountConstraints } from '../../../../data/account.ts'
-import { frames, routes } from '../../../../routes.ts'
+import { routes } from '../../../../routes.ts'
 
 export type AccountFormErrors = Partial<Record<keyof Account, string>>
 

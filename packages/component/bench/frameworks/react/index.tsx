@@ -8,9 +8,8 @@ import {
   updatedEvery10thRow,
   buildData,
 } from '../shared.ts'
-import type { Benchmark, Row } from '../shared.ts'
-import { createRoot, type Root } from 'react-dom/client'
-import { flushSync } from 'react-dom'
+import type { Row } from '../shared.ts'
+import { createRoot } from 'react-dom/client'
 
 export const name = 'react'
 

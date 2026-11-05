@@ -7,7 +7,7 @@ import {
   updatedEvery10thRow,
   buildData,
 } from '../shared.ts'
-import type { Benchmark, Row } from '../shared.ts'
+import type { Row } from '../shared.ts'
 import { createRoot, on } from '@remix-run/component'
 import type { Handle } from '@remix-run/component'
 

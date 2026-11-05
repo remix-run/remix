@@ -430,7 +430,7 @@ function matchShiftedHeadUnits(diff: SiblingDiff): void {
 // Patches each matched current unit from its next unit and returns the units
 // that will occupy each next position.
 function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUnit[] {
-  let { parent, currentNodes, nextNodes, currentUnits, nextUnits, matchIndexForNext } = diff
+  let { parent, nextNodes, currentUnits, nextUnits, matchIndexForNext } = diff
   let committed = new Array<SiblingUnit>(nextUnits.length)
 
   for (let i = 0; i < nextUnits.length; i++) {

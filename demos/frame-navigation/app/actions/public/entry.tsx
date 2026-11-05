@@ -8,8 +8,6 @@ import {
 
 import { animateEntrance, spring } from '@remix-run/ui/animation'
 
-import { routes } from '../../routes.ts'
-
 const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await importModule(moduleUrl)

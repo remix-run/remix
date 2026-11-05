@@ -296,7 +296,7 @@ function insertBlockGroup(
     .filter((block) => block.dayOfWeek === insertedGroup.dayOfWeek)
     .sort((left, right) => left.startMinute - right.startMinute)
   let otherBlocks = blocks.filter((block) => block.dayOfWeek !== insertedGroup.dayOfWeek)
-  let naturalIndex = groupInsertionIndex(targetDayBlocks, insertedGroup, originalGroup)
+  let naturalIndex = insertionIndex(targetDayBlocks, insertedGroup, originalGroup)
   let candidates: Array<{
     blocks: ScheduleLayoutBlock[]
     movedCount: number
@@ -341,35 +341,17 @@ function insertBlockGroup(
 
 function insertionIndex(
   blocks: ScheduleLayoutBlock[],
-  insertedBlock: ScheduleLayoutBlock,
-  originalBlock: ScheduleLayoutBlock | null,
+  inserted: ScheduleBlockGroup,
+  original: ScheduleBlockGroup | null,
 ) {
-  if (originalBlock?.dayOfWeek === insertedBlock.dayOfWeek) {
-    let movingDown = insertedBlock.startMinute > originalBlock.startMinute
-    let edge = movingDown ? insertedBlock.endMinute : insertedBlock.startMinute
-    let index = blocks.findIndex((block) =>
-      movingDown ? edge <= blockCenter(block) : edge <= blockCenter(block),
-    )
-    return index === -1 ? blocks.length : index
-  }
-
-  let index = blocks.findIndex((block) => insertedBlock.startMinute <= block.startMinute)
-  return index === -1 ? blocks.length : index
-}
-
-function groupInsertionIndex(
-  blocks: ScheduleLayoutBlock[],
-  insertedGroup: ScheduleBlockGroup,
-  originalGroup: ScheduleBlockGroup,
-) {
-  if (originalGroup.dayOfWeek === insertedGroup.dayOfWeek) {
-    let movingDown = insertedGroup.startMinute > originalGroup.startMinute
-    let edge = movingDown ? insertedGroup.endMinute : insertedGroup.startMinute
+  if (original?.dayOfWeek === inserted.dayOfWeek) {
+    let movingDown = inserted.startMinute > original.startMinute
+    let edge = movingDown ? inserted.endMinute : inserted.startMinute
     let index = blocks.findIndex((block) => edge <= blockCenter(block))
     return index === -1 ? blocks.length : index
   }
 
-  let index = blocks.findIndex((block) => insertedGroup.startMinute <= block.startMinute)
+  let index = blocks.findIndex((block) => inserted.startMinute <= block.startMinute)
   return index === -1 ? blocks.length : index
 }
 
@@ -525,15 +507,6 @@ function getChanges(beforeBlocks: ScheduleLayoutBlock[], afterBlocks: ScheduleLa
   return changes
 }
 
-function moveDirection(
-  movedBlock: ScheduleLayoutBlock,
-  primaryCollision: ScheduleLayoutBlock,
-): ReflowDirection {
-  if (movedBlock.startMinute <= primaryCollision.startMinute) return 'down'
-  if (movedBlock.endMinute >= primaryCollision.endMinute) return 'up'
-  return blockCenter(movedBlock) <= blockCenter(primaryCollision) ? 'down' : 'up'
-}
-
 function getCollisions(blocks: ScheduleLayoutBlock[], anchorBlock: ScheduleLayoutBlock) {
   return blocks.filter(
     (block) =>
@@ -616,13 +589,6 @@ function sameBlockPlacement(left: ScheduleLayoutBlock, right: ScheduleLayoutBloc
 
 function blocksOverlap(left: ScheduleLayoutBlock, right: ScheduleLayoutBlock) {
   return left.startMinute < right.endMinute && left.endMinute > right.startMinute
-}
-
-function overlapMinutes(left: ScheduleLayoutBlock, right: ScheduleLayoutBlock) {
-  return Math.max(
-    0,
-    Math.min(left.endMinute, right.endMinute) - Math.max(left.startMinute, right.startMinute),
-  )
 }
 
 function moveBlockTo(block: ScheduleLayoutBlock, startMinute: number) {

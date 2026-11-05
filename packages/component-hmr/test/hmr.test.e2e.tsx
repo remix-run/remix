@@ -2810,15 +2810,6 @@ function waitForNavigation(
   return result
 }
 
-async function ignoreAbortedNavigation(navigation: Promise<unknown>): Promise<void> {
-  try {
-    await navigation
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('net::ERR_ABORTED')) return
-    throw error
-  }
-}
-
 function monitorLocalRequestFailures(
   page: TestPage,
   baseUrl: string,
@@ -2940,11 +2931,6 @@ function waitForStylesheetResponse(
     },
     { timeout: options.timeout ?? 5000 },
   )
-}
-
-async function get(page: TestPage, pathname: string): Promise<void> {
-  let response = await page.request.get(pathname)
-  assert.ok(response.ok())
 }
 
 async function waitFor(

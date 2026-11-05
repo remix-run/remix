@@ -17,12 +17,7 @@ import { parseAssetTransformInvocations } from './config.ts'
 import { createTransformCacheKey } from './cache.ts'
 import type { FileCache } from './file-cache.ts'
 import { createSourceFileStore } from './store.ts'
-import type {
-  FileSnapshot,
-  SourceFileMetadata,
-  SourceFileRecord,
-  SourceFileStore,
-} from './store.ts'
+import type { FileSnapshot, SourceFileRecord, SourceFileStore } from './store.ts'
 import { isPathNotFoundError } from '../fs-errors.ts'
 
 type EmittedFile = {
@@ -297,13 +292,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         sourceFileInFlightByCacheKey.delete(cacheKey)
       }
     }
-  }
-
-  async function getOrCreateSourceFileMetadata(
-    record: SourceFileRecord,
-  ): Promise<SourceFileMetadata> {
-    if (record.metadata) return record.metadata
-    return toEmittedFileMetadata(await getOrCreateSourceFile(record))
   }
 
   async function getOrCreateTransformedFile(

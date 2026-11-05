@@ -262,7 +262,7 @@ const pushSourceURL = (
   let sourceUrl = load.S!.slice(urlStart, urlEnd)
   try {
     sourceUrl = new URL(sourceUrl, load.r).href
-  } catch (e) {}
+  } catch {}
   pushStringTo(load, urlStart, dynamicImportEndStack)
   resolvedSource += sourceUrl
   lastIndex = urlEnd

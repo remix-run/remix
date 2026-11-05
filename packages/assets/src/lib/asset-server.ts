@@ -351,7 +351,7 @@ export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
   close(): Promise<void>
 }
 
-type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
+type ResolvedAssetServerOptions = {
   allowFiles: readonly string[]
   allowPackages?: readonly string[]
   basePath: string
@@ -1138,7 +1138,7 @@ function flattenPreloadLayers(preloadLayers: readonly (readonly string[])[]): st
   return preloadLayers.flatMap((layer) => layer)
 }
 
-async function getFilePreloadLayers<transforms extends AssetRequestTransformMap>(
+async function getFilePreloadLayers(
   fileCompiler: FileCompiler | null,
   filePaths: readonly string[],
 ): Promise<string[][]> {
@@ -1169,7 +1169,7 @@ function defaultErrorHandler(error: unknown): void {
 
 function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
   options: AssetServerCreateOptions<transforms>,
-): ResolvedAssetServerOptions<transforms> {
+): ResolvedAssetServerOptions {
   let rootDir = normalizeFilePath(fs.realpathSync(path.resolve(options.rootDir ?? process.cwd())))
   let basePath = normalizeBasePath(options.basePath)
   let scriptOptions = options.scripts ?? {}

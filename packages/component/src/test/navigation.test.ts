@@ -2422,7 +2422,7 @@ describe('form navigation', () => {
     }
   })
 
-  it('leaves invalid forms to native constraint validation', (t) => {
+  it('leaves invalid forms to native constraint validation', () => {
     let submit = mock.fn()
     let form = document.createElement('form')
     form.addEventListener('submit', submit)

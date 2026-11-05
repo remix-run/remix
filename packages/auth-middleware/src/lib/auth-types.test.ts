@@ -148,7 +148,6 @@ const adminController = createController(routes.admin, {
 
 type SessionIdentity = { kind: 'session'; id: string }
 const sessionAuthMiddleware = createMiddleware(requireAuth<SessionIdentity>())
-type SessionAuthContext = MiddlewareContext<typeof sessionAuthMiddleware>
 
 const sessionAction = createAction('/session/:id', {
   middleware: sessionAuthMiddleware,
