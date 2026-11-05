@@ -1378,7 +1378,7 @@ type NodeHmrTestServer = {
   close(): Promise<void>
   output: string
   readyCount: number
-  waitForOutput(pattern: RegExp, options?: { fromIndex?: number }): Promise<void>
+  waitForOutput(pattern: RegExp): Promise<void>
   waitForReady(index: number): Promise<{ pid: number; port: number }>
 }
 
@@ -1873,9 +1873,7 @@ async function editClientField(
   let temporaryPath = `${filePath}.tmp`
   // node-hmr logs the change after marking itself not ready, and the proxy holds requests until
   // the runner is ready again, so responses after this log reflect the edit.
-  let observed = server.waitForOutput(/(hmr update|restart) .*app\/ClientField\.tsx/, {
-    fromIndex: server.output.length,
-  })
+  let observed = server.waitForOutput(/(hmr update|restart) .*app\/ClientField\.tsx/)
   await fs.writeFile(temporaryPath, getClientFieldSource({ child: text, clientEntry }))
   await fs.rename(temporaryPath, filePath)
   await observed
@@ -1931,9 +1929,10 @@ function getNodeHmrProxyDevSource(): string {
     'let proxyFetch = createFetchProxy("http://127.0.0.1:0", {',
     '  xForwardedHeaders: true,',
     '  async fetch(input, init) {',
-    '    let childPort = await readPort(process.env.CHILD_PORT_FILE)',
     '    let url = new URL(String(input))',
-    '    url.port = String(childPort)',
+    '    // The child writes this file before it reports ready, and createHmrReadyFetch only calls',
+    '    // this after the runner is ready.',
+    '    url.port = await readFile(process.env.CHILD_PORT_FILE, "utf8")',
     '    return await fetch(url, init)',
     '  },',
     '})',
@@ -1968,14 +1967,6 @@ function getNodeHmrProxyDevSource(): string {
     '  server.closeAllConnections()',
     '  server.close()',
     '  if (process.connected) process.disconnect()',
-    '}',
-    '',
-    '// The child writes this file before it reports ready, and createHmrReadyFetch only calls',
-    '// this after the runner is ready.',
-    'async function readPort(filePath) {',
-    '  let port = Number(await readFile(filePath, "utf8"))',
-    '  if (!(port > 0)) throw new Error(`Invalid child port in ${filePath}`)',
-    '  return port',
     '}',
     '',
     'function formatError(error) {',
@@ -2422,6 +2413,7 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
       ...env,
       NODE_ENV: 'development',
       CHILD_PORT_FILE: childPortFile,
+      NO_COLOR: '1',
       TEST_SERVER_PORT: '0',
     },
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
@@ -2488,45 +2480,33 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     get readyCount() {
       return readyEvents.length
     },
-    waitForOutput(pattern, options = {}) {
-      let fromIndex = options.fromIndex ?? 0
+    waitForOutput(pattern) {
+      let fromIndex = processOutput.length
       return waitForState(
-        () => pattern.test(stripAnsi(processOutput.slice(fromIndex))),
+        () => pattern.test(processOutput.slice(fromIndex)),
         `Timed out waiting for fixture output matching ${pattern}`,
       )
     },
     waitForReady: waitForReadyEvent,
   }
 
-  // Resolves once `check()` passes after a process output or exit event. The timeout is only a
-  // failure bound.
-  function waitForState(check: () => boolean, timeoutMessage: string): Promise<void> {
-    let promise = new Promise<void>((resolve, reject) => {
-      let timeout = setTimeout(() => {
-        stateWaiters.delete(update)
-        reject(new Error(`${timeoutMessage}${getExitText()}\n${processOutput}`))
-      }, consoleMessageTimeout)
-
-      function update() {
-        if (check()) {
-          clearTimeout(timeout)
-          stateWaiters.delete(update)
-          resolve()
-          return
-        }
-        if (exit) {
-          clearTimeout(timeout)
-          stateWaiters.delete(update)
-          reject(new Error(`${timeoutMessage}${getExitText()}\n${processOutput}`))
-        }
-      }
-
-      stateWaiters.add(update)
-      update()
+  // Resolves once `check()` passes after process output, and rejects if the process exits first.
+  function waitForState(check: () => boolean, message: string): Promise<void> {
+    let { promise, resolve, reject } = Promise.withResolvers<void>()
+    let fail = () => reject(new Error(`${message}${getExitText()}\n${processOutput}`))
+    let update = () => {
+      if (check()) resolve()
+      else if (exit) fail()
+    }
+    let timeout = setTimeout(fail, consoleMessageTimeout)
+    stateWaiters.add(update)
+    update()
+    let result = promise.finally(() => {
+      clearTimeout(timeout)
+      stateWaiters.delete(update)
     })
-    // A triggering file write may fail before the test awaits this promise.
-    void promise.catch(() => {})
-    return promise
+    void result.catch(() => {})
+    return result
   }
 
   function getExitText(): string {
@@ -2553,10 +2533,6 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     assert.ok(event)
     return event
   }
-}
-
-function stripAnsi(text: string): string {
-  return text.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g'), '')
 }
 
 async function handleRequest(

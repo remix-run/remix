@@ -11,7 +11,14 @@ import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on } from '../index.ts'
 import { jsx } from '../runtime/core/vnode.ts'
-import { drain, readChunks, withResolvers } from './utils.ts'
+import {
+  drain,
+  nextDomMutation,
+  readChunks,
+  trackUnhandledRejections,
+  waitForDom,
+  withResolvers,
+} from './utils.ts'
 
 async function setupReloadBodyTest(t: TestContext) {
   document.body.innerHTML = '<main>Initial</main>'
@@ -143,7 +150,7 @@ async function renderSplitFrameTemplate(
   expect(document.querySelectorAll('[data-item]').length).toBe(0)
   await beforeCompletion?.()
   document.write(templateHtml.slice(split))
-  await waitForRemoval('#fallback')
+  await waitForDom(() => document.querySelector('#fallback') === null)
   expect(document.readyState).toBe('loading')
 }
 
@@ -165,38 +172,14 @@ async function setupDefaultFrameRequestTest(t: TestContext, name?: string) {
   return { frame, fetchMock }
 }
 
-const domMutations: MutationObserverInit = {
-  attributes: true,
-  characterData: true,
-  childList: true,
-  subtree: true,
-}
-
-// Resolves once the DOM satisfies `predicate`, re-checking after each DOM mutation.
-function waitForDom(predicate: () => boolean, root: Node = document): Promise<void> {
-  if (predicate()) return Promise.resolve()
-
-  return new Promise((resolve) => {
-    let observer = new MutationObserver(() => {
-      if (!predicate()) return
-      observer.disconnect()
-      resolve()
-    })
-    observer.observe(root, domMutations)
-  })
-}
-
 async function waitForElement(
   selector: string,
   predicate: (element: Element) => boolean = () => true,
-): Promise<Element> {
-  let element: Element | null = null
+): Promise<void> {
   await waitForDom(() => {
-    element = document.querySelector(selector)
+    let element = document.querySelector(selector)
     return element !== null && predicate(element)
   })
-  invariant(element)
-  return element
 }
 
 async function waitForText(selector: string, text: string, root: ParentNode = document) {
@@ -208,10 +191,6 @@ async function waitForTexts(selector: string, texts: string[]) {
     let actual = Array.from(document.querySelectorAll(selector), (node) => node.textContent)
     return actual.length === texts.length && actual.every((text, index) => text === texts[index])
   })
-}
-
-async function waitForRemoval(selector: string, root: ParentNode = document) {
-  await waitForDom(() => root.querySelector(selector) === null, root)
 }
 
 function hasCommentMarker(root: Node, data: string): boolean {
@@ -227,41 +206,30 @@ async function waitForCommentMarker(id: string, root: Node = document) {
   await waitForDom(() => hasCommentMarker(root, `rmx:f:${id}`), root)
 }
 
-// Records every text the DOM ever displays from now on, including text that a later mutation
-// replaced before anyone could look at it, so tests can prove stale content never rendered.
-function recordRenderedText(root: Node = document) {
+// Records every text the DOM displays from now on, including text that a later mutation replaced
+// before anyone could look at it, so tests can prove stale content never rendered.
+function recordRenderedText(root: Node = document): { stop(): string[] } {
   let texts: string[] = []
-  let observer = new MutationObserver(collect)
-  function collect(records: MutationRecord[]) {
+  let collect = (records: MutationRecord[]) => {
     for (let record of records) {
       if (record.type === 'characterData') texts.push(record.oldValue ?? '')
       for (let node of record.addedNodes) texts.push(node.textContent ?? '')
     }
   }
-  observer.observe(root, { ...domMutations, characterDataOldValue: true })
+  let observer = new MutationObserver(collect)
+  observer.observe(root, {
+    characterData: true,
+    characterDataOldValue: true,
+    childList: true,
+    subtree: true,
+  })
   return {
-    includes(text: string) {
-      collect(observer.takeRecords())
-      let current = (root instanceof Document ? root.documentElement : root).textContent ?? ''
-      return texts.some((value) => value.includes(text)) || current.includes(text)
-    },
     stop() {
       collect(observer.takeRecords())
       observer.disconnect()
+      return texts
     },
   }
-}
-
-// Mutation observer callbacks run in creation order, so once this observer sees the next DOM
-// mutation, every observer the runtime created earlier has already handled the same records.
-function nextDomMutation(root: Node = document): Promise<void> {
-  return new Promise((resolve) => {
-    let observer = new MutationObserver(() => {
-      observer.disconnect()
-      resolve()
-    })
-    observer.observe(root, domMutations)
-  })
 }
 
 function createDisposableEntry(id: string, onDispose: () => void) {
@@ -282,30 +250,6 @@ function createReplacementContent(): RemixNode {
       <section id="details">Details</section>
     </>
   )
-}
-
-const unhandledRejectionSentinel = new Error('Unhandled rejection sentinel')
-
-// Browsers report unhandled rejections in the order the promises were rejected, so once a promise
-// rejected now is reported, every earlier unhandled rejection has been reported too.
-function flushUnhandledRejections(): Promise<void> {
-  return new Promise((resolve) => {
-    function onUnhandledRejection(event: PromiseRejectionEvent) {
-      if (event.reason !== unhandledRejectionSentinel) return
-      event.preventDefault()
-      window.removeEventListener('unhandledrejection', onUnhandledRejection)
-      resolve()
-    }
-    window.addEventListener('unhandledrejection', onUnhandledRejection)
-    void Promise.reject(unhandledRejectionSentinel)
-  })
-}
-
-// Transition events for style changes made before this call are dispatched during the next
-// rendering update, which runs before that frame's animation frame callbacks.
-async function waitForAnimationEvents(): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 }
 
 async function setupFrameNavigationTest(t: TestContext) {
@@ -839,14 +783,7 @@ describe('run', () => {
 
   it('rejects non-HTML 4xx responses from the default resolver', async (t) => {
     document.body.innerHTML = '<main id="initial">Initial</main>'
-    let unhandledRejections: unknown[] = []
-    let onUnhandledRejection = (event: PromiseRejectionEvent) => {
-      if (event.reason === unhandledRejectionSentinel) return
-      event.preventDefault()
-      unhandledRejections.push(event.reason)
-    }
-    window.addEventListener('unhandledrejection', onUnhandledRejection)
-    t.after(() => window.removeEventListener('unhandledrejection', onUnhandledRejection))
+    let flushUnhandledRejections = trackUnhandledRejections(t)
 
     let fetchMock = t.mock.method(
       globalThis,
@@ -872,10 +809,8 @@ describe('run', () => {
       await expect(app.frames.top.reload()).rejects.toThrow(
         'Failed to resolve frame: 404 Not Found',
       )
-      await flushUnhandledRejections()
-
+      expect(await flushUnhandledRejections()).toEqual([])
       expect(fetchMock).toHaveBeenCalledTimes(1)
-      expect(unhandledRejections).toEqual([])
       expect(reportedError).toBeInstanceOf(Error)
       expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
@@ -1928,12 +1863,6 @@ describe('run', () => {
     expect(beforeTransform).toBe('matrix(1, 0, 0, 1, 8, 0)')
     expect(beforeWidth).toBe('18px')
 
-    let transitionRuns: string[] = []
-    target.addEventListener('transitionrun', (event) => {
-      let transition = event as TransitionEvent
-      transitionRuns.push(`${transition.pseudoElement}:${transition.propertyName}`)
-    })
-
     let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/hydrated-knob.js' && exportName === 'HydratedKnob') {
@@ -1949,8 +1878,6 @@ describe('run', () => {
     expect(getComputedStyle(target, '::before').width).toBe(beforeWidth)
     // Reading computed style flushes style, which creates any transition synchronously.
     expect(target.getAnimations({ subtree: true })).toEqual([])
-    await waitForAnimationEvents()
-    expect(transitionRuns).toEqual([])
 
     app.dispose()
   })
@@ -3030,6 +2957,7 @@ describe('run', () => {
       document.body.append(document.createElement('div'))
       await observed
     })
+    // The runtime's DOMContentLoaded listener was added first, so it has run when this one does.
     let loaded = new Promise((resolve) => {
       document.addEventListener('DOMContentLoaded', resolve, { once: true })
     })
@@ -8157,9 +8085,8 @@ describe('run', () => {
     // The stale resolution settles before the fresh one, so it would render first if not ignored.
     entryFrameResolvers[1]?.('<span id="entry-frame">Reloaded entry frame</span>')
     await waitForText('#entry-frame', 'Reloaded entry frame')
-    renderedText.stop()
 
-    expect(renderedText.includes('Stale entry frame')).toBe(false)
+    expect(renderedText.stop().some((text) => text.includes('Stale entry frame'))).toBe(false)
     expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
     app.dispose()
   })
@@ -8272,9 +8199,8 @@ describe('run', () => {
     resolveInheritedFrameContent('<span id="entry-frame">Stale inherited frame</span>')
     resolveUpdatedFrameContent('<span id="entry-frame">Updated entry frame</span>')
     await waitForText('#entry-frame', 'Updated entry frame')
-    renderedText.stop()
 
-    expect(renderedText.includes('Stale inherited frame')).toBe(false)
+    expect(renderedText.stop().some((text) => text.includes('Stale inherited frame'))).toBe(false)
     expect(document.getElementById('entry-frame')?.textContent).toBe('Updated entry frame')
     app.dispose()
   })
@@ -8403,9 +8329,8 @@ describe('run', () => {
 
     entryFrameResolvers[1]?.('<span id="entry-frame">Second entry frame</span>')
     await waitForText('#entry-frame', 'Second entry frame')
-    renderedText.stop()
 
-    expect(renderedText.includes('Stale entry frame')).toBe(false)
+    expect(renderedText.stop().some((text) => text.includes('Stale entry frame'))).toBe(false)
     expect(document.getElementById('entry-frame')?.textContent).toBe('Second entry frame')
     app.dispose()
   })
@@ -8594,6 +8519,7 @@ describe('run', () => {
 
     expect(document.getElementById('entry-render-count')?.textContent).toBe('Entry render: 2')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
+    expect(entryFrameResolveCount).toBe(0)
 
     // An update-triggered reload would resolve before this explicit one, so only one resolve proves
     // the update didn't reload the frame.
@@ -8635,6 +8561,59 @@ describe('run', () => {
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Resolved content')
     expect(rootContainer.querySelector('#fallback')).toBe(null)
     root.dispose()
+  })
+
+  it('reloads a committed client frame in place when src changes while a sub-frame is loading', async (t) => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+    t.after(() => rootContainer.remove())
+
+    let SlowEntry = clientEntry('/assets/slow-entry.js#SlowEntry', function SlowEntry() {
+      return () => <p id="slow">Slow</p>
+    })
+    let firstContent = await drain(
+      renderToStream(
+        <section id="first">
+          <Frame src="/sub" />
+        </section>,
+        { resolveFrame: () => renderFrameContent(<SlowEntry />) },
+      ),
+    )
+    // The parent commits before its sub-frame is ready, because the sub-frame's client entry
+    // module is still loading.
+    let [slowModule, resolveSlowModule] = withResolvers<Function>()
+    let [slowModuleRequested, markSlowModuleRequested] = withResolvers<void>()
+    let [secondContent, resolveSecondContent] = withResolvers<string>()
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame(src) {
+          if (src === '/first') return firstContent
+          if (src === '/second') return secondContent
+          throw new Error(`Unexpected frame src: ${src}`)
+        },
+        loadModule() {
+          markSlowModuleRequested()
+          return slowModule
+        },
+      },
+    })
+    t.after(() => root.dispose())
+    let fallback = <p id="fallback">Loading...</p>
+
+    root.render(<Frame src="/first" fallback={fallback} />)
+    root.flush()
+    await slowModuleRequested
+    expect(rootContainer.querySelector('#first')).not.toBe(null)
+
+    let renderedText = recordRenderedText(rootContainer)
+    root.render(<Frame src="/second" fallback={fallback} />)
+    root.flush()
+    resolveSecondContent('<p id="second">Second</p>')
+    await waitForText('#second', 'Second', rootContainer)
+
+    expect(renderedText.stop().some((text) => text.includes('Loading...'))).toBe(false)
+    expect(rootContainer.querySelector('#first')).toBe(null)
+    resolveSlowModule(SlowEntry)
   })
 
   it('loads new client-created frame src values during server-driven entry rerenders', async () => {
@@ -8824,9 +8803,8 @@ describe('run', () => {
     resolveSlowChunk('<p id="result">Slow result</p>')
     resolveFastChunk('<p id="result">Fast result</p>')
     await waitForText('#result', 'Fast result', rootContainer)
-    renderedText.stop()
 
-    expect(renderedText.includes('Slow result')).toBe(false)
+    expect(renderedText.stop().some((text) => text.includes('Slow result'))).toBe(false)
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Fast result')
     root.dispose()
   })

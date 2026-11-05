@@ -67,8 +67,8 @@ describe('frame css style ownership', () => {
       )
     }
 
-    // Frame A resolves first so its template claims the shared style tag if
-    // the server dedupes; frame B resolves only after frame A has rendered.
+    // Frame B renders only after frame A's content has rendered, so frame A's content uses the
+    // shared style first if the server dedupes it.
     let [frameARendered, markFrameARendered] = withResolvers<void>()
     let serverResolveFrame = async (src: string) => {
       if (src === '/a') {

@@ -315,13 +315,7 @@ describe('createStyleManager', () => {
     // and getAnimations() reports them as soon as they are created.
     expect(getComputedStyle(el, '::before').transform).toBe(beforeTransform)
     expect(getComputedStyle(el, '::before').width).toBe(beforeWidth)
-    expect(
-      el.getAnimations({ subtree: true }).map((animation) => {
-        let transition = animation as CSSTransition
-        let target = animation.effect as KeyframeEffect | null
-        return `${target?.pseudoElement ?? ''}:${transition.transitionProperty}`
-      }),
-    ).toEqual([])
+    expect(el.getAnimations({ subtree: true })).toEqual([])
 
     host.remove()
     mgr.dispose()

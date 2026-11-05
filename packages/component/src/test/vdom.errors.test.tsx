@@ -440,11 +440,9 @@ describe('vdom error handling', () => {
     it('dispatches error for a cascading queued update loop', async (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = t.mock.fn()
+      let errorDispatched = Promise.withResolvers<void>()
+      let errorHandler = t.mock.fn((_event: Event) => errorDispatched.resolve())
       root.addEventListener('error', errorHandler)
-      let errorDispatched = new Promise((resolve) => {
-        root.addEventListener('error', resolve, { once: true })
-      })
 
       let renderCount = 0
       let shouldLoop = false
@@ -470,9 +468,8 @@ describe('vdom error handling', () => {
 
       shouldLoop = true
       triggerUpdate!()
-      await errorDispatched
+      await errorDispatched.promise
 
-      expect(errorHandler).toHaveBeenCalled()
       let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error
       expect(error.message).toContain('infinite loop detected')
       expect(renderCount).toBeLessThan(100)

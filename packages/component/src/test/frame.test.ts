@@ -23,7 +23,7 @@ import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
 import { ImportMap, renderToString, renderToStream } from '../server/stream.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
-import { drain, withResolvers } from './utils.ts'
+import { drain, waitForDom, withResolvers } from './utils.ts'
 
 const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
 
@@ -32,18 +32,6 @@ const markerlessDocument =
 
 type TestFrameOptions = Partial<Parameters<typeof createFrame>[1]> &
   Pick<Parameters<typeof createFrame>[1], 'resolveFrame'>
-
-function waitForElement(id: string): Promise<Element> {
-  return new Promise((resolve) => {
-    let observer = new MutationObserver(() => {
-      let element = document.getElementById(id)
-      if (!element) return
-      observer.disconnect()
-      resolve(element)
-    })
-    observer.observe(document, { childList: true, subtree: true })
-  })
-}
 
 function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestFrameOptions) {
   return createFrame(root, {
@@ -959,9 +947,8 @@ describe('frames', () => {
       await reloadFrameForNavigation(frame.handle).finished
 
       expect(document.getElementById('loading')?.textContent).toBe('Loading')
-      let collectionRendered = waitForElement('collection')
       resolveCollection('<p id="collection">Collection</p>')
-      await collectionRendered
+      await waitForDom(() => document.getElementById('collection') !== null)
       expect(document.getElementById('collection')?.textContent).toBe('Collection')
     } finally {
       frame.dispose()
@@ -1154,26 +1141,17 @@ describe('frames', () => {
 
     let [modulePromise, resolveModule] = withResolvers<Function>()
     let [moduleRequested, markModuleRequested] = withResolvers<void>()
-    let loadModule = () => {
-      markModuleRequested()
-      return modulePromise
-    }
-    let moduleCache = new Map()
-    let moduleLoads = new Map()
-    let data = {}
-    let frame = createFrame(document, {
-      src: 'https://example.com/initial',
-      errorTarget: new EventTarget(),
-      loadModule,
+    let sharedOptions = {
+      loadModule() {
+        markModuleRequested()
+        return modulePromise
+      },
       resolveFrame: () => '',
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data,
-      moduleCache,
-      moduleLoads,
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
-    })
+      moduleCache: new Map(),
+      moduleLoads: new Map(),
+    }
+    let data = {}
+    let frame = createTestFrame(document, { ...sharedOptions, data })
 
     await moduleRequested
     expect(data).not.toEqual({})
@@ -1193,19 +1171,7 @@ describe('frames', () => {
       rmxDataScript('later'),
     ].join('')
     document.body.append(laterRoot)
-    let laterFrame = createFrame(laterRoot, {
-      src: 'https://example.com/later',
-      errorTarget: new EventTarget(),
-      loadModule,
-      resolveFrame: () => '',
-      pendingClientEntries: new Map(),
-      scheduler: createScheduler(document, new EventTarget(), createStyleManager()),
-      data: {},
-      moduleCache,
-      moduleLoads,
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
-    })
+    let laterFrame = createTestFrame(laterRoot, sharedOptions)
 
     try {
       resolveModule(

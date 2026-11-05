@@ -7,7 +7,7 @@ import { createElement } from '../runtime/create-element.ts'
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { SerializableObject } from '../runtime/client-entries.ts'
-import { drain, readChunks, withResolvers } from './utils.ts'
+import { drain, readChunks, trackUnhandledRejections, withResolvers } from './utils.ts'
 import { Fragment } from '../runtime/component.ts'
 import { Frame } from '../runtime/frame.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -4952,56 +4952,40 @@ describe('stream', () => {
       expect(done.done).toBe(true)
     })
 
-    it('cancels all blocking frames without unhandled rejections', async () => {
+    it('cancels all blocking frames without unhandled rejections', async (t) => {
       let controller = new AbortController()
       let errors: unknown[] = []
       let [frameOne, , rejectFrameOne] = withResolvers<string>()
       let [frameTwo, , rejectFrameTwo] = withResolvers<string>()
-      let unhandledRejections: unknown[] = []
-      // Unhandled rejections are reported in rejection order, so a rejection made last is reported
-      // after any the render left unhandled.
-      let lastRejection = new Error('Last rejection')
-      let [lastRejectionReported, markLastRejectionReported] = withResolvers<void>()
-      let onUnhandledRejection = (event: PromiseRejectionEvent) => {
-        event.preventDefault()
-        if (event.reason === lastRejection) markLastRejectionReported()
-        else unhandledRejections.push(event.reason)
-      }
-      window.addEventListener('unhandledrejection', onUnhandledRejection)
+      let flushUnhandledRejections = trackUnhandledRejections(t)
 
-      try {
-        let stream = renderToStream(
-          <div>
-            <Frame src="/fragments/one" />
-            <Frame src="/fragments/two" />
-          </div>,
-          {
-            onError(error) {
-              errors.push(error)
-            },
-            resolveFrame(src) {
-              return src === '/fragments/one' ? frameOne : frameTwo
-            },
-            signal: controller.signal,
+      let stream = renderToStream(
+        <div>
+          <Frame src="/fragments/one" />
+          <Frame src="/fragments/two" />
+        </div>,
+        {
+          onError(error) {
+            errors.push(error)
           },
-        )
+          resolveFrame(src) {
+            return src === '/fragments/one' ? frameOne : frameTwo
+          },
+          signal: controller.signal,
+        },
+      )
 
-        let reader = stream.getReader()
-        let read = reader.read()
+      let reader = stream.getReader()
+      let read = reader.read()
 
-        let abortError = new DOMException('This operation was aborted', 'AbortError')
-        controller.abort(abortError)
-        rejectFrameOne(abortError)
-        rejectFrameTwo(abortError)
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+      rejectFrameOne(abortError)
+      rejectFrameTwo(abortError)
 
-        await expect(read).resolves.toEqual({ done: true, value: undefined })
-        void Promise.reject(lastRejection)
-        await lastRejectionReported
-        expect(errors).toEqual([])
-        expect(unhandledRejections).toEqual([])
-      } finally {
-        window.removeEventListener('unhandledrejection', onUnhandledRejection)
-      }
+      await expect(read).resolves.toEqual({ done: true, value: undefined })
+      expect(await flushUnhandledRejections()).toEqual([])
+      expect(errors).toEqual([])
     })
 
     it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {

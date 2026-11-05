@@ -1,0 +1,1 @@
+Fix `remix/node-hmr` dev servers that could stop responding to requests after a restart requested during a hot update, or stop seeing changes to watched server files after a hot update narrowed the set of watched directories.

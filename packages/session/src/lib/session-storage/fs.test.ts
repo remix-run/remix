@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { setImmediate } from 'node:timers/promises'
 
 import { createFsSessionStorage } from './fs.ts'
 
@@ -267,15 +266,13 @@ describe('fs session storage', () => {
 
     // Windows can refuse to replace a file that another handle has open; the save must still land.
     let handle = await fsp.open(file, 'r')
-    let closed: Promise<void> | undefined
-    let closeHandle = () => (closed ??= handle.close())
     let originalRename = fsp.rename
     t.mock.method(fsp, 'rename', async (...args: Parameters<typeof fsp.rename>) => {
       try {
         return await originalRename(...args)
       } catch (error) {
         // Release the handle once a replace has been refused, so a retry can land.
-        await closeHandle()
+        await handle.close()
         throw error
       }
     })
@@ -283,7 +280,7 @@ describe('fs session storage', () => {
     try {
       await storage.save(session)
     } finally {
-      await closeHandle()
+      await handle.close()
     }
 
     let saved = await storage.read(cookie)
@@ -369,9 +366,12 @@ describe('fs session storage', () => {
       t.mock.method(fsp, 'open', async (...args: Parameters<typeof fsp.open>) => {
         let handle = await originalOpen(...args)
         let originalClose = handle.close.bind(handle)
-        t.mock.method(handle, 'close', async () => {
-          await originalClose()
-          closed.resolve()
+        t.mock.method(handle, 'close', () => {
+          let closing = originalClose()
+          // Adopting `closing` subscribes after the save's own `await handle.close()`, so `closed`
+          // settles only once the save has gone on to enqueue its replacement.
+          closed.resolve(closing)
+          return closing
         })
         return handle
       })
@@ -380,8 +380,6 @@ describe('fs session storage', () => {
       let saves = Promise.allSettled([firstSave, secondSave])
       try {
         await closed.promise
-        // Let the second save enqueue its replacement after closing its complete temporary file.
-        await setImmediate()
         assert.equal(rename.mock.calls.length, 1)
         let reading = storage.read(cookie)
         let read = Promise.allSettled([reading])

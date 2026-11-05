@@ -41,6 +41,22 @@ function createMockCompressor(impl: {
   return Object.assign(emitter, impl) as MockCompressor
 }
 
+// Resolves when the compress loop releases its lock on the stream, i.e. once the loop has exited.
+function observeReaderRelease(stream: ReadableStream): Promise<void> {
+  let released = Promise.withResolvers<void>()
+  let getReader = stream.getReader.bind(stream)
+  stream.getReader = function () {
+    let reader = getReader()
+    let releaseLock = reader.releaseLock.bind(reader)
+    reader.releaseLock = () => {
+      releaseLock()
+      released.resolve()
+    }
+    return reader
+  }
+  return released.promise
+}
+
 describe('compressResponse()', () => {
   it('compresses response with gzip when client accepts it', async () => {
     let request = new Request('https://remix.run', {
@@ -1439,7 +1455,6 @@ describe('compressResponse()', () => {
           },
         )
 
-        // The data chunk was emitted synchronously right after the error
         // Should not have received the data chunk emitted after error
         assert.equal(chunks.length, 0, 'Should not receive data chunks after error')
         assert.equal(errorEmitted, true, 'Error should have been emitted')
@@ -1633,13 +1648,14 @@ describe('compressResponse()', () => {
       it('handles error emitted while waiting for drain and stops loop', async () => {
         let writeCount = 0
         let mockCompressor = createMockCompressor({
-          write: () => {
+          write: (_chunk, callback) => {
             // Real zlib compressors continue to accept writes after error
             writeCount++
             if (writeCount === 1) {
-              // Emit error on next microtask (callback won't be called)
+              // Emit error, then complete the write so the loop can run again
               setImmediate(() => {
                 mockCompressor.emit('error', new Error('Compressor failed'))
+                callback?.()
               })
             }
             return false // Always signal backpressure
@@ -1653,6 +1669,7 @@ describe('compressResponse()', () => {
             controller.enqueue(new TextEncoder().encode('chunk'))
           },
         })
+        let loopExited = observeReaderRelease(stream)
 
         let compressed = compressStream(stream, mockCompressor as any)
         let reader = compressed.getReader()
@@ -1667,7 +1684,7 @@ describe('compressResponse()', () => {
           },
         )
 
-        // The blocked write never completes, so the loop cannot write again
+        await loopExited
         assert.equal(
           writeCount,
           1,
@@ -1682,9 +1699,10 @@ describe('compressResponse()', () => {
             // Real zlib compressors continue to accept writes after error
             writeCount++
             if (writeCount === 2) {
-              // Emit error on next microtask (callback won't be called)
+              // Emit error, then complete the write so the loop can run again
               setImmediate(() => {
                 mockCompressor.emit('error', new Error('Compressor failed mid-stream'))
+                callback?.()
               })
               return false // Signal backpressure to create an await point
             }
@@ -1700,6 +1718,7 @@ describe('compressResponse()', () => {
             controller.enqueue(new TextEncoder().encode('chunk'))
           },
         })
+        let loopExited = observeReaderRelease(stream)
 
         let compressed = compressStream(stream, mockCompressor as any)
         let reader = compressed.getReader()
@@ -1717,7 +1736,7 @@ describe('compressResponse()', () => {
           },
         )
 
-        // The blocked write never completes, so the loop cannot write again
+        await loopExited
         assert.equal(
           writeCount,
           2,
@@ -1728,14 +1747,16 @@ describe('compressResponse()', () => {
       it('stops calling reader.read() after error', async () => {
         let writeCount = 0
         let mockCompressor = createMockCompressor({
-          write: () => {
+          write: (_chunk, callback) => {
             writeCount++
             if (writeCount === 1) {
+              // Emit error, then complete the write so the loop can run again
               setImmediate(() => {
                 mockCompressor.emit('error', new Error('Compressor failed'))
+                callback?.()
               })
             }
-            return false // Backpressure (callback won't be called)
+            return false // Backpressure
           },
           end: () => {},
           destroy: () => {},
@@ -1746,6 +1767,8 @@ describe('compressResponse()', () => {
             controller.enqueue(new TextEncoder().encode('chunk'))
           },
         })
+
+        let loopExited = observeReaderRelease(stream)
 
         // Monkey patch stream.getReader to count reader.read() calls
         let readCount = 0
@@ -1772,7 +1795,7 @@ describe('compressResponse()', () => {
           },
         )
 
-        // The blocked write never completes, so the loop cannot read again
+        await loopExited
         assert.equal(
           readCount,
           1,

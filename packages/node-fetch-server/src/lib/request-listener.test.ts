@@ -165,13 +165,12 @@ describe('createRequestListener', () => {
   })
 
   it('does not forward request abort errors to onError when the response closes before the handler returns', async (t) => {
-    let handlerResult: Promise<Response> | undefined
-    let handler: FetchHandler = (request) =>
-      (handlerResult = new Promise<Response>((_resolve, reject) => {
+    let handler: FetchHandler = async (request) =>
+      await new Promise<Response>((_resolve, reject) => {
         request.signal.addEventListener('abort', () => reject(request.signal.reason), {
           once: true,
         })
-      }))
+      })
     let errorHandler = t.mock.fn()
 
     let listener = createRequestListener(handler, { onError: errorHandler })
@@ -182,11 +181,9 @@ describe('createRequestListener', () => {
     let writeHead = t.mock.method(res, 'writeHead')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
-
-    // The listener subscribed to the handler result first, so it has handled the rejection by now.
-    await Promise.allSettled([handlerResult])
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -196,9 +193,8 @@ describe('createRequestListener', () => {
   it('drops the response without writing when the request was aborted before send', async (t) => {
     let errorHandler = t.mock.fn()
 
-    let handlerResult: Promise<Response> | undefined
     let handler: FetchHandler = (request) =>
-      (handlerResult = new Promise<Response>((resolve) => {
+      new Promise<Response>((resolve) => {
         request.signal.addEventListener(
           'abort',
           () => {
@@ -208,7 +204,7 @@ describe('createRequestListener', () => {
           },
           { once: true },
         )
-      }))
+      })
 
     let listener = createRequestListener(handler, { onError: errorHandler })
     assert.ok(listener)
@@ -219,11 +215,9 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
-
-    // The listener subscribed to the handler result first, so it has handled the response by now.
-    await handlerResult
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -248,12 +242,10 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
     resolveResponse(new Response('late'))
-
-    // The listener subscribed to the handler result first, so it has handled the response by now.
-    await handlerResponse
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -278,12 +270,10 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
     resolveResponse(new Response('late'))
-
-    // The listener subscribed to the handler result first, so it has handled the response by now.
-    await handlerResponse
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -538,17 +528,15 @@ describe('createRequestListener', () => {
     let handlerDone = new Promise<void>((resolve) => {
       handlerFinished = resolve
     })
-    let handlerResult: Promise<Response> | undefined
-    let handler: FetchHandler = (request) =>
-      (handlerResult = (async () => {
-        try {
-          assert.equal(request.url, 'http://localhost/')
-          await request.text()
-          return new Response('ok')
-        } finally {
-          handlerFinished()
-        }
-      })())
+    let handler: FetchHandler = async (request) => {
+      try {
+        assert.equal(request.url, 'http://localhost/')
+        await request.text()
+        return new Response('ok')
+      } finally {
+        handlerFinished()
+      }
+    }
     let errorHandler = t.mock.fn()
 
     let listener = createRequestListener(handler, { onError: errorHandler })
@@ -560,7 +548,7 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
     req.emit('error', bodyError)
 
@@ -569,8 +557,7 @@ describe('createRequestListener', () => {
       100,
       'Expected the request body read to settle when the request failed',
     )
-    // The listener subscribed to the handler result first, so it has handled the rejection by now.
-    await Promise.allSettled([handlerResult])
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -769,29 +756,26 @@ describe('createRequestListener', () => {
     })
   })
 
-  it('applies backpressure and pauses the request when the body is not read', async (t) => {
-    await new Promise<void>((resolve) => {
-      // Takes the request argument (but never reads its body) so a body stream is created.
-      let handler: FetchHandler = async (_request) => new Response('ok')
-      let listener = createRequestListener(handler)
+  it('applies backpressure and pauses the request when the body is not read', (t) => {
+    // Takes the request argument (but never reads its body) so a body stream is created.
+    let handler: FetchHandler = async (_request) => new Response('ok')
+    let listener = createRequestListener(handler)
 
-      let req = createPendingMockRequest() // method 'POST', so a body stream is created
-      let pause = t.mock.method(req, 'pause')
-      let res = createMockResponse({ req })
+    let req = createPendingMockRequest() // method 'POST', so a body stream is created
+    let pause = t.mock.method(req, 'pause')
+    let res = createMockResponse({ req })
 
-      listener(req, res)
+    listener(req, res)
 
-      // The handler never reads the body, so once the stream's queue fills the request should be
-      // paused rather than buffering every chunk in memory.
-      req.emit('data', Buffer.alloc(1024))
-      req.emit('data', Buffer.alloc(1024))
+    // The handler never reads the body, so once the stream's queue fills the request should be
+    // paused rather than buffering every chunk in memory.
+    req.emit('data', Buffer.alloc(1024))
+    req.emit('data', Buffer.alloc(1024))
 
-      assert.ok(
-        pause.mock.calls.length >= 1,
-        'Expected the request to be paused when the body queue fills',
-      )
-      resolve()
-    })
+    assert.ok(
+      pause.mock.calls.length >= 1,
+      'Expected the request to be paused when the body queue fills',
+    )
   })
 
   it('uses the `:authority` header to construct the URL for http/2 requests', async () => {
@@ -1474,22 +1458,20 @@ async function assertListenerRequestBodyReadRejects(
   let handlerFinished = new Promise<void>((resolve) => {
     resolveHandlerFinished = resolve
   })
-  let handlerResult: Promise<Response> | undefined
-  let handler: FetchHandler = (request) =>
-    (handlerResult = (async () => {
-      try {
-        await readBody(request)
-        return new Response('ok')
-      } catch (error) {
-        bodyReadRejected = true
-        bodyError = error
-        signalReason = request.signal.reason
-        throw error
-      } finally {
-        assert.equal(request.signal.aborted, true)
-        resolveHandlerFinished()
-      }
-    })())
+  let handler: FetchHandler = async (request) => {
+    try {
+      await readBody(request)
+      return new Response('ok')
+    } catch (error) {
+      bodyReadRejected = true
+      bodyError = error
+      signalReason = request.signal.reason
+      throw error
+    } finally {
+      assert.equal(request.signal.aborted, true)
+      resolveHandlerFinished()
+    }
+  }
   let errorHandler = t.mock.fn()
 
   let listener = createRequestListener(handler, { onError: errorHandler })
@@ -1501,7 +1483,7 @@ async function assertListenerRequestBodyReadRejects(
   let write = t.mock.method(res, 'write')
   let end = t.mock.method(res, 'end')
 
-  listener(req, res)
+  let handled = listener(req, res)
   req.emit('data', Buffer.from('partial'))
   failRequest(req)
 
@@ -1510,8 +1492,7 @@ async function assertListenerRequestBodyReadRejects(
     100,
     'Expected the request body read to settle when the request failed',
   )
-  // The listener subscribed to the handler result first, so it has handled the rejection by now.
-  await Promise.allSettled([handlerResult])
+  await handled
 
   assert.equal(bodyReadRejected, true)
   assertError(bodyError, signalReason)
