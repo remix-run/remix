@@ -18,6 +18,7 @@ concurrency:
 jobs:
   detect_changes:
     name: Detect changes
+    if: github.head_ref != 'release-pr/main'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
@@ -96,6 +97,7 @@ jobs:
 
   build_ubuntu:
     name: build (ubuntu-latest)
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -115,6 +117,7 @@ jobs:
 
   build_windows:
     name: build (windows-latest)
+    needs: detect_changes
     runs-on: windows-2025
     steps:
       - name: Checkout
@@ -134,6 +137,7 @@ jobs:
 
   test_ubuntu:
     name: test (ubuntu-latest, changed packages)
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -186,6 +190,7 @@ jobs:
 
   test_bun_changed:
     name: test (bun, ubuntu-latest, changed packages)
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -244,6 +249,7 @@ jobs:
 
   test_windows_changed:
     name: test (windows-latest, changed packages)
+    needs: detect_changes
     runs-on: windows-2025
     steps:
       - name: Checkout
@@ -293,6 +299,7 @@ jobs:
 
   lint:
     name: Lint
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -315,6 +322,7 @@ jobs:
 
   typecheck:
     name: Typecheck
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -334,6 +342,7 @@ jobs:
 
   change_files:
     name: Validate change files
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

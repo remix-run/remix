@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - release-pr/main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,6 +31,15 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.sha }}
         run: |
+          if [ "$GITHUB_REF" = refs/heads/release-pr/main ]; then
+            {
+              echo "session=true"
+              echo "data_table=true"
+              echo "file_storage=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           before_sha="$BEFORE_SHA"
 
           if [ "$before_sha" = "0000000000000000000000000000000000000000" ]; then
