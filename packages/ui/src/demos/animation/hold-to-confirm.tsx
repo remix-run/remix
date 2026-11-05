@@ -60,6 +60,19 @@ function HoldButton(handle: Handle<{ onConfirm: () => void }>) {
     <button
       mix={[
         animateExit(buttonExitAnimation),
+        confirmPress(),
+        on(confirmPress.start, () => {
+          confirming = true
+          handle.update()
+        }),
+        on(confirmPress.cancel, () => {
+          if (!confirming) return
+          confirming = false
+          handle.update()
+        }),
+        on(confirmPress.end, () => {
+          handle.props.onConfirm()
+        }),
         css({
           position: 'relative',
           overflow: 'hidden',
@@ -81,19 +94,6 @@ function HoldButton(handle: Handle<{ onConfirm: () => void }>) {
           '&:active': {
             transform: 'scale(0.98)',
           },
-        }),
-        confirmPress(),
-        on(confirmPress.start, () => {
-          confirming = true
-          handle.update()
-        }),
-        on(confirmPress.cancel, () => {
-          if (!confirming) return
-          confirming = false
-          handle.update()
-        }),
-        on(confirmPress.end, () => {
-          handle.props.onConfirm()
         }),
       ]}
     >
@@ -164,6 +164,7 @@ function Confirmation(handle: Handle<{ onReset: () => void }>) {
 
       <button
         mix={[
+          on('click', () => handle.props.onReset()),
           css({
             padding: '8px 16px',
             border: '1px solid #e2e8f0',
@@ -178,7 +179,6 @@ function Confirmation(handle: Handle<{ onReset: () => void }>) {
               borderColor: '#cbd5e1',
             },
           }),
-          on('click', () => handle.props.onReset()),
         ]}
       >
         Reset Demo
