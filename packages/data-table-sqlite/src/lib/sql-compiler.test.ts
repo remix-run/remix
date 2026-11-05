@@ -531,9 +531,12 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
-    it('compile for many without data', async () => {
-      await db.createMany(accounts, [])
-      let compiled = compileSqliteOperation(statements[0])
+    it('compile for many without data', () => {
+      let compiled = compileSqliteOperation({
+        kind: 'insertMany',
+        table: accounts,
+        values: [],
+      })
       assert.deepEqual(compiled, {
         text: 'select 0 where 1 = 0',
         values: [],
