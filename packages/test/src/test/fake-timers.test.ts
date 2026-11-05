@@ -18,6 +18,9 @@ describe('createFakeTimers', () => {
     let originalClearTimeout = globalThis.clearTimeout
     let originalSetInterval = globalThis.setInterval
     let originalClearInterval = globalThis.clearInterval
+    let originalSetImmediate = globalThis.setImmediate
+    let originalClearImmediate = globalThis.clearImmediate
+    let originalAbortSignalTimeout = AbortSignal.timeout
     let originalDate = globalThis.Date
     let originalPerformanceNow = globalThis.performance.now
 
@@ -27,6 +30,9 @@ describe('createFakeTimers', () => {
       assert.notEqual(globalThis.clearTimeout, originalClearTimeout)
       assert.notEqual(globalThis.setInterval, originalSetInterval)
       assert.notEqual(globalThis.clearInterval, originalClearInterval)
+      assert.notEqual(globalThis.setImmediate, originalSetImmediate)
+      assert.notEqual(globalThis.clearImmediate, originalClearImmediate)
+      assert.notEqual(AbortSignal.timeout, originalAbortSignalTimeout)
       assert.notEqual(globalThis.Date, originalDate)
       assert.notEqual(globalThis.performance.now, originalPerformanceNow)
     } finally {
@@ -37,6 +43,9 @@ describe('createFakeTimers', () => {
     assert.equal(globalThis.clearTimeout, originalClearTimeout)
     assert.equal(globalThis.setInterval, originalSetInterval)
     assert.equal(globalThis.clearInterval, originalClearInterval)
+    assert.equal(globalThis.setImmediate, originalSetImmediate)
+    assert.equal(globalThis.clearImmediate, originalClearImmediate)
+    assert.equal(AbortSignal.timeout, originalAbortSignalTimeout)
     assert.equal(globalThis.Date, originalDate)
     assert.equal(globalThis.performance.now, originalPerformanceNow)
   })
@@ -253,6 +262,76 @@ describe('FakeTimers — performance.now', () => {
       assert.equal(performance.now(), 0)
       timers.advance(125)
       assert.equal(performance.now(), 125)
+    })
+  })
+})
+
+describe('FakeTimers#advance — setImmediate', () => {
+  it('fires an immediate on the next advance, including advance(0)', () => {
+    withFakeTimers((timers) => {
+      let received: unknown[] = []
+      setImmediate((...args: unknown[]) => received.push(...args), 'a', 1)
+      assert.deepEqual(received, [])
+      timers.advance(0)
+      assert.deepEqual(received, ['a', 1])
+    })
+  })
+
+  it('fires immediates and zero-delay timeouts in the order they were scheduled', () => {
+    withFakeTimers((timers) => {
+      let order: string[] = []
+      setTimeout(() => order.push('timeout'), 0)
+      setImmediate(() => order.push('immediate'))
+      timers.advance(0)
+      assert.deepEqual(order, ['timeout', 'immediate'])
+    })
+  })
+
+  it('cancels a pending immediate with clearImmediate', () => {
+    withFakeTimers((timers) => {
+      let fired = false
+      let immediate = setImmediate(() => (fired = true))
+      clearImmediate(immediate)
+      timers.advance(0)
+      assert.equal(fired, false)
+    })
+  })
+
+  it('passes real immediates through to the real clearImmediate', (t) => {
+    let realSetImmediate = globalThis.setImmediate
+    let clearImmediateSpy = t.mock.method(globalThis, 'clearImmediate')
+    let fired = false
+    let realImmediate = realSetImmediate(() => (fired = true))
+
+    withFakeTimers(() => {
+      clearImmediate(realImmediate)
+    })
+
+    assert.ok(clearImmediateSpy.mock.calls.some((call) => call.arguments[0] === realImmediate))
+    assert.equal(fired, false)
+  })
+})
+
+describe('FakeTimers — AbortSignal.timeout', () => {
+  it('aborts the signal with a TimeoutError once the clock reaches the timeout', () => {
+    withFakeTimers((timers) => {
+      let signal = AbortSignal.timeout(100)
+      timers.advance(99)
+      assert.equal(signal.aborted, false)
+      timers.advance(1)
+      assert.equal(signal.aborted, true)
+      assert.ok(signal.reason instanceof DOMException)
+      assert.equal(signal.reason.name, 'TimeoutError')
+    })
+  })
+
+  it('dispatches an abort event when the timeout fires', () => {
+    withFakeTimers((timers) => {
+      let signal = AbortSignal.timeout(100)
+      let aborted = false
+      signal.addEventListener('abort', () => (aborted = true))
+      timers.advance(100)
+      assert.equal(aborted, true)
     })
   })
 })

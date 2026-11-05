@@ -388,7 +388,7 @@ beforeEach(
 
 #### Fake Timers
 
-`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, `clearTimeout`, `clearInterval`), `Date`, and `performance.now()` with controllable fakes that are automatically restored after the test. Time only moves when the test advances the clock. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, `setImmediate`, and their clear functions), `AbortSignal.timeout()`, `Date`, and `performance.now()` with controllable fakes that are automatically restored after the test. Time only moves when the test advances the clock. It works in any test environment — server unit tests, browser tests, or E2E setup code.
 
 ```ts
 it('debounces a callback', (t) => {
@@ -409,7 +409,7 @@ it('debounces a callback', (t) => {
 | `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
 | `restore()`   | Restore the original timer functions (called automatically after each test) |
 
-`Date.now()` and `new Date()` start at the Unix epoch (`0`), like Node's and Sinon's mock timers, and `performance.now()` starts at `0`. Pass `now` to start the fake `Date` at a specific time. `new Date(value)`, `Date.parse()`, `Date.UTC()`, and `instanceof Date` keep working as usual.
+`Date.now()` and `new Date()` start at the Unix epoch (`0`), like Node's mock timers, and `performance.now()` starts at `0`. Vitest and Jest start at the real current time instead; a fixed start keeps tests from depending on when they run. Pass `now` to start the fake `Date` at a specific time. `new Date(value)`, `Date.parse()`, `Date.UTC()`, and `instanceof Date` keep working as usual.
 
 ```ts
 it('expires a session after one hour', (t) => {
@@ -421,7 +421,7 @@ it('expires a session after one hour', (t) => {
 })
 ```
 
-Timers created before `t.useFakeTimers()` stay real, and `clearTimeout`/`clearInterval` still cancel them. In Node, fake timers return handles that support `ref()`, `unref()`, `hasRef()`, and `refresh()`.
+Immediates fire on the next advance, including `advance(0)`, and signals from `AbortSignal.timeout(ms)` abort with a `TimeoutError` once the clock reaches `ms`. Timers created before `t.useFakeTimers()` stay real, and the clear functions still cancel them. In Node, fake timers return handles that support `ref()`, `unref()`, `hasRef()`, and `refresh()`.
 
 #### E2E
 

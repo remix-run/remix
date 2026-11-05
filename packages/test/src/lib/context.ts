@@ -69,9 +69,9 @@ export interface TestContext {
 
   /**
    * Activates fake timers for testing time-dependent code. Replaces
-   * `setTimeout`, `setInterval`, `clearTimeout`, `clearInterval`, `Date`, and
-   * `performance.now()` with fakes driven by the returned handle, and restores
-   * them after the test.
+   * `setTimeout`, `setInterval`, `setImmediate`, their clear functions,
+   * `AbortSignal.timeout()`, `Date`, and `performance.now()` with fakes driven
+   * by the returned handle, and restores them after the test.
    *
    * @param options Optional settings, such as the `now` time the fake `Date` starts at.
    * @returns {FakeTimers} A fake timers instance for controlling time

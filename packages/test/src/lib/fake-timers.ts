@@ -6,21 +6,22 @@ import { mock } from './mock.ts'
 export interface FakeTimersOptions {
   /**
    * Wall-clock time the fake clock starts at, read by `Date.now()` and
-   * `new Date()`. Defaults to `0` (the Unix epoch), matching Node's and
-   * Sinon's mock timers.
+   * `new Date()`. Defaults to `0` (the Unix epoch), matching Node's mock
+   * timers. Vitest and Jest start at the real current time instead.
    */
   now?: number | Date
 }
 
 /**
  * Handle returned by `t.useFakeTimers()` for driving fake timers during a
- * test. While enabled, `setTimeout`, `setInterval`, `clearTimeout`,
- * `clearInterval`, `Date`, and `performance.now()` use the fake clock instead
- * of the real one; timers fire and time moves forward only when the test calls
- * `advance` (or `advanceAsync`). `Date.now()` and `new Date()` start at the
- * `now` option (default `0`, the Unix epoch) and `performance.now()` starts at
- * `0`. `clearTimeout` and `clearInterval` still cancel real timers created
- * before the fakes were installed.
+ * test. While enabled, `setTimeout`, `setInterval`, `setImmediate`, their
+ * clear functions, `AbortSignal.timeout()`, `Date`, and `performance.now()`
+ * use the fake clock instead of the real one; timers fire and time moves
+ * forward only when the test calls `advance` (or `advanceAsync`). Immediates
+ * fire on the next advance, including `advance(0)`. `Date.now()` and
+ * `new Date()` start at the `now` option (default `0`, the Unix epoch) and
+ * `performance.now()` starts at `0`. The clear functions still cancel real
+ * timers created before the fakes were installed.
  *
  * @example
  * ```ts
@@ -60,7 +61,8 @@ export interface FakeTimers {
    */
   advanceAsync(ms: number): Promise<void>
   /**
-   * Restore the original timer functions, `Date`, and `performance.now()`.
+   * Restore the original timer functions, `AbortSignal.timeout()`, `Date`,
+   * and `performance.now()`.
    * Called automatically after the test finishes; may also be called early to
    * disable fake timers mid-test.
    */
@@ -90,6 +92,7 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
   let RealDate = globalThis.Date
   let realClearTimeout = globalThis.clearTimeout
   let realClearInterval = globalThis.clearInterval
+  let realClearImmediate = globalThis.clearImmediate
   // Node and Bun return Timeout objects; browsers and Deno return numbers.
   let probe = globalThis.setTimeout(() => {}, 0)
   let returnsHandles = typeof probe === 'object'
@@ -198,6 +201,33 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
     'clearInterval',
     createClear(realClearInterval) as typeof clearInterval,
   )
+  // setImmediate only exists in Node, Bun, and Deno.
+  let setImmediateMock =
+    typeof globalThis.setImmediate === 'function'
+      ? mock.method(globalThis, 'setImmediate', ((fn: unknown, ...args: unknown[]) =>
+          schedule(fn, 0, args, false)) as unknown as typeof setImmediate)
+      : undefined
+  let clearImmediateMock =
+    typeof realClearImmediate === 'function'
+      ? mock.method(
+          globalThis,
+          'clearImmediate',
+          createClear(realClearImmediate) as typeof clearImmediate,
+        )
+      : undefined
+  let abortSignalTimeoutMock =
+    typeof globalThis.AbortSignal?.timeout === 'function'
+      ? mock.method(globalThis.AbortSignal, 'timeout', (ms: number) => {
+          let controller = new AbortController()
+          schedule(
+            () => controller.abort(new DOMException('signal timed out', 'TimeoutError')),
+            ms,
+            [],
+            false,
+          )
+          return controller.signal
+        })
+      : undefined
   // Installed directly rather than with mock.method(), whose spies call through
   // with `apply` and so can't construct.
   let dateDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'Date')
@@ -251,6 +281,9 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
       clearTimeoutMock.mock.restore?.()
       setIntervalMock.mock.restore?.()
       clearIntervalMock.mock.restore?.()
+      setImmediateMock?.mock.restore?.()
+      clearImmediateMock?.mock.restore?.()
+      abortSignalTimeoutMock?.mock.restore?.()
       if (dateDescriptor) Object.defineProperty(globalThis, 'Date', dateDescriptor)
       performanceNowMock?.mock.restore?.()
       pending.clear()
