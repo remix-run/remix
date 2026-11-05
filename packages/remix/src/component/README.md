@@ -1205,7 +1205,7 @@ await handle.frame.reload({
 - POST defaults to `application/x-www-form-urlencoded`. Use `encType` to select `multipart/form-data` or `text/plain`. For `multipart/form-data`, Fetch generates the boundary. URL-encoded and plain-text submissions use file names in place of file contents and normalize line breaks to CRLF.
 - Methods and encodings are case-insensitive, and unsupported values use the defaults.
 - Each reload makes one resolver request. Custom resolvers receive the requested `src`, `method`, and `signal`, plus `formData` and a normalized `encType` for POST.
-- Redirect responses render their final content without changing the frame's requested source or the browser URL.
+- Redirect responses render their final content and retain the requested source by default. Set `adoptRedirectSrc: true` to retain the final redirect URL after a successful reload, before completion events and promises settle. Failed, cancelled, or superseded reloads don't adopt a redirect URL. The browser URL and history stay unchanged.
 - A newer reload cancels earlier client work for that frame, including pending requests and streamed content. Cancelling client work can't undo a mutation the server has already performed.
 
 Reloads don't run constraint validation or dispatch a submit event. To reload with a form's values, validate and build the form data yourself:
@@ -1221,6 +1221,36 @@ if (form.reportValidity()) {
   })
 }
 ```
+
+To enhance a native form with an in-place update, intercept its submission and reload the target frame:
+
+```tsx
+<form
+  method="post"
+  action="/cart/update"
+  mix={on('submit', async (event) => {
+    if (event.defaultPrevented) return
+    let frame = handle.frames.get('cart')
+    if (!frame) return
+    event.preventDefault()
+    try {
+      await frame.reload({
+        src: '/cart/update',
+        method: 'post',
+        body: new FormData(event.currentTarget, event.submitter),
+        adoptRedirectSrc: true,
+      })
+    } catch (error) {
+      console.error(error)
+    }
+  })}
+>
+  <input type="number" name="quantity" min="1" required />
+  <button type="submit">Update cart</button>
+</form>
+```
+
+The action can redirect requests with `X-Remix-Target: cart` to `/cart/items` and native document submissions to `/cart`. The enhanced submission renders the cart items and retains `/cart/items` as the frame's source. Later `frame.reload()` calls GET that source without resending the mutation. This example handles ordinary URL-encoded POST forms; application adapters can also honor submitter overrides and other native form behaviors.
 
 ### Following a Reload
 
@@ -1322,7 +1352,7 @@ The default resolver is a short `fetch()` call ([source](https://github.com/remi
 - It accepts `2xx` responses, and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text.
 - It uses the `same-origin` Fetch mode, so cross-origin sources and redirects fail, even when the destination allows CORS.
 
-Pass a custom `resolveFrame` to `run()` when the server requires additional headers, another body encoding, or a different response policy. A custom resolver can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it. When `fetch()` followed a redirect, frames other than the top frame render the response without changing either URL.
+Pass a custom `resolveFrame` to `run()` when the server requires additional headers, another body encoding, or a different response policy. A custom resolver can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it and exposes its final redirect URL to `adoptRedirectSrc`. Returning only the response body loses that redirect metadata. Public frame reloads preserve the browser URL and retain the requested frame source unless they opt into redirect-source adoption.
 
 ### Preserving Client-Owned DOM
 
@@ -1361,15 +1391,15 @@ Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElem
 
 Links and forms remain ordinary HTML elements before the runtime starts. These attributes change how the runtime handles them:
 
-| Attribute                        | Effect                                                                                                                                                                                                   |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-rmx-target="name"`         | Loads the destination into the named frame instead of the whole page. The address bar moves to `href` unless history is `none`, and an unmatched name falls back to document navigation.                 |
-| `data-rmx-src="url"`             | Fetches a different same-origin URL for the targeted frame, while `href` or `action` stays the browser destination.                                                                                      |
-| `data-rmx-document`              | Leaves the navigation to the browser as a full document load.                                                                                                                                            |
-| `data-rmx-history`               | `push`, `replace`, or [`none`](#loading-a-frame-in-place). Controls how the navigation updates history, and can override the automatic replacement used for non-GET form submissions to the current URL. |
-| `data-rmx-reset-scroll="manual"` | Disables the automatic scroll reset.                                                                                                                                                                     |
-| `data-rmx-reset-focus="manual"`  | Disables the automatic focus reset.                                                                                                                                                                      |
-| `data-rmx-prefetch`              | `intent` or `viewport`. Starts loading the destination early. See [Prefetching](#prefetching).                                                                                                           |
+| Attribute                        | Effect                                                                                                                                                                |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-rmx-target="name"`         | Loads the destination into the named frame instead of the whole page. The address bar still moves to `href`, and an unmatched name falls back to document navigation. |
+| `data-rmx-src="url"`             | Fetches a different same-origin URL for the targeted frame, while `href` or `action` stays the browser destination.                                                   |
+| `data-rmx-document`              | Leaves the navigation to the browser as a full document load.                                                                                                         |
+| `data-rmx-history`               | `push` or `replace`. Controls how the navigation updates history, and can override the automatic replacement used for non-GET form submissions to the current URL.    |
+| `data-rmx-reset-scroll="manual"` | Disables the automatic scroll reset.                                                                                                                                  |
+| `data-rmx-reset-focus="manual"`  | Disables the automatic focus reset.                                                                                                                                   |
+| `data-rmx-prefetch`              | `intent` or `viewport`. Starts loading the destination early. See [Prefetching](#prefetching).                                                                        |
 
 ```tsx
 import { Frame } from 'remix/component'
@@ -1399,42 +1429,6 @@ Forms keep native behavior:
 - Cross-origin submissions, `method="dialog"`, and `target="_blank"` are left to the browser.
 - GET form values arrive in `src`. Non-GET forms pass `formData`, `method`, and `encType` to the resolver.
 - Non-GET `FormData` is used only for the active request and isn't kept in history.
-
-### Loading a Frame in Place
-
-Some interactions only change one region of the page, such as a cart's quantity controls or a list item's favorite button. Add `data-rmx-history="none"` to a link or form with a `data-rmx-target`. The destination loads into that frame, and the page doesn't navigate:
-
-```tsx
-import type { Handle } from 'remix/component'
-
-function CartItem(handle: Handle<{ bookId: string; quantity: number }>) {
-  return () => (
-    <form method="post" action="/cart/update" data-rmx-target="cart" data-rmx-history="none">
-      <input type="hidden" name="bookId" value={handle.props.bookId} />
-      <input
-        type="number"
-        name="quantity"
-        aria-label="Quantity"
-        defaultValue={handle.props.quantity}
-      />
-      <button type="submit">Update</button>
-    </form>
-  )
-}
-```
-
-The action answers the frame's request with the frame's content, and a document submission with the page:
-
-```ts
-// The client runtime names the frame it's loading. A browser without it submits the page.
-return redirect(request.headers.get('X-Remix-Target') === 'cart' ? '/cart/items' : '/cart')
-```
-
-- The URL, history, scroll position, focus, and the rest of the page stay as they are. The frame still dispatches `reloadStart` and `reloadComplete`, and forms dispatch [`rmx:submission`](#following-a-form-submission), so components can follow the load and render its result early.
-- The frame's `src` moves to the destination, or to where the request redirected, so its next `reload()` fetches what it now shows. Back and forward don't revisit the load, because it isn't in history.
-- The frame renders whatever the response contains. A route that redirects a frame request, for example to a login page, should send it to content that fits the frame.
-- A link opened elsewhere, such as with a modifier key or `target="_blank"`, opens as it would without `none`.
-- A navigation without `data-rmx-target` ignores `none`, because the page has to match its URL. A target that doesn't match a mounted frame falls back to document navigation, as does a browser without the client runtime or the Navigation API.
 
 ### Navigating from Code
 
@@ -1467,8 +1461,8 @@ function SortSelect(handle: Handle<{ hrefs: Record<string, string> }>) {
 }
 ```
 
-- Both accept the same options: `target` and `src` to load a named frame, `history` (`'push'`, `'replace'`, or `'none'`), and `resetScroll` and `resetFocus`. They match the `data-rmx-*` attributes above.
-- `navigate()` returns a promise that settles when the Navigation API transition finishes, or for `history: 'none'`, when the frame's content renders. Invalid or cross-origin destinations, and targets that don't match a mounted frame, fall back to document navigation.
+- Both accept the same options: `target` and `src` to load a named frame, `history` (`'push'` or `'replace'`), and `resetScroll` and `resetFocus`. They match the `data-rmx-*` attributes above.
+- `navigate()` returns a promise that settles when the Navigation API transition finishes. Invalid or cross-origin destinations, and targets that don't match a mounted frame, fall back to document navigation.
 - On anchors and `<area>` elements, `link()` sets `href` and the matching `data-rmx-*` attributes. On other elements it adds `role="link"`, makes the element focusable, sets `type="button"` on buttons, handles Enter, and opens the destination in a new tab for Ctrl-click, Cmd-click, and middle clicks.
 
 ### Updating the URL
@@ -1496,7 +1490,7 @@ To keep every link and form as a document navigation while still hydrating clien
 window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagation())
 ```
 
-This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as `handle.frame.reload()` still use the frame resolver, and so do forms marked `data-rmx-history="none"`, which load their frame when they're submitted instead of navigating.
+This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as `handle.frame.reload()` still use the frame resolver.
 
 ### Prefetching
 

@@ -11,7 +11,7 @@ import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
-import { css, navigate, on, onSubmission } from '../index.ts'
+import { css, navigate, on, onSubmission, spaResponse } from '../index.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
@@ -159,7 +159,16 @@ async function setupDefaultFrameRequestTest(t: TestContext, name?: string) {
   t.after(() => app.dispose())
   await app.ready()
   invariant(frame, 'Expected frame content to hydrate')
-  return { frame, fetchMock }
+  return { app, frame, fetchMock }
+}
+
+function redirectedFrameResponse(content: BodyInit, url: string): Response {
+  let response = new Response(content, { headers: { 'Content-Type': 'text/html' } })
+  Object.defineProperties(response, {
+    redirected: { value: true },
+    url: { value: url },
+  })
+  return response
 }
 
 function waitForElement(
@@ -429,6 +438,140 @@ describe('run', () => {
     expect(events[1]!.method).toBe('get')
     expect(events[1]!.encType).toBeNull()
     expect(events[1]!.formData).toBeNull()
+  })
+
+  it('renders a followed redirect while retaining the requested source by default', async (t) => {
+    let { frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'cart')
+    let content = await renderFrameContent(<p id="updated-cart">Updated cart</p>)
+    let destination = new URL('/cart/items', document.baseURI).href
+    fetchMock.mock.mockImplementationOnce(async () => redirectedFrameResponse(content, destination))
+
+    await frame.reload({ src: '/cart/update' })
+
+    expect(document.getElementById('updated-cart')?.textContent).toBe('Updated cart')
+    expect(frame.src).toBe('/cart/update')
+    await frame.reload()
+    expect(fetchMock.mock.calls[1]?.arguments[0]).toBe('/cart/update')
+  })
+
+  it('adopts a POST redirect before completion and uses its destination for the next GET', async (t) => {
+    let { frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'cart')
+    let content = await renderFrameContent(<p id="updated-cart">Updated cart</p>)
+    let destination = new URL('/cart/items', document.baseURI).href
+    let href = window.location.href
+    let historyLength = window.history.length
+    fetchMock.mock.mockImplementationOnce(async () => redirectedFrameResponse(content, destination))
+    let body = new FormData()
+    body.set('quantity', '2')
+    let events: FrameReloadStartEvent[] = []
+    let completionSources: string[] = []
+    frame.addEventListener('reloadStart', (event) => events.push(event))
+    frame.addEventListener('reloadComplete', () => completionSources.push(frame.src))
+
+    let signal = await frame.reload({
+      src: '/cart/update',
+      method: 'POST',
+      body,
+      adoptRedirectSrc: true,
+    })
+
+    expect(signal.aborted).toBe(false)
+    expect(frame.src).toBe(destination)
+    expect(completionSources).toEqual([destination])
+    expect(await events[0]?.finished).toBe(signal)
+    expect(events[0]?.src).toBe('/cart/update')
+    expect(document.getElementById('updated-cart')?.textContent).toBe('Updated cart')
+    expect(window.location.href).toBe(href)
+    expect(window.history.length).toBe(historyLength)
+    expect(fetchMock.mock.calls[0]?.arguments[1]?.method).toBe('post')
+
+    await frame.reload()
+
+    expect(fetchMock.mock.calls[1]?.arguments[0]).toBe(destination)
+    expect(fetchMock.mock.calls[1]?.arguments[1]?.method).toBeUndefined()
+    expect(fetchMock.mock.calls[1]?.arguments[1]?.body).toBeUndefined()
+  })
+
+  it('adopts SPA redirects only for the reload that opts in', async (t) => {
+    let { frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'cart')
+    fetchMock.mock.mockImplementationOnce(async () =>
+      spaResponse.finalize(spaResponse.create(<p>First cart</p>), '/cart/first'),
+    )
+    await frame.reload({ adoptRedirectSrc: true })
+    expect(frame.src).toBe('/cart/first')
+
+    fetchMock.mock.mockImplementationOnce(async () =>
+      spaResponse.finalize(spaResponse.create(<p>Second cart</p>), '/cart/second'),
+    )
+    await frame.reload({ src: '/cart/latest' })
+    expect(frame.src).toBe('/cart/latest')
+
+    await frame.reload({ src: '/cart/current', adoptRedirectSrc: true })
+    expect(frame.src).toBe('/cart/current')
+  })
+
+  it('lets a completion listener immediately reload the adopted source', async (t) => {
+    let { frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'cart')
+    let content = await renderFrameContent(<p>Updated cart</p>)
+    let destination = new URL('/cart/items', document.baseURI).href
+    fetchMock.mock.mockImplementationOnce(async () => redirectedFrameResponse(content, destination))
+    let nextReload: Promise<AbortSignal> | undefined
+    frame.addEventListener(
+      'reloadComplete',
+      () => {
+        nextReload = frame.reload()
+      },
+      { once: true },
+    )
+
+    await frame.reload({ src: '/cart/update', adoptRedirectSrc: true })
+    await nextReload
+
+    expect(fetchMock.mock.calls[1]?.arguments[0]).toBe(destination)
+    expect(frame.src).toBe(destination)
+  })
+
+  it('does not adopt a redirect from a superseded reload', async (t) => {
+    let { frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'cart')
+    let response = Promise.withResolvers<Response>()
+    fetchMock.mock.mockImplementationOnce(() => response.promise)
+    let stale = frame.reload({ src: '/cart/update', adoptRedirectSrc: true })
+    await frame.reload({ src: '/cart/current' })
+    response.resolve(redirectedFrameResponse('<p>Stale cart</p>', '/cart/stale'))
+
+    expect((await stale).aborted).toBe(true)
+    expect(frame.src).toBe('/cart/current')
+  })
+
+  it('does not adopt a redirect when the frame is disposed', async (t) => {
+    let { app, frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'cart')
+    let response = Promise.withResolvers<Response>()
+    fetchMock.mock.mockImplementationOnce(() => response.promise)
+    let reload = frame.reload({ src: '/cart/update', adoptRedirectSrc: true })
+    app.dispose()
+    response.resolve(redirectedFrameResponse('<p>Removed cart</p>', '/cart/removed'))
+
+    expect((await reload).aborted).toBe(true)
+    expect(frame.src).toBe('/cart/update')
+  })
+
+  it('does not adopt a redirect when rendering its response fails', async (t) => {
+    let { app, frame, fetchMock } = await setupDefaultFrameRequestTest(t, 'cart')
+    app.addEventListener('error', () => {})
+    let failure = new Error('Cart stream failed')
+    let stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.error(failure)
+      },
+    })
+    fetchMock.mock.mockImplementationOnce(async () =>
+      redirectedFrameResponse(stream, '/cart/items'),
+    )
+
+    await expect(frame.reload({ src: '/cart/update', adoptRedirectSrc: true })).rejects.toThrow(
+      'Cart stream failed',
+    )
+    expect(frame.src).toBe('/cart/update')
   })
 
   it('normalizes multipart reload metadata and lets Fetch generate its boundary', async (t) => {
@@ -4214,109 +4357,6 @@ describe('run', () => {
       { src: targetSrc, target: 'target' },
       { src: destinationUrl, target: undefined },
     ])
-  })
-
-  it('loads the target frame in place for navigate() with history none', async (t) => {
-    let fixture = await setupFrameNavigationTest(t)
-    let initialUrl = window.location.href
-    let entryCount = window.navigation.entries().length
-    let destinationUrl = new URL('/destination', initialUrl).href
-
-    await navigate(destinationUrl, { target: 'target', history: 'none' })
-
-    let frames = fixture.frames()
-    expect(window.location.href).toBe(initialUrl)
-    expect(window.navigation.entries()).toHaveLength(entryCount)
-    expect(frames.top.src).toBe(initialUrl)
-    expect(frames.target.src).toBe(destinationUrl)
-    expect(fixture.requests).toEqual([{ src: destinationUrl, target: 'target' }])
-    expect(document.getElementById('frame-content')?.textContent).toBe('Targeted frame')
-  })
-
-  it('loads a link’s target frame in place with data-rmx-history="none"', async (t) => {
-    let fixture = await setupFrameNavigationTest(t)
-    let initialUrl = window.location.href
-    let entryCount = window.navigation.entries().length
-    let link = document.createElement('a')
-    link.href = '/destination'
-    link.setAttribute('data-rmx-target', 'target')
-    link.setAttribute('data-rmx-history', 'none')
-    link.textContent = 'Destination'
-    document.body.append(link)
-    link.focus()
-    let frames = fixture.frames()
-    let started = Promise.withResolvers<FrameReloadStartEvent>()
-    frames.target.addEventListener('reloadStart', started.resolve, { once: true })
-    let navigations = 0
-    let countNavigation = () => navigations++
-    window.navigation.addEventListener('navigate', countNavigation)
-    t.after(() => window.navigation.removeEventListener('navigate', countNavigation))
-
-    link.click()
-    let reload = await started.promise
-    await reload.finished
-
-    expect(navigations).toBe(0)
-    expect(reload.element).toBe(link)
-    expect(window.location.href).toBe(initialUrl)
-    expect(window.navigation.entries()).toHaveLength(entryCount)
-    expect(window.navigation.transition).toBeNull()
-    expect(frames.target.src).toBe(link.href)
-    expect(fixture.requests).toEqual([{ src: link.href, target: 'target' }])
-    expect(document.getElementById('frame-content')?.textContent).toBe('Targeted frame')
-    expect(document.activeElement).toBe(link)
-  })
-
-  it('submits a form into its target frame in place with data-rmx-history="none"', async (t) => {
-    let fixture = await setupFrameNavigationTest(t)
-    let initialUrl = window.location.href
-    let entryCount = window.navigation.entries().length
-    let form = document.createElement('form')
-    form.method = 'post'
-    form.action = '/save'
-    form.setAttribute('data-rmx-target', 'target')
-    form.setAttribute('data-rmx-history', 'none')
-    let input = document.createElement('input')
-    input.name = 'title'
-    input.value = 'Ada'
-    let button = document.createElement('button')
-    form.append(input, button)
-    document.body.append(form)
-    let submissions: FormSubmissionEvent[] = []
-    button.addEventListener('rmx:submission', (event) => submissions.push(event))
-    let frames = fixture.frames()
-    let started = Promise.withResolvers<FrameReloadStartEvent>()
-    frames.target.addEventListener('reloadStart', started.resolve, { once: true })
-
-    button.click()
-    let reload = await started.promise
-    await reload.finished
-
-    expect(submissions).toHaveLength(1)
-    expect(submissions[0]!.form).toBe(form)
-    expect(submissions[0]!.submitter).toBe(button)
-    expect(reload.element).toBe(form)
-    expect(reload.submitter).toBe(button)
-    expect(submissions[0]!.formData?.get('title')).toBe('Ada')
-    expect(submissions[0]!.finished).toBe(reload.finished)
-    expect(window.location.href).toBe(initialUrl)
-    expect(window.navigation.entries()).toHaveLength(entryCount)
-    expect(frames.top.src).toBe(initialUrl)
-    expect(fixture.requests).toEqual([{ src: form.action, target: 'target' }])
-    expect(document.getElementById('frame-content')?.textContent).toBe('Targeted frame')
-  })
-
-  it('navigates as usual for navigate() with history none and no target', async (t) => {
-    let fixture = await setupFrameNavigationTest(t)
-    // Earlier tests can leave forward entries, which a push drops, so the entry count can't tell.
-    let entryIndex = window.navigation.currentEntry?.index ?? -1
-    let destinationUrl = new URL('/next', window.location.href).href
-
-    await navigate(destinationUrl, { history: 'none' })
-
-    expect(window.location.href).toBe(destinationUrl)
-    expect(window.navigation.currentEntry?.index).toBe(entryIndex + 1)
-    expect(fixture.requests).toEqual([{ src: destinationUrl, target: undefined }])
   })
 
   it('restores top and targeted frame sources during back and forward traversal', async (t) => {
