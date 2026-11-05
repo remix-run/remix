@@ -154,14 +154,6 @@ export function createFileChangeEventDeduper(): (
   }
 }
 
-const chokidarWatcherBySupervisor = new WeakMap<object, ReturnType<typeof watch>>()
-
-export function getSupervisorChokidarWatcher(
-  supervisor: object,
-): ReturnType<typeof watch> | undefined {
-  return chokidarWatcherBySupervisor.get(supervisor)
-}
-
 interface BrowserHmrChannelOptions {
   host?: string
   port?: number
@@ -216,6 +208,7 @@ export function createHmrSupervisor(options: {
   nodeArgs: string[]
   registerPath: string
   watch?: NodeHmrWatchOptions
+  createWatcher?: typeof watch
 }): {
   readonly generation: number
   ready(): Promise<void>
@@ -955,7 +948,8 @@ export function createHmrSupervisor(options: {
     }
   }
 
-  let watcher = watch([], {
+  let createWatcher = options.createWatcher ?? watch
+  let watcher = createWatcher([], {
     cwd: options.cwd,
     ...resolveChokidarWatchOptions(options.watch),
   })
@@ -1022,7 +1016,6 @@ export function createHmrSupervisor(options: {
 
     stop,
   }
-  chokidarWatcherBySupervisor.set(supervisor, watcher)
   return supervisor
 }
 

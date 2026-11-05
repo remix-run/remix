@@ -8,8 +8,10 @@ import { promisify } from 'node:util'
 
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import { watch } from 'chokidar'
+import type { FSWatcher } from 'chokidar'
 
-import { createHmrSupervisor, getSupervisorChokidarWatcher } from './lib/runner.ts'
+import { createHmrSupervisor } from './lib/runner.ts'
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url))
 const nodeTsxImportUrl = import.meta.resolve('@remix-run/node-tsx')
@@ -208,7 +210,12 @@ describe('node-hmr', () => {
     await using fixture = await createFixture({
       'server.ts': getIdleHmrServerSource(),
     })
+    let watcher: FSWatcher | undefined
     let supervisor = createHmrSupervisor({
+      createWatcher(paths, options) {
+        watcher = watch(paths, options)
+        return watcher
+      },
       browserHmrChannel: null,
       cwd: fixture.path,
       entry: 'server.ts',
@@ -221,7 +228,6 @@ describe('node-hmr', () => {
 
     try {
       await supervisor.ready()
-      let watcher = getSupervisorChokidarWatcher(supervisor)
       assert.ok(watcher)
 
       let entryPath = path.join(fixture.path, 'server.ts')
@@ -366,7 +372,12 @@ describe('node-hmr', () => {
     })
     let watchFile = path.join(fixture.path, 'browser/entry.ts')
     let hmrUrlFile = path.join(fixture.path, 'signals/hmr-url')
+    let watcher: FSWatcher | undefined
     let supervisor = createHmrSupervisor({
+      createWatcher(paths, options) {
+        watcher = watch(paths, options)
+        return watcher
+      },
       browserHmrChannel: { port: 0 },
       cwd: fixture.path,
       entry: 'server.ts',
@@ -386,7 +397,6 @@ describe('node-hmr', () => {
     try {
       await supervisor.ready()
       events = await connectHmrEvents(await fs.readFile(hmrUrlFile, 'utf-8'))
-      let watcher = getSupervisorChokidarWatcher(supervisor)
       assert.ok(watcher)
 
       let watchFileStats = await fs.stat(watchFile)
