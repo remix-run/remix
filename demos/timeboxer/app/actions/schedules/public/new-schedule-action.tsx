@@ -1,4 +1,4 @@
-import { clientEntry, css, navigate, on, ref, type Handle, type Props } from 'remix/component'
+import { css, navigate, on, ref, type Handle, type Props } from 'remix/component'
 import { animateEntrance, animateExit, spring } from '@remix-run/ui/animation'
 import { button } from '../../../ui/public/button.ts'
 import { theme } from '../../../ui/public/design.ts'
@@ -6,17 +6,6 @@ import { theme } from '../../../ui/public/design.ts'
 type State = 'idle' | 'creating' | 'submitting'
 
 export function NewScheduleActionComponent(handle: Handle<{ csrfToken: string }>) {
-  return NewScheduleActionImplementation(handle)
-}
-
-export const NewScheduleAction = clientEntry(
-  import.meta.url,
-  function NewScheduleAction(handle: Handle<{ csrfToken: string }>) {
-    return NewScheduleActionImplementation(handle)
-  },
-)
-
-function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) {
   let state: State = 'idle'
   let buttonNode: HTMLButtonElement | null = null
   let errorMessage: string | null = null
