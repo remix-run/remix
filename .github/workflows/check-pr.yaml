@@ -302,7 +302,7 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
-      - name: Check for UI package changes
+      - name: Check for browser workspace changes
         id: changes
         shell: bash
         env:
@@ -310,15 +310,20 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Other changes get full WebKit coverage on main.
-          changed_files="$(git diff --name-only --no-renames "$PR_BASE_SHA...$PR_HEAD_SHA" -- \
-            packages/assets packages/component packages/component-hmr \
-            packages/multiple-import-maps-polyfill packages/render-middleware \
-            packages/spa packages/test packages/ui)"
-          if [ -n "$changed_files" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
+          run=false
+          while IFS= read -r -d '' config; do
+            workspace="${config%/*}"
+            if ! git diff --quiet --no-renames "$PR_BASE_SHA...$PR_HEAD_SHA" -- "$workspace"; then
+              run=true
+              break
+            fi
+          done < <(
+            git ls-files -z -- '*/playwright.config.ts' '*/playwright.config.js'
+            # Removed configs still identify a browser-tested workspace.
+            git diff --name-only --no-renames --diff-filter=D -z "$PR_BASE_SHA...$PR_HEAD_SHA" -- \
+              '*/playwright.config.ts' '*/playwright.config.js'
+          )
+          echo "run=$run" >> "$GITHUB_OUTPUT"
 
       - name: Install pnpm
         if: steps.changes.outputs.run == 'true'
