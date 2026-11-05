@@ -845,7 +845,6 @@ export function diffVNodes(
         domParent,
         committed,
         context,
-        undefined,
         anchor,
       )
       return committed
@@ -1093,7 +1092,15 @@ function mountHostNode(
   if (hostProps.innerHTML != null) {
     dom.innerHTML = hostProps.innerHTML
   } else {
-    committed._children = diffChildren(null, childInputs, dom, committed, context, childCursor)
+    committed._children = diffChildren(
+      null,
+      childInputs,
+      dom,
+      committed,
+      context,
+      undefined,
+      childCursor,
+    )
   }
 
   setupHostNode(committed, context.scheduler)
@@ -1252,6 +1259,7 @@ function insert(
           targetHead,
           committed,
           context,
+          undefined,
           childCursor,
         )
         patchHostProps({}, resolved.props, targetHead)
@@ -1587,8 +1595,8 @@ function diffChildren(
   domParent: ParentNode,
   vParent: VNodeParent,
   context: ReconcileContext,
-  cursor?: HydrationCursor,
   anchor?: Node,
+  cursor?: HydrationCursor,
 ): CommittedVNode[] {
   let hasKeys = hasKeyedChildren(next)
   let committed: Array<VNodeInput | CommittedVNode> = next
@@ -1634,7 +1642,7 @@ function diffChildren(
     return committed as CommittedVNode[]
   }
 
-  return patchKeyedChildren(curr, next, domParent, vParent, context, cursor, anchor)
+  return patchKeyedChildren(curr, next, domParent, vParent, context, anchor, cursor)
 }
 
 function parentUsesInnerHTML(parent: VNodeParent): boolean {
@@ -1708,8 +1716,8 @@ function patchKeyedChildren(
   domParent: ParentNode,
   vParent: VNodeParent,
   context: ReconcileContext,
-  cursor?: HydrationCursor,
   anchor?: Node,
+  cursor?: HydrationCursor,
 ): CommittedVNode[] {
   let matches =
     matchKeyedChildrenInOrder(curr, next) ??
