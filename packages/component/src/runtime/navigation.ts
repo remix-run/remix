@@ -417,6 +417,10 @@ export function startNavigationListenerImpl(
       }
 
       needsFrameReload = true
+      // WebKit runs a traversal's handlers before moving its history to the destination entry, which
+      // it does later in the task that fires `navigate`. Scrolling before then restores the position
+      // of the entry being left.
+      let traversalApplied = isTraverse ? afterCurrentTask() : undefined
       let handler = async () => {
         if (event.signal.aborted) return
 
@@ -436,6 +440,8 @@ export function startNavigationListenerImpl(
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
         if (scroll !== 'manual') {
+          await traversalApplied
+          if (event.signal.aborted || reload.signal.aborted) return
           // WebKit restores a traversal's position against the layout from before the commit, so
           // it clamps the position to the old page's height. Reading the height lays out the new
           // content first.
@@ -529,6 +535,17 @@ export function getInterceptableNavigation(): Navigation | undefined {
     return
   }
   return navigation
+}
+
+function afterCurrentTask(): Promise<void> {
+  let { port1, port2 } = new MessageChannel()
+  return new Promise((resolve) => {
+    port1.onmessage = () => {
+      port1.close()
+      resolve()
+    }
+    port2.postMessage(null)
+  })
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

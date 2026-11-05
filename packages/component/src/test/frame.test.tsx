@@ -3701,14 +3701,14 @@ describe('run', () => {
     await navigate(detailUrl)
     expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
 
-    let didScroll = false
+    let listItemsRenderedAtScroll: boolean | undefined
     window.navigation.addEventListener(
       'navigate',
       (event) => {
         let scroll = event.scroll.bind(event)
         Object.defineProperty(event, 'scroll', {
           value() {
-            didScroll = true
+            listItemsRenderedAtScroll = document.getElementById('scroll-list-items') != null
             scroll()
           },
         })
@@ -3718,16 +3718,10 @@ describe('run', () => {
 
     let backNavigation = window.navigation.back().finished
     await deferredListItemsRequested
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    )
-
-    expect(didScroll).toBe(false)
-
     resolveDeferredListItems(listItemsContent)
     await backNavigation
 
-    expect(didScroll).toBe(true)
+    expect(listItemsRenderedAtScroll).toBe(true)
     expect(document.getElementById('scroll-list-items')).not.toBe(null)
     expect(window.scrollY).toBe(2500)
   })
