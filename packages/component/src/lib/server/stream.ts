@@ -658,7 +658,7 @@ function buildFrameSegment(
 
 function buildElementSegment(
   tag: string,
-  props: any,
+  props: ElementProps,
   context: RenderContext,
   frameState: SsrFrameState,
   output: Segment[],
@@ -723,7 +723,7 @@ function buildElementSegment(
   output.push(close)
 }
 
-function buildTextareaElementSegment(tag: string, props: any): Segment {
+function buildTextareaElementSegment(tag: string, props: ElementProps): Segment {
   let attrs = renderAttributes(tag, props, false, TEXTAREA_VALUE_PROPS)
   let value = props.value ?? props.defaultValue ?? ''
   return `<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`
@@ -801,7 +801,7 @@ function buildImportMapSegment(props: ElementProps, context: RenderContext): Seg
   return segment
 }
 
-function renderInputAttributes(props: any): string {
+function renderInputAttributes(props: ElementProps): string {
   let value =
     props.value === undefined && props.defaultValue !== undefined ? props.defaultValue : props.value
   let checked =
@@ -818,7 +818,7 @@ function renderInputAttributes(props: any): string {
 
 function buildHeadElementSegment(
   tag: string,
-  props: any,
+  props: ElementProps,
   context: RenderContext,
   frameState: SsrFrameState,
   output: Segment[],
@@ -860,7 +860,7 @@ function createDocumentElementSegments(
 
 function renderAttributes(
   tag: string,
-  props: any,
+  props: ElementProps,
   isSvg: boolean,
   excludedProps?: Set<string>,
 ): string {
@@ -1011,7 +1011,7 @@ function isFrameComponent(type: unknown): boolean {
 
 function buildComponentSegment(
   type: ElementFunction,
-  props: any,
+  props: ElementProps,
   context: RenderContext,
   componentId: string,
   frameState: SsrFrameState,
@@ -1175,7 +1175,7 @@ function serializeKey(key: unknown): string | number | undefined {
 
 function buildEntrySegment(
   type: EntryComponent,
-  props: any,
+  props: ElementProps,
   context: RenderContext,
   frameState: SsrFrameState,
   output: Segment[],
