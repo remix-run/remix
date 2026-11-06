@@ -1,6 +1,7 @@
 import type { ElementProps, ElementType, RemixNode, Renderable } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
+import type { FrameReloadStartEvent } from './reload-start-event.ts'
 
 /**
  * An `EventTarget` subclass with typed event maps.
@@ -273,7 +274,7 @@ export type FrameResolution = FrameContent | Response
  */
 export type FrameHandleEventMap = {
   /** A direct reload or an ancestor-driven reload has started. */
-  reloadStart: Event
+  reloadStart: FrameReloadStartEvent
   /** Reload processing has ended, including cancellation or failure. */
   reloadComplete: Event
 }

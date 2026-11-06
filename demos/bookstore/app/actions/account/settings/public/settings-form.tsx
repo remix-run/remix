@@ -7,6 +7,7 @@ import { routes } from '../../../../routes.ts'
 import { Field } from '../../../../ui/public/field.tsx'
 import { RestfulForm } from '../../../../ui/restful-form.tsx'
 import { AccountSettingsForm } from './schema.ts'
+import { SaveButton } from './save-button.tsx'
 
 export const AccountSettingsFields = clientEntry(
   import.meta.url,
@@ -42,9 +43,7 @@ export const AccountSettingsFields = clientEntry(
                 label="New Password (leave blank to keep current)"
                 autoComplete="new-password"
               />
-              <button type="submit" class="btn">
-                Update Settings
-              </button>
+              <SaveButton>Update Settings</SaveButton>
               <a
                 data-rmx-prefetch="intent"
                 href={routes.account.index.href()}

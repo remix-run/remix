@@ -66,7 +66,14 @@ export type PendingClientEntries = Map<
   [Comment, RemixElement | undefined, ResourceNonces?]
 >
 
-export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
+export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
+  /** The initiating anchor, area, or owning form. */
+  element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  /** The actual submitter captured by the native submit event. */
+  submitter?: HTMLElement | null
+  /** The owning form for a submission, even when its submitter has been detached. */
+  form?: HTMLFormElement
+}
 
 export type FrameReloadResult = {
   signal: AbortSignal

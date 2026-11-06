@@ -21,8 +21,16 @@ type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
 
+// The element whose navigation this is, and the owning form for a submission.
+type NavigationSource = {
+  element: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  form?: HTMLFormElement
+  submitter?: HTMLElement | null
+}
+
 type RuntimeNavigation = {
   state: NavigationState
+  source?: NavigationSource
   getSubmission?: () => Promise<FormSubmission>
   replaceHistory?: boolean
 }
@@ -31,7 +39,16 @@ interface FormSubmissionNavigationInfo {
   type: typeof formSubmissionNavigationInfoType
   state: NavigationState
   frame: FrameHandle
+  // The replacement navigation has no source element of its own.
+  source: NavigationSource | undefined
   getSubmission(): Promise<FormSubmission>
+}
+
+// A link or GET form navigation that started again to replace the current history entry.
+interface HistoryReplacementNavigationInfo {
+  type: typeof historyReplacementNavigationInfoType
+  // The replacement navigation has no source element of its own.
+  source: NavigationSource | undefined
 }
 
 interface FrameRedirectNavigationInfo {
@@ -41,6 +58,7 @@ interface FrameRedirectNavigationInfo {
 }
 
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
+const historyReplacementNavigationInfoType = Symbol('frame-history-replacement')
 const frameRedirectNavigationInfoType = 'frame-redirect'
 
 interface PendingUrlUpdate {
@@ -386,6 +404,9 @@ export function startNavigationListenerImpl(
       }
 
       let replayedSubmission = isFormSubmissionNavigationInfo(event.info) ? event.info : undefined
+      let historyReplacement = isHistoryReplacementNavigationInfo(event.info)
+        ? event.info
+        : undefined
       let runtimeNavigation = replayedSubmission
         ? {
             state: replayedSubmission.state,
@@ -404,6 +425,7 @@ export function startNavigationListenerImpl(
 
       let topFrame = options.getTopFrame()
       let frame = replayedSubmission?.frame
+      let source = (replayedSubmission ?? historyReplacement)?.source ?? runtimeNavigation.source
       if (!frame) {
         if (state.target) {
           frame = options.getNamedFrame(state.target)
@@ -431,6 +453,9 @@ export function startNavigationListenerImpl(
         if (frame !== topFrame) frame.src = state.src
         let reload = options.reloadFrame(frame, {
           ...submission,
+          element: source?.element,
+          submitter: source?.submitter,
+          form: source?.form,
           signal: event.signal,
         })
         await reload.committed
@@ -497,6 +522,7 @@ export function startNavigationListenerImpl(
                 type: formSubmissionNavigationInfoType,
                 state,
                 frame,
+                source,
                 getSubmission: runtimeNavigation.getSubmission,
               } satisfies FormSubmissionNavigationInfo,
             })
@@ -509,7 +535,14 @@ export function startNavigationListenerImpl(
         // <a>/<form method="get"> navigations
         if (runtimeNavigation.replaceHistory && event.cancelable) {
           event.preventDefault()
-          navigation.navigate(event.destination.url, { history: 'replace', state })
+          navigation.navigate(event.destination.url, {
+            history: 'replace',
+            state,
+            info: {
+              type: historyReplacementNavigationInfoType,
+              source,
+            } satisfies HistoryReplacementNavigationInfo,
+          })
         } else {
           interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
         }
@@ -546,6 +579,17 @@ function isFormSubmissionNavigationInfo(value: unknown): value is FormSubmission
     isRuntimeNavigation(value.state) &&
     'frame' in value &&
     typeof value.getSubmission === 'function'
+  )
+}
+
+function isHistoryReplacementNavigationInfo(
+  value: unknown,
+): value is HistoryReplacementNavigationInfo {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'type' in value &&
+    value.type === historyReplacementNavigationInfoType
   )
 }
 
@@ -810,11 +854,14 @@ function getSourceElementNavigation(
   if (!(sourceElement instanceof Element)) return
 
   let linkElement = sourceElement.closest('a, area')
-  if (linkElement instanceof Element) {
+  if (linkElement instanceof HTMLAnchorElement || linkElement instanceof HTMLAreaElement) {
     if (linkElement.hasAttribute('data-rmx-document')) return
     if (linkElement.hasAttribute('download')) return
 
-    return getElementNavigation(linkElement, event, false)
+    return {
+      ...getElementNavigation(linkElement, event, false),
+      source: { element: linkElement },
+    }
   }
 
   let formNavigation = resolveFormNavigation(event)
@@ -826,6 +873,11 @@ function getSourceElementNavigation(
 
   return {
     ...getElementNavigation(formNavigation, event, replaceHistoryByDefault),
+    source: {
+      element: formNavigation.form,
+      form: formNavigation.form,
+      submitter: formNavigation.submitter,
+    },
     getSubmission: formNavigation.getSubmission,
   }
 }

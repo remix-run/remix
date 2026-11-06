@@ -1,1 +1,1 @@
-Pair `reloadStart` and `reloadComplete` events once per frame reload. Re-entering `frame.reload()`, or a reload that takes over a reload inherited from an ancestor frame, previously dispatched an extra `reloadStart` with no matching `reloadComplete`, or a `reloadComplete` before the frame finished reloading.
+Keep inherited frame reloads in one lifecycle while preserving a separate `reloadStart` and `finished` promise for each direct request.

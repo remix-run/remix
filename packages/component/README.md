@@ -1157,7 +1157,7 @@ Components reach frames through `handle.frame`, the frame that contains the comp
 | `frame.src`              | The source the next reload uses. Assigning it alone doesn't load content or change history.                                               |
 | `frame.reload(options?)` | Fetches the frame's source through the resolver and reconciles the result. See [Reloading Frames](#reloading-frames).                     |
 | `frame.replace(content)` | Renders trusted HTML, a byte stream, or a Remix node directly, without calling the resolver or changing the source. HTML isn't sanitized. |
-| `reloadStart` event      | Dispatched when a direct or ancestor-driven reload starts.                                                                                |
+| `reloadStart` event      | Dispatched when a direct or ancestor-driven reload starts, as a `FrameReloadStartEvent`. See [Following a Reload](#following-a-reload).   |
 | `reloadComplete` event   | Dispatched when reload processing ends, including after cancellation or failure.                                                          |
 
 Use `handle.frames.top` when a nested component needs to reload the whole page instead of only its nearest frame:
@@ -1221,6 +1221,92 @@ if (form.reportValidity()) {
   })
 }
 ```
+
+### Following a Reload
+
+`reloadStart` is a `FrameReloadStartEvent`, which describes the effective request and how the reload ends. Its request fields correspond to `frame.reload()` options, with `body` exposed as `formData` and GET fields included in `src`:
+
+| Property    | Value                                                                                                                                                     |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src`       | The initiating reload's source, including any GET submission query. Relative values use the document base URL, as with `frame.reload()`.                  |
+| `method`    | The effective request method in lowercase: `get` or `post`.                                                                                               |
+| `encType`   | The effective POST encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`, or `text/plain`. `null` for GET.                       |
+| `formData`  | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                               |
+| `element`   | The initiating `HTMLAnchorElement`, `HTMLAreaElement`, or `HTMLFormElement`. `null` for `frame.reload()`, programmatic navigation, and history traversal. |
+| `submitter` | The actual submit button, or `null` when there is no submitter.                                                                                           |
+| `finished`  | A `Promise<AbortSignal>` that follows this reload like `frame.reload()`. Rejects on failure.                                                              |
+
+`event.finished` follows the same contract as `frame.reload()`:
+
+| Outcome                               | `finished`                         |
+| ------------------------------------- | ---------------------------------- |
+| Content rendered                      | Resolves with the reload's signal. |
+| Reload failed                         | Rejects with the original failure. |
+| Cancelled, replaced, or frame removed | Resolves with an aborted signal.   |
+
+For a direct reload, `await event.finished` and `await frame.reload()` return the same signal. It can become aborted later when another reload starts or the frame is disposed. Catch failures with `try`/`catch`; cancellation does not reject, so no error-name check is needed.
+
+Rendering a validation response counts as a completed reload. The response carries its field errors.
+
+Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `onSubmission()` for a form's own submissions.
+
+### Following a Form Submission
+
+`onSubmission(handler, captureBoolean?)` follows form submissions that start Remix frame reloads. Its handler receives a typed `FormSubmissionEvent` (`rmx:submission`), with the host inferred as `event.currentTarget`. Listen on a submit button for its submissions, or on the form for all of them.
+
+To display submitted values while a save is pending:
+
+```tsx
+import { clientEntry, onSubmission } from 'remix/component'
+import type { FormSubmissionEvent, Handle } from 'remix/component'
+
+export const TitleForm = clientEntry(
+  import.meta.url,
+  function TitleForm(handle: Handle<{ action: string; title: string }>) {
+    let submission: FormSubmissionEvent | undefined
+    let failed = false
+
+    return () => (
+      <form
+        method="post"
+        action={handle.props.action}
+        mix={onSubmission(async (event, signal) => {
+          submission = event
+          failed = false
+          handle.update()
+          try {
+            await event.finished
+          } catch {
+            if (!signal.aborted) failed = true
+          }
+          if (signal.aborted) return
+          submission = undefined
+          handle.update()
+        })}
+      >
+        <input name="title" aria-label="Title" defaultValue={handle.props.title} />
+        <button type="submit">Save</button>
+        <p role="status">
+          {submission
+            ? `Saving ${submission.formData?.get('title')}…`
+            : failed
+              ? 'Couldn’t save. Try again.'
+              : ''}
+        </p>
+      </form>
+    )
+  },
+)
+```
+
+The handler's signal aborts on the host's next submission or removal, so the check prevents stale updates. A cancelled reload resolves `finished` with an aborted signal, letting this example clear pending state without showing a failure. For success-only behavior such as announcing “Saved!”, use `let reloadSignal = await event.finished` and check `reloadSignal.aborted` first. If submitting removes the form itself, listen on an ancestor that stays mounted.
+
+The event extends `SubmitEvent` and shares the [reload request and completion details](#following-a-reload), including the same `FormData` object and `finished` promise as the target frame's `reloadStart`. Its `form` property is always the owning `HTMLFormElement`, even when the submitter is external or detached. `submitter` is the actual submit button or `null`.
+
+- Remix dispatches the event after the target and descendant frames' `reloadStart` events. It starts on the submit button and bubbles through the form, or starts on the form when there is no submitter, including `requestSubmit()` and `form.submit()` without one.
+- An external or detached submitter receives a non-bubbling event, followed by a separate bubbling event on its owning form. Capture listeners on shared ancestors can receive both; bubbling listeners receive the form's event once.
+- The event is noncancelable. Cancel through native `submit`; `stopPropagation()` still controls delivery of `rmx:submission`.
+- Links, `navigate()`, `frame.reload()`, and forms that load a new document don't dispatch it.
 
 ### Resolving Frames
 
