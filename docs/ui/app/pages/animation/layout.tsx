@@ -15,6 +15,7 @@ export const meta = {
 
 const reordering = await loadExample('animation/layout/reordering')
 const selection = await loadExample('animation/layout/selection')
+const presence = await loadExample('animation/layout/presence')
 
 const anatomyCode = await highlightSource(`
   import { animateLayout } from '@remix-run/ui/animation'
@@ -54,13 +55,23 @@ export default function LayoutPage(handle: Handle<PageProps>) {
           <a href="/animation/spring/">
             <code>spring('snappy')</code>
           </a>{' '}
-          for timing.
+          for layout timing.
         </p>
       }
     >
       <Example id="reordering" example={reordering} hero />
       <Section id="anatomy" title="Anatomy">
         <CodeBlock html={anatomyCode} />
+      </Section>
+      <Section id="entrance-exit" title="Entrance and exit animations">
+        <p>
+          Combine <code>animateLayout()</code> with{' '}
+          <a href="/animation/entrance-exit/">entrance and exit animations</a> to animate items
+          entering and leaving a list. A zero-duration <code>position</code> transition takes the
+          exiting item out of normal flow immediately, so the remaining items can move while it
+          fades out.
+        </p>
+        <Example id="presence" example={presence} />
       </Section>
       <Section id="options" title="Position-only animation">
         <p>
