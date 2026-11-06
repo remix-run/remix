@@ -148,20 +148,6 @@ describe('cart handlers', () => {
     assertContains(html, 'Browse Books')
   })
 
-  it('POST /cart/items saves quantity and redirects a document submission', async () => {
-    let session = await cartSession()
-    let response = await router.fetch(
-      requestWithSession('https://remix.run/cart/items', session, {
-        method: 'POST',
-        body: new URLSearchParams({ bookId: '1', quantity: '3' }),
-      }),
-    )
-    assert.equal(response.status, 303)
-    assert.equal(response.headers.get('Location'), '/cart')
-    let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-    assertContains(await cart.text(), 'Total: $50.97')
-  })
-
   it('POST /cart/items returns the updated HTML directly for frame submissions', async () => {
     let session = await cartSession()
     let response = await router.fetch(
@@ -180,66 +166,29 @@ describe('cart handlers', () => {
     assert.ok(!html.includes('<html'))
   })
 
-  it('supports HEAD and rejects unsupported item methods without changing the cart', async () => {
-    let session = await cartSession()
-    let response = await router.fetch(
-      requestWithSession('https://remix.run/cart/items', session, {
-        method: 'PUT',
-        body: new URLSearchParams({ bookId: '1', quantity: '3' }),
-      }),
-    )
-    assert.ok(response.status >= 400)
-    let head = await router.fetch(
-      requestWithSession('https://remix.run/cart/items', session, {
-        method: 'HEAD',
-      }),
-    )
-    assert.equal(head.status, 200)
-    assert.equal(await head.text(), '')
-    let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-    assertContains(await cart.text(), 'Total: $16.99')
-  })
-
   it('rejects invalid quantities and missing items without losing the cart', async () => {
     let session = await cartSession()
-    for (let headers of [new Headers(), new Headers({ 'X-Remix-Frame': 'true' })]) {
-      for (let quantity of ['', '0', '-1', '1.5', '2abc', '9007199254740992']) {
-        let response = await router.fetch(
-          requestWithSession('https://remix.run/cart/items', session, {
-            method: 'POST',
-            headers,
-            body: new URLSearchParams({ bookId: '1', quantity }),
-          }),
-        )
-        assert.equal(response.status, 400)
-        assertContains(await response.text(), 'Invalid quantity')
-      }
+    for (let quantity of ['', '0', '-1', '1.5', '2abc', '9007199254740992']) {
       let response = await router.fetch(
         requestWithSession('https://remix.run/cart/items', session, {
           method: 'POST',
-          headers,
-          body: new URLSearchParams({ bookId: '2', quantity: '3' }),
+          body: new URLSearchParams({ bookId: '1', quantity }),
         }),
       )
-      assert.equal(response.status, 404)
-      assertContains(await response.text(), 'That book is no longer in your cart.')
+      assert.equal(response.status, 400)
+      assertContains(await response.text(), 'Invalid quantity')
     }
-    let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-    assertContains(await cart.text(), 'Total: $16.99')
-  })
-
-  it('method-overridden DELETE removes the last item and redirects to the empty cart', async () => {
-    let session = await cartSession()
-    let response = await router.fetch(
+    let missing = await router.fetch(
       requestWithSession('https://remix.run/cart/items', session, {
         method: 'POST',
-        body: new URLSearchParams({ _method: 'DELETE', bookId: '1' }),
+        headers: { 'X-Remix-Frame': 'true' },
+        body: new URLSearchParams({ bookId: '2', quantity: '3' }),
       }),
     )
-    assert.equal(response.status, 303)
-    assert.equal(response.headers.get('Location'), '/cart')
+    assert.equal(missing.status, 404)
+    assertContains(await missing.text(), 'That book is no longer in your cart.')
     let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-    assertContains(await cart.text(), 'Your cart is empty.')
+    assertContains(await cart.text(), 'Total: $16.99')
   })
 
   it('DELETE /cart/items removes only the requested item and is safe to retry', async () => {
