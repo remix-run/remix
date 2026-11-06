@@ -146,7 +146,14 @@ export const CartItems = clientEntry(
                 let submittedQuantity = itemSubmission?.values.quantity
 
                 return (
-                  <tr key={item.bookId} mix={css({ '& td': { verticalAlign: 'top' } })}>
+                  <tr
+                    key={item.bookId}
+                    mix={css({
+                      opacity: isRemoving ? 0.6 : 1,
+                      transition: 'opacity 150ms',
+                      '& td': { verticalAlign: 'top' },
+                    })}
+                  >
                     <td>
                       <a
                         data-rmx-prefetch="intent"
