@@ -8,7 +8,7 @@ A test framework for JavaScript and TypeScript projects.
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
 - In-browser component testing (pair with `render` from `remix/component/test`)
-- Mock functions and method spies via `t.mock.fn` / `t.mock.method`
+- Mock functions, methods, accessors, and data properties via `t.mock`
 - Per-test and hook timeouts with `t.signal` abort support
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
@@ -276,18 +276,8 @@ interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
-  // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
-  mock: {
-    // Create a mock function with an optional implementation
-    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
-
-    // Mock an object method with an optional implementation override
-    method<T extends object, K extends keyof T>(
-      obj: T,
-      methodName: K,
-      impl?: Function,
-    ): MockFunction
-  }
+  // Mock functions, methods, accessors, and data properties
+  mock: MockTracker // import type { MockTracker } from 'remix/test'
 
   // Replace global timer functions with controllable fakes
   useFakeTimers(): FakeTimers
@@ -299,7 +289,7 @@ interface TestContext {
 
 #### Mocks and Spies
 
-Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. Mock restoration and `t.after()` callbacks run in registration order, including when the test or an earlier cleanup callback fails.
+Use `t.mock` to create mocks and spies through the [MockTracker API](https://docs.remix.run/api/test/interface/MockTracker/). Function and method mock restoration runs in registration order with `t.after()` callbacks. Accessor and property mocks restore in reverse installation order after those callbacks, even when a test or cleanup callback throws.
 
 ```ts
 it('mocks and spies', (t) => {
@@ -353,6 +343,78 @@ Call indices must be safe integers at or after the next call index. `resetCalls(
 These controls follow the selected [Node `MockFunctionContext` APIs](https://nodejs.org/download/release/v24.3.0/docs/api/test.html#class-mockfunctioncontext). Remix keeps a live `mock.calls` array and records calls before invoking the implementation; Node returns array snapshots and records calls after it returns or throws. Inside the first invocation, Remix's `callCount()` returns `1`, while Node's returns `0`. Reentrant history inspection and override scheduling can therefore differ. Node's additional `mock.fn()` overloads and `times` options are not supported.
 
 Method spies use assignment to install replacements, including through setters. Restoring a method spy skips previously restored spies on the same property. A retained spy remains callable with its current implementation.
+
+##### Data properties
+
+Use `t.mock.property()` to override a data property and track reads and writes on the original object:
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('overrides a feature setting for one read', (t) => {
+  let settings = { enabled: true }
+  let property = t.mock.property(settings, 'enabled', false)
+
+  assert.equal(settings.enabled, false)
+  property.mock.mockImplementationOnce(true)
+  assert.equal(settings.enabled, true)
+  assert.equal(settings.enabled, false)
+  assert.equal(property.mock.accessCount(), 3)
+})
+```
+
+The returned proxy exposes the property context through `.mock`. The property must be a configurable own data property on a non-array object; functions are not supported. Omitting the replacement value retains the original, while explicitly passing `undefined` replaces it with `undefined`.
+
+| Property context member                    | Behavior                                         |
+| ------------------------------------------ | ------------------------------------------------ |
+| `accesses`                                 | Returns a snapshot of recorded reads and writes. |
+| `accessCount()`                            | Counts recorded accesses.                        |
+| `mockImplementation(value)`                | Writes a new value and records the write.        |
+| `mockImplementationOnce(value, onAccess?)` | Overrides one access, defaulting to the next.    |
+| `resetAccesses()`                          | Clears history and restarts access indices.      |
+| `restore()`                                | Restores the original descriptor and value.      |
+
+A one-access override affects a read or a write. If a write consumes it, the override becomes the stored value. See the [property context reference](https://docs.remix.run/api/test/interface/MockPropertyContext/) for scheduling, read-only properties, and history resets.
+
+Reading `.mock` on the proxy returns the context even if the target has a field with that name. Read the original field on the original object. See the [proxy reference](https://docs.remix.run/api/test/type/MockProperty/) for descriptor restrictions.
+
+##### Getters and setters
+
+Use `t.mock.getter()` or `t.mock.setter()` to replace an accessor while preserving its paired setter or getter. Omitting the implementation spies on the original accessor with its receiver.
+
+For browser properties, target the prototype that owns the descriptor. In a browser test (`*.test.browser.ts`):
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('reads the offline browser state', (t) => {
+  let getter = t.mock.getter(Navigator.prototype, 'onLine', () => false)
+  assert.equal(navigator.onLine, false)
+  assert.equal(getter.mock.calls.length, 1)
+})
+```
+
+The equivalent method forms pass `{ getter: true }` or `{ setter: true }` as the fourth argument to `t.mock.method()`; they cannot be combined. Pass `undefined` as the third argument to keep the original implementation.
+
+These APIs use [Node 24.3's property and accessor API names](https://nodejs.org/download/release/v24.3.0/docs/api/test.html#class-mocktracker). Remix restricts `property()` to own data properties so it can restore their descriptors. Node's third-argument options shorthand and `times` option are not supported, and error codes and access stacks vary by runtime.
+
+For environment variables in server tests, assign `process.env` directly: Node rejects the accessor descriptor used by `property()`. This partial example registers restoration before assigning `TZ`:
+
+```ts
+import { it } from 'remix/test'
+
+it('uses UTC', (t) => {
+  let original = process.env.TZ
+  t.after(() => {
+    if (original === undefined) delete process.env.TZ
+    else process.env.TZ = original
+  })
+  process.env.TZ = 'UTC'
+  // Exercise code that reads process.env.TZ
+})
+```
 
 #### Cleanup
 
@@ -426,7 +488,7 @@ it('navigates to home', async (t) => {
 
 ### Standalone mocks (module scope)
 
-When you need a mock outside of a test body, import `mock` directly and call `restore()` manually:
+The standalone `mock` import exposes the same methods as `t.mock`. Restore function, method, and accessor mocks manually with `spy.mock.restore()`, or data properties with `property.mock.restore()`:
 
 ```ts
 import { mock } from 'remix/test'

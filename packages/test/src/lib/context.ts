@@ -1,7 +1,8 @@
 import type { Browser, Page } from 'playwright'
 import type { V8CoverageEntry } from './coverage.ts'
 import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
-import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
+import { createMockTracker } from './mock.ts'
+import type { MockCall, MockContext, MockFunction, MockTracker } from './mock.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
 
 /**
@@ -42,30 +43,11 @@ export interface TestContext {
   after(fn: () => void): void
 
   /**
-   * Function mocks and method spies using {@link mock}, restored automatically after the test.
-   * Mock restoration and test cleanup callbacks run in registration order, even after failures.
+   * {@link MockTracker} for the current test. Function and method mock restoration runs
+   * in registration order with cleanup callbacks. Accessor and property mocks restore
+   * in reverse installation order after those callbacks, including after failures.
    */
-  mock: {
-    /**
-     * Creates a function mock that is restored after the test.
-     * @param impl The implementation to call; omitted mocks return `undefined`.
-     * @returns A mock with call history and controls typed to the implementation.
-     */
-    fn<fn extends (...args: any[]) => any>(impl: fn): MockFunction<fn>
-    fn<fn extends (...args: any[]) => any>(impl?: fn): MockFunction<fn>
-    /**
-     * Creates a method spy that is restored after the test.
-     * @param obj The object whose method will be mocked.
-     * @param methodName The method to replace.
-     * @param impl Optional initial implementation, retaining support for overloaded methods.
-     * @returns A spy with permissive calls and replacement controls typed to the original method.
-     */
-    method<T extends object, K extends keyof T>(
-      obj: T,
-      methodName: K,
-      impl?: Function,
-    ): ReturnType<typeof mock.method<T, K>>
-  }
+  mock: MockTracker
 
   /**
    * Activates fake timers for testing time-dependent code.
@@ -104,26 +86,14 @@ export function createTestContext(options?: CreateTestContextOptions): {
   cleanup(): Promise<void>
 } {
   let cleanups: Array<() => void | Promise<void>> = []
+  let mockCleanups: Array<() => void> = []
 
   let testContext: TestContext = {
     signal: options?.signal ?? new AbortController().signal,
-    mock: {
-      fn(impl) {
-        let mockFn = mock.fn(impl)
-        cleanups.push(mockFn.mock.restore)
-        return mockFn
-      },
-      method(obj, methodName, impl) {
-        // Keep the existing permissive initial override for overloaded methods.
-        let mockFn = mock.method(
-          obj,
-          methodName,
-          impl as Parameters<typeof mock.method<typeof obj, typeof methodName>>[2],
-        )
-        cleanups.push(mockFn.mock.restore)
-        return mockFn
-      },
-    },
+    mock: createMockTracker(
+      (restore) => mockCleanups.push(restore),
+      (restore) => cleanups.push(restore),
+    ),
     after(fn) {
       cleanups.push(fn)
     },
@@ -184,6 +154,13 @@ export function createTestContext(options?: CreateTestContextOptions): {
         }
       }
       cleanups.length = 0
+      while (mockCleanups.length > 0) {
+        try {
+          mockCleanups.pop()?.()
+        } catch (error) {
+          errors.push(error)
+        }
+      }
       if (errors.length === 1) throw errors[0]
       if (errors.length > 1) {
         throw new AggregateError(

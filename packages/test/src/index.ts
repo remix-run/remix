@@ -12,5 +12,7 @@ export {
   afterAll,
 } from './lib/framework.ts'
 export { mock } from './lib/mock.ts'
+export type { MockMethodOptions, MockTracker } from './lib/mock.ts'
+export type { MockProperty, MockPropertyAccess, MockPropertyContext } from './lib/mock-property.ts'
 export type { TestContext } from './lib/context.ts'
 export type { FakeTimers } from './lib/fake-timers.ts'
