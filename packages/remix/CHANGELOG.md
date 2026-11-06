@@ -2,6 +2,31 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.3.0
+
+### Minor Changes
+
+- Reflect locally rendered state in the URL with `updateUrl()` from `remix/component`, without fetching, rendering, or changing scroll and focus. Replace the current entry or push a new one. ([#12110](https://github.com/remix-run/remix/pull/12110))
+
+### Patch Changes
+
+- Pair `reloadStart` and `reloadComplete` events once per frame reload. Re-entering `frame.reload()`, or a reload that takes over a reload inherited from an ancestor frame, previously dispatched an extra `reloadStart` with no matching `reloadComplete`, or a `reloadComplete` before the frame finished reloading. ([#12200](https://github.com/remix-run/remix/pull/12200))
+
+- The rendering, interactivity, and animation guides keep single-use `css()` styles beside their elements and explain when to name shared styles or variant maps. ([#12193](https://github.com/remix-run/remix/pull/12193))
+
+- Spawn a single replacement server when files change while the previous child process is still shutting down. Previously a second restart could start an extra child process that kept running in the background. ([#12199](https://github.com/remix-run/remix/pull/12199))
+
+- Validate native form submissions with `remix/data-schema/experimental/form`, including restorable values and grouped errors on failure while omitting sensitive values and files. Inspect schemas and reuse typed fields through `getSchemaMetadata()` from `remix/data-schema/experimental`. These experimental exports may change or be removed in patch releases. ([#12206](https://github.com/remix-run/remix/pull/12206))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cli@1.0.3`](https://github.com/remix-run/remix/releases/tag/cli@1.0.3)
+  - [`component@1.3.0`](https://github.com/remix-run/remix/releases/tag/component@1.3.0)
+  - [`data-schema@1.0.1`](https://github.com/remix-run/remix/releases/tag/data-schema@1.0.1)
+  - [`multiple-import-maps-polyfill@1.0.2`](https://github.com/remix-run/remix/releases/tag/multiple-import-maps-polyfill@1.0.2)
+  - [`node-hmr@1.0.1`](https://github.com/remix-run/remix/releases/tag/node-hmr@1.0.1)
+  - [`render-middleware@1.1.1`](https://github.com/remix-run/remix/releases/tag/render-middleware@1.1.1)
+  - [`spa@1.0.3`](https://github.com/remix-run/remix/releases/tag/spa@1.0.3)
+
 ## v3.2.0
 
 ### Minor Changes
