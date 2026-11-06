@@ -29,7 +29,7 @@ export function BookCard(handle: Handle<BookCardProps>) {
               View Details
             </a>
 
-            <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
+            <Frame src={routes.cart.fragments.cartButton.href({ bookId: book.id })} />
           </div>
         </div>
       </div>
