@@ -2,6 +2,7 @@ import { createTestContext, type CreateTestContextE2EOptions, type TestContext }
 import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 import type { SerializedOnlyPattern } from './config.ts'
+import { diagnostic } from './diagnostics.ts'
 
 type PendingMeta = boolean | string
 
@@ -153,6 +154,8 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
       let afterEachFailed = false
 
       let testAbortController = new AbortController()
+      let diagnosticName = getFullTestName(suite.name, test.name)
+      diagnostic(`test start: ${diagnosticName}`)
       let { testContext, cleanup } = createTestContext({
         signal: testAbortController.signal,
         e2e: createE2EOptions(options, (e) => e2eCoverageEntries.push(e)),
@@ -163,6 +166,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
           await runLifecycleHooks('beforeEach', suite.beforeEach, testAbortController, test.signal)
         }
 
+        diagnostic(`body start: ${diagnosticName}`)
         await runRunnable(
           'Test',
           () => test.fn(testContext),
@@ -170,13 +174,18 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
           testAbortController,
           test.signal,
         )
+        diagnostic(`body done: ${diagnosticName}`)
       } catch (error) {
+        diagnostic(`body/beforeEach failed: ${diagnosticName}: ${String(error)}`)
         testFailed = true
         testError = error
       } finally {
         try {
+          diagnostic(`cleanup start: ${diagnosticName}`)
           await cleanup()
+          diagnostic(`cleanup done: ${diagnosticName}`)
         } catch (error) {
+          diagnostic(`cleanup failed: ${diagnosticName}: ${String(error)}`)
           cleanupError = createHookFailure('cleanup', error)
         }
         if (suite.afterEach) {
@@ -202,6 +211,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
 
         result.duration = performance.now() - startTime
         results.tests.push(result)
+        diagnostic(`test ${result.status}: ${diagnosticName} (${result.duration}ms)`)
       }
     }
 

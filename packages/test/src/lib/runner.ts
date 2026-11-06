@@ -233,6 +233,7 @@ export function runFileInWorker(
   let worker =
     type === 'e2e'
       ? new Worker(workerE2EUrl, {
+          env: getDiagnosticEnv(file, type),
           workerData: {
             file: pathToFileURL(file).href,
             type,
@@ -243,6 +244,7 @@ export function runFileInWorker(
           },
         })
       : new Worker(workerUrl, {
+          env: getDiagnosticEnv(file, type),
           workerData: {
             file: pathToFileURL(file).href,
             type,
@@ -305,6 +307,7 @@ function runFileInProcess(
 ): WorkerRun {
   let receivedResults = false
   let child = fork(fileURLToPath(workerProcessUrl), [], {
+    env: getDiagnosticEnv(file, type),
     serialization: 'advanced',
     stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
   })
@@ -360,6 +363,19 @@ function runFileInProcess(
     finished,
     exited,
     terminate: () => terminateChildProcess(child, exited),
+  }
+}
+
+function getDiagnosticEnv(file: string, type: 'server' | 'e2e'): NodeJS.ProcessEnv {
+  let selector = process.env.REMIX_TEST_DIAGNOSTICS
+  let enabled = type === 'e2e' && !!selector && file.includes(selector)
+  return {
+    ...process.env,
+    REMIX_TEST_DIAGNOSTICS: enabled ? '1' : '',
+    REMIX_TEST_DIAGNOSTIC_FILE: file,
+    DEBUG: enabled
+      ? [process.env.DEBUG, 'pw:api,pw:browser'].filter(Boolean).join(',')
+      : process.env.DEBUG,
   }
 }
 

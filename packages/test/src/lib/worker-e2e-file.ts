@@ -11,6 +11,7 @@ import type { TestResults } from './reporters/results.ts'
 import { createFailedResults } from './worker-results.ts'
 import { isRecord, parseCoverageConfig, parseOnlyPatterns } from './worker-server.ts'
 import type { SerializedOnlyPattern } from './config.ts'
+import { diagnostic } from './diagnostics.ts'
 
 export interface E2ETestWorkerData {
   file: string
@@ -27,11 +28,15 @@ export async function runE2ETestFile(
   try {
     let workerData = parseE2ETestWorkerData(value)
 
+    diagnostic('file import start')
     await importModule(workerData.file, import.meta)
+    diagnostic('file import done')
 
     let launcher = await getBrowserLauncher(workerData.playwrightUseOpts)
     let opts = getPlaywrightLaunchOptions(workerData.playwrightUseOpts)
+    diagnostic(`browser launch start: ${launcher.name()}`)
     let browser = await launcher.launch(opts)
+    diagnostic(`browser launch done: ${launcher.name()}`)
     let browserClosed = false
 
     try {
@@ -42,6 +47,7 @@ export async function runE2ETestFile(
         coverage: !!workerData.coverage,
         only: workerData.only,
       })
+      diagnostic(`file tests done: passed=${results.passed} failed=${results.failed}`)
 
       if (workerData.open) {
         await onOpenResults?.(results)
@@ -50,15 +56,20 @@ export async function runE2ETestFile(
         return undefined
       }
 
+      diagnostic('browser close start')
       await browser.close()
+      diagnostic('browser close done')
       browserClosed = true
       return results
     } finally {
       if (!browserClosed) {
+        diagnostic('browser close (finally) start')
         await browser.close()
+        diagnostic('browser close (finally) done')
       }
     }
   } catch (error) {
+    diagnostic(`file failed: ${String(error)}`)
     return createFailedResults(error)
   }
 }

@@ -9,7 +9,9 @@ import { users } from './data/schema.ts'
 
 describe('bookstore form submissions', () => {
   it('roundtrips field and form errors through hydrated submissions', async (t) => {
+    diagnostic('hydrated router setup start')
     let router = await createTestRouter()
+    diagnostic('hydrated router setup done')
     let submissions = 0
     let page = await t.serve(
       await createTestServer((request) => {
@@ -23,7 +25,9 @@ describe('bookstore form submissions', () => {
   })
 
   it('roundtrips field and form errors without JavaScript', async (t) => {
+    diagnostic('no-JS router setup start')
     let router = await createTestRouter()
+    diagnostic('no-JS router setup done')
     let submissions = 0
     let server = await createTestServer((request) => {
       if (request.method === 'POST' && new URL(request.url).pathname === '/register') {
@@ -35,7 +39,11 @@ describe('bookstore form submissions', () => {
     let browser = runtimePage.context().browser()
     assert.ok(browser)
     let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
-    t.after(() => context.close())
+    t.after(async () => {
+      diagnostic('no-JS context close start')
+      await context.close()
+      diagnostic('no-JS context close done')
+    })
     await registrationFlow(await context.newPage(), false, () => submissions)
   })
 })
@@ -46,16 +54,34 @@ async function registrationFlow(
   submissionCount: () => number,
 ): Promise<void> {
   let pageErrors: string[] = []
-  page.on('pageerror', (error) => pageErrors.push(error.message))
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message)
+    diagnostic(`page error: ${error.message}`)
+  })
+  let diagnosticsEnabled = process.env.REMIX_TEST_DIAGNOSTICS === '1'
+  if (diagnosticsEnabled) {
+    page.on('requestfailed', (request) => {
+      diagnostic(
+        `request failed: ${request.method()} ${new URL(request.url()).pathname}: ${request.failure()?.errorText}`,
+      )
+    })
+    page.on('crash', () => diagnostic('page crashed'))
+    page.on('console', (message) => {
+      if (message.text().startsWith('[bookstore-diagnostics]')) diagnostic(message.text())
+    })
+  }
   let emailAddress = `form-${crypto.randomUUID()}@example.com`
   await page.goto('/register')
   if (javaScriptEnabled) {
-    await page.evaluate(async () => {
+    diagnostic('app ready start')
+    await page.evaluate(async (diagnosticsEnabled) => {
       let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
       if (!script) throw new Error('Missing app entry')
       let { app } = await import(script.src)
+      if (diagnosticsEnabled) console.info('[bookstore-diagnostics] app module imported')
       await app.ready()
-    })
+    }, diagnosticsEnabled)
+    diagnostic('app ready done')
   }
   let name = page.getByRole('textbox', { name: 'Name', exact: true })
   let email = page.getByRole('textbox', { name: 'Email', exact: true })
@@ -150,4 +176,12 @@ async function registrationFlow(
   await page.waitForURL((url) => url.pathname === '/account')
   await page.getByRole('heading', { name: 'My Account', exact: true }).waitFor()
   assert.deepEqual(pageErrors, [])
+}
+
+function diagnostic(message: string): void {
+  if (process.env.REMIX_TEST_DIAGNOSTICS === '1') {
+    console.error(
+      `[bookstore-diagnostics ${new Date().toISOString()} pid=${process.pid}] ${message}`,
+    )
+  }
 }
