@@ -1,6 +1,7 @@
 import type { ElementProps, ElementType, RemixNode, Renderable } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
+import { ignoreAbortedRejection } from './ignore-aborted-rejection.ts'
 
 /**
  * An `EventTarget` subclass with typed event maps.
@@ -587,10 +588,15 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
       this.#renderController ??= new AbortController()
     }
 
-    signal ??= this.#renderController?.signal
-    signal ??= sharedAbortedSignal ??= AbortSignal.abort()
+    let taskSignal = signal ?? this.#renderController?.signal
     let tasks = this.#tasks.splice(0, this.#tasks.length)
-    return tasks.map((task) => () => task(signal))
+    if (!taskSignal) {
+      // No task asked for a signal, so this aborted placeholder doesn't mean the
+      // work was cancelled and its rejections must not be ignored.
+      let placeholderSignal = (sharedAbortedSignal ??= AbortSignal.abort())
+      return tasks.map((task) => () => task(placeholderSignal))
+    }
+    return tasks.map((task) => () => ignoreAbortedRejection(task(taskSignal), taskSignal))
   }
 }
 

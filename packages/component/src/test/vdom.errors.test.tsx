@@ -1,7 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
-import { on } from '../index.ts'
+import type { TestContext } from '@remix-run/test'
+import { createMixin, on, ref } from '../index.ts'
 import type { Handle } from '../runtime/component.ts'
 
 describe('vdom error handling', () => {
@@ -329,6 +330,241 @@ describe('vdom error handling', () => {
     })
   })
 
+  describe('aborted async work', () => {
+    it('ignores rejections from on() handlers superseded by a later event', async (t) => {
+      let unhandledRejections = captureUnhandledRejections(t)
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let rejectFirst: (error: unknown) => void = () => {}
+      let calls = 0
+
+      root.render(
+        <button
+          mix={[
+            on('click', async () => {
+              calls++
+              if (calls === 1) {
+                await new Promise((_resolve, reject) => {
+                  rejectFirst = reject
+                })
+              }
+            }),
+          ]}
+        >
+          Click
+        </button>,
+      )
+      root.flush()
+
+      let button = container.querySelector('button')!
+      button.click()
+      button.click()
+      rejectFirst(new DOMException('Aborted', 'AbortError'))
+
+      await waitForUnhandledRejections()
+      expect(calls).toBe(2)
+      expect(unhandledRejections).toEqual([])
+    })
+
+    it('ignores rejections from on() handlers whose element was removed', async (t) => {
+      let unhandledRejections = captureUnhandledRejections(t)
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let rejectHandler: (error: unknown) => void = () => {}
+
+      root.render(
+        <button
+          mix={[
+            on('click', async () => {
+              await new Promise((_resolve, reject) => {
+                rejectHandler = reject
+              })
+            }),
+          ]}
+        >
+          Click
+        </button>,
+      )
+      root.flush()
+
+      container.querySelector('button')!.click()
+      root.render(null)
+      root.flush()
+      rejectHandler(new DOMException('Aborted', 'AbortError'))
+
+      await waitForUnhandledRejections()
+      expect(unhandledRejections).toEqual([])
+    })
+
+    it('ignores rejections from aborted on() handlers combined with other mixins', async (t) => {
+      let unhandledRejections = captureUnhandledRejections(t)
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let rejectHandlers: Array<(error: unknown) => void> = []
+
+      root.render(
+        <button
+          mix={[
+            ref(() => {}),
+            on('click', async () => {
+              await new Promise((_resolve, reject) => {
+                rejectHandlers.push(reject)
+              })
+            }),
+          ]}
+        >
+          Click
+        </button>,
+      )
+      root.flush()
+
+      let button = container.querySelector('button')!
+      button.click()
+      button.click()
+      root.render(null)
+      root.flush()
+      for (let reject of rejectHandlers) reject(new DOMException('Aborted', 'AbortError'))
+
+      await waitForUnhandledRejections()
+      expect(rejectHandlers).toHaveLength(2)
+      expect(unhandledRejections).toEqual([])
+    })
+
+    it('surfaces rejections from on() handlers that were not aborted', async (t) => {
+      let unhandledRejections = captureUnhandledRejections(t)
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let error = new Error('handler failed')
+
+      root.render(
+        <button
+          mix={[
+            on('click', async () => {
+              await Promise.resolve()
+              throw error
+            }),
+          ]}
+        >
+          Click
+        </button>,
+      )
+      root.flush()
+
+      container.querySelector('button')!.click()
+
+      await waitForUnhandledRejections()
+      expect(unhandledRejections).toEqual([error])
+    })
+
+    it('ignores rejections from queued tasks after the component renders again', async (t) => {
+      let unhandledRejections = captureUnhandledRejections(t)
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let rejectTask: (error: unknown) => void = () => {}
+      let update = () => {}
+
+      function Component(handle: Handle) {
+        handle.queueTask(async (signal) => {
+          await new Promise((_resolve, reject) => {
+            rejectTask = reject
+          })
+          signal.throwIfAborted()
+        })
+        update = () => handle.update()
+        return () => <div>ok</div>
+      }
+
+      root.render(<Component />)
+      root.flush()
+      update()
+      root.flush()
+      rejectTask(new DOMException('Aborted', 'AbortError'))
+
+      await waitForUnhandledRejections()
+      expect(unhandledRejections).toEqual([])
+    })
+
+    it('ignores rejections from queued tasks after the component is removed', async (t) => {
+      let unhandledRejections = captureUnhandledRejections(t)
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let rejectTask: (error: unknown) => void = () => {}
+
+      function Component(handle: Handle) {
+        handle.queueTask(async (signal) => {
+          await new Promise((_resolve, reject) => {
+            rejectTask = reject
+          })
+          signal.throwIfAborted()
+        })
+        return () => <div>ok</div>
+      }
+
+      root.render(<Component />)
+      root.flush()
+      root.render(null)
+      root.flush()
+      rejectTask(new DOMException('Aborted', 'AbortError'))
+
+      await waitForUnhandledRejections()
+      expect(unhandledRejections).toEqual([])
+    })
+
+    it('surfaces rejections from queued tasks that were not aborted', async (t) => {
+      let unhandledRejections = captureUnhandledRejections(t)
+      let errorHandler = t.mock.fn()
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.addEventListener('error', errorHandler)
+      let error = new Error('task failed')
+
+      function Component(handle: Handle) {
+        handle.queueTask(async () => {
+          await Promise.resolve()
+          throw error
+        })
+        return () => <div>ok</div>
+      }
+
+      root.render(<Component />)
+      root.flush()
+
+      await waitForUnhandledRejections()
+      expect(unhandledRejections).toEqual([error])
+      expect(errorHandler).not.toHaveBeenCalled()
+    })
+
+    it('ignores rejections from mixin queued tasks after the host is removed', async (t) => {
+      let unhandledRejections = captureUnhandledRejections(t)
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let rejectTask: (error: unknown) => void = () => {}
+      let taskStarted = false
+
+      let loader = createMixin((handle) => {
+        handle.addEventListener('insert', () => {
+          handle.queueTask(async () => {
+            taskStarted = true
+            await new Promise((_resolve, reject) => {
+              rejectTask = reject
+            })
+          })
+        })
+        return () => handle.element
+      })
+
+      root.render(<div mix={[loader()]} />)
+      root.flush()
+      expect(taskStarted).toBe(true)
+      root.render(null)
+      root.flush()
+      rejectTask(new DOMException('Aborted', 'AbortError'))
+
+      await waitForUnhandledRejections()
+      expect(unhandledRejections).toEqual([])
+    })
+  })
+
   describe('error does not prevent other work', () => {
     it('continues running tasks after task error', (t) => {
       let container = document.createElement('div')
@@ -554,3 +790,18 @@ describe('vdom error handling', () => {
     })
   })
 })
+
+function captureUnhandledRejections(t: TestContext): unknown[] {
+  let reasons: unknown[] = []
+  let onUnhandledRejection = (event: PromiseRejectionEvent) => {
+    event.preventDefault()
+    reasons.push(event.reason)
+  }
+  window.addEventListener('unhandledrejection', onUnhandledRejection)
+  t.after(() => window.removeEventListener('unhandledrejection', onUnhandledRejection))
+  return reasons
+}
+
+function waitForUnhandledRejections() {
+  return new Promise((resolve) => setTimeout(resolve, 50))
+}
