@@ -220,6 +220,80 @@ describe('runTests lifecycle hook failures', () => {
 })
 
 describe('runTests timeouts and signals', () => {
+  it('prevents timed out async tests from enabling clocks in a later test', async () => {
+    let resume = Promise.withResolvers<void>()
+    let resumed = Promise.withResolvers<void>()
+    let lateClock: ReturnType<TestContext['useFakeTimers']> | undefined
+    let lateError: unknown
+    let originalDate = Date
+    try {
+      let results = await runWithSuites([
+        {
+          name: 'suite',
+          tests: [
+            {
+              name: 'timed out test',
+              timeout: 5,
+              async fn(t) {
+                t.useFakeTimers()
+                await resume.promise
+                try {
+                  lateClock = t.useFakeTimers({ now: 1000 })
+                } catch (error) {
+                  lateError = error
+                } finally {
+                  resumed.resolve()
+                }
+              },
+            },
+            {
+              name: 'later test',
+              async fn() {
+                resume.resolve()
+                await resumed.promise
+                assert.equal(Date, originalDate)
+                assert.ok(lateError instanceof Error)
+                assert.match(lateError.message, /finished/)
+              },
+            },
+          ],
+        },
+      ])
+      assert.equal(results.failed, 1)
+      assert.equal(results.passed, 1)
+      assert.match(results.tests[0].error?.message ?? '', /Test timed out/)
+    } finally {
+      lateClock?.restore()
+    }
+  })
+
+  it('keeps runner deadlines independent of replaced global timers', async (t) => {
+    let setTimeoutSpy = t.mock.method(globalThis, 'setTimeout', () => {
+      throw new Error('global timer used for a runner deadline')
+    })
+    let clearTimeoutSpy = t.mock.method(globalThis, 'clearTimeout')
+
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'timed out test',
+            timeout: 5,
+            fn() {
+              return new Promise(() => {})
+            },
+          },
+        ],
+      },
+    ])
+
+    assert.equal(results.failed, 1)
+    assert.match(results.tests[0].error?.message ?? '', /Test timed out after 5ms/)
+    assert.equal(setTimeoutSpy.mock.callCount(), 0)
+    assert.equal(clearTimeoutSpy.mock.callCount(), 0)
+  })
+
   it('fails tests that exceed their timeout and aborts the test signal', async () => {
     let aborted = false
 
