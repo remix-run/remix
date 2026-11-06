@@ -355,7 +355,7 @@ describe('cart submissions', () => {
     )
   })
 
-  it('submits to the shared items URL with JavaScript disabled', async (t) => {
+  it('submits cart forms with JavaScript disabled and returns to the current page', async (t) => {
     let router = await createTestRouter()
     let mutations: string[] = []
     let server = await createTestServer(async (request) => {
@@ -370,15 +370,19 @@ describe('cart submissions', () => {
     let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
     t.after(() => context.close())
     let page = await context.newPage()
-    await page.goto('/books/bbq')
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
+    await page.goto('/books?sort=title')
+    let book = page.locator('[data-test-slug="bbq"]')
+    await book.getByRole('button', { name: 'Add to Cart', exact: true }).click()
     assert.deepEqual(mutations, ['/cart/button/1 303'])
-    assert.equal(new URL(page.url()).pathname, '/books/bbq')
-    await page.getByRole('button', { name: 'Remove from Cart', exact: true }).click()
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
+    assert.equal(new URL(page.url()).pathname, '/books')
+    assert.equal(new URL(page.url()).search, '?sort=title')
+    await book.getByRole('button', { name: 'Remove from Cart', exact: true }).click()
+    await book.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
     assert.deepEqual(mutations, ['/cart/button/1 303', '/cart/button/1 303'])
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
-    await page.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
+    assert.equal(new URL(page.url()).pathname, '/books')
+    assert.equal(new URL(page.url()).search, '?sort=title')
+    await book.getByRole('button', { name: 'Add to Cart', exact: true }).click()
+    await book.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
     mutations.length = 0
     await page.goto('/cart')
     await page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' }).fill('2')
