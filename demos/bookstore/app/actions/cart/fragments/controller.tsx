@@ -92,7 +92,9 @@ export default createController(routes.cart.fragments, {
       if (request.headers.get('X-Remix-Frame') === 'true') {
         return renderCartButton(context, book)
       }
-      return redirect(routes.books.show.href({ slug: book.slug }), 303)
+      let referer = URL.parse(request.headers.get('Referer') ?? '')
+      let returnTo = referer?.origin === context.url.origin ? referer.href : routes.home.href()
+      return redirect(returnTo, 303)
     },
   },
 })

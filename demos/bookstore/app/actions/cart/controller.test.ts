@@ -118,6 +118,22 @@ describe('cart handlers', () => {
     assertContains(html, 'Three Ways to Change Your Life')
   })
 
+  it('native cart button submissions return to a same-origin referrer or the home page', async () => {
+    for (let [referer, expected] of [
+      ['https://remix.run/books?sort=title', 'https://remix.run/books?sort=title'],
+      ['https://example.com/books', '/'],
+      ['', '/'],
+    ]) {
+      let response = await router.fetch('https://remix.run/cart/button/1', {
+        method: 'POST',
+        headers: { Referer: referer },
+        body: new URLSearchParams({ intent: 'add' }),
+      })
+      assert.equal(response.status, 303)
+      assert.equal(response.headers.get('Location'), expected)
+    }
+  })
+
   it('GET /cart/items renders table fragment for cart items', async () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
