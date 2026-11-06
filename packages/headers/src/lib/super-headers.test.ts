@@ -434,6 +434,10 @@ describe('SuperHeaders', () => {
     headers.permissionsPolicy = ['geolocation=()', 'camera=()']
     headers.prefer = ['respond-async', 'return=minimal']
     headers.preferenceApplied = 'return=minimal'
+    headers.secFetchDest = 'document'
+    headers.secFetchMode = 'navigate'
+    headers.secFetchSite = 'same-origin'
+    headers.secFetchUser = '?1'
     headers.traceparent = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00'
     headers.tracestate = ['rojo=00f067aa0ba902b7', 'congo=t61rcWkgMzE']
     headers.userAgent = 'Remix'
@@ -451,6 +455,14 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('Permissions-Policy'), 'geolocation=(), camera=()')
     assert.equal(headers.get('Prefer'), 'respond-async, return=minimal')
     assert.equal(headers.get('Preference-Applied'), 'return=minimal')
+    assert.equal(headers.secFetchDest, 'document')
+    assert.equal(headers.get('Sec-Fetch-Dest'), 'document')
+    assert.equal(headers.secFetchMode, 'navigate')
+    assert.equal(headers.get('Sec-Fetch-Mode'), 'navigate')
+    assert.equal(headers.secFetchSite, 'same-origin')
+    assert.equal(headers.get('Sec-Fetch-Site'), 'same-origin')
+    assert.equal(headers.secFetchUser, '?1')
+    assert.equal(headers.get('Sec-Fetch-User'), '?1')
     assert.equal(headers.traceparent, '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00')
     assert.equal(headers.get('Tracestate'), 'rojo=00f067aa0ba902b7, congo=t61rcWkgMzE')
     assert.equal(headers.userAgent, 'Remix')
