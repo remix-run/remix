@@ -72,6 +72,7 @@ export interface TestContext {
    * `setTimeout`, `setInterval`, `setImmediate`, their clear functions,
    * `AbortSignal.timeout()`, `Date`, and `performance.now()` with fakes driven
    * by the returned handle, and restores them after the test.
+   * Calling again restores the previous clock and starts a new one.
    *
    * @param options Optional settings, such as the `now` time the fake `Date` starts at.
    * @returns {FakeTimers} A fake timers instance for controlling time
@@ -108,6 +109,7 @@ export function createTestContext(options?: CreateTestContextOptions): {
   cleanup(): Promise<void>
 } {
   let cleanups: Array<() => void | Promise<void>> = []
+  let fakeTimers: FakeTimers | undefined
 
   let testContext: TestContext = {
     signal: options?.signal ?? new AbortController().signal,
@@ -132,7 +134,9 @@ export function createTestContext(options?: CreateTestContextOptions): {
       cleanups.push(fn)
     },
     useFakeTimers(options) {
+      fakeTimers?.restore()
       let timers = createFakeTimers(options)
+      fakeTimers = timers
       cleanups.push(timers.restore)
       return timers
     },

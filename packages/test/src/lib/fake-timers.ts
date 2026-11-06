@@ -22,6 +22,8 @@ export interface FakeTimersOptions {
  * `new Date()` start at the `now` option (default `0`, the Unix epoch) and
  * `performance.now()` starts at `0`. The clear functions still cancel real
  * timers created before the fakes were installed.
+ * `AbortSignal.timeout()` requires an integer from `0` to `4294967295`,
+ * matching Node's validation in every runtime.
  *
  * @example
  * ```ts
@@ -64,7 +66,7 @@ export interface FakeTimers {
    * Restore the original timer functions, `AbortSignal.timeout()`, `Date`,
    * and `performance.now()`.
    * Called automatically after the test finishes; may also be called early to
-   * disable fake timers mid-test.
+   * disable fake timers mid-test. Repeated calls have no effect.
    */
   restore(): void
 }
@@ -88,6 +90,7 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
   let currentTime = 0
   let nextId = firstFakeId
   let pending = new Map<number, FakeTimer>()
+  let restored = false
 
   let RealDate = globalThis.Date
   let realClearTimeout = globalThis.clearTimeout
@@ -105,6 +108,10 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
 
     constructor(timer: FakeTimer) {
       this.#timer = timer
+    }
+
+    static getTimer(handle: FakeTimeout) {
+      return handle.#timer
     }
 
     ref() {
@@ -155,7 +162,7 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
     return (handle: unknown) => {
       let id = handle instanceof FakeTimeout ? Number(handle) : handle
       if (typeof id === 'number' && id >= firstFakeId && id < nextId) {
-        let timer = pending.get(id)
+        let timer = handle instanceof FakeTimeout ? FakeTimeout.getTimer(handle) : pending.get(id)
         if (timer) timer.cleared = true
         pending.delete(id)
       } else {
@@ -218,6 +225,10 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
   let abortSignalTimeoutMock =
     typeof globalThis.AbortSignal?.timeout === 'function'
       ? mock.method(globalThis.AbortSignal, 'timeout', (ms: number) => {
+          if (typeof ms !== 'number') throw new TypeError('The timeout must be a number')
+          if (!Number.isInteger(ms) || ms < 0 || ms > 2 ** 32 - 1) {
+            throw new RangeError('The timeout must be an integer between 0 and 4294967295')
+          }
           let controller = new AbortController()
           schedule(
             () => controller.abort(new DOMException('signal timed out', 'TimeoutError')),
@@ -277,6 +288,7 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
       currentTime = targetTime
     },
     restore() {
+      if (restored) return
       setTimeoutMock.mock.restore?.()
       clearTimeoutMock.mock.restore?.()
       setIntervalMock.mock.restore?.()
@@ -288,6 +300,7 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
       performanceNowMock?.mock.restore?.()
       pending.clear()
       currentTime = 0
+      restored = true
     },
   }
 }

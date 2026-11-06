@@ -390,6 +390,8 @@ beforeEach(
 
 `t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, `setImmediate`, and their clear functions), `AbortSignal.timeout()`, `Date`, and `performance.now()` with controllable fakes that are automatically restored after the test. Time only moves when the test advances the clock. It works in any test environment — server unit tests, browser tests, or E2E setup code.
 
+Calling `t.useFakeTimers()` again restores the previous clock, discards its pending timers, and starts a new clock with the supplied options. Calling `restore()` more than once has no effect.
+
 ```ts
 it('debounces a callback', (t) => {
   let timers = t.useFakeTimers()
@@ -422,6 +424,8 @@ it('expires a session after one hour', (t) => {
 ```
 
 Immediates fire on the next advance, including `advance(0)`, and signals from `AbortSignal.timeout(ms)` abort with a `TimeoutError` once the clock reaches `ms`. Timers created before `t.useFakeTimers()` stay real, and the clear functions still cancel them. In Node, fake timers return handles that support `ref()`, `unref()`, `hasRef()`, and `refresh()`.
+
+Fake `AbortSignal.timeout(ms)` uses Node's validation in every runtime: `ms` must be a number and an integer from `0` through `4294967295`. Other types throw a `TypeError`; invalid numbers throw a `RangeError` synchronously.
 
 #### E2E
 

@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '../lib/framework.ts'
 import { createFakeTimers } from '../lib/fake-timers.ts'
+import { createTestContext } from '../lib/context.ts'
 
 // Always restore globals even if a test bails — we patch globalThis directly.
 function withFakeTimers<T>(fn: (timers: ReturnType<typeof createFakeTimers>) => T): T {
@@ -13,6 +14,28 @@ function withFakeTimers<T>(fn: (timers: ReturnType<typeof createFakeTimers>) => 
 }
 
 describe('createFakeTimers', () => {
+  it('restores globals after repeated useFakeTimers calls in one test', async () => {
+    let originalDate = globalThis.Date
+    let { testContext, cleanup } = createTestContext()
+    try {
+      let first = testContext.useFakeTimers({ now: 1000 })
+      let fired = false
+      setTimeout(() => (fired = true), 100)
+      let second = testContext.useFakeTimers({ now: 2000 })
+      first.restore()
+      assert.equal(Date.now(), 2000)
+      second.advance(100)
+      assert.equal(Date.now(), 2100)
+      assert.equal(fired, false)
+
+      await cleanup()
+      assert.equal(globalThis.Date, originalDate)
+    } finally {
+      await cleanup()
+      globalThis.Date = originalDate
+    }
+  })
+
   it('replaces globalThis timer functions', () => {
     let originalSetTimeout = globalThis.setTimeout
     let originalClearTimeout = globalThis.clearTimeout
@@ -134,6 +157,20 @@ describe('FakeTimers#advance — setTimeout', () => {
     })
   })
 
+  it('reactivates an expired timeout when refreshed without clearing it', () => {
+    withFakeTimers((timers) => {
+      let fired = 0
+      let handle = setTimeout(() => fired++, 100)
+      timers.advance(100)
+      assert.equal(fired, 1)
+      handle.refresh()
+      timers.advance(99)
+      assert.equal(fired, 1)
+      timers.advance(1)
+      assert.equal(fired, 2)
+    })
+  })
+
   it('fires timeouts scheduled inside a callback during the same advance', () => {
     withFakeTimers((timers) => {
       let order: string[] = []
@@ -148,6 +185,19 @@ describe('FakeTimers#advance — setTimeout', () => {
 })
 
 describe('FakeTimers#advance — clearTimeout', () => {
+  it('does not revive an expired timeout after clearing its handle', () => {
+    withFakeTimers((timers) => {
+      let fired = 0
+      let handle = setTimeout(() => fired++, 100)
+      timers.advance(100)
+      assert.equal(fired, 1)
+      clearTimeout(handle)
+      assert.equal(handle.refresh(), handle)
+      timers.advance(100)
+      assert.equal(fired, 1)
+    })
+  })
+
   it('cancels a pending setTimeout', () => {
     withFakeTimers((timers) => {
       let fired = 0
@@ -313,6 +363,32 @@ describe('FakeTimers#advance — setImmediate', () => {
 })
 
 describe('FakeTimers — AbortSignal.timeout', () => {
+  it('rejects invalid timeout durations synchronously', () => {
+    withFakeTimers(() => {
+      assert.throws(() => AbortSignal.timeout(-1), RangeError)
+      assert.throws(() => AbortSignal.timeout(NaN), RangeError)
+      assert.throws(() => AbortSignal.timeout(Infinity), RangeError)
+      assert.throws(() => AbortSignal.timeout(1.5), RangeError)
+      assert.throws(() => AbortSignal.timeout(2 ** 32), RangeError)
+      assert.throws(() => Reflect.apply(AbortSignal.timeout, AbortSignal, ['100']), TypeError)
+    })
+  })
+
+  it('accepts the minimum and maximum timeout durations', () => {
+    withFakeTimers((timers) => {
+      let immediate = AbortSignal.timeout(0)
+      let maximum = AbortSignal.timeout(2 ** 32 - 1)
+      assert.equal(immediate.aborted, false)
+      timers.advance(0)
+      assert.equal(immediate.aborted, true)
+      assert.equal(maximum.aborted, false)
+      timers.advance(2 ** 32 - 2)
+      assert.equal(maximum.aborted, false)
+      timers.advance(1)
+      assert.equal(maximum.aborted, true)
+    })
+  })
+
   it('aborts the signal with a TimeoutError once the clock reaches the timeout', () => {
     withFakeTimers((timers) => {
       let signal = AbortSignal.timeout(100)
