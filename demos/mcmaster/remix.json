@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/remix/schema/remix.json",
+  "assets": {
+    "rootDir": "../..",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "demos/mcmaster/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": [
+      "demos/mcmaster/app/routes.ts",
+      "demos/mcmaster/app/**/public/**",
+      "demos/mcmaster/app/images/products/**/*.webp"
+    ],
+    "allowPackages": ["remix"],
+    "denyFiles": ["demos/mcmaster/app/**/*.test.*"]
+  },
+  "test": {
+    "playwright": {
+      "configFile": "./playwright.config.ts"
+    }
+  }
+}
