@@ -20,7 +20,7 @@ Search this generated index by task, export name, or description. Use the guides
 | [Errors and Cancellation](guides/12-errors-and-cancellation.md) | How expected HTTP failures, uncaught server errors, rendering failures, client runtime errors, and aborted work propagate through Remix. |
 | [Testing](guides/13-testing.md) | How to choose a test boundary and test Remix routes, stateful request flows, browser components, and end-to-end behavior. |
 | [CLI and Tooling](guides/14-cli-and-tooling.md) | The Remix command-line workflow for creating, inspecting, testing, checking, and running TypeScript projects. |
-| [Production](guides/15-production.md) | How to configure, start, cache, observe, and shut down a Remix application in production. |
+| [Production](guides/15-production.md) | Run a Remix app in production, from the start command and configuration to the server entry, deploys, caching, and running more than one instance. |
 
 ## Package APIs
 

@@ -120,4 +120,12 @@ describe('renderMarkdownHtml', () => {
 
     assert.match(html, /^<blockquote>/)
   })
+
+  it('keeps a blockquote whose marker shares a line with formatted text', async () => {
+    let { root } = parseMarkdownDocument('> [!TIP] **Quoted** text.\n')
+
+    let html = await renderMarkdownHtml(root)
+
+    assert.match(html, /^<blockquote>\n<p>\[!TIP\] <strong>Quoted<\/strong> text\.<\/p>/)
+  })
 })
