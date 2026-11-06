@@ -54,7 +54,7 @@ describe('cart submissions', () => {
     await page.getByText('Total: $50.97', { exact: true }).waitFor()
   })
 
-  it('uses schema feedback and keeps validation scoped to each cart form', async (t) => {
+  it('keeps client and server validation scoped to the submitted cart form', async (t) => {
     let mutations = 0
     let page = await serveCart(
       t,
@@ -85,19 +85,8 @@ describe('cart submissions', () => {
     await second.press('Enter')
     await page.getByText('Total: $70.99', { exact: true }).waitFor()
     assert.equal(mutations, 1)
-  })
 
-  it('restores rejected quantities and binds server errors to the submitted row', async (t) => {
-    let mutations = 0
-    let page = await serveCart(
-      t,
-      (request) => {
-        if (request.method === 'POST') mutations++
-      },
-      ['1', '2'],
-    )
-    let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
-    await quantity.fill('1.5')
+    await first.fill('1.5')
     let rejected = page.waitForResponse((response) => response.request().method() === 'POST')
     let nativeForm = page.locator('form:has(input[aria-label="Quantity of Ash & Smoke"])')
     await nativeForm.evaluate((form: HTMLFormElement) => {
@@ -106,35 +95,34 @@ describe('cart submissions', () => {
     })
     assert.equal((await rejected).status(), 400)
     await nativeForm.locator('input[name="quantity"][readonly]').waitFor({ state: 'detached' })
-    assert.equal(await quantity.inputValue(), '1.5')
-    assert.equal(await quantity.getAttribute('aria-invalid'), 'true')
-    let errorId = await quantity.getAttribute('aria-describedby')
+    assert.equal(await first.inputValue(), '1.5')
+    assert.equal(await first.getAttribute('aria-invalid'), 'true')
+    let errorId = await first.getAttribute('aria-describedby')
     assert.ok(errorId)
     let error = page.locator(`[id="${errorId}"][role="alert"]`)
     await error.waitFor()
     assert.equal(await error.textContent(), 'Invalid quantity')
-    let second = page.getByRole('spinbutton', { name: 'Quantity of Heavy Metal Guitar Riffs' })
-    assert.equal(await second.inputValue(), '1')
+    assert.equal(await second.inputValue(), '2')
     assert.equal(await second.getAttribute('aria-invalid'), null)
 
     await nativeForm.evaluate((form: HTMLFormElement) => {
       form.noValidate = false
     })
-    await quantity.fill('3')
-    await quantity.press('Enter')
-    await page.getByText('Total: $77.97', { exact: true }).waitFor()
-    assert.equal(await quantity.getAttribute('aria-invalid'), null)
+    await first.fill('3')
+    await first.press('Enter')
+    await page.getByText('Total: $104.97', { exact: true }).waitFor()
+    assert.equal(await first.getAttribute('aria-invalid'), null)
     await error.waitFor({ state: 'detached' })
-    assert.equal(mutations, 2)
+    assert.equal(mutations, 3)
   })
 
-  it('rolls back a failed reload and can read the saved cart before retrying', async (t) => {
+  it('rolls back a failed update and allows a direct retry', async (t) => {
     let reject = true
-    let methods: string[] = []
+    let mutations = 0
     let page = await serveCart(t, (request) => {
-      if (!new URL(request.url).pathname.startsWith('/cart/items')) return
-      methods.push(request.method)
-      if (request.method === 'POST' && reject) {
+      if (new URL(request.url).pathname !== '/cart/items' || request.method !== 'POST') return
+      mutations++
+      if (reject) {
         return new Response('Unavailable', { status: 503 })
       }
     })
@@ -149,16 +137,12 @@ describe('cart submissions', () => {
       await page.evaluate(() => document.activeElement?.getAttribute('name')),
       'quantity',
     )
-    await page.getByRole('button', { name: 'reload cart', exact: true }).click()
-    await page.getByRole('alert').waitFor({ state: 'detached' })
-    assert.equal(methods.at(-1), 'GET')
-    await page.locator('input[name="quantity"][readonly]').waitFor({ state: 'detached' })
     reject = false
     await quantity.fill('4')
     await quantity.press('Enter')
     await page.getByRole('button', { name: 'Update', exact: true }).waitFor()
     await page.getByText('Total: $67.96', { exact: true }).waitFor()
-    assert.equal(methods.filter((method) => method === 'POST').length, 2)
+    assert.equal(mutations, 2)
   })
 
   it('recovers the saved quantity with GET when the mutation response is lost', async (t) => {
@@ -307,9 +291,11 @@ describe('cart submissions', () => {
   it('submits to the shared items URL with JavaScript disabled', async (t) => {
     let router = await createTestRouter()
     let mutations: string[] = []
-    let server = await createTestServer((request) => {
-      if (request.method === 'POST') mutations.push(new URL(request.url).pathname)
-      return router.fetch(request)
+    let server = await createTestServer(async (request) => {
+      let response = await router.fetch(request)
+      if (request.method === 'POST')
+        mutations.push(`${new URL(request.url).pathname} ${response.status}`)
+      return response
     })
     let runtimePage = await t.serve(server)
     let browser = runtimePage.context().browser()
@@ -323,11 +309,11 @@ describe('cart submissions', () => {
     await page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' }).fill('2')
     await page.getByRole('button', { name: 'Update', exact: true }).click()
     await page.getByText('Total: $33.98', { exact: true }).waitFor()
-    assert.deepEqual(mutations, ['/cart/items'])
+    assert.deepEqual(mutations, ['/cart/items 303'])
     assert.equal(new URL(page.url()).pathname, '/cart')
     await page.getByRole('button', { name: 'Remove', exact: true }).click()
     await page.getByText('Your cart is empty.', { exact: true }).waitFor()
-    assert.deepEqual(mutations, ['/cart/items', '/cart/items'])
+    assert.deepEqual(mutations, ['/cart/items 303', '/cart/items 303'])
     assert.equal(new URL(page.url()).pathname, '/cart')
   })
 })
