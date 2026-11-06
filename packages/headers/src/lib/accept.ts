@@ -58,29 +58,47 @@ export class Accept implements HeaderValue, Iterable<[string, number]> {
   }
 
   /**
-   * Gets the weight of a given media type. Also supports wildcards, so e.g. `text/*` will match `text/html`.
+   * Gets the weight of a given media type.
+   *
+   * When several media ranges in the header match, the most specific one wins, as described in
+   * [RFC 9110 Section 12.5.1](https://www.rfc-editor.org/rfc/rfc9110#section-12.5.1). An exact
+   * `type/subtype` takes precedence over `type/*`, which takes precedence over the full wildcard,
+   * regardless of their order or weights in the header. For example, `text/html;q=0, text/*` gives
+   * `text/html` a weight of `0`.
+   *
+   * The given media type may also contain wildcards, so e.g. `text/*` returns the highest weight any
+   * `text` media type could receive from this header.
    *
    * @param mediaType The media type to get the weight of
-   * @returns The weight of the media type
+   * @returns The weight of the media type, or `0` if it is not acceptable
    */
   getWeight(mediaType: string): number {
     let [type, subtype] = mediaType.toLowerCase().split('/')
+    let matchWeight = 0
+    let matchSpecificity = -1
+    let narrowerWeight = 0
 
-    for (let [key, value] of this) {
+    for (let [key, weight] of this) {
       let [t, s] = key.split('/')
-      if (
-        (t === type || t === '*' || type === '*') &&
-        (s === subtype || s === '*' || subtype === '*')
-      ) {
-        return value
+
+      if ((t === type || t === '*') && (s === subtype || s === '*')) {
+        let specificity = (t === '*' ? 0 : 1) + (s === '*' ? 0 : 1)
+        if (specificity > matchSpecificity) {
+          matchWeight = weight
+          matchSpecificity = specificity
+        }
+      } else if ((type === '*' || t === type) && (subtype === '*' || s === subtype)) {
+        // A range that is narrower than a wildcard query, e.g. `text/html` for `text/*`
+        narrowerWeight = Math.max(narrowerWeight, weight)
       }
     }
 
-    return 0
+    return Math.max(matchWeight, narrowerWeight)
   }
 
   /**
-   * Returns the most preferred media type from the given list of media types.
+   * Returns the most preferred media type from the given list of media types. Each media type is
+   * weighted using {@link Accept.getWeight}, so the most specific matching range applies.
    *
    * @param mediaTypes The list of media types to choose from
    * @returns The most preferred media type or `null` if none match
