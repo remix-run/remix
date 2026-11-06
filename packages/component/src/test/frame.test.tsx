@@ -5593,6 +5593,32 @@ describe('run', () => {
     expect(requests).toEqual(['/lazy'])
   })
 
+  it('preserves explicitly reloaded lazy frame content through parent updates', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let parent: Handle | undefined
+    function Entry(handle: Handle) {
+      parent = handle
+      return () => <Frame name="lazy" src="/lazy" loading="lazy" fallback={<p>Waiting</p>} />
+    }
+    let response = Promise.withResolvers<string>()
+    let root = createRoot(container, { frameInit: { resolveFrame: () => response.promise } })
+    t.after(() => root.dispose())
+    root.render(<Entry />)
+    root.flush()
+    invariant(parent)
+    let frame = parent.frames.get('lazy')
+    invariant(frame)
+
+    let reloaded = frame.reload()
+    expect(container.textContent).toBe('Waiting')
+    response.resolve('<p id="reloaded-content">Loaded</p>')
+    await reloaded
+    expect(container.querySelector('#reloaded-content')?.textContent).toBe('Loaded')
+
+    await parent.update()
+    expect(container.querySelector('#reloaded-content')?.textContent).toBe('Loaded')
+  })
+
   it('loads a lazy frame when a large fallback overlaps the viewport', async (t) => {
     container.style.cssText = 'position:fixed;top:-50000px;left:0'
     let resolveFrame = mock.fn(() => '<p id="large-lazy-content">Loaded</p>')
@@ -5716,19 +5742,48 @@ describe('run', () => {
     })
     t.after(() => app.dispose())
     await app.ready()
+    let frame = app.frames.get('lazy')
+    invariant(frame)
+    let events: string[] = []
+    frame.addEventListener('reloadStart', () => events.push('start'))
+    frame.addEventListener('reloadComplete', () => events.push('complete'))
     await app.frames.top.reload({ src: '/page' })
     let host = document.getElementById('lazy-host')
     invariant(host)
     await waitForIntersection(host)
     expect(requests).toEqual(['/page'])
     expect(host.textContent).toBe('Waiting')
+    expect(events).toEqual(['start', 'complete'])
 
-    let loaded = waitForElement('#lazy-content')
+    let loaded = new Promise<void>((resolve) => {
+      frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+    })
     host.style.top = '0'
     await loaded
     await app.frames.top.reload()
     expect(document.getElementById('lazy-host')?.textContent).toBe('Loaded')
     expect(requests).toEqual(['/page', '/lazy', '/page'])
+    expect(events).toEqual(['start', 'complete', 'start', 'complete', 'start', 'complete'])
+  })
+
+  it('reports failed server-rendered lazy frame requests once', async (t) => {
+    document.body.innerHTML = await drain(
+      renderToStream(<Frame src="/failure" loading="lazy" fallback="Waiting" />),
+    )
+    let failure = new Error('Frame request failed')
+    let errors: unknown[] = []
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame() {
+        throw failure
+      },
+    })
+    t.after(() => app.dispose())
+    app.addEventListener('error', (event) => errors.push(event.error))
+    await app.ready()
+    await waitForIntersection(document.body)
+    expect(errors).toEqual([failure])
+    expect(document.body.textContent).toContain('Waiting')
   })
 
   it('reports failed lazy frame requests without retrying on another intersection', async (t) => {

@@ -327,6 +327,7 @@ type FrameInit = {
   frameInstances: WeakMap<Comment, FrameInstance>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
+  disposeFallback?: () => void
 }
 
 // Whether reloadStart has been dispatched without a matching reloadComplete, and why. Each frame
@@ -497,6 +498,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   ): Promise<void> {
     if (isRenderAborted(options.signal)) return
     cancelDeferredLoad()
+    init.disposeFallback?.()
 
     if (content instanceof ReadableStream) {
       let linkedAbort = createLinkedAbortController(lifecycleController.signal, options.signal)
@@ -733,9 +735,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function loadLazyFrame(): void {
-    void reload().catch((error) => {
-      if (!disposed) context.errorTarget.dispatchEvent(createComponentErrorEvent(error))
-    })
+    // Reload reports errors before rejecting.
+    void reload().catch(() => {})
   }
 
   function startDeferredLoad(): void {
@@ -775,8 +776,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   function setCurrentMarker(marker: FrameMarkerData, signal?: AbortSignal): boolean {
     if (marker.status !== 'lazy') cancelDeferredLoad()
-    let isInheritedReload =
-      marker.status !== 'lazy' && currentMarker !== undefined && currentMarker.id !== marker.id
+    let isInheritedReload = currentMarker !== undefined && currentMarker.id !== marker.id
     currentMarker = marker
 
     if (isInheritedReload) {
@@ -1118,8 +1118,6 @@ function diffFrame(
   let nextName = getFrameName(next)
   if (curr._state.instance.isDisplayingResolvedContent()) {
     curr._state.resolved = true
-    curr._state.fallbackRoot?.dispose()
-    curr._state.fallbackRoot = undefined
   }
 
   // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
@@ -1222,7 +1220,10 @@ function insertFrame(
   getNonceManager().inheritRootResourceNonces(fallbackRoot, vParent)
   fallbackRoot.render(node.props.fallback ?? null)
 
-  let instance = createFrameInstance(node, start, end, runtime, getContext)
+  let instance = createFrameInstance(node, start, end, runtime, getContext, () => {
+    committed._state.fallbackRoot?.dispose()
+    committed._state.fallbackRoot = undefined
+  })
   let committed = commitFrameNode(node, vParent, svg, start, end, {
     instance,
     fallbackRoot,
@@ -1245,6 +1246,7 @@ function createFrameInstance(
   end: Comment,
   runtime: FrameRuntime,
   getContext: (type: ElementFunction) => unknown,
+  disposeFallback?: () => void,
 ): FrameInstance {
   let instance = createFrame([start, end], {
     name: getFrameName(node),
@@ -1262,6 +1264,7 @@ function createFrameInstance(
     frameInstances: runtime.frameInstances,
     namedFrames: runtime.namedFrames,
     processClientEntryPreloads: runtime.processClientEntryPreloads,
+    disposeFallback,
   })
   runtime.frameInstances.set(start, instance)
   return instance
@@ -1318,8 +1321,6 @@ function resolveClientFrame(
       if (isStale()) return
       let { content, nonce } = await unwrapFrameResolution(resolution)
       if (isStale()) return
-      state.fallbackRoot?.dispose()
-      state.fallbackRoot = undefined
       let nextContent = asAbortableFrameContent(content, resolveController.signal)
       await instance.render(nextContent, {
         nonce,
