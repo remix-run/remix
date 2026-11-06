@@ -2,6 +2,31 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v1.3.0
+
+### Minor Changes
+
+- Multiple selects accept arrays in `value` and `defaultValue`. Use `value={[]}` to clear the current selection, or `defaultValue={[]}` to initialize a select with no selections. ([#12204](https://github.com/remix-run/remix/pull/12204))
+
+- Reflect locally rendered state in the URL with `updateUrl(href, options?)`, without fetching, rendering, or changing scroll and focus: ([#12110](https://github.com/remix-run/remix/pull/12110))
+
+  ```ts
+  import { updateUrl } from 'remix/component'
+
+  let signal = await updateUrl('/products/shirt?color=blue')
+  await updateUrl('/products/shirt?color=red', { history: 'push' })
+  ```
+
+### Patch Changes
+
+- Fix `clientEntry()` failing with "Type instantiation is excessively deep and possibly infinite" when a component's props include a `SerializableObject` (or another `SerializableValue` type) alongside a prop that is serializable but not assignable to `SerializableObject`, such as a `FormSubmission` from `@remix-run/data-schema/experimental/form` with its readonly arrays and records. ([#12219](https://github.com/remix-run/remix/pull/12219))
+
+- Fix focus moving to `<body>` when a frame navigation fails, such as a form submission whose response is a 5xx page. The page stays as it was, so focus now stays where the visitor left it. Navigations that succeed still reset focus unless they opt out with `data-rmx-reset-focus="manual"` or `resetFocus: 'manual'`. ([#12208](https://github.com/remix-run/remix/pull/12208))
+
+- Pair `reloadStart` and `reloadComplete` events once per frame reload. Re-entering `frame.reload()`, or a reload that takes over a reload inherited from an ancestor frame, previously dispatched an extra `reloadStart` with no matching `reloadComplete`, or a `reloadComplete` before the frame finished reloading. ([#12200](https://github.com/remix-run/remix/pull/12200))
+
+- Align `<select>` initialization across server rendering, client mounting, and hydration with explicit precedence: `value`, then initial `defaultValue`, then option `selected`. This resolves previously ambiguous combinations of select and option selection props. ([#12204](https://github.com/remix-run/remix/pull/12204))
+
 ## v1.2.0
 
 ### Minor Changes

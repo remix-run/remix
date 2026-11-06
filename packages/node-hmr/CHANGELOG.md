@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Spawn a single replacement server when files change while the previous child process is still shutting down. Previously a second restart could start an extra child process that kept running in the background. ([#12199](https://github.com/remix-run/remix/pull/12199))
+
 ## v1.0.0
 
 ### Major Changes

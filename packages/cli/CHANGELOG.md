@@ -2,6 +2,12 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.3
+
+### Patch Changes
+
+- The starter app keeps single-use styles and helpers beside the JSX that uses them, and the bundled Remix skill favors keeping related code together. ([#12171](https://github.com/remix-run/remix/pull/12171))
+
 ## v1.0.2
 
 ### Patch Changes

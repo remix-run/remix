@@ -2,6 +2,16 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.2
+
+### Patch Changes
+
+- Validate native controls with a shared form schema using `@remix-run/ui/form`. `form.Context` supplies field bindings, and `root`, `control`, `label`, and `error` mixins provide native constraints, validation feedback, and accessible associations. Failed submissions restore values and display errors. Applications own the markup, and forms work with or without JavaScript. These experimental APIs may change or be removed in patch releases. ([#11630](https://github.com/remix-run/remix/pull/11630))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@1.3.0`](https://github.com/remix-run/remix/releases/tag/component@1.3.0)
+  - [`data-schema@1.0.1`](https://github.com/remix-run/remix/releases/tag/data-schema@1.0.1)
+
 ## v0.13.1
 
 ### Patch Changes
