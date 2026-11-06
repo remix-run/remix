@@ -330,6 +330,12 @@ export interface FrameProps {
   name?: string
   /** Source URL used when the frame loads or reloads its content. */
   src: string
+  /**
+   * When to load the initial content: `eager` loads immediately (default), while `lazy` renders
+   * the fallback on the server and waits until the frame approaches the viewport in the browser.
+   * Explicit reloads and navigations always load immediately.
+   */
+  loading?: 'eager' | 'lazy'
   /** Fallback content to render while the frame is pending. */
   fallback?: Renderable
   /** Event handlers invoked for events dispatched from the frame element. */

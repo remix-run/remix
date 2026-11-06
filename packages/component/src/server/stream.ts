@@ -200,7 +200,7 @@ interface ClientEntryHeadResources {
 }
 
 interface FrameData {
-  status: 'pending' | 'resolved'
+  status: 'pending' | 'resolved' | 'lazy'
   name?: string
   src: string
 }
@@ -619,7 +619,7 @@ function buildFrameSegment(
 
   // Store frame data in context for aggregation
   context.frameData.set(frameId, {
-    status: props.fallback ? 'pending' : 'resolved',
+    status: props.loading === 'lazy' ? 'lazy' : props.fallback ? 'pending' : 'resolved',
     name: props.name,
     src: props.src,
   })
@@ -628,6 +628,11 @@ function buildFrameSegment(
     kind: 'frame',
     frameId,
     content: null,
+  }
+
+  if (props.loading === 'lazy') {
+    seg.content = buildSegment(props.fallback, context, frameState)
+    return seg
   }
 
   let resolveFrameContext = getResolveFrameContext(frameState, context.nonce)

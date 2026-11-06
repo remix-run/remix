@@ -4439,6 +4439,35 @@ describe('stream', () => {
   })
 
   describe('frames', () => {
+    it('renders lazy frame fallbacks without resolving or streaming their content', async () => {
+      let requests: string[] = []
+      let html = await drain(
+        renderToStream(
+          <>
+            <Frame name="later" src="/lazy" loading="lazy" fallback={<p>Later</p>} />
+            <Frame src="/empty" loading="lazy" />
+            <Frame src="/eager" loading="eager" />
+          </>,
+          {
+            resolveFrame(src) {
+              requests.push(src)
+              return '<p>Loaded</p>'
+            },
+          },
+        ),
+      )
+
+      expect(requests).toEqual(['/eager'])
+      expect(html).toContain('<p>Later</p>')
+      expect(html).toContain('<p>Loaded</p>')
+      expect(html).not.toContain('<template')
+      expect(Object.values(parseRmxDataFromHtml(html).f)).toEqual([
+        { status: 'lazy', name: 'later', src: '/lazy' },
+        { status: 'lazy', src: '/empty' },
+        { status: 'resolved', src: '/eager' },
+      ])
+    })
+
     it('adds frame scripts for non-blocking frames', async () => {
       // Test non-blocking frame (with fallback)
       let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
