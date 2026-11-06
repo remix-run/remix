@@ -5,9 +5,6 @@ export const assetsBase = '/assets'
 export const routes = route({
   assets: `${assetsBase}/*path`,
   uploads: '/uploads/*key',
-  api: route('api', {
-    cartToggle: post('/cart/toggle'),
-  }),
 
   // Simple static routes
   home: '/',
@@ -57,6 +54,7 @@ export const routes = route({
       itemsUpdate: post('/items'),
       itemsRemove: del('/items'),
       cartButton: get('/button/:bookId'),
+      cartButtonToggle: post('/button/:bookId'),
     },
 
     // API-style endpoints under /cart/api

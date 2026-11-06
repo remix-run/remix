@@ -4,16 +4,16 @@ import * as fd from 'remix/data-schema/experimental/form'
 import type { FormSubmission } from 'remix/data-schema/experimental/form'
 import { redirect } from 'remix/response/redirect'
 
-import { books } from '../../../data/schema.ts'
+import { books, type Book } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
-import { getCartTotal } from '../../../utils/cart.ts'
+import { addToCart, getCartTotal, removeFromCart } from '../../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 import { removeCartItem, updateCart } from '../cart-api.ts'
 import { CartPage } from '../page.tsx'
 import { CartButton } from './public/cart-button.tsx'
 import { CartItems } from './public/cart-items.tsx'
-import { CartItemRemoveForm, CartItemUpdateForm } from './public/schema.ts'
+import { CartButtonForm, CartItemRemoveForm, CartItemUpdateForm } from './public/schema.ts'
 
 type CartError = { status: number; message: string; submission?: FormSubmission }
 
@@ -51,7 +51,8 @@ export default createController(routes.cart.fragments, {
       return mutationResponse(context, error)
     },
 
-    async cartButton({ db, params, render, session }) {
+    async cartButton(context) {
+      let { db, params, render } = context
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -59,16 +60,54 @@ export default createController(routes.cart.fragments, {
         return render(<p>Book not found</p>, fragmentResponseInit({ status: 404 }))
       }
 
-      let cart = getCurrentCart(session)
-      let inCart = cart.items.some((item) => item.bookId === book.id)
+      return renderCartButton(context, book)
+    },
 
-      return render(
-        <CartButton inCart={inCart} id={book.id} slug={book.slug} />,
-        fragmentResponseInit(),
-      )
+    async cartButtonToggle(context) {
+      let { db, params, formData, render, request, session } = context
+      let bookId = parseId(params.bookId)
+      let book = bookId === undefined ? undefined : await db.find(books, bookId)
+      if (!book) {
+        return render(<p>Book not found</p>, fragmentResponseInit({ status: 404 }))
+      }
+
+      let submission = fd.parseSafe(CartButtonForm, formData)
+      if (!submission.success) {
+        return renderCartButton(context, book, {
+          status: 400,
+          message: submission.issues[0].message,
+        })
+      }
+      if (process.env.NODE_ENV !== 'test') {
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
+
+      let cart = getCurrentCart(session)
+      if (submission.value.intent === 'remove') {
+        session.set('cart', removeFromCart(cart, book.id))
+      } else if (!cart.items.some((item) => item.bookId === book.id)) {
+        session.set('cart', addToCart(cart, book.id, book.slug, book.title, book.price, 1))
+      }
+
+      if (request.headers.get('X-Remix-Frame') === 'true') {
+        return renderCartButton(context, book)
+      }
+      return redirect(routes.books.show.href({ slug: book.slug }), 303)
     },
   },
 })
+
+function renderCartButton(
+  { render, session }: RouterTypes['context'],
+  book: Book,
+  error?: CartError,
+): Response {
+  let inCart = getCurrentCart(session).items.some((item) => item.bookId === book.id)
+  return render(
+    <CartButton inCart={inCart} id={book.id} error={error?.message} />,
+    fragmentResponseInit({ status: error?.status ?? 200 }),
+  )
+}
 
 function mutationResponse(context: RouterTypes['context'], error?: CartError): Response {
   if (context.request.headers.get('X-Remix-Frame') === 'true') {
