@@ -278,6 +278,9 @@ interface TestContext {
 
   // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
   mock: {
+    // Control Date and timers with enable(), tick(), setTime(), runAll(), and reset()
+    timers: MockTimers
+
     // Create a mock function with an optional implementation
     fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
 
@@ -316,7 +319,7 @@ it('mocks and spies', (t) => {
 })
 ```
 
-`t.mock` provides `fn()` and `method()`. Every spy created with `t.mock.method()` is restored automatically when the test finishes, or early via `spy.mock.restore?.()`.
+`t.mock` provides `fn()`, `method()`, and `timers`. Every spy created with `t.mock.method()` is restored automatically when the test finishes, or early via `spy.mock.restore?.()`.
 
 #### Cleanup
 
@@ -348,9 +351,59 @@ beforeEach(
 )
 ```
 
-#### Fake Timers
+#### System Time and Timers
+
+Use `t.mock.timers` to control Date and timers with Node's clock API. Node, Bun, and browsers use the same clock engine, with Node 24.3 as the compatibility reference. The clock is restored when the test completes, fails, or aborts. `enable()` returns `undefined`.
+
+```ts
+it('expires a cached value', (t) => {
+  t.mock.timers.enable({
+    apis: ['Date', 'setTimeout'],
+    now: new Date('2026-01-01T00:00:00Z'),
+  })
+  let expiredAt: number | undefined
+  setTimeout(() => {
+    expiredAt = Date.now()
+  }, 100)
+
+  t.mock.timers.tick(1000)
+  assert.equal(expiredAt, Date.parse('2026-01-01T00:00:01Z'))
+  t.mock.timers.setTime(Date.parse('2026-06-01T00:00:00Z'))
+})
+```
+
+| Method                   | Behavior                                                                                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `enable({ apis, now }?)` | Replace selected APIs. Defaults to all supported APIs and epoch zero; `now` accepts a number or Date.                                     |
+| `tick(ms = 1)`           | Set the destination time first, then run due callbacks in deadline order. Timers created by callbacks are scheduled from the destination. |
+| `setTime(ms)`            | Set epoch milliseconds without firing callbacks or shifting pending deadlines. Use `tick(0)` to run overdue callbacks.                    |
+| `runAll()`               | Advance once to Node's timer-heap horizon. Recurring and nested timers can remain pending.                                                |
+| `reset()`                | Restore APIs and discard pending work. Safe when already disabled.                                                                        |
+| `[Symbol.dispose]()`     | Same as `reset()`.                                                                                                                        |
+
+Calling `enable()` twice or driving a disabled clock throws. Only one Remix timer controller can be enabled per realm, including standalone clocks and legacy handles. Conflicting controllers are rejected before globals change. Repeated names in `apis` are applied once so reset can always restore the originals.
+
+Date mocking covers `Date.now()`, `new Date()`, and calling `Date()` as a function. Explicit constructor arguments, `Date.parse`, `Date.UTC`, and existing Date instances retain their behavior. Use `apis: ['Date']` for clock-only tests; real timers and `performance.now()` keep running.
+
+`runAll()` follows the [Node 24.3 implementation](https://github.com/nodejs/node/blob/v24.3.0/lib/internal/test_runner/mock/mock_timers.js): it ticks to the deadline at the bottom of the timer heap, which is not necessarily the latest deadline. For example, timeouts inserted with delays of 10, 30, and 20 ms run through 20 ms on the first call. A later call runs the remaining timeout. If that horizon is overdue after `setTime()`, `runAll()` throws; use `tick(0)` instead. It does not drain intervals indefinitely.
+
+Runtime support:
+
+- **Node and Bun test workers:** controls globals, `node:timers`, and `node:timers/promises`, including `setImmediate` and `scheduler.wait`. All use the shared clock; native `node:test` timers are only used as a test reference. Selecting a timer API also replaces its module counterparts and corresponding clear function. `scheduler.wait` can be selected independently of `setTimeout`. Mock handles provide `ref()`, `unref()`, and `refresh()` as no-ops returning the handle, and `hasRef()` returns `true`, matching Node 24.3's mock handles.
+- **Browsers:** controls available global `Date`, `setTimeout`, `setInterval`, and `setImmediate` APIs. Unsupported names, including `scheduler.wait`, fail before installation. Timer handles are numeric.
+- **E2E:** controls the test worker, not the Playwright page's clock.
+
+Access module timers through their default export, such as `import timers from 'node:timers'` followed by `timers.setTimeout(...)`. Named imports and function references captured before enabling retain their original behavior. Replacing module methods cannot retroactively replace those bindings.
+
+The shared engine makes a few deliberate departures from Node 24.3 in every runtime: omitted timeout delays default to zero, intervals with nonpositive or missing delays use 1 ms, and intervals can cancel themselves inside callbacks. Repeated API names and failed installations restore cleanly. Promise timers release abort listeners when they settle or reset. Reset discards pending timeout promises without settling them and closes active promise interval iterators, waking a pending `next()`.
+
+Standalone `mock.timers` uses the same engine and ownership rules. Restore it explicitly with `reset()` or `[Symbol.dispose]()`. Outside a Remix Node or Bun test worker, only available globals are controlled and handles are numeric.
+
+#### Legacy Fake Timers
 
 `t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes that are automatically restored after the test. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+
+This Remix extension keeps Date real and advances progressively through each callback's deadline. It is separate from the destination-clock semantics of `t.mock.timers`, and the two controllers cannot be enabled together. Its existing defaults and negative-delay behavior are unchanged.
 
 ```ts
 it('debounces a callback', (t) => {
@@ -366,10 +419,11 @@ it('debounces a callback', (t) => {
 })
 ```
 
-| Method        | Description                                                                 |
-| ------------- | --------------------------------------------------------------------------- |
-| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
-| `restore()`   | Restore the original timer functions (called automatically after each test) |
+| Method             | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `advance(ms)`      | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `advanceAsync(ms)` | Advance progressively, yielding to microtasks between timer callbacks       |
+| `restore()`        | Restore the original timer functions (called automatically after each test) |
 
 #### E2E
 

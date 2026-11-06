@@ -1,3 +1,5 @@
+import { createMockTimers } from './mock-timers.ts'
+
 /** Records the arguments, return value, and any thrown error for a single call. */
 export interface MockCall<Args extends unknown[] = unknown[], Result = unknown> {
   arguments: Args
@@ -74,6 +76,8 @@ function createMethodMock<T extends object, K extends keyof T>(
  * spy.mock.restore?.()
  */
 export const mock = {
+  /** Standalone clock. Call `reset()` or `[Symbol.dispose]()` to restore it. */
+  timers: createMockTimers(),
   /**
    * Creates a mock function that records every call. If `impl` is provided it
    * is used as the underlying implementation; otherwise the mock returns

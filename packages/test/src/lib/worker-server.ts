@@ -6,6 +6,7 @@ import type { TestResults } from './reporters/results.ts'
 import { runTests } from './executor.ts'
 import { IS_BUN } from './runtime.ts'
 import { createFailedResults } from './worker-results.ts'
+import { installNodeTimerModules } from './mock-node.ts'
 
 export interface ServerTestWorkerData {
   file: string
@@ -18,6 +19,7 @@ export async function runServerTestFile(value: unknown): Promise<TestResults> {
 
   try {
     workerData = parseServerTestWorkerData(value)
+    installNodeTimerModules()
 
     // When coverage is enabled in Node, we use a coverage-friendly TypeScript loader with
     // an un-minified esbuild transform so V8 coverage byte offsets align with readable

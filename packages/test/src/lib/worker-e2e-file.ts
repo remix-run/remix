@@ -11,6 +11,7 @@ import type { TestResults } from './reporters/results.ts'
 import { createFailedResults } from './worker-results.ts'
 import { isRecord, parseCoverageConfig, parseOnlyPatterns } from './worker-server.ts'
 import type { SerializedOnlyPattern } from './config.ts'
+import { installNodeTimerModules } from './mock-node.ts'
 
 export interface E2ETestWorkerData {
   file: string
@@ -26,6 +27,7 @@ export async function runE2ETestFile(
 ): Promise<TestResults | undefined> {
   try {
     let workerData = parseE2ETestWorkerData(value)
+    installNodeTimerModules()
 
     await importModule(workerData.file, import.meta)
 

@@ -145,6 +145,84 @@ describe('runTests lifecycle hook failures', () => {
 })
 
 describe('runTests timeouts and signals', () => {
+  it('restores mocked clocks after completion, failures, and real-time timeouts', async () => {
+    let NativeDate = Date
+    let timeout = setTimeout
+    let timedOutContext: TestContext | undefined
+    let results = await runWithSuites([
+      {
+        name: 'clocks',
+        tests: [
+          {
+            name: 'completion',
+            fn(t) {
+              t.mock.timers.enable()
+              setTimeout(() => assert.fail('discarded timer fired'), 1000)
+            },
+          },
+          {
+            name: 'failure',
+            fn(t) {
+              assert.equal(Date, NativeDate)
+              assert.equal(setTimeout, timeout)
+              t.mock.timers.enable()
+              throw new Error('intentional failure')
+            },
+          },
+          {
+            name: 'timeout',
+            timeout: 5,
+            fn(t) {
+              assert.equal(Date, NativeDate)
+              assert.equal(setTimeout, timeout)
+              timedOutContext = t
+              t.mock.timers.enable()
+              return new Promise(() => {})
+            },
+          },
+          {
+            name: 'restored',
+            fn() {
+              assert.equal(Date, NativeDate)
+              assert.equal(setTimeout, timeout)
+            },
+          },
+        ],
+      },
+    ])
+    assert.equal(results.passed, 2)
+    assert.equal(results.failed, 2)
+    assert.match(results.tests[1].error?.message ?? '', /intentional failure/)
+    assert.match(results.tests[2].error?.message ?? '', /timed out after 5ms/)
+    assert.ok(timedOutContext)
+    assert.equal(timedOutContext.signal.aborted, true)
+    let timers = timedOutContext.mock.timers
+    assert.throws(() => timers.enable(), /already finished/)
+  })
+
+  it('clears the real test deadline while a fake clock is still enabled', async () => {
+    let signal: AbortSignal | undefined
+    let results = await runWithSuites([
+      {
+        name: 'deadline',
+        tests: [
+          {
+            name: 'completes early',
+            timeout: 5,
+            fn(t) {
+              signal = t.signal
+              t.mock.timers.enable({ apis: ['setTimeout'] })
+            },
+          },
+        ],
+      },
+    ])
+    assert.equal(results.failed, 0)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    assert.ok(signal)
+    assert.equal(signal.aborted, false)
+  })
+
   it('fails tests that exceed their timeout and aborts the test signal', async () => {
     let aborted = false
 

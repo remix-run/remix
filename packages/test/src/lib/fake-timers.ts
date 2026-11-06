@@ -1,15 +1,16 @@
 import { mock } from './mock.ts'
+import { claimTimers, releaseTimers } from './timer-ownership.ts'
 
 /**
- * Handle returned by `mock.timers.enable()` for driving fake timers during a
- * test. While enabled, `setTimeout`, `setInterval`, `clearTimeout`,
- * `clearInterval`, and `Date.now` use the fake clock instead of the real one;
+ * Handle returned by `t.useFakeTimers()` for driving fake timers during a
+ * test. While enabled, `setTimeout`, `setInterval`, `clearTimeout`, and
+ * `clearInterval` use the fake clock. Date and `performance.now()` stay real;
  * timers fire only when the test calls `advance` (or `advanceAsync`).
  *
  * @example
  * ```ts
  * it('debounces save calls', (t) => {
- *   let timers = t.mock.timers.enable()
+ *   let timers = t.useFakeTimers()
  *   let save = t.mock.fn()
  *   let debounced = debounce(save, 100)
  *   debounced(); debounced(); debounced()
@@ -37,7 +38,7 @@ export interface FakeTimers {
    */
   advanceAsync(ms: number): Promise<void>
   /**
-   * Restore the original timer functions and the real clock. Called
+   * Restore the original timer functions. Called
    * automatically after the test finishes; may also be called early to
    * disable fake timers mid-test.
    */
@@ -45,6 +46,9 @@ export interface FakeTimers {
 }
 
 export function createFakeTimers(): FakeTimers {
+  let owner = {}
+  claimTimers(owner)
+  let restored = false
   let currentTime = 0
   let nextId = 1
   let pending: Array<{ id: number; fn: () => void; time: number; repeatMs?: number }> = []
@@ -59,20 +63,29 @@ export function createFakeTimers(): FakeTimers {
     pending = pending.filter((t) => t.id !== id)
   }
 
-  let setTimeoutMock = mock.method(globalThis, 'setTimeout', ((fn: () => void, delay = 0) =>
-    schedule(fn, delay)) as unknown as typeof setTimeout)
-  let clearTimeoutMock = mock.method(
-    globalThis,
-    'clearTimeout',
-    cancel as unknown as typeof clearTimeout,
-  )
-  let setIntervalMock = mock.method(globalThis, 'setInterval', ((fn: () => void, delay = 0) =>
-    schedule(fn, delay, Math.max(0, delay))) as unknown as typeof setInterval)
-  let clearIntervalMock = mock.method(
-    globalThis,
-    'clearInterval',
-    cancel as unknown as typeof clearInterval,
-  )
+  let restorers: Array<() => void> = []
+  function trackRestore(mockFn: { mock: { restore?: () => void } }): void {
+    if (mockFn.mock.restore) restorers.push(mockFn.mock.restore)
+  }
+
+  try {
+    trackRestore(
+      mock.method(globalThis, 'setTimeout', ((fn: () => void, delay = 0) =>
+        schedule(fn, delay)) as unknown as typeof setTimeout),
+    )
+    trackRestore(mock.method(globalThis, 'clearTimeout', cancel as unknown as typeof clearTimeout))
+    trackRestore(
+      mock.method(globalThis, 'setInterval', ((fn: () => void, delay = 0) =>
+        schedule(fn, delay, Math.max(0, delay))) as unknown as typeof setInterval),
+    )
+    trackRestore(
+      mock.method(globalThis, 'clearInterval', cancel as unknown as typeof clearInterval),
+    )
+  } catch (error) {
+    for (let restore of restorers.reverse()) restore()
+    releaseTimers(owner)
+    throw error
+  }
 
   function takeNext(targetTime: number) {
     let next = pending.filter((t) => t.time <= targetTime).sort((a, b) => a.time - b.time)[0]
@@ -110,12 +123,12 @@ export function createFakeTimers(): FakeTimers {
       currentTime = targetTime
     },
     restore() {
-      setTimeoutMock.mock.restore?.()
-      clearTimeoutMock.mock.restore?.()
-      setIntervalMock.mock.restore?.()
-      clearIntervalMock.mock.restore?.()
+      if (restored) return
+      restored = true
+      for (let restore of restorers.reverse()) restore()
       pending = []
       currentTime = 0
+      releaseTimers(owner)
     },
   }
 }

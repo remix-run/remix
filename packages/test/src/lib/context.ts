@@ -2,6 +2,8 @@ import type { Browser, Page } from 'playwright'
 import type { V8CoverageEntry } from './coverage.ts'
 import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
 import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
+import { createMockTimers, type MockTimers } from './mock-timers.ts'
+import { timerStateError } from './timer-ownership.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
 
 /**
@@ -46,6 +48,8 @@ export interface TestContext {
    * `t.mock`. Method mocks created via `t.mock` are auto-restored on test completion.
    */
   mock: {
+    /** Clock restored automatically on completion or abort, or early via `reset()`. */
+    timers: MockTimers
     /**
      * Creates a mock function with an optional implementation.
      *
@@ -110,14 +114,38 @@ export function createTestContext(options?: CreateTestContextOptions): {
   cleanup(): Promise<void>
 } {
   let cleanups: Array<() => void | Promise<void>> = []
+  let timerCleanups: Array<() => void> = []
+  let closed = false
+  let signal = options?.signal ?? new AbortController().signal
+  let timers = createMockTimers(assertActive)
+
+  function assertActive(): void {
+    if (closed || signal.aborted) throw timerStateError('This test context has already finished')
+  }
+
+  function cleanupTimers(): void {
+    closed = true
+    timers.reset()
+    for (let restore of timerCleanups) restore()
+    timerCleanups.length = 0
+  }
+
+  signal.addEventListener('abort', cleanupTimers, { once: true })
 
   let testContext: TestContext = {
-    signal: options?.signal ?? new AbortController().signal,
+    signal,
     mock: {
+      timers,
       fn: mock.fn,
       method(obj, methodName, impl) {
         let mockFn = mock.method(obj, methodName, impl as any)
-        if (mockFn.mock.restore) cleanups.push(mockFn.mock.restore)
+        let restore = mockFn.mock.restore
+        if (restore) {
+          cleanups.push(() => {
+            // Clock reset may already have removed a spy over a mocked timer.
+            if (Object.is(obj[methodName], mockFn)) restore()
+          })
+        }
         return mockFn
       },
     },
@@ -125,8 +153,9 @@ export function createTestContext(options?: CreateTestContextOptions): {
       cleanups.push(fn)
     },
     useFakeTimers() {
+      assertActive()
       let timers = createFakeTimers()
-      cleanups.push(timers.restore)
+      timerCleanups.push(timers.restore)
       return timers
     },
     async serve(server) {
@@ -172,8 +201,13 @@ export function createTestContext(options?: CreateTestContextOptions): {
   return {
     testContext,
     async cleanup() {
-      for (let fn of cleanups) await fn()
-      cleanups.length = 0
+      cleanupTimers()
+      signal.removeEventListener('abort', cleanupTimers)
+      try {
+        for (let fn of cleanups) await fn()
+      } finally {
+        cleanups.length = 0
+      }
     },
   }
 }

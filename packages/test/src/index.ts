@@ -14,3 +14,4 @@ export {
 export { mock } from './lib/mock.ts'
 export type { TestContext } from './lib/context.ts'
 export type { FakeTimers } from './lib/fake-timers.ts'
+export type { MockTimers, MockTimersOptions, MockTimerAPI } from './lib/mock-timers.ts'
