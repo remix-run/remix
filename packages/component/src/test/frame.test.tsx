@@ -2908,7 +2908,17 @@ describe('run', () => {
     expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
     expect(document.querySelector('#loaded')).toBe(null)
 
+    let parsed = new Promise<void>((resolve) => {
+      document.addEventListener(
+        'readystatechange',
+        () => {
+          if (document.readyState !== 'loading') resolve()
+        },
+        { signal: t.signal },
+      )
+    })
     document.close()
+    await parsed
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.readyState).not.toBe('loading')

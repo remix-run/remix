@@ -1882,12 +1882,12 @@ function setupTemplateObserver(id: string): () => void {
 
   observer.observe(root, { childList: true, subtree: true })
   collectFrameTemplates(root, observeTemplate)
-  document.addEventListener('DOMContentLoaded', publishCompleteTemplates, { once: true })
+  document.addEventListener('readystatechange', publishCompleteTemplates)
 
   return () => {
     observer.disconnect()
     pending.clear()
-    document.removeEventListener('DOMContentLoaded', publishCompleteTemplates)
+    document.removeEventListener('readystatechange', publishCompleteTemplates)
   }
 }
 
