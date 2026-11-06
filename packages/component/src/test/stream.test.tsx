@@ -7,7 +7,7 @@ import { createElement } from '../runtime/create-element.ts'
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { SerializableObject } from '../runtime/client-entries.ts'
-import { drain, readChunks, withResolvers } from './utils.ts'
+import { drain, readChunks, trackUnhandledRejections, withResolvers } from './utils.ts'
 import { Fragment } from '../runtime/component.ts'
 import { Frame } from '../runtime/frame.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -365,6 +365,7 @@ describe('stream', () => {
         return chunk
       })
 
+      // The microtask budget is the contract: awaiting each of the 1000 nodes would exceed it.
       for (let index = 0; index < 20; index++) await Promise.resolve()
       expect(ready).toBe(true)
       let chunk = await firstChunk
@@ -4952,50 +4953,40 @@ describe('stream', () => {
       expect(done.done).toBe(true)
     })
 
-    it('cancels all blocking frames without unhandled rejections', async () => {
+    it('cancels all blocking frames without unhandled rejections', async (t) => {
       let controller = new AbortController()
       let errors: unknown[] = []
       let [frameOne, , rejectFrameOne] = withResolvers<string>()
       let [frameTwo, , rejectFrameTwo] = withResolvers<string>()
-      let unhandledRejections: unknown[] = []
-      let onUnhandledRejection = (event: PromiseRejectionEvent) => {
-        event.preventDefault()
-        unhandledRejections.push(event.reason)
-      }
-      window.addEventListener('unhandledrejection', onUnhandledRejection)
+      let flushUnhandledRejections = trackUnhandledRejections(t)
 
-      try {
-        let stream = renderToStream(
-          <div>
-            <Frame src="/fragments/one" />
-            <Frame src="/fragments/two" />
-          </div>,
-          {
-            onError(error) {
-              errors.push(error)
-            },
-            resolveFrame(src) {
-              return src === '/fragments/one' ? frameOne : frameTwo
-            },
-            signal: controller.signal,
+      let stream = renderToStream(
+        <div>
+          <Frame src="/fragments/one" />
+          <Frame src="/fragments/two" />
+        </div>,
+        {
+          onError(error) {
+            errors.push(error)
           },
-        )
+          resolveFrame(src) {
+            return src === '/fragments/one' ? frameOne : frameTwo
+          },
+          signal: controller.signal,
+        },
+      )
 
-        let reader = stream.getReader()
-        let read = reader.read()
+      let reader = stream.getReader()
+      let read = reader.read()
 
-        let abortError = new DOMException('This operation was aborted', 'AbortError')
-        controller.abort(abortError)
-        rejectFrameOne(abortError)
-        rejectFrameTwo(abortError)
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+      rejectFrameOne(abortError)
+      rejectFrameTwo(abortError)
 
-        await expect(read).resolves.toEqual({ done: true, value: undefined })
-        await new Promise((resolve) => setTimeout(resolve, 50))
-        expect(errors).toEqual([])
-        expect(unhandledRejections).toEqual([])
-      } finally {
-        window.removeEventListener('unhandledrejection', onUnhandledRejection)
-      }
+      await expect(read).resolves.toEqual({ done: true, value: undefined })
+      expect(await flushUnhandledRejections()).toEqual([])
+      expect(errors).toEqual([])
     })
 
     it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {
@@ -5155,6 +5146,7 @@ describe('stream', () => {
     })
 
     it('renders descendant frames returned from resolveFrame', async () => {
+      let [childReleased, releaseChild] = withResolvers<void>()
       async function resolveFrame(src: string) {
         if (src === '/parent') {
           // Parent frame returns content containing a child frame
@@ -5168,8 +5160,8 @@ describe('stream', () => {
           )
         }
         if (src === '/child') {
-          // Simulate async loading of child
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          // The child resolves only after the parent template has streamed
+          await childReleased
           return '<article>Child Content</article>'
         }
         return '<div></div>'
@@ -5215,6 +5207,7 @@ describe('stream', () => {
       expect(parentTemplate).toContain('</template>')
 
       // Third chunk should contain child's resolved content
+      releaseChild()
       let thirdChunk = await chunks.next()
       expect(thirdChunk.done).toBe(false)
       let childTemplate = thirdChunk.value
@@ -5391,6 +5384,7 @@ describe('stream', () => {
     })
 
     it('handles mixed blocking and non-blocking descendant frames', async () => {
+      let [nonBlockingChildReleased, releaseNonBlockingChild] = withResolvers<void>()
       async function resolveFrame(src: string) {
         if (src === '/parent') {
           // Blocking parent returns content with both blocking and non-blocking children
@@ -5406,8 +5400,8 @@ describe('stream', () => {
           return '<div>Blocking Child</div>'
         }
         if (src === '/non-blocking-child') {
-          // Simulate async
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          // The non-blocking child resolves only after the first chunk has streamed
+          await nonBlockingChildReleased
           return '<div>Non-blocking Child</div>'
         }
         return '<div></div>'
@@ -5441,6 +5435,7 @@ describe('stream', () => {
       expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
 
       // Second chunk has non-blocking child resolved
+      releaseNonBlockingChild()
       let secondChunk = await chunks.next()
       console.log('\n\nsecond:\n', secondChunk.value)
       // IDs are local within the returned fragment stream.
@@ -5576,21 +5571,10 @@ describe('stream', () => {
         ),
       )
 
-      // Expect no new chunk yet because the child is blocking
-      let chunkArrived = false
-      let nextChunkPromise = chunks.next().then((result) => {
-        chunkArrived = true
-        return result
-      })
-
-      await Promise.resolve()
-      expect(chunkArrived).toBe(false)
-
-      // Now resolve the blocking child
       resolveChild('<article>Child Content</article>')
 
-      // Next chunk should now contain the parent's template with the child's resolved content
-      let second = await nextChunkPromise
+      // The next chunk contains the parent's template only with the child's resolved content
+      let second = await chunks.next()
       expect(second.done).toBe(false)
       let parentTemplate = second.value!
       expect(parentTemplate).toContain('<template id="f')

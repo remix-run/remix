@@ -252,12 +252,15 @@ function renderReloadScopeFrame(context: RouterTypes['context'], label: string) 
   )
 }
 
-function delay(ms: number) {
-  if (process.env.NODE_ENV === 'test') {
-    ms = 10
-  }
+// Simulated server latency so streaming is visible in the demo. Tests replace `wait`.
+export const latency = {
+  wait(ms: number) {
+    return new Promise<void>((resolve) => setTimeout(resolve, ms))
+  },
+}
 
-  return new Promise((resolve) => setTimeout(resolve, ms))
+function delay(ms: number) {
+  return latency.wait(ms)
 }
 
 const listStyle = css({ margin: 0, paddingLeft: 18, color: '#e9eefc' })

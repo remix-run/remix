@@ -380,9 +380,11 @@ describe('s3 file storage', () => {
 
   it('holds at most two parts in memory during a multipart upload', async () => {
     let chunkSize = 64 * 1024
-    let { file, pulled } = createStreamingFile(6 * PART_SIZE, chunkSize)
+    let partCount = 6
+    let { file, pulled } = createStreamingFile(partCount * PART_SIZE, chunkSize)
     let uploaded = 0
     let maxAhead = 0
+    let partRequested = Array.from({ length: partCount + 1 }, () => Promise.withResolvers<void>())
     let storage = createS3FileStorage({
       accessKeyId: 'test',
       secretAccessKey: 'test',
@@ -394,8 +396,11 @@ describe('s3 file storage', () => {
         async onRequest(request, url) {
           if (request.method !== 'PUT' || !url.searchParams.has('partNumber')) return
           maxAhead = Math.max(maxAhead, pulled() - uploaded)
-          // Simulate a slow network, so reading could get ahead of uploading
-          await new Promise((resolve) => setTimeout(resolve, 5))
+          // Hold each part until the next one is requested, so reading gets every chance to run
+          // ahead of uploading. Part requests can arrive in either order.
+          let partNumber = Number(url.searchParams.get('partNumber'))
+          partRequested[partNumber]!.resolve()
+          if (partNumber < partCount) await partRequested[partNumber + 1]!.promise
           uploaded += PART_SIZE
           return undefined
         },

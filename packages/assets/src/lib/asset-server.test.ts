@@ -134,7 +134,6 @@ async function emitWatchEvent(
   let chokidarWatcher = getInternalChokidarWatcher(assetServer)
   assert.ok(chokidarWatcher)
   chokidarWatcher.emit(event, getWatchEventFilePath(filePath))
-  await new Promise((resolve) => setTimeout(resolve, 25))
 }
 
 function createTestBrowserHmrChannel(): BrowserHmrChannel {
@@ -7288,7 +7287,6 @@ describe('asset-server', () => {
         let chokidarWatcher = getInternalChokidarWatcher(assetServer)
         assert.ok(chokidarWatcher)
         chokidarWatcher.emit('unlink', logoWatchPath)
-        await Promise.resolve()
 
         let after = await get(assetServer, '/assets/app/styles/app.css')
         assert.ok(after)

@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process'
+import { EventEmitter } from 'node:events'
 import type { Stats } from 'node:fs'
 import { createServer, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -7,7 +8,7 @@ import { pathToFileURL } from 'node:url'
 import { dirname, relative, resolve } from 'node:path'
 
 import { createStyles } from '@remix-run/terminal'
-import { watch } from 'chokidar'
+import { watch, type FSWatcher } from 'chokidar'
 
 import {
   type BrowserHmrFileEvent,
@@ -155,11 +156,9 @@ export function createFileChangeEventDeduper(): (
   }
 }
 
-const chokidarWatcherBySupervisor = new WeakMap<object, ReturnType<typeof watch>>()
+const chokidarWatcherBySupervisor = new WeakMap<object, EventEmitter>()
 
-export function getSupervisorChokidarWatcher(
-  supervisor: object,
-): ReturnType<typeof watch> | undefined {
+export function getSupervisorChokidarWatcher(supervisor: object): EventEmitter | undefined {
   return chokidarWatcherBySupervisor.get(supervisor)
 }
 
@@ -216,6 +215,7 @@ export function createHmrSupervisor(options: {
   env: NodeJS.ProcessEnv
   nodeArgs: string[]
   registerPath: string
+  shutdownTimeoutMs?: number
   watch?: NodeHmrWatchOptions
 }): {
   readonly generation: number
@@ -233,7 +233,10 @@ export function createHmrSupervisor(options: {
   let watchedDirectoryRefCounts = new Map<string, number>()
   let browserWatchedFileRefCountsByRuntime = new Map<number, Map<string, number>>()
   let browserWatchedFilePaths = new Set<string>()
-  let activeWatchedDirectories = new Set<string>()
+  let directoryWatchers = new Map<string, FSWatcher>()
+  // Chokidar only reports readiness per watcher, so each directory gets its own and ready() waits
+  // until every new one has finished its initial scan and can report changes.
+  let startingDirectoryWatchers = new Set<FSWatcher>()
   let pendingChangedPaths = new Set<string>()
   let pendingRestartPathEvents = new Map<string, 'add' | 'unlink'>()
   let activeWatchEventFlushCount = 0
@@ -262,6 +265,7 @@ export function createHmrSupervisor(options: {
   function isReady(): boolean {
     return (
       state.status === 'running' &&
+      startingDirectoryWatchers.size === 0 &&
       watchEventFlushTimer === undefined &&
       activeWatchEventFlushCount === 0 &&
       pendingHotUpdateCount === acceptedHotUpdateCount
@@ -412,9 +416,9 @@ export function createHmrSupervisor(options: {
     if (message.type === 'node-hmr:child:server-ready') {
       if (state.status !== 'starting' && state.status !== 'running') return
       state = { status: 'running', child: state.child }
-      resolveReadyWaiters()
       flushPendingServerUpdateEvent()
       flushAcceptedHotUpdateBrowserEvent()
+      resolveReadyWaiters()
       return
     }
 
@@ -524,21 +528,23 @@ export function createHmrSupervisor(options: {
       ...getWatchedDirectoriesForFiles(nextBrowserWatchedFilePaths),
     ])
 
-    let directoriesToAdd = [...nextWatchedDirectories].filter(
-      (directory) => !activeWatchedDirectories.has(directory),
-    )
-    let directoriesToRemove = [...activeWatchedDirectories].filter(
-      (directory) => !nextWatchedDirectories.has(directory),
-    )
-
-    if (directoriesToRemove.length > 0) {
-      watcher.unwatch(directoriesToRemove)
+    for (let [directory, directoryWatcher] of directoryWatchers) {
+      if (nextWatchedDirectories.has(directory)) continue
+      directoryWatchers.delete(directory)
+      startingDirectoryWatchers.delete(directoryWatcher)
+      directoryWatcher.close().catch((error: unknown) => console.error(error))
     }
-    if (directoriesToAdd.length > 0) {
-      watcher.add(directoriesToAdd)
+    for (let directory of nextWatchedDirectories) {
+      if (directoryWatchers.has(directory)) continue
+      let directoryWatcher = watch(directory, watchOptions)
+      directoryWatcher.on('all', (...args) => watchEvents.emit('all', ...args))
+      directoryWatcher.once('ready', () => {
+        startingDirectoryWatchers.delete(directoryWatcher)
+        resolveReadyWaiters()
+      })
+      startingDirectoryWatchers.add(directoryWatcher)
+      directoryWatchers.set(directory, directoryWatcher)
     }
-
-    activeWatchedDirectories = nextWatchedDirectories
     browserWatchedFilePaths = nextBrowserWatchedFilePaths
   }
 
@@ -956,12 +962,9 @@ export function createHmrSupervisor(options: {
     }
   }
 
-  let watcher = watch([], {
-    cwd: options.cwd,
-    ...resolveChokidarWatchOptions(options.watch),
-  })
-
-  watcher.on('all', handleWatchEvent)
+  let watchOptions = { cwd: options.cwd, ...resolveChokidarWatchOptions(options.watch) }
+  let watchEvents = new EventEmitter()
+  watchEvents.on('all', handleWatchEvent)
 
   let stopPromise: Promise<void> | undefined
 
@@ -983,8 +986,8 @@ export function createHmrSupervisor(options: {
     resolvePendingBrowserHmrRequests([])
 
     stopPromise ??= Promise.resolve()
-      .then(() => watcher.close())
-      .then(() => stopChild(child, { force: true, signal }))
+      .then(() => Promise.all([...directoryWatchers.values()].map((watcher) => watcher.close())))
+      .then(() => stopChild(child, { force: true, signal, timeoutMs: options.shutdownTimeoutMs }))
       .then(async () => {
         let channel = await browserHmrEventChannelPromise
         await channel?.close()
@@ -1023,7 +1026,7 @@ export function createHmrSupervisor(options: {
 
     stop,
   }
-  chokidarWatcherBySupervisor.set(supervisor, watcher)
+  chokidarWatcherBySupervisor.set(supervisor, watchEvents)
   return supervisor
 }
 
@@ -1239,14 +1242,14 @@ function formatChangedPath(path: string, cwd: string): string {
 
 async function stopChild(
   child: ChildProcess | undefined,
-  options: { force: boolean; signal: NodeJS.Signals },
+  options: { force: boolean; signal: NodeJS.Signals; timeoutMs?: number },
 ) {
   if (child === undefined) return
   if (child.exitCode !== null || child.signalCode !== null) return
 
   await new Promise<void>((resolvePromise) => {
     let timeout = options.force
-      ? setTimeout(() => child.kill('SIGKILL'), shutdownTimeoutMs)
+      ? setTimeout(() => child.kill('SIGKILL'), options.timeoutMs ?? shutdownTimeoutMs)
       : undefined
 
     child.once('exit', () => {

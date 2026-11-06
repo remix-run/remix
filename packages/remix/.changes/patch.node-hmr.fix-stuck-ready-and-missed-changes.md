@@ -1,0 +1,1 @@
+Fix `remix/node-hmr` dev servers that could stop responding to requests after a restart requested during a hot update, miss a file change made right after the server reported ready because a newly watched directory was not being watched yet, or stop seeing changes to watched server files after the runner stopped watching a directory that contained another watched directory.

@@ -5,6 +5,7 @@ import { createRoot, type Handle, type Props, type RemixNode } from '@remix-run/
 
 import { onComboboxChange, type ComboboxChangeEvent, type ComboboxHandle } from './combobox.tsx'
 import * as combobox from './combobox.tsx'
+import { settle } from './test/settle.ts'
 
 const flashDurationMs = 60
 const inputCommitDelayMs = 50
@@ -172,25 +173,6 @@ function blur(target: HTMLElement) {
   target.dispatchEvent(new FocusEvent('blur'))
 }
 
-async function settle(root: ReturnType<typeof createRoot>) {
-  await Promise.resolve()
-  root.flush()
-  await Promise.resolve()
-  root.flush()
-}
-
-async function settleFrames(root: ReturnType<typeof createRoot>) {
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resolve()
-      })
-    })
-  })
-
-  await settle(root)
-}
-
 let timers!: FakeTimers
 
 async function finishSelectionFlash(root: ReturnType<typeof createRoot>) {
@@ -204,10 +186,8 @@ async function finishInputCommit(root: ReturnType<typeof createRoot>) {
 }
 
 async function finishCloseTransition(surface: HTMLElement) {
-  await Promise.resolve()
   surface.dispatchEvent(new TransitionEvent('transitionrun', { propertyName: 'opacity' }))
   surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }))
-  await Promise.resolve()
 }
 
 let scrollIntoViewSpy: ReturnType<typeof mock.method>
@@ -275,7 +255,7 @@ describe('Combobox', () => {
 
     input.focus()
     key(input, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     expect(handles).toHaveLength(1)
     expect(handles[0]?.isOpen).toBe(true)
@@ -381,7 +361,7 @@ describe('Combobox', () => {
 
     input.focus()
     key(input, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     expect(surface.getAttribute('data-show-reason')).toBe('nav')
 
@@ -399,7 +379,7 @@ describe('Combobox', () => {
 
     input.focus()
     key(input, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     expect(surface.getAttribute('data-show-reason')).toBe('nav')
 
@@ -427,7 +407,7 @@ describe('Combobox', () => {
     expect(input.getAttribute('aria-activedescendant')).toBe(null)
 
     key(input, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     expect(surface.matches(':popover-open')).toBe(true)
     expect(document.activeElement).toBe(input)
@@ -445,7 +425,7 @@ describe('Combobox', () => {
     input.focus()
 
     pointer(input, 'click')
-    await settleFrames(root)
+    await settle(root)
 
     expect(surface.matches(':popover-open')).toBe(true)
     expect(document.activeElement).toBe(input)
@@ -461,7 +441,7 @@ describe('Combobox', () => {
     input.focus()
 
     pointer(input, 'click')
-    await settleFrames(root)
+    await settle(root)
 
     expect(surface.matches(':popover-open')).toBe(true)
     expect(document.activeElement).toBe(input)
@@ -476,7 +456,7 @@ describe('Combobox', () => {
     input.focus()
 
     key(input, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     expect(document.activeElement).toBe(input)
     expect(input.getAttribute('aria-activedescendant')).toBe(remix.id)
@@ -504,7 +484,7 @@ describe('Combobox', () => {
 
     input.focus()
     key(input, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     expect(input.getAttribute('aria-activedescendant')).toBe(remix.id)
     expect(scrollRemix).toHaveBeenCalledWith({
@@ -534,7 +514,7 @@ describe('Combobox', () => {
     expect(surface.matches(':popover-open')).toBe(false)
 
     key(input, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
     expect(surface.matches(':popover-open')).toBe(true)
 
     key(input, ' ')
@@ -616,7 +596,7 @@ describe('Combobox', () => {
 
     input.focus()
     key(input, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
     timers = t.useFakeTimers()
 
     expect(input.getAttribute('aria-activedescendant')).toBe(remix.id)

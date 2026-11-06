@@ -404,10 +404,11 @@ it('debounces a callback', (t) => {
 })
 ```
 
-| Method        | Description                                                                 |
-| ------------- | --------------------------------------------------------------------------- |
-| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
-| `restore()`   | Restore the original timer functions (called automatically after each test) |
+| Method             | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `advance(ms)`      | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `advanceAsync(ms)` | Like `advance`, but lets promise continuations settle between timer firings |
+| `restore()`        | Restore the original timer functions (called automatically after each test) |
 
 #### E2E
 
