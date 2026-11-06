@@ -1,7 +1,16 @@
 import * as assert from 'remix/assert'
 import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
+import type { TestContext } from 'remix/test'
+import { scriptEntry } from './assets.ts'
 import { router } from './router.ts'
+
+async function waitForHydration(page: Awaited<ReturnType<TestContext['serve']>>) {
+  await page.evaluate(async (entryHref) => {
+    let { app } = await import(entryHref)
+    await app.ready()
+  }, scriptEntry.href)
+}
 
 describe('Live examples in the docs site', () => {
   it('hydrates examples with working pointer interaction, keyboard dismissal and focus restoration', async (t) => {
@@ -22,6 +31,7 @@ describe('Live examples in the docs site', () => {
 
     await page.setViewportSize({ width: 390, height: 720 })
     await page.goto('/patterns/accordion/')
+    await waitForHydration(page)
     let source = page.locator('#basic .docs-demo-source')
     let code = source.locator('.docs-demo-source-code')
     let disclosure = source.getByRole('button', { name: 'Show code', exact: true })
@@ -73,6 +83,7 @@ describe('Live examples in the docs site', () => {
     )
 
     await page.goto('/patterns/popover/')
+    await waitForHydration(page)
     let popover = page.locator('#basic .docs-demo-preview')
     let trigger = popover.getByRole('button', { name: 'Filter pull requests' })
     await trigger.click()
@@ -221,9 +232,11 @@ describe('Live examples in the docs site', () => {
 
     await page.unroute('**/*')
     await page.reload()
+    await waitForHydration(page)
     await entry.waitFor({ state: 'visible' })
     await page.setViewportSize({ width: 390, height: 720 })
     await page.goto('/patterns/listbox/')
+    await waitForHydration(page)
     let toggle = page.getByRole('button', { name: 'On this page', exact: true })
     await toggle.click()
     await outline.getByRole('link', { name: 'option()', exact: true }).click()
@@ -238,6 +251,7 @@ describe('Live examples in the docs site', () => {
     })
 
     await page.goto('/patterns/listbox/#context-options-onSelectSettled')
+    await waitForHydration(page)
     let callback = page.locator('#context-options-onSelectSettled')
     await callback.waitFor({ state: 'visible' })
     summary = await callback.locator('..').locator('summary').boundingBox()

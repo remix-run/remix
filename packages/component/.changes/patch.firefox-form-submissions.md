@@ -1,0 +1,1 @@
+Fix Firefox form navigation losing submitter overrides, including the target frame, HTTP method, and encoding. Native form data is now recognized after submit dispatch finishes even when Firefox retains the submit event’s active phase.

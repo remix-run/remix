@@ -52,8 +52,75 @@ const pendingUrlUpdates = new WeakMap<Window, PendingUrlUpdate>()
 
 // Lets the navigation handler tell the WebKit workaround once it has reset scroll.
 const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
+const webKitEntryScrollPositions = new WeakMap<Navigation, Map<string, { x: number; y: number }>>()
+const webKitTraversalScrollRestorations = new WeakMap<NavigateEvent, () => void>()
 
 const webKitScrollResetDuration = 500
+
+function prepareWebKitTraversalScrollRestoration(
+  navigation: Navigation,
+  event: NavigateEvent,
+): (() => void) | undefined {
+  let userAgent = navigator.userAgent
+  if (!userAgent.includes('AppleWebKit') || isChromiumUserAgent(userAgent)) return
+  let currentEntry = navigation.currentEntry
+  if (!currentEntry || typeof navigation.entries !== 'function') return
+
+  let startX = window.scrollX
+  let startY = window.scrollY
+  let positions = webKitEntryScrollPositions.get(navigation)
+  if (!positions) {
+    positions = new Map()
+    webKitEntryScrollPositions.set(navigation, positions)
+  }
+  let entryKeys = new Set(navigation.entries().map((entry) => entry.key))
+  for (let key of positions.keys()) {
+    if (!entryKeys.has(key)) positions.delete(key)
+  }
+  positions.set(currentEntry.key, { x: startX, y: startY })
+  if (event.navigationType !== 'traverse') return
+
+  let savedPosition = positions.get(event.destination.key)
+  if (savedPosition === undefined) return
+
+  let controller = new AbortController()
+  let { signal } = controller
+  let userScrolled = false
+  function stop() {
+    controller.abort()
+    event.signal.removeEventListener('abort', stop)
+    webKitTraversalScrollRestorations.delete(event)
+  }
+  for (let type of ['pointerdown', 'wheel', 'keydown']) {
+    window.addEventListener(type, () => (userScrolled = true), {
+      capture: true,
+      passive: true,
+      signal,
+    })
+  }
+  window.addEventListener(
+    'scroll',
+    () => (userScrolled ||= window.scrollX !== startX || window.scrollY !== startY),
+    { signal },
+  )
+  event.signal.addEventListener('abort', stop, { once: true })
+
+  webKitTraversalScrollRestorations.set(event, () => {
+    // WebKit can leave traversal scroll unchanged after reconciliation layout changes.
+    // Only fill in an unchanged position when no actual scrolling/input occurred.
+    if (
+      !signal.aborted &&
+      !userScrolled &&
+      window.history.scrollRestoration === 'auto' &&
+      window.scrollX === startX &&
+      window.scrollY === startY &&
+      (startX !== savedPosition.x || startY !== savedPosition.y)
+    ) {
+      window.scrollTo({ behavior: 'instant', left: savedPosition.x, top: savedPosition.y })
+    }
+  })
+  return stop
+}
 
 // iOS Safari can restore the previous position, or the new page's bottom, for several frames after
 // a navigation resets scroll. Undo those restorations until shortly after the navigation finishes,
@@ -441,6 +508,7 @@ export function startNavigationListenerImpl(
           // content first.
           document.documentElement.scrollHeight
           event.scroll()
+          webKitTraversalScrollRestorations.get(event)?.()
           webKitScrollResets.get(event)?.()
         }
 
@@ -592,20 +660,32 @@ function interceptNavigation(
   resetScroll: boolean,
   options: NavigationInterceptOptions,
 ): void {
+  let stopWebKitScrollRestoration = prepareWebKitTraversalScrollRestoration(navigation, event)
   let scrollStyleWorkarounds = installNavigationScrollStyleWorkarounds(event, resetScroll)
 
   let transitionBound = false
   function bindTransition() {
     if (transitionBound) return
-    if (event.signal.aborted) return scrollStyleWorkarounds?.remove()
+    if (event.signal.aborted) {
+      scrollStyleWorkarounds?.remove()
+      stopWebKitScrollRestoration?.()
+      return
+    }
 
     // The Navigation API creates the transition before running interception handlers.
     let transition = navigation.transition
-    if (!transition) return scrollStyleWorkarounds?.remove()
+    if (!transition) {
+      scrollStyleWorkarounds?.remove()
+      stopWebKitScrollRestoration?.()
+      return
+    }
     transitionBound = true
 
     resyncWebKitScrollAfterNavigation(navigation, event, resetScroll, transition)
     if (scrollStyleWorkarounds) scheduleNavigationScrollCleanup(transition, scrollStyleWorkarounds)
+    if (stopWebKitScrollRestoration) {
+      void transition.finished.then(stopWebKitScrollRestoration, stopWebKitScrollRestoration)
+    }
   }
 
   let interceptOptions: NavigationInterceptOptions = {
@@ -632,6 +712,7 @@ function interceptNavigation(
     event.intercept(interceptOptions)
   } catch (error) {
     scrollStyleWorkarounds?.remove()
+    stopWebKitScrollRestoration?.()
     throw error
   }
 }
@@ -671,9 +752,18 @@ function keepFocusAfterFailure(navigation: Navigation, event: NavigateEvent): vo
 }
 
 const disableScrollAnchoringCssText = 'html, body { overflow-anchor: none !important; }'
+const firefoxMaxScrollY = new WeakMap<Navigation, number>()
 
 function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): string | undefined {
   if (!resetScroll) return
+
+  let isFirefox = navigator.userAgent.includes('Firefox')
+  if (isFirefox) {
+    firefoxMaxScrollY.set(
+      window.navigation,
+      Math.max(window.scrollY, firefoxMaxScrollY.get(window.navigation) ?? 0),
+    )
+  }
 
   if (event.navigationType === 'traverse') {
     // Full-document reconciliation can temporarily shrink the page or trigger scroll anchoring
@@ -689,8 +779,17 @@ function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): 
     // after the transition. The intended user-scroll behavior is tested here:
     // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
     let { scrollHeight, clientHeight } = document.documentElement
+    let minHeight = scrollHeight + clientHeight
+    if (isFirefox) {
+      // Firefox restores against the outgoing layout before streamed traversal content is ready.
+      // Keep visited positions in range so that native restoration cannot clamp them.
+      minHeight = Math.max(
+        minHeight,
+        (firefoxMaxScrollY.get(window.navigation) ?? 0) + clientHeight,
+      )
+    }
     return (
-      `html { min-height: ${scrollHeight + clientHeight}px !important; overflow-anchor: none !important; }` +
+      `html { min-height: ${minHeight}px !important; overflow-anchor: none !important; }` +
       'body { overflow-anchor: none !important; }'
     )
   }

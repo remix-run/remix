@@ -1,0 +1,1 @@
+Fix WebKit back and forward navigations retaining the outgoing page's scroll position when removing an earlier client entry while a blocking frame is still loading. The destination's saved position now restores after its content is ready.

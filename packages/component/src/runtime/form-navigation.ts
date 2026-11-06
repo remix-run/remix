@@ -77,7 +77,8 @@ export function createFormNavigationResolver(
       function onFormData(formDataEvent: FormDataEvent) {
         // Native formdata follows an uncanceled submit. Ignore snapshots made in submit handlers
         // or after cancellation, and stop listening before later snapshots can replace this data.
-        if (event.eventPhase !== Event.NONE || event.defaultPrevented) return
+        // Firefox leaves eventPhase at AT_TARGET after native submit dispatch finishes.
+        if (event.currentTarget !== null || event.defaultPrevented) return
         // A canceled retry must not replace a submission whose navigation is still pending.
         let existing = pendingSubmissions.get(pending.form)
         if (existing) clearPending(existing)
