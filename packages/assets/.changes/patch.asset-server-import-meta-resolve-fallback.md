@@ -1,0 +1,1 @@
+Ensure injected package resolution works when `import.meta.resolve` is unavailable by falling back to a `createRequire`-based resolver, so asset server initialization succeeds in CJS or hybrid runtimes (including Electron).
