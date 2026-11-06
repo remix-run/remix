@@ -3679,10 +3679,14 @@ describe('run', () => {
     showItemsButton.click()
     app.flush()
     await initialListItems
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    )
 
     window.scrollTo(0, 2500)
     expect(window.scrollY).toBe(2500)
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    expect(window.scrollY).toBe(2500)
 
     await navigate(detailUrl)
     expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')

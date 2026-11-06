@@ -671,9 +671,18 @@ function keepFocusAfterFailure(navigation: Navigation, event: NavigateEvent): vo
 }
 
 const disableScrollAnchoringCssText = 'html, body { overflow-anchor: none !important; }'
+const firefoxMaxScrollY = new WeakMap<Navigation, number>()
 
 function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): string | undefined {
   if (!resetScroll) return
+
+  let isFirefox = navigator.userAgent.includes('Firefox')
+  if (isFirefox) {
+    firefoxMaxScrollY.set(
+      window.navigation,
+      Math.max(window.scrollY, firefoxMaxScrollY.get(window.navigation) ?? 0),
+    )
+  }
 
   if (event.navigationType === 'traverse') {
     // Full-document reconciliation can temporarily shrink the page or trigger scroll anchoring
@@ -689,8 +698,17 @@ function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): 
     // after the transition. The intended user-scroll behavior is tested here:
     // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
     let { scrollHeight, clientHeight } = document.documentElement
+    let minHeight = scrollHeight + clientHeight
+    if (isFirefox) {
+      // Firefox restores against the outgoing layout before streamed traversal content is ready.
+      // Keep visited positions in range so that native restoration cannot clamp them.
+      minHeight = Math.max(
+        minHeight,
+        (firefoxMaxScrollY.get(window.navigation) ?? 0) + clientHeight,
+      )
+    }
     return (
-      `html { min-height: ${scrollHeight + clientHeight}px !important; overflow-anchor: none !important; }` +
+      `html { min-height: ${minHeight}px !important; overflow-anchor: none !important; }` +
       'body { overflow-anchor: none !important; }'
     )
   }
