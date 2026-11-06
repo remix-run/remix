@@ -1,42 +1,64 @@
-import { type Handle, clientEntry, on } from 'remix/component'
+import type { FrameReloadStartEvent, Handle } from 'remix/component'
+import { clientEntry, css, on } from 'remix/component'
 
 import { routes } from '../../../../routes.ts'
 
 export const CartButton = clientEntry(
   import.meta.url,
-  function CartButton(handle: Handle<{ inCart: boolean; id: string | number; slug: string }>) {
-    let pending = false
+  function CartButton(handle: Handle<{ inCart: boolean; id: string | number; error?: string }>) {
+    let activeReload: FrameReloadStartEvent | undefined
+    let failed = false
+
+    handle.frame.addEventListener(
+      'reloadStart',
+      async (event) => {
+        activeReload = event
+        failed = false
+        handle.update()
+        try {
+          await event.finished
+        } catch {
+          if (activeReload === event) failed = true
+        }
+        if (handle.signal.aborted || activeReload !== event) return
+        activeReload = undefined
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
 
     return () => {
-      let { inCart, id, slug } = handle.props
+      let { inCart, id, error } = handle.props
+      let pending = activeReload !== undefined
 
       return (
-        <button
-          type="button"
-          mix={on('click', async (_event, signal) => {
-            pending = true
-            handle.update()
-
-            let formData = new FormData()
-            formData.set('bookId', String(id))
-            formData.set('slug', slug)
-
-            await fetch(routes.api.cartToggle.href(), {
-              method: 'POST',
-              body: formData,
-              signal,
-            })
-
-            await handle.frame.reload()
-            await new Promise((resolve) => setTimeout(resolve, 500))
-            if (signal.aborted) return
-            pending = false
-            handle.update()
+        <form
+          method="POST"
+          action={routes.cart.fragments.cartButtonToggle.href({ bookId: id })}
+          mix={on('submit', (event) => {
+            if (event.defaultPrevented) return
+            event.preventDefault()
+            if (activeReload) return
+            let body = new FormData(event.currentTarget, event.submitter)
+            // reloadStart owns pending state and reports failures.
+            void handle.frame.reload({ method: 'post', body }).catch(() => {})
           })}
-          class="btn"
         >
-          {pending ? 'Saving...' : inCart ? 'Remove from Cart' : 'Add to Cart'}
-        </button>
+          <button
+            type="submit"
+            name="intent"
+            value={inCart ? 'remove' : 'add'}
+            aria-disabled={pending ? 'true' : undefined}
+            class="btn"
+          >
+            {pending ? 'Saving...' : inCart ? 'Remove from Cart' : 'Add to Cart'}
+          </button>
+          {!pending && (failed || error) ? (
+            <p role="alert" mix={css({ color: '#dc2626' })}>
+              {failed ? 'Couldn’t update your cart. Try again.' : error}
+            </p>
+          ) : null}
+        </form>
       )
     }
   },
