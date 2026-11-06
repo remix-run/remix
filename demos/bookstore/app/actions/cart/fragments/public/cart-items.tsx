@@ -23,15 +23,15 @@ type CartItemsProps = {
   submission?: FormSubmission
 }
 
-type CartChange = {
+type PendingAction = {
   bookId: number
-  quantity: number
+  type: 'update' | 'remove'
 }
 
 export const CartItems = clientEntry(
   import.meta.url,
   function CartItems(handle: Handle<CartItemsProps>) {
-    let change: CartChange | undefined
+    let pendingAction: PendingAction | undefined
     let activeReload: FrameReloadStartEvent | undefined
     let failed = false
 
@@ -41,11 +41,9 @@ export const CartItems = clientEntry(
         activeReload = event
         let formData = event.formData
         let removing = formData?.get('_method') === 'DELETE'
-        let quantity = removing ? 0 : Number(formData?.get('quantity'))
-        change =
-          formData?.has('bookId') && (removing || (Number.isSafeInteger(quantity) && quantity > 0))
-            ? { bookId: Number(formData.get('bookId')), quantity }
-            : undefined
+        pendingAction = formData?.has('bookId')
+          ? { bookId: Number(formData.get('bookId')), type: removing ? 'remove' : 'update' }
+          : undefined
         failed = false
         handle.update()
         try {
@@ -55,21 +53,19 @@ export const CartItems = clientEntry(
         }
         if (handle.signal.aborted || activeReload !== event) return
         activeReload = undefined
-        change = undefined
+        pendingAction = undefined
         handle.update()
       },
       { signal: handle.signal },
     )
 
     return () => {
-      let { canCheckout, error, submission } = handle.props
-      let items = handle.props.items.flatMap((item) => {
-        if (item.bookId !== change?.bookId) return [item]
-        return change.quantity === 0 ? [] : [{ ...item, quantity: change.quantity }]
-      })
-      let total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+      let { canCheckout, error, submission, total } = handle.props
+      let items = handle.props.items.filter(
+        (item) => pendingAction?.type !== 'remove' || item.bookId !== pendingAction.bookId,
+      )
       let isPending = activeReload !== undefined
-      let totalLabel = `$${total.toFixed(2)}`
+      let totalLabel = isPending ? '---' : `$${total.toFixed(2)}`
       let hasQuantityError =
         submission?.errors.fields.quantity &&
         items.some((item) => item.bookId === Number(submission.values.bookId))
@@ -138,7 +134,8 @@ export const CartItems = clientEntry(
             </thead>
             <tbody>
               {items.map((item) => {
-                let isUpdating = change?.bookId === item.bookId
+                let isUpdating =
+                  pendingAction?.type === 'update' && pendingAction.bookId === item.bookId
                 let itemSubmission =
                   Number(submission?.values.bookId) === item.bookId ? submission : undefined
                 let submittedQuantity = itemSubmission?.values.quantity
@@ -240,7 +237,7 @@ export const CartItems = clientEntry(
                       </form.Context>
                     </td>
 
-                    <td>${(item.price * item.quantity).toFixed(2)}</td>
+                    <td>{isUpdating ? '---' : `$${(item.price * item.quantity).toFixed(2)}`}</td>
 
                     <td>
                       <form.Context

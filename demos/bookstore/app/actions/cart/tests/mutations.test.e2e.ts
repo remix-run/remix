@@ -6,7 +6,7 @@ import type { Page } from 'playwright'
 import { createTestRouter } from '../../../../test/helpers.ts'
 
 describe('cart submissions', () => {
-  it('posts once to the frame source with optimistic totals and stable focus', async (t) => {
+  it('posts once to the frame source with pending prices and stable focus', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
     t.after(() => release.resolve())
@@ -26,7 +26,9 @@ describe('cart submissions', () => {
     await quantity.press('Enter')
     await received.promise
     await page.getByRole('button', { name: 'Saving...' }).waitFor()
-    await page.getByText('Total: $50.97', { exact: true }).waitFor()
+    await page.getByText('Total: ---', { exact: true }).waitFor()
+    let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
+    assert.equal(await row.getByRole('cell').nth(3).textContent(), '---')
     assert.equal(await quantity.getAttribute('readonly'), '')
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute('name')),
@@ -40,6 +42,8 @@ describe('cart submissions', () => {
       .evaluate((form: HTMLFormElement) => form.requestSubmit())
     release.resolve()
     await page.getByRole('button', { name: 'Update', exact: true }).waitFor()
+    await page.getByText('Total: $50.97', { exact: true }).waitFor()
+    assert.equal(await row.getByRole('cell').nth(3).textContent(), '$50.97')
     assert.deepEqual(requests, ['POST /cart/items'])
     assert.deepEqual(await frameState(page), initial)
     assert.equal(
@@ -211,7 +215,7 @@ describe('cart submissions', () => {
     await row.getByRole('button', { name: 'Remove', exact: true }).press('Enter')
     await received.promise
     await row.waitFor({ state: 'detached' })
-    await page.getByText('Total: $27.00', { exact: true }).waitFor()
+    await page.getByText('Total: ---', { exact: true }).waitFor()
     assert.equal(
       await page.getByRole('button', { name: 'Remove', exact: true }).getAttribute('aria-disabled'),
       'true',
@@ -250,7 +254,7 @@ describe('cart submissions', () => {
     await page.getByRole('button', { name: 'Remove', exact: true }).press('Enter')
     await received.promise
     await page.getByText('Your cart is empty.', { exact: true }).waitFor()
-    await page.getByText('Total: $0.00', { exact: true }).waitFor()
+    await page.getByText('Total: ---', { exact: true }).waitFor()
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute('aria-label')),
       'Shopping cart',
