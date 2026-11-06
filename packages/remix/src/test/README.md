@@ -390,7 +390,11 @@ beforeEach(
 
 `t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, `setImmediate`, and their clear functions), `AbortSignal.timeout()`, `Date`, and `performance.now()` with controllable fakes that are automatically restored after the test. Time only moves when the test advances the clock. It works in any test environment — server unit tests, browser tests, or E2E setup code.
 
-Calling `t.useFakeTimers()` again restores the previous clock, discards its pending timers, and starts a new clock with the supplied options. Calling `restore()` more than once has no effect.
+Calling `t.useFakeTimers()` again restores the previous clock, discards its pending timers, and starts a new clock with the supplied options. After a successful `restore()`, calling it again has no effect.
+
+Timers are restored synchronously when the test aborts, or before registered cleanup callbacks run when the test finishes. Calling `t.useFakeTimers()` after either event throws, so unfinished async work cannot install a clock in a later test. Runner timeouts keep using real timers while fake timers are active.
+
+Only one fake clock can be active in a global environment. An overlapping clock from another test context is rejected before globals change. Failed installation rolls back earlier replacements. Restoration preserves the original property descriptors and attempts every replacement even after a failure; it reports the errors, and another `restore()` call retries failed properties.
 
 ```ts
 it('debounces a callback', (t) => {
