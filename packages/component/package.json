@@ -82,6 +82,7 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/multiple-import-maps-polyfill": "workspace:^",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "playwright": "catalog:",

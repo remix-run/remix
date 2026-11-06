@@ -765,6 +765,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/multiple-import-maps-polyfill':
+        specifier: workspace:^
+        version: link:../multiple-import-maps-polyfill
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
