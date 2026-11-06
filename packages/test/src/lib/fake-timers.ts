@@ -1,4 +1,4 @@
-import { mock } from './mock.ts'
+import { replaceProperty } from './mock.ts'
 
 /**
  * Options for `t.useFakeTimers()`.
@@ -66,7 +66,9 @@ export interface FakeTimers {
    * Restore the original timer functions, `AbortSignal.timeout()`, `Date`,
    * and `performance.now()`.
    * Called automatically after the test finishes; may also be called early to
-   * disable fake timers mid-test. Repeated calls have no effect.
+   * disable fake timers mid-test. Repeated calls after successful restoration have no effect.
+   * Attempts every property even if one cannot be restored, then throws the
+   * restoration errors. A later call retries any failed properties.
    */
   restore(): void
 }
@@ -84,22 +86,26 @@ interface FakeTimer {
 // Matches Sinon. Keeps fake IDs clear of real numeric browser timer IDs, so the
 // fake clear functions can pass real IDs through to the real ones.
 const firstFakeId = 1e12
+const ownerKey = Symbol.for('remix.test.fakeTimerOwner')
+const realm = globalThis as typeof globalThis & {
+  [ownerKey]?: { owner?: object; nextId?: number }
+}
+const timerState = (realm[ownerKey] ??= {})
 
 export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
   let startNow = Number(options.now ?? 0)
   let currentTime = 0
-  let nextId = firstFakeId
+  let nextId = timerState.nextId ?? firstFakeId
   let pending = new Map<number, FakeTimer>()
   let restored = false
+  let owner = {}
+  let restorers: Array<() => void> = []
 
   let RealDate = globalThis.Date
   let realClearTimeout = globalThis.clearTimeout
   let realClearInterval = globalThis.clearInterval
   let realClearImmediate = globalThis.clearImmediate
-  // Node and Bun return Timeout objects; browsers and Deno return numbers.
-  let probe = globalThis.setTimeout(() => {}, 0)
-  let returnsHandles = typeof probe === 'object'
-  realClearTimeout(probe)
+  let returnsHandles = false
 
   // Mirrors the parts of Node's Timeout that production code commonly calls.
   class FakeTimeout {
@@ -130,7 +136,7 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
 
     refresh() {
       let timer = this.#timer
-      if (!timer.cleared) {
+      if (!restored && !timer.cleared) {
         timer.time = currentTime + timer.delay
         pending.delete(timer.id)
         pending.set(timer.id, timer)
@@ -144,6 +150,7 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
   }
 
   function schedule(fn: unknown, delay: unknown, args: unknown[], repeat: boolean) {
+    if (restored) throw new Error('Fake timers have been restored')
     let ms = Math.max(0, Number(delay) || 0)
     let timer: FakeTimer = {
       id: nextId++,
@@ -154,6 +161,7 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
       repeat,
       cleared: false,
     }
+    timerState.nextId = nextId
     pending.set(timer.id, timer)
     return returnsHandles ? new FakeTimeout(timer) : timer.id
   }
@@ -188,67 +196,86 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
   FakeDate.parse = RealDate.parse
   FakeDate.UTC = RealDate.UTC
 
-  let setTimeoutMock = mock.method(globalThis, 'setTimeout', ((
-    fn: unknown,
-    delay?: unknown,
-    ...args: unknown[]
-  ) => schedule(fn, delay, args, false)) as unknown as typeof setTimeout)
-  let clearTimeoutMock = mock.method(
-    globalThis,
-    'clearTimeout',
-    createClear(realClearTimeout) as typeof clearTimeout,
-  )
-  let setIntervalMock = mock.method(globalThis, 'setInterval', ((
-    fn: unknown,
-    delay?: unknown,
-    ...args: unknown[]
-  ) => schedule(fn, delay, args, true)) as unknown as typeof setInterval)
-  let clearIntervalMock = mock.method(
-    globalThis,
-    'clearInterval',
-    createClear(realClearInterval) as typeof clearInterval,
-  )
-  // setImmediate only exists in Node, Bun, and Deno.
-  let setImmediateMock =
-    typeof globalThis.setImmediate === 'function'
-      ? mock.method(globalThis, 'setImmediate', ((fn: unknown, ...args: unknown[]) =>
-          schedule(fn, 0, args, false)) as unknown as typeof setImmediate)
-      : undefined
-  let clearImmediateMock =
-    typeof realClearImmediate === 'function'
-      ? mock.method(
-          globalThis,
-          'clearImmediate',
-          createClear(realClearImmediate) as typeof clearImmediate,
+  function replace(target: object, key: PropertyKey, value: object): void {
+    restorers.push(replaceProperty(target, key, value))
+  }
+
+  function restore(): void {
+    restored = true
+    pending.clear()
+    currentTime = 0
+    let errors: unknown[] = []
+    for (let index = restorers.length - 1; index >= 0; index--) {
+      try {
+        restorers[index]()
+        restorers.splice(index, 1)
+      } catch (error) {
+        errors.push(error)
+      }
+    }
+    if (restorers.length === 0 && timerState.owner === owner) timerState.owner = undefined
+    if (errors.length === 1) throw errors[0]
+    if (errors.length > 1) throw new AggregateError(errors, 'Failed to restore fake timers')
+  }
+
+  if (timerState.owner) throw new Error('Another fake timer clock is already active')
+  timerState.owner = owner
+  try {
+    // Node and Bun return Timeout objects; browsers and Deno return numbers.
+    let probe = globalThis.setTimeout(() => {}, 0)
+    returnsHandles = typeof probe === 'object'
+    realClearTimeout(probe)
+
+    replace(globalThis, 'setTimeout', (fn: unknown, delay?: unknown, ...args: unknown[]) =>
+      schedule(fn, delay, args, false),
+    )
+    replace(globalThis, 'clearTimeout', createClear(realClearTimeout))
+    replace(globalThis, 'setInterval', (fn: unknown, delay?: unknown, ...args: unknown[]) =>
+      schedule(fn, delay, args, true),
+    )
+    replace(globalThis, 'clearInterval', createClear(realClearInterval))
+    if (typeof globalThis.setImmediate === 'function') {
+      replace(globalThis, 'setImmediate', (fn: unknown, ...args: unknown[]) =>
+        schedule(fn, 0, args, false),
+      )
+    }
+    if (typeof realClearImmediate === 'function') {
+      replace(globalThis, 'clearImmediate', createClear(realClearImmediate))
+    }
+    if (typeof globalThis.AbortSignal?.timeout === 'function') {
+      replace(globalThis.AbortSignal, 'timeout', (ms: number) => {
+        if (typeof ms !== 'number') throw new TypeError('The timeout must be a number')
+        if (!Number.isInteger(ms) || ms < 0 || ms > 2 ** 32 - 1) {
+          throw new RangeError('The timeout must be an integer between 0 and 4294967295')
+        }
+        let controller = new AbortController()
+        schedule(
+          () => controller.abort(new DOMException('signal timed out', 'TimeoutError')),
+          ms,
+          [],
+          false,
         )
-      : undefined
-  let abortSignalTimeoutMock =
-    typeof globalThis.AbortSignal?.timeout === 'function'
-      ? mock.method(globalThis.AbortSignal, 'timeout', (ms: number) => {
-          if (typeof ms !== 'number') throw new TypeError('The timeout must be a number')
-          if (!Number.isInteger(ms) || ms < 0 || ms > 2 ** 32 - 1) {
-            throw new RangeError('The timeout must be an integer between 0 and 4294967295')
-          }
-          let controller = new AbortController()
-          schedule(
-            () => controller.abort(new DOMException('signal timed out', 'TimeoutError')),
-            ms,
-            [],
-            false,
-          )
-          return controller.signal
-        })
-      : undefined
-  // Installed directly rather than with mock.method(), whose spies call through
-  // with `apply` and so can't construct.
-  let dateDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'Date')
-  globalThis.Date = FakeDate as unknown as DateConstructor
-  let performanceNowMock =
-    typeof globalThis.performance?.now === 'function'
-      ? mock.method(globalThis.performance, 'now', () => currentTime)
-      : undefined
+        return controller.signal
+      })
+    }
+    replace(globalThis, 'Date', FakeDate)
+    if (typeof globalThis.performance?.now === 'function') {
+      replace(globalThis.performance, 'now', () => currentTime)
+    }
+  } catch (error) {
+    try {
+      restore()
+    } catch (restorationError) {
+      throw new AggregateError(
+        [error, restorationError],
+        'Failed to install and restore fake timers',
+      )
+    }
+    throw error
+  }
 
   function takeNext(targetTime: number) {
+    if (restored) return null
     let next: FakeTimer | undefined
     for (let timer of pending.values()) {
       if (timer.time <= targetTime && (!next || timer.time < next.time)) next = timer
@@ -273,7 +300,7 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
         if (!next) break
         next.fn(...next.args)
       }
-      currentTime = targetTime
+      if (!restored) currentTime = targetTime
     },
     async advanceAsync(ms: number) {
       let targetTime = currentTime + ms
@@ -285,22 +312,8 @@ export function createFakeTimers(options: FakeTimersOptions = {}): FakeTimers {
         // schedule) can settle before we look for the next firing.
         await Promise.resolve()
       }
-      currentTime = targetTime
+      if (!restored) currentTime = targetTime
     },
-    restore() {
-      if (restored) return
-      setTimeoutMock.mock.restore?.()
-      clearTimeoutMock.mock.restore?.()
-      setIntervalMock.mock.restore?.()
-      clearIntervalMock.mock.restore?.()
-      setImmediateMock?.mock.restore?.()
-      clearImmediateMock?.mock.restore?.()
-      abortSignalTimeoutMock?.mock.restore?.()
-      if (dateDescriptor) Object.defineProperty(globalThis, 'Date', dateDescriptor)
-      performanceNowMock?.mock.restore?.()
-      pending.clear()
-      currentTime = 0
-      restored = true
-    },
+    restore,
   }
 }
