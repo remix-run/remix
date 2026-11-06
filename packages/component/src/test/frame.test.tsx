@@ -419,7 +419,8 @@ describe('run', () => {
     expect(requests[0]!.method).toBe('POST')
     expect(requests[1]!.method).toBe('GET')
     expect(requests[1]!.url).toBe(new URL('/save', document.baseURI).href)
-    expect(requests[1]!.body).toBeNull()
+    expect(await requests[1]!.text()).toBe('')
+    if ('body' in requests[1]!) expect(requests[1]!.body).toBeNull()
   })
 
   it('reloads with multipart FormData and lets Fetch generate its boundary', async (t) => {
@@ -468,7 +469,8 @@ describe('run', () => {
     ).href
     expect(request.url).toBe(expectedUrl)
     expect(request.method).toBe('GET')
-    expect(request.body).toBeNull()
+    expect(await request.text()).toBe('')
+    if ('body' in request) expect(request.body).toBeNull()
     expect(app.frames.top.src).toBe(expectedUrl)
     expect(document.body.textContent).toBe('Saved')
   })
@@ -495,7 +497,8 @@ describe('run', () => {
     expect(requests).toHaveLength(1)
     expect(requests[0]!.method).toBe('GET')
     expect(requests[0]!.url).toBe(new URL('/search?name=Ada', document.baseURI).href)
-    expect(requests[0]!.body).toBeNull()
+    expect(await requests[0]!.text()).toBe('')
+    if ('body' in requests[0]!) expect(requests[0]!.body).toBeNull()
     expect(requests[0]!.headers.get('Content-Type')).toBeNull()
   })
 
