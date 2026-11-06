@@ -369,14 +369,17 @@ export function createRouter<
   let matcher = options?.matcher ?? createMultiMatcher<MatchData>()
   let routerMiddleware = normalizeMiddleware(options?.middleware)
 
+  // Contexts whose HEAD request was served by a GET route
+  let headFallbackContexts = new WeakSet<RequestContext>()
+
   async function dispatchRouter(context: RequestContext): Promise<Response> {
     let dispatch = () => dispatchMatches(context)
+    let response = routerMiddleware
+      ? await runMiddleware(routerMiddleware, context, dispatch)
+      : await dispatch()
 
-    if (routerMiddleware) {
-      return runMiddleware(routerMiddleware, context, dispatch)
-    }
-
-    return dispatch()
+    // Strip the body after router middleware so it sees the same response as for GET
+    return headFallbackContexts.has(context) ? headResponse(response) : response
   }
 
   async function dispatchMatches(context: RequestContext): Promise<Response> {
@@ -409,7 +412,8 @@ export function createRouter<
     }
 
     if (headFallback !== null) {
-      return headResponse(await dispatchMatch(headFallback, context))
+      headFallbackContexts.add(context)
+      return dispatchMatch(headFallback, context)
     }
 
     if (allowedMethods !== null) {

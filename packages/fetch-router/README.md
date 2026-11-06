@@ -258,7 +258,7 @@ If you want a handler to receive every request method at a given URL instead, re
 
 #### HEAD Requests
 
-Routes registered for `GET` also serve `HEAD` requests. The `GET` handler runs as usual, and the router strips the body from its response, so a `HEAD` request observes the same status and headers as the equivalent `GET` request.
+Routes registered for `GET` also serve `HEAD` requests. The `GET` handler runs as usual, and the router strips the body from its response after router middleware runs, so middleware and the client observe the same status and headers as for the equivalent `GET` request.
 
 ```ts
 let router = createRouter()
