@@ -34,7 +34,7 @@ export function BookCard(handle: Handle<BookCardProps>) {
 
             <Frame
               name={`cart-button-${book.id}`}
-              src={routes.fragments.cartButton.href({ bookId: book.id })}
+              src={routes.cart.fragments.cartButton.href({ bookId: book.id })}
             />
           </div>
         </div>
