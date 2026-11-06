@@ -10,6 +10,7 @@ A test framework for JavaScript and TypeScript projects.
 - In-browser component testing (pair with `render` from `remix/component/test`)
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
 - Per-test and hook timeouts with `t.signal` abort support
+- Polling assertions with `t.waitFor()`
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
 - Static CLI configuration through `remix.json`
@@ -276,6 +277,12 @@ interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
+  // Retry assertions and return the first result that does not throw or reject
+  waitFor<result>(
+    condition: () => result | PromiseLike<result>,
+    options?: { interval?: number; timeout?: number },
+  ): Promise<Awaited<result>>
+
   // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
   mock: {
     // Create a mock function with an optional implementation
@@ -385,6 +392,32 @@ beforeEach(
   { timeout: 1_000 },
 )
 ```
+
+#### Polling Assertions
+
+Use `t.waitFor()` to wait for a form's save confirmation in a browser test (`*.test.browser.ts`). Rendering setup is omitted:
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('shows the saved status', async (t) => {
+  // Render your form here.
+  let submitButton = document.querySelector<HTMLButtonElement>('button[type="submit"]')
+  assert.ok(submitButton)
+  submitButton.click()
+
+  await t.waitFor(() =>
+    assert.equal(document.querySelector('[role="status"]')?.textContent, 'Saved'),
+  )
+})
+```
+
+The callback runs immediately and retries after throws or rejections, waiting `interval` milliseconds after each failure settles (default: 50). It returns the first successful result; even `false` or `undefined` ends polling, so use assertions to express what must be true.
+
+The overall `timeout` defaults to 1000 milliseconds, including pending attempts. Timeout errors retain the last assertion failure as `cause`, if any.
+
+Polling uses real timers even when fake timers are enabled. It follows [Node 24.3's `waitFor()`](https://github.com/nodejs/node/blob/v24.3.0/lib/internal/test_runner/test.js), with cancellation when its test aborts or finishes. See the [`TestContext.waitFor` reference](https://github.com/remix-run/remix/blob/main/packages/test/src/lib/context.ts) for delay validation and cancellation details.
 
 #### Fake Timers
 
