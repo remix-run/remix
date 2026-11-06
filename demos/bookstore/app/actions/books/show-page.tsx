@@ -70,7 +70,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
 
             {book.in_stock ? (
               <div mix={css({ marginTop: '2rem' })}>
-                <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
+                <Frame src={routes.cart.fragments.cartButton.href({ bookId: book.id })} />
               </div>
             ) : (
               <p mix={css({ color: '#e74c3c', fontWeight: 500 })}>

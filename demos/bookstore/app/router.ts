@@ -11,7 +11,6 @@ import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/middleware/session'
 import { staticFiles } from 'remix/middleware/static'
 
-import apiController from './actions/api/controller.tsx'
 import accountController from './actions/account/controller.tsx'
 import accountOrdersController from './actions/account/orders/controller.tsx'
 import accountSettingsController from './actions/account/settings/controller.tsx'
@@ -27,10 +26,10 @@ import authResetPasswordController from './actions/auth/reset-password/controlle
 import booksController from './actions/books/controller.tsx'
 import cartApiController from './actions/cart/api/controller.tsx'
 import cartController from './actions/cart/controller.tsx'
+import cartFragmentsController from './actions/cart/fragments/controller.tsx'
 import checkoutController from './actions/checkout/controller.tsx'
 import contactController from './actions/contact/controller.tsx'
 import rootController from './actions/controller.tsx'
-import fragmentsController from './actions/fragments/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
@@ -110,8 +109,6 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   let router = createRouter<AppContext>({ middleware })
 
   router.map(routes, rootController)
-  router.map(routes.fragments, fragmentsController)
-  router.map(routes.api, apiController)
 
   router.map(routes.contact, contactController)
 
@@ -122,6 +119,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   router.map(routes.auth.forgotPassword, authForgotPasswordController)
   router.map(routes.auth.resetPassword, authResetPasswordController)
   router.map(routes.cart, cartController)
+  router.map(routes.cart.fragments, cartFragmentsController)
   router.map(routes.cart.api, cartApiController)
   router.map(routes.account, accountController)
   router.map(routes.account.settings, accountSettingsController)

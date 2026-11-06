@@ -1,17 +1,10 @@
-import { del, get, post, put, route, form, resources } from 'remix/routes'
+import { get, post, del, route, form, resources } from 'remix/routes'
 
 export const assetsBase = '/assets'
 
 export const routes = route({
   assets: `${assetsBase}/*path`,
   uploads: '/uploads/*key',
-  fragments: route('fragments', {
-    cartButton: get('/cart-button/:bookId'),
-    cartItems: get('/cart-items'),
-  }),
-  api: route('api', {
-    cartToggle: post('/cart/toggle'),
-  }),
 
   // Simple static routes
   home: '/',
@@ -56,11 +49,17 @@ export const routes = route({
   cart: route('cart', {
     index: get('/'),
 
+    fragments: {
+      items: get('/items'),
+      itemsUpdate: post('/items'),
+      itemsRemove: del('/items'),
+      cartButton: get('/button/:bookId'),
+      cartButtonToggle: post('/button/:bookId'),
+    },
+
     // API-style endpoints under /cart/api
     api: {
       add: post('/api/add'),
-      update: put('/api/update'),
-      remove: del('/api/remove'),
     },
   }),
 
