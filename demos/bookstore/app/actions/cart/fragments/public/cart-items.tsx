@@ -60,10 +60,7 @@ export const CartItems = clientEntry(
     )
 
     return () => {
-      let { canCheckout, error, submission, total } = handle.props
-      let items = handle.props.items.filter(
-        (item) => pendingAction?.type !== 'remove' || item.bookId !== pendingAction.bookId,
-      )
+      let { items, canCheckout, error, submission, total } = handle.props
       let isPending = activeReload !== undefined
       let totalLabel = isPending ? '---' : `$${total.toFixed(2)}`
       let hasQuantityError =
@@ -79,13 +76,21 @@ export const CartItems = clientEntry(
             event.preventDefault()
             if (activeReload) return
             let body = new FormData(form, event.submitter)
-            if (body.get('_method') === 'DELETE' && form.contains(document.activeElement)) {
-              // The cart region survives optimistic row removal and the final empty state.
-              form.closest<HTMLElement>('[role="region"]')?.focus()
-            }
-            // reloadStart owns the optimistic change and reports failures.
+            let cartRegion =
+              body.get('_method') === 'DELETE' && form.contains(document.activeElement)
+                ? form.closest<HTMLElement>('[role="region"]')
+                : null
+            // reloadStart owns pending state and reports failures.
             try {
-              await handle.frame.reload({ method: 'post', body })
+              let signal = await handle.frame.reload({ method: 'post', body })
+              if (
+                !signal.aborted &&
+                cartRegion?.isConnected &&
+                !form.isConnected &&
+                document.activeElement === document.body
+              ) {
+                cartRegion.focus()
+              }
             } catch {
               if (handle.signal.aborted) return
               // Restore the committed defaults before resetting the edited controls.
@@ -120,9 +125,7 @@ export const CartItems = clientEntry(
             </p>
           ) : null}
 
-          {items.length === 0 ? <p>Your cart is empty.</p> : null}
-
-          <table hidden={items.length === 0}>
+          <table>
             <thead>
               <tr>
                 <th>Book</th>
@@ -136,6 +139,8 @@ export const CartItems = clientEntry(
               {items.map((item) => {
                 let isUpdating =
                   pendingAction?.type === 'update' && pendingAction.bookId === item.bookId
+                let isRemoving =
+                  pendingAction?.type === 'remove' && pendingAction.bookId === item.bookId
                 let itemSubmission =
                   Number(submission?.values.bookId) === item.bookId ? submission : undefined
                 let submittedQuantity = itemSubmission?.values.quantity
@@ -268,7 +273,7 @@ export const CartItems = clientEntry(
                                 textAlign: 'center',
                               })}
                             >
-                              Remove
+                              {isRemoving ? 'Removing...' : 'Remove'}
                             </button>
                           </RestfulForm>
                         )}
@@ -295,7 +300,7 @@ export const CartItems = clientEntry(
               Continue Shopping
             </a>
 
-            {items.length === 0 ? null : canCheckout ? (
+            {canCheckout ? (
               <a data-rmx-prefetch="intent" href={routes.checkout.index.href()} class="btn">
                 Proceed to Checkout
               </a>

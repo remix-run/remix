@@ -172,7 +172,7 @@ describe('cart submissions', () => {
     assert.equal(mutations, 1)
   })
 
-  it('removes a row with one DELETE override and keeps focus on the cart', async (t) => {
+  it('keeps the row pending until one DELETE override confirms removal', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
     t.after(() => release.resolve())
@@ -198,22 +198,18 @@ describe('cart submissions', () => {
     let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
     await row.getByRole('button', { name: 'Remove', exact: true }).press('Enter')
     await received.promise
-    await row.waitFor({ state: 'detached' })
+    let removing = row.getByRole('button', { name: 'Removing...', exact: true })
+    await removing.waitFor()
     await page.getByText('Total: ---', { exact: true }).waitFor()
-    assert.equal(
-      await page.getByRole('button', { name: 'Remove', exact: true }).getAttribute('aria-disabled'),
-      'true',
-    )
-    assert.equal(
-      await page.evaluate(() => document.activeElement?.getAttribute('aria-label')),
-      'Shopping cart',
-    )
+    assert.equal(await removing.getAttribute('aria-disabled'), 'true')
+    assert.equal(await removing.evaluate((button) => button === document.activeElement), true)
     assert.deepEqual(await frameState(page), initial)
-    await page
+    await row
       .locator('form:has(input[name="_method"])')
       .evaluate((form: HTMLFormElement) => form.requestSubmit())
     release.resolve()
-    await page.locator('button[aria-disabled="true"]').first().waitFor({ state: 'detached' })
+    await row.waitFor({ state: 'detached' })
+    await page.getByRole('button', { name: 'Remove', exact: true }).waitFor()
     assert.deepEqual(requests, ['POST DELETE'])
     assert.deepEqual(await frameState(page), initial)
     assert.equal(
@@ -225,7 +221,7 @@ describe('cart submissions', () => {
     await page.getByText('Total: $27.00', { exact: true }).waitFor()
   })
 
-  it('keeps focus through optimistic removal of the last item and the server empty state', async (t) => {
+  it('keeps the last item pending before rendering the server empty state', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
     t.after(() => release.resolve())
@@ -237,12 +233,11 @@ describe('cart submissions', () => {
     })
     await page.getByRole('button', { name: 'Remove', exact: true }).press('Enter')
     await received.promise
-    await page.getByText('Your cart is empty.', { exact: true }).waitFor()
+    let removing = page.getByRole('button', { name: 'Removing...', exact: true })
+    await removing.waitFor()
+    assert.equal(await page.getByText('Your cart is empty.', { exact: true }).count(), 0)
     await page.getByText('Total: ---', { exact: true }).waitFor()
-    assert.equal(
-      await page.evaluate(() => document.activeElement?.getAttribute('aria-label')),
-      'Shopping cart',
-    )
+    assert.equal(await removing.evaluate((button) => button === document.activeElement), true)
     release.resolve()
     await page.getByRole('link', { name: 'Browse Books', exact: true }).waitFor()
     assert.equal(
@@ -251,7 +246,7 @@ describe('cart submissions', () => {
     )
   })
 
-  it('restores a failed removal and reconciles a lost response with a GET', async (t) => {
+  it('keeps a failed removal available and reconciles a lost response with a GET', async (t) => {
     let mutations = 0
     let methods: string[] = []
     let page = await serveCart(t, async (request, respond) => {
@@ -267,10 +262,7 @@ describe('cart submissions', () => {
     await page.getByRole('alert').filter({ hasText: 'Couldn’t update your cart.' }).waitFor()
     await remove.waitFor()
     await page.getByText('Total: $16.99', { exact: true }).waitFor()
-    assert.equal(
-      await page.evaluate(() => document.activeElement?.getAttribute('aria-label')),
-      'Shopping cart',
-    )
+    assert.equal(await remove.evaluate((button) => button === document.activeElement), true)
     assert.equal(await remove.getAttribute('aria-disabled'), null)
     let response = page.waitForResponse((response) => response.request().method() === 'POST')
     await remove.press('Enter')
