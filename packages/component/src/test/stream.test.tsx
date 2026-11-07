@@ -2987,6 +2987,41 @@ describe('stream', () => {
       })
     })
 
+    it('serializes client entry elements in entry props as entry descriptors', async () => {
+      let Inner = clientEntry(
+        '/js/inner.js#Inner',
+        function Inner(handle: Handle<{ label: string }>) {
+          return () => <button>{handle.props.label}</button>
+        },
+      )
+      let Outer = clientEntry(
+        '/js/outer.js#Outer',
+        function Outer(handle: Handle<{ children?: RemixNode }>) {
+          return () => <div>{handle.props.children}</div>
+        },
+      )
+
+      let html = await drain(
+        renderToStream(
+          <Outer>
+            <Inner label="Click me" />
+          </Outer>,
+        ),
+      )
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values(data.h || {})
+      let outerEntry: any = entries.find((e: any) => e.exportName === 'Outer')
+      invariant(outerEntry)
+
+      expect(outerEntry.props.children).toEqual({
+        $rmxEntry: true,
+        type: '/js/inner.js#Inner',
+        props: {
+          label: 'Click me',
+        },
+      })
+    })
+
     it('serializes Fragment elements in entry props as fragment descriptors', async () => {
       let Slot = clientEntry(
         '/js/slot.js#Slot',
