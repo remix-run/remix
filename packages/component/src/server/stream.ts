@@ -1146,6 +1146,15 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
       }
     }
 
+    if (isEntry(type)) {
+      return {
+        $rmxEntry: true,
+        type: type.$entryId,
+        props,
+        key: serializeKey(element.key),
+      }
+    }
+
     // JSON visits the descriptor's props next, transforming each nested value once.
     if (typeof type === 'string') {
       return { $rmx: true, type, props, key: serializeKey(element.key) }
