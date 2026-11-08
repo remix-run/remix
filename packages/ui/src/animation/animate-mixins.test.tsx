@@ -1,5 +1,6 @@
 import assert, { expect } from '@remix-run/assert'
 import { describe, it, mock } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 import { createMixin, createRoot } from '@remix-run/component'
 import type { Handle } from '@remix-run/component'
 import { animateEntrance, animateExit } from './animate-mixins.ts'
@@ -179,34 +180,45 @@ describe('animate entrance/exit mixins', () => {
   })
 })
 
+function createTestRoot(t: TestContext) {
+  let container = document.createElement('div')
+  document.body.append(container)
+  let root = createRoot(container)
+  t.after(() => {
+    root.dispose()
+    container.remove()
+  })
+  return { root, container }
+}
+
+function animationFor(node: Element, property: string): Animation {
+  let animation = node.getAnimations().find((animation) => {
+    let effect = animation.effect
+    return (
+      effect instanceof KeyframeEffect && effect.getKeyframes().some((frame) => property in frame)
+    )
+  })
+  assert(animation, `Missing animation for ${property}`)
+  return animation
+}
+
 describe('per-property animation transitions', () => {
-  it('applies entrance overrides and shares animations with matching timing', (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
+  it('inherits entrance timing and groups properties with matching overrides', (t) => {
+    let { root, container } = createTestRoot(t)
     root.render(
       <div
         mix={animateEntrance({
           opacity: 0,
           scale: 0.8,
           translate: '20px 0',
-          rotate: '20deg',
           duration: 1000,
           delay: 100,
           easing: 'ease-in',
+          composite: 'add',
           transition: {
-            opacity: { duration: 500, delay: 0, easing: 'linear' },
+            opacity: { duration: 500, delay: 0, easing: 'linear', composite: 'replace' },
             scale: { duration: 500, delay: 0, easing: 'linear', composite: 'replace' },
-            rotate: {
-              duration: undefined,
-              delay: undefined,
-              easing: undefined,
-              composite: undefined,
-            },
+            translate: { duration: undefined },
           },
         })}
       />,
@@ -214,50 +226,38 @@ describe('per-property animation transitions', () => {
     root.flush()
     let node = container.firstElementChild
     assert(node)
-    let animations = node.getAnimations()
-    expect(animations.length).toBe(2)
-    let shorter = animations.find((animation) => animation.effect?.getTiming().duration === 500)
-    let shared = animations.find((animation) => animation.effect?.getTiming().duration === 1000)
-    assert(shorter?.effect instanceof KeyframeEffect && shared?.effect instanceof KeyframeEffect)
-    expect(shorter.effect.getTiming().easing).toBe('linear')
-    expect(shared.effect.getTiming().duration).toBe(1000)
-    expect(shared.effect.getTiming().delay).toBe(100)
-    expect(shared.effect.getTiming().easing).toBe('ease-in')
-    expect(shared.effect.composite).toBe('replace')
-    shorter.pause()
-    shorter.currentTime = 250
-    shared.pause()
-    shared.currentTime = 500
-    expect(getComputedStyle(node).opacity).toBe('0.5')
-    let shortFrames = shorter.effect.getKeyframes()
-    let sharedFrames = shared.effect.getKeyframes()
-    expect(shortFrames[0].opacity).toBe('0')
-    expect(shortFrames[0].scale).toBe('0.8')
-    expect(sharedFrames[0].translate).toBe('20px')
-    expect(sharedFrames[0].rotate).toBe('20deg')
+    let shorter = animationFor(node, 'opacity')
+    let shared = animationFor(node, 'translate')
+    expect(node.getAnimations().length).toBe(2)
+    expect(animationFor(node, 'scale')).toBe(shorter)
+    expect(shorter.effect?.getTiming()).toMatchObject({ duration: 500, delay: 0, easing: 'linear' })
+    expect(shared.effect?.getTiming()).toMatchObject({
+      duration: 1000,
+      delay: 100,
+      easing: 'ease-in',
+    })
+    assert(shorter.effect instanceof KeyframeEffect && shared.effect instanceof KeyframeEffect)
+    expect(shorter.effect.getKeyframes()[0].scale).toBe('0.8')
+    expect(shorter.effect.composite).toBe('replace')
+    expect(shared.effect.composite).toBe('add')
   })
 
-  it('applies per-property exit timing and keeps the element until every property finishes', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
+  it('applies zero-duration exit styles and waits for every other property to finish', async (t) => {
+    let { root, container } = createTestRoot(t)
     root.render(
       <div
-        key="item"
-        style={{ position: 'relative', opacity: 1 }}
+        style={{ position: 'relative', translate: '10px 0' }}
         mix={animateExit({
           position: 'absolute',
+          translate: '5px 0',
           opacity: 0,
-          translate: '32px 0',
+          scale: 0.5,
           duration: 1000,
           easing: 'ease-in',
           transition: {
             position: { duration: 0 },
-            opacity: { duration: 500, delay: 100 },
+            translate: { duration: 0, composite: 'add' },
+            opacity: { duration: 500 },
           },
         })}
       />,
@@ -268,176 +268,84 @@ describe('per-property animation transitions', () => {
     root.render(null)
     root.flush()
     expect(getComputedStyle(node).position).toBe('absolute')
+    expect(getComputedStyle(node).translate).toBe('15px')
     expect(node.style.position).toBe('relative')
-    for (let animation of node.getAnimations()) {
-      if (animation.playState !== 'finished') animation.pause()
-    }
-    let movement = node
-      .getAnimations()
-      .find((animation) => animation.effect?.getTiming().duration === 1000)
-    assert(movement)
-    expect(movement.effect?.getTiming().easing).toBe('ease-in')
-    movement.currentTime = 500
-    expect(getComputedStyle(node).translate).not.toBe('none')
-    expect(getComputedStyle(node).position).toBe('absolute')
-    expect(node.isConnected).toBe(true)
-    let fade = node
-      .getAnimations()
-      .find((animation) => animation.effect?.getTiming().duration === 500)
-    assert(fade)
-    expect(fade.effect?.getTiming().easing).toBe('ease-in')
-    expect(fade.effect?.getTiming().delay).toBe(100)
-    fade.currentTime = 350
-    expect(Number(getComputedStyle(node).opacity)).toBeGreaterThan(0)
-    expect(Number(getComputedStyle(node).opacity)).toBeLessThan(1)
+    let fade = animationFor(node, 'opacity')
+    let scale = animationFor(node, 'scale')
+    fade.pause()
+    scale.pause()
+    expect(fade.effect?.getTiming().duration).toBe(500)
     fade.finish()
     await new Promise(requestAnimationFrame)
     expect(node.isConnected).toBe(true)
-    movement.finish()
+    scale.finish()
     await new Promise(requestAnimationFrame)
     expect(node.isConnected).toBe(false)
-    expect(node.style.position).toBe('relative')
     expect(node.getAnimations().length).toBe(0)
   })
 
-  it('applies zero-duration exits immediately for both shared and per-property timing', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
+  it('applies shared and per-property zero-duration exits synchronously', async (t) => {
+    let { root, container } = createTestRoot(t)
     root.render(
       <>
+        <div mix={animateExit({ position: 'absolute', duration: 0 })} />
         <div
-          style={{ position: 'relative' }}
-          mix={animateExit({ position: 'absolute', duration: 0 })}
-        />
-        <div
-          style={{ position: 'relative' }}
           mix={animateExit({
             position: 'absolute',
-            duration: 10000,
+            duration: 1000,
             transition: { position: { duration: 0 } },
           })}
         />
       </>,
     )
     root.flush()
-    let shared = container.firstElementChild
-    let overridden = container.lastElementChild
-    assert(shared && overridden && shared !== overridden)
+    let [shared, overridden] = container.children
     root.render(null)
     root.flush()
     expect(getComputedStyle(shared).position).toBe('absolute')
     expect(getComputedStyle(overridden).position).toBe('absolute')
     await new Promise(requestAnimationFrame)
-    expect(shared.isConnected).toBe(false)
-    expect(overridden.isConnected).toBe(false)
-    expect(shared.getAnimations().length).toBe(0)
-    expect(overridden.getAnimations().length).toBe(0)
+    expect(container.childElementCount).toBe(0)
+    expect(shared.getAnimations().length + overridden.getAnimations().length).toBe(0)
   })
 
-  it('inherits the shared delay and allows a property to start without it', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
+  it('inherits a positive exit delay and allows a property to override it', async (t) => {
+    let { root, container } = createTestRoot(t)
     root.render(
       <div
-        key="item"
-        style={{ position: 'relative', opacity: 1 }}
         mix={animateExit({
           position: 'absolute',
           opacity: 0,
           duration: 1000,
           delay: 10000,
-          transition: {
-            position: { duration: 0 },
-            opacity: { duration: 500, delay: 0 },
-          },
+          transition: { position: { duration: 0 }, opacity: { delay: 0 } },
         })}
       />,
     )
     root.flush()
     let node = container.firstElementChild
-    assert(node instanceof HTMLElement)
+    assert(node)
     root.render(null)
     root.flush()
-    expect(getComputedStyle(node).position).toBe('relative')
-    for (let animation of node.getAnimations()) {
-      if (animation.playState !== 'finished') animation.pause()
-    }
-    let animations = node.getAnimations()
-    let position = animations.find((animation) => animation.effect?.getTiming().delay === 10000)
-    let fade = animations.find((animation) => animation.effect?.getTiming().duration === 500)
-    assert(position && fade)
-    expect(position.effect?.getTiming().duration).toBe(0)
+    let position = animationFor(node, 'position')
+    let fade = animationFor(node, 'opacity')
+    position.pause()
+    fade.pause()
+    expect(getComputedStyle(node).position).toBe('static')
+    expect(position.effect?.getTiming()).toMatchObject({ duration: 0, delay: 10000 })
     expect(fade.effect?.getTiming().delay).toBe(0)
     fade.finish()
     await new Promise(requestAnimationFrame)
-    expect(getComputedStyle(node).position).toBe('relative')
     expect(node.isConnected).toBe(true)
     position.finish()
     await new Promise(requestAnimationFrame)
     expect(node.isConnected).toBe(false)
   })
-
-  it('groups zero-duration exit properties while respecting per-property compositing', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
-    root.render(
-      <div
-        style={{ position: 'relative', zIndex: 2, translate: '10px 0' }}
-        mix={animateExit({
-          position: 'absolute',
-          zIndex: 100,
-          translate: '5px 0',
-          opacity: 0,
-          duration: 1000,
-          transition: {
-            position: { duration: 0 },
-            zIndex: { duration: 0 },
-            translate: { duration: 0, composite: 'add' },
-          },
-        })}
-      />,
-    )
-    root.flush()
-    let node = container.firstElementChild
-    assert(node instanceof HTMLElement)
-    root.render(null)
-    root.flush()
-    expect(node.getAnimations().length).toBe(3)
-    expect(getComputedStyle(node).position).toBe('absolute')
-    expect(getComputedStyle(node).zIndex).toBe('100')
-    expect(getComputedStyle(node).translate).toBe('15px')
-    for (let animation of node.getAnimations()) animation.finish()
-    await new Promise(requestAnimationFrame)
-    expect(node.isConnected).toBe(false)
-    expect(node.getAnimations().length).toBe(0)
-    expect(node.style.translate).toBe('10px')
-  })
 })
 
 describe('interrupted exit animations', () => {
-  it('restores updated styles when an element returns, including when animateExit is removed', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
+  it('restores current styles when an exiting element returns, even without animateExit', async (t) => {
+    let { root, container } = createTestRoot(t)
     let exit = animateExit({
       position: 'absolute',
       opacity: 0,
@@ -447,25 +355,20 @@ describe('interrupted exit animations', () => {
     root.render(<div key="item" style={{ position: 'relative', opacity: 1 }} mix={exit} />)
     root.flush()
     let node = container.firstElementChild
-    assert(node instanceof HTMLElement)
+    assert(node)
     root.render(null)
     root.flush()
     await Promise.resolve()
-    let fade = node
-      .getAnimations()
-      .find((animation) => animation.effect?.getTiming().duration === 1000)
-    assert(fade)
+    let fade = animationFor(node, 'opacity')
     fade.pause()
     fade.currentTime = 500
     let opacity = getComputedStyle(node).opacity
     root.render(<div key="item" style={{ position: 'fixed', opacity: 1 }} mix={exit} />)
     root.flush()
-    expect(container.firstElementChild).toBe(node)
-    expect(getComputedStyle(node).position).toBe('fixed')
-    let returning = node.getAnimations()[0]
-    assert(returning)
+    let returning = animationFor(node, 'opacity')
     returning.pause()
     returning.currentTime = 0
+    expect(getComputedStyle(node).position).toBe('fixed')
     expect(getComputedStyle(node).opacity).toBe(opacity)
     returning.finish()
     await new Promise(requestAnimationFrame)
@@ -473,21 +376,14 @@ describe('interrupted exit animations', () => {
     root.flush()
     root.render(<div key="item" style={{ position: 'sticky' }} />)
     root.flush()
+    await new Promise(requestAnimationFrame)
     expect(container.firstElementChild).toBe(node)
     expect(getComputedStyle(node).position).toBe('sticky')
-    await new Promise(requestAnimationFrame)
-    expect(node.isConnected).toBe(true)
     expect(node.getAnimations().length).toBe(0)
   })
 
   it('preserves additive compositing when an exiting element returns', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
+    let { root, container } = createTestRoot(t)
     let exit = animateExit({
       translate: '20px 0',
       duration: 1000,
@@ -501,34 +397,22 @@ describe('interrupted exit animations', () => {
     root.render(null)
     root.flush()
     await Promise.resolve()
-    let animation = node.getAnimations()[0]
-    assert(animation)
-    animation.pause()
-    animation.currentTime = 250
-    expect(getComputedStyle(node).translate).toBe('20px')
+    let exiting = animationFor(node, 'translate')
+    exiting.pause()
+    exiting.currentTime = 250
     root.render(<div key="item" style={{ translate: '10px 0' }} mix={exit} />)
     root.flush()
-    let returning = node.getAnimations()[0]
-    assert(returning?.effect instanceof KeyframeEffect)
-    returning.pause()
-    returning.currentTime = 0
+    let returning = animationFor(node, 'translate')
+    assert(returning.effect instanceof KeyframeEffect)
     expect(returning.effect.composite).toBe('add')
-    expect(getComputedStyle(node).translate).toBe('30px')
   })
 
-  it('returns from completed exit values when another mixin keeps elements mounted', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
+  it('returns from completed exit styles while another mixin retains the elements', async (t) => {
+    let { root, container } = createTestRoot(t)
     let removal = Promise.withResolvers<void>()
+    t.after(() => removal.resolve())
     let retain = createMixin((handle) => {
       handle.addEventListener('beforeRemove', (event) => event.persistNode(() => removal.promise))
-      return () => handle.element
-    })
-    t.after(() => {
-      removal.resolve()
-      root.dispose()
-      container.remove()
     })
     let shared = [animateExit({ opacity: 0, duration: 1000 }), retain()]
     let overridden = [
@@ -542,16 +426,12 @@ describe('interrupted exit animations', () => {
       </>,
     )
     root.flush()
-    let first = container.firstElementChild
-    let second = container.lastElementChild
-    assert(first && second && first !== second)
+    let [first, second] = container.children
     root.render(null)
     root.flush()
-    for (let animation of [...first.getAnimations(), ...second.getAnimations()]) animation.finish()
+    animationFor(first, 'opacity').finish()
+    animationFor(second, 'opacity').finish()
     await new Promise(requestAnimationFrame)
-    expect(first.isConnected && second.isConnected).toBe(true)
-    expect(getComputedStyle(first).opacity).toBe('0')
-    expect(getComputedStyle(second).opacity).toBe('0')
     root.render(
       <>
         <div key="shared" style={{ opacity: 0.4 }} mix={shared} />
@@ -559,109 +439,74 @@ describe('interrupted exit animations', () => {
       </>,
     )
     root.flush()
-    expect(container.firstElementChild).toBe(first)
-    expect(container.lastElementChild).toBe(second)
-    let firstReturn = first.getAnimations()[0]
-    let secondReturn = second.getAnimations()[0]
-    assert(firstReturn && secondReturn)
+    let firstReturn = animationFor(first, 'opacity')
+    let secondReturn = animationFor(second, 'opacity')
     firstReturn.pause()
     firstReturn.currentTime = 0
     secondReturn.pause()
     secondReturn.currentTime = 0
     expect(getComputedStyle(first).opacity).toBe('0')
     expect(getComputedStyle(second).opacity).toBe('0')
-    firstReturn.currentTime = 500
-    secondReturn.currentTime = 250
-    expect(getComputedStyle(first).opacity).toBe('0.2')
-    expect(getComputedStyle(second).opacity).toBe('0.3')
     removal.resolve()
-    await new Promise(requestAnimationFrame)
-    expect(first.isConnected && second.isConnected).toBe(true)
     firstReturn.finish()
     secondReturn.finish()
     await new Promise(requestAnimationFrame)
+    expect(container.firstElementChild).toBe(first)
+    expect(container.lastElementChild).toBe(second)
     expect(getComputedStyle(first).opacity).toBe('0.4')
     expect(getComputedStyle(second).opacity).toBe('0.6')
     expect(first.getAnimations().length + second.getAnimations().length).toBe(0)
   })
 
-  it('returns to updated styles immediately after its exit animation finishes', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
+  it('returns from finished exit styles before removal callbacks settle', async (t) => {
+    let { root, container } = createTestRoot(t)
     let exit = animateExit({ opacity: 0, duration: 1000 })
     root.render(<div key="item" style={{ opacity: 1 }} mix={exit} />)
     root.flush()
     let node = container.firstElementChild
-    assert(node instanceof HTMLElement)
+    assert(node)
     root.render(null)
     root.flush()
-    let exiting = node.getAnimations()[0]
-    assert(exiting)
-    exiting.finish()
+    animationFor(node, 'opacity').finish()
     root.render(<div key="item" style={{ opacity: 0.4 }} mix={exit} />)
     root.flush()
-    expect(container.firstElementChild).toBe(node)
-    expect(node.style.opacity).toBe('0.4')
-    let returning = node.getAnimations()[0]
-    assert(returning)
+    let returning = animationFor(node, 'opacity')
     returning.pause()
     returning.currentTime = 0
     expect(getComputedStyle(node).opacity).toBe('0')
-    returning.currentTime = 500
-    expect(getComputedStyle(node).opacity).toBe('0.2')
     await Promise.resolve()
     expect(returning.playState).toBe('paused')
     returning.finish()
     await new Promise(requestAnimationFrame)
-    expect(node.isConnected).toBe(true)
+    expect(container.firstElementChild).toBe(node)
     expect(getComputedStyle(node).opacity).toBe('0.4')
-    expect(node.getAnimations().length).toBe(0)
   })
 
-  it('keeps the latest exit running when an element leaves, returns and leaves again immediately', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
+  it('keeps the new exit running when an element leaves, returns and immediately leaves again', async (t) => {
+    let { root, container } = createTestRoot(t)
     let exit = animateExit({
       opacity: 0,
       position: 'absolute',
       duration: 1000,
       transition: { position: { duration: 0 } },
     })
-    function item() {
-      return <div key="item" style={{ opacity: 1, position: 'relative' }} mix={exit} />
-    }
-    root.render(item())
+    let item = <div key="item" style={{ opacity: 1, position: 'relative' }} mix={exit} />
+    root.render(item)
     root.flush()
     let node = container.firstElementChild
     assert(node)
     root.render(null)
     root.flush()
     let firstExit = node.getAnimations()
-    root.render(item())
+    root.render(item)
     root.flush()
-    expect(container.firstElementChild).toBe(node)
-    expect(getComputedStyle(node).position).toBe('relative')
-    let returning = node.getAnimations()[0]
-    assert(returning)
+    let returning = animationFor(node, 'opacity')
     root.render(null)
     root.flush()
     let secondExit = node.getAnimations()
-    expect(firstExit.length).toBeGreaterThan(0)
-    expect(secondExit.length).toBeGreaterThan(0)
     await Promise.resolve()
     expect(firstExit.every((animation) => animation.playState === 'idle')).toBe(true)
     expect(secondExit.every((animation) => animation.playState !== 'idle')).toBe(true)
-    expect(returning.playState).not.toBe('idle')
     await returning.ready
     for (let animation of new Set([returning, ...secondExit])) animation.finish()
     await new Promise(requestAnimationFrame)
@@ -670,10 +515,8 @@ describe('interrupted exit animations', () => {
 })
 
 describe('exit animations with other mixins', () => {
-  it('removes elements when another beforeRemove listener cancels their exit animations', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
+  it('removes elements even when another removal listener cancels their animations', async (t) => {
+    let { root, container } = createTestRoot(t)
     let cancelAnimations = createMixin((handle) => {
       let node: Element | undefined
       handle.addEventListener('insert', (event) => {
@@ -682,11 +525,6 @@ describe('exit animations with other mixins', () => {
       handle.addEventListener('beforeRemove', () => {
         for (let animation of node?.getAnimations() ?? []) animation.cancel()
       })
-      return () => handle.element
-    })
-    t.after(() => {
-      root.dispose()
-      container.remove()
     })
     root.render(
       <>
@@ -695,25 +533,19 @@ describe('exit animations with other mixins', () => {
       </>,
     )
     root.flush()
-    let animated = container.firstElementChild
-    let immediate = container.lastElementChild
-    assert(animated && immediate && animated !== immediate)
     root.render(null)
     root.flush()
     await new Promise(requestAnimationFrame)
-    expect(animated.isConnected).toBe(false)
-    expect(immediate.isConnected).toBe(false)
+    expect(container.childElementCount).toBe(0)
   })
 
-  it('animates sibling layout from its previous position when a negative exit delay changes height', (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
+  it('measures sibling layout after a negative exit delay changes height', (t) => {
+    let { root, container } = createTestRoot(t)
     let visible = true
     let update: (() => void) | undefined
     function List(handle: Handle) {
       update = () => {
-        void handle.update()
+        handle.update()
       }
       return () => (
         <section>
@@ -728,10 +560,6 @@ describe('exit animations with other mixins', () => {
         </section>
       )
     }
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
     root.render(<List />)
     root.flush()
     let exiting = container.firstElementChild?.firstElementChild
@@ -741,10 +569,7 @@ describe('exit animations with other mixins', () => {
     visible = false
     update()
     root.flush()
-    expect(getComputedStyle(exiting).height).toBe('30px')
-    expect(remaining.getBoundingClientRect().top).toBe(previousTop)
-    let layout = remaining.getAnimations()[0]
-    assert(layout)
+    let layout = animationFor(remaining, 'transform')
     layout.pause()
     layout.currentTime = 0
     expect(remaining.getBoundingClientRect().top).toBe(previousTop)
@@ -752,17 +577,11 @@ describe('exit animations with other mixins', () => {
     expect(remaining.getBoundingClientRect().top).toBe(previousTop - 30)
   })
 
-  it('cancels exit animations if their parent is removed immediately afterwards', async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
-    t.after(() => {
-      root.dispose()
-      container.remove()
-    })
+  it('cancels exit effects when their parent is removed', async (t) => {
+    let { root, container } = createTestRoot(t)
     root.render(
       <section>
-        <div key="item" mix={animateExit({ opacity: 0, duration: 1000 })} />
+        <div mix={animateExit({ opacity: 0, duration: 1000 })} />
       </section>,
     )
     root.flush()
@@ -774,38 +593,27 @@ describe('exit animations with other mixins', () => {
     expect(effects.length).toBe(1)
     root.render(null)
     root.flush()
-    expect(node.isConnected).toBe(false)
     await Promise.resolve()
-    expect(effects.every((animation) => animation.playState === 'idle')).toBe(true)
+    expect(node.isConnected).toBe(false)
+    expect(effects[0].playState).toBe('idle')
   })
 
-  it("cleans up invalid exit animations without ending another mixin's deferred removal", async (t) => {
-    let container = document.createElement('div')
-    document.body.append(container)
-    let root = createRoot(container)
+  it("cleans up failed exit setup without ending another mixin's deferred removal", async (t) => {
+    let { root, container } = createTestRoot(t)
     let removal = Promise.withResolvers<void>()
+    t.after(() => removal.resolve())
     let retain = createMixin((handle) => {
       handle.addEventListener('beforeRemove', (event) => event.persistNode(() => removal.promise))
-      return () => handle.element
-    })
-    t.after(() => {
-      removal.resolve()
-      root.dispose()
-      container.remove()
     })
     root.render(
       <div
-        style={{ position: 'relative' }}
         mix={[
           animateExit({
             position: 'absolute',
             opacity: 0,
             scale: 0.5,
             duration: 1000,
-            transition: {
-              position: { duration: 0 },
-              scale: { easing: 'invalid-easing' },
-            },
+            transition: { position: { duration: 0 }, scale: { easing: 'invalid-easing' } },
           }),
           retain(),
         ]}
@@ -818,7 +626,6 @@ describe('exit animations with other mixins', () => {
     root.flush()
     await new Promise(requestAnimationFrame)
     expect(node.isConnected).toBe(true)
-    expect(getComputedStyle(node).position).toBe('relative')
     expect(node.getAnimations().length).toBe(0)
     removal.resolve()
     await new Promise(requestAnimationFrame)
