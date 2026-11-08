@@ -220,6 +220,21 @@ describe('vnode rendering', () => {
       expect(img.getAttribute('draggable')).toBe('false')
       expect(img.getAttribute('spellcheck')).toBe('false')
     })
+
+    it('renders data-rmx-document as a boolean attribute', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<a href="/login" data-rmx-document={true} />)
+
+      let anchor = container.querySelector('a')
+      invariant(anchor instanceof HTMLAnchorElement)
+      expect(anchor.getAttribute('data-rmx-document')).toBe('')
+
+      root.render(<a href="/login" data-rmx-document={false} />)
+
+      expect(anchor.hasAttribute('data-rmx-document')).toBe(false)
+    })
   })
 
   describe('innerHTML prop', () => {

@@ -35,7 +35,8 @@ permissions:
   issues: read
   pull-requests: read
 checkout:
-  fetch-depth: 0
+  ref: main
+  fetch-depth: 1
 model: gpt-5.6-sol
 engine:
   id: copilot

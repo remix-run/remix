@@ -6,13 +6,28 @@ export function NoticePresenceDemo(handle: Handle) {
   let visible = true;
 
   return () => (
-    <div mix={stackStyles}>
+    <div
+      mix={css({
+        display: "grid",
+        gap: "1rem",
+        minWidth: "16rem",
+      })}
+    >
       <button
         mix={[
-          buttonStyles,
           on("click", () => {
             visible = !visible;
             handle.update();
+          }),
+          css({
+            border: "1px solid #d83a5a",
+            borderRadius: "999px",
+            background: "#d83a5a",
+            color: "white",
+            cursor: "pointer",
+            font: "inherit",
+            fontWeight: "700",
+            padding: "0.7rem 1rem",
           }),
         ]}
         type="button"
@@ -24,7 +39,6 @@ export function NoticePresenceDemo(handle: Handle) {
         <p
           key="notice"
           mix={[
-            noticeStyles,
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -35,6 +49,13 @@ export function NoticePresenceDemo(handle: Handle) {
               transform: "translateY(-8px)",
               ...spring("snappy"),
             }),
+            css({
+              margin: 0,
+              borderRadius: "12px",
+              background: "#ecfdf5",
+              color: "#065f46",
+              padding: "0.75rem 1rem",
+            }),
           ]}
         >
           Settings saved.
@@ -43,28 +64,3 @@ export function NoticePresenceDemo(handle: Handle) {
     </div>
   );
 }
-
-const stackStyles = css({
-  display: "grid",
-  gap: "1rem",
-  minWidth: "16rem",
-});
-
-const buttonStyles = css({
-  border: "1px solid #d83a5a",
-  borderRadius: "999px",
-  background: "#d83a5a",
-  color: "white",
-  cursor: "pointer",
-  font: "inherit",
-  fontWeight: "700",
-  padding: "0.7rem 1rem",
-});
-
-const noticeStyles = css({
-  margin: 0,
-  borderRadius: "12px",
-  background: "#ecfdf5",
-  color: "#065f46",
-  padding: "0.75rem 1rem",
-});

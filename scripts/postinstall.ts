@@ -50,7 +50,7 @@ async function main() {
           formatPlaywrightInstallError(retryError),
           '',
           'Playwright browser installation failed after one retry.',
-          'Run `pnpm --filter @remix-run/component exec playwright install` to retry manually.',
+          'Run `pnpm --filter @remix-run/component exec playwright install --only-shell chromium firefox` to retry manually.',
         ].join('\n'),
       )
     }

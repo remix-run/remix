@@ -15,12 +15,30 @@ export function PressStateDemo(handle: Handle) {
     <div
       tabIndex={0}
       mix={[
-        pressableStyles,
         onPressDown(() => {
           setPressed(true);
         }),
         onPressUp(() => {
           setPressed(false);
+        }),
+        css({
+          display: "grid",
+          width: 120,
+          height: 120,
+          placeItems: "center",
+          borderRadius: 12,
+          backgroundColor: "#9911ff",
+          color: "white",
+          cursor: "pointer",
+          fontWeight: "800",
+          transition: `transform ${spring()}`,
+          "&:focus": {
+            outline: "4px solid rgba(0,120,255,0.7)",
+            outlineOffset: 2,
+          },
+          "&:hover, &:focus": {
+            transform: "scale(1.12)",
+          },
         }),
       ]}
     >
@@ -51,23 +69,3 @@ const onPressUp = createMixin<HTMLElement, [handler: () => void]>(() => (handler
   }),
   on("blur", handler),
 ]);
-
-const pressableStyles = css({
-  display: "grid",
-  width: 120,
-  height: 120,
-  placeItems: "center",
-  borderRadius: 12,
-  backgroundColor: "#9911ff",
-  color: "white",
-  cursor: "pointer",
-  fontWeight: "800",
-  transition: `transform ${spring()}`,
-  "&:focus": {
-    outline: "4px solid rgba(0,120,255,0.7)",
-    outlineOffset: 2,
-  },
-  "&:hover, &:focus": {
-    transform: "scale(1.12)",
-  },
-});

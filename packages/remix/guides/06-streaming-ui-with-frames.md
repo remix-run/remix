@@ -200,7 +200,8 @@ Give a frame a `name` when another client entry needs to find it:
 />
 ```
 
-A component can reload the frame that contains it or a named frame elsewhere on the page:
+A component can reload the frame that contains it, a named frame elsewhere on the page, or the whole
+page:
 
 ```tsx
 // Reload the containing frame.
@@ -208,6 +209,9 @@ await handle.frame.reload();
 
 // Reload a mounted frame by name.
 await handle.frames.get("album-recommendations")?.reload();
+
+// Reload the whole page from any nested component.
+await handle.frames.top.reload();
 ```
 
 `handle.frames.get(name)` returns `undefined` when that frame is not mounted. After a reload, Remix

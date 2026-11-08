@@ -19,18 +19,53 @@ export const InstallTabs = clientEntry(
       let { panels } = handle.props;
 
       return (
-        <div mix={styles.root}>
-          <div mix={styles.header}>
+        <div
+          mix={css({
+            overflow: "clip",
+            margin: "var(--rmx-space-lg) 0",
+            border: "1px solid var(--rmx-color-border-subtle)",
+            borderRadius: "var(--rmx-radius-md)",
+            background: "var(--rmx-color-code-background)",
+          })}
+        >
+          <div
+            mix={css({
+              display: "flex",
+              borderBottom: "1px solid var(--rmx-color-border-subtle)",
+              background: "var(--rmx-surface-lvl2)",
+            })}
+          >
             <select.Context defaultLabel={panels[0]?.label} defaultValue={panels[0]?.value}>
               <button
                 type="button"
                 aria-label="Package manager"
                 mix={[
                   select.trigger(),
-                  styles.trigger,
                   select.onSelectChange((event) => {
                     selected = event.value ?? selected;
                     handle.update();
+                  }),
+                  css({
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "var(--rmx-space-sm)",
+                    padding: "var(--rmx-space-sm) var(--rmx-space-md)",
+                    border: 0,
+                    // Follows the frame's rounded top-left corner so the focus ring isn't clipped.
+                    borderRadius: "calc(var(--rmx-radius-md) - 1px) 0 0 0",
+                    background: "none",
+                    color: "var(--rmx-color-text-primary)",
+                    font: "inherit",
+                    fontSize: "var(--rmx-font-size-sm)",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    "&:hover": {
+                      background: activeBackground,
+                    },
+                    "&:focus-visible": {
+                      outline: "2px solid currentColor",
+                      outlineOffset: "-2px",
+                    },
                   }),
                 ]}
               >
@@ -38,14 +73,62 @@ export const InstallTabs = clientEntry(
                 <ChevronDownIcon />
               </button>
               <popover.Context>
-                <div mix={[select.popover(), styles.surface]}>
-                  <div aria-label="Package managers" mix={[select.list(), styles.list]}>
+                <div
+                  mix={[
+                    select.popover(),
+                    css({
+                      margin: 0,
+                      padding: 0,
+                      overflow: "clip",
+                      minWidth: "8rem",
+                      border: "1px solid var(--rmx-color-border-subtle)",
+                      borderRadius: "var(--rmx-radius-md)",
+                      background: "var(--rmx-surface-lvl2)",
+                      color: "var(--rmx-color-text-primary)",
+                      boxShadow: "0 12px 32px #00000024",
+                      fontSize: "var(--rmx-font-size-sm)",
+                      opacity: 0,
+                      transition:
+                        "opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete",
+                      "&:popover-open": {
+                        opacity: 1,
+                        "@starting-style": {
+                          opacity: 0,
+                        },
+                      },
+                      "@media (prefers-reduced-motion: reduce)": {
+                        transition: "none",
+                      },
+                    }),
+                  ]}
+                >
+                  <div
+                    aria-label="Package managers"
+                    mix={[
+                      select.list(),
+                      css({
+                        display: "grid",
+                        outline: 0,
+                      }),
+                    ]}
+                  >
                     {panels.map((panel) => (
                       <div
                         key={panel.value}
                         mix={[
                           select.option({ label: panel.label, value: panel.value }),
-                          styles.option,
+                          css({
+                            // The menu opens over the trigger, so match its inline padding to keep the label in place.
+                            // Same padding as the trigger, so the selected option covers the trigger exactly.
+                            padding: "var(--rmx-space-sm) var(--rmx-space-md)",
+                            cursor: "default",
+                            '&[data-highlighted="true"]': {
+                              background: activeBackground,
+                            },
+                            '&[aria-selected="true"]': {
+                              fontWeight: 600,
+                            },
+                          }),
                         ]}
                       >
                         {panel.label}
@@ -85,79 +168,3 @@ function ChevronDownIcon() {
 
 // Strong enough to read against the header and menu surfaces in light and dark mode.
 const activeBackground = "color-mix(in srgb, var(--rmx-color-text-primary) 14%, transparent)";
-
-const styles = {
-  root: css({
-    overflow: "clip",
-    margin: "var(--rmx-space-lg) 0",
-    border: "1px solid var(--rmx-color-border-subtle)",
-    borderRadius: "var(--rmx-radius-md)",
-    background: "var(--rmx-color-code-background)",
-  }),
-  header: css({
-    display: "flex",
-    borderBottom: "1px solid var(--rmx-color-border-subtle)",
-    background: "var(--rmx-surface-lvl2)",
-  }),
-  trigger: css({
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "var(--rmx-space-sm)",
-    padding: "var(--rmx-space-sm) var(--rmx-space-md)",
-    border: 0,
-    // Follows the frame's rounded top-left corner so the focus ring isn't clipped.
-    borderRadius: "calc(var(--rmx-radius-md) - 1px) 0 0 0",
-    background: "none",
-    color: "var(--rmx-color-text-primary)",
-    font: "inherit",
-    fontSize: "var(--rmx-font-size-sm)",
-    fontWeight: 600,
-    cursor: "pointer",
-    "&:hover": {
-      background: activeBackground,
-    },
-    "&:focus-visible": {
-      outline: "2px solid currentColor",
-      outlineOffset: "-2px",
-    },
-  }),
-  surface: css({
-    margin: 0,
-    padding: 0,
-    overflow: "clip",
-    minWidth: "8rem",
-    border: "1px solid var(--rmx-color-border-subtle)",
-    borderRadius: "var(--rmx-radius-md)",
-    background: "var(--rmx-surface-lvl2)",
-    color: "var(--rmx-color-text-primary)",
-    boxShadow: "0 12px 32px #00000024",
-    fontSize: "var(--rmx-font-size-sm)",
-    opacity: 0,
-    transition: "opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete",
-    "&:popover-open": {
-      opacity: 1,
-      "@starting-style": {
-        opacity: 0,
-      },
-    },
-    "@media (prefers-reduced-motion: reduce)": {
-      transition: "none",
-    },
-  }),
-  list: css({
-    display: "grid",
-    outline: 0,
-  }),
-  option: css({
-    // The menu opens over the trigger, so match its inline padding to keep the label in place.
-    // Same padding as the trigger, so the selected option covers the trigger exactly.
-    padding: "var(--rmx-space-sm) var(--rmx-space-md)",
-    cursor: "default",
-    '&[data-highlighted="true"]': {
-      background: activeBackground,
-    },
-    '&[aria-selected="true"]': {
-      fontWeight: 600,
-    },
-  }),
-};

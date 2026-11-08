@@ -21,7 +21,10 @@ export const initializeTableOfContentsScript = `
       let heading = id ? document.getElementById(id) : null
       return heading ? [{ heading, link }] : []
     })
-    let activationLine = window.matchMedia('(width >= 900px)').matches ? 116 : 88
+    // Keep in sync with getActivationLine() in public/table-of-contents-active.ts.
+    let activationLine =
+      (window.matchMedia('(width >= 900px)').matches ? 116 : 88) +
+      Math.min(160, window.innerHeight * 0.15)
     let activeIndex = 0
     for (let [index, entry] of entries.entries()) {
       if (entry.heading.getBoundingClientRect().top > activationLine) break

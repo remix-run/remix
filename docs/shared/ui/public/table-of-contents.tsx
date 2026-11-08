@@ -1,7 +1,7 @@
 import { clientEntry, type Handle } from 'remix/component'
 
 import { clearSelectionIndicator, positionSelectionIndicator } from './selection-indicator.ts'
-import { getActiveHeadingIndex } from './table-of-contents-active.ts'
+import { getActivationLine, getActiveHeadingIndex } from './table-of-contents-active.ts'
 
 export const TableOfContentsBehavior = clientEntry(
   import.meta.url,
@@ -120,7 +120,10 @@ export function startTableOfContentsBehavior(list: HTMLOListElement, signal: Abo
   }
 
   function update() {
-    let activationLine = window.matchMedia('(width >= 900px)').matches ? 116 : 88
+    let activationLine = getActivationLine(
+      window.innerHeight,
+      window.matchMedia('(width >= 900px)').matches,
+    )
     let atDocumentEnd =
       window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
     let activeIndex = getActiveHeadingIndex(

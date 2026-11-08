@@ -1,6 +1,6 @@
-import { normalizeCssValue } from '../../style/style.ts'
+import { camelToKebab, normalizeCssValue } from '../../style/style.ts'
 import { normalizeSvgAttribute } from '../svg-attributes.ts'
-import type { ElementProps } from '../jsx.ts'
+import type { ElementProps } from './vnode.ts'
 
 const ATTRIBUTE_FALLBACK_NAMES = new Set([
   'width',
@@ -18,13 +18,22 @@ const ATTRIBUTE_FALLBACK_NAMES = new Set([
 ])
 
 const BOOLEANISH_STRING_ATTRIBUTES = new Set([
+  'accent',
+  'accentunder',
   'autoReverse',
   'contenteditable',
+  'displaystyle',
   'draggable',
   'externalResourcesRequired',
+  'fence',
   'focusable',
+  'largeop',
+  'movablelimits',
   'preserveAlpha',
+  'separator',
   'spellcheck',
+  'stretchy',
+  'symmetric',
 ])
 
 const BLOCKED_HOST_PROP_NAMES = new Set(['__proto__', 'outerHTML'])
@@ -128,25 +137,35 @@ export function isBooleanishStringAttribute(name: string): boolean {
   return BOOLEANISH_STRING_ATTRIBUTES.has(name)
 }
 
+// Remix reads these by presence, so `true` renders an empty attribute and `false` omits it.
+const REMIX_BOOLEAN_ATTRIBUTES = new Set(['data-rmx-document', 'data-rmx-preserve-dom'])
+
 export function shouldStringifyBooleanAttribute(name: string): boolean {
-  return isBooleanishStringAttribute(name) || name === 'value'
+  return (
+    name.startsWith('aria-') ||
+    (name.startsWith('data-') && !REMIX_BOOLEAN_ATTRIBUTES.has(name)) ||
+    isBooleanishStringAttribute(name) ||
+    name === 'value'
+  )
 }
 
 export function serializeStyleObject(style: Record<string, unknown>): string {
   let parts: string[] = []
 
   for (let [key, value] of Object.entries(style)) {
-    if (value == null) continue
-    if (typeof value === 'boolean') continue
-    if (typeof value === 'number' && !Number.isFinite(value)) continue
+    let cssValue = styleValueToCss(key, value)
+    if (cssValue === undefined) continue
 
-    let cssKey = toKebabCase(key)
-    let cssValue = Array.isArray(value) ? value.join(', ') : normalizeCssValue(key, value)
-
-    parts.push(`${cssKey}: ${cssValue};`)
+    parts.push(`${camelToKebab(key)}: ${cssValue};`)
   }
 
   return parts.join(' ')
+}
+
+export function styleValueToCss(name: string, value: unknown): string | undefined {
+  if (typeof value === 'boolean') return undefined
+  if (Array.isArray(value)) return value.join(', ')
+  return normalizeCssValue(name, value)
 }
 
 export function getMergedClassName(props: ElementProps): string | undefined {
@@ -154,21 +173,4 @@ export function getMergedClassName(props: ElementProps): string | undefined {
   let className = typeof props.className === 'string' ? props.className : ''
   let merged = classAttr && className ? `${classAttr} ${className}` : classAttr || className
   return merged || undefined
-}
-
-// Style/attribute names come from a small recurring set, so cache conversions
-// instead of running a regex per property per element per render.
-const kebabCaseCache = new Map<string, string>()
-
-export function toKebabCase(value: string): string {
-  let cached = kebabCaseCache.get(value)
-  if (cached === undefined) {
-    cached = value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)
-    if (kebabCaseCache.size >= NORMALIZATION_CACHE_LIMIT) {
-      let oldest = kebabCaseCache.keys().next()
-      if (!oldest.done) kebabCaseCache.delete(oldest.value)
-    }
-    kebabCaseCache.set(value, cached)
-  }
-  return cached
 }

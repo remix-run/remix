@@ -44,6 +44,10 @@ function Tile(handle: Handle<{ title: string; children: RemixNode; notes?: strin
       >
         <button
           mix={[
+            on('click', () => {
+              remountKey++
+              handle.update()
+            }),
             css({
               position: 'absolute',
               bottom: 8,
@@ -58,10 +62,6 @@ function Tile(handle: Handle<{ title: string; children: RemixNode; notes?: strin
               '&:hover': {
                 opacity: 1,
               },
-            }),
-            on('click', () => {
-              remountKey++
-              handle.update()
             }),
           ]}
           title="Replay animation"

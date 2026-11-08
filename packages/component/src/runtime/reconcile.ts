@@ -1,48 +1,25 @@
-import type { Component, ComponentHandle, FrameContent, FrameHandle } from './component.ts'
-import { createComponent } from './component.ts'
-import type { FrameRuntime } from './frame.ts'
-import { createFrame, isFrameRuntime } from './frame.ts'
-import { unwrapFrameResolution } from './frame-resolution.ts'
-import { createRangeRoot } from './vdom.ts'
-import type {
-  CommittedFragmentNode,
-  CommittedFrameNode,
-  CommittedNonRenderNode,
-  ComponentNode,
-  CommittedClientEntryNode,
-  CommittedComponentNode,
-  CommittedHostNode,
-  CommittedTextNode,
-  ControlledReflectionState,
-  DirectEventBinding,
-  DirectEventState,
-  FrameNode,
-  HostNode,
-  MountingComponentNode,
-  ReconcileContext,
-  RuntimeHostProps,
-  TextNode,
-  VNodeInput,
-  VNodeParent,
-  CommittedVNode,
-} from './vnode.ts'
-import {
-  isCommittedComponentNode,
-  isCommittedClientEntryNode,
-  isCommittedHostNode,
-  isCommittedTextNode,
-  isFragmentNode,
-  isHostNode,
-  findContextFromAncestry,
-} from './vnode.ts'
+import { getNonceManager, type ResourceNonces } from './nonce.ts'
+import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
+import { createComponent, Fragment, FRAME_NODE } from './component.ts'
+import { getFrameRuntime, type FrameMountState } from './frame-runtime.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps } from './core/props.ts'
-import type { StyleManager } from '../style/index.ts'
+import { setSelectDefaultValue, setSelectValue } from './core/select.ts'
+import { isMixinDescriptor } from './core/mix.ts'
+import {
+  isEmptyChild,
+  isPrimitiveChild,
+  isRemixElement,
+  isRemixNode,
+  jsx,
+  normalizeChildren,
+} from './core/vnode.ts'
+import type { RemixNode } from './core/vnode.ts'
+import { normalizeUnsafeHTMLProps } from './unsafe-html.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-import { skipComments, logHydrationMismatch } from './client-entries.ts'
+import { isEntry, skipComments, logHydrationMismatch } from './client-entries.ts'
 import type { Scheduler } from './scheduler.ts'
-import { toVNode } from './to-vnode.ts'
 import {
   bindMixinRuntime,
   cancelPendingMixinRemoval,
@@ -54,13 +31,378 @@ import {
   teardownMixins,
   type MixinRuntimeBinding,
   type MixinRuntimeState,
+  type MixinRuntimeValue,
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
-import { createComponentErrorEvent } from './error-event.ts'
 import { componentStalenessCheck } from './refresh.ts'
-import { jsx } from './jsx.ts'
-import { isEntry } from './client-entries.ts'
 import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
+import { createStyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/index.ts'
+
+export const TEXT_NODE = Symbol('TEXT_NODE')
+export const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
+export const ROOT_VNODE = Symbol('ROOT_VNODE')
+
+export type VNodeKind =
+  | 'root'
+  | 'empty'
+  | 'text'
+  | 'fragment'
+  | 'host'
+  | 'component'
+  | 'client-entry'
+  | 'frame'
+
+export type RuntimeElementProps = {
+  [name: string]: unknown
+}
+
+export type RuntimeHostProps = RuntimeElementProps & {
+  children?: RemixNode
+  innerHTML?: string
+  srcDoc?: string
+  srcdoc?: string
+  mix?: MixinRuntimeValue
+}
+
+type InputNodeBase<kind extends VNodeKind, type> = {
+  kind: kind
+  type: type
+  key?: Key
+  _parent?: never
+}
+
+export type NonRenderNode = InputNodeBase<'empty', typeof NON_RENDER_NODE>
+
+export type TextNode = InputNodeBase<'text', typeof TEXT_NODE> & {
+  _text: string
+}
+
+export type FragmentNode = InputNodeBase<'fragment', typeof Fragment> & {
+  _children: VNodeInput[]
+}
+
+export type HostNode = InputNodeBase<'host', string> & {
+  props: RuntimeHostProps
+  _children: VNodeInput[]
+}
+
+export type ComponentNode = InputNodeBase<'component', ElementFunction> & {
+  props: RuntimeElementProps
+}
+
+export type FrameNode = InputNodeBase<'frame', FrameComponent> & {
+  props: RuntimeElementProps & FrameProps
+}
+
+export type VNodeInput =
+  | NonRenderNode
+  | TextNode
+  | FragmentNode
+  | HostNode
+  | ComponentNode
+  | FrameNode
+
+type MountedNodeBase = {
+  _parent: VNodeParent
+  _svg: boolean
+}
+
+type CommittedNodeBase<kind extends VNodeKind, type> = {
+  kind: kind
+  type: type
+  key?: Key
+} & MountedNodeBase
+
+export type CommittedNonRenderNode = CommittedNodeBase<'empty', typeof NON_RENDER_NODE>
+
+export type CommittedTextNode = CommittedNodeBase<'text', typeof TEXT_NODE> & {
+  _text: string
+  _dom: Text
+}
+
+export type ControlledReflectionState = {
+  disposed: boolean
+  listenersAttached: boolean
+  pendingRestoreVersion: number
+  hasControlledValue: boolean
+  controlledValue: unknown
+  hasControlledChecked: boolean
+  controlledChecked: unknown
+  onInput(): void
+  onChange(): void
+}
+
+export type DirectEventBinding = {
+  type: string
+  handler: (event: Event, signal: AbortSignal) => void | Promise<void>
+  capture: boolean
+  stableHandler: (event: Event) => void
+  reentry: AbortController | null
+}
+
+export type DirectEventState = {
+  bindings: DirectEventBinding[]
+}
+
+export type HostPersistenceState = {
+  parent: ParentNode
+  token: number
+}
+
+export type CommittedHostNode = CommittedNodeBase<'host', string> & {
+  props: RuntimeHostProps
+  _children: CommittedVNode[]
+  _dom: Element
+  _mixedProps: RuntimeHostProps
+  _mixState?: MixinRuntimeState
+  _directEventDescriptors?: OnMixinDescriptor[]
+  _directEventState?: DirectEventState
+  _controlledState?: ControlledReflectionState
+  _persistence?: HostPersistenceState
+}
+
+export type CommittedFragmentNode = CommittedNodeBase<'fragment', typeof Fragment> & {
+  _children: CommittedVNode[]
+}
+
+export type MountingComponentNode = CommittedNodeBase<'component', ElementFunction> & {
+  props: RuntimeElementProps
+  _handle: ComponentHandle
+  _context: ReconcileContext
+}
+
+export type CommittedComponentNode = MountingComponentNode & {
+  _content: CommittedVNode
+}
+
+export type CommittedClientEntryNode = CommittedNodeBase<'client-entry', ElementFunction> & {
+  props: RuntimeElementProps
+  _rangeStart: Comment
+  _rangeEnd: Comment
+}
+
+export type CommittedFrameNode = CommittedNodeBase<'frame', FrameComponent> & {
+  props: RuntimeElementProps & FrameProps
+  _rangeStart: Comment
+  _rangeEnd: Comment
+  _state: FrameMountState
+}
+
+export type CommittedVNode =
+  | CommittedNonRenderNode
+  | CommittedTextNode
+  | CommittedFragmentNode
+  | CommittedHostNode
+  | CommittedComponentNode
+  | CommittedClientEntryNode
+  | CommittedFrameNode
+
+export type RootVNode = {
+  kind: 'root'
+  type: typeof ROOT_VNODE
+  _children: CommittedVNode[]
+  _svg: boolean
+  _getContext?: (type: ElementFunction) => unknown
+  _rangeStart?: Node
+  _rangeEnd?: Node
+  _pendingHydrationComponentId?: string
+  _resourceNonces?: ResourceNonces
+}
+
+export interface ReconcileContext {
+  frame: FrameHandle
+  scheduler: Scheduler
+  styles: StyleManager
+  rootTarget: EventTarget
+}
+
+export type VNodeParent =
+  | RootVNode
+  | CommittedFragmentNode
+  | CommittedHostNode
+  | MountingComponentNode
+  | CommittedComponentNode
+
+export type VNode = VNodeInput | CommittedVNode | RootVNode | MountingComponentNode
+
+export type HydrationCursor = { current: Node | null | undefined }
+
+/**
+ * Renders `<Frame>` nodes. The frame runtime attaches it to the built-in `Frame` component so the
+ * reconciler can render frames without importing the frame runtime.
+ */
+export interface FrameNodeRenderer {
+  insert(
+    node: FrameNode,
+    domParent: ParentNode,
+    vParent: VNodeParent,
+    context: ReconcileContext,
+    svg: boolean,
+    anchor?: Node,
+    cursor?: HydrationCursor,
+  ): CommittedFrameNode
+  diff(
+    curr: CommittedFrameNode,
+    next: FrameNode,
+    domParent: ParentNode,
+    vParent: VNodeParent,
+    context: ReconcileContext,
+    svg: boolean,
+    anchor?: Node,
+  ): CommittedFrameNode
+  dispose(node: CommittedFrameNode): void
+}
+
+export type FrameComponent = ElementFunction & { readonly [FRAME_NODE]: FrameNodeRenderer }
+
+function isFrameComponent(type: ElementFunction): type is FrameComponent {
+  return Object.hasOwn(type, FRAME_NODE)
+}
+
+export function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNode {
+  return node.kind === 'fragment'
+}
+
+export function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
+  return node.kind === 'text'
+}
+
+export function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
+  return node.kind === 'host'
+}
+
+export function isCommittedComponentNode(node: VNode): node is CommittedComponentNode {
+  return node.kind === 'component' && '_content' in node
+}
+
+export function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClientEntryNode {
+  return node.kind === 'client-entry'
+}
+
+export function findContextFromAncestry(node: VNodeParent, type: ElementFunction): unknown {
+  let current: VNodeParent | undefined = node
+  while (current) {
+    if (current.kind === 'component' && current.type === type) {
+      return current._handle.getContextValue()
+    }
+    if (current.kind === 'root') {
+      return current._getContext?.(type)
+    }
+    current = '_parent' in current ? current._parent : undefined
+  }
+  return undefined
+}
+
+function flatMapChildrenToVNodes(props: RuntimeHostProps): VNodeInput[] {
+  let children = props.children
+  if (children === undefined) return []
+  if (!Array.isArray(children)) return [toVNode(children)]
+  let vnodes: VNodeInput[] = []
+  flattenChildrenToVNodes(children, vnodes)
+  return vnodes
+}
+
+function flattenChildrenToVNodes(nodes: RemixNode[], out: VNodeInput[]): void {
+  let children = normalizeChildren(nodes)
+  for (let i = 0; i < children.length; i++) {
+    out.push(toVNode(children[i]))
+  }
+}
+
+export function toVNode(node: RemixNode): VNodeInput {
+  if (isEmptyChild(node)) {
+    return { kind: 'empty', type: NON_RENDER_NODE }
+  }
+
+  if (isPrimitiveChild(node)) {
+    return { kind: 'text', type: TEXT_NODE, _text: String(node) }
+  }
+
+  if (isRemixElement(node)) {
+    if (node.type === Fragment) {
+      let props = parseHostProps(node.props)
+      return {
+        kind: 'fragment',
+        type: Fragment,
+        key: node.key,
+        _children: flatMapChildrenToVNodes(props),
+      }
+    }
+
+    if (typeof node.type === 'string') {
+      let props = parseHostProps(node.props)
+      // When innerHTML is set, ignore children
+      let children = props.innerHTML != null ? [] : flatMapChildrenToVNodes(props)
+      return {
+        kind: 'host',
+        type: node.type,
+        key: node.key,
+        props,
+        _children: children,
+      }
+    }
+    invariant(isElementFunction(node.type), 'Expected component element type')
+    if (isFrameComponent(node.type)) {
+      invariant(isFrameProps(node.props), '<Frame /> requires a src prop')
+      return { kind: 'frame', type: node.type, key: node.key, props: node.props }
+    }
+    return { kind: 'component', type: node.type, key: node.key, props: node.props }
+  }
+
+  if (Array.isArray(node)) {
+    let children: VNodeInput[] = []
+    flattenChildrenToVNodes(node, children)
+    return { kind: 'fragment', type: Fragment, _children: children }
+  }
+
+  invariant(false, 'Unexpected RemixNode')
+}
+
+function isFrameProps(props: RuntimeElementProps): props is RuntimeElementProps & FrameProps {
+  return typeof props.src === 'string' && props.src.length > 0
+}
+
+function parseHostProps(props: RuntimeElementProps): RuntimeHostProps {
+  let normalizedProps = normalizeUnsafeHTMLProps(props)
+
+  let children = normalizedProps.children
+  invariant(children === undefined || isRemixNode(children), 'Invalid host children')
+
+  let mix = normalizedProps.mix
+  invariant(mix === undefined || isRuntimeMixValue(mix), 'Invalid mix prop')
+  return normalizedProps
+}
+
+function isRuntimeMixValue(value: unknown): value is RuntimeHostProps['mix'] {
+  if (!Array.isArray(value)) return isMixinDescriptor(value)
+  for (let descriptor of value) {
+    if (!isMixinDescriptor(descriptor)) return false
+  }
+  return true
+}
+
+function isElementFunction(value: unknown): value is ElementFunction {
+  return typeof value === 'function'
+}
+
+let globalStyleManager =
+  typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
+
+export let defaultStyleManager: StyleManager = globalStyleManager
+
+/**
+ * Reset the global style state. For testing only - not exported from index.ts.
+ */
+export function resetStyleState() {
+  invariant(
+    typeof window !== 'undefined',
+    'resetStyleState() is only available in a browser environment',
+  )
+  globalStyleManager.dispose()
+  globalStyleManager = createStyleManager()
+  defaultStyleManager = globalStyleManager
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -117,8 +459,6 @@ function findMatchingPersistedMixinNode(
 const EMPTY_DIRECT_EVENT_DESCRIPTORS: OnMixinDescriptor[] = []
 const EMPTY_COMMITTED_CHILDREN: CommittedVNode[] = []
 
-type HydrationCursor = { current: Node | null | undefined }
-
 function shouldRestoreControlledReflectionOnInput(
   node: CommittedHostNode,
   state: ControlledReflectionState,
@@ -142,8 +482,6 @@ function ensureControlledReflection(
     disposed: false,
     listenersAttached: false,
     pendingRestoreVersion: 0,
-    managesValue: false,
-    managesChecked: false,
     hasControlledValue: false,
     controlledValue: undefined,
     hasControlledChecked: false,
@@ -169,21 +507,37 @@ function ensureControlledReflection(
   return state
 }
 
-function syncControlledReflection(node: CommittedHostNode, props: RuntimeHostProps): void {
-  let state = node._controlledState
-  if (!state || state.disposed) return
+const controlledSelectStates = new WeakMap<HTMLSelectElement, ControlledReflectionState>()
 
-  state.managesValue = canManageValue(node.type, node._dom)
-  state.managesChecked = canReflectProperty(node._dom, 'checked')
-  state.hasControlledValue = state.managesValue && hasControlledValueProp(props)
+function syncControlledReflection(node: CommittedHostNode, scheduler: Scheduler): void {
+  let props = getHostProps(node)
+  if (!node._controlledState && props.value === undefined && props.checked === undefined) return
+
+  let state = ensureControlledReflection(node, scheduler)
+  if (state.disposed) return
+
+  state.hasControlledValue = canManageValue(node.type, node._dom) && props.value !== undefined
   state.controlledValue = props.value
-  state.hasControlledChecked = state.managesChecked && hasControlledCheckedProp(props)
+  if (node._dom instanceof HTMLSelectElement) {
+    if (state.hasControlledValue) {
+      controlledSelectStates.set(node._dom, state)
+      setSelectValue(node._dom, props.value)
+    } else {
+      controlledSelectStates.delete(node._dom)
+    }
+  }
+  state.hasControlledChecked =
+    canReflectProperty(node._dom, 'checked') && props.checked !== undefined
   state.controlledChecked = props.checked
   state.pendingRestoreVersion++
 }
 
-function shouldTrackControlledReflection(props: RuntimeHostProps): boolean {
-  return hasControlledValueProp(props) || hasControlledCheckedProp(props)
+// Options can update through components, mixins, or separately hydrated client entries.
+export function restoreAncestorSelect(parent: ParentNode): void {
+  let select = parent instanceof Element ? parent.closest('select') : null
+  if (!(select instanceof HTMLSelectElement)) return
+  let state = controlledSelectStates.get(select)
+  if (state && !state.disposed) setSelectValue(select, state.controlledValue)
 }
 
 function scheduleControlledRestore(
@@ -212,38 +566,23 @@ function restoreControlledReflections(
   }
 }
 
-function teardownControlledReflection(node: CommittedHostNode): void {
+// See disposeDirectEventListeners for when listener removal is skipped.
+function disposeControlledReflection(node: CommittedHostNode, detach: boolean): void {
   let state = node._controlledState
   if (!state) return
   state.disposed = true
+  if (node._dom instanceof HTMLSelectElement) controlledSelectStates.delete(node._dom)
   state.pendingRestoreVersion++
-  if (state.listenersAttached) {
+  if (detach && state.listenersAttached) {
     node._dom.removeEventListener('input', state.onInput)
     node._dom.removeEventListener('change', state.onChange)
-    state.listenersAttached = false
   }
-}
-
-// See abandonDirectEventListeners: skips removeEventListener for discarded subtrees.
-function abandonControlledReflection(node: CommittedHostNode): void {
-  let state = node._controlledState
-  if (!state) return
-  state.disposed = true
-  state.pendingRestoreVersion++
   state.listenersAttached = false
 }
 
 function canManageValue(type: string, element: Element): boolean {
   if (type === 'progress') return false
   return canReflectProperty(element, 'value')
-}
-
-function hasControlledValueProp(props: RuntimeHostProps): boolean {
-  return 'value' in props && props.value !== undefined
-}
-
-function hasControlledCheckedProp(props: RuntimeHostProps): boolean {
-  return 'checked' in props && props.checked !== undefined
 }
 
 function canReflectProperty(
@@ -259,6 +598,10 @@ function readDomProp(element: Element, key: string): unknown {
 }
 
 function setPropertyReflection(element: Element, key: string, value: unknown): void {
+  if (key === 'value' && element instanceof HTMLSelectElement) {
+    setSelectValue(element, value)
+    return
+  }
   if (!canReflectProperty(element, key)) return
   element[key] = value == null ? '' : value
 }
@@ -280,11 +623,14 @@ function resolveNodeMixProps(
   let directEventDescriptors = resolveDirectEventDescriptors(mix)
   if (directEventDescriptors) {
     if (state) teardownMixins(state)
-    return { props: node.props, directEventDescriptors }
+    return {
+      props: getNonceManager().resolveResourceNonce(node.type, node.props, parent),
+      directEventDescriptors,
+    }
   }
 
   if (state == null && (mix == null || (Array.isArray(mix) && mix.length === 0))) {
-    return { props: node.props }
+    return { props: getNonceManager().resolveResourceNonce(node.type, node.props, parent) }
   }
 
   let resolved = resolveMixedProps({
@@ -301,7 +647,10 @@ function resolveNodeMixProps(
     props: node.props,
     state,
   })
-  return { props: resolved.props, mixState: resolved.state }
+  return {
+    props: getNonceManager().resolveResourceNonce(node.type, resolved.props, parent),
+    mixState: resolved.state,
+  }
 }
 
 function applyResolvedHostProps(node: CommittedHostNode, resolved: ResolvedHostProps): void {
@@ -334,7 +683,7 @@ function enqueueMixinBindingUpdate(
   let state = node._mixState
   this.scheduler.enqueueWork([
     () => {
-      if (state?.aborted) {
+      if (state?.lifecycle.status === 'removed') {
         done(getMixinRuntimeSignal(state))
         return
       }
@@ -344,10 +693,8 @@ function enqueueMixinBindingUpdate(
       let resolved = resolveNodeMixProps(node, node._parent, this.frame, this.scheduler, state)
       applyResolvedHostProps(node, resolved)
       patchHostProps(prevProps, resolved.props, this.node)
-      if (node._controlledState || shouldTrackControlledReflection(resolved.props)) {
-        ensureControlledReflection(node, this.scheduler)
-        syncControlledReflection(node, resolved.props)
-      }
+      syncControlledReflection(node, this.scheduler)
+      if (this.node.parentNode) restoreAncestorSelect(this.node.parentNode)
 
       dispatchMixinCommit(state)
       done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
@@ -357,13 +704,12 @@ function enqueueMixinBindingUpdate(
 
 function bindNodeMixRuntime(
   node: CommittedHostNode,
-  frame: FrameHandle,
-  scheduler: Scheduler,
-  styles: StyleManager,
+  context: ReconcileContext,
   reclaimed: boolean = false,
   parent?: ParentNode,
 ) {
   let state = node._mixState
+  if (!state) return
   bindMixinRuntime(
     state,
     {
@@ -371,18 +717,16 @@ function bindNodeMixRuntime(
       parent: parent ?? getRequiredDomParent(node._dom),
       key: node.key,
       target: node,
-      frame,
-      scheduler,
+      frame: context.frame,
+      scheduler: context.scheduler,
       enqueueUpdate: enqueueMixinBindingUpdate,
     },
-    { dispatchReclaimed: reclaimed },
+    reclaimed,
   )
 }
 
 function isHeadHostNode(node: HostNode | CommittedHostNode): boolean {
-  if (node.type === 'head') return true
-  if (node.type.length !== 4) return false
-  return node.type.toLowerCase() === 'head'
+  return node.type.length === 4 && node.type.toLowerCase() === 'head'
 }
 
 function getRequiredDomParent(node: Node): ParentNode {
@@ -443,16 +787,13 @@ function commitHostNode(
   svg: boolean,
   dom: Element,
   resolved: ResolvedHostProps,
-  children: CommittedVNode[] = EMPTY_COMMITTED_CHILDREN,
 ): CommittedHostNode {
   let committed = node as unknown as CommittedHostNode
   committed._parent = parent
   committed._svg = svg
   committed._dom = dom
-  committed._children = children
-  committed._mixedProps = resolved.props
-  committed._mixState = resolved.mixState
-  committed._directEventDescriptors = resolved.directEventDescriptors
+  committed._children = EMPTY_COMMITTED_CHILDREN
+  applyResolvedHostProps(committed, resolved)
   return committed
 }
 
@@ -510,19 +851,20 @@ export function diffVNodes(
     return replace(curr, next, domParent, vParent, context, anchor)
   }
 
+  let svg = getSvgContext(vParent, next)
   switch (next.kind) {
     case 'host': {
-      return diffHost(curr as CommittedHostNode, next, vParent, context)
+      return diffHost(curr as CommittedHostNode, next, vParent, context, svg)
     }
     case 'text': {
-      return diffText(curr as CommittedTextNode, next, vParent, getSvgContext(vParent, next))
+      return diffText(curr as CommittedTextNode, next, vParent, svg)
     }
     case 'empty': {
-      return commitNonRenderNode(next, vParent, getSvgContext(vParent, next))
+      return commitNonRenderNode(next, vParent, svg)
     }
     case 'fragment': {
       let childInputs = next._children
-      let committed = beginFragmentNode(next, vParent, getSvgContext(vParent, next))
+      let committed = beginFragmentNode(next, vParent, svg)
       committed._children = diffChildren(
         (curr as CommittedFragmentNode)._children,
         childInputs,
@@ -535,13 +877,13 @@ export function diffVNodes(
       return committed
     }
     case 'frame': {
-      return diffFrame(
+      return next.type[FRAME_NODE].diff(
         curr as CommittedFrameNode,
         next,
         domParent,
         vParent,
         context,
-        getSvgContext(vParent, next),
+        svg,
         anchor,
       )
     }
@@ -552,7 +894,7 @@ export function diffVNodes(
         domParent,
         vParent,
         context,
-        getSvgContext(vParent, next),
+        svg,
         anchor,
         cursor,
       )
@@ -590,11 +932,11 @@ function diffHost(
   next: HostNode,
   vParent: VNodeParent,
   context: ReconcileContext,
+  svg: boolean,
 ): CommittedHostNode {
-  let { frame, scheduler, styles } = context
-  let mixState = curr._mixState
+  let { frame, scheduler } = context
   let currProps = getHostProps(curr)
-  let resolved = resolveNodeMixProps(next, vParent, frame, scheduler, mixState)
+  let resolved = resolveNodeMixProps(next, vParent, frame, scheduler, curr._mixState)
   let childInputs = next._children
   let nextProps = resolved.props
   let nextMixState = resolved.mixState
@@ -615,22 +957,11 @@ function diffHost(
     curr._dom.innerHTML = ''
   }
 
-  let committed = commitHostNode(next, vParent, getSvgContext(vParent, next), curr._dom, resolved)
-  committed._directEventState = curr._directEventState
-  committed._controlledState = curr._controlledState
+  let committed = commitRetainedHostNode(curr, next, vParent, svg, resolved)
   committed._children = diffChildren(curr._children, childInputs, curr._dom, committed, context)
   patchHostProps(currProps, nextProps, curr._dom)
-
-  syncDirectEventListeners(committed)
-
-  if (committed._controlledState || shouldTrackControlledReflection(nextProps)) {
-    ensureControlledReflection(committed, scheduler)
-    syncControlledReflection(committed, nextProps)
-  }
-
-  if (committed._mixState) {
-    bindNodeMixRuntime(committed, frame, scheduler, styles)
-  }
+  setupHostNode(committed, scheduler)
+  bindNodeMixRuntime(committed, context)
   if (shouldDispatchMixinLifecycle) {
     scheduler.enqueueCommitPhase([() => dispatchMixinCommit(nextMixState)])
   }
@@ -638,25 +969,28 @@ function diffHost(
   return committed
 }
 
+function commitRetainedHostNode(
+  curr: CommittedHostNode,
+  next: HostNode,
+  vParent: VNodeParent,
+  svg: boolean,
+  resolved: ResolvedHostProps,
+): CommittedHostNode {
+  let committed = commitHostNode(next, vParent, svg, curr._dom, resolved)
+  committed._directEventState = curr._directEventState
+  committed._controlledState = curr._controlledState
+  return committed
+}
+
 function setupHostNode(node: CommittedHostNode, scheduler: Scheduler): void {
-  let props = getHostProps(node)
-
   syncDirectEventListeners(node)
-
-  if (shouldTrackControlledReflection(props)) {
-    ensureControlledReflection(node, scheduler)
-    syncControlledReflection(node, props)
-  }
+  syncControlledReflection(node, scheduler)
 }
 
 function syncDirectEventListeners(node: CommittedHostNode): void {
   let descriptors = node._directEventDescriptors
-  if (!descriptors) {
-    teardownDirectEventListeners(node)
-    return
-  }
-  if (descriptors.length === 0) {
-    teardownDirectEventListeners(node)
+  if (!descriptors?.length) {
+    disposeDirectEventListeners(node, true)
     return
   }
 
@@ -709,55 +1043,40 @@ function createDirectEventBinding(
     handler,
     capture,
     reentry: null,
-    stableHandler: null,
+    stableHandler: (event) => {
+      invokeDirectEventBinding(binding, event)
+    },
   }
 
   return binding
 }
 
-function getStableDirectEventHandler(binding: DirectEventBinding): (event: Event) => void {
-  if (binding.stableHandler) return binding.stableHandler
-
-  binding.stableHandler = (event) => {
-    invokeDirectEventBinding(binding, event)
-  }
-  return binding.stableHandler
-}
-
 function attachDirectEventBinding(dom: Element, binding: DirectEventBinding): void {
-  dom.addEventListener(binding.type, getStableDirectEventHandler(binding), binding.capture)
+  dom.addEventListener(binding.type, binding.stableHandler, binding.capture)
 }
 
-function removeDirectEventBinding(dom: Element, binding: DirectEventBinding): void {
-  if (binding.stableHandler) {
+function removeDirectEventBinding(
+  dom: Element,
+  binding: DirectEventBinding,
+  detach: boolean = true,
+): void {
+  if (detach) {
     dom.removeEventListener(binding.type, binding.stableHandler, binding.capture)
   }
   binding.reentry?.abort(new DOMException('', 'AbortError'))
   binding.reentry = null
 }
 
-function teardownDirectEventListeners(node: CommittedHostNode): void {
+// Without `detach`, this is teardown for a node whose DOM subtree is being
+// discarded wholesale: abort pending handler work but skip removeEventListener
+// — the listeners die with the detached node, and removing them one-by-one
+// dominates large teardowns.
+function disposeDirectEventListeners(node: CommittedHostNode, detach: boolean): void {
   let state = node._directEventState
   if (!state) return
 
   for (let binding of state.bindings) {
-    removeDirectEventBinding(node._dom, binding)
-  }
-
-  state.bindings.length = 0
-  node._directEventState = undefined
-}
-
-// Teardown for a node whose DOM subtree is being discarded wholesale: abort
-// pending handler work but skip removeEventListener — the listeners die with
-// the detached node, and removing them one-by-one dominates large teardowns.
-function abandonDirectEventListeners(node: CommittedHostNode): void {
-  let state = node._directEventState
-  if (!state) return
-
-  for (let binding of state.bindings) {
-    binding.reentry?.abort(new DOMException('', 'AbortError'))
-    binding.reentry = null
+    removeDirectEventBinding(node._dom, binding, detach)
   }
 
   state.bindings.length = 0
@@ -780,6 +1099,65 @@ function diffText(
     curr._dom.textContent = next._text
   }
   return commitTextNode(next, vParent, svg, curr._dom)
+}
+
+function mountHostNode(
+  node: HostNode,
+  vParent: VNodeParent,
+  svg: boolean,
+  dom: Element,
+  resolved: ResolvedHostProps,
+  context: ReconcileContext,
+  childCursor?: HydrationCursor,
+  parent?: ParentNode,
+): CommittedHostNode {
+  let hostProps = resolved.props
+  let childInputs = node._children
+  // Server option attributes already reflect the select's winning value. Preserve them and edits.
+  patchHostProps(
+    {},
+    childCursor && dom instanceof HTMLOptionElement
+      ? { ...hostProps, selected: undefined }
+      : hostProps,
+    dom,
+  )
+  let committed = commitHostNode(node, vParent, svg, dom, resolved)
+
+  if (hostProps.innerHTML != null) {
+    dom.innerHTML = hostProps.innerHTML
+  } else {
+    committed._children = diffChildren(null, childInputs, dom, committed, context, childCursor)
+  }
+
+  if (!childCursor) {
+    if (dom instanceof HTMLSelectElement) {
+      let value = hostProps.value ?? hostProps.defaultValue
+      if (value != null) {
+        let scalar = !dom.multiple || (hostProps.value != null && !Array.isArray(value))
+        setSelectDefaultValue(dom, value, scalar)
+      }
+    } else if (dom instanceof HTMLOptionElement) {
+      dom.defaultSelected = Boolean(hostProps.selected)
+    }
+  }
+
+  setupHostNode(committed, context.scheduler)
+  bindNodeMixRuntime(committed, context, false, parent)
+  return committed
+}
+
+// SVG elements have case-sensitive tag names (e.g. linearGradient, clipPath)
+// HTML elements are case-insensitive, so we lowercase for comparison
+function getHydrationTagName(element: Element, svg: boolean): string {
+  return svg ? element.tagName : element.tagName.toLowerCase()
+}
+
+export function insertDomNode(dom: Node, domParent: ParentNode, anchor?: Node): void {
+  if (anchor) {
+    domParent.insertBefore(dom, anchor)
+  } else {
+    domParent.appendChild(dom)
+  }
 }
 
 function insert(
@@ -829,10 +1207,6 @@ function insert(
       return committed
     }
   }
-
-  let doInsert = anchor
-    ? (dom: Node) => domParent.insertBefore(dom, anchor)
-    : (dom: Node) => domParent.appendChild(dom)
 
   if (node.kind === 'empty') {
     return commitNonRenderNode(node, vParent, svg)
@@ -891,18 +1265,17 @@ function insert(
       return commitTextNode(node, vParent, svg, hydrationNode)
     }
     let dom = document.createTextNode(node._text)
-    doInsert(dom)
+    insertDomNode(dom, domParent, anchor)
     return commitTextNode(node, vParent, svg, dom)
   }
 
   if (node.kind === 'host') {
     let resolved = resolveNodeMixProps(node, vParent, frame, scheduler)
-    let hostProps = resolved.props
-    let childInputs = node._children
 
     if (isHeadHostNode(node)) {
       let targetHead = getDocumentHead(domParent)
       if (targetHead) {
+        let childInputs = node._children
         let childCursor = cursor ? { current: hydrationNode } : undefined
         if (hydrationNode instanceof Element && hydrationNode.tagName.toLowerCase() === 'head') {
           if (childCursor) childCursor.current = hydrationNode.firstChild
@@ -926,11 +1299,9 @@ function insert(
           context,
           childCursor,
         )
-        patchHostProps({}, hostProps, targetHead)
+        patchHostProps({}, resolved.props, targetHead)
         setupHostNode(committed, scheduler)
-        if (committed._mixState) {
-          bindNodeMixRuntime(committed, frame, scheduler, styles)
-        }
+        bindNodeMixRuntime(committed, context)
         return committed
       }
     }
@@ -939,95 +1310,37 @@ function insert(
     let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
     if (persistedNode) {
       mixinReclamationVersions.set(domParent, (mixinReclamationVersions.get(domParent) ?? 0) + 1)
-      return reclaimPersistedMixinNode(persistedNode, node, vParent, context)
+      return reclaimPersistedMixinNode(persistedNode, node, vParent, context, svg)
     }
 
     if (hydrationNode instanceof Element) {
-      // SVG elements have case-sensitive tag names (e.g. linearGradient, clipPath)
-      // HTML elements are case-insensitive, so we lowercase for comparison
-      let cursorTag = svg ? hydrationNode.tagName : hydrationNode.tagName.toLowerCase()
-      if (cursorTag === node.type) {
-        let nextCursor = hydrationNode.nextSibling
-        patchHostProps({}, hostProps, hydrationNode)
-        let committed = commitHostNode(node, vParent, svg, hydrationNode, resolved)
-
-        // Handle innerHTML prop
-        if (hostProps.innerHTML != null) {
-          hydrationNode.innerHTML = hostProps.innerHTML
-        } else {
-          let childCursor = { current: hydrationNode.firstChild }
-          // Ignore excess nodes - browser extensions may inject content
-          committed._children = diffChildren(
-            null,
-            childInputs,
-            hydrationNode,
-            committed,
-            context,
-            childCursor,
-          )
+      let cursorTag = getHydrationTagName(hydrationNode, svg)
+      let match: Element | null = cursorTag === node.type ? hydrationNode : null
+      if (!match) {
+        // Type mismatch - try single-advance retry to handle browser extension injections
+        // at the start of containers. Skip this node and try the next sibling once, and
+        // leave the skipped node in place if the next sibling matches.
+        let nextSibling = skipComments(hydrationNode.nextSibling)
+        if (nextSibling instanceof Element && getHydrationTagName(nextSibling, svg) === node.type) {
+          match = nextSibling
         }
-
-        setupHostNode(committed, scheduler)
-        if (committed._mixState) {
-          bindNodeMixRuntime(committed, frame, scheduler, styles)
-        }
+      }
+      if (match) {
+        let nextCursor = match.nextSibling
+        // Ignore excess child nodes - browser extensions may inject content
+        let committed = mountHostNode(node, vParent, svg, match, resolved, context, {
+          current: match.firstChild,
+        })
         if (cursor) cursor.current = nextCursor
         return committed
-      } else {
-        // Type mismatch - try single-advance retry to handle browser extension injections
-        // at the start of containers. Skip this node and try the next sibling once.
-        let nextSibling = skipComments(hydrationNode.nextSibling)
-        if (nextSibling instanceof Element) {
-          let nextTag = svg ? nextSibling.tagName : nextSibling.tagName.toLowerCase()
-          if (nextTag === node.type) {
-            let nextCursor = nextSibling.nextSibling
-            // Found a match after skipping - adopt it and leave skipped node in place
-            patchHostProps({}, hostProps, nextSibling)
-            let committed = commitHostNode(node, vParent, svg, nextSibling, resolved)
-
-            if (hostProps.innerHTML != null) {
-              nextSibling.innerHTML = hostProps.innerHTML
-            } else {
-              let childCursor = { current: nextSibling.firstChild }
-              committed._children = diffChildren(
-                null,
-                childInputs,
-                nextSibling,
-                committed,
-                context,
-                childCursor,
-              )
-            }
-
-            setupHostNode(committed, scheduler)
-            if (committed._mixState) {
-              bindNodeMixRuntime(committed, frame, scheduler, styles)
-            }
-            if (cursor) cursor.current = nextCursor
-            return committed
-          }
-        }
-        // Retry failed - log mismatch and create new element (don't remove mismatched nodes)
-        logHydrationMismatch('tag', cursorTag, node.type)
-        if (cursor) cursor.current = undefined // stop hydration for this tree
       }
+      // Retry failed - log mismatch and create new element (don't remove mismatched nodes)
+      logHydrationMismatch('tag', cursorTag, node.type)
+      if (cursor) cursor.current = undefined // stop hydration for this tree
     }
     let dom = svg ? document.createElementNS(SVG_NS, node.type) : document.createElement(node.type)
-    patchHostProps({}, hostProps, dom)
-    let committed = commitHostNode(node, vParent, svg, dom, resolved)
-
-    // Handle innerHTML prop
-    if (hostProps.innerHTML != null) {
-      dom.innerHTML = hostProps.innerHTML
-    } else {
-      committed._children = diffChildren(null, childInputs, dom, committed, context)
-    }
-
-    setupHostNode(committed, scheduler)
-    if (committed._mixState) {
-      bindNodeMixRuntime(committed, frame, scheduler, styles, false, domParent)
-    }
-    doInsert(dom)
+    let committed = mountHostNode(node, vParent, svg, dom, resolved, context, undefined, domParent)
+    insertDomNode(dom, domParent, anchor)
     return committed
   }
 
@@ -1051,328 +1364,10 @@ function insert(
   }
 
   if (node.kind === 'frame') {
-    return insertFrame(node, domParent, vParent, context, svg, anchor, cursor)
+    return node.type[FRAME_NODE].insert(node, domParent, vParent, context, svg, anchor, cursor)
   }
 
   invariant(false, 'Unexpected node type')
-}
-
-function diffFrame(
-  curr: CommittedFrameNode,
-  next: FrameNode,
-  domParent: ParentNode,
-  vParent: VNodeParent,
-  context: ReconcileContext,
-  svg: boolean,
-  anchor?: Node,
-): CommittedFrameNode {
-  let { frame } = context
-  let currSrc = getFrameSrc(curr)
-  let nextSrc = getFrameSrc(next)
-  let currName = getFrameName(curr)
-  let nextName = getFrameName(next)
-
-  if (currName !== nextName) {
-    let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
-    remove(curr, domParent, context)
-    return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
-  }
-
-  // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
-  // so pending streams from the old src cannot take over the new src.
-  if (currSrc !== nextSrc && !curr._state.resolved) {
-    let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
-    remove(curr, domParent, context)
-    return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
-  }
-
-  let committed = next as unknown as CommittedFrameNode
-  Object.assign(committed, {
-    _rangeStart: curr._rangeStart,
-    _rangeEnd: curr._rangeEnd,
-    _state: curr._state,
-    _parent: vParent,
-    _svg: svg,
-  })
-
-  let frameRuntime = getFrameRuntime(frame)
-  let frameInstance = committed._state.instance
-  let serverFrameReload = frameRuntime?.serverFrameReload
-
-  if (currSrc !== nextSrc) {
-    if (frameInstance) {
-      frameInstance.handle.src = nextSrc
-    }
-
-    if (frameRuntime) {
-      resolveClientFrame(committed, frameRuntime, serverFrameReload)
-    }
-  } else if (frameRuntime && frameInstance && serverFrameReload) {
-    // Reload client frames that have the same src during a render triggered by an ancestor frame reload
-    resolveClientFrame(committed, frameRuntime, serverFrameReload)
-  }
-
-  if (!committed._state.resolved && committed._state.fallbackRoot) {
-    committed._state.fallbackRoot.render(committed.props.fallback ?? null)
-  }
-  return committed
-}
-
-function insertFrame(
-  node: FrameNode,
-  domParent: ParentNode,
-  vParent: VNodeParent,
-  context: ReconcileContext,
-  svg: boolean,
-  anchor?: Node,
-  cursor?: HydrationCursor,
-): CommittedFrameNode {
-  let { frame, styles } = context
-  let runtime = getFrameRuntime(frame)
-  if (!runtime || runtime.canResolveFrames === false) {
-    throw new Error(
-      'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
-    )
-  }
-
-  // Hydration path: adopt server-rendered frame markers and reuse the existing
-  // frame instance created during createSubFrames().
-  if (isFrameStartComment(cursor?.current)) {
-    let start = cursor.current
-    let end = findFrameEndComment(start)
-    if (end) {
-      let instance = runtime.frameInstances.get(start)
-      let getContext = (type: ElementFunction) => findContextFromAncestry(vParent, type)
-      let src = instance?.handle.src ?? getFrameSrc(node)
-      if (!instance) {
-        instance = createFrame([start, end], {
-          name: getFrameName(node),
-          src,
-          getContext,
-          errorTarget: runtime.errorTarget,
-          loadModule: runtime.loadModule,
-          resolveFrame: runtime.resolveFrame,
-          pendingClientEntries: runtime.pendingClientEntries,
-          scheduler: runtime.scheduler,
-          styleManager: runtime.styleManager,
-          data: {},
-          moduleCache: runtime.moduleCache,
-          moduleLoads: runtime.moduleLoads,
-          frameInstances: runtime.frameInstances,
-          namedFrames: runtime.namedFrames,
-          processClientEntryPreloads: runtime.processClientEntryPreloads,
-        })
-        runtime.frameInstances.set(start, instance)
-      } else {
-        let instanceRuntime = getFrameRuntime(instance.handle)
-        if (instanceRuntime) instanceRuntime.getContext = getContext
-      }
-
-      cursor.current = end.nextSibling
-      return Object.assign(node as unknown as CommittedFrameNode, {
-        _rangeStart: start,
-        _rangeEnd: end,
-        _parent: vParent,
-        _svg: svg,
-        _state: {
-          instance,
-          resolveToken: 0,
-          resolveController: undefined,
-          fallbackRoot: undefined,
-          resolved: true,
-        },
-      })
-    }
-  }
-
-  let start = document.createComment(` rmx:f:${randomFrameId()} `)
-  let end = document.createComment(' /rmx:f ')
-  let doInsert = anchor
-    ? (dom: Node) => domParent.insertBefore(dom, anchor)
-    : (dom: Node) => domParent.appendChild(dom)
-
-  doInsert(start)
-  doInsert(end)
-
-  let fallbackRoot = createRangeRoot([start, end], {
-    frame,
-    getContext: (type) => findContextFromAncestry(vParent, type),
-    styleManager: styles,
-  })
-  fallbackRoot.render(node.props.fallback ?? null)
-
-  let instance = createFrame([start, end], {
-    name: getFrameName(node),
-    src: getFrameSrc(node),
-    getContext: (type) => findContextFromAncestry(vParent, type),
-    errorTarget: runtime.errorTarget,
-    loadModule: runtime.loadModule,
-    resolveFrame: runtime.resolveFrame,
-    pendingClientEntries: runtime.pendingClientEntries,
-    scheduler: runtime.scheduler,
-    styleManager: runtime.styleManager,
-    data: {},
-    moduleCache: runtime.moduleCache,
-    moduleLoads: runtime.moduleLoads,
-    frameInstances: runtime.frameInstances,
-    namedFrames: runtime.namedFrames,
-    processClientEntryPreloads: runtime.processClientEntryPreloads,
-  })
-  runtime.frameInstances.set(start, instance)
-
-  let committed = Object.assign(node as unknown as CommittedFrameNode, {
-    _rangeStart: start,
-    _rangeEnd: end,
-    _parent: vParent,
-    _svg: svg,
-    _state: {
-      instance,
-      fallbackRoot,
-      resolved: false,
-      resolveToken: 0,
-      resolveController: undefined,
-    },
-  })
-  resolveClientFrame(committed, runtime, runtime.serverFrameReload)
-
-  return committed
-}
-
-function resolveClientFrame(
-  node: CommittedFrameNode,
-  runtime: FrameRuntime,
-  serverFrameReload?: NonNullable<FrameRuntime['serverFrameReload']>,
-): void {
-  let frameSrc = getFrameSrc(node)
-  let state = node._state
-  let instance = state.instance
-
-  let token = state.resolveToken + 1
-  state.resolveToken = token
-  state.resolveController?.abort()
-  let reload = serverFrameReload
-    ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
-    : undefined
-  if (!reload) {
-    instance.cancelReload()
-  }
-  let resolveController = reload?.controller ?? new AbortController()
-  state.resolveController = resolveController
-  let frameCommitted = Promise.withResolvers<void>()
-
-  let resolve = Promise.resolve()
-    .then(() =>
-      runtime.resolveFrame(frameSrc, {
-        signal: resolveController.signal,
-        target: getFrameName(node),
-      }),
-    )
-    .then(async (resolution) => {
-      if (state.resolveToken !== token || resolveController.signal.aborted) return
-      let { content } = await unwrapFrameResolution(resolution)
-      if (state.resolveToken !== token || resolveController.signal.aborted) return
-      state.fallbackRoot?.dispose()
-      state.fallbackRoot = undefined
-      let nextContent = asAbortableFrameContent(content, resolveController.signal)
-      await instance.render(nextContent, {
-        signal: resolveController.signal,
-        reconciliationTracker: serverFrameReload?.reconciliationTracker,
-        blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
-        onCommit: frameCommitted.resolve,
-      })
-      if (state.resolveToken !== token || resolveController.signal.aborted) return
-      state.resolved = true
-    })
-    .catch((error) => {
-      if (reload && state.resolveToken === token && !resolveController.signal.aborted) {
-        runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
-      }
-    })
-    .finally(() => {
-      frameCommitted.resolve()
-      reload?.complete()
-      if (state.resolveController === resolveController) {
-        state.resolveController = undefined
-      }
-    })
-
-  if (serverFrameReload?.reconciliationTracker && !node.props.fallback) {
-    serverFrameReload.reconciliationTracker.waitFor(resolve)
-  }
-  if (serverFrameReload?.blockingFrameTracker && !node.props.fallback) {
-    serverFrameReload.blockingFrameTracker.waitFor(frameCommitted.promise)
-  }
-}
-
-function disposeFrameResources(node: CommittedFrameNode): void {
-  let state = node._state
-  state.resolveToken++
-  state.resolveController?.abort()
-  state.resolveController = undefined
-  state.fallbackRoot?.dispose()
-  state.fallbackRoot = undefined
-
-  state.instance.dispose()
-}
-
-function asAbortableFrameContent(content: FrameContent, signal: AbortSignal): FrameContent {
-  if (!(content instanceof ReadableStream)) return content
-  return createAbortableReadableStream(content, signal)
-}
-
-function createAbortableReadableStream(
-  source: ReadableStream<Uint8Array>,
-  signal: AbortSignal,
-): ReadableStream<Uint8Array> {
-  let reader = source.getReader()
-  let aborted = false
-
-  let onAbort = () => {
-    aborted = true
-    void reader.cancel(signal.reason)
-  }
-
-  if (signal.aborted) onAbort()
-  else signal.addEventListener('abort', onAbort, { once: true })
-
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (aborted) {
-        controller.close()
-        return
-      }
-
-      let removeAbortReadListener: undefined | (() => void)
-      let abortRead = new Promise<{ done: true; value: undefined }>((resolve) => {
-        if (signal.aborted) {
-          resolve({ done: true, value: undefined })
-          return
-        }
-        let onAbortRead = () => {
-          resolve({ done: true, value: undefined })
-        }
-        removeAbortReadListener = () => signal.removeEventListener('abort', onAbortRead)
-        signal.addEventListener('abort', onAbortRead, { once: true })
-      })
-
-      let result = await Promise.race([reader.read(), abortRead])
-      removeAbortReadListener?.()
-
-      if (result.done) {
-        controller.close()
-        return
-      }
-      controller.enqueue(result.value)
-    },
-    cancel(reason) {
-      signal.removeEventListener('abort', onAbort)
-      return reader.cancel(reason)
-    },
-  })
-}
-
-function removeFrameDomRange(node: CommittedFrameNode, domParent: ParentNode): void {
-  removeDomRange(node._rangeStart, node._rangeEnd, domParent)
 }
 
 function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
@@ -1385,24 +1380,6 @@ function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
     if (cursor === end) break
     cursor = nextSibling
   }
-}
-
-function getFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
-  let runtime = frame.$runtime
-  return isFrameRuntime(runtime) ? runtime : undefined
-}
-
-function getFrameSrc(node: FrameNode | CommittedFrameNode): string {
-  return node.props.src
-}
-
-function getFrameName(node: FrameNode | CommittedFrameNode): string | undefined {
-  let name = node.props.name
-  return typeof name === 'string' && name.length > 0 ? name : undefined
-}
-
-function randomFrameId(): string {
-  return `f${crypto.randomUUID().slice(0, 8)}`
 }
 
 function skipCommentsExceptBoundaryStart(
@@ -1419,32 +1396,12 @@ function skipCommentsExceptBoundaryStart(
   return cursor
 }
 
-function isFrameStartComment(node: Node | null | undefined): node is Comment {
+export function isFrameStartComment(node: Node | null | undefined): node is Comment {
   return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
-}
-
-function isFrameEndComment(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim() === '/rmx:f'
 }
 
 function isCommentNode(node: Node | null | undefined): node is Comment {
   return node?.nodeType === Node.COMMENT_NODE
-}
-
-function findFrameEndComment(start: Comment): Comment | null {
-  let depth = 1
-  let node: Node | null = start.nextSibling
-
-  while (node) {
-    if (isFrameStartComment(node)) depth++
-    else if (isFrameEndComment(node)) {
-      depth--
-      if (depth === 0) return node
-    }
-    node = node.nextSibling
-  }
-
-  return null
 }
 
 export function renderComponent(
@@ -1475,6 +1432,7 @@ export function renderComponent(
     else placeReclaimedChildren([content], domParent, committed, anchor)
   }
   handle.setScheduleUpdate(scheduler, committed, domParent)
+  restoreAncestorSelect(domParent)
 
   scheduler.enqueueTasks(tasks)
 
@@ -1492,6 +1450,7 @@ function diffComponent(
   cursor?: HydrationCursor,
 ): CommittedComponentNode {
   let { frame } = context
+  let handle: ComponentHandle
   if (curr === null) {
     let componentId = vParent.kind === 'root' ? vParent._pendingHydrationComponentId : undefined
     if (componentId) {
@@ -1499,7 +1458,7 @@ function diffComponent(
     } else {
       componentId = `c${++idCounter}`
     }
-    let handle = createComponent({
+    handle = createComponent({
       id: componentId,
       frame,
       type: next.type,
@@ -1513,12 +1472,11 @@ function diffComponent(
         return runtime?.topFrame
       },
     })
-    let mounting = beginComponentNode(next, vParent, svg, handle, context)
-
-    return renderComponent(null, mounting, domParent, context, anchor, cursor)
+  } else {
+    handle = curr._handle
   }
-  let mounting = beginComponentNode(next, vParent, svg, curr._handle, context)
-  return renderComponent(curr._content, mounting, domParent, context, anchor, cursor)
+  let mounting = beginComponentNode(next, vParent, svg, handle, context)
+  return renderComponent(curr && curr._content, mounting, domParent, context, anchor, cursor)
 }
 
 function commitClientEntryBoundary(
@@ -1547,6 +1505,7 @@ function updateClientEntryBoundary(
   let element = jsx(node.type, node.props, node.key)
   let owner = getClientEntryBoundaryOwner(node._rangeStart)
   if (owner) {
+    getNonceManager().inheritRootResourceNonces(owner.root, node._parent)
     owner.root.render(element)
     return
   }
@@ -1554,7 +1513,11 @@ function updateClientEntryBoundary(
   let runtime = getFrameRuntime(context.frame)
   let pending = runtime?.pendingClientEntries.get(node._rangeStart)
   invariant(runtime && pending?.[0] === node._rangeEnd, 'Expected pending client entry boundary')
-  runtime.pendingClientEntries.set(node._rangeStart, [node._rangeEnd, element])
+  runtime.pendingClientEntries.set(node._rangeStart, [
+    node._rangeEnd,
+    element,
+    getNonceManager().getResourceNonces(node._parent),
+  ])
 }
 
 function diffClientEntryBoundary(
@@ -1582,78 +1545,37 @@ function disposeCommittedClientEntryBoundary(
   return disposeClientEntryBoundary(node._rangeStart)
 }
 
-// Cleanup without DOM removal - used for descendants when parent DOM node is removed
-function cleanupDescendants(node: CommittedVNode, context: ReconcileContext): void {
-  let { scheduler } = context
-  if (isCommittedTextNode(node)) {
-    return
-  }
-
-  if (isCommittedHostNode(node)) {
-    let children = node._children
-    for (let i = 0; i < children.length; i++) {
-      cleanupDescendants(children[i], context)
-    }
-
-    teardownMixins(node._mixState)
-    abandonDirectEventListeners(node)
-    abandonControlledReflection(node)
-    return
-  }
-
-  if (isFragmentNode(node)) {
-    let children = node._children
-    for (let i = 0; i < children.length; i++) {
-      cleanupDescendants(children[i], context)
-    }
-    return
-  }
-
-  if (isCommittedComponentNode(node)) {
-    cleanupDescendants(node._content, context)
-    let tasks = node._handle.remove()
-    scheduler.enqueueTasks(tasks)
-    return
-  }
-
-  if (isCommittedClientEntryNode(node)) {
-    disposeCommittedClientEntryBoundary(node, context)
-    return
-  }
-
-  if (node.kind === 'frame') {
-    disposeFrameResources(node)
-    return
-  }
-}
-
+// A null domParent cleans up without DOM removal - used for descendants when an
+// ancestor DOM node is removed.
 export function remove(
   node: CommittedVNode,
-  domParent: ParentNode,
+  domParent: ParentNode | null,
   context: ReconcileContext,
 ): void {
   let { scheduler } = context
   if (isCommittedTextNode(node)) {
-    node._dom.parentNode?.removeChild(node._dom)
+    if (domParent) node._dom.parentNode?.removeChild(node._dom)
     return
   }
 
   if (isCommittedHostNode(node)) {
-    if (node._persistence) return
+    if (domParent) {
+      if (node._persistence) return
 
-    let persistedRemoval = prepareMixinRemoval(node._mixState)
-    if (persistedRemoval) {
-      let token = ++persistedRemovalToken
-      markNodePersistedByMixins(node, domParent, token)
-      void persistedRemoval
-        .catch(() => {})
-        .finally(() => {
-          if (!node._persistence) return
-          if (node._persistence.token !== token) return
-          unmarkNodePersistedByMixins(node)
-          performHostNodeRemoval(node, domParent, context)
-        })
-      return
+      let persistedRemoval = prepareMixinRemoval(node._mixState)
+      if (persistedRemoval) {
+        let token = ++persistedRemovalToken
+        markNodePersistedByMixins(node, domParent, token)
+        void persistedRemoval
+          .catch(() => {})
+          .finally(() => {
+            if (!node._persistence) return
+            if (node._persistence.token !== token) return
+            unmarkNodePersistedByMixins(node)
+            performHostNodeRemoval(node, domParent, context)
+          })
+        return
+      }
     }
     performHostNodeRemoval(node, domParent, context)
     return
@@ -1675,7 +1597,9 @@ export function remove(
   }
 
   if (isCommittedClientEntryNode(node)) {
-    if (disposeCommittedClientEntryBoundary(node, context)) {
+    let disposedRoot = disposeCommittedClientEntryBoundary(node, context)
+    if (!domParent) return
+    if (disposedRoot) {
       // The root removes its content and honors mixin persistence. Only remove
       // the boundary markers here so exit animations can finish in the DOM.
       node._rangeStart.remove()
@@ -1687,8 +1611,8 @@ export function remove(
   }
 
   if (node.kind === 'frame') {
-    disposeFrameResources(node)
-    removeFrameDomRange(node, domParent)
+    node.type[FRAME_NODE].dispose(node)
+    if (domParent) removeDomRange(node._rangeStart, node._rangeEnd, domParent)
     return
   }
 }
@@ -1696,30 +1620,22 @@ export function remove(
 // Actually remove a host node from DOM and clean up
 function performHostNodeRemoval(
   node: CommittedHostNode,
-  domParent: ParentNode,
+  domParent: ParentNode | null,
   context: ReconcileContext,
 ): void {
+  // Never remove the real document.head node when reconciling a <head> vnode,
+  // and since it stays alive, remove its children and detach its listeners for
+  // real. Otherwise clean up all descendants before removing the DOM subtree.
+  let isHead = domParent !== null && isHeadHostNode(node)
   let children = node._children
-  if (isHeadHostNode(node)) {
-    for (let i = 0; i < children.length; i++) {
-      remove(children[i], node._dom, context)
-    }
-  } else {
-    // Clean up all descendants first (before removing DOM subtree)
-    for (let i = 0; i < children.length; i++) {
-      cleanupDescendants(children[i], context)
-    }
+  for (let i = 0; i < children.length; i++) {
+    remove(children[i], isHead ? node._dom : null, context)
   }
 
   teardownMixins(node._mixState)
-  // Never remove the real document.head node when reconciling a <head> vnode,
-  // and since it stays alive, detach its listeners for real.
-  if (isHeadHostNode(node)) {
-    teardownDirectEventListeners(node)
-    teardownControlledReflection(node)
-  } else {
-    abandonDirectEventListeners(node)
-    abandonControlledReflection(node)
+  disposeDirectEventListeners(node, isHead)
+  disposeControlledReflection(node, isHead)
+  if (domParent && !isHead) {
     node._dom.parentNode?.removeChild(node._dom)
   }
 }
@@ -1752,7 +1668,7 @@ function diffChildren(
     canBulkClearChildren(curr)
   ) {
     for (let i = 0; i < curr.length; i++) {
-      cleanupDescendants(curr[i], context)
+      remove(curr[i], null, context)
     }
     domParent.textContent = ''
     return EMPTY_COMMITTED_CHILDREN
@@ -1783,7 +1699,7 @@ function diffChildren(
 }
 
 function parentUsesInnerHTML(parent: VNodeParent): boolean {
-  return isHostNode(parent) && getHostProps(parent).innerHTML != null
+  return parent.kind === 'host' && getHostProps(parent).innerHTML != null
 }
 
 function canBulkClearChildren(children: CommittedVNode[]): boolean {
@@ -1952,6 +1868,10 @@ function matchKeyedChildren(curr: CommittedVNode[], next: VNodeInput[]): number[
   return matches
 }
 
+function isSameKeyedNode(oldNode: CommittedVNode, nextNode: VNodeInput): boolean {
+  return oldNode.key === nextNode.key && oldNode.type === nextNode.type
+}
+
 function matchKeyedChildrenInOrder(curr: CommittedVNode[], next: VNodeInput[]): number[] | null {
   let length = Math.min(curr.length, next.length)
   let matches: number[] = []
@@ -1961,7 +1881,7 @@ function matchKeyedChildrenInOrder(curr: CommittedVNode[], next: VNodeInput[]): 
     if (nextNode.key == null) return null
 
     let oldNode = curr[index]
-    if (oldNode.key !== nextNode.key || oldNode.type !== nextNode.type) {
+    if (!isSameKeyedNode(oldNode, nextNode)) {
       return null
     }
 
@@ -1991,7 +1911,7 @@ function matchKeyedChildrenAfterSingleRemoval(
     if (nextNode.key == null) return null
 
     let oldNode = curr[oldIndex]
-    if (oldNode.key === nextNode.key && oldNode.type === nextNode.type) {
+    if (isSameKeyedNode(oldNode, nextNode)) {
       matches.push(oldIndex)
       oldIndex++
       continue
@@ -2002,7 +1922,7 @@ function matchKeyedChildrenAfterSingleRemoval(
     oldIndex++
 
     oldNode = curr[oldIndex]
-    if (oldNode.key !== nextNode.key || oldNode.type !== nextNode.type) {
+    if (!isSameKeyedNode(oldNode, nextNode)) {
       return null
     }
 
@@ -2028,7 +1948,7 @@ function matchKeyedChildrenAfterPairSwap(
     if (nextNode.key == null) return null
 
     let oldNode = curr[index]
-    if (oldNode.key === nextNode.key && oldNode.type === nextNode.type) {
+    if (isSameKeyedNode(oldNode, nextNode)) {
       matches.push(index)
       continue
     }
@@ -2052,10 +1972,8 @@ function matchKeyedChildrenAfterPairSwap(
   let secondNextNode = next[secondMismatch]
 
   if (
-    firstOldNode.key !== secondNextNode.key ||
-    firstOldNode.type !== secondNextNode.type ||
-    secondOldNode.key !== firstNextNode.key ||
-    secondOldNode.type !== firstNextNode.type
+    !isSameKeyedNode(firstOldNode, secondNextNode) ||
+    !isSameKeyedNode(secondOldNode, firstNextNode)
   ) {
     return null
   }
@@ -2159,8 +2077,10 @@ function placeReclaimedChildren(
     return dom ? (indexes.get(dom) ?? -1) : -1
   })
   let analysis = analyzeKeyedChildMatches(matches.length, matches)
-  if (analysis.hasRemovals || !analysis.canSkipPlacement)
+  if (analysis.hasRemovals || !analysis.canSkipPlacement) {
     placeChildren(placementChildren, matches, domParent, anchor)
+    restoreAncestorSelect(domParent)
+  }
 }
 
 function placeChildren(
@@ -2201,32 +2121,24 @@ function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | 
 }
 
 export function findFirstDomAnchor(node: CommittedVNode | null | undefined): Node | null {
-  if (!node) return null
-  if (isCommittedTextNode(node)) return node._dom
-  if (isCommittedHostNode(node)) return node._dom
-  if (isCommittedComponentNode(node)) return findFirstDomAnchor(node._content)
-  if (isCommittedClientEntryNode(node)) return node._rangeStart
-  if (node.kind === 'frame') return node._rangeStart
-  if (isFragmentNode(node)) {
-    let children = node._children
-    for (let i = 0; i < children.length; i++) {
-      let dom = findFirstDomAnchor(children[i])
-      if (dom) return dom
-    }
-  }
-  return null
+  return findEdgeDomNode(node, false)
 }
 
 export function findLastDomAnchor(node: CommittedVNode | null | undefined): Node | null {
+  return findEdgeDomNode(node, true)
+}
+
+function findEdgeDomNode(node: CommittedVNode | null | undefined, last: boolean): Node | null {
   if (!node) return null
-  if (isCommittedTextNode(node)) return node._dom
-  if (isCommittedHostNode(node)) return node._dom
-  if (isCommittedComponentNode(node)) return findLastDomAnchor(node._content)
-  if (isCommittedClientEntryNode(node)) return node._rangeEnd
-  if (node.kind === 'frame') return node._rangeEnd
+  if (isCommittedTextNode(node) || isCommittedHostNode(node)) return node._dom
+  if (isCommittedComponentNode(node)) return findEdgeDomNode(node._content, last)
+  if (isCommittedClientEntryNode(node) || node.kind === 'frame') {
+    return last ? node._rangeEnd : node._rangeStart
+  }
   if (isFragmentNode(node)) {
-    for (let i = node._children.length - 1; i >= 0; i--) {
-      let dom = findLastDomAnchor(node._children[i])
+    let children = node._children
+    for (let i = 0; i < children.length; i++) {
+      let dom = findEdgeDomNode(children[last ? children.length - 1 - i : i], last)
       if (dom) return dom
     }
   }
@@ -2261,10 +2173,7 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
   let parents = activeSchedulerUpdateParents
   if (!parents?.length) return true
   for (let parent of parents) {
-    if (!(parent instanceof Node)) continue
-    let parentNode = parent
-    if (parentNode === node) return false
-    if (parentNode.contains(node)) return false
+    if (parent instanceof Node && parent.contains(node)) return false
   }
   return true
 }
@@ -2315,31 +2224,23 @@ function reclaimPersistedMixinNode(
   newNode: HostNode,
   vParent: VNodeParent,
   context: ReconcileContext,
+  svg: boolean,
 ): CommittedHostNode {
-  let { frame, scheduler, styles } = context
+  let { frame, scheduler } = context
   cancelPendingMixinRemoval(persistedNode._mixState)
   unmarkNodePersistedByMixins(persistedNode)
 
   let prevProps = getHostProps(persistedNode)
   let childInputs = newNode._children
   let resolved = resolveNodeMixProps(newNode, vParent, frame, scheduler, persistedNode._mixState)
-  let nextProps = resolved.props
-  let committed = commitHostNode(
-    newNode,
-    vParent,
-    getSvgContext(vParent, newNode),
-    persistedNode._dom,
-    resolved,
-  )
-  committed._directEventState = persistedNode._directEventState
-  committed._controlledState = persistedNode._controlledState
+  let committed = commitRetainedHostNode(persistedNode, newNode, vParent, svg, resolved)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
     dispatchMixinBeforeUpdate(committed._mixState)
   }
-  patchHostProps(prevProps, nextProps, persistedNode._dom)
+  patchHostProps(prevProps, resolved.props, persistedNode._dom)
   syncDirectEventListeners(committed)
   ensureControlledReflection(committed, scheduler)
-  syncControlledReflection(committed, nextProps)
+  syncControlledReflection(committed, scheduler)
 
   committed._children = diffChildren(
     persistedNode._children,
@@ -2349,9 +2250,7 @@ function reclaimPersistedMixinNode(
     context,
   )
 
-  if (committed._mixState) {
-    bindNodeMixRuntime(committed, frame, scheduler, styles, true)
-  }
+  bindNodeMixRuntime(committed, context, true)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
     scheduler.enqueueCommitPhase([() => dispatchMixinCommit(committed._mixState)])
   }

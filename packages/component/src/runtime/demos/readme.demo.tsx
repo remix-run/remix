@@ -294,11 +294,11 @@ function FormBasic() {
       />
       <button
         mix={[
-          css({ padding: '4px 12px' }),
           on('click', () => {
             // Select it from other parts of the form
             inputRef.select()
           }),
+          css({ padding: '4px 12px' }),
         ]}
       >
         Select Input
@@ -364,15 +364,15 @@ function Player(handle: Handle) {
         disabled={isPlaying}
         mix={[
           ref((node) => (playButton = node)),
-          css({
-            padding: '8px 16px',
-            opacity: isPlaying ? 0.5 : 1,
-          }),
           on('click', async () => {
             isPlaying = true
             await handle.update()
             // Focus the enabled button after update completes
             stopButton.focus()
+          }),
+          css({
+            padding: '8px 16px',
+            opacity: isPlaying ? 0.5 : 1,
           }),
         ]}
       >
@@ -382,15 +382,15 @@ function Player(handle: Handle) {
         disabled={!isPlaying}
         mix={[
           ref((node) => (stopButton = node)),
-          css({
-            padding: '8px 16px',
-            opacity: !isPlaying ? 0.5 : 1,
-          }),
           on('click', async () => {
             isPlaying = false
             await handle.update()
             // Focus the enabled button after update completes
             playButton.focus()
+          }),
+          css({
+            padding: '8px 16px',
+            opacity: !isPlaying ? 0.5 : 1,
           }),
         ]}
       >
@@ -541,11 +541,11 @@ function ThemeProviderAdvanced(handle: Handle<{}, Theme>) {
     <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '8px' })]}>
       <button
         mix={[
-          css({ padding: '8px 16px', alignSelf: 'flex-start' }),
           on('click', () => {
             // no updates in the parent component
             theme.setValue(theme.value === 'light' ? 'dark' : 'light')
           }),
+          css({ padding: '8px 16px', alignSelf: 'flex-start' }),
         ]}
       >
         Toggle Theme (EventTarget)

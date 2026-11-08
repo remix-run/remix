@@ -105,6 +105,8 @@ export function AlbumEditPage(handle: Handle<AlbumEditPageProps>) {
 
 The inputs use the stored album initially and preserve submitted `values` after validation fails. Each field displays its first validation issue, linked to the input with [`aria-describedby`](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-describedby) so screen readers announce the message with the field.
 
+Native attributes such as `required`, `type="email"`, `min`, and `pattern` let the browser catch simple mistakes before the request is sent, using [constraint validation](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation). For a rule those attributes can't express, a hydrated component can call [`setCustomValidity()`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/setCustomValidity) from an event handler and clear it with an empty string once the value is valid. Browser checks only improve feedback. A request can skip them, so the action always validates the submission again.
+
 ## Parse and save the submitted form
 
 Describe the fields the form may submit with a form-data schema from [`remix/data-schema/form-data`](../src/data-schema/README.md). This one trims the title and artist, rejects blank values, and converts the year to a positive whole number:

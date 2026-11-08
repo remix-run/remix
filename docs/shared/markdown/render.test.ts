@@ -82,4 +82,42 @@ describe('renderMarkdownHtml', () => {
 
     assert.equal(html, '<p><a href="/published/">Published</a> <span>Draft</span></p>')
   })
+
+  it('renders GitHub alerts as notices', async () => {
+    let { root } = parseMarkdownDocument('> [!NOTE]\n> Read this **first**.\n>\n> Then this.\n')
+
+    let html = await renderMarkdownHtml(root)
+
+    assert.match(html, /^<aside class="docs-notice" data-notice="note" aria-label="Note"><svg/)
+    assert.match(
+      html,
+      /<div class="docs-notice__content">\n?<p>Read this <strong>first<\/strong>\.<\/p>\n<p>Then this\.<\/p>\n?<\/div><\/aside>$/,
+    )
+    assert.doesNotMatch(html, /\[!NOTE\]|<blockquote/)
+  })
+
+  it('renders warning alerts with the warning notice type', async () => {
+    let { root } = parseMarkdownDocument('> [!WARNING]\n> Back up your database first.\n')
+
+    let html = await renderMarkdownHtml(root)
+
+    assert.match(html, /data-notice="warning" aria-label="Warning"/)
+    assert.match(html, /<p>Back up your database first\.<\/p>/)
+  })
+
+  it('leaves ordinary blockquotes alone', async () => {
+    let { root } = parseMarkdownDocument('> [NOTE] is not an alert marker.\n')
+
+    let html = await renderMarkdownHtml(root)
+
+    assert.match(html, /^<blockquote>\n<p>\[NOTE\] is not an alert marker\.<\/p>\n<\/blockquote>$/)
+  })
+
+  it('requires the alert marker on its own line, like GitHub', async () => {
+    let { root } = parseMarkdownDocument('> [!NOTE] Text on the same line.\n')
+
+    let html = await renderMarkdownHtml(root)
+
+    assert.match(html, /^<blockquote>/)
+  })
 })

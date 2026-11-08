@@ -98,6 +98,9 @@ export const AlbumEditForm = clientEntry(
 );
 ```
 
+The first argument identifies the component's module. With `import.meta.url`, Remix uses the
+function's name as the export name, so name the function the same as its export.
+
 On the server, this still renders like an ordinary component. The server wraps its output in a pair
 of HTML comments, `<!-- rmx:h:... -->` and `<!-- /rmx:h -->`, and serializes its props into the page.
 The comments mark a range of the document rather than adding a wrapper element, so the hydrated output
@@ -111,7 +114,8 @@ data it needs as props, or connect them through an ordinary TypeScript module, a
 Client-entry props cross from the server to the browser, so they must be serializable. They may
 contain strings, numbers, booleans, `null`, `undefined`, plain objects and arrays, and JSX elements.
 Do not pass functions, class instances, database records with custom prototypes, or other opaque
-runtime values.
+runtime values. Elements in props may use `css()`, but not other mixins such as `on()`, `ref()`, or
+custom mixins from `createMixin()`. Render elements that need those inside the client entry.
 
 Mark a boundary around interactive UI, not an entire page by habit. Static ancestors and siblings do
 not need to hydrate just because a button below them does. Keep the database, authenticated user,
@@ -251,6 +255,11 @@ the initial render follows setup. Calling it during rendering, or before the ini
 outside setup, throws an error. If rendering discovers work that should run after the commit,
 schedule that work with `handle.queueTask()`.
 
+Components rendered on the server run their setup and render functions there too. On the server,
+`handle.update()` throws and queued tasks never run. Start timers, read the DOM, and use browser
+globals such as `window` in event handlers or queued tasks, which only run in the browser. The
+Rendering UI guide shows [what each part of the handle does on the server and in the browser](/rendering-ui/#server-and-browser-work).
+
 `handle.update()` schedules work and returns a promise. Await it when the next step needs the updated
 DOM:
 
@@ -279,6 +288,10 @@ function RenameButton(handle: Handle) {
   );
 }
 ```
+
+When an update removes the element that has focus, such as a dialog's close button, move focus back
+to the control that opened it the same way, so keyboard and screen reader users don't lose their
+place.
 
 The promise resolves to an
 [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal), an object that
@@ -414,6 +427,12 @@ Typing changes both inputs. Clicking the button resets the controlled input beca
 comes from `title`. The uncontrolled input keeps its DOM value because `defaultValue` only applies
 its initial value.
 
+Prefer uncontrolled inputs. Control an input only when something besides the user's typing changes
+its value, such as a reset button, a generated value, or formatting applied as the user types.
+Otherwise read the value from the event, or from
+[`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) on submit, so the component
+only stores state it renders.
+
 ::frame{src="/examples/05-interactivity/controlled-uncontrolled-inputs/"}
 
 ## Composing behavior with mix {#the-mix-prop}
@@ -425,23 +444,21 @@ array when the element needs several:
 import { attrs, css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-const saveButtonStyle = css({
-  minWidth: "8rem",
-  minHeight: "2.5rem",
-  border: 0,
-  borderRadius: "999px",
-  background: "#111",
-  color: "#fff",
-});
-
 function SaveButton(_handle: Handle) {
   return () => (
     <button
       mix={[
-        saveButtonStyle,
         attrs({ type: "button" }),
         ref((node) => console.log("Mounted", node)),
         on("click", () => console.log("Save album")),
+        css({
+          minWidth: "8rem",
+          minHeight: "2.5rem",
+          border: 0,
+          borderRadius: "999px",
+          background: "#111",
+          color: "#fff",
+        }),
       ]}
     >
       Save
@@ -811,7 +828,7 @@ import { routes } from "../routes.ts";
 prefetch(routes.albums.show.href({ albumId: "thriller" }));
 ```
 
-Only prefetch links whose GET requests are safe to make speculatively. See the [prefetching reference](https://github.com/remix-run/remix/blob/main/packages/component/docs/frames.md#prefetching) for more information.
+Only prefetch links whose GET requests are safe to make speculatively. See the [prefetching reference](/api/component/#prefetching) for more information.
 
 ## Enhancing forms with fetch and navigation
 
@@ -1009,5 +1026,5 @@ Consume the semantic event with `on(...)` like any other DOM event:
 ```
 
 Namespace custom event names to avoid collisions, and keep one-off behavior in the component that
-uses it. The [`remix/component` API overview](/api/component/) covers the full
+uses it. The [`remix/component` mixins reference](/api/component/#mixins) covers the full
 mixin API.

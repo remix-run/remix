@@ -85,6 +85,7 @@ The following headers are currently supported:
 - [Cache-Control](./README.md#cache-control)
 - [Content-Disposition](./README.md#content-disposition)
 - [Content-Range](./README.md#content-range)
+- [Content-Security-Policy](./README.md#content-security-policy)
 - [Content-Type](./README.md#content-type)
 - [Cookie](./README.md#cookie)
 - [If-Match](./README.md#if-match)
@@ -332,6 +333,32 @@ headers.set(
   new ContentRange({ unit: 'bytes', start: 0, end: 499, size: 1000 }).toString(),
 )
 ```
+
+### Content-Security-Policy
+
+Parse, manipulate and stringify a single `Content-Security-Policy` value. Include quotes around CSP keywords and nonce sources.
+
+```ts
+import { ContentSecurityPolicy } from 'remix/headers/content-security-policy'
+
+let policy = new ContentSecurityPolicy({
+  defaultSrc: ["'self'"],
+  scriptSrc: [`'nonce-${nonce}'`],
+  styleSrc: [`'nonce-${nonce}'`],
+  upgradeInsecureRequests: true,
+})
+
+headers.set('Content-Security-Policy', policy.toString())
+
+let parsed = ContentSecurityPolicy.from(headers.get('Content-Security-Policy'))
+parsed.get('script-src') // ["'nonce-…'"]
+parsed.set('img-src', ["'self'", 'https://images.example.com'])
+parsed.delete('upgrade-insecure-requests')
+```
+
+Initializers use camel-cased directives; `get`, `set`, and `delete` use hyphenated names. Append separate policies with `headers.append()`.
+
+`SuperHeaders.contentSecurityPolicy` and `SuperHeaders.contentSecurityPolicyReportOnly` remain strings; assign `policy.toString()` to either property. Use [CSP middleware](https://github.com/remix-run/remix/tree/main/packages/csp-middleware) for nonce generation and policy headers.
 
 ### Content-Type
 

@@ -26,31 +26,32 @@ import type { Handle, RemixNode } from "remix/component";
 
 export function PressableCard(handle: Handle<{ children: RemixNode }>) {
   return () => (
-    <button mix={cardStyle} type="button">
+    <button
+      mix={css({
+        border: "1px solid #d6d6d6",
+        borderRadius: "16px",
+        background: "white",
+        cursor: "pointer",
+        font: "inherit",
+        padding: "1rem",
+        transition: "transform 160ms ease, box-shadow 160ms ease",
+        "&:hover, &:focus-visible": {
+          boxShadow: "0 12px 32px rgba(15, 17, 21, 0.14)",
+          transform: "translateY(-2px)",
+        },
+        "&:active": {
+          transform: "translateY(0)",
+        },
+        "@media (prefers-reduced-motion: reduce)": {
+          transition: "none",
+        },
+      })}
+      type="button"
+    >
       {handle.props.children}
     </button>
   );
 }
-
-const cardStyle = css({
-  border: "1px solid #d6d6d6",
-  borderRadius: "16px",
-  background: "white",
-  cursor: "pointer",
-  font: "inherit",
-  padding: "1rem",
-  transition: "transform 160ms ease, box-shadow 160ms ease",
-  "&:hover, &:focus-visible": {
-    boxShadow: "0 12px 32px rgba(15, 17, 21, 0.14)",
-    transform: "translateY(-2px)",
-  },
-  "&:active": {
-    transform: "translateY(0)",
-  },
-  "@media (prefers-reduced-motion: reduce)": {
-    transition: "none",
-  },
-});
 ```
 
 Use the animation helpers from [`@remix-run/ui/animation`](/api/ui/animation/) when the motion depends on rendering state, such as a node entering, a node exiting, a keyed item moving, or an event that needs an interruptible animation.
@@ -86,7 +87,6 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
         <p
           key="notice"
           mix={[
-            noticeStyle,
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -97,6 +97,12 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
               transform: "translateY(-8px)",
               ...spring("snappy"),
             }),
+            css({
+              borderRadius: "12px",
+              background: "#ecfdf5",
+              color: "#065f46",
+              padding: "0.75rem 1rem",
+            }),
           ]}
         >
           Settings saved.
@@ -104,13 +110,6 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
       )}
     </div>
   );
-});
-
-const noticeStyle = css({
-  borderRadius: "12px",
-  background: "#ecfdf5",
-  color: "#065f46",
-  padding: "0.75rem 1rem",
 });
 ```
 
@@ -147,28 +146,32 @@ export const ReorderList = clientEntry(import.meta.url, function ReorderList(han
       >
         Reverse
       </button>
-      <ul mix={listStyle}>
+      <ul
+        mix={css({
+          display: "grid",
+          gap: "0.5rem",
+          listStyle: "none",
+          padding: 0,
+        })}
+      >
         {items.map((item) => (
-          <li key={item} mix={[itemStyle, animateLayout({ ...spring("bouncy") })]}>
+          <li
+            key={item}
+            mix={[
+              animateLayout({ ...spring("bouncy") }),
+              css({
+                border: "1px solid #d6d6d6",
+                borderRadius: "10px",
+                padding: "0.7rem 1rem",
+              }),
+            ]}
+          >
             {item}
           </li>
         ))}
       </ul>
     </div>
   );
-});
-
-const listStyle = css({
-  display: "grid",
-  gap: "0.5rem",
-  listStyle: "none",
-  padding: 0,
-});
-
-const itemStyle = css({
-  border: "1px solid #d6d6d6",
-  borderRadius: "10px",
-  padding: "0.7rem 1rem",
 });
 ```
 
@@ -194,40 +197,36 @@ export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(h
     <button
       aria-pressed={enabled}
       mix={[
-        switchStyle,
         on("click", () => {
           enabled = !enabled;
           handle.update();
+        }),
+        css({
+          border: 0,
+          borderRadius: "999px",
+          background: "#ff6b35",
+          cursor: "pointer",
+          padding: "0.25rem",
+          width: "5rem",
         }),
       ]}
       type="button"
     >
       <span
-        mix={thumbStyle}
+        mix={css({
+          display: "block",
+          width: "2rem",
+          height: "2rem",
+          borderRadius: "50%",
+          background: "white",
+          transition: spring.transition("transform", "bouncy"),
+        })}
         style={{
           transform: enabled ? "translateX(2.25rem)" : "translateX(0)",
         }}
       />
     </button>
   );
-});
-
-const switchStyle = css({
-  border: 0,
-  borderRadius: "999px",
-  background: "#ff6b35",
-  cursor: "pointer",
-  padding: "0.25rem",
-  width: "5rem",
-});
-
-const thumbStyle = css({
-  display: "block",
-  width: "2rem",
-  height: "2rem",
-  borderRadius: "50%",
-  background: "white",
-  transition: spring.transition("transform", "bouncy"),
 });
 ```
 
@@ -255,13 +254,20 @@ export function countUp(from: number, to: number, onValue: (value: number) => vo
 
 Prefer CSS transitions and animation mixins for ordinary UI. Use `tween` for canvas, custom counters, or values that are not CSS properties.
 
+Pass `velocity` to continue the momentum of a gesture when the animation takes over. A spring's progress runs from 0 to 1, so `velocity` is measured in progress per second. Divide the gesture's speed toward the target, in pixels per second, by the remaining distance in pixels. A positive value starts faster and overshoots more. A negative value starts slower, and a large one moves away from the target first:
+
+```ts
+// After a drag release, with speed in pixels per second toward the target
+let velocity = releaseSpeed / distanceToTarget;
+card.style.transition = `transform ${spring("bouncy", { velocity })}`;
+card.style.transform = "translateX(0)";
+```
+
+The demo below releases a dragged dot with the velocity of the drag.
+
 ::frame{src="/examples/07-animation/spring-drag-release/"}
 
 ::frame{src="/examples/07-animation/bouncy-switch/"}
-
-The gallery below collects smaller motion experiments built with the same helpers.
-
-::frame{src="/examples/07-animation/animation-gallery/"}
 
 ## Interruptible interactions {#interruptible-interactions}
 
@@ -282,7 +288,6 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
     <button
       mix={[
         ref((element) => (node = element)),
-        buttonStyle,
         on("pointerdown", () => {
           currentAnimation?.cancel();
           currentAnimation = node.animate(
@@ -290,23 +295,22 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
             { ...spring("snappy") },
           );
         }),
+        css({
+          border: 0,
+          borderRadius: "999px",
+          background: "#9911ff",
+          color: "white",
+          cursor: "pointer",
+          font: "inherit",
+          fontWeight: "700",
+          padding: "0.8rem 1.1rem",
+        }),
       ]}
       type="button"
     >
       Press me
     </button>
   );
-});
-
-const buttonStyle = css({
-  border: 0,
-  borderRadius: "999px",
-  background: "#9911ff",
-  color: "white",
-  cursor: "pointer",
-  font: "inherit",
-  fontWeight: "700",
-  padding: "0.8rem 1.1rem",
 });
 ```
 
@@ -321,18 +325,22 @@ import { css } from "remix/component";
 import type { Handle, RemixNode } from "remix/component";
 
 export function MotionSafePanel(handle: Handle<{ children: RemixNode }>) {
-  return () => <section mix={panelStyle}>{handle.props.children}</section>;
+  return () => (
+    <section
+      mix={css({
+        opacity: 1,
+        transform: "translateY(0)",
+        transition: "opacity 180ms ease, transform 180ms ease",
+        "@media (prefers-reduced-motion: reduce)": {
+          transition: "none",
+          transform: "none",
+        },
+      })}
+    >
+      {handle.props.children}
+    </section>
+  );
 }
-
-const panelStyle = css({
-  opacity: 1,
-  transform: "translateY(0)",
-  transition: "opacity 180ms ease, transform 180ms ease",
-  "@media (prefers-reduced-motion: reduce)": {
-    transition: "none",
-    transform: "none",
-  },
-});
 ```
 
 For JavaScript-driven motion, check the same media query before starting work:

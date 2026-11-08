@@ -17,6 +17,7 @@ export async function renderMarkdownHtml(
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeWrapSections, { sections: options.sections ?? false })
     .use(rehypeWrapTables)
+    .use(rehypeAlerts)
     .use(rehypeLinkHeadings)
     .use(rehypeHighlightCode, options.highlightCode ?? {})
     .use(rehypeTransformLinks, { transformLink: options.transformLink })
@@ -40,6 +41,110 @@ function rehypeWrapTables() {
       }
       return SKIP
     })
+  }
+}
+
+type AlertType = 'note' | 'tip' | 'important' | 'warning' | 'caution'
+
+const alertTypes = new Map<string, AlertType>([
+  ['NOTE', 'note'],
+  ['TIP', 'tip'],
+  ['IMPORTANT', 'important'],
+  ['WARNING', 'warning'],
+  ['CAUTION', 'caution'],
+])
+
+const alertMarkerPattern = /^\[!([A-Z]+)\][^\S\n]*(?:\n|$)/i
+
+// Renders GitHub alert blockquotes, such as `> [!NOTE]`, as notices
+function rehypeAlerts() {
+  return function transform(tree: HastRoot): void {
+    visit(tree, 'element', (node, index, parent) => {
+      if (node.tagName !== 'blockquote' || index === undefined || parent === undefined) {
+        return
+      }
+
+      let paragraph = node.children.find((child): child is Element => child.type === 'element')
+      if (paragraph?.tagName !== 'p') return
+
+      let marker = paragraph.children[0]
+      if (marker?.type !== 'text') return
+
+      let match = alertMarkerPattern.exec(marker.value)
+      if (match === null) return
+
+      let type = alertTypes.get(match[1].toUpperCase())
+      if (type === undefined) return
+
+      marker.value = marker.value.slice(match[0].length)
+      if (marker.value === '') paragraph.children.shift()
+
+      let content = node.children.filter(
+        (child): child is ElementContent =>
+          !(child === paragraph && paragraph.children.length === 0),
+      )
+
+      parent.children[index] = {
+        type: 'element',
+        tagName: 'aside',
+        properties: {
+          class: 'docs-notice',
+          dataNotice: type,
+          ariaLabel: type[0].toUpperCase() + type.slice(1),
+        },
+        children: [
+          createAlertIcon(type),
+          {
+            type: 'element',
+            tagName: 'div',
+            properties: { class: 'docs-notice__content' },
+            children: content,
+          },
+        ],
+      }
+      return SKIP
+    })
+  }
+}
+
+function createAlertIcon(type: AlertType): Element {
+  let warning = type === 'warning' || type === 'caution'
+
+  return {
+    type: 'element',
+    tagName: 'svg',
+    properties: {
+      ariaHidden: 'true',
+      width: '18',
+      height: '18',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+    },
+    children: [
+      {
+        type: 'element',
+        tagName: 'circle',
+        properties: { cx: '12', cy: '12', r: '9', stroke: 'currentColor', strokeWidth: '1.5' },
+        children: [],
+      },
+      {
+        type: 'element',
+        tagName: 'path',
+        properties: {
+          d: warning ? 'M12 7.5v5' : 'M12 11v5.5',
+          stroke: 'currentColor',
+          strokeWidth: '1.5',
+          strokeLinecap: 'round',
+        },
+        children: [],
+      },
+      {
+        type: 'element',
+        tagName: 'circle',
+        properties: { cx: '12', cy: warning ? '16' : '8', r: '1', fill: 'currentColor' },
+        children: [],
+      },
+    ],
   }
 }
 

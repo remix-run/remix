@@ -28,7 +28,14 @@ export default function Example() {
   }
 
   return () => (
-    <div mix={demoCss}>
+    <div
+      mix={css({
+        display: 'grid',
+        placeItems: 'center',
+        minHeight: '9rem',
+        width: 'min(100%, 24rem)',
+      })}
+    >
       <button
         type="button"
         mix={[
@@ -53,7 +60,6 @@ export default function Example() {
 
       <div
         mix={[
-          floatingCss,
           ref((node, signal) => {
             if (!(node instanceof HTMLElement)) return
 
@@ -68,6 +74,21 @@ export default function Example() {
               clearFloating()
             })
           }),
+          css({
+            boxSizing: 'border-box',
+            width: '12rem',
+            border: '1px solid light-dark(#d1d1d1, #444444)',
+            borderRadius: '8px',
+            background: 'light-dark(#ffffff, #1a1a1a)',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.12)',
+            color: 'light-dark(#151515, #ececec)',
+            fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+            fontSize: '13px',
+            lineHeight: '18px',
+            fontWeight: 500,
+            letterSpacing: 0,
+            padding: '10px 12px',
+          }),
         ]}
       >
         Positioned surface
@@ -75,26 +96,3 @@ export default function Example() {
     </div>
   )
 }
-
-const demoCss = css({
-  display: 'grid',
-  placeItems: 'center',
-  minHeight: '9rem',
-  width: 'min(100%, 24rem)',
-})
-
-const floatingCss = css({
-  boxSizing: 'border-box',
-  width: '12rem',
-  border: '1px solid light-dark(#d1d1d1, #444444)',
-  borderRadius: '8px',
-  background: 'light-dark(#ffffff, #1a1a1a)',
-  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.12)',
-  color: 'light-dark(#151515, #ececec)',
-  fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-  fontSize: '13px',
-  lineHeight: '18px',
-  fontWeight: 500,
-  letterSpacing: 0,
-  padding: '10px 12px',
-})
