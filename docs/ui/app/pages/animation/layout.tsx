@@ -55,7 +55,7 @@ export default function LayoutPage(handle: Handle<PageProps>) {
           <a href="/animation/spring/">
             <code>spring('snappy')</code>
           </a>{' '}
-          for layout timing.
+          for timing.
         </p>
       }
     >

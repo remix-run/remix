@@ -22,7 +22,6 @@ export default function ExampleLayoutPresence(handle: Handle) {
             disabled={visible.length >= notifications.length}
             mix={[
               on('click', () => {
-                if (visible.length >= notifications.length) return
                 let next = notifications.find(
                   (entry) => !visible.some((notification) => notification.id === entry.id),
                 )
@@ -40,7 +39,6 @@ export default function ExampleLayoutPresence(handle: Handle) {
           {visible.map((notification, index) => (
             <li
               key={notification.id}
-              data-notification={notification.id}
               style={{ top: `calc(${index} * (var(--row-height) + var(--row-gap)))` }}
               mix={[
                 animateLayout(reducedMotion ? false : { ...spring('snappy'), size: false }),
