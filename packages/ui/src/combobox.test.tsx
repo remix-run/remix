@@ -1,21 +1,20 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
 
-import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot, type Handle, type Props, type RemixNode } from '@remix-run/component'
 
-import {
-  onComboboxChange,
-  type ComboboxChangeEvent,
-  type ComboboxHandle,
-  type ComboboxProps,
-} from './combobox.tsx'
+import { onComboboxChange, type ComboboxChangeEvent, type ComboboxHandle } from './combobox.tsx'
 import * as combobox from './combobox.tsx'
 
 const flashDurationMs = 60
 const inputCommitDelayMs = 50
 let roots: ReturnType<typeof createRoot>[] = []
 
-interface TestComboboxProps extends ComboboxProps {}
+type TestComboboxProps = Props<'div'> &
+  Omit<combobox.ComboboxContextProps, 'ref'> & {
+    inputId?: string
+    placeholder?: string
+  }
 
 function renderApp(node: RemixNode) {
   let container = document.createElement('div')
@@ -50,7 +49,9 @@ function TestCombobox(handle: Handle<TestComboboxProps>): () => RemixNode {
   }
 }
 
-function TestComboboxOption(handle: Handle<combobox.ComboboxOptionProps>): () => RemixNode {
+function TestComboboxOption(
+  handle: Handle<Props<'div'> & combobox.ComboboxOptionOptions>,
+): () => RemixNode {
   return () => {
     let { children, disabled, label, searchValue, value, ...divProps } = handle.props
 

@@ -82,16 +82,20 @@ export function rewriteLinksToRemixReadmes(
   let readmePaths = getReadmePathsByUrlPath(mappings)
 
   return rewriteMarkdownLinkDestinations(markdown, (href) => {
-    let url = parseUrl(href)
+    // Guides link to API pages on the same docs site with root-relative paths like `/api/router/`.
+    let isRootRelative = href.startsWith('/') && !href.startsWith('//')
+    let url = isRootRelative ? parseUrl(href, 'https://docs.remix.run') : parseUrl(href)
     if (!url || url.protocol !== 'https:' || url.port) return
 
     let readmePath: string | undefined
-    if (url.hostname === 'api.remix.run') {
-      readmePath = readmePaths.api.get(withoutTrailingSlash(url.pathname))
+    if (url.hostname === 'docs.remix.run') {
+      let apiPath = url.pathname.replace(/^\/api(?=\/)/, '')
+      readmePath = readmePaths.api.get(withoutTrailingSlash(apiPath))
     } else if (url.hostname === 'github.com') {
       readmePath = readmePaths.github.get(withoutTrailingSlash(url.pathname))
     }
-    if (!readmePath) return
+    // A README's link to its own API docs stays external rather than pointing at itself.
+    if (!readmePath || path.resolve(readmePath) === path.resolve(outputPath)) return
 
     let relativePath = toPosixPath(path.relative(path.dirname(outputPath), readmePath))
     let localHref = relativePath.startsWith('.') ? relativePath : `./${relativePath}`
@@ -107,7 +111,8 @@ function getReadmePathsByUrlPath(mappings: RemixReadmeCopy[]): {
   let github = new Map<string, string>()
 
   for (let mapping of mappings) {
-    api.set(`/api/${mapping.remixPath}/overview`, mapping.remixReadmePath)
+    // API docs URLs drop the `remix/` scope: `remix/router` is at `/api/router/`.
+    api.set(`/${mapping.remixPath.replace(/^remix\//, '')}`, mapping.remixReadmePath)
 
     let sourcePath = toPosixPath(path.relative(packagesDir, mapping.sourceReadmePath))
     let readmePath = `packages/${sourcePath}`
@@ -121,9 +126,9 @@ function getReadmePathsByUrlPath(mappings: RemixReadmeCopy[]): {
   return { api, github }
 }
 
-function parseUrl(href: string): URL | undefined {
+function parseUrl(href: string, base?: string): URL | undefined {
   try {
-    return new URL(href)
+    return new URL(href, base)
   } catch {
     return undefined
   }

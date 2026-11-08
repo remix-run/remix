@@ -1289,16 +1289,6 @@ export { popoverMixin as popover }
 export const submenuTrigger = submenuTriggerMixin
 export const trigger = triggerMixin
 
-const menu = {
-  Context,
-  contextTrigger,
-  item,
-  list,
-  popover: popoverMixin,
-  submenuTrigger,
-  trigger,
-} as const
-
 export function onMenuSelect<target extends HTMLElement>(
   handler: MenuSelectHandler<target>,
   captureBoolean?: boolean,

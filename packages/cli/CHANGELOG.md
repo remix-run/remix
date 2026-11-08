@@ -2,6 +2,77 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.2
+
+### Patch Changes
+
+- New apps now fingerprint assets in production and close the asset server on shutdown. With `NODE_ENV=production`, asset URLs include a content hash and are served with `Cache-Control: public, max-age=31536000, immutable` instead of `no-cache`. The `SIGINT` and `SIGTERM` handlers in `server.ts` also await `assets.close()` before exiting. ([#12086](https://github.com/remix-run/remix/pull/12086))
+
+  Existing generated apps can apply the same setup:
+
+  ```diff
+   // app/assets.ts
+   const isDevelopment = nodeEnv === 'development'
+  +const isProduction = nodeEnv === 'production'
+
+   export const assets = createAssetServer({
+     minify: !isDevelopment,
+  +  fingerprint: isProduction,
+     watch: isDevelopment,
+   })
+  ```
+
+  ```diff
+   // server.ts
+  +import { assets } from './app/assets.ts'
+   import { router } from './app/router.ts'
+
+   function shutdown() {
+  -  server.close(() => process.exit(0))
+  +  server.close(() => assets.close().finally(() => process.exit(0)))
+   }
+  ```
+
+- New apps created with `remix new` on Windows now run `dev`, `hmr`, `start`, and `test` through `cross-env-shell`, avoiding the `'NODE_ENV' is not recognized` error in Windows command shells while preserving Ctrl+C shutdown handling. The generated app includes `cross-env` as a production dependency so `start` also works when development dependencies are omitted. Apps created on macOS and Linux keep their existing scripts and dependencies ([#11996](https://github.com/remix-run/remix/issues/11996)). ([#12096](https://github.com/remix-run/remix/pull/12096))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.2`](https://github.com/remix-run/remix/releases/tag/assets@1.0.2)
+  - [`test@1.1.0`](https://github.com/remix-run/remix/releases/tag/test@1.1.0)
+
+## v1.0.1
+
+### Patch Changes
+
+- New apps now derive `AppContext` from the router with `RouterContext<typeof router>` instead of declaring it up front and passing it to `createRouter<AppContext>()`. The explicit type argument turned off middleware inference, so middleware added to the router later (such as `formData()`) did not show up on `context` in controllers. This also matches the setup shown in the Remix guides. ([#11999](https://github.com/remix-run/remix/pull/11999))
+
+  Existing generated apps can apply the same setup in `app/router.ts`:
+
+  ```diff
+  -import { createRouter, type MiddlewareContext } from 'remix/router'
+  +import { createRouter, type RouterContext } from 'remix/router'
+
+  -const renderMiddleware = render({ assets })
+  -type AppContext = MiddlewareContext<[typeof renderMiddleware]>
+  +export const router = createRouter({
+  +  middleware: [staticFiles('./public', { index: false }), render({ assets })],
+  +})
+  +
+  +export type AppContext = RouterContext<typeof router>
+
+   declare module 'remix' {
+     interface RouterTypes {
+       context: AppContext
+     }
+   }
+
+  -export const router = createRouter<AppContext>({
+  -  middleware: [staticFiles('./public', { index: false }), renderMiddleware],
+  -})
+  ```
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.1`](https://github.com/remix-run/remix/releases/tag/assets@1.0.1)
+
 ## v1.0.0
 
 ### Major Changes

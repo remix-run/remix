@@ -2,6 +2,12 @@
 
 This is the changelog for [`tar-parser`](https://github.com/remix-run/remix/tree/main/packages/tar-parser). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Stop parsing entries after the standard two-zero-block tar end marker while continuing to enforce the total archive size limit on trailing input (see #12035). ([#12041](https://github.com/remix-run/remix/pull/12041))
+
 ## v1.0.0
 
 ### Major Changes

@@ -21,7 +21,10 @@ export const initializeTableOfContentsScript = `
       let heading = id ? document.getElementById(id) : null
       return heading ? [{ heading, link }] : []
     })
-    let activationLine = window.matchMedia('(width >= 900px)').matches ? 116 : 88
+    // Keep in sync with getActivationLine() in public/table-of-contents-active.ts.
+    let activationLine =
+      (window.matchMedia('(width >= 900px)').matches ? 116 : 88) +
+      Math.min(160, window.innerHeight * 0.15)
     let activeIndex = 0
     for (let [index, entry] of entries.entries()) {
       if (entry.heading.getBoundingClientRect().top > activationLine) break
@@ -38,6 +41,13 @@ export const initializeTableOfContentsScript = `
 }
 `
 
+const minTableOfContentsHeadings = 4
+
+/** "On this page" only helps when a page has more than three entries. */
+export function hasTableOfContents(headings: readonly unknown[] | undefined): boolean {
+  return (headings?.length ?? 0) >= minTableOfContentsHeadings
+}
+
 export function DocsTableOfContents(handle: Handle<{ headings: DocsHeadingLink[] }>) {
   return () => {
     let listId = `${handle.id}-list`
@@ -48,6 +58,7 @@ export function DocsTableOfContents(handle: Handle<{ headings: DocsHeadingLink[]
           {handle.props.headings.map((heading, index) => (
             <li key={heading.id} class={heading.depth === 3 ? 'docs-toc__item--nested' : undefined}>
               <a
+                class="docs-nav-item"
                 href={`#${heading.id}`}
                 aria-current={index === 0 ? 'location' : undefined}
                 innerHTML={unsafeHTML(heading.titleHtml)}

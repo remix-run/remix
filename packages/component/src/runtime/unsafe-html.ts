@@ -63,15 +63,27 @@ export function normalizeUnsafeHTMLProps(
   props: Record<string, unknown>,
 ): NormalizedUnsafeHTMLProps {
   let innerHTML = readUnsafeHTML(props.innerHTML)
-  invariant(props.innerHTML === undefined || innerHTML !== undefined, 'Invalid innerHTML prop')
+  invariant(
+    props.innerHTML === undefined || innerHTML !== undefined,
+    'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+  )
 
   let srcDoc = readUnsafeHTML(props.srcDoc)
-  invariant(props.srcDoc === undefined || srcDoc !== undefined, 'Invalid srcDoc prop')
+  invariant(
+    props.srcDoc === undefined || srcDoc !== undefined,
+    'Invalid srcDoc prop: expected a value created with unsafeHTML()',
+  )
 
   let srcdoc = readUnsafeHTML(props.srcdoc)
-  invariant(props.srcdoc === undefined || srcdoc !== undefined, 'Invalid srcdoc prop')
+  invariant(
+    props.srcdoc === undefined || srcdoc !== undefined,
+    'Invalid srcdoc prop: expected a value created with unsafeHTML()',
+  )
 
-  invariant(props.outerHTML === undefined, 'Invalid outerHTML prop')
+  invariant(
+    props.outerHTML === undefined,
+    'Invalid outerHTML prop: outerHTML is not supported on host elements',
+  )
 
   if (innerHTML === undefined && srcDoc === undefined && srcdoc === undefined) return props
   return {

@@ -9,7 +9,7 @@ const buttonBaseCss = css({
   gap: '4px',
   margin: 0,
   border: '1px solid transparent',
-  borderRadius: '999px',
+  borderRadius: 'var(--rmx-radius-md)',
   background: 'transparent',
   color: 'inherit',
   font: 'inherit',

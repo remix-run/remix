@@ -1,15 +1,16 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
-import { Frame } from '../runtime/component.ts'
+import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { reloadFrameForNavigation } from '../runtime/frame.ts'
-import { getNamedFrame, getTopFrame, run } from '../runtime/run.ts'
+import { Frame, getNamedFrame, getTopFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
+import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on } from '../index.ts'
+import { jsx } from '../runtime/core/vnode.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
 async function setupReloadBodyTest(t: TestContext) {
@@ -47,6 +48,24 @@ function streamFromChunks(chunks: Array<string | Promise<string>>): ReadableStre
       controller.close()
     },
   })
+}
+
+async function hydrateDataProps(t: TestContext, props: Record<string, unknown>) {
+  let received: Record<string, unknown> | undefined
+  let Entry = clientEntry('/data.js#Entry', function Entry(handle: Handle) {
+    received = handle.props
+    return () => <p>Data</p>
+  })
+  document.body.innerHTML = await drain(renderToStream(jsx(Entry, props)))
+  received = undefined
+  let errors: unknown[] = []
+  let app = run({ loadModule: () => Entry })
+  app.addEventListener('error', (event) => errors.push(event.error))
+  t.after(() => app.dispose())
+  await app.ready()
+  expect(errors).toEqual([])
+  invariant(received, 'Expected hydrated props')
+  return received
 }
 
 async function drainWithProtocol(stream: ReadableStream<Uint8Array>): Promise<string> {
@@ -256,26 +275,35 @@ async function navigateWithLink(
   if (options.src !== undefined) link.setAttribute('data-rmx-src', options.src)
   document.body.append(link)
 
+  // Chromium navigates during the click, but Firefox and WebKit navigate in a later task, so the
+  // transition doesn't exist yet when `click()` returns.
+  let listeners = new AbortController()
+  let settled = new Promise<void>((resolve, reject) => {
+    let { signal } = listeners
+    window.navigation.addEventListener('navigatesuccess', () => resolve(), { signal })
+    window.navigation.addEventListener('navigateerror', (event) => reject(event.error), { signal })
+  })
   link.click()
-  let transition = window.navigation.transition
-  invariant(transition, 'Expected link click to start a navigation transition')
-  await transition.finished
-  link.remove()
+  try {
+    await settled
+  } finally {
+    listeners.abort()
+    link.remove()
+  }
 }
 
 describe('run', () => {
   let container: HTMLDivElement
 
   beforeEach(() => {
+    // The test runner's page starts with its own <title>, so every test needs an empty head.
+    document.head.replaceChildren()
     container = document.createElement('div')
     document.body.appendChild(container)
   })
 
   afterEach(() => {
     document.body.innerHTML = ''
-    for (let node of Array.from(document.head.childNodes)) {
-      document.head.removeChild(node)
-    }
   })
 
   it('uses fetch to request HTML by default and posts form data', async (t) => {
@@ -2199,6 +2227,450 @@ describe('run', () => {
     frame.dispose()
   })
 
+  it('renders fragment props after hydration', async (t) => {
+    let Disclosure = clientEntry(
+      '/js/disclosure.js#Disclosure',
+      function Disclosure(handle: Handle<{ content: RemixNode }>) {
+        let open = true
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                open = !open
+                handle.update()
+              })}
+            >
+              Toggle
+            </button>
+            <section>{open ? handle.props.content : null}</section>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Disclosure
+          content={
+            <>
+              <b>Bold</b>
+              <i>Italic</i>
+            </>
+          }
+        />,
+      ),
+    )
+    expect(document.querySelector('section')?.innerHTML).toBe('<b>Bold</b><i>Italic</i>')
+
+    let app = run({ loadModule: () => Disclosure })
+    t.after(() => app.dispose())
+    await app.ready()
+    let button = document.querySelector('button')
+    invariant(button)
+
+    button.click()
+    app.flush()
+    expect(document.querySelector('section')?.innerHTML).toBe('')
+
+    button.click()
+    app.flush()
+    expect(document.querySelector('section')?.innerHTML).toBe('<b>Bold</b><i>Italic</i>')
+  })
+
+  it('preserves element keys in props after hydration', async (t) => {
+    let ReversibleList = clientEntry(
+      '/js/reversible-list.js#ReversibleList',
+      function ReversibleList(handle: Handle<{ items: RemixNode[] }>) {
+        let reversed = false
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                reversed = !reversed
+                handle.update()
+              })}
+            >
+              Reverse
+            </button>
+            <ul>{reversed ? [...handle.props.items].reverse() : handle.props.items}</ul>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(<ReversibleList items={[<li key="a">A</li>, <li key="b">B</li>]} />),
+    )
+
+    let app = run({ loadModule: () => ReversibleList })
+    t.after(() => app.dispose())
+    await app.ready()
+    let [a, b] = Array.from(document.querySelectorAll('li'))
+    invariant(a && b)
+
+    document.querySelector('button')?.click()
+    app.flush()
+
+    let [first, second] = Array.from(document.querySelectorAll('li'))
+    expect(first).toBe(b)
+    expect(second).toBe(a)
+    expect([a.textContent, b.textContent]).toEqual(['A', 'B'])
+  })
+
+  it('preserves keyed fragment props after hydration', async (t) => {
+    let ReversibleTerms = clientEntry(
+      '/js/reversible-terms.js#ReversibleTerms',
+      function ReversibleTerms(handle: Handle<{ terms: RemixNode[] }>) {
+        let reversed = false
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                reversed = !reversed
+                handle.update()
+              })}
+            >
+              Reverse
+            </button>
+            <dl>{reversed ? [...handle.props.terms].reverse() : handle.props.terms}</dl>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <ReversibleTerms
+          terms={[
+            <Fragment key="a">
+              <dt>A</dt>
+              <dd>First</dd>
+            </Fragment>,
+            <Fragment key="b">
+              <dt>B</dt>
+              <dd>Second</dd>
+            </Fragment>,
+          ]}
+        />,
+      ),
+    )
+
+    let app = run({ loadModule: () => ReversibleTerms })
+    t.after(() => app.dispose())
+    await app.ready()
+    let [dtA, ddA, dtB, ddB] = Array.from(document.querySelectorAll('dl > *'))
+    invariant(dtA && ddA && dtB && ddB)
+
+    document.querySelector('button')?.click()
+    app.flush()
+
+    let [first, second, third, fourth] = Array.from(document.querySelectorAll('dl > *'))
+    expect(first).toBe(dtB)
+    expect(second).toBe(ddB)
+    expect(third).toBe(dtA)
+    expect(fourth).toBe(ddA)
+    expect(document.querySelector('dl')?.textContent).toBe('BSecondAFirst')
+  })
+
+  it('preserves plain data containing every hydration descriptor tag', async (t) => {
+    let props = {
+      element: { $rmx: true, type: 'div', props: { innerHTML: '<b>Data</b>' }, key: 'data' },
+      values: [
+        { $rmx: false },
+        { $rmx: null },
+        { $rmx: 'unknown', type: 'article', props: { children: 'Data' } },
+        { $rmxFrame: true, props: { src: '/data' }, key: 'frame' },
+        { $rmxFragment: true, props: { children: 'Data' }, key: 'fragment' },
+        { $rmxMixin: 'css', args: [{ color: 'red' }] },
+        { $rmxMixin: null },
+        { $rmxMixin: 'unknown', args: [1] },
+        { $rmxFrame: false, $rmxFragment: 'unknown' },
+        { $rmx: true, $rmxFrame: true, $rmxFragment: true, $rmxMixin: 'css' },
+      ],
+      ordinary: { type: 'span', props: { innerHTML: 'Data' }, args: [], key: { id: 1 } },
+    }
+
+    expect(await hydrateDataProps(t, props)).toEqual(props)
+  })
+
+  it('preserves descriptor tags on the top-level client entry props', async (t) => {
+    let cases = [
+      { $rmx: true, type: 'div', props: { innerHTML: '<b>Data</b>' } },
+      { $rmx: 0 },
+      { $rmxFrame: true, props: { src: '/data' } },
+      { $rmxFragment: true, props: { children: 'Data' } },
+      { $rmxMixin: 'css', args: [{ color: 'red' }] },
+      { $rmxMixin: null },
+      { $rmxObject: { $rmxMixin: 'css', args: [] } },
+    ]
+
+    for (let props of cases) {
+      expect(await hydrateDataProps(t, props)).toEqual(props)
+    }
+  })
+
+  it('preserves plain data shaped exactly like nested escape wrappers', async (t) => {
+    let props = {
+      $rmxObject: { $rmx: true, type: 'div', props: {} },
+      nested: [
+        { $rmxObject: { $rmxObject: { $rmxMixin: null } } },
+        {
+          $rmxObject: [
+            ['$rmxMixin', 'css'],
+            ['args', []],
+          ],
+        },
+        { $rmxObject: null },
+        { $rmxObject: true, $rmxFrame: true, props: { src: '/data' } },
+      ],
+    }
+
+    expect(await hydrateDataProps(t, props)).toEqual(props)
+  })
+
+  it('preserves JSON omission and toJSON behavior in escaped data', async (t) => {
+    let calls: string[] = []
+    let props = {
+      $rmx: undefined,
+      data: {
+        $rmxMixin: 'css',
+        missing: undefined,
+        callback() {},
+        symbol: Symbol('data'),
+        omitted: { toJSON() {} },
+        omittedFunction: { toJSON: () => function ignored() {} },
+        omittedSymbol: { toJSON: () => Symbol('ignored') },
+        array: [undefined, () => {}, Symbol('data'), { toJSON() {} }],
+        date: new Date('2026-01-01T00:00:00.000Z'),
+        value: {
+          $rmx: 'data',
+          toJSON(key: string) {
+            calls.push(key)
+            return this
+          },
+        },
+        converted: { toJSON: () => ({ $rmxFragment: true, props: {} }) },
+      },
+    }
+    let expected = JSON.parse(JSON.stringify(props))
+    calls = []
+
+    expect(await hydrateDataProps(t, props)).toEqual(expected)
+    expect(calls).toEqual(['value'])
+  })
+
+  it('preserves own __proto__ properties without changing data prototypes', async (t) => {
+    let props = {
+      $rmxFragment: true,
+      ['__proto__']: { label: 'top' },
+      ordinary: { ['__proto__']: { label: 'ordinary' } },
+      escaped: { $rmxMixin: null, ['__proto__']: { $rmx: 'data' } },
+    }
+    let received = await hydrateDataProps(t, props)
+
+    expect(received).toEqual(props)
+    for (let value of [received, received.ordinary, received.escaped]) {
+      expect(Object.hasOwn(value, '__proto__')).toBe(true)
+      expect(Object.getPrototypeOf(value)).toBe(Object.prototype)
+    }
+  })
+
+  it('serializes repeated escaped objects separately after each toJSON call', async (t) => {
+    let value = {
+      $rmxMixin: 'data',
+      calls: 0,
+      toJSON() {
+        this.calls++
+        return this
+      },
+    }
+
+    expect(await hydrateDataProps(t, { values: [value, value] })).toEqual({
+      values: [
+        { $rmxMixin: 'data', calls: 1 },
+        { $rmxMixin: 'data', calls: 2 },
+      ],
+    })
+  })
+
+  it('hydrates real elements alongside escaped data and preserves element copies', async (t) => {
+    let data = { $rmx: true, type: 'div', props: { innerHTML: '<b>Data</b>' } }
+    let received: unknown
+    let Entry = clientEntry(
+      '/mixed.js#Entry',
+      function Entry(
+        handle: Handle<{ bundle: { $rmxFrame: true; data: typeof data; content: RemixNode } }>,
+      ) {
+        received = handle.props.bundle.data
+        let visible = false
+        return () => (
+          <section>
+            <button
+              mix={on('click', () => {
+                visible = true
+                handle.update()
+              })}
+            >
+              Show
+            </button>
+            {visible ? handle.props.bundle.content : null}
+          </section>
+        )
+      },
+    )
+    let element = <p mix={css({ color: 'rgb(1, 2, 3)' })}>Styled</p>
+    let content = (
+      <Fragment key="content">
+        {{ ...element }}
+        <Frame src="/real-frame" />
+      </Fragment>
+    )
+    document.body.innerHTML = await drain(
+      renderToStream(<Entry bundle={{ $rmxFrame: true, data, content }} />),
+    )
+    received = undefined
+    let requests: string[] = []
+    let errors: unknown[] = []
+    let app = run({
+      loadModule: () => Entry,
+      resolveFrame(src) {
+        requests.push(src)
+        return '<i>Frame content</i>'
+      },
+    })
+    app.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => app.dispose())
+    await app.ready()
+    expect(received).toEqual(data)
+
+    document.querySelector('button')?.click()
+    app.flush()
+    await waitForElement('i', (element) => element.textContent === 'Frame content')
+
+    let paragraph = document.querySelector('p')
+    invariant(paragraph)
+    expect(paragraph.textContent).toBe('Styled')
+    expect(getComputedStyle(paragraph).color).toBe('rgb(1, 2, 3)')
+    expect(document.querySelector('i')?.textContent).toBe('Frame content')
+    expect(requests).toEqual(['/real-frame'])
+    expect(errors).toEqual([])
+  })
+
+  it('hydrates css() mixins in element props', async (t) => {
+    let Tabs = clientEntry(
+      '/js/tabs.js#Tabs',
+      function Tabs(handle: Handle<{ panels: RemixNode[] }>) {
+        let selected = 0
+        return () => (
+          <div>
+            <button
+              mix={on('click', () => {
+                selected = (selected + 1) % handle.props.panels.length
+                handle.update()
+              })}
+            >
+              Next
+            </button>
+            <section>{handle.props.panels[selected]}</section>
+          </div>
+        )
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Tabs
+          panels={[
+            <p mix={css({ color: 'rgb(1, 2, 3)' })}>One</p>,
+            <article mix={[css({ color: 'rgb(4, 5, 6)' }), css({ paddingTop: 7 })]}>
+              <span mix={css({ fontWeight: 700 })}>Two</span>
+            </article>,
+          ]}
+        />,
+      ),
+    )
+    let serverPanel = document.querySelector('p')
+    invariant(serverPanel)
+
+    let errors: unknown[] = []
+    let app = run({ loadModule: () => Tabs })
+    app.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => app.dispose())
+    await app.ready()
+
+    expect(errors).toEqual([])
+    expect(document.querySelector('p')).toBe(serverPanel)
+    expect(getComputedStyle(serverPanel).color).toBe('rgb(1, 2, 3)')
+
+    document.querySelector('button')?.click()
+    app.flush()
+
+    let article = document.querySelector('article')
+    let span = document.querySelector('article > span')
+    invariant(article && span)
+    expect(getComputedStyle(article).color).toBe('rgb(4, 5, 6)')
+    expect(getComputedStyle(article).paddingTop).toBe('7px')
+    expect(getComputedStyle(span).fontWeight).toBe('700')
+  })
+
+  it('preserves css() precedence when entry props contain undefined styles', async (t) => {
+    let Slot = clientEntry(
+      '/js/slot.js#Slot',
+      function Slot(handle: Handle<{ content: RemixNode }>) {
+        return () => <div>{handle.props.content}</div>
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <Slot
+          content={
+            <p mix={[css({ color: 'red', '&:hover': undefined }), css({ color: 'blue' })]}>
+              Styled
+            </p>
+          }
+        />,
+      ),
+    )
+    let paragraph = document.querySelector('p')
+    invariant(paragraph)
+    let serverClassName = paragraph.className
+    expect(getComputedStyle(paragraph).color).toBe('rgb(0, 0, 255)')
+
+    let app = run({ loadModule: () => Slot })
+    t.after(() => app.dispose())
+    await app.ready()
+
+    expect(document.querySelector('p')).toBe(paragraph)
+    expect(getComputedStyle(paragraph).color).toBe('rgb(0, 0, 255)')
+    expect(paragraph.className).toBe(serverClassName)
+  })
+
+  it('reports a clear error for mixins in element props that cannot be serialized', async (t) => {
+    let Slot = clientEntry(
+      '/js/slot.js#Slot',
+      function Slot(handle: Handle<{ content: RemixNode }>) {
+        return () => <div>{handle.props.content}</div>
+      },
+    )
+
+    document.body.innerHTML = await drain(
+      renderToStream(<Slot content={<button mix={on('click', () => {})}>Save</button>} />),
+    )
+
+    let errors: unknown[] = []
+    let app = run({ loadModule: () => Slot })
+    app.addEventListener('error', (event) => errors.push(event.error))
+    t.after(() => app.dispose())
+    await app.ready()
+
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toBeInstanceOf(Error)
+    expect(String(errors[0])).toMatch(
+      /Client entry props contain a mixin that can't be serialized\. Only css\(\) mixins/,
+    )
+  })
+
   it('ready() does not wait for hydration markers from later frame templates', async () => {
     let Initial = clientEntry('/js/initial.js#Initial', function Initial(handle: Handle) {
       let clicked = false
@@ -3958,6 +4430,86 @@ describe('run', () => {
     expect(secondReloadSignal.aborted).toBe(false)
 
     expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
+    clientFrame.dispose()
+  })
+
+  it('dispatches one reloadStart and reloadComplete pair when reload is re-entered', async () => {
+    let frameHandle: FrameHandle | undefined
+    let events: string[] = []
+    let callCount = 0
+    let [firstReloadContent, resolveFirstReloadContent] = withResolvers<string>()
+    let [secondReloadContent, resolveSecondReloadContent] = withResolvers<string>()
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-reentry-events.js#ReloadReentryEvents',
+      function ReloadReentryEvents(handle: Handle) {
+        frameHandle = handle.frame
+        return () => <button id="reload-reentry-events">Reload</button>
+      },
+    )
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/reload-reentry-events" fallback={<div>Loading…</div>} />
+        </main>,
+        {
+          async resolveFrame() {
+            return await drain(
+              renderToStream(
+                <section>
+                  <p id="reload-value">Initial</p>
+                  <ReloadButton />
+                </section>,
+              ),
+            )
+          },
+        },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-reentry-events.js' &&
+          exportName === 'ReloadReentryEvents'
+        ) {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src !== '/reload-reentry-events') throw new Error(`Unexpected frame src: ${src}`)
+        callCount++
+        if (callCount === 1) return firstReloadContent
+        if (callCount === 2) return secondReloadContent
+        throw new Error(`Unexpected reload call count: ${callCount}`)
+      },
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(frameHandle)
+    frameHandle.addEventListener('reloadStart', () => events.push('start'))
+    frameHandle.addEventListener('reloadComplete', () => events.push('complete'))
+
+    let firstReloadPromise = frameHandle.reload()
+    let secondReloadPromise = frameHandle.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
+    await firstReloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(events).toEqual(['start'])
+
+    resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
+    await secondReloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(events).toEqual(['start', 'complete'])
+    expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
+
     clientFrame.dispose()
   })
 

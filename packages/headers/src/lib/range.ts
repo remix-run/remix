@@ -1,5 +1,44 @@
 import { type HeaderValue } from './header-value.ts'
 
+const maxRangeBound = String(Number.MAX_SAFE_INTEGER)
+
+function normalizeRangeBound(value: string): string {
+  return value.replace(/^0+/, '') || '0'
+}
+
+function compareRangeBounds(left: string, right: string): number {
+  left = normalizeRangeBound(left)
+  right = normalizeRangeBound(right)
+
+  if (left.length !== right.length) return left.length - right.length
+  if (left === right) return 0
+  return left < right ? -1 : 1
+}
+
+function parseRangeBound(value: string): number | undefined {
+  if (value === '') return undefined
+
+  // RFC 9110 requires handling large decimal bounds without integer overflow.
+  // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2
+  let significantValue = normalizeRangeBound(value)
+  if (
+    significantValue.length > maxRangeBound.length ||
+    (significantValue.length === maxRangeBound.length && significantValue > maxRangeBound)
+  ) {
+    return Number.MAX_SAFE_INTEGER
+  }
+
+  return Number(significantValue)
+}
+
+function isValidRangeBound(value: number | undefined): boolean {
+  return value === undefined || value === Infinity || (Number.isInteger(value) && value >= 0)
+}
+
+function isValidResourceSize(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0
+}
+
 /**
  * Initializer for a {@link Range} header value.
  */
@@ -41,16 +80,22 @@ export class Range implements HeaderValue, RangeInit {
 
   /**
    * Checks if this range can be satisfied for a resource of the given size.
+   * A non-zero suffix is satisfiable even for an empty resource, although
+   * {@link Range.normalize | normalize()} returns no concrete byte positions for it.
    *
-   * @param resourceSize The size of the resource in bytes
-   * @returns `false` if the range is malformed or all ranges are beyond the resource size
+   * @param resourceSize The size of the resource in bytes as a non-negative safe integer
+   * @returns `true` if the range set is valid and contains at least one satisfiable range
    */
   canSatisfy(resourceSize: number): boolean {
     // No unit or no ranges means header was malformed or empty
-    if (!this.unit || this.ranges.length === 0) return false
+    if (!this.unit || this.ranges.length === 0 || !isValidResourceSize(resourceSize)) return false
 
-    // Validate all ranges first
+    // One invalid member invalidates the entire range set.
+    // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.1
     for (let range of this.ranges) {
+      if (!isValidRangeBound(range.start) || !isValidRangeBound(range.end)) {
+        return false
+      }
       // At least one bound must be specified
       if (range.start === undefined && range.end === undefined) {
         return false
@@ -61,11 +106,14 @@ export class Range implements HeaderValue, RangeInit {
       }
     }
 
-    // Check if at least one range is within the resource
+    // A valid set is satisfiable when any member is satisfiable.
+    // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.1
     for (let range of this.ranges) {
       if (range.start === undefined) {
-        // Suffix range (e.g., "-500") is always satisfiable
-        return true
+        // A non-zero suffix is satisfiable even for a zero-length representation.
+        // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2
+        if (range.end !== undefined && range.end > 0) return true
+        continue
       }
       if (range.start < resourceSize) {
         // At least one range starts within the resource
@@ -79,36 +127,60 @@ export class Range implements HeaderValue, RangeInit {
   /**
    * Normalizes the ranges for a resource of the given size.
    * Returns an array of ranges with resolved start and end values.
-   * Returns an empty array if the range cannot be satisfied.
+   * Returns an empty array if no concrete byte positions can be normalized, including for a
+   * zero-length resource, even when {@link Range.canSatisfy | canSatisfy()} returns `true`.
    *
-   * @param resourceSize The size of the resource in bytes
+   * @param resourceSize The size of the resource in bytes as a non-negative safe integer
    * @returns An array of ranges with resolved start and end values
    */
   normalize(resourceSize: number): Array<{ start: number; end: number }> {
-    if (!this.canSatisfy(resourceSize)) {
+    // Empty resources have no concrete byte positions, even for a satisfiable suffix.
+    // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2
+    if (
+      !isValidResourceSize(resourceSize) ||
+      resourceSize === 0 ||
+      !this.canSatisfy(resourceSize)
+    ) {
       return []
     }
 
-    return this.ranges.map((range) => {
-      if (range.start !== undefined && range.end !== undefined) {
+    // Resolve only satisfiable members, clamping end offsets and suffixes to the resource.
+    // https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2
+    return this.ranges.flatMap(({ start, end }) => {
+      if (!isValidRangeBound(start) || !isValidRangeBound(end)) {
+        return []
+      }
+
+      if (start !== undefined && end !== undefined) {
+        if (start >= resourceSize) return []
+
         // Both bounds specified (e.g., "0-99")
-        return {
-          start: range.start,
-          end: Math.min(range.end, resourceSize - 1),
-        }
-      } else if (range.start !== undefined) {
+        return [
+          {
+            start,
+            end: Math.min(end, resourceSize - 1),
+          },
+        ]
+      } else if (start !== undefined) {
+        if (start >= resourceSize) return []
+
         // Only start specified (e.g., "100-")
-        return {
-          start: range.start,
-          end: resourceSize - 1,
-        }
+        return [
+          {
+            start,
+            end: resourceSize - 1,
+          },
+        ]
       } else {
         // Only end specified (e.g., "-500" means last 500 bytes)
-        let suffix = range.end!
-        return {
-          start: Math.max(0, resourceSize - suffix),
-          end: resourceSize - 1,
-        }
+        if (end === undefined || end === 0) return []
+
+        return [
+          {
+            start: Math.max(0, resourceSize - end),
+            end: resourceSize - 1,
+          },
+        ]
       }
     })
   }
@@ -170,8 +242,14 @@ export class Range implements HeaderValue, RangeInit {
               continue
             }
 
-            let start = startStr ? parseInt(startStr, 10) : undefined
-            let end = endStr ? parseInt(endStr, 10) : undefined
+            // Compare decimal strings before capping oversized bounds.
+            if (startStr && endStr && compareRangeBounds(startStr, endStr) > 0) {
+              hasInvalidPart = true
+              continue
+            }
+
+            let start = parseRangeBound(startStr)
+            let end = parseRangeBound(endStr)
 
             // If both bounds are specified, start must be <= end
             if (start !== undefined && end !== undefined && start > end) {

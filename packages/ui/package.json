@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/ui",
-  "version": "0.12.1",
+  "version": "0.13.1",
   "description": "Headless, accessible UI primitives and animation utilities for Remix components",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -40,6 +40,10 @@
     "./combobox": {
       "types": "./src/combobox.tsx",
       "default": "./src/combobox.tsx"
+    },
+    "./form": {
+      "types": "./src/form.ts",
+      "default": "./src/form.ts"
     },
     "./listbox": {
       "types": "./src/listbox.ts",
@@ -85,6 +89,10 @@
         "types": "./dist/combobox.d.ts",
         "default": "./dist/combobox.js"
       },
+      "./form": {
+        "types": "./dist/form.d.ts",
+        "default": "./dist/form.js"
+      },
       "./listbox": {
         "types": "./dist/listbox.d.ts",
         "default": "./dist/listbox.js"
@@ -113,7 +121,8 @@
     }
   },
   "dependencies": {
-    "@remix-run/component": "workspace:^"
+    "@remix-run/component": "workspace:^",
+    "@remix-run/data-schema": "workspace:*"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",

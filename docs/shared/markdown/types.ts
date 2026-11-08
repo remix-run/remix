@@ -26,5 +26,7 @@ export type HighlightCodeOptions = {
 
 export type MarkdownHtmlOptions = {
   highlightCode?: HighlightCodeOptions
+  /** Wraps each `h2` and the content that follows it in a `<section class="docs-section">`. */
+  sections?: boolean
   transformLink?: (href: string) => string | null | undefined
 }

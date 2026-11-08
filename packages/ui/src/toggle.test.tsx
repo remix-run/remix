@@ -2,8 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 import { createRoot, type RemixNode } from '@remix-run/component'
 
-import { ToggleChangeEvent, onToggleChange } from './toggle.ts'
-import * as toggle from './toggle.ts'
+import { ToggleChangeEvent, onToggleChange, toggle } from './toggle.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
@@ -27,7 +26,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('toggle.control', () => {
+describe('toggle', () => {
   it('tracks switch state on a native checkbox input', () => {
     let changes: boolean[] = []
     let events: ToggleChangeEvent[] = []
@@ -41,7 +40,7 @@ describe('toggle.control', () => {
       >
         <input
           aria-label="Notifications"
-          mix={toggle.control({
+          mix={toggle({
             defaultChecked: true,
             inputRef: (input) => {
               inputRef = input
@@ -80,7 +79,7 @@ describe('toggle.control', () => {
     let { container, root } = renderApp(
       <span
         aria-label="Standalone span"
-        mix={toggle.control({
+        mix={toggle({
           onCheckedChange: (checked) => {
             changes.push(checked)
           },
@@ -108,7 +107,7 @@ describe('toggle.control', () => {
     let { container, root } = renderApp(
       <>
         <input
-          mix={toggle.control({
+          mix={toggle({
             defaultChecked: true,
             disabled: true,
             onCheckedChange: (checked) => {
@@ -117,7 +116,7 @@ describe('toggle.control', () => {
           })}
         />
         <input
-          mix={toggle.control({
+          mix={toggle({
             defaultChecked: true,
             onCheckedChange: (checked) => {
               readOnlyChanges.push(checked)

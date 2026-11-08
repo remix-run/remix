@@ -228,6 +228,172 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
   })
 
+  it('loads the current version when an updated module is requested later as an entry', async (t) => {
+    let fixture = await createHmrFixture({ counterBareImport: true })
+    let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
+    let entrySource = await fs.readFile(entryPath, 'utf-8')
+    await fs.writeFile(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
+    let sharedPath = path.join(fixture.rootDir, 'app/shared.ts')
+    await write(fixture.rootDir, 'app/shared.ts', "export const value = 'before'")
+    await write(fixture.rootDir, 'app/package.json', JSON.stringify({ sideEffects: false }))
+    await write(fixture.rootDir, 'app/shared-barrel.ts', "export { value } from './shared.ts'")
+    let hmrConsumerPath = path.join(fixture.rootDir, 'app/hmr-consumer.ts')
+    await fs.writeFile(
+      hmrConsumerPath,
+      [
+        "import { value } from './shared.ts'",
+        'document.body.dataset.hmrValue = value',
+        "if (import.meta.hot) import.meta.hot.accept('./shared.ts', module => {",
+        '  document.body.dataset.hmrValue = module?.value',
+        '})',
+      ].join('\n'),
+    )
+    let lateEntryPath = path.join(fixture.rootDir, 'app/late.ts')
+    await write(
+      fixture.rootDir,
+      'app/late.ts',
+      [
+        "import { value } from './shared-barrel.ts'",
+        'document.body.dataset.lateValue = value',
+      ].join('\n'),
+    )
+    let server = await createHmrTestServer(fixture)
+    let initialEntry = await server.getScriptEntry(entryPath)
+    let page = await t.serve(server)
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'before')
+    await waitForText(page, '[data-testid="increment"]', 'Package: Increment')
+    let installedImportMap = await page.locator('script[type="importmap"]').textContent()
+    assert.ok(installedImportMap)
+    assert.deepEqual(JSON.parse(installedImportMap), initialEntry.importMap)
+    assert.deepEqual(JSON.parse(installedImportMap).scopes['/assets/app/'], {
+      'test-package': '/assets/app/test-package.ts',
+    })
+
+    await fs.writeFile(sharedPath, "export const value = 'after'")
+    await page.locator('body[data-hmr-value="after"]').waitFor()
+
+    let currentEntry = await server.getScriptEntry(entryPath)
+    assert.deepEqual(currentEntry.importMap, initialEntry.importMap)
+    assert.doesNotMatch(JSON.stringify(currentEntry.importMap), /[?&]t=/)
+    assert.equal(await page.locator('script[type="importmap"]').textContent(), installedImportMap)
+
+    let updatedEntry = await server.getScriptEntry(sharedPath)
+    assert.match(updatedEntry.href, /\/shared\.ts\?t=\d+$/)
+    assert.ok(updatedEntry.preloads.includes(updatedEntry.href))
+
+    let updatedBoundaryEntry = await server.getScriptEntry(hmrConsumerPath)
+    assert.match(updatedBoundaryEntry.href, /\/hmr-consumer\.ts\?t=\d+$/)
+    assert.ok(updatedBoundaryEntry.preloads.includes(updatedBoundaryEntry.href))
+
+    await fs.writeFile(sharedPath, "export const value = 'after again'")
+    await page.locator('body[data-hmr-value="after again"]').waitFor()
+
+    let latestEntry = await server.getScriptEntry(sharedPath)
+    assert.match(latestEntry.href, /\/shared\.ts\?t=\d+$/)
+    assert.notEqual(latestEntry.href, updatedEntry.href)
+    assert.ok(latestEntry.preloads.includes(latestEntry.href))
+
+    let latestBoundaryEntry = await server.getScriptEntry(hmrConsumerPath)
+    assert.match(latestBoundaryEntry.href, /\/hmr-consumer\.ts\?t=\d+$/)
+    assert.notEqual(latestBoundaryEntry.href, updatedBoundaryEntry.href)
+    assert.ok(latestBoundaryEntry.preloads.includes(latestBoundaryEntry.href))
+    assert.deepEqual(latestBoundaryEntry.importMap, updatedBoundaryEntry.importMap)
+    assert.doesNotMatch(JSON.stringify(latestBoundaryEntry.importMap), /[?&]t=/)
+
+    let lateEntry = await server.getScriptEntry(lateEntryPath)
+    assert.match(lateEntry.href, /\/late\.ts$/)
+    assert.ok(lateEntry.preloads.includes(latestEntry.href))
+    assert.doesNotMatch(JSON.stringify(lateEntry.importMap), /[?&]t=/)
+    let lateEntrySource = await fetch(new URL(lateEntry.href, server.baseUrl)).then((response) =>
+      response.text(),
+    )
+    assert.ok(lateEntrySource.includes(latestEntry.href))
+    assert.doesNotMatch(lateEntrySource, /shared-barrel\.ts/)
+    await page.evaluate(async (href) => import(href), lateEntry.href)
+    assert.equal(await page.locator('body').getAttribute('data-late-value'), 'after again')
+  })
+
+  it('evaluates updated side-effect modules once through optimized barrel imports', async (t) => {
+    let fixture = await createHmrFixture()
+    let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
+    let entrySource = await fs.readFile(entryPath, 'utf-8')
+    await fs.writeFile(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
+    await write(
+      fixture.rootDir,
+      'app/package.json',
+      JSON.stringify({ sideEffects: ['./shared.ts'] }),
+    )
+    let sharedSource = [
+      'document.body.dataset.sharedEvaluations = String(',
+      '  Number(document.body.dataset.sharedEvaluations ?? 0) + 1,',
+      ')',
+      "export const shared = 'before'",
+    ].join('\n')
+    await write(fixture.rootDir, 'app/shared.ts', sharedSource)
+    await write(fixture.rootDir, 'app/unused.ts', "import './shared.ts'\nexport const unused = 0")
+    await write(
+      fixture.rootDir,
+      'app/value.ts',
+      "import { shared } from './shared.ts'\nexport const value = shared",
+    )
+    await write(
+      fixture.rootDir,
+      'app/shared-barrel.ts',
+      "export { unused } from './unused.ts'\nexport { value } from './value.ts'",
+    )
+    await write(
+      fixture.rootDir,
+      'app/hmr-consumer.ts',
+      [
+        "import { value } from './shared-barrel.ts'",
+        'document.body.dataset.hmrValue = value',
+        'if (import.meta.hot) import.meta.hot.accept()',
+      ].join('\n'),
+    )
+    let lateEntryPath = path.join(fixture.rootDir, 'app/late.ts')
+    await write(
+      fixture.rootDir,
+      'app/late.ts',
+      "import { value } from './shared-barrel.ts'\ndocument.body.dataset.lateValue = value",
+    )
+
+    let server = await createHmrTestServer(fixture)
+    let page = await t.serve(server)
+    t.after(fixture.close)
+    await navigateToHmrPage(page)
+    assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'before')
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '1')
+
+    let accepted = waitForConsoleMessage(
+      page,
+      '[remix] HMR accepted update /assets/app/hmr-consumer.ts',
+    )
+    await write(fixture.rootDir, 'app/shared.ts', sharedSource.replace("'before'", "'after'"))
+    await page.locator('body[data-hmr-value="after"]').waitFor()
+    await accepted
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '2')
+
+    let lateEntry = await server.getScriptEntry(lateEntryPath)
+    let lateEntrySource = await fetch(new URL(lateEntry.href, server.baseUrl)).then((response) =>
+      response.text(),
+    )
+    // A removed branch reaches shared.ts before value.ts, so the optimiser must emit this
+    // side-effect-only import as well as the named import of value.ts.
+    assert.ok(lateEntrySource.includes('import "/assets/app/shared.ts'))
+    assert.doesNotMatch(lateEntrySource, /shared-barrel\.ts|unused\.ts/)
+    await page.evaluate(async (href) => import(href), lateEntry.href)
+    assert.equal(await page.locator('body').getAttribute('data-late-value'), 'after')
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '2')
+
+    // A new document has neither URL cached, so inconsistent import URLs would execute shared.ts
+    // twice rather than silently reuse its pre-update instance.
+    await navigateToHmrPage(page)
+    assert.equal(await page.locator('body').getAttribute('data-hmr-value'), 'after')
+    assert.equal(await page.locator('body').getAttribute('data-shared-evaluations'), '1')
+  })
+
   it('recovers an accepted browser module after a failed transform is fixed', async (t) => {
     let fixture = await createHmrFixture()
 
@@ -341,6 +507,14 @@ describe('asset server HMR', () => {
     await secondAccepted
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  })
+
+  it('uses the startup managed import map nonce for HMR import maps', async (t) => {
+    await assertHmrImportMapNonce(t, 'import-map')
+  })
+
+  it('uses the startup document metadata nonce for HMR import maps', async (t) => {
+    await assertHmrImportMapNonce(t, 'meta')
   })
 
   it('applies updates with new import map entries', async (t) => {
@@ -1088,6 +1262,70 @@ describe('asset server HMR', () => {
   })
 })
 
+async function assertHmrImportMapNonce(
+  t: TestContext,
+  source: 'import-map' | 'meta',
+): Promise<void> {
+  let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+  t.after(fixture.close)
+  let page = await t.serve(await createHmrTestServer(fixture))
+  let nonce = 'hmr-document-nonce'
+  await page.route('**/', async (route) => {
+    let response = await route.fetch()
+    let html = (await response.text())
+      .replace(
+        '<script type="importmap">',
+        `<meta name="rmx-nonce" nonce="${source === 'meta' ? nonce : 'other-nonce'}">` +
+          `<script ${source === 'import-map' ? 'data-rmx-import-map ' : ''}nonce="${nonce}" type="importmap">`,
+      )
+      .replace('<script type="module"', `<script nonce="${nonce}" type="module"`)
+    await route.fulfill({
+      response,
+      body: html,
+      headers: {
+        ...response.headers(),
+        'Content-Security-Policy': `script-src 'self' 'nonce-${nonce}' blob:`,
+      },
+    })
+  })
+  await page.addInitScript(() => {
+    let violations: string[] = []
+    Reflect.set(window, 'cspViolations', violations)
+    document.addEventListener('securitypolicyviolation', (event) => {
+      violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+    })
+  })
+  await navigateToHmrPage(page)
+  await waitForText(page, '[data-testid="increment"]', 'Increment')
+  await page.locator('[data-testid="field"]').fill('keep me')
+  await page.evaluate(() => {
+    for (let element of document.querySelectorAll<HTMLElement>(
+      'meta[name="rmx-nonce"],script[type="importmap"]',
+    )) {
+      element.nonce = 'later-response-nonce'
+    }
+  })
+
+  await write(
+    fixture.rootDir,
+    'app/counter.ts',
+    getCounterModuleSource({ bareImport: true, buttonText: 'Increment with CSP' }),
+  )
+
+  await waitForText(page, '[data-testid="increment"]', 'Package: Increment with CSP')
+  assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  assert.equal(
+    await page.evaluate(
+      () =>
+        Array.from(document.querySelectorAll<HTMLScriptElement>('script[type="importmap"]')).at(-1)
+          ?.nonce,
+    ),
+    nonce,
+  )
+  assert.deepEqual(await page.evaluate(() => Reflect.get(window, 'cspViolations')), [])
+}
+
 type HmrFixture = {
   close(): Promise<void>
   renderDocument?: (assetServer: AssetServer) => Promise<ReadableStream<Uint8Array>>
@@ -1103,6 +1341,7 @@ type NodeHmrFixture = {
 type HmrTestServer = {
   baseUrl: string
   close(): Promise<void>
+  getScriptEntry(filePath: string): ReturnType<AssetServer['getScriptEntry']>
   restartAssets(): Promise<void>
   startAssets(): Promise<void>
   stopAssets(): Promise<void>
@@ -2118,6 +2357,10 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
+    getScriptEntry(filePath) {
+      if (!assetServer) throw new Error('Asset server is not running')
+      return assetServer.getScriptEntry(filePath)
+    },
     async restartAssets() {
       await stopAssets()
       await startAssets()
@@ -2159,8 +2402,18 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
       usePolling: true,
     })
 
-    browserHmrWatcher.on('all', (event, filePath) => {
+    // Match node-hmr's duplicate change suppression. A poll that lands between a write's truncate
+    // and its data reports the change again on the next poll, with identical stats, which would
+    // apply one edit as two HMR updates.
+    let changeStatsByFilePath = new Map<string, string>()
+    browserHmrWatcher.on('all', (event, filePath, stats) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
+      if (event === 'change' && stats) {
+        let { birthtimeMs, ctimeMs, ino, mtimeMs, size } = stats
+        let changeStats = [birthtimeMs, ctimeMs, ino, mtimeMs, size].join(':')
+        if (changeStatsByFilePath.get(filePath) === changeStats) return
+        changeStatsByFilePath.set(filePath, changeStats)
+      }
       pendingBrowserHmrEvents = pendingBrowserHmrEvents
         .then(() => handleBrowserHmrFileEvent({ event, filePath }))
         .catch((error: unknown) => {
@@ -2472,7 +2725,7 @@ async function writeFetchResponse(
 function waitForConsoleMessage(
   page: TestPage,
   text: string,
-  options: { signal?: AbortSignal } = {},
+  options: { signal?: AbortSignal; startAfterNavigation?: boolean } = {},
 ): Promise<void> {
   attachPageDiagnostics(page)
   let startedAt = Date.now()
@@ -2480,18 +2733,29 @@ function waitForConsoleMessage(
     let consoleMessages: string[] = []
     let pageErrors: string[] = []
     let timeoutMs = text === '[remix] HMR connected' ? hmrConnectionTimeout : consoleMessageTimeout
-    let timeout = setTimeout(() => {
-      rejectWait(
-        new Error(
-          [
-            `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
-            ...consoleMessages.map((message) => `console: ${message}`),
-            ...pageErrors.map((message) => `pageerror: ${message}`),
-            formatPageDiagnostics(page),
-          ].join('\n'),
-        ),
-      )
-    }, timeoutMs)
+    let timeout: ReturnType<typeof setTimeout> | undefined
+
+    function startTimeout() {
+      startedAt = Date.now()
+      timeout = setTimeout(() => {
+        rejectWait(
+          new Error(
+            [
+              `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
+              ...consoleMessages.map((message) => `console: ${message}`),
+              ...pageErrors.map((message) => `pageerror: ${message}`),
+              formatPageDiagnostics(page),
+            ].join('\n'),
+          ),
+        )
+      }, timeoutMs)
+    }
+
+    if (options.startAfterNavigation) {
+      page.on('framenavigated', handleNavigation)
+    } else {
+      startTimeout()
+    }
 
     page.on('close', handlePageClose)
     page.on('console', handleConsole)
@@ -2502,6 +2766,7 @@ function waitForConsoleMessage(
 
     function cleanup() {
       clearTimeout(timeout)
+      page.off('framenavigated', handleNavigation)
       page.off('close', handlePageClose)
       page.off('console', handleConsole)
       page.off('pageerror', handlePageError)
@@ -2520,6 +2785,12 @@ function waitForConsoleMessage(
 
     function handlePageClose() {
       rejectWait(new Error(`Page closed while waiting for console message: ${text}`))
+    }
+
+    function handleNavigation(frame: { parentFrame(): unknown }) {
+      if (frame.parentFrame() !== null) return
+      page.off('framenavigated', handleNavigation)
+      startTimeout()
     }
 
     function handleConsole(message: { text(): string }) {
@@ -2545,6 +2816,8 @@ async function navigateToHmrPage(page: TestPage) {
   let controller = new AbortController()
   let connected = waitForConsoleMessage(page, '[remix] HMR connected', {
     signal: controller.signal,
+    // The document request has its own navigation deadline; HMR starts after it commits.
+    startAfterNavigation: true,
   })
 
   try {

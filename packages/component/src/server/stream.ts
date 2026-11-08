@@ -6,9 +6,9 @@ import type {
   RemixNode,
   RenderFn,
 } from '../runtime/component.ts'
-import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/jsx.ts'
+import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
 import type { ElementFunction } from '../runtime/element-function.ts'
-import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
+import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
@@ -21,14 +21,23 @@ import {
 } from '../runtime/core/attributes.ts'
 import {
   appendFlushMarker,
+  DOCUMENT_NONCE_META_NAME,
   FRAME_TEMPLATE_END_MARKER,
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps, resolveMixDescriptors } from '../runtime/core/mix.ts'
+import {
+  composeMixedProps,
+  isBrowserOnlyMixinDescriptor,
+  isMixinDescriptor,
+} from '../runtime/core/mix.ts'
+import { getSelectValues } from '../runtime/core/select.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
+import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
+import { createRemixElement, isRemixElement } from '../runtime/core/vnode.ts'
+import { ESCAPED_OBJECT, SERIALIZATION_TAGS } from '../runtime/props-serialization.ts'
 
 interface VNode {
   type: ElementType
@@ -53,6 +62,16 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
 }
 
 /**
+ * Options for server-side rendering to an HTML string.
+ */
+export interface RenderToStringOptions {
+  /**
+   * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
+   */
+  nonce?: string
+}
+
+/**
  * Options for server-side rendering to a byte stream.
  */
 export interface RenderToStreamOptions {
@@ -64,6 +83,10 @@ export interface RenderToStreamOptions {
   signal?: AbortSignal
   /** Error hook invoked when rendering work throws. */
   onError?: (error: unknown) => void
+  /**
+   * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
+   */
+  nonce?: string
   /** Callback used to resolve nested frame content during streaming SSR. */
   resolveFrame?: (
     src: string,
@@ -87,18 +110,23 @@ export interface ResolveFrameContext {
   currentFrameSrc: string
   /** Source URL for the top-level frame in the current render. */
   topFrameSrc: string
+  /**
+   * Nonce from the enclosing render. Pass it to nested `renderToStream()` calls so generated
+   * elements use the document's Content Security Policy nonce.
+   */
+  nonce?: string
 }
 
 interface HydrationData {
   moduleUrl: string
   exportName: string
-  props: Record<string, unknown>
+  propsJson: string
 }
 
 interface UnresolvedHydrationData {
   entryId: string
   component: EntryComponent
-  props: Record<string, unknown>
+  propsJson: string
 }
 
 interface ResolvedClientEntry {
@@ -124,6 +152,18 @@ type ImportMapImports = Record<string, ImportMapAddress>
 type AuthoredImportMapEntries = Map<string, ImportMapAddress>
 type AuthoredImportMapScope = { imports: AuthoredImportMapEntries }
 type StaticSegment = { kind: 'static'; html: string }
+interface DocumentElementSegments {
+  open: StaticSegment
+  close: StaticSegment
+}
+
+interface DocumentSegments {
+  depth?: number
+  html?: DocumentElementSegments
+  head?: DocumentElementSegments
+  body?: DocumentElementSegments
+}
+
 type ManagedImportMap = {
   attrs: string
   segment: StaticSegment
@@ -154,6 +194,7 @@ export function ImportMap(handle: Handle<ImportMapProps>): RenderFn {
 }
 
 interface ClientEntryHeadResources {
+  // Preload tags stay nonce-free until the enclosing render serializes its head.
   modulePreloadTags: Set<string>
   importMap?: ImportMapData
 }
@@ -165,8 +206,13 @@ interface FrameData {
 }
 
 interface RenderContext {
+  selectValues?: Set<string>
+  selectScalar?: boolean
+  optionText?: string
   insideSvg: boolean
   insideHead: boolean
+  elementDepth: number
+  documentSegments: DocumentSegments
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
@@ -176,6 +222,7 @@ interface RenderContext {
     context?: ResolveFrameContext,
   ) => Promise<string | ReadableStream<Uint8Array>> | string | ReadableStream<Uint8Array>
   pendingFrames: Array<{ frameId: string; promise: Promise<ResolvedFrameHtml> }>
+  blockingFrames: Promise<void>[]
   hydrationData: Map<string, HydrationData>
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   authoredImportMapImports: AuthoredImportMapEntries
@@ -189,6 +236,7 @@ interface RenderContext {
   flushKind: FlushKind
   serverIdScope: string
   serverIdCounter: number
+  nonce?: string
 }
 
 interface ResolvedFrameHtml {
@@ -201,18 +249,16 @@ interface SsrFrameState {
   topFrame: FrameHandle
 }
 
-type Segment =
-  | StaticSegment
-  | { kind: 'composite'; parts: Segment[] }
-  | {
-      kind: 'frame'
-      frameId: string
-      content: Segment | null
-      pending?: Promise<void>
-    }
+type FrameSegment = { kind: 'frame'; frameId: string; content: Segment[] | string | null }
+type Segment = string | StaticSegment | FrameSegment
+
+const MAX_BUFFERED_HTML_LENGTH = 64 * 1024
+// UTF-8 needs at most three bytes per UTF-16 code unit.
+const htmlEncodingBuffer = new Uint8Array(MAX_BUFFERED_HTML_LENGTH * 3)
 
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
+const SELECT_VALUE_PROPS = new Set(['value', 'defaultValue'])
 
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 function stripDoctypeMarkup(html: string): string {
@@ -285,10 +331,13 @@ export function renderToStream(
   let context: RenderContext = {
     insideSvg: false,
     insideHead: false,
+    elementDepth: 0,
+    documentSegments: {},
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
     pendingFrames: [],
+    blockingFrames: [],
     hydrationData: new Map(),
     unresolvedHydrationData: new Map(),
     authoredImportMapImports: new Map(),
@@ -302,52 +351,52 @@ export function renderToStream(
     flushKind: 'fragment',
     serverIdScope: crypto.randomUUID().slice(0, 8),
     serverIdCounter: 0,
+    nonce: options?.nonce,
   }
 
   function cancel(reason: unknown): void {
+    signal?.removeEventListener('abort', onAbort)
     if (!renderAbortController.signal.aborted) {
       renderAbortController.abort(reason)
     }
   }
 
   let signal = options?.signal
+  function onAbort(): void {
+    cancel(signal?.reason)
+  }
   if (signal?.aborted) {
     cancel(signal.reason)
   } else {
-    signal?.addEventListener('abort', () => cancel(signal.reason), { once: true })
+    signal?.addEventListener('abort', onAbort, { once: true })
   }
 
   return new ReadableStream({
     async start(controller) {
       try {
         let root = buildSegment(node, context, rootFrameState)
-        await resolveBlocking(root)
+        // Await in document order so the first rejecting frame determines the error.
+        for (let frame of context.blockingFrames) await frame
         if (closeIfCancelled(controller, context)) return
         await resolveClientEntries(context, options?.resolveClientEntry)
         if (closeIfCancelled(controller, context)) return
         validateClientEntriesForHydration(context)
         finalizeManagedImportMap(context)
-        let html = serializeSegment(root)
-        let finalHtml = finalizeHtml(html, context)
-        let bytes = encoder.encode(appendFlushMarker(finalHtml, context.flushKind))
+        let finalHtml = finalizeHtml(root, context)
+        let bytes = encodeHtml(appendFlushMarker(finalHtml, context.flushKind), encoder)
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
 
-        // If we have any tails from blocking frame streams, stream them now.
-        // These contain nested non-blocking frame templates (or other follow-up chunks)
-        // that must come after the initial document chunk.
-        let tailPromise =
-          context.blockingFrameTails.length > 0
-            ? streamByteStreams(context.blockingFrameTails, controller, context)
-            : Promise.resolve()
-
-        // If we have pending non-blocking frames, stream them as they resolve
-        let pendingPromise =
-          context.pendingFrames.length > 0
-            ? streamPendingFrames(context, controller, encoder)
-            : Promise.resolve()
-
-        await Promise.all([tailPromise, pendingPromise])
+        if (context.blockingFrameTails.length > 0) {
+          let tails = streamByteStreams(context.blockingFrameTails, controller, context)
+          if (context.pendingFrames.length > 0) {
+            await Promise.all([tails, streamPendingFrames(context, controller, encoder)])
+          } else {
+            await tails
+          }
+        } else if (context.pendingFrames.length > 0) {
+          await streamPendingFrames(context, controller, encoder)
+        }
 
         if (closeIfCancelled(controller, context)) return
         controller.close()
@@ -358,12 +407,22 @@ export function renderToStream(
         }
         onError(error)
         controller.error(error)
+      } finally {
+        signal?.removeEventListener('abort', onAbort)
       }
     },
     cancel(reason) {
       cancel(reason)
     },
   })
+}
+
+function encodeHtml(html: string, encoder: TextEncoder): Uint8Array {
+  if (html.length > MAX_BUFFERED_HTML_LENGTH) return encoder.encode(html)
+
+  // Encoding is synchronous. Copy the written bytes so streams never share the scratch buffer.
+  let { written } = encoder.encodeInto(html, htmlEncodingBuffer)
+  return htmlEncodingBuffer.slice(0, written)
 }
 
 function isSignalAbortError(signal: AbortSignal, error: unknown): boolean {
@@ -401,10 +460,11 @@ function createSsrFrameState(frameSrc: string, topFrameSrc = frameSrc): SsrFrame
   return { frame, topFrame }
 }
 
-function getResolveFrameContext(frameState: SsrFrameState): ResolveFrameContext {
+function getResolveFrameContext(frameState: SsrFrameState, nonce?: string): ResolveFrameContext {
   return {
     currentFrameSrc: frameState.frame.src,
     topFrameSrc: frameState.topFrame.src,
+    nonce,
   }
 }
 
@@ -480,29 +540,25 @@ async function resolveFrameHtml(
   return splitFirstChunk(input)
 }
 
-function isRemixElement(node: unknown): node is RemixElement {
-  return typeof node === 'object' && node !== null && '$rmx' in node
-}
-
-function staticSeg(html: string): StaticSegment {
-  return { kind: 'static', html }
-}
-
-function compositeSeg(parts: Segment[]): Segment {
-  return { kind: 'composite', parts }
-}
-
-function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFrameState): Segment {
+function buildSegment(
+  node: RemixNode,
+  context: RenderContext,
+  frameState: SsrFrameState,
+  output: Segment[] = [],
+): Segment[] {
   if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
-    return staticSeg(escapeTextContent(String(node)))
+    if (context.optionText !== undefined) context.optionText += String(node)
+    output.push(escapeTextContent(String(node)))
+    return output
   }
 
   if (node === null || node === undefined || typeof node === 'boolean') {
-    return staticSeg('')
+    return output
   }
 
   if (Array.isArray(node)) {
-    return compositeSeg(node.map((child) => buildSegment(child, context, frameState)))
+    for (let child of node) buildSegment(child, context, frameState, output)
+    return output
   }
 
   if (isRemixElement(node)) {
@@ -511,7 +567,8 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
 
     if (type === Fragment) {
       let children = props.children
-      return children != null ? buildSegment(children, context, frameState) : staticSeg('')
+      if (children != null) buildSegment(children, context, frameState, output)
+      return output
     }
 
     if (typeof type === 'string') {
@@ -519,44 +576,44 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
 
       if (tag === 'html') {
         context.flushKind = 'document'
-        return buildElementSegment(tag, props, context, frameState)
       }
 
       if (tag === 'head') {
-        return buildHeadElementSegment(tag, props, context, frameState)
+        buildHeadElementSegment(tag, props, context, frameState, output)
+      } else {
+        buildElementSegment(tag, props, context, frameState, output)
       }
-
-      return buildElementSegment(tag, props, context, frameState)
+      return output
     }
 
     if (isElementFunction(type)) {
       if (type === ImportMap) {
-        return buildImportMapSegment(props, context)
+        output.push(buildImportMapSegment(props, context))
+      } else if (isFrameComponent(type)) {
+        output.push(buildFrameSegment(node, context, frameState))
+      } else if (isEntry(type)) {
+        buildEntrySegment(type, props, context, frameState, output)
+      } else {
+        buildComponentSegment(
+          type,
+          props,
+          context,
+          createServerComponentId(context),
+          frameState,
+          output,
+        )
       }
-      if (type === Frame) {
-        return buildFrameSegment(node, context, frameState)
-      }
-      if (isEntry(type)) {
-        return buildEntrySegment(type, props, context, frameState)
-      }
-      return buildComponentSegment(
-        type,
-        props,
-        context,
-        createServerComponentId(context),
-        frameState,
-      )
     }
   }
 
-  return staticSeg('')
+  return output
 }
 
 function buildFrameSegment(
   node: RemixElement,
   context: RenderContext,
   frameState: SsrFrameState,
-): Segment {
+): FrameSegment {
   let props = node.props
   let frameId = randomId('f')
 
@@ -567,13 +624,13 @@ function buildFrameSegment(
     src: props.src,
   })
 
-  let seg: Segment = {
+  let seg: FrameSegment = {
     kind: 'frame',
     frameId,
     content: null,
   }
 
-  let resolveFrameContext = getResolveFrameContext(frameState)
+  let resolveFrameContext = getResolveFrameContext(frameState, context.nonce)
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
     seg.content = buildSegment(props.fallback, context, frameState)
@@ -590,14 +647,14 @@ function buildFrameSegment(
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
       html = hoistClientEntryResourcesFromFrameHead(html, context.clientEntryHeadResources)
-      seg.content = staticSeg(html)
+      seg.content = html
       if (tail) {
         context.blockingFrameTails.push(tail)
       }
     })
     // An earlier blocking frame may reject before this promise is awaited.
     framePromise.catch(() => {})
-    seg.pending = framePromise
+    context.blockingFrames.push(framePromise)
   }
 
   return seg
@@ -608,7 +665,8 @@ function buildElementSegment(
   props: any,
   context: RenderContext,
   frameState: SsrFrameState,
-): Segment {
+  output: Segment[],
+): void {
   let normalizedProps = normalizeUnsafeHTMLProps(props)
   let innerHTML = normalizedProps.innerHTML
   let mixedProps = resolveSsrMixedProps(tag, normalizedProps, context, frameState)
@@ -617,20 +675,48 @@ function buildElementSegment(
   let currentIsSvg = context.insideSvg || tag === 'svg'
 
   if (!currentIsSvg && tag === 'textarea') {
-    return buildTextareaElementSegment(tag, processedProps)
+    output.push(buildTextareaElementSegment(tag, processedProps))
+    return
+  }
+
+  if (!currentIsSvg && tag === 'option' && context.selectValues !== undefined) {
+    buildSelectedOptionSegment(processedProps, context, frameState, output)
+    return
   }
 
   let attrs =
     !currentIsSvg && tag === 'input'
       ? renderInputAttributes(processedProps)
-      : renderAttributes(tag, processedProps, currentIsSvg)
+      : renderAttributes(
+          tag,
+          processedProps,
+          currentIsSvg,
+          !currentIsSvg && tag === 'select' ? SELECT_VALUE_PROPS : undefined,
+        )
 
   if (SELF_CLOSING_TAGS.has(tag)) {
-    return staticSeg(`<${tag}${attrs} />`)
+    output.push(`<${tag}${attrs} />`)
+    return
   }
 
+  let documentElement =
+    !currentIsSvg && (tag === 'html' || tag === 'body')
+      ? createDocumentElementSegments(tag, attrs, context)
+      : undefined
+  let open = documentElement?.open ?? `<${tag}${attrs}>`
+  let close = documentElement?.close ?? `</${tag}>`
+
   if (innerHTML !== undefined) {
-    return staticSeg(`<${tag}${attrs}>${innerHTML}</${tag}>`)
+    if (!currentIsSvg && (tag === 'select' || tag === 'optgroup')) {
+      invariant(
+        tag === 'select'
+          ? processedProps.value == null && processedProps.defaultValue == null
+          : context.selectValues === undefined,
+        'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
+      )
+    }
+    output.push(open, innerHTML, close)
+    return
   }
 
   if (tag === 'script') {
@@ -638,29 +724,70 @@ function buildElementSegment(
       if (context.insideHead) {
         collectAuthoredImportMap(context, tag, processedProps, props.children)
       }
-      return staticSeg(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
+      output.push(`<${tag}${attrs}>${escapeScriptTextContent(props.children)}</${tag}>`)
+      return
     }
     if (props.children != null) {
       console.error(new Error('script elements with children must have a single string child'))
     }
-    return staticSeg(`<${tag}${attrs}></${tag}>`)
+    output.push(`<${tag}${attrs}></${tag}>`)
+    return
   }
 
-  let open = staticSeg(`<${tag}${attrs}>`)
+  output.push(open)
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
-  let children =
-    props.children != null ? buildSegment(props.children, context, frameState) : staticSeg('')
+  let previousSelectValues = context.selectValues
+  let previousSelectScalar = context.selectScalar
+  if (!currentIsSvg && tag === 'select') {
+    let value = processedProps.value ?? processedProps.defaultValue
+    context.selectValues = getSelectValues(value)
+    context.selectScalar =
+      !processedProps.multiple || (processedProps.value != null && !Array.isArray(value))
+  }
+  context.elementDepth++
+  if (props.children != null) buildSegment(props.children, context, frameState, output)
+  context.elementDepth--
+  context.selectValues = previousSelectValues
+  context.selectScalar = previousSelectScalar
   context.insideSvg = previousInsideSvg
-  let close = staticSeg(`</${tag}>`)
-  return compositeSeg([open, children, close])
+  output.push(close)
+}
+
+function buildSelectedOptionSegment(
+  props: ElementProps,
+  context: RenderContext,
+  frameState: SsrFrameState,
+  output: Segment[],
+): void {
+  invariant(
+    props.innerHTML === undefined || props.value != null,
+    'option elements with innerHTML must have an explicit value when their select has a value or defaultValue',
+  )
+  let previousOptionText = context.optionText
+  context.optionText = ''
+  context.elementDepth++
+  let children =
+    props.innerHTML === undefined
+      ? buildSegment(props.children, context, frameState)
+      : [props.innerHTML]
+  context.elementDepth--
+  // Native options without a value use their text with ASCII whitespace collapsed.
+  let value = props.value ?? context.optionText.replace(/[\t\n\f\r ]+/g, ' ').replace(/^ | $/g, '')
+  context.optionText = previousOptionText
+  let selected = context.selectValues?.has(String(value))
+  if (selected && context.selectScalar) context.selectValues?.clear()
+  let attrs = renderAttributes('option', { ...props, selected }, false)
+  output.push(`<option${attrs}>`)
+  output.push(...children)
+  output.push('</option>')
 }
 
 function buildTextareaElementSegment(tag: string, props: any): Segment {
   let attrs = renderAttributes(tag, props, false, TEXTAREA_VALUE_PROPS)
   let value = props.value ?? props.defaultValue ?? ''
-  return staticSeg(`<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`)
+  return `<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`
 }
 
 function collectAuthoredImportMap(
@@ -726,8 +853,11 @@ function buildImportMapSegment(props: ElementProps, context: RenderContext): Seg
   }
 
   let { value: _value, ...scriptProps } = props
+  if (scriptProps.nonce === undefined && context.nonce !== undefined) {
+    scriptProps.nonce = context.nonce
+  }
   let attrs = renderAttributes('script', scriptProps, false)
-  let segment = staticSeg('')
+  let segment: StaticSegment = { kind: 'static', html: '' }
   context.managedImportMaps.push({ attrs, segment, value })
   return segment
 }
@@ -752,19 +882,41 @@ function buildHeadElementSegment(
   props: any,
   context: RenderContext,
   frameState: SsrFrameState,
-): Segment {
+  output: Segment[],
+): void {
   let processedProps = processStyleProps(props)
   let attrs = renderAttributes(tag, processedProps, false)
+  let head = createDocumentElementSegments('head', attrs, context)
 
-  let open = staticSeg(`<${tag}${attrs}>`)
+  output.push(head.open)
   let previousInsideHead = context.insideHead
   context.insideHead = true
-  let children =
-    props.children != null ? buildSegment(props.children, context, frameState) : staticSeg('')
+  context.elementDepth++
+  if (props.children != null) buildSegment(props.children, context, frameState, output)
+  context.elementDepth--
   context.insideHead = previousInsideHead
-  let close = staticSeg(`</${tag}>`)
+  output.push(head.close)
+}
 
-  return compositeSeg([open, children, close])
+function createDocumentElementSegments(
+  tag: 'html' | 'head' | 'body',
+  attrs: string,
+  context: RenderContext,
+): DocumentElementSegments {
+  let segments: DocumentElementSegments = {
+    open: { kind: 'static', html: `<${tag}${attrs}>` },
+    close: { kind: 'static', html: `</${tag}>` },
+  }
+  let document = context.documentSegments
+  if (tag === 'html') {
+    if (!document.html) {
+      document.html = segments
+      document.depth = context.elementDepth
+    }
+  } else if (document.depth !== undefined && context.elementDepth === document.depth + 1) {
+    document[tag] ??= segments
+  }
+  return segments
 }
 
 function renderAttributes(
@@ -781,18 +933,16 @@ function renderAttributes(
     if (!isAllowedHostPropName(key)) continue
 
     let value = props[key]
+    if (value === undefined || value === null) continue
     let attrName = transformAttributeName(key, isSvg)
-    let shouldStringifyBoolean = shouldStringifyBooleanAttribute(attrName)
-    if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
-      continue
-    }
-    value = sanitizeUrlAttribute(tag, attrName, value)
-
-    if (typeof value === 'boolean' && shouldStringifyBoolean) {
-      attrs += ` ${attrName}="${escapeHtml(String(value))}"`
-    } else if (value === true) {
-      attrs += ` ${attrName}`
+    if (typeof value === 'boolean') {
+      if (shouldStringifyBooleanAttribute(attrName)) {
+        attrs += ` ${attrName}="${value}"`
+      } else if (value) {
+        attrs += ` ${attrName}`
+      }
     } else {
+      value = sanitizeUrlAttribute(tag, attrName, value)
       attrs += ` ${attrName}="${escapeHtml(String(value))}"`
     }
   }
@@ -806,9 +956,23 @@ function resolveSsrMixedProps(
   context: RenderContext,
   frameState: SsrFrameState,
 ): ElementProps {
-  if (resolveMixDescriptors(initialProps).length === 0) return initialProps
+  let mix = initialProps.mix
+  if (!mix) return initialProps
+  if (Array.isArray(mix)) {
+    let hasServerMixin = false
+    for (let descriptor of mix) {
+      if (descriptor && !isBrowserOnlyMixinDescriptor(descriptor)) {
+        hasServerMixin = true
+        break
+      }
+    }
+    if (!hasServerMixin) return initialProps
+  } else if (isBrowserOnlyMixinDescriptor(mix)) {
+    return initialProps
+  }
 
   return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
+    if (isBrowserOnlyMixinDescriptor(descriptor)) return undefined
     let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState)
     if (!runner) return undefined
     // Unlike the client runtime, a throwing mixin is isolated here so a
@@ -846,12 +1010,10 @@ function createSsrMixinHandle(
   context: RenderContext,
   frameState: SsrFrameState,
 ) {
-  let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () => ({
-    $rmx: true as const,
-    type: hostType,
-    key: null,
-    props: handle.props,
-  })) as ((handle: {
+  // Context lookups read the shared render context, so capture the parent before it moves on.
+  let parentVNode = context.parentVNode
+  let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () =>
+    createRemixElement(hostType, handle.props, null)) as ((handle: {
     props: ElementProps
     update(): Promise<AbortSignal>
   }) => () => RemixElement) & {
@@ -867,7 +1029,7 @@ function createSsrMixinHandle(
           return undefined
         }
 
-        let current = context.parentVNode
+        let current = parentVNode
         while (current) {
           if (current.type === providerType) {
             let providerHandle = current._handle
@@ -904,13 +1066,18 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
+function isFrameComponent(type: unknown): boolean {
+  return typeof type === 'function' && Object.hasOwn(type, FRAME_NODE)
+}
+
 function buildComponentSegment(
   type: ElementFunction,
   props: any,
   context: RenderContext,
   componentId: string,
   frameState: SsrFrameState,
-): Segment {
+  output: Segment[],
+): void {
   let vnode = createVNode(type, props)
   if (context.parentVNode) {
     vnode._parent = context.parentVNode
@@ -945,29 +1112,15 @@ function buildComponentSegment(
 
   vnode._handle = handle
   let [renderedNode] = handle.render(props)
-  let childContext = { ...context, parentVNode: vnode }
-
-  let rendered = buildSegment(renderedNode, childContext, frameState)
-  if (childContext.flushKind === 'document') {
-    context.flushKind = 'document'
-  }
-  return rendered
+  let previousParentVNode = context.parentVNode
+  context.parentVNode = vnode
+  buildSegment(renderedNode, context, frameState, output)
+  context.parentVNode = previousParentVNode
 }
 
 function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
-  function unwrapNode(node: RemixNode): unknown {
-    if (node === null || node === undefined || typeof node === 'boolean') return node
-    if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
-      return node
-    }
-    if (Array.isArray(node)) {
-      return node.map((child) => unwrapNode(child))
-    }
-    if (isRemixElement(node)) {
-      return unwrapElement(node)
-    }
-    return node
-  }
+  let escapedObjects = new WeakMap<object, { [ESCAPED_OBJECT]: Record<string, unknown> }>()
+  let escapedContents = new WeakSet<object>()
 
   function unwrapElement(element: RemixElement): unknown {
     let type = element.type
@@ -975,17 +1128,27 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
 
     // Preserve Frame semantics through serialized props by emitting
     // a dedicated descriptor that can be revived on the client.
-    if (type === Frame) {
+    if (isFrameComponent(type)) {
       return {
         $rmxFrame: true,
-        props: transformProps(props),
+        props,
         key: element.key,
       }
     }
 
-    // If it's a DOM tag, return a serializable shape with transformed props
+    // Fragment renders null and relies on the reconciler to render its
+    // children, so it can't go through the component branch below.
+    if (type === Fragment) {
+      return {
+        $rmxFragment: true,
+        props,
+        key: serializeKey(element.key),
+      }
+    }
+
+    // JSON visits the descriptor's props next, transforming each nested value once.
     if (typeof type === 'string') {
-      return { $rmx: true, type, props: transformProps(props) }
+      return { $rmx: true, type, props, key: serializeKey(element.key) }
     }
 
     // Component function: render synchronously, then unwrap its result
@@ -1023,40 +1186,52 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
 
       vnode._handle = handle
       let [renderedNode] = handle.render(props)
-      return unwrapNode(renderedNode)
+      return replacer('', renderedNode)
     }
 
     return null
   }
 
-  function transformProps(input: ElementProps): Record<string, unknown> {
-    let out: Record<string, unknown> = {}
-    for (let key in input) {
-      let value = input[key]
-      if (key === 'children') {
-        out[key] = unwrapNode(value)
-      } else {
-        if (isRemixElement(value)) {
-          out[key] = unwrapNode(value)
-        } else if (Array.isArray(value)) {
-          out[key] = value.map((v) => unwrapNode(v))
-        } else {
-          out[key] = value
-        }
-      }
+  function replacer(_key: string, value: unknown): unknown {
+    if (typeof value !== 'object' || value === null || escapedContents.has(value)) return value
+    // Mixin descriptors hold their setup function, which JSON drops. `css()`
+    // only holds style data, so it's revived in the browser by name.
+    if (isMixinDescriptor(value)) {
+      return isCSSMixinDescriptor(value)
+        ? { $rmxMixin: 'css', args: value.args }
+        : { $rmxMixin: null }
     }
-    return out
-  }
-
-  return function replacer(_key: string, value: unknown) {
     if (isRemixElement(value)) {
       return unwrapElement(value)
     }
-    if (Array.isArray(value)) {
-      return value.map((v) => unwrapNode(v))
+    if (!Array.isArray(value) && SERIALIZATION_TAGS.some((tag) => Object.hasOwn(value, tag))) {
+      // Keep values in object properties so JSON still omits undefined, functions,
+      // symbols, and values whose toJSON returns them. JSON already called toJSON
+      // on this object, so don't copy that method into the wrapper's contents.
+      let contents = Object.fromEntries(
+        Object.entries(value).filter(
+          ([key, item]) => key !== 'toJSON' || typeof item !== 'function',
+        ),
+      )
+      let escaped = escapedObjects.get(value) ?? { [ESCAPED_OBJECT]: contents }
+      escaped[ESCAPED_OBJECT] = contents
+      // Reuse wrappers so circular input still triggers JSON's circular-reference error.
+      escapedObjects.set(value, escaped)
+      escapedContents.add(contents)
+      return escaped
     }
     return value
   }
+
+  return replacer
+}
+
+// Other key types don't survive JSON: bigints throw, and objects are revived
+// with a new identity on every render, so keyed diffs would remount them.
+function serializeKey(key: unknown): string | number | undefined {
+  if (typeof key === 'string') return key
+  if (typeof key === 'number' && Number.isFinite(key)) return key
+  return undefined
 }
 
 function buildEntrySegment(
@@ -1064,21 +1239,23 @@ function buildEntrySegment(
   props: any,
   context: RenderContext,
   frameState: SsrFrameState,
-): Segment {
+  output: Segment[],
+): void {
   let instanceId = randomId('h')
-  let rendered = buildComponentSegment(type, props, context, instanceId, frameState)
+  output.push(`<!-- rmx:h:${instanceId} -->`)
+  buildComponentSegment(type, props, context, instanceId, frameState, output)
 
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, frameState)
+  let propsJson = JSON.stringify(props, replacer)
+  if (propsJson === undefined) throw new TypeError('Client entry props must serialize to JSON')
   context.unresolvedHydrationData.set(instanceId, {
     entryId: type.$entryId,
     component: type,
-    props: JSON.parse(JSON.stringify(props, replacer)),
+    propsJson,
   })
 
-  let start = staticSeg(`<!-- rmx:h:${instanceId} -->`)
-  let end = staticSeg('<!-- /rmx:h -->')
-  return compositeSeg([start, rendered, end])
+  output.push('<!-- /rmx:h -->')
 }
 
 function resolveDefaultClientEntry(
@@ -1121,7 +1298,7 @@ async function resolveClientEntries(
   let resolvedEntries = new Map<EntryComponent, ResolvedClientEntry>()
 
   for (let [hydrationId, unresolvedHydrationData] of context.unresolvedHydrationData) {
-    let { entryId, component, props } = unresolvedHydrationData
+    let { entryId, component, propsJson } = unresolvedHydrationData
     let resolvedEntry = resolvedEntries.get(component)
     if (!resolvedEntry) {
       resolvedEntry = resolveClientEntry
@@ -1135,7 +1312,7 @@ async function resolveClientEntries(
     context.hydrationData.set(hydrationId, {
       exportName: resolvedEntry.exportName,
       moduleUrl: resolvedEntry.href,
-      props,
+      propsJson,
     })
   }
 
@@ -1202,35 +1379,26 @@ function validateClientEntriesForHydration(context: RenderContext): void {
   }
 }
 
-// Resolve all blocking frame content once
-async function resolveBlocking(segment: Segment): Promise<void> {
-  if (segment.kind === 'frame') {
-    if (segment.pending) {
-      await segment.pending
-      segment.pending = undefined
+// Joining once avoids building a deep rope of thousands of small strings, which raises RSS.
+function serializeSegment(segments: Segment[]): string {
+  let parts: string[] = []
+  for (let seg of segments) {
+    if (typeof seg === 'string') {
+      parts.push(seg)
+    } else if (seg.kind === 'static') {
+      parts.push(seg.html)
+    } else {
+      parts.push(`<!-- rmx:f:${seg.frameId} -->`)
+      if (typeof seg.content === 'string') parts.push(seg.content)
+      else if (seg.content) parts.push(serializeSegment(seg.content))
+      parts.push('<!-- /rmx:f -->')
     }
-    if (segment.content) await resolveBlocking(segment.content)
-    return
   }
-  if (segment.kind === 'composite') {
-    for (let part of segment.parts) {
-      await resolveBlocking(part)
-    }
-  }
-}
-
-// Serialize the segment tree to HTML
-function serializeSegment(seg: Segment): string {
-  if (seg.kind === 'static') return seg.html
-  if (seg.kind === 'composite') return seg.parts.map(serializeSegment).join('')
-  // frame
-  let inner = seg.content ? serializeSegment(seg.content) : ''
-  let start = `<!-- rmx:f:${seg.frameId} -->`
-  let end = `<!-- /rmx:f -->`
-  return start + inner + end
+  return parts.join('')
 }
 
 function escapeHtml(str: string): string {
+  if (!/[&<>"']/.test(str)) return str
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -1240,6 +1408,7 @@ function escapeHtml(str: string): string {
 }
 
 function escapeTextContent(str: string): string {
+  if (!/[&<>]/.test(str)) return str
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
@@ -1261,69 +1430,52 @@ function transformAttributeName(name: string, isSvg: boolean): string {
   return normalizeAttributeName(name, isSvg).attr
 }
 
-function finalizeHtml(html: string, context: RenderContext): string {
-  let hasHtmlRoot = context.flushKind === 'document'
-
-  let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
+function finalizeHtml(root: Segment[], context: RenderContext): string {
+  let preloads = collectModulePreloadTags(context.clientEntryHeadResources, context.nonce)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
-  let headContent = importMapScript + preloads + styles
-  if (hasHtmlRoot && headContent) {
-    let headCloseIndex = html.indexOf('</head>')
-    if (headCloseIndex !== -1) {
-      html = html.slice(0, headCloseIndex) + headContent + html.slice(headCloseIndex)
-    } else {
-      let htmlOpenMatch = html.match(/<html[^>]*>/)
-      if (htmlOpenMatch) {
-        let insertIndex = htmlOpenMatch.index! + htmlOpenMatch[0].length
-        html = html.slice(0, insertIndex) + `<head>${headContent}</head>` + html.slice(insertIndex)
-      } else {
-        html = headContent + html
-      }
-    }
-  }
-
-  if (!hasHtmlRoot && headContent) {
-    html = `<head>${headContent}</head>${html}`
-  }
-
-  // Append aggregated hydration/frame data script at the end
+  let nonceMeta =
+    context.flushKind === 'document' && context.nonce !== undefined
+      ? `<meta name="${DOCUMENT_NONCE_META_NAME}" content=""${renderNonceAttribute(context.nonce)}>`
+      : ''
+  let headContent = nonceMeta + importMapScript + preloads + styles
   let rmxData = buildRmxDataScript(context)
-  if (rmxData) {
-    if (hasHtmlRoot) {
-      // Insert before </body> if present, otherwise before </html>
-      let bodyCloseIndex = html.indexOf('</body>')
-      if (bodyCloseIndex !== -1) {
-        html = html.slice(0, bodyCloseIndex) + rmxData + html.slice(bodyCloseIndex)
-      } else {
-        let htmlCloseIndex = html.indexOf('</html>')
-        if (htmlCloseIndex !== -1) {
-          html = html.slice(0, htmlCloseIndex) + rmxData + html.slice(htmlCloseIndex)
-        } else {
-          html += rmxData
-        }
-      }
-    } else {
-      html += rmxData
-    }
+  if (context.flushKind !== 'document') {
+    return (headContent ? `<head>${headContent}</head>` : '') + serializeSegment(root) + rmxData
   }
+  if (!headContent && !rmxData) return serializeSegment(root)
 
-  return html
+  // Use the rendered element boundaries so raw script and frame contents cannot
+  // be mistaken for document tags.
+  let { html, head, body } = context.documentSegments
+  invariant(html, 'Missing document element segments')
+  if (headContent) {
+    if (head) head.close.html = headContent + head.close.html
+    else html.open.html += `<head>${headContent}</head>`
+  }
+  if (rmxData) {
+    let close = (body ?? html).close
+    close.html = rmxData + close.html
+  }
+  return serializeSegment(root)
 }
 
 const FRAME_HEAD_OPEN_TAG = '<head>'
 const FRAME_HEAD_CLOSE_TAG = '</head>'
 const MARKED_MODULE_PRELOAD_START = '<link data-rmx-module-preload rel="modulepreload" href="'
 const MODULE_PRELOAD_END = '" />'
-const MANAGED_IMPORT_MAP_START = '<script data-rmx-import-map type="importmap">'
+const MANAGED_IMPORT_MAP_OPEN_TAG =
+  /^<script data-rmx-import-map type="importmap"(?: nonce="[^"]*")?>/
 const IMPORT_MAP_SCRIPT_END = '</script>'
 
 function createModulePreloadTag(href: string): string {
   return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
 }
 
-function collectModulePreloadTags(resources: ClientEntryHeadResources): string {
-  return Array.from(resources.modulePreloadTags).join('')
+function collectModulePreloadTags(resources: ClientEntryHeadResources, nonce?: string): string {
+  return Array.from(resources.modulePreloadTags, (tag) =>
+    tag.replace(' />', () => `${renderNonceAttribute(nonce)} />`),
+  ).join('')
 }
 
 function hoistClientEntryResourcesFromFrameHead(
@@ -1338,8 +1490,9 @@ function hoistClientEntryResourcesFromFrameHead(
   let preloadTags: string[] = []
   let importMaps: ImportMapData[] = []
   let cursor = FRAME_HEAD_OPEN_TAG.length
-  if (html.startsWith(MANAGED_IMPORT_MAP_START, cursor)) {
-    let contentStart = cursor + MANAGED_IMPORT_MAP_START.length
+  let importMapOpenTag = html.slice(cursor).match(MANAGED_IMPORT_MAP_OPEN_TAG)
+  if (importMapOpenTag) {
+    let contentStart = cursor + importMapOpenTag[0].length
     let scriptEnd = html.indexOf(IMPORT_MAP_SCRIPT_END, contentStart)
     if (scriptEnd === -1 || scriptEnd >= headClose) return html
     importMaps.push(parseFrameworkImportMap(html.slice(contentStart, scriptEnd)))
@@ -1347,10 +1500,18 @@ function hoistClientEntryResourcesFromFrameHead(
   }
 
   while (html.startsWith(MARKED_MODULE_PRELOAD_START, cursor)) {
-    let tagEnd = html.indexOf(MODULE_PRELOAD_END, cursor + MARKED_MODULE_PRELOAD_START.length)
-    if (tagEnd === -1 || tagEnd >= headClose) return html
+    let hrefStart = cursor + MARKED_MODULE_PRELOAD_START.length
+    let hrefEnd = html.indexOf('"', hrefStart)
+    if (hrefEnd === -1 || hrefEnd >= headClose) return html
+
+    let tagEnd = html.indexOf(MODULE_PRELOAD_END, hrefEnd)
+    if (tagEnd === -1) return html
     tagEnd += MODULE_PRELOAD_END.length
-    preloadTags.push(html.slice(cursor, tagEnd))
+    if (tagEnd > headClose) return html
+
+    // Preserve the escaped href and discard the child response's nonce.
+    // The enclosing render applies its nonce when serializing the head.
+    preloadTags.push(html.slice(cursor, hrefEnd) + MODULE_PRELOAD_END)
     cursor = tagEnd
   }
 
@@ -1370,15 +1531,30 @@ function hoistClientEntryResourcesFromFrameHead(
   return `${FRAME_HEAD_OPEN_TAG}${remainingHeadHtml}${FRAME_HEAD_CLOSE_TAG}${contentAfterHead}`
 }
 
-function processStyleProps(props: any): any {
-  let processedProps = { ...props }
+function processStyleProps(props: ElementProps): ElementProps {
+  if (
+    !('class' in props) &&
+    typeof props.style !== 'object' &&
+    Object.getPrototypeOf(props) === Object.prototype
+  ) {
+    return props
+  }
+
   let classAttr = typeof props.class === 'string' ? props.class : ''
   let className = typeof props.className === 'string' ? props.className : ''
-  let mergedClassName = [classAttr, className].filter(Boolean).join(' ')
+  let mergedClassName = classAttr
+  if (className) mergedClassName = classAttr ? `${classAttr} ${className}` : className
 
+  let processedProps: ElementProps
   if (mergedClassName) {
+    // Copy without `delete`, which would leave the props object in slow dictionary mode.
+    processedProps = {}
+    for (let key of Object.keys(props)) {
+      if (key !== 'class') processedProps[key] = props[key]
+    }
     processedProps.className = mergedClassName
-    delete processedProps.class
+  } else {
+    processedProps = { ...props }
   }
 
   if (typeof props.style === 'object') {
@@ -1393,7 +1569,7 @@ function collectStyleTags(context: RenderContext): string {
 
   let tags: string[] = []
   for (let { selector, css } of context.styleCache.values()) {
-    let tag = renderStyleTag(selector, css)
+    let tag = renderStyleTag(selector, css, context.nonce)
     if (tag) tags.push(tag)
   }
   return tags.join('')
@@ -1412,11 +1588,18 @@ function wrapStyleForLayer(
 function renderStyleTag(
   selector: string,
   css: string,
+  nonce?: string,
   layer: string = REMIX_UI_STYLE_LAYER,
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''
-  return `<style data-rmx-style="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
+  return `<style data-rmx-style="${escapeHtml(selector)}"${renderNonceAttribute(nonce)}>${escapeStyleText(
+    wrappedCss,
+  )}</style>`
+}
+
+function renderNonceAttribute(nonce: string | undefined): string {
+  return nonce === undefined ? '' : ` nonce="${escapeHtml(nonce)}"`
 }
 
 function escapeStyleText(css: string): string {
@@ -1429,20 +1612,22 @@ function buildRmxDataScript(context: RenderContext): string {
     return ''
   }
 
-  let data: {
-    h?: Record<string, HydrationData>
-    f?: Record<string, FrameData>
-  } = {}
-
+  let fields: string[] = []
   if (context.hydrationData.size > 0) {
-    data.h = Object.fromEntries(context.hydrationData)
+    let entries: string[] = []
+    for (let [id, { exportName, moduleUrl, propsJson }] of context.hydrationData) {
+      entries.push(
+        `${JSON.stringify(id)}:{"exportName":${JSON.stringify(exportName)},"moduleUrl":${JSON.stringify(moduleUrl)},"props":${propsJson}}`,
+      )
+    }
+    fields.push(`"h":{${entries.join(',')}}`)
   }
 
   if (context.frameData.size > 0) {
-    data.f = Object.fromEntries(context.frameData)
+    fields.push(`"f":${JSON.stringify(Object.fromEntries(context.frameData))}`)
   }
 
-  let serializedData = escapeScriptJson(JSON.stringify(data))
+  let serializedData = escapeScriptJson(`{${fields.join(',')}}`)
   return `<script type="application/json" id="rmx-data">${serializedData}</script>`
 }
 
@@ -1456,7 +1641,7 @@ function collectImportMapScript(
   resources: ClientEntryHeadResources,
 ): string {
   let importMap = getImportMapDelta(context, resources.importMap)
-  return importMap ? buildImportMapScript(importMap) : ''
+  return importMap ? buildImportMapScript(importMap, renderNonceAttribute(context.nonce)) : ''
 }
 
 function finalizeManagedImportMap(context: RenderContext): void {
@@ -1786,14 +1971,20 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
 
 /**
  * Renders a node tree to a complete HTML string.
+ * Render errors reject the returned promise.
  *
  * @param node Node tree to render.
+ * @param options Rendering options.
  * @returns Rendered HTML.
  */
-export async function renderToString(node: RemixNode): Promise<string> {
+export async function renderToString(
+  node: RemixNode,
+  options?: RenderToStringOptions,
+): Promise<string> {
   return stripFlushMarkers(
     await drain(
       renderToStream(node, {
+        nonce: options?.nonce,
         onError(error) {
           throw error
         },

@@ -11,4 +11,5 @@ export const onKeyDown = createMixin<
         handler(event)
       }
     }),
+  { ssr: false },
 )

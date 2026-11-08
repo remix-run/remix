@@ -483,6 +483,10 @@ function createExportSource(entry: ExportEntry): string {
       `export * from '${entry.reExportFrom}'`,
     ]
 
+    if (entry.hasDefaultValueExport) {
+      lines.push(`export { default } from '${entry.reExportFrom}'`)
+    }
+
     lines.push('')
     return lines.join('\n')
   }
@@ -644,10 +648,10 @@ function classifyTopLevelNode(node: AstNode, classification: ExportClassificatio
   }
 
   if (node.type === 'ExportDefaultDeclaration') {
-    classification.hasDefaultValueExport = true
     if (getStringProperty(node, 'exportKind') === 'type') {
       classification.hasTypeExports = true
     } else {
+      classification.hasDefaultValueExport = true
       classification.hasValueExports = true
     }
     return
@@ -694,6 +698,10 @@ function classifyNamedExport(node: AstNode, classification: ExportClassification
       classification.hasTypeExports = true
     } else {
       classification.hasValueExports = true
+      let exported = getNodeProperty(specifier, 'exported')
+      if (exported?.name === 'default' || exported?.value === 'default') {
+        classification.hasDefaultValueExport = true
+      }
     }
   }
 }

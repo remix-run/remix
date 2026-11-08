@@ -47,10 +47,6 @@ export interface TabsContextProps {
   onActiveTabChange?: (activeTab: string) => void
 }
 
-export interface TabsRootOptions {}
-
-export interface TabListOptions {}
-
 export interface TabOptions {
   disabled?: boolean
   name: string
@@ -224,9 +220,9 @@ function TabsProvider(handle: Handle<TabsContextProps, TabsContextValue>): () =>
   }
 }
 
-const rootMixin: MixinFactory<HTMLElement, [options?: TabsRootOptions], ElementProps> = createMixin<
+const rootMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
   HTMLElement,
-  [options?: TabsRootOptions],
+  [],
   ElementProps
 >((handle) => {
   let context = getTabsContext(handle)
@@ -244,9 +240,9 @@ const rootMixin: MixinFactory<HTMLElement, [options?: TabsRootOptions], ElementP
     })
 })
 
-const listMixin: MixinFactory<HTMLElement, [options?: TabListOptions], ElementProps> = createMixin<
+const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
   HTMLElement,
-  [options?: TabListOptions],
+  [],
   ElementProps
 >((handle) => {
   let context = getTabsContext(handle)

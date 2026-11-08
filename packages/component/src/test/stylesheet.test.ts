@@ -248,6 +248,36 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 
+  it('leaves detached styles unadopted until they connect to the active document', () => {
+    let mgr = createStyleManager('rmx-test')
+    let style = document.createElement('style')
+    style.setAttribute('data-rmx-style', 'rmxc-detached')
+    style.textContent = '@layer rmx-test { .rmxc-detached { color: red; } }'
+
+    expect(Array.from(mgr.adoptServerStyles([style]))).toEqual([])
+    expect(mgr.has('rmxc-detached')).toBe(false)
+
+    document.head.append(style)
+    expect(Array.from(mgr.adoptServerStyles([style]))).toEqual(['rmxc-detached'])
+    expect(mgr.has('rmxc-detached')).toBe(true)
+
+    mgr.dispose()
+  })
+
+  it('does not pin an existing client rule from a detached server tag', () => {
+    let mgr = createStyleManager('rmx-test')
+    mgr.insert('rmxc-detached', '.rmxc-detached { color: red; }')
+    let style = document.createElement('style')
+    style.setAttribute('data-rmx-style', 'rmxc-detached')
+    style.textContent = '@layer rmx-test { .rmxc-detached { color: red; } }'
+
+    expect(Array.from(mgr.adoptServerStyles([style]))).toEqual([])
+    mgr.remove('rmxc-detached')
+    expect(mgr.has('rmxc-detached')).toBe(false)
+
+    mgr.dispose()
+  })
+
   it('does not start transitions when adopting server-rendered styles', async () => {
     let host = document.createElement('div')
     let serverStyle = document.createElement('style')

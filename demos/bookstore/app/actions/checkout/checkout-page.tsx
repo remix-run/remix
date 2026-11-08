@@ -1,13 +1,16 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
+import type { FormSubmission } from 'remix/data-schema/experimental/form'
 
 import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
+import { ShippingFields } from './public/shipping-form.tsx'
 
 export interface CheckoutPageProps {
   cart: Cart
   total: number
+  submission?: FormSubmission
 }
 
 export function EmptyCheckoutPage() {
@@ -17,7 +20,7 @@ export function EmptyCheckoutPage() {
         <h1>Checkout</h1>
         <p>Your cart is empty. Add some books before checking out.</p>
         <p mix={css({ marginTop: '1rem' })}>
-          <a href={routes.books.index.href()} class="btn">
+          <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
             Browse Books
           </a>
         </p>
@@ -68,38 +71,7 @@ export function CheckoutPage(handle: Handle<CheckoutPageProps>) {
 
         <div class="card" mix={css({ marginTop: '1.5rem' })}>
           <h2>Shipping Information</h2>
-          <form method="POST" action={routes.checkout.action.href()}>
-            <div class="form-group">
-              <label for="street">Street Address</label>
-              <input type="text" id="street" name="street" required />
-            </div>
-
-            <div class="form-group">
-              <label for="city">City</label>
-              <input type="text" id="city" name="city" required />
-            </div>
-
-            <div class="form-group">
-              <label for="state">State</label>
-              <input type="text" id="state" name="state" required />
-            </div>
-
-            <div class="form-group">
-              <label for="zip">ZIP Code</label>
-              <input type="text" id="zip" name="zip" required />
-            </div>
-
-            <button type="submit" class="btn">
-              Place Order
-            </button>
-            <a
-              href={routes.cart.index.href()}
-              class="btn btn-secondary"
-              mix={css({ marginLeft: '0.5rem' })}
-            >
-              Back to Cart
-            </a>
-          </form>
+          <ShippingFields submission={handle.props.submission} />
         </div>
       </Layout>
     )

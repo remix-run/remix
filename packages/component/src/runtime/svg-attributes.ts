@@ -69,40 +69,20 @@ for (let attr of CANONICAL_CAMEL_SVG_ATTRS) {
   SVG_ATTR_ALIASES.set(camelToKebab(attr), attr)
 }
 
-const NAMESPACED_SVG_ALIASES = new Map([
-  ['xlinkHref', { ns: XLINK_NS, attr: 'xlink:href' }],
-  ['xlink:href', { ns: XLINK_NS, attr: 'xlink:href' }],
-  ['xlink-href', { ns: XLINK_NS, attr: 'xlink:href' }],
-  ['xlinkActuate', { ns: XLINK_NS, attr: 'xlink:actuate' }],
-  ['xlink:actuate', { ns: XLINK_NS, attr: 'xlink:actuate' }],
-  ['xlink-actuate', { ns: XLINK_NS, attr: 'xlink:actuate' }],
-  ['xlinkArcrole', { ns: XLINK_NS, attr: 'xlink:arcrole' }],
-  ['xlink:arcrole', { ns: XLINK_NS, attr: 'xlink:arcrole' }],
-  ['xlink-arcrole', { ns: XLINK_NS, attr: 'xlink:arcrole' }],
-  ['xlinkRole', { ns: XLINK_NS, attr: 'xlink:role' }],
-  ['xlink:role', { ns: XLINK_NS, attr: 'xlink:role' }],
-  ['xlink-role', { ns: XLINK_NS, attr: 'xlink:role' }],
-  ['xlinkShow', { ns: XLINK_NS, attr: 'xlink:show' }],
-  ['xlink:show', { ns: XLINK_NS, attr: 'xlink:show' }],
-  ['xlink-show', { ns: XLINK_NS, attr: 'xlink:show' }],
-  ['xlinkTitle', { ns: XLINK_NS, attr: 'xlink:title' }],
-  ['xlink:title', { ns: XLINK_NS, attr: 'xlink:title' }],
-  ['xlink-title', { ns: XLINK_NS, attr: 'xlink:title' }],
-  ['xlinkType', { ns: XLINK_NS, attr: 'xlink:type' }],
-  ['xlink:type', { ns: XLINK_NS, attr: 'xlink:type' }],
-  ['xlink-type', { ns: XLINK_NS, attr: 'xlink:type' }],
-  ['xmlBase', { ns: XML_NS, attr: 'xml:base' }],
-  ['xml:base', { ns: XML_NS, attr: 'xml:base' }],
-  ['xml-base', { ns: XML_NS, attr: 'xml:base' }],
-  ['xmlLang', { ns: XML_NS, attr: 'xml:lang' }],
-  ['xml:lang', { ns: XML_NS, attr: 'xml:lang' }],
-  ['xml-lang', { ns: XML_NS, attr: 'xml:lang' }],
-  ['xmlSpace', { ns: XML_NS, attr: 'xml:space' }],
-  ['xml:space', { ns: XML_NS, attr: 'xml:space' }],
-  ['xml-space', { ns: XML_NS, attr: 'xml:space' }],
-  ['xmlnsXlink', { attr: 'xmlns:xlink' }],
-  ['xmlns:xlink', { attr: 'xmlns:xlink' }],
-  ['xmlns-xlink', { attr: 'xmlns:xlink' }],
+// Each namespaced attribute is accepted as `xlinkHref`, `xlink:href`, or `xlink-href`.
+const NAMESPACED_SVG_ATTR = /^(xlink|xmlns|xml)(?:[:-]([a-z]+)|([A-Z][a-z]+))$/
+const NAMESPACED_SVG_ATTRS = new Set([
+  'xlink:href',
+  'xlink:actuate',
+  'xlink:arcrole',
+  'xlink:role',
+  'xlink:show',
+  'xlink:title',
+  'xlink:type',
+  'xml:base',
+  'xml:lang',
+  'xml:space',
+  'xmlns:xlink',
 ])
 
 export function normalizeSvgAttributeName(name: string): string {
@@ -118,9 +98,14 @@ export function normalizeSvgAttribute(name: string): {
   ns?: string
   attr: string
 } {
-  let namespaced = NAMESPACED_SVG_ALIASES.get(name)
-  if (namespaced) {
-    return namespaced
+  let match = NAMESPACED_SVG_ATTR.exec(name)
+  if (match) {
+    let [, prefix, separatedName, camelName] = match
+    let attr = `${prefix}:${separatedName ?? camelName.toLowerCase()}`
+    if (NAMESPACED_SVG_ATTRS.has(attr)) {
+      if (prefix === 'xmlns') return { attr }
+      return { ns: prefix === 'xlink' ? XLINK_NS : XML_NS, attr }
+    }
   }
 
   return { attr: normalizeSvgAttributeName(name) }

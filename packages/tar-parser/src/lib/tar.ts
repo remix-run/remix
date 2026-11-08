@@ -459,6 +459,7 @@ export class TarParser {
   #buffer: Uint8Array | null = null
   #totalSize = 0
   #entryCount = 0
+  #zeroBlockCount = 0
   #missing = 0
   #header: TarHeader | null = null
   #bodyController: ReadableStreamDefaultController<Uint8Array> | null = null
@@ -552,6 +553,7 @@ export class TarParser {
     this.#buffer = null
     this.#totalSize = 0
     this.#entryCount = 0
+    this.#zeroBlockCount = 0
     this.#missing = 0
     this.#header = null
     this.#bodyController = null
@@ -568,6 +570,8 @@ export class TarParser {
       throw new MaxTotalSizeExceededError(this.maxTotalSize)
     }
     this.#totalSize += chunk.byteLength
+
+    if (this.#zeroBlockCount === 2) return
 
     if (this.#buffer !== null) {
       this.#buffer = concatChunks(this.#buffer, chunk)
@@ -607,8 +611,12 @@ export class TarParser {
 
     if (isZeroBlock(block)) {
       this.#header = null
+      this.#zeroBlockCount++
+      if (this.#zeroBlockCount === 2) this.#buffer = null
       return
     }
+
+    this.#zeroBlockCount = 0
 
     if (++this.#entryCount > this.maxEntries) {
       throw new MaxEntriesExceededError(this.maxEntries)

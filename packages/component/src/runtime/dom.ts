@@ -1,5 +1,5 @@
 import type { StyleProps } from '../style/style.ts'
-import type { RemixNode } from './jsx.ts'
+import type { RemixNode } from './core/vnode.ts'
 import type { MixInput } from './mixins/mixin.ts'
 import type { UnsafeHTML } from './unsafe-html.ts'
 
@@ -1795,6 +1795,8 @@ export interface PartialAnchorHTMLProps<
   'data-rmx-src'?: Trackable<string | undefined>
   /** Controls how activating this anchor updates the current history entry. */
   'data-rmx-history'?: Trackable<'push' | 'replace' | undefined>
+  /** Prefetches on hover, focus, or press (`intent`), or when the anchor enters the viewport. */
+  'data-rmx-prefetch'?: Trackable<'intent' | 'viewport' | undefined>
   /** Scroll behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
   'data-rmx-reset-scroll'?: Trackable<NavigationInterceptOptions['scroll'] | 'true' | 'false'>
   /** Focus reset behavior: `"after-transition"` (default) or `"manual"`; `"true"` and `"false"` are aliases. */
@@ -3229,7 +3231,7 @@ export interface OptionHTMLProps<
   label?: Trackable<string | undefined>
   /** The `role` HTML attribute. */
   role?: Trackable<'option' | undefined>
-  /** The `selected` HTML attribute. */
+  /** Selected state; the select’s `value` or initial `defaultValue` takes precedence. */
   selected?: Trackable<boolean | undefined>
   /** The `value` HTML attribute. */
   value?: Trackable<string | number | undefined>
@@ -3355,8 +3357,12 @@ export interface PartialSelectHTMLProps<
   autocomplete?: Trackable<string | undefined>
   /** The `autoComplete` HTML attribute. */
   autoComplete?: Trackable<string | undefined>
-  /** The `defaultValue` HTML attribute. */
-  defaultValue?: Trackable<string | number | undefined>
+  /**
+   * Initial selection and native reset defaults; arrays apply to multiple selects.
+   * Takes precedence over option `selected` props during initialization.
+   * Later changes are ignored unless `multiple` changes.
+   */
+  defaultValue?: Trackable<string | number | ReadonlyArray<string | number> | undefined>
   /** The `disabled` HTML attribute. */
   disabled?: Trackable<boolean | undefined>
   /** The `form` HTML attribute. */
@@ -3367,8 +3373,8 @@ export interface PartialSelectHTMLProps<
   required?: Trackable<boolean | undefined>
   /** The `size` HTML attribute. */
   size?: Trackable<number | undefined>
-  /** The `value` HTML attribute. */
-  value?: Trackable<string | number | undefined>
+  /** Selected value(s); arrays apply to multiple selects. */
+  value?: Trackable<string | number | ReadonlyArray<string | number> | undefined>
 }
 
 export type SelectAriaRoles =

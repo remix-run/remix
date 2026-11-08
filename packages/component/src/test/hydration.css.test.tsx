@@ -66,6 +66,135 @@ describe('hydration', () => {
       expect(existingDiv.className).toMatch(/rmxc-/)
     })
 
+    it('hydrates, updates, and removes unitless generated styles', async () => {
+      let layout = {
+        display: '-webkit-box',
+        webkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        whiteSpace: 'pre-line',
+        lineHeight: '10px',
+      }
+      let styles = {
+        ...layout,
+        webkitLineClamp: 4,
+        flex: 2,
+        marginTop: 8,
+        animation: 2,
+        borderImage: 3,
+        webkitMaskBoxImageWidth: 2,
+        shapeImageThreshold: 0.25,
+      }
+      let text = 'One\nTwo\nThree\nFour\nFive'
+      container.innerHTML = await renderToString(<div mix={[css(styles)]}>{text}</div>)
+
+      let div = container.querySelector('div')
+      invariant(div)
+      expect(getComputedStyle(div).webkitLineClamp).toBe('4')
+      expect(getComputedStyle(div).flexGrow).toBe('2')
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('2')
+      expect(getComputedStyle(div).borderImageSlice).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
+      expect(div.getBoundingClientRect().height).toBe(40)
+
+      let root = createRoot(container)
+      root.render(<div mix={[css(styles)]}>{text}</div>)
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(div)
+      expect(getComputedStyle(div).webkitLineClamp).toBe('4')
+      expect(getComputedStyle(div).flexGrow).toBe('2')
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('2')
+      expect(getComputedStyle(div).borderImageSlice).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
+      expect(div.getBoundingClientRect().height).toBe(40)
+
+      root.render(
+        <div
+          mix={[
+            css({
+              ...styles,
+              webkitLineClamp: 2,
+              flex: 3,
+              marginTop: 12,
+              animation: 3,
+              borderImage: 4,
+              webkitMaskBoxImageWidth: 3,
+              shapeImageThreshold: 0.75,
+            }),
+          ]}
+        >
+          {text}
+        </div>,
+      )
+      root.flush()
+
+      expect(getComputedStyle(div).webkitLineClamp).toBe('2')
+      expect(getComputedStyle(div).flexGrow).toBe('3')
+      expect(getComputedStyle(div).marginTop).toBe('12px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('3')
+      expect(getComputedStyle(div).borderImageSlice).toBe('4')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('3')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.75')
+      expect(div.getBoundingClientRect().height).toBe(20)
+
+      root.render(
+        <div mix={[css({ ...layout, webkitLineClamp: undefined, flex: null, marginTop: NaN })]}>
+          {text}
+        </div>,
+      )
+      root.flush()
+
+      expect(getComputedStyle(div).webkitLineClamp).toBe('none')
+      expect(getComputedStyle(div).flexGrow).toBe('0')
+      expect(getComputedStyle(div).marginTop).toBe('0px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('1')
+      expect(getComputedStyle(div).borderImageSlice).toBe('100%')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('auto')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0')
+      expect(div.getBoundingClientRect().height).toBe(50)
+      root.dispose()
+    })
+
+    it('keeps generated custom property names distinct through hydration, updates, and removal', async () => {
+      let styles = {
+        '--gapSize': 8,
+        '--gap-size': 12,
+        marginTop: 'calc(var(--gapSize, 0) * 1px)',
+        paddingTop: 'calc(var(--gap-size, 0) * 1px)',
+      }
+      container.innerHTML = await renderToString(<div mix={[css(styles)]}>Styled</div>)
+
+      let div = container.querySelector('div')
+      invariant(div)
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+
+      let root = createRoot(container)
+      root.render(<div mix={[css(styles)]}>Styled</div>)
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(div)
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+
+      root.render(<div mix={[css({ ...styles, '--gapSize': 16 })]}>Styled</div>)
+      root.flush()
+
+      expect(getComputedStyle(div).marginTop).toBe('16px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+
+      root.render(<div mix={[css({ ...styles, '--gapSize': undefined })]}>Styled</div>)
+      root.flush()
+
+      expect(getComputedStyle(div).marginTop).toBe('0px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+      root.dispose()
+    })
+
     it('hydrates css mixin combined with className', async () => {
       let html = await renderToString(
         <div className="my-class" mix={[css({ color: 'green' })]}>

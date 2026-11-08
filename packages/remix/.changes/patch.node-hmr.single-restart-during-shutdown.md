@@ -1,0 +1,1 @@
+Spawn a single replacement server when files change while the previous child process is still shutting down. Previously a second restart could start an extra child process that kept running in the background.

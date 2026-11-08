@@ -3,18 +3,16 @@ title: Interactivity
 description: How server-rendered UI hydrates, handles events, connects components to application models, navigates, and cancels stale work.
 ---
 
-In [Start Here](/start-here/), the album page, edit form, validation, mutation, and redirect all
-worked before we added browser JavaScript. Then we marked the form as a client entry so its submit
-button could show pending state.
-
-This chapter adds browser behavior to server-rendered components. We will mark a component for
-hydration, start the browser runtime, update local UI state, handle events, cancel stale async work,
-and enhance links and forms. For application state and business rules, components call ordinary
-TypeScript models and keep their own state focused on the UI.
+Remix renders pages on the server and hydrates only the components that need to run in the browser.
+This chapter covers marking those components with `clientEntry(...)`, starting the browser runtime
+with `run()`, updating local UI state, handling events with `on(...)` and other mixins, cancelling
+stale async work, and enhancing links and forms with client navigation. For application state and
+business rules, components call ordinary TypeScript models and keep their own state focused on the
+UI.
 
 ## Progressive enhancement {#progressive-enhancement}
 
-Begin with links and forms that already describe the request the server should receive. Our album
+Begin with links and forms that already describe the request the server should receive. This album
 form has a real action and method:
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
@@ -68,7 +66,7 @@ it needs rather than moving the whole page into browser code.
 
 ## Hydration boundaries with clientEntry {#cliententry}
 
-`clientEntry(...)` marks the smallest component that needs to run in the browser. The album edit page
+`clientEntry(...)` marks the smallest component that needs to run in the browser. An album edit page
 can remain server-only while its form hydrates:
 
 ```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx lines=[1,13-15]
@@ -100,13 +98,24 @@ export const AlbumEditForm = clientEntry(
 );
 ```
 
-On the server, this still renders like an ordinary component. In the browser, Remix loads the same
-component module and starts it with the props from the server-rendered page.
+The first argument identifies the component's module. With `import.meta.url`, Remix uses the
+function's name as the export name, so name the function the same as its export.
+
+On the server, this still renders like an ordinary component. The server wraps its output in a pair
+of HTML comments, `<!-- rmx:h:... -->` and `<!-- /rmx:h -->`, and serializes its props into the page.
+The comments mark a range of the document rather than adding a wrapper element, so the hydrated output
+can be any markup. In the browser, `run()` finds each range, loads the component's module with a
+normal `import()`, and hydrates the existing DOM in place with the serialized props.
+
+Each client entry hydrates on its own. A client entry rendered inside another one can read its
+ancestor's context, but sibling client entries don't share component context. Pass each sibling the
+data it needs as props, or connect them through an ordinary TypeScript module, as shown in [keeping application logic outside components](#saving-a-client-owned-document).
 
 Client-entry props cross from the server to the browser, so they must be serializable. They may
 contain strings, numbers, booleans, `null`, `undefined`, plain objects and arrays, and JSX elements.
 Do not pass functions, class instances, database records with custom prototypes, or other opaque
-runtime values.
+runtime values. Elements in props may use `css()`, but not other mixins such as `on()`, `ref()`, or
+custom mixins from `createMixin()`. Render elements that need those inside the client entry.
 
 Mark a boundary around interactive UI, not an entire page by habit. Static ancestors and siblings do
 not need to hydrate just because a button below them does. Keep the database, authenticated user,
@@ -115,7 +124,8 @@ browser-safe values it needs to handle its part of the page.
 
 ## Booting the browser runtime with run {#browser-entry-with-run}
 
-The document shell loads `app/actions/public/entry.ts`. That module calls `run()` once:
+Client entries hydrate once a browser entry module calls `run()`. Load that module, such as
+`app/actions/public/entry.ts`, from the document shell and call `run()` once:
 
 ```ts filename=app/actions/public/entry.ts
 import {
@@ -149,9 +159,15 @@ app.addEventListener("error", (event) => {
 await app.ready();
 ```
 
-`loadModule` imports the named component for every client entry discovered in the document. Browsers
-with multiple import map support use native imports and preloads. Browsers without that support use
-the polyfill when later frame responses introduce new mappings.
+`loadModule` imports the named component for every client entry discovered in the document. An
+[import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap)
+tells the browser which URL each bare module specifier resolves to, and Remix adds more of them as
+[client entries and frames load](/files-and-assets/#load-browser-scripts).
+Browsers that support multiple import maps on one page use native imports and preloads. Browsers without that support use
+the [`remix/multiple-import-maps-polyfill`](../src/multiple-import-maps-polyfill/README.md)
+shim when later frame responses introduce new mappings. If you only target browsers with native
+support, `loadModule` can call `import(moduleUrl)` directly and you can drop
+`processClientEntryPreloads`.
 
 The returned app runtime has three lifecycle methods:
 
@@ -163,12 +179,12 @@ The returned app runtime has three lifecycle methods:
 `run()` hydrates the server-rendered page. It is not a second application router. Browser requests
 still go to the route actions that own the corresponding server behavior.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) uses the default browser resolver for
-route-owned regions that load or reload independently.
+`run()` also provides a [default browser resolver for frames](/streaming-ui-with-frames/#resolve-frames-in-the-browser),
+the route-owned regions that load or reload independently.
 
 ## Mount client-only UI with createRoot {#client-only-roots}
 
-Use `createRoot(container)` when there is no server-rendered component to hydrate: for example, an
+Use `createRoot(container)` when there is no server-rendered component to hydrate, such as an
 imperative widget mounted into a container created by another application.
 
 ```tsx filename=app/actions/public/support-widget.tsx
@@ -191,12 +207,13 @@ if (container) {
 
 The root owns that container. `root.render(node)` schedules a tree, `root.flush()` applies pending
 work synchronously, and `root.dispose()` removes the tree and runs cleanup. Normal page UI should
-start on the server and use `clientEntry(...)`; otherwise users wait for JavaScript before they see
+start on the server and use `clientEntry(...)`. Otherwise users wait for JavaScript before they see
 content the server could have rendered.
 
 ## State, updates, and post-render tasks {#state-updates-and-post-render-tasks}
 
-Component-local UI state lives in setup scope. Change it in an event handler, then call
+Component-local UI state lives in [setup scope](/rendering-ui/#handle-props-setup-render-and-updates),
+the body of the component function that runs once before it returns its render function. Change it in an event handler, then call
 `handle.update()`:
 
 ```tsx
@@ -223,14 +240,26 @@ function Counter(handle: Handle<{ initialCount: number }>) {
 `count` lives in setup scope, so it survives each render without becoming part of the component's
 props.
 
-Calling `handle.update()` schedules work and returns a promise. Await it when the next step needs the
-updated DOM:
+Remix doesn't own your state. It's a plain variable, and you change it directly. `handle.update()` is
+the only signal that the component should render again. If you forget it, the component visibly
+doesn't change, which is usually easy to spot. Because a component only needs state and a way to
+request a render, you can build other patterns on top, such as a store or signals that call
+`handle.update()` when they change.
 
-Call it from an event handler, queued task, subscription, timer, or other work that runs after the
-component commits. Calling it during setup warns and skips the extra render because the initial
-render follows setup. Calling it during rendering, or before the initial commit from outside setup,
-throws an error. If rendering discovers work that should run after the commit, schedule that work
-with `handle.queueTask()`.
+Call `handle.update()` from an event handler, queued task, subscription, timer, or other work that
+runs after the component commits, meaning its rendered output has been applied to the DOM. Calling
+it during setup warns and skips the extra render because
+the initial render follows setup. Calling it during rendering, or before the initial commit from
+outside setup, throws an error. If rendering discovers work that should run after the commit,
+schedule that work with `handle.queueTask()`.
+
+Components rendered on the server run their setup and render functions there too. On the server,
+`handle.update()` throws and queued tasks never run. Start timers, read the DOM, and use browser
+globals such as `window` in event handlers or queued tasks, which only run in the browser. The
+Rendering UI guide shows [what each part of the handle does on the server and in the browser](/rendering-ui/#server-and-browser-work).
+
+`handle.update()` schedules work and returns a promise. Await it when the next step needs the updated
+DOM:
 
 ```tsx
 import { on, ref } from "remix/component";
@@ -258,7 +287,13 @@ function RenameButton(handle: Handle) {
 }
 ```
 
-The promise resolves to an `AbortSignal`, but capture it only if work continues across another async
+When an update removes the element that has focus, such as a dialog's close button, move focus back
+to the control that opened it the same way, so keyboard and screen reader users don't lose their
+place.
+
+The promise resolves to an
+[`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal), an object that
+reports when work should stop and that APIs such as `fetch()` accept for cancellation. Capture it only if work continues across another async
 boundary after the update. The runtime cannot abort the signal between `await handle.update()` and
 the next synchronous statement, so `input.focus()` does not need a signal check. When more async
 work follows, pass the signal to that work when possible and check it after the later `await` before
@@ -310,6 +345,9 @@ export function KeyedList(handle: Handle) {
   ];
 
   let shuffleInterval: ReturnType<typeof setInterval> | null = null;
+  handle.signal.addEventListener("abort", () => {
+    if (shuffleInterval !== null) clearInterval(shuffleInterval);
+  });
 
   let moveUp = (index: number) => {
     if (index === 0) return;
@@ -356,7 +394,8 @@ export function KeyedList(handle: Handle) {
 
   return () => (
     <div>
-      <div class="controls">
+      <p>Type in a field, then shuffle the list. Each field keeps its text.</p>
+      <div>
         <button mix={[on("click", reverse)]}>Reverse List</button>
         <button mix={[on("click", shuffle)]}>Shuffle List</button>
         <button mix={[on("click", toggleAutoShuffle)]}>
@@ -365,20 +404,10 @@ export function KeyedList(handle: Handle) {
       </div>
 
       {items.map((item, index) => (
-        <div key={item.id} class="list-item">
+        <div key={item.id}>
           <input type="text" placeholder={item.label} defaultValue={item.label} />
-          <button
-            // disabled={index === 0}
-            mix={[on("click", () => moveUp(index))]}
-          >
-            ↑
-          </button>
-          <button
-            // disabled={index === items.length - 1}
-            mix={[on("click", () => moveDown(index))]}
-          >
-            ↓
-          </button>
+          <button mix={[on("click", () => moveUp(index))]}>↑</button>
+          <button mix={[on("click", () => moveDown(index))]}>↓</button>
         </div>
       ))}
     </div>
@@ -388,9 +417,8 @@ export function KeyedList(handle: Handle) {
 
 Setup-scope variables are a good home for UI state such as whether a menu is open, which field has
 focus, or whether a request is pending. Put business rules and shared application state in ordinary
-TypeScript outside the component, then call that code from event handlers.
-[Keep application logic outside components](#saving-a-client-owned-document) shows how to update a
-component when an application model changes.
+TypeScript outside the component, then call that code from event handlers and
+[update the component when the model changes](#saving-a-client-owned-document).
 
 ## Events with on {#events-with-on}
 
@@ -421,8 +449,7 @@ touch, Enter, and Space activation. A form's `submit` event covers its submit bu
 field. Use lower-level pointer or keyboard events when the interaction itself requires them, not to
 rebuild behavior the platform already supplies.
 
-Use lower-level pointer and keyboard events only when the interaction needs them. If an event starts
-temporary listeners on `window` or `document`, give those listeners their own cleanup signal and
+If an event starts temporary listeners on `window` or `document`, give those listeners their own cleanup signal and
 stop them when the interaction finishes or the component disconnects.
 
 Only call `preventDefault()` when the enhanced path will finish the browser's job. If an event
@@ -483,6 +510,12 @@ Typing changes both inputs. Clicking the button resets the controlled input beca
 comes from `title`. The uncontrolled input keeps its DOM value because `defaultValue` only applies
 its initial value.
 
+Prefer uncontrolled inputs. Control an input only when something besides the user's typing changes
+its value, such as a reset button, a generated value, or formatting applied as the user types.
+Otherwise read the value from the event, or from
+[`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) on submit, so the component
+only stores state it renders.
+
 ## Composing behavior with mix {#the-mix-prop}
 
 The `mix` prop attaches reusable behavior and styles to host elements. Pass one mixin directly, or an
@@ -492,23 +525,21 @@ array when the element needs several:
 import { attrs, css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-const saveButtonStyle = css({
-  minWidth: "8rem",
-  minHeight: "2.5rem",
-  border: 0,
-  borderRadius: "999px",
-  background: "#111",
-  color: "#fff",
-});
-
 function SaveButton(_handle: Handle) {
   return () => (
     <button
       mix={[
-        saveButtonStyle,
         attrs({ type: "button" }),
         ref((node) => console.log("Mounted", node)),
         on("click", () => console.log("Save album")),
+        css({
+          minWidth: "8rem",
+          minHeight: "2.5rem",
+          border: 0,
+          borderRadius: "999px",
+          background: "#111",
+          color: "#fff",
+        }),
       ]}
     >
       Save
@@ -525,7 +556,15 @@ The core mixins serve different host-level jobs:
 - `link(...)` adds client navigation behavior and link semantics.
 - `css(...)` applies static generated CSS.
 
-Animation mixins use the same prop and are covered in [Animation](/animation/). Put frequently
+Components and mixins compose along different axes. Components compose the tree, so a component
+renders other components and host elements inside it. Mixins compose behavior and styles on one host
+element. To add a tooltip, a menu trigger, and a click handler to a button, keep the button where you
+render it and add a mixin for each behavior, rather than wrapping it in a component for each one.
+
+Mixins apply in array order. `on(...)` handlers for the same event run in that order, so calling `event.stopImmediatePropagation()` in one
+handler stops the handlers after it.
+
+[Animation mixins](/animation/#entrance-and-exit-animations) use the same prop. Put frequently
 changing values in normal props such as `style`, `value`, `checked`, and ARIA attributes rather than
 recreating static mixins for every state change.
 
@@ -672,7 +711,7 @@ cannot replace the newer results.
 ## Keep application logic outside components {#saving-a-client-owned-document}
 
 Setup-scope variables make component state easy, but they do not make the component the right owner
-for every rule. Keep state in the component when it describes the current UI: whether a panel is
+for every rule. Keep state in the component when it describes the current UI, such as whether a panel is
 open, which element should receive focus, or whether a request is pending. Put application data and
 operations in ordinary TypeScript that the component calls.
 
@@ -755,16 +794,19 @@ export const Cart = clientEntry(import.meta.url, function Cart(handle: Handle<Ca
 
 `cart.addEventListener()` connects model changes to `handle.update()`, and `handle.signal` removes the
 subscription when the component disconnects. If several components use the same model, create it at
-their nearest shared client boundary and provide it through component context. Do not pass a class
+their nearest shared client boundary and provide it through [component context](/rendering-ui/#handle-props-setup-render-and-updates). Do not pass a class
 instance through `clientEntry(...)` props because those props are serialized.
 
-This separation keeps each test focused. Test cart rules without a DOM. Use a component test for the
-details button and rendered item count because those depend on the component and DOM.
+With this split, you can test cart rules without a DOM and save
+[component tests](/testing/#test-remix-components-in-the-browser) for the details button and rendered
+item count, which depend on the component and DOM.
 
 ## Client navigation {#client-navigation}
 
 Keep using real anchors for links. After `run()` starts, the runtime can enhance same-origin
-navigations through the browser's Navigation API. Cross-origin links, downloads, and navigations the
+navigations through the browser's
+[Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_API), which lets
+scripts intercept a navigation and handle it without a full page load. Cross-origin links, downloads, and navigations the
 browser cannot intercept continue as normal document requests.
 
 ```tsx filename=app/ui/album-link.tsx
@@ -821,11 +863,14 @@ the `link(...)` and `navigate(...)` options:
 
 Use `resetScroll: "manual"` or `resetFocus: "manual"` for the same behavior in `link(...)` and
 `navigate(...)`. Both controls also accept `"after-transition"`, the default. Existing boolean options
-and `"true"` / `"false"` attribute values still work: `true` corresponds to `"after-transition"` and
+and `"true"` / `"false"` attribute values still work. `true` corresponds to `"after-transition"` and
 `false` to `"manual"`.
 
 The top frame follows the browser URL. If `data-rmx-target` is omitted, an intercepted navigation
-reloads the top frame from the link or form destination. If a specified target does not match a
+reloads the top frame from the link or form destination. Remix reconciles the new page into the
+current document, so a client entry that the new page renders in the same place keeps its local
+state while receiving the new server props. If a server
+render shows a section collapsed but the user expanded it in a client entry, it stays expanded. If a specified target does not match a
 mounted frame, the browser performs a document navigation. Native form navigation preserves its
 method, body, files, and submitter overrides. Back and forward traversal reloads the destination
 document instead of reconciling stale frame content.
@@ -834,60 +879,130 @@ A supplied `data-rmx-src` must be a valid same-origin URL regardless of the targ
 cross-origin values disable interception and leave the navigation to the browser. These rules also
 apply to the `src` and `target` options of `link(...)` and `navigate(...)`.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) shows these attributes with named frames and
-explains when a form can submit directly through the frame resolver.
+These attributes are most useful with [named frames](/streaming-ui-with-frames/#frames-and-partial-server-rendered-ui),
+and a form can [navigate a frame](/streaming-ui-with-frames/#navigate-a-frame-with-a-form) directly
+through the frame resolver.
+
+## Prefetch links before navigation
+
+You can opt into link prefetching to speed up client-side navigations with the `data-rmx-prefetch="intent|viewport"` attribute. Remix loads the destination HTML to discover JavaScript, CSS, and declared image and font
+preloads without running the destination's code. Navigation reuses matching fresh HTML and asset
+responses from the browser HTTP cache.
+
+Use `intent` to prefetch on hover, focus, or pointer press. Or use the more aggressive `viewport`
+value to prefetch links when they enter the viewport, including links already visible
+on initial load.
+
+```tsx
+<a href={routes.albums.show.href({ albumId: handle.props.albumId })} data-rmx-prefetch="intent">
+  {handle.props.title}
+</a>
+```
+
+If you need to prefetch imperatively based on custom logic, you can use the `prefetch` API:
+
+```ts
+import { prefetch } from "remix/component";
+
+import { routes } from "../routes.ts";
+
+prefetch(routes.albums.show.href({ albumId: "thriller" }));
+```
+
+Only prefetch links whose GET requests are safe to make speculatively. See the [prefetching reference](../src/component/README.md#prefetching) for more information.
 
 ## Enhancing forms with fetch and navigation
 
-Now we can enhance the album form without adding a second mutation API. The handler sends the form's
-existing action, method, and `FormData`, then follows the action's redirect:
+Once [`run()`](#browser-entry-with-run) boots the runtime, Remix already submits forms as
+[frame navigations](/streaming-ui-with-frames/#navigate-a-frame-with-a-form) without a full page
+reload. Write your own submit handler when you need behavior that doesn't provide, such as handling
+an error response inside the component.
 
-```tsx
-// Inside AlbumEditForm's render function:
-<form
-  action={routes.albums.edit.action.href({ albumId: album.id })}
-  method="post"
-  mix={on("submit", async (event, signal) => {
-    let form = event.currentTarget;
-    event.preventDefault();
-    error = undefined;
-    pending = true;
-    handle.update();
+You can do that without adding a second mutation API. The submit handler sends the form's existing
+action, method, and `FormData`, then follows the action's redirect:
 
-    try {
-      let response = await fetch(form.action, {
-        body: new FormData(form),
-        method: form.method,
-        signal,
-      });
+```tsx filename=app/actions/albums/edit/public/album-edit-form.tsx
+import { clientEntry, navigate, on } from "remix/component";
+import type { Handle } from "remix/component";
 
-      if (signal.aborted) return;
-      if (!response.ok) {
-        error = await response.text();
-        if (signal.aborted) return;
-        pending = false;
-        handle.update();
-        return;
-      }
+import { routes } from "../../../../routes.ts";
 
-      await navigate(response.url, { history: "replace" });
-    } catch (caught) {
-      if (signal.aborted) return;
-      error = caught instanceof Error ? caught.message : "Unable to save album";
-      pending = false;
-      handle.update();
-    }
-  })}
->
-  {/* The same fields from the progressively enhanced form above. */}
-  <button disabled={pending} type="submit">
-    {pending ? "Saving…" : "Save album"}
-  </button>
-  {error ? <p role="alert">{error}</p> : null}
-</form>
+interface Album {
+  artist: string;
+  id: string;
+  title: string;
+  year: number;
+}
+
+export const AlbumEditForm = clientEntry(
+  import.meta.url,
+  function AlbumEditForm(handle: Handle<{ album: Album }>) {
+    let error: string | undefined;
+    let pending = false;
+
+    return () => {
+      let { album } = handle.props;
+
+      return (
+        <form
+          action={routes.albums.edit.action.href({ albumId: album.id })}
+          method="post"
+          mix={on("submit", async (event, signal) => {
+            let form = event.currentTarget;
+            event.preventDefault();
+            error = undefined;
+            pending = true;
+            handle.update();
+
+            try {
+              let response = await fetch(form.action, {
+                body: new FormData(form),
+                method: form.method,
+                signal,
+              });
+
+              if (signal.aborted) return;
+              if (!response.ok) {
+                error = await response.text();
+                if (signal.aborted) return;
+                pending = false;
+                handle.update();
+                return;
+              }
+
+              await navigate(response.url, { history: "replace" });
+            } catch (caught) {
+              if (signal.aborted) return;
+              error = caught instanceof Error ? caught.message : "Unable to save album";
+              pending = false;
+              handle.update();
+            }
+          })}
+        >
+          <label>
+            Title
+            <input defaultValue={album.title} name="title" required />
+          </label>
+          <label>
+            Artist
+            <input defaultValue={album.artist} name="artist" required />
+          </label>
+          <label>
+            Year
+            <input defaultValue={album.year} name="year" required type="number" />
+          </label>
+          <button disabled={pending} type="submit">
+            {pending ? "Saving…" : "Save album"}
+          </button>
+          {error ? <p role="alert">{error}</p> : null}
+        </form>
+      );
+    };
+  },
+);
 ```
 
-The controller action has not changed. A non-enhanced submission still receives its redirect or
+The server action is the same one the plain form posts to. A non-enhanced submission still receives its redirect or
 error response. The enhanced path consumes that response, shows an error locally when it is not
 successful, and follows the controller's redirect URL with `navigate(...)`.
 
@@ -898,13 +1013,15 @@ Choose the synchronization boundary that matches the UI:
 - Send JSON when a browser-side model owns the data and no server-rendered region needs to change.
 - Poll a small JSON endpoint when data changes independently of the current page.
 
-[Streaming UI with Frames](/streaming-ui-with-frames/) covers the optional case where a mutation
-reloads one route-owned region without navigating the whole document.
+A mutation can also
+[reload one route-owned frame](/streaming-ui-with-frames/#coordinating-forms-fetches-frame-reloads-and-navigation)
+without navigating the whole document.
 
 ## Pending and optimistic UI {#optimistic-ui}
 
-The album form keeps `pending` in setup scope because the render output reads it. The submit handler
-sets it before the request and clears it when the request settles. That is enough for disabled
+Keep a `pending` flag in setup scope when the render output reads it. Set it in the submit handler
+before the request and clear it when the request settles, as in the
+[enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough for disabled
 controls, pending labels, progress indicators, and duplicate-submission prevention.
 
 Optimistic UI renders the expected result before the request completes. Put the optimistic operation
@@ -990,9 +1107,5 @@ Consume the semantic event with `on(...)` like any other DOM event:
 ```
 
 Namespace custom event names to avoid collisions, and keep one-off behavior in the component that
-uses it. The [`remix/component` API overview](../src/component/README.md) covers the full
+uses it. The [`remix/component` mixins reference](../src/component/README.md#mixins) covers the full
 mixin API.
-
-The next chapter uses the same server renderer and browser runtime to stream and reload route-owned
-UI with `<Frame>`. [Animation](/animation/) then applies component state, `mix` composition, keys, and
-cancellation to entrance, exit, layout, spring, and tween motion.

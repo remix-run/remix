@@ -54,14 +54,17 @@ export interface PopoverHideRequest {
 const anchorMixin: MixinFactory<HTMLElement, [options: AnchorOptions], ElementProps> = createMixin<
   HTMLElement,
   [options: AnchorOptions]
->((handle) => {
-  let context = handle.context.get(PopoverProvider)
-  return (options) => {
-    handle.queueTask((node) => {
-      context.anchor = { target: node, options }
-    })
-  }
-})
+>(
+  (handle) => {
+    let context = handle.context.get(PopoverProvider)
+    return (options) => {
+      handle.queueTask((node) => {
+        context.anchor = { target: node, options }
+      })
+    }
+  },
+  { ssr: false },
+)
 
 function anchorContains(anchor: AnchorRef | null, target: Node) {
   return anchor?.target instanceof HTMLElement && anchor.target.contains(target)
@@ -149,6 +152,7 @@ const focusOnShowMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixi
       context.showFocusTarget = event.node
     })
   },
+  { ssr: false },
 )
 
 const focusOnHideMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<HTMLElement, []>(
@@ -158,6 +162,7 @@ const focusOnHideMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixi
       context.hideFocusTarget = event.node
     })
   },
+  { ssr: false },
 )
 
 export const Context = PopoverProvider

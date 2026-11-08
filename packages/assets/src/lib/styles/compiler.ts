@@ -268,17 +268,17 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   async function getOrCreateTransformedStyle(record: StyleRecord): Promise<TransformedStyle> {
     if (record.transformed && styleStore.isTransformedFresh(record)) return record.transformed
 
-    let startedVersion = record.invalidationVersion
+    let startedVersion = record.contentVersion
     let transformStyleResult = await transformStyle(record, transformArgs)
 
     if (!transformStyleResult.ok) {
-      if (isFresh(record, startedVersion)) {
+      if (record.contentVersion === startedVersion) {
         styleStore.clearTransformed(record.identityPath, [transformStyleResult.tracking])
       }
       throw transformStyleResult.error
     }
 
-    if (isFresh(record, startedVersion)) {
+    if (record.contentVersion === startedVersion) {
       styleStore.setTransformed(record.identityPath, transformStyleResult.value, [
         transformStyleResult.tracking,
       ])

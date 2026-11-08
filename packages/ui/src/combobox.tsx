@@ -8,7 +8,6 @@ import {
   type Handle,
   type MixinHandle,
   type MixinFactory,
-  type Props,
   type RemixNode,
 } from '@remix-run/component'
 
@@ -76,24 +75,7 @@ export interface ComboboxContextProps {
   ref?: (handle: ComboboxHandle) => void
 }
 
-export interface ComboboxProps extends Omit<Props<'div'>, 'children'> {
-  children?: RemixNode
-  defaultValue?: string | null
-  disabled?: boolean
-  inputId?: string
-  name?: string
-  placeholder?: string
-}
-
 export interface ComboboxOptionOptions {
-  disabled?: boolean
-  label: string
-  searchValue?: SearchValue
-  value: string
-}
-
-export interface ComboboxOptionProps extends Omit<Props<'div'>, 'children'> {
-  children?: RemixNode
   disabled?: boolean
   label: string
   searchValue?: SearchValue
@@ -926,15 +908,6 @@ export const input = inputMixin
 export const list = listMixin
 export const option = optionMixin
 export { popoverMixin as popover }
-
-const combobox = {
-  Context,
-  hiddenInput,
-  input,
-  list,
-  option,
-  popover: popoverMixin,
-} as const
 
 export function onComboboxChange<target extends HTMLElement>(
   handler: ComboboxChangeHandler<target>,

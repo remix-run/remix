@@ -1,13 +1,13 @@
 import { createDocumentState } from './document-state.ts'
-import { createComponentErrorEvent } from './error-event.ts'
-import type { CommittedComponentNode, VNodeParent } from './vnode.ts'
-import { isCommittedComponentNode } from './vnode.ts'
+import type { CommittedComponentNode, VNodeParent } from './reconcile.ts'
+import { createComponentErrorEvent } from './component.ts'
 import {
+  defaultStyleManager,
   findNextSiblingDomAnchor,
+  isCommittedComponentNode,
   renderComponent,
   setActiveSchedulerUpdateParents,
 } from './reconcile.ts'
-import { defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from '../style/index.ts'
 
 type EmptyFn = () => void

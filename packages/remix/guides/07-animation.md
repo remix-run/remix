@@ -3,6 +3,19 @@ title: Animation
 description: The CSS-first animation model and Remix component helpers for motion that respects rendering state.
 ---
 
+Motion in a Remix app starts in CSS. Styles from `css(...)` in
+[`remix/component`](../src/component/README.md) handle hover, focus, and other browser-owned
+states. When motion depends on what a component renders, such as a node entering, leaving, or moving
+in a keyed list, the [mixins](/interactivity/#the-mix-prop) and timing helpers in
+[`@remix-run/ui/animation`](/api/ui/animation/) take over.
+
+[`@remix-run/ui`](/api/ui/) is currently unstable and versioned independently. It
+is not available through the `remix` package, so install it separately:
+
+```sh
+npm i remix @remix-run/ui
+```
+
 ## CSS-first visual states {#css-first-visual-states}
 
 Start with CSS when the browser already owns the state. Hover, focus, active, checked, open, selected, and reduced-motion states do not need JavaScript state unless your render output also depends on them.
@@ -13,40 +26,35 @@ import type { Handle, RemixNode } from "remix/component";
 
 export function PressableCard(handle: Handle<{ children: RemixNode }>) {
   return () => (
-    <button mix={cardStyle} type="button">
+    <button
+      mix={css({
+        border: "1px solid #d6d6d6",
+        borderRadius: "16px",
+        background: "white",
+        cursor: "pointer",
+        font: "inherit",
+        padding: "1rem",
+        transition: "transform 160ms ease, box-shadow 160ms ease",
+        "&:hover, &:focus-visible": {
+          boxShadow: "0 12px 32px rgba(15, 17, 21, 0.14)",
+          transform: "translateY(-2px)",
+        },
+        "&:active": {
+          transform: "translateY(0)",
+        },
+        "@media (prefers-reduced-motion: reduce)": {
+          transition: "none",
+        },
+      })}
+      type="button"
+    >
       {handle.props.children}
     </button>
   );
 }
-
-const cardStyle = css({
-  border: "1px solid #d6d6d6",
-  borderRadius: "16px",
-  background: "white",
-  cursor: "pointer",
-  font: "inherit",
-  padding: "1rem",
-  transition: "transform 160ms ease, box-shadow 160ms ease",
-  "&:hover, &:focus-visible": {
-    boxShadow: "0 12px 32px rgba(15, 17, 21, 0.14)",
-    transform: "translateY(-2px)",
-  },
-  "&:active": {
-    transform: "translateY(0)",
-  },
-  "@media (prefers-reduced-motion: reduce)": {
-    transition: "none",
-  },
-});
 ```
 
-Use Remix animation helpers when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
-
-The animation helpers are provided by `@remix-run/ui`. This package is currently unstable and versioned independently. It is not available through the `remix` package, so install it separately:
-
-```sh
-npm i remix @remix-run/ui
-```
+Use the animation helpers from [`@remix-run/ui/animation`](/api/ui/animation/) when the motion depends on rendering state, such as a node entering, a node exiting, a keyed item moving, or an event that needs an interruptible animation.
 
 ```tsx
 import { createMixin, css, on } from "remix/component";
@@ -66,12 +74,30 @@ export function PressStateDemo(handle: Handle) {
     <div
       tabIndex={0}
       mix={[
-        pressableStyles,
         onPressDown(() => {
           setPressed(true);
         }),
         onPressUp(() => {
           setPressed(false);
+        }),
+        css({
+          display: "grid",
+          width: 120,
+          height: 120,
+          placeItems: "center",
+          borderRadius: 12,
+          backgroundColor: "#9911ff",
+          color: "white",
+          cursor: "pointer",
+          fontWeight: "800",
+          transition: `transform ${spring()}`,
+          "&:focus": {
+            outline: "4px solid rgba(0,120,255,0.7)",
+            outlineOffset: 2,
+          },
+          "&:hover, &:focus": {
+            transform: "scale(1.12)",
+          },
         }),
       ]}
     >
@@ -102,31 +128,11 @@ const onPressUp = createMixin<HTMLElement, [handler: () => void]>(() => (handler
   }),
   on("blur", handler),
 ]);
-
-const pressableStyles = css({
-  display: "grid",
-  width: 120,
-  height: 120,
-  placeItems: "center",
-  borderRadius: 12,
-  backgroundColor: "#9911ff",
-  color: "white",
-  cursor: "pointer",
-  fontWeight: "800",
-  transition: `transform ${spring()}`,
-  "&:focus": {
-    outline: "4px solid rgba(0,120,255,0.7)",
-    outlineOffset: 2,
-  },
-  "&:hover, &:focus": {
-    transform: "scale(1.12)",
-  },
-});
 ```
 
 ## Entrance and exit animations {#entrance-and-exit-animations}
 
-`animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
+These mixins attach to host nodes, the DOM elements such as `<p>` or `<li>` that a component renders, not to components themselves. `animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
 
 ```tsx filename=app/ui/public/notice.tsx
 import { clientEntry, css, on } from "remix/component";
@@ -153,7 +159,6 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
         <p
           key="notice"
           mix={[
-            noticeStyle,
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -164,6 +169,12 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
               transform: "translateY(-8px)",
               ...spring("snappy"),
             }),
+            css({
+              borderRadius: "12px",
+              background: "#ecfdf5",
+              color: "#065f46",
+              padding: "0.75rem 1rem",
+            }),
           ]}
         >
           Settings saved.
@@ -171,13 +182,6 @@ export const Notice = clientEntry(import.meta.url, function Notice(handle: Handl
       )}
     </div>
   );
-});
-
-const noticeStyle = css({
-  borderRadius: "12px",
-  background: "#ecfdf5",
-  color: "#065f46",
-  padding: "0.75rem 1rem",
 });
 ```
 
@@ -194,13 +198,28 @@ export function NoticePresenceDemo(handle: Handle) {
   let visible = true;
 
   return () => (
-    <div mix={stackStyles}>
+    <div
+      mix={css({
+        display: "grid",
+        gap: "1rem",
+        minWidth: "16rem",
+      })}
+    >
       <button
         mix={[
-          buttonStyles,
           on("click", () => {
             visible = !visible;
             handle.update();
+          }),
+          css({
+            border: "1px solid #d83a5a",
+            borderRadius: "999px",
+            background: "#d83a5a",
+            color: "white",
+            cursor: "pointer",
+            font: "inherit",
+            fontWeight: "700",
+            padding: "0.7rem 1rem",
           }),
         ]}
         type="button"
@@ -212,7 +231,6 @@ export function NoticePresenceDemo(handle: Handle) {
         <p
           key="notice"
           mix={[
-            noticeStyles,
             animateEntrance({
               opacity: 0,
               transform: "translateY(8px)",
@@ -223,6 +241,13 @@ export function NoticePresenceDemo(handle: Handle) {
               transform: "translateY(-8px)",
               ...spring("snappy"),
             }),
+            css({
+              margin: 0,
+              borderRadius: "12px",
+              background: "#ecfdf5",
+              color: "#065f46",
+              padding: "0.75rem 1rem",
+            }),
           ]}
         >
           Settings saved.
@@ -231,36 +256,11 @@ export function NoticePresenceDemo(handle: Handle) {
     </div>
   );
 }
-
-const stackStyles = css({
-  display: "grid",
-  gap: "1rem",
-  minWidth: "16rem",
-});
-
-const buttonStyles = css({
-  border: "1px solid #d83a5a",
-  borderRadius: "999px",
-  background: "#d83a5a",
-  color: "white",
-  cursor: "pointer",
-  font: "inherit",
-  fontWeight: "700",
-  padding: "0.7rem 1rem",
-});
-
-const noticeStyles = css({
-  margin: 0,
-  borderRadius: "12px",
-  background: "#ecfdf5",
-  color: "#065f46",
-  padding: "0.75rem 1rem",
-});
 ```
 
 ## Layout animations {#layout-animations}
 
-`animateLayout(...)` measures a host node before and after a render, then animates the visual delta. This is the right tool for sorted lists, expanding cards, and elements that move because layout changed.
+`animateLayout(...)` measures a host node before and after a render, then animates the visual delta. Use it for sorted lists, expanding cards, and elements that move because layout changed.
 
 ```tsx filename=app/ui/public/reorder-list.tsx
 import { clientEntry, css, on } from "remix/component";
@@ -285,9 +285,26 @@ export const ReorderList = clientEntry(import.meta.url, function ReorderList(han
       >
         Reverse
       </button>
-      <ul mix={listStyle}>
+      <ul
+        mix={css({
+          display: "grid",
+          gap: "0.5rem",
+          listStyle: "none",
+          padding: 0,
+        })}
+      >
         {items.map((item) => (
-          <li key={item} mix={[itemStyle, animateLayout({ ...spring("bouncy") })]}>
+          <li
+            key={item}
+            mix={[
+              animateLayout({ ...spring("bouncy") }),
+              css({
+                border: "1px solid #d6d6d6",
+                borderRadius: "10px",
+                padding: "0.7rem 1rem",
+              }),
+            ]}
+          >
             {item}
           </li>
         ))}
@@ -295,24 +312,11 @@ export const ReorderList = clientEntry(import.meta.url, function ReorderList(han
     </div>
   );
 });
-
-const listStyle = css({
-  display: "grid",
-  gap: "0.5rem",
-  listStyle: "none",
-  padding: 0,
-});
-
-const itemStyle = css({
-  border: "1px solid #d6d6d6",
-  borderRadius: "10px",
-  padding: "0.7rem 1rem",
-});
 ```
 
 `key` is not optional for layout animation in lists. Without stable keys, the runtime cannot know whether an item moved or a different item replaced it.
 
-Layout animation includes size projection by default. Pass `size: false` when only position should animate and scaling the element's contents would look wrong.
+Layout animation includes size projection by default, which animates a change in size by scaling the element with a transform. Pass `size: false` when only position should animate and scaling the element's contents would look wrong.
 
 ```tsx
 import { css } from "remix/component";
@@ -338,14 +342,32 @@ export function ReorderingDemo(handle: Handle) {
   handle.queueTask(scheduleNextShuffle);
 
   return () => (
-    <ul mix={listStyles}>
+    <ul
+      mix={css({
+        display: "flex",
+        position: "relative",
+        flexDirection: "row",
+        flexWrap: "wrap",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 220,
+        gap: 10,
+        margin: 0,
+        padding: 0,
+        listStyle: "none",
+      })}
+    >
       {order.map((backgroundColor) => (
         <li
           key={backgroundColor}
           mix={[
-            itemStyles,
             animateLayout({
               ...spring({ duration: 600, bounce: 0.2 }),
+            }),
+            css({
+              width: 100,
+              height: 100,
+              borderRadius: 10,
             }),
           ]}
           style={{ backgroundColor }}
@@ -367,31 +389,11 @@ function shuffle<item>(array: item[]): item[] {
   }
   return result;
 }
-
-const listStyles = css({
-  display: "flex",
-  position: "relative",
-  flexDirection: "row",
-  flexWrap: "wrap",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 220,
-  gap: 10,
-  margin: 0,
-  padding: 0,
-  listStyle: "none",
-});
-
-const itemStyles = css({
-  width: 100,
-  height: 100,
-  borderRadius: 10,
-});
 ```
 
 ## Springs, tweens, and easing {#springs-tweens-and-easing}
 
-`spring()` returns an iterator decorated for CSS transitions and Web Animations. Stringify it in CSS, spread it into animation options, or iterate it for custom JavaScript animation.
+`spring()` returns an iterator decorated for CSS transitions and the [Web Animations API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Animations_API) (WAAPI), the browser API behind `element.animate()`. Stringify it in CSS, spread it into animation options, or iterate it for custom JavaScript animation.
 
 ```tsx filename=app/ui/public/bouncy-switch.tsx
 import { clientEntry, css, on } from "remix/component";
@@ -405,40 +407,36 @@ export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(h
     <button
       aria-pressed={enabled}
       mix={[
-        switchStyle,
         on("click", () => {
           enabled = !enabled;
           handle.update();
+        }),
+        css({
+          border: 0,
+          borderRadius: "999px",
+          background: "#ff6b35",
+          cursor: "pointer",
+          padding: "0.25rem",
+          width: "5rem",
         }),
       ]}
       type="button"
     >
       <span
-        mix={thumbStyle}
+        mix={css({
+          display: "block",
+          width: "2rem",
+          height: "2rem",
+          borderRadius: "50%",
+          background: "white",
+          transition: spring.transition("transform", "bouncy"),
+        })}
         style={{
           transform: enabled ? "translateX(2.25rem)" : "translateX(0)",
         }}
       />
     </button>
   );
-});
-
-const switchStyle = css({
-  border: 0,
-  borderRadius: "999px",
-  background: "#ff6b35",
-  cursor: "pointer",
-  padding: "0.25rem",
-  width: "5rem",
-});
-
-const thumbStyle = css({
-  display: "block",
-  width: "2rem",
-  height: "2rem",
-  borderRadius: "50%",
-  background: "white",
-  transition: spring.transition("transform", "bouncy"),
 });
 ```
 
@@ -466,13 +464,24 @@ export function countUp(from: number, to: number, onValue: (value: number) => vo
 
 Prefer CSS transitions and animation mixins for ordinary UI. Use `tween` for canvas, custom counters, or values that are not CSS properties.
 
+Pass `velocity` to continue the momentum of a gesture when the animation takes over. A spring's progress runs from 0 to 1, so `velocity` is measured in progress per second. Divide the gesture's speed toward the target, in pixels per second, by the remaining distance in pixels. A positive value starts faster and overshoots more. A negative value starts slower, and a large one moves away from the target first:
+
+```ts
+// After a drag release, with speed in pixels per second toward the target
+let velocity = releaseSpeed / distanceToTarget;
+card.style.transition = `transform ${spring("bouncy", { velocity })}`;
+card.style.transform = "translateX(0)";
+```
+
+The demo below releases a dragged dot with the velocity of the drag.
+
 ```tsx
 import { css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 import { spring } from "@remix-run/ui/animation";
 import type { SpringPreset } from "@remix-run/ui/animation";
 
-import { dragVelocityEvents } from "./gallery/drag-release.ts";
+import { dragVelocityEvents } from "./drag-release.ts";
 
 const stageWidth = 420;
 const stageHeight = 260;
@@ -511,19 +520,44 @@ export function SpringDragReleaseDemo(handle: Handle) {
   }
 
   return () => (
-    <div mix={layoutStyle}>
+    <div
+      mix={css({
+        display: "grid",
+        gap: "0.75rem",
+        width: "min(100%, 30rem)",
+      })}
+    >
       <div
         mix={[
-          stageStyle,
           ref((node: HTMLDivElement) => {
             stage = node;
           }),
           on<HTMLDivElement, "click">("click", setTarget),
+          css({
+            position: "relative",
+            overflow: "hidden",
+            width: "100%",
+            maxWidth: `${stageWidth}px`,
+            height: `${stageHeight}px`,
+            borderRadius: "18px",
+            background:
+              "radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.2), transparent 35%), #17172a",
+            cursor: "crosshair",
+            touchAction: "none",
+          }),
         ]}
       >
         <div
           aria-hidden="true"
-          mix={targetStyle}
+          mix={css({
+            position: "absolute",
+            width: `${dotSize + 18}px`,
+            height: `${dotSize + 18}px`,
+            border: "2px dashed rgba(233, 69, 96, 0.65)",
+            borderRadius: "50%",
+            transform: "translate(-50%, -50%)",
+            pointerEvents: "none",
+          })}
           style={{
             left: `${targetX}px`,
             top: `${targetY}px`,
@@ -536,7 +570,6 @@ export function SpringDragReleaseDemo(handle: Handle) {
           role="button"
           tabIndex={0}
           mix={[
-            dotStyle,
             dragVelocityEvents(),
             on<HTMLDivElement, "pointerdown">("pointerdown", (event) => {
               event.preventDefault();
@@ -569,6 +602,21 @@ export function SpringDragReleaseDemo(handle: Handle) {
               animating = false;
               handle.update();
             }),
+            css({
+              position: "absolute",
+              width: `${dotSize}px`,
+              height: `${dotSize}px`,
+              borderRadius: "50%",
+              backgroundColor: "#0ea5e9",
+              boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
+              transform: "translate(-50%, -50%)",
+              userSelect: "none",
+              touchAction: "none",
+              "&:focus-visible": {
+                outline: "3px solid rgba(255, 255, 255, 0.8)",
+                outlineOffset: "3px",
+              },
+            }),
           ]}
           style={{
             left: `${dotX}px`,
@@ -579,9 +627,26 @@ export function SpringDragReleaseDemo(handle: Handle) {
         />
       </div>
 
-      <div class="spring-demo-controls" mix={controlsStyle}>
+      <div
+        mix={css({
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.35rem",
+        })}
+      >
         {(Object.keys(spring.presets) as SpringPreset[]).map((preset) => (
-          <label key={preset} mix={controlLabelStyle}>
+          <label
+            key={preset}
+            mix={css({
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              border: "1px solid light-dark(#d1d5db, #3f3f46)",
+              borderRadius: "999px",
+              padding: "0.4rem 0.65rem",
+              fontSize: "0.85rem",
+            })}
+          >
             <input
               type="radio"
               name="spring-preset"
@@ -599,7 +664,16 @@ export function SpringDragReleaseDemo(handle: Handle) {
         ))}
       </div>
 
-      <p mix={hintStyle}>Click the panel to move the target. Drag and release the dot.</p>
+      <p
+        mix={css({
+          margin: 0,
+          color: "light-dark(#6b7280, #a1a1aa)",
+          fontSize: "0.85rem",
+          textAlign: "center",
+        })}
+      >
+        Click the panel to move the target. Drag and release the dot.
+      </p>
     </div>
   );
 }
@@ -616,74 +690,6 @@ function readVelocitySpring(preset: SpringPreset, velocity: number, distance: nu
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
-
-const layoutStyle = css({
-  display: "grid",
-  gap: "0.75rem",
-  width: "min(100%, 30rem)",
-});
-
-const stageStyle = css({
-  position: "relative",
-  overflow: "hidden",
-  width: "100%",
-  maxWidth: `${stageWidth}px`,
-  height: `${stageHeight}px`,
-  borderRadius: "18px",
-  background:
-    "radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.2), transparent 35%), #17172a",
-  cursor: "crosshair",
-  touchAction: "none",
-});
-
-const targetStyle = css({
-  position: "absolute",
-  width: `${dotSize + 18}px`,
-  height: `${dotSize + 18}px`,
-  border: "2px dashed rgba(233, 69, 96, 0.65)",
-  borderRadius: "50%",
-  transform: "translate(-50%, -50%)",
-  pointerEvents: "none",
-});
-
-const dotStyle = css({
-  position: "absolute",
-  width: `${dotSize}px`,
-  height: `${dotSize}px`,
-  borderRadius: "50%",
-  backgroundColor: "#0ea5e9",
-  boxShadow: "0 0 20px rgba(14, 165, 233, 0.45)",
-  transform: "translate(-50%, -50%)",
-  userSelect: "none",
-  touchAction: "none",
-  "&:focus-visible": {
-    outline: "3px solid rgba(255, 255, 255, 0.8)",
-    outlineOffset: "3px",
-  },
-});
-
-const controlsStyle = css({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "0.35rem",
-});
-
-const controlLabelStyle = css({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "0.35rem",
-  border: "1px solid #d1d5db",
-  borderRadius: "999px",
-  padding: "0.4rem 0.65rem",
-  fontSize: "0.85rem",
-});
-
-const hintStyle = css({
-  margin: 0,
-  color: "#6b7280",
-  fontSize: "0.85rem",
-  textAlign: "center",
-});
 ```
 
 ```tsx
@@ -698,16 +704,33 @@ export function BouncySwitchDemo(handle: Handle) {
     <button
       aria-pressed={isOn}
       mix={[
-        switchStyles,
         on("click", () => {
           isOn = !isOn;
           handle.update();
+        }),
+        css({
+          display: "flex",
+          width: 80,
+          height: 180,
+          flexDirection: "column",
+          justifyContent: "flex-end",
+          border: 0,
+          borderRadius: 50,
+          backgroundColor: "#ff6b35",
+          cursor: "pointer",
+          padding: 10,
         }),
       ]}
       type="button"
     >
       <span
-        mix={thumbStyles}
+        mix={css({
+          width: 60,
+          height: 60,
+          borderRadius: 30,
+          backgroundColor: "white",
+          willChange: "transform",
+        })}
         style={{
           transform: isOn ? "translateY(-100px)" : "translateY(0)",
           transition: isOn ? `transform ${spring()}` : `transform 800ms ${bounceEasing}`,
@@ -718,229 +741,13 @@ export function BouncySwitchDemo(handle: Handle) {
 }
 
 const bounceEasing = `linear(0, 0.258 12%, 0.424 18.3%, 0.633 24.4%, 0.999 33.3%, 0.783 39.8%, 0.733 42.5%, 0.716 45.1%, 0.731 47.6%, 0.777 50.2%, 0.999 57.7%, 0.906 61.7%, 0.883 63.5%, 0.876 65.2%, 0.901 68.7%, 0.999 74.5%, 0.964 77.4%, 0.953 80.1%, 0.961 82.6%, 1 88.2%, 0.99 91.9%, 1)`;
-
-const switchStyles = css({
-  display: "flex",
-  width: 80,
-  height: 180,
-  flexDirection: "column",
-  justifyContent: "flex-end",
-  border: 0,
-  borderRadius: 50,
-  backgroundColor: "#ff6b35",
-  cursor: "pointer",
-  padding: 10,
-});
-
-const thumbStyles = css({
-  width: 60,
-  height: 60,
-  borderRadius: 30,
-  backgroundColor: "white",
-  willChange: "transform",
-});
-```
-
-The UI package also keeps a gallery of smaller motion experiments. Keep this kind of broad demo in a bounded frame so it does not take over the surrounding guide page.
-
-```tsx
-import { css, on, type Handle, type RemixNode } from "remix/component";
-import { DefaultAnimate } from "./gallery/default-animate.tsx";
-import { EnterAnimation } from "./gallery/enter.tsx";
-import { ExitAnimation } from "./gallery/exit.tsx";
-import { Press } from "./gallery/press.tsx";
-import { HTMLContent } from "./gallery/html-content.tsx";
-import { Keyframes } from "./gallery/keyframes.tsx";
-import { InterruptibleKeyframes } from "./gallery/interruptible-keyframes.tsx";
-import { RollingSquare } from "./gallery/rolling-square.tsx";
-import { Rotate } from "./gallery/rotate.tsx";
-import { TransitionOptions } from "./gallery/transition-options.tsx";
-import { Cube } from "./gallery/cube.tsx";
-import { SharedLayout } from "./gallery/shared-layout.tsx";
-import { AspectRatio } from "./gallery/aspect-ratio.tsx";
-import { BouncySwitch } from "./gallery/bouncy-switch.tsx";
-import { ColorInterpolation } from "./gallery/color-interpolation.tsx";
-import { FlipToggle } from "./gallery/flip-toggle.tsx";
-import { Reordering } from "./gallery/reordering.tsx";
-import { MultiStateBadge } from "./gallery/multi-state-badge.tsx";
-import { HoldToConfirm } from "./gallery/hold-to-confirm.tsx";
-import { MaterialRipple } from "./gallery/material-ripple.tsx";
-
-function Tile(handle: Handle<{ title: string; children: RemixNode; notes?: string }>) {
-  let remountKey = 0;
-
-  return () => {
-    let { title, children, notes } = handle.props;
-
-    return (
-      <div
-        mix={[
-          css({
-            backgroundColor: "white",
-            padding: "40px",
-            borderRadius: 12,
-            boxShadow: "0 0 10px 0 rgba(0, 0, 0, 0.1)",
-            display: "flex",
-            alignItems: "center",
-            flexDirection: "column",
-            gap: 12,
-            position: "relative",
-          }),
-        ]}
-      >
-        <button
-          mix={[
-            css({
-              position: "absolute",
-              bottom: 8,
-              right: 8,
-              width: 18,
-              height: 18,
-              padding: 0,
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              opacity: 0.4,
-              "&:hover": {
-                opacity: 1,
-              },
-            }),
-            on("click", () => {
-              remountKey++;
-              handle.update();
-            }),
-          ]}
-          title="Replay animation"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M1 4v6h6M23 20v-6h-6" />
-            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-          </svg>
-        </button>
-        <h3 mix={[css({ margin: 0 })]}>{title}</h3>
-        <div
-          key={remountKey}
-          mix={[
-            css({
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: 280,
-            }),
-          ]}
-        >
-          {children}
-        </div>
-        {notes && (
-          <p
-            mix={[
-              css({
-                margin: 0,
-                fontSize: 12,
-                color: "#666",
-                textAlign: "center",
-                maxWidth: "200px",
-              }),
-            ]}
-          >
-            {notes}
-          </p>
-        )}
-      </div>
-    );
-  };
-}
-
-export function AnimationGallery() {
-  return () => (
-    <>
-      <h1 mix={[css({ marginBottom: 0, "& + p": { marginTop: 0 } })]}>Animations</h1>
-      <p>
-        Most animations are adapted from <a href="https://www.motion.dev">Motion</a>. Thank you for
-        your work <a href="https://motion.dev/@matt">Matt Perry</a>!
-      </p>
-      <div
-        mix={[
-          css({
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-            gap: 24,
-            marginTop: 40,
-          }),
-        ]}
-      >
-        <Tile title="Default Animate" notes="animateEntrance + animateLayout defaults">
-          <DefaultAnimate />
-        </Tile>
-        <Tile title="Rolling Square" notes="CSS transition with spring() timing function">
-          <RollingSquare />
-        </Tile>
-        <Tile title="Enter Animation" notes="animateEntrance() with spring physics">
-          <EnterAnimation />
-        </Tile>
-        <Tile title="Exit Animation" notes="animateEntrance() + animateExit()">
-          <ExitAnimation />
-        </Tile>
-        <Tile title="Press Interaction" notes="CSS transition + pointer/keyboard events">
-          <Press />
-        </Tile>
-        <Tile title="HTML Content" notes="rAF loop with spring iterator for text">
-          <HTMLContent />
-        </Tile>
-        <Tile title="Keyframes" notes="CSS @keyframes with infinite loop">
-          <Keyframes />
-        </Tile>
-        <Tile title="Interruptible Keyframes" notes="Web Animations API with commitStyles()">
-          <InterruptibleKeyframes />
-        </Tile>
-        <Tile title="Rotate" notes="CSS @keyframes (one-shot)">
-          <Rotate />
-        </Tile>
-        <Tile title="Transition Options" notes="animateEntrance() with cubic-bezier + delay">
-          <TransitionOptions />
-        </Tile>
-        <Tile title="3D Cube" notes="rAF loop with direct style manipulation">
-          <Cube />
-        </Tile>
-        <Tile title="Shared Layout" notes="CSS Grid overlap for simultaneous enter/exit">
-          <SharedLayout />
-        </Tile>
-        <Tile title="Aspect Ratio">
-          <AspectRatio />
-        </Tile>
-        <Tile title="Bouncy Switch" notes="Spring up, bounce down with CSS linear()">
-          <BouncySwitch />
-        </Tile>
-        <Tile title="FLIP Toggle" notes="animateLayout() with interruptible WAAPI">
-          <FlipToggle />
-        </Tile>
-        <Tile title="Reordering" notes="animateLayout() with auto-shuffling list">
-          <Reordering />
-        </Tile>
-        <Tile title="Color Interpolation" notes="sRGB vs OKLCH color space">
-          <ColorInterpolation />
-        </Tile>
-        <Tile title="Multi-State Badge" notes="Animated icon/label swap with WAAPI shake">
-          <MultiStateBadge />
-        </Tile>
-        <Tile title="Hold to Confirm" notes="Custom interaction with progress tracking">
-          <HoldToConfirm />
-        </Tile>
-        <Tile title="Material Ripple" notes="Pointer-tracked ripples with enter/exit animations">
-          <MaterialRipple />
-        </Tile>
-      </div>
-    </>
-  );
-}
 ```
 
 ## Interruptible interactions {#interruptible-interactions}
 
-Event handlers receive abort signals, and animation mixins cancel or replace in-flight work when the DOM changes again. That makes interruption the default path instead of an edge case.
+Event handlers receive an [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) that aborts when the same event fires again or the element is removed, and animation mixins cancel or replace in-flight work when the DOM changes again. If a user toggles a notice twice quickly, the notice animates back toward its rendered styles from wherever its exit had reached, instead of finishing the exit first.
 
-For custom imperative animations, keep the current animation in setup scope and cancel it before starting the next one:
+For custom imperative animations, keep the current animation in [setup scope](/rendering-ui/#handle-props-setup-render-and-updates) and cancel it before starting the next one:
 
 ```tsx filename=app/ui/public/ripple-button.tsx
 import { clientEntry, css, on, ref } from "remix/component";
@@ -955,13 +762,22 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
     <button
       mix={[
         ref((element) => (node = element)),
-        buttonStyle,
         on("pointerdown", () => {
           currentAnimation?.cancel();
           currentAnimation = node.animate(
             [{ transform: "scale(0.96)" }, { transform: "scale(1)" }],
             { ...spring("snappy") },
           );
+        }),
+        css({
+          border: 0,
+          borderRadius: "999px",
+          background: "#9911ff",
+          color: "white",
+          cursor: "pointer",
+          font: "inherit",
+          fontWeight: "700",
+          padding: "0.8rem 1.1rem",
         }),
       ]}
       type="button"
@@ -970,42 +786,35 @@ export const RippleButton = clientEntry(import.meta.url, function RippleButton(_
     </button>
   );
 });
-
-const buttonStyle = css({
-  border: 0,
-  borderRadius: "999px",
-  background: "#9911ff",
-  color: "white",
-  cursor: "pointer",
-  font: "inherit",
-  fontWeight: "700",
-  padding: "0.8rem 1.1rem",
-});
 ```
 
-CSS transitions are also interruptible: changing the target value while a transition is running makes the browser animate from the current visual state to the new one.
+CSS transitions are also interruptible. Changing the target value while a transition is running makes the browser animate from the current visual state to the new one.
 
 ## Reduced-motion behavior {#reduced-motion-behavior}
 
-Respect `prefers-reduced-motion` at the CSS boundary first. It works before JavaScript loads, applies to server-rendered frames, and covers static transitions.
+The [`prefers-reduced-motion`](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion) media query reports whether the user has asked their operating system to minimize motion. Respect it at the CSS boundary first. It works before JavaScript loads, applies to server-rendered frames, and covers static transitions.
 
 ```tsx filename=app/ui/motion-safe-panel.tsx
 import { css } from "remix/component";
 import type { Handle, RemixNode } from "remix/component";
 
 export function MotionSafePanel(handle: Handle<{ children: RemixNode }>) {
-  return () => <section mix={panelStyle}>{handle.props.children}</section>;
+  return () => (
+    <section
+      mix={css({
+        opacity: 1,
+        transform: "translateY(0)",
+        transition: "opacity 180ms ease, transform 180ms ease",
+        "@media (prefers-reduced-motion: reduce)": {
+          transition: "none",
+          transform: "none",
+        },
+      })}
+    >
+      {handle.props.children}
+    </section>
+  );
 }
-
-const panelStyle = css({
-  opacity: 1,
-  transform: "translateY(0)",
-  transition: "opacity 180ms ease, transform 180ms ease",
-  "@media (prefers-reduced-motion: reduce)": {
-    transition: "none",
-    transform: "none",
-  },
-});
 ```
 
 For JavaScript-driven motion, check the same media query before starting work:
@@ -1015,5 +824,7 @@ export function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 ```
+
+[`@remix-run/ui/animation`](/api/ui/animation/) exports the same check as `prefersReducedMotion()`. It also returns `false` when `matchMedia` is unavailable, so it is safe to call during server rendering.
 
 Reduced motion does not have to mean no feedback. Prefer shorter fades, instant layout changes, or non-motion state changes when movement is not essential.

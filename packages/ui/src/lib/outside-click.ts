@@ -10,46 +10,49 @@ const onOutsideClick = createMixin<
     isInsideTarget?: InsideTargetMatcher,
     stopPropagation?: boolean,
   ]
->((handle) => {
-  let active = false
-  let handler: (target: Node | null) => void = () => {}
-  let isInsideTarget: InsideTargetMatcher = () => false
-  let stopPropagation = true
+>(
+  (handle) => {
+    let active = false
+    let handler: (target: Node | null) => void = () => {}
+    let isInsideTarget: InsideTargetMatcher = () => false
+    let stopPropagation = true
 
-  handle.addEventListener('insert', (event) => {
-    let node = event.node
-    let doc = node.ownerDocument
+    handle.addEventListener('insert', (event) => {
+      let node = event.node
+      let doc = node.ownerDocument
 
-    doc.addEventListener(
-      'click',
-      (event) => {
-        let target = event.target instanceof Node ? event.target : null
+      doc.addEventListener(
+        'click',
+        (event) => {
+          let target = event.target instanceof Node ? event.target : null
 
-        if (!active || (target && (node.contains(target) || isInsideTarget(target)))) {
-          return
-        }
+          if (!active || (target && (node.contains(target) || isInsideTarget(target)))) {
+            return
+          }
 
-        if (stopPropagation) {
-          event.stopPropagation()
-        }
+          if (stopPropagation) {
+            event.stopPropagation()
+          }
 
-        handler(target)
-      },
-      { capture: true, signal: handle.signal },
-    )
-  })
+          handler(target)
+        },
+        { capture: true, signal: handle.signal },
+      )
+    })
 
-  return (
-    nextActive,
-    nextHandler,
-    nextIsInsideTarget = () => false,
-    nextStopPropagation = true,
-  ) => {
-    active = nextActive
-    handler = nextHandler
-    isInsideTarget = nextIsInsideTarget
-    stopPropagation = nextStopPropagation
-  }
-})
+    return (
+      nextActive,
+      nextHandler,
+      nextIsInsideTarget = () => false,
+      nextStopPropagation = true,
+    ) => {
+      active = nextActive
+      handler = nextHandler
+      isInsideTarget = nextIsInsideTarget
+      stopPropagation = nextStopPropagation
+    }
+  },
+  { ssr: false },
+)
 
 export { onOutsideClick }

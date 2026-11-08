@@ -10,7 +10,7 @@ description: Builds, reviews, and refactors Remix 3 apps using the remix package
 Read the relevant installed documentation before using unfamiliar Remix APIs:
 
 1. Read the app's `AGENTS.md`, `package.json`, and `tsconfig.json`, then inspect the code that owns the behavior being changed.
-2. Search `node_modules/remix/INDEX.md` by task, export, or keyword, for example `grep -i 'session' node_modules/remix/INDEX.md`.
+2. Search `node_modules/remix/INDEX.md` by task, export, or keyword, for example `grep -i 'session' node_modules/remix/INDEX.md`. For a specific function, type, or attribute, search `node_modules/remix/guides` and `node_modules/remix/src`.
 3. Follow the index to the relevant guide for the workflow, then the package README for exact imports, options, behavior, and examples. If there is no relevant guide, use the API README and existing app patterns.
 
 Treat the installed documentation as canonical, including when it differs from this skill. Do not rely on remembered Remix 2 patterns or online APIs from a newer version. If the installation has no index, inspect its `package.json` exports and matching installed READMEs, source, and types.
@@ -99,6 +99,8 @@ Event handlers run only when the component is mounted or hydrated in the browser
 
 ## Work Within the App
 
+- Write for the next reader, who may be an agent. Keep code that changes together in one place so understanding or editing a piece of UI does not require jumping between a use and its definition.
+- Do not introduce a name, constant, helper, type, or file solely to hold a single use. Each extraction adds a lookup for readers and context for agents. Extract when there is actual reuse or a separate responsibility.
 - Preserve the app's package manager, scripts, runtime, middleware order, and import conventions unless the task requires changing them. Do not replace an existing solution merely to match the starter.
 - Change the narrowest owner of the behavior. Keep route-local code together and share it only when multiple areas need it.
 - Prefer Web APIs, native links, buttons, and forms, plus existing first-party Remix primitives, over custom abstractions.

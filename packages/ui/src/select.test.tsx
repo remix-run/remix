@@ -62,13 +62,7 @@ function TestSelect(
 }
 
 function TestOption(
-  handle: Handle<{
-    children?: RemixNode
-    disabled?: boolean
-    label: string
-    textValue?: select.SelectOptionProps['textValue']
-    value: string
-  }>,
+  handle: Handle<Props<'div'> & Parameters<typeof select.option>[0]>,
 ): () => RemixNode {
   return () => {
     let { children, disabled, label, textValue, value } = handle.props
@@ -226,7 +220,7 @@ describe('Select', () => {
     expect(react.getAttribute('aria-selected')).toBe('true')
   })
 
-  it('supports lower-level composition while keeping defaultLabel before selection settles', async (t) => {
+  it('supports nested option components while keeping defaultLabel before selection settles', async (t) => {
     function SelectValue(handle: Handle) {
       let context = handle.context.get(select.Context)
 
@@ -277,7 +271,7 @@ describe('Select', () => {
     expect(trigger.textContent).toContain('Feature')
   })
 
-  it('commits Option.label to the trigger after the flash, close transition, and label delay', async (t) => {
+  it('commits the option label to the trigger after the flash, close transition, and label delay', async (t) => {
     let { container, root } = renderApp(renderSelect())
     let trigger = getTrigger(container)
     let surface = getSurface(container)
@@ -377,7 +371,7 @@ describe('Select', () => {
     expect(document.activeElement).toBe(trigger)
   })
 
-  it('lets an outer popover focus the Select trigger with popover.focusOnShow()', async () => {
+  it('lets an outer popover focus the select trigger with popover.focusOnShow()', async () => {
     function OuterPopoverWithSelect(handle: Handle) {
       let open = false
 

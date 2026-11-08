@@ -1,5 +1,5 @@
 import { createMixin, type MixinFactory } from './mixin.ts'
-import type { ElementProps } from '../jsx.ts'
+import type { ElementProps } from '../core/vnode.ts'
 
 /**
  * Callback invoked with the bound node and a lifetime signal.
@@ -10,22 +10,25 @@ export type RefCallback<node extends EventTarget> = (node: node, signal: AbortSi
  * Calls a callback when an element is inserted and aborts it when removed.
  */
 export const ref: MixinFactory<Element, [callback: RefCallback<Element>], ElementProps> =
-  createMixin<Element, [callback: RefCallback<Element>], ElementProps>((handle) => {
-    let controller: AbortController | undefined
+  createMixin<Element, [callback: RefCallback<Element>], ElementProps>(
+    (handle) => {
+      let controller: AbortController | undefined
 
-    handle.addEventListener('insert', (event) => {
-      controller = new AbortController()
-      callback(event.node, controller.signal)
-    })
+      handle.addEventListener('insert', (event) => {
+        controller = new AbortController()
+        callback(event.node, controller.signal)
+      })
 
-    handle.addEventListener('remove', () => {
-      controller?.abort(new DOMException('', 'AbortError'))
-      controller = undefined
-    })
+      handle.addEventListener('remove', () => {
+        controller?.abort(new DOMException('', 'AbortError'))
+        controller = undefined
+      })
 
-    let callback: RefCallback<Element> = () => {}
-    return (nextCallback) => {
-      callback = nextCallback
-      return handle.element
-    }
-  })
+      let callback: RefCallback<Element> = () => {}
+      return (nextCallback) => {
+        callback = nextCallback
+        return handle.element
+      }
+    },
+    { ssr: false },
+  )

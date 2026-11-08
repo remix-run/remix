@@ -1,6 +1,5 @@
-import { jsx } from './jsx.ts'
-import type { ElementProps, ElementType, RemixElement } from './jsx.ts'
-import { assertRemixNodes, normalizeChildren } from './core/children.ts'
+import { assertRemixNodes, jsx, normalizeChildren } from './core/vnode.ts'
+import type { ElementProps, ElementType, RemixElement } from './core/vnode.ts'
 
 /**
  * Creates a Remix virtual element from a JSX-like call signature.

@@ -45,7 +45,7 @@ Write concise release notes that match this repository's `.changes` conventions.
 - Do not write release notes for internal refactors unless they surface as real API or behavior changes.
 - Keep each note self-contained. A reader should understand the shipped behavior from the note itself, with links adding context rather than replacing the explanation.
 - Lead with the user-visible behavior, consequence, or required migration in direct language. Introduce API names where they become relevant to that explanation instead of opening with an inventory such as “This adds X, allows Y, and exposes Z.”
-- When a change is tied to a public issue, PR, RFC, decision doc, spec, or external bug report, include a short reference in the note. Prefer the PR that actually addressed the issue or feature over the source issue because the source issue remains reachable from the PR. Use inline same-repo references like `(see #1234)` and full URLs for external repositories, specs, or reports.
+- Do not include PR or issue numbers or links in change-file copy. The release tooling adds a link to the PR that introduced the change when it renders the changelog. Link to an RFC, decision doc, spec, or external report only when it adds useful context beyond the note.
 - Name the affected API, route convention, package, entrypoint, runtime, browser, or tool version when that detail helps users recognize whether the note applies to them.
 - For bug fixes, describe the user-visible symptom or failing scenario instead of only describing the implementation fix.
 - Structure breaking changes in this order: state what changed, explain the practical impact or who is affected, then give the migration. Do not bury the required action beneath implementation background.
@@ -62,7 +62,7 @@ Write concise release notes that match this repository's `.changes` conventions.
 
 - Package-level change files are the source of truth. For sub-packages, include the concrete API, behavior, runtime, or tooling details users need to understand the change, but shape those details into polished, user-focused prose rather than an implementation inventory.
 - Include contextual before/after examples in sub-package notes when they clarify a new API, migration, breaking change, or changed usage pattern. If the prose instructs readers to edit code, use a `diff` as described above.
-- Include useful PR, issue, RFC, decision, spec, or external report links in sub-package notes. Prefer the implementation PR when it gives readers the full trail.
+- Apply the same reference rule to sub-package notes: omit PR and issue references, and include RFC, decision, spec, or external report links only when they help readers understand the change.
 - `packages/remix/.changes` entries should read like an umbrella release summary for application authors. Synthesize a coherent app-level behavior, workflow, or migration instead of concatenating lower-level package API lists. Keep them shorter than the underlying package notes and focus on the surfaced `remix/...` entrypoints or release-level impact.
 - When several owning packages participate in the same app-level workflow or migration, write one cohesive `remix` note that explains how the pieces work together. Do not mirror the package boundaries unless they represent distinct user-facing changes.
 - Do not duplicate detailed examples, migration prose, or implementation background from a sub-package note into the `remix` note unless the umbrella package itself changes behavior.

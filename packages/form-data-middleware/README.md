@@ -101,6 +101,28 @@ let router = createRouter({
 })
 ```
 
+## Future API
+
+**Future APIs are not stable.** The `remix/middleware/form-data/future` entrypoint may change in any release, but it is a good indication of where this package will land in its next major release.
+
+`formData()` from `remix/middleware/form-data/future` parses requests with [`remix/form-data-parser/future`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser#future-api), so file uploads stream to your `uploadHandler` instead of being buffered in memory. Read each upload inside the handler; uploads the handler returns unread are read into a regular `File`.
+
+```ts
+import { formData } from 'remix/middleware/form-data/future'
+
+let router = createRouter({
+  middleware: [
+    formData({
+      async uploadHandler(upload) {
+        let storageKey = crypto.randomUUID()
+        await fileStorage.set(storageKey, upload)
+        return storageKey
+      },
+    }),
+  ],
+})
+```
+
 ## Related Packages
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API

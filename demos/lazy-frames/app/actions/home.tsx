@@ -11,23 +11,102 @@ import { ThemeToggle } from '../ui/public/theme-toggle.tsx'
 export function HomePage(handle: Handle<{ latency: DemoLatency; theme: Theme }>) {
   return () => (
     <Document title="Lazy-loaded Frames" theme={handle.props.theme}>
-      <div mix={demoControlsStyle}>
+      <div
+        mix={css({
+          position: 'fixed',
+          zIndex: 20,
+          top: '16px',
+          right: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          border: '1px solid var(--control-border)',
+          borderRadius: '10px',
+          padding: '8px',
+          backgroundColor: 'var(--control-bg)',
+          boxShadow: '0 6px 20px var(--control-shadow)',
+          color: 'var(--control-text)',
+          transition: 'background-color 160ms ease, border-color 160ms ease, color 160ms ease',
+          '@media (max-width: 560px)': {
+            top: '8px',
+            right: '8px',
+            left: '8px',
+            justifyContent: 'space-between',
+          },
+        })}
+      >
         <ThemeToggle theme={handle.props.theme} />
         <LatencyToggle latency={handle.props.latency} />
       </div>
-      <header mix={heroStyle}>
-        <div mix={heroInnerStyle}>
-          <h1 mix={heroHeadingStyle}>
+      <header
+        mix={css({
+          minHeight: 'max(100svh, 760px)',
+          display: 'grid',
+          alignItems: 'center',
+          padding: 'clamp(96px, 10vw, 132px) clamp(24px, 6vw, 76px) 72px',
+          backgroundColor: 'var(--hero-bg)',
+          color: 'var(--hero-text)',
+          transition: 'background-color 180ms ease',
+        })}
+      >
+        <div
+          mix={css({
+            width: 'min(1120px, 100%)',
+            margin: '0 auto',
+          })}
+        >
+          <h1
+            mix={css({
+              maxWidth: '980px',
+              margin: '0 0 32px',
+              fontSize: 'clamp(52px, 9vw, 112px)',
+              fontWeight: 760,
+              lineHeight: 0.92,
+              letterSpacing: '-0.065em',
+            })}
+          >
             Load Frames as
             <br />
             they approach.
           </h1>
-          <p mix={heroCopyStyle}>
+          <p
+            mix={css({
+              maxWidth: '680px',
+              margin: 0,
+              fontSize: 'clamp(18px, 2vw, 24px)',
+              lineHeight: 1.45,
+              color: 'var(--hero-muted)',
+              '& code': {
+                color: 'var(--focus-ring)',
+              },
+            })}
+          >
             This demo’s <code>LazyFrame</code> renders a placeholder with the page, then mounts a
             Remix <code>Frame</code> within 320 pixels of the viewport. Loaded Frames stay mounted.
           </p>
 
-          <ol mix={flowStyle} aria-label="Lazy frame lifecycle">
+          <ol
+            mix={css({
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              margin: 'clamp(56px, 9vh, 88px) 0 0',
+              padding: 0,
+              borderTop: '1px solid var(--hero-rule)',
+              borderBottom: '1px solid var(--hero-rule)',
+              listStyle: 'none',
+              '& li + li': {
+                borderLeft: '1px solid var(--hero-rule)',
+              },
+              '@media (max-width: 760px)': {
+                gridTemplateColumns: '1fr',
+                '& li + li': {
+                  borderTop: '1px solid var(--hero-rule)',
+                  borderLeft: 0,
+                },
+              },
+            })}
+            aria-label="Lazy frame lifecycle"
+          >
             <li mix={flowItemStyle}>
               <span mix={flowNumberStyle}>1</span>
               <span>The initial document contains the placeholder.</span>
@@ -42,20 +121,74 @@ export function HomePage(handle: Handle<{ latency: DemoLatency; theme: Theme }>)
             </li>
           </ol>
 
-          <a href="#delivery-comparison" mix={scrollCueStyle}>
+          <a
+            href="#delivery-comparison"
+            mix={css({
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '14px',
+              marginTop: '52px',
+              borderBottom: '1px solid color-mix(in srgb, var(--hero-text) 40%, transparent)',
+              paddingBottom: '6px',
+              color: 'var(--hero-text)',
+              fontSize: '13px',
+              fontWeight: 700,
+              textDecoration: 'none',
+              '&:hover': {
+                borderColor: 'var(--focus-ring)',
+                color: 'var(--focus-ring)',
+              },
+            })}
+          >
             Compare delivery <span aria-hidden="true">↓</span>
           </a>
         </div>
       </header>
 
-      <main mix={mainStyle}>
+      <main
+        mix={css({
+          width: 'min(1120px, calc(100% - 40px))',
+          margin: '0 auto',
+        })}
+      >
         <DeliveryComparison />
 
-        <section mix={introStyle} aria-labelledby="response-shapes-heading">
-          <h2 id="response-shapes-heading" mix={introHeadingStyle}>
+        <section
+          mix={css({
+            display: 'grid',
+            gridTemplateColumns: 'minmax(280px, 0.8fr) minmax(280px, 1fr)',
+            gap: 'clamp(32px, 7vw, 96px)',
+            alignItems: 'start',
+            padding: '120px 0 72px',
+            '@media (max-width: 720px)': {
+              gridTemplateColumns: '1fr',
+            },
+          })}
+          aria-labelledby="response-shapes-heading"
+        >
+          <h2
+            id="response-shapes-heading"
+            mix={css({
+              maxWidth: '620px',
+              margin: 0,
+              fontSize: 'clamp(34px, 4.5vw, 58px)',
+              fontWeight: 700,
+              lineHeight: 1,
+              letterSpacing: '-0.045em',
+              color: 'var(--page-heading)',
+            })}
+          >
             LazyFrame works with every response type
           </h2>
-          <p mix={introCopyStyle}>
+          <p
+            mix={css({
+              maxWidth: '660px',
+              margin: 0,
+              fontSize: '17px',
+              lineHeight: 1.65,
+              color: 'var(--page-muted)',
+            })}
+          >
             The examples alternate between checked-in HTML, server-rendered components, and
             components with a client entry. The loading behavior does not change.
           </p>
@@ -66,11 +199,46 @@ export function HomePage(handle: Handle<{ latency: DemoLatency; theme: Theme }>)
         ))}
       </main>
 
-      <footer mix={footerStyle}>
-        <h2 mix={footerHeadingStyle}>
+      <footer
+        mix={css({
+          minHeight: '55svh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '80px 24px',
+          backgroundColor: 'var(--footer-bg)',
+          textAlign: 'center',
+          color: 'var(--footer-text)',
+          transition: 'background-color 180ms ease, color 180ms ease',
+        })}
+      >
+        <h2
+          mix={css({
+            maxWidth: '860px',
+            margin: 0,
+            fontSize: 'clamp(38px, 6vw, 76px)',
+            lineHeight: 0.98,
+            letterSpacing: '-0.055em',
+          })}
+        >
           Ten Frames loaded near the viewport. The first shipped with the document.
         </h2>
-        <a href="#top" mix={footerLinkStyle}>
+        <a
+          href="#top"
+          mix={css({
+            marginTop: '42px',
+            borderBottom: '1px solid var(--footer-muted)',
+            paddingBottom: '5px',
+            color: 'var(--footer-text)',
+            fontSize: '13px',
+            fontWeight: 700,
+            textDecoration: 'none',
+            '&:hover': {
+              borderColor: 'var(--footer-text)',
+            },
+          })}
+        >
           Return to the beginning
         </a>
       </footer>
@@ -83,21 +251,93 @@ function LatencyToggle(handle: Handle<{ latency: DemoLatency }>) {
     let { enabled, duration } = handle.props.latency
 
     return (
-      <form action={routes.latency.href()} method="post" mix={latencyToggleStyle}>
+      <form
+        action={routes.latency.href()}
+        method="post"
+        mix={css({
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          '@media (max-width: 560px)': {
+            gap: '10px',
+            '& small': {
+              display: 'none',
+            },
+          },
+        })}
+      >
         <input type="hidden" name="enabled" value={enabled ? 'false' : 'true'} />
-        <div mix={latencyStatusStyle}>
+        <div
+          mix={css({
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          })}
+        >
           <span
             aria-hidden="true"
-            mix={[latencyDotStyle, enabled ? latencyDotEnabledStyle : latencyDotDisabledStyle]}
+            mix={[
+              css({
+                flex: '0 0 auto',
+                width: '9px',
+                height: '9px',
+                borderRadius: '50%',
+              }),
+              enabled
+                ? css({
+                    backgroundColor: '#d4543f',
+                    boxShadow: '0 0 0 5px rgba(212, 84, 63, 0.13)',
+                  })
+                : css({
+                    backgroundColor: 'var(--control-muted)',
+                  }),
+            ]}
           />
           <span>
-            <strong mix={latencyLabelStyle}>Global latency {enabled ? 'on' : 'off'}</strong>
-            <small mix={latencyDetailStyle}>
+            <strong
+              mix={css({
+                display: 'block',
+                fontSize: '12px',
+              })}
+            >
+              Global latency {enabled ? 'on' : 'off'}
+            </strong>
+            <small
+              mix={css({
+                display: 'block',
+                marginTop: '2px',
+                fontSize: '10px',
+                color: 'var(--control-muted)',
+              })}
+            >
               {enabled ? `${duration} ms on every request` : 'Responses run at full speed'}
             </small>
           </span>
         </div>
-        <button type="submit" aria-pressed={enabled} mix={latencyButtonStyle}>
+        <button
+          type="submit"
+          aria-pressed={enabled}
+          mix={css({
+            minHeight: '36px',
+            border: '1px solid var(--control-border)',
+            borderRadius: '6px',
+            padding: '7px 11px',
+            backgroundColor: 'var(--control-button-bg)',
+            color: 'var(--control-text)',
+            font: 'inherit',
+            fontSize: '11px',
+            fontWeight: 750,
+            cursor: 'pointer',
+            '&:hover': {
+              borderColor: 'var(--control-border-hover)',
+              backgroundColor: 'var(--control-button-hover)',
+            },
+            '&:focus-visible': {
+              outline: '3px solid var(--focus-ring)',
+              outlineOffset: '2px',
+            },
+          })}
+        >
           {enabled ? 'Disable' : 'Enable'}
         </button>
       </form>
@@ -110,10 +350,50 @@ function DeliveryComparison() {
     let frameHref = routes.frames.html.href({ id: motionArtifact.id })
 
     return (
-      <section id="delivery-comparison" mix={comparisonSectionStyle}>
-        <header mix={comparisonHeaderStyle}>
-          <h2 mix={comparisonHeadingStyle}>The same response, eager and lazy</h2>
-          <div mix={comparisonDescriptionStyle}>
+      <section
+        id="delivery-comparison"
+        mix={css({
+          minHeight: '105svh',
+          display: 'grid',
+          alignContent: 'center',
+          gap: '52px',
+          padding: '120px 0',
+          scrollMarginTop: '84px',
+        })}
+      >
+        <header
+          mix={css({
+            display: 'grid',
+            gridTemplateColumns: 'minmax(280px, 0.9fr) minmax(280px, 0.65fr)',
+            alignItems: 'end',
+            gap: 'clamp(32px, 8vw, 112px)',
+            '@media (max-width: 760px)': {
+              gridTemplateColumns: '1fr',
+            },
+          })}
+        >
+          <h2
+            mix={css({
+              maxWidth: '700px',
+              margin: 0,
+              fontSize: 'clamp(40px, 5.5vw, 68px)',
+              lineHeight: 1,
+              letterSpacing: '-0.05em',
+              color: 'var(--page-text)',
+            })}
+          >
+            The same response, eager and lazy
+          </h2>
+          <div
+            mix={css({
+              '& p': {
+                margin: '0 0 18px',
+                fontSize: '15px',
+                lineHeight: 1.65,
+                color: 'var(--page-muted)',
+              },
+            })}
+          >
             <p>
               Both Frames resolve the route below. The regular Frame is resolved during server
               rendering; LazyFrame waits to mount it in the browser. The checked-in fragment carries
@@ -123,7 +403,16 @@ function DeliveryComparison() {
           </div>
         </header>
 
-        <div mix={comparisonGridStyle}>
+        <div
+          mix={css({
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: '20px',
+            '@media (max-width: 900px)': {
+              gridTemplateColumns: '1fr',
+            },
+          })}
+        >
           <article data-delivery="eager" mix={deliveryCardStyle}>
             <header mix={deliveryHeaderStyle}>
               <h3 mix={deliveryHeadingStyle}>Regular Frame</h3>
@@ -166,15 +455,72 @@ function ExhibitSection(handle: Handle<{ exhibit: Exhibit; index: number }>) {
     let ordinal = String(index + 1).padStart(2, '0')
 
     return (
-      <section id={exhibit.id} mix={exhibitSectionStyle}>
-        <div mix={sectionGridStyle}>
-          <header mix={sectionHeaderStyle}>
-            <p mix={sectionIndexStyle}>
+      <section
+        id={exhibit.id}
+        mix={css({
+          minHeight: '100svh',
+          display: 'grid',
+          alignItems: 'center',
+          borderTop: '1px solid var(--page-rule)',
+          padding: '12vh 0',
+          scrollMarginTop: '84px',
+        })}
+      >
+        <div
+          mix={css({
+            display: 'grid',
+            gridTemplateColumns: 'minmax(250px, 0.62fr) minmax(0, 1fr)',
+            alignItems: 'center',
+            gap: 'clamp(42px, 8vw, 116px)',
+            '@media (max-width: 820px)': {
+              gridTemplateColumns: '1fr',
+            },
+          })}
+        >
+          <header
+            mix={css({
+              alignSelf: 'start',
+            })}
+          >
+            <p
+              mix={css({
+                display: 'flex',
+                gap: '14px',
+                margin: '0 0 22px',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                fontSize: '11px',
+                lineHeight: 1.4,
+                color: 'var(--page-subtle)',
+                '& span:first-child': {
+                  fontWeight: 700,
+                  color: 'var(--page-heading)',
+                },
+              })}
+            >
               <span>{ordinal}</span>
               <span>{categoryLabel(exhibit.kind)}</span>
             </p>
-            <h2 mix={sectionHeadingStyle}>{exhibit.title}</h2>
-            <p mix={sectionDescriptionStyle}>{exhibit.description}</p>
+            <h2
+              mix={css({
+                margin: 0,
+                fontSize: 'clamp(34px, 4.6vw, 62px)',
+                lineHeight: 0.98,
+                letterSpacing: '-0.055em',
+                color: 'var(--page-text)',
+              })}
+            >
+              {exhibit.title}
+            </h2>
+            <p
+              mix={css({
+                margin: '22px 0 20px',
+                fontSize: '16px',
+                lineHeight: 1.65,
+                color: 'var(--page-muted)',
+              })}
+            >
+              {exhibit.description}
+            </p>
             <code mix={routeStyle}>{frameHref}</code>
           </header>
 
@@ -231,151 +577,6 @@ function categoryLabel(kind: Exhibit['kind']): string {
   }
 }
 
-const demoControlsStyle = css({
-  position: 'fixed',
-  zIndex: 20,
-  top: '16px',
-  right: '16px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  border: '1px solid var(--control-border)',
-  borderRadius: '10px',
-  padding: '8px',
-  backgroundColor: 'var(--control-bg)',
-  boxShadow: '0 6px 20px var(--control-shadow)',
-  color: 'var(--control-text)',
-  transition: 'background-color 160ms ease, border-color 160ms ease, color 160ms ease',
-  '@media (max-width: 560px)': {
-    top: '8px',
-    right: '8px',
-    left: '8px',
-    justifyContent: 'space-between',
-  },
-})
-
-const latencyToggleStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '14px',
-  '@media (max-width: 560px)': {
-    gap: '10px',
-    '& small': {
-      display: 'none',
-    },
-  },
-})
-
-const latencyStatusStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-})
-
-const latencyDotStyle = css({
-  flex: '0 0 auto',
-  width: '9px',
-  height: '9px',
-  borderRadius: '50%',
-})
-
-const latencyDotEnabledStyle = css({
-  backgroundColor: '#d4543f',
-  boxShadow: '0 0 0 5px rgba(212, 84, 63, 0.13)',
-})
-
-const latencyDotDisabledStyle = css({
-  backgroundColor: 'var(--control-muted)',
-})
-
-const latencyLabelStyle = css({
-  display: 'block',
-  fontSize: '12px',
-})
-
-const latencyDetailStyle = css({
-  display: 'block',
-  marginTop: '2px',
-  fontSize: '10px',
-  color: 'var(--control-muted)',
-})
-
-const latencyButtonStyle = css({
-  minHeight: '36px',
-  border: '1px solid var(--control-border)',
-  borderRadius: '6px',
-  padding: '7px 11px',
-  backgroundColor: 'var(--control-button-bg)',
-  color: 'var(--control-text)',
-  font: 'inherit',
-  fontSize: '11px',
-  fontWeight: 750,
-  cursor: 'pointer',
-  '&:hover': {
-    borderColor: 'var(--control-border-hover)',
-    backgroundColor: 'var(--control-button-hover)',
-  },
-  '&:focus-visible': {
-    outline: '3px solid var(--focus-ring)',
-    outlineOffset: '2px',
-  },
-})
-
-const heroStyle = css({
-  minHeight: 'max(100svh, 760px)',
-  display: 'grid',
-  alignItems: 'center',
-  padding: 'clamp(96px, 10vw, 132px) clamp(24px, 6vw, 76px) 72px',
-  backgroundColor: 'var(--hero-bg)',
-  color: 'var(--hero-text)',
-  transition: 'background-color 180ms ease',
-})
-
-const heroInnerStyle = css({
-  width: 'min(1120px, 100%)',
-  margin: '0 auto',
-})
-
-const heroHeadingStyle = css({
-  maxWidth: '980px',
-  margin: '0 0 32px',
-  fontSize: 'clamp(52px, 9vw, 112px)',
-  fontWeight: 760,
-  lineHeight: 0.92,
-  letterSpacing: '-0.065em',
-})
-
-const heroCopyStyle = css({
-  maxWidth: '680px',
-  margin: 0,
-  fontSize: 'clamp(18px, 2vw, 24px)',
-  lineHeight: 1.45,
-  color: 'var(--hero-muted)',
-  '& code': {
-    color: 'var(--focus-ring)',
-  },
-})
-
-const flowStyle = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  margin: 'clamp(56px, 9vh, 88px) 0 0',
-  padding: 0,
-  borderTop: '1px solid var(--hero-rule)',
-  borderBottom: '1px solid var(--hero-rule)',
-  listStyle: 'none',
-  '& li + li': {
-    borderLeft: '1px solid var(--hero-rule)',
-  },
-  '@media (max-width: 760px)': {
-    gridTemplateColumns: '1fr',
-    '& li + li': {
-      borderTop: '1px solid var(--hero-rule)',
-      borderLeft: 0,
-    },
-  },
-})
-
 const flowItemStyle = css({
   display: 'grid',
   gridTemplateColumns: '28px 1fr',
@@ -393,103 +594,6 @@ const flowNumberStyle = css({
   fontSize: '12px',
   fontWeight: 700,
   color: 'var(--focus-ring)',
-})
-
-const scrollCueStyle = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '14px',
-  marginTop: '52px',
-  borderBottom: '1px solid color-mix(in srgb, var(--hero-text) 40%, transparent)',
-  paddingBottom: '6px',
-  color: 'var(--hero-text)',
-  fontSize: '13px',
-  fontWeight: 700,
-  textDecoration: 'none',
-  '&:hover': {
-    borderColor: 'var(--focus-ring)',
-    color: 'var(--focus-ring)',
-  },
-})
-
-const mainStyle = css({
-  width: 'min(1120px, calc(100% - 40px))',
-  margin: '0 auto',
-})
-
-const introStyle = css({
-  display: 'grid',
-  gridTemplateColumns: 'minmax(280px, 0.8fr) minmax(280px, 1fr)',
-  gap: 'clamp(32px, 7vw, 96px)',
-  alignItems: 'start',
-  padding: '120px 0 72px',
-  '@media (max-width: 720px)': {
-    gridTemplateColumns: '1fr',
-  },
-})
-
-const introHeadingStyle = css({
-  maxWidth: '620px',
-  margin: 0,
-  fontSize: 'clamp(34px, 4.5vw, 58px)',
-  fontWeight: 700,
-  lineHeight: 1,
-  letterSpacing: '-0.045em',
-  color: 'var(--page-heading)',
-})
-
-const introCopyStyle = css({
-  maxWidth: '660px',
-  margin: 0,
-  fontSize: '17px',
-  lineHeight: 1.65,
-  color: 'var(--page-muted)',
-})
-
-const comparisonSectionStyle = css({
-  minHeight: '105svh',
-  display: 'grid',
-  alignContent: 'center',
-  gap: '52px',
-  padding: '120px 0',
-  scrollMarginTop: '84px',
-})
-
-const comparisonHeaderStyle = css({
-  display: 'grid',
-  gridTemplateColumns: 'minmax(280px, 0.9fr) minmax(280px, 0.65fr)',
-  alignItems: 'end',
-  gap: 'clamp(32px, 8vw, 112px)',
-  '@media (max-width: 760px)': {
-    gridTemplateColumns: '1fr',
-  },
-})
-
-const comparisonHeadingStyle = css({
-  maxWidth: '700px',
-  margin: 0,
-  fontSize: 'clamp(40px, 5.5vw, 68px)',
-  lineHeight: 1,
-  letterSpacing: '-0.05em',
-  color: 'var(--page-text)',
-})
-
-const comparisonDescriptionStyle = css({
-  '& p': {
-    margin: '0 0 18px',
-    fontSize: '15px',
-    lineHeight: 1.65,
-    color: 'var(--page-muted)',
-  },
-})
-
-const comparisonGridStyle = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  gap: '20px',
-  '@media (max-width: 900px)': {
-    gridTemplateColumns: '1fr',
-  },
 })
 
 const deliveryCardStyle = css({
@@ -531,58 +635,6 @@ const deliveryDetailStyle = css({
   '& strong': {
     color: 'var(--page-heading)',
   },
-})
-
-const exhibitSectionStyle = css({
-  minHeight: '100svh',
-  display: 'grid',
-  alignItems: 'center',
-  borderTop: '1px solid var(--page-rule)',
-  padding: '12vh 0',
-  scrollMarginTop: '84px',
-})
-
-const sectionGridStyle = css({
-  display: 'grid',
-  gridTemplateColumns: 'minmax(250px, 0.62fr) minmax(0, 1fr)',
-  alignItems: 'center',
-  gap: 'clamp(42px, 8vw, 116px)',
-  '@media (max-width: 820px)': {
-    gridTemplateColumns: '1fr',
-  },
-})
-
-const sectionHeaderStyle = css({
-  alignSelf: 'start',
-})
-
-const sectionIndexStyle = css({
-  display: 'flex',
-  gap: '14px',
-  margin: '0 0 22px',
-  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-  fontSize: '11px',
-  lineHeight: 1.4,
-  color: 'var(--page-subtle)',
-  '& span:first-child': {
-    fontWeight: 700,
-    color: 'var(--page-heading)',
-  },
-})
-
-const sectionHeadingStyle = css({
-  margin: 0,
-  fontSize: 'clamp(34px, 4.6vw, 62px)',
-  lineHeight: 0.98,
-  letterSpacing: '-0.055em',
-  color: 'var(--page-text)',
-})
-
-const sectionDescriptionStyle = css({
-  margin: '22px 0 20px',
-  fontSize: '16px',
-  lineHeight: 1.65,
-  color: 'var(--page-muted)',
 })
 
 const routeStyle = css({
@@ -680,39 +732,5 @@ const frameShellStyle = css({
     fontSize: '11px',
     lineHeight: 1.5,
     color: 'var(--plain-muted)',
-  },
-})
-
-const footerStyle = css({
-  minHeight: '55svh',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '80px 24px',
-  backgroundColor: 'var(--footer-bg)',
-  textAlign: 'center',
-  color: 'var(--footer-text)',
-  transition: 'background-color 180ms ease, color 180ms ease',
-})
-
-const footerHeadingStyle = css({
-  maxWidth: '860px',
-  margin: 0,
-  fontSize: 'clamp(38px, 6vw, 76px)',
-  lineHeight: 0.98,
-  letterSpacing: '-0.055em',
-})
-
-const footerLinkStyle = css({
-  marginTop: '42px',
-  borderBottom: '1px solid var(--footer-muted)',
-  paddingBottom: '5px',
-  color: 'var(--footer-text)',
-  fontSize: '13px',
-  fontWeight: 700,
-  textDecoration: 'none',
-  '&:hover': {
-    borderColor: 'var(--footer-text)',
   },
 })

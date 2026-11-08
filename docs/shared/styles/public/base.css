@@ -39,8 +39,8 @@
   }
 
   ::selection {
-    background: #ffdf5f;
-    color: #1b1b1f;
+    background: var(--docs-selection-background);
+    color: var(--docs-selection-foreground);
   }
 
   pagefind-filter-dropdown,
@@ -95,10 +95,6 @@
 
 .rmx-page-body-sm {
   font-size: var(--rmx-font-size-sm);
-}
-
-.docs-accent {
-  color: var(--rmx-color-eyebrow);
 }
 
 [data-docs-main] h1 {

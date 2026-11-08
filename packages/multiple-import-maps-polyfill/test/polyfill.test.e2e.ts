@@ -6,7 +6,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const lexerPath = fileURLToPath(import.meta.resolve('es-module-lexer'))
+const lexerPath = fileURLToPath(import.meta.resolve('es-module-lexer/minimal/js'))
 
 declare global {
   interface Window {
@@ -32,7 +32,7 @@ describe('multiple import map polyfill', () => {
           return html(`<!doctype html><html><head>
         <base href="/app/">
         <script type="importmap">${JSON.stringify({
-          imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' },
+          imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' },
           scopes: {
             '/app/': { shared: '/app/shared.js' },
             '/feature/': { shared: '/feature/shared.js' },
@@ -235,6 +235,32 @@ describe('multiple import map polyfill', () => {
     assert.equal(requests.get('/dist/lib/core.js') ?? 0, supportsMultiple ? 0 : 1)
   })
 
+  it('runs feature detection once', async (t) => {
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let url = new URL(request.url)
+        if (url.pathname === '/') return html(detectionDocument)
+        if (url.pathname === '/dist/index.js') return file('dist/index.js')
+        if (url.pathname.startsWith('/dist/lib/')) return file(url.pathname.slice(1))
+        if (url.pathname === '/vendor/es-module-lexer.js') {
+          return javascript(await fs.readFile(lexerPath, 'utf8'))
+        }
+        return new Response('Not Found', { status: 404 })
+      }),
+    )
+
+    // Retriggering the detection iframe's early onload after setting srcdoc ran the feature test
+    // in the initial about:blank document, and the srcdoc navigation canceled its module import.
+    let failedRequests: string[] = []
+    page.on('requestfailed', (request) => {
+      failedRequests.push(`${request.url()}: ${request.failure()?.errorText}`)
+    })
+    await page.goto('/')
+    await page.locator('#support').waitFor({ state: 'attached' })
+
+    assert.deepEqual(failedRequests, [])
+  })
+
   it('detects support when Trusted Types enforcement allows its policy', async (t) => {
     let page = await t.serve(
       await createTestServer(async (request) => {
@@ -243,7 +269,7 @@ describe('multiple import map polyfill', () => {
           return html(trustedTypesDocument, {
             headers: {
               'Content-Security-Policy':
-                "script-src 'self' 'nonce-n0nce' blob: 'wasm-unsafe-eval'; connect-src 'self' blob:; require-trusted-types-for 'script'; trusted-types remix/multiple-import-maps-polyfill",
+                "script-src 'self' 'nonce-n0nce' blob:; connect-src 'self' blob:; require-trusted-types-for 'script'; trusted-types remix/multiple-import-maps-polyfill",
             },
           })
         }
@@ -253,12 +279,22 @@ describe('multiple import map polyfill', () => {
           return javascript(await fs.readFile(lexerPath, 'utf8'))
         }
         if (url.pathname === '/csp-module.js') {
+          return javascript("export { value } from '/csp-dependency.js'")
+        }
+        if (url.pathname === '/csp-dependency.js') {
           return javascript("export let value = 'csp'")
         }
         return new Response('Not Found', { status: 404 })
       }),
     )
 
+    await page.addInitScript(() => {
+      let violations: string[] = []
+      Reflect.set(window, 'cspViolations', violations)
+      document.addEventListener('securitypolicyviolation', (event) => {
+        violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+      })
+    })
     await page.goto('/')
     await page.locator('#support, #error').waitFor({ state: 'attached' })
 
@@ -267,6 +303,46 @@ describe('multiple import map polyfill', () => {
       await page.locator('#support, #error').textContent(),
       `${String(browserName !== 'firefox')}:csp`,
     )
+    assert.deepEqual(await page.evaluate(() => Reflect.get(window, 'cspViolations')), [])
+  })
+
+  it('loads module graphs under a Content Security Policy without eval or Wasm', async (t) => {
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let url = new URL(request.url)
+        if (url.pathname === '/') {
+          return html(strictCspDocument, {
+            headers: { 'Content-Security-Policy': "script-src 'self' 'nonce-n0nce' blob:" },
+          })
+        }
+        if (url.pathname === '/dist/index.js') return file('dist/index.js')
+        if (url.pathname.startsWith('/dist/lib/')) return file(url.pathname.slice(1))
+        if (url.pathname === '/vendor/es-module-lexer.js') {
+          return javascript(await fs.readFile(lexerPath, 'utf8'))
+        }
+        if (url.pathname === '/csp-entry.js') {
+          return javascript(
+            "import { value } from './csp-static.js'; export { value }; export let load = () => import('./csp-dynamic.js')",
+          )
+        }
+        if (url.pathname === '/csp-static.js') return javascript("export let value = 'static'")
+        if (url.pathname === '/csp-dynamic.js') return javascript("export let value = 'dynamic'")
+        return new Response('Not Found', { status: 404 })
+      }),
+    )
+
+    await page.addInitScript(() => {
+      let violations: string[] = []
+      Reflect.set(window, 'cspViolations', violations)
+      document.addEventListener('securitypolicyviolation', (event) => {
+        violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+      })
+    })
+    await page.goto('/')
+    await page.locator('#result, #error').waitFor({ state: 'attached' })
+
+    assert.equal(await page.locator('#result, #error').textContent(), 'static:dynamic:0')
+    assert.deepEqual(await page.evaluate(() => Reflect.get(window, 'cspViolations')), [])
   })
 
   it('rejects non-JavaScript module responses', async (t) => {
@@ -405,7 +481,7 @@ describe('multiple import map polyfill', () => {
 
 const initialImportMap = {
   imports: {
-    'es-module-lexer': '/vendor/es-module-lexer.js',
+    'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js',
     '/shared.js': '/shared.hash.js',
   },
   scopes: {
@@ -455,7 +531,7 @@ const preloadFailureDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -595,7 +671,7 @@ const helperDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -632,7 +708,7 @@ const detectionDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -649,7 +725,7 @@ const trustedTypesDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap" nonce="n0nce">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap" nonce="n0nce">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
   <script type="importmap" nonce="n0nce">${JSON.stringify({ imports: { 'csp-module': '/csp-module.js' } })}</script>
 </head>
 <body>
@@ -673,11 +749,41 @@ const trustedTypesDocument = `
 </html>
 `
 
+const strictCspDocument = `
+<!doctype html>
+<html>
+<head>
+  <script type="importmap" nonce="n0nce">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
+</head>
+<body>
+  <script type="module" nonce="n0nce">
+    import { importShim } from '/dist/index.js'
+
+    let violations = 0
+    document.addEventListener('securitypolicyviolation', () => violations++)
+    try {
+      let module = await importShim('/csp-entry.js')
+      let dynamic = await module.load()
+      let result = document.createElement('div')
+      result.id = 'result'
+      result.textContent = module.value + ':' + dynamic.value + ':' + violations
+      document.body.append(result)
+    } catch (error) {
+      let result = document.createElement('div')
+      result.id = 'error'
+      result.textContent = String(error)
+      document.body.append(result)
+    }
+  </script>
+</body>
+</html>
+`
+
 const nonJavaScriptDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -702,7 +808,7 @@ const nativeModuleTypesDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -739,7 +845,7 @@ const wasmSourceDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">
@@ -786,7 +892,7 @@ const integrityDocument = `
 <!doctype html>
 <html>
 <head>
-  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer': '/vendor/es-module-lexer.js' } })}</script>
+  <script type="importmap">${JSON.stringify({ imports: { 'es-module-lexer/minimal/js': '/vendor/es-module-lexer.js' } })}</script>
 </head>
 <body>
   <script type="module">

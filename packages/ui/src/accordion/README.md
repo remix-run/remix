@@ -62,13 +62,15 @@ Listen for bubbling changes on the root or an ancestor:
 - `Context`: provider for controlled or uncontrolled accordion state. Supports `value`, `defaultValue`, `onValueChange`, `disabled`, `collapsible`, and `type="multiple"`.
 - `ItemContext`: provider for one item `value`. Pass `disabled` to prevent that item from opening or receiving keyboard focus.
 - `root()`: wires the root element and bubbling change events.
-- `item()`: wires one item wrapper.
+- `item()`: applies disabled and open or closed state attributes to the item element.
 - `trigger()`: wires the item trigger, keyboard navigation, and trigger ARIA attributes.
 - `content()`: wires the item panel id, hidden state, inert state, and open or closed state attributes.
 - `onAccordionChange(...)`: event mixin for the bubbling `AccordionChangeEvent`.
 - `AccordionChangeEvent`: bubbling event with `value`, `itemValue`, and `accordionType`.
-- `AccordionType`, `AccordionValue`, `AccordionSingleValue`, `AccordionMultipleValue`, and `AccordionHeadingLevel`: public state and configuration types.
-- `AccordionBaseContextProps`, `AccordionSingleContextProps`, `AccordionMultipleContextProps`, `AccordionContextProps`, `AccordionRootOptions`, `AccordionItemOptions`, `AccordionTriggerOptions`, and `AccordionContentOptions`: context prop and mixin option types.
+- `AccordionType`, `AccordionValue`, `AccordionSingleValue`, and `AccordionMultipleValue`: public state types.
+- `AccordionBaseContextProps`, `AccordionSingleContextProps`, `AccordionMultipleContextProps`, and `AccordionContextProps`: provider prop types.
+- `AccordionItemOptions`: props for `ItemContext`, including `value` and optional `disabled`.
+- `AccordionTriggerOptions`: options for `trigger()`, including optional `disabled`.
 
 ## Behavior Notes
 
@@ -80,3 +82,5 @@ Listen for bubbling changes on the root or an ancestor:
 - Trigger and panel ids are generated and linked with `aria-controls`, `aria-labelledby`, and `aria-expanded`. Closed panels receive `aria-hidden` and `inert`.
 - Each item and trigger receives `data-state="open"` or `data-state="closed"` for app-owned styling.
 - `AccordionChangeEvent` bubbles from the root and includes `value`, `itemValue`, and `accordionType`.
+
+Render the trigger inside an appropriate heading element, such as `<h2>` or `<h3>`. App markup determines the heading level.

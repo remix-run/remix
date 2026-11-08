@@ -7,13 +7,13 @@
 Use a native checkbox when you want normal form participation:
 
 ```tsx
-import * as toggle from '@remix-run/ui/toggle'
+import { toggle } from '@remix-run/ui/toggle'
 import { controlStyle } from './toggle.styles'
 
 function NotificationSetting() {
   return () => (
     <label>
-      <input mix={[controlStyle, toggle.control({ defaultChecked: true })]} type="checkbox" />
+      <input mix={[controlStyle, toggle({ defaultChecked: true })]} type="checkbox" />
       Email notifications
     </label>
   )
@@ -23,12 +23,12 @@ function NotificationSetting() {
 The same primitive supports a custom host:
 
 ```tsx
-import * as toggle from '@remix-run/ui/toggle'
+import { toggle } from '@remix-run/ui/toggle'
 import { controlStyle } from './toggle.styles'
 
 function CustomToggle() {
   return () => (
-    <button mix={[controlStyle, toggle.control({ defaultChecked: true })]} type="button">
+    <button mix={[controlStyle, toggle({ defaultChecked: true })]} type="button">
       Notifications
     </button>
   )
@@ -39,10 +39,10 @@ Use `checked` and `onCheckedChange` for controlled state, or `defaultChecked` fo
 
 ## `@remix-run/ui/toggle`
 
-- `control(options)`: wires a boolean switch control with checked state, ARIA, keyboard behavior, and native input behavior. Options include controlled `checked`, uncontrolled `defaultChecked`, `onCheckedChange`, and common form-control properties.
+- `toggle(options)`: wires a boolean switch control with checked state, ARIA, keyboard behavior, and native input behavior. Options include controlled `checked`, uncontrolled `defaultChecked`, `onCheckedChange`, and common form-control properties.
 - `onToggleChange(handler)`: event mixin for bubbling toggle changes.
 - `ToggleChangeEvent`: bubbling event whose `checked` property contains the next state.
-- `ToggleControlOptions`: options for controlled and uncontrolled state, disabled and read-only behavior, and native form participation.
+- `ToggleOptions`: options for controlled and uncontrolled state, disabled and read-only behavior, and native form participation.
 
 ## Behavior Notes
 

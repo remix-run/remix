@@ -19,6 +19,11 @@ and the
    - Since the change files have been deleted, it publishes all unpublished packages to npm
    - It then creates Git tags and GitHub releases for the packages that were published
 
+Each change-file entry links to the pull request that introduced the file, using the PR number in
+the introducing commit's subject. If there is no PR number, it links to that commit instead. Later
+edits to the file preserve its original attribution. Release generation requires full Git history;
+uncommitted change files appear without source links in local previews.
+
 ### Manual Versioning
 
 The Release pull request automates the `pnpm changes:version` command. If needed, run the command
@@ -80,23 +85,34 @@ To release the stable version:
 The prerelease suffix is removed, for example from `3.0.0-rc.7` to `3.0.0`. The bump type is used
 only for changelog categorization; by convention, use `major` for a major release announcement.
 
-## Preview Builds
+## Preview Releases
 
-The `preview/main` branch provides installable builds of `main` without publishing releases to npm.
-The
-[`preview` workflow](https://github.com/remix-run/remix/blob/main/.github/workflows/preview.yml)
-runs [`setup-installable-branch.ts`](./scripts/setup-installable-branch.ts) after every commit to
-`main`. The script builds the repository and commits the build output and required `package.json`
-changes to `preview/main`.
+The Preview Build workflow builds public package tarballs for `main` pushes and same-repository PR
+updates, then uploads and verifies them before publishing releases in
+[remix-run/previews](https://github.com/remix-run/previews). Dispatch it with `baseBranch`
+for an experimental preview. Previewed refs must include the preview scripts from
+`main`.
 
-The `preview/main` build can be installed directly with pnpm 9 or newer:
+Main and experimental release names and tags use `v0.YYYYMMDD.HHMMSS-<channel>-<8-character-sha>`,
+with the source commit's UTC date and time. Leading zeros are removed from the numeric time
+component for valid SemVer. PRs share a `v0.YYYYMMDD.HHMMSS-pr-<number>` release, using the PR's
+creation timestamp so every build uses the same tag, with `<package>-<8-character-sha>.tgz` assets.
+After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
+updates the release's install table, and retains the latest 10 complete builds by completion time.
+Main releases are published as the repository's latest release when they are the newest main
+build, and include a `remix.url` asset containing their `remix.tgz` URL.
+Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release
+and any older per-SHA preview releases.
 
-```sh
-pnpm install "remix-run/remix#preview/main&path:packages/remix"
+Successful PR publication deletes the corresponding legacy `preview/pr-<number>` branch.
+Closing a PR also deletes its legacy branch, including when its head predates this workflow.
+These deletions use the source repository's `GITHUB_TOKEN`.
 
-# Or install a single package
-pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
-```
+The destination must be public, initialized with a commit, and have release immutability disabled.
+Set `REMIX_PREVIEWS_PAT` in this repository's Actions secrets to a fine-grained PAT with Contents
+read/write access to the destination. See the
+[README](https://github.com/remix-run/remix/blob/main/README.md#installation) for installation and
+retention details.
 
 ## Agentic Workflows
 

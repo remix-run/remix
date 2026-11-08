@@ -38,7 +38,7 @@ export default createController(routes.fragments, {
           <div mix={css({ marginTop: '2rem' })}>
             <p>Your cart is empty.</p>
             <p mix={css({ marginTop: '1rem' })}>
-              <a href={routes.books.index.href()} class="btn">
+              <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
                 Browse Books
               </a>
             </p>

@@ -81,7 +81,11 @@ export function AdminOrderShowPage(
         </div>
 
         <p mix={css({ marginTop: '1.5rem' })}>
-          <a href={routes.admin.orders.index.href()} class="btn btn-secondary">
+          <a
+            data-rmx-prefetch="intent"
+            href={routes.admin.orders.index.href()}
+            class="btn btn-secondary"
+          >
             Back to Orders
           </a>
         </p>

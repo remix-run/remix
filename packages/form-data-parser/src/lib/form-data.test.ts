@@ -3,6 +3,7 @@ import { describe, it } from '@remix-run/test'
 
 import {
   type FileUploadHandler,
+  type FileUpload,
   FormDataParseError,
   MaxFilesExceededError,
   parseFormData,
@@ -624,5 +625,83 @@ describe('parseFormData', () => {
     let file = formData.get('file')
     assert.ok(file instanceof File)
     assert.equal(file.name, '%2Fetc%2Fpasswd')
+  })
+})
+
+describe('FileUpload', () => {
+  function createUploadRequest(content: Uint8Array): Request {
+    let encoder = new TextEncoder()
+    return new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data; boundary=----BOUNDARY' },
+      body: new Blob([
+        encoder.encode(
+          [
+            '------BOUNDARY',
+            'Content-Disposition: form-data; name="file"; filename="example.bin"',
+            'Content-Type: application/octet-stream',
+            '',
+            '',
+          ].join('\r\n'),
+        ),
+        content as Uint8Array<ArrayBuffer>,
+        encoder.encode('\r\n------BOUNDARY--\r\n'),
+      ]),
+    })
+  }
+
+  // Some runtimes (Bun) store a plain File in FormData, so use the upload the handler receives.
+  async function parseUpload(content: Uint8Array): Promise<FileUpload> {
+    let upload: FileUpload | undefined
+    await parseFormData(createUploadRequest(content), { maxFileSize: 1024 * 1024 }, (file) => {
+      upload = file
+    })
+    assert.ok(upload)
+    return upload
+  }
+
+  function createContent(size: number): Uint8Array {
+    let content = new Uint8Array(size)
+    for (let index = 0; index < size; index++) content[index] = index % 251
+    return content
+  }
+
+  it('streams the full contents of a file larger than one chunk', async () => {
+    let content = createContent(200 * 1024 + 7)
+    let file = await parseUpload(content)
+
+    let chunks: Uint8Array[] = []
+    for await (let chunk of file.stream()) chunks.push(chunk)
+
+    assert.ok(chunks.length > 1)
+    assert.deepEqual(new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer()), content)
+  })
+
+  it('streams an empty file', async () => {
+    let file = await parseUpload(new Uint8Array(0))
+
+    let chunks: Uint8Array[] = []
+    for await (let chunk of file.stream()) chunks.push(chunk)
+
+    assert.equal(file.size, 0)
+    assert.deepEqual(chunks, [])
+  })
+
+  it('supports reading the stream into a caller-provided buffer', async () => {
+    let content = createContent(100 * 1024)
+    let file = await parseUpload(content)
+
+    let reader = file.stream().getReader({ mode: 'byob' })
+    let received = new Uint8Array(content.length)
+    let offset = 0
+    while (true) {
+      let { done, value } = await reader.read(new Uint8Array(16 * 1024))
+      if (done || value == null) break
+      received.set(value, offset)
+      offset += value.byteLength
+    }
+
+    assert.equal(offset, content.length)
+    assert.deepEqual(received, content)
   })
 })

@@ -183,6 +183,29 @@ parser.finish()
 
 `write()` yields the final part when both closing hyphens arrive. A malformed closing suffix can cause a subsequent `write()` or `finish()` to throw after that part was delivered. Processing a part does not guarantee that the entire message is valid. Empty multipart messages yield no parts.
 
+## Future API
+
+**Future APIs are not stable.** The `remix/multipart-parser/future` entrypoint may change in any release, but it is a good indication of where this package will land in its next major release.
+
+`remix/multipart-parser/future` exports a streaming `parseMultipartRequest()` and `parseMultipartStream()`. Each `MultipartPart` is yielded as soon as its headers arrive, and its content streams from the request body as you read it, so large files are never buffered in memory.
+
+```ts
+import { parseMultipartRequest } from 'remix/multipart-parser/future'
+
+for await (let part of parseMultipartRequest(request, { maxFileSize: 100 * 1024 * 1024 })) {
+  if (part.isFile) {
+    // Stream the file to storage under an application-generated name
+    await storage.put(crypto.randomUUID(), part.body)
+  } else {
+    console.log(part.name, await part.text())
+  }
+}
+```
+
+Read each part's content once, with `part.body`, `await part.bytes()`, `await part.text()`, or `for await...of`, before continuing to the next part. Content you don't read is discarded when you continue, and breaking out of the loop cancels the request body.
+
+The future entrypoint does not include `parseMultipart()`, `MultipartParser`, or Node.js bindings. Its error classes are the same as the stable entrypoint's, so `instanceof` checks work with either.
+
 ## Demos
 
 The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos) contains a few working demos of how you can use this library:

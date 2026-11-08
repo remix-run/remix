@@ -1,5 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import assertDefault, { equal } from 'remix/assert'
+import Headers, { SuperHeaders } from 'remix/headers'
 
 import * as fs from 'node:fs'
 import * as os from 'node:os'
@@ -95,6 +97,20 @@ const allRemixRunPackages: string[] = fs
 // --- Tests ---
 
 describe('manifest', () => {
+  it('re-exports the callable assertion default alongside named exports', () => {
+    assert.equal(assertDefault, assert.default)
+    assert.equal(equal, assert.equal)
+    assertDefault(true)
+    assertDefault.equal(1, 1)
+  })
+
+  it('re-exports the headers default alongside named exports', () => {
+    assert.equal(Headers, SuperHeaders)
+    let headers = new Headers({ 'Content-Type': 'application/json' })
+    assert.equal(headers.get('Content-Type'), 'application/json')
+    assert.equal(headers.contentType.mediaType, 'application/json')
+  })
+
   it('exports application types from the package root', () => {
     let packageJson: {
       exports: Record<string, unknown>
@@ -294,11 +310,7 @@ describe('manifest', () => {
     let sessionReadmePath = path.join(__dirname, 'src', 'session', 'README.md')
 
     assert.equal(
-      rewriteLinksToRemixReadmes(
-        '[Router](https://api.remix.run/api/remix/router/overview/)',
-        guidePath,
-        mappings,
-      ),
+      rewriteLinksToRemixReadmes('[Router](https://docs.remix.run/router/)', guidePath, mappings),
       '[Router](../src/fetch-router/README.md)',
     )
     assert.equal(
@@ -311,7 +323,7 @@ describe('manifest', () => {
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '[Router][router]\n\n[router]: https://api.remix.run/api/remix/router/overview/#middleware',
+        '[Router][router]\n\n[router]: https://docs.remix.run/router/#middleware',
         guidePath,
         mappings,
       ),
@@ -319,19 +331,19 @@ describe('manifest', () => {
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+        '`[Router](https://docs.remix.run/router/)`\n\n```md\n[Router](https://docs.remix.run/router/)\n```',
         guidePath,
         mappings,
       ),
-      '`[Router](https://api.remix.run/api/remix/router/overview/)`\n\n```md\n[Router](https://api.remix.run/api/remix/router/overview/)\n```',
+      '`[Router](https://docs.remix.run/router/)`\n\n```md\n[Router](https://docs.remix.run/router/)\n```',
     )
     assert.equal(
       rewriteLinksToRemixReadmes(
-        '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+        '[createTestServer](https://docs.remix.run/node-fetch-server/test/function/createTestServer/)',
         guidePath,
         mappings,
       ),
-      '[createTestServer](https://api.remix.run/api/remix/node-fetch-server/test/function/createTestServer/)',
+      '[createTestServer](https://docs.remix.run/node-fetch-server/test/function/createTestServer/)',
     )
   })
 

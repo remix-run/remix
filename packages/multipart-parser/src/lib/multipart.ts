@@ -572,7 +572,7 @@ export class MultipartParser {
 
 let decoder: TextDecoder | undefined
 
-function decodeUtf8(input: Uint8Array): string {
+export function decodeUtf8(input: Uint8Array): string {
   decoder ??= new TextDecoder('utf-8', { fatal: true })
   return decoder.decode(input as BufferSource)
 }
@@ -584,7 +584,7 @@ export interface MultipartHeaders {
   readonly [name: string]: string | undefined
 }
 
-function parseMultipartHeaders(raw: string): MultipartHeaders {
+export function parseMultipartHeaders(raw: string): MultipartHeaders {
   let headers: Record<string, string> = Object.create(null)
 
   for (let line of raw.split('\r\n')) {

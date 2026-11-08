@@ -43,7 +43,11 @@ export function IndexPage(handle: Handle<IndexPageProps>) {
           <h3>Browse by Genre</h3>
           <div mix={css({ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' })}>
             {genres.map((genre) => (
-              <a href={routes.books.genre.href({ genre })} class="btn btn-secondary">
+              <a
+                data-rmx-prefetch="intent"
+                href={routes.books.genre.href({ genre })}
+                class="btn btn-secondary"
+              >
                 {genre}
               </a>
             ))}

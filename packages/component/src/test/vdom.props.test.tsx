@@ -220,6 +220,21 @@ describe('vnode rendering', () => {
       expect(img.getAttribute('draggable')).toBe('false')
       expect(img.getAttribute('spellcheck')).toBe('false')
     })
+
+    it('renders data-rmx-document as a boolean attribute', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<a href="/login" data-rmx-document={true} />)
+
+      let anchor = container.querySelector('a')
+      invariant(anchor instanceof HTMLAnchorElement)
+      expect(anchor.getAttribute('data-rmx-document')).toBe('')
+
+      root.render(<a href="/login" data-rmx-document={false} />)
+
+      expect(anchor.hasAttribute('data-rmx-document')).toBe(false)
+    })
   })
 
   describe('innerHTML prop', () => {
@@ -235,7 +250,9 @@ describe('vnode rendering', () => {
       let root = createRoot(container)
       let props = JSON.parse('{"innerHTML":"<img src=invalid onerror=alert(1)>"}')
 
-      expect(() => root.render(createElement('div', props))).toThrow('Invalid innerHTML prop')
+      expect(() => root.render(createElement('div', props))).toThrow(
+        'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+      )
 
       expect(container.innerHTML).toBe('')
     })
@@ -262,7 +279,7 @@ describe('vnode rendering', () => {
 
       expect(() =>
         root.render(createElement('iframe', { srcDoc: '<img src=invalid onerror=alert(1)>' })),
-      ).toThrow('Invalid srcDoc prop')
+      ).toThrow('Invalid srcDoc prop: expected a value created with unsafeHTML()')
 
       expect(container.innerHTML).toBe('')
     })
@@ -273,7 +290,7 @@ describe('vnode rendering', () => {
 
       expect(() =>
         root.render(createElement('iframe', { srcDoc: { value: '<p>HTML</p>' } })),
-      ).toThrow('Invalid srcDoc prop')
+      ).toThrow('Invalid srcDoc prop: expected a value created with unsafeHTML()')
 
       expect(container.innerHTML).toBe('')
     })
@@ -284,7 +301,7 @@ describe('vnode rendering', () => {
 
       expect(() =>
         root.render(createElement('iframe', { srcdoc: '<img src=invalid onerror=alert(1)>' })),
-      ).toThrow('Invalid srcdoc prop')
+      ).toThrow('Invalid srcdoc prop: expected a value created with unsafeHTML()')
 
       expect(container.innerHTML).toBe('')
     })
@@ -295,7 +312,7 @@ describe('vnode rendering', () => {
 
       expect(() =>
         root.render(createElement('iframe', { srcdoc: { value: '<p>HTML</p>' } })),
-      ).toThrow('Invalid srcdoc prop')
+      ).toThrow('Invalid srcdoc prop: expected a value created with unsafeHTML()')
 
       expect(container.innerHTML).toBe('')
     })
@@ -309,7 +326,7 @@ describe('vnode rendering', () => {
       invariant(existing)
 
       expect(() => root.render(createElement('div', { outerHTML: '<p>replacement</p>' }))).toThrow(
-        'Invalid outerHTML prop',
+        'Invalid outerHTML prop: outerHTML is not supported on host elements',
       )
 
       expect(container.querySelector('div')).toBe(existing)

@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { spaResponse } from './index.ts'
-import { unwrapFrameResolution } from './runtime/frame-resolution.ts'
+import { unwrapFrameResolution } from './runtime/spa-response.ts'
 
 describe('SPA responses', () => {
   it('associates a Remix node with an otherwise bodyless response', async () => {

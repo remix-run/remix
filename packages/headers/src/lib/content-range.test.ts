@@ -151,12 +151,63 @@ describe('ContentRange', () => {
     assert.equal(contentRange.toString(), 'bytes */1000')
   })
 
+  it('serializes an unsatisfied range after clearing the start', () => {
+    let contentRange = new ContentRange('bytes 0-99/100')
+    contentRange.start = null
+    contentRange.end = 100
+
+    assert.equal(contentRange.toString(), 'bytes */100')
+  })
+
   it('handles zero-based ranges', () => {
     let contentRange = new ContentRange('bytes 0-0/1')
     assert.equal(contentRange.start, 0)
     assert.equal(contentRange.end, 0)
     assert.equal(contentRange.size, 1)
     assert.equal(contentRange.toString(), 'bytes 0-0/1')
+  })
+
+  it('rejects a range whose end precedes its start', () => {
+    let contentRange = new ContentRange('bytes 100-50/200')
+    assert.equal(contentRange.unit, '')
+    assert.equal(contentRange.start, null)
+    assert.equal(contentRange.end, null)
+    assert.equal(contentRange.size, undefined)
+    assert.equal(contentRange.toString(), '')
+  })
+
+  it('rejects a range that reaches the complete length', () => {
+    let contentRange = new ContentRange('bytes 0-100/100')
+    assert.equal(contentRange.unit, '')
+    assert.equal(contentRange.toString(), '')
+  })
+
+  it('does not serialize a range reversed after construction', () => {
+    let contentRange = new ContentRange('bytes 0-99/100')
+    contentRange.start = 100
+    contentRange.end = 50
+    assert.equal(contentRange.toString(), '')
+  })
+
+  it('does not serialize a range changed to reach the complete length', () => {
+    let contentRange = new ContentRange('bytes 0-99/100')
+    contentRange.end = 100
+    assert.equal(contentRange.toString(), '')
+  })
+
+  it('accepts a range ending on the last byte of the resource', () => {
+    let contentRange = new ContentRange('bytes 0-99/100')
+    assert.equal(contentRange.unit, 'bytes')
+    assert.equal(contentRange.start, 0)
+    assert.equal(contentRange.end, 99)
+    assert.equal(contentRange.size, 100)
+    assert.equal(contentRange.toString(), 'bytes 0-99/100')
+  })
+
+  it('rejects a reversed range even when the size is unknown', () => {
+    let contentRange = new ContentRange('bytes 100-50/*')
+    assert.equal(contentRange.unit, '')
+    assert.equal(contentRange.toString(), '')
   })
 })
 
@@ -168,5 +219,33 @@ describe('ContentRange.from', () => {
     assert.equal(result.start, 0)
     assert.equal(result.end, 499)
     assert.equal(result.size, 1234)
+  })
+
+  it('rejects an init object whose end precedes its start', () => {
+    let result = ContentRange.from({ unit: 'bytes', start: 100, end: 50, size: 200 })
+    assert.equal(result.unit, '')
+    assert.equal(result.toString(), '')
+  })
+
+  it('rejects an init object that reaches the complete length', () => {
+    let result = ContentRange.from({ unit: 'bytes', start: 0, end: 100, size: 100 })
+    assert.equal(result.unit, '')
+    assert.equal(result.toString(), '')
+  })
+
+  it('accepts an init object for an unsatisfied range', () => {
+    let result = ContentRange.from({ unit: 'bytes', start: null, end: null, size: 67589 })
+    assert.equal(result.unit, 'bytes')
+    assert.equal(result.toString(), 'bytes */67589')
+  })
+
+  it('preserves an end-only initializer whose end reaches the resource size', () => {
+    let result = ContentRange.from({ unit: 'bytes', end: 100, size: 100 })
+
+    assert.equal(result.unit, 'bytes')
+    assert.equal(result.start, null)
+    assert.equal(result.end, 100)
+    assert.equal(result.size, 100)
+    assert.equal(result.toString(), 'bytes */100')
   })
 })

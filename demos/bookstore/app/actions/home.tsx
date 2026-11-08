@@ -25,7 +25,7 @@ export function HomePage(handle: Handle<HomePageProps>) {
             and more.
           </p>
           <p>
-            <a href={routes.books.index.href()} class="btn">
+            <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
               Browse Books
             </a>
           </p>

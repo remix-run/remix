@@ -2,6 +2,31 @@
 
 This is the changelog for [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.0
+
+### Minor Changes
+
+- `render()` reads the nonce established by `csp()` and applies it to generated import maps, module preloads, and CSS mixin styles. Authored tags use `getCspNonce(context)`. ([#12098](https://github.com/remix-run/remix/pull/12098))
+
+  Internal frame requests, including redirects, inherit the document nonce before child handlers run, even on routes without their own CSP middleware. Independent requests receive fresh nonces when they run `csp()`.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.2`](https://github.com/remix-run/remix/releases/tag/assets@1.0.2)
+  - [`component@1.2.0`](https://github.com/remix-run/remix/releases/tag/component@1.2.0)
+  - [`csp-middleware@1.0.0`](https://github.com/remix-run/remix/releases/tag/csp-middleware@1.0.0)
+  - [`response@1.0.2`](https://github.com/remix-run/remix/releases/tag/response@1.0.2)
+
+## v1.0.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.1`](https://github.com/remix-run/remix/releases/tag/assets@1.0.1)
+  - [`component@1.1.0`](https://github.com/remix-run/remix/releases/tag/component@1.1.0)
+  - [`response@1.0.1`](https://github.com/remix-run/remix/releases/tag/response@1.0.1)
+
 ## v1.0.0
 
 ### Major Changes

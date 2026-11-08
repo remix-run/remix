@@ -55,6 +55,41 @@ describe('generatePrTitle', () => {
 })
 
 describe('generatePrBody', () => {
+  it('counts change files by bump type and marks dependency-only releases as n/a', () => {
+    let release = makeRelease({
+      packageDirName: 'example',
+      packageName: '@remix-run/example',
+      nextVersion: '2.0.0',
+    })
+    release.changes = [
+      { file: 'patch.fix.md', bump: 'patch', content: 'Fix a bug' },
+      { file: 'minor.feature.md', bump: 'minor', content: 'Add a feature' },
+      { file: 'major.breaking.md', bump: 'major', content: 'BREAKING CHANGE: Remove an API' },
+      { file: 'minor.another-feature.md', bump: 'minor', content: 'Add another feature' },
+    ]
+    let dependent = makeRelease({
+      packageDirName: 'dependent',
+      packageName: '@remix-run/dependent',
+      nextVersion: '1.0.1',
+    })
+    dependent.changes = []
+    dependent.dependencyBumps = [
+      {
+        packageName: release.packageName,
+        version: release.nextVersion,
+        releaseUrl: 'https://github.com/remix-run/remix/releases/tag/example@2.0.0',
+      },
+    ]
+
+    let body = generatePrBody([release, dependent])
+
+    assert.ok(body.includes('| Package | Version | Change files |'))
+    assert.ok(
+      body.includes('| @remix-run/example | `1.0.0` → `2.0.0` | 1 major, 2 minor, 1 patch |'),
+    )
+    assert.ok(body.includes('| @remix-run/dependent | `1.0.0` → `1.0.1` | n/a |'))
+  })
+
   it('puts remix first and sorts remaining packages alphabetically', () => {
     let body = generatePrBody([
       makeRelease({

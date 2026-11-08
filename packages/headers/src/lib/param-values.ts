@@ -42,8 +42,8 @@ export function parseParams(
 }
 
 export function quote(value: string): string {
-  if (value.includes('"') || value.includes(';') || value.includes(' ')) {
-    return `"${value.replace(/"/g, '\\"')}"`
+  if (value.includes('"') || value.includes('\\') || value.includes(';') || value.includes(' ')) {
+    return `"${value.replace(/["\\]/g, '\\$&')}"`
   }
   return value
 }

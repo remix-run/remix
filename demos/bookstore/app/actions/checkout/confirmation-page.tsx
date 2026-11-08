@@ -11,7 +11,7 @@ export function CheckoutOrderNotFoundPage() {
       <div class="card">
         <h1>Order Not Found</h1>
         <p>
-          <a href={routes.account.orders.index.href()} class="btn">
+          <a data-rmx-prefetch="intent" href={routes.account.orders.index.href()} class="btn">
             View My Orders
           </a>
         </p>
@@ -49,10 +49,15 @@ export function CheckoutConfirmationPage(handle: Handle<{ order: Order }>) {
           </p>
 
           <div mix={css({ marginTop: '2rem' })}>
-            <a href={routes.account.orders.show.href({ orderId: order.id })} class="btn">
+            <a
+              data-rmx-prefetch="intent"
+              href={routes.account.orders.show.href({ orderId: order.id })}
+              class="btn"
+            >
               View Order Details
             </a>
             <a
+              data-rmx-prefetch="intent"
               href={routes.books.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}
