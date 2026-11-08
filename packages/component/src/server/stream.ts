@@ -31,6 +31,7 @@ import {
   isBrowserOnlyMixinDescriptor,
   isMixinDescriptor,
 } from '../runtime/core/mix.ts'
+import { getSelectValues } from '../runtime/core/select.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -205,6 +206,9 @@ interface FrameData {
 }
 
 interface RenderContext {
+  selectValues?: Set<string>
+  selectScalar?: boolean
+  optionText?: string
   insideSvg: boolean
   insideHead: boolean
   elementDepth: number
@@ -254,6 +258,7 @@ const htmlEncodingBuffer = new Uint8Array(MAX_BUFFERED_HTML_LENGTH * 3)
 
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
+const SELECT_VALUE_PROPS = new Set(['value', 'defaultValue'])
 
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 function stripDoctypeMarkup(html: string): string {
@@ -542,6 +547,7 @@ function buildSegment(
   output: Segment[] = [],
 ): Segment[] {
   if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
+    if (context.optionText !== undefined) context.optionText += String(node)
     output.push(escapeTextContent(String(node)))
     return output
   }
@@ -673,10 +679,20 @@ function buildElementSegment(
     return
   }
 
+  if (!currentIsSvg && tag === 'option' && context.selectValues !== undefined) {
+    buildSelectedOptionSegment(processedProps, context, frameState, output)
+    return
+  }
+
   let attrs =
     !currentIsSvg && tag === 'input'
       ? renderInputAttributes(processedProps)
-      : renderAttributes(tag, processedProps, currentIsSvg)
+      : renderAttributes(
+          tag,
+          processedProps,
+          currentIsSvg,
+          !currentIsSvg && tag === 'select' ? SELECT_VALUE_PROPS : undefined,
+        )
 
   if (SELF_CLOSING_TAGS.has(tag)) {
     output.push(`<${tag}${attrs} />`)
@@ -691,6 +707,14 @@ function buildElementSegment(
   let close = documentElement?.close ?? `</${tag}>`
 
   if (innerHTML !== undefined) {
+    if (!currentIsSvg && (tag === 'select' || tag === 'optgroup')) {
+      invariant(
+        tag === 'select'
+          ? processedProps.value == null && processedProps.defaultValue == null
+          : context.selectValues === undefined,
+        'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
+      )
+    }
     output.push(open, innerHTML, close)
     return
   }
@@ -714,11 +738,50 @@ function buildElementSegment(
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
+  let previousSelectValues = context.selectValues
+  let previousSelectScalar = context.selectScalar
+  if (!currentIsSvg && tag === 'select') {
+    let value = processedProps.value ?? processedProps.defaultValue
+    context.selectValues = getSelectValues(value)
+    context.selectScalar =
+      !processedProps.multiple || (processedProps.value != null && !Array.isArray(value))
+  }
   context.elementDepth++
   if (props.children != null) buildSegment(props.children, context, frameState, output)
   context.elementDepth--
+  context.selectValues = previousSelectValues
+  context.selectScalar = previousSelectScalar
   context.insideSvg = previousInsideSvg
   output.push(close)
+}
+
+function buildSelectedOptionSegment(
+  props: ElementProps,
+  context: RenderContext,
+  frameState: SsrFrameState,
+  output: Segment[],
+): void {
+  invariant(
+    props.innerHTML === undefined || props.value != null,
+    'option elements with innerHTML must have an explicit value when their select has a value or defaultValue',
+  )
+  let previousOptionText = context.optionText
+  context.optionText = ''
+  context.elementDepth++
+  let children =
+    props.innerHTML === undefined
+      ? buildSegment(props.children, context, frameState)
+      : [props.innerHTML]
+  context.elementDepth--
+  // Native options without a value use their text with ASCII whitespace collapsed.
+  let value = props.value ?? context.optionText.replace(/[\t\n\f\r ]+/g, ' ').replace(/^ | $/g, '')
+  context.optionText = previousOptionText
+  let selected = context.selectValues?.has(String(value))
+  if (selected && context.selectScalar) context.selectValues?.clear()
+  let attrs = renderAttributes('option', { ...props, selected }, false)
+  output.push(`<option${attrs}>`)
+  output.push(...children)
+  output.push('</option>')
 }
 
 function buildTextareaElementSegment(tag: string, props: any): Segment {

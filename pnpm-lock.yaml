@@ -31,6 +31,11 @@ catalogs:
       specifier: ^7.0.2
       version: 7.0.2
 
+patchedDependencies:
+  playwright-core@1.63.0:
+    hash: 9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb
+    path: patches/playwright-core@1.63.0.patch
+
 importers:
 
   .:
@@ -56,6 +61,10 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+    devDependencies:
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
 
   demos/assets:
     dependencies:
@@ -75,6 +84,9 @@ importers:
 
   demos/bookstore:
     dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -2392,6 +2404,9 @@ importers:
       '@remix-run/component':
         specifier: workspace:^
         version: link:../component
+      '@remix-run/data-schema':
+        specifier: workspace:*
+        version: link:../data-schema
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
@@ -9686,7 +9701,7 @@ snapshots:
 
   playwright-core@1.60.0: {}
 
-  playwright-core@1.63.0: {}
+  playwright-core@1.63.0(patch_hash=9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb): {}
 
   playwright@1.60.0:
     dependencies:
@@ -9696,7 +9711,7 @@ snapshots:
 
   playwright@1.63.0:
     dependencies:
-      playwright-core: 1.63.0
+      playwright-core: 1.63.0(patch_hash=9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb)
 
   postcss@8.5.14:
     dependencies:

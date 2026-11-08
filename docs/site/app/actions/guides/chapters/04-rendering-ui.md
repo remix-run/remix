@@ -365,31 +365,32 @@ one, and returns a normal Web `Response`.
 ## Styling with css and dynamic style values {#styling-with-css}
 
 Use `css(...)` for static rules. It supports pseudo-selectors, pseudo-elements, descendant and
-attribute selectors, and media queries with normal CSS nesting:
+attribute selectors, and media queries with normal CSS nesting. Keep a style used at one JSX site
+inline in that element's `mix`, with any explanatory comment beside the relevant rule:
 
 ```tsx filename=app/ui/album-card.tsx
 import { css } from "remix/component";
 import type { Handle } from "remix/component";
 
-const cardStyle = css({
-  border: "1px solid #d6d6d6",
-  borderRadius: "12px",
-  padding: "1rem",
-  transition: "border-color 120ms ease",
-  "&:hover": {
-    borderColor: "#6d28d9",
-  },
-  "& .title": {
-    marginBlock: "0 0.25rem",
-  },
-  "@media (max-width: 40rem)": {
-    borderRadius: 0,
-  },
-});
-
 export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
   return () => (
-    <article mix={cardStyle} style={{ opacity: handle.props.soldOut ? 0.55 : 1 }}>
+    <article
+      mix={css({
+        border: "1px solid #d6d6d6",
+        borderRadius: "12px",
+        padding: "1rem",
+        "&:hover": {
+          borderColor: "#6d28d9",
+        },
+        "& .title": {
+          marginBlock: "0 0.25rem",
+        },
+        "@media (max-width: 40rem)": {
+          borderRadius: 0,
+        },
+      })}
+      style={{ opacity: handle.props.soldOut ? 0.55 : 1 }}
+    >
       <h2 class="title">{handle.props.title}</h2>
       <p>{handle.props.soldOut ? "Sold out" : "In stock"}</p>
     </article>
@@ -398,9 +399,13 @@ export function AlbumCard(handle: Handle<{ soldOut: boolean; title: string }>) {
 ```
 
 The `css(...)` call creates a generated class and static rule, and the element's
-[`mix` prop](/interactivity/#the-mix-prop) applies it. The `style` prop is better for values
-such as progress, coordinates, opacity, or transforms that can change on every update. Putting those
-values in `css(...)` would create another generated rule for each value.
+[`mix` prop](/interactivity/#the-mix-prop) applies it. Name a style when multiple JSX sites share
+it or when a variant map makes the supported choices clear. Keep named styles in the component's
+module, and extract when the second use appears.
+
+The `style` prop is better for values such as progress, coordinates, opacity, or transforms that
+can change on every update. Putting those values in `css(...)` would create another generated rule
+for each value.
 
 Prefer state selectors such as `"&:hover .title"` or `'&[aria-expanded="true"]'` over tracking hover
 or focus in JavaScript. The browser applies them without a render, and they work before the page

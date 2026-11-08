@@ -314,15 +314,23 @@ type ResolveMixedPropsOutput = {
 export type MixinRuntimeState = {
   id: string
   controller?: AbortController
-  aborted: boolean
+  lifecycle: MixinLifecycle
   handle?: AnyMixinHandle
   runners: RunnerEntry[]
   binding?: MixinRuntimeBinding
-  removePrepared?: boolean
-  pendingRemoval?: {
-    controller: AbortController
-    done: Promise<void>
-  }
+}
+
+type MixinLifecycle =
+  | { status: 'active' }
+  // beforeRemove was dispatched. `persisted` is set while `persistNode` teardowns keep the node
+  // in the DOM, and the removal can still be cancelled by reclaiming the node.
+  | { status: 'removing'; persisted?: PersistedMixinRemoval }
+  // Every scope was released and the runtime signal is aborted.
+  | { status: 'removed' }
+
+type PersistedMixinRemoval = {
+  controller: AbortController
+  done: Promise<void>
 }
 
 let mixinHandleId = 0
@@ -437,7 +445,10 @@ export function teardownMixins(state?: MixinRuntimeState) {
   if (!state) return
   state.binding = undefined
   prepareMixinRemoval(state)
-  cancelPendingMixinRemoval(state)
+  if (state.lifecycle.status === 'removing' && state.lifecycle.persisted) {
+    state.lifecycle.persisted.controller.abort(new DOMException('', 'AbortError'))
+    state.lifecycle = { status: 'removing' }
+  }
   let handle = state.handle as ScopedAnyMixinHandle | undefined
   if (handle) {
     handle.queueCommitTask(() => finalizeMixinTeardown(state))
@@ -463,10 +474,11 @@ export function bindMixinRuntime<target>(
 }
 
 export function prepareMixinRemoval(state?: MixinRuntimeState) {
-  if (!state || state.removePrepared) return state?.pendingRemoval?.done
-  state.removePrepared = true
+  if (!state) return
+  if (state.lifecycle.status === 'removing') return state.lifecycle.persisted?.done
+  if (state.lifecycle.status === 'removed') return
+  state.lifecycle = { status: 'removing' }
 
-  let pendingRemoval: MixinRuntimeState['pendingRemoval']
   let persistTeardowns: Array<(signal: AbortSignal) => void | Promise<void>> = []
   let registerPersistNode = (teardown: (signal: AbortSignal) => void | Promise<void>) => {
     persistTeardowns.push(teardown)
@@ -479,32 +491,29 @@ export function prepareMixinRemoval(state?: MixinRuntimeState) {
     return event
   })
 
-  if (persistTeardowns.length > 0) {
-    let controller = new AbortController()
-    let done = Promise.allSettled(
-      persistTeardowns.map((teardown) => Promise.resolve().then(() => teardown(controller.signal))),
-    ).then(() => {})
-    pendingRemoval = { controller, done }
-  }
+  if (persistTeardowns.length === 0) return
 
-  state.pendingRemoval = pendingRemoval
-  return pendingRemoval?.done
+  let controller = new AbortController()
+  let done = Promise.allSettled(
+    persistTeardowns.map((teardown) => Promise.resolve().then(() => teardown(controller.signal))),
+  ).then(() => {})
+  state.lifecycle = { status: 'removing', persisted: { controller, done } }
+  return done
 }
 
 export function cancelPendingMixinRemoval(
   state?: MixinRuntimeState,
   reason: unknown = new DOMException('', 'AbortError'),
 ) {
-  if (!state?.pendingRemoval) return
-  state.pendingRemoval.controller.abort(reason)
-  state.pendingRemoval = undefined
-  state.removePrepared = false
+  if (state?.lifecycle.status !== 'removing' || !state.lifecycle.persisted) return
+  state.lifecycle.persisted.controller.abort(reason)
+  state.lifecycle = { status: 'active' }
 }
 
 function createMixinRuntimeState(): MixinRuntimeState {
   return {
     id: `m${++mixinHandleId}`,
-    aborted: false,
+    lifecycle: { status: 'active' },
     runners: [],
   }
 }
@@ -712,7 +721,7 @@ export function getMixinRuntimeSignal(state: MixinRuntimeState): AbortSignal {
   let controller = state.controller
   if (!controller) {
     controller = new AbortController()
-    if (state.aborted) {
+    if (state.lifecycle.status === 'removed') {
       controller.abort()
     }
     state.controller = controller
@@ -770,10 +779,8 @@ function finalizeMixinTeardown(state: MixinRuntimeState) {
     }
   }
   state.runners.length = 0
-  state.aborted = true
+  state.lifecycle = { status: 'removed' }
   state.controller?.abort()
-  state.pendingRemoval = undefined
-  state.removePrepared = true
   state.handle = undefined
 }
 

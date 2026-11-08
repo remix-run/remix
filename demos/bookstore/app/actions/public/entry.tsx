@@ -5,7 +5,7 @@ import {
   preloadShim,
 } from 'remix/multiple-import-maps-polyfill'
 
-const app = run({
+export const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
     let mod = await importModule(moduleUrl)
     let Component = mod[exportName]

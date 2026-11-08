@@ -6,6 +6,7 @@
     "node": ">=24.3.0"
   },
   "dependencies": {
+    "@remix-run/ui": "workspace:^",
     "remix": "workspace:*"
   },
   "devDependencies": {

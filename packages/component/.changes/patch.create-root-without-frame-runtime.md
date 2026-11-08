@@ -1,1 +1,0 @@
-Apps that render with `createRoot()` or `createRangeRoot()` and never use `<Frame>` no longer load the frame runtime, which includes frame streaming, DOM diffing for frame reloads, and import map handling. Their component runtime is about 40% smaller. The frame runtime still loads when an app imports `Frame` or calls `run()`, and frames behave as before.

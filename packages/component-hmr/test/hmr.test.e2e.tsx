@@ -2326,6 +2326,10 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     try {
       await handleRequest(request, response, fixture, assetServer, hmrEventStream)
     } catch (error) {
+      if (response.headersSent) {
+        response.destroy()
+        return
+      }
       response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
       response.end(error instanceof Error ? error.stack : String(error))
     }
@@ -2376,8 +2380,18 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
       usePolling: true,
     })
 
-    browserHmrWatcher.on('all', (event, filePath) => {
+    // Match node-hmr's duplicate change suppression. A poll that lands between a write's truncate
+    // and its data reports the change again on the next poll, with identical stats, which would
+    // apply one edit as two HMR updates.
+    let changeStatsByFilePath = new Map<string, string>()
+    browserHmrWatcher.on('all', (event, filePath, stats) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
+      if (event === 'change' && stats) {
+        let { birthtimeMs, ctimeMs, ino, mtimeMs, size } = stats
+        let changeStats = [birthtimeMs, ctimeMs, ino, mtimeMs, size].join(':')
+        if (changeStatsByFilePath.get(filePath) === changeStats) return
+        changeStatsByFilePath.set(filePath, changeStats)
+      }
       pendingBrowserHmrEvents = pendingBrowserHmrEvents
         .then(() => handleBrowserHmrFileEvent({ event, filePath }))
         .catch((error: unknown) => {
@@ -2558,8 +2572,9 @@ async function handleRequest(
       )
       return
     }
+    let html = await renderStaticIndex(fixture, assetServer)
     response.writeHead(200, headers)
-    response.end(await renderStaticIndex(fixture, assetServer))
+    response.end(html)
     return
   }
 

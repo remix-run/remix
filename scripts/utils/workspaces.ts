@@ -9,7 +9,13 @@ export type WorkspaceInfo = {
 }
 
 const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', 'reference'])
-const ROOT_FULL_RUN_FILES = new Set(['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'])
+const ROOT_FULL_RUN_FILES = new Set([
+  'package.json',
+  'playwright.config.ts',
+  'playwright.config.js',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+])
 const ROOT_TSCONFIG_PATTERN = /^tsconfig(?:\..+)?\.json$/
 
 export function getWorkspaceInfos(rootDir: string): WorkspaceInfo[] {
@@ -39,6 +45,13 @@ export function getChangedWorkspaceDirs(
     let workspace = findOwningWorkspace(file, workspacesBySpecificity)
     if (workspace != null) {
       changedWorkspaceDirs.add(workspace.dir)
+    }
+
+    // Changes in nested workspaces also affect their enclosing package workspaces.
+    for (let parent of workspaces) {
+      if (parent.dir.startsWith('packages/') && file.startsWith(`${parent.dir}/`)) {
+        changedWorkspaceDirs.add(parent.dir)
+      }
     }
   }
 
@@ -76,6 +89,11 @@ export function getAffectedWorkspaceDirs(
     }
   }
 
+  // CLI scaffolding copies the app template instead of importing it as a package.
+  if (workspacesByDir.has('packages/cli')) {
+    reverseDependencies.get('template')?.add('packages/cli')
+  }
+
   let affectedWorkspaceDirs = new Set(changedWorkspaceDirs)
   let queue = [...changedWorkspaceDirs]
 
@@ -105,11 +123,15 @@ export function getAffectedWorkspaceDirs(
 }
 
 export function getFullRunReasons(changedFiles: string[], workspaces: WorkspaceInfo[]): string[] {
-  let workspacesBySpecificity = [...workspaces].sort((a, b) => b.dir.length - a.dir.length)
   let reasons: string[] = []
 
   for (let file of changedFiles) {
-    if (ROOT_FULL_RUN_FILES.has(file) || ROOT_TSCONFIG_PATTERN.test(file)) {
+    if (
+      ROOT_FULL_RUN_FILES.has(file) ||
+      ROOT_TSCONFIG_PATTERN.test(file) ||
+      file.startsWith('.github/') ||
+      file.startsWith('scripts/')
+    ) {
       reasons.push(file)
       continue
     }
@@ -118,7 +140,7 @@ export function getFullRunReasons(changedFiles: string[], workspaces: WorkspaceI
       continue
     }
 
-    if (findOwningWorkspace(file, workspacesBySpecificity) == null) {
+    if (!workspaces.some((workspace) => file === `${workspace.dir}/package.json`)) {
       reasons.push(file)
     }
   }

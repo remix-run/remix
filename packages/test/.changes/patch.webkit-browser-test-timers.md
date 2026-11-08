@@ -1,1 +1,0 @@
-Fix browser test runs in WebKit stalling until the progress timeout once earlier files' results fill the runner page. The running file was placed below those results, out of view, where WebKit throttles its timers. It now runs at the top of the page.

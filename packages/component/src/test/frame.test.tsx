@@ -4433,6 +4433,86 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('dispatches one reloadStart and reloadComplete pair when reload is re-entered', async () => {
+    let frameHandle: FrameHandle | undefined
+    let events: string[] = []
+    let callCount = 0
+    let [firstReloadContent, resolveFirstReloadContent] = withResolvers<string>()
+    let [secondReloadContent, resolveSecondReloadContent] = withResolvers<string>()
+
+    let ReloadButton = clientEntry(
+      '/assets/reload-reentry-events.js#ReloadReentryEvents',
+      function ReloadReentryEvents(handle: Handle) {
+        frameHandle = handle.frame
+        return () => <button id="reload-reentry-events">Reload</button>
+      },
+    )
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/reload-reentry-events" fallback={<div>Loading…</div>} />
+        </main>,
+        {
+          async resolveFrame() {
+            return await drain(
+              renderToStream(
+                <section>
+                  <p id="reload-value">Initial</p>
+                  <ReloadButton />
+                </section>,
+              ),
+            )
+          },
+        },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-reentry-events.js' &&
+          exportName === 'ReloadReentryEvents'
+        ) {
+          return ReloadButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src !== '/reload-reentry-events') throw new Error(`Unexpected frame src: ${src}`)
+        callCount++
+        if (callCount === 1) return firstReloadContent
+        if (callCount === 2) return secondReloadContent
+        throw new Error(`Unexpected reload call count: ${callCount}`)
+      },
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(frameHandle)
+    frameHandle.addEventListener('reloadStart', () => events.push('start'))
+    frameHandle.addEventListener('reloadComplete', () => events.push('complete'))
+
+    let firstReloadPromise = frameHandle.reload()
+    let secondReloadPromise = frameHandle.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
+    await firstReloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(events).toEqual(['start'])
+
+    resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
+    await secondReloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(events).toEqual(['start', 'complete'])
+    expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
+
+    clientFrame.dispose()
+  })
+
   it('keeps head-like elements inside the frame when a frame reloads', async () => {
     let renderCount = 0
     let reload: undefined | (() => Promise<AbortSignal>)

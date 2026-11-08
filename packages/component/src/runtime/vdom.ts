@@ -13,6 +13,7 @@ import { createScheduler, type Scheduler } from './scheduler.ts'
 import {
   defaultStyleManager,
   diffVNodes,
+  restoreAncestorSelect,
   remove as removeVNode,
   resetStyleState,
   ROOT_VNODE,
@@ -200,6 +201,7 @@ function createVirtualRoot(
           vParent._children = [committed]
           vroot = committed
           hydrationCursor = null
+          restoreAncestorSelect(parent)
         },
       ])
       scheduler.dequeue()
@@ -218,7 +220,12 @@ function createVirtualRoot(
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueWork([() => removeVNode(current, parent, context)])
+      scheduler.enqueueWork([
+        () => {
+          removeVNode(current, parent, context)
+          restoreAncestorSelect(parent)
+        },
+      ])
       scheduler.dequeue()
     },
 

@@ -786,11 +786,11 @@ export const AlbumEditForm = clientEntry(
           action={routes.albums.edit.action.href({ albumId: album.id })}
           method="post"
           mix={[
-            css({ display: "grid", gap: "0.75rem", maxWidth: "fit-content" }),
             on("submit", () => {
               pending = true;
               handle.update();
             }),
+            css({ display: "grid", gap: "0.75rem", maxWidth: "fit-content" }),
           ]}
         >
           {/* ... */}
