@@ -5,7 +5,7 @@ import { csp, getCspNonce } from '@remix-run/csp-middleware'
 import { createTestServer } from '@remix-run/node-fetch-server/test'
 
 describe('CSP revalidation', () => {
-  it('executes cached nonce-bearing scripts after a 304 response', async (t) => {
+  it('executes nonce-bearing scripts after reloading a document', async (t) => {
     let statuses: number[] = []
     let nonces: string[] = []
     let router = createRouter({
@@ -33,12 +33,22 @@ describe('CSP revalidation', () => {
     })
     let page = await t.serve(await createTestServer(router.fetch))
 
-    await page.goto('/')
+    let initialResponse = await page.goto('/')
+    assert.ok(initialResponse)
     assert.equal(await page.locator('html').getAttribute('data-booted'), 'true')
-    await page.reload()
+    let response = await page.reload()
+    assert.ok(response)
 
-    assert.deepEqual(statuses, [200, 304])
+    // Playwright's WebKit contexts do not retain the document's HTTP cache across reloads.
+    let isWebKit = page.context().browser()?.browserType().name() === 'webkit'
+    assert.deepEqual(statuses, isWebKit ? [200, 200] : [200, 304])
     assert.notEqual(nonces[0], nonces[1])
     assert.equal(await page.locator('html').getAttribute('data-booted'), 'true')
+    let documentNonce = isWebKit ? nonces[1] : nonces[0]
+    assert.equal(await page.locator('script').evaluate((script) => script.nonce), documentNonce)
+    assert.equal(
+      (isWebKit ? response : initialResponse).headers()['content-security-policy'],
+      `script-src 'nonce-${documentNonce}'`,
+    )
   })
 })
