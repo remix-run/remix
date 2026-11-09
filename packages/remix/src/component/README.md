@@ -1044,6 +1044,7 @@ await app.ready()
 | `processClientEntryPreloads` | Receives module preloads discovered in frame responses before they're added to the document. Return the URLs that should stay as native `<link rel="modulepreload">` elements. |
 | `resolveFrame`               | Fetches frame content for navigations and reloads. See [Resolving Frames](#resolving-frames).                                                                                  |
 | `prefetch`                   | Replaces the default prefetch for `data-rmx-prefetch` links and `prefetch()` calls. See [Prefetching](#prefetching).                                                           |
+| `frameTransition`            | Wraps the swap of each top-frame navigation, for example in a view transition. See [View Transitions](#view-transitions).                                                      |
 
 The returned runtime emits `error` events for component errors, and has these members:
 
@@ -1375,6 +1376,43 @@ window.navigation?.addEventListener('navigate', (e) => e.stopImmediatePropagatio
 ```
 
 This prevents Remix from intercepting Navigation API events. Explicit frame reloads such as `handle.frame.reload()` still use the frame resolver.
+
+### View Transitions
+
+Top-frame navigations swap the new page into the current document, so cross-document view transitions don't apply. Pass `frameTransition` to `run()` to wrap the swap in `document.startViewTransition()`. Remix calls it for link, GET form, `navigate()`, Back, Forward and reload navigations once the response is in, while the old page stays interactive, and swaps when the function calls `commit()`:
+
+```ts
+run({
+  async frameTransition({ transition, signal, commit }) {
+    if (!document.startViewTransition || signal.aborted) return commit()
+
+    // Back and Forward, for example, can animate in opposite directions.
+    let back = window.navigation.currentEntry.index < transition.from.index
+    document.documentElement.dataset.direction = back ? 'back' : 'forward'
+
+    let viewTransition = document.startViewTransition(() => commit())
+    signal.addEventListener('abort', () => viewTransition.skipTransition(), { once: true })
+    await viewTransition.finished.catch(() => {})
+    delete document.documentElement.dataset.direction
+  },
+})
+```
+
+The function receives:
+
+| Option       | Use                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transition` | The browser's [`NavigationTransition`](https://developer.mozilla.org/en-US/docs/Web/API/NavigationTransition). `from` is the entry being left, and `navigationType` is `push`, `replace`, `reload` or `traverse`. A traversal has already committed its destination, so compare `from.index` with `navigation.currentEntry.index` to tell Back from Forward. A navigation that interrupts one whose page never rendered leaves that navigation's entry, so `from` is not the page on screen. |
+| `to`         | The destination URL after redirects.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `signal`     | Aborts when the navigation is cancelled or superseded.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `commit()`   | Swaps the destination in. Resolves when the navigation has finished, including scroll and focus restoration, or has been cancelled or superseded. Calling it again does not swap again.                                                                                                                                                                                                                                                                                                      |
+
+Pass `commit()` as the view transition's update callback: its promise resolves once the page is in its final scroll position, so the browser captures the finished state. Remix doesn't wait for the function after the swap starts, so waiting for `viewTransition.finished` doesn't hold the navigation back.
+
+- If the function returns or throws without calling `commit()`, Remix swaps anyway, and reports a thrown error as a component `error` event. A function that never settles holds the navigation until it is cancelled or superseded.
+- If a newer navigation supersedes this one, `signal` aborts, a pending `commit()` resolves without swapping, and Remix doesn't call the function for a navigation that is already aborted.
+- Remix doesn't check `prefers-reduced-motion`. Read it in the function to skip naming elements, or call `commit()` directly. The function runs either way, so an app can still cross-fade.
+- POST form submissions, named frames, `frame.reload()` and the first page load swap as usual. Without the Navigation API, Remix doesn't call the function. Without `startViewTransition()`, the function decides what to do, as in the example above.
 
 ### Prefetching
 
