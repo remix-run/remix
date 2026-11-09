@@ -39,12 +39,14 @@ describe('bookstore form submissions', () => {
     let browser = runtimePage.context().browser()
     assert.ok(browser)
     let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
-    t.after(async () => {
+    // Release this context's connections before t.serve() cleanup closes the server.
+    try {
+      await registrationFlow(await context.newPage(), false, () => submissions)
+    } finally {
       diagnostic('no-JS context close start')
       await context.close()
       diagnostic('no-JS context close done')
-    })
-    await registrationFlow(await context.newPage(), false, () => submissions)
+    }
   })
 })
 
