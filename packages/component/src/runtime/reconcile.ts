@@ -2141,6 +2141,9 @@ function reclaimPersistedMixinNode(
   svg: boolean,
 ): CommittedHostNode {
   let { frame, scheduler } = context
+  // Persisted hosts are unbound, so notify their existing mixins explicitly
+  // before resolving replacements and patching the returning host's props.
+  dispatchMixinBeforeUpdate(persistedNode._mixState, persistedNode._dom)
   cancelPendingMixinRemoval(persistedNode._mixState)
   unmarkNodePersistedByMixins(persistedNode)
 
@@ -2148,9 +2151,6 @@ function reclaimPersistedMixinNode(
   let childInputs = newNode._children
   let resolved = resolveNodeMixProps(newNode, vParent, frame, scheduler, persistedNode._mixState)
   let committed = commitRetainedHostNode(persistedNode, newNode, vParent, svg, resolved)
-  if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
-    dispatchMixinBeforeUpdate(committed._mixState)
-  }
   patchHostProps(prevProps, resolved.props, persistedNode._dom)
   syncDirectEventListeners(committed)
   ensureControlledReflection(committed, scheduler)
