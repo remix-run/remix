@@ -2,6 +2,7 @@ import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
 import { createComponent, Fragment, FRAME_NODE } from './component.ts'
 import { getFrameRuntime, type FrameMountState } from './frame-runtime.ts'
+import { ignoreAbortedRejection } from './ignore-aborted-rejection.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps } from './core/props.ts'
 import { setSelectDefaultValue, setSelectValue } from './core/select.ts'
@@ -1085,7 +1086,8 @@ function disposeDirectEventListeners(node: CommittedHostNode, detach: boolean): 
 function invokeDirectEventBinding(binding: DirectEventBinding, event: Event): void {
   binding.reentry?.abort(new DOMException('', 'EventReentry'))
   binding.reentry = new AbortController()
-  void binding.handler(event, binding.reentry.signal)
+  let signal = binding.reentry.signal
+  ignoreAbortedRejection(binding.handler(event, signal), signal)
 }
 
 function diffText(
