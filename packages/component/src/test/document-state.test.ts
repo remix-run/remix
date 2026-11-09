@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
-import { createDocumentState } from '../runtime/document-state.ts'
+import { createDocumentState } from '../runtime/scheduler.ts'
 
 describe('document-state', () => {
   let container: HTMLDivElement

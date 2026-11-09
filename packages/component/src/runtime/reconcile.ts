@@ -1,10 +1,14 @@
 import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
 import { createComponent, Fragment, FRAME_NODE } from './component.ts'
-import { getFrameRuntime, type FrameMountState } from './frame-runtime.ts'
+import {
+  disposeClientEntryBoundary,
+  getClientEntryBoundaryOwner,
+  getFrameRuntime,
+  type FrameMountState,
+} from './frame-runtime.ts'
 import { invariant } from './invariant.ts'
-import { patchHostProps } from './core/props.ts'
-import { setSelectDefaultValue, setSelectValue } from './core/select.ts'
+import { patchHostProps, setSelectDefaultValue, setSelectValue } from './core/props.ts'
 import { isMixinDescriptor } from './core/mix.ts'
 import {
   isEmptyChild,
@@ -35,7 +39,6 @@ import {
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
-import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 

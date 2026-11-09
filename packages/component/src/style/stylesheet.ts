@@ -1,5 +1,3 @@
-import { REMIX_UI_STYLE_LAYER } from './layers.ts'
-
 // # Style ownership model
 //
 // Rules are content-addressed: a class name is a hash of the style object that
@@ -33,6 +31,8 @@ export interface StyleManager {
   selectors(): IterableIterator<string>
   dispose(): void
 }
+
+export const REMIX_UI_STYLE_LAYER = 'rmx'
 
 const SERVER_STYLE_SELECTOR = 'style[data-rmx-style]'
 

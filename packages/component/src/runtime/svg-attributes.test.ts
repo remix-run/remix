@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { normalizeSvgAttribute } from './svg-attributes.ts'
+import { normalizeSvgAttribute } from './core/attributes.ts'
 
 const XLINK_NS = 'http://www.w3.org/1999/xlink'
 const XML_NS = 'http://www.w3.org/XML/1998/namespace'

@@ -25,8 +25,8 @@ import {
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
 import { composeMixedProps, isMixinDescriptor } from '../runtime/core/mix.ts'
-import { getSelectValues } from '../runtime/core/select.ts'
-import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
+import { getSelectValues } from '../runtime/core/props.ts'
+import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
 import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'

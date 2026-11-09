@@ -4,7 +4,7 @@ import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
   type ClientEntryIdentity,
-} from './client-entry-boundary.ts'
+} from './frame-runtime.ts'
 
 const HMR_TIMESTAMP_QUERY_SEGMENT_PATTERN = /^t=\d{13}$/
 
