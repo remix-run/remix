@@ -522,7 +522,12 @@ describe('toast.root()', () => {
     await result.act(() =>
       region.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' })),
     )
-    region.focus()
+    await result.act(() =>
+      publish.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'F6', bubbles: true, cancelable: true }),
+      ),
+    )
+    assert.equal(document.activeElement, region)
     await result.act(() =>
       region.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })),
     )
