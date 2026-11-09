@@ -125,12 +125,11 @@ export type CommittedTextNode = CommittedNodeBase<'text', typeof TEXT_NODE> & {
 }
 
 export type ControlledReflectionState = {
-  disposed: boolean
-  listenersAttached: boolean
+  // Listeners attach in a post-commit task, so a host can be disposed before they attach.
+  status: 'attaching' | 'attached' | 'disposed'
   pendingRestoreVersion: number
-  hasControlledValue: boolean
+  // Each is undefined when that prop isn't controlled. null is a controlled value.
   controlledValue: unknown
-  hasControlledChecked: boolean
   controlledChecked: unknown
   onInput(): void
   onChange(): void
@@ -453,7 +452,7 @@ function shouldRestoreControlledReflectionOnInput(
   // Some controls dispatch `input` before `change` for the same interaction.
   // When checked/value state is typically handled on `change`, restoring on the
   // earlier `input` can race and clobber the value observed by app handlers.
-  if (state.hasControlledChecked) return false
+  if (state.controlledChecked !== undefined) return false
   if (node.type === 'select') return false
   return true
 }
@@ -466,12 +465,9 @@ function ensureControlledReflection(
   if (existing) return existing
 
   let state: ControlledReflectionState = {
-    disposed: false,
-    listenersAttached: false,
+    status: 'attaching',
     pendingRestoreVersion: 0,
-    hasControlledValue: false,
     controlledValue: undefined,
-    hasControlledChecked: false,
     controlledChecked: undefined,
     onInput: () => {
       if (!shouldRestoreControlledReflectionOnInput(node, state)) return
@@ -485,10 +481,10 @@ function ensureControlledReflection(
   node._controlledState = state
   scheduler.enqueueTasks([
     () => {
-      if (state.disposed) return
+      if (state.status !== 'attaching') return
       node._dom.addEventListener('input', state.onInput)
       node._dom.addEventListener('change', state.onChange)
-      state.listenersAttached = true
+      state.status = 'attached'
     },
   ])
   return state
@@ -501,21 +497,18 @@ function syncControlledReflection(node: CommittedHostNode, scheduler: Scheduler)
   if (!node._controlledState && props.value === undefined && props.checked === undefined) return
 
   let state = ensureControlledReflection(node, scheduler)
-  if (state.disposed) return
+  if (state.status === 'disposed') return
 
-  state.hasControlledValue = canManageValue(node.type, node._dom) && props.value !== undefined
-  state.controlledValue = props.value
+  state.controlledValue = canManageValue(node.type, node._dom) ? props.value : undefined
   if (node._dom instanceof HTMLSelectElement) {
-    if (state.hasControlledValue) {
+    if (state.controlledValue !== undefined) {
       controlledSelectStates.set(node._dom, state)
       setSelectValue(node._dom, props.value)
     } else {
       controlledSelectStates.delete(node._dom)
     }
   }
-  state.hasControlledChecked =
-    canReflectProperty(node._dom, 'checked') && props.checked !== undefined
-  state.controlledChecked = props.checked
+  state.controlledChecked = canReflectProperty(node._dom, 'checked') ? props.checked : undefined
   state.pendingRestoreVersion++
 }
 
@@ -524,17 +517,17 @@ export function restoreAncestorSelect(parent: ParentNode): void {
   let select = parent instanceof Element ? parent.closest('select') : null
   if (!(select instanceof HTMLSelectElement)) return
   let state = controlledSelectStates.get(select)
-  if (state && !state.disposed) setSelectValue(select, state.controlledValue)
+  if (state && state.status !== 'disposed') setSelectValue(select, state.controlledValue)
 }
 
 function scheduleControlledRestore(
   node: CommittedHostNode,
   state: ControlledReflectionState,
 ): void {
-  if (state.disposed) return
+  if (state.status === 'disposed') return
   let version = ++state.pendingRestoreVersion
   queueMicrotask(() => {
-    if (state.disposed) return
+    if (state.status === 'disposed') return
     if (state.pendingRestoreVersion !== version) return
     restoreControlledReflections(node, state)
   })
@@ -545,10 +538,16 @@ function restoreControlledReflections(
   state: ControlledReflectionState,
 ): void {
   let element = node._dom
-  if (state.hasControlledValue && readDomProp(element, 'value') !== state.controlledValue) {
+  if (
+    state.controlledValue !== undefined &&
+    readDomProp(element, 'value') !== state.controlledValue
+  ) {
     setPropertyReflection(element, 'value', state.controlledValue)
   }
-  if (state.hasControlledChecked && readDomProp(element, 'checked') !== state.controlledChecked) {
+  if (
+    state.controlledChecked !== undefined &&
+    readDomProp(element, 'checked') !== state.controlledChecked
+  ) {
     setPropertyReflection(element, 'checked', state.controlledChecked)
   }
 }
@@ -557,14 +556,14 @@ function restoreControlledReflections(
 function disposeControlledReflection(node: CommittedHostNode, detach: boolean): void {
   let state = node._controlledState
   if (!state) return
-  state.disposed = true
+  let attached = state.status === 'attached'
+  state.status = 'disposed'
   if (node._dom instanceof HTMLSelectElement) controlledSelectStates.delete(node._dom)
   state.pendingRestoreVersion++
-  if (detach && state.listenersAttached) {
+  if (detach && attached) {
     node._dom.removeEventListener('input', state.onInput)
     node._dom.removeEventListener('change', state.onChange)
   }
-  state.listenersAttached = false
 }
 
 function canManageValue(type: string, element: Element): boolean {
