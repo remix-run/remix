@@ -9,6 +9,18 @@ describe('defaultResolveFrame', () => {
     document.body.replaceChildren()
   })
 
+  it('returns an unconsumed response without invoking its commit callback', async (t) => {
+    let response = new Response('<p>Ready</p>')
+    let commit = t.mock.fn()
+    let result = await defaultResolveFrame('/frame', undefined, {
+      fetch: async () => response,
+      commit,
+    })
+    expect(result).toBe(response)
+    expect(result.bodyUsed).toBe(false)
+    expect(commit.mock.calls).toHaveLength(0)
+  })
+
   it('passes the prepared frame request to a custom fetch implementation', async (t) => {
     let response = new Response('<p>Saved</p>', {
       headers: { 'Content-Security-Policy': "script-src 'nonce-response'" },
@@ -21,16 +33,18 @@ describe('defaultResolveFrame', () => {
     let result = await defaultResolveFrame(
       '/account',
       { target: 'details', method: 'post', formData, signal: controller.signal },
-      (url, init) => {
-        let headers = new Headers(init?.headers)
-        headers.set('Authorization', 'Bearer example')
-        return fetch(url, {
-          ...init,
-          cache: 'no-cache',
-          credentials: 'omit',
-          priority: 'high',
-          headers,
-        })
+      {
+        fetch(url, init) {
+          let headers = new Headers(init?.headers)
+          headers.set('Authorization', 'Bearer example')
+          return fetch(url, {
+            ...init,
+            cache: 'no-cache',
+            credentials: 'omit',
+            priority: 'high',
+            headers,
+          })
+        },
       },
     )
 
@@ -94,11 +108,17 @@ describe('defaultResolveFrame', () => {
       throw new Error('Unexpected network request')
     })
 
-    let response = await defaultResolveFrame(src, { target: 'details' }, async (url, init) => {
-      let cached = await cache.match(new Request(url, init))
-      if (!cached) throw new Error('Expected a matching cached frame')
-      return cached
-    })
+    let response = await defaultResolveFrame(
+      src,
+      { target: 'details' },
+      {
+        async fetch(url, init) {
+          let cached = await cache.match(new Request(url, init))
+          if (!cached) throw new Error('Expected a matching cached frame')
+          return cached
+        },
+      },
+    )
 
     expect(fetchMock.mock.calls.length).toBe(0)
     expect(response.bodyUsed).toBe(false)
@@ -108,12 +128,10 @@ describe('defaultResolveFrame', () => {
 
   it('validates responses returned by a custom fetch implementation', async () => {
     await expect(
-      defaultResolveFrame(
-        '/unavailable',
-        undefined,
-        async () =>
+      defaultResolveFrame('/unavailable', undefined, {
+        fetch: async () =>
           new Response('<p>Unavailable</p>', { status: 503, statusText: 'Service Unavailable' }),
-      ),
+      }),
     ).rejects.toThrow('Failed to resolve frame: 503 Service Unavailable')
   })
 
@@ -135,12 +153,13 @@ describe('defaultResolveFrame', () => {
       loadModule: mock.fn(),
       resolveFrame(src, options) {
         navigationTypes.push(options?.navigationType)
-        return defaultResolveFrame(src, options, (url, init) =>
-          fetch(url, {
-            ...init,
-            cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
-          }),
-        )
+        return defaultResolveFrame(src, options, {
+          fetch: (url, init) =>
+            fetch(url, {
+              ...init,
+              cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+            }),
+        })
       },
     })
     t.after(async () => {

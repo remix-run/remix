@@ -65,6 +65,13 @@ import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './st
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './spa-response.ts'
 import {
+  commitFrameResponse,
+  getFrameCommitNavigation,
+  setFrameCommitNavigation,
+  takeFrameCommit,
+  type FrameCommit,
+} from './frame-commit.ts'
+import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
   getClientEntryKey,
@@ -269,6 +276,12 @@ type PendingTemplateWatch = {
 }
 
 export type FrameInstance = {
+  commitResponse: (
+    response: Response,
+    commit: FrameCommit,
+    render: () => Promise<void>,
+    signal: AbortSignal,
+  ) => Promise<void>
   render: (content: InternalFrameContent, options?: RenderOptions) => Promise<void>
   ready: () => Promise<void>
   flush: () => void
@@ -327,6 +340,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let pendingTemplateWatch: PendingTemplateWatch | undefined
   let disposed = false
   let lifecycleController = new AbortController()
+  let commitController: AbortController | undefined
 
   async function consumeClientEntryResources(
     source: ParentNode,
@@ -374,6 +388,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     $runtime: runtime,
     reload: async (options) => (await reload(options)).signal,
     replace: async (content: FrameContent) => {
+      commitController?.abort()
       await render(content)
     },
   })
@@ -605,6 +620,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (disposed) return
     disposed = true
     lifecycleController.abort()
+    commitController?.abort()
     clearRmxData(context.data)
     reloadController?.abort()
     reloadController = undefined
@@ -630,6 +646,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let readyPromise = hydrateInitial()
 
   return {
+    commitResponse,
     render,
     ready: () => readyPromise,
     flush: () => context.scheduler.dequeue(),
@@ -763,20 +780,40 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function cancelReload(): void {
+    commitController?.abort()
     let controller = reloadController
     if (!controller) return
     controller.abort()
     completeReload(controller)
   }
 
+  function commitResponse(
+    response: Response,
+    commit: FrameCommit,
+    swap: () => Promise<void>,
+    signal: AbortSignal,
+  ): Promise<void> {
+    commitController?.abort()
+    let controller = new AbortController()
+    commitController = controller
+    return commitFrameResponse(response, commit, swap, {
+      signal,
+      commitSignal: AbortSignal.any([controller.signal, lifecycleController.signal]),
+      onError: (error) => init.errorTarget.dispatchEvent(createComponentErrorEvent(error)),
+    })
+  }
+
   // Starts a reload this frame owns. A reload that supersedes another one, or takes over an
   // inherited reload, continues the same reloadStart/reloadComplete pair.
   function beginReload(status: 'direct' | 'ancestor', signal?: AbortSignal): AbortController {
+    commitController?.abort()
     let previousStatus = reloadState.status
     reloadController?.abort()
     leaveReloadState()
 
     let { controller, disconnect } = createLinkedAbortController(signal)
+    let navigation = getFrameCommitNavigation(signal)
+    if (navigation) setFrameCommitNavigation(controller.signal, navigation)
     reloadController = controller
     reloadState = { status, controller, disconnect }
 
@@ -809,28 +846,36 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         signal: controller.signal,
         target: frameName,
       })
+      let commit = takeFrameCommit(resolution)
       if (isStale()) return { signal: controller.signal }
       let { content, redirectedTo, nonce } = await unwrapFrameResolution(resolution)
       if (isStale()) return { signal: controller.signal }
-      let reconciliationTracker = createReconciliationTracker()
-      let blockingFrameTracker = createReconciliationTracker()
-      let commitStarted = false
-      await render(content, {
-        nonce,
-        navigationType: options?.navigationType,
-        documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
-        signal: controller.signal,
-        reconciliationTracker,
-        blockingFrameTracker,
-        onCommit() {
-          if (commitStarted) return
-          commitStarted = true
-          blockingFrameTracker.finalize()
-          resolveCommit?.(blockingFrameTracker.ready())
-        },
-      })
-      reconciliationTracker.finalize()
-      await reconciliationTracker.ready()
+      let swap = async () => {
+        let reconciliationTracker = createReconciliationTracker()
+        let blockingFrameTracker = createReconciliationTracker()
+        let commitStarted = false
+        await render(content, {
+          nonce,
+          navigationType: options?.navigationType,
+          documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
+          signal: controller.signal,
+          reconciliationTracker,
+          blockingFrameTracker,
+          onCommit() {
+            if (commitStarted) return
+            commitStarted = true
+            blockingFrameTracker.finalize()
+            resolveCommit?.(blockingFrameTracker.ready())
+          },
+        })
+        reconciliationTracker.finalize()
+        await reconciliationTracker.ready()
+      }
+      if (commit && resolution instanceof Response) {
+        await commitResponse(resolution, commit, swap, controller.signal)
+      } else {
+        await swap()
+      }
       return {
         signal: controller.signal,
         redirectedTo: isStale() ? undefined : redirectedTo,
@@ -1173,20 +1218,28 @@ function resolveClientFrame(
       }),
     )
     .then(async (resolution) => {
+      let commit = takeFrameCommit(resolution)
       if (isStale()) return
       let { content, nonce } = await unwrapFrameResolution(resolution)
       if (isStale()) return
-      state.fallbackRoot?.dispose()
-      state.fallbackRoot = undefined
-      let nextContent = asAbortableFrameContent(content, resolveController.signal)
-      await instance.render(nextContent, {
-        nonce,
-        navigationType: serverFrameReload?.navigationType,
-        signal: resolveController.signal,
-        reconciliationTracker: serverFrameReload?.reconciliationTracker,
-        blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
-        onCommit: frameCommitted.resolve,
-      })
+      let swap = async () => {
+        state.fallbackRoot?.dispose()
+        state.fallbackRoot = undefined
+        let nextContent = asAbortableFrameContent(content, resolveController.signal)
+        await instance.render(nextContent, {
+          nonce,
+          navigationType: serverFrameReload?.navigationType,
+          signal: resolveController.signal,
+          reconciliationTracker: serverFrameReload?.reconciliationTracker,
+          blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
+          onCommit: frameCommitted.resolve,
+        })
+      }
+      if (commit && resolution instanceof Response) {
+        await instance.commitResponse(resolution, commit, swap, resolveController.signal)
+      } else {
+        await swap()
+      }
       if (isStale()) return
       state.resolved = true
     })
