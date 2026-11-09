@@ -1345,7 +1345,9 @@ function parseAssetRequestPathname(
 } | null {
   let isSourceMapRequest = pathname.endsWith('.map')
   let pathWithoutMap = isSourceMapRequest ? pathname.slice(0, -4) : pathname
-  let fingerprint = parseFingerprintSuffix(pathWithoutMap)
+  let fingerprint = options.fingerprintAssets
+    ? parseFingerprintSuffix(pathWithoutMap)
+    : { pathname: pathWithoutMap, requestedFingerprint: null }
   let filePath = options.routes.resolveUrlPathname(fingerprint.pathname)
   if (!filePath) return null
   if (options.fingerprintAssets && fingerprint.requestedFingerprint === null) return null
