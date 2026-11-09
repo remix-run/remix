@@ -69,7 +69,7 @@ if (!result.success) {
 }
 ```
 
-Both `parse` and `parseSafe` accept any [Standard Schema](https://standardschema.dev/) v1 schema, not just data-schema's own schemas. You can pass a Zod, Valibot, or ArkType schema and they'll work.
+Both `parse` and `parseSafe` accept any [Standard Schema](https://standardschema.dev/) v1 schema, not just data-schema's own schemas. You can pass a Zod, Valibot, or ArkType schema and they'll work. Validation is synchronous, so both throw a `TypeError` if a schema validates asynchronously, such as one with an async refinement.
 
 For native form submissions, [`remix/data-schema/experimental/form`](./experimental-form/README.md) describes input kinds and provides functional `fd.parse(schema, data)` / `fd.parseSafe(schema, data)` APIs. Safe failures include restorable values and grouped errors for UI rendering. For explicit extraction without form kinds or restoration, the lower-level `remix/data-schema/form-data` helpers plug into the ordinary `parse()` / `parseSafe()` flow:
 
