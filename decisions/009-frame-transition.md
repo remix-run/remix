@@ -36,6 +36,7 @@ View transition types on `startViewTransition()` could cover direction in CSS, b
 - It runs for top-frame GET navigations handled by the Navigation API: links, GET forms, `navigate()`, Back, Forward and reload. POST form submissions, named frames, `frame.reload()` and `popstate` fallbacks swap as before.
 - If the callback returns or throws without calling `commit()`, Remix swaps anyway, and reports a thrown error as a component error. A faulty callback never holds a navigation back. A callback that never settles holds it until it is cancelled or superseded.
 - Remix does not read `prefers-reduced-motion`. The callback runs either way, so an app can still cross-fade.
+- `transition.from` is whatever entry the browser is leaving. A push commits its entry before the response arrives, so a navigation that interrupts one whose page never rendered leaves that entry, not the page on screen, and the browser replaces it ([#12240](https://github.com/remix-run/remix/pull/12240)). Passing the platform object keeps that visible rather than inventing a `from` Remix cannot yet compute; committing GET navigations only once the response arrives would fix it at the source.
 
 ## When to revisit
 

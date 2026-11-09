@@ -95,7 +95,8 @@ export interface FrameTransitionOptions {
    * The browser's Navigation API transition. `from` is the entry being left, and
    * `navigationType` is `push`, `replace`, `reload` or `traverse`. A traversal has already
    * committed its destination, so compare `from.index` with `navigation.currentEntry.index` to
-   * tell Back from Forward.
+   * tell Back from Forward. A navigation that interrupts one whose page never rendered leaves
+   * that navigation's entry, so `from` is not the page on screen.
    */
   transition: NavigationTransition
   /** The destination URL after redirects, which `navigation.currentEntry` may not reflect yet. */
