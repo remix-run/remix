@@ -45,6 +45,14 @@ export interface RunInit {
    * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
    */
   prefetch?: PrefetchFrame
+
+  /**
+   * Maximum number of additional nested-frame requests made by the default prefetch strategy.
+   * Must be a nonnegative safe integer. `0` only scans the initial HTML; `1` also fetches frames
+   * explicitly declared by `<link rel="preload" as="fetch">` and scans their assets. Frame names
+   * come from `data-rmx-target` on the link. Ignored when `prefetch` is provided. Defaults to `0`.
+   */
+  prefetchDepth?: number
 }
 
 /**
@@ -128,6 +136,10 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
+  let prefetchDepth = init.prefetchDepth ?? 0
+  if (!init.prefetch && (!Number.isSafeInteger(prefetchDepth) || prefetchDepth < 0)) {
+    throw new RangeError('prefetchDepth must be a nonnegative safe integer')
+  }
   getNonceManager()
   let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
@@ -173,7 +185,7 @@ export function run(init: RunInit): AppRuntime {
     })
   }
   startNavigationListener(appController.signal)
-  startPrefetching(appController.signal, init.prefetch)
+  startPrefetching(appController.signal, init.prefetch, prefetchDepth)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error

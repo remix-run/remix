@@ -1044,6 +1044,7 @@ await app.ready()
 | `processClientEntryPreloads` | Receives module preloads discovered in frame responses before they're added to the document. Return the URLs that should stay as native `<link rel="modulepreload">` elements. |
 | `resolveFrame`               | Fetches frame content for navigations and reloads. See [Resolving Frames](#resolving-frames).                                                                                  |
 | `prefetch`                   | Replaces the default prefetch for `data-rmx-prefetch` links and `prefetch()` calls. See [Prefetching](#prefetching).                                                           |
+| `prefetchDepth`              | Maximum additional nested-frame request depth for the default prefetch strategy. Defaults to `0`. See [Prefetching](#prefetching).                                             |
 
 The returned runtime emits `error` events for component errors, and has these members:
 
@@ -1392,6 +1393,26 @@ Remix reads the prefetched HTML without running it and finds the page's JavaScri
 ```
 
 Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix doesn't scan `<img>` elements or CSS `@font-face` rules.
+
+To prefetch selected nested frames, declare their sources in the destination HTML:
+
+```html
+<link rel="preload" as="fetch" href="/partials/reviews" data-rmx-target="reviews" />
+```
+
+Then configure how many additional levels of frame requests Remix can follow:
+
+```ts
+import { run } from 'remix/component'
+
+const PREFETCH_DEPTH = 1
+
+run({ loadModule, prefetchDepth: PREFETCH_DEPTH })
+```
+
+`prefetchDepth` defaults to `0`, which only discovers assets already included in the initial HTML. `1` also fetches same-origin URLs from explicit `<link rel="preload" as="fetch">` declarations and scans their HTML for assets. `2` follows fetch preloads in those responses as well. The value must be a nonnegative safe integer. Declarations inside nested templates are included, and unmatched `media` conditions are skipped. `<Frame>` metadata alone never opts a frame into prefetching.
+
+Nested requests use the same frame headers as imperative `prefetch()` calls. Set `data-rmx-target` on the preload link for a named frame, or omit it for an unnamed frame. Failed and non-HTML responses stop discovery for that URL. This option applies to both automatic link prefetching and imperative calls, and is ignored when `run({ prefetch })` replaces the default strategy.
 
 The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
 

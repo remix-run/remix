@@ -1,0 +1,1 @@
+Opt selected nested frames into prefetching with explicit fetch preload links and `run({ prefetchDepth })` from `remix/component`. Remix fetches their HTML and discovers their assets up to the configured depth, which defaults to `0`.

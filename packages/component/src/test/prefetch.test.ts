@@ -104,13 +104,13 @@ function stubConnection(
   })
 }
 
-function createPrefetch(t: TestContext) {
+function createPrefetch(t: TestContext, prefetchDepth = 0) {
   let controller = new AbortController()
   t.after(() => controller.abort())
-  return { prefetch: createDefaultPrefetch(controller.signal), controller }
+  return { prefetch: createDefaultPrefetch(controller.signal, prefetchDepth), controller }
 }
 
-function collectHints(t: TestContext): HTMLLinkElement[] {
+function collectHints(t: TestContext, onHint?: (link: HTMLLinkElement) => void): HTMLLinkElement[] {
   let hints: HTMLLinkElement[] = []
   let observer = new MutationObserver((records) => {
     for (let record of records) {
@@ -118,6 +118,7 @@ function collectHints(t: TestContext): HTMLLinkElement[] {
         if (node instanceof HTMLLinkElement && node.rel === 'prefetch') {
           hints.push(node)
           node.dispatchEvent(new Event('load'))
+          onHint?.(node)
         }
       }
     }
@@ -829,6 +830,174 @@ describe('prefetch', () => {
 })
 
 describe('default frame prefetch', () => {
+  it('scans embedded frame assets without fetching nested sources by default', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let html = await drain(
+      renderToStream(jsx(Frame, { name: 'details', src: '/details', fallback: 'Loading' }), {
+        resolveFrame: () => '<script src="/embedded.js"></script>',
+      }),
+    )
+    let fetch = t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse(`<link rel="preload" as="fetch" href="/details">${html}`),
+    )
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t)
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/embedded.js'])
+  })
+
+  it('uses run prefetchDepth for imperative calls and scans one additional frame response', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let rootHtml = await drain(
+      renderToStream(jsx(Frame, { name: 'ignored', src: '/not-prefetched' }), {
+        resolveFrame: () => 'Details',
+      }),
+    )
+    let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      let url = new URL(String(src))
+      let response = htmlResponse(
+        url.pathname === '/page'
+          ? `<base href="/partials/">${rootHtml}
+              <link rel="preload" as="fetch" href="./details#content" data-rmx-target="details">`
+          : `<script type="module" src="./entry.js"></script>
+              <link rel="preload" as="fetch" href="/grandchild">`,
+      )
+      Object.defineProperty(response, 'url', {
+        value: new URL(
+          url.pathname === '/page' ? '/pages/final' : '/redirected/details',
+          location.href,
+        ).href,
+      })
+      return response
+    })
+    let hinted = Promise.withResolvers<void>()
+    let hints = collectHints(t, () => hinted.resolve())
+    document.body.textContent = ''
+    let app = run({ loadModule: mock.fn(), prefetchDepth: 1 })
+    t.after(() => app.dispose())
+    await app.ready()
+
+    prefetch('/page')
+    await hinted.promise
+
+    expect(fetch.mock.calls.map((call) => new URL(String(call.arguments[0])).pathname)).toEqual([
+      '/page',
+      '/partials/details',
+    ])
+    expect(
+      fetch.mock.calls.map((call) => new Headers(call.arguments[1]?.headers).get('X-Remix-Target')),
+    ).toEqual([null, 'details'])
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/redirected/entry.js'])
+  })
+
+  it('bounds recursive requests, deduplicates cycles, and keeps target variants separate', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      switch (new URL(String(src)).pathname) {
+        case '/page':
+          return htmlResponse(`<link rel="preload" as="fetch" href="/shared" data-rmx-target="details">
+            <link rel="preload" as="fetch" href="/shared#duplicate" data-rmx-target="details">
+            <link rel="preload" as="fetch" href="/shared" data-rmx-target="sidebar">`)
+        case '/shared':
+          return htmlResponse(`<script src="/shared.js"></script>
+            <link rel="preload" as="fetch" href="/page">
+            <template><template><link rel="preload" as="fetch" href="/leaf"></template></template>`)
+        case '/leaf':
+          return htmlResponse(`<link rel="stylesheet" href="/leaf.css">
+            <link rel="preload" as="fetch" href="/too-deep">`)
+        default:
+          throw new Error('Unexpected nested-frame request')
+      }
+    })
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t, 2)
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(
+      fetch.mock.calls.map((call) => [
+        new URL(String(call.arguments[0])).pathname,
+        new Headers(call.arguments[1]?.headers).get('X-Remix-Target'),
+      ]),
+    ).toEqual([
+      ['/page', null],
+      ['/shared', 'details'],
+      ['/shared', 'sidebar'],
+      ['/leaf', null],
+    ])
+    expect(hints.map((link) => new URL(link.href).pathname)).toContain('/shared.js')
+    expect(hints.map((link) => new URL(link.href).pathname)).toContain('/leaf.css')
+  })
+
+  it('ignores ineligible preloads and failed or non-HTML responses without losing sibling assets', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      if (new URL(String(src)).pathname === '/page') {
+        return htmlResponse(`<script src="/page.js"></script>
+          <link rel="preload" as="fetch">
+          <link rel="preload" as="fetch" href="">
+          <link rel="preload" as="fetch" href="http://[">
+          <link rel="preload" as="fetch" href="https://example.com/frame">
+          <link rel="preload" as="fetch" href="data:text/html,frame">
+          <link rel="preload" as="fetch" href="/print" media="not all">
+          <link rel="prefetch" as="fetch" href="/ordinary-prefetch">
+          <link rel="preload" as="fetch" href="/failed">
+          <link rel="preload" as="fetch" href="/json">
+          <link rel="preload" as="fetch" href="/valid?size=small#content" media="all">`)
+      }
+      if (new URL(String(src)).pathname === '/failed') {
+        return new Response('Unavailable', { status: 503 })
+      }
+      if (new URL(String(src)).pathname === '/json') {
+        return new Response('<script src="/ignored.js"></script>', {
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return htmlResponse('<link rel="preload" as="image" href="/valid.jpg">')
+    })
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t, 1)
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(fetch.mock.calls.map((call) => new URL(String(call.arguments[0])).pathname)).toEqual([
+      '/page',
+      '/failed',
+      '/json',
+      '/valid',
+    ])
+    expect(new URL(String(fetch.mock.calls[3].arguments[0])).search).toBe('?size=small')
+    expect(new URL(String(fetch.mock.calls[3].arguments[0])).hash).toBe('')
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/page.js', '/valid.jpg'])
+  })
+
+  it('rejects invalid run prefetch depths before starting the runtime', () => {
+    for (let prefetchDepth of [-1, 1.5, NaN, Infinity]) {
+      expect(() => run({ loadModule: mock.fn(), prefetchDepth })).toThrow(
+        'prefetchDepth must be a nonnegative safe integer',
+      )
+    }
+  })
+
+  it('shares overlapping recursive requests without waiting on a cycle', async (t) => {
+    let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) =>
+      htmlResponse(
+        `<link rel="preload" as="fetch" href="${new URL(String(src)).pathname === '/first' ? '/second' : '/first'}">`,
+      ),
+    )
+    let { prefetch } = createPrefetch(t, 2)
+
+    await Promise.all([
+      prefetch(new URL('/first', location.href).href),
+      prefetch(new URL('/second', location.href).href),
+    ])
+
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
   it('discovers explicit assets in inert HTML and nested templates without using its import map', async (t) => {
     stubLinkPrefetchSupport(t, true)
     t.mock.method(globalThis, 'fetch', async () =>
@@ -1102,14 +1271,26 @@ describe('default frame prefetch', () => {
     expect(hints).toEqual([])
   })
 
-  it('cancels speculative HTML and removes pending asset links on disposal', async (t) => {
+  it('cancels nested speculative HTML and removes pending asset links on disposal', async (t) => {
     stubLinkPrefetchSupport(t, true)
-    let fetchedSignal: AbortSignal | null | undefined
-    t.mock.method(globalThis, 'fetch', async (_src: RequestInfo | URL, init?: RequestInit) => {
-      fetchedSignal = init?.signal
-      return htmlResponse('<script src="/pending.js"></script>')
-    })
-    let { prefetch, controller } = createPrefetch(t)
+    let nestedStarted = Promise.withResolvers<AbortSignal | null | undefined>()
+    let fetch = t.mock.method(
+      globalThis,
+      'fetch',
+      async (src: RequestInfo | URL, init?: RequestInit) => {
+        if (new URL(String(src)).pathname === '/page') {
+          return htmlResponse(`<script src="/pending.js"></script>
+          <link rel="preload" as="fetch" href="/nested">`)
+        }
+        let response = Promise.withResolvers<Response>()
+        init?.signal?.addEventListener('abort', () => response.reject(init.signal?.reason), {
+          once: true,
+        })
+        nestedStarted.resolve(init?.signal)
+        return response.promise
+      },
+    )
+    let { prefetch, controller } = createPrefetch(t, 1)
     let linked = Promise.withResolvers<HTMLLinkElement>()
     let observer = new MutationObserver((records) => {
       for (let record of records) {
@@ -1123,10 +1304,12 @@ describe('default frame prefetch', () => {
 
     let ready = prefetch(new URL('/page', location.href).href)
     let link = await linked.promise
+    let nestedSignal = await nestedStarted.promise
     controller.abort()
     await ready
 
-    expect(fetchedSignal?.aborted).toBe(true)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(nestedSignal?.aborted).toBe(true)
     expect(link.isConnected).toBe(false)
   })
 })
