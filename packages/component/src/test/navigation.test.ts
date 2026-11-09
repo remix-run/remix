@@ -1708,9 +1708,9 @@ describe('navigate', () => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) =>
         createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
@@ -1796,9 +1796,9 @@ describe('navigate', () => {
     let topFrame = { src: originalUrl } as FrameHandle
     let reloadFrame = stubReloadFrameInterruptedAt(interruptedUrl.href)
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame,
     })
 
@@ -1845,9 +1845,9 @@ describe('navigate', () => {
     let topFrame = { src: originalUrl } as FrameHandle
     let reloadFrame = stubReloadFrameInterruptedAt(interruptedUrl.href)
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame,
     })
 
@@ -1883,9 +1883,9 @@ describe('navigate', () => {
     interruptingUrl.searchParams.set('frame-navigation', 'interrupting-at-commit')
     let topFrame = { src: originalUrl } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: () => createReloadTransition({ signal: new AbortController().signal }),
     })
 
