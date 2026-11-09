@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { on } from '@remix-run/component'
+import type { Handle } from '@remix-run/component'
 import { render } from '@remix-run/component/test'
 import type { TestContext } from '@remix-run/test'
 import { renderToString } from '@remix-run/component/server'
@@ -30,6 +31,41 @@ function element(container: ParentNode, selector: string): HTMLElement {
   let node = container.querySelector(selector)
   assert.ok(node instanceof HTMLElement)
   return node
+}
+
+function RetainedNotifications(handle: Handle<{ manager: ToastManager }>) {
+  return () => (
+    <Context manager={handle.props.manager}>
+      {(toastItems) => (
+        <section mix={root({ label: 'Notifications' })}>
+          {toastItems.map((toastItem) => (
+            <ItemContext key={toastItem.id} value={toastItem.id}>
+              <article
+                key={toastItem.id}
+                data-id={toastItem.id}
+                mix={[item(), animateExit({ opacity: 0, duration: 10000 })]}
+              >
+                {toastItem.title}
+              </article>
+            </ItemContext>
+          ))}
+        </section>
+      )}
+    </Context>
+  )
+}
+
+function pauseExit(node: Element) {
+  let animations = node.getAnimations()
+  assert.ok(animations.length > 0)
+  for (let animation of animations) animation.pause()
+}
+
+async function finishExit(node: Element) {
+  let animations = node.getAnimations()
+  for (let animation of animations) animation.finish()
+  await Promise.all(animations.map((animation) => animation.finished))
+  await new Promise((resolve) => requestAnimationFrame(resolve))
 }
 
 describe('toast manager', () => {
@@ -961,6 +997,61 @@ describe('toast availability', () => {
 })
 
 describe('toast.root() interactions', () => {
+  it('collapses on pointer leave and resumes timers while a dismissed toast animates out', async (t) => {
+    let toastManager = createToastManager()
+    toastManager.add({ id: 'outgoing', timeout: false })
+    toastManager.add({ id: 'remaining', timeout: 100000 })
+    let result = render(<RetainedNotifications manager={toastManager} />)
+    t.after(result.cleanup)
+    let region = element(result.container, 'section')
+    let outgoing = element(region, '[data-id="outgoing"]')
+    await result.act(() =>
+      region.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' })),
+    )
+    await result.act(() => toastManager.close('outgoing'))
+    pauseExit(outgoing)
+    await result.act(() =>
+      region.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })),
+    )
+    assert.equal(outgoing.isConnected, true)
+    assert.equal(region.hasAttribute('data-expanded'), false)
+    assert.equal(first(toastManager).paused, false)
+    await result.act(() => finishExit(outgoing))
+    assert.equal(outgoing.isConnected, false)
+    assert.equal(region.hasAttribute('data-expanded'), false)
+    assert.equal(first(toastManager).paused, false)
+  })
+
+  it('keeps hover expansion when the pointer returns before a retained exit finishes', async (t) => {
+    let toastManager = createToastManager()
+    toastManager.add({ id: 'outgoing', timeout: false })
+    toastManager.add({ id: 'remaining', timeout: 100000 })
+    let result = render(<RetainedNotifications manager={toastManager} />)
+    t.after(result.cleanup)
+    let region = element(result.container, 'section')
+    let outgoing = element(region, '[data-id="outgoing"]')
+    await result.act(() =>
+      region.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' })),
+    )
+    await result.act(() => toastManager.close('outgoing'))
+    pauseExit(outgoing)
+    await result.act(() =>
+      region.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })),
+    )
+    await result.act(() =>
+      region.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' })),
+    )
+    await result.act(() => finishExit(outgoing))
+    assert.equal(outgoing.isConnected, false)
+    assert.equal(region.hasAttribute('data-expanded'), true)
+    assert.equal(first(toastManager).paused, true)
+    await result.act(() =>
+      region.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })),
+    )
+    assert.equal(region.hasAttribute('data-expanded'), false)
+    assert.equal(first(toastManager).paused, false)
+  })
+
   it('keeps touch expansion through release and resumes only its own pause on an outside touch', async (t) => {
     let time = clock(t)
     let toastManager = createToastManager()

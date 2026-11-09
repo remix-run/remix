@@ -89,13 +89,20 @@ export interface ToastItemContextProps {
   children?: RemixNode
 }
 
+type ToastClock =
+  | { status: 'stopped'; remaining: number }
+  | {
+      status: 'running'
+      remaining: number
+      started: number
+      timer: ReturnType<typeof setTimeout>
+    }
+
 type StoredToastItem<data> = {
   revision: number
   options: ToastOptions<data>
   timeout: number | false
-  remaining: number
-  started: number | null
-  timer?: ReturnType<typeof setTimeout>
+  clock: ToastClock
   presentations: Set<symbol>
 }
 
@@ -118,24 +125,35 @@ export function createToastManager<data = unknown>(
   }
 
   function remaining(toastItem: StoredToastItem<data>) {
+    let clock = toastItem.clock
     return Math.max(
       0,
-      toastItem.remaining -
-        (toastItem.started === null ? 0 : performance.now() - toastItem.started),
+      clock.remaining - (clock.status === 'stopped' ? 0 : performance.now() - clock.started),
     )
   }
 
   function stop(toastItem: StoredToastItem<data>) {
-    toastItem.remaining = remaining(toastItem)
-    toastItem.started = null
-    clearTimeout(toastItem.timer)
+    let clock = toastItem.clock
+    if (clock.status === 'stopped') return
+    toastItem.clock = { status: 'stopped', remaining: remaining(toastItem) }
+    clearTimeout(clock.timer)
   }
 
   function start(id: string, toastItem: StoredToastItem<data>) {
-    if (toastItem.timeout === false || toastItem.presentations.size === 0 || reasons.size > 0)
+    let clock = toastItem.clock
+    if (
+      clock.status === 'running' ||
+      toastItem.timeout === false ||
+      toastItem.presentations.size === 0 ||
+      reasons.size > 0
+    )
       return
-    toastItem.started = performance.now()
-    toastItem.timer = setTimeout(() => toastManager.close(id), toastItem.remaining)
+    toastItem.clock = {
+      status: 'running',
+      remaining: clock.remaining,
+      started: performance.now(),
+      timer: setTimeout(() => toastManager.close(id), clock.remaining),
+    }
   }
 
   function validateTimeout(value: number | false) {
@@ -157,7 +175,7 @@ export function createToastManager<data = unknown>(
             data: toastItem.options.data,
             timeout: toastItem.timeout,
             remaining: remaining(toastItem),
-            paused: toastItem.started === null,
+            paused: toastItem.clock.status === 'stopped',
             presented: toastItem.presentations.size > 0,
           }),
         ),
@@ -176,8 +194,7 @@ export function createToastManager<data = unknown>(
         revision: previous ? previous.revision + 1 : 0,
         options: { ...options },
         timeout: lifetime,
-        remaining: lifetime === false ? 0 : lifetime,
-        started: null,
+        clock: { status: 'stopped', remaining: lifetime === false ? 0 : lifetime },
         presentations: previous?.presentations ?? new Set(),
       }
       storedToastItems.set(id, toastItem)
@@ -322,9 +339,14 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   let hovered = false
   let focused = false
   let entering = false
-  let collapseAfterExit = false
   let presentations = new Map<string, HTMLElement>()
   let previous = toastManager.toastItems.map((toastItem) => toastItem.id)
+
+  function setHovered(next: boolean) {
+    hovered = next
+    if (next) toastManager.pause(hover)
+    else toastManager.resume(hover)
+  }
 
   function restoreFocus(): boolean {
     if (!region || !returnTo) return false
@@ -401,21 +423,10 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     unregisterItem(id, node) {
       if (presentations.get(id) !== node) return
       presentations.delete(id)
-      if (
-        collapseAfterExit &&
-        ![...presentations.keys()].some(
-          (id) => !toastManager.toastItems.some((toastItem) => toastItem.id === id),
-        )
-      ) {
-        collapseAfterExit = false
-        hovered = false
-        toastManager.resume(hover)
-      }
       if (!toastManager.toastItems.length) {
-        collapseAfterExit = false
-        touchEngaged = hovered = false
+        touchEngaged = false
+        setHovered(false)
         toastManager.resume(touch)
-        toastManager.resume(hover)
       }
       refresh()
     },
@@ -445,11 +456,11 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
             event.composedPath().includes(node)
           )
             return
-          touchEngaged = hovered = false
+          touchEngaged = false
+          setHovered(false)
           let active = activeElement(doc)
           if (active && contains(node, active)) active.blur()
           toastManager.resume(touch)
-          toastManager.resume(hover)
           void handle.update()
         },
         { capture: true, signal },
@@ -458,9 +469,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         'pointerenter',
         (event) => {
           if (event.pointerType === 'touch') return
-          hovered = true
-          collapseAfterExit = false
-          toastManager.pause(hover)
+          setHovered(true)
           void handle.update()
         },
         { signal },
@@ -468,16 +477,8 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       node.addEventListener(
         'pointerleave',
         () => {
-          if (
-            [...presentations.keys()].some(
-              (id) => !toastManager.toastItems.some((toastItem) => toastItem.id === id),
-            )
-          ) {
-            collapseAfterExit = true
-            return
-          }
-          hovered = false
-          toastManager.resume(hover)
+          if (!hovered) return
+          setHovered(false)
           void handle.update()
         },
         { signal },
@@ -575,9 +576,9 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         () => {
           region = undefined
           returnTo = undefined
-          touchEngaged = hovered = focused = false
+          touchEngaged = focused = false
+          setHovered(false)
           toastManager.resume(touch)
-          toastManager.resume(hover)
           toastManager.resume(focus)
           toastManager.resume(visibility)
           toastManager.resume(windowBlur)
