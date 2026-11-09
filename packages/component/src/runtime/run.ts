@@ -44,8 +44,9 @@ export interface RunInit {
    * Wraps the swap of each top-frame navigation, for example in `document.startViewTransition()`
    * to animate between pages in the same document. Remix calls it once the response is in hand,
    * so the old page stays interactive while it loads, and swaps when the function calls
-   * `commit()` or settles. Applies to link, `navigate()`, Back and Forward navigations, and not to
-   * form submissions or named frames. Without the Navigation API, navigations swap as usual.
+   * `commit()` or settles. Applies to link, GET form, `navigate()`, Back, Forward and reload
+   * navigations, and not to POST form submissions or named frames. Without the Navigation API,
+   * navigations swap as usual.
    */
   frameTransition?: FrameTransition
 

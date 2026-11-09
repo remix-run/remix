@@ -68,7 +68,7 @@ export interface ResolveFrameOptions {
  * replaced, so the old page stays interactive while a slow response loads. The swap starts when the
  * function calls `commit()`, or when it returns or throws without calling it. Remix reports a
  * thrown error as a component error and still swaps. Navigations started with
- * `window.location`, `popstate`, form submissions and named frames do not call it.
+ * `window.location`, `popstate`, POST form submissions and named frames do not call it.
  *
  * @param options The navigation, its destination, and the means to swap it in.
  * @returns A promise Remix does not wait for once the swap has started.

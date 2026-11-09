@@ -1379,7 +1379,7 @@ This prevents Remix from intercepting Navigation API events. Explicit frame relo
 
 ### View Transitions
 
-Top-frame navigations swap the new page into the current document, so cross-document view transitions don't apply. Pass `frameTransition` to `run()` to wrap the swap in `document.startViewTransition()`. Remix calls it for link, `navigate()`, Back, Forward and reload navigations once the response is in, while the old page stays interactive, and swaps when the function calls `commit()`:
+Top-frame navigations swap the new page into the current document, so cross-document view transitions don't apply. Pass `frameTransition` to `run()` to wrap the swap in `document.startViewTransition()`. Remix calls it for link, GET form, `navigate()`, Back, Forward and reload navigations once the response is in, while the old page stays interactive, and swaps when the function calls `commit()`:
 
 ```ts
 run({
@@ -1412,7 +1412,7 @@ Pass `commit()` as the view transition's update callback: its promise resolves o
 - If the function returns or throws without calling `commit()`, Remix swaps anyway, and reports a thrown error as a component `error` event. A function that never settles holds the navigation until it is cancelled or superseded.
 - If a newer navigation supersedes this one, `signal` aborts, a pending `commit()` resolves without swapping, and Remix doesn't call the function for a navigation that is already aborted.
 - Remix doesn't check `prefers-reduced-motion`. Read it in the function to skip naming elements, or call `commit()` directly. The function runs either way, so an app can still cross-fade.
-- Form submissions, named frames, `frame.reload()` and the first page load swap as usual. Without the Navigation API, Remix doesn't call the function. Without `startViewTransition()`, the function decides what to do, as in the example above.
+- POST form submissions, named frames, `frame.reload()` and the first page load swap as usual. Without the Navigation API, Remix doesn't call the function. Without `startViewTransition()`, the function decides what to do, as in the example above.
 
 ### Prefetching
 

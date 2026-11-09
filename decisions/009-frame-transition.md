@@ -33,7 +33,7 @@ View transition types on `startViewTransition()` could cover direction in CSS, b
 ## Behavior
 
 - The callback runs after the response is in hand, so the old page stays interactive and the app's own progress UI keeps working while a slow response loads.
-- It runs for top-frame GET navigations handled by the Navigation API: links, `navigate()`, Back, Forward and reload. Form submissions, named frames, `frame.reload()` and `popstate` fallbacks swap as before.
+- It runs for top-frame GET navigations handled by the Navigation API: links, GET forms, `navigate()`, Back, Forward and reload. POST form submissions, named frames, `frame.reload()` and `popstate` fallbacks swap as before.
 - If the callback returns or throws without calling `commit()`, Remix swaps anyway, and reports a thrown error as a component error. A faulty callback never holds a navigation back. A callback that never settles holds it until it is cancelled or superseded.
 - Remix does not read `prefers-reduced-motion`. The callback runs either way, so an app can still cross-fade.
 

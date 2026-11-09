@@ -247,7 +247,8 @@ function inferFlushKind(html: string): FlushKind {
  * Reloads a frame and returns response metadata used by the navigation runtime.
  *
  * @param frame Frame handle to reload.
- * @param options Form submission metadata and cancellation signal.
+ * @param options Form submission metadata, cancellation signal, and the navigation transition the
+ * app's `frameTransition` may wrap.
  * @returns The reload signal and final response URL, when redirected.
  */
 export function reloadFrameForNavigation(
