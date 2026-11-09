@@ -1230,13 +1230,13 @@ The default resolver sends `X-Remix-Frame: true` for every request, including to
 
 The default resolver doesn't tell the server which page contains the frame. If frame content depends on the containing page, include that context explicitly in the frame's `src`.
 
-`defaultResolveFrame(src, options?, overrides?)` is the resolver used by `run()` unless you provide `resolveFrame`. It follows these rules:
+`defaultResolveFrame(src, options?, fetch?)` is the resolver used by `run()` unless you provide `resolveFrame`. It follows these rules:
 
 - GET form values are already encoded in `src`. `application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use CRLF-delimited text, and `multipart/form-data` submissions use `FormData`.
 - It accepts `2xx` responses, and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text.
-- It uses the `same-origin` Fetch mode, so cross-origin sources and redirects fail, even when the destination allows CORS.
+- It supplies the `same-origin` Fetch mode, so the default fetch implementation rejects cross-origin sources and redirects, even when the destination allows CORS.
 
-Delegate to `defaultResolveFrame` to customize Fetch's `cache`, `headers`, `credentials`, or `priority` settings while keeping the default form encoding, cancellation, and response handling. Custom headers merge with the default headers; `Accept`, `X-Remix-Frame`, `X-Remix-Target`, and the form Content-Type remain controlled by the resolver. Fetch generates multipart boundaries.
+Delegate to `defaultResolveFrame` with a custom fetch implementation to customize requests or return stored responses. The callback receives the URL and prepared `RequestInit`, including the form body, frame headers, abort signal, and `same-origin` mode. Forward these settings when calling `fetch()` to preserve the default request behavior. Fetch generates multipart boundaries. The default resolver validates the returned response before passing it to the frame.
 
 For example, use the browser HTTP cache for Back/Forward navigations, including stale responses:
 
@@ -1249,9 +1249,12 @@ run({
     return mod[exportName]
   },
   resolveFrame(src, options) {
-    return defaultResolveFrame(src, options, {
-      cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
-    })
+    return defaultResolveFrame(src, options, (url, init) =>
+      fetch(url, {
+        ...init,
+        cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+      }),
+    )
   },
 })
 ```
@@ -1259,6 +1262,8 @@ run({
 `options.navigationType` is `push`, `replace`, `traverse`, or `reload` for loads caused by a navigation. Client frames loaded while rendering that response inherit the navigation type. Independent frame loads and `frame.reload()` calls leave it undefined.
 
 `force-cache` still needs a matching stored response and falls back to the network on a miss. The server must allow the response to be stored, with suitable `Cache-Control` and `Vary` headers. It can reuse responses past their `max-age`, so the application owns when to bypass cached responses after mutations or changes to the signed-in user.
+
+For application-managed storage with the Cache API, the callback can construct `new Request(url, init)` as a cache key and return a stored `Response`. The app owns cache writes, invalidation, and partitioning by user. Custom fetch implementations also own any changes to request and redirect policies.
 
 Provide a custom `resolveFrame` without delegating when you need another body encoding or response policy. It can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it. When `fetch()` followed a redirect, frames other than the top frame render the response without changing either URL.
 

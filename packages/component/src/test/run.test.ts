@@ -9,7 +9,7 @@ describe('defaultResolveFrame', () => {
     document.body.replaceChildren()
   })
 
-  it('applies Fetch overrides while preserving the frame request and response', async (t) => {
+  it('passes the prepared frame request to a custom fetch implementation', async (t) => {
     let response = new Response('<p>Saved</p>', {
       headers: { 'Content-Security-Policy': "script-src 'nonce-response'" },
     })
@@ -21,16 +21,16 @@ describe('defaultResolveFrame', () => {
     let result = await defaultResolveFrame(
       '/account',
       { target: 'details', method: 'post', formData, signal: controller.signal },
-      {
-        cache: 'no-cache',
-        credentials: 'omit',
-        priority: 'high',
-        headers: {
-          Authorization: 'Bearer example',
-          'X-Remix-Frame': 'false',
-          'X-Remix-Target': 'other',
-          'Content-Type': 'application/json',
-        },
+      (url, init) => {
+        let headers = new Headers(init?.headers)
+        headers.set('Authorization', 'Bearer example')
+        return fetch(url, {
+          ...init,
+          cache: 'no-cache',
+          credentials: 'omit',
+          priority: 'high',
+          headers,
+        })
       },
     )
 
@@ -58,24 +58,63 @@ describe('defaultResolveFrame', () => {
     let formData = new FormData()
     formData.set('name', 'Ada')
 
-    await defaultResolveFrame(
-      '/account',
-      { method: 'post', formData, encType: 'multipart/form-data' },
-      {
-        headers: new Headers({
-          'X-Request-Id': 'example',
-          'X-Remix-Target': 'other',
-          'Content-Type': 'application/json',
-        }),
-      },
-    )
+    await defaultResolveFrame('/account', {
+      method: 'post',
+      formData,
+      encType: 'multipart/form-data',
+    })
 
     let init = fetchMock.mock.calls[0]!.arguments[1]
     expect(init?.body).toBe(formData)
     let headers = new Headers(init?.headers)
-    expect(headers.get('X-Request-Id')).toBe('example')
+    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('X-Remix-Frame')).toBe('true')
     expect(headers.get('X-Remix-Target')).toBeNull()
     expect(headers.get('Content-Type')).toBeNull()
+  })
+
+  it('can return a Cache API response without fetching', async (t) => {
+    let cacheName = `frame-test-${crypto.randomUUID()}`
+    t.after(() => caches.delete(cacheName))
+    let cache = await caches.open(cacheName)
+    let src = new URL('/cached-frame', window.location.href).href
+    await cache.put(
+      new Request(src, {
+        headers: { Accept: 'text/html', 'X-Remix-Frame': 'true', 'X-Remix-Target': 'details' },
+      }),
+      new Response('<p>Cached</p>', {
+        headers: {
+          'Content-Type': 'text/html',
+          'Content-Security-Policy': "script-src 'nonce-cached'",
+          Vary: 'X-Remix-Frame, X-Remix-Target',
+        },
+      }),
+    )
+    let fetchMock = t.mock.method(globalThis, 'fetch', async () => {
+      throw new Error('Unexpected network request')
+    })
+
+    let response = await defaultResolveFrame(src, { target: 'details' }, async (url, init) => {
+      let cached = await cache.match(new Request(url, init))
+      if (!cached) throw new Error('Expected a matching cached frame')
+      return cached
+    })
+
+    expect(fetchMock.mock.calls.length).toBe(0)
+    expect(response.bodyUsed).toBe(false)
+    expect(response.headers.get('Content-Security-Policy')).toBe("script-src 'nonce-cached'")
+    expect(await response.text()).toBe('<p>Cached</p>')
+  })
+
+  it('validates responses returned by a custom fetch implementation', async () => {
+    await expect(
+      defaultResolveFrame(
+        '/unavailable',
+        undefined,
+        async () =>
+          new Response('<p>Unavailable</p>', { status: 503, statusText: 'Service Unavailable' }),
+      ),
+    ).rejects.toThrow('Failed to resolve frame: 503 Service Unavailable')
   })
 
   it('uses request-specific navigation types to customize traversal fetches', async (t) => {
@@ -96,9 +135,12 @@ describe('defaultResolveFrame', () => {
       loadModule: mock.fn(),
       resolveFrame(src, options) {
         navigationTypes.push(options?.navigationType)
-        return defaultResolveFrame(src, options, {
-          cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
-        })
+        return defaultResolveFrame(src, options, (url, init) =>
+          fetch(url, {
+            ...init,
+            cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+          }),
+        )
       },
     })
     t.after(async () => {

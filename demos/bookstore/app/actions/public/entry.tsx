@@ -15,9 +15,12 @@ export const app = run({
     return Component
   },
   resolveFrame(src, options) {
-    return defaultResolveFrame(src, options, {
-      cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
-    })
+    return defaultResolveFrame(src, options, (url, init) =>
+      fetch(url, {
+        ...init,
+        cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+      }),
+    )
   },
   async processClientEntryPreloads(preloads) {
     if (await detectMultipleImportMapSupport()) {
