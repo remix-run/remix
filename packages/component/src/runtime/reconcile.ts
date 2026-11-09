@@ -40,7 +40,7 @@ import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
 export const TEXT_NODE = Symbol('TEXT_NODE')
-export const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
+const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
 export const ROOT_VNODE = Symbol('ROOT_VNODE')
 
 export type VNodeKind =
@@ -260,15 +260,15 @@ function isFrameComponent(type: ElementFunction): type is FrameComponent {
   return Object.hasOwn(type, FRAME_NODE)
 }
 
-export function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNode {
+function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNode {
   return node.kind === 'fragment'
 }
 
-export function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
+function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
   return node.kind === 'text'
 }
 
-export function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
+function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
   return node.kind === 'host'
 }
 
@@ -276,7 +276,7 @@ export function isCommittedComponentNode(node: VNode): node is CommittedComponen
   return node.kind === 'component' && '_content' in node
 }
 
-export function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClientEntryNode {
+function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClientEntryNode {
   return node.kind === 'client-entry'
 }
 
@@ -386,23 +386,8 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
-let globalStyleManager =
+export const defaultStyleManager: StyleManager =
   typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
-
-export let defaultStyleManager: StyleManager = globalStyleManager
-
-/**
- * Reset the global style state. For testing only - not exported from index.ts.
- */
-export function resetStyleState() {
-  invariant(
-    typeof window !== 'undefined',
-    'resetStyleState() is only available in a browser environment',
-  )
-  globalStyleManager.dispose()
-  globalStyleManager = createStyleManager()
-  defaultStyleManager = globalStyleManager
-}
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -2049,11 +2034,11 @@ function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | 
   moveDomRange(domParent, firstDom, lastDom, anchor)
 }
 
-export function findFirstDomAnchor(node: CommittedVNode | null | undefined): Node | null {
+function findFirstDomAnchor(node: CommittedVNode | null | undefined): Node | null {
   return findEdgeDomNode(node, false)
 }
 
-export function findLastDomAnchor(node: CommittedVNode | null | undefined): Node | null {
+function findLastDomAnchor(node: CommittedVNode | null | undefined): Node | null {
   return findEdgeDomNode(node, true)
 }
 

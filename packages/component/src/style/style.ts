@@ -240,8 +240,3 @@ export function processStyleClass(
 
   return result
 }
-
-// Clear style cache (useful for testing)
-export function clearStyleCache(styleCache: Map<string, { selector: string; css: string }>): void {
-  styleCache.clear()
-}

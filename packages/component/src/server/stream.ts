@@ -11,8 +11,6 @@ import type { ElementFunction } from '../runtime/element-function.ts'
 import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
-  FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
-  SELF_CLOSING_TAGS,
   isAllowedHostPropName,
   normalizeAttributeName,
   sanitizeUrlAttribute,
@@ -26,11 +24,7 @@ import {
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import {
-  composeMixedProps,
-  isBrowserOnlyMixinDescriptor,
-  isMixinDescriptor,
-} from '../runtime/core/mix.ts'
+import { composeMixedProps, isMixinDescriptor } from '../runtime/core/mix.ts'
 import { getSelectValues } from '../runtime/core/select.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
@@ -281,7 +275,24 @@ function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYE
   return `${layer}.${selector}`
 }
 
-const SSR_OMITTED_PROPS = RUNTIME_FRAMEWORK_PROPS
+const SSR_OMITTED_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
+
+const SELF_CLOSING_TAGS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+])
 
 const ssrSignal = Object.freeze({
   get aborted() {
@@ -948,6 +959,12 @@ function renderAttributes(
   }
 
   return attrs
+}
+
+function isBrowserOnlyMixinDescriptor(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || !('type' in value)) return false
+  let type = value.type
+  return typeof type === 'function' && '__rmxMixinSsr' in type && type.__rmxMixinSsr === false
 }
 
 function resolveSsrMixedProps(

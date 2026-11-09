@@ -45,29 +45,6 @@ const JAVASCRIPT_PROTOCOL =
 const BLOCKED_JAVASCRIPT_URL =
   "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
 
-export const FRAMEWORK_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
-
-export const SELF_CLOSING_TAGS = new Set([
-  'area',
-  'base',
-  'br',
-  'col',
-  'embed',
-  'hr',
-  'img',
-  'input',
-  'link',
-  'meta',
-  'param',
-  'source',
-  'track',
-  'wbr',
-])
-
-export function isChildlessElement(name: string): boolean {
-  return SELF_CLOSING_TAGS.has(name)
-}
-
 export function isAllowedHostPropName(name: string): boolean {
   return name.length > 0 && !UNSAFE_HOST_PROP_NAME.test(name) && !BLOCKED_HOST_PROP_NAMES.has(name)
 }
@@ -133,7 +110,7 @@ function computeAttributeName(name: string, isSvg: boolean): { ns?: string; attr
   return normalizeSvgAttribute(name)
 }
 
-export function isBooleanishStringAttribute(name: string): boolean {
+function isBooleanishStringAttribute(name: string): boolean {
   return BOOLEANISH_STRING_ATTRIBUTES.has(name)
 }
 
