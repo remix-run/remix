@@ -27,9 +27,9 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
  * fetches HTML and discovers external JavaScript, CSS, and explicit image and font preloads for
  * `<link rel="prefetch">` hints.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
- * `prefetchDepth` to `run()` to follow explicit fetch preloads as nested-frame sources, or `prefetch`
- * to replace the strategy. Cross-origin URLs, the current untargeted page, and browsers where
- * Remix doesn't handle navigations are skipped.
+ * `{ prefetch: { depth } }` to `run()` to follow explicit fetch preloads as nested-frame sources,
+ * or a `prefetch` handler to replace the strategy. Cross-origin URLs, the current untargeted page,
+ * and browsers where Remix doesn't handle navigations are skipped.
  *
  * @param href URL to prefetch, resolved against the document base URL.
  * @param options Destination frame for the request.

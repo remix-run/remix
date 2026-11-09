@@ -552,15 +552,48 @@ describe('prefetch', () => {
     expect(prefetchFrame).not.toHaveBeenCalled()
   })
 
-  it('passes target context to imperative prefetch overrides', (t) => {
+  it('preserves the run prefetch function shorthand and target context', async (t) => {
     let prefetchFrame = mock.fn()
-    startTestPrefetching(t, prefetchFrame)
+    let app = run({
+      loadModule: mock.fn(),
+      prefetch(src, options) {
+        prefetchFrame(src, options)
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
     prefetch('/partial#details', { target: 'details' })
     expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partial', location.href).href, {
       target: 'details',
     })
     prefetch('https://example.com/partial', { target: 'details' })
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses an object prefetch handler for links and imperative calls instead of default discovery', async (t) => {
+    let prefetchFrame = mock.fn()
+    let fetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
+    let app = run({
+      loadModule: mock.fn(),
+      prefetch: {
+        handler(src, options) {
+          prefetchFrame(src, options)
+        },
+        depth: 1,
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+
+    let anchor = createIntentLink('/next')
+    press(anchor)
+    prefetch('/partial#details', { target: 'details' })
+
+    expect(prefetchFrame.mock.calls.map((call) => call.arguments)).toEqual([
+      [anchor.href, undefined],
+      [new URL('/partial', location.href).href, { target: 'details' }],
+    ])
+    expect(fetch).not.toHaveBeenCalled()
   })
 
   it('prefetches named-frame content with the same URL and headers as a frame reload', async (t) => {
@@ -849,7 +882,7 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/embedded.js'])
   })
 
-  it('uses run prefetchDepth for imperative calls and scans one additional frame response', async (t) => {
+  it('uses run prefetch.depth for imperative calls and scans one additional frame response', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let rootHtml = await drain(
       renderToStream(jsx(Frame, { name: 'ignored', src: '/not-prefetched' }), {
@@ -876,7 +909,7 @@ describe('default frame prefetch', () => {
     let hinted = Promise.withResolvers<void>()
     let hints = collectHints(t, () => hinted.resolve())
     document.body.textContent = ''
-    let app = run({ loadModule: mock.fn(), prefetchDepth: 1 })
+    let app = run({ loadModule: mock.fn(), prefetch: { depth: 1 } })
     t.after(() => app.dispose())
     await app.ready()
 
@@ -975,9 +1008,9 @@ describe('default frame prefetch', () => {
   })
 
   it('rejects invalid run prefetch depths before starting the runtime', () => {
-    for (let prefetchDepth of [-1, 1.5, NaN, Infinity]) {
-      expect(() => run({ loadModule: mock.fn(), prefetchDepth })).toThrow(
-        'prefetchDepth must be a nonnegative safe integer',
+    for (let depth of [-1, 1.5, NaN, Infinity]) {
+      expect(() => run({ loadModule: mock.fn(), prefetch: { depth } })).toThrow(
+        'prefetch.depth must be a nonnegative safe integer',
       )
     }
   })
