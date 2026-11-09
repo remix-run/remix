@@ -331,8 +331,9 @@ export interface FrameProps {
   /** Source URL used when the frame loads or reloads its content. */
   src: string
   /**
-   * Prefetches this frame's HTML and assets when ancestor HTML is prefetched. Does not trigger
-   * speculative requests during normal document loads. Defaults to `false`.
+   * Includes this frame's HTML and assets in the default prefetch strategy when ancestor HTML
+   * is prefetched. Does not trigger speculative requests during normal document loads.
+   * Defaults to `false`.
    */
   preload?: boolean
   /** Fallback content to render while the frame is pending. */

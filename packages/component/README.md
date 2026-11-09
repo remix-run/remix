@@ -1110,13 +1110,13 @@ function AlbumPage(handle: Handle<{ albumId: string }>) {
 }
 ```
 
-| Prop       | Use                                                                                            |
-| ---------- | ---------------------------------------------------------------------------------------------- |
-| `src`      | Required. The URL whose HTML the frame renders and reloads.                                    |
-| `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                             |
-| `preload`  | Prefetches this frame's HTML and assets when ancestor HTML is prefetched. Defaults to `false`. |
-| `fallback` | Content to render while the frame is pending.                                                  |
-| `on`       | Event handlers for events dispatched from the frame element, keyed by event type.              |
+| Prop       | Use                                                                                                       |
+| ---------- | --------------------------------------------------------------------------------------------------------- |
+| `src`      | Required. The URL whose HTML the frame renders and reloads.                                               |
+| `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                                        |
+| `preload`  | Opts this frame into the default prefetch strategy when ancestor HTML is prefetched. Defaults to `false`. |
+| `fallback` | Content to render while the frame is pending.                                                             |
+| `on`       | Event handlers for events dispatched from the frame element, keyed by event type.                         |
 
 Frame content can contain other frames and client entries.
 
@@ -1403,7 +1403,9 @@ function ProductPage() {
 }
 ```
 
-The server records this flag in the frame's JSON metadata. When Remix prefetches ancestor HTML, it reads that metadata without executing scripts, fetches each opted-in same-origin frame, and scans its HTML for assets and further opted-in frames. Metadata inside nested templates is included. Each source and frame target is visited once per prefetch traversal, so cycles stop. Frames without `preload={true}` don't trigger additional requests; their assets are still discovered if they're already embedded in the HTML.
+The server records this flag in the frame's JSON metadata. When the default prefetch strategy loads ancestor HTML, it reads that metadata without executing scripts, fetches each opted-in same-origin frame, and scans its HTML for assets and further opted-in frames. Metadata inside nested templates is included.
+
+Each combination of source URL and frame target is visited once per prefetch traversal, so cycles stop. Frames without `preload={true}` don't trigger additional requests. Their assets are still discovered if they're already embedded in the HTML.
 
 Nested requests use the same frame headers as imperative `prefetch()` calls, including `X-Remix-Target` from the frame's `name`. Failed and non-HTML responses stop discovery for that URL. This behavior applies to both automatic link prefetching and imperative calls.
 
