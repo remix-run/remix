@@ -178,8 +178,9 @@ function createLinkedAbortController(...signals: Array<AbortSignal | undefined>)
 // Runs the app's frame transition and the swap it controls. The swap starts when the callback calls
 // `commit()`, or when the callback settles without calling it, so a faulty callback never holds
 // the navigation back. A callback that never settles holds it until the navigation is cancelled
-// or superseded. Once the swap has started, the callback may keep running, for example to wait
-// for a view transition to finish, without delaying the navigation it is waiting on.
+// or superseded, which aborts `signal`; `swap()` renders nothing for an aborted signal. Once the
+// swap has started, the callback may keep running, for example to wait for a view transition to
+// finish, without delaying the navigation it is waiting on.
 async function swapWithFrameTransition(
   frameTransition: FrameTransition,
   swap: () => Promise<void>,
@@ -187,11 +188,10 @@ async function swapWithFrameTransition(
     transition: NavigationTransition
     to: string
     signal: AbortSignal
-    isStale: () => boolean
     onError: (error: unknown) => void
   },
 ): Promise<void> {
-  let { transition, to, signal, isStale } = options
+  let { transition, to, signal } = options
   let swapping: Promise<void> | undefined
   let commitRequested = Promise.withResolvers<void>()
   let aborted = new Promise<void>((resolve) => {
@@ -199,19 +199,12 @@ async function swapWithFrameTransition(
     else signal.addEventListener('abort', () => resolve(), { once: true })
   })
   // `commit()` resolves with the navigation, which only finishes once the swap has.
-  let navigationEnded = Promise.race([
-    transition.finished.then(
-      () => {},
-      () => {},
-    ),
-    aborted,
-  ])
+  let navigationEnded = Promise.race([transition.finished.catch(() => {}), aborted])
 
   function start() {
-    if (!swapping && !isStale()) {
-      swapping = swap()
-      commitRequested.resolve()
-    }
+    if (swapping) return
+    swapping = swap()
+    commitRequested.resolve()
   }
 
   let callback = Promise.resolve()
@@ -891,7 +884,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           transition,
           to: redirectedTo ?? frame.src,
           signal: controller.signal,
-          isStale,
           onError: (error) => init.errorTarget.dispatchEvent(createComponentErrorEvent(error)),
         })
       } else {

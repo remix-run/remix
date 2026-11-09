@@ -46,6 +46,9 @@ async function setup(
 
 const page = () => document.getElementById('page')?.textContent
 
+// `navigation.transition` is null once the navigation has finished.
+const describeTransition = () => (window.navigation.transition ? 'pending' : 'finished')
+
 describe('run frameTransition', () => {
   it('wraps the swap of a forward navigation in a view transition', async (t) => {
     let seen: Array<{ from: string | undefined; type: string; to: string; before: string | null }> =
@@ -84,8 +87,13 @@ describe('run frameTransition', () => {
     let committed: Promise<void> | undefined
     let order: string[] = []
     let fixture = await setup(t, ({ commit }) => {
-      committed = commit().then(() => void order.push('navigation finished'))
-      order.push('commit called')
+      committed = commit().then(
+        () =>
+          void order.push(
+            `navigation finished, showing ${page()}, transition ${describeTransition()}`,
+          ),
+      )
+      order.push(`commit called, showing ${page()}`)
       commitCalled[1]()
     })
 
@@ -95,7 +103,10 @@ describe('run frameTransition', () => {
     await committed
 
     expect(page()).toBe('/slow')
-    expect(order).toEqual(['commit called', 'navigation finished'])
+    expect(order).toEqual([
+      'commit called, showing /',
+      'navigation finished, showing /slow, transition finished',
+    ])
   })
 
   it('reports Back and Forward as traversals with the entry being left', async (t) => {
