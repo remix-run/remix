@@ -340,7 +340,7 @@ function createPendingExitAnimation(
         pendingExit.cancel()
         return
       }
-      // Keep the abort listener after playback while another mixin can still retain the node.
+      // Retention can be aborted after playback while another mixin still retains the node.
       signal.addEventListener('abort', abortExit, { once: true })
       await waitForFinishOrAbort(playback.finished, signal)
     },
@@ -350,10 +350,9 @@ function createPendingExitAnimation(
     if (playback.animations.length === 0) return
 
     // Interrupted shared animations still use commitStyles during reclamation.
-    if (!config.transition) {
-      let finished = playback.animations.every((animation) => animation.playState === 'finished')
-      if (!finished) return
-    }
+    if (!config.transition) return
+    let finished = playback.animations.every((animation) => animation.playState === 'finished')
+    if (finished) return
     pendingExit.reclaimKeyframe = readComputedKeyframe(node, playback.properties)
     pendingExit.cancel()
   }
@@ -368,14 +367,6 @@ function prepareReclaimedElement(
     if (pendingExit) {
       for (let animation of pendingExit.immediateAnimations) animation.cancel()
       if (pendingExit.reclaimKeyframe) return pendingExit.reclaimKeyframe
-
-      // Another mixin may retain the element after its exit animation finishes.
-      if (pendingExit.animations.length > 0) {
-        let finished = pendingExit.animations.every(
-          (animation) => animation.playState === 'finished',
-        )
-        if (finished) return readComputedKeyframe(node, pendingExit.properties)
-      }
     }
 
     let trackedAnimation = animatingNodes.get(node)

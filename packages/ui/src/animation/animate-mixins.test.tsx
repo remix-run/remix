@@ -342,62 +342,6 @@ describe('interrupted exit animations', () => {
     expect(container.firstElementChild).toBe(node)
     expect(getComputedStyle(node).opacity).toBe('0.8')
   })
-
-  it('returns from completed exit styles while another mixin retains the element', async (t) => {
-    let { root, container } = createTestRoot(t)
-    let removal = Promise.withResolvers<void>()
-    t.after(() => removal.resolve())
-    let retain = createMixin((handle) => {
-      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => removal.promise))
-    })
-    let mix = [
-      animateExit({ opacity: 0, duration: 1000, transition: { opacity: { duration: 500 } } }),
-      retain(),
-    ]
-    root.render(<div key="item" style={{ opacity: 1 }} mix={mix} />)
-    root.flush()
-    let node = container.firstElementChild
-    assert(node)
-    root.render(null)
-    root.flush()
-    animationFor(node, 'opacity').finish()
-    await new Promise(requestAnimationFrame)
-    root.render(<div key="item" style={{ opacity: 0.4 }} mix={mix} />)
-    root.flush()
-    let returning = animationFor(node, 'opacity')
-    returning.pause()
-    returning.currentTime = 0
-    expect(getComputedStyle(node).opacity).toBe('0')
-    removal.resolve()
-    returning.finish()
-    await new Promise(requestAnimationFrame)
-    expect(container.firstElementChild).toBe(node)
-    expect(getComputedStyle(node).opacity).toBe('0.4')
-  })
-
-  it('returns from finished exit styles before removal callbacks settle', async (t) => {
-    let { root, container } = createTestRoot(t)
-    let exit = animateExit({ opacity: 0, duration: 1000 })
-    root.render(<div key="item" style={{ opacity: 1 }} mix={exit} />)
-    root.flush()
-    let node = container.firstElementChild
-    assert(node)
-    root.render(null)
-    root.flush()
-    animationFor(node, 'opacity').finish()
-    root.render(<div key="item" style={{ opacity: 0.4 }} mix={exit} />)
-    root.flush()
-    let returning = animationFor(node, 'opacity')
-    returning.pause()
-    returning.currentTime = 0
-    expect(getComputedStyle(node).opacity).toBe('0')
-    await Promise.resolve()
-    expect(getComputedStyle(node).opacity).toBe('0')
-    returning.finish()
-    await new Promise(requestAnimationFrame)
-    expect(container.firstElementChild).toBe(node)
-    expect(getComputedStyle(node).opacity).toBe('0.4')
-  })
 })
 
 describe('exit animations with other mixins', () => {
