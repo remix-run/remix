@@ -57,7 +57,7 @@ import {
   isHydrationEnd,
   isHydrationStart,
 } from './diff-dom.ts'
-import { createStyleManager, type StyleManager } from '../style/index.ts'
+import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'

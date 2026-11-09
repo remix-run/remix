@@ -4,7 +4,7 @@ import type { ElementFunction } from './element-function.ts'
 import type { FrameInstance } from './frame.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 import type { Scheduler } from './scheduler.ts'
-import type { StyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 import type { ResourceNonces } from './nonce.ts'
 
 /**

@@ -8,7 +8,7 @@ import {
   renderComponent,
   setActiveSchedulerUpdateParents,
 } from './reconcile.ts'
-import type { StyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 
 type EmptyFn = () => void
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'

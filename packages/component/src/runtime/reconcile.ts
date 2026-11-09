@@ -36,8 +36,8 @@ import {
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
 import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
-import { createStyleManager } from '../style/index.ts'
-import type { StyleManager } from '../style/index.ts'
+import { createStyleManager } from '../style/stylesheet.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 
 export const TEXT_NODE = Symbol('TEXT_NODE')
 export const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')

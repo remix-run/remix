@@ -22,7 +22,7 @@ import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
 import { ImportMap, renderToString, renderToStream } from '../server/stream.ts'
-import { createStyleManager } from '../style/index.ts'
+import { createStyleManager } from '../style/stylesheet.ts'
 import { drain, withResolvers } from './utils.ts'
 
 const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'

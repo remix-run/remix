@@ -23,7 +23,7 @@ import {
   type RootVNode,
 } from './reconcile.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
-import type { StyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 import type { ElementFunction } from './element-function.ts'
 
 /**
