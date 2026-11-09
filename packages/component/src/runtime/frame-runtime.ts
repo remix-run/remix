@@ -61,12 +61,65 @@ export interface ResolveFrameOptions {
   signal?: AbortSignal
 }
 
+/**
+ * Wraps the swap of a top-frame navigation, for example in `document.startViewTransition()`.
+ *
+ * Remix calls it after the destination's response is in hand and before the current page is
+ * replaced, so the old page stays interactive while a slow response loads. The swap starts when the
+ * function calls `commit()`, or when it returns or throws without calling it. Remix reports a
+ * thrown error as a component error and still swaps. Navigations started with
+ * `window.location`, `popstate`, form submissions and named frames do not call it.
+ *
+ * @param options The navigation, its destination, and the means to swap it in.
+ * @returns A promise Remix does not wait for once the swap has started.
+ *
+ * @example
+ * ```ts
+ * run({
+ *   async frameTransition({ signal, commit }) {
+ *     if (!document.startViewTransition || signal.aborted) return commit()
+ *     let transition = document.startViewTransition(() => commit())
+ *     signal.addEventListener('abort', () => transition.skipTransition(), { once: true })
+ *     await transition.finished.catch(() => {})
+ *   },
+ * })
+ * ```
+ */
+export type FrameTransition = (options: FrameTransitionOptions) => Promise<void> | void
+
+/**
+ * Describes the top-frame navigation passed to a {@link FrameTransition}.
+ */
+export interface FrameTransitionOptions {
+  /**
+   * The browser's Navigation API transition. `from` is the entry being left, and
+   * `navigationType` is `push`, `replace`, `reload` or `traverse`. A traversal has already
+   * committed its destination, so compare `from.index` with `navigation.currentEntry.index` to
+   * tell Back from Forward.
+   */
+  transition: NavigationTransition
+  /** The destination URL after redirects, which `navigation.currentEntry` may not reflect yet. */
+  to: string
+  /** Aborts when the navigation is cancelled or superseded. */
+  signal: AbortSignal
+  /**
+   * Swaps the destination in. Resolves when the navigation has finished, including scroll and
+   * focus restoration, or has been cancelled or superseded, so it can be the update callback of a
+   * view transition that captures the finished page. Calling it again, or after the navigation was
+   * cancelled or superseded, does not swap again.
+   */
+  commit(): Promise<void>
+}
+
 export type PendingClientEntries = Map<
   Comment,
   [Comment, RemixElement | undefined, ResourceNonces?]
 >
 
-export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
+export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
+  /** Set for top-frame navigations that the app's `frameTransition` may wrap. */
+  transition?: NavigationTransition
+}
 
 export type FrameReloadResult = {
   signal: AbortSignal

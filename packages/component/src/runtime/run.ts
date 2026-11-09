@@ -3,7 +3,12 @@ import { appNamedFrames, createFrame, getAppTopFrame, setAppTopFrame } from './f
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
-import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame-runtime.ts'
+import type {
+  FrameTransition,
+  LoadModule,
+  ResolveFrame,
+  ResolveFrameOptions,
+} from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
 import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
@@ -34,6 +39,15 @@ export interface RunInit {
    * The report-only header is used only when the enforcing header is absent.
    */
   resolveFrame?: ResolveFrame
+
+  /**
+   * Wraps the swap of each top-frame navigation, for example in `document.startViewTransition()`
+   * to animate between pages in the same document. Remix calls it once the response is in hand,
+   * so the old page stays interactive while it loads, and swaps when the function calls
+   * `commit()` or settles. Applies to link, `navigate()`, Back and Forward navigations, and not to
+   * form submissions or named frames. Without the Navigation API, navigations swap as usual.
+   */
+  frameTransition?: FrameTransition
 
   /** Processes module preloads discovered in late client entry responses before activation. */
   processClientEntryPreloads?: ProcessClientEntryPreloads
@@ -149,6 +163,7 @@ export function run(init: RunInit): AppRuntime {
     frameInstances: new WeakMap(),
     namedFrames: appNamedFrames,
     processClientEntryPreloads: init.processClientEntryPreloads,
+    frameTransition: init.frameTransition,
   })
   setAppTopFrame(topFrame)
 

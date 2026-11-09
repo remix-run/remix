@@ -432,6 +432,8 @@ export function startNavigationListenerImpl(
         let reload = options.reloadFrame(frame, {
           ...submission,
           signal: event.signal,
+          transition:
+            frame === topFrame && !submission ? (navigation.transition ?? undefined) : undefined,
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return

@@ -28,6 +28,7 @@ import {
   type FrameReloadResult,
   type FrameReloadTransition,
   type FrameRuntime,
+  type FrameTransition,
   type LoadModule,
   type PendingClientEntries,
   type ReconciliationTracker,
@@ -174,6 +175,63 @@ function createLinkedAbortController(...signals: Array<AbortSignal | undefined>)
   }
 }
 
+// Runs the app's frame transition and the swap it controls. The swap starts when the callback calls
+// `commit()`, or when the callback settles without calling it, so a faulty callback never holds
+// the navigation back. A callback that never settles holds it until the navigation is cancelled
+// or superseded. Once the swap has started, the callback may keep running, for example to wait
+// for a view transition to finish, without delaying the navigation it is waiting on.
+async function swapWithFrameTransition(
+  frameTransition: FrameTransition,
+  swap: () => Promise<void>,
+  options: {
+    transition: NavigationTransition
+    to: string
+    signal: AbortSignal
+    isStale: () => boolean
+    onError: (error: unknown) => void
+  },
+): Promise<void> {
+  let { transition, to, signal, isStale } = options
+  let swapping: Promise<void> | undefined
+  let commitRequested = Promise.withResolvers<void>()
+  let aborted = new Promise<void>((resolve) => {
+    if (signal.aborted) resolve()
+    else signal.addEventListener('abort', () => resolve(), { once: true })
+  })
+  // `commit()` resolves with the navigation, which only finishes once the swap has.
+  let navigationEnded = Promise.race([
+    transition.finished.then(
+      () => {},
+      () => {},
+    ),
+    aborted,
+  ])
+
+  function start() {
+    if (!swapping && !isStale()) {
+      swapping = swap()
+      commitRequested.resolve()
+    }
+  }
+
+  let callback = Promise.resolve()
+    .then(() =>
+      frameTransition({
+        transition,
+        to,
+        signal,
+        commit() {
+          start()
+          return navigationEnded
+        },
+      }),
+    )
+    .catch(options.onError)
+  await Promise.race([commitRequested.promise, callback, aborted])
+  start()
+  await swapping
+}
+
 // Marker-less HTML is a whole document when it starts with a doctype or `<html>`.
 // `renderToString` strips flush markers before returning, and so does any comment-stripping
 // minifier run over static output, so the marker alone cannot tell the two apart here.
@@ -248,6 +306,7 @@ type FrameInit = {
   frameInstances: WeakMap<Comment, FrameInstance>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
+  frameTransition?: FrameTransition
 }
 
 // Whether reloadStart has been dispatched without a matching reloadComplete, and why. Each frame
@@ -795,9 +854,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     let isStale = () => reloadController !== controller || controller.signal.aborted
+    let { transition, ...resolveOptions } = options ?? {}
     try {
       let resolution = await init.resolveFrame(frame.src, {
-        ...options,
+        ...resolveOptions,
         signal: controller.signal,
         target: frameName,
       })
@@ -807,21 +867,35 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       let reconciliationTracker = createReconciliationTracker()
       let blockingFrameTracker = createReconciliationTracker()
       let commitStarted = false
-      await render(content, {
-        nonce,
-        documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
-        signal: controller.signal,
-        reconciliationTracker,
-        blockingFrameTracker,
-        onCommit() {
-          if (commitStarted) return
-          commitStarted = true
-          blockingFrameTracker.finalize()
-          resolveCommit?.(blockingFrameTracker.ready())
-        },
-      })
-      reconciliationTracker.finalize()
-      await reconciliationTracker.ready()
+      async function swap() {
+        await render(content, {
+          nonce,
+          documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
+          signal: controller.signal,
+          reconciliationTracker,
+          blockingFrameTracker,
+          onCommit() {
+            if (commitStarted) return
+            commitStarted = true
+            blockingFrameTracker.finalize()
+            resolveCommit?.(blockingFrameTracker.ready())
+          },
+        })
+        reconciliationTracker.finalize()
+        await reconciliationTracker.ready()
+      }
+
+      if (transition && init.frameTransition) {
+        await swapWithFrameTransition(init.frameTransition, swap, {
+          transition,
+          to: redirectedTo ?? frame.src,
+          signal: controller.signal,
+          isStale,
+          onError: (error) => init.errorTarget.dispatchEvent(createComponentErrorEvent(error)),
+        })
+      } else {
+        await swap()
+      }
       return {
         signal: controller.signal,
         redirectedTo: isStale() ? undefined : redirectedTo,
