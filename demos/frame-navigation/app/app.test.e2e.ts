@@ -135,6 +135,52 @@ describe('frame navigation', () => {
     await assertDocumentPreserved(page, documentMarker)
   })
 
+  it('retains a pending course query when the filter is submitted before results arrive', async (t) => {
+    let requested = Promise.withResolvers<void>()
+    let response = Promise.withResolvers<void>()
+    let firstSearch = true
+    let server = await createTestServer(async (request) => {
+      let url = new URL(request.url)
+      if (
+        firstSearch &&
+        url.pathname === routes.main.courses.href() &&
+        url.searchParams.get('q') === 'accessibility'
+      ) {
+        firstSearch = false
+        requested.resolve()
+        await response.promise
+      }
+      return router.fetch(request)
+    })
+    let page = await t.serve(server)
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    await page.getByRole('link', { name: 'Courses', exact: true }).click()
+    await page.locator('#courses-heading').waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+
+    try {
+      let search = page.getByLabel('Filter courses')
+      await search.fill('accessibility')
+      await requested.promise
+      assert.equal(await search.inputValue(), 'accessibility')
+
+      await page.getByRole('button', { name: 'Filter', exact: true }).click()
+      await page.getByText('1 course matching “accessibility”', { exact: true }).waitFor()
+      await page.waitForFunction(() => window.navigation.transition === null)
+      assert.equal(new URL(page.url()).searchParams.get('q'), 'accessibility')
+      assert.equal(await search.inputValue(), 'accessibility')
+
+      await page.getByRole('link', { name: 'Clear', exact: true }).click()
+      await page.getByText('4 courses', { exact: true }).waitFor()
+      await page.waitForFunction(() => window.navigation.transition === null)
+      assert.equal(await search.inputValue(), '')
+    } finally {
+      response.resolve()
+    }
+  })
+
   it('retains search focus while filtering courses with replace navigations as you type', async (t) => {
     let server = await createTestServer(router.fetch)
     let page = await t.serve(server)
