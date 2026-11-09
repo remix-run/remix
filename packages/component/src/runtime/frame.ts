@@ -964,7 +964,7 @@ function diffFrame(
 
   // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
   // so pending streams from the old src cannot take over the new src.
-  if (currName !== nextName || (currSrc !== nextSrc && !curr._state.resolved)) {
+  if (currName !== nextName || (currSrc !== nextSrc && curr._state.content.status !== 'resolved')) {
     let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
     remove(curr, domParent, context)
     return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
@@ -989,9 +989,10 @@ function diffFrame(
     resolveClientFrame(committed, frameRuntime, serverFrameReload)
   }
 
-  if (!committed._state.resolved && committed._state.fallbackRoot) {
-    getNonceManager().inheritRootResourceNonces(committed._state.fallbackRoot, vParent)
-    committed._state.fallbackRoot.render(committed.props.fallback ?? null)
+  let { content } = committed._state
+  if (content.status === 'fallback') {
+    getNonceManager().inheritRootResourceNonces(content.fallbackRoot, vParent)
+    content.fallbackRoot.render(committed.props.fallback ?? null)
   }
   return committed
 }
@@ -1032,10 +1033,8 @@ function insertFrame(
       cursor.current = end.nextSibling
       return commitFrameNode(node, vParent, svg, start, end, {
         instance,
-        resolveToken: 0,
+        content: { status: 'resolved' },
         resolveController: undefined,
-        fallbackRoot: undefined,
-        resolved: true,
       })
     }
   }
@@ -1056,9 +1055,7 @@ function insertFrame(
   let instance = createFrameInstance(node, start, end, runtime, getContext)
   let committed = commitFrameNode(node, vParent, svg, start, end, {
     instance,
-    fallbackRoot,
-    resolved: false,
-    resolveToken: 0,
+    content: { status: 'fallback', fallbackRoot },
     resolveController: undefined,
   })
   resolveClientFrame(committed, runtime, runtime.serverFrameReload)
@@ -1120,8 +1117,6 @@ function resolveClientFrame(
   let state = node._state
   let instance = state.instance
 
-  let token = state.resolveToken + 1
-  state.resolveToken = token
   state.resolveController?.abort()
   let reload = serverFrameReload
     ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
@@ -1131,35 +1126,37 @@ function resolveClientFrame(
   }
   let resolveController = reload?.controller ?? new AbortController()
   state.resolveController = resolveController
-  let isStale = () => state.resolveToken !== token || resolveController.signal.aborted
+  let { signal } = resolveController
   let frameCommitted = Promise.withResolvers<void>()
 
   let resolve = Promise.resolve()
     .then(() =>
       runtime.resolveFrame(frameSrc, {
-        signal: resolveController.signal,
+        signal,
         target: getFrameName(node),
       }),
     )
     .then(async (resolution) => {
-      if (isStale()) return
+      if (signal.aborted) return
       let { content, nonce } = await unwrapFrameResolution(resolution)
-      if (isStale()) return
-      state.fallbackRoot?.dispose()
-      state.fallbackRoot = undefined
-      let nextContent = asAbortableFrameContent(content, resolveController.signal)
+      if (signal.aborted) return
+      if (state.content.status === 'fallback') {
+        state.content.fallbackRoot.dispose()
+        state.content = { status: 'rendering' }
+      }
+      let nextContent = asAbortableFrameContent(content, signal)
       await instance.render(nextContent, {
         nonce,
-        signal: resolveController.signal,
+        signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
         onCommit: frameCommitted.resolve,
       })
-      if (isStale()) return
-      state.resolved = true
+      if (signal.aborted) return
+      state.content = { status: 'resolved' }
     })
     .catch((error) => {
-      if (reload && !isStale()) {
+      if (reload && !signal.aborted) {
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
     })
@@ -1181,11 +1178,9 @@ function resolveClientFrame(
 
 function disposeFrameResources(node: CommittedFrameNode): void {
   let state = node._state
-  state.resolveToken++
   state.resolveController?.abort()
   state.resolveController = undefined
-  state.fallbackRoot?.dispose()
-  state.fallbackRoot = undefined
+  if (state.content.status === 'fallback') state.content.fallbackRoot.dispose()
 
   state.instance.dispose()
 }
