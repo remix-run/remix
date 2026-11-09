@@ -44,9 +44,14 @@ type ExitAnimationPlayback = AnimationState & {
   finished: Promise<unknown>
 }
 
+// Exit cleanup remains active while the node is retained, even after playback finishes.
+type ExitAnimationLifecycle =
+  | { status: 'active' }
+  | { status: 'cancelled'; reclaimKeyframe?: Keyframe }
+
 type PendingExitAnimation = ExitAnimationPlayback & {
-  reclaimKeyframe?: Keyframe
-  cancel(): void
+  lifecycle: ExitAnimationLifecycle
+  cancel(reclaimKeyframe?: Keyframe): void
   waitForFinish(signal: AbortSignal): Promise<void>
 }
 
@@ -324,12 +329,12 @@ function createPendingExitAnimation(
   let wasConnected = node.isConnected
   let playback = startExitAnimation(node, config)
   let retentionSignal: AbortSignal | undefined
-  let cancelled = false
   let pendingExit: PendingExitAnimation = {
     ...playback,
-    cancel() {
-      if (cancelled) return
-      cancelled = true
+    lifecycle: { status: 'active' },
+    cancel(reclaimKeyframe) {
+      if (pendingExit.lifecycle.status === 'cancelled') return
+      pendingExit.lifecycle = { status: 'cancelled', reclaimKeyframe }
       retentionSignal?.removeEventListener('abort', abortExit)
       for (let animation of playback.animations) animation.cancel()
       for (let animation of playback.immediateAnimations) animation.cancel()
@@ -353,8 +358,7 @@ function createPendingExitAnimation(
     if (!config.transition) return
     let finished = playback.animations.every((animation) => animation.playState === 'finished')
     if (finished) return
-    pendingExit.reclaimKeyframe = readComputedKeyframe(node, playback.properties)
-    pendingExit.cancel()
+    pendingExit.cancel(readComputedKeyframe(node, playback.properties))
   }
   return pendingExit
 }
@@ -366,7 +370,10 @@ function prepareReclaimedElement(
   try {
     if (pendingExit) {
       for (let animation of pendingExit.immediateAnimations) animation.cancel()
-      if (pendingExit.reclaimKeyframe) return pendingExit.reclaimKeyframe
+      let lifecycle = pendingExit.lifecycle
+      if (lifecycle.status === 'cancelled' && lifecycle.reclaimKeyframe) {
+        return lifecycle.reclaimKeyframe
+      }
     }
 
     let trackedAnimation = animatingNodes.get(node)
