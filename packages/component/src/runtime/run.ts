@@ -130,7 +130,7 @@ export async function defaultResolveFrame(
     options?.target,
     { body, method: options?.method, signal: options?.signal },
     encType,
-    fetchImpl ?? fetch,
+    fetchImpl,
   )
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
