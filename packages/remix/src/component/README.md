@@ -1043,7 +1043,7 @@ await app.ready()
 | `loadModule`                 | Required. Loads a client entry's module and returns the named export. Remix passes each module specifier unchanged.                                                            |
 | `processClientEntryPreloads` | Receives module preloads discovered in frame responses before they're added to the document. Return the URLs that should stay as native `<link rel="modulepreload">` elements. |
 | `resolveFrame`               | Fetches frame content for navigations and reloads. See [Resolving Frames](#resolving-frames).                                                                                  |
-| `prefetch`                   | Accepts a custom handler or an object with `handler` and `depth` options. Depth defaults to `0`. See [Prefetching](#prefetching).                                              |
+| `prefetch`                   | Replaces the default HTML fetch and asset discovery with a custom handler. See [Prefetching](#prefetching).                                                                    |
 
 The returned runtime emits `error` events for component errors, and has these members:
 
@@ -1110,12 +1110,13 @@ function AlbumPage(handle: Handle<{ albumId: string }>) {
 }
 ```
 
-| Prop       | Use                                                                               |
-| ---------- | --------------------------------------------------------------------------------- |
-| `src`      | Required. The URL whose HTML the frame renders and reloads.                       |
-| `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                |
-| `fallback` | Content to render while the frame is pending.                                     |
-| `on`       | Event handlers for events dispatched from the frame element, keyed by event type. |
+| Prop       | Use                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------- |
+| `src`      | Required. The URL whose HTML the frame renders and reloads.                                    |
+| `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                             |
+| `preload`  | Prefetches this frame's HTML and assets when ancestor HTML is prefetched. Defaults to `false`. |
+| `fallback` | Content to render while the frame is pending.                                                  |
+| `on`       | Event handlers for events dispatched from the frame element, keyed by event type.              |
 
 Frame content can contain other frames and client entries.
 
@@ -1393,27 +1394,22 @@ Remix reads the prefetched HTML without running it and finds the page's JavaScri
 
 Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix doesn't scan `<img>` elements or CSS `@font-face` rules.
 
-To prefetch selected nested frames, declare their sources in the destination HTML:
+To prefetch selected nested frames, set `preload={true}` on those frames in the destination page:
 
-```html
-<link rel="preload" as="fetch" href="/partials/reviews" data-rmx-target="reviews" />
+```tsx
+import { Frame } from 'remix/component'
+function ProductPage() {
+  return () => <Frame name="reviews" src="/partials/reviews" preload={true} />
+}
 ```
 
-Then configure how many additional levels of frame requests Remix can follow:
+The server records this flag in the frame's JSON metadata. When Remix prefetches ancestor HTML, it reads that metadata without executing scripts, fetches each opted-in same-origin frame, and scans its HTML for assets and further opted-in frames. Metadata inside nested templates is included. Each source and frame target is visited once per prefetch traversal, so cycles stop. Frames without `preload={true}` don't trigger additional requests; their assets are still discovered if they're already embedded in the HTML.
 
-```ts
-import { run } from 'remix/component'
+Nested requests use the same frame headers as imperative `prefetch()` calls, including `X-Remix-Target` from the frame's `name`. Failed and non-HTML responses stop discovery for that URL. This behavior applies to both automatic link prefetching and imperative calls.
 
-const PREFETCH_DEPTH = 1
+`preload` doesn't emit a native fetch preload link or initiate speculative requests during a normal document load. Remix doesn't use `<link rel="preload" as="fetch">` for nested-frame discovery.
 
-run({ loadModule, prefetch: { depth: PREFETCH_DEPTH } })
-```
-
-`prefetch.depth` defaults to `0`, which only discovers assets already included in the initial HTML. `1` also fetches same-origin URLs from explicit `<link rel="preload" as="fetch">` declarations and scans their HTML for assets. `2` follows fetch preloads in those responses as well. The value must be a nonnegative safe integer. Declarations inside nested templates are included, and unmatched `media` conditions are skipped. `<Frame>` metadata alone never opts a frame into prefetching.
-
-Nested requests use the same frame headers as imperative `prefetch()` calls. Set `data-rmx-target` on the preload link for a named frame, or omit it for an unnamed frame. Failed and non-HTML responses stop discovery for that URL. Depth applies to both automatic link prefetching and imperative calls, and is ignored when a custom handler replaces the default strategy.
-
-Pass a custom handler as `run({ prefetch: { handler } })` or use the existing `run({ prefetch: handler })` shorthand. Both forms replace the default HTML fetch and asset discovery; the handler owns any nested-frame loading.
+Pass a custom handler as `run({ prefetch(src, options) {} })` to replace the default HTML fetch and asset discovery. The handler owns any nested-frame loading.
 
 The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
 

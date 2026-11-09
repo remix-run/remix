@@ -9,24 +9,6 @@ import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 
-/** Options for configuring prefetching in {@link run}. */
-export interface PrefetchConfig {
-  /**
-   * Replaces the default HTML fetch and asset discovery for `data-rmx-prefetch` links and
-   * imperative `prefetch()` calls. Use with `resolveFrame` to reuse uncacheable HTML.
-   * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
-   */
-  handler?: PrefetchFrame
-
-  /**
-   * Maximum number of additional nested-frame requests made by the default prefetch strategy.
-   * Must be a nonnegative safe integer. `0` only scans the initial HTML; `1` also fetches frames
-   * explicitly declared by `<link rel="preload" as="fetch">` and scans their assets. Frame names
-   * come from `data-rmx-target` on the link. Ignored when `handler` is provided. Defaults to `0`.
-   */
-  depth?: number
-}
-
 /**
  * Options for starting the client runtime with {@link run}.
  */
@@ -57,10 +39,12 @@ export interface RunInit {
   processClientEntryPreloads?: ProcessClientEntryPreloads
 
   /**
-   * Configures default prefetch discovery or replaces it with a custom handler. A function is
-   * shorthand for `{ handler }`. Omit it to use the default strategy with a nested-frame depth of `0`.
+   * Starts loading a page for `data-rmx-prefetch` links and `prefetch()` calls, replacing the
+   * default HTML fetch and asset discovery. Use it with `resolveFrame` to reuse uncacheable HTML,
+   * for example to hold the response in memory until the next navigation to that URL and target.
+   * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
    */
-  prefetch?: PrefetchFrame | PrefetchConfig
+  prefetch?: PrefetchFrame
 }
 
 /**
@@ -144,11 +128,6 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
-  let prefetchHandler = typeof init.prefetch === 'function' ? init.prefetch : init.prefetch?.handler
-  let prefetchDepth = typeof init.prefetch === 'function' ? 0 : (init.prefetch?.depth ?? 0)
-  if (!prefetchHandler && (!Number.isSafeInteger(prefetchDepth) || prefetchDepth < 0)) {
-    throw new RangeError('prefetch.depth must be a nonnegative safe integer')
-  }
   getNonceManager()
   let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
@@ -194,7 +173,7 @@ export function run(init: RunInit): AppRuntime {
     })
   }
   startNavigationListener(appController.signal)
-  startPrefetching(appController.signal, prefetchHandler, prefetchDepth)
+  startPrefetching(appController.signal, init.prefetch)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error

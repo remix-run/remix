@@ -104,10 +104,10 @@ function stubConnection(
   })
 }
 
-function createPrefetch(t: TestContext, prefetchDepth = 0) {
+function createPrefetch(t: TestContext) {
   let controller = new AbortController()
   t.after(() => controller.abort())
-  return { prefetch: createDefaultPrefetch(controller.signal, prefetchDepth), controller }
+  return { prefetch: createDefaultPrefetch(controller.signal), controller }
 }
 
 function collectHints(t: TestContext, onHint?: (link: HTMLLinkElement) => void): HTMLLinkElement[] {
@@ -570,32 +570,6 @@ describe('prefetch', () => {
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
   })
 
-  it('uses an object prefetch handler for links and imperative calls instead of default discovery', async (t) => {
-    let prefetchFrame = mock.fn()
-    let fetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
-    let app = run({
-      loadModule: mock.fn(),
-      prefetch: {
-        handler(src, options) {
-          prefetchFrame(src, options)
-        },
-        depth: 1,
-      },
-    })
-    t.after(() => app.dispose())
-    await app.ready()
-
-    let anchor = createIntentLink('/next')
-    press(anchor)
-    prefetch('/partial#details', { target: 'details' })
-
-    expect(prefetchFrame.mock.calls.map((call) => call.arguments)).toEqual([
-      [anchor.href, undefined],
-      [new URL('/partial', location.href).href, { target: 'details' }],
-    ])
-    expect(fetch).not.toHaveBeenCalled()
-  })
-
   it('prefetches named-frame content with the same URL and headers as a frame reload', async (t) => {
     let app = await startNamedFramePrefetching(t)
     let fetch = t.mock.method(
@@ -863,7 +837,7 @@ describe('prefetch', () => {
 })
 
 describe('default frame prefetch', () => {
-  it('scans embedded frame assets without fetching nested sources by default', async (t) => {
+  it('scans embedded assets without fetching unmarked frames or native fetch preloads', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let html = await drain(
       renderToStream(jsx(Frame, { name: 'details', src: '/details', fallback: 'Loading' }), {
@@ -882,21 +856,26 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/embedded.js'])
   })
 
-  it('uses run prefetch.depth for imperative calls and scans one additional frame response', async (t) => {
+  it('prefetches only frames with preload=true and discovers their assets by default', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let rootHtml = await drain(
-      renderToStream(jsx(Frame, { name: 'ignored', src: '/not-prefetched' }), {
-        resolveFrame: () => 'Details',
-      }),
+      renderToStream(
+        jsx('main', {
+          children: [
+            jsx(Frame, { name: 'details', src: './details#content', preload: true }),
+            jsx(Frame, { name: 'disabled', src: '/disabled', preload: false }),
+            jsx(Frame, { src: '/not-prefetched' }),
+          ],
+        }),
+        { resolveFrame: () => 'Details' },
+      ),
     )
     let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
       let url = new URL(String(src))
       let response = htmlResponse(
         url.pathname === '/page'
-          ? `<base href="/partials/">${rootHtml}
-              <link rel="preload" as="fetch" href="./details#content" data-rmx-target="details">`
-          : `<script type="module" src="./entry.js"></script>
-              <link rel="preload" as="fetch" href="/grandchild">`,
+          ? `<base href="/partials/">${rootHtml}`
+          : '<script type="module" src="./entry.js"></script>',
       )
       Object.defineProperty(response, 'url', {
         value: new URL(
@@ -909,7 +888,7 @@ describe('default frame prefetch', () => {
     let hinted = Promise.withResolvers<void>()
     let hints = collectHints(t, () => hinted.resolve())
     document.body.textContent = ''
-    let app = run({ loadModule: mock.fn(), prefetch: { depth: 1 } })
+    let app = run({ loadModule: mock.fn() })
     t.after(() => app.dispose())
     await app.ready()
 
@@ -926,27 +905,33 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/redirected/entry.js'])
   })
 
-  it('bounds recursive requests, deduplicates cycles, and keeps target variants separate', async (t) => {
+  it('recursively discovers preloaded frames in templates and deduplicates cycles by source and target', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
       switch (new URL(String(src)).pathname) {
         case '/page':
-          return htmlResponse(`<link rel="preload" as="fetch" href="/shared" data-rmx-target="details">
-            <link rel="preload" as="fetch" href="/shared#duplicate" data-rmx-target="details">
-            <link rel="preload" as="fetch" href="/shared" data-rmx-target="sidebar">`)
+          return htmlResponse(`<script type="application/json" id="rmx-data">{"f":{
+            "details":{"src":"/shared","name":"details","preload":true},
+            "duplicate":{"src":"/shared#duplicate","name":"details","preload":true},
+            "sidebar":{"src":"/shared","name":"sidebar","preload":true}
+          }}</script>`)
         case '/shared':
           return htmlResponse(`<script src="/shared.js"></script>
-            <link rel="preload" as="fetch" href="/page">
-            <template><template><link rel="preload" as="fetch" href="/leaf"></template></template>`)
+            <script type="application/json" id="rmx-data">{"f":{"cycle":{"src":"/page","preload":true}}}</script>
+            <template><template><script type="application/json" id="rmx-data">
+              {"f":{"leaf":{"src":"/leaf","preload":true}}}
+            </script></template></template>`)
         case '/leaf':
           return htmlResponse(`<link rel="stylesheet" href="/leaf.css">
-            <link rel="preload" as="fetch" href="/too-deep">`)
+            <script type="application/json" id="rmx-data">{"f":{"deep":{"src":"/deep","preload":true}}}</script>`)
+        case '/deep':
+          return htmlResponse('<link rel="preload" as="font" href="/deep.woff2" crossorigin>')
         default:
           throw new Error('Unexpected nested-frame request')
       }
     })
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t, 2)
+    let { prefetch } = createPrefetch(t)
 
     await prefetch(new URL('/page', location.href).href)
 
@@ -960,26 +945,31 @@ describe('default frame prefetch', () => {
       ['/shared', 'details'],
       ['/shared', 'sidebar'],
       ['/leaf', null],
+      ['/deep', null],
     ])
     expect(hints.map((link) => new URL(link.href).pathname)).toContain('/shared.js')
     expect(hints.map((link) => new URL(link.href).pathname)).toContain('/leaf.css')
+    expect(hints.map((link) => new URL(link.href).pathname)).toContain('/deep.woff2')
   })
 
-  it('ignores ineligible preloads and failed or non-HTML responses without losing sibling assets', async (t) => {
+  it('ignores malformed metadata and ineligible frames without losing valid sibling assets', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
       if (new URL(String(src)).pathname === '/page') {
         return htmlResponse(`<script src="/page.js"></script>
-          <link rel="preload" as="fetch">
-          <link rel="preload" as="fetch" href="">
-          <link rel="preload" as="fetch" href="http://[">
-          <link rel="preload" as="fetch" href="https://example.com/frame">
-          <link rel="preload" as="fetch" href="data:text/html,frame">
-          <link rel="preload" as="fetch" href="/print" media="not all">
-          <link rel="prefetch" as="fetch" href="/ordinary-prefetch">
-          <link rel="preload" as="fetch" href="/failed">
-          <link rel="preload" as="fetch" href="/json">
-          <link rel="preload" as="fetch" href="/valid?size=small#content" media="all">`)
+          <script type="application/json" id="rmx-data">invalid JSON</script>
+          <script type="application/json" id="rmx-data">null</script>
+          <script type="application/json" id="rmx-data">{"f":[{"src":"/array","preload":true}]}</script>
+          <script type="application/json" id="rmx-data">{"f":{
+            "null":null,"number":42,"missing":{"preload":true},
+            "empty":{"src":"","preload":true},"invalid":{"src":"http://[","preload":true},
+            "crossOrigin":{"src":"https://example.com/frame","preload":true},
+            "data":{"src":"data:text/html,frame","preload":true},
+            "badTarget":{"src":"/bad","name":42,"preload":true},
+            "stringFlag":{"src":"/string","preload":"true"},
+            "failed":{"src":"/failed","preload":true},"json":{"src":"/json","preload":true},
+            "valid":{"src":"/valid?size=small#content","preload":true}
+          }}</script>`)
       }
       if (new URL(String(src)).pathname === '/failed') {
         return new Response('Unavailable', { status: 503 })
@@ -992,7 +982,7 @@ describe('default frame prefetch', () => {
       return htmlResponse('<link rel="preload" as="image" href="/valid.jpg">')
     })
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t, 1)
+    let { prefetch } = createPrefetch(t)
 
     await prefetch(new URL('/page', location.href).href)
 
@@ -1007,21 +997,36 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/page.js', '/valid.jpg'])
   })
 
-  it('rejects invalid run prefetch depths before starting the runtime', () => {
-    for (let depth of [-1, 1.5, NaN, Infinity]) {
-      expect(() => run({ loadModule: mock.fn(), prefetch: { depth } })).toThrow(
-        'prefetch.depth must be a nonnegative safe integer',
-      )
-    }
+  it('does not make speculative requests while hydrating preloaded frames on a normal load', async (t) => {
+    let html = await drain(
+      renderToStream(jsx(Frame, { name: 'details', src: '/details', preload: true }), {
+        resolveFrame: () => '<p>Server-rendered details</p>',
+      }),
+    )
+    document.body.innerHTML = html
+    expect(document.querySelector('link[rel="preload"][as="fetch"]')).toBe(null)
+    let fetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => {
+      app.dispose()
+      document.body.textContent = ''
+    })
+
+    await app.ready()
+
+    expect(app.frames.get('details')).toBeDefined()
+    expect(fetch).not.toHaveBeenCalled()
   })
 
   it('shares overlapping recursive requests without waiting on a cycle', async (t) => {
     let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) =>
       htmlResponse(
-        `<link rel="preload" as="fetch" href="${new URL(String(src)).pathname === '/first' ? '/second' : '/first'}">`,
+        `<script type="application/json" id="rmx-data">{"f":{"next":{
+          "src":"${new URL(String(src)).pathname === '/first' ? '/second' : '/first'}","preload":true
+        }}}</script>`,
       ),
     )
-    let { prefetch } = createPrefetch(t, 2)
+    let { prefetch } = createPrefetch(t)
 
     await Promise.all([
       prefetch(new URL('/first', location.href).href),
@@ -1313,7 +1318,7 @@ describe('default frame prefetch', () => {
       async (src: RequestInfo | URL, init?: RequestInit) => {
         if (new URL(String(src)).pathname === '/page') {
           return htmlResponse(`<script src="/pending.js"></script>
-          <link rel="preload" as="fetch" href="/nested">`)
+          <script type="application/json" id="rmx-data">{"f":{"nested":{"src":"/nested","preload":true}}}</script>`)
         }
         let response = Promise.withResolvers<Response>()
         init?.signal?.addEventListener('abort', () => response.reject(init.signal?.reason), {
@@ -1323,7 +1328,7 @@ describe('default frame prefetch', () => {
         return response.promise
       },
     )
-    let { prefetch, controller } = createPrefetch(t, 1)
+    let { prefetch, controller } = createPrefetch(t)
     let linked = Promise.withResolvers<HTMLLinkElement>()
     let observer = new MutationObserver((records) => {
       for (let record of records) {

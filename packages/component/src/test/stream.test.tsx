@@ -4439,6 +4439,28 @@ describe('stream', () => {
   })
 
   describe('frames', () => {
+    it('serializes preload=true as inert frame metadata without native fetch preloads', async () => {
+      let html = await drain(
+        renderToStream(
+          <main>
+            <Frame name="enabled" src="/enabled" preload={true} />
+            <Frame name="disabled" src="/disabled" preload={false} />
+            <Frame name="default" src="/default" />
+          </main>,
+          { resolveFrame: () => '<p>Resolved</p>' },
+        ),
+      )
+
+      expect(Object.values(parseRmxDataFromHtml(html).f)).toEqual([
+        { status: 'resolved', name: 'enabled', src: '/enabled', preload: true },
+        { status: 'resolved', name: 'disabled', src: '/disabled' },
+        { status: 'resolved', name: 'default', src: '/default' },
+      ])
+      let template = document.createElement('template')
+      template.innerHTML = html
+      expect(template.content.querySelector('link[rel="preload"][as="fetch"]')).toBe(null)
+    })
+
     it('adds frame scripts for non-blocking frames', async () => {
       // Test non-blocking frame (with fallback)
       let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {

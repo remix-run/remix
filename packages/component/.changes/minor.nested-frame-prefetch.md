@@ -1,10 +1,8 @@
-Prefetch selected nested frames by declaring `<link rel="preload" as="fetch" href="…">` in destination HTML and setting `run({ prefetch: { depth: 1 } })`. Each same-origin HTML response is scanned for JavaScript, CSS, and explicit image and font preloads. Higher depths follow declarations in those responses; the default `0` only scans the initial HTML. Set `data-rmx-target` on the preload link to send a named frame's target header. Custom handlers can be supplied as `prefetch: { handler }` or with the existing `prefetch: handler` shorthand, and retain control of discovery.
+Prefetch selected nested frames with `<Frame preload={true}>`. When Remix prefetches ancestor HTML, it reads the frame's JSON metadata, fetches its same-origin source with the frame's target header, and scans the response for JavaScript, CSS, explicit image and font preloads, and further opted-in frames. Duplicate sources and targets are visited once per traversal. The flag does not initiate speculative requests during normal document loads. Custom `run({ prefetch(src, options) {} })` handlers retain control of discovery.
 
 ```diff
- import { run } from 'remix/component'
+ import { Frame } from 'remix/component'
 
- run({
-   loadModule,
-+  prefetch: { depth: 1 },
- })
+-<Frame name="reviews" src="/partials/reviews" />
++<Frame name="reviews" src="/partials/reviews" preload={true} />
 ```
