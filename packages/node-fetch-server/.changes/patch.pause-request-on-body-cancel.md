@@ -1,0 +1,1 @@
+Pause the Node.js request when a handler cancels `request.body`. Previously the rest of the body kept being read off the socket and discarded, so a server that rejected a large upload would still download all of it.

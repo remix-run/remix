@@ -335,6 +335,9 @@ function createRequestBodyStream(
     if (bodyClosed) return
     bodyClosed = true
     cleanup()
+    // Removing the data listener does not stop a flowing request, so without this the rest of
+    // the body would be read off the socket and discarded
+    req.pause()
   }
 
   function onData(chunk: Buffer) {

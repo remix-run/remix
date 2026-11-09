@@ -788,6 +788,26 @@ describe('createRequestListener', () => {
     })
   })
 
+  it('pauses the request when the handler cancels the body', async () => {
+    let req = createPendingMockRequest()
+    let res = createMockResponse({ req })
+    let cancelled = new Promise<void>((resolve) => {
+      let listener = createRequestListener(async (request) => {
+        let reader = request.body!.getReader()
+        await reader.read()
+        await reader.cancel()
+        resolve()
+        return new Response('Payload Too Large', { status: 413 })
+      })
+      listener(req, res)
+    })
+
+    req.emit('data', Buffer.from('partial'))
+    await cancelled
+
+    assert.equal(req.isPaused(), true)
+  })
+
   it('uses the `:authority` header to construct the URL for http/2 requests', async () => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async (request) => {
