@@ -68,11 +68,15 @@ export function createScheduler(
   let commitPhaseTasks: EmptyFn[] = []
   let postCommitTasks: EmptyFn[] = []
   let flushState: 'idle' | 'scheduled' | 'flushing' = 'idle'
-  let cascadingComponentUpdateCount = 0
-  let cascadingComponentUpdateCounts = new WeakMap<CommittedComponentNode, number>()
-  let cascadingComponentNameCounts = new Map<string, number>()
-  let warnedAboutCascadingUpdates = false
-  let resetScheduled = false
+  // Counts for the current event loop turn, or undefined when no component has updated in it yet.
+  let cascadingUpdates:
+    | {
+        total: number
+        byComponent: WeakMap<CommittedComponentNode, number>
+        byName: Map<string, number>
+        warned: boolean
+      }
+    | undefined
   let phaseEvents = new EventTarget()
   let phaseListenerCounts: Record<SchedulerPhaseType, number> = {
     beforeUpdate: 0,
@@ -85,46 +89,34 @@ export function createScheduler(
     rootTarget.dispatchEvent(createComponentErrorEvent(error))
   }
 
-  function scheduleCounterReset() {
-    if (resetScheduled) return
-    resetScheduled = true
-    // Reset when control returns to the event loop while still allowing
-    // microtask-driven flushes in the same turn to count as cascading.
-    setTimeout(() => {
-      cascadingComponentUpdateCount = 0
-      cascadingComponentUpdateCounts = new WeakMap()
-      cascadingComponentNameCounts = new Map()
-      warnedAboutCascadingUpdates = false
-      resetScheduled = false
-    }, 0)
-  }
-
   function trackCascadingUpdate(vnode: CommittedComponentNode): boolean {
-    cascadingComponentUpdateCount++
+    if (!cascadingUpdates) {
+      cascadingUpdates = { total: 0, byComponent: new WeakMap(), byName: new Map(), warned: false }
+      // Close the window when control returns to the event loop while still allowing
+      // microtask-driven flushes in the same turn to count as cascading.
+      setTimeout(() => {
+        cascadingUpdates = undefined
+      }, 0)
+    }
+    let updates = cascadingUpdates
+    updates.total++
 
     let componentName = getComponentName(vnode)
-    cascadingComponentNameCounts.set(
-      componentName,
-      (cascadingComponentNameCounts.get(componentName) ?? 0) + 1,
-    )
+    updates.byName.set(componentName, (updates.byName.get(componentName) ?? 0) + 1)
 
-    let componentUpdateCount = (cascadingComponentUpdateCounts.get(vnode) ?? 0) + 1
-    cascadingComponentUpdateCounts.set(vnode, componentUpdateCount)
-    scheduleCounterReset()
+    let componentUpdateCount = (updates.byComponent.get(vnode) ?? 0) + 1
+    updates.byComponent.set(vnode, componentUpdateCount)
 
-    if (
-      !warnedAboutCascadingUpdates &&
-      cascadingComponentUpdateCount >= CASCADING_UPDATE_WARN_THRESHOLD
-    ) {
-      warnedAboutCascadingUpdates = true
+    if (!updates.warned && updates.total >= CASCADING_UPDATE_WARN_THRESHOLD) {
+      updates.warned = true
       console.warn(
-        `${cascadingComponentUpdateCount} cascading component updates detected in one event loop turn. Consider reducing hydration regions. Components: ${formatComponentCounts(cascadingComponentNameCounts)}`,
+        `${updates.total} cascading component updates detected in one event loop turn. Consider reducing hydration regions. Components: ${formatComponentCounts(updates.byName)}`,
       )
     }
 
     if (componentUpdateCount > MAX_CASCADING_COMPONENT_UPDATES) {
       let error = new Error(
-        `handle.update() infinite loop detected in ${componentName} after ${componentUpdateCount} cascading updates. Components: ${formatComponentCounts(cascadingComponentNameCounts)}`,
+        `handle.update() infinite loop detected in ${componentName} after ${componentUpdateCount} cascading updates. Components: ${formatComponentCounts(updates.byName)}`,
       )
       dispatchError(error)
       return false
@@ -138,7 +130,6 @@ export function createScheduler(
     flushState = 'flushing'
     try {
       while (true) {
-
         let batch = new Map(scheduled)
         scheduled.clear()
 
