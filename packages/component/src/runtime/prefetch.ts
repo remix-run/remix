@@ -19,7 +19,7 @@ type PrefetchRequest = [src: string, options?: PrefetchOptions]
 
 const INTENT_DELAY_MS = 100
 
-const defaultPrefetch = createDefaultPrefetch()
+const defaultPrefetch = createPrefetch()
 let prefetchFrame: PrefetchFrame = defaultPrefetch
 
 /**
@@ -46,7 +46,7 @@ export function prefetch(href: string, options?: PrefetchOptions): void {
  */
 export function startPrefetching(signal: AbortSignal, prefetchOverride?: PrefetchFrame): void {
   if (signal.aborted) return
-  prefetchFrame = prefetchOverride ?? createDefaultPrefetch(signal)
+  prefetchFrame = prefetchOverride ?? createPrefetch({ signal })
   signal.addEventListener(
     'abort',
     () => {
@@ -312,9 +312,38 @@ export function fetchFrame(
   return fetch(src, { ...init, headers, mode: 'same-origin' })
 }
 
-export function createDefaultPrefetch(
-  signal?: AbortSignal,
-): (src: string, options?: PrefetchOptions) => Promise<void> {
+/** Options for `createPrefetch()`. */
+export interface CreatePrefetchOptions {
+  /** Stops the prefetch and removes the `<link rel="prefetch">` hints it added. */
+  signal?: AbortSignal
+
+  /**
+   * Loads a page's HTML in place of the default request, which is a low-priority `GET` with the
+   * same headers as a frame navigation. The response is read for assets only when it is OK HTML;
+   * any other response is skipped. Named-frame pages pass their `target`.
+   */
+  fetch?: (src: string, options?: PrefetchOptions) => Promise<Response>
+}
+
+/**
+ * Creates the prefetch that `run()` uses by default: it loads a page, discovers its JavaScript, CSS,
+ * and declared image and font preloads, and adds `<link rel="prefetch">` hints for them. Pending
+ * loads of the same page and target are shared. Pass the result to `run({ prefetch })`, or give it
+ * a `fetch` to decide when and how each page loads, for example to limit concurrency.
+ *
+ * The returned function resolves once the page has loaded and its hints are added, so a scheduler
+ * can hold a slot until then.
+ *
+ * @param options Options
+ * @param options.signal Stops the prefetch and removes its hints.
+ * @param options.fetch Loads each page's HTML.
+ * @returns A function that prefetches a page and its assets.
+ */
+export function createPrefetch({
+  signal,
+  fetch: fetchPage = (src, options) =>
+    fetchFrame(src, options?.target, { method: 'GET', priority: 'low', signal }),
+}: CreatePrefetchOptions = {}): (src: string, options?: PrefetchOptions) => Promise<void> {
   let pending = new Map<string, Promise<void>>()
   let assets = new Map<string, Promise<void>>()
 
@@ -361,11 +390,7 @@ export function createDefaultPrefetch(
 
   async function discover(src: string, options?: PrefetchOptions): Promise<void> {
     try {
-      let response = await fetchFrame(src, options?.target, {
-        method: 'GET',
-        priority: 'low',
-        signal,
-      })
+      let response = await fetchPage(src, options)
       if (
         !response.ok ||
         !response.headers.get('Content-Type')?.toLowerCase().includes('text/html')

@@ -1043,7 +1043,7 @@ await app.ready()
 | `loadModule`                 | Required. Loads a client entry's module and returns the named export. Remix passes each module specifier unchanged.                                                            |
 | `processClientEntryPreloads` | Receives module preloads discovered in frame responses before they're added to the document. Return the URLs that should stay as native `<link rel="modulepreload">` elements. |
 | `resolveFrame`               | Fetches frame content for navigations and reloads. See [Resolving Frames](#resolving-frames).                                                                                  |
-| `prefetch`                   | Replaces the default prefetch for `data-rmx-prefetch` links and `prefetch()` calls. See [Prefetching](#prefetching).                                                           |
+| `prefetch`                   | Replaces the default prefetch for `data-rmx-prefetch` links and `prefetch()` calls, or schedules it with `createPrefetch()`. See [Prefetching](#prefetching).                  |
 
 The returned runtime emits `error` events for component errors, and has these members:
 
@@ -1394,6 +1394,41 @@ Remix reads the prefetched HTML without running it and finds the page's JavaScri
 Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix doesn't scan `<img>` elements or CSS `@font-face` rules.
 
 The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
+
+To schedule page loads while keeping the asset hints, pass `createPrefetch({ signal, fetch })` to `run()`. Remix still decides when and which links to prefetch and shares pending loads of the same page and target; your `fetch(src, options)` decides when and how each page loads, and returns its `Response`. The prefetch resolves once the page has loaded and its hints are added, so a scheduler can hold a slot until then. Without `fetch`, pages load as they do by default. A response that isn't OK HTML is skipped, so a `503` from an overloaded server adds no hints. A custom `fetch` replaces the default request, so send the frame headers (`Accept: text/html`, `X-Remix-Frame: true`, and `X-Remix-Target` for `options.target`) to get the HTML a navigation would. This example allows three loads at a time:
+
+```ts
+import { createPrefetch, run } from 'remix/component'
+
+let controller = new AbortController()
+let active = 0
+let waiting: Array<() => void> = []
+
+async function fetchPage(src: string, options?: { target?: string }) {
+  while (active >= 3) await new Promise<void>((resolve) => waiting.push(resolve))
+  active++
+  try {
+    return await fetch(src, {
+      priority: 'low',
+      mode: 'same-origin',
+      signal: controller.signal,
+      headers: {
+        Accept: 'text/html',
+        'X-Remix-Frame': 'true',
+        ...(options?.target != null && { 'X-Remix-Target': options.target }),
+      },
+    })
+  } finally {
+    active--
+    waiting.shift()?.()
+  }
+}
+
+run({
+  loadModule,
+  prefetch: createPrefetch({ signal: controller.signal, fetch: fetchPage }),
+})
+```
 
 To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next GET request with the same source and target. The app provides `loadModule` and a `fetchFrame(src, options)` helper that handles frame headers, submissions, cancellation, and response handling, and it owns the lifetime and invalidation of any responses it keeps:
 

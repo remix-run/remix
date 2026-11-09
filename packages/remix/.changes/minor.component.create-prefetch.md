@@ -1,0 +1,1 @@
+Add `createPrefetch({ signal, fetch })` to `remix/component` to schedule page prefetches without losing Remix's asset discovery. Pass its result to `run({ prefetch })` and supply `fetch(src, options)` to decide when and how each page loads, for example to limit concurrency or back off when the server is overloaded.

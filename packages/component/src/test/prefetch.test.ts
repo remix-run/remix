@@ -3,10 +3,11 @@ import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test
 import { Frame } from '../runtime/frame.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import {
-  createDefaultPrefetch,
+  createPrefetch,
   prefetch,
   startPrefetching,
   type PrefetchFrame,
+  type PrefetchOptions,
 } from '../runtime/prefetch.ts'
 import { run } from '../runtime/run.ts'
 import { renderToStream } from '../server/stream.ts'
@@ -104,10 +105,10 @@ function stubConnection(
   })
 }
 
-function createPrefetch(t: TestContext) {
+function startPrefetch(t: TestContext) {
   let controller = new AbortController()
   t.after(() => controller.abort())
-  return { prefetch: createDefaultPrefetch(controller.signal), controller }
+  return { prefetch: createPrefetch({ signal: controller.signal }), controller }
 }
 
 function collectHints(t: TestContext): HTMLLinkElement[] {
@@ -848,7 +849,7 @@ describe('default frame prefetch', () => {
       </body></html>`),
     )
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
     let importMaps = document.querySelectorAll('script[type=importmap]').length
 
     await prefetch(new URL('/page', location.href).href)
@@ -883,7 +884,7 @@ describe('default frame prefetch', () => {
     })
     t.mock.method(globalThis, 'fetch', async () => response)
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
 
     await prefetch(new URL('/redirect', location.href).href)
 
@@ -905,7 +906,7 @@ describe('default frame prefetch', () => {
         <link rel="preload" as="fetch" href="not-prefetched.json">`),
     )
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
 
     await prefetch(new URL('/page', location.href).href)
 
@@ -937,7 +938,7 @@ describe('default frame prefetch', () => {
         <link rel="preload" as="image" href="/images/screen.jpg" media="all">`),
     )
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
 
     await prefetch(new URL('/page', location.href).href)
 
@@ -965,7 +966,7 @@ describe('default frame prefetch', () => {
         <style>@font-face { font-family: undiscovered; src: url(css-only.woff2) }</style>`),
     )
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
 
     await prefetch(new URL('/page', location.href).href)
 
@@ -987,7 +988,7 @@ describe('default frame prefetch', () => {
   it('shares only pending discovery work and does not retain completed no-store responses', async (t) => {
     let response = Promise.withResolvers<Response>()
     let fetch = t.mock.method(globalThis, 'fetch', () => response.promise)
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
     let src = new URL('/page', location.href).href
 
     let first = prefetch(src)
@@ -1012,7 +1013,7 @@ describe('default frame prefetch', () => {
         return htmlResponse('<main>Frame</main>')
       },
     )
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
     let src = new URL('/page', location.href).href
     let requests = [
       prefetch(src),
@@ -1038,7 +1039,7 @@ describe('default frame prefetch', () => {
       t.mock.method(response, 'text', () => html.promise)
       return response
     })
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
     let linked = Promise.withResolvers<void>()
     let hints: HTMLLinkElement[] = []
     let observer = new MutationObserver((records) => {
@@ -1073,7 +1074,7 @@ describe('default frame prefetch', () => {
     let response = new Response('<script src="/ignored.js"></script>', { status: 503 })
     let fetch = t.mock.method(globalThis, 'fetch', async () => response)
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
     let src = new URL('/page', location.href).href
 
     await prefetch(src)
@@ -1094,7 +1095,7 @@ describe('default frame prefetch', () => {
       htmlResponse('<script src="/entry.js"></script><link rel="stylesheet" href="/styles.css">'),
     )
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = startPrefetch(t)
 
     await prefetch(new URL('/page', location.href).href)
 
@@ -1109,7 +1110,7 @@ describe('default frame prefetch', () => {
       fetchedSignal = init?.signal
       return htmlResponse('<script src="/pending.js"></script>')
     })
-    let { prefetch, controller } = createPrefetch(t)
+    let { prefetch, controller } = startPrefetch(t)
     let linked = Promise.withResolvers<HTMLLinkElement>()
     let observer = new MutationObserver((records) => {
       for (let record of records) {
@@ -1128,5 +1129,115 @@ describe('default frame prefetch', () => {
 
     expect(fetchedSignal?.aborted).toBe(true)
     expect(link.isConnected).toBe(false)
+  })
+})
+
+describe('createPrefetch', () => {
+  it('loads pages with the given fetch and still adds hints for their assets', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let globalFetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
+    let hints = collectHints(t)
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let fetchPage = mock.fn(async (_src: string, _options?: PrefetchOptions) =>
+      htmlResponse(
+        '<script type="module" src="/entry.js"></script><link rel="stylesheet" href="/app.css">',
+      ),
+    )
+    let prefetch = createPrefetch({ signal: controller.signal, fetch: fetchPage })
+    let src = new URL('/page', location.href).href
+
+    await prefetch(src, { target: 'details' })
+
+    expect(fetchPage).toHaveBeenCalledTimes(1)
+    expect(fetchPage.mock.calls[0].arguments).toEqual([src, { target: 'details' }])
+    expect(globalFetch).not.toHaveBeenCalled()
+    expect(hints.map((hint) => new URL(hint.href).pathname).sort()).toEqual([
+      '/app.css',
+      '/entry.js',
+    ])
+  })
+
+  it('shares pending loads of a page and target, and reaches the given fetch only once', async (t) => {
+    let response = Promise.withResolvers<Response>()
+    let fetchPage = mock.fn((_src: string, _options?: PrefetchOptions) => response.promise)
+    let prefetch = createPrefetch({ fetch: fetchPage })
+    let src = new URL('/page', location.href).href
+
+    let requests = [prefetch(src), prefetch(src), prefetch(src, { target: 'details' })]
+
+    expect(fetchPage).toHaveBeenCalledTimes(2)
+    response.resolve(htmlResponse('<main>Next</main>'))
+    await Promise.all(requests)
+  })
+
+  it('holds the returned promise until the given fetch settles, so a scheduler can keep its slot', async () => {
+    let response = Promise.withResolvers<Response>()
+    let prefetch = createPrefetch({ fetch: () => response.promise })
+    let settled = false
+
+    let request = prefetch(new URL('/page', location.href).href).then(() => (settled = true))
+    await wait(10)
+    expect(settled).toBe(false)
+    response.resolve(htmlResponse('<main>Next</main>'))
+    await request
+    expect(settled).toBe(true)
+  })
+
+  it('skips responses that are not OK HTML and ignores a failed fetch', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let hints = collectHints(t)
+    let responses = [
+      new Response('<script src="/missing.js"></script>', {
+        status: 503,
+        headers: { 'Content-Type': 'text/html' },
+      }),
+      new Response('<script src="/data.js"></script>', {
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    ]
+    let prefetch = createPrefetch({
+      fetch: async () => {
+        let response = responses.shift()
+        if (!response) throw new Error('offline')
+        return response
+      },
+    })
+    let src = new URL('/page', location.href).href
+
+    await prefetch(src)
+    await prefetch(src)
+    await prefetch(src)
+
+    expect(hints).toHaveLength(0)
+  })
+
+  it('does not call the given fetch once its signal is aborted', async () => {
+    let controller = new AbortController()
+    let fetchPage = mock.fn(async () => htmlResponse(''))
+    let prefetch = createPrefetch({ signal: controller.signal, fetch: fetchPage })
+    controller.abort()
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(fetchPage).not.toHaveBeenCalled()
+  })
+
+  it('schedules viewport links through run({ prefetch })', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let hints = collectHints(t)
+    let fetchPage = mock.fn(async (_src: string, _options?: PrefetchOptions) =>
+      htmlResponse('<script type="module" src="/viewport.js"></script>'),
+    )
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let link = createViewportLink(new URL('/products/scheduled', location.href).href)
+
+    startTestPrefetching(t, createPrefetch({ signal: controller.signal, fetch: fetchPage }))
+    await wait(50)
+
+    expect(fetchPage).toHaveBeenCalledTimes(1)
+    expect(fetchPage.mock.calls[0].arguments[0]).toBe(link.href)
+    expect(hints.map((hint) => new URL(hint.href).pathname)).toEqual(['/viewport.js'])
   })
 })
