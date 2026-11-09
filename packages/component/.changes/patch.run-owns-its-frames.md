@@ -1,1 +1,0 @@
-Fix `run()` runtimes acting on each other's frames when a page starts more than one. Disposing an older runtime no longer disposes the newer runtime's top frame, each runtime handles navigations with its own frames, and `app.frames.get(name)` only returns frames from the same runtime.
