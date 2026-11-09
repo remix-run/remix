@@ -1,5 +1,7 @@
+import * as vm from 'node:vm'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import { minLength } from './checks.ts'
 import { number, object, parse, parseSafe, string } from './schema.ts'
@@ -30,6 +32,18 @@ describe('parse', () => {
       },
     )
   })
+
+  it('throws a TypeError for async schemas', () => {
+    let schema: StandardSchemaV1<unknown, string> = {
+      '~standard': {
+        version: 1,
+        vendor: 'test',
+        validate: async (value) => ({ value: String(value) }),
+      },
+    }
+
+    assert.throws(() => parse(schema, 'a'), new TypeError('Expected sync schema'))
+  })
 })
 
 describe('parseSafe', () => {
@@ -47,6 +61,30 @@ describe('parseSafe', () => {
 
     assert.ok(!result.success)
     assert.equal(result.issues.length, 2)
+  })
+
+  it('throws a TypeError for async schemas', () => {
+    let schema: StandardSchemaV1<unknown, string> = {
+      '~standard': {
+        version: 1,
+        vendor: 'test',
+        validate: async () => ({ issues: [{ message: 'Invalid' }] }),
+      },
+    }
+
+    assert.throws(() => parseSafe(schema, 'a'), new TypeError('Expected sync schema'))
+  })
+
+  it('throws a TypeError for promises from another realm', () => {
+    let schema: StandardSchemaV1<unknown, string> = {
+      '~standard': {
+        version: 1,
+        vendor: 'test',
+        validate: () => vm.runInNewContext('Promise.resolve({ value: "a" })'),
+      },
+    }
+
+    assert.throws(() => parseSafe(schema, 'a'), new TypeError('Expected sync schema'))
   })
 
   it('supports abortEarly option', () => {
