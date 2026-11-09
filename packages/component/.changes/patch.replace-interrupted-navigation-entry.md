@@ -1,0 +1,1 @@
+Fix a link click, form submission or `navigate()` call that interrupts a navigation before its page renders leaving a history entry for the page that never rendered. The new navigation now replaces that entry, so Back returns to the page the visitor saw.

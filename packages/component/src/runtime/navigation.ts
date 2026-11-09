@@ -348,6 +348,10 @@ export function startNavigationListenerImpl(
   // Hash changes abort the previous navigation before this listener runs. Keep unfinished frame
   // work pending across aborts so the next navigation can finish loading the destination.
   let needsFrameReload = false
+  // The Navigation API commits a push's entry before its page loads. A push that starts before
+  // that page is on screen replaces the entry, as a document navigation that never committed
+  // leaves none, so Back returns to the page the visitor saw.
+  let unrenderedEntryKey: string | undefined
 
   navigation.updateCurrentEntry({
     state: {
@@ -394,6 +398,11 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
+      let replaceHistory =
+        runtimeNavigation.replaceHistory ||
+        (event.navigationType === 'push' &&
+          unrenderedEntryKey !== undefined &&
+          navigation.currentEntry?.key === unrenderedEntryKey)
       let isTraverse = event.navigationType === 'traverse'
       let scroll = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetScroll)
       let focusReset = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetFocus)
@@ -418,6 +427,9 @@ export function startNavigationListenerImpl(
 
       needsFrameReload = true
       let handler = async () => {
+        if (event.navigationType === 'push' && !replaceHistory) {
+          unrenderedEntryKey = navigation.currentEntry?.key
+        }
         if (event.signal.aborted) return
 
         let submission = await runtimeNavigation.getSubmission?.()
@@ -435,6 +447,7 @@ export function startNavigationListenerImpl(
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
+        if (navigation.currentEntry?.key === unrenderedEntryKey) unrenderedEntryKey = undefined
         if (scroll !== 'manual') {
           // WebKit restores a traversal's position against the layout from before the commit, so
           // it clamps the position to the old page's height. Reading the height lays out the new
@@ -472,7 +485,7 @@ export function startNavigationListenerImpl(
 
       if (runtimeNavigation.getSubmission) {
         // <form method="post"> navigations
-        if (runtimeNavigation.replaceHistory && replayedSubmission == null) {
+        if (replaceHistory && replayedSubmission == null) {
           let supportsPrecommit =
             typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
 
@@ -507,7 +520,7 @@ export function startNavigationListenerImpl(
         interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
-        if (runtimeNavigation.replaceHistory && event.cancelable) {
+        if (replaceHistory && event.cancelable) {
           event.preventDefault()
           navigation.navigate(event.destination.url, { history: 'replace', state })
         } else {

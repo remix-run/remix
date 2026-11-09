@@ -1746,6 +1746,65 @@ describe('navigate', () => {
     }
   })
 
+  it('replaces the entry of a push navigation that a link click interrupts before it renders', async () => {
+    let originalUrl = window.location.href
+    let interruptedUrl = new URL(originalUrl)
+    interruptedUrl.searchParams.set('frame-navigation', 'interrupted')
+    let interruptingUrl = new URL(originalUrl)
+    interruptingUrl.searchParams.set('frame-navigation', 'interrupting')
+    let topFrame = { src: originalUrl } as FrameHandle
+    let reloadFrame = mock.fn((frame: FrameHandle, options?: ResolveFrameOptions) => {
+      if (frame.src !== interruptedUrl.href) {
+        return createReloadTransition({ signal: new AbortController().signal })
+      }
+      // The interrupted page never renders: its load ends when the next navigation aborts it.
+      let aborted = new Promise<never>((_, reject) => {
+        options?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('The navigation was interrupted.', 'AbortError')),
+        )
+      })
+      void aborted.catch(() => {})
+      return { signal: new AbortController().signal, committed: aborted, finished: aborted }
+    })
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame,
+    })
+
+    let interrupted = document.createElement('a')
+    interrupted.href = interruptedUrl.href
+    let interrupting = document.createElement('a')
+    interrupting.href = interruptingUrl.href
+    document.body.append(interrupted, interrupting)
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    try {
+      interrupted.click()
+      await waitUntil(() => reloadFrame.mock.callCount() === 1)
+      expect(window.navigation.currentEntry?.url).toBe(interruptedUrl.href)
+
+      let navigationSucceeded = waitForNavigationSuccess()
+      interrupting.click()
+      await navigationSucceeded
+
+      expect(window.navigation.currentEntry?.url).toBe(interruptingUrl.href)
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation + 1)
+
+      await window.navigation.back().finished
+      expect(window.navigation.currentEntry?.url).toBe(originalUrl)
+      await window.navigation.forward().finished
+    } finally {
+      interrupted.remove()
+      interrupting.remove()
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
+
   it('replaces the navigation URL when the top frame reload follows a redirect', async () => {
     let originalUrl = window.location.href
     let requestedUrl = new URL(originalUrl)
@@ -2846,4 +2905,8 @@ function setupWebKitScrollReset(t: TestContext, frames = stubFrames) {
       )
     },
   }
+}
+
+async function waitUntil(condition: () => boolean): Promise<void> {
+  while (!condition()) await new Promise((resolve) => setTimeout(resolve, 0))
 }
