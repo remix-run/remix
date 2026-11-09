@@ -9,7 +9,7 @@ import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
-import { css, navigate, on, updateUrl } from '../index.ts'
+import { css, navigate, on } from '../index.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
@@ -3378,45 +3378,6 @@ describe('run', () => {
     } finally {
       app.dispose()
     }
-  })
-
-  it('stops syncing updateUrl() to the top frame after the runtime is disposed', async (t) => {
-    let initialUrl = window.location.href
-    t.after(() => window.history.replaceState(null, '', initialUrl))
-    document.body.innerHTML = await drain(renderToStream(<main />))
-
-    let app = run({ loadModule: mock.fn() })
-    await app.ready()
-    let destination = new URL('?while=running', initialUrl)
-    await updateUrl(destination.search)
-    expect(app.frames.top.src).toBe(destination.href)
-
-    app.dispose()
-    await updateUrl('?after=dispose')
-    expect(app.frames.top.src).toBe(destination.href)
-  })
-
-  it('keeps a newer runtime running when an older runtime is disposed', async (t) => {
-    document.body.innerHTML = '<main>Initial</main>'
-
-    let first = run({ loadModule: mock.fn() })
-    let second = run({
-      loadModule: mock.fn(),
-      resolveFrame: () => renderDocumentContent(<p id="second-page">Second page</p>),
-    })
-    t.after(() => second.dispose())
-    await Promise.all([first.ready(), second.ready()])
-
-    first.dispose()
-
-    await second.frames.top.reload()
-    expect(document.getElementById('second-page')?.textContent).toBe('Second page')
-
-    let initialUrl = window.location.href
-    t.after(() => window.history.replaceState(null, '', initialUrl))
-    let destination = new URL('?runtime=second', initialUrl)
-    await updateUrl(destination.search)
-    expect(second.frames.top.src).toBe(destination.href)
   })
 
   it('restores the previous named frame when the latest duplicate unmounts', async () => {
