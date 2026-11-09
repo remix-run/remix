@@ -40,7 +40,7 @@ export type PrefetchConfig =
        * decides when a request starts and how it ends. `options.signal` aborts when the runtime is
        * disposed. Because it replaces the default request, send the frame headers a navigation
        * would (`Accept: text/html`, `X-Remix-Frame: true`, and `X-Remix-Target` for
-       * `options.target`) to get the HTML it would.
+       * `options.target`), and `Purpose: prefetch` if your server sheds prefetches.
        */
       fetch?: PrefetchFetch
     }

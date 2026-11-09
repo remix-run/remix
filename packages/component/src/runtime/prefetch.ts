@@ -328,7 +328,9 @@ export function fetchFrame(
   init: RequestInit,
   contentType?: string,
 ): Promise<Response> {
-  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+  let headers = new Headers(init.headers)
+  headers.set('Accept', 'text/html')
+  headers.set('X-Remix-Frame', 'true')
   if (target != null) headers.set('X-Remix-Target', target)
   if (contentType) headers.set('Content-Type', contentType)
   return fetch(src, { ...init, headers, mode: 'same-origin' })
@@ -338,7 +340,13 @@ export function createDefaultPrefetch(
   signal?: AbortSignal,
   prefetchDepth = 0,
   fetchPage: PrefetchFetch = (src, { target, signal }) =>
-    fetchFrame(src, target, { method: 'GET', priority: 'low', signal }),
+    fetchFrame(src, target, {
+      method: 'GET',
+      // Not `Sec-Purpose`, which `fetch()` forbids; servers can use this to shed prefetches.
+      headers: { Purpose: 'prefetch' },
+      priority: 'low',
+      signal,
+    }),
 ): (src: string, options?: PrefetchOptions) => Promise<void> {
   let pending = new Map<
     string,
