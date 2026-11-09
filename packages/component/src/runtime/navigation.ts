@@ -1,6 +1,4 @@
 import {
-  getNamedFrame,
-  getTopFrame,
   isDocumentReload,
   reloadCurrentDocument,
   reloadFrameForNavigation,
@@ -323,25 +321,18 @@ async function waitForUrlUpdate(updating: Promise<void>, signal?: AbortSignal): 
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
+ * @param options Frame lookups for the running app, and an optional reload override for tests.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal) {
-  return startNavigationListenerImpl(signal, {
-    getTopFrame,
-    getNamedFrame,
-    reloadFrame: reloadFrameForNavigation,
-  })
-}
-
-// Internal version used by unit tests so we can inject stub frames
-export function startNavigationListenerImpl(
+export function startNavigationListener(
   signal: AbortSignal,
   options: {
-    getTopFrame: typeof getTopFrame
-    getNamedFrame: typeof getNamedFrame
-    reloadFrame: typeof reloadFrameForNavigation
+    getTopFrame: () => FrameHandle
+    getNamedFrame: (name: string) => FrameHandle | undefined
+    reloadFrame?: typeof reloadFrameForNavigation
   },
 ) {
+  let reloadFrame = options.reloadFrame ?? reloadFrameForNavigation
   let navigation = getInterceptableNavigation()
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
@@ -453,7 +444,7 @@ export function startNavigationListenerImpl(
 
         topFrame.src = event.destination.url
         if (frame !== topFrame) frame.src = state.src
-        let reload = options.reloadFrame(frame, {
+        let reload = reloadFrame(frame, {
           ...submission,
           signal: event.signal,
         })

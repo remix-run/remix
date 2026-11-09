@@ -1,0 +1,3 @@
+Fix `run()` runtimes acting on each other's frames when an app starts more than one. `app.flush()` and `app.dispose()` used whichever runtime started most recently, so disposing an older runtime disposed the newer runtime's top frame and left it unable to render. Navigations were always routed to the newest runtime's frames, even after it was disposed, so an older runtime that was still running changed the URL without rendering the new page.
+
+Each runtime now flushes, disposes, and navigates its own top frame and named frames, and `app.frames.get(name)` and `handle.frames.get(name)` only return named frames from the same runtime. After `app.dispose()`, `updateUrl()` no longer writes the new URL to the disposed runtime's `app.frames.top.src`.
