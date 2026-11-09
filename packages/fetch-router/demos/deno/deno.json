@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "dev": "deno serve --watch --allow-read=./public --allow-env=CI,FORCE_COLOR,NO_COLOR,TERM --port 44100 app/router.ts",
+    "start": "deno serve --allow-read=./public --allow-env=CI,FORCE_COLOR,NO_COLOR,TERM --port 44100 app/router.ts",
+    "typecheck": "deno check"
+  },
+  "nodeModulesDir": "manual"
+}
