@@ -352,6 +352,7 @@ export function startNavigationListenerImpl(
   // that page is on screen replaces the entry, as a document navigation that never committed
   // leaves none, so Back returns to the page the visitor saw.
   let unrenderedEntryKey: string | undefined
+  let uncommittedPushFromKey: string | undefined
 
   navigation.updateCurrentEntry({
     state: {
@@ -366,6 +367,13 @@ export function startNavigationListenerImpl(
   navigation.addEventListener(
     'navigate',
     (event) => {
+      // currententrychange can start this navigation before the previous push's handler runs.
+      if (uncommittedPushFromKey !== undefined) {
+        let currentEntryKey = navigation.currentEntry?.key
+        if (currentEntryKey !== uncommittedPushFromKey) unrenderedEntryKey = currentEntryKey
+        uncommittedPushFromKey = undefined
+      }
+
       if (
         isDocumentReload(event.info) ||
         (event.hashChange && !needsFrameReload) ||
@@ -426,11 +434,15 @@ export function startNavigationListenerImpl(
       }
 
       needsFrameReload = true
+      if (event.navigationType === 'push' && !replaceHistory) {
+        uncommittedPushFromKey = navigation.currentEntry?.key
+      }
       let handler = async () => {
+        if (event.signal.aborted) return
         if (event.navigationType === 'push' && !replaceHistory) {
           unrenderedEntryKey = navigation.currentEntry?.key
+          uncommittedPushFromKey = undefined
         }
-        if (event.signal.aborted) return
 
         let submission = await runtimeNavigation.getSubmission?.()
         if (event.signal.aborted) return

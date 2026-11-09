@@ -1879,6 +1879,55 @@ describe('navigate', () => {
     }
   })
 
+  it('replaces an unrendered push interrupted from currententrychange', async () => {
+    let originalUrl = window.location.href
+    let interruptedUrl = new URL(originalUrl)
+    interruptedUrl.searchParams.set('frame-navigation', 'interrupted-at-commit')
+    let interruptingUrl = new URL(originalUrl)
+    interruptingUrl.searchParams.set('frame-navigation', 'interrupting-at-commit')
+    let topFrame = { src: originalUrl } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame: () => createReloadTransition({ signal: new AbortController().signal }),
+    })
+
+    let interrupting: Promise<void> | undefined
+    window.navigation.addEventListener(
+      'currententrychange',
+      (event) => {
+        if (
+          event.navigationType === 'push' &&
+          window.navigation.currentEntry?.url === interruptedUrl.href
+        ) {
+          interrupting = navigate(interruptingUrl.href)
+        }
+      },
+      { signal: controller.signal },
+    )
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    try {
+      await navigate(interruptedUrl.href).catch(() => {})
+      expect(interrupting).toBeDefined()
+      await interrupting
+
+      expect(window.navigation.currentEntry?.url).toBe(interruptingUrl.href)
+      expect(topFrame.src).toBe(interruptingUrl.href)
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation + 1)
+
+      await window.navigation.back().finished
+      expect(window.navigation.currentEntry?.url).toBe(originalUrl)
+      await window.navigation.forward().finished
+    } finally {
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
+
   it('replaces the navigation URL when the top frame reload follows a redirect', async () => {
     let originalUrl = window.location.href
     let requestedUrl = new URL(originalUrl)
