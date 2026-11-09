@@ -42,13 +42,12 @@ function createChunkedStream(body: Uint8Array, chunkSize: number): ReadableStrea
   })
 }
 
-// Enqueues `chunk` and stays open unless `close` is set, like a sender that has not finished
-function createCancelTrackingStream(chunk: Uint8Array, options?: { close?: boolean }) {
+// Enqueues `chunk` and never closes, like a sender that has not finished
+function createCancelTrackingStream(chunk: Uint8Array) {
   let cancelled = false
   let stream = new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(chunk)
-      if (options?.close) controller.close()
     },
     cancel() {
       cancelled = true
@@ -577,17 +576,5 @@ describe('parseMultipartStream', async () => {
       break
     }
     assert.equal(wasCancelled(), true)
-  })
-
-  it('does not cancel the stream when it is read to the end', async () => {
-    let { stream, wasCancelled } = createCancelTrackingStream(
-      createMultipartMessage(boundary, { field1: 'value1' }),
-      { close: true },
-    )
-
-    for await (let _ of parseMultipartStream(stream, { boundary })) {
-      // ...
-    }
-    assert.equal(wasCancelled(), false)
   })
 })

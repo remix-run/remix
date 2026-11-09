@@ -797,7 +797,7 @@ describe('createRequestListener', () => {
         await reader.read()
         await reader.cancel()
         resolve()
-        return new Response('Payload Too Large', { status: 413 })
+        return new Response(null, { status: 413 })
       })
       listener(req, res)
     })
