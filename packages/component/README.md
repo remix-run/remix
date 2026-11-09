@@ -1393,9 +1393,11 @@ Remix reads the prefetched HTML without running it and finds the page's JavaScri
 
 Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix doesn't scan `<img>` elements or CSS `@font-face` rules.
 
+Prefetch requests carry `Purpose: prefetch` (not `Sec-Purpose`, which `fetch()` forbids), so a server can recognize them and shed them under load, for example with a `503`. Navigations don't send it. The header isn't part of the cache key unless a response lists `Purpose` in `Vary`, so a prefetched response can still serve the navigation.
+
 The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
 
-To schedule page loads while keeping the asset hints, pass `createPrefetch({ signal, fetch })` to `run()`. Remix still decides when and which links to prefetch and shares pending loads of the same page and target; your `fetch(src, options)` decides when and how each page loads, and returns its `Response`. The prefetch resolves once the page has loaded and its hints are added, so a scheduler can hold a slot until then. Without `fetch`, pages load as they do by default. A response that isn't OK HTML is skipped, so a `503` from an overloaded server adds no hints. A custom `fetch` replaces the default request, so send the frame headers (`Accept: text/html`, `X-Remix-Frame: true`, and `X-Remix-Target` for `options.target`) to get the HTML a navigation would. This example allows three loads at a time:
+To schedule page loads while keeping the asset hints, pass `createPrefetch({ signal, fetch })` to `run()`. Remix still decides when and which links to prefetch and shares pending loads of the same page and target; your `fetch(src, options)` decides when and how each page loads, and returns its `Response`. The prefetch resolves once the page has loaded and its hints are added, so a scheduler can hold a slot until then. Without `fetch`, pages load as they do by default. A response that isn't OK HTML is skipped, so a `503` from an overloaded server adds no hints. A custom `fetch` replaces the default request, so send the frame headers (`Accept: text/html`, `X-Remix-Frame: true`, and `X-Remix-Target` for `options.target`), and `Purpose: prefetch` if your server sheds prefetches, to get the HTML a navigation would. This example allows three loads at a time:
 
 ```ts
 import { createPrefetch, run } from 'remix/component'
@@ -1415,6 +1417,7 @@ async function fetchPage(src: string, options?: { target?: string }) {
       headers: {
         Accept: 'text/html',
         'X-Remix-Frame': 'true',
+        Purpose: 'prefetch',
         ...(options?.target != null && { 'X-Remix-Target': options.target }),
       },
     })

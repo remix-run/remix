@@ -581,17 +581,19 @@ describe('prefetch', () => {
     await frame.reload({ src })
 
     expect(fetch).toHaveBeenCalledTimes(2)
-    for (let call of fetch.mock.calls) {
+    for (let [index, call] of fetch.mock.calls.entries()) {
       let [input, init] = call.arguments
       expect(input).toBe(src)
       let headers = new Headers(init?.headers)
       expect(headers.get('Accept')).toBe('text/html')
       expect(headers.get('X-Remix-Frame')).toBe('true')
       expect(headers.get('X-Remix-Target')).toBe('details')
+      // Only the prefetch (first call) says it is one; the reload is a navigation.
+      expect(headers.get('Purpose')).toBe(index === 0 ? 'prefetch' : null)
     }
   })
 
-  it('fetches HTML with low priority and frame headers by default', async (t) => {
+  it('fetches HTML with low priority, frame headers, and Purpose: prefetch by default', async (t) => {
     let fetch = t.mock.method(
       globalThis,
       'fetch',
@@ -612,6 +614,7 @@ describe('prefetch', () => {
     expect(init?.priority).toBe('low')
     expect(new Headers(init?.headers).get('X-Remix-Frame')).toBe('true')
     expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
+    expect(new Headers(init?.headers).get('Purpose')).toBe('prefetch')
   })
 
   describe('viewport', () => {

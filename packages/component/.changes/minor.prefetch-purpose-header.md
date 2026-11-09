@@ -1,0 +1,1 @@
+Send `Purpose: prefetch` with the default prefetch request, so a server can recognize prefetches and shed them under load. Navigations don't send it. `Sec-Purpose` isn't used because `fetch()` forbids setting it. A response that lists `Purpose` in `Vary` is cached separately for prefetches and navigations.
