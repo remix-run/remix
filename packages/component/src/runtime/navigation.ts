@@ -1,13 +1,11 @@
 import {
-  getNamedFrame,
-  getTopFrame,
   isDocumentReload,
   reloadCurrentDocument,
   reloadFrameForNavigation,
   setTopFrameSource,
 } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, Handle } from './component.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -323,25 +321,14 @@ async function waitForUrlUpdate(updating: Promise<void>, signal?: AbortSignal): 
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
+ * @param options Frames of the running app, and an optional reload override for tests.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal) {
-  return startNavigationListenerImpl(signal, {
-    getTopFrame,
-    getNamedFrame,
-    reloadFrame: reloadFrameForNavigation,
-  })
-}
-
-// Internal version used by unit tests so we can inject stub frames
-export function startNavigationListenerImpl(
+export function startNavigationListener(
   signal: AbortSignal,
-  options: {
-    getTopFrame: typeof getTopFrame
-    getNamedFrame: typeof getNamedFrame
-    reloadFrame: typeof reloadFrameForNavigation
-  },
+  options: Handle['frames'] & { reloadFrame?: typeof reloadFrameForNavigation },
 ) {
+  let reloadFrame = options.reloadFrame ?? reloadFrameForNavigation
   let navigation = getInterceptableNavigation()
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
@@ -419,11 +406,11 @@ export function startNavigationListenerImpl(
         return
       }
 
-      let topFrame = options.getTopFrame()
+      let topFrame = options.top
       let frame = replayedSubmission?.frame
       if (!frame) {
         if (state.target) {
-          frame = options.getNamedFrame(state.target)
+          frame = options.get(state.target)
           if (!frame) {
             fallbackToDocumentNavigation(navigation, event)
             return
@@ -453,7 +440,7 @@ export function startNavigationListenerImpl(
 
         topFrame.src = event.destination.url
         if (frame !== topFrame) frame.src = state.src
-        let reload = options.reloadFrame(frame, {
+        let reload = reloadFrame(frame, {
           ...submission,
           signal: event.signal,
         })

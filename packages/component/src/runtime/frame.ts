@@ -22,13 +22,13 @@ import {
   getFrameRuntime,
   getSharedFrameRuntime,
   isFrameRuntime,
-  NamedFrameRegistry,
   type FrameMountState,
   type FrameNavigationOptions,
   type FrameReloadResult,
   type FrameReloadTransition,
   type FrameRuntime,
   type LoadModule,
+  type NamedFrameRegistry,
   type PendingClientEntries,
   type ReconciliationTracker,
   type ResolveFrame,
@@ -102,29 +102,19 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-let appTopFrame: FrameInstance
-export const appNamedFrames = new NamedFrameRegistry()
+// Frames of the most recently started run() runtime, for module-level helpers that have no
+// runtime reference: targeted prefetching and updateUrl().
+let appFrames: Handle['frames'] | undefined
 
-export function setAppTopFrame(frame: FrameInstance): void {
-  appTopFrame = frame
-}
-
-export function getAppTopFrame(): FrameInstance {
-  return appTopFrame
+export function setAppFrames(frames: Handle['frames']): () => void {
+  appFrames = frames
+  return () => {
+    if (appFrames === frames) appFrames = undefined
+  }
 }
 
 export function setTopFrameSource(src: string): void {
-  if (appTopFrame) appTopFrame.handle.src = src
-}
-
-/**
- * Returns the top-level frame handle for the running application.
- *
- * @returns The top-level frame handle.
- */
-export function getTopFrame(): FrameHandle {
-  if (!appTopFrame) throw new Error('app runtime not initialized')
-  return appTopFrame.handle
+  if (appFrames) appFrames.top.src = src
 }
 
 /**
@@ -134,7 +124,7 @@ export function getTopFrame(): FrameHandle {
  * @returns The matching frame handle, or `undefined` when not found.
  */
 export function getNamedFrame(name: string): FrameHandle | undefined {
-  return appNamedFrames.get(name)
+  return appFrames?.get(name)
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
