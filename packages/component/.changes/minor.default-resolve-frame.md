@@ -1,4 +1,4 @@
-Customize frame fetching without reimplementing form encoding, frame headers, cancellation, or response handling. The exported `defaultResolveFrame(src, options?, fetch?)` accepts a fetch implementation that receives the prepared URL and request options and returns a `Response`.
+Customize frame fetching without reimplementing form encoding, frame headers, cancellation, or response handling. The exported `defaultResolveFrame(src, options?, fetchImpl?)` accepts a fetch implementation that receives the prepared URL and request options and returns a `Response`.
 
 Frame resolvers now receive `options.navigationType` for navigation-driven loads, including client frames loaded within the response. Independent loads and `frame.reload()` calls leave it undefined. For example, reuse cached HTML on Back/Forward navigations:
 

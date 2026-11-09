@@ -116,13 +116,13 @@ function normalizeLineBreaks(value: string): string {
  *
  * @param src Frame source to fetch.
  * @param options Frame target, submission, and cancellation settings.
- * @param fetch Fetch implementation receiving the prepared URL and request options (defaults to `globalThis.fetch`).
+ * @param fetchImpl Fetch implementation receiving the prepared URL and request options (defaults to `fetch`).
  * @returns The unconsumed response for streaming into the frame.
  */
 export async function defaultResolveFrame(
   src: string,
   options?: ResolveFrameOptions,
-  fetch: typeof globalThis.fetch = globalThis.fetch,
+  fetchImpl?: typeof fetch,
 ): Promise<Response> {
   let { body, encType } = getRequestBody(options)
   let response = await fetchFrame(
@@ -130,7 +130,7 @@ export async function defaultResolveFrame(
     options?.target,
     { body, method: options?.method, signal: options?.signal },
     encType,
-    fetch,
+    fetchImpl ?? fetch,
   )
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
