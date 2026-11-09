@@ -34,13 +34,14 @@ The fork keeps ES Module Shims' graph fetching, parsing, resolution, rewriting, 
 - The runtime is an ES module with explicit `importShim` and `preloadShim` exports. `preloadShim` accepts one or more module specifiers, exposes upstream's `processPreload` fetch-cache path without requiring declarative preload links, and ignores preload failures at the public wrapper boundary.
 - Rewritten dynamic imports use a private symbol-keyed bridge instead of a public `globalThis.importShim` API.
 - Multiple import map detection retains upstream's iframe feature test and resolves conservatively after one second when the test cannot complete, such as when blocked by Content Security Policy.
+- Multiple import map detection skips upstream's early-`onload` retrigger when using `srcdoc`, since it only ever ran the test in the iframe's initial `about:blank` document. The `srcdoc` document's own `load` event still reaches the fallback.
 - Import maps are read from standard `<script type="importmap">` elements, including maps appended at runtime.
 - Processed import map elements are tracked in a `WeakSet` instead of writing upstream's shared `ep` marker onto the elements.
 - Declarative module scripts and module preload elements are not intercepted.
 - Shim mode, legacy module support, initialization options, customization hooks, and hot reloading are removed.
 - Module transforms for CSS, JSON, Wasm, and TypeScript are removed. Native JSON and CSS import attributes and static Wasm source-phase imports retain upstream's URL-rewriting structure but delegate module loading to the browser.
 - Dynamic source imports and import defer are removed.
-- `es-module-lexer` is a package dependency rather than vendored into the loader.
+- `es-module-lexer` is a package dependency rather than vendored into the loader. The loader imports the same CSP-compatible minimal asm.js build that upstream bundles (`es-module-lexer/minimal/js`). That build only exports `parse` and initializes synchronously, so the loader waits only on feature detection. Upstream's `lexer.init` is undefined in this build, and referencing it makes bundlers warn about a missing export.
 - Import-map integrity metadata is enforced when present, but upstream's `enforceIntegrity` policy requiring integrity for every module is removed.
 - Runtime warnings use the `remix/multiple-import-maps-polyfill` package name, and upstream's global `ESMS_DEBUG` diagnostics are not exposed.
 - Native module registration prevents the package's lazy ESM wrapper from loading itself through the polyfill.

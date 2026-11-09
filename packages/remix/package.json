@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -49,6 +49,8 @@
     "./data-schema": "./src/data-schema.ts",
     "./data-schema/checks": "./src/data-schema/checks.ts",
     "./data-schema/coerce": "./src/data-schema/coerce.ts",
+    "./data-schema/experimental": "./src/data-schema/experimental.ts",
+    "./data-schema/experimental/form": "./src/data-schema/experimental/form.ts",
     "./data-schema/form-data": "./src/data-schema/form-data.ts",
     "./data-schema/lazy": "./src/data-schema/lazy.ts",
     "./data-table": "./src/data-table.ts",
@@ -75,6 +77,7 @@
     "./headers/cache-control": "./src/headers/cache-control.ts",
     "./headers/content-disposition": "./src/headers/content-disposition.ts",
     "./headers/content-range": "./src/headers/content-range.ts",
+    "./headers/content-security-policy": "./src/headers/content-security-policy.ts",
     "./headers/content-type": "./src/headers/content-type.ts",
     "./headers/cookie": "./src/headers/cookie.ts",
     "./headers/if-match": "./src/headers/if-match.ts",
@@ -91,6 +94,7 @@
     "./middleware/compression": "./src/compression-middleware.ts",
     "./middleware/cop": "./src/cop-middleware.ts",
     "./middleware/cors": "./src/cors-middleware.ts",
+    "./middleware/csp": "./src/csp-middleware.ts",
     "./middleware/csrf": "./src/csrf-middleware.ts",
     "./middleware/form-data": "./src/form-data-middleware.ts",
     "./middleware/form-data/future": "./src/form-data-middleware/future.ts",
@@ -221,6 +225,14 @@
         "types": "./dist/data-schema/coerce.d.ts",
         "default": "./dist/data-schema/coerce.js"
       },
+      "./data-schema/experimental": {
+        "types": "./dist/data-schema/experimental.d.ts",
+        "default": "./dist/data-schema/experimental.js"
+      },
+      "./data-schema/experimental/form": {
+        "types": "./dist/data-schema/experimental/form.d.ts",
+        "default": "./dist/data-schema/experimental/form.js"
+      },
       "./data-schema/form-data": {
         "types": "./dist/data-schema/form-data.d.ts",
         "default": "./dist/data-schema/form-data.js"
@@ -325,6 +337,10 @@
         "types": "./dist/headers/content-range.d.ts",
         "default": "./dist/headers/content-range.js"
       },
+      "./headers/content-security-policy": {
+        "types": "./dist/headers/content-security-policy.d.ts",
+        "default": "./dist/headers/content-security-policy.js"
+      },
       "./headers/content-type": {
         "types": "./dist/headers/content-type.d.ts",
         "default": "./dist/headers/content-type.js"
@@ -388,6 +404,10 @@
       "./middleware/cors": {
         "types": "./dist/cors-middleware.d.ts",
         "default": "./dist/cors-middleware.js"
+      },
+      "./middleware/csp": {
+        "types": "./dist/csp-middleware.d.ts",
+        "default": "./dist/csp-middleware.js"
       },
       "./middleware/csrf": {
         "types": "./dist/csrf-middleware.d.ts",
@@ -615,7 +635,8 @@
     "@remix-run/node-hmr": "workspace:^",
     "@remix-run/spa": "workspace:^",
     "@remix-run/static-middleware": "workspace:^",
-    "@remix-run/multiple-import-maps-polyfill": "workspace:^"
+    "@remix-run/multiple-import-maps-polyfill": "workspace:^",
+    "@remix-run/csp-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",

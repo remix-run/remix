@@ -12,6 +12,7 @@ describe('UI docs pages', () => {
         'patterns/accordion',
         'patterns/anchor',
         'patterns/combobox',
+        'patterns/form',
         'patterns/listbox',
         'patterns/menu',
         'patterns/popover',

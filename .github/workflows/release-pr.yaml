@@ -20,7 +20,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           token: ${{ secrets.GH_REMIX_PAT }}
-          fetch-depth: 0
+
+      - name: Fetch release attribution history
+        run: git fetch --no-tags --unshallow origin "$GITHUB_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6

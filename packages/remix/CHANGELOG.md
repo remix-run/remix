@@ -2,6 +2,102 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.2.0
+
+### Minor Changes
+
+- Protect apps with a nonce-based Content Security Policy using `csp()` from `remix/middleware/csp`. Add it before `render()` and it generates a nonce for each request along with a matching policy. Generated import maps, module preloads, and `css()` styles receive the nonce automatically, and authored tags can read it with `getCspNonce(context)`: ([#12098](https://github.com/remix-run/remix/pull/12098))
+
+  ```ts
+  import { createRouter } from 'remix/router'
+  import { csp } from 'remix/middleware/csp'
+  import { render } from 'remix/middleware/render'
+
+  let router = createRouter({
+    middleware: [
+      csp({
+        policy: ({ nonce }) => ({
+          scriptSrc: [`'nonce-${nonce}'`],
+          styleSrc: [`'nonce-${nonce}'`],
+        }),
+      }),
+      render(),
+    ],
+  })
+  ```
+
+  Frames rendered on the server share the document's nonce, and client navigation keeps it across frame and island updates. HMR updates that add imports and `remix/multiple-import-maps-polyfill` also work under a strict policy, including one without `'unsafe-eval'`. The middleware supports report-only policies and reporting endpoints; see the [CSP middleware docs](https://github.com/remix-run/remix/tree/main/packages/csp-middleware#usage) for setup.
+
+  Custom integrations can pass `nonce` to `renderToStream()` or `renderToString()` from `remix/component/server` and build policies with `ContentSecurityPolicy` from `remix/headers/content-security-policy`.
+
+- Added `package.json` `exports`: ([#12098](https://github.com/remix-run/remix/pull/12098))
+  - `remix/headers/content-security-policy` to re-export APIs from `@remix-run/headers/content-security-policy`
+  - `remix/middleware/csp` to re-export APIs from `@remix-run/csp-middleware`
+
+- Mocks and method spies in `remix/test` can now swap their implementation with `mockImplementation()` or `mockImplementationOnce()`, clear recorded calls with `resetCalls()`, report `callCount()`, and `restore()` the original function. Mocks created with `t.mock` are restored even when a test or its cleanup fails. ([#12097](https://github.com/remix-run/remix/pull/12097))
+
+### Patch Changes
+
+- Apps created with `remix new` now fingerprint assets in production, close the asset server on shutdown, and run their `package.json` scripts in Windows command shells. See the [`@remix-run/cli` changelog](https://github.com/remix-run/remix/blob/main/packages/cli/CHANGELOG.md) to apply the same setup to an existing app. ([#12192](https://github.com/remix-run/remix/pull/12192))
+
+- Adding or removing `clientEntry` during HMR now restarts the app server, so fresh server responses no longer use stale hydration boundaries. ([#11982](https://github.com/remix-run/remix/pull/11982))
+
+- `clientEntry` props in `remix/component` hydrate more reliably. JSX elements styled with `css()` in props no longer fail hydration with `Invalid mix prop`, and plain data that contains keys Remix uses for serialization, such as `$rmx`, now reaches the client entry unchanged. Only elements created with JSX or `createElement()` render; objects that merely look like elements, such as ones parsed from JSON, now throw `Invalid child node`, so data from a database or API can't inject markup. ([#12192](https://github.com/remix-run/remix/pull/12192))
+
+- `css()` and the `style` prop in `remix/component` now serialize property names and numbers the way browsers expect, and `css()` rerenders take about half as long in our benchmarks. Some existing output changes: ([#12192](https://github.com/remix-run/remix/pull/12192))
+  - Numbers stay unitless for properties that accept bare numbers. `flex: 2` is now a grow factor instead of `2px`, and `tabSize`, `animation`, and `borderImage` numbers take their unitless meaning. Use strings such as `'4px'` or `'200ms'` when you want units.
+  - Custom properties keep their casing, so `'--gapSize'` no longer becomes `--gap-size`.
+  - Vendor-prefixed keys get their leading dash, so `webkitLineClamp` renders as `-webkit-line-clamp`.
+  - Styles that list the same properties in a different order no longer share a class, and generated `rmxc-*` class names change. Update tests or selectors that hard-code them.
+
+  See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for migration examples.
+
+- Fixes for client navigation and rendering in `remix/component`: ([#12192](https://github.com/remix-run/remix/pull/12192))
+  - Navigations no longer flash unstyled content when page-specific `<head>` links are added or removed, because keyed stylesheets stay in place instead of being moved and reloaded.
+  - Safari restores the full scroll position on back and forward navigation.
+  - Boolean `aria-*` and `data-*` values render as `"true"` and `"false"` on the server, matching the browser. Previously `aria-current={true}` rendered as a bare attribute, which assistive technology reads as `"false"`. `data-rmx-document={false}` and `data-rmx-preserve-dom={false}` now omit the attribute in the browser instead of turning those features on.
+  - Doctype-looking text inside scripts, styles, textareas, attributes, and comments is preserved when the browser parses frame HTML.
+
+- The `remix/component` browser runtime is about 10% smaller when minified. Apps that render with `createRoot()` or `createRangeRoot()` and never use `<Frame>` no longer load the frame runtime at all, which roughly halves their component JavaScript. ([#12192](https://github.com/remix-run/remix/pull/12192))
+
+- A failed upload stream no longer corrupts an existing file stored with `remix/file-storage/fs`. The API and disk format are unchanged; see the [filesystem storage documentation](https://github.com/remix-run/remix/tree/main/packages/file-storage#replacement-writes) for failure behavior and filesystem requirements. ([#11909](https://github.com/remix-run/remix/pull/11909))
+
+- The guides installed with `remix` are revised as standalone chapters, including a complete Files and Assets chapter and expanded component coverage in Rendering UI. Their links now point to the consolidated docs site, and the Motion link in the animation examples is fixed. ([#12077](https://github.com/remix-run/remix/pull/12077))
+
+- `remix/session-storage/fs` no longer corrupts a session file when overlapping requests save the same session. Session files that were already corrupted now start a fresh session instead of throwing on every request. ([#12192](https://github.com/remix-run/remix/pull/12192))
+
+- Browser tests in `remix/test` no longer fail with syntax errors when they dynamically import modules, and WebKit runs no longer stall until the progress timeout. ([#12192](https://github.com/remix-run/remix/pull/12192))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.2`](https://github.com/remix-run/remix/releases/tag/assets@1.0.2)
+  - [`auth@1.0.1`](https://github.com/remix-run/remix/releases/tag/auth@1.0.1)
+  - [`auth-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/auth-middleware@1.0.1)
+  - [`cli@1.0.2`](https://github.com/remix-run/remix/releases/tag/cli@1.0.2)
+  - [`component@1.2.0`](https://github.com/remix-run/remix/releases/tag/component@1.2.0)
+  - [`component-hmr@1.0.1`](https://github.com/remix-run/remix/releases/tag/component-hmr@1.0.1)
+  - [`compression-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/compression-middleware@1.0.2)
+  - [`cookie@1.0.2`](https://github.com/remix-run/remix/releases/tag/cookie@1.0.2)
+  - [`cors-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/cors-middleware@1.0.2)
+  - [`csp-middleware@1.0.0`](https://github.com/remix-run/remix/releases/tag/csp-middleware@1.0.0)
+  - [`csrf-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@1.0.1)
+  - [`fetch-proxy@1.0.2`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@1.0.2)
+  - [`file-storage@1.0.1`](https://github.com/remix-run/remix/releases/tag/file-storage@1.0.1)
+  - [`file-storage-s3@1.1.1`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@1.1.1)
+  - [`form-data-middleware@1.1.1`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@1.1.1)
+  - [`form-data-parser@1.1.1`](https://github.com/remix-run/remix/releases/tag/form-data-parser@1.1.1)
+  - [`headers@1.1.0`](https://github.com/remix-run/remix/releases/tag/headers@1.1.0)
+  - [`multipart-parser@1.1.1`](https://github.com/remix-run/remix/releases/tag/multipart-parser@1.1.1)
+  - [`multiple-import-maps-polyfill@1.0.1`](https://github.com/remix-run/remix/releases/tag/multiple-import-maps-polyfill@1.0.1)
+  - [`render-middleware@1.1.0`](https://github.com/remix-run/remix/releases/tag/render-middleware@1.1.0)
+  - [`response@1.0.2`](https://github.com/remix-run/remix/releases/tag/response@1.0.2)
+  - [`session@1.0.1`](https://github.com/remix-run/remix/releases/tag/session@1.0.1)
+  - [`session-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/session-middleware@1.0.2)
+  - [`session-storage-memcache@1.0.1`](https://github.com/remix-run/remix/releases/tag/session-storage-memcache@1.0.1)
+  - [`session-storage-redis@1.0.1`](https://github.com/remix-run/remix/releases/tag/session-storage-redis@1.0.1)
+  - [`spa@1.0.2`](https://github.com/remix-run/remix/releases/tag/spa@1.0.2)
+  - [`static-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/static-middleware@1.0.2)
+  - [`test@1.1.0`](https://github.com/remix-run/remix/releases/tag/test@1.1.0)
+
 ## v3.1.0
 
 ### Minor Changes

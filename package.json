@@ -12,12 +12,15 @@
     "remix": "workspace:^",
     "typescript": "catalog:"
   },
+  "devDependencies": {
+    "playwright": "catalog:"
+  },
   "engines": {
     "node": ">=24.3.0"
   },
   "scripts": {
     "postinstall": "node ./scripts/postinstall.ts",
-    "build": "pnpm -r build",
+    "build": "pnpm --filter '!remix-docs' -r build",
     "changes:preview": "node ./scripts/changes-preview.ts",
     "changes:validate": "node ./scripts/changes-validate.ts",
     "changes:version": "node ./scripts/changes-version.ts",
@@ -28,12 +31,13 @@
     "generate-remix": "node ./scripts/generate-remix.ts",
     "lint": "oxlint . --max-warnings=0",
     "lint:fix": "oxlint . --fix --max-warnings=0",
-    "pr-preview": "node ./scripts/pr-preview.ts",
-    "setup-installable-branch": "node ./scripts/setup-installable-branch.ts",
+    "preview-pr": "node ./scripts/preview-pr.ts",
+    "preview": "node ./scripts/preview.ts",
     "sync-remix-package-files": "node ./scripts/sync-remix-package-files.ts",
     "validate-remix-package": "node ./scripts/validate-remix-package.ts",
     "validate-package-meta": "node ./scripts/validate-package-meta.ts",
-    "test": "pnpm --recursive --workspace-concurrency=4 --stream run test",
+    "test": "pnpm --recursive --no-sort --workspace-concurrency=4 --stream run test",
+    "test:browser": "node ./scripts/test-browser.ts",
     "test:bun": "pnpm --parallel --if-present run test:bun",
     "test:changed": "node ./scripts/run-changed-workspaces.ts test",
     "typecheck": "pnpm -r typecheck",

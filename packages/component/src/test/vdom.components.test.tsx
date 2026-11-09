@@ -1,18 +1,43 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it } from '@remix-run/test'
+import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import type { Handle } from '../runtime/component.ts'
 
 describe('vnode rendering', () => {
+  beforeEach(() => {
+    // The test runner's page starts with its own <title>, so every test needs an empty head.
+    document.head.replaceChildren()
+  })
+
   afterEach(() => {
     document.body.innerHTML = ''
-    for (let node of Array.from(document.head.childNodes)) {
-      document.head.removeChild(node)
-    }
   })
 
   describe('components', () => {
+    it('updates and removes an own __proto__ prop without changing the props prototype', () => {
+      let container = document.createElement('div')
+      let received: Record<string, unknown> = {}
+      function App(handle: Handle<{ __proto__?: { label: string } }>) {
+        received = handle.props
+        return () => <p>Content</p>
+      }
+      let root = createRoot(container)
+      root.render(<App {...{ ['__proto__']: { label: 'first' } }} />)
+      expect(Object.hasOwn(received, '__proto__')).toBe(true)
+      expect(received.__proto__).toEqual({ label: 'first' })
+      expect(Object.getPrototypeOf(received)).toBe(Object.prototype)
+
+      root.render(<App {...{ ['__proto__']: { label: 'second' } }} />)
+      expect(received.__proto__).toEqual({ label: 'second' })
+      expect(Object.getPrototypeOf(received)).toBe(Object.prototype)
+
+      root.render(<App />)
+      expect(Object.hasOwn(received, '__proto__')).toBe(false)
+      expect(Object.getPrototypeOf(received)).toBe(Object.prototype)
+      root.dispose()
+    })
+
     it.todo('warns when render is called after component is removed')
 
     it('updates from a task queued during the initial render', () => {

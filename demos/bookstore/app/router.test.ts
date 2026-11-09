@@ -11,6 +11,7 @@ describe('router', () => {
 
     assert.equal(response.status, 200)
     assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
+    assert.ok(response.headers.get('Content-Security-Policy'))
 
     let html = await response.text()
     assert.ok(html.includes('Welcome to the Bookstore'))

@@ -116,8 +116,11 @@ fi
 - As soon as it resolves, configure the GitHub Actions trusted publisher from the same local machine where you published the placeholder:
 
 ```sh
-npm trust github <package-name> --repo remix-run/remix --file publish.yaml --yes
+npm trust github <package-name> --repo=remix-run/remix --file=publish.yaml --allow-publish --yes
 ```
+
+- `--allow-publish` is required: npm 12 rejects `npm trust` without a permission flag, and the publish workflow runs `pnpm publish` directly rather than staged publishing.
+- This is an account change, so npm asks for a one-time password. Pass it as `--otp=<code>`; `npm trust` treats a space-separated `--otp <code>` value as an unknown positional argument.
 
 - This follow-up should be done immediately after placeholder publish while local npm auth is already available.
 

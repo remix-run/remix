@@ -30,7 +30,9 @@ export type SerializableValue =
 /**
  * Constraint that ensures all properties in an object are serializable.
  */
-type SerializableProperty<value> = value extends SerializablePrimitive | RemixNode
+// Values already assignable to `SerializableValue` stop here. Mapping the
+// recursive `SerializableValue` union through its array branch never ends.
+type SerializableProperty<value> = value extends SerializableValue
   ? value
   : value extends (...args: never[]) => unknown
     ? never

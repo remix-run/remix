@@ -27,7 +27,16 @@ export function Document(handle: Handle<DocumentProps>) {
           ))}
           <script type="module" src={href} />
         </head>
-        <body mix={bodyStyle}>
+        <body
+          mix={css({
+            fontFamily:
+              'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
+            margin: 0,
+            padding: 24,
+            background: '#0b1020',
+            color: '#e9eefc',
+          })}
+        >
           {/* `maxWidth` is caller-driven, so it stays an inline style. */}
           <div mix={css({ margin: '0 auto' })} style={{ maxWidth }}>
             {children}
@@ -37,12 +46,3 @@ export function Document(handle: Handle<DocumentProps>) {
     )
   }
 }
-
-const bodyStyle = css({
-  fontFamily:
-    'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji',
-  margin: 0,
-  padding: 24,
-  background: '#0b1020',
-  color: '#e9eefc',
-})

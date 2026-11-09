@@ -74,7 +74,7 @@ describe('bookstore prefetching', () => {
     assert.equal(imageRequests.filter((path) => path.includes('/bbq-')).length, 1)
     await link.click()
     await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
-    assert.equal(requests.length, 1)
+    assert.equal(requests.length, reusesPrefetchedHtml(page) ? 1 : 2)
     assert.equal(requests[0].headers.get('X-Remix-Frame'), 'true')
     assert.equal(
       await page.getByRole('img', { name: 'Image 1 of 3' }).getAttribute('src'),
@@ -115,8 +115,8 @@ describe('bookstore prefetching', () => {
     releaseImages.resolve()
     let freshDocument = await page.goto('/books/bbq')
     assert.equal(freshDocument?.headers()['cache-control'], 'no-store')
-    assert.equal(requests.length, 2)
-    assert.equal(requests[1].headers.get('X-Remix-Frame'), null)
+    assert.equal(requests.length, reusesPrefetchedHtml(page) ? 2 : 3)
+    assert.equal(requests.at(-1)?.headers.get('X-Remix-Frame'), null)
   })
 
   it('warms destination assets from no-store HTML and fetches HTML again on navigation', async (t) => {
@@ -161,27 +161,36 @@ describe('bookstore prefetching', () => {
     let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
     await link.scrollIntoViewIfNeeded()
     assert.equal((await prefetched).headers()['cache-control'], 'no-store')
-    await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).waitFor({
-      state: 'attached',
-    })
-    await page.locator(`head link[rel="prefetch"][href$="${styleHref}"]`).waitFor({
-      state: 'attached',
-    })
-    assert.equal(await page.getByRole('button', { name: 'Next image' }).count(), 0)
-    assert.equal(await page.locator(`head link[rel="stylesheet"][href="${styleHref}"]`).count(), 0)
+    if (await prefetchesAssets(page)) {
+      await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).waitFor({
+        state: 'attached',
+      })
+      await page.locator(`head link[rel="prefetch"][href$="${styleHref}"]`).waitFor({
+        state: 'attached',
+      })
+      assert.equal(await page.getByRole('button', { name: 'Next image' }).count(), 0)
+      assert.equal(
+        await page.locator(`head link[rel="stylesheet"][href="${styleHref}"]`).count(),
+        0,
+      )
 
-    let warmed = Promise.all([page.waitForResponse(scriptHref), page.waitForResponse(styleHref)])
-    release.resolve()
-    await warmed
-    await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
+      let warmed = Promise.all([page.waitForResponse(scriptHref), page.waitForResponse(styleHref)])
+      release.resolve()
+      await warmed
+      await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
+    } else {
+      release.resolve()
+    }
     await link.click()
     await page.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
     await page.getByRole('button', { name: 'Next image' }).click()
-    await page.waitForFunction(() =>
-      document
-        .querySelector('img[alt="Image 1 of 3"]')
-        ?.parentElement?.parentElement?.style.transform.includes('-100%'),
-    )
+    await page.waitForFunction(() => {
+      let track = document.querySelector('img[alt="Image 1 of 3"]')?.parentElement?.parentElement
+      if (!track) return false
+      let transform = new DOMMatrixReadOnly(getComputedStyle(track).transform)
+      return Math.abs(transform.m41 + track.clientWidth) < 1
+    })
     assert.equal(
       await page
         .getByRole('heading', { name: 'Ash & Smoke', exact: true })
@@ -270,22 +279,32 @@ describe('bookstore prefetching', () => {
     await page.goto('/')
     await waitForNavigationRuntime(page)
     let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
+    let prefetchesScript = await prefetchesAssets(page)
+    let prefetched = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/books/bbq',
+    )
     await link.scrollIntoViewIfNeeded()
-    await started.promise
+    if (prefetchesScript) await started.promise
+    else await (await prefetched).finished()
     let failedAssets: string[] = []
     page.on('requestfailed', (request) => {
       if (new URL(request.url()).pathname === scriptHref) failedAssets.push(request.url())
     })
     await link.click()
     await page.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
-    assert.equal(await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).count(), 1)
-    release.resolve()
-    await page.getByRole('button', { name: 'Next image' }).click()
-    await page.waitForFunction(() =>
-      document
-        .querySelector('img[alt="Image 1 of 3"]')
-        ?.parentElement?.parentElement?.style.transform.includes('-100%'),
+    assert.equal(
+      await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).count(),
+      prefetchesScript ? 1 : 0,
     )
+    release.resolve()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    await page.getByRole('button', { name: 'Next image' }).click()
+    await page.waitForFunction(() => {
+      let track = document.querySelector('img[alt="Image 1 of 3"]')?.parentElement?.parentElement
+      if (!track) return false
+      let transform = new DOMMatrixReadOnly(getComputedStyle(track).transform)
+      return Math.abs(transform.m41 + track.clientWidth) < 1
+    })
     assert.equal(requests, 1)
     assert.deepEqual(failedAssets, [])
   })
@@ -310,7 +329,7 @@ describe('bookstore prefetching', () => {
     await (await prefetched).finished()
     await link.click()
     await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
-    assert.equal(requests, 1)
+    assert.equal(requests, reusesPrefetchedHtml(page) ? 1 : 2)
   })
 
   it('observes links added by frame navigation and does not repeat on viewport reentry', async (t) => {
@@ -369,6 +388,17 @@ async function waitForNavigationRuntime(page: Page): Promise<void> {
     let state = window.navigation.currentEntry?.getState()
     return typeof state === 'object' && state != null && '$rmx' in state
   })
+}
+
+// Playwright's WebKit contexts keep no HTTP cache, so navigations there fetch prefetched HTML again.
+// Safari reuses it, as WebKit does with a persistent profile.
+function reusesPrefetchedHtml(page: Page): boolean {
+  return page.context().browser()?.browserType().name() !== 'webkit'
+}
+
+// Safari can't prefetch links, so the runtime prefetches only a destination's HTML there.
+async function prefetchesAssets(page: Page): Promise<boolean> {
+  return page.evaluate(() => document.createElement('link').relList.supports('prefetch'))
 }
 
 async function isInViewport(link: Locator): Promise<boolean> {
