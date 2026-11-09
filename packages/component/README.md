@@ -1043,16 +1043,17 @@ await app.ready()
 | `loadModule`                 | Required. Loads a client entry's module and returns the named export. Remix passes each module specifier unchanged.                                                            |
 | `processClientEntryPreloads` | Receives module preloads discovered in frame responses before they're added to the document. Return the URLs that should stay as native `<link rel="modulepreload">` elements. |
 | `resolveFrame`               | Fetches frame content for navigations and reloads. See [Resolving Frames](#resolving-frames).                                                                                  |
-| `prefetch`                   | Replaces the default HTML fetch and asset discovery with a custom handler. See [Prefetching](#prefetching).                                                                    |
+| `prefetch`                   | Configures the default prefetch queue or replaces it with a custom handler. See [Prefetching](#prefetching).                                                                   |
 
 The returned runtime emits `error` events for component errors, and has these members:
 
-| Member          | Use                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------- |
-| `app.ready()`   | Resolves after the document finishes hydrating.                                     |
-| `app.flush()`   | Applies pending component updates synchronously, mainly for tests and integrations. |
-| `app.dispose()` | Stops the runtime's listeners and disposes the top-level frame.                     |
-| `app.frames`    | The top-level and named frames, like [`handle.frames`](#frame-handles).             |
+| Member                     | Use                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `app.ready()`              | Resolves after the document finishes hydrating.                                             |
+| `app.flush()`              | Applies pending component updates synchronously, mainly for tests and integrations.         |
+| `app.invalidatePrefetch()` | Refreshes queued prefetch filters and priorities after application state or layout changes. |
+| `app.dispose()`            | Stops the runtime's listeners and disposes the top-level frame.                             |
+| `app.frames`               | The top-level and named frames, like [`handle.frames`](#frame-handles).                     |
 
 ### Trusted Content and Module Loading
 
@@ -1411,7 +1412,47 @@ Nested requests use the same frame headers as imperative `prefetch()` calls, inc
 
 `prefetch` doesn't emit a native fetch preload link or initiate speculative requests during a normal document load. Remix doesn't use `<link rel="preload" as="fetch">` for nested-frame discovery.
 
-Pass a custom handler as `run({ prefetch(src, options) {} })` to replace the default HTML fetch and asset discovery. The handler owns any nested-frame loading.
+The default strategy queues HTML requests with three concurrent slots. Configure its scheduling policy with the object form of `prefetch`:
+
+```ts
+import { run } from 'remix/component'
+
+let app = run({
+  loadModule,
+  prefetch: {
+    concurrency: 3,
+    filter(src) {
+      return !new URL(src).pathname.startsWith('/checkout')
+    },
+    priority(_src, { anchors, trigger }) {
+      if (trigger === 'intent') return 1000
+      if (anchors.length === 0) return 0
+      // The application chooses when and how to read positions.
+      return Math.max(
+        ...anchors.map((anchor) => {
+          let rect = anchor.getBoundingClientRect()
+          return -Math.abs(rect.top + rect.height / 2 - innerHeight / 2)
+        }),
+      )
+    },
+  },
+})
+
+// For state changes Remix cannot observe, such as a pointer-based ranking policy:
+app.invalidatePrefetch()
+```
+
+`filter` and `priority` receive the absolute source URL and `{ target, trigger, anchors }`. The trigger is `viewport`, `intent`, `imperative`, or `frame` for nested discovery. Matching tracked links share one pending request per source and target; nested frames inherit their ancestor's links. Imperative calls have no anchor of their own. Remix uses these stored links to check ownership without querying the document on every scheduling pass.
+
+Larger finite scores start first; ties follow discovery order. Without a priority callback, intent comes first, followed by imperative calls and viewport links. Nested frames inherit their parent's score. A custom callback also scores nested frames. Non-finite scores become zero, and exceptions in either policy drop the candidate. `concurrency` must be a positive safe integer; invalid values throw `RangeError`.
+
+New candidates are scored in a batch. Pending scores and filter decisions stay cached when requests finish. Scroll, resize, tracked DOM changes, and `app.invalidatePrefetch()` mark them stale. When a slot opens, Remix refreshes stale candidates once and fills the available slots from that ranking. Invalidation doesn't interrupt running requests or retry candidates already rejected by `filter`.
+
+A slot covers fetching, reading, and parsing one HTML response. Asset hints and nested traversal continue after that slot is released, so `concurrency: 1` supports recursive frames. The limit controls HTML requests; the browser schedules asset hints separately.
+
+Queued link requests disappear when their last matching link is removed or its source, target, or prefetch mode changes. Running requests and descendants are cancelled when their last owner disappears. An imperative caller can supply `prefetch(src, { signal: handle.signal })` to tie its work to a component's lifetime. Shared requests and asset hints stay active for remaining owners. Navigation pauses new queued work, then retains owners in surviving content after success or failure; `app.dispose()` cancels the entire queue.
+
+Pass a custom handler as `run({ prefetch(src, options) {} })` to replace the strategy. That function continues to own fetching, scheduling, nested-frame loading, and any supplied cancellation signal.
 
 The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
 

@@ -1,19 +1,13 @@
 import { getNamedFrame, pendingPrefetchLinks } from './frame.ts'
 import { getInterceptableNavigation, getSameOriginUrl } from './navigation.ts'
 
-/** Options for prefetching frame content. */
-export interface PrefetchOptions {
-  /** Name of the destination frame, sent as `X-Remix-Target` by the default strategy. */
-  target?: string
-}
-
-/**
- * Starts loading same-origin frame content so a later navigation can reuse the response.
- *
- * @param src Absolute URL of the page to prefetch, without a hash.
- * @param options Destination frame for the request.
- */
-export type PrefetchFrame = (src: string, options?: PrefetchOptions) => void
+import { createPrefetchQueue } from './prefetch-queue.ts'
+import type {
+  PrefetchConfig,
+  PrefetchFrame,
+  PrefetchOptions,
+  PrefetchOwner,
+} from './prefetch-queue.ts'
 
 type PrefetchRequest = [src: string, options?: PrefetchOptions]
 
@@ -32,7 +26,7 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
  * untargeted page, and browsers where Remix doesn't handle navigations are skipped.
  *
  * @param href URL to prefetch, resolved against the document base URL.
- * @param options Destination frame for the request.
+ * @param options Destination frame and optional cancellation signal.
  */
 export function prefetch(href: string, options?: PrefetchOptions): void {
   let request = getPrefetchRequest(href, options)
@@ -43,11 +37,25 @@ export function prefetch(href: string, options?: PrefetchOptions): void {
  * Prefetches marked links on mouse/keyboard intent or when they enter the viewport.
  *
  * @param signal Abort signal used to remove the listeners.
- * @param prefetchOverride Replaces how pages are prefetched while the listeners are active.
+ * @param config Queue policy or a replacement strategy while the listeners are active.
+ * @returns Invalidates the queued filter decisions and priority scores.
  */
-export function startPrefetching(signal: AbortSignal, prefetchOverride?: PrefetchFrame): void {
-  if (signal.aborted) return
-  prefetchFrame = prefetchOverride ?? createDefaultPrefetch(signal)
+export function startPrefetching(
+  signal: AbortSignal,
+  config?: PrefetchFrame | PrefetchConfig,
+): () => void {
+  if (signal.aborted) return () => {}
+  let strategy = typeof config === 'function' ? undefined : createDefaultPrefetch(signal, config)
+  prefetchFrame = typeof config === 'function' ? config : (strategy ?? defaultPrefetch)
+  let invalidate = () => strategy?.invalidate()
+  function dispatch(
+    request: PrefetchRequest,
+    anchor: HTMLAnchorElement,
+    trigger: 'intent' | 'viewport',
+  ) {
+    if (strategy) void strategy.enqueue(request[0], request[1], anchor, trigger)
+    else prefetchFrame(...request)
+  }
   signal.addEventListener(
     'abort',
     () => {
@@ -55,7 +63,8 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     },
     { once: true },
   )
-  if (!getInterceptableNavigation()) return
+  let navigation = getInterceptableNavigation()
+  if (!navigation) return invalidate
 
   // Hover and focus share an intent on the same link until both inputs leave it.
   interface Intent {
@@ -85,7 +94,7 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     }
     intent.prefetched = true
     let request = getAnchorPrefetchRequest(intent.anchor)
-    if (request && hasPrefetchTarget(request)) prefetchFrame(...request)
+    if (request && hasPrefetchTarget(request)) dispatch(request, intent.anchor, 'intent')
   }
   function stopResting(intent: Intent | undefined) {
     if (intent !== pointerIntent && intent !== focusIntent) clearTimeout(intent?.timer)
@@ -165,12 +174,39 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     },
     { once: true },
   )
-  startViewportPrefetching(signal)
+  startViewportPrefetching(signal, dispatch, invalidate)
+  if (strategy) {
+    window.addEventListener('scroll', invalidate, { capture: true, passive: true, signal })
+    window.addEventListener('resize', invalidate, { passive: true, signal })
+    let current: NavigateEvent | undefined
+    navigation.addEventListener(
+      'navigate',
+      (event) => {
+        current = event
+        strategy.pause()
+        event.signal.addEventListener(
+          'abort',
+          () => {
+            queueMicrotask(() => {
+              if (current === event) strategy.resume()
+            })
+          },
+          { once: true },
+        )
+      },
+      { signal },
+    )
+    navigation.addEventListener('navigatesuccess', () => strategy.resume(), { signal })
+    navigation.addEventListener('navigateerror', () => strategy.resume(), { signal })
+  }
+  return invalidate
 }
 
-function startViewportPrefetching(signal: AbortSignal): void {
-  if (typeof IntersectionObserver === 'undefined') return
-
+function startViewportPrefetching(
+  signal: AbortSignal,
+  dispatch: (request: PrefetchRequest, anchor: HTMLAnchorElement, trigger: 'viewport') => void,
+  invalidate: () => void,
+): void {
   let completed = new WeakMap<HTMLAnchorElement, string>()
 
   function getRequest(anchor: HTMLAnchorElement): PrefetchRequest | undefined {
@@ -178,29 +214,32 @@ function startViewportPrefetching(signal: AbortSignal): void {
     return getAnchorPrefetchRequest(anchor)
   }
 
-  let viewport = new IntersectionObserver((entries) => {
-    if (signal.aborted || !canPrefetchAutomatically()) return
-    for (let { target, isIntersecting } of entries) {
-      if (!isIntersecting || !(target instanceof HTMLAnchorElement)) continue
-      let request = getRequest(target)
-      if (!request || !hasPrefetchTarget(request)) continue
-      let key = JSON.stringify(request)
-      if (completed.get(target) === key) continue
-      completed.set(target, key)
-      viewport.unobserve(target)
-      prefetchFrame(...request)
-    }
-  })
+  let viewport =
+    typeof IntersectionObserver === 'undefined'
+      ? undefined
+      : new IntersectionObserver((entries) => {
+          if (signal.aborted || !canPrefetchAutomatically()) return
+          for (let { target, isIntersecting } of entries) {
+            if (!isIntersecting || !(target instanceof HTMLAnchorElement)) continue
+            let request = getRequest(target)
+            if (!request || !hasPrefetchTarget(request)) continue
+            let key = JSON.stringify(request)
+            if (completed.get(target) === key) continue
+            completed.set(target, key)
+            viewport?.unobserve(target)
+            dispatch(request, target, 'viewport')
+          }
+        })
 
   function update(anchor: HTMLAnchorElement): void {
-    viewport.unobserve(anchor)
+    viewport?.unobserve(anchor)
     if (!anchor.isConnected) {
       completed.delete(anchor)
       return
     }
     // Named frames can still be hydrating here; check their registration when the link enters view.
     let request = getRequest(anchor)
-    if (request && completed.get(anchor) !== JSON.stringify(request)) viewport.observe(anchor)
+    if (request && completed.get(anchor) !== JSON.stringify(request)) viewport?.observe(anchor)
   }
 
   function scan(node: Node): void {
@@ -211,26 +250,37 @@ function startViewportPrefetching(signal: AbortSignal): void {
 
   let mutations = new MutationObserver((records) => {
     if (signal.aborted) return
+    let changed = false
     for (let record of records) {
       if (record.type === 'attributes' && record.target instanceof HTMLAnchorElement) {
         update(record.target)
       }
-      for (let node of record.removedNodes) scan(node)
-      for (let node of record.addedNodes) scan(node)
+      if (record.type !== 'childList') changed = true
+      for (let node of [...record.removedNodes, ...record.addedNodes]) {
+        if (node instanceof HTMLLinkElement && node.rel === 'prefetch') continue
+        changed = true
+        scan(node)
+      }
     }
+    if (changed) invalidate()
   })
   mutations.observe(document, {
     childList: true,
+    characterData: true,
     subtree: true,
     attributes: true,
     attributeFilter: [
       'href',
+      'src',
       'data-rmx-prefetch',
       'download',
       'data-rmx-document',
       'data-rmx-target',
       'data-rmx-src',
       'target',
+      'class',
+      'style',
+      'hidden',
     ],
   })
   scan(document.documentElement)
@@ -239,7 +289,7 @@ function startViewportPrefetching(signal: AbortSignal): void {
     'abort',
     () => {
       mutations.disconnect()
-      viewport.disconnect()
+      viewport?.disconnect()
     },
     { once: true },
   )
@@ -288,10 +338,17 @@ function getPrefetchRequest(href: string, options?: PrefetchOptions): PrefetchRe
   if (!getInterceptableNavigation()) return
   let src = getSameOriginHref(href)
   if (!src) return
-  if (options?.target) return [src, { target: options.target }]
+  if (options?.signal?.aborted) return
+  if (options?.target)
+    return [
+      src,
+      options.signal
+        ? { target: options.target, signal: options.signal }
+        : { target: options.target },
+    ]
   let currentUrl = new URL(window.location.href)
   currentUrl.hash = ''
-  if (src !== currentUrl.href) return [src]
+  if (src !== currentUrl.href) return options?.signal ? [src, { signal: options.signal }] : [src]
 }
 
 function getSameOriginHref(href: string): string | undefined {
@@ -313,36 +370,52 @@ export function fetchFrame(
   return fetch(src, { ...init, headers, mode: 'same-origin' })
 }
 
-export function createDefaultPrefetch(
-  signal?: AbortSignal,
-): (src: string, options?: PrefetchOptions) => Promise<void> {
-  let pending = new Map<
+export function createDefaultPrefetch(signal?: AbortSignal, config: PrefetchConfig = {}) {
+  let assets = new Map<
     string,
-    Promise<{ source: DocumentFragment; baseUrl: string; assets: Promise<void[]> } | undefined>
+    { ready: Promise<void>; signals: Set<AbortSignal>; cancel: () => void }
   >()
-  let assets = new Map<string, Promise<void>>()
 
-  function prefetchAsset(link: HTMLLinkElement, activeAssets: Set<string>): Promise<void> {
+  function prefetchAsset(
+    link: HTMLLinkElement,
+    activeAssets: Set<string>,
+    jobSignal: AbortSignal,
+  ): Promise<void> {
     let key = assetKey(link)
     let existing = assets.get(key)
-    if (existing) return existing
-    if (activeAssets.has(key) || !link.relList.supports('prefetch')) return Promise.resolve()
+    if (existing) {
+      existing.signals.add(jobSignal)
+      jobSignal.addEventListener('abort', existing.cancel, { once: true })
+      return existing.ready
+    }
+    if (jobSignal.aborted || activeAssets.has(key) || !link.relList.supports('prefetch'))
+      return Promise.resolve()
 
-    let ready = new Promise<void>((resolve) => {
-      function finish() {
-        link.remove()
-        pendingPrefetchLinks.delete(link)
-        assets.delete(key)
-        signal?.removeEventListener('abort', finish)
-        resolve()
+    let signals = new Set([jobSignal])
+    let { promise: ready, resolve } = Promise.withResolvers<void>()
+    function finish() {
+      link.remove()
+      pendingPrefetchLinks.delete(link)
+      assets.delete(key)
+      for (let subscriber of signals) subscriber.removeEventListener('abort', cancel)
+      signals.clear()
+      resolve()
+    }
+    function cancel() {
+      for (let subscriber of signals) {
+        if (subscriber.aborted) {
+          subscriber.removeEventListener('abort', cancel)
+          signals.delete(subscriber)
+        }
       }
-      link.addEventListener('load', finish, { once: true })
-      link.addEventListener('error', finish, { once: true })
-      signal?.addEventListener('abort', finish, { once: true })
-      pendingPrefetchLinks.add(link)
-      document.head.append(link)
-    })
-    assets.set(key, ready)
+      if (signals.size === 0) finish()
+    }
+    link.addEventListener('load', finish, { once: true })
+    link.addEventListener('error', finish, { once: true })
+    jobSignal.addEventListener('abort', cancel, { once: true })
+    assets.set(key, { ready, signals, cancel })
+    pendingPrefetchLinks.add(link)
+    document.head.append(link)
     return ready
   }
 
@@ -350,14 +423,17 @@ export function createDefaultPrefetch(
     source: DocumentFragment,
     baseUrl: string,
     activeAssets: Set<string>,
+    jobSignal: AbortSignal,
   ): Promise<void[]> {
     let requests: Promise<void>[] = []
     for (let element of source.querySelectorAll('link[href], script[src], template')) {
       if (element instanceof HTMLTemplateElement) {
-        requests.push(discoverAssets(element.content, baseUrl, activeAssets).then(() => {}))
+        requests.push(
+          discoverAssets(element.content, baseUrl, activeAssets, jobSignal).then(() => {}),
+        )
       } else {
         let link = createAssetPrefetch(element, baseUrl)
-        if (link) requests.push(prefetchAsset(link, activeAssets))
+        if (link) requests.push(prefetchAsset(link, activeAssets, jobSignal))
       }
     }
     return Promise.all(requests)
@@ -367,13 +443,17 @@ export function createDefaultPrefetch(
     source: DocumentFragment,
     baseUrl: string,
     visited: Set<string>,
+    owner: PrefetchOwner,
+    priority: number,
   ): Promise<void[]> {
     let requests: Promise<void>[] = []
     for (let element of source.querySelectorAll(
       'script#rmx-data[type="application/json"], template',
     )) {
       if (element instanceof HTMLTemplateElement) {
-        requests.push(discoverFrames(element.content, baseUrl, visited).then(() => {}))
+        requests.push(
+          discoverFrames(element.content, baseUrl, visited, owner, priority).then(() => {}),
+        )
         continue
       }
       let data: unknown
@@ -400,18 +480,30 @@ export function createDefaultPrefetch(
         if (url.origin !== window.location.origin) continue
         if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
         url.hash = ''
-        requests.push(prefetch(url.href, target === undefined ? undefined : { target }, visited))
+        requests.push(
+          traverse(
+            url.href,
+            target === undefined ? undefined : { target },
+            visited,
+            owner,
+            priority,
+          ),
+        )
       }
     }
     return Promise.all(requests)
   }
 
-  async function discover(src: string, options?: PrefetchOptions) {
+  async function discover(
+    src: string,
+    options: PrefetchOptions | undefined,
+    jobSignal: AbortSignal,
+  ) {
     try {
       let response = await fetchFrame(src, options?.target, {
         method: 'GET',
         priority: 'low',
-        signal,
+        signal: jobSignal,
       })
       if (
         !response.ok ||
@@ -421,7 +513,7 @@ export function createDefaultPrefetch(
         return
       }
       let html = await response.text()
-      if (signal?.aborted) return
+      if (jobSignal.aborted) return
       // Template contents stay inert, including scripts, styles, and nested frame templates.
       let template = document.createElement('template')
       template.innerHTML = html
@@ -443,38 +535,79 @@ export function createDefaultPrefetch(
       return {
         source: template.content,
         baseUrl,
-        assets: discoverAssets(template.content, baseUrl, activeAssets),
+        assets: discoverAssets(template.content, baseUrl, activeAssets, jobSignal),
       }
     } catch {
       // Speculative failures leave navigation to the default resolver.
     }
   }
 
-  async function prefetch(
+  let queue = createPrefetchQueue(signal, config, discover)
+
+  async function traverse(
     src: string,
     options: PrefetchOptions | undefined,
     visited: Set<string>,
+    owner: PrefetchOwner,
+    priority?: number,
   ): Promise<void> {
-    if (signal?.aborted) return
+    if (signal?.aborted || !owner.valid()) return
     let key = JSON.stringify([src, options?.target])
     if (visited.has(key)) return
     visited.add(key)
-    let ready = pending.get(key)
-    if (!ready) {
-      // Share HTML and asset discovery, not recursive traversal promises, which can await each other.
-      ready = discover(src, options)
-      pending.set(key, ready)
-    }
+    // Only share response discovery: recursive traversal promises can await one another in cycles.
+    let entry = queue.read(src, options, owner, priority)
+    if (!entry) return
     try {
-      let content = await ready
-      if (!content || signal?.aborted) return
-      await Promise.all([content.assets, discoverFrames(content.source, content.baseUrl, visited)])
+      let content = await entry.ready
+      if (!content || !owner.valid()) return
+      await Promise.all([
+        content.assets,
+        discoverFrames(content.source, content.baseUrl, visited, owner, entry.priority),
+      ])
     } finally {
-      if (pending.get(key) === ready) pending.delete(key)
+      queue.release(entry, owner)
     }
   }
 
-  return (src, options) => prefetch(src, options, new Set())
+  async function enqueue(
+    src: string,
+    options?: PrefetchOptions,
+    anchor?: HTMLAnchorElement,
+    trigger: 'intent' | 'viewport' | 'imperative' = 'imperative',
+  ): Promise<void> {
+    let owner: PrefetchOwner = {
+      anchor,
+      trigger,
+      valid() {
+        if (signal?.aborted || options?.signal?.aborted) return false
+        if (!anchor) return true
+        if (!canPrefetchAutomatically() || anchor.getAttribute('data-rmx-prefetch') !== trigger)
+          return false
+        let request = getAnchorPrefetchRequest(anchor)
+        return (
+          request !== undefined &&
+          hasPrefetchTarget(request) &&
+          request[0] === src &&
+          request[1]?.target === options?.target
+        )
+      },
+    }
+    let prune = () => queue.prune()
+    options?.signal?.addEventListener('abort', prune, { once: true })
+    try {
+      await traverse(src, options, new Set(), owner)
+    } finally {
+      options?.signal?.removeEventListener('abort', prune)
+    }
+  }
+
+  return Object.assign((src: string, options?: PrefetchOptions) => enqueue(src, options), {
+    enqueue,
+    invalidate: () => queue.invalidate(),
+    pause: () => queue.pause(),
+    resume: () => queue.resume(),
+  })
 }
 
 function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement | undefined {

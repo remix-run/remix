@@ -2,17 +2,14 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import { Frame } from '../runtime/frame.ts'
 import { jsx } from '../runtime/core/vnode.ts'
-import {
-  createDefaultPrefetch,
-  prefetch,
-  startPrefetching,
-  type PrefetchFrame,
-} from '../runtime/prefetch.ts'
+import { createDefaultPrefetch, prefetch, startPrefetching } from '../runtime/prefetch.ts'
+import type { PrefetchConfig, PrefetchFrame } from '../runtime/prefetch-queue.ts'
 import { run } from '../runtime/run.ts'
+import { navigate } from '../runtime/navigation.ts'
 import { renderToStream } from '../server/stream.ts'
 import { drain } from './utils.ts'
 
-function startTestPrefetching(t: TestContext, prefetchFrame?: PrefetchFrame) {
+function startTestPrefetching(t: TestContext, prefetchFrame?: PrefetchFrame | PrefetchConfig) {
   let controller = new AbortController()
   startPrefetching(controller.signal, prefetchFrame)
   t.after(() => controller.abort())
@@ -104,10 +101,10 @@ function stubConnection(
   })
 }
 
-function createPrefetch(t: TestContext) {
+function createPrefetch(t: TestContext, config?: PrefetchConfig) {
   let controller = new AbortController()
   t.after(() => controller.abort())
-  return { prefetch: createDefaultPrefetch(controller.signal), controller }
+  return { prefetch: createDefaultPrefetch(controller.signal, config), controller }
 }
 
 function collectHints(t: TestContext, onHint?: (link: HTMLLinkElement) => void): HTMLLinkElement[] {
@@ -141,6 +138,41 @@ function htmlResponse(html: string) {
   return new Response(html, {
     headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' },
   })
+}
+
+function holdHtml(t: TestContext) {
+  let flights: {
+    path: string
+    signal: AbortSignal | null | undefined
+    finish(html?: string): void
+  }[] = []
+  t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL, init?: RequestInit) => {
+    let signal = init?.signal
+    let stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        let finished = false
+        function abort() {
+          if (finished) return
+          finished = true
+          controller.error(signal?.reason)
+        }
+        signal?.addEventListener('abort', abort, { once: true })
+        flights.push({
+          path: new URL(String(src)).pathname,
+          signal,
+          finish(html = '<main>Prefetched</main>') {
+            if (finished) return
+            finished = true
+            signal?.removeEventListener('abort', abort)
+            controller.enqueue(new TextEncoder().encode(html))
+            controller.close()
+          },
+        })
+      },
+    })
+    return new Response(stream, { headers: { 'Content-Type': 'text/html' } })
+  })
+  return flights
 }
 
 describe('prefetch', () => {
@@ -611,6 +643,7 @@ describe('prefetch', () => {
     prefetch(href)
     prefetch(href)
 
+    await wait(0)
     expect(fetch).toHaveBeenCalledTimes(1)
     let [src, init] = fetch.mock.calls[0].arguments
     expect(src).toBe(href)
@@ -836,6 +869,348 @@ describe('prefetch', () => {
   })
 })
 
+describe('prefetch queue', () => {
+  afterEach(() => {
+    document.body.textContent = ''
+  })
+
+  it('ranks a batch and holds three slots through HTML consumption without rescoring on completion', async (t) => {
+    let flights = holdHtml(t)
+    let priority = mock.fn((src: string) => Number(new URL(src).pathname.slice(1)))
+    let { prefetch } = createPrefetch(t, { priority })
+    let ready = Promise.all(
+      [1, 2, 3, 4, 5, 6].map((n) => prefetch(new URL(`/${n}`, location.href).href)),
+    )
+    await wait(0)
+
+    expect(flights.map((flight) => flight.path)).toEqual(['/6', '/5', '/4'])
+    expect(priority).toHaveBeenCalledTimes(6)
+    // Headers have arrived for all three responses, but their bodies are still open.
+    await wait(0)
+    expect(flights).toHaveLength(3)
+    flights[0].finish()
+    await wait(0)
+    expect(flights.map((flight) => flight.path)).toEqual(['/6', '/5', '/4', '/3'])
+    expect(priority).toHaveBeenCalledTimes(6)
+    flights[1].finish()
+    flights[2].finish()
+    flights[3].finish()
+    await wait(0)
+    expect(flights.map((flight) => flight.path)).toEqual(['/6', '/5', '/4', '/3', '/2', '/1'])
+    flights[4].finish()
+    flights[5].finish()
+    await ready
+    expect(priority).toHaveBeenCalledTimes(6)
+  })
+
+  it('refreshes cached policies once when a slot opens after scroll, resize, or explicit invalidation', async (t) => {
+    let flights = holdHtml(t)
+    let scores = new Map([
+      ['/running', 10],
+      ['/a', 1],
+      ['/b', 2],
+      ['/c', 3],
+    ])
+    let priority = mock.fn((src: string) => scores.get(new URL(src).pathname) ?? 0)
+    let filter = mock.fn(() => true)
+    let app = run({ loadModule: mock.fn(), prefetch: { concurrency: 1, priority, filter } })
+    t.after(() => app.dispose())
+    await app.ready()
+    prefetch('/running')
+    prefetch('/a')
+    prefetch('/b')
+    await wait(0)
+    expect(priority).toHaveBeenCalledTimes(3)
+
+    scores.set('/a', 20)
+    window.dispatchEvent(new Event('scroll'))
+    window.dispatchEvent(new Event('scroll'))
+    await wait(0)
+    expect(priority).toHaveBeenCalledTimes(3)
+    prefetch('/c')
+    await wait(0)
+    expect(priority).toHaveBeenCalledTimes(4)
+    flights[0].finish()
+    await wait(0)
+    expect(flights.map((flight) => flight.path)).toEqual(['/running', '/a'])
+    expect(priority).toHaveBeenCalledTimes(6)
+    expect(filter).toHaveBeenCalledTimes(6)
+    flights[1].finish()
+    await wait(0)
+    expect(flights[2].path).toBe('/c')
+    expect(priority).toHaveBeenCalledTimes(6)
+    prefetch('/d')
+    await wait(0)
+    expect(priority).toHaveBeenCalledTimes(7)
+    window.dispatchEvent(new Event('resize'))
+    window.dispatchEvent(new Event('resize'))
+    await wait(0)
+    expect(priority).toHaveBeenCalledTimes(7)
+    flights[2].finish()
+    await wait(0)
+    expect(flights[3].path).toBe('/b')
+    expect(priority).toHaveBeenCalledTimes(9)
+    app.invalidatePrefetch()
+    app.invalidatePrefetch()
+    await wait(0)
+    expect(priority).toHaveBeenCalledTimes(9)
+    flights[3].finish()
+    await wait(0)
+    expect(flights[4].path).toBe('/d')
+    expect(priority).toHaveBeenCalledTimes(10)
+    expect(filter).toHaveBeenCalledTimes(10)
+    flights[4].finish()
+  })
+
+  it('invalidates priorities after text changes without scoring on each mutation', async (t) => {
+    let flights = holdHtml(t)
+    let first = createIntentLink('/first')
+    let second = createIntentLink('/second')
+    first.textContent = '1'
+    second.textContent = '2'
+    let priority = mock.fn((_src: string, { anchors }: { anchors: readonly HTMLAnchorElement[] }) =>
+      Number(anchors[0]?.textContent ?? 0),
+    )
+    startTestPrefetching(t, { concurrency: 1, priority })
+    prefetch('/running')
+    await wait(0)
+    press(first)
+    press(second)
+    await wait(0)
+    expect(priority).toHaveBeenCalledTimes(3)
+    if (!first.firstChild) throw new Error('Missing text')
+    first.firstChild.nodeValue = '3'
+    first.firstChild.nodeValue = '4'
+    await wait(0)
+    expect(priority).toHaveBeenCalledTimes(3)
+    flights[0].finish()
+    await wait(0)
+    expect(flights[1].path).toBe('/first')
+    expect(priority).toHaveBeenCalledTimes(5)
+    flights[1].finish()
+    await wait(0)
+    flights[2].finish()
+  })
+
+  it('rechecks filters after invalidation and drops queued requests that are no longer allowed', async (t) => {
+    let flights = holdHtml(t)
+    let allowed = true
+    let { prefetch } = createPrefetch(t, { concurrency: 1, filter: () => allowed })
+    let running = prefetch(new URL('/running', location.href).href)
+    let queued = prefetch(new URL('/queued', location.href).href)
+    await wait(0)
+    allowed = false
+    prefetch.invalidate()
+    flights[0].finish()
+    await Promise.all([running, queued])
+    expect(flights.map((flight) => flight.path)).toEqual(['/running'])
+  })
+
+  it('supplies all tracked owners for a viewport batch', async (t) => {
+    let first = createViewportLink('/shared')
+    let second = createViewportLink('/shared')
+    let other = createViewportLink('/other')
+    let flights = holdHtml(t)
+    let priority = mock.fn(
+      (_src: string, context: { anchors: readonly HTMLAnchorElement[] }) => context.anchors.length,
+    )
+    startTestPrefetching(t, { concurrency: 1, priority })
+    await readIntersection(other)
+    await wait(0)
+    expect(flights.map((flight) => flight.path)).toEqual(['/shared'])
+    expect(priority).toHaveBeenCalledWith(first.href, {
+      target: undefined,
+      trigger: 'viewport',
+      anchors: [first, second],
+    })
+    first.remove()
+    await wait(0)
+    expect(flights[0].signal?.aborted).toBe(false)
+    second.remove()
+    await wait(0)
+    expect(flights[0].signal?.aborted).toBe(true)
+    expect(flights[1].path).toBe('/other')
+    flights[1].finish()
+  })
+
+  it('drops changed or removed link owners, retaining an imperative owner of the same request', async (t) => {
+    let running = createIntentLink('/running')
+    let changed = createIntentLink('/changed')
+    let shared = createIntentLink('/shared')
+    let removed = createIntentLink('/removed')
+    let flights = holdHtml(t)
+    startTestPrefetching(t, { concurrency: 1 })
+    press(running)
+    press(changed)
+    press(shared)
+    press(removed)
+    prefetch('/shared')
+    await wait(0)
+    changed.setAttribute('data-rmx-src', '/different')
+    changed.setAttribute('data-rmx-target', 'missing')
+    shared.removeAttribute('data-rmx-prefetch')
+    removed.remove()
+    flights[0].finish()
+    await wait(0)
+    expect(flights.map((flight) => flight.path)).toEqual(['/running', '/shared'])
+    flights[1].finish()
+  })
+
+  it('filters nested frames and inherits parent priority, releasing a slot before children and assets finish', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let flights = holdHtml(t)
+    let hints = collectHints(t)
+    let filter = mock.fn((src: string) => !src.endsWith('/denied'))
+    let { prefetch } = createPrefetch(t, { concurrency: 1, filter })
+    let anchor = createIntentLink('/parent')
+    let parent = prefetch.enqueue(anchor.href, undefined, anchor, 'intent')
+    let other = prefetch(new URL('/viewport', location.href).href)
+    await wait(0)
+    flights[0].finish(`<script src="/parent.js"></script>
+      <script type="application/json" id="rmx-data">{"f":{
+        "child":{"src":"/child","name":"child","prefetch":true},
+        "denied":{"src":"/denied","prefetch":true}
+      }}</script>`)
+    await wait(0)
+    expect(flights.map((flight) => flight.path)).toEqual(['/parent', '/child'])
+    expect(filter).toHaveBeenCalledWith(new URL('/child', location.href).href, {
+      target: 'child',
+      trigger: 'frame',
+      anchors: [anchor],
+    })
+    flights[1].finish(`<script src="/child.js"></script>
+      <script type="application/json" id="rmx-data">{"f":{"cycle":{"src":"/parent","prefetch":true}}}</script>`)
+    await wait(0)
+    expect(flights.map((flight) => flight.path)).toEqual(['/parent', '/child', '/viewport'])
+    flights[2].finish()
+    await Promise.all([parent, other])
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/parent.js', '/child.js'])
+  })
+
+  it('cancels running and queued descendants when their ancestor link is unmounted', async (t) => {
+    let flights = holdHtml(t)
+    let parent = createIntentLink('/parent')
+    startTestPrefetching(t, { concurrency: 1 })
+    press(parent)
+    await wait(0)
+    flights[0].finish(`<script type="application/json" id="rmx-data">{"f":{
+      "first":{"src":"/first","prefetch":true},"second":{"src":"/second","prefetch":true}
+    }}</script>`)
+    await wait(0)
+    expect(flights.map((flight) => flight.path)).toEqual(['/parent', '/first'])
+    parent.remove()
+    await wait(0)
+    expect(flights[1].signal?.aborted).toBe(true)
+    expect(flights).toHaveLength(2)
+  })
+
+  it('supports caller cancellation, keeps shared asset hints until their last owner cancels, and disposes the queue', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let flights = holdHtml(t)
+    let { prefetch, controller } = createPrefetch(t, { concurrency: 2 })
+    let first = new AbortController()
+    let second = new AbortController()
+    let a = prefetch(new URL('/a', location.href).href, { signal: first.signal })
+    let b = prefetch(new URL('/b', location.href).href, { signal: second.signal })
+    await wait(0)
+    flights[0].finish('<script src="/shared.js"></script>')
+    flights[1].finish('<script src="/shared.js"></script>')
+    await wait(0)
+    let hint = document.querySelector('link[rel="prefetch"]')
+    expect(hint).not.toBe(null)
+    first.abort()
+    await wait(0)
+    expect(hint?.isConnected).toBe(true)
+    second.abort()
+    await Promise.all([a, b])
+    expect(hint?.isConnected).toBe(false)
+
+    let c = prefetch(new URL('/c', location.href).href)
+    let d = prefetch(new URL('/d', location.href).href)
+    let e = prefetch(new URL('/e', location.href).href)
+    await wait(0)
+    controller.abort()
+    await Promise.all([c, d, e])
+    expect(flights.map((flight) => flight.path)).toEqual(['/a', '/b', '/c', '/d'])
+    expect(flights.slice(2).every((flight) => flight.signal?.aborted)).toBe(true)
+  })
+
+  it('pauses queued work during navigation and resumes surviving owners after a failed navigation', async (t) => {
+    let flights = holdHtml(t)
+    let resolution = Promise.withResolvers<Response>()
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame: () => resolution.promise,
+      prefetch: { concurrency: 1 },
+    })
+    t.after(() => app.dispose())
+    // A failed frame load is surfaced by the runtime error event.
+    app.addEventListener('error', (event) => event.preventDefault())
+    await app.ready()
+    let running = createIntentLink('/running')
+    let queued = createIntentLink('/queued')
+    press(running)
+    press(queued)
+    await wait(0)
+    let transition = navigate('/failed').catch(() => {})
+    flights[0].finish()
+    await wait(0)
+    expect(flights).toHaveLength(1)
+    resolution.reject(new Error('Unavailable'))
+    await transition
+    await wait(0)
+    expect(flights[1].path).toBe('/queued')
+    flights[1].finish()
+  })
+
+  it('prunes replaced frame content after navigation while retaining links in surviving content', async (t) => {
+    document.body.innerHTML = await drain(
+      renderToStream(jsx(Frame, { name: 'details', src: '/details' }), {
+        resolveFrame: () => '<a href="/replaced" data-rmx-prefetch="intent">Replaced</a>',
+      }),
+    )
+    let replaced = document.querySelector('a')
+    if (!(replaced instanceof HTMLAnchorElement)) throw new Error('Missing link')
+    let surviving = createIntentLink('/surviving')
+    let flights = holdHtml(t)
+    let resolution = Promise.withResolvers<Response>()
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame: () => resolution.promise,
+      prefetch: { concurrency: 1 },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    prefetch('/running')
+    await wait(0)
+    press(replaced)
+    press(surviving)
+    let transition = navigate('/next-details', { target: 'details', src: '/next-details' })
+    flights[0].finish()
+    await wait(0)
+    expect(flights).toHaveLength(1)
+    resolution.resolve(htmlResponse('<main>Updated details</main>'))
+    await transition
+    await wait(0)
+    expect(replaced.isConnected).toBe(false)
+    expect(surviving.isConnected).toBe(true)
+    expect(flights.map((flight) => flight.path)).toEqual(['/running', '/surviving'])
+    flights[1].finish()
+  })
+
+  it('rejects invalid concurrency and treats policy failures as speculative failures', async (t) => {
+    expect(() => createDefaultPrefetch(undefined, { concurrency: 0 })).toThrow(RangeError)
+    let flights = holdHtml(t)
+    let { prefetch } = createPrefetch(t, {
+      filter() {
+        throw new Error('Policy failed')
+      },
+    })
+    await prefetch(new URL('/denied', location.href).href)
+    expect(flights).toHaveLength(0)
+  })
+})
+
 describe('default frame prefetch', () => {
   it('scans embedded assets without fetching unmarked frames or native fetch preloads', async (t) => {
     stubLinkPrefetchSupport(t, true)
@@ -1028,7 +1403,7 @@ describe('default frame prefetch', () => {
         }}}</script>`,
       ),
     )
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = createPrefetch(t, { concurrency: 1 })
 
     await Promise.all([
       prefetch(new URL('/first', location.href).href),
@@ -1201,11 +1576,13 @@ describe('default frame prefetch', () => {
 
     let first = prefetch(src)
     let second = prefetch(src)
+    await wait(0)
     expect(fetch).toHaveBeenCalledTimes(1)
     response.resolve(htmlResponse('<main>Next</main>'))
     await Promise.all([first, second])
     response = Promise.withResolvers<Response>()
     let third = prefetch(src)
+    await wait(0)
     expect(fetch).toHaveBeenCalledTimes(2)
     response.resolve(htmlResponse('<main>Updated</main>'))
     await third
@@ -1230,6 +1607,7 @@ describe('default frame prefetch', () => {
       prefetch(src, { target: 'details' }),
     ]
 
+    await wait(0)
     expect(fetch).toHaveBeenCalledTimes(3)
     expect(
       fetch.mock.calls.map((call) => new Headers(call.arguments[1]?.headers).get('X-Remix-Target')),
