@@ -47,8 +47,8 @@ export interface RunInit {
    * target. Named-frame links pass their target and use `data-rmx-src` as the source when
    * specified.
    *
-   * `{ fetch }` keeps the default strategy and only replaces how each page, including preloaded
-   * nested frames, is loaded. Remix still shares pending loads, discovers assets, and adds
+   * `{ fetch }` keeps the default strategy and only replaces how each page, including nested
+   * `<Frame prefetch>` frames, is loaded. Remix still shares pending loads, discovers assets, and adds
    * `<link rel="prefetch">` hints. Use it to queue, rank, or throttle page loads: the returned
    * promise decides when a request starts and how it ends. `options.signal` aborts when the
    * runtime is disposed. Because it replaces the default request, send the frame headers a

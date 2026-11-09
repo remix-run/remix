@@ -860,14 +860,14 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/embedded.js'])
   })
 
-  it('prefetches only frames with preload=true and discovers their assets by default', async (t) => {
+  it('prefetches only frames with prefetch=true and discovers their assets by default', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let rootHtml = await drain(
       renderToStream(
         jsx('main', {
           children: [
-            jsx(Frame, { name: 'details', src: './details#content', preload: true }),
-            jsx(Frame, { name: 'disabled', src: '/disabled', preload: false }),
+            jsx(Frame, { name: 'details', src: './details#content', prefetch: true }),
+            jsx(Frame, { name: 'disabled', src: '/disabled', prefetch: false }),
             jsx(Frame, { src: '/not-prefetched' }),
           ],
         }),
@@ -912,25 +912,25 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/redirected/entry.js'])
   })
 
-  it('recursively discovers preloaded frames in templates and deduplicates cycles by source and target', async (t) => {
+  it('recursively discovers opted-in frames in templates and deduplicates cycles by source and target', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
       switch (new URL(String(src)).pathname) {
         case '/page':
           return htmlResponse(`<script type="application/json" id="rmx-data">{"f":{
-            "details":{"src":"/shared","name":"details","preload":true},
-            "duplicate":{"src":"/shared#duplicate","name":"details","preload":true},
-            "sidebar":{"src":"/shared","name":"sidebar","preload":true}
+            "details":{"src":"/shared","name":"details","prefetch":true},
+            "duplicate":{"src":"/shared#duplicate","name":"details","prefetch":true},
+            "sidebar":{"src":"/shared","name":"sidebar","prefetch":true}
           }}</script>`)
         case '/shared':
           return htmlResponse(`<script src="/shared.js"></script>
-            <script type="application/json" id="rmx-data">{"f":{"cycle":{"src":"/page","preload":true}}}</script>
+            <script type="application/json" id="rmx-data">{"f":{"cycle":{"src":"/page","prefetch":true}}}</script>
             <template><template><script type="application/json" id="rmx-data">
-              {"f":{"leaf":{"src":"/leaf","preload":true}}}
+              {"f":{"leaf":{"src":"/leaf","prefetch":true}}}
             </script></template></template>`)
         case '/leaf':
           return htmlResponse(`<link rel="stylesheet" href="/leaf.css">
-            <script type="application/json" id="rmx-data">{"f":{"deep":{"src":"/deep","preload":true}}}</script>`)
+            <script type="application/json" id="rmx-data">{"f":{"deep":{"src":"/deep","prefetch":true}}}</script>`)
         case '/deep':
           return htmlResponse('<link rel="preload" as="font" href="/deep.woff2" crossorigin>')
         default:
@@ -966,16 +966,16 @@ describe('default frame prefetch', () => {
         return htmlResponse(`<script src="/page.js"></script>
           <script type="application/json" id="rmx-data">invalid JSON</script>
           <script type="application/json" id="rmx-data">null</script>
-          <script type="application/json" id="rmx-data">{"f":[{"src":"/array","preload":true}]}</script>
+          <script type="application/json" id="rmx-data">{"f":[{"src":"/array","prefetch":true}]}</script>
           <script type="application/json" id="rmx-data">{"f":{
-            "null":null,"number":42,"missing":{"preload":true},
-            "empty":{"src":"","preload":true},"invalid":{"src":"http://[","preload":true},
-            "crossOrigin":{"src":"https://example.com/frame","preload":true},
-            "data":{"src":"data:text/html,frame","preload":true},
-            "badTarget":{"src":"/bad","name":42,"preload":true},
-            "stringFlag":{"src":"/string","preload":"true"},
-            "failed":{"src":"/failed","preload":true},"json":{"src":"/json","preload":true},
-            "valid":{"src":"/valid?size=small#content","preload":true}
+            "null":null,"number":42,"missing":{"prefetch":true},
+            "empty":{"src":"","prefetch":true},"invalid":{"src":"http://[","prefetch":true},
+            "crossOrigin":{"src":"https://example.com/frame","prefetch":true},
+            "data":{"src":"data:text/html,frame","prefetch":true},
+            "badTarget":{"src":"/bad","name":42,"prefetch":true},
+            "stringFlag":{"src":"/string","prefetch":"true"},
+            "failed":{"src":"/failed","prefetch":true},"json":{"src":"/json","prefetch":true},
+            "valid":{"src":"/valid?size=small#content","prefetch":true}
           }}</script>`)
       }
       if (new URL(String(src)).pathname === '/failed') {
@@ -1004,14 +1004,16 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/page.js', '/valid.jpg'])
   })
 
-  it('does not make speculative requests while hydrating preloaded frames on a normal load', async (t) => {
+  it('does not make speculative requests while hydrating frames marked for prefetch on a normal load', async (t) => {
     let html = await drain(
-      renderToStream(jsx(Frame, { name: 'details', src: '/details', preload: true }), {
+      renderToStream(jsx(Frame, { name: 'details', src: '/details', prefetch: true }), {
         resolveFrame: () => '<p>Server-rendered details</p>',
       }),
     )
     document.body.innerHTML = html
-    expect(document.querySelector('link[rel="preload"][as="fetch"]')).toBe(null)
+    expect(document.querySelector('link[rel="preload"][as="fetch"], link[rel="prefetch"]')).toBe(
+      null,
+    )
     let fetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
     let app = run({ loadModule: mock.fn() })
     t.after(() => {
@@ -1029,7 +1031,7 @@ describe('default frame prefetch', () => {
     let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) =>
       htmlResponse(
         `<script type="application/json" id="rmx-data">{"f":{"next":{
-          "src":"${new URL(String(src)).pathname === '/first' ? '/second' : '/first'}","preload":true
+          "src":"${new URL(String(src)).pathname === '/first' ? '/second' : '/first'}","prefetch":true
         }}}</script>`,
       ),
     )
@@ -1316,7 +1318,7 @@ describe('default frame prefetch', () => {
     expect(hints).toEqual([])
   })
 
-  it('loads every page and preloaded frame through the configured fetch and keeps discovery', async (t) => {
+  it('loads every page and opted-in frame through the configured fetch and keeps discovery', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let globalFetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
     let requests: Array<[string, string | undefined]> = []
@@ -1327,7 +1329,7 @@ describe('default frame prefetch', () => {
       return htmlResponse(
         new URL(src).pathname === '/page'
           ? `<script src="/page.js"></script><script type="application/json" id="rmx-data">
-            {"f":{"details":{"src":"/frame","name":"details","preload":true}}}</script>`
+            {"f":{"details":{"src":"/frame","name":"details","prefetch":true}}}</script>`
           : '<link rel="stylesheet" href="/frame.css">',
       )
     })
@@ -1352,9 +1354,9 @@ describe('default frame prefetch', () => {
       switch (new URL(src).pathname) {
         case '/page':
           return htmlResponse(`<script type="application/json" id="rmx-data">{"f":{
-            "shed":{"src":"/shed","preload":true},
-            "rejected":{"src":"/rejected","preload":true},
-            "ok":{"src":"/ok","preload":true}
+            "shed":{"src":"/shed","prefetch":true},
+            "rejected":{"src":"/rejected","prefetch":true},
+            "ok":{"src":"/ok","prefetch":true}
           }}</script>`)
         case '/shed':
           return new Response('<script src="/shed.js"></script>', { status: 503 })
@@ -1400,7 +1402,7 @@ describe('default frame prefetch', () => {
       async (src: RequestInfo | URL, init?: RequestInit) => {
         if (new URL(String(src)).pathname === '/page') {
           return htmlResponse(`<script src="/pending.js"></script>
-          <script type="application/json" id="rmx-data">{"f":{"nested":{"src":"/nested","preload":true}}}</script>`)
+          <script type="application/json" id="rmx-data">{"f":{"nested":{"src":"/nested","prefetch":true}}}</script>`)
         }
         let response = Promise.withResolvers<Response>()
         init?.signal?.addEventListener('abort', () => response.reject(init.signal?.reason), {

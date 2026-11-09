@@ -1114,7 +1114,7 @@ function AlbumPage(handle: Handle<{ albumId: string }>) {
 | ---------- | --------------------------------------------------------------------------------------------------------- |
 | `src`      | Required. The URL whose HTML the frame renders and reloads.                                               |
 | `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                                        |
-| `preload`  | Opts this frame into the default prefetch strategy when ancestor HTML is prefetched. Defaults to `false`. |
+| `prefetch` | Opts this frame into the default prefetch strategy when ancestor HTML is prefetched. Defaults to `false`. |
 | `fallback` | Content to render while the frame is pending.                                                             |
 | `on`       | Event handlers for events dispatched from the frame element, keyed by event type.                         |
 
@@ -1394,26 +1394,26 @@ Remix reads the prefetched HTML without running it and finds the page's JavaScri
 
 Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix doesn't scan `<img>` elements or CSS `@font-face` rules.
 
-To prefetch selected nested frames, set `preload={true}` on those frames in the destination page:
+To prefetch selected nested frames, add `prefetch` to those frames in the destination page:
 
 ```tsx
 import { Frame } from 'remix/component'
 function ProductPage() {
-  return () => <Frame name="reviews" src="/partials/reviews" preload={true} />
+  return () => <Frame name="reviews" src="/partials/reviews" prefetch />
 }
 ```
 
 The server records this flag in the frame's JSON metadata. When the default prefetch strategy loads ancestor HTML, it reads that metadata without executing scripts, fetches each opted-in same-origin frame, and scans its HTML for assets and further opted-in frames. Metadata inside nested templates is included.
 
-Each combination of source URL and frame target is visited once per prefetch traversal, so cycles stop. Frames without `preload={true}` don't trigger additional requests. Their assets are still discovered if they're already embedded in the HTML.
+Each combination of source URL and frame target is visited once per prefetch traversal, so cycles stop. Frames without `prefetch={true}` don't trigger additional requests. Their assets are still discovered if they're already embedded in the HTML.
 
 Nested requests use the same frame headers as imperative `prefetch()` calls, including `X-Remix-Target` from the frame's `name`. Failed and non-HTML responses stop discovery for that URL. This behavior applies to both automatic link prefetching and imperative calls.
 
-`preload` doesn't emit a native fetch preload link or initiate speculative requests during a normal document load. Remix doesn't use `<link rel="preload" as="fetch">` for nested-frame discovery.
+`prefetch` doesn't emit a native fetch preload link or initiate speculative requests during a normal document load. Remix doesn't use `<link rel="preload" as="fetch">` for nested-frame discovery.
 
 Prefetch requests, including nested frames, carry `Purpose: prefetch` (not `Sec-Purpose`, which `fetch()` forbids), so a server can recognize them and shed them under load, for example with a `503`. Navigations don't send it. The header isn't part of the cache key unless a response lists `Purpose` in `Vary`, so a prefetched response can still serve the navigation.
 
-To control when and how pages load while keeping Remix's discovery, pass `run({ prefetch: { fetch } })`. Remix still decides which links to prefetch, shares pending loads of the same page and target, discovers assets, adds `<link rel="prefetch">` hints, and follows preloaded frames. Your `fetch(src, { target, signal })` loads each page, including nested frames, and returns its `Response`. The prefetch resolves once the page has loaded and its hints are added, so a scheduler can hold a slot until then. `signal` aborts when the runtime is disposed. A response that isn't OK HTML is skipped, so a `503` from an overloaded server adds no hints. A custom `fetch` replaces the default request, so send the frame headers (`Accept: text/html`, `X-Remix-Frame: true`, and `X-Remix-Target` for `target`), and `Purpose: prefetch` if your server sheds prefetches, to get the HTML a navigation would. This example allows three loads at a time:
+To control when and how pages load while keeping Remix's discovery, pass `run({ prefetch: { fetch } })`. Remix still decides which links to prefetch, shares pending loads of the same page and target, discovers assets, adds `<link rel="prefetch">` hints, and follows `<Frame prefetch>` frames. Your `fetch(src, { target, signal })` loads each page, including nested frames, and returns its `Response`. The prefetch resolves once the page has loaded and its hints are added, so a scheduler can hold a slot until then. `signal` aborts when the runtime is disposed. A response that isn't OK HTML is skipped, so a `503` from an overloaded server adds no hints. A custom `fetch` replaces the default request, so send the frame headers (`Accept: text/html`, `X-Remix-Frame: true`, and `X-Remix-Target` for `target`), and `Purpose: prefetch` if your server sheds prefetches, to get the HTML a navigation would. This example allows three loads at a time:
 
 ```ts
 import { run } from 'remix/component'
