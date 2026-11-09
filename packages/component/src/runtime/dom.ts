@@ -2911,8 +2911,6 @@ export interface LiHTMLProps<
 export interface LinkHTMLProps<
   eventTarget extends EventTarget = HTMLLinkElement,
 > extends HTMLProps<eventTarget> {
-  /** Name sent as `X-Remix-Target` when prefetching an explicit nested-frame fetch preload. */
-  'data-rmx-target'?: Trackable<string | undefined>
   /** The `as` HTML attribute. */
   as?: Trackable<string | undefined>
   /** The `crossorigin` HTML attribute. */

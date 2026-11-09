@@ -17,7 +17,7 @@ export type PrefetchFrame = (src: string, options?: PrefetchOptions) => void
 
 /**
  * Loads a page for the default prefetch strategy. Remix still shares pending loads, discovers
- * assets, adds hints, and follows nested frames; this decides when and how each request is made.
+ * assets, adds hints, and follows preloaded frames; this decides when and how each request is made.
  *
  * @param src Absolute URL of the page to load, without a hash.
  * @param options Destination frame and the runtime's abort signal, which aborts when it is disposed.
@@ -39,11 +39,11 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
  * Prefetches frame content so a later navigation can reuse the response. By default this
  * fetches HTML and discovers external JavaScript, CSS, and explicit image and font preloads for
  * `<link rel="prefetch">` hints.
- * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
- * `{ prefetch: { depth } }` to `run()` to follow explicit fetch preloads as nested-frame sources,
- * `{ prefetch: { fetch } }` to control how each page loads, or a `prefetch` handler to replace the
- * strategy. Cross-origin URLs, the current untargeted page,
- * and browsers where Remix doesn't handle navigations are skipped.
+ * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Set
+ * `preload={true}` on nested `<Frame>` components to also fetch their HTML and discover their assets.
+ * Pass `{ prefetch: { fetch } }` to `run()` to control how each page loads, or a `prefetch` handler
+ * to replace the strategy. Cross-origin URLs, the current untargeted page, and browsers where Remix
+ * doesn't handle navigations are skipped.
  *
  * @param href URL to prefetch, resolved against the document base URL.
  * @param options Destination frame for the request.
@@ -57,18 +57,16 @@ export function prefetch(href: string, options?: PrefetchOptions): void {
  * Prefetches marked links on mouse/keyboard intent or when they enter the viewport.
  *
  * @param signal Abort signal used to remove the listeners.
- * @param prefetchOverride Replaces how pages are prefetched while the listeners are active.
- * @param prefetchDepth Maximum number of additional nested-frame requests (defaults to `0`).
- * @param prefetchFetch Loads each page for the default strategy instead of `fetch()`.
+ * @param prefetch Replaces how pages are prefetched while the listeners are active, or `{ fetch }`
+ * to load each page for the default strategy.
  */
 export function startPrefetching(
   signal: AbortSignal,
-  prefetchOverride?: PrefetchFrame,
-  prefetchDepth = 0,
-  prefetchFetch?: PrefetchFetch,
+  prefetch?: PrefetchFrame | { fetch: PrefetchFetch },
 ): void {
   if (signal.aborted) return
-  prefetchFrame = prefetchOverride ?? createDefaultPrefetch(signal, prefetchDepth, prefetchFetch)
+  prefetchFrame =
+    typeof prefetch === 'function' ? prefetch : createDefaultPrefetch(signal, prefetch?.fetch)
   signal.addEventListener(
     'abort',
     () => {
@@ -338,7 +336,6 @@ export function fetchFrame(
 
 export function createDefaultPrefetch(
   signal?: AbortSignal,
-  prefetchDepth = 0,
   fetchPage: PrefetchFetch = (src, { target, signal }) =>
     fetchFrame(src, target, {
       method: 'GET',
@@ -398,33 +395,42 @@ export function createDefaultPrefetch(
   function discoverFrames(
     source: DocumentFragment,
     baseUrl: string,
-    depth: number,
-    visited: Map<string, number>,
+    visited: Set<string>,
   ): Promise<void[]> {
     let requests: Promise<void>[] = []
-    for (let element of source.querySelectorAll('link[href], template')) {
+    for (let element of source.querySelectorAll(
+      'script#rmx-data[type="application/json"], template',
+    )) {
       if (element instanceof HTMLTemplateElement) {
-        requests.push(discoverFrames(element.content, baseUrl, depth, visited).then(() => {}))
+        requests.push(discoverFrames(element.content, baseUrl, visited).then(() => {}))
         continue
       }
-      if (!(element instanceof HTMLLinkElement)) continue
-      if (!element.relList.contains('preload') || element.as !== 'fetch') continue
-      if (element.media && !matchMedia(element.media).matches) continue
-      let href = element.getAttribute('href')
-      if (!href) continue
-      let url: URL
+      let data: unknown
       try {
-        url = new URL(href, baseUrl)
+        data = JSON.parse(element.textContent ?? '')
       } catch {
         continue
       }
-      if (url.origin !== window.location.origin) continue
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
-      url.hash = ''
-      let target = element.getAttribute('data-rmx-target') || undefined
-      requests.push(
-        prefetch(url.href, target === undefined ? undefined : { target }, depth, visited),
-      )
+      if (typeof data !== 'object' || data === null || !('f' in data)) continue
+      if (typeof data.f !== 'object' || data.f === null || Array.isArray(data.f)) continue
+      let frames: unknown[] = Object.values(data.f)
+      for (let frame of frames) {
+        if (typeof frame !== 'object' || frame === null || !('preload' in frame)) continue
+        if (frame.preload !== true || !('src' in frame)) continue
+        if (typeof frame.src !== 'string' || !frame.src) continue
+        let target = 'name' in frame ? frame.name : undefined
+        if (target !== undefined && typeof target !== 'string') continue
+        let url: URL
+        try {
+          url = new URL(frame.src, baseUrl)
+        } catch {
+          continue
+        }
+        if (url.origin !== window.location.origin) continue
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
+        url.hash = ''
+        requests.push(prefetch(url.href, target === undefined ? undefined : { target }, visited))
+      }
     }
     return Promise.all(requests)
   }
@@ -472,13 +478,12 @@ export function createDefaultPrefetch(
   async function prefetch(
     src: string,
     options: PrefetchOptions | undefined,
-    depth: number,
-    visited: Map<string, number>,
+    visited: Set<string>,
   ): Promise<void> {
     if (signal?.aborted) return
     let key = JSON.stringify([src, options?.target])
-    if ((visited.get(key) ?? -1) >= depth) return
-    visited.set(key, depth)
+    if (visited.has(key)) return
+    visited.add(key)
     let ready = pending.get(key)
     if (!ready) {
       // Share HTML and asset discovery, not recursive traversal promises, which can await each other.
@@ -488,16 +493,13 @@ export function createDefaultPrefetch(
     try {
       let content = await ready
       if (!content || signal?.aborted) return
-      await Promise.all([
-        content.assets,
-        depth > 0 ? discoverFrames(content.source, content.baseUrl, depth - 1, visited) : undefined,
-      ])
+      await Promise.all([content.assets, discoverFrames(content.source, content.baseUrl, visited)])
     } finally {
       if (pending.get(key) === ready) pending.delete(key)
     }
   }
 
-  return (src, options) => prefetch(src, options, prefetchDepth, new Map())
+  return (src, options) => prefetch(src, options, new Set())
 }
 
 function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement | undefined {

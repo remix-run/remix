@@ -2,7 +2,7 @@
 
 // -- Roots --
 export { run } from './runtime/run.ts'
-export type { AppRuntime, AppRuntimeEventMap, PrefetchConfig, RunInit } from './runtime/run.ts'
+export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
 export type { ComponentErrorEvent } from './runtime/component.ts'
 
 export { createRoot, createRangeRoot, createScheduler } from './runtime/vdom.ts'
@@ -77,4 +77,4 @@ export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 export { navigate, updateUrl } from './runtime/navigation.ts'
 export type { NavigationOptions, UpdateUrlOptions } from './runtime/navigation.ts'
 export { prefetch } from './runtime/prefetch.ts'
-export type { PrefetchFrame, PrefetchOptions } from './runtime/prefetch.ts'
+export type { PrefetchFetch, PrefetchFrame, PrefetchOptions } from './runtime/prefetch.ts'
