@@ -155,6 +155,7 @@ export function run(init: RunInit): AppRuntime {
     errorTarget,
     loadModule: init.loadModule,
     resolveFrame,
+    frameTransition: init.frameTransition,
     pendingClientEntries: new Map(),
     scheduler,
     styleManager,
@@ -164,7 +165,6 @@ export function run(init: RunInit): AppRuntime {
     frameInstances: new WeakMap(),
     namedFrames: appNamedFrames,
     processClientEntryPreloads: init.processClientEntryPreloads,
-    frameTransition: init.frameTransition,
   })
   setAppTopFrame(topFrame)
 

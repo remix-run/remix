@@ -38,6 +38,14 @@ View transition types on `startViewTransition()` could cover direction in CSS, b
 - Remix does not read `prefers-reduced-motion`. The callback runs either way, so an app can still cross-fade.
 - `transition.from` is whatever entry the browser is leaving. A push commits its entry before the response arrives, so a navigation that interrupts one whose page never rendered leaves that entry, not the page on screen, and the browser replaces it ([#12240](https://github.com/remix-run/remix/pull/12240)). Passing the platform object keeps that visible rather than inventing a `from` Remix cannot yet compute; committing GET navigations only once the response arrives would fix it at the source.
 
+## Relation to other runtime work
+
+- A frame navigation object ([#12051](https://github.com/remix-run/remix/pull/12051)) describes the navigation Remix is handling: `url` after redirects, `type`, `target`, `submission`, `signal`. `frameTransition` overlaps with it on `to` and `signal` but needs the entry being left and its index, which only the platform transition carries. The two can converge later by adding that object to `FrameTransitionOptions` without changing `commit()` or `transition`.
+- `run()` options are functions, and declarative switches live on elements such as `<Frame prefetch>` ([#12239](https://github.com/remix-run/remix/pull/12239)). `frameTransition` follows that: a function, no config object, and a `viewTransition: true` switch is deferred until the same callback body repeats across apps.
+- Reload metadata that resolvers must not see travels in `FrameNavigationOptions` and is stripped before `resolveFrame` ([#12183](https://github.com/remix-run/remix/pull/12183) adds `element`, `submitter` and `form` the same way `transition` is added here).
+- The hook is wired per runtime, through `createFrame()`'s init and the navigation listener's top-frame check, so a runtime that owns its own frames ([#12245](https://github.com/remix-run/remix/pull/12245)) wraps only its own top frame.
+- A thrown callback error is dispatched on the runtime's error target with `createComponentErrorEvent()`, the path every other runtime error takes ([#12242](https://github.com/remix-run/remix/pull/12242)).
+
 ## When to revisit
 
 1. If most apps write the same twelve lines around `startViewTransition()`, a `viewTransition: true` shorthand can be added next to `frameTransition` without changing it.

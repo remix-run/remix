@@ -290,6 +290,7 @@ type FrameInit = {
   errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
+  frameTransition?: FrameTransition
   pendingClientEntries: PendingClientEntries
   scheduler: Scheduler
   styleManager?: StyleManager
@@ -300,7 +301,6 @@ type FrameInit = {
   frameInstances: WeakMap<Comment, FrameInstance>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
-  frameTransition?: FrameTransition
 }
 
 // Whether reloadStart has been dispatched without a matching reloadComplete, and why. Each frame
