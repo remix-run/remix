@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@re
 import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
 import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { Frame, getNamedFrame, getTopFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
+import { Frame, getNamedFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
-import { css, navigate, on } from '../index.ts'
+import { css, navigate, on, updateUrl } from '../index.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
@@ -258,8 +258,8 @@ async function setupFrameNavigationTest(t: TestContext) {
     requests,
     frames() {
       return {
-        top: getTopFrame(),
-        target: getNamedFrame('target'),
+        top: app.frames.top,
+        target: app.frames.get('target'),
       }
     },
   }
@@ -3380,15 +3380,20 @@ describe('run', () => {
     }
   })
 
-  it('clears the app frame accessors when the runtime is disposed', async () => {
+  it('stops syncing updateUrl() to the top frame after the runtime is disposed', async (t) => {
+    let initialUrl = window.location.href
+    t.after(() => window.history.replaceState(null, '', initialUrl))
     document.body.innerHTML = await drain(renderToStream(<main />))
 
     let app = run({ loadModule: mock.fn() })
     await app.ready()
-    expect(getTopFrame()).toBe(app.frames.top)
+    let destination = new URL('?while=running', initialUrl)
+    await updateUrl(destination.search)
+    expect(app.frames.top.src).toBe(destination.href)
 
     app.dispose()
-    expect(() => getTopFrame()).toThrow('app runtime not initialized')
+    await updateUrl('?after=dispose')
+    expect(app.frames.top.src).toBe(destination.href)
   })
 
   it('keeps a newer runtime running when an older runtime is disposed', async (t) => {
@@ -3403,10 +3408,15 @@ describe('run', () => {
     await Promise.all([first.ready(), second.ready()])
 
     first.dispose()
-    expect(getTopFrame()).toBe(second.frames.top)
 
     await second.frames.top.reload()
     expect(document.getElementById('second-page')?.textContent).toBe('Second page')
+
+    let initialUrl = window.location.href
+    t.after(() => window.history.replaceState(null, '', initialUrl))
+    let destination = new URL('?runtime=second', initialUrl)
+    await updateUrl(destination.search)
+    expect(second.frames.top.src).toBe(destination.href)
   })
 
   it('restores the previous named frame when the latest duplicate unmounts', async () => {

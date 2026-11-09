@@ -105,8 +105,8 @@ type FrameMarkerData = FrameData & {
 let appTopFrame: FrameInstance | undefined
 let appNamedFrames: NamedFrameRegistry | undefined
 
-// Backs the module-level accessors (getTopFrame, getNamedFrame, prefetch, updateUrl) that have no
-// runtime reference. Returns a function that clears the registration if it is still current.
+// Backs the module-level accessors (getNamedFrame for targeted prefetching, and updateUrl) that
+// have no runtime reference. Returns a function that clears the registration if it is still current.
 export function setAppFrames(topFrame: FrameInstance, namedFrames: NamedFrameRegistry): () => void {
   appTopFrame = topFrame
   appNamedFrames = namedFrames
@@ -119,16 +119,6 @@ export function setAppFrames(topFrame: FrameInstance, namedFrames: NamedFrameReg
 
 export function setTopFrameSource(src: string): void {
   if (appTopFrame) appTopFrame.handle.src = src
-}
-
-/**
- * Returns the top-level frame handle for the running application.
- *
- * @returns The top-level frame handle.
- */
-export function getTopFrame(): FrameHandle {
-  if (!appTopFrame) throw new Error('app runtime not initialized')
-  return appTopFrame.handle
 }
 
 /**
