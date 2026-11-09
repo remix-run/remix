@@ -23,8 +23,8 @@ const stubFrame = {
 } as unknown as FrameHandle
 
 const stubFrames = {
-  getTopFrame: () => stubFrame,
-  getNamedFrame: () => stubFrame,
+  top: stubFrame,
+  get: () => stubFrame,
   reloadFrame: (frame: FrameHandle) =>
     createReloadTransition(frame.reload().then((signal) => ({ signal }))),
 }
@@ -718,8 +718,8 @@ describe('navigate', () => {
     let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
     let frame = { src: '' } as FrameHandle
     let dispatchNavigation = startStubNavigationListener(t, {
-      getTopFrame: () => frame,
-      getNamedFrame: () => frame,
+      top: frame,
+      get: () => frame,
       reloadFrame() {
         return { signal: reloadController.signal, committed, finished }
       },
@@ -1327,8 +1327,8 @@ describe('navigate', () => {
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame() {
         return { signal: eventController.signal, committed, finished }
       },
@@ -1752,8 +1752,8 @@ describe('navigate', () => {
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) =>
         createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
@@ -1944,8 +1944,8 @@ describe('navigate', () => {
     })
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame,
     })
 
@@ -2006,8 +2006,8 @@ describe('navigate', () => {
     )
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => childFrame,
+      top: topFrame,
+      get: () => childFrame,
       reloadFrame,
     })
 
@@ -2048,8 +2048,8 @@ describe('frame navigation sources', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let dispatch = startStubNavigationListener(t, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: (name) => (name === 'details' ? namedFrame : undefined),
+      top: topFrame,
+      get: (name) => (name === 'details' ? namedFrame : undefined),
       reloadFrame,
     })
     let anchor = document.createElement('a')
@@ -2177,8 +2177,8 @@ describe('frame navigation sources', () => {
     )
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => undefined,
+      top: topFrame,
+      get: () => undefined,
       reloadFrame,
     })
 
@@ -2230,8 +2230,8 @@ describe('frame navigation sources', () => {
     )
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => ({ src: window.location.href }) as FrameHandle,
-      getNamedFrame: () => stubFrame,
+      top: { src: window.location.href } as FrameHandle,
+      get: () => stubFrame,
       reloadFrame,
     })
 
@@ -2379,8 +2379,8 @@ describe('form navigation', () => {
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2420,8 +2420,8 @@ describe('form navigation', () => {
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2466,8 +2466,8 @@ describe('form navigation', () => {
     )
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame(name) {
+      top: topFrame,
+      get(name) {
         expect(name).toBe('account')
         return getNamedFrame()
       },
@@ -2503,8 +2503,8 @@ describe('form navigation', () => {
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) =>
         createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
@@ -2540,8 +2540,8 @@ describe('form navigation', () => {
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2579,8 +2579,8 @@ describe('form navigation', () => {
     let namedFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame(name) {
+      top: topFrame,
+      get(name) {
         expect(name).toBe('account')
         return namedFrame
       },
@@ -2646,8 +2646,8 @@ describe('form navigation', () => {
     )
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => undefined,
+      top: topFrame,
+      get: () => undefined,
       reloadFrame,
     })
 
@@ -2677,8 +2677,8 @@ describe('form navigation', () => {
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2721,8 +2721,8 @@ describe('form navigation', () => {
     let namedFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame(name) {
+      top: topFrame,
+      get(name) {
         expect(name).toBe('items')
         return namedFrame
       },
@@ -2786,8 +2786,8 @@ describe('form navigation', () => {
     })
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 

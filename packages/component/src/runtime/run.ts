@@ -3,8 +3,12 @@ import { createFrame, setAppFrames } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
-import { NamedFrameRegistry } from './frame-runtime.ts'
-import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame-runtime.ts'
+import {
+  NamedFrameRegistry,
+  type LoadModule,
+  type ResolveFrame,
+  type ResolveFrameOptions,
+} from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
 import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
@@ -152,7 +156,6 @@ export function run(init: RunInit): AppRuntime {
     namedFrames,
     processClientEntryPreloads: init.processClientEntryPreloads,
   })
-  let clearAppFrames = setAppFrames(topFrame, namedFrames)
 
   let appController = new AbortController()
   let frames: Handle['frames'] = {
@@ -161,6 +164,7 @@ export function run(init: RunInit): AppRuntime {
       return namedFrames.get(name)
     },
   }
+  let clearAppFrames = setAppFrames(frames)
   if (window.navigation) {
     window.navigation.addEventListener(
       'currententrychange',
@@ -174,10 +178,7 @@ export function run(init: RunInit): AppRuntime {
       signal: appController.signal,
     })
   }
-  startNavigationListener(appController.signal, {
-    getTopFrame: () => topFrame.handle,
-    getNamedFrame: frames.get,
-  })
+  startNavigationListener(appController.signal, frames)
   startPrefetching(appController.signal, init.prefetch)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))

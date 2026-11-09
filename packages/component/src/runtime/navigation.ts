@@ -5,7 +5,7 @@ import {
   setTopFrameSource,
 } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, Handle } from './component.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -321,16 +321,12 @@ async function waitForUrlUpdate(updating: Promise<void>, signal?: AbortSignal): 
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
- * @param options Frame lookups for the running app, and an optional reload override for tests.
+ * @param options Frames of the running app, and an optional reload override for tests.
  * @returns void
  */
 export function startNavigationListener(
   signal: AbortSignal,
-  options: {
-    getTopFrame: () => FrameHandle
-    getNamedFrame: (name: string) => FrameHandle | undefined
-    reloadFrame?: typeof reloadFrameForNavigation
-  },
+  options: Handle['frames'] & { reloadFrame?: typeof reloadFrameForNavigation },
 ) {
   let reloadFrame = options.reloadFrame ?? reloadFrameForNavigation
   let navigation = getInterceptableNavigation()
@@ -410,11 +406,11 @@ export function startNavigationListener(
         return
       }
 
-      let topFrame = options.getTopFrame()
+      let topFrame = options.top
       let frame = replayedSubmission?.frame
       if (!frame) {
         if (state.target) {
-          frame = options.getNamedFrame(state.target)
+          frame = options.get(state.target)
           if (!frame) {
             fallbackToDocumentNavigation(navigation, event)
             return

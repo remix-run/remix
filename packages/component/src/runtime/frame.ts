@@ -102,23 +102,19 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-let appTopFrame: FrameInstance | undefined
-let appNamedFrames: NamedFrameRegistry | undefined
+// Frames of the most recently started run() runtime, for module-level helpers that have no
+// runtime reference: targeted prefetching and updateUrl().
+let appFrames: Handle['frames'] | undefined
 
-// Backs the module-level accessors (getNamedFrame for targeted prefetching, and updateUrl) that
-// have no runtime reference. Returns a function that clears the registration if it is still current.
-export function setAppFrames(topFrame: FrameInstance, namedFrames: NamedFrameRegistry): () => void {
-  appTopFrame = topFrame
-  appNamedFrames = namedFrames
+export function setAppFrames(frames: Handle['frames']): () => void {
+  appFrames = frames
   return () => {
-    if (appTopFrame !== topFrame) return
-    appTopFrame = undefined
-    appNamedFrames = undefined
+    if (appFrames === frames) appFrames = undefined
   }
 }
 
 export function setTopFrameSource(src: string): void {
-  if (appTopFrame) appTopFrame.handle.src = src
+  if (appFrames) appFrames.top.src = src
 }
 
 /**
@@ -128,7 +124,7 @@ export function setTopFrameSource(src: string): void {
  * @returns The matching frame handle, or `undefined` when not found.
  */
 export function getNamedFrame(name: string): FrameHandle | undefined {
-  return appNamedFrames?.get(name)
+  return appFrames?.get(name)
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
