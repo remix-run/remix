@@ -1226,7 +1226,7 @@ describe('createPrefetch', () => {
     expect(fetchPage).not.toHaveBeenCalled()
   })
 
-  it('schedules viewport links through run({ prefetch })', async (t) => {
+  it('schedules viewport links when passed as the prefetch override', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let hints = collectHints(t)
     let fetchPage = mock.fn(async (_src: string, _options?: PrefetchOptions) =>
