@@ -14,7 +14,7 @@ export async function* readStream(stream: ReadableStream<Uint8Array>): AsyncIter
       yield result.value
     }
   } finally {
-    // Stop the sender if the consumer quit early, e.g. because a limit was exceeded
+    // Cancel on early exit, as native ReadableStream async iteration does
     if (!done) await reader.cancel().catch(() => {})
     reader.releaseLock()
   }

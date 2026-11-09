@@ -155,15 +155,11 @@ async function readUrlEncodedBody(
   let partCount = 0
   let totalSize = 0
   let hasPartBytes = false
-  let done = false
 
   try {
     while (true) {
       let result = await reader.read()
-      if (result.done) {
-        done = true
-        break
-      }
+      if (result.done) break
 
       totalSize += result.value.length
       if (totalSize > maxTotalSize) {
@@ -187,9 +183,10 @@ async function readUrlEncodedBody(
     if (hasPartBytes) {
       validateUrlEncodedPartCount(++partCount, maxParts)
     }
+  } catch (error) {
+    await reader.cancel(error).catch(() => {})
+    throw error
   } finally {
-    // Tell the sender to stop when a limit is hit instead of leaving the rest of the body unread
-    if (!done) await reader.cancel().catch(() => {})
     reader.releaseLock()
   }
 

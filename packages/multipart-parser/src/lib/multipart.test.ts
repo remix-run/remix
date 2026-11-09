@@ -42,6 +42,22 @@ function createChunkedStream(body: Uint8Array, chunkSize: number): ReadableStrea
   })
 }
 
+// Enqueues `chunk` and stays open unless `close` is set, like a sender that has not finished
+function createCancelTrackingStream(chunk: Uint8Array, options?: { close?: boolean }) {
+  let cancelled = false
+  let stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(chunk)
+      if (options?.close) controller.close()
+    },
+    cancel() {
+      cancelled = true
+    },
+  })
+
+  return { stream, wasCancelled: () => cancelled }
+}
+
 describe('MultipartParser', () => {
   it('accepts boundaries up to 70 characters', () => {
     assert.doesNotThrow(() => new MultipartParser('b'.repeat(70)))
@@ -537,26 +553,41 @@ describe('parseMultipartStream', async () => {
     }, MaxTotalSizeExceededError)
   })
 
-  it('cancels the stream when the limit is exceeded before the body ends', async () => {
-    let cancelled = false
-    let stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(
-          new TextEncoder().encode(
-            `--${boundary}\r\nContent-Disposition: form-data; name="a"\r\n\r\n${'x'.repeat(100)}`,
-          ),
-        )
-      },
-      cancel() {
-        cancelled = true
-      },
-    })
+  it('cancels the stream when a limit is exceeded before the stream ends', async () => {
+    let { stream, wasCancelled } = createCancelTrackingStream(
+      new TextEncoder().encode(
+        `--${boundary}\r\nContent-Disposition: form-data; name="a"\r\n\r\n${'x'.repeat(100)}`,
+      ),
+    )
 
     await assert.rejects(async () => {
       for await (let _ of parseMultipartStream(stream, { boundary, maxTotalSize: 10 })) {
         // ...
       }
     }, MaxTotalSizeExceededError)
-    assert.equal(cancelled, true)
+    assert.equal(wasCancelled(), true)
+  })
+
+  it('cancels the stream when iteration stops before the stream ends', async () => {
+    let { stream, wasCancelled } = createCancelTrackingStream(
+      createMultipartMessage(boundary, { field1: 'value1', field2: 'value2' }),
+    )
+
+    for await (let _ of parseMultipartStream(stream, { boundary })) {
+      break
+    }
+    assert.equal(wasCancelled(), true)
+  })
+
+  it('does not cancel the stream when it is read to the end', async () => {
+    let { stream, wasCancelled } = createCancelTrackingStream(
+      createMultipartMessage(boundary, { field1: 'value1' }),
+      { close: true },
+    )
+
+    for await (let _ of parseMultipartStream(stream, { boundary })) {
+      // ...
+    }
+    assert.equal(wasCancelled(), false)
   })
 })

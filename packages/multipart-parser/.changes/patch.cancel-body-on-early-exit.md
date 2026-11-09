@@ -1,1 +1,1 @@
-Cancel the request body stream when `parseMultipartRequest()` and `parseMultipartStream()` stop reading before the body ends, such as when `maxTotalSize` or `maxParts` is exceeded, so the sender is told to stop instead of the rest of the body being left unread.
+Cancel the input stream when `parseMultipartStream()` or `parseMultipartRequest()` stops reading before the stream ends, matching native `ReadableStream` async iteration. For example, an upstream `fetch()` response is now closed when a parsing limit is exceeded or the caller stops iterating early.

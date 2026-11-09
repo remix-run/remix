@@ -39,7 +39,7 @@ function createOpenEndedRequest(contentType: string, chunk: string) {
     headers: { 'Content-Type': contentType },
     body,
     duplex: 'half',
-  } as RequestInit)
+  } as RequestInit & { duplex: 'half' })
 
   return { request, wasCancelled: () => cancelled }
 }

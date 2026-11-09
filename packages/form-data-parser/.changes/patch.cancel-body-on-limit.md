@@ -1,1 +1,1 @@
-Cancel the request body when `parseFormData()` rejects a `application/x-www-form-urlencoded` or `multipart/form-data` request for exceeding `maxTotalSize` or `maxParts`, so the sender is told to stop instead of the rest of the body being left unread.
+Cancel the request body stream when `parseFormData()` stops reading an `application/x-www-form-urlencoded` body early, such as when `maxTotalSize` or `maxParts` is exceeded, so the stream's source can release its resources.
