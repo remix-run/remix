@@ -67,8 +67,7 @@ export function createScheduler(
   let workTasks: EmptyFn[] = []
   let commitPhaseTasks: EmptyFn[] = []
   let postCommitTasks: EmptyFn[] = []
-  let flushScheduled = false
-  let flushing = false
+  let flushState: 'idle' | 'scheduled' | 'flushing' = 'idle'
   let cascadingComponentUpdateCount = 0
   let cascadingComponentUpdateCounts = new WeakMap<CommittedComponentNode, number>()
   let cascadingComponentNameCounts = new Map<string, number>()
@@ -135,11 +134,10 @@ export function createScheduler(
   }
 
   function flush() {
-    if (flushing) return
-    flushing = true
+    if (flushState === 'flushing') return
+    flushState = 'flushing'
     try {
       while (true) {
-        flushScheduled = false
 
         let batch = new Map(scheduled)
         scheduled.clear()
@@ -191,7 +189,7 @@ export function createScheduler(
       }
     } finally {
       setActiveSchedulerUpdateParents(undefined)
-      flushing = false
+      flushState = 'idle'
     }
   }
 
@@ -214,8 +212,8 @@ export function createScheduler(
   }
 
   function scheduleFlush() {
-    if (flushScheduled || flushing) return
-    flushScheduled = true
+    if (flushState !== 'idle') return
+    flushState = 'scheduled'
     queueMicrotask(flush)
   }
 
