@@ -6,9 +6,10 @@ import {
   createDefaultPrefetch,
   prefetch,
   startPrefetching,
+  type PrefetchFetch,
   type PrefetchFrame,
 } from '../runtime/prefetch.ts'
-import { run } from '../runtime/run.ts'
+import { run, type PrefetchConfig } from '../runtime/run.ts'
 import { renderToStream } from '../server/stream.ts'
 import { drain } from './utils.ts'
 
@@ -104,10 +105,13 @@ function stubConnection(
   })
 }
 
-function createPrefetch(t: TestContext, prefetchDepth = 0) {
+function createPrefetch(t: TestContext, prefetchDepth = 0, fetchPage?: PrefetchFetch) {
   let controller = new AbortController()
   t.after(() => controller.abort())
-  return { prefetch: createDefaultPrefetch(controller.signal, prefetchDepth), controller }
+  return {
+    prefetch: createDefaultPrefetch(controller.signal, prefetchDepth, fetchPage),
+    controller,
+  }
 }
 
 function collectHints(t: TestContext, onHint?: (link: HTMLLinkElement) => void): HTMLLinkElement[] {
@@ -579,7 +583,6 @@ describe('prefetch', () => {
         handler(src, options) {
           prefetchFrame(src, options)
         },
-        depth: 1,
       },
     })
     t.after(() => app.dispose())
@@ -594,6 +597,14 @@ describe('prefetch', () => {
       [new URL('/partial', location.href).href, { target: 'details' }],
     ])
     expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('rejects combining a prefetch handler with depth or fetch in the types', () => {
+    // @ts-expect-error A handler owns discovery, so it can't take a fetch.
+    let withFetch: PrefetchConfig = { handler: mock.fn(), fetch: mock.fn() }
+    // @ts-expect-error A handler owns discovery, so it can't take a depth.
+    let withDepth: PrefetchConfig = { handler: mock.fn(), depth: 1 }
+    expect([withFetch, withDepth]).toHaveLength(2)
   })
 
   it('prefetches named-frame content with the same URL and headers as a frame reload', async (t) => {
@@ -1005,6 +1016,77 @@ describe('default frame prefetch', () => {
     expect(new URL(String(fetch.mock.calls[3].arguments[0])).search).toBe('?size=small')
     expect(new URL(String(fetch.mock.calls[3].arguments[0])).hash).toBe('')
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/page.js', '/valid.jpg'])
+  })
+
+  it('loads every page and nested frame through the configured fetch and keeps discovery', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let globalFetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
+    let requests: Array<[string, string | undefined]> = []
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t, 1, async (src, options) => {
+      requests.push([new URL(src).pathname, options.target])
+      expect(options.signal).toBeInstanceOf(AbortSignal)
+      return htmlResponse(
+        new URL(src).pathname === '/page'
+          ? '<script src="/page.js"></script><link rel="preload" as="fetch" href="/frame" data-rmx-target="details">'
+          : '<link rel="stylesheet" href="/frame.css">',
+      )
+    })
+
+    await Promise.all([
+      prefetch(new URL('/page', location.href).href),
+      prefetch(new URL('/page', location.href).href),
+    ])
+
+    expect(globalFetch).not.toHaveBeenCalled()
+    expect(requests).toEqual([
+      ['/page', undefined],
+      ['/frame', 'details'],
+    ])
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/page.js', '/frame.css'])
+  })
+
+  it('skips pages whose configured fetch fails or returns a response that is not OK HTML', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t, 1, async (src) => {
+      switch (new URL(src).pathname) {
+        case '/page':
+          return htmlResponse(`<link rel="preload" as="fetch" href="/shed">
+            <link rel="preload" as="fetch" href="/rejected"><link rel="preload" as="fetch" href="/ok">`)
+        case '/shed':
+          return new Response('<script src="/shed.js"></script>', { status: 503 })
+        case '/rejected':
+          throw new DOMException('Not prefetched', 'AbortError')
+        default:
+          return htmlResponse('<script src="/ok.js"></script>')
+      }
+    })
+
+    await prefetch(new URL('/page', location.href).href)
+
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/ok.js'])
+  })
+
+  it('passes the runtime signal to the configured fetch and runs it from run()', async (t) => {
+    let signals: Array<AbortSignal | undefined> = []
+    let app = run({
+      loadModule: mock.fn(),
+      prefetch: {
+        async fetch(_src, { signal }) {
+          signals.push(signal)
+          return htmlResponse('')
+        },
+      },
+    })
+    await app.ready()
+
+    prefetch('/page')
+    await Promise.resolve()
+    expect(signals).toHaveLength(1)
+    expect(signals[0]?.aborted).toBe(false)
+    app.dispose()
+    expect(signals[0]?.aborted).toBe(true)
   })
 
   it('rejects invalid run prefetch depths before starting the runtime', () => {

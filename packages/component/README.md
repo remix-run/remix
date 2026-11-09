@@ -1043,7 +1043,7 @@ await app.ready()
 | `loadModule`                 | Required. Loads a client entry's module and returns the named export. Remix passes each module specifier unchanged.                                                            |
 | `processClientEntryPreloads` | Receives module preloads discovered in frame responses before they're added to the document. Return the URLs that should stay as native `<link rel="modulepreload">` elements. |
 | `resolveFrame`               | Fetches frame content for navigations and reloads. See [Resolving Frames](#resolving-frames).                                                                                  |
-| `prefetch`                   | Accepts a custom handler or an object with `handler` and `depth` options. Depth defaults to `0`. See [Prefetching](#prefetching).                                              |
+| `prefetch`                   | Accepts a custom handler, or an object with a `handler`, or with `depth` and `fetch` options for the default strategy. Depth defaults to `0`. See [Prefetching](#prefetching). |
 
 The returned runtime emits `error` events for component errors, and has these members:
 
@@ -1411,9 +1411,43 @@ run({ loadModule, prefetch: { depth: PREFETCH_DEPTH } })
 
 `prefetch.depth` defaults to `0`, which only discovers assets already included in the initial HTML. `1` also fetches same-origin URLs from explicit `<link rel="preload" as="fetch">` declarations and scans their HTML for assets. `2` follows fetch preloads in those responses as well. The value must be a nonnegative safe integer. Declarations inside nested templates are included, and unmatched `media` conditions are skipped. `<Frame>` metadata alone never opts a frame into prefetching.
 
-Nested requests use the same frame headers as imperative `prefetch()` calls. Set `data-rmx-target` on the preload link for a named frame, or omit it for an unnamed frame. Failed and non-HTML responses stop discovery for that URL. Depth applies to both automatic link prefetching and imperative calls, and is ignored when a custom handler replaces the default strategy.
+Nested requests use the same frame headers as imperative `prefetch()` calls. Set `data-rmx-target` on the preload link for a named frame, or omit it for an unnamed frame. Failed and non-HTML responses stop discovery for that URL. Depth applies to both automatic link prefetching and imperative calls. `depth` and `fetch` configure the default strategy, so they can't be combined with a custom handler.
 
-Pass a custom handler as `run({ prefetch: { handler } })` or use the existing `run({ prefetch: handler })` shorthand. Both forms replace the default HTML fetch and asset discovery; the handler owns any nested-frame loading.
+To control when and how pages load while keeping Remix's discovery, pass `prefetch.fetch`. Remix still decides which links to prefetch, shares pending loads of the same page and target, discovers assets, adds `<link rel="prefetch">` hints, and follows `depth`. Your `fetch(src, { target, signal })` loads each page, including nested frames, and returns its `Response`. The prefetch resolves once the page has loaded and its hints are added, so a scheduler can hold a slot until then. `signal` aborts when the runtime is disposed. A response that isn't OK HTML is skipped, so a `503` from an overloaded server adds no hints. A custom `fetch` replaces the default request, so send the frame headers (`Accept: text/html`, `X-Remix-Frame: true`, and `X-Remix-Target` for `target`) to get the HTML a navigation would. This example allows three loads at a time:
+
+```ts
+import { run } from 'remix/component'
+
+let active = 0
+let waiting: Array<() => void> = []
+
+async function fetchPage(
+  src: string,
+  { target, signal }: { target?: string; signal?: AbortSignal },
+) {
+  while (active >= 3) await new Promise<void>((resolve) => waiting.push(resolve))
+  active++
+  try {
+    return await fetch(src, {
+      priority: 'low',
+      mode: 'same-origin',
+      signal,
+      headers: {
+        Accept: 'text/html',
+        'X-Remix-Frame': 'true',
+        ...(target != null && { 'X-Remix-Target': target }),
+      },
+    })
+  } finally {
+    active--
+    waiting.shift()?.()
+  }
+}
+
+run({ loadModule, prefetch: { fetch: fetchPage } })
+```
+
+To replace discovery as well, pass a custom handler as `run({ prefetch: { handler } })` or use the existing `run({ prefetch: handler })` shorthand. Both forms replace the default HTML fetch and asset discovery; the handler owns any nested-frame loading.
 
 The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
 

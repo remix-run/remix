@@ -5,27 +5,45 @@ import { createStyleManager } from '../style/index.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
 import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
-import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
+import { fetchFrame, startPrefetching, type PrefetchFetch, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 
 /** Options for configuring prefetching in {@link run}. */
-export interface PrefetchConfig {
-  /**
-   * Replaces the default HTML fetch and asset discovery for `data-rmx-prefetch` links and
-   * imperative `prefetch()` calls. Use with `resolveFrame` to reuse uncacheable HTML.
-   * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
-   */
-  handler?: PrefetchFrame
+export type PrefetchConfig =
+  | {
+      /**
+       * Replaces the default HTML fetch and asset discovery for `data-rmx-prefetch` links and
+       * imperative `prefetch()` calls. Use with `resolveFrame` to reuse uncacheable HTML.
+       * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
+       * A handler owns discovery, so it can't be combined with `depth` or `fetch`.
+       */
+      handler: PrefetchFrame
+      depth?: never
+      fetch?: never
+    }
+  | {
+      handler?: never
 
-  /**
-   * Maximum number of additional nested-frame requests made by the default prefetch strategy.
-   * Must be a nonnegative safe integer. `0` only scans the initial HTML; `1` also fetches frames
-   * explicitly declared by `<link rel="preload" as="fetch">` and scans their assets. Frame names
-   * come from `data-rmx-target` on the link. Ignored when `handler` is provided. Defaults to `0`.
-   */
-  depth?: number
-}
+      /**
+       * Maximum number of additional nested-frame requests made by the default prefetch strategy.
+       * Must be a nonnegative safe integer. `0` only scans the initial HTML; `1` also fetches frames
+       * explicitly declared by `<link rel="preload" as="fetch">` and scans their assets. Frame names
+       * come from `data-rmx-target` on the link. Defaults to `0`.
+       */
+      depth?: number
+
+      /**
+       * Loads each page for the default strategy, including nested frames, instead of `fetch()`.
+       * Remix still shares pending loads, discovers assets, adds `<link rel="prefetch">` hints, and
+       * follows `depth`. Use it to queue, rank, or throttle page loads: the returned promise
+       * decides when a request starts and how it ends. `options.signal` aborts when the runtime is
+       * disposed. Because it replaces the default request, send the frame headers a navigation
+       * would (`Accept: text/html`, `X-Remix-Frame: true`, and `X-Remix-Target` for
+       * `options.target`) to get the HTML it would.
+       */
+      fetch?: PrefetchFetch
+    }
 
 /**
  * Options for starting the client runtime with {@link run}.
@@ -144,8 +162,10 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
-  let prefetchHandler = typeof init.prefetch === 'function' ? init.prefetch : init.prefetch?.handler
-  let prefetchDepth = typeof init.prefetch === 'function' ? 0 : (init.prefetch?.depth ?? 0)
+  let prefetchConfig: PrefetchConfig =
+    typeof init.prefetch === 'function' ? { handler: init.prefetch } : (init.prefetch ?? {})
+  let prefetchHandler = prefetchConfig.handler
+  let prefetchDepth = prefetchConfig.depth ?? 0
   if (!prefetchHandler && (!Number.isSafeInteger(prefetchDepth) || prefetchDepth < 0)) {
     throw new RangeError('prefetch.depth must be a nonnegative safe integer')
   }
@@ -194,7 +214,7 @@ export function run(init: RunInit): AppRuntime {
     })
   }
   startNavigationListener(appController.signal)
-  startPrefetching(appController.signal, prefetchHandler, prefetchDepth)
+  startPrefetching(appController.signal, prefetchHandler, prefetchDepth, prefetchConfig.fetch)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error

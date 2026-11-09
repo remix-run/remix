@@ -15,6 +15,19 @@ export interface PrefetchOptions {
  */
 export type PrefetchFrame = (src: string, options?: PrefetchOptions) => void
 
+/**
+ * Loads a page for the default prefetch strategy. Remix still shares pending loads, discovers
+ * assets, adds hints, and follows nested frames; this decides when and how each request is made.
+ *
+ * @param src Absolute URL of the page to load, without a hash.
+ * @param options Destination frame and the runtime's abort signal, which aborts when it is disposed.
+ * @returns The page's response. Responses that aren't OK HTML are skipped.
+ */
+export type PrefetchFetch = (
+  src: string,
+  options: { target?: string; signal?: AbortSignal },
+) => Promise<Response>
+
 type PrefetchRequest = [src: string, options?: PrefetchOptions]
 
 const INTENT_DELAY_MS = 100
@@ -28,7 +41,8 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
  * `<link rel="prefetch">` hints.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
  * `{ prefetch: { depth } }` to `run()` to follow explicit fetch preloads as nested-frame sources,
- * or a `prefetch` handler to replace the strategy. Cross-origin URLs, the current untargeted page,
+ * `{ prefetch: { fetch } }` to control how each page loads, or a `prefetch` handler to replace the
+ * strategy. Cross-origin URLs, the current untargeted page,
  * and browsers where Remix doesn't handle navigations are skipped.
  *
  * @param href URL to prefetch, resolved against the document base URL.
@@ -45,14 +59,16 @@ export function prefetch(href: string, options?: PrefetchOptions): void {
  * @param signal Abort signal used to remove the listeners.
  * @param prefetchOverride Replaces how pages are prefetched while the listeners are active.
  * @param prefetchDepth Maximum number of additional nested-frame requests (defaults to `0`).
+ * @param prefetchFetch Loads each page for the default strategy instead of `fetch()`.
  */
 export function startPrefetching(
   signal: AbortSignal,
   prefetchOverride?: PrefetchFrame,
   prefetchDepth = 0,
+  prefetchFetch?: PrefetchFetch,
 ): void {
   if (signal.aborted) return
-  prefetchFrame = prefetchOverride ?? createDefaultPrefetch(signal, prefetchDepth)
+  prefetchFrame = prefetchOverride ?? createDefaultPrefetch(signal, prefetchDepth, prefetchFetch)
   signal.addEventListener(
     'abort',
     () => {
@@ -321,6 +337,8 @@ export function fetchFrame(
 export function createDefaultPrefetch(
   signal?: AbortSignal,
   prefetchDepth = 0,
+  fetchPage: PrefetchFetch = (src, { target, signal }) =>
+    fetchFrame(src, target, { method: 'GET', priority: 'low', signal }),
 ): (src: string, options?: PrefetchOptions) => Promise<void> {
   let pending = new Map<
     string,
@@ -405,11 +423,7 @@ export function createDefaultPrefetch(
 
   async function discover(src: string, options?: PrefetchOptions) {
     try {
-      let response = await fetchFrame(src, options?.target, {
-        method: 'GET',
-        priority: 'low',
-        signal,
-      })
+      let response = await fetchPage(src, { target: options?.target, signal })
       if (
         !response.ok ||
         !response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
