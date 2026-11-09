@@ -1,4 +1,5 @@
 import type { VirtualRoot } from './vdom.ts'
+import type { ElementFunction } from './element-function.ts'
 
 export type ClientEntryIdentity = {
   moduleUrl: string
@@ -47,6 +48,7 @@ export type ClientEntryBoundaryOwner = {
   end: Comment
   identity: ClientEntryIdentity
   root: ClientEntryRoot
+  component?: ElementFunction
 }
 
 const CLIENT_ENTRY_BOUNDARY_OWNER = Symbol('ClientEntryBoundaryOwner')
@@ -65,8 +67,9 @@ export function setClientEntryBoundaryOwner(
   end: Comment,
   identity: ClientEntryIdentity,
   root: ClientEntryRoot,
+  component?: ElementFunction,
 ): ClientEntryBoundaryOwner {
-  let owner = { end, identity, root }
+  let owner = { end, identity, root, component }
   Object.defineProperties(marker, {
     [CLIENT_ENTRY_BOUNDARY_OWNER]: {
       configurable: true,

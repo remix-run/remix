@@ -64,6 +64,7 @@ import type { CSSProps } from '../style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './spa-response.ts'
+import { clientEntry, type EntryComponent } from './client-entries.ts'
 import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
@@ -1495,9 +1496,23 @@ function scheduleHydrationMarker(
     if (!isHydrationMarkerLive(marker, context)) return
     if (!props) return
     let pending = context.pendingClientEntries.get(marker.start)
-    let vElement = pending?.[1] ?? createElement(component, props)
+    let vElement = pending?.[1]
+    if (vElement) {
+      vElement = jsx(component, vElement.props, vElement.key)
+    } else {
+      vElement = createElement(component, props)
+    }
     context.pendingClientEntries.set(marker.start, [marker.end, vElement])
-    hydrateRegion(vElement, marker.start, marker.end, identity, context, signal, pending?.[2])
+    hydrateRegion(
+      vElement,
+      marker.start,
+      marker.end,
+      identity,
+      context,
+      signal,
+      pending?.[2],
+      component,
+    )
   }
 
   let parentHydration = marker.parent && pendingClientEntryHydrations.get(marker.parent)
@@ -1605,7 +1620,22 @@ function reviveSerializedValue(value: unknown): unknown {
     return reviveSerializedElement(record.type, record)
   }
 
+  if (record.$rmxEntry === true && typeof record.type === 'string') {
+    return reviveSerializedElement(getClientEntryPlaceholder(record.type), record)
+  }
+
   return reviveSerializedProperties(record)
+}
+
+const clientEntryPlaceholders = new Map<string, EntryComponent>()
+
+function getClientEntryPlaceholder(entryId: string): EntryComponent {
+  let placeholder = clientEntryPlaceholders.get(entryId)
+  if (!placeholder) {
+    placeholder = clientEntry(entryId, (() => () => null) as any)
+    clientEntryPlaceholders.set(entryId, placeholder)
+  }
+  return placeholder
 }
 
 function reviveSerializedProperties(record: Record<string, unknown>): Record<string, unknown> {
@@ -1651,6 +1681,7 @@ function hydrateRegion(
   context: FrameContext,
   signal?: AbortSignal,
   resourceNonces?: ResourceNonces,
+  component?: ElementFunction,
 ): void {
   if (signal?.aborted) return
 
@@ -1698,7 +1729,7 @@ function hydrateRegion(
   }
 
   let root = createFrameRoot([start, end], context)
-  setClientEntryBoundaryOwner(start, end, identity, root)
+  setClientEntryBoundaryOwner(start, end, identity, root, component)
   renderEntry(root)
 }
 

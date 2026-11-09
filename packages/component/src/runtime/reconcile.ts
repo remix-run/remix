@@ -1488,8 +1488,9 @@ function updateClientEntryBoundary(
   node: CommittedClientEntryNode,
   context: ReconcileContext,
 ): void {
-  let element = jsx(node.type, node.props, node.key)
   let owner = getClientEntryBoundaryOwner(node._rangeStart)
+  let componentType = owner?.component ?? node.type
+  let element = jsx(componentType, node.props, node.key)
   if (owner) {
     getNonceManager().inheritRootResourceNonces(owner.root, node._parent)
     owner.root.render(element)
