@@ -449,6 +449,7 @@ export function startNavigationListenerImpl(
 
         if (event.navigationType !== 'traverse') {
           navigation.updateCurrentEntry({ state })
+          if (event.signal.aborted) return
         }
 
         topFrame.src = event.destination.url

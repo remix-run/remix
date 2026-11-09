@@ -1928,6 +1928,53 @@ describe('navigate', () => {
     }
   })
 
+  it('does not reload a navigation superseded while updating its history state', async () => {
+    let originalUrl = window.location.href
+    let interruptedUrl = new URL(originalUrl)
+    interruptedUrl.searchParams.set('frame-navigation', 'interrupted-state-update')
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'successor-state-update')
+    let topFrame = { src: originalUrl } as FrameHandle
+    let reloads: { src: string; aborted: boolean | undefined }[] = []
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+      reloadFrame(frame, options) {
+        reloads.push({ src: frame.src, aborted: options?.signal?.aborted })
+        return createReloadTransition({ signal: new AbortController().signal })
+      },
+    })
+
+    let successor: Promise<void> | undefined
+    window.navigation.addEventListener(
+      'currententrychange',
+      (event) => {
+        if (
+          event.navigationType === null &&
+          window.navigation.currentEntry?.url === interruptedUrl.href
+        ) {
+          successor = navigate(destination.href)
+        }
+      },
+      { signal: controller.signal },
+    )
+
+    try {
+      await navigate(interruptedUrl.href).catch(() => {})
+      expect(successor).toBeDefined()
+      await successor
+
+      expect(reloads).toEqual([{ src: destination.href, aborted: false }])
+      expect(topFrame.src).toBe(destination.href)
+    } finally {
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
+
   it('replaces the navigation URL when the top frame reload follows a redirect', async () => {
     let originalUrl = window.location.href
     let requestedUrl = new URL(originalUrl)
