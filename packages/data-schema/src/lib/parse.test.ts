@@ -42,7 +42,34 @@ describe('parse', () => {
       },
     }
 
-    assert.throws(() => parse(schema, 'a'), new TypeError('Expected sync schema'))
+    assert.throws(
+      () => parse(schema, 'a'),
+      new TypeError('parse() and parseSafe() do not support async schemas'),
+    )
+  })
+
+  it('does not leave an unhandled rejection when an async schema rejects', async () => {
+    let schema: StandardSchemaV1<unknown, string> = {
+      '~standard': {
+        version: 1,
+        vendor: 'test',
+        validate: async () => {
+          throw new Error('Validation service unavailable')
+        },
+      },
+    }
+    let unhandled: unknown[] = []
+    let onUnhandledRejection = (reason: unknown) => unhandled.push(reason)
+    process.on('unhandledRejection', onUnhandledRejection)
+
+    try {
+      assert.throws(() => parse(schema, 'a'), TypeError)
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection)
+    }
+
+    assert.deepEqual(unhandled, [])
   })
 })
 
@@ -72,7 +99,10 @@ describe('parseSafe', () => {
       },
     }
 
-    assert.throws(() => parseSafe(schema, 'a'), new TypeError('Expected sync schema'))
+    assert.throws(
+      () => parseSafe(schema, 'a'),
+      new TypeError('parse() and parseSafe() do not support async schemas'),
+    )
   })
 
   it('throws a TypeError for promises from another realm', () => {
@@ -84,7 +114,10 @@ describe('parseSafe', () => {
       },
     }
 
-    assert.throws(() => parseSafe(schema, 'a'), new TypeError('Expected sync schema'))
+    assert.throws(
+      () => parseSafe(schema, 'a'),
+      new TypeError('parse() and parseSafe() do not support async schemas'),
+    )
   })
 
   it('supports abortEarly option', () => {

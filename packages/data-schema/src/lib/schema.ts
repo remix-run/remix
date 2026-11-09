@@ -1402,7 +1402,10 @@ function validateSync<input, output>(
 
   // Unlike `instanceof Promise`, this also catches promises from other realms and custom thenables.
   if ('then' in result) {
-    throw new TypeError('Expected sync schema')
+    // Nothing can await this result, so a later rejection must not surface as an unhandled
+    // rejection, which crashes Node by default.
+    Promise.resolve(result).catch(() => {})
+    throw new TypeError('parse() and parseSafe() do not support async schemas')
   }
 
   return result
