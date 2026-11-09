@@ -17,9 +17,9 @@ import {
   serializeStyleObject,
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
+import { DOCUMENT_NONCE_META_NAME } from '../runtime/nonce.ts'
 import {
   appendFlushMarker,
-  DOCUMENT_NONCE_META_NAME,
   FRAME_TEMPLATE_END_MARKER,
   type FlushKind,
   stripFlushMarkers,

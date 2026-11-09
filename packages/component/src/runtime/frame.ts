@@ -50,6 +50,7 @@ import {
   diffElementAttributes,
   diffNodes,
   findEndMarker,
+  getClientEntryKey,
   getFrameId,
   isCommentNode,
   isFrameEnd,
@@ -67,7 +68,6 @@ import { unwrapFrameResolution } from './spa-response.ts'
 import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
-  getClientEntryKey,
   setClientEntryBoundaryOwner,
   type ClientEntryIdentity,
 } from './client-entry-boundary.ts'
