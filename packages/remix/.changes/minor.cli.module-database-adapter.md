@@ -1,0 +1,1 @@
+`remix db` can now run against databases Remix does not ship an adapter for. Set `db.adapter.type` to `"module"` in `remix.json` and name a module that exports a database factory; `remix/cli` exports `RemixDbModuleFactory` and `RemixDbModuleContext` for typing it.
