@@ -23,6 +23,27 @@ function normalizeFileType(type: string): string {
   return new File([''], '', { type }).type
 }
 
+// A request whose body sends `chunk` and then stays open, like a client that never finishes
+function createOpenEndedRequest(contentType: string, chunk: string) {
+  let cancelled = false
+  let body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(chunk))
+    },
+    cancel() {
+      cancelled = true
+    },
+  })
+  let request = new Request('https://remix.run', {
+    method: 'POST',
+    headers: { 'Content-Type': contentType },
+    body,
+    duplex: 'half',
+  } as RequestInit)
+
+  return { request, wasCancelled: () => cancelled }
+}
+
 describe('parseFormData', () => {
   it('reports the uploaded media type independently of the filename extension', async () => {
     let request = new Request('https://remix.run', {
@@ -131,6 +152,29 @@ describe('parseFormData', () => {
       () => parseFormData(request, { maxTotalSize: 1 }),
       MaxTotalSizeExceededError,
     )
+  })
+
+  it('cancels an unfinished urlencoded body when a limit is exceeded', async () => {
+    let { request, wasCancelled } = createOpenEndedRequest(
+      'application/x-www-form-urlencoded',
+      'tag=red&tag=green&tag=blue',
+    )
+
+    await assert.rejects(() => parseFormData(request, { maxParts: 1 }), MaxPartsExceededError)
+    assert.equal(wasCancelled(), true)
+  })
+
+  it('cancels an unfinished multipart body when a limit is exceeded', async () => {
+    let { request, wasCancelled } = createOpenEndedRequest(
+      'multipart/form-data; boundary=b',
+      '--b\r\nContent-Disposition: form-data; name="a"\r\n\r\n' + 'x'.repeat(100),
+    )
+
+    await assert.rejects(
+      () => parseFormData(request, { maxTotalSize: 10 }),
+      MaxTotalSizeExceededError,
+    )
+    assert.equal(wasCancelled(), true)
   })
 
   it('preserves repeated fields for mixed-case urlencoded media types', async () => {

@@ -1,0 +1,1 @@
+Cancel the request body stream when `parseMultipartRequest()` and `parseMultipartStream()` stop reading before the body ends, such as when `maxTotalSize` or `maxParts` is exceeded, so the sender is told to stop instead of the rest of the body being left unread.

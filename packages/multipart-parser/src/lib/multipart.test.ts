@@ -536,4 +536,27 @@ describe('parseMultipartStream', async () => {
       }
     }, MaxTotalSizeExceededError)
   })
+
+  it('cancels the stream when the limit is exceeded before the body ends', async () => {
+    let cancelled = false
+    let stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            `--${boundary}\r\nContent-Disposition: form-data; name="a"\r\n\r\n${'x'.repeat(100)}`,
+          ),
+        )
+      },
+      cancel() {
+        cancelled = true
+      },
+    })
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartStream(stream, { boundary, maxTotalSize: 10 })) {
+        // ...
+      }
+    }, MaxTotalSizeExceededError)
+    assert.equal(cancelled, true)
+  })
 })
