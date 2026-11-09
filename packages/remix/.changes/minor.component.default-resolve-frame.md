@@ -1,0 +1,1 @@
+Customize frame requests with `defaultResolveFrame` from `remix/component`, preserving Remix's form encoding, frame headers, cancellation, and response handling. Resolvers now receive `navigationType`, so apps can opt into `cache: 'force-cache'` for Back/Forward navigations while leaving other requests unchanged.

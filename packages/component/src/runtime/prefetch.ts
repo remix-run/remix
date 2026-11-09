@@ -306,8 +306,12 @@ export function fetchFrame(
   init: RequestInit,
   contentType?: string,
 ): Promise<Response> {
-  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+  let headers = new Headers(init.headers)
+  headers.set('Accept', 'text/html')
+  headers.set('X-Remix-Frame', 'true')
+  headers.delete('X-Remix-Target')
   if (target != null) headers.set('X-Remix-Target', target)
+  headers.delete('Content-Type')
   if (contentType) headers.set('Content-Type', contentType)
   return fetch(src, { ...init, headers, mode: 'same-origin' })
 }

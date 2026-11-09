@@ -1,4 +1,4 @@
-import { run } from 'remix/component'
+import { defaultResolveFrame, run } from 'remix/component'
 import {
   detectMultipleImportMapSupport,
   importModule,
@@ -13,6 +13,11 @@ export const app = run({
       throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
     }
     return Component
+  },
+  resolveFrame(src, options) {
+    return defaultResolveFrame(src, options, {
+      cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+    })
   },
   async processClientEntryPreloads(preloads) {
     if (await detectMultipleImportMapSupport()) {

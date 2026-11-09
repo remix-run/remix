@@ -1309,6 +1309,81 @@ describe('frames', () => {
     expect(root.textContent).toBe('Reloaded')
   })
 
+  it('inherits navigation types through client frames without retaining them for reloads', async (t) => {
+    let root = document.implementation.createHTMLDocument('Initial')
+    let namedFrames = new NamedFrameRegistry()
+    let loads: Array<[string, ResolveFrameOptions['navigationType']]> = []
+    let frame = createTestFrame(root, {
+      namedFrames,
+      resolveFrame(src, options) {
+        loads.push([src, options?.navigationType])
+        if (src === 'https://example.com/initial') {
+          return jsx(Frame, { name: 'child', src: '/child' })
+        }
+        if (src === '/child') return jsx(Frame, { src: '/grandchild' })
+        return '<p>Loaded</p>'
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    await reloadFrameForNavigation(frame.handle, { navigationType: 'traverse' }).finished
+
+    expect(loads).toEqual([
+      ['https://example.com/initial', 'traverse'],
+      ['/child', 'traverse'],
+      ['/grandchild', 'traverse'],
+    ])
+    expect(root.body.textContent).toBe('Loaded')
+    let child = namedFrames.get('child')
+    expect(child).toBeDefined()
+    await child?.reload()
+
+    expect(loads.slice(3)).toEqual([
+      ['/child', undefined],
+      ['/grandchild', undefined],
+    ])
+  })
+
+  it('passes navigation types to client frames hydrated inside new server frames', async (t) => {
+    let renderClientFrame = false
+    let Entry = clientEntry('/entry.js#Entry', function Entry() {
+      return () =>
+        renderClientFrame
+          ? jsx(Frame, { src: '/client-child' })
+          : jsx('p', { children: 'Server content' })
+    })
+    let html = await drain(
+      renderToStream(
+        jsx('html', {
+          children: [
+            jsx('head', {}),
+            jsx('body', { children: jsx(Frame, { src: '/server-wrapper' }) }),
+          ],
+        }),
+        { resolveFrame: () => renderToString(jsx(Entry, {})) },
+      ),
+    )
+    let loads: Array<ResolveFrameOptions['navigationType']> = []
+    let frame = createTestFrame(document, {
+      loadModule: () => Entry,
+      resolveFrame(src, options) {
+        if (src === 'https://example.com/initial') return html
+        expect(src).toBe('/client-child')
+        loads.push(options?.navigationType)
+        return '<p id="client-child">Client content</p>'
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    renderClientFrame = true
+
+    await reloadFrameForNavigation(frame.handle, { navigationType: 'traverse' }).finished
+
+    expect(loads).toEqual(['traverse'])
+    expect(document.getElementById('client-child')?.textContent).toBe('Client content')
+  })
+
   it('submits FormData in one request and renders its response without navigation', async (t) => {
     let root = document.createElement('div')
     root.innerHTML = '<p>Initial</p>'

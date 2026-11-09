@@ -1230,13 +1230,37 @@ The default resolver sends `X-Remix-Frame: true` for every request, including to
 
 The default resolver doesn't tell the server which page contains the frame. If frame content depends on the containing page, include that context explicitly in the frame's `src`.
 
-The default resolver is a short `fetch()` call ([source](https://github.com/remix-run/remix/blob/main/packages/component/src/runtime/run.ts)), so a custom resolver can start from a copy of it. It also follows these rules:
+`defaultResolveFrame(src, options?, overrides?)` is the resolver used by `run()` unless you provide `resolveFrame`. It follows these rules:
 
 - GET form values are already encoded in `src`. `application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use CRLF-delimited text, and `multipart/form-data` submissions use `FormData`.
 - It accepts `2xx` responses, and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text.
 - It uses the `same-origin` Fetch mode, so cross-origin sources and redirects fail, even when the destination allows CORS.
 
-Pass a custom `resolveFrame` to `run()` when the server requires additional headers, another body encoding, or a different response policy. A custom resolver can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it. When `fetch()` followed a redirect, frames other than the top frame render the response without changing either URL.
+Delegate to `defaultResolveFrame` to customize Fetch's `cache`, `headers`, `credentials`, or `priority` settings while keeping the default form encoding, cancellation, and response handling. Custom headers merge with the default headers; `Accept`, `X-Remix-Frame`, `X-Remix-Target`, and the form Content-Type remain controlled by the resolver. Fetch generates multipart boundaries.
+
+For example, use the browser HTTP cache for Back/Forward navigations, including stale responses:
+
+```ts
+import { defaultResolveFrame, run } from 'remix/component'
+
+run({
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+  resolveFrame(src, options) {
+    return defaultResolveFrame(src, options, {
+      cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+    })
+  },
+})
+```
+
+`options.navigationType` is `push`, `replace`, `traverse`, or `reload` for loads caused by a navigation. Client frames loaded while rendering that response inherit the navigation type. Independent frame loads and `frame.reload()` calls leave it undefined.
+
+`force-cache` still needs a matching stored response and falls back to the network on a miss. The server must allow the response to be stored, with suitable `Cache-Control` and `Vary` headers. It can reuse responses past their `max-age`, so the application owns when to bypass cached responses after mutations or changes to the signed-in user.
+
+Provide a custom `resolveFrame` without delegating when you need another body encoding or response policy. It can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it. When `fetch()` followed a redirect, frames other than the top frame render the response without changing either URL.
 
 ### Preserving Client-Owned DOM
 
@@ -1395,10 +1419,10 @@ Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS 
 
 The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
 
-To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next GET request with the same source and target. The app provides `loadModule` and a `fetchFrame(src, options)` helper that handles frame headers, submissions, cancellation, and response handling, and it owns the lifetime and invalidation of any responses it keeps:
+To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next GET request with the same source and target, using `defaultResolveFrame` for requests. The app provides `loadModule` and owns the lifetime and invalidation of any responses it keeps:
 
 ```ts
-import { run } from 'remix/component'
+import { defaultResolveFrame, run } from 'remix/component'
 
 let prefetched = new Map<string, Promise<Response>>()
 
@@ -1411,13 +1435,13 @@ function frameKey(src: string, target?: string) {
 run({
   loadModule,
   prefetch(src, options) {
-    prefetched.set(frameKey(src, options?.target), fetchFrame(src, options))
+    prefetched.set(frameKey(src, options?.target), defaultResolveFrame(src, options))
   },
   resolveFrame(src, options) {
     let isGet = !options?.method || options.method.toUpperCase() === 'GET'
     let response = isGet ? prefetched.get(frameKey(src, options?.target)) : undefined
     prefetched.clear()
-    return response ?? fetchFrame(src, options)
+    return response ?? defaultResolveFrame(src, options)
   },
 })
 ```

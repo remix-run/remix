@@ -432,6 +432,7 @@ export function startNavigationListenerImpl(
         let reload = options.reloadFrame(frame, {
           ...submission,
           signal: event.signal,
+          navigationType: event.navigationType,
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
