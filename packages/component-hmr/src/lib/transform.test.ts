@@ -984,7 +984,8 @@ describe('transformComponentsForServer', () => {
     )
     assert.equal(
       getGeneratedImports(result.code),
-      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from "@remix-run/component-hmr/runtime/server";`,
+      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from "@remix-run/component-hmr/runtime/server";
+Counter = __remixComponentHmr__.getStableComponentForHmr("file:///app/Counter.tsx", "Counter", Counter);`,
     )
     assert.equal(
       getGeneratedPublicWrapper(result.code, 'Counter'),
@@ -1013,6 +1014,20 @@ describe('transformComponentsForServer', () => {
     assert.equal(getGeneratedComponentModuleUpdate(result.code), null)
   })
 
+  it('stabilizes hoisted component bindings before top-level reads', () => {
+    let result = transformComponentsForServer(
+      `const identity = Counter
+export function Counter() {
+  return () => <button>Count</button>
+}
+`,
+      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
+    )
+
+    let stabilization = 'Counter = __remixComponentHmr__.getStableComponentForHmr('
+    assert.ok(result.code.indexOf(stabilization) < result.code.indexOf('const identity = Counter'))
+  })
+
   it('derives server runtime imports from the import source', () => {
     let result = transformComponentsForServer(
       `export function Counter() {
@@ -1025,7 +1040,8 @@ describe('transformComponentsForServer', () => {
     assert.equal(result.transformed, true)
     assert.equal(
       getGeneratedImports(result.code),
-      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from "remix/component-hmr/runtime/server";`,
+      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from "remix/component-hmr/runtime/server";
+Counter = __remixComponentHmr__.getStableComponentForHmr("file:///app/Counter.tsx", "Counter", Counter);`,
     )
   })
 
@@ -1041,7 +1057,8 @@ describe('transformComponentsForServer', () => {
     assert.equal(result.transformed, true)
     assert.equal(
       getGeneratedImports(result.code),
-      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from "@acme/remix/component-hmr/runtime/server";`,
+      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from "@acme/remix/component-hmr/runtime/server";
+Counter = __remixComponentHmr__.getStableComponentForHmr("file:///app/Counter.tsx", "Counter", Counter);`,
     )
   })
 
