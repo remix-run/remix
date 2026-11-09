@@ -4439,12 +4439,12 @@ describe('stream', () => {
   })
 
   describe('frames', () => {
-    it('serializes preload=true as inert frame metadata without native fetch preloads', async () => {
+    it('serializes prefetch=true as inert frame metadata without native fetch hints', async () => {
       let html = await drain(
         renderToStream(
           <main>
-            <Frame name="enabled" src="/enabled" preload={true} />
-            <Frame name="disabled" src="/disabled" preload={false} />
+            <Frame name="enabled" src="/enabled" prefetch />
+            <Frame name="disabled" src="/disabled" prefetch={false} />
             <Frame name="default" src="/default" />
           </main>,
           { resolveFrame: () => '<p>Resolved</p>' },
@@ -4452,13 +4452,15 @@ describe('stream', () => {
       )
 
       expect(Object.values(parseRmxDataFromHtml(html).f)).toEqual([
-        { status: 'resolved', name: 'enabled', src: '/enabled', preload: true },
+        { status: 'resolved', name: 'enabled', src: '/enabled', prefetch: true },
         { status: 'resolved', name: 'disabled', src: '/disabled' },
         { status: 'resolved', name: 'default', src: '/default' },
       ])
       let template = document.createElement('template')
       template.innerHTML = html
-      expect(template.content.querySelector('link[rel="preload"][as="fetch"]')).toBe(null)
+      expect(
+        template.content.querySelector('link[rel="preload"][as="fetch"], link[rel="prefetch"]'),
+      ).toBe(null)
     })
 
     it('adds frame scripts for non-blocking frames', async () => {

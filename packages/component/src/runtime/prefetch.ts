@@ -27,7 +27,7 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
  * fetches HTML and discovers external JavaScript, CSS, and explicit image and font preloads for
  * `<link rel="prefetch">` hints.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Set
- * `preload={true}` on nested `<Frame>` components to also fetch their HTML and discover their assets.
+ * `prefetch={true}` on nested `<Frame>` components to also fetch their HTML and discover their assets.
  * Pass a `prefetch` handler to `run()` to replace the strategy. Cross-origin URLs, the current
  * untargeted page, and browsers where Remix doesn't handle navigations are skipped.
  *
@@ -386,8 +386,8 @@ export function createDefaultPrefetch(
       if (typeof data.f !== 'object' || data.f === null || Array.isArray(data.f)) continue
       let frames: unknown[] = Object.values(data.f)
       for (let frame of frames) {
-        if (typeof frame !== 'object' || frame === null || !('preload' in frame)) continue
-        if (frame.preload !== true || !('src' in frame)) continue
+        if (typeof frame !== 'object' || frame === null || !('prefetch' in frame)) continue
+        if (frame.prefetch !== true || !('src' in frame)) continue
         if (typeof frame.src !== 'string' || !frame.src) continue
         let target = 'name' in frame ? frame.name : undefined
         if (target !== undefined && typeof target !== 'string') continue

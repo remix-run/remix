@@ -81,7 +81,7 @@ type FrameData = {
   status: 'pending' | 'resolved'
   name?: string
   src: string
-  preload?: true
+  prefetch?: true
 }
 
 type HydrationData = {
