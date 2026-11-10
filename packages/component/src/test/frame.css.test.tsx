@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import type { Handle } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
-import { Frame, getNamedFrame } from '../runtime/frame.ts'
+import { Frame } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { renderToStream } from '../server/stream.ts'
@@ -176,7 +176,7 @@ describe('frame css style ownership', () => {
       )
     }
 
-    let stableFrame = getNamedFrame('stable')
+    let stableFrame = app.frames.get('stable')
     invariant(stableFrame)
     expect(stableFrame.src).toBe('/stable')
     let reload = () => stableFrame.reload()
