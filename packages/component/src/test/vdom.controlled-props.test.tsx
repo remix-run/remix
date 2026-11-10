@@ -234,6 +234,60 @@ describe('vdom controlled props', () => {
     expect(selected(select)).toEqual([])
   })
 
+  it('selects the first matching option after returning components are placed', (t) => {
+    let removal = Promise.withResolvers<void>()
+    let retained = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => removal.promise))
+      return () => handle.element
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => {
+      root.dispose()
+      removal.resolve()
+    })
+    let visible = true
+    let handles = new Map<string, Handle<{ id: string }>>()
+    function Option(handle: Handle<{ id: string }>) {
+      handles.set(handle.props.id, handle)
+      return () =>
+        visible ? (
+          <option key={handle.props.id} value="same" mix={retained()}>
+            {handle.props.id}
+          </option>
+        ) : null
+    }
+    function list(order: string[]) {
+      return (
+        <select value="same">
+          {order.map((id) => (
+            <Option key={id} id={id} />
+          ))}
+        </select>
+      )
+    }
+    root.render(list(['A', 'B']))
+    root.flush()
+    let select = container.querySelector('select')
+    if (!select) throw new Error('Missing select')
+    let original = [...select.options]
+    visible = false
+    for (let handle of handles.values()) handle.update()
+    root.flush()
+    root.render(list(['B', 'A']))
+    root.flush()
+    visible = true
+    for (let id of ['B', 'A']) {
+      let handle = handles.get(id)
+      if (!handle) throw new Error('Missing option handle')
+      handle.update()
+    }
+    root.flush()
+    expect([...select.options]).toEqual([original[1], original[0]])
+    expect(select.selectedIndex).toBe(0)
+    expect(select.selectedOptions[0]).toBe(original[1])
+  })
+
   it('ignores changes and removal of a select defaultValue after initialization', (t) => {
     let container = document.createElement('div')
     let root = createRoot(container)
