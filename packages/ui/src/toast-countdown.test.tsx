@@ -155,7 +155,7 @@ describe('Toast countdown indicators', () => {
     await result.act(() => toastManager.add({ id, title: 'Saved', timeout: false }))
     assert.equal(host.hidden, false)
     assert.equal(host.getAnimations().length, 0)
-    assert.equal(host.getAttribute('aria-hidden'), null)
+    assert.equal(host.getAttribute('aria-hidden'), 'true')
     await result.act(() => toastManager.add({ id, title: 'Saved', timeout: 10000 }))
     let last = host.getAnimations()[0]
     result.cleanup()
@@ -191,6 +191,6 @@ describe('Toast countdown indicators', () => {
     assert.equal(animation.playState, 'idle')
     assert.equal(host.getAnimations().length, 0)
     assert.equal(host.hidden, false)
-    assert.equal(host.getAttribute('aria-hidden'), null)
+    assert.equal(host.getAttribute('aria-hidden'), 'true')
   })
 })

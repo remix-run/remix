@@ -121,6 +121,7 @@ type RootState = {
   unregisterItem(id: string, node: HTMLElement): void
   focusGuard(previous: EventTarget | null): void
   readonly hasReturnTarget: boolean
+  readonly focused: boolean
   readonly expanded: boolean
 }
 
@@ -241,7 +242,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     for (let [id, { node }] of presentations) {
       let unavailable = !available.has(id)
       node.inert = unavailable
-      if (unavailable) node.setAttribute('aria-hidden', 'true')
+      if (unavailable || !state.focused) node.setAttribute('aria-hidden', 'true')
       else node.removeAttribute('aria-hidden')
     }
   }
@@ -273,6 +274,9 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     },
     get hasReturnTarget() {
       return returnTo !== undefined
+    },
+    get focused() {
+      return Boolean(region && contains(region, activeElement(region.ownerDocument)))
     },
     get expanded() {
       return interaction.expanded
@@ -341,10 +345,11 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         'focusin',
         (event) => {
           let active = activeElement(doc)
-          if (!active || (!entering && !active.matches(':focus-visible'))) return
-          if (!entering && isElement(event.relatedTarget) && !contains(node, event.relatedTarget))
-            returnTo = event.relatedTarget
-          interaction.set('keyboardFocused', true)
+          if (active && (entering || active.matches(':focus-visible'))) {
+            if (!entering && isElement(event.relatedTarget) && !contains(node, event.relatedTarget))
+              returnTo = event.relatedTarget
+            interaction.set('keyboardFocused', true)
+          }
           refresh()
           void handle.update()
         },
@@ -461,20 +466,21 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       <ToastScope value={state}>
         {handle.props.children(toastManager.toastItems)}
         <div aria-live="polite" aria-atomic="false" aria-relevant="additions text" mix={hidden}>
-          {toastManager.toastItems
-            .filter((toastItem) => presentations.has(toastItem.id))
-            .map((toastItem) => (
-              <div key={JSON.stringify([toastItem.id, toastItem.revision])} aria-atomic="true">
-                {toastItem.announcement !== undefined ? (
-                  toastItem.announcement
-                ) : (
-                  <>
-                    <div>{toastItem.title}</div>
-                    <div>{toastItem.description}</div>
-                  </>
-                )}
-              </div>
-            ))}
+          {!state.focused &&
+            toastManager.toastItems
+              .filter((toastItem) => presentations.has(toastItem.id))
+              .map((toastItem) => (
+                <div key={JSON.stringify([toastItem.id, toastItem.revision])} aria-atomic="true">
+                  {toastItem.announcement !== undefined ? (
+                    toastItem.announcement
+                  ) : (
+                    <>
+                      <div>{toastItem.title}</div>
+                      <div>{toastItem.description}</div>
+                    </>
+                  )}
+                </div>
+              ))}
         </div>
       </ToastScope>
     )
@@ -685,7 +691,7 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
       return [
         attrs({
           inert: limited || !toastItem ? true : undefined,
-          'aria-hidden': limited || !toastItem ? 'true' : undefined,
+          'aria-hidden': limited || !toastItem || !context.focused ? 'true' : undefined,
           'data-limited': limited ? '' : undefined,
           role: 'dialog',
           'aria-modal': 'false',

@@ -507,7 +507,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Applied while limited or logically closed. Retained exits remain unavailable.
           </ApiEntry>
           <ApiEntry name="aria-hidden" type="'true'">
-            Applied while limited or logically closed.
+            Applied while focus is outside the collection, or while limited or logically closed.
           </ApiEntry>
         </ApiTable>
         <ApiTable id="item-states" label="Attribute">

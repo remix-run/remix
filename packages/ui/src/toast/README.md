@@ -69,7 +69,7 @@ Notifications announce the published title and description through a separate po
 
 If you omit the title, supply an accessible name on the item with `aria-label` or `aria-labelledby`.
 
-Screen reader users cannot activate a toast's actions directly from its announcement. Where possible, use `announcement` to explain an alternative way to perform the action, such as a keyboard shortcut or a control elsewhere in your application. Visible notifications and their controls remain available for exploration unless limited.
+Screen reader users cannot activate a toast's actions directly from its announcement. Where possible, use `announcement` to explain an alternative way to perform the action, such as a keyboard shortcut or a control elsewhere in your application. While focus is outside the collection, screen readers receive the separate announcements. Entering the collection clears the announcement content and exposes the available notifications and their controls for exploration.
 
 F6 enters the collection and F6 again returns to the previous element. Tab visits each available notification before its controls. Shift+Tab from the collection, or Tab past either boundary, returns to the previous element. Escape dismisses the focused notification. Closing it moves focus to a neighbouring mounted, available notification or returns to the previous element. Focus is not deferred to a future mount. Make the shortcut discoverable in your application; change or disable `hotkey` for secondary managers.
 

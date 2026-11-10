@@ -409,7 +409,7 @@ describe('toast gestures and clocks', () => {
     assert.ok(Number(bar.getAnimations()[0].effect?.getTiming().duration) > 19000)
     await result.act(() => toastManager.add({ id, title: 'Saved', timeout: false }))
     assert.equal(bar.hidden, false)
-    assert.equal(bar.getAttribute('aria-hidden'), null)
+    assert.equal(bar.getAttribute('aria-hidden'), 'true')
     assert.equal(bar.getAnimations().length, 0)
   })
 
@@ -479,7 +479,7 @@ describe('toast gestures and clocks', () => {
     let current = element(result.container, '[data-toast]')
     assert.equal(current, node)
     assert.equal(current.inert, false)
-    assert.equal(current.getAttribute('aria-hidden'), null)
+    assert.equal(current.getAttribute('aria-hidden'), 'true')
     assert.equal(current.textContent, 'Second')
   })
 })
@@ -516,7 +516,7 @@ describe('toast availability', () => {
     assert.equal(result.$$('[data-limited]').length, 0)
     for (let node of result.$$('[data-toast]')) {
       assert.equal(node.inert, false)
-      assert.equal(node.getAttribute('aria-hidden'), null)
+      assert.equal(node.getAttribute('aria-hidden'), 'true')
     }
 
     await result.act(() => result.root.render(view(3)))
@@ -538,14 +538,14 @@ describe('toast availability', () => {
 
     await result.act(() => toastManager.close('third'))
     assert.equal(secondNode.inert, false)
-    assert.equal(secondNode.getAttribute('aria-hidden'), null)
+    assert.equal(secondNode.getAttribute('aria-hidden'), 'true')
     assert.equal(secondNode.hasAttribute('data-limited'), false)
     assert.equal(firstNode.inert, true)
 
     await result.act(() => result.root.render(view(3)))
     assert.equal(element(result.container, '[data-id="first"]'), firstNode)
     assert.equal(firstNode.inert, false)
-    assert.equal(firstNode.getAttribute('aria-hidden'), null)
+    assert.equal(firstNode.getAttribute('aria-hidden'), 'true')
     assert.equal(firstNode.hasAttribute('data-limited'), false)
     await result.act(() => result.root.render(view(1)))
     assert.equal(secondNode.inert, true)
@@ -553,8 +553,8 @@ describe('toast availability', () => {
     await result.act(() => result.root.render(view()))
     assert.equal(firstNode.inert, false)
     assert.equal(secondNode.inert, false)
-    assert.equal(firstNode.getAttribute('aria-hidden'), null)
-    assert.equal(secondNode.getAttribute('aria-hidden'), null)
+    assert.equal(firstNode.getAttribute('aria-hidden'), 'true')
+    assert.equal(secondNode.getAttribute('aria-hidden'), 'true')
     assert.equal(result.$$('[data-limited]').length, 0)
   })
 
@@ -737,7 +737,7 @@ describe('toast availability', () => {
     assert.notEqual(document.activeElement, current)
     await result.act(() => toastManager.close('new'))
     assert.equal(old.inert, false)
-    assert.equal(old.getAttribute('aria-hidden'), null)
+    assert.equal(old.getAttribute('aria-hidden'), 'true')
     assert.notEqual(document.activeElement, old)
   })
 })
