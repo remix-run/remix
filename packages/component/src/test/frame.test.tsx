@@ -408,6 +408,78 @@ describe('run', () => {
     expect(document.getElementById('next-page')?.textContent).toBe('Next page')
   })
 
+  it('keeps client-created preserved elements, and their focus, when the top frame reloads', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let host = document.createElement('div')
+    host.setAttribute('data-rmx-preserve-dom', '')
+    let input = document.createElement('input')
+    host.append(input)
+    document.body.append(host)
+    input.focus()
+    let main = document.querySelector('main')
+    let records: MutationRecord[] = []
+    let observer = new MutationObserver((batch) => records.push(...batch))
+    observer.observe(document.body, { childList: true, attributes: true, subtree: true })
+    t.after(() => observer.disconnect())
+    app.frames.top.src = '/saved'
+
+    await app.frames.top.reload()
+    await Promise.resolve()
+
+    expect(main?.textContent).toBe('Saved')
+    expect(Array.from(document.body.children)).toEqual([main, host])
+    expect(document.activeElement).toBe(input)
+    expect(
+      records.filter((record) => record.addedNodes.length + record.removedNodes.length > 0),
+    ).toEqual([])
+  })
+
+  it('keeps a preserved element beside a named frame when the top frame reloads', async (t) => {
+    let frameHtml = '<p id="frame-content">Fresh</p>'
+    document.body.innerHTML = await drain(
+      renderToStream(<Frame name="details" src="/frame" />, {
+        resolveFrame: () => '<p id="frame-content">Initial</p>',
+      }),
+    )
+    let host = document.createElement('div')
+    host.setAttribute('data-rmx-preserve-dom', '')
+    document.body.append(host)
+    t.mock.method(
+      globalThis,
+      'fetch',
+      async () =>
+        new Response(
+          await drainWithProtocol(
+            renderToStream(
+              <html>
+                <head />
+                <body>
+                  <Frame name="details" src="/frame" />
+                </body>
+              </html>,
+              { resolveFrame: () => frameHtml },
+            ),
+          ),
+        ),
+    )
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => app.dispose())
+    await app.ready()
+    let removed: Node[] = []
+    let observer = new MutationObserver((batch) =>
+      batch.forEach((record) => removed.push(...record.removedNodes)),
+    )
+    observer.observe(document.body, { childList: true })
+    t.after(() => observer.disconnect())
+
+    await app.frames.top.reload()
+    await Promise.resolve()
+
+    expect(document.getElementById('frame-content')?.textContent).toBe('Fresh')
+    expect(document.body.lastElementChild).toBe(host)
+    expect(removed).not.toContain(host)
+  })
+
   it('retains the requested source without retaining the previous method or body', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
     let body = new FormData()

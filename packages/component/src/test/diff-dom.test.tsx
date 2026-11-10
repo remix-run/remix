@@ -48,6 +48,7 @@ function recordMutations(target: Node) {
     let records = observer.takeRecords()
     observer.disconnect()
     return {
+      added: records.flatMap((record) => Array.from(record.addedNodes)),
       removed: records.flatMap((record) => Array.from(record.removedNodes)),
       attributeTargets: records
         .filter((record) => record.type === 'attributes')
@@ -832,6 +833,25 @@ describe('diffNodes', () => {
       expect(current.head.children.item(2)).toBe(preload)
     })
 
+    it('keeps a client-created preserved element and does not pair it with a shifted incoming one', () => {
+      let current = parseHead(
+        '<style data-rmx-preserve-dom>.client{}</style><link rel="modulepreload" href="/a.js">',
+      )
+      let [style, preload] = Array.from(current.head.children)
+
+      diffHead(
+        current,
+        '<style>.server{}</style><link rel="modulepreload" href="/b.js"><link rel="modulepreload" href="/a.js">',
+      )
+
+      let styles = Array.from(current.head.querySelectorAll('style'))
+      expect(styles.length).toBe(2)
+      expect(styles[0]).toBe(style)
+      expect(style.textContent).toBe('.client{}')
+      expect(styles[1].textContent).toBe('.server{}')
+      expect(current.head.contains(preload)).toBe(true)
+    })
+
     it('does not repurpose a link to load a different href', () => {
       let current = parseHead(
         '<link rel="stylesheet" href="/a.css"><link rel="stylesheet" href="/b.css">',
@@ -1328,6 +1348,199 @@ describe('diffNodes', () => {
 
       expect(Array.from(container.children)).toEqual([first, d, a, b, c, last])
       expect(mutations().removed).toEqual([d])
+    })
+
+    describe('unmatched preserved elements', () => {
+      it('keeps a client-created element the incoming html omits', () => {
+        let container = document.createElement('div')
+        container.innerHTML =
+          '<main>Old</main><div data-rmx-preserve-dom><button>Client</button></div>'
+        let [main, host] = Array.from(container.children)
+        let button = host.querySelector('button')
+        let mutations = recordMutations(container)
+
+        diffDom(container, '<main>New</main>')
+
+        expect(Array.from(container.children)).toEqual([main, host])
+        expect(host.querySelector('button')).toBe(button)
+        expect(host.hasAttribute('data-rmx-preserve-dom')).toBe(true)
+        let { added, removed } = mutations()
+        expect(removed).not.toContain(host)
+        expect(added).not.toContain(host)
+      })
+
+      it('does not move matched siblings around trailing preserved elements', () => {
+        let container = document.createElement('div')
+        container.innerHTML =
+          '<header>H</header><main>M</main><footer>F</footer>' +
+          '<div data-rmx-preserve-dom></div><div data-rmx-preserve-dom></div>'
+        let [header, main, footer, host1, host2] = Array.from(container.children)
+        let mutations = recordMutations(container)
+
+        diffDom(container, '<header>H2</header><main>M2</main><footer>F2</footer>')
+
+        expect(Array.from(container.children)).toEqual([header, main, footer, host1, host2])
+        let { added, removed } = mutations()
+        expect(added).toEqual([])
+        expect(removed).toEqual([])
+      })
+
+      it('inserts new siblings before trailing preserved elements', () => {
+        let container = document.createElement('div')
+        container.innerHTML = '<main>M</main><div data-rmx-preserve-dom></div>'
+        let [main, host] = Array.from(container.children)
+        let mutations = recordMutations(container)
+
+        diffDom(container, '<main>M</main><aside>A</aside><footer>F</footer>')
+
+        expect(container.innerHTML).toBe(
+          '<main>M</main><aside>A</aside><footer>F</footer><div data-rmx-preserve-dom=""></div>',
+        )
+        expect(container.firstElementChild).toBe(main)
+        expect(container.lastElementChild).toBe(host)
+        let { added, removed } = mutations()
+        expect(removed).toEqual([])
+        expect(added).not.toContain(main)
+        expect(added).not.toContain(host)
+      })
+
+      it('keeps leading, middle, and trailing preserved elements while matched siblings update', () => {
+        let container = document.createElement('div')
+        container.innerHTML =
+          '<i data-rmx-preserve-dom>lead</i><p>A</p><b data-rmx-preserve-dom>mid</b>' +
+          '<p>B</p><u data-rmx-preserve-dom>tail</u>'
+        let [lead, a, mid, b, tail] = Array.from(container.children)
+        let mutations = recordMutations(container)
+
+        diffDom(container, '<p>A2</p><p>B2</p>')
+
+        expect(Array.from(container.children)).toEqual([lead, a, mid, b, tail])
+        expect(a.textContent).toBe('A2')
+        expect(b.textContent).toBe('B2')
+        let { added, removed } = mutations()
+        expect(removed).toEqual([])
+        expect(added).toEqual([])
+      })
+
+      it('places new siblings between preserved elements without moving them', () => {
+        let container = document.createElement('div')
+        container.innerHTML = '<i data-rmx-preserve-dom></i><p>A</p><b data-rmx-preserve-dom></b>'
+        let [lead, a, tail] = Array.from(container.children)
+        let mutations = recordMutations(container)
+
+        diffDom(container, '<p>A</p><p>B</p>')
+
+        let [first, second, third, fourth] = Array.from(container.children)
+        expect([first, second]).toEqual([lead, a])
+        expect(third.textContent).toBe('B')
+        expect(fourth).toBe(tail)
+        let { added, removed } = mutations()
+        expect(removed).toEqual([])
+        expect(added).toEqual([third])
+      })
+
+      it('moves keyed siblings without detaching a preserved element between them', () => {
+        let container = document.createElement('div')
+        container.innerHTML =
+          '<p data-rmx-key="a">A</p><div data-rmx-preserve-dom></div>' +
+          '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
+        let [a, host, b, c] = Array.from(container.children)
+        let mutations = recordMutations(container)
+
+        diffDom(
+          container,
+          '<p data-rmx-key="c">C</p><p data-rmx-key="a">A</p><p data-rmx-key="b">B</p>',
+        )
+
+        expect(container.contains(host)).toBe(true)
+        expect(Array.from(container.children).filter((node) => node !== host)).toEqual([c, a, b])
+        let { added, removed } = mutations()
+        expect(removed).not.toContain(host)
+        expect(added).not.toContain(host)
+      })
+
+      it('removes preserved elements nested in an unmatched parent', () => {
+        let container = document.createElement('div')
+        container.innerHTML =
+          '<section><div data-rmx-preserve-dom></div></section><main data-rmx-key="m">M</main>'
+        let main = container.querySelector('main')
+
+        diffDom(container, '<main data-rmx-key="m">M</main>')
+
+        expect(container.innerHTML).toBe('<main data-rmx-key="m">M</main>')
+        expect(container.firstElementChild).toBe(main)
+      })
+
+      it('keeps a preserved element nested in a matched parent', () => {
+        let container = document.createElement('div')
+        container.innerHTML = '<section><p>Old</p><div data-rmx-preserve-dom></div></section>'
+        let host = container.querySelector('div')
+
+        diffDom(container, '<section><p>New</p></section>')
+
+        expect(container.querySelector('section')?.lastElementChild).toBe(host)
+        expect(container.querySelector('p')?.textContent).toBe('New')
+      })
+
+      it('matches a preserved element the incoming html later includes', () => {
+        let container = document.createElement('div')
+        container.innerHTML =
+          '<main>M</main><div data-rmx-key="host" data-rmx-preserve-dom>Client</div>'
+        let [main, host] = Array.from(container.children)
+
+        diffDom(container, '<main>M</main>')
+        expect(Array.from(container.children)).toEqual([main, host])
+
+        diffDom(
+          container,
+          '<main>M</main><div data-rmx-key="host" data-rmx-preserve-dom>Server</div>',
+        )
+        expect(Array.from(container.children)).toEqual([main, host])
+        expect(host.textContent).toBe('Client')
+
+        diffDom(container, '<main>M</main><div data-rmx-key="host">Server</div>')
+        expect(Array.from(container.children)).toEqual([main, host])
+        expect(host.textContent).toBe('Server')
+      })
+
+      it('does not resurrect a preserved element its owner removed', () => {
+        let container = document.createElement('div')
+        container.innerHTML = '<main>M</main><div data-rmx-preserve-dom></div>'
+        let [main, host] = Array.from(container.children)
+
+        diffDom(container, '<main>M</main>')
+        host.remove()
+        diffDom(container, '<main>M</main>')
+
+        expect(Array.from(container.children)).toEqual([main])
+      })
+
+      it('still removes unmatched elements without the attribute', () => {
+        let container = document.createElement('div')
+        container.innerHTML = '<main>M</main><div>Client</div>'
+        let main = container.firstElementChild
+
+        diffDom(container, '<main>M</main>')
+
+        expect(container.innerHTML).toBe('<main>M</main>')
+        expect(container.firstElementChild).toBe(main)
+      })
+
+      it('does not hand a preserved element to an unrelated incoming sibling', () => {
+        let container = document.createElement('div')
+        container.innerHTML =
+          '<main>M</main><div data-rmx-preserve-dom><button>Client</button></div>'
+        let [main, host] = Array.from(container.children)
+        let button = host.querySelector('button')
+
+        diffDom(container, '<main>M</main><div>Server</div>')
+
+        expect(container.children.length).toBe(3)
+        expect(container.children[0]).toBe(main)
+        expect(container.contains(host)).toBe(true)
+        expect(host.querySelector('button')).toBe(button)
+        expect(container.textContent).toContain('Server')
+      })
     })
 
     it('preserves current select value when incoming html changes selected options', () => {

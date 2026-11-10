@@ -389,17 +389,28 @@ function matchKeyedSiblingUnits(diff: SiblingDiff, context: FrameContext): void 
   }
 }
 
+// An unkeyed preserved element only pairs with an incoming preserved one, so an
+// unrelated incoming sibling can neither take over a client-created element nor
+// shift the pairing of the siblings around it.
 function matchPositionalSiblingUnits(diff: SiblingDiff): void {
-  let { currentUnits, nextUnits, used, matchIndexForNext } = diff
+  matchPositionalSiblingUnitGroup(diff, true)
+  matchPositionalSiblingUnitGroup(diff, false)
+}
 
+function matchPositionalSiblingUnitGroup(diff: SiblingDiff, preserved: boolean): void {
+  let { currentUnits, nextUnits, used, matchIndexForNext } = diff
   let remainingCurrentIndexes: number[] = []
   for (let i = 0; i < currentUnits.length; i++) {
-    if (!used[i]) remainingCurrentIndexes.push(i)
+    if (!used[i] && (!isPreservedUnit(currentUnits[i]) || preserved)) {
+      remainingCurrentIndexes.push(i)
+    }
   }
 
   let remainingNextIndexes: number[] = []
   for (let i = 0; i < nextUnits.length; i++) {
-    if (matchIndexForNext[i] === -1) remainingNextIndexes.push(i)
+    if (matchIndexForNext[i] === -1 && (!preserved || isPreservedUnit(nextUnits[i]))) {
+      remainingNextIndexes.push(i)
+    }
   }
 
   let remainingLength = Math.min(remainingCurrentIndexes.length, remainingNextIndexes.length)
@@ -456,8 +467,13 @@ function matchShiftedHeadUnits(diff: SiblingDiff): void {
     }
     let identity = getUnkeyedNodeIdentity(nextUnit.node)
     if (identity === undefined) continue
-    let currentIndex = currentIndexesByIdentity.get(identity)?.shift()
-    if (currentIndex === undefined) continue
+    let indexes = currentIndexesByIdentity.get(identity)
+    // Like positional pairing, a preserved element only pairs with an incoming preserved one.
+    let position = indexes?.findIndex(
+      (index) => isPreservedUnit(nextUnit) || !isPreservedUnit(currentUnits[index]),
+    )
+    if (!indexes || position === undefined || position === -1) continue
+    let currentIndex = indexes.splice(position, 1)[0]
     used[currentIndex] = true
     matchIndexForNext[i] = currentIndex
   }
@@ -514,11 +530,13 @@ function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUn
 }
 
 // Remove obsolete siblings before placement so they do not force surviving
-// nodes to move and lose focus.
+// nodes to move and lose focus. Unmatched preserved elements are client-created,
+// like a portal host, so the incoming HTML never mentions them.
 function removeUnusedSiblingUnits(diff: SiblingDiff, context: FrameContext): void {
   let { parent, currentUnits, used } = diff
   for (let i = 0; i < currentUnits.length; i++) {
-    if (!used[i]) removeSiblingUnit(currentUnits[i], parent, context)
+    if (!used[i] && !isPreservedUnit(currentUnits[i]))
+      removeSiblingUnit(currentUnits[i], parent, context)
   }
 }
 
@@ -530,9 +548,17 @@ function placeSiblingUnits(
   committed: SiblingUnit[],
   regionTailRef: ChildNode | null,
 ): void {
-  let { parent } = diff
+  let { parent, currentUnits, used } = diff
   let stable = getStableCommittedIndexes(diff, committed)
+
+  // Unmatched preserved elements stay in place. Insert before the trailing ones so
+  // client-owned nodes keep trailing the region, instead of appending after them.
   let anchor: Node | null = regionTailRef
+  for (let i = currentUnits.length - 1; i >= 0 && !used[i]; i--) {
+    let unit = currentUnits[i]
+    if (unit.kind === 'node' && isPreservedUnit(unit)) anchor = unit.node
+  }
+
   for (let i = committed.length - 1; i >= 0; i--) {
     let unit = committed[i]
     let first = getSiblingUnitFirstNode(unit)
@@ -736,6 +762,10 @@ function removeSiblingUnit(unit: SiblingUnit, parent: ParentNode, context: Frame
   for (let node of collectNodeRange(unit.start, unit.end)) {
     removeNode(node, parent, context)
   }
+}
+
+function isPreservedUnit(unit: SiblingUnit): boolean {
+  return unit.kind === 'node' && isPreservedDomElement(unit.node)
 }
 
 function isPreservedDomElement(node: Node): node is Element {
