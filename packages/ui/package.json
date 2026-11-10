@@ -147,6 +147,7 @@
     "@remix-run/test": "workspace:*",
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
+    "axe-core": "^4.14.0",
     "esbuild": "^0.27.1",
     "playwright": "catalog:",
     "typescript": "catalog:"
