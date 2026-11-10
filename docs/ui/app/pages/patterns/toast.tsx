@@ -9,8 +9,7 @@ export const meta = {
   title: 'Toast',
   slug: 'toast',
   category: 'patterns',
-  description:
-    'Publish notifications from anywhere, with retained state, typed data and pausable timers.',
+  description: 'Toast notifications with accessible interactions and pausable timers.',
   importPath: '@remix-run/ui/toast',
 } satisfies PageMeta
 
@@ -67,7 +66,7 @@ const anatomy = await highlightSource(`
 const countdownCode = await highlightSource(`
   const defaultTimeout = 5000 // Use the same fixed default on Context.
 
-  <article mix={toast.item({ countdown: true })}>
+  const element = <article mix={toast.item({ countdown: true })}>
     <strong mix={toast.title()}>{toastItem.title}</strong>
     {Boolean(toastItem.timeout ?? defaultTimeout) && (
       <div aria-hidden="true" mix={css({
@@ -176,11 +175,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </>
       }
     >
-      <p>
-        Notifications form a compact stack that expands on hover, focus or touch. Use the dismiss
-        button to close a notification. F6 moves focus into the stack and back. Escape dismisses the
-        focused notification.
-      </p>
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <CodeBlock html={anatomy} />
@@ -192,11 +186,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
           changes.
         </p>
         <CodeBlock html={publishers} />
-        <p>
-          Notifications published before the region mounts are retained. Their timers start when an
-          item presents them. Unmounting the region cancels those timers without discarding
-          notifications. Remounting starts a fresh timeout for each presented notification.
-        </p>
         <p>
           Call <code>close(id)</code> to dismiss a toast programmatically, or <code>close()</code>
           to dismiss all toasts. Use the ID returned by <code>add()</code> or read it from{' '}
@@ -228,7 +217,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <Example id="timeout" example={timeout} />
         <p id="timers">
           Hover, focus and touch engagement pause timers. So do a hidden document or an unfocused
-          window. Timer state belongs to the rendered notifications, rather than the manager.
+          window.
         </p>
       </Section>
       <Section id="default-timeout" title="Default timeout">
@@ -239,35 +228,21 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <Example id="default-timeout-example" example={defaultTimeout} />
         <p>
           Pass a callback to choose a default from the toast's content or custom data, such as
-          keeping toasts with actions open until dismissed. The callback runs once when a
-          notification is presented or replaced without an explicit timeout.
+          keeping toasts with actions open until dismissed.
         </p>
         <Example id="dynamic-timeout-example" example={dynamicTimeout} />
       </Section>
       <Section id="countdown-indicators" title="Countdown indicators">
         <p>
           Set <code>countdown: true</code> on <code>toast.item()</code> to enable countdown styling.
-          It animates <code>--toast-countdown</code> from 1 to 0. The value inherits into
-          descendants, so CSS can use it for a transform, an SVG stroke or a gradient. You supply
-          the shape, dimensions, color and placement. Mark decorative indicators with{' '}
-          <code>aria-hidden="true"</code> and only render them for toasts with an automatic
-          dismissal timeout.
+          It animates <code>--toast-countdown</code> from 1 to 0. Use this value in your indicator's
+          CSS. Mark decorative indicators with <code>aria-hidden="true"</code> and only render them
+          for toasts with an automatic dismissal timeout.
         </p>
         <Example id="countdown-example" example={countdown} />
         <CodeBlock html={countdownCode} />
-        <p>
-          The indicator follows the toast's timer, including pauses and restarts. If a five-second
-          toast is paused with three seconds remaining, the value stays at 0.6 until it resumes,
-          then reaches zero over the remaining three seconds. The rendered item closes the toast
-          when its timer expires.
-        </p>
       </Section>
       <Section id="action" title="Actions and custom data">
-        <p>
-          Supply a data type to <code>createToastManager()</code> and pass custom values through{' '}
-          <code>data</code>. The context callback infers that type. Your renderer decides how to
-          display it.
-        </p>
         <p>
           Use data to define custom actions, including their labels and handlers. Your render logic
           decides how to present them to the user.
@@ -285,16 +260,12 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <p>
           Pass a stable <code>id</code> to <code>add()</code> to replace an existing notification
           instead of creating a duplicate. Its timer restarts and its position in the stack stays
-          the same. If the notification has been dismissed, it appears again.
+          the same. Each call replaces the previous content and options.
         </p>
         <p>
-          Each call supplies the complete content and options. Omitted titles, descriptions and data
-          are cleared. Omitted timeout uses the Context default, or stays open until dismissed.
-        </p>
-        <p>
-          Each toast starts with <code>revision: 0</code>. Adding the same ID again increments its
-          revision, even when the content is unchanged. Your renderer can use this to replay
-          feedback without remounting the toast.
+          Each replacement increments <code>toastItem.revision</code>. The example uses odd and even
+          revisions to alternate between two identical CSS animations, restarting the pulse each
+          time.
         </p>
         <Example id="stack" example={stack} />
       </Section>
@@ -323,7 +294,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           Tab past either boundary returns to the previous element. Escape dismisses the focused
           notification. Closing it moves focus to a neighbouring available notification or restores
           the previous element. The shortcut can be changed or disabled. Make the shortcut
-          discoverable in your application and use distinct shortcuts for separate managers.
+          discoverable in your application.
         </p>
         <p>
           Provide a visible dismiss control. Essential errors and decisions should also be available
@@ -366,34 +337,28 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Optional renderable supporting content. Apply description() to its element.
           </ApiEntry>
           <ApiEntry name="announcement" type="string" defaultValue="title and description">
-            Spoken text. Overrides the published title and description without changing the visible
-            content. An empty string supplies no announcement content.
+            Overrides the spoken title and description without changing the visible content.
           </ApiEntry>
           <ApiEntry name="data" type="data">
             Consumer-defined data interpreted by your renderer. Supply a type to
             createToastManager() for typed access.
           </ApiEntry>
           <ApiEntry name="timeout" type="number | false" defaultValue="Context default">
-            Finite, non-negative milliseconds, or false to disable automatic dismissal. Zero
-            dismisses immediately once presented. Overrides the Context defaultTimeout. Without
-            either option, the toast stays open until dismissed. Invalid values throw RangeError.
+            Timeout in non-negative milliseconds, or false to disable automatic dismissal. Overrides
+            the Context defaultTimeout.
           </ApiEntry>
         </ApiTable>
         <h3 id="toast-item">ToastItem&lt;data = unknown&gt;</h3>
-        <p>
-          Readonly title, description, announcement and data fields match the published content.
-          Timeout overrides are preserved without starting a timer. Other snapshot fields follow.
-        </p>
+        <p>Readonly notification content and options, with an ID and update revision.</p>
         <ApiTable id="toast-item-fields" label="Field">
           <ApiEntry name="id" type="string">
             Stable identity for commands and the host's key.
           </ApiEntry>
           <ApiEntry name="revision" type="number">
-            Starts at zero and increments on each duplicate add, even when the content is unchanged.
-            UI interactions do not increment it.
+            Starts at zero and increments each time add() replaces the notification.
           </ApiEntry>
           <ApiEntry name="timeout" type="number | false | undefined">
-            Published timeout override. Defaults are resolved by the UI when presented.
+            The notification's timeout option.
           </ApiEntry>
         </ApiTable>
         <h3 id="context">Context</h3>
@@ -406,13 +371,11 @@ export default function ToastPage(handle: Handle<PageProps>) {
             type="number | false | ((options: ToastOptions<data>) => number | false)"
             defaultValue="false"
           >
-            Fallback timeout in milliseconds. A callback resolves it once per presentation or
-            replacement without an explicit timeout. Invalid values throw RangeError.
+            Fallback timeout in milliseconds, or false to disable automatic dismissal. Pass a
+            callback to choose the timeout from the notification's content or data.
           </ApiEntry>
           <ApiEntry name="limit" type="number">
-            Maximum available notifications. Unlimited by default. Must be a positive integer;
-            invalid values throw RangeError. Overflow remains mounted and inert, and its timers keep
-            running.
+            Maximum available notifications, as a positive integer. Unlimited by default.
           </ApiEntry>
           <ApiEntry
             name="children"
@@ -425,7 +388,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <h3 id="root">root()</h3>
         <ApiTable id="root-options" label="Option" defaults>
           <ApiEntry name="label" type="string" required>
-            Non-empty accessible region name. No fallback is supplied.
+            Non-empty accessible region name.
           </ApiEntry>
           <ApiEntry name="hotkey" type="string | false" defaultValue="'F6'">
             Unmodified KeyboardEvent.key used to enter and leave the region. False disables it.
@@ -442,9 +405,8 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Programmatically focusable without adding an empty region to the tab order.
           </ApiEntry>
           <ApiEntry name="data-expanded" type="''">
-            Present during hover, keyboard focus or touch engagement. A primary touch inside starts
-            engagement; releasing or cancelling the gesture keeps it active until a primary touch
-            outside. Your styles choose the expanded presentation.
+            Present during hover, keyboard focus or touch engagement. Use it to style the expanded
+            collection.
           </ApiEntry>
         </ApiTable>
         <h3 id="item-context">ItemContext</h3>
@@ -459,11 +421,10 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <h3 id="content-parts">title(), description(), close()</h3>
         <p>
           Apply <code>title()</code> to the heading and <code>description()</code> to supporting
-          content. They register generated or authored IDs with the item and remove relationships
-          when their content is empty or the elements disappear. They do not supply elements or
-          content. Apply <code>close()</code> to a native button with your translated text or
-          accessible label. It dismisses the scoped notification. Actions remain ordinary buttons
-          and links and do not implicitly dismiss.
+          content. They connect those elements to the notification using generated or authored IDs.
+          Apply <code>close()</code> to a native button with your translated text or accessible
+          label. It dismisses the scoped notification. Actions remain ordinary buttons and links and
+          do not implicitly dismiss.
         </p>
         <h3 id="item">item()</h3>
         <p>
@@ -474,14 +435,13 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <ApiTable id="item-options" label="Option">
           <ApiEntry name="countdown" type="boolean">
             Animates the inherited <code>--toast-countdown</code> fraction from 1 to 0 while the
-            timer runs. Defaults to false. Persistent items do not create a countdown animation.
+            timer runs. Defaults to false.
           </ApiEntry>
         </ApiTable>
         <ApiTable id="item-css-variables" label="CSS variable">
           <ApiEntry name="--toast-countdown" type="number">
-            Remaining timeout fraction when <code>countdown: true</code> is enabled. Consumer CSS
-            maps the fraction to a decorative indicator. The native animation follows timer changes
-            without per-frame component updates.
+            Remaining timeout fraction when <code>countdown: true</code> is enabled. Use it to style
+            a decorative indicator.
           </ApiEntry>
         </ApiTable>
         <ApiTable id="item-attributes" label="Attribute">
@@ -504,10 +464,11 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Marks the toast host.
           </ApiEntry>
           <ApiEntry name="inert" type="boolean">
-            Applied while limited or logically closed. Retained exits remain unavailable.
+            Applied to overflow and dismissed notifications.
           </ApiEntry>
           <ApiEntry name="aria-hidden" type="'true'">
-            Applied while focus is outside the collection, or while limited or logically closed.
+            Applied while focus is outside the collection, or to overflow and dismissed
+            notifications.
           </ApiEntry>
         </ApiTable>
         <ApiTable id="item-states" label="Attribute">

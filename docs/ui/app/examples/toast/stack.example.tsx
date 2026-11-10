@@ -5,8 +5,7 @@ import {
   animateLayout,
   prefersReducedMotion,
 } from '@remix-run/ui/animation'
-import { css, on, createMixin } from 'remix/component'
-import type { ElementProps } from 'remix/component'
+import { css, on } from 'remix/component'
 
 const toastManager = toast.createToastManager()
 
@@ -77,7 +76,18 @@ export function ToastRegion() {
                 ]}
               >
                 <div mix={styles.collapseSlot}>
-                  <div role="none" mix={[styles.surface, pulse(toastItem.revision)]}>
+                  <div
+                    role="none"
+                    style={{
+                      animationName:
+                        toastItem.revision === 0 || prefersReducedMotion()
+                          ? 'none'
+                          : toastItem.revision % 2 === 0
+                            ? 'toast-pulse-even'
+                            : 'toast-pulse-odd',
+                    }}
+                    mix={styles.surface}
+                  >
                     <div mix={[styles.message, styles.hideWhenCovered]}>
                       <h2 mix={[toast.title(), styles.title]}>{toastItem.title}</h2>
                       <span mix={[toast.description(), styles.description]}>
@@ -101,29 +111,6 @@ export function ToastRegion() {
     </toast.Context>
   )
 }
-
-const pulse = createMixin<HTMLElement, [revision: number], ElementProps>((handle) => {
-  let revision = 0
-  let previousRevision = 0
-  let animation: Animation | undefined
-
-  handle.addEventListener('commit', ({ node }) => {
-    if (revision === previousRevision) return
-    previousRevision = revision
-    animation?.cancel()
-    if (revision === 0 || prefersReducedMotion()) return
-    animation = node.animate([{ scale: 1 }, { scale: 1.03 }, { scale: 1 }], {
-      duration: 240,
-      easing: 'ease-out',
-    })
-  })
-  handle.addEventListener('remove', () => animation?.cancel())
-
-  return (value) => {
-    revision = value
-    return handle.element
-  }
-})
 
 const styles = {
   hideWhenCovered: css({
@@ -257,8 +244,27 @@ const styles = {
     flexShrink: 0,
     transformOrigin: 'bottom center',
     transition: 'scale 160ms ease-out, opacity 120ms ease-out',
+    animationDuration: '240ms',
+    animationTimingFunction: 'ease-out',
+    '@keyframes toast-pulse-even': {
+      '0%, 100%': {
+        scale: 1,
+      },
+      '50%': {
+        scale: 1.03,
+      },
+    },
+    '@keyframes toast-pulse-odd': {
+      '0%, 100%': {
+        scale: 1,
+      },
+      '50%': {
+        scale: 1.03,
+      },
+    },
     '@media (prefers-reduced-motion: reduce)': {
       transition: 'none',
+      animationDuration: '0s',
     },
     display: 'flex',
     alignItems: 'center',
