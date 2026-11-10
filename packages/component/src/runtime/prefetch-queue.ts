@@ -45,7 +45,7 @@ export function createPrefetchQueue<content>(
   ) => Promise<content | undefined>,
 ) {
   validatePrefetchConfig(config)
-  let concurrency = config.links?.concurrency ?? Infinity
+  let concurrency = config.links?.concurrency ?? 8
   let entries = new Map<string, PrefetchEntry<content>>()
   let order: PrefetchEntry<content>[] = []
   let generation = 0

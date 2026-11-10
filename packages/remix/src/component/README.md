@@ -1421,13 +1421,13 @@ let app = run({
   loadModule,
   prefetch: {
     links: {
-      concurrency: 6,
+      concurrency: 8,
       scheduler(batch) {
         return batch.filter((candidate) => !new URL(candidate.src).pathname.startsWith('/checkout'))
       },
     },
     assets: {
-      concurrency: 8,
+      concurrency: 40,
       scheduler(batch, { fragment }) {
         return [...batch, ...fragment.querySelectorAll('img[data-prefetch]')]
       },
@@ -1446,7 +1446,7 @@ Returned order is cached while pending candidates and policy stay unchanged. Scr
 
 Selected images use native image preloads, retaining `srcset` descriptors, `sizes`, CORS, and referrer policy. Relative candidates resolve against the response's final URL and `<base href>`. The browser selects the responsive resource; Remix does not load every candidate, decode images, keep image objects, or delay navigation. Picture/source art direction and CSS image discovery are outside this hook.
 
-There is no framework concurrency cap by default. Set `links.concurrency` to limit HTML operations through body reading and parsing, and `assets.concurrency` to limit native asset operations through load, error, or cleanup. Each omitted limit remains uncapped independently; explicit limits must be positive safe integers. Waiting fragment batches interleave their assets; there is no per-page asset limit. Navigation pauses new speculative starts in both queues and prunes abandoned owners before resuming.
+The default global limits are eight HTML operations through body reading and parsing, and forty native asset operations through load, error, or cleanup. Override them independently with `links.concurrency` and `assets.concurrency`; explicit limits must be positive safe integers. Waiting fragment batches interleave their assets; there is no per-page asset limit. Navigation pauses new speculative starts in both queues and prunes abandoned owners before resuming.
 
 ```ts
 import { prefetch } from 'remix/component'

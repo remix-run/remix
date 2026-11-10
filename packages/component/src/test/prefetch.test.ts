@@ -1410,19 +1410,34 @@ describe('prefetch selection', () => {
     ).toThrow(RangeError)
   })
 
-  it('starts all selected HTML and asset work when concurrency is omitted', async (t) => {
+  it('defaults to eight HTML operations when concurrency is omitted', async (t) => {
+    let response = Promise.withResolvers<void>()
+    let fetch = t.mock.method(globalThis, 'fetch', async () => {
+      await response.promise
+      return htmlResponse('')
+    })
+    let { prefetch: load } = createPrefetch(t, { links: { scheduler: (batch) => batch } })
+    let ready = Promise.all(
+      Array.from({ length: 9 }, (_, index) => load(new URL(`/page-${index}`, location.href).href)),
+    )
+    await waitFor(() => fetch.mock.calls.length === 8)
+    await wait(0)
+    expect(fetch).toHaveBeenCalledTimes(8)
+    response.resolve()
+    await ready
+    expect(fetch).toHaveBeenCalledTimes(9)
+  })
+
+  it('defaults to forty native asset operations when concurrency is omitted', async (t) => {
     stubLinkPrefetchSupport(t, true)
     holdNativeHintEvents(t)
-    let response = Promise.withResolvers<void>()
-    let starts: string[] = []
-    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
-      let path = new URL(String(src)).pathname
-      starts.push(path)
-      await response.promise
-      return htmlResponse(
-        `<script src="${path}-1.js"></script><script src="${path}-2.js"></script>`,
-      )
-    })
+    t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse(
+        Array.from({ length: 41 }, (_, index) => `<script src="/asset-${index}.js"></script>`).join(
+          '',
+        ),
+      ),
+    )
     let hints: HTMLLinkElement[] = []
     let observer = new MutationObserver((records) => {
       for (let record of records)
@@ -1432,19 +1447,16 @@ describe('prefetch selection', () => {
     })
     observer.observe(document.head, { childList: true })
     t.after(() => observer.disconnect())
-    let { prefetch: load } = createPrefetch(t, {
-      links: { scheduler: (batch) => batch },
-      assets: { scheduler: (batch) => batch },
-    })
-    let ready = Promise.all(
-      ['/a', '/b', '/c', '/d', '/e'].map((src) => load(new URL(src, location.href).href)),
-    )
-    await waitFor(() => starts.length === 5)
-    expect(starts).toEqual(['/a', '/b', '/c', '/d', '/e'])
-    response.resolve()
-    await waitFor(() => hints.length === 10)
+    let { prefetch: load } = createPrefetch(t, { assets: { scheduler: (batch) => batch } })
+    let ready = load(new URL('/assets', location.href).href)
+    await waitFor(() => hints.length === 40)
+    await wait(0)
+    expect(hints).toHaveLength(40)
     expect(hints.every((link) => link.isConnected)).toBe(true)
-    for (let link of hints) link.dispatchEvent(new Event('load'))
+    hints[0].dispatchEvent(new Event('load'))
+    await waitFor(() => hints.length === 41)
+    expect(hints.filter((link) => link.isConnected)).toHaveLength(40)
+    for (let link of hints.slice(1)) link.dispatchEvent(new Event('load'))
     await ready
     expect(hints.every((link) => !link.isConnected)).toBe(true)
   })
