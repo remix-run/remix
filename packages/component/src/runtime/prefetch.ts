@@ -45,7 +45,7 @@ export interface PrefetchAssetContext {
 
 /** Scheduling and concurrency for pending HTML requests. */
 export interface PrefetchLinksConfig {
-  /** Maximum HTML fetches through body consumption and parsing (default: 3). */
+  /** Maximum HTML fetches through body consumption and parsing; omitted means no framework cap. */
   concurrency?: number
   /**
    * Selects original pending candidates in start order; omitted candidates are dropped for this
@@ -56,7 +56,7 @@ export interface PrefetchLinksConfig {
 
 /** Scheduling and global concurrency for assets from each parsed response. */
 export interface PrefetchAssetsConfig {
-  /** Maximum native asset hints awaiting load, error, or cancellation (default: 2). */
+  /** Maximum native asset hints awaiting load, error, or cancellation; omitted means no framework cap. */
   concurrency?: number
   /**
    * Selects original supported elements from this fragment or its templates in submission order.
@@ -446,7 +446,7 @@ export function fetchFrame(
 }
 
 export function createDefaultPrefetch(signal?: AbortSignal, config: PrefetchConfig = {}) {
-  let assets = createPrefetchAssetQueue(signal, config.assets?.concurrency ?? 2)
+  let assets = createPrefetchAssetQueue(signal, config.assets?.concurrency ?? Infinity)
 
   function discoverAssets(
     source: DocumentFragment,

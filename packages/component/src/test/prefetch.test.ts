@@ -1410,6 +1410,45 @@ describe('prefetch selection', () => {
     ).toThrow(RangeError)
   })
 
+  it('starts all selected HTML and asset work when concurrency is omitted', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    holdNativeHintEvents(t)
+    let response = Promise.withResolvers<void>()
+    let starts: string[] = []
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      let path = new URL(String(src)).pathname
+      starts.push(path)
+      await response.promise
+      return htmlResponse(
+        `<script src="${path}-1.js"></script><script src="${path}-2.js"></script>`,
+      )
+    })
+    let hints: HTMLLinkElement[] = []
+    let observer = new MutationObserver((records) => {
+      for (let record of records)
+        for (let node of record.addedNodes) {
+          if (node instanceof HTMLLinkElement && node.rel === 'prefetch') hints.push(node)
+        }
+    })
+    observer.observe(document.head, { childList: true })
+    t.after(() => observer.disconnect())
+    let { prefetch: load } = createPrefetch(t, {
+      links: { scheduler: (batch) => batch },
+      assets: { scheduler: (batch) => batch },
+    })
+    let ready = Promise.all(
+      ['/a', '/b', '/c', '/d', '/e'].map((src) => load(new URL(src, location.href).href)),
+    )
+    await waitFor(() => starts.length === 5)
+    expect(starts).toEqual(['/a', '/b', '/c', '/d', '/e'])
+    response.resolve()
+    await waitFor(() => hints.length === 10)
+    expect(hints.every((link) => link.isConnected)).toBe(true)
+    for (let link of hints) link.dispatchEvent(new Event('load'))
+    await ready
+    expect(hints.every((link) => !link.isConnected)).toBe(true)
+  })
+
   it('bounds HTML reads, preserves selected order, and drains cached selection on completion', async (t) => {
     let responses = new Map<string, ReturnType<typeof Promise.withResolvers<Response>>>()
     let starts: string[] = []
