@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
-import { createRoot, type RemixNode } from '@remix-run/component'
+import { createRoot, on, type RemixNode } from '@remix-run/component'
 
 import { ToggleChangeEvent, onToggleChange, toggle } from './toggle.ts'
 
@@ -14,6 +14,10 @@ function renderApp(node: RemixNode) {
   root.flush()
   roots.push(root)
   return { container, root }
+}
+
+function nextTask() {
+  return new Promise<void>((resolve) => setTimeout(resolve))
 }
 
 afterEach(() => {
@@ -72,6 +76,19 @@ describe('toggle', () => {
     expect(changes).toEqual([false])
     expect(events[0]).toBeInstanceOf(ToggleChangeEvent)
     expect(events[0]?.checked).toBe(false)
+  })
+
+  it('works without options', () => {
+    let { container, root } = renderApp(<button mix={toggle()} type="button" />)
+    let button = container.querySelector('button') as HTMLButtonElement
+
+    expect(button.getAttribute('aria-checked')).toBe('false')
+
+    button.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: ' ' }))
+    root.flush()
+
+    expect(button.getAttribute('aria-checked')).toBe('true')
+    expect(button.dataset.state).toBe('checked')
   })
 
   it('supports non-input hosts with switch role and space-key toggling', () => {
@@ -139,5 +156,75 @@ describe('toggle', () => {
     expect(controls[1]?.getAttribute('data-state')).toBe('checked')
     expect(disabledChanges).toEqual([])
     expect(readOnlyChanges).toEqual([])
+  })
+
+  it('restores defaultChecked and data-state when the form resets', async () => {
+    let changes: boolean[] = []
+    let { container, root } = renderApp(
+      <form>
+        <input name="a" mix={toggle({ onCheckedChange: (checked) => changes.push(checked) })} />
+        <input name="b" mix={toggle({ defaultChecked: true })} />
+      </form>,
+    )
+    let form = container.querySelector('form') as HTMLFormElement
+    let [a, b] = [...container.querySelectorAll('input')] as HTMLInputElement[]
+
+    a.click()
+    b.click()
+    root.flush()
+
+    expect([a.checked, b.checked]).toEqual([true, false])
+
+    form.reset()
+    await nextTask()
+    root.flush()
+
+    expect([a.checked, b.checked]).toEqual([false, true])
+    expect([a.dataset.state, b.dataset.state]).toEqual(['unchecked', 'checked'])
+    expect(changes).toEqual([true])
+
+    a.click()
+    root.flush()
+
+    expect(a.checked).toBe(true)
+    expect(a.dataset.state).toBe('checked')
+  })
+
+  it('keeps controlled state and DOM in sync across a form reset', async () => {
+    let { container, root } = renderApp(
+      <form>
+        <input mix={toggle({ checked: true })} />
+      </form>,
+    )
+    let input = container.querySelector('input') as HTMLInputElement
+
+    ;(container.querySelector('form') as HTMLFormElement).reset()
+    await nextTask()
+    root.flush()
+
+    expect(input.checked).toBe(true)
+    expect(input.dataset.state).toBe('checked')
+  })
+
+  it('ignores a canceled form reset', async () => {
+    let { container, root } = renderApp(
+      <form
+        mix={on('reset', (event) => {
+          event.preventDefault()
+        })}
+      >
+        <input mix={toggle()} />
+      </form>,
+    )
+    let input = container.querySelector('input') as HTMLInputElement
+
+    input.click()
+    root.flush()
+    ;(container.querySelector('form') as HTMLFormElement).reset()
+    await nextTask()
+    root.flush()
+
+    expect(input.checked).toBe(true)
+    expect(input.dataset.state).toBe('checked')
   })
 })

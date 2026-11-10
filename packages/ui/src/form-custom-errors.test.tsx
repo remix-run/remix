@@ -4,7 +4,7 @@ import * as s from '@remix-run/data-schema'
 import * as fd from '@remix-run/data-schema/experimental/form'
 import * as form from './form.ts'
 import type { InputValidationEvent } from './form.ts'
-import { renderForm, input, edit, blur } from './test/form.tsx'
+import { renderForm, input, edit, blur, resetForm } from './test/form.tsx'
 
 const username = fd.text(s.string())
 
@@ -66,8 +66,7 @@ describe('setCustomErrors', () => {
     edit(node, 'grace')
     expect(field.errors).toEqual([])
     field.setCustomErrors(['Taken'])
-    native.reset()
-    await Promise.resolve()
+    await resetForm(native)
     view.root.flush()
     expect(node.value).toBe('ada')
     expect(field.errors).toEqual([])

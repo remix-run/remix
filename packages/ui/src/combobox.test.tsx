@@ -892,4 +892,56 @@ describe('Combobox', () => {
     expectInputSelection(input)
     expect(react.getAttribute('data-combobox-flash')).toBe(null)
   })
+
+  it('restores defaultValue and closes the popover when the form resets', async () => {
+    let changes: ComboboxChangeEvent[] = []
+    let { container, root } = renderApp(
+      <form
+        mix={onComboboxChange((event) => {
+          changes.push(event)
+        })}
+      >
+        {renderCombobox({ defaultValue: 'react' })}
+      </form>,
+    )
+    let input = container.querySelector('input[type="text"]') as HTMLInputElement
+    let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
+    let surface = container.querySelector('[popover]') as HTMLElement
+
+    input.focus()
+    changeInputValue(input, 'rem')
+    await settle(root)
+
+    expect(surface.matches(':popover-open')).toBe(true)
+    expect(hiddenInput.value).toBe('')
+    expect(changes).toHaveLength(1)
+    ;(container.querySelector('form') as HTMLFormElement).reset()
+    await new Promise<void>((resolve) => setTimeout(resolve))
+    await settle(root)
+
+    expect(input.value).toBe('react')
+    expect(hiddenInput.value).toBe('react')
+    expect(surface.matches(':popover-open')).toBe(false)
+    expect(changes).toHaveLength(1)
+  })
+
+  it('clears input text and selection on form reset when there is no defaultValue', async () => {
+    let { container, root } = renderApp(<form>{renderCombobox()}</form>)
+    let input = container.querySelector('input[type="text"]') as HTMLInputElement
+    let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
+
+    input.focus()
+    changeInputValue(input, 'remix framework')
+    await settle(root)
+    blur(input)
+    await settle(root)
+
+    expect(hiddenInput.value).toBe('remix')
+    ;(container.querySelector('form') as HTMLFormElement).reset()
+    await new Promise<void>((resolve) => setTimeout(resolve))
+    await settle(root)
+
+    expect(input.value).toBe('')
+    expect(hiddenInput.value).toBe('')
+  })
 })
