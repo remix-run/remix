@@ -1249,6 +1249,9 @@ Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong
 ```
 
 - The runtime still renders the element's children during server rendering and hydrates any initial client entries inside it. The attribute only affects later frame reloads. When incoming frame HTML has `data-rmx-preserve-dom` on a matched element, the runtime keeps that element's current attributes and children instead of applying incoming changes below it.
+- A current element with `data-rmx-preserve-dom` that the incoming HTML doesn't match is kept, not removed. This is how client-created DOM, such as a portal host appended to `<body>`, survives frame reloads without being detached, which would blur focus, restart CSS transitions, and reset scroll. Elements without the attribute are still removed.
+- Unmatched preserved elements never move. Matched siblings update around them, and new siblings are inserted before any that trail their parent. An unkeyed preserved element pairs only with an incoming preserved element, so an unrelated incoming sibling can't take it over.
+- A preserved element is removed with its parent when the parent isn't matched, and nothing recreates it after client code removes it. Frame reloads only keep it. Client code owns its lifetime.
 - Add `data-rmx-key` when the element can move among siblings, so reloads match the same live element before falling back to matching by position.
 - Avoid wrapping Remix-owned UI that should keep receiving server-driven frame updates. A client entry inside `data-rmx-preserve-dom` hydrates from the initial HTML, but later frame reloads won't patch new server-rendered children or props through the preserved element. Put the client entry outside the preserved element when it needs future frame data, or put `data-rmx-preserve-dom` inside the client entry around only the imperative DOM.
 
