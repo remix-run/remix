@@ -4,6 +4,7 @@ import { componentHmr } from 'remix/component-hmr/assets'
 const rootDir = process.cwd()
 const nodeEnv = process.env.NODE_ENV ?? 'development'
 const isDevelopment = nodeEnv === 'development'
+const isProduction = nodeEnv === 'production'
 const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
 export const assets = createAssetServer({
@@ -21,6 +22,7 @@ export const assets = createAssetServer({
   denyFiles: ['app/**/*.test.*'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
+  fingerprint: isProduction,
   watch: isDevelopment,
   hmr: isHmr
     ? {

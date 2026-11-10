@@ -1,5 +1,1 @@
-import { defineConfig } from 'playwright/test'
-
-export default defineConfig({
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
-})
+export { default } from '../../playwright.config.ts'

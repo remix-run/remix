@@ -1,0 +1,1 @@
+Validate native form submissions with `remix/data-schema/experimental/form`, including restorable values and grouped errors on failure while omitting sensitive values and files. Inspect schemas and reuse typed fields through `getSchemaMetadata()` from `remix/data-schema/experimental`. These experimental exports may change or be removed in patch releases.

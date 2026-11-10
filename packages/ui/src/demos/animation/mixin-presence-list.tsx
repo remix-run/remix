@@ -25,6 +25,10 @@ export function MixinPresenceList(handle: Handle) {
       <div mix={[css({ display: 'flex', gap: 8 })]}>
         <button
           mix={[
+            on('click', () => {
+              items.unshift(createItem())
+              handle.update()
+            }),
             css({
               flex: 1,
               padding: '8px 10px',
@@ -35,16 +39,16 @@ export function MixinPresenceList(handle: Handle) {
               cursor: 'pointer',
               '&:hover': { backgroundColor: '#0284c7' },
             }),
-            on('click', () => {
-              items.unshift(createItem())
-              handle.update()
-            }),
           ]}
         >
           Add
         </button>
         <button
           mix={[
+            on('click', () => {
+              items = items.slice(0, Math.max(0, items.length - 1))
+              handle.update()
+            }),
             css({
               flex: 1,
               padding: '8px 10px',
@@ -54,10 +58,6 @@ export function MixinPresenceList(handle: Handle) {
               color: 'white',
               cursor: 'pointer',
               '&:hover': { backgroundColor: '#dc2626' },
-            }),
-            on('click', () => {
-              items = items.slice(0, Math.max(0, items.length - 1))
-              handle.update()
             }),
           ]}
         >
@@ -95,6 +95,10 @@ export function MixinPresenceList(handle: Handle) {
           <span>{item.label}</span>
           <button
             mix={[
+              on('click', () => {
+                items = items.filter((entry) => entry.id !== item.id)
+                handle.update()
+              }),
               css({
                 width: 24,
                 height: 24,
@@ -105,10 +109,6 @@ export function MixinPresenceList(handle: Handle) {
                 color: '#64748b',
                 cursor: 'pointer',
                 '&:hover': { backgroundColor: '#e2e8f0' },
-              }),
-              on('click', () => {
-                items = items.filter((entry) => entry.id !== item.id)
-                handle.update()
               }),
             ]}
           >

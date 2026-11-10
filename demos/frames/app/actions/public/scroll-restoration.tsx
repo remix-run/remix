@@ -143,7 +143,6 @@ export const StoreScrollReproduction = clientEntry(
               <button
                 type="button"
                 mix={[
-                  newsletterButtonStyle,
                   on('click', () => {
                     void navigate(
                       routes.scrollRestorationDetail.href(undefined, {
@@ -152,6 +151,7 @@ export const StoreScrollReproduction = clientEntry(
                       { history: 'replace', resetScroll: false },
                     )
                   }),
+                  newsletterButtonStyle,
                 ]}
               >
                 Select size without resetting scroll

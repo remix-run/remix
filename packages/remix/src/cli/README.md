@@ -43,6 +43,8 @@ remix completion zsh >> ~/.zshrc
 
 Use `npx remix new my-remix-app` to scaffold a new Remix app. After installing Remix, the equivalent local command is `remix new my-remix-app`.
 
+On Windows, new apps include `cross-env` as a dependency and use `cross-env-shell` to set `NODE_ENV` in package scripts while preserving Ctrl+C shutdown handling. On macOS and Linux, scripts use shell environment assignments without the extra dependency.
+
 The rest of the CLI is available through the installed `remix` command:
 
 ```sh

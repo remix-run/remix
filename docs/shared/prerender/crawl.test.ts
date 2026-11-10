@@ -203,6 +203,18 @@ describe('crawl(router)', () => {
     assert.deepEqual(visited, ['/blog/', '/blog/post-1'])
   })
 
+  it('removes query strings and fragments from crawled paths', async () => {
+    let router = createRouter()
+    router.get('/', () => html('<a href="/about?tab=api#details">About</a>'))
+    router.get('/about', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/', '/about'])
+  })
+
   it('throws on non-2xx responses', async () => {
     let router = createRouter()
     router.get('/', () => new Response('Not Found', { status: 404, statusText: 'Not Found' }))
@@ -213,6 +225,35 @@ describe('crawl(router)', () => {
         }
       },
       { message: 'Crawl failed: 404 Not Found (/)' },
+    )
+  })
+
+  it('writes static redirect pages and visits same-site destinations', async () => {
+    let router = createRouter()
+    router.get(
+      '/old',
+      () =>
+        new Response(null, {
+          status: 308,
+          headers: { Location: '/new?from=old&mode=fast' },
+        }),
+    )
+    router.get('/new', () => html('<html><body>New</body></html>'))
+
+    let results: { pathname: string; filepath: string; body: string }[] = []
+    for await (let { pathname, filepath, response } of crawl(router, { paths: ['/old'] })) {
+      results.push({ pathname, filepath, body: await response.text() })
+    }
+
+    assert.equal(results[0]?.pathname, '/old')
+    assert.equal(results[0]?.filepath, '/old/index.html')
+    assert.match(
+      results[0]?.body ?? '',
+      /http-equiv="refresh" content="0; url=\/new\?from=old&amp;mode=fast"/,
+    )
+    assert.deepEqual(
+      results.map((result) => result.pathname),
+      ['/old', '/new'],
     )
   })
 

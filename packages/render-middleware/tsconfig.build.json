@@ -7,5 +7,5 @@
     "outDir": "./dist"
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "dist"]
+  "exclude": ["src/**/*.test.ts", "dist", "src/**/*.test.e2e.ts"]
 }

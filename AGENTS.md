@@ -32,6 +32,8 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 
 ## Code Style
 
+- **Locality**: write for the next reader, who may be an agent. Keep code that changes together in one place so understanding or editing a piece of UI does not require jumping between a use and its definition.
+- **Indirection**: do not introduce a name, constant, helper, type, or file solely to hold a single use. Each extraction adds a lookup for readers and context for agents. Extract when there is actual reuse or a separate responsibility. Exported types and public API shapes are not single uses.
 - **Imports**: use `import type { X }` and `export type { X }`; include `.ts` extensions
 - **Variables**: use `let` for locals, `const` for module scope, never `var`
 - **Functions**: use regular functions by default; use arrow functions for callbacks; use concise arrow bodies when they only return an expression
@@ -40,6 +42,12 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 - **Generics**: use descriptive lowercase names like `source`, `pattern`, or `method`
 - **Comments**: add non-JSDoc comments only when behavior is surprising or non-obvious
 - **Formatting**: Oxfmt with `printWidth: 100`, no semicolons, single quotes, spaces not tabs
+
+## Component Styling
+
+- Write a `css()` style used at one JSX site inline in that element's `mix`, such as `<p mix={css({ color: 'var(--muted)' })}>`. Keep comments explaining a rule beside it.
+- Name styles when multiple JSX sites share them or when a variant map makes the supported choices clear, such as `{ pill: ..., swatch: ... }`. Keep them in the component's module. Extract when the second use appears, not in anticipation of reuse.
+- Do not hoist a single-use `css()` style for performance. Naming it does not make rendering meaningfully cheaper.
 
 ## Tests And Docs
 

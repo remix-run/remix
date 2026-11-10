@@ -65,5 +65,5 @@ async function runPagefind(siteDir: string, assetsDir: string): Promise<void> {
     path.join(siteDir, assetsDir, 'pagefind'),
   ]
   console.log(`Running Pagefind:\n  pnpm ${pagefindArgs.join(' ')}`)
-  await execFile('pnpm', pagefindArgs)
+  await execFile('pnpm', pagefindArgs, { shell: process.platform === 'win32' })
 }

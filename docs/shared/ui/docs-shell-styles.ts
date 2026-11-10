@@ -20,7 +20,7 @@ export const skipLinkCss = css({
 
 const navigationToggleExpandedLeft =
   'calc(var(--docs-sidebar-inline-start) + var(--docs-sidebar-content-width) - 32px)'
-const navigationToggleCollapsedLeft = 'calc(var(--docs-sidebar-inline-start) + 61px)'
+const navigationToggleCollapsedLeft = 'calc(var(--docs-sidebar-inline-start) + 97px)'
 
 export const navigationToggleCss = css({
   position: 'fixed',
@@ -176,6 +176,8 @@ export const mainCss = css({
     width: 'calc(100% - var(--docs-content-offset))',
     margin: 'var(--site-header-height) 0 0 var(--docs-content-offset)',
     padding: 'var(--docs-main-padding)',
+    // Start content level with the top of the left navigation
+    paddingTop: '44px',
     paddingLeft: 'var(--docs-content-padding-start)',
     borderRadius: '16px 0 0 16px',
     '&::before': {
@@ -240,12 +242,11 @@ export const secondaryNavigationCss = css({
   },
   '@container docs-main (width >= 56rem)': {
     position: 'sticky',
-    top: 'calc(var(--site-header-height) + var(--docs-main-padding))',
+    top: 'calc(var(--site-header-height) + 44px)',
     display: 'block',
     gridColumn: 2,
     gridRow: 1,
-    maxHeight:
-      'calc(100dvh - var(--site-header-height) - var(--docs-main-padding) - var(--rmx-space-xl))',
+    maxHeight: 'calc(100dvh - var(--site-header-height) - 44px - var(--rmx-space-xl))',
     overflowY: 'auto',
     overscrollBehaviorY: 'contain',
   },

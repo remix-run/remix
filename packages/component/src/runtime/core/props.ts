@@ -1,15 +1,15 @@
-import type { ElementProps } from '../jsx.ts'
+import type { ElementProps } from './vnode.ts'
 import {
   canUseProperty,
   getMergedClassName,
   isAllowedHostPropName,
-  isBooleanishStringAttribute,
   normalizeAttributeName,
   sanitizeUrlAttribute,
   serializeStyleObject,
-  toKebabCase,
+  shouldStringifyBooleanAttribute,
+  styleValueToCss,
 } from './attributes.ts'
-import { normalizeCssValue } from '../../style/style.ts'
+import { camelToKebab } from '../../style/style.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -55,6 +55,7 @@ function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, n
  */
 export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Element): void {
   let isSvg = dom.namespaceURI === SVG_NS
+  let wasMultiple = dom instanceof HTMLSelectElement ? dom.multiple : undefined
   let currClassName = getMergedClassName(curr)
   let nextClassName = getMergedClassName(next)
 
@@ -68,6 +69,8 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
   for (let name in curr) {
     if (isFrameworkProp(name)) continue
+    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
+    if (name === 'value' && dom instanceof HTMLSelectElement && curr.value === undefined) continue
     if (!isAllowedHostPropName(name)) continue
     if (name === 'class' || name === 'className') continue
     if (name in next && next[name] != null) continue
@@ -83,6 +86,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
   for (let name in next) {
     if (isFrameworkProp(name)) continue
+    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
     if (!isAllowedHostPropName(name)) continue
     if (name === 'class' || name === 'className') continue
 
@@ -104,11 +108,20 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
 
     patchHostProp(dom, name, nextValue, isSvg)
   }
+
+  if (dom instanceof HTMLSelectElement && wasMultiple !== dom.multiple && next.value == null) {
+    setSelectDefaultValue(dom, next.defaultValue)
+  }
 }
 
 function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolean): void {
   let { ns, attr } = normalizeAttributeName(name, isSvg)
   value = sanitizeUrlAttribute(dom.localName, attr, value)
+
+  if (name === 'value' && dom instanceof HTMLSelectElement) {
+    setSelectValue(dom, value)
+    return
+  }
 
   if (attr === 'style' && isStyleObject(value)) {
     patchStyleObject(dom, undefined, value)
@@ -129,10 +142,11 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
 
   if (typeof value === 'function') return
 
-  let isAriaOrData = name.startsWith('aria-') || name.startsWith('data-')
-  let isBooleanishString = isBooleanishStringAttribute(attr)
-  if (value != null && (value !== false || isAriaOrData || isBooleanishString)) {
-    let attrValue = name === 'popover' && value === true ? '' : String(value)
+  // Match server rendering: booleans render as "true"/"false" only for attributes that read them as
+  // strings; otherwise `true` renders an empty attribute and `false` omits it.
+  let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
+  if (value != null && (stringify || value)) {
+    let attrValue = stringify ? String(value) : ''
     if (ns) dom.setAttributeNS(ns, attr, attrValue)
     else dom.setAttribute(attr, attrValue)
   } else {
@@ -164,7 +178,7 @@ function patchStyleObject(
       let prevCssValue = styleValueToCss(name, curr[name])
       if (prevCssValue === undefined) continue
 
-      style.removeProperty(toKebabCase(name))
+      style.removeProperty(camelToKebab(name))
     }
   }
 
@@ -175,18 +189,40 @@ function patchStyleObject(
     let prevCssValue = curr ? styleValueToCss(name, curr[name]) : undefined
     if (prevCssValue === nextCssValue) continue
 
-    style.setProperty(toKebabCase(name), nextCssValue)
+    style.setProperty(camelToKebab(name), nextCssValue)
   }
 }
 
-function styleValueToCss(name: string, value: unknown): string | undefined {
+export function getSelectValues(value: unknown): Set<string> | undefined {
   if (value == null) return undefined
-  if (typeof value === 'boolean') return undefined
-  if (typeof value === 'number' && !Number.isFinite(value)) return undefined
+  return new Set(Array.isArray(value) ? value.map(String) : [String(value)])
+}
 
-  if (Array.isArray(value)) {
-    return value.join(', ')
+export function setSelectDefaultValue(
+  select: HTMLSelectElement,
+  value: unknown,
+  scalar = !select.multiple,
+): void {
+  let values = getSelectValues(value)
+  let options = Array.from(select.options)
+  let matched = false
+  for (let option of options) {
+    let selected = (values?.has(option.value) ?? false) && !(scalar && matched)
+    if (selected) matched = true
+    option.defaultSelected = selected
+    option.selected = selected
   }
+  if (!select.multiple && !matched) {
+    let firstEnabled = options.find((option) => !option.disabled)
+    if (firstEnabled) firstEnabled.selected = true
+  }
+}
 
-  return normalizeCssValue(name, value)
+export function setSelectValue(select: HTMLSelectElement, value: unknown): void {
+  if (!select.multiple || !Array.isArray(value)) {
+    select.value = value == null ? '' : String(value)
+    return
+  }
+  let values = getSelectValues(value)
+  for (let option of select.options) option.selected = values?.has(option.value) ?? false
 }

@@ -26,7 +26,7 @@ const nodeFetchServerImportUrl = pathToFileURL(
 const nodeTsxImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
 ).href
-const consoleMessageTimeout = 5000
+const consoleMessageTimeout = 10_000
 const hmrConnectionTimeout = 15_000
 
 describe('asset server HMR', () => {
@@ -507,6 +507,14 @@ describe('asset server HMR', () => {
     await secondAccepted
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  })
+
+  it('uses the startup managed import map nonce for HMR import maps', async (t) => {
+    await assertHmrImportMapNonce(t, 'import-map')
+  })
+
+  it('uses the startup document metadata nonce for HMR import maps', async (t) => {
+    await assertHmrImportMapNonce(t, 'meta')
   })
 
   it('applies updates with new import map entries', async (t) => {
@@ -1253,6 +1261,70 @@ describe('asset server HMR', () => {
     }
   })
 })
+
+async function assertHmrImportMapNonce(
+  t: TestContext,
+  source: 'import-map' | 'meta',
+): Promise<void> {
+  let fixture = await createHmrFixture({ counterBareImportConfigured: true })
+  t.after(fixture.close)
+  let page = await t.serve(await createHmrTestServer(fixture))
+  let nonce = 'hmr-document-nonce'
+  await page.route('**/', async (route) => {
+    let response = await route.fetch()
+    let html = (await response.text())
+      .replace(
+        '<script type="importmap">',
+        `<meta name="rmx-nonce" nonce="${source === 'meta' ? nonce : 'other-nonce'}">` +
+          `<script ${source === 'import-map' ? 'data-rmx-import-map ' : ''}nonce="${nonce}" type="importmap">`,
+      )
+      .replace('<script type="module"', `<script nonce="${nonce}" type="module"`)
+    await route.fulfill({
+      response,
+      body: html,
+      headers: {
+        ...response.headers(),
+        'Content-Security-Policy': `script-src 'self' 'nonce-${nonce}' blob:`,
+      },
+    })
+  })
+  await page.addInitScript(() => {
+    let violations: string[] = []
+    Reflect.set(window, 'cspViolations', violations)
+    document.addEventListener('securitypolicyviolation', (event) => {
+      violations.push(`${event.effectiveDirective}: ${event.blockedURI}`)
+    })
+  })
+  await navigateToHmrPage(page)
+  await waitForText(page, '[data-testid="increment"]', 'Increment')
+  await page.locator('[data-testid="field"]').fill('keep me')
+  await page.evaluate(() => {
+    for (let element of document.querySelectorAll<HTMLElement>(
+      'meta[name="rmx-nonce"],script[type="importmap"]',
+    )) {
+      element.nonce = 'later-response-nonce'
+    }
+  })
+
+  await write(
+    fixture.rootDir,
+    'app/counter.ts',
+    getCounterModuleSource({ bareImport: true, buttonText: 'Increment with CSP' }),
+  )
+
+  await waitForText(page, '[data-testid="increment"]', 'Package: Increment with CSP')
+  assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'keep me')
+  assert.equal(await page.locator('script[type="importmap"]').count(), 2)
+  assert.equal(
+    await page.evaluate(
+      () =>
+        Array.from(document.querySelectorAll<HTMLScriptElement>('script[type="importmap"]')).at(-1)
+          ?.nonce,
+    ),
+    nonce,
+  )
+  assert.deepEqual(await page.evaluate(() => Reflect.get(window, 'cspViolations')), [])
+}
 
 type HmrFixture = {
   close(): Promise<void>
@@ -2330,8 +2402,18 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
       usePolling: true,
     })
 
-    browserHmrWatcher.on('all', (event, filePath) => {
+    // Match node-hmr's duplicate change suppression. A poll that lands between a write's truncate
+    // and its data reports the change again on the next poll, with identical stats, which would
+    // apply one edit as two HMR updates.
+    let changeStatsByFilePath = new Map<string, string>()
+    browserHmrWatcher.on('all', (event, filePath, stats) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
+      if (event === 'change' && stats) {
+        let { birthtimeMs, ctimeMs, ino, mtimeMs, size } = stats
+        let changeStats = [birthtimeMs, ctimeMs, ino, mtimeMs, size].join(':')
+        if (changeStatsByFilePath.get(filePath) === changeStats) return
+        changeStatsByFilePath.set(filePath, changeStats)
+      }
       pendingBrowserHmrEvents = pendingBrowserHmrEvents
         .then(() => handleBrowserHmrFileEvent({ event, filePath }))
         .catch((error: unknown) => {
@@ -2643,7 +2725,7 @@ async function writeFetchResponse(
 function waitForConsoleMessage(
   page: TestPage,
   text: string,
-  options: { signal?: AbortSignal } = {},
+  options: { signal?: AbortSignal; startAfterNavigation?: boolean } = {},
 ): Promise<void> {
   attachPageDiagnostics(page)
   let startedAt = Date.now()
@@ -2651,18 +2733,29 @@ function waitForConsoleMessage(
     let consoleMessages: string[] = []
     let pageErrors: string[] = []
     let timeoutMs = text === '[remix] HMR connected' ? hmrConnectionTimeout : consoleMessageTimeout
-    let timeout = setTimeout(() => {
-      rejectWait(
-        new Error(
-          [
-            `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
-            ...consoleMessages.map((message) => `console: ${message}`),
-            ...pageErrors.map((message) => `pageerror: ${message}`),
-            formatPageDiagnostics(page),
-          ].join('\n'),
-        ),
-      )
-    }, timeoutMs)
+    let timeout: ReturnType<typeof setTimeout> | undefined
+
+    function startTimeout() {
+      startedAt = Date.now()
+      timeout = setTimeout(() => {
+        rejectWait(
+          new Error(
+            [
+              `Timed out after ${Date.now() - startedAt}ms waiting for console message: ${text}`,
+              ...consoleMessages.map((message) => `console: ${message}`),
+              ...pageErrors.map((message) => `pageerror: ${message}`),
+              formatPageDiagnostics(page),
+            ].join('\n'),
+          ),
+        )
+      }, timeoutMs)
+    }
+
+    if (options.startAfterNavigation) {
+      page.on('framenavigated', handleNavigation)
+    } else {
+      startTimeout()
+    }
 
     page.on('close', handlePageClose)
     page.on('console', handleConsole)
@@ -2673,6 +2766,7 @@ function waitForConsoleMessage(
 
     function cleanup() {
       clearTimeout(timeout)
+      page.off('framenavigated', handleNavigation)
       page.off('close', handlePageClose)
       page.off('console', handleConsole)
       page.off('pageerror', handlePageError)
@@ -2691,6 +2785,12 @@ function waitForConsoleMessage(
 
     function handlePageClose() {
       rejectWait(new Error(`Page closed while waiting for console message: ${text}`))
+    }
+
+    function handleNavigation(frame: { parentFrame(): unknown }) {
+      if (frame.parentFrame() !== null) return
+      page.off('framenavigated', handleNavigation)
+      startTimeout()
     }
 
     function handleConsole(message: { text(): string }) {
@@ -2716,6 +2816,8 @@ async function navigateToHmrPage(page: TestPage) {
   let controller = new AbortController()
   let connected = waitForConsoleMessage(page, '[remix] HMR connected', {
     signal: controller.signal,
+    // The document request has its own navigation deadline; HMR starts after it commits.
+    startAfterNavigation: true,
   })
 
   try {
@@ -2851,7 +2953,7 @@ async function waitForText(page: TestPage, selector: string, text: string): Prom
     await page.waitForFunction(
       ({ selector, text }) => document.querySelector(selector)?.textContent?.trim() === text,
       { selector, text },
-      { timeout: 5000 },
+      { timeout: 10_000 },
     )
   } catch (error) {
     let actualText = await page

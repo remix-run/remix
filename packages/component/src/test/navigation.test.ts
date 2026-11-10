@@ -1,14 +1,10 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import {
-  navigate,
-  startNavigationListener,
-  startNavigationListenerImpl,
-} from '../runtime/navigation.ts'
+import { navigate, startNavigationListener } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
-import type { ResolveFrameOptions } from '../runtime/frame.ts'
+import type { ResolveFrameOptions } from '../runtime/frame-runtime.ts'
 import { withResolvers } from './utils.ts'
-import { reloadDocument } from '../runtime/document-reload.ts'
+import { reloadDocument } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
@@ -19,17 +15,16 @@ function createReloadTransition(result: StubFrameReloadResult | Promise<StubFram
   return { signal, committed: finished.then(() => {}), finished }
 }
 
-// Stand-in frame the navigation handler can call without dragging in the
-// full app runtime from ./run.ts. Only `src` and `reload` are touched on
-// the path under test.
+// Stand-in frame the navigation handler can call without starting the app
+// runtime. Only `src` and `reload` are touched on the path under test.
 const stubFrame = {
   src: '',
   reload: async () => new AbortController().signal,
 } as unknown as FrameHandle
 
 const stubFrames = {
-  getTopFrame: () => stubFrame,
-  getNamedFrame: () => stubFrame,
+  top: stubFrame,
+  get: () => stubFrame,
   reloadFrame: (frame: FrameHandle) =>
     createReloadTransition(frame.reload().then((signal) => ({ signal }))),
 }
@@ -102,7 +97,7 @@ type StubNavigationTransition = {
 
 function startStubNavigationListener(
   t: TestContext,
-  options: Parameters<typeof startNavigationListenerImpl>[1] = stubFrames,
+  options: Parameters<typeof startNavigationListener>[1] = stubFrames,
 ): (event: Event) => StubNavigationTransition {
   let stubNavigation = Object.assign(new EventTarget(), {
     updateCurrentEntry: mock.fn(),
@@ -113,7 +108,7 @@ function startStubNavigationListener(
   stubGlobalField(t, 'navigation', stubNavigation)
 
   let controller = new AbortController()
-  startNavigationListenerImpl(controller.signal, options)
+  startNavigationListener(controller.signal, options)
   t.after(() => controller.abort())
   // Ends navigation workarounds that are still running, as the next navigation would.
   t.after(() => stubNavigation.dispatchEvent(new Event('navigate')))
@@ -194,7 +189,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', navigation)
     let controller = new AbortController()
     t.after(() => controller.abort())
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let destination = new URL('/next', document.location.href).href
     reloadDocument(document, destination)
@@ -311,7 +306,7 @@ describe('navigate', () => {
     t.after(() => controller.abort())
     let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
     let [committed, resolveCommitted] = withResolvers<void>()
-    startNavigationListenerImpl(controller.signal, {
+    startNavigationListener(controller.signal, {
       ...stubFrames,
       reloadFrame: () => ({ signal: controller.signal, committed, finished }),
     })
@@ -326,6 +321,226 @@ describe('navigate', () => {
 
     resolveFinished({ signal: controller.signal })
     await navigated
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('keeps focus when a failed navigation resets it to the body or an autofocus element', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let reload = Promise.withResolvers<StubFrameReloadResult>()
+    startNavigationListener(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({
+        signal: controller.signal,
+        committed: Promise.resolve(),
+        finished: reload.promise,
+      }),
+    })
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    reload.reject(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(input)
+
+    let autofocusInput = document.createElement('input')
+    autofocusInput.autofocus = true
+    document.body.append(autofocusInput)
+    reload = Promise.withResolvers<StubFrameReloadResult>()
+
+    navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    reload.reject(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('leaves focus where the visitor moved it while a failing navigation ran', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    startNavigationListener(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let first = document.createElement('input')
+    let second = document.createElement('input')
+    document.body.append(first, second)
+    first.focus()
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    second.focus()
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(second)
+  })
+
+  it('leaves focus set by a navigation error handler', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    startNavigationListener(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let input = document.createElement('input')
+    let errorSummary = document.createElement('p')
+    errorSummary.tabIndex = -1
+    document.body.append(input, errorSummary)
+    input.focus()
+    navigation.addEventListener('navigateerror', () => errorSummary.focus(), {
+      signal: controller.signal,
+    })
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(errorSummary)
+  })
+
+  it('leaves abort-handler focus changes intact with automatic or manual focus reset', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let reload = Promise.withResolvers<StubFrameReloadResult>()
+    startNavigationListener(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({
+        signal: controller.signal,
+        committed: Promise.resolve(),
+        finished: reload.promise,
+      }),
+    })
+    let input = document.createElement('input')
+    let errorSummary = document.createElement('p')
+    errorSummary.tabIndex = -1
+    document.body.append(input, errorSummary)
+    input.focus()
+    navigation.addEventListener(
+      'navigate',
+      (event) => event.signal.addEventListener('abort', () => errorSummary.focus(), { once: true }),
+      { signal: controller.signal },
+    )
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    reload.reject(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(errorSummary)
+
+    reload = Promise.withResolvers<StubFrameReloadResult>()
+    input.focus()
+
+    navigated = navigate(window.location.href, {
+      history: 'replace',
+      resetScroll: false,
+      resetFocus: 'manual',
+    })
+    reload.reject(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(errorSummary)
+  })
+
+  it('leaves focus cleared by an earlier navigation abort handler', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    startNavigationListener(controller.signal, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let input = document.createElement('input')
+    let autofocusInput = document.createElement('input')
+    autofocusInput.autofocus = true
+    document.body.append(input, autofocusInput)
+    input.focus()
+    navigation.addEventListener(
+      'navigate',
+      (event) =>
+        event.signal.addEventListener('abort', () => autofocusInput.blur(), { once: true }),
+      { signal: controller.signal },
+    )
+
+    let navigated = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(navigated).rejects.toBe(failure)
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('leaves focus to a navigation started by an earlier abort handler', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
+    let dispatchNavigation = startStubNavigationListener(t, {
+      ...stubFrames,
+      reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
+    })
+    let input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+    let event = createTraverseNavigateEvent({ target: undefined, src: '/previous', $rmx: true })
+    event.signal = controller.signal
+    controller.signal.addEventListener(
+      'abort',
+      () => navigation.dispatchEvent(new Event('navigate')),
+      { once: true },
+    )
+    let transition = dispatchNavigation(event)
+    let handled = transition.runHandler()
+    let failure = new Error('save failed')
+    rejectFinished(failure)
+    await expect(handled).rejects.toBe(failure)
+
+    // The browser resets focus before aborting the failed navigation.
+    input.blur()
+    controller.abort(failure)
+    await transition.fail()
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('lets a later navigation reset focus after a replaced one fails', async (t) => {
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let reloads = [
+      withResolvers<StubFrameReloadResult>(),
+      withResolvers<StubFrameReloadResult>(),
+      withResolvers<StubFrameReloadResult>(),
+    ]
+    let [reloading, startReloading] = withResolvers<void>()
+    let calls = 0
+    startNavigationListener(controller.signal, {
+      ...stubFrames,
+      reloadFrame() {
+        let [finished] = reloads[calls++]!
+        startReloading()
+        return { signal: controller.signal, committed: finished.then(() => {}), finished }
+      },
+    })
+    let input = document.createElement('input')
+    let link = document.createElement('a')
+    link.href = window.location.href
+    document.body.append(input, link)
+    input.focus()
+
+    let replaced = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    await reloading
+    let replacing = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    await replaced.catch(() => {})
+    let [, , failReplaced] = reloads[0]!
+    failReplaced(new DOMException('The frame reload was replaced.', 'AbortError'))
+    // Lets the replaced navigation's handler settle before the visitor moves on.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    link.focus()
+    let latest = navigate(window.location.href, { history: 'replace', resetScroll: false })
+    await replacing.catch(() => {})
+    let [, finishLatest] = reloads[2]!
+    finishLatest({ signal: controller.signal })
+    await latest
     expect(document.activeElement).toBe(document.body)
   })
 
@@ -406,7 +621,7 @@ describe('navigate', () => {
     let addDocumentListener = t.mock.method(document, 'addEventListener')
     let controller = new AbortController()
 
-    startNavigationListener(controller.signal)
+    startNavigationListener(controller.signal, stubFrames)
 
     expect(addDocumentListener).not.toHaveBeenCalled()
     controller.abort()
@@ -422,7 +637,7 @@ describe('navigate', () => {
     let addDocumentListener = t.mock.method(document, 'addEventListener')
     let controller = new AbortController()
 
-    startNavigationListener(controller.signal)
+    startNavigationListener(controller.signal, stubFrames)
 
     expect(addDocumentListener).not.toHaveBeenCalled()
     expect(navigation.updateCurrentEntry).not.toHaveBeenCalled()
@@ -503,8 +718,8 @@ describe('navigate', () => {
     let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
     let frame = { src: '' } as FrameHandle
     let dispatchNavigation = startStubNavigationListener(t, {
-      getTopFrame: () => frame,
-      getNamedFrame: () => frame,
+      top: frame,
+      get: () => frame,
       reloadFrame() {
         return { signal: reloadController.signal, committed, finished }
       },
@@ -1111,9 +1326,9 @@ describe('navigate', () => {
     let [finished, resolveFinished] = withResolvers<{ signal: AbortSignal }>()
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame() {
         return { signal: eventController.signal, committed, finished }
       },
@@ -1235,7 +1450,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -1269,7 +1484,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = 'https://example.com/login'
@@ -1418,7 +1633,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = '/report.csv'
@@ -1452,7 +1667,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = '/logo'
@@ -1484,8 +1699,8 @@ describe('navigate', () => {
     controller.abort()
   })
 
-  it('replaces marked anchor history without precommit support', async (t) => {
-    stubGlobalField(t, 'NavigationPrecommitController', undefined)
+  it('replaces marked anchor history before commit when supported', async () => {
+    expect(typeof Reflect.get(window, 'NavigationPrecommitController')).toBe('function')
 
     let originalUrl = window.location.href
     let destination = new URL(originalUrl)
@@ -1493,9 +1708,9 @@ describe('navigate', () => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) =>
         createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
@@ -1527,6 +1742,188 @@ describe('navigate', () => {
     }
   })
 
+  it('replaces marked anchor history without precommit support', async (t) => {
+    stubGlobalField(t, 'NavigationPrecommitController', undefined)
+
+    let originalUrl = window.location.href
+    let destination = new URL(originalUrl)
+    destination.searchParams.set('frame-navigation', 'replace-link')
+    let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
+    let topFrame = { src: '' } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
+      reloadFrame: (_frame, options) =>
+        createReloadTransition(reload(options).then((signal) => ({ signal }))),
+    })
+
+    let anchor = document.createElement('a')
+    anchor.href = destination.href
+    anchor.setAttribute('data-rmx-history', 'replace')
+    anchor.setAttribute('data-rmx-reset-focus', 'false')
+    document.body.append(anchor)
+    anchor.focus()
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    let didNavigate = false
+    try {
+      let navigationSucceeded = waitForNavigationSuccess()
+      anchor.click()
+      await navigationSucceeded
+      didNavigate = true
+
+      let entryAfterNavigation = getCurrentNavigationEntry()
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation)
+      expect(entryAfterNavigation.url).toBe(destination.href)
+      expect(topFrame.src).toBe(destination.href)
+      expect(reload).toHaveBeenCalledTimes(1)
+      expect(document.activeElement).toBe(anchor)
+    } finally {
+      if (didNavigate) await navigate(originalUrl, { history: 'replace' })
+      controller.abort()
+    }
+  })
+
+  it('replaces the entry of a push navigation that a link click interrupts before it renders', async (t) => {
+    stubGlobalField(t, 'NavigationPrecommitController', undefined)
+
+    let originalUrl = window.location.href
+    let interruptedUrl = new URL(originalUrl)
+    interruptedUrl.searchParams.set('frame-navigation', 'interrupted')
+    let interruptingUrl = new URL(originalUrl)
+    interruptingUrl.searchParams.set('frame-navigation', 'interrupting')
+    let topFrame = { src: originalUrl } as FrameHandle
+    let reloadFrame = stubReloadFrameInterruptedAt(interruptedUrl.href)
+    let controller = new AbortController()
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
+      reloadFrame,
+    })
+
+    let interrupted = document.createElement('a')
+    interrupted.href = interruptedUrl.href
+    let interrupting = document.createElement('a')
+    interrupting.href = interruptingUrl.href
+    document.body.append(interrupted, interrupting)
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    try {
+      interrupted.click()
+      await waitUntil(() => reloadFrame.mock.callCount() === 1)
+      expect(window.navigation.currentEntry?.url).toBe(interruptedUrl.href)
+
+      let navigationSucceeded = waitForNavigationSuccess()
+      interrupting.click()
+      await navigationSucceeded
+
+      expect(window.navigation.currentEntry?.url).toBe(interruptingUrl.href)
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation + 1)
+
+      await window.navigation.back().finished
+      expect(window.navigation.currentEntry?.url).toBe(originalUrl)
+      await window.navigation.forward().finished
+    } finally {
+      interrupted.remove()
+      interrupting.remove()
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
+
+  it('replaces the entry of a push navigation that navigate() interrupts before it renders', async () => {
+    expect(typeof Reflect.get(window, 'NavigationPrecommitController')).toBe('function')
+
+    let originalUrl = window.location.href
+    let interruptedUrl = new URL(originalUrl)
+    interruptedUrl.searchParams.set('frame-navigation', 'interrupted')
+    let interruptingUrl = new URL(originalUrl)
+    interruptingUrl.searchParams.set('frame-navigation', 'interrupting')
+    let topFrame = { src: originalUrl } as FrameHandle
+    let reloadFrame = stubReloadFrameInterruptedAt(interruptedUrl.href)
+    let controller = new AbortController()
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
+      reloadFrame,
+    })
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    try {
+      void navigate(interruptedUrl.href).catch(() => {})
+      await waitUntil(() => reloadFrame.mock.callCount() === 1)
+      expect(window.navigation.currentEntry?.url).toBe(interruptedUrl.href)
+
+      // The interrupting navigation is redirected before it commits, so its promise still settles.
+      await navigate(interruptingUrl.href)
+
+      expect(window.navigation.currentEntry?.url).toBe(interruptingUrl.href)
+      expect(topFrame.src).toBe(interruptingUrl.href)
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation + 1)
+
+      await window.navigation.back().finished
+      expect(window.navigation.currentEntry?.url).toBe(originalUrl)
+      await window.navigation.forward().finished
+    } finally {
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
+
+  it('replaces an unrendered push interrupted from currententrychange', async () => {
+    let originalUrl = window.location.href
+    let interruptedUrl = new URL(originalUrl)
+    interruptedUrl.searchParams.set('frame-navigation', 'interrupted-at-commit')
+    let interruptingUrl = new URL(originalUrl)
+    interruptingUrl.searchParams.set('frame-navigation', 'interrupting-at-commit')
+    let topFrame = { src: originalUrl } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
+      reloadFrame: () => createReloadTransition({ signal: new AbortController().signal }),
+    })
+
+    let interrupting: Promise<void> | undefined
+    window.navigation.addEventListener(
+      'currententrychange',
+      (event) => {
+        if (
+          event.navigationType === 'push' &&
+          window.navigation.currentEntry?.url === interruptedUrl.href
+        ) {
+          interrupting = navigate(interruptingUrl.href)
+        }
+      },
+      { signal: controller.signal },
+    )
+
+    let entryCountBeforeNavigation = window.navigation.entries().length
+    try {
+      await navigate(interruptedUrl.href).catch(() => {})
+      expect(interrupting).toBeDefined()
+      await interrupting
+
+      expect(window.navigation.currentEntry?.url).toBe(interruptingUrl.href)
+      expect(topFrame.src).toBe(interruptingUrl.href)
+      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation + 1)
+
+      await window.navigation.back().finished
+      expect(window.navigation.currentEntry?.url).toBe(originalUrl)
+      await window.navigation.forward().finished
+    } finally {
+      if (window.location.href !== originalUrl) {
+        await navigate(originalUrl, { history: 'replace' })
+      }
+      controller.abort()
+    }
+  })
+
   it('replaces the navigation URL when the top frame reload follows a redirect', async () => {
     let originalUrl = window.location.href
     let requestedUrl = new URL(originalUrl)
@@ -1546,9 +1943,9 @@ describe('navigate', () => {
       return createReloadTransition({ signal: new AbortController().signal })
     })
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame,
     })
 
@@ -1608,9 +2005,9 @@ describe('navigate', () => {
       }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => childFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => childFrame,
       reloadFrame,
     })
 
@@ -1651,8 +2048,8 @@ describe('frame navigation sources', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let dispatch = startStubNavigationListener(t, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: (name) => (name === 'details' ? namedFrame : undefined),
+      top: topFrame,
+      get: (name) => (name === 'details' ? namedFrame : undefined),
       reloadFrame,
     })
     let anchor = document.createElement('a')
@@ -1779,9 +2176,9 @@ describe('frame navigation sources', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => undefined,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => undefined,
       reloadFrame,
     })
 
@@ -1832,9 +2229,9 @@ describe('frame navigation sources', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => ({ src: window.location.href }) as FrameHandle,
-      getNamedFrame: () => stubFrame,
+    startNavigationListener(controller.signal, {
+      top: { src: window.location.href } as FrameHandle,
+      get: () => stubFrame,
       reloadFrame,
     })
 
@@ -1981,9 +2378,9 @@ describe('form navigation', () => {
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2022,9 +2419,9 @@ describe('form navigation', () => {
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2068,9 +2465,9 @@ describe('form navigation', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame(name) {
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get(name) {
         expect(name).toBe('account')
         return getNamedFrame()
       },
@@ -2105,9 +2502,9 @@ describe('form navigation', () => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) =>
         createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
@@ -2142,9 +2539,9 @@ describe('form navigation', () => {
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2181,9 +2578,9 @@ describe('form navigation', () => {
     let topFrame = { src: '' } as FrameHandle
     let namedFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame(name) {
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get(name) {
         expect(name).toBe('account')
         return namedFrame
       },
@@ -2248,9 +2645,9 @@ describe('form navigation', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => undefined,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => undefined,
       reloadFrame,
     })
 
@@ -2279,9 +2676,9 @@ describe('form navigation', () => {
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2323,9 +2720,9 @@ describe('form navigation', () => {
     let topFrame = { src: '' } as FrameHandle
     let namedFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame(name) {
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get(name) {
         expect(name).toBe('items')
         return namedFrame
       },
@@ -2388,9 +2785,9 @@ describe('form navigation', () => {
       return { signal: new AbortController().signal }
     })
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2452,7 +2849,7 @@ describe('form navigation', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
     let form = document.createElement('form')
     form.setAttribute('data-rmx-document', '')
     let intercept = mock.fn()
@@ -2479,7 +2876,7 @@ describe('form navigation', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
     let form = document.createElement('form')
     form.method = 'dialog'
     let intercept = mock.fn()
@@ -2627,4 +3024,22 @@ function setupWebKitScrollReset(t: TestContext, frames = stubFrames) {
       )
     },
   }
+}
+
+// Reloads of `interruptedUrl` never render. They settle once the next navigation aborts them, as
+// the frame runtime settles a reload whose navigation is interrupted.
+function stubReloadFrameInterruptedAt(interruptedUrl: string) {
+  return mock.fn((frame: FrameHandle, options?: ResolveFrameOptions) => {
+    let signal = options?.signal ?? new AbortController().signal
+    if (frame.src !== interruptedUrl) return createReloadTransition({ signal })
+    return createReloadTransition(
+      new Promise<StubFrameReloadResult>((resolve) =>
+        signal.addEventListener('abort', () => resolve({ signal }), { once: true }),
+      ),
+    )
+  })
+}
+
+async function waitUntil(condition: () => boolean): Promise<void> {
+  while (!condition()) await new Promise((resolve) => setTimeout(resolve, 0))
 }

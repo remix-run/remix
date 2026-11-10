@@ -1,24 +1,28 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 
-import { Frame, type Handle } from '../runtime/component.ts'
+import type { Handle } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import {
   consumeFrameTemplate,
   createFrame,
-  NamedFrameRegistry,
+  Frame,
   publishFrameTemplate,
   reloadFrameForNavigation,
+} from '../runtime/frame.ts'
+import {
+  NamedFrameRegistry,
   type LoadModule,
   type ResolveFrameOptions,
-} from '../runtime/frame.ts'
-import { jsx } from '../runtime/jsx.ts'
+} from '../runtime/frame-runtime.ts'
+import { jsx } from '../runtime/core/vnode.ts'
 import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
+import { resetNonceManager } from '../runtime/nonce.ts'
 import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
 import { ImportMap, renderToString, renderToStream } from '../server/stream.ts'
-import { createStyleManager } from '../style/index.ts'
+import { createStyleManager } from '../style/stylesheet.ts'
 import { drain, withResolvers } from './utils.ts'
 
 const managedModulePreloadSelector = 'link[data-rmx-module-preload][rel="modulepreload"]'
@@ -48,7 +52,23 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
 describe('frames', () => {
   afterEach(() => {
     resetDocumentImportMapManager(document)
+    resetNonceManager()
     document.documentElement.innerHTML = '<head></head><body></body>'
+  })
+
+  it('preserves doctype-looking text in frame script data', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    let json = '{"example":"<!doctype html>"}'
+    let frame = createTestFrame(root, {
+      resolveFrame: () => `<!DOCTYPE html><script type="application/json">${json}</script>`,
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+
+    expect(root.querySelector('script')?.textContent).toBe(json)
   })
 
   it('preserves named html and body attributes across top frame reloads', async () => {
@@ -205,6 +225,93 @@ describe('frames', () => {
     } finally {
       frame.dispose()
     }
+  })
+
+  it('applies the html, head, and body of a reloaded document with native HTML parsing', async (t) => {
+    let html = document.documentElement
+    t.after(() => {
+      for (let name of ['lang', 'dir', 'data-label', 'data-other']) html.removeAttribute(name)
+    })
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        '<!doctype html><!-- <html lang="wrong"> -->' +
+        '<HTML lang="fr" dir="rtl" data-label="A > B &amp; 🐈" data-other=unquoted>' +
+        '<head><title>Next &amp; last</title>' +
+        '<script type="application/json">{"html":"<style>p{color:red}</style>","doctype":"<!doctype html>"}</script></head>' +
+        '<body class="next"><table><tr><td>Cell</td></tr></table></body></html>',
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+
+    expect(html.lang).toBe('fr')
+    expect(html.dir).toBe('rtl')
+    expect(html.dataset.label).toBe('A > B & 🐈')
+    expect(html.dataset.other).toBe('unquoted')
+    expect(document.title).toBe('Next & last')
+    expect(JSON.parse(document.querySelector('script')?.textContent ?? '{}')).toEqual({
+      html: '<style>p{color:red}</style>',
+      doctype: '<!doctype html>',
+    })
+    expect(document.body.className).toBe('next')
+    expect(document.querySelector('table > tbody > tr > td')?.textContent).toBe('Cell')
+  })
+
+  it('supplies omitted elements of a reloaded document', async (t) => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+    let frame = createTestFrame(document, {
+      resolveFrame: () => '<!doctype html><title>Next</title><p>Hello</p>',
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+
+    expect(document.title).toBe('Next')
+    expect(document.querySelector('body > p')?.textContent).toBe('Hello')
+    expect(document.querySelector('main')).toBe(null)
+  })
+
+  it('does not run scripts or keep noscript content from a reloaded document', async (t) => {
+    let constructions = 0
+    let name = `reload-probe-${crypto.randomUUID()}`
+    customElements.define(
+      name,
+      class extends HTMLElement {
+        constructor() {
+          super()
+          constructions++
+        }
+      },
+    )
+    let key = `reload-script-${crypto.randomUUID()}`
+    t.after(() => Reflect.deleteProperty(globalThis, key))
+    let script = `globalThis[${JSON.stringify(key)}] = true`
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        '<!doctype html><html><head><noscript><style>p { color: red }</style></noscript></head><body>' +
+        `<${name}></${name}><script>${script}</script>` +
+        `<template><script>${script}</script><noscript><img src="/unused"></noscript></template>` +
+        '</body></html>',
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+    expect(constructions).toBe(1)
+    expect(Reflect.get(globalThis, key)).toBe(undefined)
+    expect(document.querySelector('noscript')?.textContent).toBe('')
+    expect(document.querySelector('template')?.content.querySelector('noscript')?.textContent).toBe(
+      '',
+    )
   })
 
   it('reloads the document when frame HTML is a string without a flush marker', async () => {
@@ -377,6 +484,129 @@ describe('frames', () => {
     } finally {
       frame.dispose()
     }
+  })
+
+  it('does not move head nodes after a leading server-rendered import map on reload', async () => {
+    let importMap = { imports: { '/entry.js': '/entry.hash.js' } }
+    let stylesheet = '<link data-rmx-key="styles" rel="stylesheet" href="data:text/css,">'
+    document.documentElement.innerHTML = [
+      '<head>',
+      remixImportMapScript(importMap),
+      '<title>Initial</title>',
+      stylesheet,
+      '</head>',
+      '<body><main>Initial</main></body>',
+    ].join('')
+
+    let frame = createTestFrame(document, {
+      resolveFrame() {
+        return htmlStream([
+          appendFlushMarker(
+            [
+              '<!doctype html><html><head>',
+              remixImportMapScript(importMap),
+              '<title>Next</title>',
+              stylesheet,
+              '</head><body><main>Next</main></body></html>',
+            ].join(''),
+            'document',
+          ),
+        ])
+      },
+    })
+
+    try {
+      await frame.ready()
+      let importMapScript = document.head.firstElementChild
+      let stylesheetLink = document.head.querySelector('link[data-rmx-key="styles"]')
+      let removedNodes: Node[] = []
+      let observer = new MutationObserver((records) => {
+        for (let record of records) removedNodes.push(...record.removedNodes)
+      })
+      observer.observe(document.head, { childList: true })
+
+      await frame.handle.reload()
+      for (let record of observer.takeRecords()) removedNodes.push(...record.removedNodes)
+      observer.disconnect()
+
+      expect(removedNodes).not.toContain(stylesheetLink)
+      expect(removedNodes).not.toContain(importMapScript)
+      expect(document.title).toBe('Next')
+      expect(Array.from(document.head.children)).toEqual([
+        importMapScript,
+        document.querySelector('title'),
+        stylesheetLink,
+      ])
+      expect(importMapScript?.matches('script[data-rmx-import-map][type="importmap"]')).toBe(true)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps shared head resources in place when page-specific links come and go', async (t) => {
+    let importMap = { imports: { '/entry.js': '/entry.hash.js' } }
+    let renderHead = (title: string, pageLinks = '') =>
+      [
+        remixImportMapScript(importMap),
+        `<title>${title}</title>`,
+        pageLinks,
+        '<link data-rmx-key="styles" rel="stylesheet" href="data:text/css,">',
+        '<link rel="modulepreload" href="data:text/javascript,">',
+      ].join('')
+    let pages = {
+      home: renderHead('Home'),
+      doc: renderHead('Doc', '<link rel="alternate" type="text/markdown" href="/doc.md">'),
+    }
+    let page: keyof typeof pages = 'home'
+    document.documentElement.innerHTML = `<head>${pages.home}</head><body><main>Home</main></body>`
+
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        htmlStream([
+          appendFlushMarker(
+            `<!doctype html><html><head>${pages[page]}</head><body><main>${page}</main></body></html>`,
+            'document',
+          ),
+        ]),
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let stylesheet = document.head.querySelector('link[rel="stylesheet"]')
+    let preload = document.head.querySelector('link[rel="modulepreload"]')
+    let detached: Node[] = []
+    let rewritten: Node[] = []
+    let collect = (records: MutationRecord[]) => {
+      for (let record of records) {
+        detached.push(...record.removedNodes)
+        if (record.type === 'attributes') rewritten.push(record.target)
+      }
+    }
+    let observer = new MutationObserver(collect)
+    observer.observe(document.head, { childList: true, attributes: true, subtree: true })
+    t.after(() => observer.disconnect())
+
+    page = 'doc'
+    await frame.handle.reload()
+
+    let alternate = document.head.querySelector('link[rel="alternate"]')
+    expect(document.title).toBe('Doc')
+    expect(alternate?.nextElementSibling).toBe(stylesheet)
+    expect(stylesheet?.nextElementSibling).toBe(preload)
+
+    page = 'home'
+    await frame.handle.reload()
+
+    expect(document.title).toBe('Home')
+    expect(document.head.querySelector('link[rel="alternate"]')).toBe(null)
+    expect(document.head.querySelector('link[rel="stylesheet"]')).toBe(stylesheet)
+    expect(document.head.querySelector('link[rel="modulepreload"]')).toBe(preload)
+    expect(preload?.getAttribute('href')).toBe('data:text/javascript,')
+
+    collect(observer.takeRecords())
+    expect(detached).not.toContain(stylesheet)
+    expect(detached).not.toContain(preload)
+    expect(rewritten).not.toContain(preload)
   })
 
   it('resolves after committing reload content', async () => {
@@ -2273,7 +2503,7 @@ describe('frames', () => {
   it('keeps active initial preloads connected across a document reload', async () => {
     document.documentElement.innerHTML = [
       '<head><title>Initial</title>',
-      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" />',
+      '<link data-rmx-module-preload rel="modulepreload" href="/entry.js" nonce="document-nonce" />',
       '</head><body></body>',
     ].join('')
 
@@ -2306,6 +2536,7 @@ describe('frames', () => {
         document.head.querySelectorAll<HTMLLinkElement>(managedModulePreloadSelector),
       )
       expect(activePreloads).toHaveLength(2)
+      expect(activePreloads.map((link) => link.nonce)).toEqual(['document-nonce', 'document-nonce'])
 
       await frame.handle.reload()
 

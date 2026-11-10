@@ -1,5 +1,3 @@
-import { REMIX_UI_STYLE_LAYER } from './layers.ts'
-
 // # Style ownership model
 //
 // Rules are content-addressed: a class name is a hash of the style object that
@@ -34,11 +32,9 @@ export interface StyleManager {
   dispose(): void
 }
 
-const SERVER_STYLE_SELECTOR = 'style[data-rmx-style]'
+export const REMIX_UI_STYLE_LAYER = 'rmx'
 
-function getStyleLayerName(className: string, layer: string = REMIX_UI_STYLE_LAYER): string {
-  return `${layer}.${className}`
-}
+const SERVER_STYLE_SELECTOR = 'style[data-rmx-style]'
 
 function compareNodesInDocumentOrder(a: Node, b: Node): number {
   if (a === b) return 0
@@ -99,7 +95,7 @@ function getStyleSelector(styleEl: HTMLStyleElement): string | null {
   return selector ? selector : null
 }
 
-export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleManager {
+export function createStyleManager(): StyleManager {
   let stylesheet: CSSStyleSheet | null = null
   let generation = 0
 
@@ -131,6 +127,12 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
   function adoptServerStyleTag(styleEl: HTMLStyleElement): string | undefined {
     let selector = getStyleSelector(styleEl)
     if (!selector) return undefined
+
+    // Only the active document can authorize these styles under its CSP.
+    // Detached and CSP-blocked tags have no associated stylesheet.
+    if (!styleEl.isConnected || styleEl.ownerDocument !== document || !styleEl.sheet) {
+      return undefined
+    }
 
     let entry = ruleMap.get(selector)
     if (entry) {
@@ -183,7 +185,7 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
     let index = sheet.cssRules.length
     // This may throw for invalid CSS. If it does, we intentionally let it
     // bubble so the rule is not tracked unless insertion actually succeeds.
-    sheet.insertRule(`@layer ${getStyleLayerName(className, layer)} { ${rule} }`, index)
+    sheet.insertRule(`@layer ${REMIX_UI_STYLE_LAYER}.${className} { ${rule} }`, index)
     ruleMap.set(className, { count: 1, index, pinned: false })
   }
 

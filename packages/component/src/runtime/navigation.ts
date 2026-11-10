@@ -1,8 +1,11 @@
-import { getTopFrame, getNamedFrame } from './run.ts'
-import { reloadFrameForNavigation } from './frame.ts'
+import {
+  isDocumentReload,
+  reloadCurrentDocument,
+  reloadFrameForNavigation,
+  setTopFrameSource,
+} from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
-import { isDocumentReload, reloadCurrentDocument } from './document-reload.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, Handle } from './component.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -37,6 +40,13 @@ interface FrameRedirectNavigationInfo {
 
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const frameRedirectNavigationInfoType = 'frame-redirect'
+
+interface PendingUrlUpdate {
+  controller: AbortController
+  state: unknown
+}
+
+const pendingUrlUpdates = new WeakMap<Window, PendingUrlUpdate>()
 
 // Lets the navigation handler tell the WebKit workaround once it has reset scroll.
 const webKitScrollResets = new WeakMap<NavigateEvent, () => void>()
@@ -174,34 +184,162 @@ export async function navigate(href: string, options?: NavigationOptions) {
 }
 
 /**
+ * Options for updating the current URL.
+ */
+export interface UpdateUrlOptions {
+  /** How the URL updates browser history. (default: `"replace"`) */
+  history?: 'replace' | 'push'
+  /** Cancels a pending URL update without aborting the navigation it is waiting for. */
+  signal?: AbortSignal
+}
+
+/**
+ * Reflects locally rendered state in the URL without fetching, rendering, or changing scroll/focus.
+ * Preserves history state and synchronizes Remix metadata and the top-frame source.
+ * Waits for the active transition and requires the captured browser URL to remain current.
+ * Supersession, navigation/URL changes, and cancellation resolve with an aborted signal.
+ * Newer calls supersede waiting calls. Cancellation reasons are available on the returned signal.
+ * Native interception of this update is unsupported (`NotSupportedError`); it may still commit.
+ * Cross-origin URLs reject with `SecurityError`; other failures propagate.
+ * Do not await this inside the captured transition's interception handler.
+ *
+ * @param href Same-origin URL, resolved against `document.baseURI` when applied. An empty string
+ * retains the current URL.
+ * @param options History mode (default: `"replace"`) and cancellation signal.
+ * @returns The update's signal: aborted on cancellation, otherwise permanently non-aborted.
+ */
+export async function updateUrl(href: string, options?: UpdateUrlOptions): Promise<AbortSignal> {
+  let signal = options?.signal
+  if (signal?.aborted) return AbortSignal.abort(signal.reason)
+  let previous = pendingUrlUpdates.get(window)
+  let previousState = previous?.controller.signal.aborted ? undefined : previous?.state
+  previous?.controller.abort(new DOMException('URL update was superseded', 'AbortError'))
+  let update: PendingUrlUpdate = { controller: new AbortController(), state: undefined }
+  pendingUrlUpdates.set(window, update)
+  let { controller } = update
+  let navigation = window.navigation
+  let capturedUrl = window.location.href
+  let capturedTransition = navigation?.transition
+  let waitingSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal
+  let dispatching = false
+  let updateEvent: NavigateEvent | undefined
+  function observeNavigation(event: NavigateEvent) {
+    if (dispatching && !updateEvent) updateEvent = event
+    else abortUrlUpdate(controller)
+  }
+  function updateHistory(): NavigateEvent | undefined {
+    dispatching = true
+    try {
+      if (options?.history === 'push') window.history.pushState(window.history.state, '', href)
+      else window.history.replaceState(window.history.state, '', href)
+    } finally {
+      dispatching = false
+    }
+    return updateEvent
+  }
+  try {
+    navigation?.addEventListener('navigate', observeNavigation, {
+      capture: true,
+      signal: controller.signal,
+    })
+    if (capturedTransition) await waitForUrlUpdate(capturedTransition.finished, waitingSignal)
+    waitingSignal.throwIfAborted()
+    if (navigation?.transition || window.location.href !== capturedUrl)
+      return abortUrlUpdate(controller)
+    let entry = navigation?.currentEntry
+    let state = entry?.getState()
+    // A reentrant call can run after History API commit clears state, before we restore it.
+    if (state === undefined && !capturedTransition) state = previousState
+    update.state = state
+    let destination = document.createElement('a')
+    destination.href = href
+    let destinationUrl = href === '' ? window.location.href : destination.href
+    let event = updateHistory()
+    controller.signal.throwIfAborted()
+    if (event?.defaultPrevented || event?.signal.aborted) return abortUrlUpdate(controller)
+    if (navigation?.transition) {
+      throw new DOMException(
+        'Native interception of URL updates is not supported',
+        'NotSupportedError',
+      )
+    }
+    let updatedEntry = navigation?.currentEntry
+    if (entry && (updatedEntry?.id === entry.id || updatedEntry?.url !== destinationUrl)) {
+      return abortUrlUpdate(controller)
+    }
+    let src = window.location.href
+    if (navigation && state !== undefined) {
+      navigation.updateCurrentEntry({
+        state: isRuntimeNavigation(state) ? { ...state, target: undefined, src } : state,
+      })
+    }
+    controller.signal.throwIfAborted()
+    if (navigation?.currentEntry?.id !== updatedEntry?.id) return abortUrlUpdate(controller)
+    setTopFrameSource(src)
+    return controller.signal
+  } catch (error) {
+    if (
+      (controller.signal.aborted && error === controller.signal.reason) ||
+      (signal?.aborted && error === signal.reason)
+    ) {
+      return AbortSignal.abort(error)
+    }
+    throw error
+  } finally {
+    navigation?.removeEventListener('navigate', observeNavigation, { capture: true })
+    if (pendingUrlUpdates.get(window) === update) pendingUrlUpdates.delete(window)
+  }
+}
+
+function abortUrlUpdate(controller: AbortController): AbortSignal {
+  controller.abort(
+    new DOMException('Navigation or URL changed before update completed', 'AbortError'),
+  )
+  return controller.signal
+}
+
+async function waitForUrlUpdate(updating: Promise<void>, signal?: AbortSignal): Promise<void> {
+  let listeners = new AbortController()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(signal.reason)
+      } else {
+        signal?.addEventListener('abort', () => reject(signal.reason), {
+          once: true,
+          signal: listeners.signal,
+        })
+      }
+      void updating.then(resolve, reject)
+    })
+  } finally {
+    listeners.abort()
+  }
+}
+
+/**
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
+ * @param options Frames of the running app, and an optional reload override for tests.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal) {
-  return startNavigationListenerImpl(signal, {
-    getTopFrame,
-    getNamedFrame,
-    reloadFrame: reloadFrameForNavigation,
-  })
-}
-
-// Internal version used by unit tests so we can inject stub frames
-export function startNavigationListenerImpl(
+export function startNavigationListener(
   signal: AbortSignal,
-  options: {
-    getTopFrame: typeof getTopFrame
-    getNamedFrame: typeof getNamedFrame
-    reloadFrame: typeof reloadFrameForNavigation
-  },
+  options: Handle['frames'] & { reloadFrame?: typeof reloadFrameForNavigation },
 ) {
+  let reloadFrame = options.reloadFrame ?? reloadFrameForNavigation
   let navigation = getInterceptableNavigation()
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
   // Hash changes abort the previous navigation before this listener runs. Keep unfinished frame
   // work pending across aborts so the next navigation can finish loading the destination.
   let needsFrameReload = false
+  // The Navigation API commits a push's entry before its page loads. A push that starts before
+  // that page is on screen replaces the entry, as a document navigation that never committed
+  // leaves none, so Back returns to the page the visitor saw.
+  let unrenderedEntryKey: string | undefined
+  let uncommittedPushFromKey: string | undefined
 
   navigation.updateCurrentEntry({
     state: {
@@ -216,6 +354,13 @@ export function startNavigationListenerImpl(
   navigation.addEventListener(
     'navigate',
     (event) => {
+      // currententrychange can start this navigation before the previous push's handler runs.
+      if (uncommittedPushFromKey !== undefined) {
+        let currentEntryKey = navigation.currentEntry?.key
+        if (currentEntryKey !== uncommittedPushFromKey) unrenderedEntryKey = currentEntryKey
+        uncommittedPushFromKey = undefined
+      }
+
       if (
         isDocumentReload(event.info) ||
         (event.hashChange && !needsFrameReload) ||
@@ -248,6 +393,11 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
+      let replaceHistory =
+        runtimeNavigation.replaceHistory ||
+        (event.navigationType === 'push' &&
+          unrenderedEntryKey !== undefined &&
+          navigation.currentEntry?.key === unrenderedEntryKey)
       let isTraverse = event.navigationType === 'traverse'
       let scroll = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetScroll)
       let focusReset = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetFocus)
@@ -256,11 +406,11 @@ export function startNavigationListenerImpl(
         return
       }
 
-      let topFrame = options.getTopFrame()
+      let topFrame = options.top
       let frame = replayedSubmission?.frame
       if (!frame) {
         if (state.target) {
-          frame = options.getNamedFrame(state.target)
+          frame = options.get(state.target)
           if (!frame) {
             fallbackToDocumentNavigation(navigation, event)
             return
@@ -271,8 +421,15 @@ export function startNavigationListenerImpl(
       }
 
       needsFrameReload = true
+      if (event.navigationType === 'push' && !replaceHistory) {
+        uncommittedPushFromKey = navigation.currentEntry?.key
+      }
       let handler = async () => {
         if (event.signal.aborted) return
+        if (event.navigationType === 'push' && !replaceHistory) {
+          unrenderedEntryKey = navigation.currentEntry?.key
+          uncommittedPushFromKey = undefined
+        }
 
         let submission = await runtimeNavigation.getSubmission?.()
         if (event.signal.aborted) return
@@ -283,13 +440,18 @@ export function startNavigationListenerImpl(
 
         topFrame.src = event.destination.url
         if (frame !== topFrame) frame.src = state.src
-        let reload = options.reloadFrame(frame, {
+        let reload = reloadFrame(frame, {
           ...submission,
           signal: event.signal,
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
+        if (navigation.currentEntry?.key === unrenderedEntryKey) unrenderedEntryKey = undefined
         if (scroll !== 'manual') {
+          // WebKit restores a traversal's position against the layout from before the commit, so
+          // it clamps the position to the old page's height. Reading the height lays out the new
+          // content first.
+          document.documentElement.scrollHeight
           event.scroll()
           webKitScrollResets.get(event)?.()
         }
@@ -320,20 +482,21 @@ export function startNavigationListenerImpl(
         focusReset,
       } satisfies NavigationInterceptOptions
 
+      // Modern browsers allow you to update the in-flight navigation entry before it's committed
+      let supportsPrecommit =
+        typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
+      let replaceInterceptOptions = {
+        ...interceptOptions,
+        precommitHandler(controller) {
+          controller.redirect(event.destination.url, { history: 'replace' })
+        },
+      } satisfies NavigationInterceptOptions
+
       if (runtimeNavigation.getSubmission) {
         // <form method="post"> navigations
-        if (runtimeNavigation.replaceHistory && replayedSubmission == null) {
-          let supportsPrecommit =
-            typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
-
-          // Modern browsers allow you to update the in-flight navigation entry before it's committed
+        if (replaceHistory && replayedSubmission == null) {
           if (supportsPrecommit) {
-            interceptNavigation(navigation, event, scroll !== 'manual', {
-              ...interceptOptions,
-              precommitHandler(controller) {
-                controller.redirect(event.destination.url, { history: 'replace' })
-              },
-            })
+            interceptNavigation(navigation, event, scroll !== 'manual', replaceInterceptOptions)
             return
           }
 
@@ -357,7 +520,11 @@ export function startNavigationListenerImpl(
         interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
-        if (runtimeNavigation.replaceHistory && event.cancelable) {
+        if (replaceHistory && supportsPrecommit) {
+          interceptNavigation(navigation, event, scroll !== 'manual', replaceInterceptOptions)
+        } else if (replaceHistory && event.cancelable) {
+          // Cancelling rejects the promise of a `navigate()` call that started this navigation,
+          // so a replacement navigation is only the fallback.
           event.preventDefault()
           navigation.navigate(event.destination.url, { history: 'replace', state })
         } else {
@@ -381,42 +548,47 @@ export function getInterceptableNavigation(): Navigation | undefined {
   return navigation
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value != null
+}
+
 function isRuntimeNavigation(info: unknown): info is NavigationState {
-  return typeof info === 'object' && info != null && '$rmx' in info
+  return isObject(info) && '$rmx' in info
 }
 
 function isFormSubmissionNavigationInfo(value: unknown): value is FormSubmissionNavigationInfo {
   return (
-    typeof value === 'object' &&
-    value != null &&
-    'type' in value &&
+    isObject(value) &&
     value.type === formSubmissionNavigationInfoType &&
-    'state' in value &&
     isRuntimeNavigation(value.state) &&
     'frame' in value &&
-    'getSubmission' in value &&
     typeof value.getSubmission === 'function'
   )
 }
 
 function isFrameRedirectNavigationInfo(value: unknown): value is FrameRedirectNavigationInfo {
   return (
-    typeof value === 'object' &&
-    value != null &&
-    'type' in value &&
+    isObject(value) &&
     value.type === frameRedirectNavigationInfoType &&
-    'resetScroll' in value &&
-    (value.resetScroll === 'after-transition' || value.resetScroll === 'manual') &&
-    'resetFocus' in value &&
-    (value.resetFocus === 'after-transition' || value.resetFocus === 'manual')
+    isResetBehavior(value.resetScroll) &&
+    isResetBehavior(value.resetFocus)
   )
 }
 
+function isResetBehavior(value: unknown): boolean {
+  return value === 'after-transition' || value === 'manual'
+}
+
 function isSameOriginUrl(src: string): boolean {
+  return getSameOriginUrl(src) != null
+}
+
+export function getSameOriginUrl(src: string): URL | undefined {
   try {
-    return new URL(src, document.baseURI).origin === window.location.origin
+    let url = new URL(src, document.baseURI)
+    if (url.origin === window.location.origin) return url
   } catch {
-    return false
+    // Invalid URLs can't be same-origin.
   }
 }
 
@@ -455,9 +627,14 @@ function interceptNavigation(
 
   let interceptOptions: NavigationInterceptOptions = {
     ...options,
-    handler() {
+    async handler() {
       bindTransition()
-      return options.handler?.()
+      try {
+        await options.handler?.()
+      } catch (error) {
+        if (options.focusReset !== 'manual') keepFocusAfterFailure(navigation, event)
+        throw error
+      }
     },
   }
   let precommitHandler = options.precommitHandler
@@ -476,12 +653,41 @@ function interceptNavigation(
   }
 }
 
-const disableScrollAnchoringCssText = `
-  html,
-  body {
-    overflow-anchor: none !important;
+// The Navigation API resets focus once a navigation settles, even when its handler fails and the
+// page stays as it was, which would take the visitor away from a form whose save failed. The reset
+// runs before the signal aborts. Restore focus then, before `navigateerror` listeners run, unless
+// an earlier abort listener has already moved focus or started another navigation. A navigation
+// that was already replaced leaves focus to its successor.
+function keepFocusAfterFailure(navigation: Navigation, event: NavigateEvent): void {
+  let focused = document.activeElement
+  if (event.signal.aborted || focused === document.body) return
+  if (!(focused instanceof HTMLElement || focused instanceof SVGElement)) return
+
+  let controller = new AbortController()
+  let { signal } = controller
+  function stop() {
+    controller.abort()
   }
-`
+  function onFocusChange() {
+    // The browser's reset happens before abort; focus changes during abort belong to app code.
+    if (event.signal.aborted) stop()
+  }
+  document.addEventListener('focus', onFocusChange, { capture: true, signal })
+  document.addEventListener('blur', onFocusChange, { capture: true, signal })
+  navigation.addEventListener('navigate', stop, { signal })
+  event.signal.addEventListener(
+    'abort',
+    () => {
+      stop()
+      if (focused.isConnected && document.activeElement !== focused) {
+        focused.focus({ preventScroll: true })
+      }
+    },
+    { once: true, signal },
+  )
+}
+
+const disableScrollAnchoringCssText = 'html, body { overflow-anchor: none !important; }'
 
 function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): string | undefined {
   if (!resetScroll) return
@@ -500,16 +706,10 @@ function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): 
     // after the transition. The intended user-scroll behavior is tested here:
     // https://github.com/web-platform-tests/wpt/blob/master/navigation-api/scroll-behavior/after-transition-skips-restore-when-scrolled.html
     let { scrollHeight, clientHeight } = document.documentElement
-    return `
-      html {
-        min-height: ${scrollHeight + clientHeight}px !important;
-        overflow-anchor: none !important;
-      }
-
-      body {
-        overflow-anchor: none !important;
-      }
-    `
+    return (
+      `html { min-height: ${scrollHeight + clientHeight}px !important; overflow-anchor: none !important; }` +
+      'body { overflow-anchor: none !important; }'
+    )
   }
 
   if (event.navigationType !== 'push' && event.navigationType !== 'replace') return
@@ -631,16 +831,7 @@ function getSourceElementNavigation(
     if (linkElement.hasAttribute('data-rmx-document')) return
     if (linkElement.hasAttribute('download')) return
 
-    return {
-      state: {
-        target: linkElement.getAttribute('data-rmx-target') ?? undefined,
-        src: linkElement.getAttribute('data-rmx-src') ?? event.destination.url,
-        resetScroll: normalizeResetBehavior(linkElement.getAttribute('data-rmx-reset-scroll')),
-        resetFocus: normalizeResetBehavior(linkElement.getAttribute('data-rmx-reset-focus')),
-        $rmx: true,
-      },
-      replaceHistory: getReplaceHistory(linkElement.getAttribute('data-rmx-history'), false),
-    }
+    return getElementNavigation(linkElement, event, false)
   }
 
   let formNavigation = resolveFormNavigation(event)
@@ -651,18 +842,28 @@ function getSourceElementNavigation(
     event.destination.url === navigation.currentEntry?.url
 
   return {
+    ...getElementNavigation(formNavigation, event, replaceHistoryByDefault),
+    getSubmission: formNavigation.getSubmission,
+  }
+}
+
+function getElementNavigation(
+  element: { getAttribute(name: string): string | null },
+  event: NavigateEvent,
+  replaceHistoryByDefault: boolean,
+): RuntimeNavigation {
+  return {
     state: {
-      target: formNavigation.getAttribute('data-rmx-target') ?? undefined,
-      src: formNavigation.getAttribute('data-rmx-src') ?? event.destination.url,
-      resetScroll: normalizeResetBehavior(formNavigation.getAttribute('data-rmx-reset-scroll')),
-      resetFocus: normalizeResetBehavior(formNavigation.getAttribute('data-rmx-reset-focus')),
+      target: element.getAttribute('data-rmx-target') ?? undefined,
+      src: element.getAttribute('data-rmx-src') ?? event.destination.url,
+      resetScroll: normalizeResetBehavior(element.getAttribute('data-rmx-reset-scroll')),
+      resetFocus: normalizeResetBehavior(element.getAttribute('data-rmx-reset-focus')),
       $rmx: true,
     },
     replaceHistory: getReplaceHistory(
-      formNavigation.getAttribute('data-rmx-history'),
+      element.getAttribute('data-rmx-history'),
       replaceHistoryByDefault,
     ),
-    getSubmission: formNavigation.getSubmission,
   }
 }
 

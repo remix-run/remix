@@ -6,29 +6,32 @@ import type {
   RemixNode,
   RenderFn,
 } from '../runtime/component.ts'
-import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/jsx.ts'
+import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
 import type { ElementFunction } from '../runtime/element-function.ts'
-import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
+import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
-  FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
-  SELF_CLOSING_TAGS,
   isAllowedHostPropName,
   normalizeAttributeName,
   sanitizeUrlAttribute,
   serializeStyleObject,
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
+import { DOCUMENT_NONCE_META_NAME } from '../runtime/nonce.ts'
 import {
   appendFlushMarker,
   FRAME_TEMPLATE_END_MARKER,
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps, isBrowserOnlyMixinDescriptor } from '../runtime/core/mix.ts'
-import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
+import { composeMixedProps, isMixinDescriptor } from '../runtime/core/mix.ts'
+import { getSelectValues } from '../runtime/core/props.ts'
+import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
+import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
+import { createRemixElement, isRemixElement } from '../runtime/core/vnode.ts'
+import { ESCAPED_OBJECT, SERIALIZATION_TAGS } from '../runtime/props-serialization.ts'
 
 interface VNode {
   type: ElementType
@@ -53,6 +56,16 @@ export function createVNode(type: ElementType, props: ElementProps, key?: Key): 
 }
 
 /**
+ * Options for server-side rendering to an HTML string.
+ */
+export interface RenderToStringOptions {
+  /**
+   * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
+   */
+  nonce?: string
+}
+
+/**
  * Options for server-side rendering to a byte stream.
  */
 export interface RenderToStreamOptions {
@@ -64,6 +77,10 @@ export interface RenderToStreamOptions {
   signal?: AbortSignal
   /** Error hook invoked when rendering work throws. */
   onError?: (error: unknown) => void
+  /**
+   * Content Security Policy nonce for generated import maps, module preloads, and CSS mixin styles.
+   */
+  nonce?: string
   /** Callback used to resolve nested frame content during streaming SSR. */
   resolveFrame?: (
     src: string,
@@ -87,6 +104,11 @@ export interface ResolveFrameContext {
   currentFrameSrc: string
   /** Source URL for the top-level frame in the current render. */
   topFrameSrc: string
+  /**
+   * Nonce from the enclosing render. Pass it to nested `renderToStream()` calls so generated
+   * elements use the document's Content Security Policy nonce.
+   */
+  nonce?: string
 }
 
 interface HydrationData {
@@ -124,6 +146,18 @@ type ImportMapImports = Record<string, ImportMapAddress>
 type AuthoredImportMapEntries = Map<string, ImportMapAddress>
 type AuthoredImportMapScope = { imports: AuthoredImportMapEntries }
 type StaticSegment = { kind: 'static'; html: string }
+interface DocumentElementSegments {
+  open: StaticSegment
+  close: StaticSegment
+}
+
+interface DocumentSegments {
+  depth?: number
+  html?: DocumentElementSegments
+  head?: DocumentElementSegments
+  body?: DocumentElementSegments
+}
+
 type ManagedImportMap = {
   attrs: string
   segment: StaticSegment
@@ -154,6 +188,7 @@ export function ImportMap(handle: Handle<ImportMapProps>): RenderFn {
 }
 
 interface ClientEntryHeadResources {
+  // Preload tags stay nonce-free until the enclosing render serializes its head.
   modulePreloadTags: Set<string>
   importMap?: ImportMapData
 }
@@ -165,8 +200,13 @@ interface FrameData {
 }
 
 interface RenderContext {
+  selectValues?: Set<string>
+  selectScalar?: boolean
+  optionText?: string
   insideSvg: boolean
   insideHead: boolean
+  elementDepth: number
+  documentSegments: DocumentSegments
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
@@ -190,6 +230,7 @@ interface RenderContext {
   flushKind: FlushKind
   serverIdScope: string
   serverIdCounter: number
+  nonce?: string
 }
 
 interface ResolvedFrameHtml {
@@ -211,6 +252,7 @@ const htmlEncodingBuffer = new Uint8Array(MAX_BUFFERED_HTML_LENGTH * 3)
 
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
+const SELECT_VALUE_PROPS = new Set(['value', 'defaultValue'])
 
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 function stripDoctypeMarkup(html: string): string {
@@ -233,7 +275,24 @@ function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYE
   return `${layer}.${selector}`
 }
 
-const SSR_OMITTED_PROPS = RUNTIME_FRAMEWORK_PROPS
+const SSR_OMITTED_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
+
+const SELF_CLOSING_TAGS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+])
 
 const ssrSignal = Object.freeze({
   get aborted() {
@@ -283,6 +342,8 @@ export function renderToStream(
   let context: RenderContext = {
     insideSvg: false,
     insideHead: false,
+    elementDepth: 0,
+    documentSegments: {},
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
@@ -301,6 +362,7 @@ export function renderToStream(
     flushKind: 'fragment',
     serverIdScope: crypto.randomUUID().slice(0, 8),
     serverIdCounter: 0,
+    nonce: options?.nonce,
   }
 
   function cancel(reason: unknown): void {
@@ -331,8 +393,7 @@ export function renderToStream(
         if (closeIfCancelled(controller, context)) return
         validateClientEntriesForHydration(context)
         finalizeManagedImportMap(context)
-        let html = serializeSegment(root)
-        let finalHtml = finalizeHtml(html, context)
+        let finalHtml = finalizeHtml(root, context)
         let bytes = encodeHtml(appendFlushMarker(finalHtml, context.flushKind), encoder)
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
@@ -410,10 +471,11 @@ function createSsrFrameState(frameSrc: string, topFrameSrc = frameSrc): SsrFrame
   return { frame, topFrame }
 }
 
-function getResolveFrameContext(frameState: SsrFrameState): ResolveFrameContext {
+function getResolveFrameContext(frameState: SsrFrameState, nonce?: string): ResolveFrameContext {
   return {
     currentFrameSrc: frameState.frame.src,
     topFrameSrc: frameState.topFrame.src,
+    nonce,
   }
 }
 
@@ -489,10 +551,6 @@ async function resolveFrameHtml(
   return splitFirstChunk(input)
 }
 
-function isRemixElement(node: unknown): node is RemixElement {
-  return typeof node === 'object' && node !== null && '$rmx' in node
-}
-
 function buildSegment(
   node: RemixNode,
   context: RenderContext,
@@ -500,6 +558,7 @@ function buildSegment(
   output: Segment[] = [],
 ): Segment[] {
   if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
+    if (context.optionText !== undefined) context.optionText += String(node)
     output.push(escapeTextContent(String(node)))
     return output
   }
@@ -541,7 +600,7 @@ function buildSegment(
     if (isElementFunction(type)) {
       if (type === ImportMap) {
         output.push(buildImportMapSegment(props, context))
-      } else if (type === Frame) {
+      } else if (isFrameComponent(type)) {
         output.push(buildFrameSegment(node, context, frameState))
       } else if (isEntry(type)) {
         buildEntrySegment(type, props, context, frameState, output)
@@ -582,7 +641,7 @@ function buildFrameSegment(
     content: null,
   }
 
-  let resolveFrameContext = getResolveFrameContext(frameState)
+  let resolveFrameContext = getResolveFrameContext(frameState, context.nonce)
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
     seg.content = buildSegment(props.fallback, context, frameState)
@@ -631,18 +690,43 @@ function buildElementSegment(
     return
   }
 
+  if (!currentIsSvg && tag === 'option' && context.selectValues !== undefined) {
+    buildSelectedOptionSegment(processedProps, context, frameState, output)
+    return
+  }
+
   let attrs =
     !currentIsSvg && tag === 'input'
       ? renderInputAttributes(processedProps)
-      : renderAttributes(tag, processedProps, currentIsSvg)
+      : renderAttributes(
+          tag,
+          processedProps,
+          currentIsSvg,
+          !currentIsSvg && tag === 'select' ? SELECT_VALUE_PROPS : undefined,
+        )
 
   if (SELF_CLOSING_TAGS.has(tag)) {
     output.push(`<${tag}${attrs} />`)
     return
   }
 
+  let documentElement =
+    !currentIsSvg && (tag === 'html' || tag === 'body')
+      ? createDocumentElementSegments(tag, attrs, context)
+      : undefined
+  let open = documentElement?.open ?? `<${tag}${attrs}>`
+  let close = documentElement?.close ?? `</${tag}>`
+
   if (innerHTML !== undefined) {
-    output.push(`<${tag}${attrs}>${innerHTML}</${tag}>`)
+    if (!currentIsSvg && (tag === 'select' || tag === 'optgroup')) {
+      invariant(
+        tag === 'select'
+          ? processedProps.value == null && processedProps.defaultValue == null
+          : context.selectValues === undefined,
+        'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
+      )
+    }
+    output.push(open, innerHTML, close)
     return
   }
 
@@ -661,13 +745,54 @@ function buildElementSegment(
     return
   }
 
-  output.push(`<${tag}${attrs}>`)
+  output.push(open)
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
+  let previousSelectValues = context.selectValues
+  let previousSelectScalar = context.selectScalar
+  if (!currentIsSvg && tag === 'select') {
+    let value = processedProps.value ?? processedProps.defaultValue
+    context.selectValues = getSelectValues(value)
+    context.selectScalar =
+      !processedProps.multiple || (processedProps.value != null && !Array.isArray(value))
+  }
+  context.elementDepth++
   if (props.children != null) buildSegment(props.children, context, frameState, output)
+  context.elementDepth--
+  context.selectValues = previousSelectValues
+  context.selectScalar = previousSelectScalar
   context.insideSvg = previousInsideSvg
-  output.push(`</${tag}>`)
+  output.push(close)
+}
+
+function buildSelectedOptionSegment(
+  props: ElementProps,
+  context: RenderContext,
+  frameState: SsrFrameState,
+  output: Segment[],
+): void {
+  invariant(
+    props.innerHTML === undefined || props.value != null,
+    'option elements with innerHTML must have an explicit value when their select has a value or defaultValue',
+  )
+  let previousOptionText = context.optionText
+  context.optionText = ''
+  context.elementDepth++
+  let children =
+    props.innerHTML === undefined
+      ? buildSegment(props.children, context, frameState)
+      : [props.innerHTML]
+  context.elementDepth--
+  // Native options without a value use their text with ASCII whitespace collapsed.
+  let value = props.value ?? context.optionText.replace(/[\t\n\f\r ]+/g, ' ').replace(/^ | $/g, '')
+  context.optionText = previousOptionText
+  let selected = context.selectValues?.has(String(value))
+  if (selected && context.selectScalar) context.selectValues?.clear()
+  let attrs = renderAttributes('option', { ...props, selected }, false)
+  output.push(`<option${attrs}>`)
+  output.push(...children)
+  output.push('</option>')
 }
 
 function buildTextareaElementSegment(tag: string, props: any): Segment {
@@ -739,6 +864,9 @@ function buildImportMapSegment(props: ElementProps, context: RenderContext): Seg
   }
 
   let { value: _value, ...scriptProps } = props
+  if (scriptProps.nonce === undefined && context.nonce !== undefined) {
+    scriptProps.nonce = context.nonce
+  }
   let attrs = renderAttributes('script', scriptProps, false)
   let segment: StaticSegment = { kind: 'static', html: '' }
   context.managedImportMaps.push({ attrs, segment, value })
@@ -769,13 +897,37 @@ function buildHeadElementSegment(
 ): void {
   let processedProps = processStyleProps(props)
   let attrs = renderAttributes(tag, processedProps, false)
+  let head = createDocumentElementSegments('head', attrs, context)
 
-  output.push(`<${tag}${attrs}>`)
+  output.push(head.open)
   let previousInsideHead = context.insideHead
   context.insideHead = true
+  context.elementDepth++
   if (props.children != null) buildSegment(props.children, context, frameState, output)
+  context.elementDepth--
   context.insideHead = previousInsideHead
-  output.push(`</${tag}>`)
+  output.push(head.close)
+}
+
+function createDocumentElementSegments(
+  tag: 'html' | 'head' | 'body',
+  attrs: string,
+  context: RenderContext,
+): DocumentElementSegments {
+  let segments: DocumentElementSegments = {
+    open: { kind: 'static', html: `<${tag}${attrs}>` },
+    close: { kind: 'static', html: `</${tag}>` },
+  }
+  let document = context.documentSegments
+  if (tag === 'html') {
+    if (!document.html) {
+      document.html = segments
+      document.depth = context.elementDepth
+    }
+  } else if (document.depth !== undefined && context.elementDepth === document.depth + 1) {
+    document[tag] ??= segments
+  }
+  return segments
 }
 
 function renderAttributes(
@@ -807,6 +959,12 @@ function renderAttributes(
   }
 
   return attrs
+}
+
+function isBrowserOnlyMixinDescriptor(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || !('type' in value)) return false
+  let type = value.type
+  return typeof type === 'function' && '__rmxMixinSsr' in type && type.__rmxMixinSsr === false
 }
 
 function resolveSsrMixedProps(
@@ -871,12 +1029,8 @@ function createSsrMixinHandle(
 ) {
   // Context lookups read the shared render context, so capture the parent before it moves on.
   let parentVNode = context.parentVNode
-  let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () => ({
-    $rmx: true as const,
-    type: hostType,
-    key: null,
-    props: handle.props,
-  })) as ((handle: {
+  let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () =>
+    createRemixElement(hostType, handle.props, null)) as ((handle: {
     props: ElementProps
     update(): Promise<AbortSignal>
   }) => () => RemixElement) & {
@@ -929,6 +1083,10 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
+function isFrameComponent(type: unknown): boolean {
+  return typeof type === 'function' && Object.hasOwn(type, FRAME_NODE)
+}
+
 function buildComponentSegment(
   type: ElementFunction,
   props: any,
@@ -978,19 +1136,8 @@ function buildComponentSegment(
 }
 
 function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
-  function unwrapNode(node: RemixNode): unknown {
-    if (node === null || node === undefined || typeof node === 'boolean') return node
-    if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
-      return node
-    }
-    if (Array.isArray(node)) {
-      return node.map((child) => unwrapNode(child))
-    }
-    if (isRemixElement(node)) {
-      return unwrapElement(node)
-    }
-    return node
-  }
+  let escapedObjects = new WeakMap<object, { [ESCAPED_OBJECT]: Record<string, unknown> }>()
+  let escapedContents = new WeakSet<object>()
 
   function unwrapElement(element: RemixElement): unknown {
     let type = element.type
@@ -998,10 +1145,10 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
 
     // Preserve Frame semantics through serialized props by emitting
     // a dedicated descriptor that can be revived on the client.
-    if (type === Frame) {
+    if (isFrameComponent(type)) {
       return {
         $rmxFrame: true,
-        props: transformProps(props),
+        props,
         key: element.key,
       }
     }
@@ -1011,14 +1158,14 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     if (type === Fragment) {
       return {
         $rmxFragment: true,
-        props: transformProps(props),
+        props,
         key: serializeKey(element.key),
       }
     }
 
-    // If it's a DOM tag, return a serializable shape with transformed props
+    // JSON visits the descriptor's props next, transforming each nested value once.
     if (typeof type === 'string') {
-      return { $rmx: true, type, props: transformProps(props), key: serializeKey(element.key) }
+      return { $rmx: true, type, props, key: serializeKey(element.key) }
     }
 
     // Component function: render synchronously, then unwrap its result
@@ -1056,40 +1203,44 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
 
       vnode._handle = handle
       let [renderedNode] = handle.render(props)
-      return unwrapNode(renderedNode)
+      return replacer('', renderedNode)
     }
 
     return null
   }
 
-  function transformProps(input: ElementProps): Record<string, unknown> {
-    let out: Record<string, unknown> = {}
-    for (let key in input) {
-      let value = input[key]
-      if (key === 'children') {
-        out[key] = unwrapNode(value)
-      } else {
-        if (isRemixElement(value)) {
-          out[key] = unwrapNode(value)
-        } else if (Array.isArray(value)) {
-          out[key] = value.map((v) => unwrapNode(v))
-        } else {
-          out[key] = value
-        }
-      }
+  function replacer(_key: string, value: unknown): unknown {
+    if (typeof value !== 'object' || value === null || escapedContents.has(value)) return value
+    // Mixin descriptors hold their setup function, which JSON drops. `css()`
+    // only holds style data, so it's revived in the browser by name.
+    if (isMixinDescriptor(value)) {
+      return isCSSMixinDescriptor(value)
+        ? { $rmxMixin: 'css', args: value.args }
+        : { $rmxMixin: null }
     }
-    return out
-  }
-
-  return function replacer(_key: string, value: unknown) {
     if (isRemixElement(value)) {
       return unwrapElement(value)
     }
-    if (Array.isArray(value)) {
-      return value.map((v) => unwrapNode(v))
+    if (!Array.isArray(value) && SERIALIZATION_TAGS.some((tag) => Object.hasOwn(value, tag))) {
+      // Keep values in object properties so JSON still omits undefined, functions,
+      // symbols, and values whose toJSON returns them. JSON already called toJSON
+      // on this object, so don't copy that method into the wrapper's contents.
+      let contents = Object.fromEntries(
+        Object.entries(value).filter(
+          ([key, item]) => key !== 'toJSON' || typeof item !== 'function',
+        ),
+      )
+      let escaped = escapedObjects.get(value) ?? { [ESCAPED_OBJECT]: contents }
+      escaped[ESCAPED_OBJECT] = contents
+      // Reuse wrappers so circular input still triggers JSON's circular-reference error.
+      escapedObjects.set(value, escaped)
+      escapedContents.add(contents)
+      return escaped
     }
     return value
   }
+
+  return replacer
 }
 
 // Other key types don't survive JSON: bigints throw, and objects are revived
@@ -1296,62 +1447,52 @@ function transformAttributeName(name: string, isSvg: boolean): string {
   return normalizeAttributeName(name, isSvg).attr
 }
 
-function finalizeHtml(html: string, context: RenderContext): string {
-  let preloads = collectModulePreloadTags(context.clientEntryHeadResources)
+function finalizeHtml(root: Segment[], context: RenderContext): string {
+  let preloads = collectModulePreloadTags(context.clientEntryHeadResources, context.nonce)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
-  let headContent = importMapScript + preloads + styles
+  let nonceMeta =
+    context.flushKind === 'document' && context.nonce !== undefined
+      ? `<meta name="${DOCUMENT_NONCE_META_NAME}" content=""${renderNonceAttribute(context.nonce)}>`
+      : ''
+  let headContent = nonceMeta + importMapScript + preloads + styles
   let rmxData = buildRmxDataScript(context)
   if (context.flushKind !== 'document') {
-    return (headContent ? `<head>${headContent}</head>` : '') + html + rmxData
+    return (headContent ? `<head>${headContent}</head>` : '') + serializeSegment(root) + rmxData
   }
-  if (!headContent && !rmxData) return html
+  if (!headContent && !rmxData) return serializeSegment(root)
 
-  // Both insertion points are found in the rendered document before either insertion.
-  let headIndex = headContent ? html.indexOf('</head>') : -1
-  if (headContent && headIndex === -1) {
-    let htmlOpenMatch = html.match(/<html[^>]*>/)
-    headIndex = htmlOpenMatch ? htmlOpenMatch.index! + htmlOpenMatch[0].length : 0
-    if (htmlOpenMatch) headContent = `<head>${headContent}</head>`
+  // Use the rendered element boundaries so raw script and frame contents cannot
+  // be mistaken for document tags.
+  let { html, head, body } = context.documentSegments
+  invariant(html, 'Missing document element segments')
+  if (headContent) {
+    if (head) head.close.html = headContent + head.close.html
+    else html.open.html += `<head>${headContent}</head>`
   }
-  let dataIndex = html.length
   if (rmxData) {
-    dataIndex = html.indexOf('</body>')
-    if (dataIndex === -1) dataIndex = html.indexOf('</html>')
-    if (dataIndex === -1) dataIndex = html.length
+    let close = (body ?? html).close
+    close.html = rmxData + close.html
   }
-  if (!headContent) return html.slice(0, dataIndex) + rmxData + html.slice(dataIndex)
-  if (dataIndex < headIndex) {
-    return (
-      html.slice(0, dataIndex) +
-      rmxData +
-      html.slice(dataIndex, headIndex) +
-      headContent +
-      html.slice(headIndex)
-    )
-  }
-  return (
-    html.slice(0, headIndex) +
-    headContent +
-    html.slice(headIndex, dataIndex) +
-    rmxData +
-    html.slice(dataIndex)
-  )
+  return serializeSegment(root)
 }
 
 const FRAME_HEAD_OPEN_TAG = '<head>'
 const FRAME_HEAD_CLOSE_TAG = '</head>'
 const MARKED_MODULE_PRELOAD_START = '<link data-rmx-module-preload rel="modulepreload" href="'
 const MODULE_PRELOAD_END = '" />'
-const MANAGED_IMPORT_MAP_START = '<script data-rmx-import-map type="importmap">'
+const MANAGED_IMPORT_MAP_OPEN_TAG =
+  /^<script data-rmx-import-map type="importmap"(?: nonce="[^"]*")?>/
 const IMPORT_MAP_SCRIPT_END = '</script>'
 
 function createModulePreloadTag(href: string): string {
   return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
 }
 
-function collectModulePreloadTags(resources: ClientEntryHeadResources): string {
-  return Array.from(resources.modulePreloadTags).join('')
+function collectModulePreloadTags(resources: ClientEntryHeadResources, nonce?: string): string {
+  return Array.from(resources.modulePreloadTags, (tag) =>
+    tag.replace(' />', () => `${renderNonceAttribute(nonce)} />`),
+  ).join('')
 }
 
 function hoistClientEntryResourcesFromFrameHead(
@@ -1366,8 +1507,9 @@ function hoistClientEntryResourcesFromFrameHead(
   let preloadTags: string[] = []
   let importMaps: ImportMapData[] = []
   let cursor = FRAME_HEAD_OPEN_TAG.length
-  if (html.startsWith(MANAGED_IMPORT_MAP_START, cursor)) {
-    let contentStart = cursor + MANAGED_IMPORT_MAP_START.length
+  let importMapOpenTag = html.slice(cursor).match(MANAGED_IMPORT_MAP_OPEN_TAG)
+  if (importMapOpenTag) {
+    let contentStart = cursor + importMapOpenTag[0].length
     let scriptEnd = html.indexOf(IMPORT_MAP_SCRIPT_END, contentStart)
     if (scriptEnd === -1 || scriptEnd >= headClose) return html
     importMaps.push(parseFrameworkImportMap(html.slice(contentStart, scriptEnd)))
@@ -1375,10 +1517,18 @@ function hoistClientEntryResourcesFromFrameHead(
   }
 
   while (html.startsWith(MARKED_MODULE_PRELOAD_START, cursor)) {
-    let tagEnd = html.indexOf(MODULE_PRELOAD_END, cursor + MARKED_MODULE_PRELOAD_START.length)
-    if (tagEnd === -1 || tagEnd >= headClose) return html
+    let hrefStart = cursor + MARKED_MODULE_PRELOAD_START.length
+    let hrefEnd = html.indexOf('"', hrefStart)
+    if (hrefEnd === -1 || hrefEnd >= headClose) return html
+
+    let tagEnd = html.indexOf(MODULE_PRELOAD_END, hrefEnd)
+    if (tagEnd === -1) return html
     tagEnd += MODULE_PRELOAD_END.length
-    preloadTags.push(html.slice(cursor, tagEnd))
+    if (tagEnd > headClose) return html
+
+    // Preserve the escaped href and discard the child response's nonce.
+    // The enclosing render applies its nonce when serializing the head.
+    preloadTags.push(html.slice(cursor, hrefEnd) + MODULE_PRELOAD_END)
     cursor = tagEnd
   }
 
@@ -1436,7 +1586,7 @@ function collectStyleTags(context: RenderContext): string {
 
   let tags: string[] = []
   for (let { selector, css } of context.styleCache.values()) {
-    let tag = renderStyleTag(selector, css)
+    let tag = renderStyleTag(selector, css, context.nonce)
     if (tag) tags.push(tag)
   }
   return tags.join('')
@@ -1455,11 +1605,18 @@ function wrapStyleForLayer(
 function renderStyleTag(
   selector: string,
   css: string,
+  nonce?: string,
   layer: string = REMIX_UI_STYLE_LAYER,
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''
-  return `<style data-rmx-style="${escapeHtml(selector)}">${escapeStyleText(wrappedCss)}</style>`
+  return `<style data-rmx-style="${escapeHtml(selector)}"${renderNonceAttribute(nonce)}>${escapeStyleText(
+    wrappedCss,
+  )}</style>`
+}
+
+function renderNonceAttribute(nonce: string | undefined): string {
+  return nonce === undefined ? '' : ` nonce="${escapeHtml(nonce)}"`
 }
 
 function escapeStyleText(css: string): string {
@@ -1501,7 +1658,7 @@ function collectImportMapScript(
   resources: ClientEntryHeadResources,
 ): string {
   let importMap = getImportMapDelta(context, resources.importMap)
-  return importMap ? buildImportMapScript(importMap) : ''
+  return importMap ? buildImportMapScript(importMap, renderNonceAttribute(context.nonce)) : ''
 }
 
 function finalizeManagedImportMap(context: RenderContext): void {
@@ -1831,14 +1988,20 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
 
 /**
  * Renders a node tree to a complete HTML string.
+ * Render errors reject the returned promise.
  *
  * @param node Node tree to render.
+ * @param options Rendering options.
  * @returns Rendered HTML.
  */
-export async function renderToString(node: RemixNode): Promise<string> {
+export async function renderToString(
+  node: RemixNode,
+  options?: RenderToStringOptions,
+): Promise<string> {
   return stripFlushMarkers(
     await drain(
       renderToStream(node, {
+        nonce: options?.nonce,
         onError(error) {
           throw error
         },

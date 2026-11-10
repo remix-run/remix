@@ -200,6 +200,7 @@ export function transformComponentsForBrowser(
         '__remixComponentHmrComponentNames__',
         {
           spaces: 0,
+          clientEntryNames: clientEntryMatches.map((match) => match.name),
         },
       )};`,
       `  let __remixComponentHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
@@ -343,6 +344,7 @@ export function transformComponentsForServer(
         '__remixComponentHmrComponentNames__',
         {
           spaces: 0,
+          clientEntryNames: clientEntryMatches.map((match) => match.name),
         },
       )};`,
       `  let __remixComponentHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
@@ -579,6 +581,7 @@ function createComponentNamesCheckSource(
   componentNamesName: string,
   options: {
     spaces: number
+    clientEntryNames: readonly string[]
   },
 ): string {
   let indent = ' '.repeat(options.spaces)
@@ -590,6 +593,16 @@ function createComponentNamesCheckSource(
     `${indent}  import.meta.hot.invalidate('Updated component module changed its exports');`,
     `${indent}  return false;`,
     `${indent}}`,
+    `${indent}let __remixComponentHmrClientEntryNames__ = ${JSON.stringify(options.clientEntryNames)};`,
+    `${indent}let __remixComponentHmrPreviousClientEntryNames__ = import.meta.hot.data.clientEntryNamesByModuleUrl?.[${JSON.stringify(moduleUrl)}];`,
+    `${indent}if (__remixComponentHmrPreviousClientEntryNames__ && (__remixComponentHmrPreviousClientEntryNames__.length !== __remixComponentHmrClientEntryNames__.length || __remixComponentHmrPreviousClientEntryNames__.some((name, index) => name !== __remixComponentHmrClientEntryNames__[index]))) {`,
+    `${indent}  import.meta.hot.invalidate('Updated component module changed its client entries');`,
+    `${indent}  return false;`,
+    `${indent}}`,
+    `${indent}import.meta.hot.data.clientEntryNamesByModuleUrl = {`,
+    `${indent}  ...import.meta.hot.data.clientEntryNamesByModuleUrl,`,
+    `${indent}  [${JSON.stringify(moduleUrl)}]: __remixComponentHmrClientEntryNames__,`,
+    `${indent}};`,
     `${indent}import.meta.hot.data.componentNamesByModuleUrl = {`,
     `${indent}  ...import.meta.hot.data.componentNamesByModuleUrl,`,
     `${indent}  [${JSON.stringify(moduleUrl)}]: ${componentNamesName},`,

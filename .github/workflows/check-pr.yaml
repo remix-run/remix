@@ -18,6 +18,7 @@ concurrency:
 jobs:
   detect_changes:
     name: Detect changes
+    if: github.head_ref != 'release-pr/main'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
@@ -96,6 +97,7 @@ jobs:
 
   build_ubuntu:
     name: build (ubuntu-latest)
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -115,6 +117,7 @@ jobs:
 
   build_windows:
     name: build (windows-latest)
+    needs: detect_changes
     runs-on: windows-2025
     steps:
       - name: Checkout
@@ -133,11 +136,20 @@ jobs:
         run: pnpm build
 
   test_ubuntu:
-    name: test (ubuntu-latest)
+    name: test (ubuntu-latest, changed packages)
+    needs: detect_changes
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Fetch base and head history
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -164,29 +176,31 @@ jobs:
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
       - name: Run tests
-        run: pnpm test
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node ./scripts/run-changed-workspaces.ts test "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
   test_bun_changed:
     name: test (bun, ubuntu-latest, changed packages)
+    needs: detect_changes
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Fetch base and head refs
+      - name: Fetch base and head history
         shell: bash
         env:
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch --no-tags origin \
-            "$PR_BASE_REF" \
-            "+refs/pull/$PR_NUMBER/head"
+          # Three-dot diffs need ancestry, but no other branches or tags.
+          git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -216,7 +230,7 @@ jobs:
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
       - name: Run changed package Bun tests
         shell: bash
@@ -227,22 +241,21 @@ jobs:
 
   test_windows_changed:
     name: test (windows-latest, changed packages)
+    needs: detect_changes
     runs-on: windows-2025
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Fetch base and head refs
+      - name: Fetch base and head history
         shell: bash
         env:
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch --no-tags origin \
-            "$PR_BASE_REF" \
-            "+refs/pull/$PR_NUMBER/head"
+          # Three-dot diffs need ancestry, but no other branches or tags.
+          git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -268,7 +281,7 @@ jobs:
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
       - name: Run changed package tests
         shell: bash
@@ -277,8 +290,57 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node ./scripts/detect-changed-packages.ts "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
+  test_webkit_macos:
+    name: test (WebKit, macOS, changed packages)
+    needs: detect_changes
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Fetch base and head history
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git fetch --no-tags --unshallow origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node-pnpm-cache
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright Version
+        id: playwright-version
+        shell: bash
+        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        id: cache-browsers
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install WebKit
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @remix-run/component exec playwright install webkit
+
+      - name: Run WebKit tests
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: pnpm test:browser "$PR_BASE_SHA" "$PR_HEAD_SHA"
+
   lint:
     name: Lint
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -301,6 +363,7 @@ jobs:
 
   typecheck:
     name: Typecheck
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -320,6 +383,7 @@ jobs:
 
   change_files:
     name: Validate change files
+    needs: detect_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

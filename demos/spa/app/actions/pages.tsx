@@ -94,11 +94,11 @@ export function GreetingPage(handle: Handle<GreetingPageProps>) {
           method="POST"
           action={routes.submitGreet.href()}
           mix={[
-            formStyle,
             on('submit', () => {
               isPending = true
               void handle.update()
             }),
+            formStyle,
           ]}
         >
           <label htmlFor="next-name" mix={labelStyle}>

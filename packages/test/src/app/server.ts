@@ -222,7 +222,8 @@ async function rewriteImports(
     if (imp.n == null) continue
     let url = resolveSpecifier(imp.n, importerFile, rootDir)
     if (url == null || url === imp.n) continue
-    s.overwrite(imp.s, imp.e, url)
+    // Dynamic import spans include their quotes; static import spans do not.
+    s.overwrite(imp.s, imp.e, imp.d >= 0 ? JSON.stringify(url) : url)
     edited = true
   }
 

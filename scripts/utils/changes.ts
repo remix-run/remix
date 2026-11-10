@@ -372,14 +372,7 @@ export function parsePackageChanges(
     }
 
     // File is valid, add to changes
-    let change: ChangeFile = { file, bump, content }
-    let commit = getFileIntroductionCommit(filePath)
-    if (commit) {
-      change.gitSha = commit.sha
-      let prNumber = parsePrNumber(commit.subject)
-      if (prNumber !== null) change.prNumber = prNumber
-    }
-    changes.push(change)
+    changes.push({ file, bump, content })
   }
 
   // Validate entering prerelease requires a major bump
@@ -769,6 +762,25 @@ function generateDependencyBumpsSection(
   return lines.join('\n')
 }
 
+function getAttributedChanges(release: PackageRelease): ChangeFile[] {
+  return release.changes.map((change) => {
+    if (change.gitSha !== undefined || change.prNumber !== undefined) return change
+
+    let filePath = getPackageFile(release.packageDirName, `.changes/${change.file}`)
+    if (!fs.existsSync(filePath)) return change
+
+    let commit = getFileIntroductionCommit(filePath)
+    if (!commit) return change
+
+    let prNumber = parsePrNumber(commit.subject)
+    return {
+      ...change,
+      gitSha: commit.sha,
+      ...(prNumber !== null ? { prNumber } : {}),
+    }
+  })
+}
+
 /**
  * Generates changelog content for a package release
  */
@@ -782,6 +794,7 @@ export function generateChangelogContent(
   } = {},
 ): string {
   let { includePackageName = false, headingLevel = 2 } = options
+  let changes = getAttributedChanges(release)
   let lines: string[] = []
 
   let headingPrefix = '#'.repeat(headingLevel)
@@ -795,7 +808,7 @@ export function generateChangelogContent(
   let isPrereleaseRelease = getPrereleaseIdentifier(release.nextVersion) !== null
   if (isPrereleaseRelease) {
     let prereleaseSection = generatePrereleaseChangesSection(
-      release.changes,
+      changes,
       release.dependencyBumps,
       subheadingLevel,
     )
@@ -807,7 +820,7 @@ export function generateChangelogContent(
 
   // Generate sections in order: major, minor, patch (skipping empty sections)
   for (let bumpType of bumpTypes) {
-    let section = generateBumpTypeSection(release.changes, bumpType, subheadingLevel)
+    let section = generateBumpTypeSection(changes, bumpType, subheadingLevel)
     if (section) {
       lines.push(section)
     }
@@ -816,7 +829,7 @@ export function generateChangelogContent(
   // Add dependency bumps section if there are any
   // Only add if there are no other patch changes (to avoid duplicate "Patch Changes" heading)
   if (release.dependencyBumps.length > 0) {
-    let hasPatchChanges = release.changes.some((c) => c.bump === 'patch')
+    let hasPatchChanges = changes.some((c) => c.bump === 'patch')
     if (hasPatchChanges) {
       // Append to existing patch section (without heading)
       lines.push('- Bumped `@remix-run/*` dependencies:')

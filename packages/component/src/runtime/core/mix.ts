@@ -1,4 +1,5 @@
-import type { ElementProps, RemixElement } from '../jsx.ts'
+import type { ElementProps } from './vnode.ts'
+import { isRemixElement } from './vnode.ts'
 
 // Stop mixins that return themselves from expanding forever.
 const MAX_MIX_DESCRIPTORS = 1024
@@ -43,7 +44,7 @@ export function composeMixedProps(
       continue
     }
 
-    if (!isRemixElementResult(result)) {
+    if (!isRemixElement(result)) {
       console.error(new Error('mixins must return a remix element'))
       continue
     }
@@ -75,7 +76,7 @@ export function composeMixedProps(
 }
 
 // JSX creation flattens nested mix arrays before composition.
-export function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
+function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
   let mix = props.mix
   if (!mix) return []
   if (Array.isArray(mix)) {
@@ -121,7 +122,7 @@ function hasMixinContentProps(props: ElementProps): boolean {
 }
 
 export function isMixinDescriptor(value: unknown): value is MixDescriptor {
-  if (!value || typeof value !== 'object' || isRemixElementResult(value)) {
+  if (!value || typeof value !== 'object' || isRemixElement(value)) {
     return false
   }
 
@@ -129,23 +130,11 @@ export function isMixinDescriptor(value: unknown): value is MixDescriptor {
   return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
 }
 
-export function isBrowserOnlyMixinDescriptor(value: unknown): boolean {
-  if (!value || typeof value !== 'object' || !('type' in value)) return false
-  let type = value.type
-  return typeof type === 'function' && '__rmxMixinSsr' in type && type.__rmxMixinSsr === false
-}
-
 export function isMixinElementFunction(
   value: unknown,
 ): value is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
   if (typeof value !== 'function') return false
   return '__rmxMixinElementType' in value
-}
-
-// The composition loop checks the returned element's host type separately.
-function isRemixElementResult(value: unknown): value is RemixElement {
-  if (!value || typeof value !== 'object') return false
-  return (value as { $rmx?: unknown }).$rmx === true
 }
 
 function resolveReturnedMixDescriptors(value: unknown): MixDescriptor[] | null {

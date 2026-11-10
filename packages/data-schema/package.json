@@ -22,11 +22,13 @@
   "exports": {
     ".": "./src/index.ts",
     "./checks": "./src/checks.ts",
+    "./experimental": "./src/experimental.ts",
     "./coerce": "./src/coerce.ts",
     "./form-data": "./src/form-data.ts",
     "./json-schema": "./src/json-schema.ts",
     "./lazy": "./src/lazy.ts",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./experimental/form": "./src/experimental-form.ts"
   },
   "publishConfig": {
     "exports": {
@@ -37,6 +39,10 @@
       "./checks": {
         "types": "./dist/checks.d.ts",
         "default": "./dist/checks.js"
+      },
+      "./experimental": {
+        "types": "./dist/experimental.d.ts",
+        "default": "./dist/experimental.js"
       },
       "./coerce": {
         "types": "./dist/coerce.d.ts",
@@ -54,7 +60,11 @@
         "types": "./dist/lazy.d.ts",
         "default": "./dist/lazy.js"
       },
-      "./package.json": "./package.json"
+      "./package.json": "./package.json",
+      "./experimental/form": {
+        "types": "./dist/experimental-form.d.ts",
+        "default": "./dist/experimental-form.js"
+      }
     }
   },
   "devDependencies": {

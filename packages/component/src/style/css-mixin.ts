@@ -1,10 +1,11 @@
 import { createMixin, renderMixinElement } from '../runtime/mixins/mixin.ts'
-import type { MixinFactory } from '../runtime/mixins/mixin.ts'
+import type { MixinFactory, MixinType } from '../runtime/mixins/mixin.ts'
 import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
-import type { ElementProps } from '../runtime/jsx.ts'
+import type { ElementProps } from '../runtime/core/vnode.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { processStyleClass } from '../style/index.ts'
-import type { CSSProps } from '../style/style.ts'
+import { isMixinDescriptor } from '../runtime/core/mix.ts'
+import { processStyleClass } from './style.ts'
+import type { CSSProps } from './style.ts'
 
 type StyleEntry = { selector: string; css: string }
 type StyleCache = Map<string, StyleEntry>
@@ -21,14 +22,7 @@ export type CSSMixinDescriptor = MixinDescriptor<Element, [styles: CSSProps], El
 
 const clientStyleCache: StyleCache = new Map()
 
-/**
- * Applies generated class names for CSS object styles.
- */
-export const css: MixinFactory<Element, [styles: CSSProps], ElementProps> = createMixin<
-  Element,
-  [styles: CSSProps],
-  ElementProps
->((handle) => {
+const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (handle) => {
   let activeSelector = ''
   let activeGeneration = -1
   let currentStyles: CSSProps = {}
@@ -77,7 +71,20 @@ export const css: MixinFactory<Element, [styles: CSSProps], ElementProps> = crea
       className: props?.className ? `${props.className} ${selector}` : selector,
     })
   }
-})
+}
+
+/**
+ * Applies generated class names for CSS object styles.
+ */
+export const css: MixinFactory<Element, [styles: CSSProps], ElementProps> = createMixin<
+  Element,
+  [styles: CSSProps],
+  ElementProps
+>(cssMixinType)
+
+export function isCSSMixinDescriptor(value: unknown): value is CSSMixinDescriptor {
+  return isMixinDescriptor(value) && value.type === cssMixinType
+}
 
 function resolveStyleTarget(runtime: {
   styleCache?: StyleCache

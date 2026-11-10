@@ -1,21 +1,28 @@
-import type { FrameHandle } from './component.ts'
-import { createFrameHandle } from './component.ts'
-import { invariant } from './invariant.ts'
-import type { RemixNode } from './jsx.ts'
-import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame.ts'
+import { getNonceManager } from './nonce.ts'
+import type { ComponentErrorEvent, FrameHandle } from './component.ts'
 import {
   createComponentErrorEvent,
+  createFrameHandle,
   getComponentError,
-  type ComponentErrorEvent,
-} from './error-event.ts'
+  TypedEventTarget,
+} from './component.ts'
+import { invariant } from './invariant.ts'
+import type { RemixNode } from './core/vnode.ts'
+import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame-runtime.ts'
 import { createScheduler, type Scheduler } from './scheduler.ts'
-import { diffVNodes, remove as removeVNode } from './reconcile.ts'
-import { toVNode } from './to-vnode.ts'
-import { TypedEventTarget } from './typed-event-target.ts'
-import { ROOT_VNODE, type CommittedVNode, type ReconcileContext, type RootVNode } from './vnode.ts'
-import { resetStyleState, defaultStyleManager } from './diff-props.ts'
+import {
+  defaultStyleManager,
+  diffVNodes,
+  restoreAncestorSelect,
+  remove as removeVNode,
+  ROOT_VNODE,
+  toVNode,
+  type CommittedVNode,
+  type ReconcileContext,
+  type RootVNode,
+} from './reconcile.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
-import type { StyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 import type { ElementFunction } from './element-function.ts'
 
 /**
@@ -72,10 +79,8 @@ export type VirtualRootOptions = {
 }
 
 export { createScheduler, type Scheduler }
-export { diffVNodes, toVNode }
-export { resetStyleState }
 
-function getHydrationComponentIdFromRangeStart(start: Node): string | undefined {
+function getHydrationComponentIdFromRangeStart(start: Node | undefined): string | undefined {
   if (!(start instanceof Comment)) return undefined
   let marker = start.data.trim()
   if (!marker.startsWith('rmx:h:')) return undefined
@@ -95,16 +100,43 @@ export function createRangeRoot(
   options: VirtualRootOptions = {},
 ): VirtualRoot {
   let [start, end] = boundaries
-  let vroot: CommittedVNode | null = null
-  let currentElement: RemixNode | undefined
-  let styles = options.styleManager ?? defaultStyleManager
-
   let container = end.parentNode
   invariant(container, 'Expected parent node')
   invariant(start.parentNode === container, 'Boundaries must share parent')
-  let parent = container
+  return createVirtualRoot(container, start.nextSibling, options, start, end)
+}
 
-  let hydrationCursor = start.nextSibling
+/**
+ * Creates a virtual root for a host container element.
+ *
+ * @param container Host element to render into.
+ * @param options Root configuration.
+ * @returns A virtual root controller.
+ */
+export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
+  let styles = options.styleManager ?? defaultStyleManager
+  if (container.innerHTML.trim() !== '') {
+    // Adopt additively: multiple roots hydrating separate islands may share
+    // the default style manager, and adopting a later island must not release
+    // the server styles an earlier island still depends on.
+    styles.adoptServerStyles(container)
+  }
+  let hydrationStart = container.innerHTML.trim() !== '' ? container.firstChild : null
+  return createVirtualRoot(container, hydrationStart, options)
+}
+
+function createVirtualRoot(
+  parent: ParentNode,
+  hydrationStart: Node | null,
+  options: VirtualRootOptions,
+  rangeStart?: Node,
+  rangeEnd?: Node,
+): VirtualRoot {
+  let nonceManager = getNonceManager()
+  let vroot: CommittedVNode | null = null
+  let currentElement: RemixNode | undefined
+  let styles = options.styleManager ?? defaultStyleManager
+  let hydrationCursor = hydrationStart
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
   let scheduler =
@@ -153,18 +185,20 @@ export function createRangeRoot(
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
+        _resourceNonces: nonceManager.getRootResourceNonces(root),
         _getContext: options.getContext,
-        _rangeStart: start,
-        _rangeEnd: end,
-        _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(start),
+        _rangeStart: rangeStart,
+        _rangeEnd: rangeEnd,
+        _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(rangeStart),
       }
       scheduler.enqueueWork([
         () => {
           let cursor = hydrationCursor === null ? undefined : { current: hydrationCursor }
-          let committed = diffVNodes(vroot, vnode, parent, vParent, context, end, cursor)
+          let committed = diffVNodes(vroot, vnode, parent, vParent, context, rangeEnd, cursor)
           vParent._children = [committed]
           vroot = committed
           hydrationCursor = null
+          restoreAncestorSelect(parent)
         },
       ])
       scheduler.dequeue()
@@ -183,113 +217,12 @@ export function createRangeRoot(
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueWork([() => removeVNode(current, parent, context)])
-      scheduler.dequeue()
-    },
-
-    flush() {
-      scheduler.dequeue()
-    },
-  })
-
-  registerRoot(root)
-  return root
-}
-
-/**
- * Creates a virtual root for a host container element.
- *
- * @param container Host element to render into.
- * @param options Root configuration.
- * @returns A virtual root controller.
- */
-export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
-  let vroot: CommittedVNode | null = null
-  let currentElement: RemixNode | undefined
-  let styles = options.styleManager ?? defaultStyleManager
-  if (container.innerHTML.trim() !== '') {
-    // Adopt additively: multiple roots hydrating separate islands may share
-    // the default style manager, and adopting a later island must not release
-    // the server styles an earlier island still depends on.
-    styles.adoptServerStyles(container)
-  }
-  let hydrationCursor = container.innerHTML.trim() !== '' ? container.firstChild : undefined
-
-  let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
-  let scheduler =
-    options.scheduler ?? createScheduler(container.ownerDocument ?? document, eventTarget, styles)
-  let frameStub =
-    options.frame ??
-    createRootFrameHandle({
-      src: options.frameInit?.src,
-      resolveFrame: options.frameInit?.resolveFrame,
-      loadModule: options.frameInit?.loadModule,
-      errorTarget: eventTarget,
-      scheduler,
-      styleManager: styles,
-    })
-  let context: ReconcileContext = {
-    frame: frameStub,
-    scheduler,
-    styles,
-    rootTarget: eventTarget,
-  }
-
-  let isErrorForwardingAttached = false
-  function forwardDomError(event: Event) {
-    eventTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
-  }
-  function attachDomErrorForwarding() {
-    if (isErrorForwardingAttached) return
-    container.addEventListener('error', forwardDomError)
-    isErrorForwardingAttached = true
-  }
-  function detachDomErrorForwarding() {
-    if (!isErrorForwardingAttached) return
-    container.removeEventListener('error', forwardDomError)
-    isErrorForwardingAttached = false
-  }
-  attachDomErrorForwarding()
-
-  let root = Object.assign(eventTarget, {
-    render(element: RemixNode) {
-      attachDomErrorForwarding()
-      currentElement = element
-
-      let vnode = toVNode(element)
-      let vParent: RootVNode = {
-        kind: 'root',
-        type: ROOT_VNODE,
-        _children: [],
-        _svg: false,
-        _getContext: options.getContext,
-      }
       scheduler.enqueueWork([
         () => {
-          let cursor = hydrationCursor === undefined ? undefined : { current: hydrationCursor }
-          let committed = diffVNodes(vroot, vnode, container, vParent, context, undefined, cursor)
-          vParent._children = [committed]
-          vroot = committed
-          hydrationCursor = undefined
+          removeVNode(current, parent, context)
+          restoreAncestorSelect(parent)
         },
       ])
-      scheduler.dequeue()
-    },
-
-    reconcile() {
-      if (currentElement === undefined) return
-      root.render(currentElement)
-    },
-
-    dispose() {
-      detachDomErrorForwarding()
-      unregisterRoot(root)
-      currentElement = undefined
-
-      if (!vroot) return
-      let current = vroot
-      vroot = null
-      scheduler.enqueueWork([() => removeVNode(current, container, context)])
       scheduler.dequeue()
     },
 

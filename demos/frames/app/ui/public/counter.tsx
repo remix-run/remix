@@ -11,6 +11,10 @@ export const Counter = clientEntry(
         <button
           type="button"
           mix={[
+            on('click', () => {
+              count--
+              handle.update()
+            }),
             css({
               padding: '6px 10px',
               borderRadius: 10,
@@ -19,10 +23,6 @@ export const Counter = clientEntry(
               color: '#e9eefc',
               cursor: 'pointer',
               '&:hover': { background: 'rgba(255,255,255,0.10)' },
-            }),
-            on('click', () => {
-              count--
-              handle.update()
             }),
           ]}
         >
@@ -34,6 +34,10 @@ export const Counter = clientEntry(
         <button
           type="button"
           mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
             css({
               padding: '6px 10px',
               borderRadius: 10,
@@ -42,10 +46,6 @@ export const Counter = clientEntry(
               color: '#e9eefc',
               cursor: 'pointer',
               '&:hover': { background: 'rgba(255,255,255,0.10)' },
-            }),
-            on('click', () => {
-              count++
-              handle.update()
             }),
           ]}
         >
