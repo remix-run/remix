@@ -506,14 +506,33 @@ export const root = createMixin<HTMLElement, [options: ToastRootOptions], Elemen
 
 function FocusGuard(handle: Handle<{ active: boolean }>) {
   let context = handle.context.get(ToastScope)
-  return () => (
-    <span
-      tabIndex={handle.props.active ? 0 : -1}
-      aria-hidden="true"
-      data-toast-focus-guard=""
-      mix={[hidden, on('focus', (event) => context.focusGuard(event.relatedTarget))]}
-    />
-  )
+  let voiceOverWebKit = false
+  return () => {
+    let role: 'button' | undefined = handle.props.active && voiceOverWebKit ? 'button' : undefined
+    return (
+      <span
+        tabIndex={handle.props.active ? 0 : -1}
+        role={role}
+        aria-hidden={role ? undefined : 'true'}
+        data-toast-focus-guard=""
+        mix={[
+          hidden,
+          ref((node: HTMLElement) => {
+            let win = node.ownerDocument.defaultView
+            let platform = win?.navigator.platform.toLowerCase() ?? ''
+            // WebKit needs role-button guards for VoiceOver's virtual cursor to dispatch focus.
+            let next =
+              (platform.startsWith('mac') || /^i(os$|p)/.test(platform)) &&
+              Boolean(win?.CSS.supports?.('-webkit-backdrop-filter:none'))
+            if (voiceOverWebKit === next) return
+            voiceOverWebKit = next
+            void handle.update()
+          }),
+          on('focus', (event) => context.focusGuard(event.relatedTarget)),
+        ]}
+      />
+    )
+  }
 }
 
 /**
