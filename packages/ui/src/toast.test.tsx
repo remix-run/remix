@@ -182,7 +182,49 @@ describe('toast manager', () => {
 })
 
 describe('toast.root()', () => {
-  it('preserves array data inference in the context render callback', async () => {
+  it('presents queued notifications after hydration with their full timeout', async (t) => {
+    let time = clock(t)
+    let toastManager = createToastManager()
+    let renderedCounts: number[] = []
+    function view() {
+      return (
+        <Context manager={toastManager}>
+          {(toastItems) => {
+            renderedCounts.push(toastItems.length)
+            return (
+              <section mix={root({ label: 'Notifications' })}>
+                {toastItems.map((toastItem) => (
+                  <ItemContext key={toastItem.id} value={toastItem.id}>
+                    <article key={toastItem.id} mix={item()}>
+                      {toastItem.title}
+                    </article>
+                  </ItemContext>
+                ))}
+              </section>
+            )
+          }}
+        </Context>
+      )
+    }
+    let container = document.createElement('div')
+    container.innerHTML = await renderToString(view())
+    document.body.appendChild(container)
+    let serverRegion = element(container, 'section')
+    renderedCounts = []
+    toastManager.add({ title: 'Saved', timeout: 1000 })
+    time.advance(10000)
+    let result = render(view(), { container })
+    t.after(result.cleanup)
+    assert.equal(renderedCounts[0], 0)
+    assert.equal(element(container, 'section'), serverRegion)
+    assert.equal(element(container, 'article').textContent, 'Saved')
+    await result.act(() => time.advance(999))
+    assert.equal(element(container, 'article').textContent, 'Saved')
+    await result.act(() => time.advance(1))
+    assert.equal(container.querySelector('article'), null)
+  })
+
+  it('preserves array data inference in the context render callback', async (t) => {
     interface Action {
       label: string
       run(): void
@@ -192,7 +234,7 @@ describe('toast.root()', () => {
       return toastManager.add(options)
     }
     publish(toastManager, { title: 'Saved', data: [{ label: 'Undo', run() {} }] })
-    let html = await renderToString(
+    let result = render(
       <Context manager={toastManager}>
         {(toastItems) => (
           <section mix={root({ label: 'Notifications' })}>
@@ -207,7 +249,8 @@ describe('toast.root()', () => {
         )}
       </Context>,
     )
-    assert.match(html, /Undo/)
+    t.after(result.cleanup)
+    assert.equal(element(result.container, 'button').textContent, 'Undo')
   })
 
   it('presents buffered content, announces it, enters on F6, and restores focus on close', async (t) => {

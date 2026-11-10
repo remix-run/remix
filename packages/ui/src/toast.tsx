@@ -55,7 +55,7 @@ export interface ToastContextProps<data = unknown> {
   defaultTimeout?: number | false | ((options: ToastAddOptions<data>) => number | false)
   /** Maximum available toast items. Unlimited by default. Must be a positive integer. */
   limit?: number
-  /** Renders every open toast item, including overflow, newest first. */
+  /** Renders every open toast item after mounting, including overflow, newest first. */
   children: (toastItems: readonly ToastItem<data>[]) => RemixNode
 }
 
@@ -74,19 +74,20 @@ export interface ToastItemContextProps {
 }
 
 /**
- * Creates retained notification data independently of rendering.
+ * Creates browser notification data independently of rendering. Server calls do not retain notifications.
  * @returns A manager with native EventTarget subscriptions.
  */
 export function createToastManager<data = unknown>(): ToastManager<data> {
-  let items = new Map<string, ToastItem<data>>()
+  let items = typeof window !== 'undefined' ? new Map<string, ToastItem<data>>() : undefined
   let nextId = 0
 
   class ToastStore extends TypedEventTarget<{ change: Event }> implements ToastManager<data> {
     get items(): readonly ToastItem<data>[] {
-      return Object.freeze([...items.values()].reverse())
+      return Object.freeze(items ? [...items.values()].reverse() : [])
     }
     add(options: ToastAddOptions<data>) {
       if (options.timeout !== undefined) validateTimeout(options.timeout)
+      if (!items) return options.id ?? crypto.randomUUID()
       let id = options.id ?? `toast-${++nextId}`
       while (options.id === undefined && items.has(id)) id = `toast-${++nextId}`
       let previous = items.get(id)
@@ -98,10 +99,11 @@ export function createToastManager<data = unknown>(): ToastManager<data> {
       return id
     }
     close(id: string) {
-      if (!items.delete(id)) return
+      if (!items?.delete(id)) return
       this.dispatchEvent(new Event('change'))
     }
     closeAll() {
+      if (!items) return
       items.clear()
       this.dispatchEvent(new Event('change'))
     }
@@ -193,6 +195,7 @@ function focusElement(node: HTMLElement, visible?: boolean) {
  */
 export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>): () => RemixNode {
   let toastManager = handle.props.manager
+  let mounted = false
   let limit = handle.props.limit ?? Infinity
   let region: HTMLElement | undefined
   let returnTo: HTMLElement | undefined
@@ -452,6 +455,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   }
   handle.queueTask(() => {
     toastManager.addEventListener('change', sync, { signal: handle.signal })
+    mounted = true
     sync()
   })
   return () => {
@@ -465,12 +469,13 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       limit = nextLimit
       refresh()
     }
+    let toastItems = mounted ? toastManager.items : []
     return (
       <ToastScope value={state}>
-        {handle.props.children(toastManager.items)}
+        {handle.props.children(toastItems)}
         <div aria-live="polite" aria-atomic="false" aria-relevant="additions text" mix={hidden}>
           {!state.focused &&
-            toastManager.items
+            toastItems
               .filter((toastItem) => presentations.has(toastItem.id))
               .map((toastItem) => (
                 <div key={JSON.stringify([toastItem.id, toastItem.revision])} aria-atomic="true">

@@ -185,6 +185,10 @@ export default function ToastPage(handle: Handle<PageProps>) {
           its context near the application root so notifications remain available across page
           changes.
         </p>
+        <p>
+          The manager stores notifications only in the browser. Toasts are not server-rendered.
+          Notifications published in the browser before the context hydrates appear after it mounts.
+        </p>
         <CodeBlock html={publishers} />
         <p>
           Call <code>close(id)</code> to dismiss a toast programmatically, or{' '}
@@ -303,7 +307,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="create-manager">createToastManager&lt;data = unknown&gt;()</h3>
-        <p>Creates application-level state and commands.</p>
+        <p>Creates browser notification state and commands.</p>
         <h3 id="manager">ToastManager&lt;data&gt;</h3>
         <ApiTable id="manager-members" label="Member">
           <ApiEntry name="items" type="readonly ToastItem<data>[]">
