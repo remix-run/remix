@@ -12,13 +12,13 @@ concurrency:
 
 jobs:
   windows:
-    name: HMR timing (Windows, ${{ matrix.mode }})
+    name: HMR timing (Windows, workspace ${{ matrix.iteration }})
     runs-on: windows-2025
-    timeout-minutes: 25
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        mode: [isolated, workspace]
+        iteration: [1, 2, 3]
     steps:
       - name: Checkout diagnostic revision
         uses: actions/checkout@v6
@@ -53,37 +53,20 @@ jobs:
         run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
       - name: Repeat native HMR waits
-        timeout-minutes: 20
+        timeout-minutes: 12
         shell: bash
         env:
           REMIX_HMR_DIAGNOSTICS: '1'
-          HMR_MODE: ${{ matrix.mode }}
           HMR_REPRO_BASE_SHA: 21567dc53cd2501cdc6a2ced0f32815e2410eb5f
           HMR_REPRO_HEAD_SHA: a2feaf983bf4248fc3158a86a85cc59f664fa79f
         run: |
           mkdir -p diagnostics
-          failed=0
-          repetitions=20
-          if [[ "$HMR_MODE" == workspace ]]; then repetitions=3; fi
-          for ((iteration=1; iteration<=repetitions; iteration++)); do
-            log="diagnostics/run-$iteration.log"
-            if [[ "$HMR_MODE" == workspace ]]; then
-              if ! node ./scripts/detect-changed-packages.ts "$HMR_REPRO_BASE_SHA" "$HMR_REPRO_HEAD_SHA" 2>&1 | tee "$log"; then
-                failed=1
-              fi
-            else
-              if ! pnpm --filter @remix-run/assets test --quiet test/hmr.test.e2e.tsx --project firefox \
-                --only 'updates accepted browser module output without losing page state' 2>&1 | tee "$log"; then
-                failed=1
-              fi
-            fi
-          done
-          exit "$failed"
+          node ./scripts/detect-changed-packages.ts "$HMR_REPRO_BASE_SHA" "$HMR_REPRO_HEAD_SHA" 2>&1 | tee diagnostics/run.log
 
       - name: Upload timing diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: hmr-timing-windows-${{ matrix.mode }}
+          name: hmr-timing-windows-workspace-${{ matrix.iteration }}
           path: diagnostics/
           retention-days: 7

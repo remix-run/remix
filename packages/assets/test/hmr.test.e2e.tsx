@@ -44,6 +44,21 @@ describe('asset server HMR', () => {
 
     let page = await t.serve(await createHmrTestServer(fixture))
     t.after(fixture.close)
+    if (process.env.REMIX_HMR_DIAGNOSTICS === '1') {
+      await page.addInitScript(() => {
+        let NativeEventSource = window.EventSource
+        window.EventSource = class extends NativeEventSource {
+          constructor(url: string | URL, options?: EventSourceInit) {
+            super(url, options)
+            this.addEventListener('message', (event) => {
+              console.debug(
+                `[hmr-event-timing] ${JSON.stringify({ at: Date.now(), data: event.data })}`,
+              )
+            })
+          }
+        }
+      })
+    }
     let documentResponse = await navigateToHmrPage(page)
     assert.ok(documentResponse)
     assert.equal(documentResponse.status(), 200, await documentResponse.text())
@@ -52,6 +67,7 @@ describe('asset server HMR', () => {
 
     let probe =
       process.env.REMIX_HMR_DIAGNOSTICS === '1' ? await startHmrTimingProbe(page) : undefined
+    probe?.mark(`fixture: ${fixture.rootDir}`)
     try {
       let counterPath = path.join(fixture.rootDir, 'app/counter.ts')
       let counterSource = await fs.readFile(counterPath, 'utf-8')
@@ -2293,6 +2309,13 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   let browserHmrWatcher: FSWatcher | undefined
   let pendingBrowserHmrEvents = Promise.resolve()
 
+  function logTiming(event: string) {
+    if (process.env.REMIX_HMR_DIAGNOSTICS !== '1') return
+    console.error(
+      `[hmr-server-timing] ${JSON.stringify({ at: Date.now(), fixture: fixture.rootDir, event })}`,
+    )
+  }
+
   let createCurrentAssetServer = () =>
     createAssetServer({
       allowPackages: ['remix'],
@@ -2421,6 +2444,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     let changeStatsByFilePath = new Map<string, string>()
     browserHmrWatcher.on('all', (event, filePath, stats) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
+      logTiming(`watch event: ${event} ${filePath}`)
       if (event === 'change' && stats) {
         let { birthtimeMs, ctimeMs, ino, mtimeMs, size } = stats
         let changeStats = [birthtimeMs, ctimeMs, ino, mtimeMs, size].join(':')
@@ -2438,11 +2462,15 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   }
 
   async function handleBrowserHmrFileEvent(event: BrowserHmrFileEvent): Promise<void> {
+    logTiming('file handler start')
     let filePath = await getWatchEventFilePath(event.filePath)
+    logTiming('file path resolved')
     let normalizedEvent = { ...event, filePath }
 
     for (let handleFileEvents of browserHmrFileEventHandlers) {
+      logTiming('classification start')
       let browserHmrEvents = await handleFileEvents([normalizedEvent])
+      logTiming('classification done')
       for (let browserHmrEvent of browserHmrEvents) {
         if (browserHmrEvent.type === 'reload') {
           hmrEventStream?.send({ type: 'browser:reload' })
@@ -2453,6 +2481,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
           data: browserHmrEvent.data,
           type: 'browser:update',
         })
+        logTiming('update enqueued')
         for (let updatePath of getBrowserHmrUpdatePaths(browserHmrEvent.data)) {
           let waiters = browserUpdateWaiters.get(updatePath)
           if (!waiters) continue
@@ -2728,6 +2757,14 @@ async function writeFetchResponse(
       let { done, value } = await reader.read()
       if (done) break
       response.write(value)
+      if (
+        process.env.REMIX_HMR_DIAGNOSTICS === '1' &&
+        fetchResponse.headers.get('Content-Type')?.startsWith('text/event-stream')
+      ) {
+        console.error(
+          `[hmr-transport-timing] ${JSON.stringify({ at: Date.now(), port: response.socket?.localPort, buffered: response.writableLength, data: new TextDecoder().decode(value) })}`,
+        )
+      }
     }
   } finally {
     response.end()
@@ -2982,6 +3019,27 @@ async function startHmrTimingProbe(page: TestPage) {
     let polls: Array<{ elapsed: number; matches: boolean }> = []
     let timerTicks: number[] = []
     let textChanges: Array<{ elapsed: number; text: string | null }> = []
+    let resources: Array<{
+      name: string
+      start: number
+      request: number
+      response: number
+      end: number
+    }> = []
+    let resourceObserver = new PerformanceObserver((entries) => {
+      for (let entry of entries.getEntries()) {
+        if (!(entry instanceof PerformanceResourceTiming)) continue
+        if (!entry.name.includes('/assets/app/counter.ts?')) continue
+        resources.push({
+          name: entry.name,
+          start: entry.startTime - started,
+          request: entry.requestStart - started,
+          response: entry.responseStart - started,
+          end: entry.responseEnd - started,
+        })
+      }
+    })
+    resourceObserver.observe({ entryTypes: ['resource'] })
     let visibility: Array<{ elapsed: number; state: string }> = [
       { elapsed: 0, state: document.visibilityState },
     ]
@@ -3005,6 +3063,7 @@ async function startHmrTimingProbe(page: TestPage) {
       stop() {
         clearInterval(timer)
         observer.disconnect()
+        resourceObserver.disconnect()
         document.removeEventListener('visibilitychange', onVisibility)
         return {
           timeOrigin: performance.timeOrigin,
@@ -3012,6 +3071,7 @@ async function startHmrTimingProbe(page: TestPage) {
           polls,
           timerTicks,
           textChanges,
+          resources,
           visibility,
         }
       },
