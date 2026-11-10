@@ -1,9 +1,14 @@
 import { getNonceManager } from './nonce.ts'
-import { appNamedFrames, createFrame, getAppTopFrame, setAppTopFrame } from './frame.ts'
+import { createFrame, setAppFrames } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
-import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame-runtime.ts'
+import {
+  NamedFrameRegistry,
+  type LoadModule,
+  type ResolveFrame,
+  type ResolveFrameOptions,
+} from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
 import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
@@ -134,6 +139,7 @@ export function run(init: RunInit): AppRuntime {
   let scheduler = createScheduler(document, errorTarget, styleManager)
 
   let resolveFrame = init.resolveFrame ?? defaultResolveFrame
+  let namedFrames = new NamedFrameRegistry()
 
   let topFrame = createFrame(document, {
     src: document.location.href,
@@ -147,18 +153,18 @@ export function run(init: RunInit): AppRuntime {
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
-    namedFrames: appNamedFrames,
+    namedFrames,
     processClientEntryPreloads: init.processClientEntryPreloads,
   })
-  setAppTopFrame(topFrame)
 
   let appController = new AbortController()
   let frames: Handle['frames'] = {
     top: topFrame.handle,
     get(name) {
-      return appNamedFrames.get(name)
+      return namedFrames.get(name)
     },
   }
+  let clearAppFrames = setAppFrames(frames)
   if (window.navigation) {
     window.navigation.addEventListener(
       'currententrychange',
@@ -172,7 +178,7 @@ export function run(init: RunInit): AppRuntime {
       signal: appController.signal,
     })
   }
-  startNavigationListener(appController.signal)
+  startNavigationListener(appController.signal, frames)
   startPrefetching(appController.signal, init.prefetch)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
@@ -182,11 +188,12 @@ export function run(init: RunInit): AppRuntime {
   return Object.assign(errorTarget, {
     frames,
     ready: () => readyPromise,
-    flush: () => getAppTopFrame().flush(),
+    flush: () => topFrame.flush(),
     dispose: () => {
       appController.abort()
-      getAppTopFrame().dispose()
+      topFrame.dispose()
       styleManager.dispose()
+      clearAppFrames()
     },
   })
 }
