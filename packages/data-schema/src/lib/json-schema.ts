@@ -1,4 +1,4 @@
-import { getSchemaMetadata } from './schema.ts'
+import { getSchemaMetadata, registerJSONSchemaConverter } from './schema.ts'
 import type { Schema, SchemaCheckMetadata, SchemaDef } from './schema.ts'
 
 /**
@@ -500,3 +500,7 @@ function formatPath(path: PropertyKey[]): string {
 
   return path.map((key) => String(key)).join('.')
 }
+
+registerJSONSchemaConverter(function convert(schema, io, options) {
+  return toJSONSchema(schema, { io, target: options.target as JSONSchemaTarget })
+})

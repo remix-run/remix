@@ -18,7 +18,10 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/lib/json-schema.ts",
+    "./dist/lib/json-schema.js"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./checks": "./src/checks.ts",

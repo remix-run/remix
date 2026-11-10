@@ -1,5 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+
+import { execFileSync } from 'node:child_process'
 import type { StandardJSONSchemaV1 } from '@standard-schema/spec'
 import { Ajv2020 } from 'ajv/dist/2020.js'
 
@@ -482,6 +484,32 @@ describe('Standard JSON Schema v1', () => {
     assert.equal(schema['~standard'].version, 1)
     assert.equal(schema['~standard'].vendor, 'data-schema')
     assert.deepEqual(schema['~standard'].validate('a'), { value: 'a' })
+  })
+})
+
+describe('converter loading', () => {
+  it('is installed once this module is loaded', () => {
+    assert.deepEqual(string()['~standard'].jsonSchema.input({ target: 'draft-2020-12' }), {
+      type: 'string',
+    })
+  })
+
+  it('explains how to load it when only the root entry is imported', () => {
+    let script =
+      "import { string } from './src/index.ts';" +
+      "try { string()['~standard'].jsonSchema.input({ target: 'draft-2020-12' });" +
+      " console.log('NO_THROW') } catch (error) { console.log(error.message) }"
+    let output = execFileSync(
+      process.execPath,
+      ['--experimental-strip-types', '--input-type=module', '--eval', script],
+      {
+        cwd: new URL('../..', import.meta.url),
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      },
+    )
+
+    assert.match(output, /Import '@remix-run\/data-schema\/json-schema' to load it\./)
   })
 })
 

@@ -473,7 +473,7 @@ toJSONSchema(Search)
 // }
 ```
 
-Checks become constraints, `optional` and `defaulted` keys are omitted from `required`, and `nullable` adds `"null"` to the type. Pass `io: 'output'` to describe what a schema produces rather than what it accepts, or `target: 'draft-07'` to emit that dialect. Schemas also implement [Standard JSON Schema](https://standardschema.dev/json-schema) through `~standard.jsonSchema`, so other libraries can convert them without depending on this package.
+Checks become constraints, `optional` and `defaulted` keys are omitted from `required`, and `nullable` adds `"null"` to the type. Pass `io: 'output'` to describe what a schema produces rather than what it accepts, or `target: 'draft-07'` to emit that dialect. Schemas also implement [Standard JSON Schema](https://standardschema.dev/json-schema) through `~standard.jsonSchema`, so other libraries can convert them without depending on this package. The converter lives in `remix/data-schema/json-schema` and loads with it, so import that entrypoint anywhere a schema is handed to such a library.
 
 ## Schemas that cannot be represented
 

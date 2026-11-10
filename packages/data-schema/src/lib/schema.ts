@@ -1,6 +1,4 @@
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from '@standard-schema/spec'
-import { toJSONSchema } from './json-schema.ts'
-import type { JSONSchemaTarget } from './json-schema.ts'
 
 /**
  * A validation issue returned by a schema, compatible with Standard Schema v1.
@@ -311,6 +309,44 @@ type InternalValidationContext = ValidationContext & {
 
 const builtinSchemas = new WeakSet<object>()
 
+/**
+ * Converts a schema to JSON Schema. Supplied by `@remix-run/data-schema/json-schema` so that
+ * the converter is only loaded by programs that ask for it.
+ */
+type JSONSchemaConverter = (
+  schema: Schema<any, any>,
+  io: 'input' | 'output',
+  options: StandardJSONSchemaV1.Options,
+) => Record<string, unknown>
+
+let jsonSchemaConverter: JSONSchemaConverter | undefined
+
+/**
+ * Install the JSON Schema converter used by `~standard.jsonSchema`.
+ *
+ * `@remix-run/data-schema/json-schema` calls this when it loads. Nothing else should.
+ *
+ * @param converter The converter to install
+ */
+export function registerJSONSchemaConverter(converter: JSONSchemaConverter): void {
+  jsonSchemaConverter = converter
+}
+
+function convertToJSONSchema(
+  schema: Schema<any, any>,
+  io: 'input' | 'output',
+  options: StandardJSONSchemaV1.Options,
+): Record<string, unknown> {
+  if (jsonSchemaConverter === undefined) {
+    throw new Error(
+      'Cannot convert to JSON Schema because the converter is not loaded. ' +
+        "Import '@remix-run/data-schema/json-schema' to load it.",
+    )
+  }
+
+  return jsonSchemaConverter(schema, io, options)
+}
+
 type IssueDescriptor = {
   code: string
   defaultMessage: string
@@ -347,10 +383,10 @@ export function createSchema<input, output>(
       },
       jsonSchema: {
         input(options: StandardJSONSchemaV1.Options) {
-          return toJSONSchema(schema, { io: 'input', target: options.target as JSONSchemaTarget })
+          return convertToJSONSchema(schema, 'input', options)
         },
         output(options: StandardJSONSchemaV1.Options) {
-          return toJSONSchema(schema, { io: 'output', target: options.target as JSONSchemaTarget })
+          return convertToJSONSchema(schema, 'output', options)
         },
       },
     },
