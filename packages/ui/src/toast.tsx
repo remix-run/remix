@@ -61,8 +61,6 @@ export interface ToastContextProps<data = unknown> {
 export interface ToastRootOptions {
   /** Accessible name for the notification region. */
   label: string
-  /** Unmodified key for entering and leaving the region. Defaults to F6. False disables it. */
-  hotkey?: string | false
 }
 
 /** Scopes one notification's content and controls. */
@@ -369,7 +367,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         'keydown',
         (event) => {
           if (event.defaultPrevented) return
-          if (event.key === (options().hotkey ?? 'F6')) {
+          if (event.key === 'F6') {
             event.stopPropagation()
             if (restoreFocus()) event.preventDefault()
             return
@@ -389,7 +387,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         'keydown',
         (event) => {
           if (
-            event.key !== (options().hotkey ?? 'F6') ||
+            event.key !== 'F6' ||
             event.altKey ||
             event.ctrlKey ||
             event.metaKey ||

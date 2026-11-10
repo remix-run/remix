@@ -142,7 +142,6 @@ interface ToastItemOptions {
   ToastRootOptions: await highlightSource(`
 interface ToastRootOptions {
   label: string
-  hotkey?: string | false
 }
 `),
   ToastItemContextProps: await highlightSource(`
@@ -293,8 +292,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           visits each notification before its controls. F6 again, Shift+Tab from the collection, or
           Tab past either boundary returns to the previous element. Escape dismisses the focused
           notification. Closing it moves focus to a neighbouring available notification or restores
-          the previous element. The shortcut can be changed or disabled. Make the shortcut
-          discoverable in your application.
+          the previous element. Make the shortcut discoverable in your application.
         </p>
         <p>
           Provide a visible dismiss control. Essential errors and decisions should also be available
@@ -389,9 +387,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <ApiTable id="root-options" label="Option" defaults>
           <ApiEntry name="label" type="string" required>
             Non-empty accessible region name.
-          </ApiEntry>
-          <ApiEntry name="hotkey" type="string | false" defaultValue="'F6'">
-            Unmodified KeyboardEvent.key used to enter and leave the region. False disables it.
           </ApiEntry>
         </ApiTable>
         <ApiTable id="root-attributes" label="Attribute">

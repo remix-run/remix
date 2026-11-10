@@ -51,7 +51,7 @@ export function Notifications() {
 
 - `createToastManager<data = unknown>()`: creates a manager with `add(options)`, `close(id?)` and a newest-first `toastItems` collection. Omit the ID from `close()` to dismiss all notifications. The manager supports native `change` subscriptions.
 - `Context`: connects a stable `manager` to the UI. Accepts `defaultTimeout`, `limit` and a typed collection callback. There is no limit by default.
-- `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and keyboard entry. A non-empty `label` is required.
+- `root({ label })`: gives the collection named region semantics and keyboard entry. A non-empty `label` is required.
 - `ItemContext`: scopes one notification using its ID as `value`.
 - `item({ countdown? })`: applies non-modal dialog semantics, availability and focus recovery. With `countdown: true`, it animates the inherited `--toast-countdown` value from 1 to 0 for CSS indicators.
 - `title()` and `description()`: connect your heading and supporting content to the notification. They generate IDs unless supplied.

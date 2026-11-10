@@ -37,9 +37,7 @@ export function ToastRegion() {
   return () => (
     <toast.Context manager={toastManager} defaultTimeout={5000} limit={3}>
       {(toastItems) => (
-        <section
-          mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.root, styles.region]}
-        >
+        <section mix={[toast.root({ label: 'Notifications' }), styles.root, styles.region]}>
           {toastItems.map((toastItem, index) => (
             <toast.ItemContext key={toastItem.id} value={toastItem.id}>
               <article
