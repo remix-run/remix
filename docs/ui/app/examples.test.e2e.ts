@@ -163,12 +163,12 @@ describe('Live examples in the docs site', () => {
 
     await page.goto('/patterns/listbox/#context-reference')
     let settled = page.locator('.ui-api-entry').filter({
-      has: page.locator('summary code').getByText('onSelectSettled', { exact: true }),
+      has: page.locator('summary code').getByText('onHighlight', { exact: true }),
     })
     await settled.locator('summary').click()
     assert.match(
       await settled.getByRole('row', { name: /^Type / }).innerText(),
-      /option\?: ListboxRegisteredOption.*void \| Promise<void>/,
+      /option\?: ListboxRegisteredOption.*=> void/,
     )
     let referenceWidth = await settled.evaluate((el) => ({
       width: el.clientWidth,
@@ -239,8 +239,8 @@ describe('Live examples in the docs site', () => {
       state: 'attached',
     })
 
-    await page.goto('/patterns/listbox/#context-options-onSelectSettled')
-    let callback = page.locator('#context-options-onSelectSettled')
+    await page.goto('/patterns/listbox/#context-options-onHighlight')
+    let callback = page.locator('#context-options-onHighlight')
     await callback.waitFor({ state: 'visible' })
     summary = await callback.locator('..').locator('summary').boundingBox()
     assert.ok(summary)

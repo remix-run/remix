@@ -1,23 +1,19 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
+import { afterEach, describe, it, mock } from '@remix-run/test'
 
 import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
 
 import * as listbox from './listbox.ts'
 import type { ListboxOption, ListboxRef, ListboxValue } from './listbox.ts'
 
-const flashDurationMs = 60
 let roots: ReturnType<typeof createRoot>[] = []
 
 type RenderListboxOptions = {
   activeValue?: ListboxValue
-  flashSelection?: boolean
   onHighlight?: (value: ListboxValue, option?: ListboxOption) => void
   onSelect?: (value: ListboxValue, option?: ListboxOption) => void
-  onSelectSettled?: (value: ListboxValue, option?: ListboxOption) => void | Promise<void>
   options?: Array<Omit<ListboxOption, 'id'>>
   ref?: (ref: ListboxRef) => void
-  selectionFlashAttribute?: string
   tabIndex?: number
   value?: ListboxValue
 }
@@ -51,25 +47,19 @@ function renderApp(node: RemixNode) {
 
 function renderListbox({
   activeValue = null,
-  flashSelection = false,
   onHighlight = () => {},
   onSelect = () => {},
-  onSelectSettled = () => {},
   options = frameworkOptions,
   ref,
-  selectionFlashAttribute = 'data-listbox-flash',
   tabIndex,
   value = null,
 }: RenderListboxOptions = {}) {
   return (
     <listbox.Context
       activeValue={activeValue}
-      flashSelection={flashSelection}
       onHighlight={onHighlight}
       onSelect={onSelect}
-      onSelectSettled={onSelectSettled}
       ref={ref}
-      selectionFlashAttribute={selectionFlashAttribute}
       value={value}
     >
       <div aria-label="Frameworks" tabIndex={tabIndex} mix={listbox.list()}>
@@ -84,15 +74,12 @@ function renderListbox({
 }
 
 function renderControlledListbox({
-  flashSelection = false,
   initialActiveValue = null,
   initialValue = null,
   onHighlight = () => {},
   onSelect = () => {},
-  onSelectSettled = () => {},
   options,
   ref,
-  selectionFlashAttribute,
   tabIndex,
 }: ControlledListboxOptions = {}) {
   function App(handle: Handle) {
@@ -102,7 +89,6 @@ function renderControlledListbox({
     return () =>
       renderListbox({
         activeValue,
-        flashSelection,
         onHighlight(nextActiveValue, option) {
           activeValue = nextActiveValue
           onHighlight(nextActiveValue, option)
@@ -113,10 +99,8 @@ function renderControlledListbox({
           onSelect(nextValue, option)
           void handle.update()
         },
-        onSelectSettled,
         options,
         ref,
-        selectionFlashAttribute,
         tabIndex,
         value,
       })
@@ -170,13 +154,6 @@ async function settle(root: ReturnType<typeof createRoot>) {
   root.flush()
   await Promise.resolve()
   root.flush()
-}
-
-let timers!: FakeTimers
-
-async function finishSelectionFlash(root: ReturnType<typeof createRoot>) {
-  await timers.advanceAsync(flashDurationMs)
-  await settle(root)
 }
 
 afterEach(() => {
@@ -723,22 +700,15 @@ describe('listbox', () => {
     expect(preact.getAttribute('aria-selected')).toBe('true')
   })
 
-  it('delays onSelect during flashSelection and ignores interactions until the flash completes', async (t) => {
-    timers = t.useFakeTimers()
-
+  it('selects immediately and keeps highlighting enabled afterwards', async () => {
     let highlights: SelectionCall[] = []
     let selections: SelectionCall[] = []
-    let settledSelections: SelectionCall[] = []
     let { container, root } = renderControlledListbox({
-      flashSelection: true,
       onHighlight(value, option) {
         highlights.push({ option, value })
       },
       onSelect(value, option) {
         selections.push({ option, value })
-      },
-      onSelectSettled(value, option) {
-        settledSelections.push({ option, value })
       },
     })
 
@@ -753,31 +723,13 @@ describe('listbox', () => {
     key(list, 'Enter')
     await settle(root)
 
-    expect(selections).toHaveLength(1)
-    expect(selections[0]?.value).toBe('react')
-    expect(settledSelections).toHaveLength(0)
-    expect(react.getAttribute('data-listbox-flash')).toBe('true')
+    expect(selections.map((selection) => selection.value)).toEqual(['react'])
+    expect(react.getAttribute('aria-selected')).toBe('true')
 
-    key(list, 'End')
     mouse(preact, 'mousemove')
     await settle(root)
 
-    expect(highlights.map((highlight) => highlight.value)).toEqual(['remix', 'react'])
-    expect(preact.dataset.highlighted).toBe('false')
-    expect(preact.getAttribute('aria-selected')).toBe('false')
-
-    await finishSelectionFlash(root)
-
-    expect(settledSelections).toHaveLength(1)
-    expect(settledSelections[0]?.value).toBe('react')
-    expect(settledSelections[0]?.option).toEqual(
-      expect.objectContaining({
-        id: react.id,
-        label: 'React',
-        value: 'react',
-      }),
-    )
-    expect(react.getAttribute('data-listbox-flash')).toBe(null)
-    expect(react.getAttribute('aria-selected')).toBe('true')
+    expect(highlights.map((highlight) => highlight.value)).toEqual(['remix', 'react', 'preact'])
+    expect(preact.dataset.highlighted).toBe('true')
   })
 })

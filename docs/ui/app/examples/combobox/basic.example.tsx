@@ -112,9 +112,6 @@ export default function ExampleCombobox(handle: Handle) {
                         opacity: 0.4,
                         cursor: 'not-allowed',
                       },
-                      '&[data-combobox-flash]': {
-                        background: 'light-dark(#d6d6e0, #4b4b56)',
-                      },
                     }),
                   ]}
                 >

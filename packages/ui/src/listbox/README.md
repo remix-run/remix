@@ -65,7 +65,7 @@ Use `textValue` when the visible label is not the best string for typeahead sear
 
 ## `@remix-run/ui/listbox`
 
-- `Context`: provider for controlled `value` and `activeValue`, option registration, selection, highlighting, optional ref access, `flashSelection`, `selectionFlashAttribute`, and `onSelectSettled`.
+- `Context`: provider for controlled `value` and `activeValue`, option registration, selection, highlighting, and optional ref access.
 - `list()`: wires `role="listbox"`, default `tabIndex={-1}`, keyboard navigation, focus scrolling, and typeahead highlighting.
 - `option(options)`: registers an option with required `label` and `value`, optional `disabled` and `textValue`, and wires `role="option"`, id, selected, disabled, highlighted, mouse, and click behavior.
 - `ListboxValue`: selected or active value, represented as `string | null`.
@@ -80,4 +80,4 @@ Use `textValue` when the visible label is not the best string for typeahead sear
 - Disabled options are skipped by keyboard navigation, typeahead, mouse movement, and click selection.
 - Arrow keys wrap through enabled options. `Home` and `End` move to enabled boundaries. `Enter` and Space select the active option.
 - Typeahead highlights the next matching enabled option without selecting it and supports `textValue`.
-- `flashSelection` applies `selectionFlashAttribute` for 60ms, delays `onSelectSettled`, and ignores new highlight/select interactions until the flash completes.
+- `onSelect` runs synchronously on every selection request. Consumers that need to ignore interactions while closing, such as `select` and `combobox`, track that themselves.

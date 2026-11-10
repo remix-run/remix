@@ -39,7 +39,6 @@ describe('Grouped listbox example', () => {
 
     await result.act(() => key(list, 'Enter'))
     await waitFor(() => assert.equal(georgia.getAttribute('aria-selected'), 'true'))
-    await waitFor(() => assert.equal(georgia.hasAttribute('data-listbox-flash'), false))
     await result.act(() => key(list, 'h'))
 
     let helvetica = element(

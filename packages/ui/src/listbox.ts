@@ -8,12 +8,10 @@ import {
   type RemixNode,
 } from '@remix-run/component'
 import { hiddenTypeahead, matchNextItemBySearchText, type SearchValue } from './lib/typeahead.ts'
-import { flashAttribute } from './lib/flash-attribute.ts'
 
 export type ListboxValue = string | null
 
 type NavigationStrategy = 'next' | 'previous' | 'first' | 'last'
-type State = 'idle' | 'selecting'
 
 interface Values {
   value: ListboxValue
@@ -22,7 +20,7 @@ interface Values {
 
 export interface ListboxContext extends Values {
   registerOption: (option: RegisteredOption) => void
-  select: (value: ListboxValue) => Promise<void>
+  select: (value: ListboxValue) => void
   highlight: (value: ListboxValue) => void
   highlightSearchMatch: (text: string) => void
   navigate: (direction: NavigationStrategy) => void
@@ -32,10 +30,7 @@ export interface ListboxContext extends Values {
 export interface ListboxProviderProps extends Values {
   children?: RemixNode
   ref?: (ref: ListboxRef) => void
-  flashSelection?: boolean
-  selectionFlashAttribute?: string
   onSelect: (value: ListboxValue, option?: ListboxRegisteredOption) => void
-  onSelectSettled?: (value: ListboxValue, option?: ListboxRegisteredOption) => void | Promise<void>
   onHighlight: (value: ListboxValue, option?: ListboxRegisteredOption) => void
 }
 
@@ -51,8 +46,8 @@ export interface ListboxRef {
   navigateNext: () => void
   navigatePrevious: () => void
   scrollActiveOptionIntoView: () => void
-  select: (value: ListboxValue) => Promise<void>
-  selectActive: () => Promise<void>
+  select: (value: ListboxValue) => void
+  selectActive: () => void
 }
 
 export interface ListboxRegisteredOption extends ListboxOption {
@@ -64,7 +59,6 @@ interface RegisteredOption extends ListboxRegisteredOption {}
 
 function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>): () => RemixNode {
   let options: RegisteredOption[] = []
-  let state: State = 'idle'
 
   function getOption(value: ListboxValue) {
     return options.find((option) => option.value === value)
@@ -164,37 +158,18 @@ function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>): 
       options.push(option)
     },
 
-    async select(value) {
-      if (state === 'selecting') {
-        return
-      }
-      state = 'selecting'
+    select(value) {
       let option = getOption(value)
-      if (!isInteractableOption(option)) {
-        state = 'idle'
-        return
-      }
+      if (!isInteractableOption(option)) return
       handle.props.onSelect(value, option)
-      if (option && handle.props.flashSelection) {
-        await flashAttribute(
-          option.node,
-          handle.props.selectionFlashAttribute ?? 'data-listbox-flash',
-          60,
-        )
-      }
-      await handle.props.onSelectSettled?.(value, option)
-      state = 'idle'
     },
 
     highlight(value) {
-      if (state === 'selecting') return
       let option = getOption(value)
       handle.props.onHighlight(value, option)
     },
 
     highlightSearchMatch(text) {
-      if (state === 'selecting') return
-
       let option = findSearchMatch(text, handle.props.activeValue)
 
       if (option) {
@@ -204,8 +179,6 @@ function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>): 
     },
 
     navigate(strategy: NavigationStrategy) {
-      if (state === 'selecting') return
-
       let option: RegisteredOption | undefined
       let interactableOptions = getInteractableOptions()
       let activeIndex = interactableOptions.findIndex(
@@ -277,7 +250,7 @@ const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<HTMLE
           case 'Enter':
           case ' ':
             event.preventDefault()
-            void context.select(context.activeValue)
+            context.select(context.activeValue)
             break
           case 'Home':
             event.preventDefault()
