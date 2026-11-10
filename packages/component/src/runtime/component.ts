@@ -412,190 +412,156 @@ export interface ComponentHandle<C = NoContext> {
  * @returns Component runtime helpers used by the reconciler.
  */
 export function createComponent<C = NoContext>(config: ComponentConfig): ComponentHandle<C> {
-  return new ComponentRuntime<C>(config)
-}
+  let connectedController: AbortController | undefined
+  let contextValue: C | undefined
+  let props: ElementProps = {}
+  let renderController: AbortController | undefined
+  let renderFn: RenderFn | undefined
+  let removed = false
+  let phase: 'idle' | 'setup' | 'render' = 'idle'
+  let updateQueue: UpdateQueue | undefined
+  let updateVNode: object | undefined
+  let updateDomParent: ParentNode | undefined
+  let tasks: Task[] = []
 
-class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
-  frame: FrameHandle
-
-  #config: ComponentConfig
-  #connectedController: AbortController | undefined
-  #contextValue: C | undefined
-  #handle: Handle<ElementProps, C>
-  #props: ElementProps = {}
-  #renderController: AbortController | undefined
-  #renderFn: RenderFn | undefined
-  #removed = false
-  #phase: 'idle' | 'setup' | 'render' = 'idle'
-  // The schedule target is stored as fields (updated each render) rather than
-  // a closure so re-renders don't allocate a new function per component.
-  #updateQueue: UpdateQueue | undefined
-  #updateVNode: object | undefined
-  #updateDomParent: ParentNode | undefined
-  #scheduleUpdate = (): void => {
-    let queue = this.#updateQueue
-    if (!queue) throw new Error('scheduleUpdate not implemented')
-    let vnode = this.#updateVNode
-    let domParent = this.#updateDomParent
-    if (!vnode || !domParent) throw new Error('scheduleUpdate target not initialized')
-    queue.enqueue(vnode, domParent)
-  }
-  #tasks: Task[] = []
-
-  constructor(config: ComponentConfig) {
-    this.#config = config
-    this.frame = config.frame
-    this.#handle = this.#createHandle()
+  let context: Context<C> = {
+    set(value) {
+      contextValue = value
+    },
+    get: (type: ElementType | symbol) =>
+      isElementFunction(type) ? config.getContext(type) : undefined,
   }
 
-  render = (nextProps: ElementProps): [RemixNode, Array<() => void>] => {
-    if (this.#removed) {
-      console.warn('render called after component was removed, potential application memory leak')
-      return [null, []]
-    }
+  let handle: Handle<ElementProps, C> = {
+    id: config.id,
+    props,
+    update() {
+      if (removed) return Promise.resolve(AbortSignal.abort())
 
-    this.#abortRenderSignal()
-    syncProps(this.#props, nextProps)
-
-    let renderFn = this.#renderFn
-
-    if (renderFn === undefined) {
-      let initialize = this.#config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
-      let result: unknown
-      this.#phase = 'setup'
-      try {
-        result = initialize(this.#handle)
-      } finally {
-        this.#phase = 'idle'
-      }
-
-      if (!isRenderFn(result)) {
-        let name = this.#config.type.name || 'Anonymous'
-        throw new Error(`${name} must return a render function, received ${typeof result}`)
-      }
-
-      renderFn = result
-      this.#renderFn = renderFn
-    }
-
-    let element: RemixNode
-    this.#phase = 'render'
-    try {
-      element = renderFn()
-    } finally {
-      this.#phase = 'idle'
-    }
-
-    return [element, this.#dequeueTasks()]
-  }
-
-  remove = (): Array<() => void> => {
-    if (this.#removed) return EMPTY_TASKS
-    this.#removed = true
-    this.#connectedController?.abort()
-    this.#abortRenderSignal()
-    if (this.#tasks.length === 0) return EMPTY_TASKS
-    return this.#dequeueTasks((sharedAbortedSignal ??= AbortSignal.abort()))
-  }
-
-  setScheduleUpdate = (queue: UpdateQueue, vnode: object, domParent: ParentNode): void => {
-    this.#updateQueue = queue
-    this.#updateVNode = vnode
-    this.#updateDomParent = domParent
-  }
-
-  getContextValue = (): C | undefined => this.#contextValue
-
-  isRemoved = (): boolean => this.#removed
-
-  #createHandle(): Handle<ElementProps, C> {
-    let component = this
-    let context: Context<C> = {
-      set: (value: C) => {
-        this.#contextValue = value
-      },
-      get: (type: ElementType | symbol) =>
-        isElementFunction(type) ? this.#config.getContext(type) : undefined,
-    }
-
-    return {
-      id: this.#config.id,
-      props: this.#props,
-      update: () => {
-        if (component.#removed) return Promise.resolve(AbortSignal.abort())
-
-        let name = component.#config.type.name || 'Anonymous'
-        if (component.#phase === 'setup') {
-          console.warn(
-            `Ignored handle.update() while ${name} is running its setup function. The initial render includes setup changes.`,
-          )
-          return new Promise((resolve) => {
-            this.#tasks.push((signal) => resolve(signal))
-          })
-        }
-        if (component.#phase !== 'idle') {
-          throw new Error(
-            `Cannot call handle.update() while ${name} is running its ${component.#phase} function. Call it from an event handler or handle.queueTask() instead.`,
-          )
-        }
-        if (component.#updateQueue === undefined) {
-          throw new Error(
-            `Cannot call handle.update() before ${name}'s initial render commits. Call it from an event handler or handle.queueTask() instead.`,
-          )
-        }
-
+      if (phase === 'setup') {
+        console.warn(
+          `Ignored handle.update() while ${getComponentName(config)} is running its setup function. The initial render includes setup changes.`,
+        )
         return new Promise((resolve) => {
-          this.#tasks.push((signal) => resolve(signal))
-          this.#scheduleUpdate()
+          tasks.push((signal) => resolve(signal))
         })
+      }
+      if (phase !== 'idle') {
+        throw new Error(
+          `Cannot call handle.update() while ${getComponentName(config)} is running its ${phase} function. Call it from an event handler or handle.queueTask() instead.`,
+        )
+      }
+      let queue = updateQueue
+      let vnode = updateVNode
+      let domParent = updateDomParent
+      // setScheduleUpdate() sets all three together when the initial render commits.
+      if (!queue || !vnode || !domParent) {
+        throw new Error(
+          `Cannot call handle.update() before ${getComponentName(config)}'s initial render commits. Call it from an event handler or handle.queueTask() instead.`,
+        )
+      }
+
+      return new Promise((resolve) => {
+        tasks.push((signal) => resolve(signal))
+        queue.enqueue(vnode, domParent)
+      })
+    },
+    queueTask(task: Task) {
+      tasks.push(task)
+    },
+    frame: config.frame,
+    frames: {
+      get top() {
+        return config.getTopFrame?.() ?? config.frame
       },
-      queueTask: (task: Task) => {
-        this.#tasks.push(task)
+      get(name: string) {
+        return config.getFrameByName(name)
       },
-      frame: this.#config.frame,
-      frames: {
-        get top() {
-          return component.#config.getTopFrame?.() ?? component.#config.frame
-        },
-        get(name: string) {
-          return component.#config.getFrameByName(name)
-        },
-      },
-      context,
-      get signal() {
-        return component.#config.signal ?? component.#connectedSignal()
-      },
+    },
+    context,
+    get signal() {
+      return config.signal ?? (connectedController ??= new AbortController()).signal
+    },
+  }
+
+  function dequeueTasks(signal?: AbortSignal): Array<() => void> {
+    if (tasks.length === 0) return EMPTY_TASKS
+
+    if (signal === undefined && tasks.some((task) => task.length >= 1)) {
+      renderController ??= new AbortController()
     }
-  }
 
-  #connectedSignal(): AbortSignal {
-    this.#connectedController ??= new AbortController()
-    return this.#connectedController.signal
-  }
-
-  #abortRenderSignal(): void {
-    this.#renderController?.abort()
-    this.#renderController = undefined
-  }
-
-  #dequeueTasks(signal?: AbortSignal): Array<() => void> {
-    if (this.#tasks.length === 0) return EMPTY_TASKS
-
-    let needsSignal = signal === undefined && this.#tasks.some((task) => task.length >= 1)
-
-    if (needsSignal) {
-      this.#renderController ??= new AbortController()
-    }
-
-    signal ??= this.#renderController?.signal
+    signal ??= renderController?.signal
     signal ??= sharedAbortedSignal ??= AbortSignal.abort()
-    let tasks = this.#tasks.splice(0, this.#tasks.length)
-    return tasks.map((task) => () => task(signal))
+    return tasks.splice(0, tasks.length).map((task) => () => task(signal))
+  }
+
+  return {
+    frame: config.frame,
+    render(nextProps) {
+      if (removed) {
+        console.warn('render called after component was removed, potential application memory leak')
+        return [null, []]
+      }
+
+      renderController?.abort()
+      renderController = undefined
+      syncProps(props, nextProps)
+
+      if (renderFn === undefined) {
+        let initialize = config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
+        let result: unknown
+        phase = 'setup'
+        try {
+          result = initialize(handle)
+        } finally {
+          phase = 'idle'
+        }
+
+        if (!isRenderFn(result)) {
+          throw new Error(
+            `${getComponentName(config)} must return a render function, received ${typeof result}`,
+          )
+        }
+
+        renderFn = result
+      }
+
+      let element: RemixNode
+      phase = 'render'
+      try {
+        element = renderFn()
+      } finally {
+        phase = 'idle'
+      }
+
+      return [element, dequeueTasks()]
+    },
+    remove() {
+      if (removed) return EMPTY_TASKS
+      removed = true
+      connectedController?.abort()
+      renderController?.abort()
+      renderController = undefined
+      if (tasks.length === 0) return EMPTY_TASKS
+      return dequeueTasks((sharedAbortedSignal ??= AbortSignal.abort()))
+    },
+    setScheduleUpdate(queue, vnode, domParent) {
+      updateQueue = queue
+      updateVNode = vnode
+      updateDomParent = domParent
+    },
+    getContextValue: () => contextValue,
+    isRemoved: () => removed,
   }
 }
 
 function isRenderFn(value: unknown): value is RenderFn {
   return typeof value === 'function'
+}
+
+function getComponentName(config: ComponentConfig): string {
+  return config.type.name || 'Anonymous'
 }
 
 function isElementFunction(value: unknown): value is ElementFunction {
