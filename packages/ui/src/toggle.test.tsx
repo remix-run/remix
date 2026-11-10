@@ -3,6 +3,7 @@ import { afterEach, describe, it } from '@remix-run/test'
 import { createRoot, type RemixNode } from '@remix-run/component'
 
 import { ToggleChangeEvent, onToggleChange, toggle } from './toggle.ts'
+import { pointer } from './test/pointer.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
@@ -72,6 +73,36 @@ describe('toggle', () => {
     expect(changes).toEqual([false])
     expect(events[0]).toBeInstanceOf(ToggleChangeEvent)
     expect(events[0]?.checked).toBe(false)
+  })
+
+  it('toggles on the click, once, for native inputs and custom hosts', () => {
+    let changes: boolean[] = []
+    let { container, root } = renderApp(
+      <div>
+        <input
+          aria-label="Native"
+          mix={toggle({ onCheckedChange: (checked) => changes.push(checked) })}
+        />
+        <button mix={toggle({ onCheckedChange: (checked) => changes.push(checked) })}>
+          Custom
+        </button>
+      </div>,
+    )
+    let input = container.querySelector('input') as HTMLInputElement
+    let button = container.querySelector('button') as HTMLButtonElement
+
+    for (let host of [input, button]) {
+      pointer(host, 'pointerdown')
+      root.flush()
+      expect(changes).toEqual(host === input ? [] : [true])
+      pointer(host, 'pointerup')
+      host.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+      root.flush()
+    }
+
+    expect(changes).toEqual([true, true])
+    expect(input.checked).toBe(true)
+    expect(button.getAttribute('aria-checked')).toBe('true')
   })
 
   it('supports non-input hosts with switch role and space-key toggling', () => {

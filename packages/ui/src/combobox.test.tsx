@@ -5,6 +5,7 @@ import { createRoot, type Handle, type Props, type RemixNode } from '@remix-run/
 
 import { onComboboxChange, type ComboboxChangeEvent, type ComboboxHandle } from './combobox.tsx'
 import * as combobox from './combobox.tsx'
+import { pointer as mousePointer } from './test/pointer.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
@@ -218,6 +219,14 @@ afterEach(() => {
 })
 
 describe('Combobox', () => {
+  it('keeps the input text cursor and text selection', () => {
+    let { container } = renderApp(renderCombobox())
+    let style = getComputedStyle(container.querySelector('input[type="text"]') as HTMLElement)
+
+    expect(style.cursor).not.toBe('default')
+    expect(style.userSelect).not.toBe('none')
+  })
+
   it('applies the raw defaultValue to the input text while keeping the hidden input committed', async () => {
     let { container, root } = renderApp(renderCombobox({ defaultValue: 'react' }))
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
@@ -424,6 +433,33 @@ describe('Combobox', () => {
     expect(input.getAttribute('aria-activedescendant')).toBe(react.id)
   })
 
+  it('commits an option on the click, not on press, keeping focus on the input', async () => {
+    let changes: ComboboxChangeEvent[] = []
+    let { container, root } = renderObservedCombobox(changes)
+    let input = container.querySelector('input[role="combobox"]') as HTMLInputElement
+    input.focus()
+    changeInputValue(input, 'rea')
+    await settle(root)
+
+    let react = getOptionByText(container, 'React')
+    mousePointer(react, 'pointerdown')
+    await settle(root)
+
+    expect(input.value).toBe('rea')
+    expect(changes).toHaveLength(0)
+    expect(document.activeElement).toBe(input)
+
+    mousePointer(react, 'pointerup')
+    pointer(react, 'click')
+
+    expect(input.value).toBe('React framework')
+
+    await settle(root)
+
+    expect(container.querySelector<HTMLInputElement>('input[type="hidden"]')?.value).toBe('react')
+    expect(changes).toHaveLength(1)
+  })
+
   it('clicking the focused input opens the list without an active item when nothing is selected', async () => {
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
@@ -437,6 +473,41 @@ describe('Combobox', () => {
     expect(document.activeElement).toBe(input)
     expect(surface.getAttribute('data-show-reason')).toBe('nav')
     expect(input.getAttribute('aria-activedescendant')).toBe(null)
+  })
+
+  it('opens on the click of the input, not on mouse press', async () => {
+    let { container, root } = renderApp(renderCombobox())
+    let input = container.querySelector('input[type="text"]') as HTMLInputElement
+    let surface = container.querySelector('[data-popover]') as HTMLElement
+    input.focus()
+
+    mousePointer(input, 'pointerdown')
+    await settleFrames(root)
+
+    expect(surface.matches('[data-open]')).toBe(false)
+    expect(document.activeElement).toBe(input)
+
+    mousePointer(input, 'pointerup')
+    pointer(input, 'click')
+    await settleFrames(root)
+
+    expect(surface.matches('[data-open]')).toBe(true)
+  })
+
+  it('waits for the click when the input is pressed by touch', async () => {
+    let { container, root } = renderApp(renderCombobox())
+    let input = container.querySelector('input[type="text"]') as HTMLInputElement
+    let surface = container.querySelector('[data-popover]') as HTMLElement
+    input.focus()
+
+    mousePointer(input, 'pointerdown', { pointerType: 'touch' })
+    await settleFrames(root)
+    expect(surface.matches('[data-open]')).toBe(false)
+
+    pointer(input, 'click')
+    await settleFrames(root)
+
+    expect(surface.matches('[data-open]')).toBe(true)
   })
 
   it('clicking the focused input activates the selected item when one exists', async () => {
@@ -536,6 +607,8 @@ describe('Combobox', () => {
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
     let surface = container.querySelector('[data-popover]') as HTMLElement
     let react = getOptionByText(container, 'React')
+    let remix = getOptionByText(container, 'Remix')
+    let reactRouter = getOptionByText(container, 'React Router')
 
     input.focus()
     changeInputValue(input, 'rea')
@@ -558,6 +631,11 @@ describe('Combobox', () => {
     expect(changes[0]?.value).toBe('react')
     expect(surface.matches('[data-open]')).toBe(false)
     expect(input.getAttribute('data-surface-visible')).toBe('true')
+    expect(input.getAttribute('aria-activedescendant')).toBe(react.id)
+    expect(remix.hidden).toBe(true)
+    expect(getComputedStyle(remix).display).toBe('none')
+    expect(reactRouter.hidden).toBe(false)
+    expect(getComputedStyle(reactRouter).display).not.toBe('none')
 
     await finishCloseTransition(surface)
     await settle(root)

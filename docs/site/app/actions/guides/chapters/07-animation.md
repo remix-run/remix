@@ -56,6 +56,8 @@ export function PressableCard(handle: Handle<{ children: RemixNode }>) {
 
 Use the animation helpers from [`@remix-run/ui/animation`](/api/ui/animation/) when the motion depends on rendering state, such as a node entering, a node exiting, a keyed item moving, or an event that needs an interruptible animation.
 
+This example tracks a pressed state with [`press()`](/api/ui/press/) from `@remix-run/ui/press`. `onPressStart` and `onPressEnd` fire for mouse, touch, pen, and Enter or Space presses, and `onPressEnd` also fires when the press is cancelled by moving off the element, a scroll, Escape, or losing focus. `activate: false` keeps the control's activation on the native click, so the press only drives feedback. CSS `:active` can't show a keyboard press.
+
 ::frame{src="/examples/07-animation/press-state/"}
 
 ## Entrance and exit animations {#entrance-and-exit-animations}

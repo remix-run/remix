@@ -5,6 +5,7 @@ import * as popover from '../popover.ts'
 import * as menu from '../menu.tsx'
 import * as select from '../select.tsx'
 import * as combobox from '../combobox.tsx'
+import { press } from '../press.ts'
 
 function FixturePopover(handle: Handle<{ open: boolean; onHide(): void }>) {
   return () => (
@@ -23,6 +24,7 @@ function DialogFixture(handle: Handle) {
   let outsideClicks = 0
   let modal = new URLSearchParams(location.search).get('modal') !== 'false'
   let detached = new URLSearchParams(location.search).has('detached')
+  let pressed = new URLSearchParams(location.search).has('press')
   function hidePopover() {
     popoverOpen = false
     void handle.update()
@@ -53,11 +55,11 @@ function DialogFixture(handle: Handle) {
             }
           }}
         >
-          <button id="trigger" mix={dialog.trigger()}>
+          <button id="trigger" mix={[dialog.trigger(), pressed && press()]}>
             Open dialog
           </button>
           {!modal ? (
-            <button id="second-trigger" mix={dialog.trigger()}>
+            <button id="second-trigger" mix={[dialog.trigger(), pressed && press()]}>
               Another opener
             </button>
           ) : null}
@@ -114,7 +116,7 @@ function DialogFixture(handle: Handle) {
                   confirmation = value
                 }}
               >
-                <button id="child-trigger" mix={dialog.trigger()}>
+                <button id="child-trigger" mix={[dialog.trigger(), pressed && press()]}>
                   Open confirmation
                 </button>
                 <Portal>
@@ -123,13 +125,13 @@ function DialogFixture(handle: Handle) {
                 <Portal>
                   <div data-testid="child-dialog" mix={dialog.surface()}>
                     <h2 mix={dialog.title()}>Confirm changes</h2>
-                    <button id="child-close" mix={dialog.close()}>
+                    <button id="child-close" mix={[dialog.close(), pressed && press()]}>
                       Confirm
                     </button>
                   </div>
                 </Portal>
               </dialog.Context>
-              <button id="close" mix={dialog.close()}>
+              <button id="close" mix={[dialog.close(), pressed && press()]}>
                 Done
               </button>
               <menu.Context label="Actions">

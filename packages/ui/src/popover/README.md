@@ -67,7 +67,7 @@ Provides shared coordination for one popover instance. Render the anchor, any fo
 
 ### `popover.anchor(options)`
 
-Registers the host element as the anchor for the current popover surface.
+Registers the host element as the anchor for the current popover surface. A primary-button mouse press on the anchor doesn't take focus when the surface has a `focusOnShow()` target, so an anchor that also uses [`press()`](https://github.com/remix-run/remix/blob/main/packages/ui/src/press/README.md) leaves focus on that target, as a click does. Touch, pen, other buttons and anchors without an initial focus target keep the native press.
 
 ### `popover.surface({ open, onHide, ... })`
 
@@ -78,6 +78,7 @@ Turns the host into the controlled popover surface.
 - Calls `onHide` for `Escape` and outside clicks with a `PopoverHideRequest`.
 - Restores focus to the registered hide target unless `restoreFocusOnHide: false`.
 - Accepts `closeOnAnchorClick: false` when the anchor must stay interactive while open.
+- Ignores the `click` of a press that started inside the surface, or before the surface opened. A popover opened on press therefore isn't dismissed when the mouse is released outside it.
 
 Apply this to the actual floating root, not a nested child.
 

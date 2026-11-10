@@ -6,6 +6,7 @@ import { createRoot, on, type Handle, type Props, type RemixNode } from '@remix-
 import * as popover from '@remix-run/ui/popover'
 import { onSelectChange, SelectChangeEvent } from './select.tsx'
 import * as select from './select.tsx'
+import { mouseClick, pointer } from './test/pointer.ts'
 
 const flashDurationMs = 60
 let roots: ReturnType<typeof createRoot>[] = []
@@ -28,6 +29,7 @@ function TestSelect(
     children?: RemixNode
     defaultLabel: string
     defaultValue?: string | null
+    disabled?: boolean
     id?: string
     mix?: Props<'button'>['mix']
     name?: string
@@ -35,10 +37,15 @@ function TestSelect(
   }>,
 ): () => RemixNode {
   return () => {
-    let { children, defaultLabel, defaultValue, id, mix, name, type } = handle.props
+    let { children, defaultLabel, defaultValue, disabled, id, mix, name, type } = handle.props
 
     return (
-      <select.Context defaultLabel={defaultLabel} defaultValue={defaultValue} name={name}>
+      <select.Context
+        defaultLabel={defaultLabel}
+        defaultValue={defaultValue}
+        disabled={disabled}
+        name={name}
+      >
         <button id={id} type={type ?? 'button'} mix={[select.trigger(), mix]}>
           <SelectLabel />
         </button>
@@ -359,6 +366,306 @@ describe('Select', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     expect(surface.matches('[data-open]')).toBe(false)
     expect(document.activeElement).toBe(trigger)
+  })
+
+  describe('press', () => {
+    it('opens on mouse pointerdown and stays open through the release and its click', async () => {
+      let { container, root } = renderApp(renderSelect())
+      let trigger = getTrigger(container)
+      let surface = getSurface(container)
+
+      pointer(trigger, 'pointerdown')
+      await settleFrames(root)
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('true')
+      expect(surface.matches('[data-open]')).toBe(true)
+      expect(document.activeElement).toBe(getList(container))
+
+      pointer(trigger, 'pointerup')
+      click(trigger)
+      await settleFrames(root)
+
+      expect(surface.matches('[data-open]')).toBe(true)
+    })
+
+    it('does not dismiss when the popup opened under the cursor and the click lands outside it', async () => {
+      let { container, root } = renderApp(renderSelect())
+      let surface = getSurface(container)
+
+      pointer(getTrigger(container), 'pointerdown')
+      await settleFrames(root)
+
+      pointer(getOptionByText(container, 'Remix'), 'pointerup')
+      click(container)
+      await settleFrames(root)
+
+      expect(surface.matches('[data-open]')).toBe(true)
+    })
+
+    it('closes on the next mouse press of the trigger', async () => {
+      let { container, root } = renderApp(renderSelect())
+      let trigger = getTrigger(container)
+      let surface = getSurface(container)
+
+      mouseClick(trigger)
+      await settleFrames(root)
+      expect(surface.matches('[data-open]')).toBe(true)
+
+      mouseClick(trigger)
+      await settleFrames(root)
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('false')
+      expect(surface.matches('[data-open]')).toBe(false)
+    })
+
+    it('waits for the click on touch and pen presses', async () => {
+      let { container, root } = renderApp(renderSelect())
+      let trigger = getTrigger(container)
+      let surface = getSurface(container)
+
+      for (let pointerType of ['touch', 'pen']) {
+        pointer(trigger, 'pointerdown', { pointerType })
+        await settleFrames(root)
+        expect(surface.matches('[data-open]')).toBe(false)
+      }
+
+      click(trigger)
+      await settleFrames(root)
+
+      expect(surface.matches('[data-open]')).toBe(true)
+    })
+
+    it('still opens and closes from clicks without a mouse press, like the keyboard', async () => {
+      let { container, root } = renderApp(renderSelect())
+      let surface = getSurface(container)
+
+      await openSelect(container, root)
+      expect(surface.matches('[data-open]')).toBe(true)
+
+      click(getTrigger(container))
+      await settleFrames(root)
+
+      expect(surface.matches('[data-open]')).toBe(false)
+    })
+
+    it('does not open from a press when disabled', async () => {
+      let { container, root } = renderApp(
+        <TestSelect defaultLabel="Select a framework" disabled>
+          <TestOption label="Remix framework" value="remix" />
+        </TestSelect>,
+      )
+
+      pointer(getTrigger(container), 'pointerdown')
+      await settleFrames(root)
+
+      expect(getSurface(container).matches('[data-open]')).toBe(false)
+    })
+
+    it('selects an option on release, not on press, once', async (t) => {
+      let changes: SelectChangeEvent[] = []
+      let { container, root } = renderApp(
+        <div
+          mix={onSelectChange((event) => {
+            changes.push(event)
+          })}
+        >
+          {renderSelect()}
+        </div>,
+      )
+      let surface = getSurface(container)
+      await openSelect(container, root)
+
+      timers = t.useFakeTimers()
+
+      let react = getOptionByText(container, 'React')
+      pointer(react, 'pointerdown')
+      await settle(root)
+      expect(changes).toEqual([])
+      expect(surface.matches('[data-open]')).toBe(true)
+
+      pointer(react, 'pointerup')
+      react.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+      await finishSelectUpdate(surface, root)
+
+      expect(changes.map((change) => change.value)).toEqual(['react'])
+      expect(surface.matches('[data-open]')).toBe(false)
+    })
+
+    it('selects the option a press that started on another option is released over', async (t) => {
+      let changes: SelectChangeEvent[] = []
+      let { container, root } = renderApp(
+        <div
+          mix={onSelectChange((event) => {
+            changes.push(event)
+          })}
+        >
+          {renderSelect()}
+        </div>,
+      )
+      let surface = getSurface(container)
+      await openSelect(container, root)
+
+      timers = t.useFakeTimers()
+
+      pointer(getOptionByText(container, 'Remix'), 'pointerdown')
+      pointer(getOptionByText(container, 'React'), 'pointerup')
+      await finishSelectUpdate(surface, root)
+
+      expect(changes.map((change) => change.value)).toEqual(['react'])
+    })
+
+    it('selects nothing when a press that started on an option is released outside the list', async () => {
+      let changes: SelectChangeEvent[] = []
+      let { container, root } = renderApp(
+        <div
+          mix={onSelectChange((event) => {
+            changes.push(event)
+          })}
+        >
+          {renderSelect()}
+        </div>,
+      )
+      await openSelect(container, root)
+
+      pointer(getOptionByText(container, 'React'), 'pointerdown')
+      pointer(container, 'pointerup')
+      click(container)
+      await settleFrames(root)
+
+      expect(changes).toEqual([])
+      expect(getSurface(container).matches('[data-open]')).toBe(true)
+    })
+
+    it('does not select a disabled option on a mouse click', async () => {
+      let changes: SelectChangeEvent[] = []
+      let { container, root } = renderApp(
+        <div
+          mix={onSelectChange((event) => {
+            changes.push(event)
+          })}
+        >
+          {renderSelect()}
+        </div>,
+      )
+      await openSelect(container, root)
+
+      mouseClick(getOptionByText(container, 'React Router'))
+      await settleFrames(root)
+
+      expect(changes).toEqual([])
+      expect(getSurface(container).matches('[data-open]')).toBe(true)
+    })
+
+    it('still selects an option from a touch tap', async (t) => {
+      let changes: SelectChangeEvent[] = []
+      let { container, root } = renderApp(
+        <div
+          mix={onSelectChange((event) => {
+            changes.push(event)
+          })}
+        >
+          {renderSelect()}
+        </div>,
+      )
+      await openSelect(container, root)
+      timers = t.useFakeTimers()
+
+      let react = getOptionByText(container, 'React')
+      pointer(react, 'pointerdown', { pointerType: 'touch' })
+      await settle(root)
+      expect(changes).toEqual([])
+
+      click(react)
+      await settle(root)
+      expect(changes.map((change) => change.value)).toEqual(['react'])
+    })
+
+    it('selects the option the mouse is released over after pressing the trigger and dragging', async (t) => {
+      let changes: SelectChangeEvent[] = []
+      let { container, root } = renderApp(
+        <div
+          mix={onSelectChange((event) => {
+            changes.push(event)
+          })}
+        >
+          {renderSelect()}
+        </div>,
+      )
+      let surface = getSurface(container)
+
+      pointer(getTrigger(container), 'pointerdown', { clientX: 10, clientY: 10 })
+      await settleFrames(root)
+
+      timers = t.useFakeTimers()
+
+      pointer(getOptionByText(container, 'React'), 'pointerup', { clientX: 10, clientY: 60 })
+      await settle(root)
+      await finishSelectUpdate(surface, root)
+
+      expect(changes.map((change) => change.value)).toEqual(['react'])
+      expect(surface.matches('[data-open]')).toBe(false)
+    })
+
+    it('highlights the option under the mouse while the trigger press is still held', async () => {
+      let { container, root } = renderApp(renderSelect())
+      let react = getOptionByText(container, 'React')
+
+      pointer(getTrigger(container), 'pointerdown', { clientX: 10, clientY: 10 })
+      await settleFrames(root)
+
+      react.dispatchEvent(
+        new PointerEvent('pointermove', { bubbles: true, pointerType: 'mouse', buttons: 1 }),
+      )
+      await settle(root)
+
+      expect(react.getAttribute('data-highlighted')).toBe('true')
+    })
+
+    it('does not select on a release at the press position', async () => {
+      let changes: SelectChangeEvent[] = []
+      let { container, root } = renderApp(
+        <div
+          mix={onSelectChange((event) => {
+            changes.push(event)
+          })}
+        >
+          {renderSelect()}
+        </div>,
+      )
+      let surface = getSurface(container)
+
+      pointer(getTrigger(container), 'pointerdown', { clientX: 10, clientY: 10 })
+      await settleFrames(root)
+
+      pointer(getOptionByText(container, 'Remix'), 'pointerup', { clientX: 12, clientY: 11 })
+      click(container)
+      await settleFrames(root)
+
+      expect(changes).toEqual([])
+      expect(surface.matches('[data-open]')).toBe(true)
+    })
+
+    it('does not select a disabled option on release', async () => {
+      let changes: SelectChangeEvent[] = []
+      let { container, root } = renderApp(
+        <div
+          mix={onSelectChange((event) => {
+            changes.push(event)
+          })}
+        >
+          {renderSelect()}
+        </div>,
+      )
+
+      pointer(getTrigger(container), 'pointerdown', { clientX: 10, clientY: 10 })
+      await settleFrames(root)
+
+      pointer(getOptionByText(container, 'React Router'), 'pointerup', { clientX: 10, clientY: 60 })
+      await settleFrames(root)
+
+      expect(changes).toEqual([])
+      expect(getSurface(container).matches('[data-open]')).toBe(true)
+    })
   })
 
   it('lets an outer popover focus the select trigger with popover.focusOnShow()', async () => {

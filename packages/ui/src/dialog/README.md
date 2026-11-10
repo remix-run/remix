@@ -56,6 +56,8 @@ The surface's focus options accept an element or a callback returning one. `fals
 | `closeOnEscape`       | `true`  | Escape requests closing the topmost open layer.                                                                                    |
 | `closeOnOutsideClick` | `true`  | Outside clicks request closing. Also controls focus-departure dismissal in non-modal mode.                                         |
 
+`dialog.trigger()` and `dialog.close()` activate on click. Add [`press()`](https://github.com/remix-run/remix/blob/main/packages/ui/src/press/README.md) to open or close on mouse press: a mouse press on either button doesn't move focus to it, so the dialog's own focus handling isn't taken back, and a dialog opened on press isn't dismissed by the same gesture's release over its backdrop or outside the surface.
+
 `onOpenChange` receives a cancelable `DialogChangeEvent` with `open`, `reason`, and `sourceEvent`. Reasons are `trigger`, `close`, `escape-key`, `outside-click`, `focus-out`, and `programmatic`. Call `event.preventDefault()` to reject the request. The same event bubbles through the surface's DOM ancestors as `rmx:dialog-change`; use `dialog.onDialogChange(handler, captureBoolean?)` to listen on an ancestor. Inspect `event.target` when listening around nested dialogs. With a portal, use `onOpenChange` or attach the event handler inside the portal.
 
 `onOpenChangeComplete(open)` runs after the surface and backdrop finish their finite animations and transitions. Infinite decorative animations do not delay completion. A later state change supersedes an unfinished transition.

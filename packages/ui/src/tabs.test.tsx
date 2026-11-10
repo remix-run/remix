@@ -5,6 +5,7 @@ import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
 import { renderToString } from '@remix-run/component/server'
 
 import * as tabs from './tabs.ts'
+import { mouseClick, pointer } from './test/pointer.ts'
 import { TabsChangeEvent, onTabsChange, type TabsContextProps } from './tabs.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
@@ -207,6 +208,41 @@ describe('tabs', () => {
     expect(changes).toEqual(['activity'])
     expect(tabButtons[0].getAttribute('aria-selected')).toBe('false')
     expect(tabButtons[1].getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('activates a tab on the click, not on mouse press', () => {
+    let { container, root } = renderApp(renderExampleTabs({ defaultActiveTab: 'overview' }))
+    let tabButtons = getTabs(container)
+
+    pointer(tabButtons[1], 'pointerdown')
+    root.flush()
+    expect(tabButtons[1].getAttribute('aria-selected')).toBe('false')
+
+    pointer(tabButtons[1], 'pointerup')
+    tabButtons[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    root.flush()
+
+    expect(tabButtons[1].getAttribute('aria-selected')).toBe('true')
+    expect(getPanels(container)[1].hidden).toBe(false)
+  })
+
+  it('activates once for a full mouse click and ignores disabled tabs', () => {
+    let changes: string[] = []
+    let { container, root } = renderApp(
+      renderExampleTabs({
+        defaultActiveTab: 'overview',
+        onActiveTabChange(activeTab) {
+          changes.push(activeTab)
+        },
+      }),
+    )
+    let tabButtons = getTabs(container)
+
+    mouseClick(tabButtons[1])
+    mouseClick(tabButtons[2])
+    root.flush()
+
+    expect(changes).toEqual(['activity'])
   })
 
   it('dispatches a bubbling Tabs change event from the root', () => {

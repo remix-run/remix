@@ -5,6 +5,7 @@ import { createRoot, ref, type Handle, type Props, type RemixNode } from '@remix
 
 import * as menu from './menu.tsx'
 import { onMenuSelect, type MenuSelectEvent } from './menu.tsx'
+import { mouseClick, pointer } from './test/pointer.ts'
 
 const flashDurationMs = 60
 let roots: Array<ReturnType<typeof createRoot>> = []
@@ -370,6 +371,203 @@ describe('menu', () => {
 
     expect(rootSurface.matches('[data-open]')).toBe(false)
     expect(document.activeElement).toBe(trigger)
+  })
+
+  describe('press', () => {
+    it('opens on mouse pointerdown and stays open through the release and its click', async () => {
+      let { container, root } = renderMenu()
+      let trigger = getButtonByText(container, 'View')
+      let [rootSurface] = getSurfaces(container)
+      let [rootList] = getLists(container)
+
+      pointer(trigger, 'pointerdown')
+      await settleFrames(root)
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('true')
+      expect(rootSurface.matches('[data-open]')).toBe(true)
+      expect(document.activeElement).toBe(rootList)
+
+      pointer(trigger, 'pointerup')
+      click(container)
+      click(trigger)
+      await settleFrames(root)
+
+      expect(rootSurface.matches('[data-open]')).toBe(true)
+    })
+
+    it('closes on the next mouse press of the trigger', async () => {
+      let { container, root } = renderMenu()
+      let trigger = getButtonByText(container, 'View')
+      let [rootSurface] = getSurfaces(container)
+
+      mouseClick(trigger)
+      await settleFrames(root)
+      expect(rootSurface.matches('[data-open]')).toBe(true)
+
+      mouseClick(trigger)
+      await settle(root)
+      await finishDismissal(rootSurface, root)
+
+      expect(rootSurface.matches('[data-open]')).toBe(false)
+    })
+
+    it('waits for the click on touch and pen presses', async () => {
+      let { container, root } = renderMenu()
+      let trigger = getButtonByText(container, 'View')
+      let [rootSurface] = getSurfaces(container)
+
+      for (let pointerType of ['touch', 'pen']) {
+        pointer(trigger, 'pointerdown', { pointerType })
+        await settleFrames(root)
+        expect(rootSurface.matches('[data-open]')).toBe(false)
+      }
+
+      click(trigger)
+      await settleFrames(root)
+
+      expect(rootSurface.matches('[data-open]')).toBe(true)
+    })
+
+    it('commits the item the mouse is released over after pressing the trigger and dragging', async (t) => {
+      let selections: MenuSelectEvent[] = []
+      let { container, root } = renderMenu((event) => {
+        selections.push(event)
+      })
+      let trigger = getButtonByText(container, 'View')
+      let [rootSurface] = getSurfaces(container)
+
+      pointer(trigger, 'pointerdown', { clientX: 10, clientY: 10 })
+      await settleFrames(root)
+
+      timers = t.useFakeTimers()
+
+      pointer(getMenuItemByText(container, 'Word wrap'), 'pointerup', { clientX: 10, clientY: 60 })
+      await settle(root)
+      await finishSelectionFlash(root)
+      await finishDismissal(rootSurface, root)
+
+      expect(selections.map((event) => event.item.name)).toEqual(['wordWrap'])
+      expect(rootSurface.matches('[data-open]')).toBe(false)
+    })
+
+    it('activates an item on release, not on press, once', async (t) => {
+      let selections: MenuSelectEvent[] = []
+      let { container, root } = renderMenu((event) => {
+        selections.push(event)
+      })
+      let trigger = getButtonByText(container, 'View')
+      let [rootSurface] = getSurfaces(container)
+      key(trigger, 'ArrowDown')
+      await settleFrames(root)
+
+      timers = t.useFakeTimers()
+
+      let item = getMenuItemsByText(container, 'Word wrap').at(-1) as HTMLElement
+      pointer(item, 'pointerdown')
+      await settle(root)
+      expect(selections).toEqual([])
+
+      pointer(item, 'pointerup')
+      click(item)
+      await finishSelectionFlash(root)
+      await finishDismissal(rootSurface, root)
+
+      expect(selections.map((event) => event.item.name)).toEqual(['wordWrap'])
+      expect(item.getAttribute('aria-checked')).toBe('true')
+    })
+
+    it('activates the item a press that started on another item is released over', async (t) => {
+      let selections: MenuSelectEvent[] = []
+      let { container, root } = renderMenu((event) => {
+        selections.push(event)
+      })
+      let [rootSurface] = getSurfaces(container)
+      key(getButtonByText(container, 'View'), 'ArrowDown')
+      await settleFrames(root)
+
+      timers = t.useFakeTimers()
+
+      pointer(getMenuItemsByText(container, 'Zoom')[0], 'pointerdown')
+      await settle(root)
+      expect(selections).toEqual([])
+
+      pointer(getMenuItemsByText(container, 'Word wrap').at(-1) as HTMLElement, 'pointerup', {
+        clientX: 10,
+        clientY: 60,
+      })
+      await finishSelectionFlash(root)
+      await finishDismissal(rootSurface, root)
+
+      expect(selections.map((event) => event.item.name)).toEqual(['wordWrap'])
+    })
+
+    it('activates nothing when a press that started on an item is released outside the menu', async () => {
+      let selections: MenuSelectEvent[] = []
+      let { container, root } = renderMenu((event) => {
+        selections.push(event)
+      })
+      key(getButtonByText(container, 'View'), 'ArrowDown')
+      await settleFrames(root)
+
+      pointer(getMenuItemsByText(container, 'Word wrap').at(-1) as HTMLElement, 'pointerdown')
+      pointer(container, 'pointerup', { clientX: 300, clientY: 300 })
+      click(container)
+      await settleFrames(root)
+
+      expect(selections).toEqual([])
+    })
+
+    it('opens a submenu on click of its trigger, not on press', async () => {
+      let { container, root } = renderMenu()
+      let trigger = getButtonByText(container, 'View')
+      let zoom = getMenuItemsByText(container, 'Zoom')[0]
+      let [, childSurface] = getSurfaces(container)
+      key(trigger, 'ArrowDown')
+      await settleFrames(root)
+
+      pointer(zoom, 'pointerdown')
+      await settle(root)
+      expect(childSurface.matches('[data-open]')).toBe(false)
+
+      pointer(zoom, 'pointerup')
+      click(zoom)
+      await settle(root)
+      expect(childSurface.matches('[data-open]')).toBe(true)
+    })
+
+    it('does not activate a disabled item on a mouse click', async () => {
+      let selections: MenuSelectEvent[] = []
+      let { container, root } = renderMenu((event) => {
+        selections.push(event)
+      })
+      key(getButtonByText(container, 'View'), 'ArrowDown')
+      await settleFrames(root)
+
+      mouseClick(getMenuItemByText(container, 'Minimap'))
+      await settleFrames(root)
+
+      expect(selections).toEqual([])
+    })
+
+    it('does not commit a release at the press position or over a disabled item', async () => {
+      let selections: MenuSelectEvent[] = []
+      let { container, root } = renderMenu((event) => {
+        selections.push(event)
+      })
+      let trigger = getButtonByText(container, 'View')
+      let [rootSurface] = getSurfaces(container)
+
+      pointer(trigger, 'pointerdown', { clientX: 10, clientY: 10 })
+      await settleFrames(root)
+
+      pointer(getMenuItemByText(container, 'Word wrap'), 'pointerup', { clientX: 12, clientY: 11 })
+      pointer(getMenuItemByText(container, 'Minimap'), 'pointerup', { clientX: 10, clientY: 60 })
+      click(container)
+      await settleFrames(root)
+
+      expect(selections).toEqual([])
+      expect(rootSurface.matches('[data-open]')).toBe(true)
+    })
   })
 
   it('opens from contextmenu at the pointer coordinates', async () => {
@@ -836,6 +1034,39 @@ describe('menu', () => {
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
     expect(childSurface.matches('[data-open]')).toBe(true)
+  })
+
+  it('highlights items under a held mouse button, as in a press-and-drag selection', async () => {
+    let { container, root } = renderMenu()
+    let trigger = getButtonByText(container, 'View')
+    let wordWrap = getMenuItemByText(container, 'Word wrap')
+
+    click(trigger)
+    await settleFrames(root)
+
+    wordWrap.dispatchEvent(
+      new PointerEvent('pointermove', { bubbles: true, pointerType: 'mouse', buttons: 1 }),
+    )
+    await settle(root)
+
+    expect(wordWrap.getAttribute('data-highlighted')).toBe('true')
+    expect(document.activeElement).toBe(wordWrap)
+  })
+
+  it('keeps text unselectable with a default cursor on every item role, disabled included', () => {
+    let { container } = renderMenu()
+    let items = [
+      getMenuItemByText(container, 'Word wrap'),
+      getMenuItemByText(container, 'Minimap'),
+      getMenuItemsByText(container, 'Zoom')[0],
+      getMenuItemByText(container, 'Zoom in'),
+    ]
+
+    for (let item of items) {
+      let style = getComputedStyle(item)
+      expect(style.cursor).toBe('default')
+      expect(style.userSelect).toBe('none')
+    }
   })
 
   it('unhighlights items when pointer leaves them for a separator', async () => {

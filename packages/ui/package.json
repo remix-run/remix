@@ -62,6 +62,10 @@
       "types": "./src/popover.ts",
       "default": "./src/popover.ts"
     },
+    "./press": {
+      "types": "./src/press.ts",
+      "default": "./src/press.ts"
+    },
     "./select": {
       "types": "./src/select.tsx",
       "default": "./src/select.tsx"
@@ -117,6 +121,10 @@
       "./popover": {
         "types": "./dist/popover.d.ts",
         "default": "./dist/popover.js"
+      },
+      "./press": {
+        "types": "./dist/press.d.ts",
+        "default": "./dist/press.js"
       },
       "./select": {
         "types": "./dist/select.d.ts",

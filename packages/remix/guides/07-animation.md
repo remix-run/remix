@@ -56,10 +56,13 @@ export function PressableCard(handle: Handle<{ children: RemixNode }>) {
 
 Use the animation helpers from [`@remix-run/ui/animation`](/api/ui/animation/) when the motion depends on rendering state, such as a node entering, a node exiting, a keyed item moving, or an event that needs an interruptible animation.
 
+This example tracks a pressed state with [`press()`](/api/ui/press/) from `@remix-run/ui/press`. `onPressStart` and `onPressEnd` fire for mouse, touch, pen, and Enter or Space presses, and `onPressEnd` also fires when the press is cancelled by moving off the element, a scroll, Escape, or losing focus. `activate: false` keeps the control's activation on the native click, so the press only drives feedback. CSS `:active` can't show a keyboard press.
+
 ```tsx
-import { createMixin, css, on } from "remix/component";
+import { css } from "remix/component";
 import type { Handle } from "remix/component";
 import { spring } from "@remix-run/ui/animation";
+import { press } from "@remix-run/ui/press";
 
 export function PressStateDemo(handle: Handle) {
   let pressed = false;
@@ -74,11 +77,14 @@ export function PressStateDemo(handle: Handle) {
     <div
       tabIndex={0}
       mix={[
-        onPressDown(() => {
-          setPressed(true);
-        }),
-        onPressUp(() => {
-          setPressed(false);
+        press({
+          activate: false,
+          onPressStart() {
+            setPressed(true);
+          },
+          onPressEnd() {
+            setPressed(false);
+          },
         }),
         css({
           display: "grid",
@@ -105,29 +111,6 @@ export function PressStateDemo(handle: Handle) {
     </div>
   );
 }
-
-const onPressDown = createMixin<HTMLElement, [handler: () => void]>(() => (handler) => [
-  on("pointerdown", (event) => {
-    if (event.isPrimary === false) return;
-    handler();
-  }),
-  on("keydown", (event) => {
-    if (!(event.key === "Enter" || event.key === " ") || event.repeat) return;
-    event.preventDefault();
-    handler();
-  }),
-]);
-
-const onPressUp = createMixin<HTMLElement, [handler: () => void]>(() => (handler) => [
-  on("pointerup", handler),
-  on("pointerleave", handler),
-  on("keyup", (event) => {
-    if (!(event.key === "Enter" || event.key === " ")) return;
-    event.preventDefault();
-    handler();
-  }),
-  on("blur", handler),
-]);
 ```
 
 ## Entrance and exit animations {#entrance-and-exit-animations}

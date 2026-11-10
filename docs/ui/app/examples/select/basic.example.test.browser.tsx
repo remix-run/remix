@@ -23,6 +23,6 @@ describe('Select example', () => {
       assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), false),
     )
     await waitFor(() => assert.equal(trigger.textContent?.trim(), 'Express delivery'))
-    assert.equal(document.activeElement, trigger)
+    await waitFor(() => assert.equal(document.activeElement, trigger))
   })
 })

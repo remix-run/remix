@@ -5,6 +5,7 @@ import {
   type ElementProps,
   type Handle,
   type MixinFactory,
+  on,
   type RemixNode,
 } from '@remix-run/component'
 import { anchor as positionAnchor, type AnchorOptions, type AnchorTarget } from './anchor.ts'
@@ -63,6 +64,14 @@ const anchorMixin: MixinFactory<HTMLElement, [options: AnchorOptions], ElementPr
     return (options) => {
       handle.queueTask((node) => {
         context.anchor = { target: node, options }
+      })
+
+      // A mouse press on the anchor must not move focus to it after the surface takes initial
+      // focus, which happens when the anchor activates on press (`press()`) rather than on click.
+      return on('pointerdown', (event) => {
+        if (event.pointerType === 'mouse' && event.button === 0 && context.showFocusTarget) {
+          event.preventDefault()
+        }
       })
     }
   },
@@ -154,7 +163,14 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
             if (signal.aborted || currentTransition !== transition) return
             node.removeAttribute('data-open')
             cleanup()
-            if (currentOptions.restoreFocusOnHide !== false) context.hideFocusTarget?.focus()
+            if (currentOptions.restoreFocusOnHide !== false) {
+              // Another surface may have taken focus, e.g. when a trigger opened it on press
+              // before this one was dismissed.
+              let active = node.ownerDocument.activeElement
+              if (!active || active === node.ownerDocument.body || node.contains(active)) {
+                context.hideFocusTarget?.focus()
+              }
+            }
           }
           let finished = finishAnimations([node])
           if (finished) void finished.then(finishClose)

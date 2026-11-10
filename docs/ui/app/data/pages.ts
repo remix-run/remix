@@ -22,6 +22,7 @@ import FormPage, { meta as form } from '../pages/patterns/form.tsx'
 import ListboxPage, { meta as listbox } from '../pages/patterns/listbox.tsx'
 import MenuPage, { meta as menu } from '../pages/patterns/menu.tsx'
 import PopoverPage, { meta as popover } from '../pages/patterns/popover.tsx'
+import PressPage, { meta as press } from '../pages/patterns/press.tsx'
 import SelectPage, { meta as select } from '../pages/patterns/select.tsx'
 import TabsPage, { meta as tabs } from '../pages/patterns/tabs.tsx'
 import TogglePage, { meta as toggle } from '../pages/patterns/toggle.tsx'
@@ -58,6 +59,7 @@ export const pages: UiPage[] = [
   { ...listbox, Component: ListboxPage },
   { ...menu, Component: MenuPage },
   { ...popover, Component: PopoverPage },
+  { ...press, Component: PressPage },
   { ...select, Component: SelectPage },
   { ...tabs, Component: TabsPage },
   { ...toggle, Component: TogglePage },

@@ -16,6 +16,12 @@ import { registerDismissableLayer } from './lib/dismissable-layer.ts'
 import { finishAnimations } from './lib/finish-animations.ts'
 import { lockScroll } from './lib/scroll-lock.ts'
 
+// The dialog moves focus itself, so a mouse press on its trigger or close button must not move
+// focus to the button afterwards, which it would when the button activates on press (`press()`).
+function keepFocus(event: PointerEvent) {
+  if (event.pointerType === 'mouse' && event.button === 0) event.preventDefault()
+}
+
 const DIALOG_CHANGE_EVENT = 'rmx:dialog-change' as const
 
 /** The interaction that requested a dialog state change. */
@@ -241,6 +247,7 @@ const triggerMixin: MixinFactory<HTMLButtonElement, [], ElementProps> = createMi
       context.triggers.add(node)
       signal.addEventListener('abort', () => context.triggers.delete(node))
     }),
+    on('pointerdown', (event) => keepFocus(event)),
     on('click', (event) => {
       if (
         event.defaultPrevented ||
@@ -465,6 +472,7 @@ const closeMixin: MixinFactory<HTMLButtonElement, [], ElementProps> = createMixi
   let context = getDialogContext(handle)
   return (props) => [
     attrs({ type: props.type ?? 'button' }),
+    on('pointerdown', (event) => keepFocus(event)),
     on('click', (event) => {
       if (
         event.defaultPrevented ||
