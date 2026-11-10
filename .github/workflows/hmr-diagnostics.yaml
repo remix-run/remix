@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/hmr-diagnostics.yaml
       - packages/assets/test/hmr.test.e2e.tsx
+      - packages/component-hmr/test/hmr.test.e2e.tsx
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -12,12 +13,13 @@ concurrency:
 
 jobs:
   windows:
-    name: HMR timing (Windows, workspace ${{ matrix.iteration }})
+    name: HMR timing (Windows, ${{ matrix.mode }} ${{ matrix.iteration }})
     runs-on: windows-2025
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
+        mode: [workspace, isolated]
         iteration: [1, 2, 3]
     steps:
       - name: Checkout diagnostic revision
@@ -57,16 +59,28 @@ jobs:
         shell: bash
         env:
           REMIX_HMR_DIAGNOSTICS: '1'
+          HMR_DIAGNOSTIC_MODE: ${{ matrix.mode }}
           HMR_REPRO_BASE_SHA: 21567dc53cd2501cdc6a2ced0f32815e2410eb5f
           HMR_REPRO_HEAD_SHA: a2feaf983bf4248fc3158a86a85cc59f664fa79f
         run: |
           mkdir -p diagnostics
-          node ./scripts/detect-changed-packages.ts "$HMR_REPRO_BASE_SHA" "$HMR_REPRO_HEAD_SHA" 2>&1 | tee diagnostics/run.log
+          if [[ "$HMR_DIAGNOSTIC_MODE" == workspace ]]; then
+            node ./scripts/detect-changed-packages.ts "$HMR_REPRO_BASE_SHA" "$HMR_REPRO_HEAD_SHA" 2>&1 | tee diagnostics/run.log
+          else
+            failed=0
+            for ((iteration=1; iteration<=30; iteration++)); do
+              if ! pnpm --filter @remix-run/component-hmr test --quiet test/hmr.test.e2e.tsx --project firefox \
+                --only 'updates component render output without losing setup state' 2>&1 | tee "diagnostics/run-$iteration.log"; then
+                failed=1
+              fi
+            done
+            exit "$failed"
+          fi
 
       - name: Upload timing diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: hmr-timing-windows-workspace-${{ matrix.iteration }}
+          name: hmr-timing-windows-${{ matrix.mode }}-${{ matrix.iteration }}
           path: diagnostics/
           retention-days: 7
