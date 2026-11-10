@@ -388,8 +388,11 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
-export const defaultStyleManager: StyleManager =
-  typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
+let defaultStyleManager: StyleManager | undefined
+
+export function getDefaultStyleManager(): StyleManager {
+  return (defaultStyleManager ??= createStyleManager())
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
