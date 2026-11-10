@@ -61,7 +61,7 @@ export function Notifications() {
 
 ## Behavior Notes
 
-- Notifications published before the UI mounts are retained. Scope server-side managers to an application instance or request.
+- Notifications published before the UI mounts are retained.
 - `add()` returns the notification ID. Reusing an ID replaces its complete content and options, restarts its timeout and preserves its position. Your renderer decides how to display custom `data` and actions.
 - Toasts stay open unless a timeout is supplied. Set `timeout` in milliseconds or `false` to disable automatic dismissal. An explicit timeout overrides `Context`'s `defaultTimeout`, which can be a fixed value or callback.
 - Timers belong to the rendered items. They start on presentation, pause for hover, keyboard focus, touch engagement, a hidden document or an unfocused window, and are cancelled on unmount. Remounting starts a fresh timeout.

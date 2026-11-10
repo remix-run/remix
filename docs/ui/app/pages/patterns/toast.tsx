@@ -189,7 +189,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <p>
           Share a stable manager with any component or utility that publishes notifications. Mount
           its context near the application root so notifications remain available across page
-          changes. Keep server-side managers scoped to an application instance or request.
+          changes.
         </p>
         <CodeBlock html={publishers} />
         <p>
