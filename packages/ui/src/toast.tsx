@@ -195,8 +195,8 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   let entering = false
   let presentations = new Map<string, { node: HTMLElement; clock: ToastClock }>()
   let previous = toastManager.toastItems.map((toastItem) => toastItem.id)
-  let interaction = createInteractionState(() => {
-    for (let { clock } of presentations.values()) clock.setPaused(interaction.paused)
+  let interaction = createInteractionState((paused) => {
+    for (let { clock } of presentations.values()) clock.setPaused(paused)
     if (!handle.signal.aborted) void handle.update()
   })
 
@@ -836,7 +836,7 @@ const initialInteractionState: InteractionState = {
   windowBlurred: false,
 }
 
-function createInteractionState(changed: () => void) {
+function createInteractionState(changed: (paused: boolean) => void) {
   let state = initialInteractionState
 
   function update(next: InteractionState) {
@@ -849,7 +849,7 @@ function createInteractionState(changed: () => void) {
     )
       return
     state = next
-    changed()
+    changed(expanded() || state.documentHidden || state.windowBlurred)
   }
 
   function expanded() {
