@@ -36,7 +36,7 @@
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --test",
+    "test": "node --test-reporter=../../scripts/node-test-reporter.ts --test",
     "test:bun": "bun test",
     "typecheck": "tsc --noEmit"
   },
