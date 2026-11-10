@@ -13,8 +13,8 @@ export interface ToastAddOptions<data = unknown> {
   announcement?: string
   /** Consumer-defined data interpreted by the renderer. */
   data?: data
-  /** Timeout override in milliseconds, or false to keep the notification open. Interpreted by the UI when presented. */
-  timeout?: number | false
+  /** Timeout in milliseconds. Omit to keep the notification open. Starts when the UI presents the notification. */
+  timeout?: number
 }
 
 /** An immutable snapshot of a published notification. */
@@ -31,8 +31,8 @@ export interface ToastItem<data = unknown> {
   readonly announcement?: string
   /** Content interpreted by the consumer's renderer. */
   readonly data?: data
-  /** Optional timeout override interpreted by the notification UI. */
-  readonly timeout?: number | false
+  /** Optional dismissal timeout interpreted by the notification UI. */
+  readonly timeout?: number
 }
 
 /** Commands and observable state, without a bound component. Events signal that state can be read. */
@@ -51,8 +51,6 @@ export interface ToastManager<data = unknown> extends TypedEventTarget<{ change:
 export interface ToastContextProps<data = unknown> {
   /** Stable manager created outside the rendering component. */
   manager: ToastManager<data>
-  /** Fallback timeout in milliseconds, or false to keep notifications open. A callback resolves it once per presentation or replacement without an explicit timeout. Defaults to false. */
-  defaultTimeout?: number | false | ((options: ToastAddOptions<data>) => number | false)
   /** Maximum available toast items. Unlimited by default. Must be a positive integer. */
   limit?: number
   /** Renders every open toast item after mounting, including overflow, newest first. */
@@ -111,16 +109,14 @@ export function createToastManager<data = unknown>(): ToastManager<data> {
   return new ToastStore()
 }
 
-function validateTimeout(value: number | false): number | false {
-  if (value !== false && (!Number.isFinite(value) || value < 0))
-    throw new RangeError('Toast timeout must be false or finite and non-negative')
-  return value
+function validateTimeout(value: number): void {
+  if (!Number.isFinite(value) || value < 0)
+    throw new RangeError('Toast timeout must be finite and non-negative')
 }
 
 type RootState = {
   readonly limit: number
   toastManager: Pick<ToastManager<unknown>, 'close' | 'items'>
-  timeout(id: string): number | false
   registerRoot(node: HTMLElement, options: () => ToastRootOptions, signal: AbortSignal): void
   registerItem(id: string, node: HTMLElement, clock: ToastClock): void
   unregisterItem(id: string, node: HTMLElement): void
@@ -255,15 +251,6 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
 
   let state: RootState = {
     toastManager,
-    timeout(id) {
-      let toastItem = toastManager.items.find((toastItem) => toastItem.id === id)
-      if (!toastItem) return false
-      let defaultTimeout = handle.props.defaultTimeout ?? false
-      return validateTimeout(
-        toastItem.timeout ??
-          (typeof defaultTimeout === 'function' ? defaultTimeout(toastItem) : defaultTimeout),
-      )
-    },
     get limit() {
       return limit
     },
@@ -459,9 +446,6 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     sync()
   })
   return () => {
-    let defaultTimeout = handle.props.defaultTimeout
-    if (defaultTimeout !== undefined && typeof defaultTimeout !== 'function')
-      validateTimeout(defaultTimeout)
     let nextLimit = handle.props.limit ?? Infinity
     if (handle.props.limit !== undefined && (!Number.isInteger(nextLimit) || nextLimit < 1))
       throw new RangeError('Toast limit must be a positive integer')
@@ -662,7 +646,7 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
 
     function synchronizeClock(toastItem: ToastItem<unknown> | undefined) {
       if (!host || publication === toastItem) return
-      let duration = toastItem ? context.timeout(scoped.id) : false
+      let duration = toastItem?.timeout ?? false
       publication = toastItem
       clock.reset(duration)
     }

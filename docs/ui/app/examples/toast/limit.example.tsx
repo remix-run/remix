@@ -21,7 +21,6 @@ export default function ExampleToastLimit() {
             toastManager.add({
               title: `Toast ${++nextToast}`,
               description: 'This is a toast description.',
-              timeout: false,
             })
           }),
         ]}

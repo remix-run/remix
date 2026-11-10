@@ -19,7 +19,7 @@ function clock(t: TestContext) {
 
 function Notifications<data>(handle: Handle<Omit<toast.ToastContextProps<data>, 'children'>>) {
   return () => (
-    <toast.Context manager={handle.props.manager} defaultTimeout={handle.props.defaultTimeout}>
+    <toast.Context manager={handle.props.manager}>
       {(toastItems) => (
         <section mix={toast.root({ label: 'Notifications' })}>
           {toastItems.map((notification) => (
@@ -54,42 +54,6 @@ describe('toast UI timers', () => {
     await result.act(() => time.advance(1))
     assert.equal(manager.items.length, 0)
     assert.equal(result.container.querySelector('article'), null)
-  })
-
-  it('resolves provider defaults once per presentation or replacement and honours overrides', async (t) => {
-    let time = clock(t)
-    let manager = toast.createToastManager<{ persistent: boolean }>()
-    manager.add({ id: 'default', title: 'Saved' })
-    manager.add({ id: 'override', timeout: 500 })
-    let calls = 0
-    let result = render(
-      <Notifications
-        manager={manager}
-        defaultTimeout={({ data }) => {
-          calls++
-          return data?.persistent ? false : 1000
-        }}
-      />,
-    )
-    t.after(result.cleanup)
-    assert.equal(calls, 1)
-    await result.act(() => time.advance(500))
-    assert.deepEqual(
-      manager.items.map((item) => item.id),
-      ['default'],
-    )
-    let node = region(result.container)
-    await result.act(() =>
-      node.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' })),
-    )
-    await result.act(() =>
-      node.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })),
-    )
-    assert.equal(calls, 1)
-    await result.act(() => manager.add({ id: 'default', data: { persistent: true } }))
-    assert.equal(calls, 2)
-    await result.act(() => time.advance(10000))
-    assert.equal(manager.items.length, 1)
   })
 
   it('keeps existing and arriving clocks paused until overlapping UI conditions end', async (t) => {
@@ -207,11 +171,11 @@ describe('toast UI timers', () => {
   it('keeps persistent items open and dismisses zero timeouts only when presented', async (t) => {
     let time = clock(t)
     let manager = toast.createToastManager()
-    manager.add({ id: 'persistent', timeout: false })
+    manager.add({ id: 'persistent' })
     manager.add({ id: 'immediate', timeout: 0 })
     time.advance(10000)
     assert.equal(manager.items.length, 2)
-    let result = render(<Notifications manager={manager} defaultTimeout={1000} />)
+    let result = render(<Notifications manager={manager} />)
     t.after(result.cleanup)
     await result.act(() => time.advance(0))
     assert.deepEqual(

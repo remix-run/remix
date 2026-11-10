@@ -152,7 +152,7 @@ describe('Toast countdown indicators', () => {
     assert.equal(host.getAnimations().length, 1)
     assert.equal(host.getAnimations()[0].effect?.getTiming().duration, 20000)
     assert.ok(fraction(host) > 0.99)
-    await result.act(() => toastManager.add({ id, title: 'Saved', timeout: false }))
+    await result.act(() => toastManager.add({ id, title: 'Saved' }))
     assert.equal(host.hidden, false)
     assert.equal(host.getAnimations().length, 0)
     assert.equal(host.getAttribute('aria-hidden'), 'true')

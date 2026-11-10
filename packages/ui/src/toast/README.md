@@ -50,7 +50,7 @@ export function Notifications() {
 ## `@remix-run/ui/toast`
 
 - `createToastManager<data = unknown>()`: creates a manager with `add(options)`, `close(id)`, `closeAll()` and a newest-first `items` collection. The manager supports native `change` subscriptions.
-- `Context`: connects a stable `manager` to the UI after mounting. Accepts `defaultTimeout`, `limit` and a typed collection callback. There is no limit by default.
+- `Context`: connects a stable `manager` to the UI after mounting. Accepts `limit` and a typed collection callback. There is no limit by default.
 - `root({ label })`: gives the collection named region semantics and keyboard entry. A non-empty `label` is required.
 - `ItemContext`: scopes one notification using its ID as `value`.
 - `item({ countdown? })`: applies non-modal dialog semantics, availability and focus recovery. With `countdown: true`, it animates the inherited `--toast-countdown` value from 1 to 0 for CSS indicators.
@@ -62,7 +62,7 @@ export function Notifications() {
 ## Behavior Notes
 
 - `add()` returns the notification ID. Reusing an ID replaces its complete content and options, restarts its timeout and preserves its position. Your renderer decides how to display custom `data` and actions.
-- Toasts stay open unless a timeout is supplied. Set `timeout` in milliseconds or `false` to disable automatic dismissal. An explicit timeout overrides `Context`'s `defaultTimeout`, which can be a fixed value or callback.
+- Toasts stay open unless a timeout is supplied. Set `timeout` in milliseconds when publishing a toast.
 - Hover, keyboard focus, touch engagement, a hidden document or an unfocused window pause timers.
 - F6 enters the collection and returns to the previous element. Tab visits each notification before its controls. Leaving either Tab boundary returns focus. Escape dismisses the focused notification; closing it focuses a neighbour or returns to the previous element. Make the shortcut discoverable.
 - Announcements use the published title and description, excluding controls added by your renderer. Set `announcement` to replace the spoken message. Entering the collection clears the separate announcements and exposes the notifications for exploration. Actions remain available there; where possible, describe another way to perform them in the announcement.

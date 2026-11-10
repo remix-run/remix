@@ -120,7 +120,7 @@ describe('toast manager', () => {
       title: 'Failed',
       description: 'Try again',
       data: { label: 'Retry' },
-      timeout: false,
+      timeout: 1000,
       announcement: 'Save failed.',
     })
     toastManager.add({ id: 'save', description: 'Ready' })
@@ -138,7 +138,7 @@ describe('toast manager', () => {
 
   it('increments revision for duplicate publications, including unchanged content', () => {
     let toastManager = createToastManager()
-    toastManager.add({ id: 'save', title: 'Saved', timeout: false })
+    toastManager.add({ id: 'save', title: 'Saved' })
     let initial = first(toastManager)
     assert.equal(initial.revision, 0)
     toastManager.add({ id: 'save', title: 'Saved' })
@@ -151,7 +151,7 @@ describe('toast manager', () => {
     assert.throws(() => toastManager.add({ id: 'save', timeout: -1 }), RangeError)
     assert.equal(first(toastManager).revision, 3)
     toastManager.close('save')
-    toastManager.add({ id: 'save', title: 'Saved', timeout: false })
+    toastManager.add({ id: 'save', title: 'Saved' })
     assert.equal(first(toastManager).revision, 0)
   })
 
@@ -344,7 +344,7 @@ describe('toast.root()', () => {
 
   it('makes a logically closed toast inert while retaining its exit animation', async (t) => {
     let toastManager = createToastManager()
-    let id = toastManager.add({ title: 'Saved', timeout: false })
+    let id = toastManager.add({ title: 'Saved' })
     let result = render(
       <Context manager={toastManager}>
         {(toastItems) => (
@@ -466,7 +466,7 @@ describe('toast gestures and clocks', () => {
     await result.act(() => toastManager.add({ id, title: 'Saved', timeout: 20000 }))
     assert.equal(bar.getAnimations().length, 1)
     assert.ok(Number(bar.getAnimations()[0].effect?.getTiming().duration) > 19000)
-    await result.act(() => toastManager.add({ id, title: 'Saved', timeout: false }))
+    await result.act(() => toastManager.add({ id, title: 'Saved' }))
     assert.equal(bar.hidden, false)
     assert.equal(bar.getAttribute('aria-hidden'), 'true')
     assert.equal(bar.getAnimations().length, 0)
@@ -474,7 +474,7 @@ describe('toast gestures and clocks', () => {
 
   it('moves focus out of a retained last toast without a remembered return target', async (t) => {
     let toastManager = createToastManager()
-    let id = toastManager.add({ title: 'Saved', timeout: false })
+    let id = toastManager.add({ title: 'Saved' })
     let result = render(
       <Context manager={toastManager}>
         {(toastItems) => (
@@ -505,7 +505,7 @@ describe('toast gestures and clocks', () => {
 
   it('reclaims a closed identity without leaving its new toast inert', async (t) => {
     let toastManager = createToastManager()
-    toastManager.add({ id: 'same', title: 'First', timeout: false })
+    toastManager.add({ id: 'same', title: 'First' })
     let result = render(
       <Context manager={toastManager}>
         {(toastItems) => (
@@ -534,7 +534,7 @@ describe('toast gestures and clocks', () => {
     t.after(result.cleanup)
     let node = element(result.container, '[data-toast]')
     await result.act(() => toastManager.close('same'))
-    await result.act(() => toastManager.add({ id: 'same', title: 'Second', timeout: false }))
+    await result.act(() => toastManager.add({ id: 'same', title: 'Second' }))
     let current = element(result.container, '[data-toast]')
     assert.equal(current, node)
     assert.equal(current.inert, false)
@@ -546,10 +546,10 @@ describe('toast gestures and clocks', () => {
 describe('toast availability', () => {
   it('limits availability only when configured and promotes retained overflow without reordering updates', async (t) => {
     let toastManager = createToastManager()
-    toastManager.add({ id: 'first', title: 'First', timeout: false })
-    toastManager.add({ id: 'second', title: 'Second', timeout: false })
-    toastManager.add({ id: 'third', title: 'Third', timeout: false })
-    toastManager.add({ id: 'fourth', title: 'Fourth', timeout: false })
+    toastManager.add({ id: 'first', title: 'First' })
+    toastManager.add({ id: 'second', title: 'Second' })
+    toastManager.add({ id: 'third', title: 'Third' })
+    toastManager.add({ id: 'fourth', title: 'Fourth' })
     function view(limit?: number) {
       return (
         <Context manager={toastManager} limit={limit}>
@@ -621,7 +621,7 @@ describe('toast availability', () => {
     let time = clock(t)
     let toastManager = createToastManager()
     toastManager.add({ id: 'old', title: 'Old', timeout: 1000 })
-    toastManager.add({ id: 'new', title: 'New', timeout: false })
+    toastManager.add({ id: 'new', title: 'New' })
     function view(limit: number) {
       return (
         <Context manager={toastManager} limit={limit}>
@@ -659,8 +659,8 @@ describe('toast availability', () => {
 
   it('moves keyboard focus to an available notification when the context limit shrinks', async (t) => {
     let toastManager = createToastManager()
-    toastManager.add({ id: 'old', title: 'Old', timeout: false })
-    toastManager.add({ id: 'new', title: 'New', timeout: false })
+    toastManager.add({ id: 'old', title: 'Old' })
+    toastManager.add({ id: 'new', title: 'New' })
     function view(limit: number) {
       return (
         <>
@@ -740,7 +740,7 @@ describe('toast availability', () => {
     let time = clock(t)
     let toastManager = createToastManager()
     toastManager.add({ id: 'old', title: 'Old', timeout: 1000 })
-    toastManager.add({ id: 'new', title: 'New', timeout: false })
+    toastManager.add({ id: 'new', title: 'New' })
     let result = render(
       <Context manager={toastManager} limit={1}>
         {(toastItems) => (
@@ -770,7 +770,7 @@ describe('toast availability', () => {
 
   it('does not steal focus later when an arrival limits the focused card', async (t) => {
     let toastManager = createToastManager()
-    toastManager.add({ id: 'old', title: 'Old', timeout: false })
+    toastManager.add({ id: 'old', title: 'Old' })
     let result = render(
       <Context manager={toastManager} limit={1}>
         {(toastItems) => (
@@ -788,7 +788,7 @@ describe('toast availability', () => {
     )
     t.after(result.cleanup)
     element(result.container, 'button').focus()
-    await result.act(() => toastManager.add({ id: 'new', title: 'New', timeout: false }))
+    await result.act(() => toastManager.add({ id: 'new', title: 'New' }))
     let old = element(result.container, '[data-id="old"]')
     let current = element(result.container, '[data-id="new"]')
     assert.equal(old.inert, true)
@@ -804,7 +804,7 @@ describe('toast availability', () => {
 describe('toast.root() interactions', () => {
   it('collapses on pointer leave and resumes timers while a dismissed toast animates out', async (t) => {
     let toastManager = createToastManager()
-    toastManager.add({ id: 'outgoing', timeout: false })
+    toastManager.add({ id: 'outgoing' })
     toastManager.add({ id: 'remaining', timeout: 100000 })
     let result = render(<RetainedNotifications manager={toastManager} />)
     t.after(result.cleanup)
@@ -827,7 +827,7 @@ describe('toast.root() interactions', () => {
 
   it('keeps hover expansion when the pointer returns before a retained exit finishes', async (t) => {
     let toastManager = createToastManager()
-    toastManager.add({ id: 'outgoing', timeout: false })
+    toastManager.add({ id: 'outgoing' })
     toastManager.add({ id: 'remaining', timeout: 100000 })
     let result = render(<RetainedNotifications manager={toastManager} />)
     t.after(result.cleanup)
@@ -923,7 +923,7 @@ describe('toast.root() interactions', () => {
 
   it('ignores mouse and secondary touches and clears touch engagement when the stack empties', async (t) => {
     let toastManager = createToastManager()
-    toastManager.add({ title: 'Saved', timeout: false })
+    toastManager.add({ title: 'Saved' })
     let result = render(
       <Context manager={toastManager}>
         {(toastItems) => (
@@ -987,8 +987,8 @@ describe('toast.root() interactions', () => {
   it('skips a hidden region when the default F6 shortcut selects the active one', async (t) => {
     let hidden = createToastManager()
     let active = createToastManager()
-    hidden.add({ title: 'Hidden notification', timeout: false })
-    active.add({ title: 'Active notification', timeout: false })
+    hidden.add({ title: 'Hidden notification' })
+    active.add({ title: 'Active notification' })
     let result = await render(
       <>
         <Context manager={hidden}>

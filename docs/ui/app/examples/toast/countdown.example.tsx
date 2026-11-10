@@ -19,6 +19,7 @@ export default function ExampleToastCountdown() {
             styles.button,
             on('click', () => {
               toastManager.add({
+                timeout: 5000,
                 id: treatment,
                 title: 'Toast title',
                 description: 'This is a toast description.',
@@ -35,7 +36,7 @@ export default function ExampleToastCountdown() {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={toastManager} defaultTimeout={5000} limit={3}>
+    <toast.Context manager={toastManager} limit={3}>
       {(toastItems) => (
         <section mix={[toast.root({ label: 'Notifications' }), styles.root, styles.region]}>
           {toastItems.map((toastItem, index) => (
@@ -77,7 +78,7 @@ export function ToastRegion() {
               >
                 <div mix={styles.collapseSlot}>
                   <div role="none" mix={[styles.surface]}>
-                    {Boolean(toastItem.timeout ?? 5000) && toastItem.id !== 'bar' && (
+                    {Boolean(toastItem.timeout) && toastItem.id !== 'bar' && (
                       <div aria-hidden="true" mix={[styles.timer, styles.hideWhenCovered]}>
                         <svg width="28" height="28" viewBox="0 0 28 28">
                           <circle cx="14" cy="14" r="11" mix={styles.ringTrack} />
@@ -98,7 +99,7 @@ export function ToastRegion() {
                     >
                       ×
                     </button>
-                    {Boolean(toastItem.timeout ?? 5000) && toastItem.id === 'bar' && (
+                    {Boolean(toastItem.timeout) && toastItem.id === 'bar' && (
                       <div aria-hidden="true" mix={[styles.bar, styles.hideWhenCovered]} />
                     )}
                   </div>

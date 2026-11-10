@@ -104,13 +104,12 @@ describe('Toast stack', () => {
       </>,
     )
     t.after(() => toastManager.closeAll())
-    let rearId = toastManager.add({ title: 'Toast title', timeout: false })
+    let rearId = toastManager.add({ title: 'Toast title' })
     await result.act(() =>
       toastManager.add({
         title: 'Another toast title',
         description:
           'This is a longer toast description. It spans several lines to show how toasts with different amounts of content stack, expand and collapse together.',
-        timeout: false,
       }),
     )
     let region = element(result.container, '[role="region"]')
@@ -150,7 +149,6 @@ describe('Toast stack', () => {
         title: 'Another toast title',
         description:
           'This is a longer toast description. It spans several lines to show how toasts with different amounts of content stack, expand and collapse together.',
-        timeout: false,
       }),
     )
     await frame()
@@ -188,7 +186,6 @@ describe('Toast stack', () => {
         title: 'Another toast title',
         description:
           'This is a longer toast description. It spans several lines to show how toasts with different amounts of content stack, expand and collapse together.',
-        timeout: false,
       }),
     )
     await result.act(() => button(result.container, 'Show toast').click())
@@ -197,7 +194,6 @@ describe('Toast stack', () => {
         title: 'Another toast title',
         description:
           'This is a longer toast description. It spans several lines to show how toasts with different amounts of content stack, expand and collapse together.',
-        timeout: false,
       }),
     )
     let region = element(result.container, '[role="region"]')

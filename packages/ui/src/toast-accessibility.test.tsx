@@ -53,7 +53,7 @@ function Notifications<data>(
 describe('toast accessibility', () => {
   it('uses consumer-supplied names without English fallbacks', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ title: 'Gespeichert', timeout: false })
+    toastManager.add({ title: 'Gespeichert' })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let region = element(result.container, 'section')
@@ -66,8 +66,8 @@ describe('toast accessibility', () => {
 
   it('resolves current toast state and dismissal from an item identity', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ id: 'saved', title: 'Saved', timeout: false })
-    toastManager.add({ id: 'other', title: 'Other', timeout: false })
+    toastManager.add({ id: 'saved', title: 'Saved' })
+    toastManager.add({ id: 'other', title: 'Other' })
     let result = render(
       <toast.Context manager={toastManager}>
         {() => (
@@ -86,7 +86,7 @@ describe('toast accessibility', () => {
     let item = element(result.container, 'article')
     assert.equal(item.getAttribute('role'), 'dialog')
     assert.equal(item.inert, false)
-    await result.act(() => toastManager.add({ id: 'saved', title: 'Updated', timeout: false }))
+    await result.act(() => toastManager.add({ id: 'saved', title: 'Updated' }))
     assert.equal(item.getAttribute('role'), 'dialog')
     await result.act(() => element(item, 'button').click())
     assert.deepEqual(
@@ -136,7 +136,7 @@ describe('toast accessibility', () => {
     let origin = element(result.container, '[data-origin]')
     let region = element(result.container, 'section')
     origin.focus()
-    await result.act(() => toastManager.add({ title: 'Saved', timeout: false }))
+    await result.act(() => toastManager.add({ title: 'Saved' }))
     await result.act(() => region.showPopover())
     assert.equal(region.matches(':popover-open'), true)
     assert.equal(document.activeElement, origin)
@@ -153,7 +153,7 @@ describe('toast accessibility', () => {
     assert.equal(document.activeElement, origin)
     assert.equal(toastManager.items.length, 0)
 
-    await result.act(() => toastManager.add({ title: 'Another toast', timeout: false }))
+    await result.act(() => toastManager.add({ title: 'Another toast' }))
     assert.equal(element(result.container, '[aria-live="polite"]').textContent, 'Another toast')
     let next = element(region, 'article')
     assert.equal(next.getAttribute('aria-hidden'), 'true')
@@ -181,7 +181,6 @@ describe('toast accessibility', () => {
           Use <kbd>Undo</kbd> to restore it.
         </>
       ),
-      timeout: false,
     })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
@@ -204,7 +203,6 @@ describe('toast accessibility', () => {
       toastManager.add({
         id: toastManager.items[0].id,
         title: 'Restored',
-        timeout: false,
       }),
     )
     assert.equal(element(item, 'h2').textContent, 'Restored')
@@ -214,7 +212,7 @@ describe('toast accessibility', () => {
 
   it('updates authored IDs and clears relationships for empty or removed parts', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ id: 'note', timeout: false })
+    toastManager.add({ id: 'note' })
     let currentId = 'heading-one'
     let content = 'Saved'
     let show = true
@@ -276,7 +274,7 @@ describe('toast accessibility', () => {
 
   it('supports description-only notifications without fabricating a title', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ description: <span>Saved</span>, timeout: false })
+    toastManager.add({ description: <span>Saved</span> })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let item = element(result.container, 'article')
@@ -371,7 +369,7 @@ describe('toast accessibility', () => {
 
   it('hands off announcements to toast content while the region has focus', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ title: 'Saved', announcement: 'Changes saved.', timeout: false })
+    toastManager.add({ title: 'Saved', announcement: 'Changes saved.' })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let origin = element(result.container, '[data-origin]')
@@ -403,9 +401,9 @@ describe('toast accessibility', () => {
 
   it('dismisses only the focused toast with Escape and chooses a mounted neighbour', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ id: 'oldest', title: 'Oldest', timeout: false })
-    toastManager.add({ id: 'middle', title: 'Middle', timeout: false })
-    toastManager.add({ id: 'newest', title: 'Newest', timeout: false })
+    toastManager.add({ id: 'oldest', title: 'Oldest' })
+    toastManager.add({ id: 'middle', title: 'Middle' })
+    toastManager.add({ id: 'newest', title: 'Newest' })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let origin = element(result.container, '[data-origin]')
@@ -428,7 +426,7 @@ describe('toast accessibility', () => {
 
   it('returns at both Tab boundaries without closing notifications', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ title: 'Saved', timeout: false })
+    toastManager.add({ title: 'Saved' })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let origin = element(result.container, '[data-origin]')
@@ -451,8 +449,8 @@ describe('toast accessibility', () => {
     let toastManager = toast.createToastManager()
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
-    await result.act(() => toastManager.add({ id: 'oldest', title: 'Oldest', timeout: false }))
-    await result.act(() => toastManager.add({ id: 'newest', title: 'Newest', timeout: false }))
+    await result.act(() => toastManager.add({ id: 'oldest', title: 'Oldest' }))
+    await result.act(() => toastManager.add({ id: 'newest', title: 'Newest' }))
     let region = element(result.container, 'section')
     let origin = element(result.container, '[data-origin]')
     origin.focus()
@@ -472,7 +470,7 @@ describe('toast accessibility', () => {
 
   it('preserves an unsuccessful return origin and lets the browser handle the shortcut', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ title: 'Saved', timeout: false })
+    toastManager.add({ title: 'Saved' })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let origin = element(result.container, '[data-origin]')
@@ -491,7 +489,7 @@ describe('toast accessibility', () => {
 
   it('allows consumers to prevent a close activation', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ title: 'Saved', timeout: false })
+    toastManager.add({ title: 'Saved' })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let dismiss = element(result.container, 'article button')
@@ -501,7 +499,7 @@ describe('toast accessibility', () => {
   })
   it('restores focus if a consumer closes the collection during shortcut entry', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ title: 'Saved', timeout: false })
+    toastManager.add({ title: 'Saved' })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let origin = element(result.container, '[data-origin]')
@@ -517,8 +515,8 @@ describe('toast accessibility', () => {
 
   it('does not revive a neighbour closed by its consumer focus handler', async (t) => {
     let toastManager = toast.createToastManager()
-    toastManager.add({ id: 'old', title: 'Old', timeout: false })
-    toastManager.add({ id: 'new', title: 'New', timeout: false })
+    toastManager.add({ id: 'old', title: 'Old' })
+    toastManager.add({ id: 'new', title: 'New' })
     let result = render(<Notifications manager={toastManager} />)
     t.after(result.cleanup)
     let origin = element(result.container, '[data-origin]')

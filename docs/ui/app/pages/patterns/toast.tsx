@@ -13,8 +13,6 @@ export const meta = {
   importPath: '@remix-run/ui/toast',
 } satisfies PageMeta
 
-const defaultTimeout = await loadExample('toast/default-timeout', { outlet: 'ToastRegion' })
-const dynamicTimeout = await loadExample('toast/dynamic-timeout', { outlet: 'ToastRegion' })
 const timeout = await loadExample('toast/timeout', { outlet: 'ToastRegion' })
 const customPosition = await loadExample('toast/position', { outlet: 'ToastRegion' })
 const limit = await loadExample('toast/limit', { outlet: 'ToastRegion' })
@@ -64,11 +62,9 @@ const anatomy = await highlightSource(`
 `)
 
 const countdownCode = await highlightSource(`
-  const defaultTimeout = 5000 // Use the same fixed default on Context.
-
   const element = <article mix={toast.item({ countdown: true })}>
     <strong mix={toast.title()}>{toastItem.title}</strong>
-    {Boolean(toastItem.timeout ?? defaultTimeout) && (
+    {Boolean(toastItem.timeout) && (
       <div aria-hidden="true" mix={css({
         height: '2px',
         background: 'currentColor',
@@ -105,7 +101,7 @@ interface ToastAddOptions<data = unknown> {
   description?: RemixNode
   announcement?: string
   data?: data
-  timeout?: number | false
+  timeout?: number
 }
 `),
   ToastItem: await highlightSource(`
@@ -116,7 +112,7 @@ interface ToastItem<data = unknown> {
   readonly description?: RemixNode
   readonly announcement?: string
   readonly data?: data
-  readonly timeout?: number | false
+  readonly timeout?: number
 }
 `),
   ToastManager: await highlightSource(`
@@ -130,7 +126,6 @@ interface ToastManager<data = unknown> extends TypedEventTarget<{ change: Event 
   ToastContextProps: await highlightSource(`
 interface ToastContextProps<data = unknown> {
   manager: ToastManager<data>
-  defaultTimeout?: number | false | ((options: ToastAddOptions<data>) => number | false)
   limit?: number
   children: (toastItems: readonly ToastItem<data>[]) => RemixNode
 }
@@ -166,8 +161,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
             {action.Outlet && <action.Outlet />}
             {stack.Outlet && <stack.Outlet />}
             {timeout.Outlet && <timeout.Outlet />}
-            {defaultTimeout.Outlet && <defaultTimeout.Outlet />}
-            {dynamicTimeout.Outlet && <dynamicTimeout.Outlet />}
             {countdown.Outlet && <countdown.Outlet />}
             {dismissal.Outlet && <dismissal.Outlet />}
           </div>
@@ -215,27 +208,12 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <Example id="limit" example={limit} />
       </Section>
       <Section id="auto-dismiss" title="Timeout">
-        <p>
+        <p id="timers">
           Set <code>timeout</code> in milliseconds to dismiss a toast automatically. Without a
-          timeout, toasts stay open until dismissed unless the Context supplies a default.
+          timeout, toasts stay open until dismissed. Timers pause during hover, focus or touch
+          engagement, and while the document is hidden or the window is unfocused.
         </p>
         <Example id="timeout" example={timeout} />
-        <p id="timers">
-          Hover, focus and touch engagement pause timers. So do a hidden document or an unfocused
-          window.
-        </p>
-      </Section>
-      <Section id="default-timeout" title="Default timeout">
-        <p>
-          Set <code>defaultTimeout</code> on <code>Context</code> to share a timeout across toasts.
-          An explicit <code>timeout</code> on a toast takes precedence.
-        </p>
-        <Example id="default-timeout-example" example={defaultTimeout} />
-        <p>
-          Pass a callback to choose a default from the toast's content or custom data, such as
-          keeping toasts with actions open until dismissed.
-        </p>
-        <Example id="dynamic-timeout-example" example={dynamicTimeout} />
       </Section>
       <Section id="countdown-indicators" title="Countdown indicators">
         <p>
@@ -350,9 +328,8 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Consumer-defined data interpreted by your renderer. Supply a type to
             createToastManager() for typed access.
           </ApiEntry>
-          <ApiEntry name="timeout" type="number | false" defaultValue="Context default">
-            Timeout in non-negative milliseconds, or false to disable automatic dismissal. Overrides
-            the Context defaultTimeout.
+          <ApiEntry name="timeout" type="number" defaultValue="none">
+            Timeout in non-negative milliseconds. Omit to keep the notification open.
           </ApiEntry>
         </ApiTable>
         <h3 id="toast-item">ToastItem&lt;data = unknown&gt;</h3>
@@ -364,7 +341,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           <ApiEntry name="revision" type="number">
             Starts at zero and increments each time add() replaces the notification.
           </ApiEntry>
-          <ApiEntry name="timeout" type="number | false | undefined">
+          <ApiEntry name="timeout" type="number | undefined">
             The notification's timeout option.
           </ApiEntry>
         </ApiTable>
@@ -372,14 +349,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <ApiTable id="context-props" label="Prop">
           <ApiEntry name="manager" type="ToastManager<data>" required>
             Stable application-level manager.
-          </ApiEntry>
-          <ApiEntry
-            name="defaultTimeout"
-            type="number | false | ((options: ToastAddOptions<data>) => number | false)"
-            defaultValue="false"
-          >
-            Fallback timeout in milliseconds, or false to disable automatic dismissal. Pass a
-            callback to choose the timeout from the notification's content or data.
           </ApiEntry>
           <ApiEntry name="limit" type="number">
             Maximum available notifications, as a positive integer. Unlimited by default.
@@ -487,7 +456,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             <CodeBlock html={typeDefinitions.ToastAddOptions} />
           </ApiEntry>
           <ApiEntry id="type-ToastItem" name="ToastItem" type="interface">
-            <p>Immutable published content and timeout overrides.</p>
+            <p>Immutable published content and options.</p>
             <CodeBlock html={typeDefinitions.ToastItem} />
           </ApiEntry>
           <ApiEntry id="type-ToastManager" name="ToastManager" type="interface">
