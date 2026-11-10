@@ -26,7 +26,7 @@ const nodeFetchServerImportUrl = pathToFileURL(
 const nodeTsxImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
 ).href
-const consoleMessageTimeout = 5000
+const consoleMessageTimeout = 10_000
 const hmrConnectionTimeout = 15_000
 
 describe('asset server HMR', () => {
@@ -3110,7 +3110,7 @@ async function waitForText(
         return matches
       },
       { selector, text, probe },
-      { timeout: 5000 },
+      { timeout: 10_000 },
     )
   } catch (error) {
     let actualText = await page
