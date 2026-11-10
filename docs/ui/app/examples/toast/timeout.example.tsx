@@ -41,65 +41,70 @@ export default function ExampleToastTimeout() {
 export function ToastRegion() {
   return () => (
     <toast.Context manager={toastManager} limit={3}>
-      {(toastItems) => (
-        <section mix={[toast.root({ label: 'Notifications' }), styles.region]}>
-          {toastItems.map((toastItem, index) => (
-            <toast.ItemContext key={toastItem.id} value={toastItem.id}>
-              <article
-                key={toastItem.id}
-                data-toast-index={index}
-                style={{ '--toast-index': index }}
-                mix={[
-                  toast.item(),
-                  styles.toastLayout,
-                  animateLayout(
-                    prefersReducedMotion()
-                      ? false
-                      : {
-                          duration: 160,
-                          easing: 'ease-out',
-                        },
-                  ),
-                  animateEntrance({
-                    translate: '0 calc(100% + max(16px, env(safe-area-inset-bottom)))',
-                    duration: prefersReducedMotion() ? 0 : 160,
-                    easing: 'ease-out',
-                  }),
-                  animateExit({
-                    position: index === 0 ? 'absolute' : 'var(--stack-position)',
-                    zIndex: index === 0 ? 101 : 100 - index,
-                    opacity: 0,
-                    gridTemplateRows: '0fr',
-                    marginBlockEnd: 0,
-                    translate: 'calc(100% + 24px) 0',
-                    duration: prefersReducedMotion() ? 0 : 140,
-                    transition: {
-                      position: { duration: 0 },
-                      zIndex: { duration: 0 },
-                    },
-                  }),
-                ]}
-              >
-                <div mix={styles.collapseSlot}>
-                  <div role="none" mix={[styles.surface]}>
-                    <div mix={[styles.message, styles.hideWhenCovered]}>
-                      <h2 mix={[toast.title(), styles.title]}>{toastItem.title}</h2>
-                      <p mix={[toast.description(), styles.description]}>{toastItem.description}</p>
+      {(toastItems) => {
+        let reducedMotion = prefersReducedMotion()
+        return (
+          <section mix={[toast.root({ label: 'Notifications' }), styles.region]}>
+            {toastItems.map((toastItem, index) => (
+              <toast.ItemContext key={toastItem.id} value={toastItem.id}>
+                <article
+                  key={toastItem.id}
+                  data-toast-index={index}
+                  style={{ '--toast-index': index }}
+                  mix={[
+                    toast.item(),
+                    styles.toastLayout,
+                    animateLayout(
+                      reducedMotion
+                        ? false
+                        : {
+                            duration: 160,
+                            easing: 'ease-out',
+                          },
+                    ),
+                    animateEntrance({
+                      translate: '0 calc(100% + max(16px, env(safe-area-inset-bottom)))',
+                      duration: reducedMotion ? 0 : 160,
+                      easing: 'ease-out',
+                    }),
+                    animateExit({
+                      position: index === 0 ? 'absolute' : 'var(--stack-position)',
+                      zIndex: index === 0 ? 101 : 100 - index,
+                      opacity: 0,
+                      gridTemplateRows: '0fr',
+                      marginBlockEnd: 0,
+                      translate: 'calc(100% + 24px) 0',
+                      duration: reducedMotion ? 0 : 140,
+                      transition: {
+                        position: { duration: 0 },
+                        zIndex: { duration: 0 },
+                      },
+                    }),
+                  ]}
+                >
+                  <div mix={styles.collapseSlot}>
+                    <div role="none" mix={[styles.surface]}>
+                      <div mix={[styles.message, styles.hideWhenCovered]}>
+                        <h2 mix={[toast.title(), styles.title]}>{toastItem.title}</h2>
+                        <p mix={[toast.description(), styles.description]}>
+                          {toastItem.description}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label="Dismiss notification"
+                        mix={[styles.dismissButton, styles.hideWhenCovered, toast.close()]}
+                      >
+                        ×
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      aria-label="Dismiss notification"
-                      mix={[styles.dismissButton, styles.hideWhenCovered, toast.close()]}
-                    >
-                      ×
-                    </button>
                   </div>
-                </div>
-              </article>
-            </toast.ItemContext>
-          ))}
-        </section>
-      )}
+                </article>
+              </toast.ItemContext>
+            ))}
+          </section>
+        )
+      }}
     </toast.Context>
   )
 }
