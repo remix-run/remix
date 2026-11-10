@@ -1,7 +1,7 @@
 import { getNonceManager } from './nonce.ts'
 import { createFrame, setAppFrames } from './frame.ts'
 import { createScheduler } from './vdom.ts'
-import { createStyleManager } from '../style/index.ts'
+import { createStyleManager } from '../style/stylesheet.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
 import {
   NamedFrameRegistry,
