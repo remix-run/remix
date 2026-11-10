@@ -1,10 +1,3 @@
-Prefetch selected nested frames with `<Frame prefetch>`. The default prefetch strategy follows opted-in same-origin frames recursively, sends each named frame's `name` as `X-Remix-Target`, and scans the response for JavaScript, CSS, and explicit image and font preloads. Each combination of source URL and frame target is visited once per traversal. The flag creates no extra speculative requests during normal document loads. Custom `run({ prefetch(src, options) {} })` handlers continue to replace the default strategy.
+Prefetch eager nested frames automatically when the default strategy prefetches a destination page. Remix follows frame entries with resolved server metadata, matching the frames SSR waits for before its initial flush, and scans their responses for JavaScript, CSS, explicit image and font preloads, and further eager frames. No new frame prop is required. Pending fallback frames and lazy frames do not trigger additional HTML requests; assets already embedded in the response are still discovered.
 
-```diff
- import { Frame } from 'remix/component'
-
- function ProductPage() {
--  return () => <Frame name="reviews" src="/partials/reviews" />
-+  return () => <Frame name="reviews" src="/partials/reviews" prefetch />
- }
-```
+Each combination of source URL and frame target is visited once per traversal. Nested requests use the frame’s `name` as `X-Remix-Target`, and HTML reuse on navigation depends on the browser HTTP cache. Normal document loads create no extra speculative requests, and custom `run({ prefetch(src, options) {} })` handlers continue to replace the default strategy.

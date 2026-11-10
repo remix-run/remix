@@ -26,8 +26,9 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
  * Prefetches frame content so a later navigation can reuse the response. By default this
  * fetches HTML and discovers external JavaScript, CSS, and explicit image and font preloads for
  * `<link rel="prefetch">` hints.
- * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Set
- * `prefetch={true}` on nested `<Frame>` components to also fetch their HTML and discover their assets.
+ * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets.
+ * Eager nested frames with resolved server metadata are fetched recursively by default.
+ * Pending fallback frames and lazy frames do not trigger additional HTML requests.
  * Pass a `prefetch` handler to `run()` to replace the strategy. Cross-origin URLs, the current
  * untargeted page, and browsers where Remix doesn't handle navigations are skipped.
  *
@@ -386,8 +387,8 @@ export function createDefaultPrefetch(
       if (typeof data.f !== 'object' || data.f === null || Array.isArray(data.f)) continue
       let frames: unknown[] = Object.values(data.f)
       for (let frame of frames) {
-        if (typeof frame !== 'object' || frame === null || !('prefetch' in frame)) continue
-        if (frame.prefetch !== true || !('src' in frame)) continue
+        if (typeof frame !== 'object' || frame === null || !('status' in frame)) continue
+        if (frame.status !== 'resolved' || !('src' in frame)) continue
         if (typeof frame.src !== 'string' || !frame.src) continue
         let target = 'name' in frame ? frame.name : undefined
         if (target !== undefined && typeof target !== 'string') continue

@@ -837,7 +837,7 @@ describe('prefetch', () => {
 })
 
 describe('default frame prefetch', () => {
-  it('scans embedded assets without fetching unmarked frames or native fetch preloads', async (t) => {
+  it('scans embedded assets without fetching fallback frame sources or native fetch preloads', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let html = await drain(
       renderToStream(jsx(Frame, { name: 'details', src: '/details', fallback: 'Loading' }), {
@@ -856,15 +856,15 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/embedded.js'])
   })
 
-  it('prefetches only frames with prefetch=true and discovers their assets by default', async (t) => {
+  it('prefetches eager nested frames and discovers their assets without a frame opt-in', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let rootHtml = await drain(
       renderToStream(
         jsx('main', {
           children: [
-            jsx(Frame, { name: 'details', src: './details#content', prefetch: true }),
-            jsx(Frame, { name: 'disabled', src: '/disabled', prefetch: false }),
-            jsx(Frame, { src: '/not-prefetched' }),
+            jsx(Frame, { name: 'details', src: './details#content' }),
+            jsx(Frame, { name: 'deferred', src: '/deferred', fallback: 'Loading' }),
+            jsx(Frame, { src: '/unnamed' }),
           ],
         }),
         { resolveFrame: () => 'Details' },
@@ -898,32 +898,33 @@ describe('default frame prefetch', () => {
     expect(fetch.mock.calls.map((call) => new URL(String(call.arguments[0])).pathname)).toEqual([
       '/page',
       '/partials/details',
+      '/unnamed',
     ])
     expect(
       fetch.mock.calls.map((call) => new Headers(call.arguments[1]?.headers).get('X-Remix-Target')),
-    ).toEqual([null, 'details'])
+    ).toEqual([null, 'details', null])
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/redirected/entry.js'])
   })
 
-  it('recursively discovers opted-in frames in templates and deduplicates cycles by source and target', async (t) => {
+  it('recursively discovers eager frames in templates and deduplicates cycles by source and target', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
       switch (new URL(String(src)).pathname) {
         case '/page':
           return htmlResponse(`<script type="application/json" id="rmx-data">{"f":{
-            "details":{"src":"/shared","name":"details","prefetch":true},
-            "duplicate":{"src":"/shared#duplicate","name":"details","prefetch":true},
-            "sidebar":{"src":"/shared","name":"sidebar","prefetch":true}
+            "details":{"src":"/shared","name":"details","status":"resolved"},
+            "duplicate":{"src":"/shared#duplicate","name":"details","status":"resolved"},
+            "sidebar":{"src":"/shared","name":"sidebar","status":"resolved"}
           }}</script>`)
         case '/shared':
           return htmlResponse(`<script src="/shared.js"></script>
-            <script type="application/json" id="rmx-data">{"f":{"cycle":{"src":"/page","prefetch":true}}}</script>
+            <script type="application/json" id="rmx-data">{"f":{"cycle":{"src":"/page","status":"resolved"}}}</script>
             <template><template><script type="application/json" id="rmx-data">
-              {"f":{"leaf":{"src":"/leaf","prefetch":true}}}
+              {"f":{"leaf":{"src":"/leaf","status":"resolved"}}}
             </script></template></template>`)
         case '/leaf':
           return htmlResponse(`<link rel="stylesheet" href="/leaf.css">
-            <script type="application/json" id="rmx-data">{"f":{"deep":{"src":"/deep","prefetch":true}}}</script>`)
+            <script type="application/json" id="rmx-data">{"f":{"deep":{"src":"/deep","status":"resolved"}}}</script>`)
         case '/deep':
           return htmlResponse('<link rel="preload" as="font" href="/deep.woff2" crossorigin>')
         default:
@@ -959,16 +960,19 @@ describe('default frame prefetch', () => {
         return htmlResponse(`<script src="/page.js"></script>
           <script type="application/json" id="rmx-data">invalid JSON</script>
           <script type="application/json" id="rmx-data">null</script>
-          <script type="application/json" id="rmx-data">{"f":[{"src":"/array","prefetch":true}]}</script>
+          <script type="application/json" id="rmx-data">{"f":[{"src":"/array","status":"resolved"}]}</script>
           <script type="application/json" id="rmx-data">{"f":{
-            "null":null,"number":42,"missing":{"prefetch":true},
-            "empty":{"src":"","prefetch":true},"invalid":{"src":"http://[","prefetch":true},
-            "crossOrigin":{"src":"https://example.com/frame","prefetch":true},
-            "data":{"src":"data:text/html,frame","prefetch":true},
-            "badTarget":{"src":"/bad","name":42,"prefetch":true},
-            "stringFlag":{"src":"/string","prefetch":"true"},
-            "failed":{"src":"/failed","prefetch":true},"json":{"src":"/json","prefetch":true},
-            "valid":{"src":"/valid?size=small#content","prefetch":true}
+            "null":null,"number":42,"missing":{"status":"resolved"},
+            "empty":{"src":"","status":"resolved"},"invalid":{"src":"http://[","status":"resolved"},
+            "crossOrigin":{"src":"https://example.com/frame","status":"resolved"},
+            "data":{"src":"data:text/html,frame","status":"resolved"},
+            "badTarget":{"src":"/bad","name":42,"status":"resolved"},
+            "invalidStatus":{"src":"/string","status":42},
+            "pending":{"src":"/pending","status":"pending"},
+            "lazy":{"src":"/lazy","status":"lazy"},
+            "missingStatus":{"src":"/missing-status"},
+            "failed":{"src":"/failed","status":"resolved"},"json":{"src":"/json","status":"resolved"},
+            "valid":{"src":"/valid?size=small#content","status":"resolved"}
           }}</script>`)
       }
       if (new URL(String(src)).pathname === '/failed') {
@@ -997,9 +1001,9 @@ describe('default frame prefetch', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/page.js', '/valid.jpg'])
   })
 
-  it('does not make speculative requests while hydrating frames marked for prefetch on a normal load', async (t) => {
+  it('does not make speculative requests while hydrating eager frames on a normal load', async (t) => {
     let html = await drain(
-      renderToStream(jsx(Frame, { name: 'details', src: '/details', prefetch: true }), {
+      renderToStream(jsx(Frame, { name: 'details', src: '/details' }), {
         resolveFrame: () => '<p>Server-rendered details</p>',
       }),
     )
@@ -1024,7 +1028,7 @@ describe('default frame prefetch', () => {
     let fetch = t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) =>
       htmlResponse(
         `<script type="application/json" id="rmx-data">{"f":{"next":{
-          "src":"${new URL(String(src)).pathname === '/first' ? '/second' : '/first'}","prefetch":true
+          "src":"${new URL(String(src)).pathname === '/first' ? '/second' : '/first'}","status":"resolved"
         }}}</script>`,
       ),
     )
@@ -1320,7 +1324,7 @@ describe('default frame prefetch', () => {
       async (src: RequestInfo | URL, init?: RequestInit) => {
         if (new URL(String(src)).pathname === '/page') {
           return htmlResponse(`<script src="/pending.js"></script>
-          <script type="application/json" id="rmx-data">{"f":{"nested":{"src":"/nested","prefetch":true}}}</script>`)
+          <script type="application/json" id="rmx-data">{"f":{"nested":{"src":"/nested","status":"resolved"}}}</script>`)
         }
         let response = Promise.withResolvers<Response>()
         init?.signal?.addEventListener('abort', () => response.reject(init.signal?.reason), {

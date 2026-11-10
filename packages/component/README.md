@@ -1110,13 +1110,12 @@ function AlbumPage(handle: Handle<{ albumId: string }>) {
 }
 ```
 
-| Prop       | Use                                                                                                       |
-| ---------- | --------------------------------------------------------------------------------------------------------- |
-| `src`      | Required. The URL whose HTML the frame renders and reloads.                                               |
-| `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                                        |
-| `prefetch` | Opts this frame into the default prefetch strategy when ancestor HTML is prefetched. Defaults to `false`. |
-| `fallback` | Content to render while the frame is pending.                                                             |
-| `on`       | Event handlers for events dispatched from the frame element, keyed by event type.                         |
+| Prop       | Use                                                                               |
+| ---------- | --------------------------------------------------------------------------------- |
+| `src`      | Required. The URL whose HTML the frame renders and reloads.                       |
+| `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                |
+| `fallback` | Content to render while the frame is pending.                                     |
+| `on`       | Event handlers for events dispatched from the frame element, keyed by event type. |
 
 Frame content can contain other frames and client entries.
 
@@ -1394,22 +1393,26 @@ Remix reads the prefetched HTML without running it and finds the page's JavaScri
 
 Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix doesn't scan `<img>` elements or CSS `@font-face` rules.
 
-To prefetch selected nested frames, add `prefetch` to those frames in the destination page:
+The default strategy also fetches eager nested frames recursively. It follows frame entries with `status: "resolved"` in the server's existing JSON metadata, including entries inside nested templates. These are the frames whose content SSR waits for before its initial flush. No extra frame prop is required:
 
 ```tsx
 import { Frame } from 'remix/component'
+
 function ProductPage() {
-  return () => <Frame name="reviews" src="/partials/reviews" prefetch />
+  return () => (
+    <main>
+      <Frame name="reviews" src="/partials/reviews" />
+      <Frame name="recommendations" src="/partials/recommendations" fallback="Loading…" />
+    </main>
+  )
 }
 ```
 
-The server records this flag in the frame's JSON metadata. When the default prefetch strategy loads ancestor HTML, it reads that metadata without executing scripts, fetches each opted-in same-origin frame, and scans its HTML for assets and further opted-in frames. Metadata inside nested templates is included.
+Prefetching this page also fetches the reviews frame and discovers its assets. The recommendations frame has pending fallback metadata, so its source doesn't trigger an additional prefetch request. Frames marked lazy are skipped too. Assets already embedded in the response are still discovered, including those streamed from fallback frames.
 
-Each combination of source URL and frame target is visited once per prefetch traversal, so cycles stop. Frames without `prefetch={true}` don't trigger additional requests. Their assets are still discovered if they're already embedded in the HTML.
+Each combination of source URL and frame target is visited once per prefetch traversal, so cycles stop. Nested requests use the same frame headers as imperative `prefetch()` calls, including `X-Remix-Target` from the frame's `name`. Failed and non-HTML responses stop discovery for that URL. This behavior applies to both automatic link prefetching and imperative calls.
 
-Nested requests use the same frame headers as imperative `prefetch()` calls, including `X-Remix-Target` from the frame's `name`. Failed and non-HTML responses stop discovery for that URL. This behavior applies to both automatic link prefetching and imperative calls.
-
-`prefetch` doesn't emit a native fetch preload link or initiate speculative requests during a normal document load. Remix doesn't use `<link rel="preload" as="fetch">` for nested-frame discovery.
+Frame discovery uses inert JSON metadata and doesn't emit native fetch preload links or initiate speculative requests during a normal document load. Remix doesn't use `<link rel="preload" as="fetch">` for nested-frame discovery.
 
 Pass a custom handler as `run({ prefetch(src, options) {} })` to replace the default HTML fetch and asset discovery. The handler owns any nested-frame loading.
 
