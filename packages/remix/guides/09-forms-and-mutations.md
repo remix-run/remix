@@ -220,7 +220,7 @@ To show "Album saved" on the destination page, store the message as [session fla
 Once the page [boots the browser runtime with `run()`](/interactivity/#browser-entry-with-run), Remix handles the form submission as a [frame navigation](/streaming-ui-with-frames/#navigate-a-frame-with-a-form). It renders validation responses into the page and follows redirects after a successful save.
 
 Hydrate the submit button and use
-[`onSubmission()`](../src/component/README.md#following-a-form-submission) to show when its save is in progress.
+[`on('rmx:submission', handler)`](../src/component/README.md#following-a-form-submission) to show when its save is in progress.
 The rest of the form stays server-rendered. The handler runs for submissions using that button,
 including Enter when it is the form's default button. Links and other forms don't start its pending
 state.
@@ -233,7 +233,7 @@ clear pending state when that request ends instead.
 Put the button in the edit action's `public/` directory so the [asset server can serve it to the browser](/files-and-assets/#control-what-the-browser-can-reach):
 
 ```tsx filename=app/actions/albums/edit/public/save-button.tsx
-import { clientEntry, onSubmission } from "remix/component";
+import { clientEntry, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 export const SaveButton = clientEntry(import.meta.url, function SaveButton(handle: Handle) {
@@ -244,7 +244,7 @@ export const SaveButton = clientEntry(import.meta.url, function SaveButton(handl
     <>
       <button
         type="submit"
-        mix={onSubmission(async (event, signal) => {
+        mix={on("rmx:submission", async (event, signal) => {
           saving = true;
           failed = false;
           handle.update();

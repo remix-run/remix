@@ -1025,7 +1025,7 @@ settles, as in the [enhanced album form](#enhancing-forms-with-fetch-and-navigat
 for disabled controls, pending labels, progress indicators, and duplicate-submission prevention.
 
 For forms Remix handles as [frame navigations](#client-navigation), use
-[`onSubmission()`](../src/component/README.md#following-a-form-submission) to follow a button's or form's own
+[`on('rmx:submission', handler)`](../src/component/README.md#following-a-form-submission) to follow a button's or form's own
 submissions. The handler receives the submitted `formData` and a `finished` promise that follows
 the same `Promise<AbortSignal>` contract as `frame.reload()`.
 [Add pending feedback](/forms-and-mutations/#add-pending-feedback) shows how to use it for a save button.
@@ -1034,7 +1034,7 @@ Optimistic UI renders the expected result before the request completes. A hydrat
 what it just submitted, and let the response replace it:
 
 ```tsx filename=app/actions/albums/public/favorite-form.tsx
-import { clientEntry, onSubmission } from "remix/component";
+import { clientEntry, on } from "remix/component";
 import type { Handle } from "remix/component";
 
 export const FavoriteForm = clientEntry(
@@ -1049,7 +1049,7 @@ export const FavoriteForm = clientEntry(
         <form
           method="post"
           action={handle.props.action}
-          mix={onSubmission(async (event, signal) => {
+          mix={on("rmx:submission", async (event, signal) => {
             submitted = event.formData?.get("favorite") === "true";
             failed = false;
             handle.update();

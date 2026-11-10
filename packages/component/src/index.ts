@@ -68,7 +68,6 @@ export type {
 export { TypedEventTarget } from './runtime/component.ts'
 export type { Dispatched } from './runtime/event-types.ts'
 export { on } from './runtime/mixins/on-mixin.ts'
-export { onSubmission } from './runtime/mixins/on-submission-mixin.ts'
 export { link } from './runtime/mixins/link-mixin.ts'
 export { ref } from './runtime/mixins/ref-mixin.ts'
 export type { RefCallback } from './runtime/mixins/ref-mixin.ts'

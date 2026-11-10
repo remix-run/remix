@@ -11,7 +11,7 @@ import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
-import { css, navigate, on, onSubmission } from '../index.ts'
+import { css, navigate, on } from '../index.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
 
@@ -849,7 +849,7 @@ describe('run', () => {
     expect(document.querySelector('main')?.textContent).toBe('Initial')
   })
 
-  it('aborts onSubmission()’s signal when a newer submission of the same button starts', async (t) => {
+  it('aborts the submission handler signal when a newer submission of the same button starts', async (t) => {
     document.body.innerHTML = '<main>Initial</main>'
     let [firstResponse, resolveFirstResponse] = withResolvers<Response>()
     let fetchCalls = 0
@@ -870,7 +870,7 @@ describe('run', () => {
     root.render(
       <form>
         <button
-          mix={onSubmission((event, signal) => {
+          mix={on('rmx:submission', (event, signal) => {
             submissions.push({ event, signal })
           })}
         >

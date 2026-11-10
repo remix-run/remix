@@ -1248,16 +1248,16 @@ For a direct reload, `await event.finished` and `await frame.reload()` return th
 
 Rendering a validation response counts as a completed reload. The response carries its field errors.
 
-Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `onSubmission()` for a form's own submissions.
+Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `rmx:submission` for a form's own submissions.
 
 ### Following a Form Submission
 
-`onSubmission(handler, captureBoolean?)` follows form submissions that start Remix frame reloads. Its handler receives a typed `FormSubmissionEvent` (`rmx:submission`), with the host inferred as `event.currentTarget`. Listen on a submit button for its submissions, or on the form for all of them.
+`on('rmx:submission', handler, captureBoolean?)` follows form submissions that start Remix frame reloads. Its handler receives a typed `FormSubmissionEvent`, with the host inferred as `event.currentTarget`. Listen on a submit button for its submissions, or on the form for all of them.
 
 To display submitted values while a save is pending:
 
 ```tsx
-import { clientEntry, onSubmission } from 'remix/component'
+import { clientEntry, on } from 'remix/component'
 import type { FormSubmissionEvent, Handle } from 'remix/component'
 
 export const TitleForm = clientEntry(
@@ -1270,7 +1270,7 @@ export const TitleForm = clientEntry(
       <form
         method="post"
         action={handle.props.action}
-        mix={onSubmission(async (event, signal) => {
+        mix={on('rmx:submission', async (event, signal) => {
           submission = event
           failed = false
           handle.update()

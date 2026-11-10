@@ -1,6 +1,6 @@
 # Follow a form's own submissions with an element event
 
-Use `reloadStart` to observe every reload of a frame and `rmx:submission` to observe the form submissions that start one. Both carry the initiating request details and share the target frame's `finished` promise. The typed `onSubmission(handler, captureBoolean?)` mixin follows the same signature and reentry behavior as `on()`.
+Use `reloadStart` to observe every reload of a frame and `rmx:submission` to observe the form submissions that start one. Both carry the initiating request details and share the target frame's `finished` promise. Listen through the existing `on('rmx:submission', handler, captureBoolean?)` mixin.
 
 ## Why an element event
 
@@ -14,7 +14,7 @@ External or detached submitters have no event path through their owning form. Th
 
 `FormSubmissionEvent` extends the native `SubmitEvent` with `cancelable: false`. The name describes an operation already underway and distinguishes it from native `submit`, where applications can still prevent submission. `stopPropagation()` controls delivery without cancelling the reload.
 
-`onSubmission()` wraps `on('rmx:submission', handler, captureBoolean)`, preserving inferred `currentTarget` types and the signal aborted on reentry or removal. `reloadStart` and `reloadComplete` retain their existing names.
+Registering `rmx:submission` in `HTMLElementEventMap` gives `on()` a typed event, inferred `currentTarget`, and event-name completion. The existing handler signal aborts on reentry or removal, so a dedicated submission mixin would only hide the event name. `reloadStart` and `reloadComplete` retain their existing names.
 
 ## Shared request and origin details
 

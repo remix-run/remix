@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Assert, Equal } from './utils.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
-import { createMixin, on, onSubmission, ref, unsafeHTML } from '../index.ts'
+import { createMixin, on, ref, unsafeHTML } from '../index.ts'
 
 import type {
   Dispatched,
@@ -436,7 +436,7 @@ describe('jsx', () => {
       let applied = <div mix={[withOnMixin()]} />
     })
 
-    it('infers onSubmission event and currentTarget types from the host', () => {
+    it('infers submission event and currentTarget types from the host', () => {
       type reloadElement = Assert<
         Equal<
           FrameReloadStartEvent['element'],
@@ -445,7 +445,7 @@ describe('jsx', () => {
       >
       let button = (
         <button
-          mix={onSubmission((event, signal) => {
+          mix={on('rmx:submission', (event, signal) => {
             type inferredEvent = Assert<
               Equal<typeof event, Dispatched<FormSubmissionEvent, HTMLButtonElement>>
             >
@@ -456,7 +456,7 @@ describe('jsx', () => {
       )
       let form = (
         <form
-          mix={onSubmission((event) => {
+          mix={on('rmx:submission', (event) => {
             type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLFormElement>>
             type inferredForm = Assert<Equal<typeof event.form, HTMLFormElement>>
             type noElement = Assert<Equal<Extract<'element', keyof typeof event>, never>>
@@ -468,7 +468,7 @@ describe('jsx', () => {
       )
       let ancestor = (
         <section
-          mix={onSubmission((event) => {
+          mix={on('rmx:submission', (event) => {
             type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLElement>>
           })}
         />

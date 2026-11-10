@@ -1,4 +1,4 @@
-import { type Handle, clientEntry, css, onSubmission } from 'remix/component'
+import { type Handle, clientEntry, css, on } from 'remix/component'
 
 export const SaveButton = clientEntry(
   import.meta.url,
@@ -11,7 +11,7 @@ export const SaveButton = clientEntry(
         <button
           type="submit"
           class="btn"
-          mix={onSubmission(async (event, signal) => {
+          mix={on('rmx:submission', async (event, signal) => {
             saving = true
             failed = false
             handle.update()
