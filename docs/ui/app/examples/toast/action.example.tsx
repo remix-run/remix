@@ -31,8 +31,7 @@ export default function ExampleToastAction() {
       (target.isContentEditable || target.closest('input, textarea, select'))
     )
       return
-    let action = toastManager.toastItems.find((toastItem) => toastItem.id === 'example')?.data
-      ?.action
+    let action = toastManager.items.find((toastItem) => toastItem.id === 'example')?.data?.action
     if (!action) return
     event.preventDefault()
     action.run()

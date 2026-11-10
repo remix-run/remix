@@ -49,7 +49,7 @@ export function Notifications() {
 
 ## `@remix-run/ui/toast`
 
-- `createToastManager<data = unknown>()`: creates a manager with `add(options)`, `close(id)`, `closeAll()` and a newest-first `toastItems` collection. The manager supports native `change` subscriptions.
+- `createToastManager<data = unknown>()`: creates a manager with `add(options)`, `close(id)`, `closeAll()` and a newest-first `items` collection. The manager supports native `change` subscriptions.
 - `Context`: connects a stable `manager` to the UI. Accepts `defaultTimeout`, `limit` and a typed collection callback. There is no limit by default.
 - `root({ label })`: gives the collection named region semantics and keyboard entry. A non-empty `label` is required.
 - `ItemContext`: scopes one notification using its ID as `value`.

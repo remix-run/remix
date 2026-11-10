@@ -18,7 +18,7 @@ export default function ExampleToastDismissal(handle: Handle) {
   })
 
   return () => {
-    let newest = toastManager.toastItems[0]
+    let newest = toastManager.items[0]
 
     return (
       <div mix={styles.triggers}>

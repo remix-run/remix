@@ -20,9 +20,9 @@ function clock(t: TestContext) {
 function Notifications<data>(handle: Handle<Omit<toast.ToastContextProps<data>, 'children'>>) {
   return () => (
     <toast.Context manager={handle.props.manager} defaultTimeout={handle.props.defaultTimeout}>
-      {(items) => (
+      {(toastItems) => (
         <section mix={toast.root({ label: 'Notifications' })}>
-          {items.map((notification) => (
+          {toastItems.map((notification) => (
             <toast.ItemContext key={notification.id} value={notification.id}>
               <article key={notification.id} mix={toast.item()}>
                 {notification.title}
@@ -50,9 +50,9 @@ describe('toast UI timers', () => {
     let result = render(<Notifications manager={manager} />)
     t.after(result.cleanup)
     await result.act(() => time.advance(999))
-    assert.equal(manager.toastItems.length, 1)
+    assert.equal(manager.items.length, 1)
     await result.act(() => time.advance(1))
-    assert.equal(manager.toastItems.length, 0)
+    assert.equal(manager.items.length, 0)
     assert.equal(result.container.querySelector('article'), null)
   })
 
@@ -75,7 +75,7 @@ describe('toast UI timers', () => {
     assert.equal(calls, 1)
     await result.act(() => time.advance(500))
     assert.deepEqual(
-      manager.toastItems.map((item) => item.id),
+      manager.items.map((item) => item.id),
       ['default'],
     )
     let node = region(result.container)
@@ -89,7 +89,7 @@ describe('toast UI timers', () => {
     await result.act(() => manager.add({ id: 'default', data: { persistent: true } }))
     assert.equal(calls, 2)
     await result.act(() => time.advance(10000))
-    assert.equal(manager.toastItems.length, 1)
+    assert.equal(manager.items.length, 1)
   })
 
   it('keeps existing and arriving clocks paused until overlapping UI conditions end', async (t) => {
@@ -109,17 +109,17 @@ describe('toast UI timers', () => {
     )
     await result.act(() => manager.add({ id: 'second', timeout: 1000 }))
     await result.act(() => time.advance(5000))
-    assert.equal(manager.toastItems.length, 2)
+    assert.equal(manager.items.length, 2)
     await result.act(() => window.dispatchEvent(new Event('focus')))
     await result.act(() => time.advance(699))
-    assert.equal(manager.toastItems.length, 2)
+    assert.equal(manager.items.length, 2)
     await result.act(() => time.advance(1))
     assert.deepEqual(
-      manager.toastItems.map((item) => item.id),
+      manager.items.map((item) => item.id),
       ['second'],
     )
     await result.act(() => time.advance(300))
-    assert.equal(manager.toastItems.length, 0)
+    assert.equal(manager.items.length, 0)
   })
 
   it('cancels clocks on unmount while retaining data and starts fresh clocks on remount', async (t) => {
@@ -130,13 +130,13 @@ describe('toast UI timers', () => {
     await first.act(() => time.advance(300))
     first.cleanup()
     time.advance(10000)
-    assert.equal(manager.toastItems.length, 1)
+    assert.equal(manager.items.length, 1)
     let second = render(<Notifications manager={manager} />)
     t.after(second.cleanup)
     await second.act(() => time.advance(999))
-    assert.equal(manager.toastItems.length, 1)
+    assert.equal(manager.items.length, 1)
     await second.act(() => time.advance(1))
-    assert.equal(manager.toastItems.length, 0)
+    assert.equal(manager.items.length, 0)
   })
 
   it('keeps clocks paused after hover ends while keyboard focus remains in the region', async (t) => {
@@ -160,16 +160,16 @@ describe('toast UI timers', () => {
       node.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })),
     )
     await result.act(() => time.advance(5000))
-    assert.equal(manager.toastItems.length, 1)
+    assert.equal(manager.items.length, 1)
     await result.act(() =>
       node.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'F6', bubbles: true, cancelable: true }),
       ),
     )
     await result.act(() => time.advance(899))
-    assert.equal(manager.toastItems.length, 1)
+    assert.equal(manager.items.length, 1)
     await result.act(() => time.advance(1))
-    assert.equal(manager.toastItems.length, 0)
+    assert.equal(manager.items.length, 0)
   })
 
   it('restarts a replaced notification without allowing its previous clock to dismiss it', async (t) => {
@@ -181,9 +181,9 @@ describe('toast UI timers', () => {
     await result.act(() => time.advance(300))
     await result.act(() => manager.add({ id: 'saved', timeout: 1000 }))
     await result.act(() => time.advance(700))
-    assert.equal(manager.toastItems.length, 1)
+    assert.equal(manager.items.length, 1)
     await result.act(() => time.advance(300))
-    assert.equal(manager.toastItems.length, 0)
+    assert.equal(manager.items.length, 0)
   })
 
   it('does not let an expiring clock close a replacement before the UI updates', async (t) => {
@@ -197,11 +197,11 @@ describe('toast UI timers', () => {
       manager.add({ id: 'saved', title: 'Replacement', timeout: 1000 })
       time.advance(1)
     })
-    assert.equal(manager.toastItems[0]?.title, 'Replacement')
+    assert.equal(manager.items[0]?.title, 'Replacement')
     await result.act(() => time.advance(999))
-    assert.equal(manager.toastItems.length, 1)
+    assert.equal(manager.items.length, 1)
     await result.act(() => time.advance(1))
-    assert.equal(manager.toastItems.length, 0)
+    assert.equal(manager.items.length, 0)
   })
 
   it('keeps persistent items open and dismisses zero timeouts only when presented', async (t) => {
@@ -210,15 +210,15 @@ describe('toast UI timers', () => {
     manager.add({ id: 'persistent', timeout: false })
     manager.add({ id: 'immediate', timeout: 0 })
     time.advance(10000)
-    assert.equal(manager.toastItems.length, 2)
+    assert.equal(manager.items.length, 2)
     let result = render(<Notifications manager={manager} defaultTimeout={1000} />)
     t.after(result.cleanup)
     await result.act(() => time.advance(0))
     assert.deepEqual(
-      manager.toastItems.map((item) => item.id),
+      manager.items.map((item) => item.id),
       ['persistent'],
     )
     await result.act(() => time.advance(10000))
-    assert.equal(manager.toastItems.length, 1)
+    assert.equal(manager.items.length, 1)
   })
 })

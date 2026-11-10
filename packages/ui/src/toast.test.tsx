@@ -22,7 +22,7 @@ function clock(t: TestContext) {
 }
 
 function first<data>(toastManager: ToastManager<data>): ToastItem<data> {
-  let toastItem = toastManager.toastItems[0]
+  let toastItem = toastManager.items[0]
   assert.ok(toastItem)
   return toastItem
 }
@@ -84,31 +84,31 @@ describe('toast manager', () => {
     toastManager.add({ id: 'other', title: 'Other' })
     toastManager.add({ id: 'save', title: 'Saved', timeout: 5000 })
     assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.id),
+      toastManager.items.map((toastItem) => toastItem.id),
       ['other', 'save'],
     )
-    assert.equal(toastManager.toastItems[1].title, 'Saved')
+    assert.equal(toastManager.items[1].title, 'Saved')
     toastManager.close('save')
     assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.id),
+      toastManager.items.map((toastItem) => toastItem.id),
       ['other'],
     )
     toastManager.closeAll()
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
   })
 
   it('closes all toasts and notifies subscribers with the empty collection', () => {
     let toastManager = createToastManager()
     toastManager.add({ title: 'First' })
     toastManager.add({ title: 'Second' })
-    let snapshot = toastManager.toastItems
+    let snapshot = toastManager.items
     let count = 0
     toastManager.addEventListener('change', () => {
       count += 1
-      assert.equal(toastManager.toastItems.length, 0)
+      assert.equal(toastManager.items.length, 0)
     })
     toastManager.closeAll()
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
     assert.equal(snapshot.length, 2)
     assert.equal(count, 1)
   })
@@ -248,7 +248,7 @@ describe('toast.root()', () => {
     assert.equal(element(result.container, '[role="region"]').getAttribute('aria-live'), null)
     await result.act(() => undo.click())
     assert.equal(document.activeElement, publish)
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
     assert.equal(result.container.querySelector('[data-toast]'), null)
     assert.ok(id)
   })
@@ -330,7 +330,7 @@ describe('toast.root()', () => {
     t.after(result.cleanup)
     let node = element(result.container, '[data-toast]')
     await result.act(() => toastManager.close(id))
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
     assert.equal(node.inert, true)
     assert.equal(node.getAttribute('aria-hidden'), 'true')
     assert.equal(node.isConnected, true)
@@ -540,7 +540,7 @@ describe('toast availability', () => {
     assert.equal(firstNode.hasAttribute('data-limited'), true)
     assert.equal(secondNode.inert, false)
     assert.equal(result.$$('[data-limited]').length, 1)
-    assert.equal(toastManager.toastItems.length, 4)
+    assert.equal(toastManager.items.length, 4)
 
     await result.act(() => result.root.render(view(2)))
     assert.equal(secondNode.inert, true)
@@ -548,7 +548,7 @@ describe('toast availability', () => {
     await result.act(() => toastManager.add({ id: 'first', title: 'First updated' }))
     assert.equal(firstNode.inert, true)
     assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.id),
+      toastManager.items.map((toastItem) => toastItem.id),
       ['fourth', 'third', 'second', 'first'],
     )
 
@@ -609,7 +609,7 @@ describe('toast availability', () => {
     await result.act(() => time.advance(400))
     assert.equal(old.isConnected, false)
     assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.id),
+      toastManager.items.map((toastItem) => toastItem.id),
       ['new'],
     )
   })
@@ -718,10 +718,10 @@ describe('toast availability', () => {
     assert.equal(old.inert, true)
     await result.act(() => window.dispatchEvent(new Event('blur')))
     time.advance(2000)
-    assert.equal(toastManager.toastItems.length, 2)
+    assert.equal(toastManager.items.length, 2)
     await result.act(() => window.dispatchEvent(new Event('focus')))
     await result.act(() => time.advance(1000))
-    assert.equal(toastManager.toastItems.length, 1)
+    assert.equal(toastManager.items.length, 1)
     assert.equal(old.isConnected, false)
   })
 
@@ -861,7 +861,7 @@ describe('toast.root() interactions', () => {
     assert.equal(activations, 1)
     assert.equal(region.hasAttribute('data-expanded'), true)
     time.advance(2000)
-    assert.equal(toastManager.toastItems.length, 1)
+    assert.equal(toastManager.items.length, 1)
     await result.act(() => action.focus())
     await result.act(() =>
       outside.dispatchEvent(
@@ -875,7 +875,7 @@ describe('toast.root() interactions', () => {
     assert.equal(region.hasAttribute('data-expanded'), false)
     assert.equal(region.contains(document.activeElement), false)
     await result.act(() => time.advance(1000))
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
   })
 
   it('ignores mouse and secondary touches and clears touch engagement when the stack empties', async (t) => {

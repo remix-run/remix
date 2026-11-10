@@ -91,7 +91,7 @@ const publishers = await highlightSource(`
 const subscribe = await highlightSource(`
   let subscription = new AbortController()
   toastManager.addEventListener('change', () => {
-    console.log(toastManager.toastItems)
+    console.log(toastManager.items)
   }, { signal: subscription.signal })
 
   subscription.abort()
@@ -121,7 +121,7 @@ interface ToastItem<data = unknown> {
 `),
   ToastManager: await highlightSource(`
 interface ToastManager<data = unknown> extends TypedEventTarget<{ change: Event }> {
-  readonly toastItems: readonly ToastItem<data>[]
+  readonly items: readonly ToastItem<data>[]
   add(options: ToastAddOptions<data>): string
   close(id: string): void
   closeAll(): void
@@ -190,7 +190,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           Call <code>close(id)</code> to dismiss a toast programmatically, or{' '}
           <code>closeAll()</code>
           to dismiss all toasts. Use the ID returned by <code>add()</code> or read it from{' '}
-          <code>toastItems</code>.
+          <code>items</code>.
         </p>
         <Example id="programmatic-dismissal" example={dismissal} />
       </Section>
@@ -306,7 +306,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <p>Creates application-level state and commands.</p>
         <h3 id="manager">ToastManager&lt;data&gt;</h3>
         <ApiTable id="manager-members" label="Member">
-          <ApiEntry name="toastItems" type="readonly ToastItem<data>[]">
+          <ApiEntry name="items" type="readonly ToastItem<data>[]">
             Current immutable snapshots, newest first. Repeated IDs keep their position.
           </ApiEntry>
           <ApiEntry name="add" type="(options: ToastAddOptions<data>) => string">
@@ -322,7 +322,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry name="addEventListener" type="('change', listener, options?) => void">
             <p>
-              Native EventTarget subscription with AbortSignal cleanup. Read <code>toastItems</code>
+              Native EventTarget subscription with AbortSignal cleanup. Read <code>items</code>
               inside the listener for immutable snapshots of the new state.
             </p>
             <CodeBlock html={subscribe} />

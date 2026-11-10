@@ -38,7 +38,7 @@ export interface ToastItem<data = unknown> {
 /** Commands and observable state, without a bound component. Events signal that state can be read. */
 export interface ToastManager<data = unknown> extends TypedEventTarget<{ change: Event }> {
   /** Open toast items, newest first. Updating an existing identity preserves its position. */
-  readonly toastItems: readonly ToastItem<data>[]
+  readonly items: readonly ToastItem<data>[]
   /** Adds or replaces a toast by identity. Omitted fields clear or use defaults. Returns its identity. */
   add(options: ToastAddOptions<data>): string
   /** Closes the toast with the supplied identity. */
@@ -78,19 +78,19 @@ export interface ToastItemContextProps {
  * @returns A manager with native EventTarget subscriptions.
  */
 export function createToastManager<data = unknown>(): ToastManager<data> {
-  let toastItems = new Map<string, ToastItem<data>>()
+  let items = new Map<string, ToastItem<data>>()
   let nextId = 0
 
   class ToastStore extends TypedEventTarget<{ change: Event }> implements ToastManager<data> {
-    get toastItems(): readonly ToastItem<data>[] {
-      return Object.freeze([...toastItems.values()].reverse())
+    get items(): readonly ToastItem<data>[] {
+      return Object.freeze([...items.values()].reverse())
     }
     add(options: ToastAddOptions<data>) {
       if (options.timeout !== undefined) validateTimeout(options.timeout)
       let id = options.id ?? `toast-${++nextId}`
-      while (options.id === undefined && toastItems.has(id)) id = `toast-${++nextId}`
-      let previous = toastItems.get(id)
-      toastItems.set(
+      while (options.id === undefined && items.has(id)) id = `toast-${++nextId}`
+      let previous = items.get(id)
+      items.set(
         id,
         Object.freeze({ ...options, id, revision: previous ? previous.revision + 1 : 0 }),
       )
@@ -98,11 +98,11 @@ export function createToastManager<data = unknown>(): ToastManager<data> {
       return id
     }
     close(id: string) {
-      if (!toastItems.delete(id)) return
+      if (!items.delete(id)) return
       this.dispatchEvent(new Event('change'))
     }
     closeAll() {
-      toastItems.clear()
+      items.clear()
       this.dispatchEvent(new Event('change'))
     }
   }
@@ -117,7 +117,7 @@ function validateTimeout(value: number | false): number | false {
 
 type RootState = {
   readonly limit: number
-  toastManager: Pick<ToastManager<unknown>, 'close' | 'toastItems'>
+  toastManager: Pick<ToastManager<unknown>, 'close' | 'items'>
   timeout(id: string): number | false
   registerRoot(node: HTMLElement, options: () => ToastRootOptions, signal: AbortSignal): void
   registerItem(id: string, node: HTMLElement, clock: ToastClock): void
@@ -198,7 +198,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   let returnTo: HTMLElement | undefined
   let entering = false
   let presentations = new Map<string, { node: HTMLElement; clock: ToastClock }>()
-  let previous = toastManager.toastItems.map((toastItem) => toastItem.id)
+  let previous = toastManager.items.map((toastItem) => toastItem.id)
   let interaction = createInteractionState((paused) => {
     for (let { clock } of presentations.values()) clock.setPaused(paused)
     if (!handle.signal.aborted) void handle.update()
@@ -215,8 +215,8 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   }
 
   function refresh() {
-    let toastItems = toastManager.toastItems
-    let available = new Set(toastItems.slice(0, limit).map((toastItem) => toastItem.id))
+    let items = toastManager.items
+    let available = new Set(items.slice(0, limit).map((toastItem) => toastItem.id))
     let active = region && activeElement(region.ownerDocument)
     if (region && !available.size && active && contains(region, active)) {
       if (!restoreFocus()) active.blur()
@@ -239,9 +239,9 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       }
     }
     // Focusing a neighbour may run consumer handlers that close more notifications.
-    toastItems = toastManager.toastItems
-    available = new Set(toastItems.slice(0, limit).map((toastItem) => toastItem.id))
-    previous = toastItems.map((toastItem) => toastItem.id)
+    items = toastManager.items
+    available = new Set(items.slice(0, limit).map((toastItem) => toastItem.id))
+    previous = items.map((toastItem) => toastItem.id)
     for (let [id, { node }] of presentations) {
       let unavailable = !available.has(id)
       node.inert = unavailable
@@ -253,7 +253,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   let state: RootState = {
     toastManager,
     timeout(id) {
-      let toastItem = toastManager.toastItems.find((toastItem) => toastItem.id === id)
+      let toastItem = toastManager.items.find((toastItem) => toastItem.id === id)
       if (!toastItem) return false
       let defaultTimeout = handle.props.defaultTimeout ?? false
       return validateTimeout(
@@ -267,7 +267,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     focusGuard(previous) {
       let target =
         previous === region
-          ? toastManager.toastItems
+          ? toastManager.items
               .slice(0, limit)
               .map((toastItem) => presentations.get(toastItem.id)?.node)
               .find((node) => node?.isConnected && !node.inert)
@@ -293,7 +293,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     unregisterItem(id, node) {
       if (presentations.get(id)?.node !== node) return
       presentations.delete(id)
-      if (!toastManager.toastItems.length) {
+      if (!toastManager.items.length) {
         interaction.clearPointerInteraction()
       }
       refresh()
@@ -402,7 +402,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
             node.closest('[inert]')
           )
             return
-          if (!toastManager.toastItems.length || contains(node, activeElement(doc))) return
+          if (!toastManager.items.length || contains(node, activeElement(doc))) return
           returnTo = activeElement(doc) ?? doc.body
           entering = true
           try {
@@ -467,10 +467,10 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     }
     return (
       <ToastScope value={state}>
-        {handle.props.children(toastManager.toastItems)}
+        {handle.props.children(toastManager.items)}
         <div aria-live="polite" aria-atomic="false" aria-relevant="additions text" mix={hidden}>
           {!state.focused &&
-            toastManager.toastItems
+            toastManager.items
               .filter((toastItem) => presentations.has(toastItem.id))
               .map((toastItem) => (
                 <div key={JSON.stringify([toastItem.id, toastItem.revision])} aria-atomic="true">
@@ -603,7 +603,7 @@ export function ItemContext(handle: Handle<ToastItemContextProps, ItemState>): (
     },
   })
   return () => {
-    let available = context.toastManager.toastItems.slice(0, context.limit)
+    let available = context.toastManager.items.slice(0, context.limit)
     let first = available[0]?.id === handle.props.value
     let last = available.at(-1)?.id === handle.props.value
     return (
@@ -637,7 +637,7 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
     let countdown = false
     let animation: Animation | undefined
     let clock = createToastClock(() => {
-      let current = context.toastManager.toastItems.find((toastItem) => toastItem.id === scoped.id)
+      let current = context.toastManager.items.find((toastItem) => toastItem.id === scoped.id)
       if (current && current === publication) context.toastManager.close(scoped.id)
     }, synchronizeCountdown)
 
@@ -666,9 +666,7 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
       host = node
       publication = undefined
       context.registerItem(scoped.id, node, clock)
-      synchronizeClock(
-        context.toastManager.toastItems.find((toastItem) => toastItem.id === scoped.id),
-      )
+      synchronizeClock(context.toastManager.items.find((toastItem) => toastItem.id === scoped.id))
     }
     handle.addEventListener('insert', (event) => connect(event.node))
     handle.addEventListener('reclaimed', (event) => connect(event.node))
@@ -682,9 +680,9 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
     handle.addEventListener('remove', disconnect)
     handle.signal.addEventListener('abort', disconnect, { once: true })
     return (options = {}) => {
-      let toastItems = context.toastManager.toastItems
-      let index = toastItems.findIndex((toastItem) => toastItem.id === scoped.id)
-      let toastItem = toastItems[index]
+      let items = context.toastManager.items
+      let index = items.findIndex((toastItem) => toastItem.id === scoped.id)
+      let toastItem = items[index]
       if (countdown !== Boolean(options.countdown)) {
         countdown = Boolean(options.countdown)
         synchronizeCountdown()

@@ -90,7 +90,7 @@ describe('toast accessibility', () => {
     assert.equal(item.getAttribute('role'), 'dialog')
     await result.act(() => element(item, 'button').click())
     assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.id),
+      toastManager.items.map((toastItem) => toastItem.id),
       ['other'],
     )
     assert.equal(item.inert, true)
@@ -151,7 +151,7 @@ describe('toast accessibility', () => {
     await result.act(() => action.click())
     assert.equal(actionCount, 1)
     assert.equal(document.activeElement, origin)
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
 
     await result.act(() => toastManager.add({ title: 'Another toast', timeout: false }))
     assert.equal(element(result.container, '[aria-live="polite"]').textContent, 'Another toast')
@@ -161,7 +161,7 @@ describe('toast accessibility', () => {
     assert.equal(next.getAttribute('aria-hidden'), null)
     await result.act(() => next.focus())
     await result.act(() => key(next, 'Escape'))
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
     assert.equal(document.activeElement, origin)
     assert.equal(region.matches(':popover-open'), true)
     await result.act(() => region.hidePopover())
@@ -202,7 +202,7 @@ describe('toast accessibility', () => {
     )
     await result.act(() =>
       toastManager.add({
-        id: toastManager.toastItems[0].id,
+        id: toastManager.items[0].id,
         title: 'Restored',
         timeout: false,
       }),
@@ -325,7 +325,7 @@ describe('toast accessibility', () => {
     let polite = element(result.container, '[aria-live="polite"]')
     assert.equal(polite.textContent, 'Changes saved.')
     assert.equal(element(result.container, 'article h2').textContent, 'Saved')
-    assert.equal(toastManager.toastItems[0].announcement, 'Changes saved.')
+    assert.equal(toastManager.items[0].announcement, 'Changes saved.')
     await result.act(() =>
       toastManager.add({
         id: 'saved',
@@ -336,7 +336,7 @@ describe('toast accessibility', () => {
     assert.equal(polite.textContent, 'Save failed.')
     await result.act(() => toastManager.add({ id: 'saved', title: 'Restored' }))
     assert.equal(polite.textContent, 'Restored')
-    assert.equal(toastManager.toastItems[0].announcement, undefined)
+    assert.equal(toastManager.items[0].announcement, undefined)
     await result.act(() => toastManager.add({ id: 'saved', title: 'Quiet', announcement: '' }))
     assert.equal(polite.textContent, '')
   })
@@ -396,7 +396,7 @@ describe('toast accessibility', () => {
     await result.act(() => key(document, 'F6'))
     await result.act(() => dismiss.focus())
     await result.act(() => dismiss.click())
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
     assert.equal(document.activeElement, origin)
     assert.equal(origin.matches(':focus-visible'), true)
   })
@@ -415,7 +415,7 @@ describe('toast accessibility', () => {
     await result.act(() => middle.focus())
     await result.act(() => key(middle, 'Escape'))
     assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.id),
+      toastManager.items.map((toastItem) => toastItem.id),
       ['newest', 'oldest'],
     )
     assert.equal(document.activeElement, element(result.container, '[data-id="oldest"]'))
@@ -444,7 +444,7 @@ describe('toast accessibility', () => {
     assert.equal(guards.length, 2)
     await result.act(() => guards[1].focus())
     assert.equal(document.activeElement, origin)
-    assert.equal(toastManager.toastItems.length, 1)
+    assert.equal(toastManager.items.length, 1)
   })
 
   it('preserves notification order when keyboard boundary guards become active', async (t) => {
@@ -497,7 +497,7 @@ describe('toast accessibility', () => {
     let dismiss = element(result.container, 'article button')
     dismiss.addEventListener('click', (event) => event.preventDefault(), { capture: true })
     await result.act(() => dismiss.click())
-    assert.equal(toastManager.toastItems.length, 1)
+    assert.equal(toastManager.items.length, 1)
   })
   it('restores focus if a consumer closes the collection during shortcut entry', async (t) => {
     let toastManager = toast.createToastManager()
@@ -509,7 +509,7 @@ describe('toast accessibility', () => {
     origin.focus()
     region.addEventListener('focusin', () => toastManager.closeAll(), { once: true })
     await result.act(() => key(document, 'F6'))
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
     assert.equal(document.activeElement, origin)
     assert.equal(region.hasAttribute('data-expanded'), false)
     await result.act(() => toastManager.add({ title: 'Next', timeout: 10000 }))
@@ -529,7 +529,7 @@ describe('toast accessibility', () => {
     neighbour.addEventListener('focus', () => toastManager.close('old'), { once: true })
     await result.act(() => current.focus())
     await result.act(() => toastManager.close('new'))
-    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(toastManager.items.length, 0)
     assert.equal(document.activeElement, origin)
     assert.equal(neighbour.inert, true)
   })
