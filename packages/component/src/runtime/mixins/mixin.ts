@@ -297,15 +297,6 @@ export type MixinRuntimeBinding<target = unknown> = {
   enqueueUpdate(done: (signal: AbortSignal) => void): void
 }
 
-type ResolveMixedPropsInput = {
-  hostType: string
-  frame: FrameHandle
-  scheduler: Scheduler
-  getContext?: MixinContext['get']
-  props: ElementProps
-  state?: MixinRuntimeState
-}
-
 type ResolveMixedPropsOutput = {
   props: ElementProps
   state: MixinRuntimeState
@@ -381,20 +372,20 @@ export function createMixin<
   })
 }
 
-export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPropsOutput {
-  let state = input.state ?? createMixinRuntimeState()
-  let hostType = input.hostType
-  state.handle ??= new MixinHandleImpl(
-    state,
-    hostType,
-    input.frame,
-    input.scheduler,
-    input.getContext ?? (() => undefined),
-  )
+export function resolveMixedProps(
+  hostType: string,
+  hostProps: ElementProps,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  getContext: MixinContext['get'],
+  existingState?: MixinRuntimeState,
+): ResolveMixedPropsOutput {
+  let state = existingState ?? createMixinRuntimeState()
+  state.handle ??= new MixinHandleImpl(state, hostType, frame, scheduler, getContext)
   let handle = state.handle as ScopedAnyMixinHandle
 
   let runnerCount = 0
-  let props = composeMixedProps(hostType, input.props, (descriptor, index, mixinProps) => {
+  let props = composeMixedProps(hostType, hostProps, (descriptor, index, mixinProps) => {
     runnerCount = index + 1
     let entry = state.runners[index]
     if (!entry || entry.type !== descriptor.type) {

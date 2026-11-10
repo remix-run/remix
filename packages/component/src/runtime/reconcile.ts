@@ -622,20 +622,20 @@ function resolveNodeMixProps(
     return { props: getNonceManager().resolveResourceNonce(node.type, node.props, parent) }
   }
 
-  let resolved = resolveMixedProps({
-    hostType: node.type,
+  let resolved = resolveMixedProps(
+    node.type,
+    node.props,
     frame,
     scheduler,
-    getContext: (type: Component | string | symbol) => {
+    (type: Component | string | symbol) => {
       if (typeof type !== 'function') {
         return undefined
       }
 
       return findContextFromAncestry(parent, type)
     },
-    props: node.props,
     state,
-  })
+  )
   return {
     props: getNonceManager().resolveResourceNonce(node.type, resolved.props, parent),
     mixState: resolved.state,
