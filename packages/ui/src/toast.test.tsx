@@ -93,8 +93,24 @@ describe('toast manager', () => {
       toastManager.toastItems.map((toastItem) => toastItem.id),
       ['other'],
     )
-    toastManager.close()
+    toastManager.closeAll()
     assert.equal(toastManager.toastItems.length, 0)
+  })
+
+  it('closes all toasts and notifies subscribers with the empty collection', () => {
+    let toastManager = createToastManager()
+    toastManager.add({ title: 'First' })
+    toastManager.add({ title: 'Second' })
+    let snapshot = toastManager.toastItems
+    let count = 0
+    toastManager.addEventListener('change', () => {
+      count += 1
+      assert.equal(toastManager.toastItems.length, 0)
+    })
+    toastManager.closeAll()
+    assert.equal(toastManager.toastItems.length, 0)
+    assert.equal(snapshot.length, 2)
+    assert.equal(count, 1)
   })
 
   it('uses the same content and options whether the previous toast is open or dismissed', () => {
@@ -151,7 +167,7 @@ describe('toast manager', () => {
     assert.equal(Object.isFrozen(snapshot), true)
     assert.equal(count, 2)
     subscription.abort()
-    toastManager.close()
+    toastManager.closeAll()
     assert.equal(count, 2)
   })
 
@@ -259,7 +275,7 @@ describe('toast.root()', () => {
       </>,
     )
     t.after(result.cleanup)
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     let publish = element(result.container, 'button')
     let region = element(result.container, '[role="region"]')
     publish.focus()
@@ -385,7 +401,7 @@ describe('toast gestures and clocks', () => {
       </Context>,
     )
     t.after(result.cleanup)
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     let bar = element(result.container, '[data-id]')
     assert.equal(bar.getAnimations().length, 1)
     let original = bar.getAnimations()[0]
@@ -920,7 +936,7 @@ describe('toast.root() interactions', () => {
       ),
     )
     assert.equal(region.hasAttribute('data-expanded'), true)
-    await result.act(() => toastManager.close())
+    await result.act(() => toastManager.closeAll())
     await result.act(() => toastManager.add({ title: 'New', timeout: 1000 }))
     assert.equal(region.hasAttribute('data-expanded'), false)
   })

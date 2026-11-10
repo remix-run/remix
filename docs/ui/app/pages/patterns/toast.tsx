@@ -123,7 +123,8 @@ interface ToastItem<data = unknown> {
 interface ToastManager<data = unknown> extends TypedEventTarget<{ change: Event }> {
   readonly toastItems: readonly ToastItem<data>[]
   add(options: ToastAddOptions<data>): string
-  close(id?: string): void
+  close(id: string): void
+  closeAll(): void
 }
 `),
   ToastContextProps: await highlightSource(`
@@ -186,7 +187,8 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
         <CodeBlock html={publishers} />
         <p>
-          Call <code>close(id)</code> to dismiss a toast programmatically, or <code>close()</code>
+          Call <code>close(id)</code> to dismiss a toast programmatically, or{' '}
+          <code>closeAll()</code>
           to dismiss all toasts. Use the ID returned by <code>add()</code> or read it from{' '}
           <code>toastItems</code>.
         </p>
@@ -312,8 +314,11 @@ export default function ToastPage(handle: Handle<PageProps>) {
             ID's content and options and restarts its lifetime. Omitted fields clear or use their
             defaults. Returns the generated or supplied ID.
           </ApiEntry>
-          <ApiEntry name="close" type="(id?: string) => void">
-            Closes one item, or all items when omitted.
+          <ApiEntry name="close" type="(id: string) => void">
+            Closes the item with the supplied ID.
+          </ApiEntry>
+          <ApiEntry name="closeAll" type="() => void">
+            Closes all items.
           </ApiEntry>
           <ApiEntry name="addEventListener" type="('change', listener, options?) => void">
             <p>

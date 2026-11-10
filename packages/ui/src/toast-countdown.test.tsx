@@ -81,7 +81,7 @@ describe('Toast countdown indicators', () => {
         )}
       </Context>,
     )
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     let host = element(result.container, 'article')
     let bar = element(result.container, '[data-bar]')
     let ring = result.container.querySelector('[data-ring]')
@@ -127,7 +127,7 @@ describe('Toast countdown indicators', () => {
         )}
       </Context>,
     )
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     let host = element(result.container, 'article')
     let original = host.getAnimations()[0]
     await result.act(() =>
@@ -181,7 +181,7 @@ describe('Toast countdown indicators', () => {
       )
     }
     let result = await mount(t, view())
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     let host = element(result.container, 'article')
     assert.equal(host.getAnimations().length, 0)
     await result.act(() => result.root.render(view(true)))

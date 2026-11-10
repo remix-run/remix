@@ -310,7 +310,7 @@ describe('toast accessibility', () => {
       toastManager.add({ id: 'saved', title: 'Saved', description: 'All changes.' }),
     )
     assert.notEqual(element(polite, '[aria-atomic="true"]'), message)
-    await result.act(() => toastManager.close())
+    await result.act(() => toastManager.closeAll())
     assert.equal(polite.textContent, '')
     assert.equal(element(result.container, '[aria-live="polite"]'), polite)
   })
@@ -507,7 +507,7 @@ describe('toast accessibility', () => {
     let origin = element(result.container, '[data-origin]')
     let region = element(result.container, 'section')
     origin.focus()
-    region.addEventListener('focusin', () => toastManager.close(), { once: true })
+    region.addEventListener('focusin', () => toastManager.closeAll(), { once: true })
     await result.act(() => key(document, 'F6'))
     assert.equal(toastManager.toastItems.length, 0)
     assert.equal(document.activeElement, origin)

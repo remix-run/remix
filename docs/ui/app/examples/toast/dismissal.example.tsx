@@ -52,7 +52,7 @@ export default function ExampleToastDismissal(handle: Handle) {
         <button
           type="button"
           disabled={!newest}
-          mix={[on('click', () => toastManager.close()), styles.triggerButton]}
+          mix={[on('click', () => toastManager.closeAll()), styles.triggerButton]}
         >
           Dismiss all
         </button>

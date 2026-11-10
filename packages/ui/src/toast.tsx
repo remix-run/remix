@@ -41,8 +41,10 @@ export interface ToastManager<data = unknown> extends TypedEventTarget<{ change:
   readonly toastItems: readonly ToastItem<data>[]
   /** Adds or replaces a toast by identity. Omitted fields clear or use defaults. Returns its identity. */
   add(options: ToastAddOptions<data>): string
-  /** Closes one toast, or all toasts when no identity is supplied. */
-  close(id?: string): void
+  /** Closes the toast with the supplied identity. */
+  close(id: string): void
+  /** Closes all toasts. */
+  closeAll(): void
 }
 
 /** Connects application-level state to consumer-owned markup. */
@@ -95,9 +97,12 @@ export function createToastManager<data = unknown>(): ToastManager<data> {
       this.dispatchEvent(new Event('change'))
       return id
     }
-    close(id?: string) {
-      if (id === undefined) toastItems.clear()
-      else if (!toastItems.delete(id)) return
+    close(id: string) {
+      if (!toastItems.delete(id)) return
+      this.dispatchEvent(new Event('change'))
+    }
+    closeAll() {
+      toastItems.clear()
       this.dispatchEvent(new Event('change'))
     }
   }

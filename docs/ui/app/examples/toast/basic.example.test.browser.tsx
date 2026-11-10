@@ -17,9 +17,9 @@ async function settle(target: Element) {
 
 describe('Toast stack', () => {
   it('starts dismissal from the visible stack positions and slides the toast out', async (t) => {
-    toastManager.close()
+    toastManager.closeAll()
     let result = await mount(t, <ToastRegion />)
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     await result.act(() => {
       toastManager.add({ title: 'First toast' })
       toastManager.add({ title: 'Second toast' })
@@ -54,14 +54,14 @@ describe('Toast stack', () => {
     assert.ok(exit, 'Dismissal retains the slide animation')
     exit.currentTime = 70
     assert.ok(outgoing.getBoundingClientRect().left > previousLeft + 50)
-    await result.act(() => toastManager.close())
+    await result.act(() => toastManager.closeAll())
     for (let animation of region.getAnimations({ subtree: true })) animation.finish()
   })
 
   it('closes a gap in the expanded stack without reversing the remaining cards', async (t) => {
-    toastManager.close()
+    toastManager.closeAll()
     let result = await mount(t, <ToastRegion />)
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     await result.act(() => {
       toastManager.add({ title: 'First toast' })
       toastManager.add({ title: 'Second toast' })
@@ -90,12 +90,12 @@ describe('Toast stack', () => {
       await frame()
     }
     assert.ok(survivor.getBoundingClientRect().top > startingTop + 40)
-    await result.act(() => toastManager.close())
+    await result.act(() => toastManager.closeAll())
     await waitFor(() => assert.equal(region.querySelector('[data-toast]'), null))
   })
 
   it('keeps an exiting covered card behind the front at the collapsed stack height', async (t) => {
-    toastManager.close()
+    toastManager.closeAll()
     let result = await mount(
       t,
       <>
@@ -103,7 +103,7 @@ describe('Toast stack', () => {
         <ToastRegion />
       </>,
     )
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     let rearId = toastManager.add({ title: 'Toast title', timeout: false })
     await result.act(() =>
       toastManager.add({
@@ -132,7 +132,7 @@ describe('Toast stack', () => {
   })
 
   it('keeps the collapsed stack sized by the logical front during entry and retained exit', async (t) => {
-    toastManager.close()
+    toastManager.closeAll()
     let result = await mount(
       t,
       <>
@@ -140,7 +140,7 @@ describe('Toast stack', () => {
         <ToastRegion />
       </>,
     )
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     let region = element(result.container, '[role="region"]')
     await result.act(() => button(result.container, 'Show toast').click())
     await result.act(() => button(result.container, 'Show toast').click())
@@ -173,7 +173,7 @@ describe('Toast stack', () => {
   })
 
   it('fans out natural mixed-height cards and promotes overflow without measuring them', async (t) => {
-    toastManager.close()
+    toastManager.closeAll()
     let result = await mount(
       t,
       <>
@@ -181,7 +181,7 @@ describe('Toast stack', () => {
         <ToastRegion />
       </>,
     )
-    t.after(() => toastManager.close())
+    t.after(() => toastManager.closeAll())
     await result.act(() => button(result.container, 'Show toast').click())
     await result.act(() =>
       toastManager.add({
