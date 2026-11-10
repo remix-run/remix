@@ -4,6 +4,32 @@ import type { MockProperty, MockPropertyContext, MockTracker, TestContext } from
 import { createTestContext } from '../lib/context.ts'
 
 describe('mock.property', () => {
+  it('does not reinstall restored method spies during property cleanup', async () => {
+    let target = { method: () => 1 }
+    let descriptor = Object.getOwnPropertyDescriptor(target, 'method')
+    let { testContext, cleanup } = createTestContext()
+    testContext.mock.method(target, 'method', () => 2)
+    testContext.mock.method(target, 'method', () => 3)
+    testContext.mock.property(target, 'method', () => 4)
+    assert.equal(target.method(), 4)
+    await cleanup()
+    assert.deepEqual(Object.getOwnPropertyDescriptor(target, 'method'), descriptor)
+    assert.equal(target.method(), 1)
+  })
+
+  it('does not reinstall a restored property mock when restoring a standalone method spy', () => {
+    let target = { method: () => 1 }
+    let original = target.method
+    let descriptor = Object.getOwnPropertyDescriptor(target, 'method')
+    let property = mock.property(target, 'method', () => 2)
+    let method = mock.method(target, 'method', () => 3)
+    property.mock.restore()
+    method.mock.restore()
+    assert.deepEqual(Object.getOwnPropertyDescriptor(target, 'method'), descriptor)
+    assert.equal(target.method, original)
+    assert.equal(target.method(), 1)
+  })
+
   it('mutates and restores a typed proxy while Object.defineProperty is mocked', (t) => {
     let target = { value: 1, other: 'unchanged' }
     Object.defineProperty(target, 'value', { enumerable: false })

@@ -1,3 +1,5 @@
+import { registerMockDescriptor, restoreMockDescriptor } from './mock-restoration.ts'
+
 /** A recorded read or write of a mocked property. */
 export interface MockPropertyAccess<value = unknown> {
   /** Whether the property was read or written. */
@@ -121,10 +123,19 @@ export function createPropertyMock<target extends object, key extends keyof targ
         // An accessor spy may have reinstalled this already-restored property mock.
         if (current?.get !== read && current?.set !== context.mockImplementation) return
       }
-      defineProperty(object, propertyName, descriptor)
+      restoreMockDescriptor(object, propertyName, descriptor)
       restored = true
     },
   }
+
+  let restoration = {
+    object,
+    propertyName,
+    descriptor,
+    isRestored: () => restored,
+  }
+  registerMockDescriptor(read, 'get', restoration)
+  registerMockDescriptor(context.mockImplementation, 'set', restoration)
 
   defineProperty(object, propertyName, {
     configurable: descriptor.configurable,

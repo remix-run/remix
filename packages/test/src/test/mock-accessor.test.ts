@@ -3,6 +3,95 @@ import { describe, it, mock } from '../index.ts'
 import { createTestContext } from '../lib/context.ts'
 
 describe('mock.getter and mock.setter', () => {
+  it('does not reinstall a restored getter when restoring a standalone method spy', () => {
+    let original = () => 1
+    let target = {
+      get method() {
+        return original
+      },
+      set method(_value: () => number) {},
+    }
+    let descriptor = Object.getOwnPropertyDescriptor(target, 'method')
+    let getter = mock.getter(target, 'method', () => () => 2)
+    let method = mock.method(target, 'method', () => 3)
+    getter.mock.restore()
+    method.mock.restore()
+    assert.deepEqual(Object.getOwnPropertyDescriptor(target, 'method'), descriptor)
+    assert.equal(target.method, original)
+    assert.equal(target.method(), 1)
+  })
+
+  it('removes inherited accessor shadows after cleanup', async () => {
+    class Settings {
+      stored = 1
+      get value() {
+        return this.stored
+      }
+      set value(value: number) {
+        this.stored = value
+      }
+    }
+    let target = new Settings()
+    let descriptor = Object.getOwnPropertyDescriptor(Settings.prototype, 'value')
+    let { testContext, cleanup } = createTestContext()
+    testContext.mock.getter(target, 'value', () => 2)
+    testContext.mock.setter(target, 'value', () => {})
+    assert.equal(target.value, 2)
+    target.value = 3
+    assert.equal(target.stored, 1)
+    await cleanup()
+    assert.equal(Object.hasOwn(target, 'value'), false)
+    assert.equal(target.value, 1)
+    assert.deepEqual(Object.getOwnPropertyDescriptor(Settings.prototype, 'value'), descriptor)
+  })
+
+  it('restores shadows of non-configurable inherited accessors', async () => {
+    class Settings {
+      get value() {
+        return 1
+      }
+      set value(_value: number) {}
+    }
+    Object.defineProperty(Settings.prototype, 'value', { configurable: false })
+    let target = new Settings()
+    let descriptor = Object.getOwnPropertyDescriptor(Settings.prototype, 'value')
+    let { testContext, cleanup } = createTestContext()
+    testContext.mock.getter(target, 'value', () => 2)
+    testContext.mock.setter(target, 'value', () => {})
+    assert.equal(target.value, 2)
+    await cleanup()
+    assert.equal(Object.hasOwn(target, 'value'), false)
+    assert.equal(target.value, 1)
+    assert.deepEqual(Object.getOwnPropertyDescriptor(Settings.prototype, 'value'), descriptor)
+  })
+
+  it('skips restored standalone accessor spies when restoring a later spy', () => {
+    let target = {
+      get value() {
+        return 1
+      },
+      set value(_value: number) {},
+    }
+    let descriptor = Object.getOwnPropertyDescriptor(target, 'value')
+    let getter = mock.getter(target, 'value', () => 2)
+    let setter = mock.setter(target, 'value', () => {})
+    getter.mock.restore()
+    setter.mock.restore()
+    assert.deepEqual(Object.getOwnPropertyDescriptor(target, 'value'), descriptor)
+    assert.equal(target.value, 1)
+  })
+
+  it('skips restored standalone property mocks when restoring a later accessor spy', () => {
+    let target = { value: 1 }
+    let descriptor = Object.getOwnPropertyDescriptor(target, 'value')
+    let property = mock.property(target, 'value', 2)
+    let getter = mock.getter(target, 'value', () => 3)
+    property.mock.restore()
+    getter.mock.restore()
+    assert.deepEqual(Object.getOwnPropertyDescriptor(target, 'value'), descriptor)
+    assert.equal(target.value, 1)
+  })
+
   it('records original accessor calls with their receiver and restores paired spies', async () => {
     let target = {
       stored: 1,

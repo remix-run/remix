@@ -1,5 +1,6 @@
 import { createPropertyMock } from './mock-property.ts'
 import type { MockProperty } from './mock-property.ts'
+import { registerMockDescriptor, restoreMockDescriptor } from './mock-restoration.ts'
 
 /**
  * Selects an accessor for the fourth argument to `mock.method()`. Only `getter` and
@@ -176,6 +177,20 @@ function createMethodMock<T extends object, K extends keyof T>(
     restored: false,
   }
   setMethodRestoration(mockFn, restoration)
+  if (!descriptor || 'value' in descriptor) {
+    registerMockDescriptor(mockFn, 'value', {
+      object: obj,
+      propertyName: method,
+      // Legacy method restoration retains an own property for inherited methods.
+      descriptor: descriptor ?? {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: original,
+      },
+      isRestored: () => restoration.restored,
+    })
+  }
   mockFn.mock.restore = () => {
     let target = restoration
     // A nested mock must not reinstall a spy that was manually restored earlier.
@@ -184,10 +199,11 @@ function createMethodMock<T extends object, K extends keyof T>(
       if (!previous?.restored || previous.object !== obj || previous.method !== method) break
       target = previous
     }
-    if (target.descriptor) {
-      defineProperty(obj, method, target.descriptor)
+    let descriptor = target.descriptor
+    if (descriptor) {
+      descriptor = restoreMockDescriptor(obj, method, descriptor)
     }
-    if (!target.descriptor || !('value' in target.descriptor)) {
+    if (!descriptor || !('value' in descriptor)) {
       if (!setProperty(obj, method, target.original)) {
         throw new TypeError('Unable to restore the method')
       }
@@ -215,7 +231,8 @@ function createAccessorMock(
   let { getter = false } = options
 
   let owner = object
-  let descriptor = getOwnPropertyDescriptor(owner, methodName)
+  let ownDescriptor = getOwnPropertyDescriptor(owner, methodName)
+  let descriptor = ownDescriptor
   while (!descriptor) {
     owner = getPrototypeOf(owner)
     if (owner === null) break
@@ -229,9 +246,16 @@ function createAccessorMock(
   let mockFn = createMockFn(impl ?? original)
   defineProperty(object, methodName, {
     ...descriptor,
+    configurable: ownDescriptor?.configurable ?? true,
     ...(getter ? { get: mockFn } : { set: mockFn }),
   })
   let restored = false
+  registerMockDescriptor(mockFn, getter ? 'get' : 'set', {
+    object,
+    propertyName: methodName,
+    descriptor: ownDescriptor,
+    isRestored: () => restored,
+  })
   mockFn.mock.restore = () => {
     if (restored) {
       let current = getOwnPropertyDescriptor(object, methodName)
@@ -239,7 +263,7 @@ function createAccessorMock(
       // A later spy's restoration may have reinstalled this already-restored mock.
       if (active !== mockFn) return
     }
-    defineProperty(object, methodName, descriptor)
+    restoreMockDescriptor(object, methodName, ownDescriptor)
     restored = true
   }
   return mockFn
