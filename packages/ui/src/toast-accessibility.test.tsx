@@ -398,6 +398,7 @@ describe('toast accessibility', () => {
     await result.act(() => dismiss.click())
     assert.equal(toastManager.toastItems.length, 0)
     assert.equal(document.activeElement, origin)
+    assert.equal(origin.matches(':focus-visible'), true)
   })
 
   it('dismisses only the focused toast with Escape and chooses a mounted neighbour', async (t) => {
@@ -422,6 +423,7 @@ describe('toast accessibility', () => {
     assert.equal(document.activeElement, element(result.container, '[data-id="newest"]'))
     await result.act(() => key(document.activeElement ?? document, 'Escape'))
     assert.equal(document.activeElement, origin)
+    assert.equal(origin.matches(':focus-visible'), true)
   })
 
   it('returns at both Tab boundaries without closing notifications', async (t) => {

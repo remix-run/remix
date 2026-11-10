@@ -175,8 +175,8 @@ function contains(container: HTMLElement, target: Node | null): boolean {
   return false
 }
 
-function focusElement(node: HTMLElement, visible = false) {
-  let options: FocusOptions & { focusVisible: boolean } = {
+function focusElement(node: HTMLElement, visible?: boolean) {
+  let options: FocusOptions & { focusVisible?: boolean } = {
     preventScroll: true,
     focusVisible: visible,
   }
