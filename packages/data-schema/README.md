@@ -492,22 +492,19 @@ toJSONSchema(Slug) // { type: 'string', pattern: '^[a-z-]+$' }
 
 ## Introspecting schemas
 
-Read how a schema was built from its `~def`, without running the validator. This is what `toJSONSchema()` uses, and it is there for your own tooling.
+`getSchemaMetadata()`, from `remix/data-schema/experimental`, reports the facts an adapter needs about a schema without running its validator. This is what `toJSONSchema()` reads to turn checks into constraints.
 
 ```ts
-import { object, optional, string } from 'remix/data-schema'
+import { object, string } from 'remix/data-schema'
 import { minLength } from 'remix/data-schema/checks'
+import { getSchemaMetadata } from 'remix/data-schema/experimental'
 
-let def = object({ name: string(), nickname: optional(string()) })['~def']
+let User = object({ name: string().pipe(minLength(1)) })
+let metadata = getSchemaMetadata(User)
 
-def.kind // 'object'
-Object.keys(def.entries) // ['name', 'nickname']
-def.entries.nickname['~def'].kind // 'optional'
-
-string().pipe(minLength(1))['~def'].checks // [{ code: 'string.min_length', values: { min: 1 }, ... }]
+Object.keys(metadata.shape) // ['name']
+getSchemaMetadata(metadata.shape.name).checks // [{ code: 'string.min_length', values: { min: 1 } }]
 ```
-
-`kind` reports the constructor underneath, so `.pipe()`, `.refine()`, and `.transform()` do not hide it. What they added is reported as `checks`, `refined`, and `transformed`.
 
 ## License
 

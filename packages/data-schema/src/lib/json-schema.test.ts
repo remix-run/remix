@@ -361,6 +361,14 @@ describe('toJSONSchema input and output', () => {
     assert.throws(() => toJSONSchema(schema, { io: 'output' }), JSONSchemaError)
   })
 
+  it('keeps the input checks of a transformed schema', () => {
+    let schema = string()
+      .pipe(minLength(2))
+      .transform((value) => value.length)
+
+    assert.deepEqual(toJSONSchema(schema, { io: 'input' }), { type: 'string', minLength: 2 })
+  })
+
   it('describes what a coercion produces', () => {
     assert.deepEqual(toJSONSchema(coerceNumber(), { io: 'output' }), { type: 'number' })
     assert.deepEqual(toJSONSchema(coerceBoolean(), { io: 'output' }), { type: 'boolean' })

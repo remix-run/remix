@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
+import { getSchemaMetadata } from '../experimental.ts'
 import { minLength, url } from './checks.ts'
 import { coerceNumber } from './coerce.ts'
 import { lazy } from './lazy.ts'
@@ -173,29 +174,9 @@ describe('schema introspection', () => {
     assert.equal(def.resolve(), inner)
   })
 
-  it('keeps checks readable after pipe, in order', () => {
-    let def = string().pipe(minLength(1), url())['~def']
-
-    assert.equal(def.checks.length, 2)
-    assert.equal(def.checks[0].code, 'string.min_length')
-    assert.deepEqual(def.checks[0].values, { min: 1 })
-    assert.equal(def.checks[1].code, 'string.url')
-  })
-
-  it('accumulates checks across chained pipe calls', () => {
-    let def = string().pipe(minLength(1)).pipe(url())['~def']
-
-    assert.deepEqual(
-      def.checks.map((check) => check.code),
-      ['string.min_length', 'string.url'],
-    )
-  })
-
-  it('reports refine and transform', () => {
+  it('reports refine', () => {
     assert.equal(string()['~def'].refined, false)
-    assert.equal(string()['~def'].transformed, false)
     assert.equal(string().refine(() => true)['~def'].refined, true)
-    assert.equal(string().transform((value) => value.length)['~def'].transformed, true)
   })
 
   it('still reports the underlying kind after pipe, refine and transform', () => {
@@ -205,9 +186,7 @@ describe('schema introspection', () => {
       .transform((value) => value.length)
 
     assert.equal(schema['~def'].kind, 'string')
-    assert.equal(schema['~def'].checks.length, 1)
     assert.equal(schema['~def'].refined, true)
-    assert.equal(schema['~def'].transformed, true)
   })
 
   it('does not call the validator', () => {
@@ -219,6 +198,46 @@ describe('schema introspection', () => {
     )
 
     assert.equal(schema['~def'].kind, 'string')
+  })
+})
+
+describe('checks through getSchemaMetadata', () => {
+  it('keeps checks readable after pipe, in order', () => {
+    let metadata = getSchemaMetadata(string().pipe(minLength(1), url()))
+
+    assert.equal(metadata.checks.length, 2)
+    assert.equal(metadata.checks[0].code, 'string.min_length')
+    assert.deepEqual(metadata.checks[0].values, { min: 1 })
+    assert.equal(metadata.checks[1].code, 'string.url')
+  })
+
+  it('accumulates checks across chained pipe calls', () => {
+    let metadata = getSchemaMetadata(string().pipe(minLength(1)).pipe(url()))
+
+    assert.deepEqual(
+      metadata.checks.map((check) => check.code),
+      ['string.min_length', 'string.url'],
+    )
+  })
+
+  it('separates input checks from output checks across a transform', () => {
+    let schema = string()
+      .pipe(minLength(1))
+      .transform((value) => value.length)
+    let metadata = getSchemaMetadata(schema)
+
+    assert.deepEqual(
+      (metadata.inputChecks ?? []).map((check) => check.code),
+      ['string.min_length'],
+    )
+  })
+
+  it('reports a transform through inputChecks', () => {
+    assert.equal(getSchemaMetadata(string()).inputChecks, undefined)
+    assert.notEqual(
+      getSchemaMetadata(string().transform((value) => value.length)).inputChecks,
+      undefined,
+    )
   })
 })
 

@@ -37,7 +37,6 @@ export type {
   Issue,
   ParseOptions,
   Schema,
-  SchemaDef,
   SchemaDefInit,
   SchemaMeta,
   ValidationOptions,

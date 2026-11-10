@@ -144,23 +144,17 @@ export type SchemaDefInit =
 /**
  * The full description of a schema, carried on `schema['~def']`.
  *
- * `checks`, `refined` and `transformed` describe what `pipe`, `refine` and `transform` added,
- * while `kind` keeps reporting the constructor underneath. So
- * `string().pipe(minLength(1)).refine(fn)` still reports `kind: 'string'`.
+ * `kind` keeps reporting the constructor underneath, so `string().pipe(minLength(1))` still
+ * reports `kind: 'string'`.
  */
 export type SchemaDef = SchemaDefInit & {
   /**
-   * The checks added by `pipe`, in the order they were applied.
-   */
-  checks: Check<any>[]
-  /**
    * Whether `refine` was applied. A predicate has no JSON Schema representation.
+   *
+   * Checks and transforms are not recorded here. Read those from {@link getSchemaMetadata},
+   * which is the introspection API for both.
    */
   refined: boolean
-  /**
-   * Whether `transform` was applied. The output type is then unrelated to `kind`.
-   */
-  transformed: boolean
   /**
    * Documentation added by `meta`.
    */
@@ -337,7 +331,7 @@ export function createSchema<input, output>(
   validator: (value: unknown, context: ValidationContext) => ValidationResult<output>,
   definition: SchemaDefInit | SchemaDef = { kind: 'unknown' },
 ): Schema<input, output> {
-  let def: SchemaDef = { checks: [], refined: false, transformed: false, ...definition }
+  let def: SchemaDef = { refined: false, ...definition }
 
   let schema: Schema<input, output> = {
     '~standard': {
@@ -403,7 +397,7 @@ export function createSchema<input, output>(
 
           return result
         },
-        { ...def, checks: [...def.checks, ...checks] },
+        def,
       )
 
       let existingChecks = getSchemaChecks(schema)
@@ -463,7 +457,7 @@ export function createSchema<input, output>(
 
           return { value: transformer(result.value) }
         },
-        { ...def, transformed: true },
+        def,
       )
 
       let metadata = getSchemaMetadata(schema)

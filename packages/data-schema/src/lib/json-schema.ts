@@ -1,4 +1,5 @@
-import type { Check, Schema, SchemaDef } from './schema.ts'
+import { getSchemaMetadata } from './schema.ts'
+import type { Schema, SchemaCheckMetadata, SchemaDef } from './schema.ts'
 
 /**
  * A JSON Schema dialect that {@link toJSONSchema} knows how to emit.
@@ -123,11 +124,15 @@ function emit(schema: Schema<any, any>, context: Context): JSONSchemaNode {
 
 function emitNode(schema: Schema<any, any>, context: Context): JSONSchemaNode {
   let def = schema['~def']
+  let metadata = getSchemaMetadata(schema)
+  // `inputChecks` is present only once a transform has separated the two sides.
+  let transformed = metadata.inputChecks !== undefined
+  let checks = context.io === 'input' ? (metadata.inputChecks ?? metadata.checks) : metadata.checks
   let override = def.meta?.jsonSchema
   let node: JSONSchemaNode
 
   if (override) {
-    node = { ...tryEmitBase(def, context), ...override }
+    node = { ...tryEmitBase(def, checks, context), ...override }
   } else {
     if (def.refined) {
       throw new JSONSchemaError(
@@ -136,14 +141,14 @@ function emitNode(schema: Schema<any, any>, context: Context): JSONSchemaNode {
       )
     }
 
-    if (def.transformed && context.io === 'output') {
+    if (transformed && context.io === 'output') {
       throw new JSONSchemaError(
         'Cannot emit an output JSON Schema for a transformed schema, because a transform has no representation',
         context.path,
       )
     }
 
-    node = { ...emitKind(def, context), ...emitChecks(def.checks, context) }
+    node = { ...emitKind(def, context), ...emitChecks(checks, context) }
   }
 
   if (def.meta?.title !== undefined) {
@@ -157,9 +162,13 @@ function emitNode(schema: Schema<any, any>, context: Context): JSONSchemaNode {
   return node
 }
 
-function tryEmitBase(def: SchemaDef, context: Context): JSONSchemaNode {
+function tryEmitBase(
+  def: SchemaDef,
+  checks: readonly SchemaCheckMetadata[],
+  context: Context,
+): JSONSchemaNode {
   try {
-    return { ...emitKind(def, context), ...emitChecks(def.checks, context) }
+    return { ...emitKind(def, context), ...emitChecks(checks, context) }
   } catch {
     return {}
   }
@@ -312,7 +321,11 @@ function emitRecord(
   let keyDef = key['~def']
 
   // JSON object keys are always strings, so an unconstrained string key adds nothing.
-  if (keyDef.kind !== 'string' || keyDef.checks.length > 0 || keyDef.meta !== undefined) {
+  if (
+    keyDef.kind !== 'string' ||
+    getSchemaMetadata(key).checks.length > 0 ||
+    keyDef.meta !== undefined
+  ) {
     node.propertyNames = emit(key, context)
   }
 
@@ -395,7 +408,7 @@ function addNull(node: JSONSchemaNode): JSONSchemaNode {
   return { anyOf: [node, { type: 'null' }] }
 }
 
-function emitChecks(checks: Check<any>[], context: Context): JSONSchemaNode {
+function emitChecks(checks: readonly SchemaCheckMetadata[], context: Context): JSONSchemaNode {
   let node: JSONSchemaNode = {}
 
   for (let check of checks) {
@@ -405,7 +418,7 @@ function emitChecks(checks: Check<any>[], context: Context): JSONSchemaNode {
   return node
 }
 
-function emitCheck(check: Check<any>, context: Context): JSONSchemaNode {
+function emitCheck(check: SchemaCheckMetadata, context: Context): JSONSchemaNode {
   let values = check.values ?? {}
 
   switch (check.code) {
@@ -424,7 +437,7 @@ function emitCheck(check: Check<any>, context: Context): JSONSchemaNode {
     default:
       throw new JSONSchemaError(
         'Cannot emit JSON Schema for check "' +
-          (check.code ?? check.message ?? 'unknown') +
+          (check.code ?? 'unknown') +
           '", because it has no known representation',
         context.path,
       )
