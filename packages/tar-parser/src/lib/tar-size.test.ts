@@ -1099,3 +1099,100 @@ describe('TarEntry body readers', () => {
     ])
   })
 })
+
+describe('tar early exit', () => {
+  // Enqueues `chunks` and never closes, like a source that has not finished sending
+  function createUnfinishedStream(chunks: Uint8Array[]) {
+    let cancelReasons: unknown[] = []
+    let stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let chunk of chunks) controller.enqueue(chunk)
+      },
+      cancel(reason) {
+        cancelReasons.push(reason)
+      },
+    })
+
+    return { stream, cancelReasons }
+  }
+
+  it('cancels and releases a source stream when a limit is exceeded', async () => {
+    let { stream, cancelReasons } = createUnfinishedStream([new Uint8Array(4096)])
+
+    await assert.rejects(
+      () => parseTar(stream, { maxTotalSize: 1024 }, () => {}),
+      MaxTotalSizeExceededError,
+    )
+    assert.equal(cancelReasons.length, 1)
+    assert.ok(cancelReasons[0] instanceof MaxTotalSizeExceededError)
+    assert.equal(stream.locked, false)
+  })
+
+  it('rejects without waiting for a tee branch to finish cancelling', async () => {
+    // Cancelling one branch of a tee doesn't settle until the other branch is cancelled too
+    let { stream } = createUnfinishedStream([new Uint8Array(4096)])
+    let [branch] = stream.tee()
+
+    await assert.rejects(
+      () => parseTar(branch, { maxTotalSize: 1024 }, () => {}),
+      MaxTotalSizeExceededError,
+    )
+  })
+
+  it('cancels a source stream when a handler rejects', { timeout: 1000 }, async () => {
+    let error = new Error('Handler failed')
+    let { stream, cancelReasons } = createUnfinishedStream([createHeader(0)])
+
+    await assert.rejects(
+      () =>
+        parseTar(stream, async () => {
+          throw error
+        }),
+      error,
+    )
+    assert.deepEqual(cancelReasons, [error])
+    assert.equal(stream.locked, false)
+  })
+
+  it('rejects an async iterable source when a handler rejects', { timeout: 1000 }, async () => {
+    let error = new Error('Handler failed')
+    async function* source() {
+      yield createHeader(0)
+      // Never sends more
+      await new Promise(() => {})
+    }
+
+    await assert.rejects(
+      () =>
+        parseTar(source(), async () => {
+          throw error
+        }),
+      error,
+    )
+  })
+
+  it('stops at a handler rejection instead of reading until a later error', async () => {
+    let error = new Error('Handler failed')
+    let entries = 0
+    let blocks = 0
+    // An endless archive of 1-byte entries, each a header block and a body block
+    let source = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(blocks++ % 2 === 0 ? createHeader(1) : new Uint8Array(512))
+      },
+    })
+
+    await assert.rejects(
+      () =>
+        parseTar(source, { maxEntries: Infinity, maxTotalSize: 1024 * 1024 }, async () => {
+          entries++
+          throw error
+        }),
+      error,
+    )
+    assert.ok(
+      entries < 10,
+      `Expected parsing to stop at the first rejection, got ${entries} entries`,
+    )
+  })
+})

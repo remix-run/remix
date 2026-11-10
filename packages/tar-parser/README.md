@@ -50,6 +50,8 @@ await parseTar(archive, async (entry) => {
 })
 ```
 
+`parseTar()` rejects with the first error, whether a handler rejects or parsing fails. With a stream or async iterable archive, it stops reading at that error, so handlers aren't called for later entries, and a `ReadableStream` archive is cancelled so its source, such as a `fetch()` response, can stop sending.
+
 ## Path Policy
 
 The default `pathPolicy: 'relative'` requires nonempty relative entry names and link targets. `parseTarHeader()`, `parseTar()`, and `TarParser` throw `TarParseError` when paths start with `/` or a Windows drive prefix, or contain backslashes or embedded NULs. Validation applies to the final `entry.name` and, for symlinks and hard links, `entry.header.linkname` after ustar prefixes and GNU/PAX overrides, before invoking the entry handler.
