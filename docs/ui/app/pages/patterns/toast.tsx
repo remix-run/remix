@@ -306,6 +306,18 @@ export default function ToastPage(handle: Handle<PageProps>) {
           Both fields accept JSX; the mixins belong on the elements you render.
         </p>
         <p>
+          Announcements use the published title and description, excluding action buttons, dismiss
+          controls and other markup added by your renderer. Set <code>announcement</code> to replace
+          the entire spoken message without changing the visible content.
+        </p>
+        <p>
+          Toast actions are not readily available to screen reader users from a live announcement.
+          Where possible, provide an alternative way to perform the action and describe it in{' '}
+          <code>announcement</code>, such as a keyboard shortcut or a control elsewhere in your
+          application. The toast's controls remain available when users navigate into the
+          collection.
+        </p>
+        <p>
           New notifications preserve focus elsewhere on the page. F6 enters the collection, and Tab
           visits each notification before its controls. F6 again, Shift+Tab from the collection, or
           Tab past either boundary returns to the previous element. Escape dismisses the focused
