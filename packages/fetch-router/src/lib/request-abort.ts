@@ -2,7 +2,10 @@ export function raceRequestAbort<T>(promise: Promise<T>, request: Request): Prom
   let signal = request.signal
 
   if (signal.aborted) {
-    promise.then((value) => cancelAbandonedResponse(value, signal.reason), () => {})
+    promise.then(
+      (value) => cancelAbandonedResponse(value, signal.reason),
+      () => {},
+    )
     throw signal.reason
   }
 
