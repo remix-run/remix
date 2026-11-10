@@ -1,6 +1,6 @@
 # toast
 
-`toast` provides headless notifications with announcements, keyboard navigation and dismissal. Publish notifications through a shared manager while your components own the markup and styles.
+Toast notifications with accessible interactions and pausable timers.
 
 ## Usage
 
