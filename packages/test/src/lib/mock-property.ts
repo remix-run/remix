@@ -53,6 +53,7 @@ export type MockProperty<target extends object, key extends keyof target> = Omit
   mock: MockPropertyContext<target[key]>
 }
 
+const OriginalError = Error
 const createObject = Object.create
 const defineProperty = Object.defineProperty
 const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
@@ -90,7 +91,7 @@ export function createPropertyMock<target extends object, key extends keyof targ
     let override = onceValues[index]
     let next = override ? override.value : fallback
     delete onceValues[index]
-    let record = { __proto__: null, type, value: next, stack: new Error() }
+    let record = { __proto__: null, type, value: next, stack: new OriginalError() }
     accesses.push(record)
     return next
   }

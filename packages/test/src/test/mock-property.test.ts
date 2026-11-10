@@ -93,6 +93,26 @@ describe('mock.property', () => {
     assert.equal(property.mock.accessCount(), 4)
   })
 
+  it('records accesses while the global Error constructor is mocked', () => {
+    let originalError = globalThis.Error
+    let descriptor = Object.getOwnPropertyDescriptor(globalThis, 'Error')
+    let property = mock.property(globalThis, 'Error', originalError)
+    let value: ErrorConstructor | undefined
+    try {
+      value = globalThis.Error
+    } finally {
+      property.mock.restore()
+    }
+    assert.equal(value, originalError)
+    assert.equal(property.mock.accessCount(), 1)
+    let [access] = property.mock.accesses
+    assert.equal(access.type, 'get')
+    assert.equal(access.value, originalError)
+    assert.ok(access.stack instanceof originalError)
+    assert.equal(typeof access.stack.stack, 'string')
+    assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis, 'Error'), descriptor)
+  })
+
   it('overwrites and consumes read/write overrides while Map.get is mocked', (t) => {
     let get = t.mock.method(Map.prototype, 'get', () => undefined)
     let target = { value: 1 as number | undefined }
