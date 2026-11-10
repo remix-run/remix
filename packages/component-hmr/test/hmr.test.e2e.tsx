@@ -10,12 +10,7 @@ import * as http from 'node:http'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
-import type {
-  ConsoleMessage,
-  Frame,
-  Request as PlaywrightRequest,
-  Response as PlaywrightResponse,
-} from 'playwright'
+import type { Request as PlaywrightRequest } from 'playwright'
 import { watch, type FSWatcher } from 'chokidar'
 import { createAssetServer, type AssetServer, type BrowserHmrChannel } from '@remix-run/assets'
 import { componentHmr } from '../src/assets.ts'
@@ -50,15 +45,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
     let page = await t.serve(await createHmrTestServer(fixture))
     t.after(fixture.close)
-    let navigationProbe =
-      process.env.REMIX_HMR_DIAGNOSTICS === '1'
-        ? await startHmrNavigationProbe(page, fixture.rootDir)
-        : undefined
-    try {
-      await openHmrPage(page)
-    } finally {
-      await navigationProbe?.close()
-    }
+    await openHmrPage(page)
     await assertCount(page, 'Count: 3')
     await page.locator('[data-testid="field"]').fill('hello')
     await page.evaluate(() => {
@@ -2336,19 +2323,9 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   await startBrowserHmrWatcher()
 
   let server = http.createServer(async (request, response) => {
-    function logTiming(event: string) {
-      if (process.env.REMIX_HMR_DIAGNOSTICS !== '1') return
-      console.error(
-        `[hmr-navigation-server] ${JSON.stringify({ at: Date.now(), fixture: fixture.rootDir, port: response.socket?.localPort, url: request.url, event })}`,
-      )
-    }
-    logTiming('request received')
-    response.once('finish', () => logTiming('response finished'))
-    response.once('close', () => logTiming('response closed'))
     try {
       await handleRequest(request, response, fixture, assetServer, hmrEventStream)
     } catch (error) {
-      logTiming(`request failed: ${String(error)}`)
       if (response.headersSent) {
         response.destroy()
         return
@@ -2747,13 +2724,12 @@ async function openHmrPage(page: TestPage, options: { hydrate?: boolean } = {}):
     // Listen before navigation, but give readiness its own budget after the document loads.
     timeout = setTimeout(() => {
       ready.reject(
-        new Error(`Timed out waiting for console messages: ${[...pendingMessages].join(', ')}`),
+        new Error(
+          `Timed out waiting for console messages: ${[...pendingMessages].join(', ')}\n${formatPageDiagnostics(page)}`,
+        ),
       )
     }, browserStartupTimeout)
     await ready.promise
-  } catch (error) {
-    let message = error instanceof Error ? error.message : String(error)
-    throw new Error(`${message}\n${formatPageDiagnostics(page)}`, { cause: error })
   } finally {
     clearTimeout(timeout)
     page.off('console', handleConsole)
@@ -2764,101 +2740,6 @@ async function openHmrPage(page: TestPage, options: { hydrate?: boolean } = {}):
       if (message.text().includes(text)) pendingMessages.delete(text)
     }
     if (pendingMessages.size === 0) ready.resolve()
-  }
-}
-
-async function startHmrNavigationProbe(page: TestPage, fixture: string) {
-  let events: Array<{ at: number; event: string }> = []
-  let timerTicks: number[] = []
-  function mark(event: string) {
-    events.push({ at: Date.now(), event })
-  }
-  function onRequest(request: PlaywrightRequest) {
-    mark(`request: ${request.resourceType()} ${request.method()} ${request.url()}`)
-  }
-  function onResponse(response: PlaywrightResponse) {
-    mark(`response: ${response.status()} ${response.url()}`)
-  }
-  function onRequestFinished(request: PlaywrightRequest) {
-    mark(`request finished: ${request.url()}`)
-  }
-  function onRequestFailed(request: PlaywrightRequest) {
-    mark(`request failed: ${request.url()} ${request.failure()?.errorText}`)
-  }
-  function onConsole(message: ConsoleMessage) {
-    mark(`console: ${message.text()}`)
-  }
-  function onFrameNavigated(frame: Frame) {
-    mark(`frame navigated: ${frame.url()}`)
-  }
-  function onDOMContentLoaded() {
-    mark(`DOMContentLoaded: ${page.url()}`)
-  }
-  function onLoad() {
-    mark(`load: ${page.url()}`)
-  }
-  page.on('request', onRequest)
-  page.on('response', onResponse)
-  page.on('requestfinished', onRequestFinished)
-  page.on('requestfailed', onRequestFailed)
-  page.on('console', onConsole)
-  page.on('framenavigated', onFrameNavigated)
-  page.on('domcontentloaded', onDOMContentLoaded)
-  page.on('load', onLoad)
-  await page.addInitScript(() => {
-    document.addEventListener('readystatechange', () => {
-      console.debug(
-        `[hmr-navigation-lifecycle] ${JSON.stringify({ at: Date.now(), url: document.URL, readyState: document.readyState })}`,
-      )
-    })
-  })
-  let timer = setInterval(() => timerTicks.push(Date.now()), 100)
-  mark('navigation probe installed')
-  return {
-    async close() {
-      mark('navigation probe collection start')
-      clearInterval(timer)
-      page.off('request', onRequest)
-      page.off('response', onResponse)
-      page.off('requestfinished', onRequestFinished)
-      page.off('requestfailed', onRequestFailed)
-      page.off('console', onConsole)
-      page.off('framenavigated', onFrameNavigated)
-      page.off('domcontentloaded', onDOMContentLoaded)
-      page.off('load', onLoad)
-      let timeout: ReturnType<typeof setTimeout> | undefined
-      let snapshot = await Promise.race([
-        page.evaluate(() => ({
-          at: Date.now(),
-          url: document.URL,
-          readyState: document.readyState,
-          bodyText: document.body?.textContent?.slice(0, 300),
-          stylesheets: [...document.querySelectorAll('link[rel="stylesheet"]')].map((link) => ({
-            href: link.getAttribute('href'),
-            hasSheet: link instanceof HTMLLinkElement && link.sheet !== null,
-          })),
-          resources: performance
-            .getEntriesByType('resource')
-            .filter(
-              (entry): entry is PerformanceResourceTiming =>
-                entry instanceof PerformanceResourceTiming,
-            )
-            .map((entry) => ({
-              name: entry.name,
-              start: performance.timeOrigin + entry.startTime,
-              response: performance.timeOrigin + entry.responseStart,
-              end: performance.timeOrigin + entry.responseEnd,
-            })),
-        })),
-        new Promise<string>((resolve) => {
-          timeout = setTimeout(() => resolve('Browser snapshot timed out'), 1000)
-        }),
-      ]).catch((error) => String(error))
-      clearTimeout(timeout)
-      console.error(
-        `[hmr-navigation] ${JSON.stringify({ browser: page.context().browser()?.browserType().name(), fixture, events, timerTicks, snapshot })}`,
-      )
-    },
   }
 }
 

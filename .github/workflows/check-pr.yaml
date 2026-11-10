@@ -179,85 +179,16 @@ jobs:
         run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
       - name: Run tests
-        timeout-minutes: 20
-        shell: bash
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          REMIX_TEST_DIAGNOSTICS: demos/bookstore
-        run: |
-          mkdir -p diagnostics
-          node ./scripts/run-changed-workspaces.ts test "$PR_BASE_SHA" "$PR_HEAD_SHA" 2>&1 | tee diagnostics/workspace-tests.log
-
-      - name: Upload test diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: bookstore-workspace-diagnostics
-          path: diagnostics/
-          retention-days: 7
-
-  bookstore_diagnostics:
-    name: bookstore diagnostics (${{ matrix.mode }}, ${{ matrix.project }})
-    needs: detect_changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        mode: [isolated, concurrent]
-        project: [chromium, firefox]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Install Node.js
-        uses: ./.github/actions/setup-node-pnpm-cache
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Playwright Browsers
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
-
-      - name: Repeat bookstore E2E tests
-        timeout-minutes: 12
-        shell: bash
-        env:
-          REMIX_TEST_DIAGNOSTICS: demos/bookstore
-          TEST_MODE: ${{ matrix.mode }}
-          TEST_PROJECT: ${{ matrix.project }}
-        run: |
-          mkdir -p diagnostics
-          files=(app/forms.test.e2e.ts)
-          concurrency=1
-          if [[ "$TEST_MODE" == concurrent ]]; then
-            files+=(app/prefetch.test.e2e.ts)
-            concurrency=2
-          fi
-          for iteration in {1..5}; do
-            log="diagnostics/run-$iteration.log"
-            echo "Iteration $iteration: $TEST_MODE / $TEST_PROJECT" | tee "$log"
-            timeout --signal=TERM --kill-after=10s 120s \
-              pnpm --filter bookstore-demo test "${files[@]}" --type e2e \
-                --project "$TEST_PROJECT" --concurrency "$concurrency" 2>&1 | tee -a "$log"
-          done
-
-      - name: Upload bookstore diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: bookstore-diagnostics-${{ matrix.mode }}-${{ matrix.project }}
-          path: diagnostics/
-          retention-days: 7
+        run: node ./scripts/run-changed-workspaces.ts test "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
   test_bun_changed:
     name: test (bun, ubuntu-latest, changed packages)
     needs: detect_changes
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -312,6 +243,7 @@ jobs:
     name: test (windows-latest, changed packages)
     needs: detect_changes
     runs-on: windows-2025
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -362,6 +294,7 @@ jobs:
     name: test (WebKit, macOS, changed packages)
     needs: detect_changes
     runs-on: macos-15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6

@@ -44,50 +44,21 @@ describe('asset server HMR', () => {
 
     let page = await t.serve(await createHmrTestServer(fixture))
     t.after(fixture.close)
-    if (process.env.REMIX_HMR_DIAGNOSTICS === '1') {
-      await page.addInitScript(() => {
-        let NativeEventSource = window.EventSource
-        window.EventSource = class extends NativeEventSource {
-          constructor(url: string | URL, options?: EventSourceInit) {
-            super(url, options)
-            this.addEventListener('message', (event) => {
-              console.debug(
-                `[hmr-event-timing] ${JSON.stringify({ at: Date.now(), data: event.data })}`,
-              )
-            })
-          }
-        }
-      })
-    }
     let documentResponse = await navigateToHmrPage(page)
     assert.ok(documentResponse)
     assert.equal(documentResponse.status(), 200, await documentResponse.text())
     await assertCount(page, 'Count: 3')
     await page.locator('[data-testid="field"]').fill('hello')
 
-    let probe =
-      process.env.REMIX_HMR_DIAGNOSTICS === '1' ? await startHmrTimingProbe(page) : undefined
-    probe?.mark(`fixture: ${fixture.rootDir}`)
-    try {
-      let counterPath = path.join(fixture.rootDir, 'app/counter.ts')
-      let counterSource = await fs.readFile(counterPath, 'utf-8')
-      let accepted = waitForConsoleMessage(
-        page,
-        '[remix] HMR accepted update /assets/app/counter.ts',
-      )
-      probe?.mark('source write start')
-      await fs.writeFile(counterPath, counterSource.replace('Increment', 'Increment via HMR'))
-      probe?.mark('source write done')
+    let counterPath = path.join(fixture.rootDir, 'app/counter.ts')
+    let counterSource = await fs.readFile(counterPath, 'utf-8')
+    let accepted = waitForConsoleMessage(page, '[remix] HMR accepted update /assets/app/counter.ts')
+    await fs.writeFile(counterPath, counterSource.replace('Increment', 'Increment via HMR'))
 
-      await waitForText(page, '[data-testid="increment"]', 'Increment via HMR', probe?.pageProbe)
-      probe?.mark('text wait resolved')
-      await accepted
-      probe?.mark('accept wait resolved')
-      await assertCount(page, 'Count: 3')
-      assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
-    } finally {
-      await probe?.close()
-    }
+    await waitForText(page, '[data-testid="increment"]', 'Increment via HMR')
+    await accepted
+    await assertCount(page, 'Count: 3')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
   })
 
   it('updates transitive dependencies of an accepted browser module', async (t) => {
@@ -2309,13 +2280,6 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   let browserHmrWatcher: FSWatcher | undefined
   let pendingBrowserHmrEvents = Promise.resolve()
 
-  function logTiming(event: string) {
-    if (process.env.REMIX_HMR_DIAGNOSTICS !== '1') return
-    console.error(
-      `[hmr-server-timing] ${JSON.stringify({ at: Date.now(), fixture: fixture.rootDir, event })}`,
-    )
-  }
-
   let createCurrentAssetServer = () =>
     createAssetServer({
       allowPackages: ['remix'],
@@ -2444,7 +2408,6 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     let changeStatsByFilePath = new Map<string, string>()
     browserHmrWatcher.on('all', (event, filePath, stats) => {
       if (event !== 'add' && event !== 'change' && event !== 'unlink') return
-      logTiming(`watch event: ${event} ${filePath}`)
       if (event === 'change' && stats) {
         let { birthtimeMs, ctimeMs, ino, mtimeMs, size } = stats
         let changeStats = [birthtimeMs, ctimeMs, ino, mtimeMs, size].join(':')
@@ -2462,15 +2425,11 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
   }
 
   async function handleBrowserHmrFileEvent(event: BrowserHmrFileEvent): Promise<void> {
-    logTiming('file handler start')
     let filePath = await getWatchEventFilePath(event.filePath)
-    logTiming('file path resolved')
     let normalizedEvent = { ...event, filePath }
 
     for (let handleFileEvents of browserHmrFileEventHandlers) {
-      logTiming('classification start')
       let browserHmrEvents = await handleFileEvents([normalizedEvent])
-      logTiming('classification done')
       for (let browserHmrEvent of browserHmrEvents) {
         if (browserHmrEvent.type === 'reload') {
           hmrEventStream?.send({ type: 'browser:reload' })
@@ -2481,7 +2440,6 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
           data: browserHmrEvent.data,
           type: 'browser:update',
         })
-        logTiming('update enqueued')
         for (let updatePath of getBrowserHmrUpdatePaths(browserHmrEvent.data)) {
           let waiters = browserUpdateWaiters.get(updatePath)
           if (!waiters) continue
@@ -2757,14 +2715,6 @@ async function writeFetchResponse(
       let { done, value } = await reader.read()
       if (done) break
       response.write(value)
-      if (
-        process.env.REMIX_HMR_DIAGNOSTICS === '1' &&
-        fetchResponse.headers.get('Content-Type')?.startsWith('text/event-stream')
-      ) {
-        console.error(
-          `[hmr-transport-timing] ${JSON.stringify({ at: Date.now(), port: response.socket?.localPort, buffered: response.writableLength, data: new TextDecoder().decode(value) })}`,
-        )
-      }
     }
   } finally {
     response.end()
@@ -2997,119 +2947,12 @@ async function assertCount(page: TestPage, count: string): Promise<void> {
   }
 }
 
-async function startHmrTimingProbe(page: TestPage) {
-  let hostEvents: Array<{ at: number; event: string }> = []
-  function mark(event: string) {
-    hostEvents.push({ at: Date.now(), event })
-  }
-  function onConsole(message: { text(): string }) {
-    mark(`console: ${message.text()}`)
-  }
-  function onRequest(request: PageRequest) {
-    mark(`request: ${request.method()} ${request.url()}`)
-  }
-  function onRequestFinished(request: PageRequest) {
-    mark(`request finished: ${request.url()}`)
-  }
-  page.on('console', onConsole)
-  page.on('request', onRequest)
-  page.on('requestfinished', onRequestFinished)
-  let pageProbe = await page.evaluateHandle(() => {
-    let started = performance.now()
-    let polls: Array<{ elapsed: number; matches: boolean }> = []
-    let timerTicks: number[] = []
-    let textChanges: Array<{ elapsed: number; text: string | null }> = []
-    let resources: Array<{
-      name: string
-      start: number
-      request: number
-      response: number
-      end: number
-    }> = []
-    let resourceObserver = new PerformanceObserver((entries) => {
-      for (let entry of entries.getEntries()) {
-        if (!(entry instanceof PerformanceResourceTiming)) continue
-        if (!entry.name.includes('/assets/app/counter.ts?')) continue
-        resources.push({
-          name: entry.name,
-          start: entry.startTime - started,
-          request: entry.requestStart - started,
-          response: entry.responseStart - started,
-          end: entry.responseEnd - started,
-        })
-      }
-    })
-    resourceObserver.observe({ entryTypes: ['resource'] })
-    let visibility: Array<{ elapsed: number; state: string }> = [
-      { elapsed: 0, state: document.visibilityState },
-    ]
-    let previousText = document.querySelector('[data-testid="increment"]')?.textContent ?? null
-    let observer = new MutationObserver(() => {
-      let text = document.querySelector('[data-testid="increment"]')?.textContent ?? null
-      if (text === previousText) return
-      previousText = text
-      textChanges.push({ elapsed: performance.now() - started, text })
-    })
-    observer.observe(document.body, { childList: true, characterData: true, subtree: true })
-    let timer = setInterval(() => timerTicks.push(performance.now() - started), 50)
-    function onVisibility() {
-      visibility.push({ elapsed: performance.now() - started, state: document.visibilityState })
-    }
-    document.addEventListener('visibilitychange', onVisibility)
-    return {
-      recordPoll(matches: boolean) {
-        polls.push({ elapsed: performance.now() - started, matches })
-      },
-      stop() {
-        clearInterval(timer)
-        observer.disconnect()
-        resourceObserver.disconnect()
-        document.removeEventListener('visibilitychange', onVisibility)
-        return {
-          timeOrigin: performance.timeOrigin,
-          started,
-          polls,
-          timerTicks,
-          textChanges,
-          resources,
-          visibility,
-        }
-      },
-    }
-  })
-  mark('probe installed')
-  return {
-    pageProbe,
-    mark,
-    async close() {
-      mark('probe collection start')
-      page.off('console', onConsole)
-      page.off('request', onRequest)
-      page.off('requestfinished', onRequestFinished)
-      let timing = await pageProbe.evaluate((probe) => probe.stop()).catch((error) => String(error))
-      console.error(
-        `[hmr-timing] ${JSON.stringify({ browser: page.context().browser()?.browserType().name(), hostEvents, timing })}`,
-      )
-      await pageProbe.dispose()
-    },
-  }
-}
-
-async function waitForText(
-  page: TestPage,
-  selector: string,
-  text: string,
-  probe?: Awaited<ReturnType<typeof startHmrTimingProbe>>['pageProbe'],
-): Promise<void> {
+async function waitForText(page: TestPage, selector: string, text: string): Promise<void> {
   attachPageDiagnostics(page)
   try {
     await page.waitForFunction(
-      ({ selector, text, probe }) => {
-        let matches = document.querySelector(selector)?.textContent?.trim() === text
-        probe?.recordPoll(matches)
-        return matches
-      },
-      { selector, text, probe },
+      ({ selector, text }) => document.querySelector(selector)?.textContent?.trim() === text,
+      { selector, text },
       { timeout: 10_000 },
     )
   } catch (error) {

@@ -1,5 +1,4 @@
 import * as http from 'node:http'
-import type { Socket } from 'node:net'
 
 import { createRequestListener } from './request-listener.ts'
 
@@ -33,7 +32,6 @@ export function createTestServer(
 ): Promise<TestServer> {
   return new Promise((resolve, reject) => {
     let server = http.createServer(createRequestListener(handler))
-    if (process.env.REMIX_TEST_DIAGNOSTICS === '1') instrumentServer(server)
 
     server.listen(0, '127.0.0.1', () => {
       let addr = server.address() as { port: number }
@@ -44,42 +42,5 @@ export function createTestServer(
     })
 
     server.on('error', reject)
-  })
-}
-
-// Temporary transport diagnostics; keep native server.close() semantics unchanged.
-function instrumentServer(server: http.Server): void {
-  let sockets = new Set<Socket>()
-  let requests = new Map<http.ServerResponse, string>()
-  function log(message: string) {
-    console.error(
-      `[server-diagnostics ${new Date().toISOString()} pid=${process.pid}] ${message}; sockets=${sockets.size}; pending=${JSON.stringify([...requests.values()])}`,
-    )
-  }
-  server.on('connection', (socket) => {
-    sockets.add(socket)
-    socket.once('close', () => {
-      sockets.delete(socket)
-      log('socket closed')
-    })
-  })
-  server.on('request', (request, response) => {
-    let label = `${request.method} ${request.url?.split('?')[0]}`
-    requests.set(response, label)
-    log(`request started: ${label}`)
-    response.once('finish', () => {
-      requests.delete(response)
-      log(`response finished: ${label}`)
-    })
-    response.once('close', () => {
-      requests.delete(response)
-      log(`response closed: ${label}; finished=${response.writableFinished}`)
-    })
-  })
-  let heartbeat = setInterval(() => log('server heartbeat'), 15_000)
-  heartbeat.unref()
-  server.once('close', () => {
-    clearInterval(heartbeat)
-    log('server closed')
   })
 }

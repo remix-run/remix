@@ -3,7 +3,6 @@ import type { V8CoverageEntry } from './coverage.ts'
 import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
 import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
-import { diagnostic } from './diagnostics.ts'
 
 /**
  * The shape `t.serve()` consumes. Matches the result of `createTestServer`
@@ -139,12 +138,10 @@ export function createTestContext(options?: CreateTestContextOptions): {
         throw new Error('t.serve() is only available in E2E test suites')
       }
 
-      diagnostic(`serve page create start: ${server.baseUrl}`)
       let page = await e2e.browser.newPage({
         ...e2e.playwrightPageOptions,
         baseURL: server.baseUrl,
       })
-      diagnostic(`serve page create done: ${server.baseUrl}`)
       if (e2e.playwrightPageOptions?.navigationTimeout != null) {
         page.setDefaultNavigationTimeout(e2e.playwrightPageOptions.navigationTimeout)
       }
@@ -166,13 +163,9 @@ export function createTestContext(options?: CreateTestContextOptions): {
 
       cleanups.push(async () => {
         if (!e2e.open) {
-          diagnostic(`serve page close start: ${server.baseUrl}`)
           await page.close()
-          diagnostic(`serve page close done: ${server.baseUrl}`)
         }
-        diagnostic(`serve server close start: ${server.baseUrl}`)
         await server.close()
-        diagnostic(`serve server close done: ${server.baseUrl}`)
       })
 
       return page
@@ -183,13 +176,10 @@ export function createTestContext(options?: CreateTestContextOptions): {
     testContext,
     async cleanup() {
       let errors: unknown[] = []
-      for (let [index, fn] of cleanups.entries()) {
+      for (let fn of cleanups) {
         try {
-          diagnostic(`cleanup callback ${index + 1}/${cleanups.length} start`)
           await fn()
-          diagnostic(`cleanup callback ${index + 1}/${cleanups.length} done`)
         } catch (error) {
-          diagnostic(`cleanup callback ${index + 1}/${cleanups.length} failed: ${String(error)}`)
           errors.push(error)
         }
       }
