@@ -5,8 +5,14 @@ import { createStyleManager } from '../style/index.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
 import type { LoadModule, ResolveFrame, ResolveFrameOptions } from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
-import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
+import {
+  fetchFrame,
+  startPrefetching,
+  type PrefetchFrame,
+  type PrefetchConfig,
+} from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
+import { validatePrefetchConfig } from './prefetch-queue.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 
 /**
@@ -39,12 +45,12 @@ export interface RunInit {
   processClientEntryPreloads?: ProcessClientEntryPreloads
 
   /**
-   * Starts loading a page for `data-rmx-prefetch` links and `prefetch()` calls, replacing the
-   * default HTML fetch and asset discovery. Use it with `resolveFrame` to reuse uncacheable HTML,
-   * for example to hold the response in memory until the next navigation to that URL and target.
+   * Selects pending HTML and each response's assets with independent global concurrency limits,
+   * or replaces the full strategy with a function. The function owns fetching, scheduling,
+   * discovery, and cancellation. Use it with `resolveFrame` for application-owned response reuse.
    * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
    */
-  prefetch?: PrefetchFrame
+  prefetch?: PrefetchFrame | PrefetchConfig
 }
 
 /**
@@ -64,6 +70,8 @@ export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
   ready(): Promise<void>
   /** Flushes any queued component updates synchronously. */
   flush(): void
+  /** Refreshes pending built-in link selection; does not revive dropped candidates or affect a full override. */
+  invalidatePrefetch(): void
   /** Stops runtime listeners and disposes the top-level frame. */
   dispose(): void
 }
@@ -128,6 +136,8 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
+  if (typeof init.prefetch === 'object' && init.prefetch !== null)
+    validatePrefetchConfig(init.prefetch)
   getNonceManager()
   let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
@@ -173,7 +183,7 @@ export function run(init: RunInit): AppRuntime {
     })
   }
   startNavigationListener(appController.signal)
-  startPrefetching(appController.signal, init.prefetch)
+  let invalidatePrefetch = startPrefetching(appController.signal, init.prefetch)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error
@@ -181,6 +191,7 @@ export function run(init: RunInit): AppRuntime {
 
   return Object.assign(errorTarget, {
     frames,
+    invalidatePrefetch,
     ready: () => readyPromise,
     flush: () => getAppTopFrame().flush(),
     dispose: () => {

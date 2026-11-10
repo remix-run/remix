@@ -7,7 +7,9 @@ import {
   prefetch,
   startPrefetching,
   type PrefetchFrame,
+  type PrefetchConfig,
 } from '../runtime/prefetch.ts'
+import type { PrefetchLink } from '../index.ts'
 import { run } from '../runtime/run.ts'
 import { renderToStream } from '../server/stream.ts'
 import { drain } from './utils.ts'
@@ -54,7 +56,7 @@ function createIntentLink(href: string): HTMLAnchorElement {
 function createViewportLink(href: string, visible = true): HTMLAnchorElement {
   let anchor = createIntentLink(href)
   anchor.setAttribute('data-rmx-prefetch', 'viewport')
-  anchor.style.cssText = `position: fixed; left: 0; top: ${visible ? 0 : innerHeight + 100}px; width: 20px; height: 20px`
+  anchor.style.cssText = `position: fixed; left: 0; top: ${visible ? 0 : 100000}px; width: 20px; height: 20px`
   return anchor
 }
 
@@ -92,6 +94,14 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+async function waitFor(condition: () => boolean) {
+  let deadline = Date.now() + 2000
+  while (!condition()) {
+    if (Date.now() >= deadline) throw new Error('Timed out waiting for prefetch work')
+    await wait(10)
+  }
+}
+
 function stubConnection(
   t: TestContext,
   connection: { saveData?: boolean; effectiveType?: string } | undefined,
@@ -104,10 +114,10 @@ function stubConnection(
   })
 }
 
-function createPrefetch(t: TestContext) {
+function createPrefetch(t: TestContext, config?: PrefetchConfig) {
   let controller = new AbortController()
   t.after(() => controller.abort())
-  return { prefetch: createDefaultPrefetch(controller.signal), controller }
+  return { prefetch: createDefaultPrefetch(controller.signal, config), controller }
 }
 
 function collectHints(t: TestContext, onHint?: (link: HTMLLinkElement) => void): HTMLLinkElement[] {
@@ -115,7 +125,7 @@ function collectHints(t: TestContext, onHint?: (link: HTMLLinkElement) => void):
   let observer = new MutationObserver((records) => {
     for (let record of records) {
       for (let node of record.addedNodes) {
-        if (node instanceof HTMLLinkElement && node.rel === 'prefetch') {
+        if (node instanceof HTMLLinkElement && ['prefetch', 'preload'].includes(node.rel)) {
           hints.push(node)
           node.dispatchEvent(new Event('load'))
           onHint?.(node)
@@ -135,6 +145,20 @@ function stubLinkPrefetchSupport(t: TestContext, supported: boolean) {
   t.mock.method(DOMTokenList.prototype, 'supports', function (this: DOMTokenList, token: string) {
     return token === 'prefetch' ? supported : supports.call(this, token)
   })
+}
+
+function holdNativeHintEvents(t: TestContext) {
+  let controller = new AbortController()
+  t.after(() => controller.abort())
+  for (let type of ['load', 'error'])
+    document.head.addEventListener(
+      type,
+      (event) => {
+        if (event.isTrusted && event.target instanceof HTMLLinkElement)
+          event.stopImmediatePropagation()
+      },
+      { capture: true, signal: controller.signal },
+    )
 }
 
 function htmlResponse(html: string) {
@@ -243,7 +267,7 @@ describe('prefetch', () => {
     expect(await readIntersection(anchor)).toBe(true)
     expect(prefetchFrame).not.toHaveBeenCalled()
 
-    anchor.style.top = `${innerHeight + 100}px`
+    anchor.style.top = `100000px`
     expect(await readIntersection(anchor)).toBe(false)
     connection.effectiveType = '4g'
     anchor.style.top = '0px'
@@ -611,6 +635,7 @@ describe('prefetch', () => {
     prefetch(href)
     prefetch(href)
 
+    await Promise.resolve()
     expect(fetch).toHaveBeenCalledTimes(1)
     let [src, init] = fetch.mock.calls[0].arguments
     expect(src).toBe(href)
@@ -709,7 +734,7 @@ describe('prefetch', () => {
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href)
 
-      anchor.style.top = `${innerHeight + 100}px`
+      anchor.style.top = `100000px`
       expect(await readIntersection(anchor)).toBe(false)
       anchor.style.top = '0px'
       expect(await readIntersection(anchor)).toBe(true)
@@ -931,7 +956,7 @@ describe('default frame prefetch', () => {
       }
     })
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t)
+    let { prefetch } = createPrefetch(t, { concurrency: { links: 1 } })
 
     await prefetch(new URL('/page', location.href).href)
 
@@ -1129,7 +1154,7 @@ describe('default frame prefetch', () => {
     expect(hints.every((link) => !link.isConnected)).toBe(true)
   })
 
-  it('skips active image preloads, responsive candidates, and unmatched image media', async (t) => {
+  it('selects responsive preloads while skipping active images and unmatched media', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let active = document.createElement('link')
     active.rel = 'preload'
@@ -1150,7 +1175,16 @@ describe('default frame prefetch', () => {
 
     await prefetch(new URL('/page', location.href).href)
 
-    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/images/screen.jpg'])
+    expect(hints.map((link) => link.getAttribute('href'))).toEqual([
+      new URL('/images/fallback.jpg', location.href).href,
+      null,
+      new URL('/images/screen.jpg', location.href).href,
+    ])
+    expect(hints[0].rel).toBe('preload')
+    expect(hints[0].imageSrcset).toBe(
+      `${new URL('/images/small.jpg', location.href).href} 400w, ${new URL('/images/large.jpg', location.href).href} 1200w`,
+    )
+    expect(hints[0].imageSizes).toBe('100vw')
     expect(hints[0].as).toBe('image')
   })
 
@@ -1201,11 +1235,13 @@ describe('default frame prefetch', () => {
 
     let first = prefetch(src)
     let second = prefetch(src)
+    await Promise.resolve()
     expect(fetch).toHaveBeenCalledTimes(1)
     response.resolve(htmlResponse('<main>Next</main>'))
     await Promise.all([first, second])
     response = Promise.withResolvers<Response>()
     let third = prefetch(src)
+    await Promise.resolve()
     expect(fetch).toHaveBeenCalledTimes(2)
     response.resolve(htmlResponse('<main>Updated</main>'))
     await third
@@ -1230,6 +1266,7 @@ describe('default frame prefetch', () => {
       prefetch(src, { target: 'details' }),
     ]
 
+    await Promise.resolve()
     expect(fetch).toHaveBeenCalledTimes(3)
     expect(
       fetch.mock.calls.map((call) => new Headers(call.arguments[1]?.headers).get('X-Remix-Target')),
@@ -1253,7 +1290,7 @@ describe('default frame prefetch', () => {
     let observer = new MutationObserver((records) => {
       for (let record of records) {
         for (let node of record.addedNodes) {
-          if (node instanceof HTMLLinkElement && node.rel === 'prefetch') {
+          if (node instanceof HTMLLinkElement && ['prefetch', 'preload'].includes(node.rel)) {
             hints.push(node)
             linked.resolve()
           }
@@ -1293,6 +1330,7 @@ describe('default frame prefetch', () => {
     response = htmlResponse('<script src="/recovered.js"></script>')
     await prefetch(src)
 
+    await Promise.resolve()
     expect(fetch).toHaveBeenCalledTimes(3)
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/recovered.js'])
   })
@@ -1335,7 +1373,8 @@ describe('default frame prefetch', () => {
     let observer = new MutationObserver((records) => {
       for (let record of records) {
         for (let node of record.addedNodes) {
-          if (node instanceof HTMLLinkElement && node.rel === 'prefetch') linked.resolve(node)
+          if (node instanceof HTMLLinkElement && ['prefetch', 'preload'].includes(node.rel))
+            linked.resolve(node)
         }
       }
     })
@@ -1351,5 +1390,460 @@ describe('default frame prefetch', () => {
     expect(fetch).toHaveBeenCalledTimes(2)
     expect(nestedSignal?.aborted).toBe(true)
     expect(link.isConnected).toBe(false)
+  })
+})
+
+describe('prefetch selection', () => {
+  afterEach(() => {
+    document.body.textContent = ''
+  })
+
+  it('rejects invalid independent concurrency limits before starting the runtime', () => {
+    expect(() => run({ loadModule: mock.fn(), prefetch: { concurrency: { links: 0 } } })).toThrow(
+      RangeError,
+    )
+    expect(() =>
+      run({ loadModule: mock.fn(), prefetch: { concurrency: { assets: 1.5 } } }),
+    ).toThrow(RangeError)
+    expect(() =>
+      run({ loadModule: mock.fn(), prefetch: { concurrency: { links: Infinity } } }),
+    ).toThrow(RangeError)
+  })
+
+  it('bounds HTML reads, preserves selected order, and drains cached selection on completion', async (t) => {
+    let responses = new Map<string, ReturnType<typeof Promise.withResolvers<Response>>>()
+    let starts: string[] = []
+    let active = 0
+    let peak = 0
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      let path = new URL(String(src)).pathname
+      starts.push(path)
+      active++
+      peak = Math.max(peak, active)
+      let response = Promise.withResolvers<Response>()
+      responses.set(path, response)
+      let value = await response.promise
+      active--
+      return value
+    })
+    let links = mock.fn((batch: readonly PrefetchLink[]) => [...batch].reverse())
+    let { prefetch: load } = createPrefetch(t, { concurrency: { links: 2 }, links })
+    let ready = Promise.all(
+      ['/a', '/b', '/c', '/d'].map((src) => load(new URL(src, location.href).href)),
+    )
+    await wait(0)
+    expect(starts).toEqual(['/d', '/c'])
+    expect(links).toHaveBeenCalledTimes(1)
+    responses.get('/d')?.resolve(htmlResponse(''))
+    await waitFor(() => starts.length === 3)
+    expect(starts).toEqual(['/d', '/c', '/b'])
+    expect(links).toHaveBeenCalledTimes(1)
+    responses.get('/c')?.resolve(htmlResponse(''))
+    await waitFor(() => starts.length === 4)
+    expect(starts).toEqual(['/d', '/c', '/b', '/a'])
+    responses.get('/a')?.resolve(htmlResponse(''))
+    responses.get('/b')?.resolve(htmlResponse(''))
+    await ready
+    expect(peak).toBe(2)
+    expect(links).toHaveBeenCalledTimes(1)
+  })
+
+  it('drops omissions without reviving them on invalidation and accepts a new attempt', async (t) => {
+    let fetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
+    let allow = false
+    let links = mock.fn((batch: readonly PrefetchLink[]) => (allow ? [...batch, ...batch] : []))
+    let strategy = createDefaultPrefetch(undefined, { links })
+    await strategy(new URL('/dropped', location.href).href)
+    allow = true
+    strategy.invalidate()
+    await wait(0)
+    expect(fetch).not.toHaveBeenCalled()
+    await strategy(new URL('/dropped', location.href).href)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('refreshes stale pending selection lazily when an HTML slot opens', async (t) => {
+    let gate = Promise.withResolvers<Response>()
+    let starts: string[] = []
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      let path = new URL(String(src)).pathname
+      starts.push(path)
+      return path === '/busy' ? gate.promise : htmlResponse('')
+    })
+    let reverse = false
+    let links = mock.fn((batch: readonly PrefetchLink[]) =>
+      reverse ? [...batch].reverse() : batch,
+    )
+    let strategy = createDefaultPrefetch(undefined, { concurrency: { links: 1 }, links })
+    let busy = strategy(new URL('/busy', location.href).href)
+    await wait(0)
+    let next = strategy(new URL('/next', location.href).href)
+    let last = strategy(new URL('/last', location.href).href)
+    reverse = true
+    strategy.invalidate()
+    strategy.invalidate()
+    await wait(0)
+    expect(links).toHaveBeenCalledTimes(1)
+    gate.resolve(htmlResponse(''))
+    await Promise.all([busy, next, last])
+    expect(starts).toEqual(['/busy', '/last', '/next'])
+    expect(links).toHaveBeenCalledTimes(2)
+  })
+
+  it('tracks shared live anchors and keeps a request until its last owner disappears', async (t) => {
+    let signals: AbortSignal[] = []
+    t.mock.method(globalThis, 'fetch', (_src: RequestInfo | URL, init?: RequestInit) => {
+      if (!init?.signal) throw new Error('Missing prefetch signal')
+      signals.push(init.signal)
+      return new Promise<Response>((_resolve, reject) =>
+        init.signal?.addEventListener('abort', () => reject(new Error('aborted'))),
+      )
+    })
+    let first = createIntentLink('/shared-owner')
+    let second = createIntentLink('/shared-owner')
+    let contexts: readonly PrefetchLink[] = []
+    let app = run({
+      loadModule: mock.fn(),
+      prefetch: {
+        links(batch) {
+          contexts = batch
+          return batch
+        },
+      },
+    })
+    t.after(() => app.dispose())
+    press(first)
+    press(second)
+    await wait(0)
+    expect(signals).toHaveLength(1)
+    expect(contexts[0].trigger).toBe('intent')
+    expect(contexts[0].anchors).toEqual([first, second])
+    first.remove()
+    await wait(0)
+    expect(signals[0].aborted).toBe(false)
+    second.remove()
+    await waitFor(() => signals[0].aborted)
+    expect(signals[0].aborted).toBe(true)
+  })
+
+  it('inherits current intent ordering when an owner joins running HTML', async (t) => {
+    let gate = Promise.withResolvers<Response>()
+    let blocker = Promise.withResolvers<Response>()
+    let starts: string[] = []
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      let path = new URL(String(src)).pathname
+      starts.push(path)
+      if (path === '/parent') return gate.promise
+      if (path === '/blocker') return blocker.promise
+      return htmlResponse('')
+    })
+    let { prefetch: strategy } = createPrefetch(t, { concurrency: { links: 1 } })
+    let parent = strategy(new URL('/parent', location.href).href)
+    await wait(0)
+    let anchor = createIntentLink('/parent')
+    let shared = strategy.enqueue(anchor.href, undefined, anchor, 'intent')
+    let busy = strategy(new URL('/blocker', location.href).href)
+    gate.resolve(
+      htmlResponse(
+        '<script id="rmx-data" type="application/json">{"f":{"child":{"src":"/child","prefetch":true}}}</script>',
+      ),
+    )
+    await waitFor(() => starts.includes('/blocker'))
+    let next = strategy(new URL('/next', location.href).href)
+    blocker.resolve(htmlResponse(''))
+    await Promise.all([parent, shared, busy, next])
+    expect(starts).toEqual(['/parent', '/child', '/blocker', '/next'])
+  })
+
+  it('ignores cloned candidates and malformed selections without affecting later work', async (t) => {
+    let fetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
+    let config: PrefetchConfig = {
+      links(batch) {
+        return batch.map((candidate) => ({ ...candidate }))
+      },
+    }
+    let strategy = createDefaultPrefetch(undefined, config)
+    await strategy(new URL('/cloned', location.href).href)
+    expect(fetch).not.toHaveBeenCalled()
+    Object.defineProperty(config, 'links', { value: () => Promise.resolve([]), configurable: true })
+    await strategy(new URL('/malformed', location.href).href)
+    expect(fetch).not.toHaveBeenCalled()
+    Object.defineProperty(config, 'links', {
+      value: (batch: readonly PrefetchLink[]) => batch,
+      configurable: true,
+    })
+    await strategy(new URL('/valid', location.href).href)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels one imperative owner independently and aborts HTML for the last', async (t) => {
+    let jobSignal: AbortSignal | undefined
+    t.mock.method(globalThis, 'fetch', (_src: RequestInfo | URL, init?: RequestInit) => {
+      jobSignal = init?.signal ?? undefined
+      return new Promise<Response>((_resolve, reject) =>
+        jobSignal?.addEventListener('abort', () => reject(new Error('aborted'))),
+      )
+    })
+    let { prefetch: load } = createPrefetch(t)
+    let first = new AbortController()
+    let second = new AbortController()
+    let a = load(new URL('/shared', location.href).href, { signal: first.signal })
+    let b = load(new URL('/shared', location.href).href, { signal: second.signal })
+    await wait(0)
+    first.abort()
+    expect(jobSignal?.aborted).toBe(false)
+    second.abort()
+    expect(jobSignal?.aborted).toBe(true)
+    await Promise.all([a, b])
+  })
+
+  it('selects assets once per response before unrelated HTML finishes and snapshots frame metadata', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let gate = Promise.withResolvers<Response>()
+    let starts: string[] = []
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      let path = new URL(String(src)).pathname
+      starts.push(path)
+      if (path === '/slow') return gate.promise
+      if (path === '/leaf') return htmlResponse('')
+      return htmlResponse(`<base href="/assets/"><script src="default.js"></script><img src="opted.jpg" data-prefetch>
+        <template><img src="nested.jpg" data-prefetch></template>
+        <script type="application/json" id="rmx-data">{"f":{"leaf":{"src":"/leaf","prefetch":true}}}</script>`)
+    })
+    let foreign = document.createElement('img')
+    foreign.src = '/foreign.jpg'
+    let calls = 0
+    let hints = collectHints(t)
+    let { prefetch: load } = createPrefetch(t, {
+      assets(batch, context) {
+        if (context.src.endsWith('/leaf') || context.src.endsWith('/slow')) return batch
+        calls++
+        expect(batch).toHaveLength(1)
+        expect(context.baseURL).toBe(new URL('/assets/', location.href).href)
+        let image = context.fragment.querySelector('img')
+        let template = context.fragment.querySelector('template')
+        if (!image || !template) throw new Error('Missing selected images')
+        context.fragment.querySelector('#rmx-data')?.remove()
+        return [image, image, ...template.content.querySelectorAll('img'), foreign]
+      },
+    })
+    let a = load(new URL('/fast', location.href).href)
+    let shared = load(new URL('/fast', location.href).href)
+    let b = load(new URL('/slow', location.href).href)
+    await wait(0)
+    await waitFor(() => calls === 1 && starts.includes('/leaf') && hints.length === 2)
+    expect(calls).toBe(1)
+    expect(starts).toContain('/leaf')
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual([
+      '/assets/opted.jpg',
+      '/assets/nested.jpg',
+    ])
+    gate.resolve(htmlResponse(''))
+    await Promise.all([a, shared, b])
+    expect(document.querySelector('img')).toBe(null)
+  })
+
+  it('bounds global assets, interleaves fragments, and releases error and success slots', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    holdNativeHintEvents(t)
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) => {
+      let page = new URL(String(src)).pathname.slice(1)
+      return htmlResponse(
+        `<script src="/${page}1.js"></script><script src="/${page}2.js"></script><script src="/${page}3.js"></script>`,
+      )
+    })
+    let hints: HTMLLinkElement[] = []
+    let peak = 0
+    let observer = new MutationObserver((records) => {
+      for (let record of records)
+        for (let node of record.addedNodes) {
+          if (node instanceof HTMLLinkElement && node.rel === 'prefetch') hints.push(node)
+        }
+      peak = Math.max(peak, document.head.querySelectorAll('link[rel="prefetch"]').length)
+    })
+    observer.observe(document.head, { childList: true })
+    t.after(() => observer.disconnect())
+    let { prefetch: load } = createPrefetch(t, { concurrency: { assets: 1 } })
+    let first = load(new URL('/a', location.href).href)
+    await waitFor(() => hints.length === 1)
+    let second = load(new URL('/b', location.href).href)
+    let ready = Promise.all([first, second])
+    await wait(20)
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/a1.js'])
+    hints[0].dispatchEvent(new Event('error'))
+    await waitFor(() => hints.length === 2)
+    hints[1].dispatchEvent(new Event('load'))
+    await waitFor(() => hints.length === 3)
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/a1.js', '/a2.js', '/b1.js'])
+    for (let i = 2; i < 6; i++) {
+      hints[i].dispatchEvent(new Event('load'))
+      if (i < 5) await waitFor(() => hints.length === i + 2)
+    }
+    await ready
+    expect(peak).toBe(1)
+    expect(hints.every((link) => !link.isConnected)).toBe(true)
+  })
+
+  it('keeps selected order when a fragment joins an already queued shared asset', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    holdNativeHintEvents(t)
+    let selections = 0
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) =>
+      htmlResponse(
+        new URL(String(src)).pathname === '/a'
+          ? '<script src="/a1.js"></script><script src="/a2.js"></script><script src="/shared.js"></script>'
+          : '<script src="/shared.js"></script><script src="/b.js"></script>',
+      ),
+    )
+    let hints: HTMLLinkElement[] = []
+    let observer = new MutationObserver((records) => {
+      for (let record of records)
+        for (let node of record.addedNodes) {
+          if (node instanceof HTMLLinkElement) hints.push(node)
+        }
+    })
+    observer.observe(document.head, { childList: true })
+    t.after(() => observer.disconnect())
+    let { prefetch: load } = createPrefetch(t, {
+      concurrency: { assets: 1 },
+      assets(batch) {
+        selections++
+        return batch
+      },
+    })
+    let a = load(new URL('/a', location.href).href)
+    await waitFor(() => hints.length === 1)
+    let b = load(new URL('/b', location.href).href)
+    await waitFor(() => selections === 2)
+    for (let i = 0; i < 4; i++) {
+      hints[i].dispatchEvent(new Event('load'))
+      if (i < 3) await waitFor(() => hints.length === i + 2)
+    }
+    await Promise.all([a, b])
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual([
+      '/a1.js',
+      '/a2.js',
+      '/shared.js',
+      '/b.js',
+    ])
+  })
+
+  it('retains a shared issued asset for another owner and removes queued assets on cancellation', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    holdNativeHintEvents(t)
+    t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse('<script src="/shared.js"></script><script src="/queued.js"></script>'),
+    )
+    let selections = 0
+    let { prefetch: load } = createPrefetch(t, {
+      concurrency: { assets: 1 },
+      assets(batch) {
+        selections++
+        return batch
+      },
+    })
+    let a = new AbortController()
+    let b = new AbortController()
+    let ready = Promise.all([
+      load(new URL('/a', location.href).href, { signal: a.signal }),
+      load(new URL('/b', location.href).href, { signal: b.signal }),
+    ])
+    await wait(0)
+    await waitFor(() => selections === 2 && document.querySelector('link[rel="prefetch"]') !== null)
+    let link = document.querySelector('link[rel="prefetch"]')
+    expect(link).not.toBe(null)
+    a.abort()
+    await wait(0)
+    expect(link?.isConnected).toBe(true)
+    b.abort()
+    await ready
+    expect(link?.isConnected).toBe(false)
+    expect(document.querySelector('link[rel="prefetch"]')).toBe(null)
+  })
+
+  it('prunes abandoned owners before resuming queued native assets', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    holdNativeHintEvents(t)
+    t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse('<script src="/issued.js"></script><script src="/abandoned.js"></script>'),
+    )
+    let starts: string[] = []
+    let observer = new MutationObserver((records) => {
+      for (let record of records)
+        for (let node of record.addedNodes) {
+          if (node instanceof HTMLLinkElement) starts.push(new URL(node.href).pathname)
+        }
+    })
+    observer.observe(document.head, { childList: true })
+    t.after(() => observer.disconnect())
+    let anchor = createIntentLink('/owner')
+    let { prefetch: strategy } = createPrefetch(t, { concurrency: { assets: 1 } })
+    let ready = strategy.enqueue(anchor.href, undefined, anchor, 'intent')
+    await waitFor(() => document.querySelector('link[rel="prefetch"]') !== null)
+    strategy.pause()
+    let issued = document.querySelector('link[rel="prefetch"]')
+    issued?.dispatchEvent(new Event('load'))
+    anchor.remove()
+    strategy.resume()
+    await ready
+    expect(document.querySelector('link[rel="prefetch"]')).toBe(null)
+    expect(starts).toEqual(['/issued.js'])
+  })
+
+  it('preloads selected responsive images without native prefetch support and snapshots attributes', async (t) => {
+    stubLinkPrefetchSupport(t, false)
+    t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse(
+        `<base href="/relative/"><img src="fallback.png" srcset="small.png 400w, large.png 1200w" sizes="100vw" crossorigin="use-credentials" referrerpolicy="no-referrer"><script src="/ignored.js"></script>`,
+      ),
+    )
+    let source: Element | undefined
+    let hints = collectHints(t)
+    let { prefetch: load } = createPrefetch(t, {
+      assets(_batch, { fragment }) {
+        source = fragment.querySelector('img') ?? undefined
+        return source ? [source] : []
+      },
+    })
+    await load(new URL('/image', location.href).href)
+    source?.setAttribute('srcset', '/mutated.png 1x')
+    expect(hints).toHaveLength(1)
+    expect(hints[0].rel).toBe('preload')
+    expect(hints[0].imageSrcset).toBe(
+      `${new URL('/relative/small.png', location.href).href} 400w, ${new URL('/relative/large.png', location.href).href} 1200w`,
+    )
+    expect(hints[0].crossOrigin).toBe('use-credentials')
+    expect(hints[0].referrerPolicy).toBe('no-referrer')
+    expect(hints[0].fetchPriority).toBe('low')
+  })
+
+  it('keeps nested discovery and navigation available after selector errors', async (t) => {
+    t.mock.method(globalThis, 'fetch', async (src: RequestInfo | URL) =>
+      ['/leaf', '/navigate'].includes(new URL(String(src)).pathname)
+        ? htmlResponse('<html><head></head><body><main>Navigation</main></body></html>')
+        : htmlResponse(
+            '<script id="rmx-data" type="application/json">{"f":{"leaf":{"src":"/leaf","prefetch":true}}}</script>',
+          ),
+    )
+    let calls = 0
+    let { prefetch: load } = createPrefetch(t, {
+      assets() {
+        calls++
+        throw new Error('policy')
+      },
+    })
+    await load(new URL('/root', location.href).href)
+    expect(calls).toBe(2)
+    let app = run({
+      loadModule: mock.fn(),
+      prefetch: {
+        links() {
+          throw new Error('policy')
+        },
+      },
+    })
+    t.after(() => app.dispose())
+    prefetch('/rejected')
+    await app.frames.top.reload({ src: new URL('/navigate', location.href).href })
   })
 })
