@@ -1,4 +1,5 @@
 import { createMixin, css, on } from '@remix-run/component'
+import type { CSSMixinDescriptor } from '@remix-run/component'
 
 const LONG_PRESS_DURATION = 500
 
@@ -363,7 +364,7 @@ function trackHost(host: Element, activates: () => boolean, lifetime: AbortSigna
  *
  * @returns The `css()` mixin
  */
-export function pressableCss() {
+export function pressableCss(): CSSMixinDescriptor {
   return css({
     cursor: 'default',
     userSelect: 'none',
