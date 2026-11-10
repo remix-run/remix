@@ -301,7 +301,6 @@ type SelectionInformation = {
 }
 
 function createDocumentState(doc: Document) {
-
   function getActiveElement(): Element | null {
     return doc.activeElement || doc.body
   }
