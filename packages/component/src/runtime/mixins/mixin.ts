@@ -392,6 +392,26 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     input.getContext ?? (() => undefined),
   )
   let handle = state.handle as ScopedAnyMixinHandle
+  let removedScopes: symbol[] = []
+  let insertedEntries: Array<{ binding: MixinRuntimeBinding; entry: RunnerEntry }> = []
+  let lifecycleCommitQueued = false
+
+  function queueLifecycleCommit() {
+    if (lifecycleCommitQueued) return
+    lifecycleCommitQueued = true
+    handle.queueCommitTask(() => {
+      for (let scope of removedScopes) {
+        removeMixinScope(handle, scope)
+      }
+      for (let { binding, entry } of insertedEntries) {
+        let event = new Event('insert') as MixinInsertEvent<Element>
+        event.node = binding.node
+        event.parent = binding.parent
+        event.key = binding.key
+        handle.dispatchScopedEvent(entry.scope, event)
+      }
+    })
+  }
 
   let runnerCount = 0
   let props = composeMixedProps(hostType, input.props, (descriptor, index, mixinProps) => {
@@ -399,7 +419,8 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
     let entry = state.runners[index]
     if (!entry || entry.type !== descriptor.type) {
       if (entry) {
-        queueMixinRemove(handle, entry.scope)
+        removedScopes.push(entry.scope)
+        queueLifecycleCommit()
       }
       let scope = Symbol('mixin-scope')
       handle.setActiveScope(scope)
@@ -415,7 +436,8 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       state.runners[index] = entry
       let binding = state.binding
       if (binding?.node) {
-        queueMixinBindEvent(handle, entry.scope, 'insert', binding)
+        insertedEntries.push({ binding, entry })
+        queueLifecycleCommit()
       }
     }
 
@@ -756,10 +778,6 @@ function queueMixinBindEvent(
 function removeMixinScope(handle: ScopedAnyMixinHandle, scope: symbol) {
   handle.dispatchScopedEvent(scope, new Event('remove'))
   handle.releaseScope(scope)
-}
-
-function queueMixinRemove(handle: ScopedAnyMixinHandle, scope: symbol) {
-  handle.queueCommitTask(() => removeMixinScope(handle, scope))
 }
 
 function dispatchMixinEvent(state: MixinRuntimeState | undefined, createEvent: () => Event) {
