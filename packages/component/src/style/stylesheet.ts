@@ -36,10 +36,6 @@ export const REMIX_UI_STYLE_LAYER = 'rmx'
 
 const SERVER_STYLE_SELECTOR = 'style[data-rmx-style]'
 
-function getStyleLayerName(className: string, layer: string = REMIX_UI_STYLE_LAYER): string {
-  return `${layer}.${className}`
-}
-
 function compareNodesInDocumentOrder(a: Node, b: Node): number {
   if (a === b) return 0
 
@@ -99,7 +95,7 @@ function getStyleSelector(styleEl: HTMLStyleElement): string | null {
   return selector ? selector : null
 }
 
-export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleManager {
+export function createStyleManager(): StyleManager {
   let stylesheet: CSSStyleSheet | null = null
   let generation = 0
 
@@ -189,7 +185,7 @@ export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER): StyleM
     let index = sheet.cssRules.length
     // This may throw for invalid CSS. If it does, we intentionally let it
     // bubble so the rule is not tracked unless insertion actually succeeds.
-    sheet.insertRule(`@layer ${getStyleLayerName(className, layer)} { ${rule} }`, index)
+    sheet.insertRule(`@layer ${REMIX_UI_STYLE_LAYER}.${className} { ${rule} }`, index)
     ruleMap.set(className, { count: 1, index, pinned: false })
   }
 
