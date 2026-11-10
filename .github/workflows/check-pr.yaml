@@ -139,6 +139,7 @@ jobs:
     name: test (ubuntu-latest, changed packages)
     needs: detect_changes
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -187,6 +188,7 @@ jobs:
     name: test (bun, ubuntu-latest, changed packages)
     needs: detect_changes
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -241,6 +243,7 @@ jobs:
     name: test (windows-latest, changed packages)
     needs: detect_changes
     runs-on: windows-2025
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -291,6 +294,7 @@ jobs:
     name: test (WebKit, macOS, changed packages)
     needs: detect_changes
     runs-on: macos-15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
