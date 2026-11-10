@@ -13,17 +13,11 @@ export interface ToastOptions<data = unknown> {
   announcement?: string
   /** Consumer-defined data interpreted by the renderer. */
   data?: data
-  /** Auto-dismiss timeout in milliseconds, or false to disable. Zero dismisses immediately. Falls back to the manager default, or false. */
+  /** Timeout override in milliseconds, or false to keep the notification open. Interpreted by the UI when presented. */
   timeout?: number | false
 }
 
-/** Default policy for notifications published through a manager. */
-export interface ToastManagerOptions<data = unknown> {
-  /** Fallback timeout in milliseconds, or false to disable. A callback resolves it once per add without an explicit timeout. Defaults to false. */
-  defaultTimeout?: number | false | ((options: ToastOptions<data>) => number | false)
-}
-
-/** An immutable toast item snapshot. Read the manager again for the current remaining time. */
+/** An immutable snapshot of a published notification. */
 export interface ToastItem<data = unknown> {
   /** Stable identity, including generated identities. */
   readonly id: string
@@ -37,14 +31,8 @@ export interface ToastItem<data = unknown> {
   readonly announcement?: string
   /** Content interpreted by the consumer's renderer. */
   readonly data?: data
-  /** Configured timeout in milliseconds, or false for a persistent toast. */
-  readonly timeout: number | false
-  /** Remaining time in milliseconds, or zero when persistent. Sampled when this snapshot was read. */
-  readonly remaining: number
-  /** Whether the timer is stopped, including while no item presents the toast. */
-  readonly paused: boolean
-  /** Whether at least one mounted item presents this toast. */
-  readonly presented: boolean
+  /** Optional timeout override interpreted by the notification UI. */
+  readonly timeout?: number | false
 }
 
 /** Commands and observable state, without a bound component. Events signal that state can be read. */
@@ -55,18 +43,14 @@ export interface ToastManager<data = unknown> extends TypedEventTarget<{ change:
   add(options: ToastOptions<data>): string
   /** Closes one toast, or all toasts when no identity is supplied. */
   close(id?: string): void
-  /** Pauses all timers for an opaque reason. New arrivals inherit active reasons. */
-  pause(reason: unknown): void
-  /** Removes just this pause reason. Other reasons continue to pause timers. */
-  resume(reason: unknown): void
-  /** Presents an item for the signal's lifetime. Multiple presentations share one timer. */
-  present(id: string, signal: AbortSignal): void
 }
 
 /** Connects application-level state to consumer-owned markup. */
 export interface ToastContextProps<data = unknown> {
   /** Stable manager created outside the rendering component. */
   manager: ToastManager<data>
+  /** Fallback timeout in milliseconds, or false to keep notifications open. A callback resolves it once per presentation or replacement without an explicit timeout. Defaults to false. */
+  defaultTimeout?: number | false | ((options: ToastOptions<data>) => number | false)
   /** Maximum available toast items. Unlimited by default. Must be a positive integer. */
   limit?: number
   /** Renders every open toast item, including overflow, newest first. */
@@ -89,171 +73,51 @@ export interface ToastItemContextProps {
   children?: RemixNode
 }
 
-type ToastClock =
-  | { status: 'stopped'; remaining: number }
-  | {
-      status: 'running'
-      remaining: number
-      started: number
-      timer: ReturnType<typeof setTimeout>
-    }
-
-type StoredToastItem<data> = {
-  revision: number
-  options: ToastOptions<data>
-  timeout: number | false
-  clock: ToastClock
-  presentations: Set<symbol>
-}
-
 /**
- * Creates retained toast state independently of rendering. Timers run only while presented.
- * @param options Default notification policy.
+ * Creates retained notification data independently of rendering.
  * @returns A manager with native EventTarget subscriptions.
  */
-export function createToastManager<data = unknown>(
-  options: ToastManagerOptions<data> = {},
-): ToastManager<data> {
-  let defaultTimeout = options.defaultTimeout ?? false
-  if (typeof defaultTimeout !== 'function') validateTimeout(defaultTimeout)
-  let storedToastItems = new Map<string, StoredToastItem<data>>()
-  let reasons = new Set<unknown>()
+export function createToastManager<data = unknown>(): ToastManager<data> {
+  let toastItems = new Map<string, ToastItem<data>>()
   let nextId = 0
-
-  function changed() {
-    toastManager.dispatchEvent(new Event('change'))
-  }
-
-  function remaining(toastItem: StoredToastItem<data>) {
-    let clock = toastItem.clock
-    return Math.max(
-      0,
-      clock.remaining - (clock.status === 'stopped' ? 0 : performance.now() - clock.started),
-    )
-  }
-
-  function stop(toastItem: StoredToastItem<data>) {
-    let clock = toastItem.clock
-    if (clock.status === 'stopped') return
-    toastItem.clock = { status: 'stopped', remaining: remaining(toastItem) }
-    clearTimeout(clock.timer)
-  }
-
-  function start(id: string, toastItem: StoredToastItem<data>) {
-    let clock = toastItem.clock
-    if (
-      clock.status === 'running' ||
-      toastItem.timeout === false ||
-      toastItem.presentations.size === 0 ||
-      reasons.size > 0
-    )
-      return
-    toastItem.clock = {
-      status: 'running',
-      remaining: clock.remaining,
-      started: performance.now(),
-      timer: setTimeout(() => toastManager.close(id), clock.remaining),
-    }
-  }
-
-  function validateTimeout(value: number | false) {
-    if (value !== false && (!Number.isFinite(value) || value < 0))
-      throw new RangeError('Toast timeout must be false or finite and non-negative')
-    return value
-  }
 
   class ToastStore extends TypedEventTarget<{ change: Event }> implements ToastManager<data> {
     get toastItems(): readonly ToastItem<data>[] {
-      return Object.freeze(
-        [...storedToastItems].reverse().map(([id, toastItem]) =>
-          Object.freeze({
-            id,
-            revision: toastItem.revision,
-            title: toastItem.options.title,
-            description: toastItem.options.description,
-            announcement: toastItem.options.announcement,
-            data: toastItem.options.data,
-            timeout: toastItem.timeout,
-            remaining: remaining(toastItem),
-            paused: toastItem.clock.status === 'stopped',
-            presented: toastItem.presentations.size > 0,
-          }),
-        ),
-      )
+      return Object.freeze([...toastItems.values()].reverse())
     }
     add(options: ToastOptions<data>) {
+      if (options.timeout !== undefined) validateTimeout(options.timeout)
       let id = options.id ?? `toast-${++nextId}`
-      while (options.id === undefined && storedToastItems.has(id)) id = `toast-${++nextId}`
-      let previous = storedToastItems.get(id)
-      let lifetime = validateTimeout(
-        options.timeout ??
-          (typeof defaultTimeout === 'function' ? defaultTimeout(options) : defaultTimeout),
+      while (options.id === undefined && toastItems.has(id)) id = `toast-${++nextId}`
+      let previous = toastItems.get(id)
+      toastItems.set(
+        id,
+        Object.freeze({ ...options, id, revision: previous ? previous.revision + 1 : 0 }),
       )
-      if (previous) stop(previous)
-      let toastItem: StoredToastItem<data> = {
-        revision: previous ? previous.revision + 1 : 0,
-        options: { ...options },
-        timeout: lifetime,
-        clock: { status: 'stopped', remaining: lifetime === false ? 0 : lifetime },
-        presentations: previous?.presentations ?? new Set(),
-      }
-      storedToastItems.set(id, toastItem)
-      start(id, toastItem)
-      changed()
+      this.dispatchEvent(new Event('change'))
       return id
     }
     close(id?: string) {
-      if (id === undefined) {
-        for (let toastItem of storedToastItems.values()) stop(toastItem)
-        storedToastItems.clear()
-      } else {
-        let toastItem = storedToastItems.get(id)
-        if (!toastItem) return
-        stop(toastItem)
-        storedToastItems.delete(id)
-      }
-      changed()
-    }
-    pause(reason: unknown) {
-      if (reasons.has(reason)) return
-      for (let toastItem of storedToastItems.values()) stop(toastItem)
-      reasons.add(reason)
-      changed()
-    }
-    resume(reason: unknown) {
-      if (!reasons.delete(reason)) return
-      if (reasons.size === 0) for (let [id, toastItem] of storedToastItems) start(id, toastItem)
-      changed()
-    }
-    present(id: string, signal: AbortSignal) {
-      let toastItem = storedToastItems.get(id)
-      if (!toastItem || signal.aborted) return
-      let token = Symbol()
-      toastItem.presentations.add(token)
-      if (toastItem.presentations.size === 1) start(id, toastItem)
-      signal.addEventListener(
-        'abort',
-        () => {
-          // An add with the same id replaces the stored toast item but retains its presentations.
-          let current = storedToastItems.get(id)
-          if (!current || !current.presentations.delete(token)) return
-          if (current.presentations.size === 0) stop(current)
-          changed()
-        },
-        { once: true },
-      )
-      changed()
+      if (id === undefined) toastItems.clear()
+      else if (!toastItems.delete(id)) return
+      this.dispatchEvent(new Event('change'))
     }
   }
-  let toastManager = new ToastStore()
-  return toastManager
+  return new ToastStore()
+}
+
+function validateTimeout(value: number | false): number | false {
+  if (value !== false && (!Number.isFinite(value) || value < 0))
+    throw new RangeError('Toast timeout must be false or finite and non-negative')
+  return value
 }
 
 type RootState = {
   readonly limit: number
-  toastManager: Pick<ToastManager<unknown>, 'present' | 'close' | 'toastItems' | 'pause' | 'resume'>
+  toastManager: Pick<ToastManager<unknown>, 'close' | 'toastItems'>
+  timeout(id: string): number | false
   registerRoot(node: HTMLElement, options: () => ToastRootOptions, signal: AbortSignal): void
-  registerItem(id: string, node: HTMLElement): void
+  registerItem(id: string, node: HTMLElement, clock: ToastClock): void
   unregisterItem(id: string, node: HTMLElement): void
   focusGuard(previous: EventTarget | null): void
   readonly hasReturnTarget: boolean
@@ -284,8 +148,6 @@ const hidden = css({
   whiteSpace: 'nowrap',
   border: 0,
 })
-
-const mountedManagers = new WeakSet<object>()
 
 function isElement(target: unknown): target is HTMLElement {
   return (
@@ -330,23 +192,13 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   let limit = handle.props.limit ?? Infinity
   let region: HTMLElement | undefined
   let returnTo: HTMLElement | undefined
-  let touch = Symbol('touch')
-  let hover = Symbol('hover')
-  let focus = Symbol('focus')
-  let visibility = Symbol('visibility')
-  let windowBlur = Symbol('window blur')
-  let touchEngaged = false
-  let hovered = false
-  let focused = false
   let entering = false
-  let presentations = new Map<string, HTMLElement>()
+  let presentations = new Map<string, { node: HTMLElement; clock: ToastClock }>()
   let previous = toastManager.toastItems.map((toastItem) => toastItem.id)
-
-  function setHovered(next: boolean) {
-    hovered = next
-    if (next) toastManager.pause(hover)
-    else toastManager.resume(hover)
-  }
+  let interaction = createInteractionState(() => {
+    for (let { clock } of presentations.values()) clock.setPaused(interaction.paused)
+    if (!handle.signal.aborted) void handle.update()
+  })
 
   function restoreFocus(): boolean {
     if (!region || !returnTo) return false
@@ -366,9 +218,9 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       if (!restoreFocus()) active.blur()
       active = activeElement(region.ownerDocument)
     }
-    for (let [id, node] of presentations) {
+    for (let [id, { node }] of presentations) {
       if (!available.has(id) && active && contains(node, active)) {
-        if (!focused && !active.matches(':focus-visible')) {
+        if (!interaction.keyboardFocused && !active.matches(':focus-visible')) {
           active.blur()
           continue
         }
@@ -376,7 +228,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         let candidates = [...previous.slice(index + 1), ...previous.slice(0, index).reverse()]
         let target = candidates
           .filter((candidate) => available.has(candidate))
-          .map((candidate) => presentations.get(candidate))
+          .map((candidate) => presentations.get(candidate)?.node)
           .find((candidate) => candidate?.isConnected && !candidate.inert)
         if (target) focusElement(target, true)
         else if (!restoreFocus()) active.blur()
@@ -386,7 +238,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     toastItems = toastManager.toastItems
     available = new Set(toastItems.slice(0, limit).map((toastItem) => toastItem.id))
     previous = toastItems.map((toastItem) => toastItem.id)
-    for (let [id, node] of presentations) {
+    for (let [id, { node }] of presentations) {
       let unavailable = !available.has(id)
       node.inert = unavailable
       if (unavailable) node.setAttribute('aria-hidden', 'true')
@@ -396,6 +248,15 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
 
   let state: RootState = {
     toastManager,
+    timeout(id) {
+      let toastItem = toastManager.toastItems.find((toastItem) => toastItem.id === id)
+      if (!toastItem) return false
+      let defaultTimeout = handle.props.defaultTimeout ?? false
+      return validateTimeout(
+        toastItem.timeout ??
+          (typeof defaultTimeout === 'function' ? defaultTimeout(toastItem) : defaultTimeout),
+      )
+    },
     get limit() {
       return limit
     },
@@ -404,7 +265,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         previous === region
           ? toastManager.toastItems
               .slice(0, limit)
-              .map((toastItem) => presentations.get(toastItem.id))
+              .map((toastItem) => presentations.get(toastItem.id)?.node)
               .find((node) => node?.isConnected && !node.inert)
           : undefined
       if (target) focusElement(target, true)
@@ -414,21 +275,22 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       return returnTo !== undefined
     },
     get expanded() {
-      return hovered || focused || touchEngaged
+      return interaction.expanded
     },
-    registerItem(id, node) {
-      presentations.set(id, node)
+    registerItem(id, node, clock) {
+      presentations.set(id, { node, clock })
+      clock.setPaused(interaction.paused)
       refresh()
+      if (!handle.signal.aborted) void handle.update()
     },
     unregisterItem(id, node) {
-      if (presentations.get(id) !== node) return
+      if (presentations.get(id)?.node !== node) return
       presentations.delete(id)
       if (!toastManager.toastItems.length) {
-        touchEngaged = false
-        setHovered(false)
-        toastManager.resume(touch)
+        interaction.clearPointerInteraction()
       }
       refresh()
+      if (!handle.signal.aborted) void handle.update()
     },
     registerRoot(node, options, signal) {
       if (region && region !== node) throw new Error('Mount only one toast.root() per Context')
@@ -439,9 +301,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         'pointerdown',
         (event) => {
           if (event.pointerType !== 'touch' || !event.isPrimary || event.button !== 0) return
-          touchEngaged = true
-          toastManager.pause(touch)
-          void handle.update()
+          interaction.set('touchEngaged', true)
         },
         { signal },
       )
@@ -449,19 +309,16 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         'pointerdown',
         (event) => {
           if (
-            !touchEngaged ||
+            !interaction.touchEngaged ||
             event.pointerType !== 'touch' ||
             !event.isPrimary ||
             event.button !== 0 ||
             event.composedPath().includes(node)
           )
             return
-          touchEngaged = false
-          setHovered(false)
+          interaction.clearPointerInteraction()
           let active = activeElement(doc)
           if (active && contains(node, active)) active.blur()
-          toastManager.resume(touch)
-          void handle.update()
         },
         { capture: true, signal },
       )
@@ -469,17 +326,14 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         'pointerenter',
         (event) => {
           if (event.pointerType === 'touch') return
-          setHovered(true)
-          void handle.update()
+          interaction.set('hovered', true)
         },
         { signal },
       )
       node.addEventListener(
         'pointerleave',
         () => {
-          if (!hovered) return
-          setHovered(false)
-          void handle.update()
+          interaction.set('hovered', false)
         },
         { signal },
       )
@@ -490,8 +344,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
           if (!active || (!entering && !active.matches(':focus-visible'))) return
           if (!entering && isElement(event.relatedTarget) && !contains(node, event.relatedTarget))
             returnTo = event.relatedTarget
-          focused = true
-          toastManager.pause(focus)
+          interaction.set('keyboardFocused', true)
           refresh()
           void handle.update()
         },
@@ -501,8 +354,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         'focusout',
         (event) => {
           if (isElement(event.relatedTarget) && contains(node, event.relatedTarget)) return
-          focused = false
-          toastManager.resume(focus)
+          interaction.set('keyboardFocused', false)
           refresh()
           void handle.update()
         },
@@ -545,28 +397,30 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
           if (!toastManager.toastItems.length || contains(node, activeElement(doc))) return
           returnTo = activeElement(doc) ?? doc.body
           entering = true
-          focusElement(node, true)
-          entering = false
+          try {
+            focusElement(node, true)
+          } finally {
+            entering = false
+          }
           if (activeElement(doc) === node) event.preventDefault()
         },
         { signal },
       )
       function onVisibility() {
-        if (doc.hidden) toastManager.pause(visibility)
-        else toastManager.resume(visibility)
+        interaction.set('documentHidden', doc.hidden)
       }
       doc.addEventListener('visibilitychange', onVisibility, { signal })
       win?.addEventListener(
         'blur',
         (event) => {
-          if (event.target === win) toastManager.pause(windowBlur)
+          if (event.target === win) interaction.set('windowBlurred', true)
         },
         { signal },
       )
       win?.addEventListener(
         'focus',
         (event) => {
-          if (event.target === win) toastManager.resume(windowBlur)
+          if (event.target === win) interaction.set('windowBlurred', false)
         },
         { signal },
       )
@@ -576,12 +430,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         () => {
           region = undefined
           returnTo = undefined
-          touchEngaged = focused = false
-          setHovered(false)
-          toastManager.resume(touch)
-          toastManager.resume(focus)
-          toastManager.resume(visibility)
-          toastManager.resume(windowBlur)
+          interaction.reset()
         },
         { once: true },
       )
@@ -594,16 +443,13 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
     void handle.update()
   }
   handle.queueTask(() => {
-    if (mountedManagers.has(toastManager))
-      throw new Error('Mount only one toast.Context per manager')
-    mountedManagers.add(toastManager)
     toastManager.addEventListener('change', sync, { signal: handle.signal })
     sync()
-    handle.signal.addEventListener('abort', () => mountedManagers.delete(toastManager), {
-      once: true,
-    })
   })
   return () => {
+    let defaultTimeout = handle.props.defaultTimeout
+    if (defaultTimeout !== undefined && typeof defaultTimeout !== 'function')
+      validateTimeout(defaultTimeout)
     let nextLimit = handle.props.limit ?? Infinity
     if (handle.props.limit !== undefined && (!Number.isInteger(nextLimit) || nextLimit < 1))
       throw new RangeError('Toast limit must be a positive integer')
@@ -616,7 +462,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         {handle.props.children(toastManager.toastItems)}
         <div aria-live="polite" aria-atomic="false" aria-relevant="additions text" mix={hidden}>
           {toastManager.toastItems
-            .filter((toastItem) => toastItem.presented)
+            .filter((toastItem) => presentations.has(toastItem.id))
             .map((toastItem) => (
               <div key={JSON.stringify([toastItem.id, toastItem.revision])} aria-atomic="true">
                 {toastItem.announcement !== undefined ? (
@@ -758,21 +604,52 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
     let scoped = handle.context.get(ItemContext)
     if (!context || !scoped)
       throw new Error('toast.item() must be rendered inside toast.ItemContext')
-    let presentation: AbortController | undefined
     let host: HTMLElement | undefined
+    let publication: ToastItem<unknown> | undefined
+    let countdown = false
+    let animation: Animation | undefined
+    let clock = createToastClock(() => {
+      let current = context.toastManager.toastItems.find((toastItem) => toastItem.id === scoped.id)
+      if (current && current === publication) context.toastManager.close(scoped.id)
+    }, synchronizeCountdown)
+
+    function synchronizeCountdown() {
+      animation?.cancel()
+      animation = undefined
+      if (!host || !countdown || clock.duration === false) return
+      registerCountdownProperty()
+      animation = host.animate([{ '--toast-countdown': '1' }, { '--toast-countdown': '0' }], {
+        duration: clock.duration,
+        fill: 'both',
+        easing: 'linear',
+      })
+      animation.currentTime = clock.duration - clock.remaining
+      if (clock.paused) animation.pause()
+    }
+
+    function synchronizeClock(toastItem: ToastItem<unknown> | undefined) {
+      if (!host || publication === toastItem) return
+      let duration = toastItem ? context.timeout(scoped.id) : false
+      publication = toastItem
+      clock.reset(duration)
+    }
+
     function connect(node: HTMLElement) {
-      presentation?.abort()
-      presentation = new AbortController()
       host = node
-      context.registerItem(scoped.id, node)
-      context.toastManager.present(scoped.id, presentation.signal)
+      publication = undefined
+      context.registerItem(scoped.id, node, clock)
+      synchronizeClock(
+        context.toastManager.toastItems.find((toastItem) => toastItem.id === scoped.id),
+      )
     }
     handle.addEventListener('insert', (event) => connect(event.node))
     handle.addEventListener('reclaimed', (event) => connect(event.node))
-    handle.addEventListener('beforeRemove', () => presentation?.abort())
+    handle.addEventListener('beforeRemove', () => clock.dispose())
     function disconnect() {
-      presentation?.abort()
+      clock.dispose()
       if (host) context.unregisterItem(scoped.id, host)
+      host = undefined
+      publication = undefined
     }
     handle.addEventListener('remove', disconnect)
     handle.signal.addEventListener('abort', disconnect, { once: true })
@@ -780,9 +657,13 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
       let toastItems = context.toastManager.toastItems
       let index = toastItems.findIndex((toastItem) => toastItem.id === scoped.id)
       let toastItem = toastItems[index]
+      if (countdown !== Boolean(options.countdown)) {
+        countdown = Boolean(options.countdown)
+        synchronizeCountdown()
+      }
+      synchronizeClock(toastItem)
       let limited = index >= context.limit
       return [
-        options.countdown && toastItem ? countdownAnimation(toastItem) : undefined,
         attrs({
           inert: limited || !toastItem ? true : undefined,
           'aria-hidden': limited || !toastItem ? 'true' : undefined,
@@ -846,40 +727,156 @@ export const close = createMixin<HTMLButtonElement, [], ElementProps>((handle) =
 
 let countdownPropertyRegistered = false
 
-const countdownAnimation = createMixin<
-  HTMLElement,
-  [clock: Pick<ToastItem<unknown>, 'timeout' | 'remaining' | 'paused'>],
-  ElementProps
->((handle) => {
-  let clock: Pick<ToastItem<unknown>, 'timeout' | 'remaining' | 'paused'>
-  let animation: Animation | undefined
-  handle.addEventListener('remove', () => animation?.cancel())
-  handle.signal.addEventListener('abort', () => animation?.cancel(), { once: true })
-  function synchronize() {
-    handle.queueTask((node) => {
-      if (!countdownPropertyRegistered) {
-        CSS.registerProperty({
-          name: '--toast-countdown',
-          syntax: '<number>',
-          inherits: true,
-          initialValue: '1',
-        })
-        countdownPropertyRegistered = true
-      }
-      animation?.cancel()
-      if (clock.timeout === false) return
-      animation = node.animate([{ '--toast-countdown': '1' }, { '--toast-countdown': '0' }], {
-        duration: clock.timeout,
-        fill: 'both',
-        easing: 'linear',
-      })
-      animation.currentTime = clock.timeout - clock.remaining
-      if (clock.paused) animation.pause()
-    })
+function registerCountdownProperty() {
+  if (countdownPropertyRegistered) return
+  CSS.registerProperty({
+    name: '--toast-countdown',
+    syntax: '<number>',
+    inherits: true,
+    initialValue: '1',
+  })
+  countdownPropertyRegistered = true
+}
+
+type ClockState =
+  | { status: 'inactive'; paused: boolean }
+  | { status: 'paused'; duration: number; remaining: number }
+  | {
+      status: 'running'
+      duration: number
+      remaining: number
+      started: number
+      timer: ReturnType<typeof setTimeout>
+    }
+
+type ToastClock = ReturnType<typeof createToastClock>
+
+function createToastClock(expire: () => void, changed: () => void) {
+  let state: ClockState = { status: 'inactive', paused: false }
+
+  function paused() {
+    return state.status === 'inactive' ? state.paused : state.status === 'paused'
   }
-  return (nextClock) => {
-    clock = nextClock
-    synchronize()
-    return undefined
+
+  function remaining() {
+    if (state.status === 'inactive') return 0
+    return Math.max(
+      0,
+      state.remaining - (state.status === 'running' ? performance.now() - state.started : 0),
+    )
   }
-})
+
+  function cancel() {
+    if (state.status === 'running') clearTimeout(state.timer)
+  }
+
+  function start(duration: number, remaining: number) {
+    state = {
+      status: 'running',
+      duration,
+      remaining,
+      started: performance.now(),
+      timer: setTimeout(() => {
+        state = { status: 'inactive', paused: false }
+        expire()
+      }, remaining),
+    }
+  }
+
+  return {
+    get duration(): number | false {
+      return state.status === 'inactive' ? false : state.duration
+    },
+    get remaining() {
+      return remaining()
+    },
+    get paused() {
+      return paused()
+    },
+    reset(duration: number | false) {
+      let isPaused = paused()
+      cancel()
+      if (duration === false) state = { status: 'inactive', paused: isPaused }
+      else if (isPaused) state = { status: 'paused', duration, remaining: duration }
+      else start(duration, duration)
+      changed()
+    },
+    setPaused(next: boolean) {
+      if (paused() === next) return
+      if (state.status === 'inactive') state = { status: 'inactive', paused: next }
+      else if (state.status === 'running') {
+        let timeLeft = remaining()
+        cancel()
+        state = { status: 'paused', duration: state.duration, remaining: timeLeft }
+      } else start(state.duration, state.remaining)
+      changed()
+    },
+    dispose() {
+      let isPaused = paused()
+      cancel()
+      state = { status: 'inactive', paused: isPaused }
+      changed()
+    },
+  }
+}
+
+interface InteractionState {
+  hovered: boolean
+  keyboardFocused: boolean
+  touchEngaged: boolean
+  documentHidden: boolean
+  windowBlurred: boolean
+}
+
+const initialInteractionState: InteractionState = {
+  hovered: false,
+  keyboardFocused: false,
+  touchEngaged: false,
+  documentHidden: false,
+  windowBlurred: false,
+}
+
+function createInteractionState(changed: () => void) {
+  let state = initialInteractionState
+
+  function update(next: InteractionState) {
+    if (
+      next.hovered === state.hovered &&
+      next.keyboardFocused === state.keyboardFocused &&
+      next.touchEngaged === state.touchEngaged &&
+      next.documentHidden === state.documentHidden &&
+      next.windowBlurred === state.windowBlurred
+    )
+      return
+    state = next
+    changed()
+  }
+
+  function expanded() {
+    return state.hovered || state.keyboardFocused || state.touchEngaged
+  }
+
+  return {
+    get keyboardFocused() {
+      return state.keyboardFocused
+    },
+    get touchEngaged() {
+      return state.touchEngaged
+    },
+    get expanded() {
+      return expanded()
+    },
+    get paused() {
+      return expanded() || state.documentHidden || state.windowBlurred
+    },
+    set(fact: keyof InteractionState, value: boolean) {
+      update({ ...state, [fact]: value })
+    },
+    clearPointerInteraction() {
+      update({ ...state, touchEngaged: false, hovered: false })
+    },
+    reset() {
+      update(initialInteractionState)
+    },
+  }
+}

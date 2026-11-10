@@ -65,9 +65,11 @@ const anatomy = await highlightSource(`
 `)
 
 const countdownCode = await highlightSource(`
+  const defaultTimeout = 5000 // Use the same fixed default on Context.
+
   <article mix={toast.item({ countdown: true })}>
     <strong mix={toast.title()}>{toastItem.title}</strong>
-    {Boolean(toastItem.timeout) && (
+    {Boolean(toastItem.timeout ?? defaultTimeout) && (
       <div aria-hidden="true" mix={css({
         height: '2px',
         background: 'currentColor',
@@ -96,20 +98,7 @@ const subscribe = await highlightSource(`
   subscription.abort()
 `)
 
-const timing = await highlightSource(`
-  let pauseReason = Symbol('application pause')
-  toastManager.pause(pauseReason)
-
-  // Resume only this reason. Hover or focus can still keep timers paused.
-  toastManager.resume(pauseReason)
-`)
-
 const typeDefinitions = {
-  ToastManagerOptions: await highlightSource(`
-interface ToastManagerOptions<data = unknown> {
-  defaultTimeout?: number | false | ((options: ToastOptions<data>) => number | false)
-}
-`),
   ToastOptions: await highlightSource(`
 interface ToastOptions<data = unknown> {
   id?: string
@@ -128,10 +117,7 @@ interface ToastItem<data = unknown> {
   readonly description?: RemixNode
   readonly announcement?: string
   readonly data?: data
-  readonly timeout: number | false
-  readonly remaining: number
-  readonly paused: boolean
-  readonly presented: boolean
+  readonly timeout?: number | false
 }
 `),
   ToastManager: await highlightSource(`
@@ -139,14 +125,12 @@ interface ToastManager<data = unknown> extends TypedEventTarget<{ change: Event 
   readonly toastItems: readonly ToastItem<data>[]
   add(options: ToastOptions<data>): string
   close(id?: string): void
-  pause(reason: unknown): void
-  resume(reason: unknown): void
-  present(id: string, signal: AbortSignal): void
 }
 `),
   ToastContextProps: await highlightSource(`
 interface ToastContextProps<data = unknown> {
   manager: ToastManager<data>
+  defaultTimeout?: number | false | ((options: ToastOptions<data>) => number | false)
   limit?: number
   children: (toastItems: readonly ToastItem<data>[]) => RemixNode
 }
@@ -210,8 +194,8 @@ export default function ToastPage(handle: Handle<PageProps>) {
         <CodeBlock html={publishers} />
         <p>
           Notifications published before the region mounts are retained. Their timers start when an
-          item presents them. Unmounting the region pauses those timers without discarding
-          notifications. Remounting resumes them with their remaining time.
+          item presents them. Unmounting the region cancels those timers without discarding
+          notifications. Remounting starts a fresh timeout for each presented notification.
         </p>
         <p>
           Call <code>close(id)</code> to dismiss a toast programmatically, or <code>close()</code>
@@ -239,27 +223,24 @@ export default function ToastPage(handle: Handle<PageProps>) {
       <Section id="auto-dismiss" title="Timeout">
         <p>
           Set <code>timeout</code> in milliseconds to dismiss a toast automatically. Without a
-          timeout, toasts stay open until dismissed unless the manager supplies a default.
+          timeout, toasts stay open until dismissed unless the Context supplies a default.
         </p>
         <Example id="timeout" example={timeout} />
         <p id="timers">
           Hover, focus and touch engagement pause timers. So do a hidden document or an unfocused
-          window. Add an application pause with <code>pause(reason)</code> and remove it with{' '}
-          <code>resume(reason)</code>. Each reason is independent. Resuming one does not override
-          another.
+          window. Timer state belongs to the rendered notifications, rather than the manager.
         </p>
-        <CodeBlock html={timing} />
       </Section>
       <Section id="default-timeout" title="Default timeout">
         <p>
-          Set <code>defaultTimeout</code> on <code>createToastManager()</code> to share a timeout
-          across toasts. An explicit <code>timeout</code> on a toast takes precedence.
+          Set <code>defaultTimeout</code> on <code>Context</code> to share a timeout across toasts.
+          An explicit <code>timeout</code> on a toast takes precedence.
         </p>
         <Example id="default-timeout-example" example={defaultTimeout} />
         <p>
           Pass a callback to choose a default from the toast's content or custom data, such as
-          keeping toasts with actions open until dismissed. The callback runs once per{' '}
-          <code>add()</code> without an explicit timeout, including replacements.
+          keeping toasts with actions open until dismissed. The callback runs once when a
+          notification is presented or replaced without an explicit timeout.
         </p>
         <Example id="dynamic-timeout-example" example={dynamicTimeout} />
       </Section>
@@ -269,15 +250,16 @@ export default function ToastPage(handle: Handle<PageProps>) {
           It animates <code>--toast-countdown</code> from 1 to 0. The value inherits into
           descendants, so CSS can use it for a transform, an SVG stroke or a gradient. You supply
           the shape, dimensions, color and placement. Mark decorative indicators with{' '}
-          <code>aria-hidden="true"</code> and only render them when <code>toastItem.timeout</code>{' '}
-          is truthy.
+          <code>aria-hidden="true"</code> and only render them for toasts with an automatic
+          dismissal timeout.
         </p>
         <Example id="countdown-example" example={countdown} />
         <CodeBlock html={countdownCode} />
         <p>
-          The indicator follows the toast's timer, including pauses and restarts. For a five-second
-          toast with three seconds remaining, the value starts at 0.6 and reaches zero over three
-          seconds. The manager closes the toast when its timer expires.
+          The indicator follows the toast's timer, including pauses and restarts. If a five-second
+          toast is paused with three seconds remaining, the value stays at 0.6 until it resumes,
+          then reaches zero over the remaining three seconds. The rendered item closes the toast
+          when its timer expires.
         </p>
       </Section>
       <Section id="action" title="Actions and custom data">
@@ -307,7 +289,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
         <p>
           Each call supplies the complete content and options. Omitted titles, descriptions and data
-          are cleared. Omitted timeout uses the manager's default, or stays open until dismissed.
+          are cleared. Omitted timeout uses the Context default, or stays open until dismissed.
         </p>
         <p>
           Each toast starts with <code>revision: 0</code>. Adding the same ID again increments its
@@ -337,19 +319,8 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </p>
       </Section>
       <Section id="api-reference" title="API reference">
-        <h3 id="create-manager">createToastManager&lt;data = unknown&gt;(options?)</h3>
+        <h3 id="create-manager">createToastManager&lt;data = unknown&gt;()</h3>
         <p>Creates application-level state and commands.</p>
-        <ApiTable id="manager-options" label="Option" defaults>
-          <ApiEntry
-            name="defaultTimeout"
-            type="number | false | ((options: ToastOptions<data>) => number | false)"
-            defaultValue="false"
-          >
-            Fallback timeout in finite, non-negative milliseconds, or false to keep toasts open. A
-            callback receives the published options once per add without an explicit timeout.
-            Invalid values throw RangeError.
-          </ApiEntry>
-        </ApiTable>
         <h3 id="manager">ToastManager&lt;data&gt;</h3>
         <ApiTable id="manager-members" label="Member">
           <ApiEntry name="toastItems" type="readonly ToastItem<data>[]">
@@ -362,16 +333,6 @@ export default function ToastPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry name="close" type="(id?: string) => void">
             Closes one item, or all items when omitted.
-          </ApiEntry>
-          <ApiEntry name="pause" type="(reason: unknown) => void">
-            Adds an opaque pause reason. Repeated calls with the same reason are idempotent.
-          </ApiEntry>
-          <ApiEntry name="resume" type="(reason: unknown) => void">
-            Removes only the matching pause reason.
-          </ApiEntry>
-          <ApiEntry name="present" type="(id: string, signal: AbortSignal) => void">
-            Registers a presentation until abort. The last presentation's removal pauses the timer.
-            item() calls this for its host lifetime.
           </ApiEntry>
           <ApiEntry name="addEventListener" type="('change', listener, options?) => void">
             <p>
@@ -400,16 +361,16 @@ export default function ToastPage(handle: Handle<PageProps>) {
             Consumer-defined data interpreted by your renderer. Supply a type to
             createToastManager() for typed access.
           </ApiEntry>
-          <ApiEntry name="timeout" type="number | false" defaultValue="manager default">
+          <ApiEntry name="timeout" type="number | false" defaultValue="Context default">
             Finite, non-negative milliseconds, or false to disable automatic dismissal. Zero
-            dismisses immediately once presented. Overrides the manager's defaultTimeout. Without
+            dismisses immediately once presented. Overrides the Context defaultTimeout. Without
             either option, the toast stays open until dismissed. Invalid values throw RangeError.
           </ApiEntry>
         </ApiTable>
         <h3 id="toast-item">ToastItem&lt;data = unknown&gt;</h3>
         <p>
           Readonly title, description, announcement and data fields match the published content.
-          Other snapshot fields follow.
+          Timeout overrides are preserved without starting a timer. Other snapshot fields follow.
         </p>
         <ApiTable id="toast-item-fields" label="Field">
           <ApiEntry name="id" type="string">
@@ -417,25 +378,24 @@ export default function ToastPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry name="revision" type="number">
             Starts at zero and increments on each duplicate add, even when the content is unchanged.
-            Timer and presentation changes do not increment it.
+            UI interactions do not increment it.
           </ApiEntry>
-          <ApiEntry name="timeout" type="number | false">
-            Configured timeout in milliseconds, or false for a persistent toast.
-          </ApiEntry>
-          <ApiEntry name="remaining" type="number">
-            Remaining milliseconds when the snapshot was read, or zero for a persistent toast.
-          </ApiEntry>
-          <ApiEntry name="paused" type="boolean">
-            True while the timer is stopped, including persistent or unpresented items.
-          </ApiEntry>
-          <ApiEntry name="presented" type="boolean">
-            At least one mounted element presents the item.
+          <ApiEntry name="timeout" type="number | false | undefined">
+            Published timeout override. Defaults are resolved by the UI when presented.
           </ApiEntry>
         </ApiTable>
         <h3 id="context">Context</h3>
         <ApiTable id="context-props" label="Prop">
           <ApiEntry name="manager" type="ToastManager<data>" required>
-            Stable application-level manager. Mount one Context per manager.
+            Stable application-level manager.
+          </ApiEntry>
+          <ApiEntry
+            name="defaultTimeout"
+            type="number | false | ((options: ToastOptions<data>) => number | false)"
+            defaultValue="false"
+          >
+            Fallback timeout in milliseconds. A callback resolves it once per presentation or
+            replacement without an explicit timeout. Invalid values throw RangeError.
           </ApiEntry>
           <ApiEntry name="limit" type="number">
             Maximum available notifications. Unlimited by default. Must be a positive integer;
@@ -545,16 +505,12 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </ApiTable>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable id="toast-types">
-          <ApiEntry id="type-ToastManagerOptions" name="ToastManagerOptions" type="interface">
-            <p>Default notification policy.</p>
-            <CodeBlock html={typeDefinitions.ToastManagerOptions} />
-          </ApiEntry>
           <ApiEntry id="type-ToastOptions" name="ToastOptions" type="interface">
             <p>Content supplied when publishing.</p>
             <CodeBlock html={typeDefinitions.ToastOptions} />
           </ApiEntry>
           <ApiEntry id="type-ToastItem" name="ToastItem" type="interface">
-            <p>Immutable content and sampled clock state.</p>
+            <p>Immutable published content and timeout overrides.</p>
             <CodeBlock html={typeDefinitions.ToastItem} />
           </ApiEntry>
           <ApiEntry id="type-ToastManager" name="ToastManager" type="interface">

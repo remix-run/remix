@@ -47,21 +47,21 @@ export function Notifications() {
 }
 ```
 
-Supply the region label and control labels. Mount one `Context` per manager, outside clipping containers. It uses ordinary document rendering without a portal or top layer. Scope server-side managers to an application instance or request.
+Supply the region label and control labels. Render the region outside clipping containers. It uses ordinary document rendering without a portal or top layer. Scope server-side managers to an application instance or request.
 
 ## `@remix-run/ui/toast`
 
-- `createToastManager<data = unknown>(options?)`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
-- `Context`: accepts a stable `manager`, an optional `limit` (unlimited by default), and a typed collection callback. Render every item, including overflow.
+- `createToastManager<data = unknown>()`: creates retained state and commands. The complete collection is newest first. Repeated IDs retain their position.
+- `Context`: accepts a stable `manager`, an optional `defaultTimeout`, an optional `limit` (unlimited by default), and a typed collection callback. Render every item, including overflow.
 - `root({ label, hotkey = 'F6' })`: gives the collection named region semantics and keyboard entry. A non-empty `label` is required.
 - `ItemContext`: accepts the toast item ID as `value` and scopes its markup. Key the provider and animated host by the item ID.
 - `item({ countdown? })`: applies non-modal dialog semantics, presentation lifetime, availability and focus recovery. It is a Tab stop before the controls.
 - `title()` and `description()`: connect authored heading and supporting elements through `aria-labelledby` and `aria-describedby`. They generate IDs unless you supply them, and remove relationships when a part is empty or removed. They supply no elements or content.
 - `close()`: dismisses the scoped toast from a native button. Supply translated text or an accessible label for an icon button. It defaults to `type="button"`.
 - `ToastOptions<data>`: optional renderable `title` and `description`, generic `data`, `announcement`, `id` and `timeout`.
-- `ToastItem<data>`: immutable content, an update `revision` and sampled clock state: `presented`, `paused`, `remaining` and `timeout`.
-- `ToastManager<data>`: `add`, `close`, `pause`, `resume`, `present` and `toastItems`. Native `change` subscriptions support `AbortSignal` cleanup.
-- `ToastManagerOptions<data>`, `ToastContextProps<data>`, `ToastItemContextProps`, `ToastItemOptions` and `ToastRootOptions`: configuration types.
+- `ToastItem<data>`: immutable published content, an update `revision` and an optional `timeout` override.
+- `ToastManager<data>`: `add`, `close` and `toastItems`. Native `change` subscriptions support `AbortSignal` cleanup.
+- `ToastContextProps<data>`, `ToastItemContextProps`, `ToastItemOptions` and `ToastRootOptions`: configuration types.
 
 ## Announcements and keyboard access
 
@@ -77,11 +77,11 @@ Supply a type to `createToastManager<data>()` for custom values and behavior. Th
 
 ## Timers and motion
 
-Toasts stay open until dismissed unless a timeout is supplied. Set `timeout` to finite, non-negative milliseconds, or `false` to disable automatic dismissal. Configure a shared `defaultTimeout` on the manager as a fixed value or a callback receiving the published options. An explicit toast timeout overrides it. The callback runs once per `add()` without an explicit timeout, including replacements. Zero dismisses as soon as the toast is presented. `add()` replaces the full content and options for duplicate IDs and restarts their lifetime. Omitted titles, descriptions and data are cleared; omitted timeout uses its default.
+Toasts stay open until dismissed unless a timeout is supplied. Set `timeout` to finite, non-negative milliseconds, or `false` to disable automatic dismissal. Configure a shared `defaultTimeout` on `Context` as a fixed value or a callback receiving the published options. An explicit toast timeout overrides it. The callback runs once per presentation or replacement without an explicit timeout. Zero dismisses as soon as the toast is presented. `add()` replaces the full content and options for duplicate IDs and restarts their lifetime. Omitted titles, descriptions and data are cleared; omitted timeout uses its default.
 
-Each item starts with `revision: 0`. Duplicate `add()` calls increment it, including when content is unchanged. Renderers can use the revision to replay feedback without remounting the toast. Timer and presentation changes leave it unchanged.
+Each item starts with `revision: 0`. Duplicate `add()` calls increment it, including when content is unchanged. Renderers can use the revision to replay feedback without remounting the toast. UI interactions leave it unchanged.
 
-Timers run while `item()` presents the item, including limited items. Publications before mounting retain their full lifetime; unmounting pauses without discarding them. Hover, keyboard focus, touch engagement, document visibility, window blur and manual `pause(reason)` calls compose. `resume(reason)` removes only its own reason.
+Timers run while `item()` presents the item, including limited items. Publications before mounting retain their full lifetime; unmounting cancels local clocks without discarding notifications, and remounting starts fresh clocks. Hover, keyboard focus, touch engagement, document visibility, and window blur pause the local clocks. The manager stores publications without tracking their timers.
 
 A primary touch inside the collection expands it and pauses dismissal until a primary touch outside. Releasing or cancelling a gesture keeps it expanded. Touching outside clears hover and blurs focus inside; native controls retain normal activation.
 
@@ -92,9 +92,11 @@ A primary touch inside the collection expands it and pauses dismissal until a pr
 Set `countdown: true` on `item()` to animate the inherited `--toast-countdown` fraction from 1 to 0. Map it to your indicator with CSS:
 
 ```tsx
+const defaultTimeout = 5000 // Use the same fixed default on Context.
+
 <article mix={toast.item({ countdown: true })}>
   <strong mix={toast.title()}>{toastItem.title}</strong>
-  {Boolean(toastItem.timeout) && (
+  {Boolean(toastItem.timeout ?? defaultTimeout) && (
     <div
       aria-hidden="true"
       mix={css({
@@ -108,4 +110,4 @@ Set `countdown: true` on `item()` to animate the inherited `--toast-countdown` f
 </article>
 ```
 
-For an SVG ring, map the inherited fraction to `stroke-dashoffset`. The manager closes the toast independently of the indicator. The native animation follows pause, resume and lifetime changes without per-frame component updates. Persistent items do not create a countdown animation.
+For an SVG ring, map the inherited fraction to `stroke-dashoffset`. The item closes the toast independently of the indicator. The native animation follows pause, resume and lifetime changes without per-frame component updates. Persistent items do not create a countdown animation.

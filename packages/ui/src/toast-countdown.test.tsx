@@ -3,7 +3,7 @@ import type { RemixNode } from '@remix-run/component'
 import { render } from '@remix-run/component/test'
 import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
-import { createToastManager, Context, ItemContext, item } from './toast.tsx'
+import { createToastManager, Context, ItemContext, item, root } from './toast.tsx'
 
 async function mount(t: TestContext, node: RemixNode) {
   let result = render(node)
@@ -64,20 +64,21 @@ function near(actual: number, expected: number) {
 describe('Toast countdown indicators', () => {
   it('drives a bar and an SVG ring from the same sampled fraction without component updates', async (t) => {
     let toastManager = createToastManager()
-    toastManager.pause('manual')
     toastManager.add({ title: 'Saved', timeout: 10000 })
     let result = await mount(
       t,
       <Context manager={toastManager}>
-        {(toastItems) =>
-          toastItems.map((toastItem) => (
-            <ItemContext key={toastItem.id} value={toastItem.id}>
-              <article mix={item({ countdown: true })}>
-                <Indicators />
-              </article>
-            </ItemContext>
-          ))
-        }
+        {(toastItems) => (
+          <section mix={root({ label: 'Notifications' })}>
+            {toastItems.map((toastItem) => (
+              <ItemContext key={toastItem.id} value={toastItem.id}>
+                <article mix={item({ countdown: true })}>
+                  <Indicators />
+                </article>
+              </ItemContext>
+            ))}
+          </section>
+        )}
       </Context>,
     )
     t.after(() => toastManager.close())
@@ -85,6 +86,11 @@ describe('Toast countdown indicators', () => {
     let bar = element(result.container, '[data-bar]')
     let ring = result.container.querySelector('[data-ring]')
     assert.ok(ring)
+    await result.act(() =>
+      element(result.container, 'section').dispatchEvent(
+        new PointerEvent('pointerenter', { pointerType: 'mouse' }),
+      ),
+    )
     let animation = host.getAnimations()[0]
     assert.equal(animation.playState, 'paused')
     animation.currentTime = 4000
@@ -102,27 +108,33 @@ describe('Toast countdown indicators', () => {
     near(Number.parseFloat(getComputedStyle(ring).strokeDashoffset), 100)
   })
 
-  it('uses the real manager clock for pause, resume, restart and persistent updates', async (t) => {
+  it('uses the local item clock for pause, resume, restart and persistent updates', async (t) => {
     let toastManager = createToastManager()
     let id = toastManager.add({ title: 'Saved', timeout: 10000 })
     let result = await mount(
       t,
       <Context manager={toastManager}>
-        {(toastItems) =>
-          toastItems.map((toastItem) => (
-            <ItemContext key={toastItem.id} value={toastItem.id}>
-              <article key={toastItem.id} data-id={toastItem.id} mix={item({ countdown: true })}>
-                <Indicators />
-              </article>
-            </ItemContext>
-          ))
-        }
+        {(toastItems) => (
+          <section mix={root({ label: 'Notifications' })}>
+            {toastItems.map((toastItem) => (
+              <ItemContext key={toastItem.id} value={toastItem.id}>
+                <article key={toastItem.id} data-id={toastItem.id} mix={item({ countdown: true })}>
+                  <Indicators />
+                </article>
+              </ItemContext>
+            ))}
+          </section>
+        )}
       </Context>,
     )
     t.after(() => toastManager.close())
     let host = element(result.container, 'article')
     let original = host.getAnimations()[0]
-    await result.act(() => toastManager.pause('manual'))
+    await result.act(() =>
+      element(result.container, 'section').dispatchEvent(
+        new PointerEvent('pointerenter', { pointerType: 'mouse' }),
+      ),
+    )
     let paused = fraction(host)
     assert.ok(paused > 0.9 && paused <= 1)
     assert.equal(original.playState, 'idle')
@@ -130,7 +142,11 @@ describe('Toast countdown indicators', () => {
     await frame()
     await frame()
     near(fraction(host), paused)
-    await result.act(() => toastManager.resume('manual'))
+    await result.act(() =>
+      element(result.container, 'section').dispatchEvent(
+        new PointerEvent('pointerleave', { pointerType: 'mouse' }),
+      ),
+    )
     assert.equal(host.getAnimations()[0].playState, 'running')
     await result.act(() => toastManager.add({ id, title: 'Saved', timeout: 20000 }))
     assert.equal(host.getAnimations().length, 1)
@@ -152,13 +168,15 @@ describe('Toast countdown indicators', () => {
     function view(countdown?: boolean) {
       return (
         <Context manager={toastManager}>
-          {(toastItems) =>
-            toastItems.map((toastItem) => (
-              <ItemContext key={toastItem.id} value={toastItem.id}>
-                <article mix={item({ countdown })}>{toastItem.title}</article>
-              </ItemContext>
-            ))
-          }
+          {(toastItems) => (
+            <section mix={root({ label: 'Notifications' })}>
+              {toastItems.map((toastItem) => (
+                <ItemContext key={toastItem.id} value={toastItem.id}>
+                  <article mix={item({ countdown })}>{toastItem.title}</article>
+                </ItemContext>
+              ))}
+            </section>
+          )}
         </Context>
       )
     }

@@ -7,7 +7,7 @@ import {
 } from '@remix-run/ui/animation'
 import { css, on } from 'remix/component'
 
-const toastManager = toast.createToastManager({ defaultTimeout: 5000 })
+const toastManager = toast.createToastManager()
 
 export default function ExampleToastCountdown() {
   return () => (
@@ -35,7 +35,7 @@ export default function ExampleToastCountdown() {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={toastManager} limit={3}>
+    <toast.Context manager={toastManager} defaultTimeout={5000} limit={3}>
       {(toastItems) => (
         <section
           mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.root, styles.region]}
@@ -79,7 +79,7 @@ export function ToastRegion() {
               >
                 <div mix={styles.collapseSlot}>
                   <div mix={[styles.surface]}>
-                    {Boolean(toastItem.timeout) && toastItem.id !== 'bar' && (
+                    {Boolean(toastItem.timeout ?? 5000) && toastItem.id !== 'bar' && (
                       <div aria-hidden="true" mix={[styles.timer, styles.hideWhenCovered]}>
                         <svg width="28" height="28" viewBox="0 0 28 28">
                           <circle cx="14" cy="14" r="11" mix={styles.ringTrack} />
@@ -100,7 +100,7 @@ export function ToastRegion() {
                     >
                       ×
                     </button>
-                    {Boolean(toastItem.timeout) && toastItem.id === 'bar' && (
+                    {Boolean(toastItem.timeout ?? 5000) && toastItem.id === 'bar' && (
                       <div aria-hidden="true" mix={[styles.bar, styles.hideWhenCovered]} />
                     )}
                   </div>

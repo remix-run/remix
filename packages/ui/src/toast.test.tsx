@@ -69,57 +69,35 @@ async function finishExit(node: Element) {
 }
 
 describe('toast manager', () => {
-  it('retains publications before a renderer subscribes or mounts', (t) => {
+  it('retains publications without running timers before a renderer mounts', (t) => {
     let time = clock(t)
     let toastManager = createToastManager()
     let id = toastManager.add({ title: 'Saved', timeout: 1000 })
     time.advance(10000)
     assert.equal(first(toastManager).id, id)
-    assert.equal(first(toastManager).remaining, 1000)
-    assert.equal(first(toastManager).presented, false)
-    let presentation = new AbortController()
-    toastManager.present(id, presentation.signal)
-    assert.equal(first(toastManager).paused, false)
-    time.advance(1000)
-    assert.equal(toastManager.toastItems.length, 0)
-    presentation.abort()
+    assert.equal(first(toastManager).timeout, 1000)
   })
 
-  it('replaces duplicates in place and restarts the lifetime without losing presentation', (t) => {
-    let time = clock(t)
-    let toastManager = createToastManager({ defaultTimeout: 5000 })
-    toastManager.add({ id: 'save', title: 'Saving', description: 'Settings', timeout: 1000 })
-    toastManager.add({ id: 'other', title: 'Other', timeout: false })
-    let presentation = new AbortController()
-    toastManager.present('save', presentation.signal)
-    time.advance(400)
-    toastManager.add({ id: 'save', title: 'Saved' })
+  it('replaces an existing identity without changing notification order', () => {
+    let toastManager = createToastManager()
+    toastManager.add({ id: 'save', title: 'Saving' })
+    toastManager.add({ id: 'other', title: 'Other' })
+    toastManager.add({ id: 'save', title: 'Saved', timeout: 5000 })
     assert.deepEqual(
       toastManager.toastItems.map((toastItem) => toastItem.id),
       ['other', 'save'],
     )
-    let replacement = toastManager.toastItems.find((toastItem) => toastItem.id === 'save')
-    assert.ok(replacement)
-    assert.equal(replacement.title, 'Saved')
-    assert.equal(replacement.description, undefined)
-    assert.equal(replacement.remaining, 5000)
-    assert.equal(replacement.presented, true)
-    assert.equal(replacement.revision, 1)
-    time.advance(900)
-    assert.equal(
-      toastManager.toastItems.find((toastItem) => toastItem.id === 'save')?.remaining,
-      4100,
-    )
-    presentation.abort()
-    time.advance(1000)
-    assert.equal(
-      toastManager.toastItems.find((toastItem) => toastItem.id === 'save')?.remaining,
-      4100,
+    assert.equal(toastManager.toastItems[1].title, 'Saved')
+    toastManager.close('save')
+    assert.deepEqual(
+      toastManager.toastItems.map((toastItem) => toastItem.id),
+      ['other'],
     )
     toastManager.close()
+    assert.equal(toastManager.toastItems.length, 0)
   })
 
-  it('uses the same content and defaults whether the previous toast is open or dismissed', () => {
+  it('uses the same content and options whether the previous toast is open or dismissed', () => {
     let toastManager = createToastManager<{ label: string }>()
     toastManager.add({
       id: 'save',
@@ -134,7 +112,7 @@ describe('toast manager', () => {
     assert.equal(replacement.title, undefined)
     assert.equal(replacement.description, 'Ready')
     assert.equal(replacement.data, undefined)
-    assert.equal(replacement.timeout, false)
+    assert.equal(replacement.timeout, undefined)
     assert.equal(replacement.announcement, undefined)
     assert.equal(replacement.revision, 1)
     toastManager.close('save')
@@ -159,238 +137,6 @@ describe('toast manager', () => {
     toastManager.close('save')
     toastManager.add({ id: 'save', title: 'Saved', timeout: false })
     assert.equal(first(toastManager).revision, 0)
-  })
-
-  it('keeps revision unchanged through timer and presentation changes', (t) => {
-    let time = clock(t)
-    let toastManager = createToastManager()
-    let id = toastManager.add({ title: 'Saved', timeout: 1000 })
-    let presentation = new AbortController()
-    toastManager.present(id, presentation.signal)
-    time.advance(200)
-    assert.equal(first(toastManager).remaining, 800)
-    assert.equal(first(toastManager).revision, 0)
-    toastManager.pause('application')
-    assert.equal(first(toastManager).revision, 0)
-    toastManager.resume('application')
-    assert.equal(first(toastManager).revision, 0)
-    presentation.abort()
-    assert.equal(first(toastManager).revision, 0)
-    toastManager.add({ title: 'Other toast', timeout: false })
-    assert.equal(toastManager.toastItems.find((toastItem) => toastItem.id === id)?.revision, 0)
-    toastManager.close()
-  })
-
-  it('composes independent pause reasons and applies them to new arrivals', (t) => {
-    let time = clock(t)
-    let toastManager = createToastManager()
-    let hover = Symbol()
-    let focus = Symbol()
-    toastManager.pause(hover)
-    let id = toastManager.add({ title: 'Saved', timeout: 1000 })
-    let presentation = new AbortController()
-    toastManager.present(id, presentation.signal)
-    toastManager.pause(focus)
-    toastManager.resume(hover)
-    time.advance(2000)
-    assert.equal(first(toastManager).paused, true)
-    assert.equal(first(toastManager).remaining, 1000)
-    toastManager.resume(focus)
-    time.advance(250)
-    assert.equal(first(toastManager).remaining, 750)
-    toastManager.pause(hover)
-    toastManager.pause(hover)
-    time.advance(1000)
-    toastManager.resume(hover)
-    time.advance(750)
-    assert.equal(toastManager.toastItems.length, 0)
-    presentation.abort()
-  })
-
-  it('pauses while unpresented and resumes with the remaining lifetime', (t) => {
-    let time = clock(t)
-    let toastManager = createToastManager()
-    let id = toastManager.add({ title: 'Saved', timeout: 1000 })
-    let firstMount = new AbortController()
-    let secondMount = new AbortController()
-    toastManager.present(id, firstMount.signal)
-    toastManager.present(id, secondMount.signal)
-    time.advance(300)
-    firstMount.abort()
-    assert.equal(first(toastManager).paused, false)
-    secondMount.abort()
-    time.advance(10000)
-    assert.equal(first(toastManager).remaining, 700)
-    let remount = new AbortController()
-    toastManager.present(id, remount.signal)
-    time.advance(700)
-    assert.equal(toastManager.toastItems.length, 0)
-    remount.abort()
-  })
-
-  it('does not detach a new toast when an old presentation of the same identity aborts', () => {
-    let toastManager = createToastManager()
-    toastManager.add({ id: 'same', title: 'Old', timeout: false })
-    let old = new AbortController()
-    toastManager.present('same', old.signal)
-    toastManager.close('same')
-    toastManager.add({ id: 'same', title: 'New', timeout: false })
-    let current = new AbortController()
-    toastManager.present('same', current.signal)
-    old.abort()
-    assert.equal(first(toastManager).presented, true)
-    current.abort()
-    assert.equal(first(toastManager).presented, false)
-  })
-
-  it('keeps toasts open by default regardless of data', (t) => {
-    let time = clock(t)
-    let toastManager = createToastManager()
-    toastManager.add({ title: 'Text' })
-    toastManager.add({ title: 'Empty string data', data: '' })
-    toastManager.add({ title: 'False data', data: false })
-    toastManager.add({ title: 'Null data', data: null })
-    toastManager.add({ title: 'Explicit timeout', data: {}, timeout: 1000 })
-    toastManager.add({ title: 'Action data', data: { label: 'Undo', run() {} } })
-    toastManager.add({ title: 'Persistent data', data: {}, timeout: false })
-    assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.timeout),
-      [false, false, 1000, false, false, false, false],
-    )
-    let presentation = new AbortController()
-    for (let toastItem of toastManager.toastItems) {
-      toastManager.present(toastItem.id, presentation.signal)
-    }
-    time.advance(5000)
-    assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.title),
-      ['Persistent data', 'Action data', 'Null data', 'False data', 'Empty string data', 'Text'],
-    )
-    presentation.abort()
-  })
-
-  it('uses a fixed manager timeout unless the toast overrides it', (t) => {
-    let time = clock(t)
-    let toastManager = createToastManager({ defaultTimeout: 5000 })
-    toastManager.add({ id: 'default', title: 'Default' })
-    toastManager.add({ id: 'persistent', timeout: false })
-    toastManager.add({ id: 'immediate', timeout: 0 })
-    toastManager.add({ id: 'short', timeout: 1000 })
-    assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.timeout),
-      [1000, 0, false, 5000],
-    )
-    let presentation = new AbortController()
-    for (let toastItem of toastManager.toastItems)
-      toastManager.present(toastItem.id, presentation.signal)
-    time.advance(1)
-    assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.id),
-      ['short', 'persistent', 'default'],
-    )
-    time.advance(999)
-    assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.id),
-      ['persistent', 'default'],
-    )
-    time.advance(4000)
-    assert.deepEqual(
-      toastManager.toastItems.map((toastItem) => toastItem.id),
-      ['persistent'],
-    )
-    presentation.abort()
-  })
-
-  it('resolves typed defaults once per publication and skips explicit timeouts', (t) => {
-    let time = clock(t)
-    let calls: ToastOptions<{ action?: string }>[] = []
-    let toastManager = createToastManager<{ action?: string }>({
-      defaultTimeout(options) {
-        calls.push(options)
-        return options.data?.action ? false : 5000
-      },
-    })
-    toastManager.add({ id: 'example', title: 'Undo', data: { action: 'undo' } })
-    assert.equal(first(toastManager).timeout, false)
-    let presentation = new AbortController()
-    toastManager.present('example', presentation.signal)
-    toastManager.pause('test')
-    toastManager.resume('test')
-    time.advance(1000)
-    assert.equal(first(toastManager).timeout, false)
-    assert.equal(calls.length, 1)
-    toastManager.add({ id: 'example', title: 'Done' })
-    assert.equal(calls.length, 2)
-    assert.equal(calls[1].data, undefined)
-    assert.equal(first(toastManager).timeout, 5000)
-    time.advance(1000)
-    assert.equal(first(toastManager).remaining, 4000)
-    toastManager.add({ timeout: false })
-    toastManager.add({ timeout: 0 })
-    toastManager.add({ timeout: 1000 })
-    assert.equal(calls.length, 2)
-    presentation.abort()
-    toastManager.close()
-  })
-
-  it('rejects invalid manager defaults', () => {
-    assert.throws(() => createToastManager({ defaultTimeout: -1 }), RangeError)
-    assert.throws(() => createToastManager({ defaultTimeout: Infinity }), RangeError)
-    assert.throws(() => createToastManager({ defaultTimeout: NaN }), RangeError)
-  })
-
-  it('preserves the current publication and timer when a default resolver fails', (t) => {
-    let time = clock(t)
-    let toastManager = createToastManager<string>({
-      defaultTimeout({ data }) {
-        if (data === 'throw') throw new Error('Cannot resolve timeout')
-        return data === 'invalid' ? NaN : 1000
-      },
-    })
-    toastManager.add({ id: 'example', title: 'Original' })
-    let presentation = new AbortController()
-    toastManager.present('example', presentation.signal)
-    time.advance(400)
-    assert.throws(() => toastManager.add({ id: 'example', data: 'invalid' }), RangeError)
-    assert.throws(
-      () => toastManager.add({ id: 'example', data: 'throw' }),
-      /Cannot resolve timeout/,
-    )
-    assert.equal(first(toastManager).title, 'Original')
-    assert.equal(first(toastManager).revision, 0)
-    assert.equal(first(toastManager).remaining, 600)
-    time.advance(600)
-    assert.equal(toastManager.toastItems.length, 0)
-    presentation.abort()
-  })
-
-  it('keeps explicitly persistent items open until their timeout is enabled', (t) => {
-    let time = clock(t)
-    let toastManager = createToastManager()
-    let id = toastManager.add({ title: 'Saved', timeout: false })
-    let presentation = new AbortController()
-    toastManager.present(id, presentation.signal)
-    time.advance(10000)
-    assert.equal(first(toastManager).timeout, false)
-    assert.equal(first(toastManager).paused, true)
-    assert.equal(first(toastManager).remaining, 0)
-    toastManager.add({ id, title: 'Saved', timeout: 1000 })
-    time.advance(1000)
-    assert.equal(toastManager.toastItems.length, 0)
-    presentation.abort()
-  })
-
-  it('dismisses a zero-timeout item as soon as it is presented', (t) => {
-    let time = clock(t)
-    let toastManager = createToastManager()
-    let id = toastManager.add({ title: 'Saved', timeout: 0 })
-    time.advance(10000)
-    assert.equal(first(toastManager).timeout, 0)
-    let presentation = new AbortController()
-    toastManager.present(id, presentation.signal)
-    time.advance(1)
-    assert.equal(toastManager.toastItems.length, 0)
-    presentation.abort()
   })
 
   it('notifies state changes with native abortable subscriptions and immutable snapshots', () => {
@@ -446,7 +192,6 @@ describe('toast.root()', () => {
       </Context>,
     )
     assert.match(html, /Undo/)
-    assert.equal(first(toastManager).presented, false)
   })
 
   it('presents buffered content, announces it, enters on F6, and restores focus on close', async (t) => {
@@ -484,7 +229,6 @@ describe('toast.root()', () => {
     assert.equal(document.activeElement, element(result.container, '[role="region"]'))
     let undo = element(result.container, '[data-toast] button')
     undo.focus()
-    assert.equal(first(toastManager).paused, true)
     assert.equal(element(result.container, '[role="region"]').getAttribute('aria-live'), null)
     await result.act(() => undo.click())
     assert.equal(document.activeElement, publish)
@@ -531,14 +275,12 @@ describe('toast.root()', () => {
     await result.act(() =>
       region.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })),
     )
-    assert.equal(first(toastManager).paused, true)
     await result.act(() =>
       region.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'F6', bubbles: true, cancelable: true }),
       ),
     )
     assert.equal(document.activeElement, publish)
-    assert.equal(first(toastManager).paused, false)
   })
 
   it('makes a logically closed toast inert while retaining its exit animation', async (t) => {
@@ -612,7 +354,6 @@ describe('toast gestures and clocks', () => {
       ),
     )
     assert.equal(region.hasAttribute('data-expanded'), true)
-    assert.equal(first(toastManager).paused, true)
     await result.act(() =>
       document.dispatchEvent(
         new PointerEvent('pointerdown', {
@@ -623,7 +364,6 @@ describe('toast gestures and clocks', () => {
       ),
     )
     assert.equal(region.hasAttribute('data-expanded'), false)
-    assert.equal(first(toastManager).paused, false)
   })
 
   it('replaces countdown animations on pause, restart and persistent updates', async (t) => {
@@ -649,11 +389,19 @@ describe('toast gestures and clocks', () => {
     let bar = element(result.container, '[data-id]')
     assert.equal(bar.getAnimations().length, 1)
     let original = bar.getAnimations()[0]
-    await result.act(() => toastManager.pause('manual'))
+    await result.act(() =>
+      element(result.container, 'section').dispatchEvent(
+        new PointerEvent('pointerenter', { pointerType: 'mouse' }),
+      ),
+    )
     assert.equal(original.playState, 'idle')
     assert.equal(bar.getAnimations().length, 1)
     assert.equal(bar.getAnimations()[0].playState, 'paused')
-    await result.act(() => toastManager.resume('manual'))
+    await result.act(() =>
+      element(result.container, 'section').dispatchEvent(
+        new PointerEvent('pointerleave', { pointerType: 'mouse' }),
+      ),
+    )
     assert.equal(bar.getAnimations().length, 1)
     assert.equal(bar.getAnimations()[0].playState, 'running')
     await result.act(() => toastManager.add({ id, title: 'Saved', timeout: 20000 }))
@@ -696,7 +444,7 @@ describe('toast gestures and clocks', () => {
     assert.equal(node.contains(document.activeElement), false)
   })
 
-  it('reclaims a closed identity without leaving its new toast inert or unpresented', async (t) => {
+  it('reclaims a closed identity without leaving its new toast inert', async (t) => {
     let toastManager = createToastManager()
     toastManager.add({ id: 'same', title: 'First', timeout: false })
     let result = render(
@@ -733,7 +481,6 @@ describe('toast gestures and clocks', () => {
     assert.equal(current.inert, false)
     assert.equal(current.getAttribute('aria-hidden'), null)
     assert.equal(current.textContent, 'Second')
-    assert.equal(first(toastManager).presented, true)
   })
 })
 
@@ -839,13 +586,10 @@ describe('toast availability', () => {
     await result.act(() => result.root.render(view(2)))
     let old = element(result.container, '[data-id="old"]')
     assert.equal(old.inert, false)
-    assert.equal(toastManager.toastItems[1]?.remaining, 600)
-    assert.equal(toastManager.toastItems[1]?.paused, false)
     await result.act(() => result.root.render(view(1)))
     assert.equal(old.inert, true)
     await result.act(() => time.advance(200))
     await result.act(() => result.root.render(view(2)))
-    assert.equal(toastManager.toastItems[1]?.remaining, 400)
     await result.act(() => time.advance(400))
     assert.equal(old.isConnected, false)
     assert.deepEqual(
@@ -933,7 +677,7 @@ describe('toast availability', () => {
     )
   })
 
-  it('keeps limited timers running and composes window blur with manual pause', async (t) => {
+  it('keeps limited timers running and pauses them while the window is blurred', async (t) => {
     let time = clock(t)
     let toastManager = createToastManager()
     toastManager.add({ id: 'old', title: 'Old', timeout: 1000 })
@@ -956,13 +700,10 @@ describe('toast availability', () => {
     t.after(result.cleanup)
     let old = element(result.container, '[data-id="old"]')
     assert.equal(old.inert, true)
-    assert.equal(toastManager.toastItems[1]?.paused, false)
     await result.act(() => window.dispatchEvent(new Event('blur')))
-    toastManager.pause('manual')
-    await result.act(() => window.dispatchEvent(new Event('focus')))
     time.advance(2000)
     assert.equal(toastManager.toastItems.length, 2)
-    toastManager.resume('manual')
+    await result.act(() => window.dispatchEvent(new Event('focus')))
     await result.act(() => time.advance(1000))
     assert.equal(toastManager.toastItems.length, 1)
     assert.equal(old.isConnected, false)
@@ -1020,11 +761,9 @@ describe('toast.root() interactions', () => {
     )
     assert.equal(outgoing.isConnected, true)
     assert.equal(region.hasAttribute('data-expanded'), false)
-    assert.equal(first(toastManager).paused, false)
     await result.act(() => finishExit(outgoing))
     assert.equal(outgoing.isConnected, false)
     assert.equal(region.hasAttribute('data-expanded'), false)
-    assert.equal(first(toastManager).paused, false)
   })
 
   it('keeps hover expansion when the pointer returns before a retained exit finishes', async (t) => {
@@ -1049,15 +788,13 @@ describe('toast.root() interactions', () => {
     await result.act(() => finishExit(outgoing))
     assert.equal(outgoing.isConnected, false)
     assert.equal(region.hasAttribute('data-expanded'), true)
-    assert.equal(first(toastManager).paused, true)
     await result.act(() =>
       region.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })),
     )
     assert.equal(region.hasAttribute('data-expanded'), false)
-    assert.equal(first(toastManager).paused, false)
   })
 
-  it('keeps touch expansion through release and resumes only its own pause on an outside touch', async (t) => {
+  it('keeps touch expansion through release and resumes timers on an outside touch', async (t) => {
     let time = clock(t)
     let toastManager = createToastManager()
     toastManager.add({ title: 'Saved', timeout: 1000 })
@@ -1100,7 +837,6 @@ describe('toast.root() interactions', () => {
       ),
     )
     assert.equal(region.hasAttribute('data-expanded'), true)
-    assert.equal(first(toastManager).paused, true)
     await result.act(() => {
       action.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true }))
       region.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'touch' }))
@@ -1110,7 +846,6 @@ describe('toast.root() interactions', () => {
     assert.equal(region.hasAttribute('data-expanded'), true)
     time.advance(2000)
     assert.equal(toastManager.toastItems.length, 1)
-    toastManager.pause('manual')
     await result.act(() => action.focus())
     await result.act(() =>
       outside.dispatchEvent(
@@ -1122,9 +857,7 @@ describe('toast.root() interactions', () => {
       ),
     )
     assert.equal(region.hasAttribute('data-expanded'), false)
-    assert.equal(first(toastManager).paused, true)
     assert.equal(region.contains(document.activeElement), false)
-    toastManager.resume('manual')
     await result.act(() => time.advance(1000))
     assert.equal(toastManager.toastItems.length, 0)
   })
@@ -1190,48 +923,6 @@ describe('toast.root() interactions', () => {
     await result.act(() => toastManager.close())
     await result.act(() => toastManager.add({ title: 'New', timeout: 1000 }))
     assert.equal(region.hasAttribute('data-expanded'), false)
-    assert.equal(first(toastManager).paused, false)
-  })
-
-  it('releases touch pauses and document listeners when the region unmounts', async () => {
-    let toastManager = createToastManager()
-    toastManager.add({ title: 'Saved', timeout: 1000 })
-    let result = render(
-      <Context manager={toastManager}>
-        {(toastItems) => (
-          <section mix={root({ label: 'Notifications' })}>
-            {toastItems.map((toastItem) => (
-              <ItemContext key={toastItem.id} value={toastItem.id}>
-                <article key={toastItem.id} data-id={toastItem.id} mix={item()} />
-              </ItemContext>
-            ))}
-          </section>
-        )}
-      </Context>,
-    )
-    await result.act(() =>
-      element(result.container, 'section').dispatchEvent(
-        new PointerEvent('pointerdown', {
-          pointerType: 'touch',
-          isPrimary: true,
-          bubbles: true,
-        }),
-      ),
-    )
-    assert.equal(first(toastManager).paused, true)
-    result.cleanup()
-    let presentation = new AbortController()
-    toastManager.present(first(toastManager).id, presentation.signal)
-    assert.equal(first(toastManager).paused, false)
-    document.dispatchEvent(
-      new PointerEvent('pointerdown', {
-        pointerType: 'touch',
-        isPrimary: true,
-        bubbles: true,
-      }),
-    )
-    assert.equal(first(toastManager).paused, false)
-    presentation.abort()
   })
 
   it('skips a hidden region when the default F6 shortcut selects the active one', async (t) => {

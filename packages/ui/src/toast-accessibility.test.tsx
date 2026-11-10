@@ -148,7 +148,6 @@ describe('toast accessibility', () => {
     assert.equal(document.activeElement, region)
     let action = element(region, 'article button')
     await result.act(() => action.focus())
-    assert.equal(toastManager.toastItems[0]?.paused, true)
     await result.act(() => action.click())
     assert.equal(actionCount, 1)
     assert.equal(document.activeElement, origin)
@@ -301,7 +300,11 @@ describe('toast accessibility', () => {
     assert.equal(polite.querySelector('button'), null)
     assert.equal(element(result.container, 'article button').getAttribute('aria-hidden'), null)
     let message = element(polite, '[aria-atomic="true"]')
-    await result.act(() => toastManager.pause('test'))
+    await result.act(() =>
+      element(result.container, 'section').dispatchEvent(
+        new PointerEvent('pointerenter', { pointerType: 'mouse' }),
+      ),
+    )
     assert.equal(element(polite, '[aria-atomic="true"]'), message)
     await result.act(() =>
       toastManager.add({ id: 'saved', title: 'Saved', description: 'All changes.' }),
@@ -494,7 +497,6 @@ describe('toast accessibility', () => {
     assert.equal(document.activeElement, origin)
     assert.equal(region.hasAttribute('data-expanded'), false)
     await result.act(() => toastManager.add({ title: 'Next', timeout: 10000 }))
-    assert.equal(toastManager.toastItems[0].paused, false)
   })
 
   it('does not revive a neighbour closed by its consumer focus handler', async (t) => {

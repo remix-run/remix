@@ -12,9 +12,7 @@ interface Action {
   run(): void
 }
 
-const toastManager = toast.createToastManager<{ action: Action }>({
-  defaultTimeout: ({ data }) => (data?.action ? false : 5000),
-})
+const toastManager = toast.createToastManager<{ action: Action }>()
 
 export default function ExampleToastDynamicTimeout() {
   return () => (
@@ -63,7 +61,11 @@ export default function ExampleToastDynamicTimeout() {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={toastManager} limit={3}>
+    <toast.Context
+      manager={toastManager}
+      defaultTimeout={({ data }) => (data?.action ? false : 5000)}
+      limit={3}
+    >
       {(toastItems) => (
         <section
           mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.root, styles.region]}

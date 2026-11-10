@@ -7,7 +7,7 @@ import {
 import * as toast from '@remix-run/ui/toast'
 import { css, on } from 'remix/component'
 
-const toastManager = toast.createToastManager({ defaultTimeout: 5000 })
+const toastManager = toast.createToastManager()
 
 export default function ExampleToastDefaultTimeout() {
   return () => (
@@ -30,7 +30,7 @@ export default function ExampleToastDefaultTimeout() {
 
 export function ToastRegion() {
   return () => (
-    <toast.Context manager={toastManager} limit={3}>
+    <toast.Context manager={toastManager} defaultTimeout={5000} limit={3}>
       {(toastItems) => (
         <section mix={[toast.root({ label: 'Notifications', hotkey: false }), styles.region]}>
           {toastItems.map((toastItem, index) => (
