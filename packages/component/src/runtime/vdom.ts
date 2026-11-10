@@ -15,7 +15,6 @@ import {
   diffVNodes,
   restoreAncestorSelect,
   remove as removeVNode,
-  resetStyleState,
   ROOT_VNODE,
   toVNode,
   type CommittedVNode,
@@ -23,7 +22,7 @@ import {
   type RootVNode,
 } from './reconcile.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
-import type { StyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 import type { ElementFunction } from './element-function.ts'
 
 /**
@@ -80,8 +79,6 @@ export type VirtualRootOptions = {
 }
 
 export { createScheduler, type Scheduler }
-export { diffVNodes, toVNode }
-export { resetStyleState }
 
 function getHydrationComponentIdFromRangeStart(start: Node | undefined): string | undefined {
   if (!(start instanceof Comment)) return undefined

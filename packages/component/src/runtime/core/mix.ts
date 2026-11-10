@@ -76,7 +76,7 @@ export function composeMixedProps(
 }
 
 // JSX creation flattens nested mix arrays before composition.
-export function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
+function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
   let mix = props.mix
   if (!mix) return []
   if (Array.isArray(mix)) {
@@ -128,12 +128,6 @@ export function isMixinDescriptor(value: unknown): value is MixDescriptor {
 
   let descriptor = value as { type?: unknown; args?: unknown }
   return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
-}
-
-export function isBrowserOnlyMixinDescriptor(value: unknown): boolean {
-  if (!value || typeof value !== 'object' || !('type' in value)) return false
-  let type = value.type
-  return typeof type === 'function' && '__rmxMixinSsr' in type && type.__rmxMixinSsr === false
 }
 
 export function isMixinElementFunction(

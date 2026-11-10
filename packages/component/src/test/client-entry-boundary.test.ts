@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { getClientEntryKey } from '../runtime/client-entry-boundary.ts'
+import { getClientEntryKey } from '../runtime/diff-dom.ts'
 
 describe('getClientEntryKey', () => {
   it('ignores a single 13-digit HMR timestamp query parameter', () => {

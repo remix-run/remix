@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
-import { createRoot, resetStyleState } from '../runtime/vdom.ts'
+import { createRoot } from '../runtime/vdom.ts'
+import { defaultStyleManager } from '../runtime/reconcile.ts'
 import { renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { css } from '../index.ts'
@@ -20,7 +21,7 @@ describe('hydration', () => {
   describe('css mixin hydration', () => {
     afterEach(() => {
       // Reset the global style manager state between tests
-      resetStyleState()
+      defaultStyleManager.dispose()
     })
 
     it('hydrates element with css mixin and adopts server style', async () => {
