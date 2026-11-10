@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@re
 import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
 import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { Frame, getNamedFrame, getTopFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
+import { Frame, getNamedFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -268,8 +268,8 @@ async function setupFrameNavigationTest(t: TestContext) {
     requests,
     frames() {
       return {
-        top: getTopFrame(),
-        target: getNamedFrame('target'),
+        top: app.frames.top,
+        target: app.frames.get('target'),
       }
     },
   }

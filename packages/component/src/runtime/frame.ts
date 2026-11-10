@@ -19,16 +19,20 @@ import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import {
   createFrameRuntime,
+  disposeClientEntryBoundary,
+  getClientEntryBoundaryOwner,
   getFrameRuntime,
   getSharedFrameRuntime,
   isFrameRuntime,
-  NamedFrameRegistry,
+  setClientEntryBoundaryOwner,
+  type ClientEntryIdentity,
   type FrameMountState,
   type FrameNavigationOptions,
   type FrameReloadResult,
   type FrameReloadTransition,
   type FrameRuntime,
   type LoadModule,
+  type NamedFrameRegistry,
   type PendingClientEntries,
   type ReconciliationTracker,
   type ResolveFrame,
@@ -50,6 +54,7 @@ import {
   diffElementAttributes,
   diffNodes,
   findEndMarker,
+  getClientEntryKey,
   getFrameId,
   isCommentNode,
   isFrameEnd,
@@ -57,22 +62,14 @@ import {
   isHydrationEnd,
   isHydrationStart,
 } from './diff-dom.ts'
-import { createStyleManager, type StyleManager } from '../style/index.ts'
+import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './spa-response.ts'
-import {
-  disposeClientEntryBoundary,
-  getClientEntryBoundaryOwner,
-  getClientEntryKey,
-  setClientEntryBoundaryOwner,
-  type ClientEntryIdentity,
-} from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
-import { parseDocument, removeNoscriptContents } from './parse-document.ts'
 import { ESCAPED_OBJECT } from './props-serialization.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
@@ -102,29 +99,19 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-let appTopFrame: FrameInstance
-export const appNamedFrames = new NamedFrameRegistry()
+// Frames of the most recently started run() runtime, for module-level helpers that have no
+// runtime reference: targeted prefetching and updateUrl().
+let appFrames: Handle['frames'] | undefined
 
-export function setAppTopFrame(frame: FrameInstance): void {
-  appTopFrame = frame
-}
-
-export function getAppTopFrame(): FrameInstance {
-  return appTopFrame
+export function setAppFrames(frames: Handle['frames']): () => void {
+  appFrames = frames
+  return () => {
+    if (appFrames === frames) appFrames = undefined
+  }
 }
 
 export function setTopFrameSource(src: string): void {
-  if (appTopFrame) appTopFrame.handle.src = src
-}
-
-/**
- * Returns the top-level frame handle for the running application.
- *
- * @returns The top-level frame handle.
- */
-export function getTopFrame(): FrameHandle {
-  if (!appTopFrame) throw new Error('app runtime not initialized')
-  return appTopFrame.handle
+  if (appFrames) appFrames.top.src = src
 }
 
 /**
@@ -134,7 +121,7 @@ export function getTopFrame(): FrameHandle {
  * @returns The matching frame handle, or `undefined` when not found.
  */
 export function getNamedFrame(name: string): FrameHandle | undefined {
-  return appNamedFrames.get(name)
+  return appFrames?.get(name)
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
@@ -1117,12 +1104,12 @@ function diffFrame(
   let currName = getFrameName(curr)
   let nextName = getFrameName(next)
   if (curr._state.instance.isDisplayingResolvedContent()) {
-    curr._state.resolved = true
+    curr._state.content = { status: 'resolved' }
   }
 
   // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
   // so pending streams from the old src cannot take over the new src.
-  if (currName !== nextName || (currSrc !== nextSrc && !curr._state.resolved)) {
+  if (currName !== nextName || (currSrc !== nextSrc && curr._state.content.status !== 'resolved')) {
     let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
     remove(curr, domParent, context)
     return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
@@ -1146,15 +1133,16 @@ function diffFrame(
     frameRuntime &&
     frameInstance &&
     serverFrameReload &&
-    (committed._state.resolved || committed.props.loading !== 'lazy')
+    (committed._state.content.status === 'resolved' || committed.props.loading !== 'lazy')
   ) {
     // Reload client frames that have the same src during a render triggered by an ancestor frame reload
     resolveClientFrame(committed, frameRuntime, serverFrameReload)
   }
 
-  if (!committed._state.resolved && committed._state.fallbackRoot) {
-    getNonceManager().inheritRootResourceNonces(committed._state.fallbackRoot, vParent)
-    committed._state.fallbackRoot.render(committed.props.fallback ?? null)
+  let { content } = committed._state
+  if (content.status === 'fallback') {
+    getNonceManager().inheritRootResourceNonces(content.fallbackRoot, vParent)
+    content.fallbackRoot.render(committed.props.fallback ?? null)
     if (committed.props.loading === 'lazy') frameInstance.deferLoad()
   }
   if (curr.props.loading === 'lazy' && next.props.loading !== 'lazy') {
@@ -1199,10 +1187,8 @@ function insertFrame(
       cursor.current = end.nextSibling
       return commitFrameNode(node, vParent, svg, start, end, {
         instance,
-        resolveToken: 0,
+        content: { status: instance.isDisplayingResolvedContent() ? 'resolved' : 'pending' },
         resolveController: undefined,
-        fallbackRoot: undefined,
-        resolved: instance.isDisplayingResolvedContent(),
       })
     }
   }
@@ -1221,14 +1207,15 @@ function insertFrame(
   fallbackRoot.render(node.props.fallback ?? null)
 
   let instance = createFrameInstance(node, start, end, runtime, getContext, () => {
-    committed._state.fallbackRoot?.dispose()
-    committed._state.fallbackRoot = undefined
+    let state = committed._state
+    if (state.content.status === 'fallback') {
+      state.content.fallbackRoot.dispose()
+      state.content = { status: 'rendering' }
+    }
   })
   let committed = commitFrameNode(node, vParent, svg, start, end, {
     instance,
-    fallbackRoot,
-    resolved: false,
-    resolveToken: 0,
+    content: { status: 'fallback', fallbackRoot },
     resolveController: undefined,
   })
   if (node.props.loading === 'lazy') {
@@ -1296,8 +1283,6 @@ function resolveClientFrame(
   let state = node._state
   let instance = state.instance
 
-  let token = state.resolveToken + 1
-  state.resolveToken = token
   state.resolveController?.abort()
   let reload = serverFrameReload
     ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
@@ -1307,33 +1292,33 @@ function resolveClientFrame(
   }
   let resolveController = reload?.controller ?? new AbortController()
   state.resolveController = resolveController
-  let isStale = () => state.resolveToken !== token || resolveController.signal.aborted
+  let { signal } = resolveController
   let frameCommitted = Promise.withResolvers<void>()
 
   let resolve = Promise.resolve()
     .then(() =>
       runtime.resolveFrame(frameSrc, {
-        signal: resolveController.signal,
+        signal,
         target: getFrameName(node),
       }),
     )
     .then(async (resolution) => {
-      if (isStale()) return
+      if (signal.aborted) return
       let { content, nonce } = await unwrapFrameResolution(resolution)
-      if (isStale()) return
-      let nextContent = asAbortableFrameContent(content, resolveController.signal)
+      if (signal.aborted) return
+      let nextContent = asAbortableFrameContent(content, signal)
       await instance.render(nextContent, {
         nonce,
-        signal: resolveController.signal,
+        signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
         onCommit: frameCommitted.resolve,
       })
-      if (isStale()) return
-      state.resolved = true
+      if (signal.aborted) return
+      state.content = { status: 'resolved' }
     })
     .catch((error) => {
-      if ((reload || node.props.loading === 'lazy') && !isStale()) {
+      if ((reload || node.props.loading === 'lazy') && !signal.aborted) {
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
     })
@@ -1355,11 +1340,9 @@ function resolveClientFrame(
 
 function disposeFrameResources(node: CommittedFrameNode): void {
   let state = node._state
-  state.resolveToken++
   state.resolveController?.abort()
   state.resolveController = undefined
-  state.fallbackRoot?.dispose()
-  state.fallbackRoot = undefined
+  if (state.content.status === 'fallback') state.content.fallbackRoot.dispose()
 
   state.instance.dispose()
 }
@@ -2434,5 +2417,41 @@ export function reloadCurrentDocument(doc: Document): void {
     navigation.reload({ info: documentReloadInfo })
   } else {
     doc.location.reload()
+  }
+}
+
+function parseDocument(doc: Document, content: string): HTMLElement {
+  let parsed = doc.implementation.createHTMLDocument()
+  parsed.open()
+
+  // Let the native parser find the opening html element and its attributes. The
+  // delimiters only split input chunks; the parser handles comments and quoted >.
+  let offset = 0
+  while (!parsed.documentElement && offset < content.length) {
+    let end = content.indexOf('>', offset)
+    let next = end === -1 ? content.length : end + 1
+    parsed.write(content.slice(offset, next))
+    offset = next
+  }
+
+  let root = parsed.documentElement
+  root?.remove()
+  parsed.close()
+  root ??= parsed.documentElement
+  invariant(root, 'Missing document element')
+  root.remove()
+
+  // Fragment parsing keeps scripts inert. Keep the root disconnected so styles
+  // cannot enforce CSP before their response nonces have been rewritten.
+  root.innerHTML = content
+  removeNoscriptContents(root)
+  return root
+}
+
+function removeNoscriptContents(source: ParentNode): void {
+  // Frame navigation requires scripting; fallback markup must stay inactive.
+  for (let noscript of source.querySelectorAll('noscript')) noscript.textContent = ''
+  for (let template of source.querySelectorAll('template')) {
+    removeNoscriptContents(template.content)
   }
 }
