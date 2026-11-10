@@ -78,9 +78,12 @@ export function createBarrelFileImportOptimizer(): (
     graph: ReadonlyMap<string, ResolvedModule>,
   ): Map<string, ResolvedModule> {
     let sideEffectsCache = new Map<string, SideEffects>()
-    let rewrittenGraph = new Map<string, ResolvedModule>()
+    // Retained modules are what a target evaluates once its own barrel file imports are
+    // rewritten, so modules are rewritten after their dependencies. Updating entries in place
+    // keeps the graph's iteration order.
+    let servedGraph = new Map(graph)
 
-    for (let module of graph.values()) {
+    for (let module of getDependencyFirstOrder(graph)) {
       let analysis = getExportAnalysis(module, analysisCache)
       let importRewrites: ImportRewrite[] = []
       let replacedImports = new Set<ResolvedImport>()
@@ -128,6 +131,7 @@ export function createBarrelFileImportOptimizer(): (
             targetPaths,
             resolvedBindings.flatMap((binding) => binding.barrelFilePaths),
             graph,
+            servedGraph,
             sideEffectsCache,
           )
         ) {
@@ -138,6 +142,7 @@ export function createBarrelFileImportOptimizer(): (
           importedModule.identityPath,
           targetPaths,
           graph,
+          servedGraph,
         )
 
         let [firstDeclaration, ...remainingDeclarations] = group.declarations
@@ -171,10 +176,7 @@ export function createBarrelFileImportOptimizer(): (
         }
       }
 
-      if (importRewrites.length === 0) {
-        rewrittenGraph.set(module.identityPath, module)
-        continue
-      }
+      if (importRewrites.length === 0) continue
 
       importRewrites.sort((left, right) => left.start - right.start)
       let runtimeImports = module.imports.filter((imported) => !replacedImports.has(imported))
@@ -206,7 +208,7 @@ export function createBarrelFileImportOptimizer(): (
           .map((dependency) => dependency.depPath),
       )
 
-      rewrittenGraph.set(module.identityPath, {
+      servedGraph.set(module.identityPath, {
         ...module,
         deps: [...remainingDeps],
         importRewrites,
@@ -215,8 +217,35 @@ export function createBarrelFileImportOptimizer(): (
       })
     }
 
-    return rewrittenGraph
+    return servedGraph
   }
+}
+
+// An importer's rewrite only depends on modules behind the barrel file, which cannot reach the
+// importer because bypassing a barrel file in the importer's own cycle is rejected. Depth-first
+// post-order finishes every such module before the importer.
+function getDependencyFirstOrder(graph: ReadonlyMap<string, ResolvedModule>): ResolvedModule[] {
+  let order: ResolvedModule[] = []
+  let visited = new Set<string>()
+  for (let root of graph.values()) {
+    if (visited.has(root.identityPath)) continue
+    visited.add(root.identityPath)
+    let stack = [{ module: root, depIndex: 0 }]
+    while (stack.length > 0) {
+      let frame = stack[stack.length - 1]
+      if (frame.depIndex === frame.module.staticDeps.length) {
+        stack.pop()
+        order.push(frame.module)
+        continue
+      }
+      let depPath = frame.module.staticDeps[frame.depIndex++]
+      let dep = graph.get(depPath)
+      if (!dep || visited.has(depPath)) continue
+      visited.add(depPath)
+      stack.push({ module: dep, depIndex: 0 })
+    }
+  }
+  return order
 }
 
 function getImportSpecifiers(
@@ -268,8 +297,9 @@ function getReplacementImportPaths(
   barrelFilePath: string,
   targetPaths: readonly string[],
   graph: ReadonlyMap<string, ResolvedModule>,
+  servedGraph: ReadonlyMap<string, ResolvedModule>,
 ): string[] {
-  let retained = getStaticallyReachableModules(targetPaths, graph)
+  let retained = getStaticallyReachableModules(targetPaths, servedGraph)
   let replacementImports: string[] = []
   let requested = new Set<string>()
   let evaluated = new Set<string>()
@@ -280,7 +310,7 @@ function getReplacementImportPaths(
     while (queue.length > 0) {
       let currentPath = queue.pop()
       if (!currentPath || evaluated.has(currentPath)) continue
-      let module = graph.get(currentPath)
+      let module = servedGraph.get(currentPath)
       if (!module) continue
       evaluated.add(currentPath)
       queue.push(...module.staticDeps)
@@ -328,9 +358,10 @@ function canOptimizeBarrelFileImport(
   targetPaths: readonly string[],
   barrelFilePaths: readonly string[],
   graph: ReadonlyMap<string, ResolvedModule>,
+  servedGraph: ReadonlyMap<string, ResolvedModule>,
   sideEffectsCache: Map<string, SideEffects>,
 ): boolean {
-  let retained = getStaticallyReachableModules(targetPaths, graph)
+  let retained = getStaticallyReachableModules(targetPaths, servedGraph)
   let barrelFileGraph = getStaticallyReachableModules([barrelFilePath], graph)
   // Bypassing a barrel file within the importer's cycle can move another branch past the
   // importer's initialization, changing live binding and temporal dead zone behavior.

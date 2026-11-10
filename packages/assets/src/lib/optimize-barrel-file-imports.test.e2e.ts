@@ -222,4 +222,51 @@ describe('barrel file import optimization', () => {
     let result: unknown = await page.evaluate(() => Reflect.get(globalThis, 'result'))
     assert.deepEqual(result, { order: ['shared', 'other'], value: 'value' })
   })
+
+  it('preserves retained dependency order through barrel files that targets bypass', async (t) => {
+    let dir = await fs.mkdtemp(path.join(os.tmpdir(), 'reexport-order-test-'))
+    await write(
+      dir,
+      'package.json',
+      JSON.stringify({ sideEffects: ['./app/inner/first.ts', './app/inner/second.ts'] }),
+    )
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { y } from "./outer/index.ts"',
+        'globalThis.result = { y, order: globalThis.order }',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/outer/index.ts',
+      ['export { x } from "./a.ts"', 'export { y } from "./b.ts"'].join('\n'),
+    )
+    await write(dir, 'app/outer/a.ts', 'import { w } from "../inner/index.ts"\nexport const x = w')
+    await write(dir, 'app/outer/b.ts', 'import { z } from "../inner/index.ts"\nexport const y = z')
+    await write(
+      dir,
+      'app/inner/index.ts',
+      ['export { w } from "./w.ts"', 'export { z } from "./z.ts"'].join('\n'),
+    )
+    await write(dir, 'app/inner/w.ts', 'import "./first.ts"\nexport const w = "w"')
+    await write(
+      dir,
+      'app/inner/z.ts',
+      ['import "./second.ts"', 'import "./first.ts"', 'export const z = "z"'].join('\n'),
+    )
+    await write(dir, 'app/inner/first.ts', 'globalThis.order = ["first"]')
+    await write(dir, 'app/inner/second.ts', 'globalThis.order.push("second")')
+
+    let server = await createTestServer(dir)
+    let page = await t.serve(server)
+    t.after(() => fs.rm(dir, { recursive: true, force: true }))
+    await page.goto('/')
+    await page.waitForFunction(() => 'result' in globalThis)
+
+    let result: unknown = await page.evaluate(() => Reflect.get(globalThis, 'result'))
+    assert.deepEqual(result, { order: ['first', 'second'], y: 'z' })
+    assert.ok(!server.requestedAssetPaths.some((pathname) => /\/(?:index|a|w)\.ts$/.test(pathname)))
+  })
 })

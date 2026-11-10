@@ -4193,6 +4193,48 @@ describe('asset-server', () => {
     ])
   })
 
+  it('does not retain barrel files that targets bypass through their own rewritten imports', async () => {
+    await writeJson(dir, 'app/node_modules/pkg-a/package.json', {
+      name: 'pkg-a',
+      sideEffects: false,
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(
+      dir,
+      'app/node_modules/pkg-a/index.ts',
+      ['export { x } from "./a.ts"', 'export { y } from "./b.ts"'].join('\n'),
+    )
+    await write(dir, 'app/node_modules/pkg-a/a.ts', 'import { w } from "pkg-b"\nexport const x = w')
+    await write(dir, 'app/node_modules/pkg-a/b.ts', 'import { z } from "pkg-b"\nexport const y = z')
+    await writeJson(dir, 'app/node_modules/pkg-b/package.json', {
+      name: 'pkg-b',
+      sideEffects: false,
+      type: 'module',
+      exports: './index.ts',
+    })
+    await write(
+      dir,
+      'app/node_modules/pkg-b/index.ts',
+      ['export { w } from "./w.ts"', 'export { z } from "./z.ts"'].join('\n'),
+    )
+    await write(dir, 'app/node_modules/pkg-b/w.ts', 'export const w = "w"')
+    await write(dir, 'app/node_modules/pkg-b/z.ts', 'export const z = "z"')
+    await write(dir, 'app/entry.ts', 'import { y } from "pkg-a"\nconsole.log(y)')
+    let assetServer = createTestServer(dir)
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.match(body, /import "\/assets\/app\/node_modules\/pkg-b\/z\.ts"/)
+    assert.match(body, /import \{ y \} from "\/assets\/app\/node_modules\/pkg-a\/b\.ts"/)
+    assert.doesNotMatch(body, /pkg-[ab]\/index\.ts|pkg-b\/w\.ts/)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/node_modules/pkg-b/z.ts',
+      '/assets/app/node_modules/pkg-a/b.ts',
+    ])
+  })
+
   it('rewrites repeated imports together in re-export dependency order', async () => {
     await writeJson(dir, 'app/package.json', { sideEffects: false })
     await write(
