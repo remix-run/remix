@@ -66,7 +66,7 @@ export function ToastRegion() {
                     zIndex: index === 0 ? 101 : 100 - index,
                     opacity: 0,
                     gridTemplateRows: '0fr',
-                    marginBlockStart: 0,
+                    marginBlockEnd: 0,
                     translate: 'calc(100% + 24px) 0',
                     duration: prefersReducedMotion() ? 0 : 140,
                     transition: {
@@ -77,9 +77,9 @@ export function ToastRegion() {
                 ]}
               >
                 <div mix={styles.collapseSlot}>
-                  <div mix={[styles.surface, pulse(toastItem.revision)]}>
+                  <div role="none" mix={[styles.surface, pulse(toastItem.revision)]}>
                     <div mix={[styles.message, styles.hideWhenCovered]}>
-                      <strong mix={[toast.title(), styles.title]}>{toastItem.title}</strong>
+                      <h2 mix={[toast.title(), styles.title]}>{toastItem.title}</h2>
                       <span mix={[toast.description(), styles.description]}>
                         {toastItem.description}
                       </span>
@@ -146,6 +146,7 @@ const styles = {
     },
   }),
   title: css({
+    margin: 0,
     display: 'block',
     fontSize: '13px',
   }),
@@ -213,12 +214,13 @@ const styles = {
     display: 'grid',
     gridTemplateRows: '1fr',
     alignContent: 'end',
-    marginBlockStart: 'var(--stack-gap)',
+    marginBlockEnd: 'var(--stack-gap)',
     flexShrink: 0,
     width: '100%',
     transition:
-      'grid-template-rows 140ms ease-out, margin-block-start 140ms ease-out, opacity 120ms ease-out',
+      'grid-template-rows 140ms ease-out, margin-block-end 140ms ease-out, opacity 120ms ease-out',
     '&[data-toast-index="0"]': {
+      marginBlockEnd: 0,
       position: 'relative',
       '--stack-height': 'auto',
       '--stack-overflow': 'visible',
@@ -226,7 +228,7 @@ const styles = {
     },
     '&[data-limited]': {
       gridTemplateRows: '0fr',
-      marginBlockStart: 0,
+      marginBlockEnd: 0,
       opacity: 0,
       pointerEvents: 'none',
     },

@@ -62,7 +62,7 @@ export function ToastRegion() {
                     zIndex: index === 0 ? 101 : 100 - index,
                     opacity: 0,
                     gridTemplateRows: '0fr',
-                    marginBlockEnd: 0,
+                    marginBlockStart: 0,
                     translate: '0 calc(-100% - 24px)',
                     duration: prefersReducedMotion() ? 0 : 140,
                     transition: {
@@ -73,9 +73,9 @@ export function ToastRegion() {
                 ]}
               >
                 <div mix={styles.collapseSlot}>
-                  <div mix={[styles.surface]}>
+                  <div role="none" mix={[styles.surface]}>
                     <div mix={[styles.message, styles.hideWhenCovered]}>
-                      <strong mix={[toast.title(), styles.title]}>{toastItem.title}</strong>
+                      <h2 mix={[toast.title(), styles.title]}>{toastItem.title}</h2>
                       <p mix={[toast.description(), styles.description]}>{toastItem.description}</p>
                     </div>
                     <button
@@ -163,12 +163,13 @@ const styles = {
     display: 'grid',
     gridTemplateRows: '1fr',
     alignContent: 'start',
-    marginBlockEnd: 'var(--stack-gap)',
+    marginBlockStart: 'var(--stack-gap)',
     flexShrink: 0,
     width: '100%',
     transition:
-      'grid-template-rows 140ms ease-out, margin-block-end 140ms ease-out, opacity 120ms ease-out',
+      'grid-template-rows 140ms ease-out, margin-block-start 140ms ease-out, opacity 120ms ease-out',
     '&[data-toast-index="0"]': {
+      marginBlockStart: 0,
       position: 'relative',
       '--stack-height': 'auto',
       '--stack-overflow': 'visible',
@@ -176,7 +177,7 @@ const styles = {
     },
     '&[data-limited]': {
       gridTemplateRows: '0fr',
-      marginBlockEnd: 0,
+      marginBlockStart: 0,
       opacity: 0,
       pointerEvents: 'none',
     },
@@ -236,6 +237,7 @@ const styles = {
     minWidth: 0,
   }),
   title: css({
+    margin: 0,
     display: 'block',
     fontSize: '13px',
   }),
