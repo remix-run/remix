@@ -2,7 +2,7 @@ import { attrs, createMixin, css, on, ref, TypedEventTarget } from '@remix-run/c
 import type { ElementProps, Handle, RemixNode } from '@remix-run/component'
 
 /** Content published to a toast manager. */
-export interface ToastOptions<data = unknown> {
+export interface ToastAddOptions<data = unknown> {
   /** Stable identity. Reusing it replaces the content and options and restarts the timer. */
   id?: string
   /** Renderable heading content. Connect its element with `title()`. */
@@ -40,7 +40,7 @@ export interface ToastManager<data = unknown> extends TypedEventTarget<{ change:
   /** Open toast items, newest first. Updating an existing identity preserves its position. */
   readonly toastItems: readonly ToastItem<data>[]
   /** Adds or replaces a toast by identity. Omitted fields clear or use defaults. Returns its identity. */
-  add(options: ToastOptions<data>): string
+  add(options: ToastAddOptions<data>): string
   /** Closes one toast, or all toasts when no identity is supplied. */
   close(id?: string): void
 }
@@ -50,7 +50,7 @@ export interface ToastContextProps<data = unknown> {
   /** Stable manager created outside the rendering component. */
   manager: ToastManager<data>
   /** Fallback timeout in milliseconds, or false to keep notifications open. A callback resolves it once per presentation or replacement without an explicit timeout. Defaults to false. */
-  defaultTimeout?: number | false | ((options: ToastOptions<data>) => number | false)
+  defaultTimeout?: number | false | ((options: ToastAddOptions<data>) => number | false)
   /** Maximum available toast items. Unlimited by default. Must be a positive integer. */
   limit?: number
   /** Renders every open toast item, including overflow, newest first. */
@@ -83,7 +83,7 @@ export function createToastManager<data = unknown>(): ToastManager<data> {
     get toastItems(): readonly ToastItem<data>[] {
       return Object.freeze([...toastItems.values()].reverse())
     }
-    add(options: ToastOptions<data>) {
+    add(options: ToastAddOptions<data>) {
       if (options.timeout !== undefined) validateTimeout(options.timeout)
       let id = options.id ?? `toast-${++nextId}`
       while (options.id === undefined && toastItems.has(id)) id = `toast-${++nextId}`

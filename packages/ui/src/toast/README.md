@@ -56,7 +56,7 @@ export function Notifications() {
 - `item({ countdown? })`: applies non-modal dialog semantics, availability and focus recovery. With `countdown: true`, it animates the inherited `--toast-countdown` value from 1 to 0 for CSS indicators.
 - `title()` and `description()`: connect your heading and supporting content to the notification. They generate IDs unless supplied.
 - `close()`: dismisses the scoped notification from a native button. It defaults to `type="button"`.
-- `ToastOptions<data>` and `ToastItem<data>`: published title, description, announcement, custom data, ID and timeout. Items also include a revision that increments when replaced.
+- `ToastAddOptions<data>` and `ToastItem<data>`: published title, description, announcement, custom data, ID and timeout. Items also include a revision that increments when replaced.
 - `ToastManager<data>`, `ToastContextProps<data>`, `ToastItemContextProps`, `ToastItemOptions` and `ToastRootOptions`: manager and component configuration types.
 
 ## Behavior Notes

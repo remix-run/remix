@@ -98,8 +98,8 @@ const subscribe = await highlightSource(`
 `)
 
 const typeDefinitions = {
-  ToastOptions: await highlightSource(`
-interface ToastOptions<data = unknown> {
+  ToastAddOptions: await highlightSource(`
+interface ToastAddOptions<data = unknown> {
   id?: string
   title?: RemixNode
   description?: RemixNode
@@ -122,14 +122,14 @@ interface ToastItem<data = unknown> {
   ToastManager: await highlightSource(`
 interface ToastManager<data = unknown> extends TypedEventTarget<{ change: Event }> {
   readonly toastItems: readonly ToastItem<data>[]
-  add(options: ToastOptions<data>): string
+  add(options: ToastAddOptions<data>): string
   close(id?: string): void
 }
 `),
   ToastContextProps: await highlightSource(`
 interface ToastContextProps<data = unknown> {
   manager: ToastManager<data>
-  defaultTimeout?: number | false | ((options: ToastOptions<data>) => number | false)
+  defaultTimeout?: number | false | ((options: ToastAddOptions<data>) => number | false)
   limit?: number
   children: (toastItems: readonly ToastItem<data>[]) => RemixNode
 }
@@ -307,9 +307,9 @@ export default function ToastPage(handle: Handle<PageProps>) {
           <ApiEntry name="toastItems" type="readonly ToastItem<data>[]">
             Current immutable snapshots, newest first. Repeated IDs keep their position.
           </ApiEntry>
-          <ApiEntry name="add" type="(options: ToastOptions<data>) => string">
-            Publishes <a href="#type-ToastOptions">ToastOptions</a> or replaces an existing ID's
-            content and options and restarts its lifetime. Omitted fields clear or use their
+          <ApiEntry name="add" type="(options: ToastAddOptions<data>) => string">
+            Publishes <a href="#type-ToastAddOptions">ToastAddOptions</a> or replaces an existing
+            ID's content and options and restarts its lifetime. Omitted fields clear or use their
             defaults. Returns the generated or supplied ID.
           </ApiEntry>
           <ApiEntry name="close" type="(id?: string) => void">
@@ -323,7 +323,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
             <CodeBlock html={subscribe} />
           </ApiEntry>
         </ApiTable>
-        <h3 id="options">ToastOptions&lt;data = unknown&gt;</h3>
+        <h3 id="options">ToastAddOptions&lt;data = unknown&gt;</h3>
         <ApiTable id="toast-options" label="Option" defaults>
           <ApiEntry name="id" type="string" defaultValue="generated">
             Repeated IDs update in place. Generated IDs are unique within the manager.
@@ -366,7 +366,7 @@ export default function ToastPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry
             name="defaultTimeout"
-            type="number | false | ((options: ToastOptions<data>) => number | false)"
+            type="number | false | ((options: ToastAddOptions<data>) => number | false)"
             defaultValue="false"
           >
             Fallback timeout in milliseconds, or false to disable automatic dismissal. Pass a
@@ -473,9 +473,9 @@ export default function ToastPage(handle: Handle<PageProps>) {
         </ApiTable>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable id="toast-types">
-          <ApiEntry id="type-ToastOptions" name="ToastOptions" type="interface">
+          <ApiEntry id="type-ToastAddOptions" name="ToastAddOptions" type="interface">
             <p>Content supplied when publishing.</p>
-            <CodeBlock html={typeDefinitions.ToastOptions} />
+            <CodeBlock html={typeDefinitions.ToastAddOptions} />
           </ApiEntry>
           <ApiEntry id="type-ToastItem" name="ToastItem" type="interface">
             <p>Immutable published content and timeout overrides.</p>

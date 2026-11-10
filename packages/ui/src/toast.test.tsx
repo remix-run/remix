@@ -7,7 +7,7 @@ import type { TestContext } from '@remix-run/test'
 import { renderToString } from '@remix-run/component/server'
 import { animateExit } from './animation.ts'
 import { createToastManager, Context, root, ItemContext, item } from './toast.tsx'
-import type { ToastManager, ToastOptions, ToastItem } from './toast.tsx'
+import type { ToastManager, ToastAddOptions, ToastItem } from './toast.tsx'
 
 function clock(t: TestContext) {
   let timers = t.useFakeTimers()
@@ -172,7 +172,7 @@ describe('toast.root()', () => {
       run(): void
     }
     let toastManager = createToastManager<Action[]>()
-    function publish<data>(toastManager: ToastManager<data>, options: ToastOptions<data>) {
+    function publish<data>(toastManager: ToastManager<data>, options: ToastAddOptions<data>) {
       return toastManager.add(options)
     }
     publish(toastManager, { title: 'Saved', data: [{ label: 'Undo', run() {} }] })
