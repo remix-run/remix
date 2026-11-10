@@ -258,7 +258,7 @@ If you want a handler to receive every request method at a given URL instead, re
 
 #### HEAD Requests
 
-Routes registered for `GET` also serve `HEAD` requests. The `GET` handler runs as usual, and the router strips the body from its response, so a `HEAD` request observes the same status and headers as the equivalent `GET` request.
+Routes registered for `GET` also serve `HEAD` requests. The `GET` handler runs as usual, and the router strips the body from its response after router middleware runs, so middleware and the client observe the same status and headers as for the equivalent `GET` request.
 
 ```ts
 let router = createRouter()
@@ -826,7 +826,7 @@ In this example, the router's inline middleware array defines the app context co
 
 Apps that install `@remix-run/fetch-router` directly should augment the `@remix-run/fetch-router` module instead.
 
-Prefer plain inline arrays for `middleware` options on routers, controllers, actions, and route helpers. Inline arrays already give TypeScript enough information to infer middleware-provided context for downstream handlers, so `createAction()` and direct action objects see action middleware context, and `createController()` sees controller middleware context without `createMiddleware()`.
+Prefer plain inline arrays for `middleware` options on routers, controllers, actions, and route helpers. Inline arrays already give TypeScript enough information to infer middleware-provided context for downstream handlers, so `createAction()` and direct action objects see action middleware context, and `createController()` sees controller middleware context without `createMiddleware()`. Conditional entries like `...(isDev ? [logger()] : [])` are fine too: the middleware around them still types the context, but the conditional middleware's values are left out because it may not run.
 
 Use `createMiddleware()` only when a middleware chain is stored somewhere and its exact tuple type needs to survive that boundary. The common cases are deriving `MiddlewareContext<typeof rootMiddleware>` without a router value, exporting a reusable chain, or returning a chain from a factory. A standalone array like `let middleware = [loadSession(), loadDatabase()]` widens to a normal array, so `MiddlewareContext<typeof middleware>` cannot derive the ordered middleware context.
 

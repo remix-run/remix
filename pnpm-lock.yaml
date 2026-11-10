@@ -61,6 +61,10 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+    devDependencies:
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
 
   demos/assets:
     dependencies:

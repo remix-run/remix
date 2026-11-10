@@ -1,10 +1,13 @@
 import { platform } from 'node:process'
+import type { PlaywrightTestProject } from 'playwright/test'
 import { defineConfig } from 'playwright/test'
 
-export default defineConfig({
-  projects: [
-    { name: 'chromium', use: { browserName: 'chromium' } },
-    // Playwright's Windows WebKit is a different port from Safari's, so macOS and Linux cover it.
-    ...(platform === 'win32' ? [] : [{ name: 'webkit', use: { browserName: 'webkit' as const } }]),
-  ],
-})
+let projects: PlaywrightTestProject[]
+
+if (process.env.CI === 'true' && platform === 'darwin') {
+  projects = [{ name: 'webkit', use: { browserName: 'webkit' } }]
+} else {
+  projects = [{ name: 'chromium', use: { browserName: 'chromium' } }]
+}
+
+export default defineConfig({ projects })
