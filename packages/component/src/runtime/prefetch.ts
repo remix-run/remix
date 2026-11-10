@@ -43,29 +43,38 @@ export interface PrefetchAssetContext {
   fragment: DocumentFragment
 }
 
-/** Independent limits for tracked speculative operations. */
-export interface PrefetchConcurrency {
+/** Scheduling and concurrency for pending HTML requests. */
+export interface PrefetchLinksConfig {
   /** Maximum HTML fetches through body consumption and parsing (default: 3). */
-  links?: number
-  /** Maximum native asset hints awaiting load, error, or cancellation (default: 2). */
-  assets?: number
-}
-
-/** Selection and concurrency for Remix's built-in prefetch strategy. */
-export interface PrefetchConfig {
-  /** Positive safe integer limits; invalid values throw `RangeError` during `run()`. */
-  concurrency?: PrefetchConcurrency
+  concurrency?: number
   /**
    * Selects original pending candidates in start order; omitted candidates are dropped for this
    * attempt. Order is cached until discovery, ownership changes, or policy invalidation.
    */
-  links?(batch: readonly PrefetchLink[]): readonly PrefetchLink[]
+  scheduler?(batch: readonly PrefetchLink[]): readonly PrefetchLink[]
+}
+
+/** Scheduling and global concurrency for assets from each parsed response. */
+export interface PrefetchAssetsConfig {
+  /** Maximum native asset hints awaiting load, error, or cancellation (default: 2). */
+  concurrency?: number
   /**
    * Selects original supported elements from this fragment or its templates in submission order.
    * Called synchronously once per parsed response. Ordinary images require explicit selection.
    * Omitted, duplicate, unsupported, and foreign elements are ignored. Source nodes remain inert.
    */
-  assets?(batch: readonly Element[], context: PrefetchAssetContext): readonly Element[]
+  scheduler?(batch: readonly Element[], context: PrefetchAssetContext): readonly Element[]
+}
+
+/**
+ * Selection and concurrency for Remix's built-in prefetch strategy.
+ * Invalid concurrency limits throw `RangeError` during `run()`.
+ */
+export interface PrefetchConfig {
+  /** Pending HTML selection and a global positive safe integer concurrency limit. */
+  links?: PrefetchLinksConfig
+  /** Per-response asset selection and a global positive safe integer concurrency limit. */
+  assets?: PrefetchAssetsConfig
 }
 
 type PrefetchRequest = [src: string, options?: PrefetchOptions]
@@ -81,7 +90,7 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
  * native hints. Responsive declarations and selected images use `<link rel="preload" as="image">`.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Set
  * `prefetch={true}` on nested `<Frame>` components to also fetch their HTML and discover their assets.
- * Configure `run({ prefetch: { links, assets, concurrency } })` to select work, or pass a function
+ * Configure `run({ prefetch: { links, assets } })` to select work, or pass a function
  * to replace the complete strategy. Cross-origin URLs, the current
  * untargeted page, and browsers where Remix doesn't handle navigations are skipped.
  *
@@ -437,7 +446,7 @@ export function fetchFrame(
 }
 
 export function createDefaultPrefetch(signal?: AbortSignal, config: PrefetchConfig = {}) {
-  let assets = createPrefetchAssetQueue(signal, config.concurrency?.assets ?? 2)
+  let assets = createPrefetchAssetQueue(signal, config.assets?.concurrency ?? 2)
 
   function discoverAssets(
     source: DocumentFragment,
@@ -460,8 +469,8 @@ export function createDefaultPrefetch(signal?: AbortSignal, config: PrefetchConf
     )
     let selected: readonly Element[]
     try {
-      selected = config.assets
-        ? config.assets(Object.freeze(batch), { fragment: source, src, target, baseURL })
+      selected = config.assets?.scheduler
+        ? config.assets.scheduler(Object.freeze(batch), { fragment: source, src, target, baseURL })
         : batch
       if (!Array.isArray(selected)) return Promise.resolve()
       selected = Array.from(selected)

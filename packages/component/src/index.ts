@@ -83,6 +83,7 @@ export type {
   PrefetchTrigger,
   PrefetchLink,
   PrefetchAssetContext,
-  PrefetchConcurrency,
+  PrefetchLinksConfig,
+  PrefetchAssetsConfig,
   PrefetchConfig,
 } from './runtime/prefetch.ts'

@@ -43,7 +43,7 @@ async function serveImages(t: TestContext, width: number, source: 'img' | 'link'
             let supports = DOMTokenList.prototype.supports
             DOMTokenList.prototype.supports = function(token) { return token === 'prefetch' ? false : supports.call(this, token) }
             let app = run({ loadModule: () => {}, prefetch: {
-              assets(batch, { fragment }) { return [...batch, ...fragment.querySelectorAll('img[data-prefetch]')] }
+              assets: { scheduler(batch, { fragment }) { return [...batch, ...fragment.querySelectorAll('img[data-prefetch]')] } }
             } })
             document.querySelector('#start').onclick = () => prefetch('/redirect')
             await app.ready()

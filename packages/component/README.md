@@ -1420,12 +1420,17 @@ import { run } from 'remix/component'
 let app = run({
   loadModule,
   prefetch: {
-    concurrency: { links: 3, assets: 2 },
-    links(batch) {
-      return batch.filter((candidate) => !new URL(candidate.src).pathname.startsWith('/checkout'))
+    links: {
+      concurrency: 3,
+      scheduler(batch) {
+        return batch.filter((candidate) => !new URL(candidate.src).pathname.startsWith('/checkout'))
+      },
     },
-    assets(batch, { fragment }) {
-      return [...batch, ...fragment.querySelectorAll('img[data-prefetch]')]
+    assets: {
+      concurrency: 2,
+      scheduler(batch, { fragment }) {
+        return [...batch, ...fragment.querySelectorAll('img[data-prefetch]')]
+      },
     },
   },
 })
@@ -1433,11 +1438,11 @@ let app = run({
 app.invalidatePrefetch()
 ```
 
-`links(batch)` receives pending HTML requests, excluding running requests. Each candidate has `src`, `target`, `trigger`, and its tracked `anchors`; shared requests have all their live anchors, and nested frames inherit their ancestor's ownership. Return original candidates in the desired start order. Remix drops omitted candidates for that attempt and ignores duplicates and foreign entries. Invalidation does not restore dropped candidates; another discovery or imperative request can offer them again.
+`links.scheduler(batch)` receives pending HTML requests, excluding running requests. Each candidate has `src`, `target`, `trigger`, and its tracked `anchors`; shared requests have all their live anchors, and nested frames inherit their ancestor's ownership. Return original candidates in the desired start order. Remix drops omitted candidates for that attempt and ignores duplicates and foreign entries. Invalidation does not restore dropped candidates; another discovery or imperative request can offer them again.
 
 Returned order is cached while pending candidates and policy stay unchanged. Scroll, resize, relevant DOM changes, discovery, ownership changes, and `app.invalidatePrefetch()` invalidate it. Remix refreshes selection when an HTML slot opens; completion alone drains the cached order. Without a selector, intent precedes imperative and viewport requests, with stable discovery order and inherited ordering for nested frames.
 
-`assets(batch, { fragment, src, target, baseURL })` runs synchronously once for each fetched response as soon as it is parsed, including declarations inside templates. It does not wait for other responses. Return original supported `script`, `link`, or `img` elements from that fragment or its template contents in submission order. Ordinary images are only loaded when selected by the hook; markers such as `data-prefetch` are app-defined. Inspect the inert fragment without moving or mutating nodes. Omitted declarations, duplicates, unsupported elements, and foreign nodes are ignored. Throwing or malformed selectors skip speculative work for that batch without blocking independent frame discovery or navigation.
+`assets.scheduler(batch, { fragment, src, target, baseURL })` runs synchronously once for each fetched response as soon as it is parsed, including declarations inside templates. It does not wait for other responses. Return original supported `script`, `link`, or `img` elements from that fragment or its template contents in submission order. Ordinary images are only loaded when selected by the hook; markers such as `data-prefetch` are app-defined. Inspect the inert fragment without moving or mutating nodes. Omitted declarations, duplicates, unsupported elements, and foreign nodes are ignored. Throwing or malformed selectors skip speculative work for that batch without blocking independent frame discovery or navigation.
 
 Selected images use native image preloads, retaining `srcset` descriptors, `sizes`, CORS, and referrer policy. Relative candidates resolve against the response's final URL and `<base href>`. The browser selects the responsive resource; Remix does not load every candidate, decode images, keep image objects, or delay navigation. Picture/source art direction and CSS image discovery are outside this hook.
 

@@ -956,7 +956,7 @@ describe('default frame prefetch', () => {
       }
     })
     let hints = collectHints(t)
-    let { prefetch } = createPrefetch(t, { concurrency: { links: 1 } })
+    let { prefetch } = createPrefetch(t, { links: { concurrency: 1 } })
 
     await prefetch(new URL('/page', location.href).href)
 
@@ -1399,14 +1399,14 @@ describe('prefetch selection', () => {
   })
 
   it('rejects invalid independent concurrency limits before starting the runtime', () => {
-    expect(() => run({ loadModule: mock.fn(), prefetch: { concurrency: { links: 0 } } })).toThrow(
+    expect(() => run({ loadModule: mock.fn(), prefetch: { links: { concurrency: 0 } } })).toThrow(
       RangeError,
     )
     expect(() =>
-      run({ loadModule: mock.fn(), prefetch: { concurrency: { assets: 1.5 } } }),
+      run({ loadModule: mock.fn(), prefetch: { assets: { concurrency: 1.5 } } }),
     ).toThrow(RangeError)
     expect(() =>
-      run({ loadModule: mock.fn(), prefetch: { concurrency: { links: Infinity } } }),
+      run({ loadModule: mock.fn(), prefetch: { links: { concurrency: Infinity } } }),
     ).toThrow(RangeError)
   })
 
@@ -1427,7 +1427,7 @@ describe('prefetch selection', () => {
       return value
     })
     let links = mock.fn((batch: readonly PrefetchLink[]) => [...batch].reverse())
-    let { prefetch: load } = createPrefetch(t, { concurrency: { links: 2 }, links })
+    let { prefetch: load } = createPrefetch(t, { links: { concurrency: 2, scheduler: links } })
     let ready = Promise.all(
       ['/a', '/b', '/c', '/d'].map((src) => load(new URL(src, location.href).href)),
     )
@@ -1452,7 +1452,7 @@ describe('prefetch selection', () => {
     let fetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
     let allow = false
     let links = mock.fn((batch: readonly PrefetchLink[]) => (allow ? [...batch, ...batch] : []))
-    let strategy = createDefaultPrefetch(undefined, { links })
+    let strategy = createDefaultPrefetch(undefined, { links: { scheduler: links } })
     await strategy(new URL('/dropped', location.href).href)
     allow = true
     strategy.invalidate()
@@ -1474,7 +1474,7 @@ describe('prefetch selection', () => {
     let links = mock.fn((batch: readonly PrefetchLink[]) =>
       reverse ? [...batch].reverse() : batch,
     )
-    let strategy = createDefaultPrefetch(undefined, { concurrency: { links: 1 }, links })
+    let strategy = createDefaultPrefetch(undefined, { links: { concurrency: 1, scheduler: links } })
     let busy = strategy(new URL('/busy', location.href).href)
     await wait(0)
     let next = strategy(new URL('/next', location.href).href)
@@ -1505,9 +1505,11 @@ describe('prefetch selection', () => {
     let app = run({
       loadModule: mock.fn(),
       prefetch: {
-        links(batch) {
-          contexts = batch
-          return batch
+        links: {
+          scheduler(batch) {
+            contexts = batch
+            return batch
+          },
         },
       },
     })
@@ -1537,7 +1539,7 @@ describe('prefetch selection', () => {
       if (path === '/blocker') return blocker.promise
       return htmlResponse('')
     })
-    let { prefetch: strategy } = createPrefetch(t, { concurrency: { links: 1 } })
+    let { prefetch: strategy } = createPrefetch(t, { links: { concurrency: 1 } })
     let parent = strategy(new URL('/parent', location.href).href)
     await wait(0)
     let anchor = createIntentLink('/parent')
@@ -1557,18 +1559,23 @@ describe('prefetch selection', () => {
 
   it('ignores cloned candidates and malformed selections without affecting later work', async (t) => {
     let fetch = t.mock.method(globalThis, 'fetch', async () => htmlResponse(''))
-    let config: PrefetchConfig = {
-      links(batch) {
-        return batch.map((candidate) => ({ ...candidate }))
+    let config = {
+      links: {
+        scheduler(batch: readonly PrefetchLink[]) {
+          return batch.map((candidate) => ({ ...candidate }))
+        },
       },
-    }
+    } satisfies PrefetchConfig
     let strategy = createDefaultPrefetch(undefined, config)
     await strategy(new URL('/cloned', location.href).href)
     expect(fetch).not.toHaveBeenCalled()
-    Object.defineProperty(config, 'links', { value: () => Promise.resolve([]), configurable: true })
+    Object.defineProperty(config.links, 'scheduler', {
+      value: () => Promise.resolve([]),
+      configurable: true,
+    })
     await strategy(new URL('/malformed', location.href).href)
     expect(fetch).not.toHaveBeenCalled()
-    Object.defineProperty(config, 'links', {
+    Object.defineProperty(config.links, 'scheduler', {
       value: (batch: readonly PrefetchLink[]) => batch,
       configurable: true,
     })
@@ -1615,16 +1622,18 @@ describe('prefetch selection', () => {
     let calls = 0
     let hints = collectHints(t)
     let { prefetch: load } = createPrefetch(t, {
-      assets(batch, context) {
-        if (context.src.endsWith('/leaf') || context.src.endsWith('/slow')) return batch
-        calls++
-        expect(batch).toHaveLength(1)
-        expect(context.baseURL).toBe(new URL('/assets/', location.href).href)
-        let image = context.fragment.querySelector('img')
-        let template = context.fragment.querySelector('template')
-        if (!image || !template) throw new Error('Missing selected images')
-        context.fragment.querySelector('#rmx-data')?.remove()
-        return [image, image, ...template.content.querySelectorAll('img'), foreign]
+      assets: {
+        scheduler(batch, context) {
+          if (context.src.endsWith('/leaf') || context.src.endsWith('/slow')) return batch
+          calls++
+          expect(batch).toHaveLength(1)
+          expect(context.baseURL).toBe(new URL('/assets/', location.href).href)
+          let image = context.fragment.querySelector('img')
+          let template = context.fragment.querySelector('template')
+          if (!image || !template) throw new Error('Missing selected images')
+          context.fragment.querySelector('#rmx-data')?.remove()
+          return [image, image, ...template.content.querySelectorAll('img'), foreign]
+        },
       },
     })
     let a = load(new URL('/fast', location.href).href)
@@ -1663,7 +1672,7 @@ describe('prefetch selection', () => {
     })
     observer.observe(document.head, { childList: true })
     t.after(() => observer.disconnect())
-    let { prefetch: load } = createPrefetch(t, { concurrency: { assets: 1 } })
+    let { prefetch: load } = createPrefetch(t, { assets: { concurrency: 1 } })
     let first = load(new URL('/a', location.href).href)
     await waitFor(() => hints.length === 1)
     let second = load(new URL('/b', location.href).href)
@@ -1705,10 +1714,12 @@ describe('prefetch selection', () => {
     observer.observe(document.head, { childList: true })
     t.after(() => observer.disconnect())
     let { prefetch: load } = createPrefetch(t, {
-      concurrency: { assets: 1 },
-      assets(batch) {
-        selections++
-        return batch
+      assets: {
+        concurrency: 1,
+        scheduler(batch) {
+          selections++
+          return batch
+        },
       },
     })
     let a = load(new URL('/a', location.href).href)
@@ -1736,10 +1747,12 @@ describe('prefetch selection', () => {
     )
     let selections = 0
     let { prefetch: load } = createPrefetch(t, {
-      concurrency: { assets: 1 },
-      assets(batch) {
-        selections++
-        return batch
+      assets: {
+        concurrency: 1,
+        scheduler(batch) {
+          selections++
+          return batch
+        },
       },
     })
     let a = new AbortController()
@@ -1777,7 +1790,7 @@ describe('prefetch selection', () => {
     observer.observe(document.head, { childList: true })
     t.after(() => observer.disconnect())
     let anchor = createIntentLink('/owner')
-    let { prefetch: strategy } = createPrefetch(t, { concurrency: { assets: 1 } })
+    let { prefetch: strategy } = createPrefetch(t, { assets: { concurrency: 1 } })
     let ready = strategy.enqueue(anchor.href, undefined, anchor, 'intent')
     await waitFor(() => document.querySelector('link[rel="prefetch"]') !== null)
     strategy.pause()
@@ -1800,9 +1813,11 @@ describe('prefetch selection', () => {
     let source: Element | undefined
     let hints = collectHints(t)
     let { prefetch: load } = createPrefetch(t, {
-      assets(_batch, { fragment }) {
-        source = fragment.querySelector('img') ?? undefined
-        return source ? [source] : []
+      assets: {
+        scheduler(_batch, { fragment }) {
+          source = fragment.querySelector('img') ?? undefined
+          return source ? [source] : []
+        },
       },
     })
     await load(new URL('/image', location.href).href)
@@ -1827,9 +1842,11 @@ describe('prefetch selection', () => {
     )
     let calls = 0
     let { prefetch: load } = createPrefetch(t, {
-      assets() {
-        calls++
-        throw new Error('policy')
+      assets: {
+        scheduler() {
+          calls++
+          throw new Error('policy')
+        },
       },
     })
     await load(new URL('/root', location.href).href)
@@ -1837,8 +1854,10 @@ describe('prefetch selection', () => {
     let app = run({
       loadModule: mock.fn(),
       prefetch: {
-        links() {
-          throw new Error('policy')
+        links: {
+          scheduler() {
+            throw new Error('policy')
+          },
         },
       },
     })

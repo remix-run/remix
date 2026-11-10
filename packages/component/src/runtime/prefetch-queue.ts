@@ -28,9 +28,9 @@ function getPriority<content>(entry: PrefetchEntry<content>): number {
 
 export function validatePrefetchConfig(config: PrefetchConfig): void {
   for (let name of ['links', 'assets'] as const) {
-    let limit = config.concurrency?.[name]
+    let limit = config[name]?.concurrency
     if (limit !== undefined && (!Number.isSafeInteger(limit) || limit < 1)) {
-      throw new RangeError(`prefetch.concurrency.${name} must be a positive safe integer`)
+      throw new RangeError(`prefetch.${name}.concurrency must be a positive safe integer`)
     }
   }
 }
@@ -45,7 +45,7 @@ export function createPrefetchQueue<content>(
   ) => Promise<content | undefined>,
 ) {
   validatePrefetchConfig(config)
-  let concurrency = config.concurrency?.links ?? 3
+  let concurrency = config.links?.concurrency ?? 3
   let entries = new Map<string, PrefetchEntry<content>>()
   let order: PrefetchEntry<content>[] = []
   let generation = 0
@@ -113,8 +113,8 @@ export function createPrefetchQueue<content>(
     let batch = [...candidates.keys()]
     let selected: readonly PrefetchLink[] = []
     try {
-      selected = config.links
-        ? config.links(Object.freeze(batch))
+      selected = config.links?.scheduler
+        ? config.links.scheduler(Object.freeze(batch))
         : batch.sort(
             (a, b) => (candidates.get(b)?.priority ?? 0) - (candidates.get(a)?.priority ?? 0),
           )
