@@ -41,6 +41,7 @@ import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.t
 import { componentStalenessCheck } from './refresh.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
+import type { IdScope } from './core/id-scope.ts'
 
 export const TEXT_NODE = Symbol('TEXT_NODE')
 const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
@@ -208,7 +209,6 @@ export type RootVNode = {
   _getContext?: (type: ElementFunction) => unknown
   _rangeStart?: Node
   _rangeEnd?: Node
-  _pendingHydrationComponentId?: string
   _resourceNonces?: ResourceNonces
 }
 
@@ -217,6 +217,7 @@ export interface ReconcileContext {
   scheduler: Scheduler
   styles: StyleManager
   rootTarget: EventTarget
+  idScope: IdScope
 }
 
 export type VNodeParent =
@@ -393,7 +394,6 @@ export const defaultStyleManager: StyleManager =
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
-let idCounter = 0
 let persistedRemovalToken = 0
 const persistedMixinNodes = new Set<CommittedHostNode>()
 let activeSchedulerUpdateParents: ParentNode[] | undefined
@@ -603,6 +603,7 @@ function resolveNodeMixProps(
   parent: VNodeParent,
   frame: FrameHandle,
   scheduler: Scheduler,
+  createMixinId: () => string,
   state?: MixinRuntimeState,
 ): ResolvedHostProps {
   let mix = node.props.mix
@@ -623,6 +624,7 @@ function resolveNodeMixProps(
     hostType: node.type,
     frame,
     scheduler,
+    createId: createMixinId,
     getContext: (type: Component | string | symbol) => {
       if (typeof type !== 'function') {
         return undefined
@@ -676,7 +678,14 @@ function enqueueMixinBindingUpdate(
 
       dispatchMixinBeforeUpdate(state)
       let prevProps = getHostProps(node)
-      let resolved = resolveNodeMixProps(node, node._parent, this.frame, this.scheduler, state)
+      let resolved = resolveNodeMixProps(
+        node,
+        node._parent,
+        this.frame,
+        this.scheduler,
+        this.createMixinId,
+        state,
+      )
       applyResolvedHostProps(node, resolved)
       patchHostProps(prevProps, resolved.props, this.node)
       syncControlledReflection(node, this.scheduler)
@@ -705,6 +714,7 @@ function bindNodeMixRuntime(
       target: node,
       frame: context.frame,
       scheduler: context.scheduler,
+      createMixinId: context.idScope.createMixinId,
       enqueueUpdate: enqueueMixinBindingUpdate,
     },
     reclaimed,
@@ -922,7 +932,14 @@ function diffHost(
 ): CommittedHostNode {
   let { frame, scheduler } = context
   let currProps = getHostProps(curr)
-  let resolved = resolveNodeMixProps(next, vParent, frame, scheduler, curr._mixState)
+  let resolved = resolveNodeMixProps(
+    next,
+    vParent,
+    frame,
+    scheduler,
+    context.idScope.createMixinId,
+    curr._mixState,
+  )
   let childInputs = next._children
   let nextProps = resolved.props
   let nextMixState = resolved.mixState
@@ -1256,7 +1273,13 @@ function insert(
   }
 
   if (node.kind === 'host') {
-    let resolved = resolveNodeMixProps(node, vParent, frame, scheduler)
+    let resolved = resolveNodeMixProps(
+      node,
+      vParent,
+      frame,
+      scheduler,
+      context.idScope.createMixinId,
+    )
 
     if (isHeadHostNode(node)) {
       let targetHead = getDocumentHead(domParent)
@@ -1425,14 +1448,8 @@ function diffComponent(
   let { frame } = context
   let handle: ComponentHandle
   if (curr === null) {
-    let componentId = vParent.kind === 'root' ? vParent._pendingHydrationComponentId : undefined
-    if (componentId) {
-      if (vParent.kind === 'root') vParent._pendingHydrationComponentId = undefined
-    } else {
-      componentId = `c${++idCounter}`
-    }
     handle = createComponent({
-      id: componentId,
+      id: context.idScope.createComponentId(),
       frame,
       type: next.type,
       getContext: (type: ElementFunction) => findContextFromAncestry(vParent, type),
@@ -2133,7 +2150,14 @@ function reclaimPersistedMixinNode(
 
   let prevProps = getHostProps(persistedNode)
   let childInputs = newNode._children
-  let resolved = resolveNodeMixProps(newNode, vParent, frame, scheduler, persistedNode._mixState)
+  let resolved = resolveNodeMixProps(
+    newNode,
+    vParent,
+    frame,
+    scheduler,
+    context.idScope.createMixinId,
+    persistedNode._mixState,
+  )
   let committed = commitRetainedHostNode(persistedNode, newNode, vParent, svg, resolved)
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
     dispatchMixinBeforeUpdate(committed._mixState)
