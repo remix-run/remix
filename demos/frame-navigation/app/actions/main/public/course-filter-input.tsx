@@ -9,7 +9,7 @@ export const CourseFilterInput = clientEntry(
     return () => {
       if (handle.props.query !== serverQuery) {
         serverQuery = handle.props.query
-        query = serverQuery
+        if (query.trim() !== serverQuery) query = serverQuery
       }
       return (
         <input

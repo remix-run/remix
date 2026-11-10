@@ -181,6 +181,28 @@ describe('frame navigation', () => {
     }
   })
 
+  it('retains spaces between course search terms when normalized results arrive', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.courses.href())
+    await waitForNavigationRuntime(page)
+    await page.locator('#courses-heading').waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+
+    let search = page.getByLabel('Filter courses')
+    await search.fill('web ')
+    await page.getByText('2 courses matching “web”', { exact: true }).waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+    assert.equal(await search.inputValue(), 'web ')
+
+    await page.keyboard.press('a')
+    await page.getByText('1 course matching “web a”', { exact: true }).waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+    assert.equal(await search.inputValue(), 'web a')
+    assert.equal(new URL(page.url()).searchParams.get('q'), 'web a')
+  })
+
   it('retains search focus while filtering courses with replace navigations as you type', async (t) => {
     let server = await createTestServer(router.fetch)
     let page = await t.serve(server)
