@@ -260,13 +260,13 @@ describe('dialog', () => {
   })
 
   it('restores page scrolling when an open dialog is unmounted', async () => {
-    let overflow = document.documentElement.style.overflow
+    let overflow = getComputedStyle(document.documentElement).overflow
     let { root } = render(<Example defaultOpen />)
     await settle(root)
-    expect(document.documentElement.style.overflow).toBe('hidden')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
     root.render(null)
     await settle(root)
-    expect(document.documentElement.style.overflow).toBe(overflow)
+    expect(getComputedStyle(document.documentElement).overflow).toBe(overflow)
     expect(document.querySelector('[data-open]')).toBe(null)
   })
 
@@ -296,7 +296,7 @@ describe('dialog', () => {
     await settle(root)
     expect(get<HTMLElement>(container, '[data-parent]').matches('[data-open]')).toBe(true)
     expect(get<HTMLElement>(container, '[data-child]').matches('[data-open]')).toBe(false)
-    expect(document.documentElement.style.overflow).toBe('hidden')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
     expect(document.activeElement?.id).toBe('child-trigger')
   })
 
@@ -451,7 +451,7 @@ describe('dialog', () => {
   })
 
   it('allows non-modal focus and pointer interaction without locking the page', async () => {
-    let overflow = document.documentElement.style.overflow
+    let overflow = getComputedStyle(document.documentElement).overflow
     let { container, root } = render(
       <>
         <button id="outside">Outside</button>
@@ -463,7 +463,7 @@ describe('dialog', () => {
     outside.focus()
     expect(document.activeElement).toBe(outside)
     expect(outside.closest('[inert]')).toBe(null)
-    expect(document.documentElement.style.overflow).toBe(overflow)
+    expect(getComputedStyle(document.documentElement).overflow).toBe(overflow)
     expect(get(container, '[role="dialog"]').hasAttribute('aria-modal')).toBe(false)
   })
 
@@ -483,7 +483,7 @@ describe('dialog', () => {
   })
 
   it('traps focus without blocking background pointers or page scrolling', async () => {
-    let overflow = document.documentElement.style.overflow
+    let overflow = getComputedStyle(document.documentElement).overflow
     let { container, root } = render(
       <>
         <button id="outside">Outside</button>
@@ -493,7 +493,7 @@ describe('dialog', () => {
     await settle(root)
     let outside = get<HTMLButtonElement>(container, '#outside')
     expect(outside.closest('[inert]')).toBe(null)
-    expect(document.documentElement.style.overflow).toBe(overflow)
+    expect(getComputedStyle(document.documentElement).overflow).toBe(overflow)
     outside.focus()
     expect(get(container, '[role="dialog"]').contains(document.activeElement)).toBe(true)
   })
@@ -758,7 +758,7 @@ describe('dialog', () => {
 
   it('closes nested popovers and releases their scroll lock when the parent closes', async () => {
     let api: dialog.DialogRef | undefined
-    let overflow = document.documentElement.style.overflow
+    let overflow = getComputedStyle(document.documentElement).overflow
     function NestedPopover(handle: Handle) {
       let open = false
       return () => (
@@ -810,7 +810,7 @@ describe('dialog', () => {
     api?.close()
     await settle(root)
     expect(container.querySelectorAll('[data-open]').length).toBe(0)
-    expect(document.documentElement.style.overflow).toBe(overflow)
+    expect(getComputedStyle(document.documentElement).overflow).toBe(overflow)
     api?.show()
     await settle(root)
     expect(get(container, '[data-popup]').matches('[data-open]')).toBe(false)
@@ -818,7 +818,7 @@ describe('dialog', () => {
 
   it('keeps a detached popup in the dialog focus boundary and closes it with its owner', async () => {
     let api: dialog.DialogRef | undefined
-    let overflow = document.documentElement.style.overflow
+    let overflow = getComputedStyle(document.documentElement).overflow
     let { container, root } = render(
       <DetachedPopup
         ref={(value) => {
@@ -835,7 +835,7 @@ describe('dialog', () => {
     api?.close()
     await settle(root)
     expect(container.querySelectorAll('[data-open]').length).toBe(0)
-    expect(document.documentElement.style.overflow).toBe(overflow)
+    expect(getComputedStyle(document.documentElement).overflow).toBe(overflow)
     expect(document.activeElement?.id).toBe('trigger')
   })
 
@@ -928,7 +928,7 @@ describe('dialog', () => {
   it('releases a dialog when its containing popover closes', async () => {
     let api: dialog.DialogRef | undefined
     let closePopover = () => {}
-    let overflow = document.documentElement.style.overflow
+    let overflow = getComputedStyle(document.documentElement).overflow
     function DialogInPopover(handle: Handle) {
       let open = true
       closePopover = () => {
@@ -963,14 +963,14 @@ describe('dialog', () => {
     closePopover()
     await settle(root)
     expect(container.querySelectorAll('[data-open]').length).toBe(0)
-    expect(document.documentElement.style.overflow).toBe(overflow)
+    expect(getComputedStyle(document.documentElement).overflow).toBe(overflow)
     expect(api?.open).toBe(false)
   })
 
   it('releases a controlled dialog even when its owner refuses an ancestor-close request', async () => {
     let closePopover = () => {}
     let rerender = () => {}
-    let overflow = document.documentElement.style.overflow
+    let overflow = getComputedStyle(document.documentElement).overflow
     function ControlledInPopover(handle: Handle) {
       let open = true
       closePopover = () => {
@@ -1001,7 +1001,7 @@ describe('dialog', () => {
     rerender()
     await settle(root)
     expect(container.querySelectorAll('[data-open]').length).toBe(0)
-    expect(document.documentElement.style.overflow).toBe(overflow)
+    expect(getComputedStyle(document.documentElement).overflow).toBe(overflow)
     expect(container.querySelector('[inert]')).toBe(null)
   })
 

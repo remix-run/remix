@@ -280,7 +280,7 @@ describe('popover', () => {
     await settle(root)
     expect(surface.hasAttribute('data-open')).toBe(true)
     expect(surface.getAttribute('data-state')).toBe('closed')
-    expect(document.documentElement.style.overflow).toBe('hidden')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
     click(anchor)
     await settle(root)
     animation.finish()
@@ -343,14 +343,14 @@ describe('popover', () => {
     expect(surface.style.position).toBe('fixed')
     expect(surface.style.top).toBe('70px')
     expect(surface.style.left).toBe('100px')
-    expect(document.documentElement.style.overflow).toBe('hidden')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
     expect(document.body.style.position).toBe('')
     expect(document.body.style.overflow).toBe('')
 
     click(insideClose)
     await settle(root)
 
-    expect(document.documentElement.style.overflow).toBe('')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
   })
 
   it('moves focus to the registered show target when opening', async () => {
@@ -574,7 +574,7 @@ describe('popover', () => {
 
     expect(isPopoverOpen(parent)).toBe(false)
     expect(isPopoverOpen(child)).toBe(false)
-    expect(document.documentElement.style.overflow).toBe('')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
     expect(requests).toEqual([undefined])
 
     click(getById(container, 'open-parent'))
@@ -586,7 +586,7 @@ describe('popover', () => {
     expect(isPopoverOpen(child)).toBe(true)
     click(getById(container, 'close-parent'))
     await settle(root)
-    expect(document.documentElement.style.overflow).toBe('')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
     expect(requests).toEqual([undefined, undefined])
   })
 
@@ -599,7 +599,7 @@ describe('popover', () => {
 
     root.render(null)
     root.flush()
-    expect(document.documentElement.style.overflow).toBe('')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
     expect(key(document.body, 'Escape').defaultPrevented).toBe(false)
   })
 
@@ -684,6 +684,6 @@ describe('popover', () => {
     key(document.body, 'Escape')
 
     expect(onHide).not.toHaveBeenCalled()
-    expect(document.documentElement.style.overflow).toBe('')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
   })
 })
