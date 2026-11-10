@@ -92,6 +92,17 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// Dispatches scroll events from `target`, as a scroll in progress does, until stopped. These tests
+// keep real timers: `readIntersection()` waits for the browser's intersection notifications with
+// a real task, which fake timers would stall.
+function keepScrolling(t: TestContext, target: EventTarget = document): () => void {
+  target.dispatchEvent(new Event('scroll'))
+  let interval = setInterval(() => target.dispatchEvent(new Event('scroll')), 50)
+  let stop = () => clearInterval(interval)
+  t.after(stop)
+  return stop
+}
+
 function stubConnection(
   t: TestContext,
   connection: { saveData?: boolean; effectiveType?: string } | undefined,
@@ -791,6 +802,88 @@ describe('prefetch', () => {
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       await wait(150)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
+    })
+
+    it('waits for a scroll to stop before prefetching links that entered view during it', async (t) => {
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt', false)
+      let scroller = document.createElement('div')
+      document.body.append(scroller)
+      startTestPrefetching(t, prefetchFrame)
+      expect(await readIntersection(anchor)).toBe(false)
+
+      let stopScrolling = keepScrolling(t, scroller)
+      anchor.style.top = '0px'
+      expect(await readIntersection(anchor)).toBe(true)
+      await wait(200)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      stopScrolling()
+      await wait(200)
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
+    it('skips links that leave view before a scroll stops and prefetches them on a later entry', async (t) => {
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/passed', false)
+      startTestPrefetching(t, prefetchFrame)
+      expect(await readIntersection(anchor)).toBe(false)
+
+      let stopScrolling = keepScrolling(t)
+      anchor.style.top = '0px'
+      expect(await readIntersection(anchor)).toBe(true)
+      anchor.style.top = `${innerHeight + 100}px`
+      expect(await readIntersection(anchor)).toBe(false)
+      stopScrolling()
+      await wait(200)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      anchor.style.top = '0px'
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
+    it('checks connection settings when a scroll stops and allows a later entry', async (t) => {
+      let connection = { saveData: false }
+      stubConnection(t, connection)
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt', false)
+      startTestPrefetching(t, prefetchFrame)
+      expect(await readIntersection(anchor)).toBe(false)
+
+      let stopScrolling = keepScrolling(t)
+      anchor.style.top = '0px'
+      expect(await readIntersection(anchor)).toBe(true)
+      connection.saveData = true
+      stopScrolling()
+      await wait(200)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      connection.saveData = false
+      anchor.style.top = `${innerHeight + 100}px`
+      expect(await readIntersection(anchor)).toBe(false)
+      anchor.style.top = '0px'
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
+    it('does not prefetch links waiting for a scroll to stop once disposed', async (t) => {
+      let prefetchFrame = mock.fn()
+      let controller = new AbortController()
+      let anchor = createViewportLink('/products/shirt', false)
+      startPrefetching(controller.signal, prefetchFrame)
+      expect(await readIntersection(anchor)).toBe(false)
+
+      let stopScrolling = keepScrolling(t)
+      anchor.style.top = '0px'
+      expect(await readIntersection(anchor)).toBe(true)
+      stopScrolling()
+      controller.abort()
+      await wait(200)
+      expect(prefetchFrame).not.toHaveBeenCalled()
     })
 
     it('stops observing existing and newly inserted links when disposed', async () => {
