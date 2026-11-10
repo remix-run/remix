@@ -11,6 +11,7 @@ export {
   beforeAll,
   afterAll,
 } from './lib/framework.ts'
+export type { TestFn, TestMeta } from './lib/framework.ts'
 export { mock } from './lib/mock.ts'
 export type { MockMethodOptions, MockTracker } from './lib/mock.ts'
 export type { MockProperty, MockPropertyAccess, MockPropertyContext } from './lib/mock-property.ts'

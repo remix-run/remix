@@ -19,16 +19,20 @@ import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import {
   createFrameRuntime,
+  disposeClientEntryBoundary,
+  getClientEntryBoundaryOwner,
   getFrameRuntime,
   getSharedFrameRuntime,
   isFrameRuntime,
-  NamedFrameRegistry,
+  setClientEntryBoundaryOwner,
+  type ClientEntryIdentity,
   type FrameMountState,
   type FrameNavigationOptions,
   type FrameReloadResult,
   type FrameReloadTransition,
   type FrameRuntime,
   type LoadModule,
+  type NamedFrameRegistry,
   type PendingClientEntries,
   type ReconciliationTracker,
   type ResolveFrame,
@@ -50,6 +54,7 @@ import {
   diffElementAttributes,
   diffNodes,
   findEndMarker,
+  getClientEntryKey,
   getFrameId,
   isCommentNode,
   isFrameEnd,
@@ -57,22 +62,14 @@ import {
   isHydrationEnd,
   isHydrationStart,
 } from './diff-dom.ts'
-import { createStyleManager, type StyleManager } from '../style/index.ts'
+import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './spa-response.ts'
-import {
-  disposeClientEntryBoundary,
-  getClientEntryBoundaryOwner,
-  getClientEntryKey,
-  setClientEntryBoundaryOwner,
-  type ClientEntryIdentity,
-} from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
-import { parseDocument, removeNoscriptContents } from './parse-document.ts'
 import { ESCAPED_OBJECT } from './props-serialization.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
@@ -102,29 +99,19 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-let appTopFrame: FrameInstance
-export const appNamedFrames = new NamedFrameRegistry()
+// Frames of the most recently started run() runtime, for module-level helpers that have no
+// runtime reference: targeted prefetching and updateUrl().
+let appFrames: Handle['frames'] | undefined
 
-export function setAppTopFrame(frame: FrameInstance): void {
-  appTopFrame = frame
-}
-
-export function getAppTopFrame(): FrameInstance {
-  return appTopFrame
+export function setAppFrames(frames: Handle['frames']): () => void {
+  appFrames = frames
+  return () => {
+    if (appFrames === frames) appFrames = undefined
+  }
 }
 
 export function setTopFrameSource(src: string): void {
-  if (appTopFrame) appTopFrame.handle.src = src
-}
-
-/**
- * Returns the top-level frame handle for the running application.
- *
- * @returns The top-level frame handle.
- */
-export function getTopFrame(): FrameHandle {
-  if (!appTopFrame) throw new Error('app runtime not initialized')
-  return appTopFrame.handle
+  if (appFrames) appFrames.top.src = src
 }
 
 /**
@@ -134,7 +121,7 @@ export function getTopFrame(): FrameHandle {
  * @returns The matching frame handle, or `undefined` when not found.
  */
 export function getNamedFrame(name: string): FrameHandle | undefined {
-  return appNamedFrames.get(name)
+  return appFrames?.get(name)
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
@@ -2273,5 +2260,41 @@ export function reloadCurrentDocument(doc: Document): void {
     navigation.reload({ info: documentReloadInfo })
   } else {
     doc.location.reload()
+  }
+}
+
+function parseDocument(doc: Document, content: string): HTMLElement {
+  let parsed = doc.implementation.createHTMLDocument()
+  parsed.open()
+
+  // Let the native parser find the opening html element and its attributes. The
+  // delimiters only split input chunks; the parser handles comments and quoted >.
+  let offset = 0
+  while (!parsed.documentElement && offset < content.length) {
+    let end = content.indexOf('>', offset)
+    let next = end === -1 ? content.length : end + 1
+    parsed.write(content.slice(offset, next))
+    offset = next
+  }
+
+  let root = parsed.documentElement
+  root?.remove()
+  parsed.close()
+  root ??= parsed.documentElement
+  invariant(root, 'Missing document element')
+  root.remove()
+
+  // Fragment parsing keeps scripts inert. Keep the root disconnected so styles
+  // cannot enforce CSP before their response nonces have been rewritten.
+  root.innerHTML = content
+  removeNoscriptContents(root)
+  return root
+}
+
+function removeNoscriptContents(source: ParentNode): void {
+  // Frame navigation requires scripting; fallback markup must stay inactive.
+  for (let noscript of source.querySelectorAll('noscript')) noscript.textContent = ''
+  for (let template of source.querySelectorAll('template')) {
+    removeNoscriptContents(template.content)
   }
 }

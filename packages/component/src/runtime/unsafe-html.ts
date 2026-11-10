@@ -40,9 +40,8 @@ export function unsafeHTML(value: string): UnsafeHTML {
  *
  * @param value The value to inspect.
  * @returns The raw HTML string, or `undefined` when the value is not an `UnsafeHTML` instance.
- * @internal
  */
-export function readUnsafeHTML(value: unknown): string | undefined {
+function readUnsafeHTML(value: unknown): string | undefined {
   return value instanceof UnsafeHTMLValue ? UnsafeHTMLValue.read(value) : undefined
 }
 
