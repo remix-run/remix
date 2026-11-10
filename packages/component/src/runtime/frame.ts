@@ -2263,7 +2263,7 @@ export function reloadCurrentDocument(doc: Document): void {
   }
 }
 
-export function parseDocument(doc: Document, content: string): HTMLElement {
+function parseDocument(doc: Document, content: string): HTMLElement {
   let parsed = doc.implementation.createHTMLDocument()
   parsed.open()
 

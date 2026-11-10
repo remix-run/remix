@@ -227,6 +227,93 @@ describe('frames', () => {
     }
   })
 
+  it('applies the html, head, and body of a reloaded document with native HTML parsing', async (t) => {
+    let html = document.documentElement
+    t.after(() => {
+      for (let name of ['lang', 'dir', 'data-label', 'data-other']) html.removeAttribute(name)
+    })
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        '<!doctype html><!-- <html lang="wrong"> -->' +
+        '<HTML lang="fr" dir="rtl" data-label="A > B &amp; 🐈" data-other=unquoted>' +
+        '<head><title>Next &amp; last</title>' +
+        '<script type="application/json">{"html":"<style>p{color:red}</style>","doctype":"<!doctype html>"}</script></head>' +
+        '<body class="next"><table><tr><td>Cell</td></tr></table></body></html>',
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+
+    expect(html.lang).toBe('fr')
+    expect(html.dir).toBe('rtl')
+    expect(html.dataset.label).toBe('A > B & 🐈')
+    expect(html.dataset.other).toBe('unquoted')
+    expect(document.title).toBe('Next & last')
+    expect(JSON.parse(document.querySelector('script')?.textContent ?? '{}')).toEqual({
+      html: '<style>p{color:red}</style>',
+      doctype: '<!doctype html>',
+    })
+    expect(document.body.className).toBe('next')
+    expect(document.querySelector('table > tbody > tr > td')?.textContent).toBe('Cell')
+  })
+
+  it('supplies omitted elements of a reloaded document', async (t) => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+    let frame = createTestFrame(document, {
+      resolveFrame: () => '<!doctype html><title>Next</title><p>Hello</p>',
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+
+    expect(document.title).toBe('Next')
+    expect(document.querySelector('body > p')?.textContent).toBe('Hello')
+    expect(document.querySelector('main')).toBe(null)
+  })
+
+  it('does not run scripts or keep noscript content from a reloaded document', async (t) => {
+    let constructions = 0
+    let name = `reload-probe-${crypto.randomUUID()}`
+    customElements.define(
+      name,
+      class extends HTMLElement {
+        constructor() {
+          super()
+          constructions++
+        }
+      },
+    )
+    let key = `reload-script-${crypto.randomUUID()}`
+    t.after(() => Reflect.deleteProperty(globalThis, key))
+    let script = `globalThis[${JSON.stringify(key)}] = true`
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        '<!doctype html><html><head><noscript><style>p { color: red }</style></noscript></head><body>' +
+        `<${name}></${name}><script>${script}</script>` +
+        `<template><script>${script}</script><noscript><img src="/unused"></noscript></template>` +
+        '</body></html>',
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+    expect(constructions).toBe(1)
+    expect(Reflect.get(globalThis, key)).toBe(undefined)
+    expect(document.querySelector('noscript')?.textContent).toBe('')
+    expect(document.querySelector('template')?.content.querySelector('noscript')?.textContent).toBe(
+      '',
+    )
+  })
+
   it('reloads the document when frame HTML is a string without a flush marker', async () => {
     document.documentElement.innerHTML =
       '<head><title>Initial</title></head><body><main>Initial</main></body>'

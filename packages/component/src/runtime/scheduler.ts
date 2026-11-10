@@ -300,8 +300,7 @@ type SelectionInformation = {
   selectionRange: { start: number; end: number } | null
 }
 
-export function createDocumentState(_doc?: Document) {
-  let doc = _doc ?? document
+function createDocumentState(doc: Document) {
 
   function getActiveElement(): Element | null {
     return doc.activeElement || doc.body

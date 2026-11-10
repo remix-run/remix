@@ -247,7 +247,7 @@ function normalizeSvgAttributeName(name: string): string {
   return svgCamelToKebab(name)
 }
 
-export function normalizeSvgAttribute(name: string): {
+function normalizeSvgAttribute(name: string): {
   ns?: string
   attr: string
 } {
