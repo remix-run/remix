@@ -13,6 +13,12 @@ import { camelToKebab } from '../../style/style.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
+// Style objects can be mutated in place between renders, so each element records the style values
+// it last applied and diffs against those instead of the previous props' object. Object values
+// (arrays) are recorded as their CSS string so in-place mutations of them are seen too.
+const APPLIED_STYLE = Symbol('AppliedStyle')
+type StyledElement = Element & { [APPLIED_STYLE]?: Record<string, unknown> }
+
 function isFrameworkProp(name: string): boolean {
   return (
     name === 'children' ||
@@ -94,19 +100,17 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
     if (nextValue == null) continue
 
     let prevValue = curr[name]
-    if (prevValue === nextValue) continue
-
     if (name === 'style' && isStyleObject(nextValue)) {
-      if (isStyleObject(prevValue)) {
-        patchStyleObject(dom, prevValue, nextValue)
-      } else {
-        dom.removeAttribute('style')
-        patchStyleObject(dom, undefined, nextValue)
-      }
+      let isPatch = isStyleObject(prevValue)
+      if (!isPatch) dom.removeAttribute('style')
+      patchStyleObject(dom, nextValue, isPatch)
       continue
     }
 
-    patchHostProp(dom, name, nextValue, isSvg)
+    let sameObject = prevValue === nextValue
+    if (sameObject && typeof nextValue !== 'object') continue
+
+    patchHostProp(dom, name, nextValue, isSvg, sameObject)
   }
 
   if (dom instanceof HTMLSelectElement && wasMultiple !== dom.multiple && next.value == null) {
@@ -114,7 +118,15 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
   }
 }
 
-function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolean): void {
+// Objects can be mutated in place, so a prop that receives the same object is compared with what
+// the DOM holds instead of skipped.
+function patchHostProp(
+  dom: Element,
+  name: string,
+  value: unknown,
+  isSvg: boolean,
+  sameObject = false,
+): void {
   let { ns, attr } = normalizeAttributeName(name, isSvg)
   value = sanitizeUrlAttribute(dom.localName, attr, value)
 
@@ -124,7 +136,7 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
   }
 
   if (attr === 'style' && isStyleObject(value)) {
-    patchStyleObject(dom, undefined, value)
+    patchStyleObject(dom, value, false)
     return
   }
 
@@ -134,6 +146,8 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
   }
 
   if (canUseProperty(dom, name, isSvg, attr)) {
+    // Reassigning some properties, like `srcObject`, reloads the element even for the same object.
+    if (sameObject && dom[name] === value) return
     try {
       dom[name] = value == null ? '' : value
       return
@@ -147,6 +161,7 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
   let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
   if (value != null && (stringify || value)) {
     let attrValue = stringify ? String(value) : ''
+    if (sameObject && dom.getAttribute(attr) === attrValue) return
     if (ns) dom.setAttributeNS(ns, attr, attrValue)
     else dom.setAttribute(attr, attrValue)
   } else {
@@ -159,37 +174,40 @@ function isStyleObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function patchStyleObject(
-  dom: Element,
-  curr: Record<string, unknown> | undefined,
-  next: Record<string, unknown>,
-): void {
+function patchStyleObject(dom: Element, next: Record<string, unknown>, isPatch: boolean): void {
   if (!(dom instanceof HTMLElement || dom instanceof SVGElement)) {
-    dom.setAttribute('style', serializeStyleObject(next))
+    let cssText = serializeStyleObject(next)
+    if (dom.getAttribute('style') !== cssText) dom.setAttribute('style', cssText)
     return
   }
 
   let style = dom.style
-  if (curr) {
-    for (let name in curr) {
-      let nextCssValue = styleValueToCss(name, next[name])
-      if (nextCssValue !== undefined) continue
-
-      let prevCssValue = styleValueToCss(name, curr[name])
-      if (prevCssValue === undefined) continue
-
+  let applied = isPatch ? (dom as StyledElement)[APPLIED_STYLE] : undefined
+  if (applied) {
+    for (let name in applied) {
+      let value = next[name]
+      if (value === applied[name] || styleValueToCss(name, value) !== undefined) continue
       style.removeProperty(camelToKebab(name))
+      delete applied[name]
     }
+  } else {
+    applied = {}
+    ;(dom as StyledElement)[APPLIED_STYLE] = applied
   }
 
   for (let name in next) {
-    let nextCssValue = styleValueToCss(name, next[name])
-    if (nextCssValue === undefined) continue
+    let value = next[name]
+    if (value === applied[name]) continue
 
-    let prevCssValue = curr ? styleValueToCss(name, curr[name]) : undefined
-    if (prevCssValue === nextCssValue) continue
-
-    style.setProperty(camelToKebab(name), nextCssValue)
+    let cssValue = styleValueToCss(name, value)
+    if (cssValue === undefined) continue
+    if (typeof value === 'object') {
+      if (applied[name] === cssValue) continue
+      applied[name] = cssValue
+    } else {
+      applied[name] = value
+    }
+    style.setProperty(camelToKebab(name), cssValue)
   }
 }
 
