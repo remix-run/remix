@@ -8,7 +8,6 @@ import {
   type SearchFunction,
   type PartialTailSearchFunction,
 } from './buffer-search.ts'
-import { readStream } from './read-stream.ts'
 
 /**
  * The base class for errors thrown by the multipart parser.
@@ -177,12 +176,34 @@ export async function* parseMultipartStream(
     maxTotalSize: options.maxTotalSize,
   })
 
-  for await (let chunk of readStream(stream)) {
-    if (chunk.length === 0) {
-      continue // No data to parse
-    }
+  // Not all browsers support ReadableStream async iteration yet, so read with a reader
+  let reader = stream.getReader()
+  let streamDone = false
+  let cancelReason: unknown
 
-    yield* parser.write(chunk)
+  try {
+    while (true) {
+      let result = await reader.read()
+      if (result.done) {
+        streamDone = true
+        break
+      }
+
+      if (result.value.length === 0) {
+        continue // No data to parse
+      }
+
+      yield* parser.write(result.value)
+    }
+  } catch (error) {
+    cancelReason = error
+    throw error
+  } finally {
+    // Cancel the stream when parsing stops before it ends, with the error if there is one. Don't
+    // wait for the cancel to settle: a tee'd stream, such as the body of a cloned request, doesn't
+    // settle it until every branch is cancelled.
+    if (!streamDone) reader.cancel(cancelReason).catch(() => {})
+    reader.releaseLock()
   }
 
   parser.finish()

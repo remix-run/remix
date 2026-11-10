@@ -184,7 +184,9 @@ async function readUrlEncodedBody(
       validateUrlEncodedPartCount(++partCount, maxParts)
     }
   } catch (error) {
-    await reader.cancel(error).catch(() => {})
+    // Don't wait for the cancel to settle. A tee'd stream, such as the body of a cloned request,
+    // doesn't settle its cancel until every branch is cancelled.
+    reader.cancel(error).catch(() => {})
     throw error
   } finally {
     reader.releaseLock()

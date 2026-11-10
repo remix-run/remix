@@ -133,25 +133,63 @@ describe('parseFormData', () => {
     )
   })
 
-  it('cancels an unfinished urlencoded body when a limit is exceeded', async () => {
-    let cancelled = false
+  // The body never closes, like a client that is still sending
+  function createUnfinishedRequest(contentType: string, chunk: string) {
+    let cancelReasons: unknown[] = []
     let request = new Request('https://remix.run', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      // Never closes, like a client still sending
+      headers: { 'Content-Type': contentType },
       body: new ReadableStream<Uint8Array>({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode('tag=red&tag=green&tag=blue'))
+          controller.enqueue(new TextEncoder().encode(chunk))
         },
-        cancel() {
-          cancelled = true
+        cancel(reason) {
+          cancelReasons.push(reason)
         },
       }),
       duplex: 'half',
     } as RequestInit & { duplex: 'half' })
 
+    return { request, cancelReasons }
+  }
+
+  it('cancels an unfinished urlencoded body with the error when a limit is exceeded', async () => {
+    let { request, cancelReasons } = createUnfinishedRequest(
+      'application/x-www-form-urlencoded',
+      'tag=red&tag=green&tag=blue',
+    )
+
     await assert.rejects(() => parseFormData(request, { maxParts: 1 }), MaxPartsExceededError)
-    assert.equal(cancelled, true)
+    assert.equal(cancelReasons.length, 1)
+    assert.ok(cancelReasons[0] instanceof MaxPartsExceededError)
+  })
+
+  it('rejects a cloned urlencoded request when a limit is exceeded', async () => {
+    let { request } = createUnfinishedRequest(
+      'application/x-www-form-urlencoded',
+      'tag=red&tag=green&tag=blue',
+    )
+    // Cloning tees the body, and cancelling one branch doesn't settle until the clone's is too
+    request.clone()
+
+    await assert.rejects(() => parseFormData(request, { maxParts: 1 }), MaxPartsExceededError)
+  })
+
+  it('cancels an unfinished multipart body when maxFiles is exceeded', async () => {
+    let { request, cancelReasons } = createUnfinishedRequest(
+      'multipart/form-data; boundary=ExampleBoundary',
+      [
+        '--ExampleBoundary',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        '',
+        'hello',
+        '--ExampleBoundary',
+        '',
+      ].join('\r\n'),
+    )
+
+    await assert.rejects(() => parseFormData(request, { maxFiles: 0 }), MaxFilesExceededError)
+    assert.equal(cancelReasons.length, 1)
   })
 
   it('preserves repeated fields for mixed-case urlencoded media types', async () => {

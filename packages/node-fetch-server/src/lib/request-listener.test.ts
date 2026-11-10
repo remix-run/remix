@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict'
 import type { TestContext } from 'node:test'
 import { describe, it } from 'node:test'
-import type * as http from 'node:http'
+import * as http from 'node:http'
+import type * as net from 'node:net'
 import * as stream from 'node:stream'
 
 import { type ClientAddress, type FetchHandler } from './fetch-handler.ts'
@@ -806,6 +807,64 @@ describe('createRequestListener', () => {
     await cancelled
 
     assert.equal(req.isPaused(), true)
+  })
+
+  it('stops reading the request off the socket when the handler cancels the body', async (t) => {
+    let bodySize = 32 * 1024 * 1024
+    let server = http.createServer(
+      createRequestListener(async (request) => {
+        let reader = request.body!.getReader()
+        await reader.read()
+        await reader.cancel()
+        // Give a request that is still flowing time to keep reading
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        return new Response('Payload Too Large', { status: 413 })
+      }),
+    )
+    let serverSocket: net.Socket | undefined
+    server.on('connection', (socket) => {
+      serverSocket = socket
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    t.after(() => {
+      server.closeAllConnections()
+      server.close()
+    })
+    let { port } = server.address() as net.AddressInfo
+
+    let status = await new Promise<number | undefined>((resolve, reject) => {
+      let request = http.request({
+        host: '127.0.0.1',
+        port,
+        method: 'POST',
+        headers: { 'Content-Length': String(bodySize) },
+      })
+      request.on('response', (response) => {
+        response.resume()
+        resolve(response.statusCode)
+      })
+      request.on('error', reject)
+
+      let chunk = Buffer.alloc(64 * 1024)
+      let written = 0
+      function write() {
+        while (written < bodySize) {
+          written += chunk.length
+          if (!request.write(chunk)) {
+            request.once('drain', write)
+            return
+          }
+        }
+        request.end()
+      }
+      write()
+    })
+
+    assert.equal(status, 413)
+    assert.ok(
+      serverSocket!.bytesRead < bodySize / 2,
+      `Expected the server to stop reading the body, but it read ${serverSocket!.bytesRead} bytes`,
+    )
   })
 
   it('uses the `:authority` header to construct the URL for http/2 requests', async () => {
