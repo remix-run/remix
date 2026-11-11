@@ -515,14 +515,31 @@ export class TarParser {
     this.#reset()
 
     let results: Promise<void>[] = []
-    // Rejects with the first handler rejection, so reading stops without waiting for more input
-    let handlerFailure = Promise.withResolvers<never>()
-    handlerFailure.promise.catch(() => {})
+    let handlerFailure: { error: unknown } | undefined
+    let rejectPendingRead: ((error: unknown) => void) | undefined
 
     function handleEntry(entry: TarEntry): void {
       let result = Promise.resolve(handler(entry))
-      result.catch(handlerFailure.reject)
+      result.catch((error: unknown) => {
+        handlerFailure ??= { error }
+        rejectPendingRead?.(error)
+      })
       results.push(result)
+    }
+
+    // Waits for a read, but rejects with the first handler rejection as soon as it happens, so
+    // parsing doesn't wait for more input. Each read gets its own promise rather than racing one
+    // shared promise, which would hold on to every settled read and its chunk until parsing ends.
+    async function readUnlessHandlerFailed<result>(read: Promise<result>): Promise<result> {
+      let result = await new Promise<result>((resolve, reject) => {
+        rejectPendingRead = reject
+        read.then(resolve, reject)
+        if (handlerFailure !== undefined) reject(handlerFailure.error)
+      })
+      rejectPendingRead = undefined
+      // A handler can reject after the read settles but before this function resumes
+      if (handlerFailure !== undefined) throw handlerFailure.error
+      return result
     }
 
     try {
@@ -530,7 +547,7 @@ export class TarParser {
         let reader = archive.getReader()
         try {
           while (true) {
-            let result = await Promise.race([handlerFailure.promise, reader.read()])
+            let result = await readUnlessHandlerFailed(reader.read())
             if (result.done) break
             this.#write(result.value, handleEntry)
           }
@@ -544,18 +561,27 @@ export class TarParser {
         }
       } else if (isAsyncIterable(archive)) {
         let iterator = archive[Symbol.asyncIterator]()
+        let iteratorFailed = false
         try {
           while (true) {
-            let result = await Promise.race([handlerFailure.promise, iterator.next()])
+            let next = new Promise<IteratorResult<Uint8Array>>((resolve) =>
+              resolve(iterator.next()),
+            ).catch((error: unknown) => {
+              iteratorFailed = true
+              throw error
+            })
+            let result = await readUnlessHandlerFailed(next)
             if (result.done) break
             this.#write(result.value, handleEntry)
           }
         } catch (error) {
-          // Close the iterator like `for await` does, but don't wait for it: an async generator
-          // doesn't return until a pending `next()` settles.
-          Promise.resolve()
-            .then(() => iterator.return?.())
-            .catch(() => {})
+          // Close the iterator like `for await` does, unless the iterator itself failed. Don't
+          // wait for it: an async generator doesn't return until a pending `next()` settles.
+          if (!iteratorFailed) {
+            Promise.resolve()
+              .then(() => iterator.return?.())
+              .catch(() => {})
+          }
           throw error
         }
       } else if (archive instanceof Uint8Array) {

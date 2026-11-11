@@ -50,7 +50,7 @@ await parseTar(archive, async (entry) => {
 })
 ```
 
-`parseTar()` rejects with the first error, whether a handler rejects or parsing fails. With a stream or async iterable archive, it stops reading at that error, so handlers aren't called for later entries, and a `ReadableStream` archive is cancelled so its source, such as a `fetch()` response, can stop sending.
+`parseTar()` rejects with the first error, whether a handler rejects or parsing fails. With a stream or async iterable archive, it stops reading at that error, so handlers aren't called for entries in chunks read after it. A `ReadableStream` archive is cancelled so its source, such as a `fetch()` response, can stop sending. An async iterable archive is closed with `return()` once any read it is waiting on settles. With a `Uint8Array` or other sync archive, every entry reaches its handler before a rejection is seen.
 
 ## Path Policy
 

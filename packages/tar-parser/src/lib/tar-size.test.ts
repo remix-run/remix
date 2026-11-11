@@ -1,3 +1,6 @@
+import * as v8 from 'node:v8'
+import * as vm from 'node:vm'
+
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
@@ -1194,5 +1197,53 @@ describe('tar early exit', () => {
       entries < 10,
       `Expected parsing to stop at the first rejection, got ${entries} entries`,
     )
+  })
+})
+
+describe('tar memory', () => {
+  it('releases archive chunks once their bytes are delivered', async () => {
+    let gc: () => void
+    if ('Bun' in globalThis) {
+      gc = () => (globalThis as { Bun?: { gc(force: boolean): void } }).Bun!.gc(true)
+    } else {
+      v8.setFlagsFromString('--expose-gc')
+      gc = vm.runInNewContext('gc')
+    }
+
+    let chunkSize = 1024
+    let chunkCount = 64
+    let trackedChunks: WeakRef<Uint8Array>[] = []
+    let collected = -1
+    let index = 0
+    let source = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        if (index === 0) {
+          controller.enqueue(createHeader(chunkSize * chunkCount))
+        } else if (index <= chunkCount) {
+          if (index === chunkCount) {
+            // WeakRef targets stay alive until the current task ends
+            await new Promise((resolve) => setTimeout(resolve, 0))
+            gc()
+            collected = trackedChunks.filter((ref) => ref.deref() === undefined).length
+          }
+          let chunk = new Uint8Array(chunkSize)
+          if (index <= 20) trackedChunks.push(new WeakRef(chunk))
+          controller.enqueue(chunk)
+        } else {
+          controller.enqueue(new Uint8Array(1024))
+          controller.close()
+        }
+        index++
+      },
+    })
+
+    await parseTar(source, async (entry) => {
+      for await (let _ of entry.body) {
+        // Discard the content
+      }
+    })
+
+    // Conservative stack scanning can keep the odd chunk alive, so don't require every one
+    assert.ok(collected >= 15, `Expected early chunks to be collected, but ${collected} of 20 were`)
   })
 })
