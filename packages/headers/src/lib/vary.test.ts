@@ -12,41 +12,48 @@ describe('Vary', () => {
 
   it('initializes with a string', () => {
     let header = new Vary('Accept-Encoding, Accept-Language')
-    assert.deepEqual(header.headerNames, ['accept-encoding', 'accept-language'])
+    assert.deepEqual(header.headerNames, ['Accept-Encoding', 'Accept-Language'])
     assert.equal(header.size, 2)
   })
 
   it('initializes with an array', () => {
     let header = new Vary(['Accept-Encoding', 'Accept-Language'])
-    assert.deepEqual(header.headerNames, ['accept-encoding', 'accept-language'])
+    assert.deepEqual(header.headerNames, ['Accept-Encoding', 'Accept-Language'])
     assert.equal(header.size, 2)
   })
 
   it('initializes with an object', () => {
     let header = new Vary({ headerNames: ['Accept-Encoding', 'Accept-Language'] })
-    assert.deepEqual(header.headerNames, ['accept-encoding', 'accept-language'])
+    assert.deepEqual(header.headerNames, ['Accept-Encoding', 'Accept-Language'])
     assert.equal(header.size, 2)
   })
 
   it('initializes with another Vary', () => {
     let header = new Vary(new Vary('Accept-Encoding, Accept-Language'))
-    assert.deepEqual(header.headerNames, ['accept-encoding', 'accept-language'])
+    assert.deepEqual(header.headerNames, ['Accept-Encoding', 'Accept-Language'])
     assert.equal(header.size, 2)
   })
 
   it('handles whitespace in initial value', () => {
     let header = new Vary('  Accept-Encoding  ,   Accept-Language  ')
-    assert.deepEqual(header.headerNames, ['accept-encoding', 'accept-language'])
+    assert.deepEqual(header.headerNames, ['Accept-Encoding', 'Accept-Language'])
   })
 
-  it('normalizes header names to lowercase', () => {
+  it('keeps header names as given', () => {
     let header = new Vary(['Accept-Encoding', 'ACCEPT-LANGUAGE', 'user-agent'])
-    assert.deepEqual(header.headerNames, ['accept-encoding', 'accept-language', 'user-agent'])
+    assert.deepEqual(header.headerNames, ['Accept-Encoding', 'ACCEPT-LANGUAGE', 'user-agent'])
+    assert.equal(header.toString(), 'Accept-Encoding, ACCEPT-LANGUAGE, user-agent')
+  })
+
+  it('keeps the first spelling of a repeated header name', () => {
+    let header = new Vary('Cookie, cookie, Accept-Encoding')
+    assert.deepEqual(header.headerNames, ['Cookie', 'Accept-Encoding'])
+    assert.equal(header.toString(), 'Cookie, Accept-Encoding')
   })
 
   it('gets all header names', () => {
     let header = new Vary('Accept-Encoding, Accept-Language')
-    assert.deepEqual(header.headerNames, ['accept-encoding', 'accept-language'])
+    assert.deepEqual(header.headerNames, ['Accept-Encoding', 'Accept-Language'])
   })
 
   it('returns size', () => {
@@ -75,7 +82,7 @@ describe('Vary', () => {
     header.add('Accept-Language')
     header.add('User-Agent')
     assert.equal(header.size, 3)
-    assert.deepEqual(header.headerNames, ['accept-encoding', 'accept-language', 'user-agent'])
+    assert.deepEqual(header.headerNames, ['Accept-Encoding', 'Accept-Language', 'User-Agent'])
   })
 
   it('does not add duplicate header names (case-insensitive)', () => {
@@ -84,7 +91,7 @@ describe('Vary', () => {
     header.add('ACCEPT-ENCODING')
     header.add('Accept-Encoding')
     assert.equal(header.size, 1)
-    assert.deepEqual(header.headerNames, ['accept-encoding'])
+    assert.deepEqual(header.headerNames, ['Accept-Encoding'])
   })
 
   it('handles empty header names', () => {
@@ -99,7 +106,7 @@ describe('Vary', () => {
     header.delete('Accept-Encoding')
     assert.equal(header.has('Accept-Encoding'), false)
     assert.equal(header.size, 1)
-    assert.deepEqual(header.headerNames, ['accept-language'])
+    assert.deepEqual(header.headerNames, ['Accept-Language'])
   })
 
   it('deletes a header name (case-insensitive)', () => {
@@ -116,9 +123,15 @@ describe('Vary', () => {
     assert.deepEqual(header.headerNames, [])
   })
 
+  it('replaces header names before and after * with *', () => {
+    let header = new Vary('Cookie, *, Accept-Encoding')
+    assert.deepEqual(header.headerNames, ['*'])
+    assert.equal(header.toString(), '*')
+  })
+
   it('converts to string', () => {
     let header = new Vary(['Accept-Encoding', 'Accept-Language', 'User-Agent'])
-    assert.equal(header.toString(), 'accept-encoding, accept-language, user-agent')
+    assert.equal(header.toString(), 'Accept-Encoding, Accept-Language, User-Agent')
   })
 
   it('converts empty header to empty string', () => {
@@ -132,7 +145,7 @@ describe('Vary', () => {
     for (let name of header) {
       names.push(name)
     }
-    assert.deepEqual(names, ['accept-encoding', 'accept-language', 'user-agent'])
+    assert.deepEqual(names, ['Accept-Encoding', 'Accept-Language', 'User-Agent'])
   })
 
   it('supports forEach', () => {
@@ -141,7 +154,7 @@ describe('Vary', () => {
     header.forEach((name) => {
       names.push(name)
     })
-    assert.deepEqual(names, ['accept-encoding', 'accept-language'])
+    assert.deepEqual(names, ['Accept-Encoding', 'Accept-Language'])
   })
 })
 

@@ -6,6 +6,8 @@ import { createRoot, on, type Handle, type Props, type RemixNode } from '@remix-
 import * as popover from '@remix-run/ui/popover'
 import { onSelectChange, SelectChangeEvent } from './select.tsx'
 import * as select from './select.tsx'
+import { holdAnimationFrames } from './test/animation-frames.ts'
+import { settle } from './test/settle.ts'
 
 const flashDurationMs = 60
 const defaultLabelSwapDelayMs = 75
@@ -129,25 +131,6 @@ function key(target: HTMLElement, key: string) {
   target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }))
 }
 
-async function settle(root: ReturnType<typeof createRoot>) {
-  await Promise.resolve()
-  root.flush()
-  await Promise.resolve()
-  root.flush()
-}
-
-async function settleFrames(root: ReturnType<typeof createRoot>) {
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resolve()
-      })
-    })
-  })
-
-  await settle(root)
-}
-
 async function openSelect(
   container: HTMLElement,
   root: ReturnType<typeof createRoot>,
@@ -161,14 +144,12 @@ async function openSelect(
     click(trigger)
   }
 
-  await settleFrames(root)
+  await settle(root)
 }
 
 async function finishCloseTransition(surface: HTMLElement) {
-  await Promise.resolve()
   surface.dispatchEvent(new TransitionEvent('transitionrun', { propertyName: 'opacity' }))
   surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }))
-  await Promise.resolve()
 }
 
 let timers!: FakeTimers
@@ -300,6 +281,7 @@ describe('Select', () => {
   })
 
   it('supports a custom label swap delay on the primitive context', async (t) => {
+    holdAnimationFrames(t)
     let { container, root } = renderApp(
       <TestSelect
         defaultLabel="Select a framework"
@@ -364,7 +346,7 @@ describe('Select', () => {
     expect(document.activeElement).toBe(list)
 
     key(list, 'Escape')
-    await settleFrames(root)
+    await settle(root)
 
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     expect(surface.matches(':popover-open')).toBe(false)
@@ -422,7 +404,7 @@ describe('Select', () => {
 
     outerTrigger.focus()
     click(outerTrigger)
-    await settleFrames(root)
+    await settle(root)
 
     expect(document.activeElement).toBe(selectTrigger)
   })
@@ -502,7 +484,7 @@ describe('Select', () => {
     expect(staging.getAttribute('data-highlighted')).toBe('true')
 
     key(list, 'Escape')
-    await settleFrames(root)
+    await settle(root)
 
     expect(document.activeElement).toBe(trigger)
 

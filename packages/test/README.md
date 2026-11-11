@@ -289,8 +289,8 @@ interface TestContext {
     ): MockFunction
   }
 
-  // Replace global timer functions with controllable fakes
-  useFakeTimers(): FakeTimers
+  // Replace global timers, Date, and performance.now() with controllable fakes
+  useFakeTimers(options?: { now?: number | Date }): FakeTimers
 
   // E2E only: connect a running test server to a Playwright Page
   serve(server: { baseUrl: string; close(): Promise<void> }): Promise<Page>
@@ -388,7 +388,13 @@ beforeEach(
 
 #### Fake Timers
 
-`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes that are automatically restored after the test. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, `setImmediate`, and their clear functions), `AbortSignal.timeout()`, `Date`, and `performance.now()` with controllable fakes that are automatically restored after the test. Time only moves when the test advances the clock. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+
+Calling `t.useFakeTimers()` again restores the previous clock, discards its pending timers, and starts a new clock with the supplied options. After a successful `restore()`, calling it again has no effect.
+
+Timers are restored synchronously when the test aborts, or before registered cleanup callbacks run when the test finishes. Calling `t.useFakeTimers()` after either event throws, so unfinished async work cannot install a clock in a later test. Runner timeouts keep using real timers while fake timers are active.
+
+Only one fake clock can be active in a global environment. An overlapping clock from another test context is rejected before globals change. Failed installation rolls back earlier replacements. Restoration preserves the original property descriptors and attempts every replacement even after a failure; it reports the errors, and another `restore()` call retries failed properties.
 
 ```ts
 it('debounces a callback', (t) => {
@@ -404,10 +410,27 @@ it('debounces a callback', (t) => {
 })
 ```
 
-| Method        | Description                                                                 |
-| ------------- | --------------------------------------------------------------------------- |
-| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
-| `restore()`   | Restore the original timer functions (called automatically after each test) |
+| Method             | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `advance(ms)`      | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `advanceAsync(ms)` | Like `advance`, but lets promise continuations settle between timer firings |
+| `restore()`        | Restore the original timer functions (called automatically after each test) |
+
+`Date.now()` and `new Date()` start at the Unix epoch (`0`), like Node's mock timers, and `performance.now()` starts at `0`. Vitest and Jest start at the real current time instead; a fixed start keeps tests from depending on when they run. Pass `now` to start the fake `Date` at a specific time. `new Date(value)`, `Date.parse()`, `Date.UTC()`, and `instanceof Date` keep working as usual.
+
+```ts
+it('expires a session after one hour', (t) => {
+  let timers = t.useFakeTimers({ now: new Date('2030-01-01T00:00:00Z') })
+  let session = createSession()
+
+  timers.advance(60 * 60 * 1000)
+  assert.equal(session.isExpired(), true)
+})
+```
+
+Immediates fire on the next advance, including `advance(0)`, and signals from `AbortSignal.timeout(ms)` abort with a `TimeoutError` once the clock reaches `ms`. Timers created before `t.useFakeTimers()` stay real, and the clear functions still cancel them. In Node, fake timers return handles that support `ref()`, `unref()`, `hasRef()`, and `refresh()`.
+
+Fake `AbortSignal.timeout(ms)` uses Node's validation in every runtime: `ms` must be a number and an integer from `0` through `4294967295`. Other types throw a `TypeError`; invalid numbers throw a `RangeError` synchronously.
 
 #### E2E
 

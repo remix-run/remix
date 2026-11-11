@@ -22,7 +22,6 @@ describe('Live examples in the docs site', () => {
       else process.env.NODE_ENV = nodeEnv
     })
     let page = await t.serve(await createTestServer(router.fetch))
-    page.setDefaultTimeout(5000)
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     page.on('console', (message) => {
@@ -98,7 +97,6 @@ describe('Live examples in the docs site', () => {
   })
   it('opens API details with the keyboard and follows type links without JavaScript', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
-    page.setDefaultTimeout(5000)
     await page.route('**/*', (route) =>
       route.request().resourceType() === 'script' ? route.abort() : route.continue(),
     )
@@ -199,7 +197,6 @@ describe('Live examples in the docs site', () => {
 
   it('navigates to API parts and shares entries below the sticky navigation', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
-    page.setDefaultTimeout(5000)
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.route('**/*', (route) =>
       route.request().resourceType() === 'script' ? route.abort() : route.continue(),

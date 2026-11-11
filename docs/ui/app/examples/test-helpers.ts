@@ -6,8 +6,6 @@ import type { TestContext } from 'remix/test'
 export async function mount(t: TestContext, node: RemixNode): Promise<ReturnType<typeof render>> {
   let result = render(node)
   t.after(result.cleanup)
-  await frame()
-  await frame()
   return result
 }
 
@@ -60,9 +58,7 @@ export async function waitFor(check: () => void): Promise<void> {
 }
 
 export async function finishAnimations(target: Element): Promise<void> {
-  await frame()
-  await Promise.all(target.getAnimations({ subtree: true }).map((animation) => animation.finished))
-  await frame()
+  await finish(target.getAnimations({ subtree: true }))
 }
 
 export async function expectAnimation(target: Element, property = 'transform'): Promise<void> {
@@ -76,6 +72,11 @@ export async function expectAnimation(target: Element, property = 'transform'): 
     })
     assert.ok(animations.length > 0, `${property} animates on the expected element`)
   })
+  await finish(animations)
+}
+
+// Jump to the end instead of waiting out real durations so slow runners can't change the outcome.
+async function finish(animations: Animation[]): Promise<void> {
+  for (let animation of animations) animation.finish()
   await Promise.all(animations.map((animation) => animation.finished))
-  await frame()
 }
