@@ -6,6 +6,7 @@ import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { Frame, getNamedFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
+import type { ResolveFrame } from '../runtime/frame-runtime.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
@@ -186,6 +187,87 @@ function waitForIntersection(element: Element): Promise<void> {
     })
     observer.observe(element)
   })
+}
+
+async function setupPreservedLazyFrame(
+  t: TestContext,
+  resolveFrame: ResolveFrame,
+  options: { serverRendered?: boolean } = {},
+) {
+  let reveal: (() => Promise<AbortSignal>) | undefined
+  let version = 0
+  let Entry = clientEntry(
+    '/lazy-entry.js#Entry',
+    function Entry(handle: Handle<{ version: number }>) {
+      let visible = options.serverRendered ?? false
+      reveal = () => {
+        visible = true
+        return handle.update()
+      }
+      return () => (
+        <section id="lazy-host" mix={css({ position: 'fixed', top: '100000px', left: 0 })}>
+          <p>{handle.props.version}</p>
+          {visible ? (
+            <Frame name="lazy" src="/lazy" loading="lazy" fallback={<p id="waiting">Waiting</p>} />
+          ) : null}
+        </section>
+      )
+    },
+  )
+  let renderPage = () => renderDocumentContent(<Entry version={version++} />)
+  document.documentElement.innerHTML = await renderPage()
+  let app = run({
+    loadModule: () => Entry,
+    resolveFrame(src, options) {
+      return src === '/lazy' ? resolveFrame(src, options) : renderPage()
+    },
+  })
+  t.after(() => app.dispose())
+  await app.ready()
+  invariant(reveal)
+  await reveal()
+  let host = document.getElementById('lazy-host')
+  let frame = app.frames.get('lazy')
+  invariant(host && frame)
+  await waitForIntersection(host)
+  return { app, frame, host }
+}
+
+async function assertPendingLazyFrameRestart(
+  t: TestContext,
+  options: { serverRendered?: boolean } = {},
+) {
+  let requests: Array<{
+    signal: AbortSignal
+    response: ReturnType<typeof Promise.withResolvers<string>>
+  }> = []
+  let { app, host } = await setupPreservedLazyFrame(
+    t,
+    (_src, options) => {
+      invariant(options?.signal)
+      let response = Promise.withResolvers<string>()
+      requests.push({ signal: options.signal, response })
+      return response.promise
+    },
+    options,
+  )
+  host.style.top = '0'
+  await waitForIntersection(host)
+  expect(requests.length).toBe(1)
+
+  await app.frames.top.reload({ src: '/page' })
+  expect(requests.length).toBe(2)
+  expect(requests[0]?.signal.aborted).toBe(true)
+  expect(requests[1]?.signal.aborted).toBe(false)
+  requests[0]?.response.resolve('<p id="stale-lazy-content">Stale</p>')
+  await waitForIntersection(host)
+  expect(document.getElementById('stale-lazy-content')).toBe(null)
+  expect(document.getElementById('waiting')?.textContent).toBe('Waiting')
+
+  let loaded = waitForElement('#fresh-lazy-content')
+  requests[1]?.response.resolve('<p id="fresh-lazy-content">Fresh</p>')
+  await loaded
+  expect(document.getElementById('fresh-lazy-content')?.textContent).toBe('Fresh')
 }
 
 function createDisposableEntry(id: string, onDispose: () => void) {
@@ -5534,6 +5616,53 @@ describe('run', () => {
     expect(disconnect).toHaveBeenCalledTimes(1)
   })
 
+  it('loads a lazy frame after its fallback component replaces the observed element', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let fallback: Handle | undefined
+    let swapped = false
+    function Fallback(handle: Handle) {
+      fallback = handle
+      return () => (swapped ? <section>Waiting</section> : <p>Waiting</p>)
+    }
+    let resolveFrame = mock.fn(() => '<p id="updated-fallback-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/lazy" loading="lazy" fallback={<Fallback />} />)
+    root.flush()
+    await waitForIntersection(container)
+    invariant(fallback)
+    swapped = true
+    await fallback.update()
+    expect(container.querySelector('section')?.textContent).toBe('Waiting')
+    expect(resolveFrame).not.toHaveBeenCalled()
+
+    container.style.top = '0'
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('#updated-fallback-content')?.textContent).toBe('Loaded')
+  })
+
+  it('pairs inherited reload events while a client-created lazy frame stays deferred', async (t) => {
+    let resolveFrame = mock.fn(() => '<p>Unexpected load</p>')
+    let { app, frame } = await setupPreservedLazyFrame(t, resolveFrame)
+    let events: string[] = []
+    frame.addEventListener('reloadStart', () => events.push('start'))
+    frame.addEventListener('reloadComplete', () => events.push('complete'))
+
+    await app.frames.top.reload({ src: '/page' })
+    expect(resolveFrame).not.toHaveBeenCalled()
+    expect(document.getElementById('waiting')?.textContent).toBe('Waiting')
+    expect(events).toEqual(['start', 'complete'])
+  })
+
+  it('restarts a pending client-created lazy frame during an ancestor reload', async (t) => {
+    await assertPendingLazyFrameRestart(t)
+  })
+
+  it('restarts a pending hydrated lazy frame during an ancestor reload', async (t) => {
+    await assertPendingLazyFrameRestart(t, { serverRendered: true })
+  })
+
   it('updates a deferred client frame source and loads when changed to eager', async (t) => {
     container.style.cssText = 'position:fixed;top:100000px;left:0'
     let requests: string[] = []
@@ -5679,9 +5808,11 @@ describe('run', () => {
     })
     let Entry = clientEntry('/entry.js#Entry', function Entry(handle: Handle) {
       update = () => void handle.update()
-      return () => <Frame src="/lazy" loading={loading} fallback={<Fallback />} />
+      return () => <Frame src="/lazy" loading={loading} fallback={<Frame src="/fallback" />} />
     })
-    document.body.innerHTML = await drain(renderToStream(<Entry />))
+    document.body.innerHTML = await drain(
+      renderToStream(<Entry />, { resolveFrame: () => renderToStream(<Fallback />) }),
+    )
     let requested = Promise.withResolvers<void>()
     let module = Promise.withResolvers<typeof Fallback>()
     let resolveFrame = mock.fn(() => '<p id="eager-content">Loaded</p>')
@@ -5725,10 +5856,11 @@ describe('run', () => {
   })
 
   it('keeps lazy frames deferred through ancestor reloads and preserves loaded content', async (t) => {
+    let fallback: RemixNode = 'Waiting'
     let renderPage = () =>
       renderDocumentContent(
         <section id="lazy-host" mix={css({ position: 'fixed', top: '100000px', left: 0 })}>
-          <Frame name="lazy" src="/lazy" loading="lazy" fallback="Waiting" />
+          <Frame name="lazy" src="/lazy" loading="lazy" fallback={fallback} />
         </section>,
       )
     document.documentElement.innerHTML = await renderPage()
@@ -5747,6 +5879,7 @@ describe('run', () => {
     let events: string[] = []
     frame.addEventListener('reloadStart', () => events.push('start'))
     frame.addEventListener('reloadComplete', () => events.push('complete'))
+    fallback = <span>Waiting</span>
     await app.frames.top.reload({ src: '/page' })
     let host = document.getElementById('lazy-host')
     invariant(host)
