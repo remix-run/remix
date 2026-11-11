@@ -16,32 +16,32 @@ export interface VaryInit {
  * The `Vary` header indicates which request headers affect whether a cached
  * response can be used, enabling proper content negotiation caching.
  *
- * Header names are normalized to lowercase for case-insensitive comparison.
+ * Header names are compared case-insensitively and keep the spelling they were first given.
  *
  * [MDN `Vary` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary)
  *
  * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.vary)
  */
 export class Vary implements HeaderValue, VaryInit, Iterable<string> {
-  #set!: Set<string>
+  #map!: Map<string, string>
 
   constructor(init?: string | string[] | VaryInit) {
     if (init) return Vary.from(init)
-    this.#set = new Set()
+    this.#map = new Map()
   }
 
   /**
-   * An array of the header names (normalized to lowercase).
+   * An array of the header names, spelled as first given.
    */
   get headerNames(): string[] {
-    return Array.from(this.#set)
+    return Array.from(this.#map.values())
   }
 
   /**
    * The number of header names in the Vary header.
    */
   get size(): number {
-    return this.#set.size
+    return this.#map.size
   }
 
   /**
@@ -50,18 +50,19 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
    * @returns `true` if the header name is present, `false` otherwise.
    */
   has(headerName: string): boolean {
-    return this.#set.has(headerName.toLowerCase())
+    return this.#map.has(headerName.toLowerCase())
   }
 
   /**
    * Adds a header name to the Vary header (case-insensitive).
-   * If the header name already exists, this is a no-op.
+   * If the header name already exists, this is a no-op and the first spelling is kept.
    * @param headerName The header name to add.
    */
   add(headerName: string): void {
     let trimmed = headerName.trim()
     if (trimmed) {
-      this.#set.add(trimmed.toLowerCase())
+      let key = trimmed.toLowerCase()
+      if (!this.#map.has(key)) this.#map.set(key, trimmed)
     }
   }
 
@@ -70,14 +71,14 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
    * @param headerName The header name to remove.
    */
   delete(headerName: string): void {
-    this.#set.delete(headerName.toLowerCase())
+    this.#map.delete(headerName.toLowerCase())
   }
 
   /**
    * Removes all header names from the Vary header.
    */
   clear(): void {
-    this.#set.clear()
+    this.#map.clear()
   }
 
   /**
@@ -92,12 +93,12 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
   }
 
   /**
-   * Iterates over normalized header names in the `Vary` set.
+   * Iterates over the header names in the `Vary` set, spelled as first given.
    *
    * @returns An iterator of header names.
    */
   [Symbol.iterator](): IterableIterator<string> {
-    return this.#set.values()
+    return this.#map.values()
   }
 
   /**
@@ -106,7 +107,7 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
    * @returns The header value as a comma-separated string.
    */
   toString(): string {
-    return Array.from(this.#set).join(', ')
+    return Array.from(this.#map.values()).join(', ')
   }
 
   /**
@@ -121,24 +122,15 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
     if (value !== null) {
       if (typeof value === 'string') {
         for (let headerName of value.split(',')) {
-          let trimmed = headerName.trim()
-          if (trimmed) {
-            header.#set.add(trimmed.toLowerCase())
-          }
+          header.add(headerName)
         }
       } else if (Array.isArray(value)) {
         for (let headerName of value) {
-          let trimmed = headerName.trim()
-          if (trimmed) {
-            header.#set.add(trimmed.toLowerCase())
-          }
+          header.add(headerName)
         }
       } else {
         for (let headerName of value.headerNames) {
-          let trimmed = headerName.trim()
-          if (trimmed) {
-            header.#set.add(trimmed.toLowerCase())
-          }
+          header.add(headerName)
         }
       }
     }

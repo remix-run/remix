@@ -69,7 +69,7 @@ headers.apply({
 })
 
 headers.get('Content-Type') // 'application/json'
-headers.get('Vary') // 'accept-encoding, accept-language'
+headers.get('Vary') // 'Accept-Encoding, Accept-Language'
 headers.getSetCookie() // ['session=abc', 'theme=dark']
 ```
 
@@ -637,7 +637,7 @@ import { Vary } from 'remix/headers'
 // Parse from headers
 let vary = Vary.from(response.headers.get('Vary'))
 
-vary.headerNames // ['accept-encoding', 'accept-language']
+vary.headerNames // ['Accept-Encoding', 'Accept-Language'] (spelled as first given)
 vary.has('Accept-Encoding') // true (case-insensitive)
 vary.size // 2
 
