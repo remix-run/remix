@@ -651,6 +651,9 @@ new Vary('Accept-Encoding, Accept-Language')
 new Vary(['Accept-Encoding', 'Accept-Language'])
 new Vary({ headerNames: ['Accept-Encoding', 'Accept-Language'] })
 
+// `*` means the response varies on everything, so it replaces other names
+new Vary('Cookie, *').toString() // '*'
+
 // Use class for type safety when setting Headers values
 // via Vary's `.toString()` method
 let responseHeaders = new Headers({
