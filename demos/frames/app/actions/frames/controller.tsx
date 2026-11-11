@@ -14,7 +14,7 @@ import { searchUnitedStates } from '../../utils/us-states.ts'
 export const framesController = createController(routes.frames, {
   actions: {
     async sidebar(context) {
-      await delay(400)
+      await latency.wait(400)
 
       return render(
         context,
@@ -32,7 +32,7 @@ export const framesController = createController(routes.frames, {
     },
 
     async activity(context) {
-      await delay(2000)
+      await latency.wait(2000)
 
       return render(
         context,
@@ -50,7 +50,7 @@ export const framesController = createController(routes.frames, {
     },
 
     async activityDetail(context) {
-      await delay(600)
+      await latency.wait(600)
 
       return render(
         context,
@@ -69,7 +69,7 @@ export const framesController = createController(routes.frames, {
     },
 
     async clientFrameExample(context) {
-      await delay(500)
+      await latency.wait(500)
 
       return render(
         context,
@@ -91,7 +91,7 @@ export const framesController = createController(routes.frames, {
     },
 
     async clientFrameExampleNested(context) {
-      await delay(350)
+      await latency.wait(350)
 
       return render(
         context,
@@ -105,7 +105,7 @@ export const framesController = createController(routes.frames, {
     },
 
     async clientMountedOuter(context) {
-      await delay(350)
+      await latency.wait(350)
 
       return render(
         context,
@@ -128,7 +128,7 @@ export const framesController = createController(routes.frames, {
     },
 
     async clientMountedNested(context) {
-      await delay(2200)
+      await latency.wait(2200)
 
       return render(
         context,
@@ -143,7 +143,7 @@ export const framesController = createController(routes.frames, {
     },
 
     async rootReloadEntryFrame(context) {
-      await delay(700)
+      await latency.wait(700)
 
       return render(
         context,
@@ -158,7 +158,7 @@ export const framesController = createController(routes.frames, {
     },
 
     async time(context) {
-      await delay(1200)
+      await latency.wait(1200)
 
       let now = new Date()
 
@@ -187,13 +187,13 @@ export const framesController = createController(routes.frames, {
     },
 
     async reloadScope(context) {
-      await delay(700)
+      await latency.wait(700)
 
       return renderReloadScopeFrame(context, 'Non-blocking frame server time')
     },
 
     async reloadScopeBlocking(context) {
-      await delay(500)
+      await latency.wait(500)
 
       return renderReloadScopeFrame(context, 'Blocking frame server time')
     },
@@ -207,7 +207,7 @@ export const framesController = createController(routes.frames, {
     },
 
     async stateSearchResults(context) {
-      await delay(300)
+      await latency.wait(300)
 
       let query = (context.url.searchParams.get('query') ?? '').trim()
       let matches = searchUnitedStates(query)
@@ -257,10 +257,6 @@ export const latency = {
   wait(ms: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, ms))
   },
-}
-
-function delay(ms: number) {
-  return latency.wait(ms)
 }
 
 const listStyle = css({ margin: 0, paddingLeft: 18, color: '#e9eefc' })
