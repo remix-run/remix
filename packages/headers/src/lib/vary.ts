@@ -31,7 +31,7 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
   }
 
   /**
-   * An array of the header names, spelled as first given.
+   * An array of the header names.
    */
   get headerNames(): string[] {
     return Array.from(this.#map.values())
@@ -55,7 +55,7 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
 
   /**
    * Adds a header name to the Vary header (case-insensitive).
-   * If the header name already exists, this is a no-op and the first spelling is kept.
+   * If the header name already exists, this is a no-op.
    * @param headerName The header name to add.
    */
   add(headerName: string): void {
@@ -93,7 +93,7 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
   }
 
   /**
-   * Iterates over the header names in the `Vary` set, spelled as first given.
+   * Iterates over the header names in the `Vary` set.
    *
    * @returns An iterator of header names.
    */
@@ -107,7 +107,7 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
    * @returns The header value as a comma-separated string.
    */
   toString(): string {
-    return Array.from(this.#map.values()).join(', ')
+    return this.headerNames.join(', ')
   }
 
   /**
@@ -118,21 +118,16 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
    */
   static from(value: string | string[] | VaryInit | null): Vary {
     let header = new Vary()
+    if (value === null) return header
 
-    if (value !== null) {
-      if (typeof value === 'string') {
-        for (let headerName of value.split(',')) {
-          header.add(headerName)
-        }
-      } else if (Array.isArray(value)) {
-        for (let headerName of value) {
-          header.add(headerName)
-        }
-      } else {
-        for (let headerName of value.headerNames) {
-          header.add(headerName)
-        }
-      }
+    let headerNames =
+      typeof value === 'string'
+        ? value.split(',')
+        : Array.isArray(value)
+          ? value
+          : value.headerNames
+    for (let headerName of headerNames) {
+      header.add(headerName)
     }
 
     return header

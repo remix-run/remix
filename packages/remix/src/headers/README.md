@@ -637,7 +637,7 @@ import { Vary } from 'remix/headers'
 // Parse from headers
 let vary = Vary.from(response.headers.get('Vary'))
 
-vary.headerNames // ['Accept-Encoding', 'Accept-Language'] (spelled as first given)
+vary.headerNames // ['Accept-Encoding', 'Accept-Language']
 vary.has('Accept-Encoding') // true (case-insensitive)
 vary.size // 2
 

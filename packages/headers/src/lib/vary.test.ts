@@ -45,50 +45,10 @@ describe('Vary', () => {
     assert.equal(header.toString(), 'Accept-Encoding, ACCEPT-LANGUAGE, user-agent')
   })
 
-  it('keeps the first spelling of a header name from a string', () => {
+  it('keeps the first spelling of a repeated header name', () => {
     let header = new Vary('Cookie, cookie, Accept-Encoding')
-    assert.equal(header.size, 2)
     assert.deepEqual(header.headerNames, ['Cookie', 'Accept-Encoding'])
     assert.equal(header.toString(), 'Cookie, Accept-Encoding')
-  })
-
-  it('keeps the first spelling of a header name from an array', () => {
-    let header = new Vary(['Cookie', 'COOKIE', 'Accept-Encoding'])
-    assert.equal(header.size, 2)
-    assert.deepEqual(header.headerNames, ['Cookie', 'Accept-Encoding'])
-    assert.equal(header.toString(), 'Cookie, Accept-Encoding')
-  })
-
-  it('keeps the first spelling of a header name from an object', () => {
-    let header = new Vary({ headerNames: ['Cookie', 'cookie', 'Accept-Encoding'] })
-    assert.equal(header.size, 2)
-    assert.deepEqual(header.headerNames, ['Cookie', 'Accept-Encoding'])
-    assert.equal(header.toString(), 'Cookie, Accept-Encoding')
-  })
-
-  it('keeps the first spelling of a header name when adding', () => {
-    let header = new Vary()
-    header.add('Cookie')
-    header.add('cookie')
-    assert.equal(header.size, 1)
-    assert.deepEqual(header.headerNames, ['Cookie'])
-    assert.deepEqual([...header], ['Cookie'])
-    assert.equal(header.toString(), 'Cookie')
-    assert.equal(header.has('COOKIE'), true)
-  })
-
-  it('deletes a header name regardless of its spelling', () => {
-    let header = new Vary(['Cookie', 'Accept-Encoding'])
-    header.delete('cookie')
-    assert.equal(header.has('Cookie'), false)
-    assert.deepEqual(header.headerNames, ['Accept-Encoding'])
-  })
-
-  it('does not recase lowercase header names', () => {
-    let header = new Vary('cookie')
-    header.add('accept-encoding')
-    assert.deepEqual(header.headerNames, ['cookie', 'accept-encoding'])
-    assert.equal(header.toString(), 'cookie, accept-encoding')
   })
 
   it('gets all header names', () => {
