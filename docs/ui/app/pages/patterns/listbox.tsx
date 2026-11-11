@@ -27,7 +27,6 @@ const anatomyCode = await highlightSource(`
     activeValue={activeValue}
     onSelect={onSelect}
     onHighlight={onHighlight}
-    flashSelection
   >
     <div
       tabIndex={0}
@@ -53,7 +52,6 @@ const anatomyCode = await highlightSource(`
             '&[aria-selected="false"]': {},
             '&[aria-disabled="true"]': {},
             '&[aria-disabled="false"]': {},
-            '&[data-listbox-flash]': {},
           }),
         ]}
       >
@@ -85,21 +83,6 @@ const stateCode = await highlightSource(`
   </listbox.Context>
 `)
 
-const settlingCode = await highlightSource(`
-  <listbox.Context
-    value={value}
-    activeValue={activeValue}
-    onSelect={onSelect}
-    onHighlight={onHighlight}
-    flashSelection
-    onSelectSettled={(value, option) => {
-      saveSelection(value, option?.label)
-    }}
-  >
-    {/* List and options */}
-  </listbox.Context>
-`)
-
 const imperativeCode = await highlightSource(`
   let control: listbox.ListboxRef | undefined
 
@@ -114,7 +97,7 @@ const imperativeCode = await highlightSource(`
   </listbox.Context>
 
   control?.highlightSearchMatch('design')
-  await control?.selectActive()
+  control?.selectActive()
 `)
 
 const accessibilityCode = await highlightSource(`
@@ -135,10 +118,7 @@ const typeDefinitions = {
 
   children?: RemixNode
   ref?: (ref: ListboxRef) => void
-  flashSelection?: boolean
-  selectionFlashAttribute?: string
   onSelect: (value: ListboxValue, option?: ListboxRegisteredOption) => void
-  onSelectSettled?: (value: ListboxValue, option?: ListboxRegisteredOption) => void | Promise<void>
   onHighlight: (value: ListboxValue, option?: ListboxRegisteredOption) => void
 }`,
   ),
@@ -148,7 +128,7 @@ const typeDefinitions = {
   activeValue: ListboxValue
 
   registerOption: (option: ListboxRegisteredOption) => void
-  select: (value: ListboxValue) => Promise<void>
+  select: (value: ListboxValue) => void
   highlight: (value: ListboxValue) => void
   highlightSearchMatch: (text: string) => void
   navigate: (direction: 'next' | 'previous' | 'first' | 'last') => void
@@ -183,8 +163,8 @@ const typeDefinitions = {
   navigateNext: () => void
   navigatePrevious: () => void
   scrollActiveOptionIntoView: () => void
-  select: (value: ListboxValue) => Promise<void>
-  selectActive: () => Promise<void>
+  select: (value: ListboxValue) => void
+  selectActive: () => void
 }`,
   ),
 }
@@ -229,15 +209,6 @@ export default function ListboxPage(handle: Handle<PageProps>) {
           moving the highlight leaves selection unchanged until an option is chosen.
         </p>
         <Example id="grouped-example" example={groupedExample} />
-      </Section>
-      <Section id="settling" title="Selection feedback">
-        <p>
-          <code>flashSelection</code> adds a temporary attribute to the selected option.{' '}
-          <code>onSelect</code> runs immediately. <code>onSelectSettled</code> runs after the fixed
-          60 ms flash when enabled, or immediately after <code>onSelect</code> otherwise. Highlight
-          and selection requests are ignored until <code>onSelectSettled</code> finishes.
-        </p>
-        <CodeBlock html={settlingCode} />
       </Section>
       <Section id="imperative" title="Imperative access">
         <p>
@@ -291,22 +262,6 @@ export default function ListboxPage(handle: Handle<PageProps>) {
             required
           >
             Receives the requested highlight and registered option.
-          </ApiEntry>
-          <ApiEntry
-            name="onSelectSettled"
-            type="(value: ListboxValue, option?: ListboxRegisteredOption) => void | Promise<void>"
-          >
-            Runs after optional selection feedback.
-          </ApiEntry>
-          <ApiEntry name="flashSelection" type="boolean" defaultValue="false">
-            Adds a 60 millisecond selection flash.
-          </ApiEntry>
-          <ApiEntry
-            name="selectionFlashAttribute"
-            type="string"
-            defaultValue="'data-listbox-flash'"
-          >
-            Attribute applied during selection feedback.
           </ApiEntry>
           <ApiEntry name="ref" type="(ref: ListboxRef) => void">
             Receives live option metadata and operations.
@@ -401,12 +356,10 @@ export default function ListboxPage(handle: Handle<PageProps>) {
             Scrolls the highlighted option into view.
           </ApiEntry>
           <ApiEntry name="select" type="(value: ListboxValue) => Promise<void>">
-            Requests selection of an enabled visible option and waits for settling. Null and unknown
-            values are ignored.
+            Requests selection of an enabled visible option. Null and unknown values are ignored.
           </ApiEntry>
-          <ApiEntry name="selectActive" type="() => Promise<void>">
-            Selects the current highlight and waits for settling. Disabled and hidden options are
-            ignored.
+          <ApiEntry name="selectActive" type="() => void">
+            Selects the current highlight. Disabled and hidden options are ignored.
           </ApiEntry>
         </ApiTable>
         <h3 id="provided-context-reference">Provided context</h3>
@@ -418,7 +371,7 @@ export default function ListboxPage(handle: Handle<PageProps>) {
             Current highlighted value.
           </ApiEntry>
           <ApiEntry name="select" type="(value: ListboxValue) => Promise<void>">
-            Selection request and settling.
+            Requests selection of an enabled visible option.
           </ApiEntry>
           <ApiEntry name="highlight" type="(value: ListboxValue) => void">
             Requests a highlight without checking availability or scrolling. Null clears it.

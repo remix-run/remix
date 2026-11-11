@@ -8,7 +8,6 @@ import { onSelectChange, SelectChangeEvent } from './select.tsx'
 import * as select from './select.tsx'
 
 const flashDurationMs = 60
-const defaultLabelSwapDelayMs = 75
 let roots: ReturnType<typeof createRoot>[] = []
 const unsetDefaultValue = undefined
 
@@ -30,23 +29,16 @@ function TestSelect(
     defaultLabel: string
     defaultValue?: string | null
     id?: string
-    labelSwapDelayMs?: number
     mix?: Props<'button'>['mix']
     name?: string
     type?: 'button' | 'submit' | 'reset'
   }>,
 ): () => RemixNode {
   return () => {
-    let { children, defaultLabel, defaultValue, id, labelSwapDelayMs, mix, name, type } =
-      handle.props
+    let { children, defaultLabel, defaultValue, id, mix, name, type } = handle.props
 
     return (
-      <select.Context
-        defaultLabel={defaultLabel}
-        defaultValue={defaultValue}
-        labelSwapDelayMs={labelSwapDelayMs}
-        name={name}
-      >
+      <select.Context defaultLabel={defaultLabel} defaultValue={defaultValue} name={name}>
         <button id={id} type={type ?? 'button'} mix={[select.trigger(), mix]}>
           <SelectLabel />
         </button>
@@ -174,15 +166,9 @@ async function finishCloseTransition(surface: HTMLElement) {
 let timers!: FakeTimers
 let scrollIntoViewSpy: ReturnType<typeof mock.method>
 
-async function finishSelectUpdate(
-  surface: HTMLElement,
-  root: ReturnType<typeof createRoot>,
-  labelSwapDelayMs = defaultLabelSwapDelayMs,
-) {
+async function finishSelectUpdate(surface: HTMLElement, root: ReturnType<typeof createRoot>) {
   await timers.advanceAsync(flashDurationMs)
   await finishCloseTransition(surface)
-  await settle(root)
-  await timers.advanceAsync(labelSwapDelayMs)
   await settle(root)
 }
 
@@ -220,7 +206,7 @@ describe('Select', () => {
     expect(react.getAttribute('aria-selected')).toBe('true')
   })
 
-  it('supports nested option components while keeping defaultLabel before selection settles', async (t) => {
+  it('supports nested option components and commits the label on selection', async (t) => {
     function SelectValue(handle: Handle) {
       let context = handle.context.get(select.Context)
 
@@ -263,18 +249,30 @@ describe('Select', () => {
     click(feature)
     await settle(root)
 
-    expect(feature.getAttribute('data-select-flash')).toBe('true')
-    expect(trigger.textContent).toContain('Select a type')
+    expect(trigger.textContent).toContain('Feature')
 
     await finishSelectUpdate(surface, root)
 
     expect(trigger.textContent).toContain('Feature')
   })
 
-  it('commits the option label to the trigger after the flash, close transition, and label delay', async (t) => {
-    let { container, root } = renderApp(renderSelect())
+  it('commits the label, hidden input and change event on selection while the popup closes', async (t) => {
+    let changes: SelectChangeEvent[] = []
+    let { container, root } = renderApp(
+      <form>
+        <div
+          mix={onSelectChange((event) => {
+            changes.push(event)
+          })}
+        >
+          {renderSelect({ name: 'framework' })}
+        </div>
+      </form>,
+    )
+    let form = container.querySelector('form') as HTMLFormElement
     let trigger = getTrigger(container)
     let surface = getSurface(container)
+    let hiddenInput = getHiddenInput(container)
 
     expect(trigger.textContent).toContain('Select a framework')
     expect(surface.matches('[data-open]')).toBe(false)
@@ -287,32 +285,33 @@ describe('Select', () => {
     click(react)
     await settle(root)
 
-    expect(react.getAttribute('data-select-flash')).toBe('true')
-    expect(trigger.textContent).toContain('Select a framework')
-    expect(surface.matches('[data-open]')).toBe(true)
+    expect(surface.matches('[data-open]')).toBe(false)
+    expect(trigger.textContent).toContain('React framework')
+    expect(trigger.textContent).not.toContain('React Router framework')
+    expect(trigger.getAttribute('aria-describedby')).toBe(react.id)
+    expect(hiddenInput.value).toBe('react')
+    expect(new FormData(form).get('framework')).toBe('react')
+    expect(changes).toHaveLength(1)
+    expect(changes[0]?.label).toBe('React framework')
+    expect(changes[0]?.value).toBe('react')
 
     await finishSelectUpdate(surface, root)
 
     expect(trigger.textContent).toContain('React framework')
-    expect(trigger.textContent).not.toContain('React Router framework')
-    expect(trigger.getAttribute('aria-describedby')).toBe(react.id)
     expect(surface.matches('[data-open]')).toBe(false)
+    expect(changes).toHaveLength(1)
   })
 
-  it('supports a custom label swap delay on the primitive context', async (t) => {
+  it('does not dispatch when the already-selected value is selected again', async (t) => {
+    let changes: SelectChangeEvent[] = []
     let { container, root } = renderApp(
-      <TestSelect
-        defaultLabel="Select a framework"
-        defaultValue={unsetDefaultValue}
-        labelSwapDelayMs={100}
+      <div
+        mix={onSelectChange((event) => {
+          changes.push(event)
+        })}
       >
-        <TestOption label="Remix framework" value="remix">
-          Remix
-        </TestOption>
-        <TestOption label="React framework" value="react">
-          React
-        </TestOption>
-      </TestSelect>,
+        {renderSelect({ defaultValue: 'react' })}
+      </div>,
     )
     let trigger = getTrigger(container)
     let surface = getSurface(container)
@@ -321,22 +320,13 @@ describe('Select', () => {
 
     timers = t.useFakeTimers()
 
-    let react = getOptionByText(container, 'React')
-    click(react)
+    click(getOptionByText(container, 'React'))
     await settle(root)
-    await timers.advanceAsync(flashDurationMs)
-    await finishCloseTransition(surface)
-    await settle(root)
-
-    await timers.advanceAsync(99)
-    await settle(root)
-
-    expect(trigger.textContent).toContain('Select a framework')
-
-    await timers.advanceAsync(1)
-    await settle(root)
+    await finishSelectUpdate(surface, root)
 
     expect(trigger.textContent).toContain('React framework')
+    expect(surface.matches('[data-open]')).toBe(false)
+    expect(changes).toHaveLength(0)
   })
 
   it('opens on click, syncs min-width, moves focus into the list, and restores focus on escape', async () => {

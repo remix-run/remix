@@ -196,12 +196,12 @@ Keep imperative DOM work near the owner of the relevant ref.
   focus restoration, anchoring, and scroll locking.
 - `select.popover()` and `combobox.popover()` own popup min-width syncing because
   they know their trigger/input refs.
-- `listbox` owns option scrolling and selection flash.
+- `listbox` owns option scrolling.
 - `menu` owns branch closing, focus transfer, hover aim, and close animation
   sequencing.
 
 When waiting for transitions or timers, use existing utilities such as
-`waitForCssTransition(...)`, `wait(...)`, and `flashAttribute(...)`, then check
+`waitForCssTransition(...)` and `wait(...)`, then check
 the component signal before dispatching events or updating more state.
 
 ## Public Events

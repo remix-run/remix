@@ -1,13 +1,11 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
+import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
 
 import { createRoot, type Handle, type Props, type RemixNode } from '@remix-run/component'
 
 import { onComboboxChange, type ComboboxChangeEvent, type ComboboxHandle } from './combobox.tsx'
 import * as combobox from './combobox.tsx'
 
-const flashDurationMs = 60
-const inputCommitDelayMs = 50
 let roots: ReturnType<typeof createRoot>[] = []
 
 type TestComboboxProps = Props<'div'> &
@@ -188,18 +186,6 @@ async function settleFrames(root: ReturnType<typeof createRoot>) {
     })
   })
 
-  await settle(root)
-}
-
-let timers!: FakeTimers
-
-async function finishSelectionFlash(root: ReturnType<typeof createRoot>) {
-  await timers.advanceAsync(flashDurationMs)
-  await settle(root)
-}
-
-async function finishInputCommit(root: ReturnType<typeof createRoot>) {
-  await timers.advanceAsync(inputCommitDelayMs)
   await settle(root)
 }
 
@@ -543,15 +529,12 @@ describe('Combobox', () => {
     expect(hiddenInput.value).toBe('')
   })
 
-  it('Enter selects the active option, flashes it, then closes the popover and emits onComboboxChange', async (t) => {
-    timers = t.useFakeTimers()
+  it('Enter commits the input value, hidden value, and change event before the popover finishes closing', async () => {
     let changes: ComboboxChangeEvent[] = []
     let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
     let surface = container.querySelector('[data-popover]') as HTMLElement
-    let remix = getOptionByText(container, 'Remix')
-    let reactRouter = getOptionByText(container, 'React Router')
     let react = getOptionByText(container, 'React')
 
     input.focus()
@@ -564,94 +547,102 @@ describe('Combobox', () => {
     expect(input.getAttribute('aria-activedescendant')).toBe(react.id)
 
     key(input, 'Enter')
+
+    expect(input.value).toBe('React framework')
+    expectInputSelection(input)
+
     await settle(root)
 
-    expect(react.getAttribute('data-combobox-flash')).toBe('true')
-    expect(surface.matches('[data-open]')).toBe(true)
-    expect(changes).toHaveLength(0)
-    expect(input.value).toBe('rea')
     expect(hiddenInput.value).toBe('react')
-    expect(input.getAttribute('data-surface-visible')).toBe('true')
-    expect(remix.hidden).toBe(true)
-    expect(getComputedStyle(remix).display).toBe('none')
-    expect(reactRouter.hidden).toBe(false)
-    expect(getComputedStyle(reactRouter).display).not.toBe('none')
-
-    await finishSelectionFlash(root)
-
+    expect(changes).toHaveLength(1)
+    expect(changes[0]?.value).toBe('react')
     expect(surface.matches('[data-open]')).toBe(false)
-    expect(input.value).toBe('rea')
     expect(input.getAttribute('data-surface-visible')).toBe('true')
-    expect(input.getAttribute('aria-activedescendant')).toBe(react.id)
 
     await finishCloseTransition(surface)
     await settle(root)
 
-    expect(surface.matches('[data-open]')).toBe(false)
-    expect(document.activeElement).toBe(input)
-    expect(input.value).toBe('rea')
-    expect(hiddenInput.value).toBe('react')
-    expect(input.getAttribute('data-surface-visible')).toBe(null)
-    expect(input.getAttribute('aria-activedescendant')).toBe(null)
-
-    await finishInputCommit(root)
-
-    expect(surface.matches('[data-open]')).toBe(false)
     expect(document.activeElement).toBe(input)
     expect(input.value).toBe('React framework')
     expect(hiddenInput.value).toBe('react')
-    expectInputSelection(input)
-    expect(react.getAttribute('data-combobox-flash')).toBe(null)
+    expect(input.getAttribute('data-surface-visible')).toBe(null)
+    expect(input.getAttribute('aria-activedescendant')).toBe(null)
     expect(changes).toHaveLength(1)
-    expect(changes[0]?.value).toBe('react')
   })
 
-  it('selecting from an untouched input delays the visible input commit until after close', async (t) => {
+  it('selecting from an untouched input commits immediately', async () => {
     let changes: ComboboxChangeEvent[] = []
     let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
-    let surface = container.querySelector('[data-popover]') as HTMLElement
     let remix = getOptionByText(container, 'Remix')
 
     input.focus()
     key(input, 'ArrowDown')
     await settleFrames(root)
-    timers = t.useFakeTimers()
 
     expect(input.getAttribute('aria-activedescendant')).toBe(remix.id)
     expect(input.value).toBe('')
 
     key(input, 'Enter')
+
+    expect(input.value).toBe('Remix framework')
+
     await settle(root)
 
-    expect(remix.getAttribute('data-combobox-flash')).toBe('true')
-    expect(surface.matches('[data-open]')).toBe(true)
-    expect(input.value).toBe('')
     expect(hiddenInput.value).toBe('remix')
-    expect(changes).toHaveLength(0)
+    expect(changes).toHaveLength(1)
+    expect(changes[0]?.value).toBe('remix')
+    expectInputSelection(input)
+  })
 
-    await finishSelectionFlash(root)
+  it('does not dispatch a change when the selected option is already committed', async () => {
+    let changes: ComboboxChangeEvent[] = []
+    let { container, root } = renderObservedCombobox(changes, { defaultValue: 'remix' })
+    let input = container.querySelector('input[type="text"]') as HTMLInputElement
+    let surface = container.querySelector('[data-popover]') as HTMLElement
 
-    expect(surface.matches('[data-open]')).toBe(false)
-    expect(input.value).toBe('')
-
+    input.focus()
+    key(input, 'ArrowDown')
+    await settleFrames(root)
+    key(input, 'Enter')
+    await settle(root)
     await finishCloseTransition(surface)
     await settle(root)
 
-    expect(surface.matches('[data-open]')).toBe(false)
-    expect(input.value).toBe('')
+    expect(changes).toHaveLength(0)
+  })
 
-    await finishInputCommit(root)
+  it('does not clobber typing or a reopened popover during the exit transition', async () => {
+    let changes: ComboboxChangeEvent[] = []
+    let { container, root } = renderObservedCombobox(changes)
+    let input = container.querySelector('input[type="text"]') as HTMLInputElement
+    let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
+    let surface = container.querySelector('[data-popover]') as HTMLElement
+    let react = getOptionByText(container, 'React')
 
-    expect(surface.matches('[data-open]')).toBe(false)
-    expect(document.activeElement).toBe(input)
-    expect(input.value).toBe('Remix framework')
-    expect(hiddenInput.value).toBe('remix')
-    expectInputSelection(input)
-    expect(remix.getAttribute('data-combobox-flash')).toBe(null)
+    input.focus()
+    changeInputValue(input, 'rea')
+    await settle(root)
+    key(input, 'ArrowDown')
+    await settle(root)
+    key(input, 'Enter')
+    await settle(root)
+
+    expect(input.value).toBe('React framework')
     expect(changes).toHaveLength(1)
-    expect(changes[0]?.value).toBe('remix')
+
+    changeInputValue(input, 'Rem')
+    await settle(root)
+    await finishCloseTransition(surface)
+    await settle(root)
+
+    expect(input.value).toBe('Rem')
+    expect(hiddenInput.value).toBe('')
+    expect(surface.matches('[data-open]')).toBe(true)
+    expect(react.hidden).toBe(true)
+    expect(changes).toHaveLength(2)
+    expect(changes[1]?.value).toBe(null)
   })
 
   it('Enter does nothing when typing has opened the popover but no option is active', async () => {
@@ -677,8 +668,7 @@ describe('Combobox', () => {
     expect(changes).toHaveLength(0)
   })
 
-  it('selects the input text after menu selection even when the label is already visible', async (t) => {
-    timers = t.useFakeTimers()
+  it('selects the input text after selection even when the label is already visible', async () => {
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let surface = container.querySelector('[data-popover]') as HTMLElement
@@ -692,7 +682,6 @@ describe('Combobox', () => {
 
     key(input, 'Enter')
     await settle(root)
-    await finishSelectionFlash(root)
     await finishCloseTransition(surface)
     await settle(root)
 
@@ -702,8 +691,7 @@ describe('Combobox', () => {
     expectInputSelection(input)
   })
 
-  it('clears the input selection when arrow navigation starts', async (t) => {
-    timers = t.useFakeTimers()
+  it('clears the input selection when arrow navigation starts', async () => {
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let surface = container.querySelector('[data-popover]') as HTMLElement
@@ -717,7 +705,6 @@ describe('Combobox', () => {
     await settle(root)
     key(input, 'Enter')
     await settle(root)
-    await finishSelectionFlash(root)
     await finishCloseTransition(surface)
     await settle(root)
 
@@ -849,9 +836,9 @@ describe('Combobox', () => {
     expect(input.getAttribute('aria-activedescendant')).toBe(null)
   })
 
-  it('pointer selection keeps focus on the input', async (t) => {
-    timers = t.useFakeTimers()
-    let { container, root } = renderApp(renderCombobox())
+  it('pointer selection commits immediately and keeps focus on the input', async () => {
+    let changes: ComboboxChangeEvent[] = []
+    let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement
     let surface = container.querySelector('[data-popover]') as HTMLElement
@@ -864,32 +851,22 @@ describe('Combobox', () => {
     pointer(react, 'pointerdown')
     pointer(react, 'pointerup')
     pointer(react, 'click')
+
+    expect(input.value).toBe('React framework')
+
     await settle(root)
 
-    expect(react.getAttribute('data-combobox-flash')).toBe('true')
-    expect(surface.matches('[data-open]')).toBe(true)
     expect(document.activeElement).toBe(input)
-    expect(input.value).toBe('rea')
     expect(hiddenInput.value).toBe('react')
-
-    await finishSelectionFlash(root)
-
+    expect(changes).toHaveLength(1)
+    expect(changes[0]?.value).toBe('react')
     expect(surface.matches('[data-open]')).toBe(false)
-    expect(input.value).toBe('rea')
+    expectInputSelection(input)
 
     await finishCloseTransition(surface)
     await settle(root)
 
-    expect(surface.matches('[data-open]')).toBe(false)
-    expect(document.activeElement).toBe(input)
-
-    await finishInputCommit(root)
-
-    expect(surface.matches('[data-open]')).toBe(false)
     expect(document.activeElement).toBe(input)
     expect(input.value).toBe('React framework')
-    expect(hiddenInput.value).toBe('react')
-    expectInputSelection(input)
-    expect(react.getAttribute('data-combobox-flash')).toBe(null)
   })
 })

@@ -15,10 +15,8 @@ import * as listbox from './listbox.ts'
 import * as popover from './popover.ts'
 import { type SearchValue } from './lib/typeahead.ts'
 import { waitForCssTransition } from './lib/wait-for-css-transition.ts'
-import { wait } from './lib/wait.ts'
 
 const COMBOBOX_CHANGE_EVENT = 'rmx:combobox-change' as const
-const INPUT_COMMIT_DELAY_MS = 50
 
 type ComboboxChangeHandler<target extends HTMLElement> = (
   event: Dispatched<ComboboxChangeEvent, target>,
@@ -106,16 +104,10 @@ interface ComboboxContextValue {
   registerSurface: (node: HTMLElement) => void
   setInputText: (text: string) => Promise<void>
   syncPopoverMinWidth: () => void
-  selectActive: () => Promise<void>
+  selectActive: () => void
   unregisterInput: (node: HTMLInputElement) => void
   unregisterSurface: (node: HTMLElement) => void
 }
-
-type PendingChange = {
-  label: string
-  optionId: string
-  value: string
-} | null
 
 function getSearchValues(value: SearchValue) {
   return Array.isArray(value) ? value : [value]
@@ -169,9 +161,6 @@ function ComboboxProvider(
   let open = false
   let surfaceVisible = false
   let showReason: ShowReason = 'nav'
-  let pendingInputValue: string | null = null
-  let pendingChange: PendingChange = null
-  let selectInputAfterClose = false
   let closeSequenceId = 0
 
   let listId = `${handle.id}-combobox-list`
@@ -325,10 +314,6 @@ function ComboboxProvider(
 
   function clearInputAndSelection() {
     closeSequenceId++
-    pendingInputValue = null
-    pendingChange = null
-    selectInputAfterClose = false
-
     inputText = ''
     activeValue = null
     activeId = undefined
@@ -380,32 +365,7 @@ function ComboboxProvider(
     activeValue = null
     activeId = undefined
 
-    signal = await handle.update()
-    if (signal.aborted || closeId !== closeSequenceId || open) {
-      return
-    }
-
-    if (pendingInputValue !== null) {
-      let nextValue = pendingInputValue
-      await wait(INPUT_COMMIT_DELAY_MS)
-      if (
-        signal.aborted ||
-        closeId !== closeSequenceId ||
-        open ||
-        pendingInputValue !== nextValue
-      ) {
-        return
-      }
-
-      setInputValue(nextValue)
-      pendingInputValue = null
-    }
-
-    if (selectInputAfterClose && inputRef?.isConnected && document.activeElement === inputRef) {
-      inputRef.select()
-    }
-
-    selectInputAfterClose = false
+    await handle.update()
   }
 
   async function openPopover(
@@ -416,13 +376,7 @@ function ComboboxProvider(
       return
     }
 
-    if (pendingInputValue !== null) {
-      setInputValue(pendingInputValue)
-      pendingInputValue = null
-    }
-
     closeSequenceId++
-    selectInputAfterClose = false
 
     let nextFilterText = getOpenFilterText()
     let matchingOptions = getMatchingOptions(nextFilterText)
@@ -447,11 +401,11 @@ function ComboboxProvider(
     listboxRef?.scrollActiveOptionIntoView()
   }
 
-  function beginSelection(
+  function selectOption(
     nextValue: listbox.ListboxValue,
     option: listbox.ListboxRegisteredOption | undefined,
   ) {
-    if (!option) {
+    if (!option || !open) {
       return
     }
 
@@ -463,34 +417,22 @@ function ComboboxProvider(
     activeId = option.id
     inputText = option.label
     showReason = 'nav'
-    pendingInputValue = inputRef?.value === option.label ? null : option.label
-    pendingChange = selectionChanged
-      ? {
-          label: option.label,
-          optionId: option.id,
-          value: option.value,
-        }
-      : null
-    selectInputAfterClose = true
-    void handle.update()
-  }
-
-  async function finishSelection() {
-    let change = pendingChange
-    pendingChange = null
-
-    if (change) {
-      dispatchChange(change)
+    setInputValue(option.label)
+    if (inputRef && document.activeElement === inputRef) {
+      inputRef.select()
     }
 
-    await closePopover()
+    // The hidden input renders from `value`, so dispatch after the update flushes.
+    void handle.update().then(() => {
+      if (selectionChanged && !handle.signal.aborted) {
+        dispatchChange({ label: option.label, optionId: option.id, value: option.value })
+      }
+    })
+    void closePopover()
   }
 
   async function setInputText(nextText: string) {
     closeSequenceId++
-    pendingInputValue = null
-    pendingChange = null
-    selectInputAfterClose = false
 
     let selectionChanged = clearCommittedSelection()
 
@@ -580,7 +522,7 @@ function ComboboxProvider(
   }
 
   function selectActive() {
-    return listboxRef?.selectActive() ?? Promise.resolve()
+    listboxRef?.selectActive()
   }
 
   function registerInput(node: HTMLInputElement) {
@@ -713,7 +655,6 @@ function ComboboxProvider(
       <popover.Context>
         <listbox.Context
           activeValue={activeValue}
-          flashSelection
           onHighlight={(nextActiveValue, option) => {
             if (!open) {
               return
@@ -726,12 +667,10 @@ function ComboboxProvider(
             }
             void handle.update()
           }}
-          onSelect={beginSelection}
-          onSelectSettled={finishSelection}
+          onSelect={selectOption}
           ref={(ref) => {
             listboxRef = ref
           }}
-          selectionFlashAttribute="data-combobox-flash"
           value={value}
         >
           {handle.props.children}
@@ -806,7 +745,7 @@ const inputMixin: MixinFactory<HTMLInputElement, [], ElementProps> = createMixin
           }
 
           event.preventDefault()
-          void context.selectActive()
+          context.selectActive()
           return
         case 'Escape':
           if (!context.isOpen && context.inputText === '') {

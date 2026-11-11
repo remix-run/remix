@@ -133,9 +133,6 @@ export default function ExampleSelect(handle: Handle) {
                         '&[aria-selected="true"][data-highlighted="true"]': {
                           boxShadow: 'inset 0 0 0 1px light-dark(#a5a5af, #777782)',
                         },
-                        '&[data-select-flash]': {
-                          background: 'light-dark(#d6d6e0, #4b4b56)',
-                        },
                       }),
                     ]}
                   >

@@ -18,7 +18,6 @@ describe('Listbox example', () => {
     await result.act(() => key(list, 'Enter'))
     await waitFor(() => assert.equal(engineering.getAttribute('aria-selected'), 'true'))
     assert.equal(design.getAttribute('aria-selected'), 'false')
-    await waitFor(() => assert.equal(engineering.hasAttribute('data-listbox-flash'), false))
     await result.act(() => element(result.container, '[role="option"]:last-child').click())
     await waitFor(() =>
       assert.equal(

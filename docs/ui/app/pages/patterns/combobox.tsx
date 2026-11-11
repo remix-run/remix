@@ -67,7 +67,6 @@ const anatomyCode = await highlightSource(`
               '&[aria-selected="false"]': {},
               '&[aria-disabled="true"]': {},
               '&[aria-disabled="false"]': {},
-              '&[data-combobox-flash]': {},
             }),
           ]}
         >
@@ -201,7 +200,8 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           <code>onComboboxChange()</code> receives committed-value changes from the input or an
           ancestor. Its <code>value</code>, <code>label</code> and <code>optionId</code> become null
           when editing clears a selection. Recommitting an unchanged value does not dispatch another
-          change. Blur matching commits immediately, without the selection flash.
+          change. Selecting an option and blur matching both commit immediately: the input text,
+          hidden input and change event update before the popup finishes closing.
         </p>
         <CodeBlock html={eventsCode} />
       </Section>
@@ -215,15 +215,14 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="feedback" title="Popup and selection feedback">
         <p>
-          <code>data-combobox-flash</code> marks a fixed 60 ms selection flash. The committed-value
-          change event fires after the flash, before closing starts.
+          Selecting an option commits it immediately and starts closing the popup. Style the
+          selected option with <code>aria-selected</code>.
         </p>
         <p>
           Typing opens a hint with <code>data-show-reason="hint"</code>. Dismissing that hint skips
           the close transition. Highlighting or selecting an option switches to{' '}
           <code>data-show-reason="nav"</code>. Navigation closures keep{' '}
-          <code>data-surface-visible</code> on the input through the transition. The chosen label
-          appears 50 ms later. This delay is fixed.
+          <code>data-surface-visible</code> on the input through the transition.
         </p>
       </Section>
       <Section id="disabled" title="Disabled state">
@@ -367,9 +366,6 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry name="hidden" type="true | absent">
             Non-matching filter results.
-          </ApiEntry>
-          <ApiEntry name="data-combobox-flash" type="true | absent">
-            Temporary selection feedback.
           </ApiEntry>
         </ApiTable>
         <h3 id="hidden-input-reference">hiddenInput()</h3>

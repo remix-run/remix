@@ -20,7 +20,7 @@ function SelectValue(handle: Handle) {
 
 function IssueTypeSelect() {
   return () => (
-    <select.Context defaultLabel="Select a type" labelSwapDelayMs={100} name="issueType">
+    <select.Context defaultLabel="Select a type" name="issueType">
       <button mix={[triggerStyle, select.trigger()]} type="button">
         <SelectValue />
       </button>
@@ -71,7 +71,7 @@ Listen for committed-value changes on the select root or an ancestor:
 
 ## `@remix-run/ui/select`
 
-- `Context`: provider for select composition. Accepts `defaultLabel`, `defaultValue`, `disabled`, `name`, and `labelSwapDelayMs`. The label-swap delay defaults to 75 milliseconds.
+- `Context`: provider for select composition. Accepts `defaultLabel`, `defaultValue`, `disabled`, and `name`.
 - `trigger()`: wires the trigger button, open behavior, closed-trigger typeahead, and trigger ARIA attributes.
 - `popover()`: wires the popover surface and keeps its minimum width synced to the trigger before open.
 - `list()`: wires the listbox root used inside the popover.
@@ -83,13 +83,13 @@ Listen for committed-value changes on the select root or an ancestor:
 
 ## Behavior Notes
 
-- `defaultLabel` is displayed before selection settles. `defaultValue` selects the matching option without replacing the trigger label until a new selection commits.
+- `defaultLabel` is the initial trigger label. When `defaultValue` is set, pass that option's label: option labels are not known until options register, so the label is not derived from `defaultValue`.
 - The option `label` is the committed display label and event label. The host's children are the rendered option contents.
 - Click, `ArrowDown`, and `ArrowUp` open the popup. Focus moves into the list and Escape restores focus to the trigger through popover behavior.
 - Reopening highlights the current selected value.
 - The popup minimum width syncs to the trigger width before opening.
 - Closed-trigger typeahead selects a matching option immediately and supports option `textValue`.
-- Selecting an option sets `data-select-flash` for app-owned flash styling, waits for the close transition and label delay, updates the displayed label, and dispatches `SelectChangeEvent`.
+- Selecting an option commits immediately: the displayed label, hidden input value, and `SelectChangeEvent` update while the popup closes with its exit transition.
 - Selecting the already-selected value updates state but does not dispatch a change event.
 - `SelectChangeEvent` bubbles from the trigger when a trigger exists. It includes `value`, `label`, and `optionId`.
 - Passing `name` to `Context` and applying `hiddenInput()` to an input lets the selected value participate in `FormData`. Disabled selects disable the trigger and hidden input.

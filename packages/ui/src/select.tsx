@@ -14,12 +14,10 @@ import * as listbox from './listbox.ts'
 import * as popover from './popover.ts'
 import { hiddenTypeahead } from './lib/typeahead.ts'
 import { waitForCssTransition } from './lib/wait-for-css-transition.ts'
-import { wait } from './lib/wait.ts'
 import { onKeyDown } from './lib/keydown.ts'
 import type { AnchorOptions } from './anchor.ts'
 
 const SELECT_CHANGE_EVENT = 'rmx:select-change' as const
-const DEFAULT_LABEL_SWAP_DELAY_MS = 75
 
 type SelectChangeHandler<target extends HTMLElement> = (
   event: Dispatched<SelectChangeEvent, target>,
@@ -58,7 +56,6 @@ export interface SelectContextProps {
   defaultLabel: string
   defaultValue?: string | null
   disabled?: boolean
-  labelSwapDelayMs?: number
   name?: string
 }
 
@@ -104,9 +101,7 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
   let activeValue: listbox.ListboxValue = null
   let activeId: string | undefined = undefined
   let selectedId: string | undefined = undefined
-  let selectedLabel = ''
   let displayedLabel = ''
-  let pendingChange: PendingChange = null
 
   let listId = `${handle.id}-list`
 
@@ -156,18 +151,13 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
   function setSelectedOption(
     nextValue: listbox.ListboxValue,
     option: listbox.ListboxOption | undefined,
-    syncDisplayedLabel = false,
   ) {
     value = nextValue
     activeValue = nextValue
     activeId = option?.id
     selectedId = option?.id
-    selectedLabel = option ? option.label : handle.props.defaultLabel
+    displayedLabel = option ? option.label : handle.props.defaultLabel
     syncPopoverContext()
-
-    if (syncDisplayedLabel) {
-      displayedLabel = selectedLabel
-    }
   }
 
   function getPendingChange(
@@ -194,40 +184,36 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
     target?.dispatchEvent(new SelectChangeEvent(change))
   }
 
+  function commitOption(
+    nextValue: listbox.ListboxValue,
+    option: listbox.ListboxOption | undefined,
+  ) {
+    let change = getPendingChange(nextValue, option)
+    setSelectedOption(nextValue, option)
+    void handle.update().then((signal) => {
+      if (signal.aborted) return
+      dispatchChange(change)
+    })
+  }
+
   function selectOption(
     nextValue: listbox.ListboxValue,
     option: listbox.ListboxOption | undefined,
   ) {
     if (state !== 'open') return
-    pendingChange = getPendingChange(nextValue, option)
-    setSelectedOption(nextValue, option)
-    handle.update()
+    commitOption(nextValue, option)
+    void closeSelected()
   }
 
-  async function settleSelectedOption() {
-    if (state !== 'open') return
-
-    let change = pendingChange
-    pendingChange = null
+  async function closeSelected() {
     state = 'selecting'
-
-    if (!surfaceRef) {
-      displayedLabel = selectedLabel
-      state = 'closed'
-      let signal = await handle.update()
-      if (signal.aborted) return
-      dispatchChange(change)
-      return
-    }
-
-    await Promise.all([handle.update(), waitForCssTransition(surfaceRef, handle.signal)])
-    await wait(handle.props.labelSwapDelayMs ?? DEFAULT_LABEL_SWAP_DELAY_MS)
+    await Promise.all([
+      handle.update(),
+      surfaceRef && waitForCssTransition(surfaceRef, handle.signal),
+    ])
     if (handle.signal.aborted) return
-    displayedLabel = selectedLabel
     state = 'closed'
-    let signal = await handle.update()
-    if (signal.aborted) return
-    dispatchChange(change)
+    await handle.update()
   }
 
   function selectTypeaheadMatch(text: string) {
@@ -236,13 +222,7 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
     let option = listboxRef?.matchSearchText(text, value)
     if (!option) return
 
-    let change = getPendingChange(option.value, option)
-    pendingChange = null
-    setSelectedOption(option.value, option, true)
-    void handle.update().then((signal) => {
-      if (signal.aborted) return
-      dispatchChange(change)
-    })
+    commitOption(option.value, option)
   }
 
   function highlightOption(
@@ -340,7 +320,7 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
 
   return () => {
     if (state === 'initializing') {
-      selectedLabel = displayedLabel = handle.props.defaultLabel
+      displayedLabel = handle.props.defaultLabel
       value = handle.props.defaultValue ?? null
       activeValue = value
       state = 'closed'
@@ -361,16 +341,13 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
 
     return (
       <listbox.Context
-        flashSelection
         ref={(nextListboxRef: listbox.ListboxRef) => {
           listboxRef = nextListboxRef
         }}
         value={value}
         activeValue={activeValue}
-        onSelectSettled={settleSelectedOption}
         onSelect={selectOption}
         onHighlight={highlightOption}
-        selectionFlashAttribute="data-select-flash"
       >
         {handle.props.children}
       </listbox.Context>

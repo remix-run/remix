@@ -58,7 +58,7 @@ Listens for bubbled committed-value changes. The event includes:
 
 ### `combobox.Context`
 
-Coordinates the shared popover and listbox behavior. It owns the draft text, committed value, popup state, and selection timing. Pass `defaultValue` for an initial selection, `disabled` to disable the control, `name` for form participation, and `ref` for imperative access.
+Coordinates the shared popover and listbox behavior. It owns the draft text, committed value, and popup state. Pass `defaultValue` for an initial selection, `disabled` to disable the control, `name` for form participation, and `ref` for imperative access.
 
 ### `combobox.input()`
 
@@ -102,7 +102,7 @@ Mirrors the committed value into a hidden input for forms. Apply it to an `<inpu
 
 - Typing opens the popup in hint mode when there are matches.
 - If typing leaves no matches, the popup closes immediately without the navigation fade-out.
-- Selecting from the list sets `data-combobox-flash` for app-owned flash styling, then closes the popup and finally commits the visible input label.
+- Selecting from the list commits immediately: the visible input label, hidden form value, and `ComboboxChangeEvent` update right away, the input text is selected, and the popup then closes with its exit transition. Style the selected option with `aria-selected`.
 - Typing clears the committed value immediately. The hidden form value becomes empty until the user commits again.
 - Blur commits an exact `label` or `searchValue` match. A non-matching blur clears the draft text and committed value.
 - Escape keeps exact-match draft text but clears non-matching draft text and selection.

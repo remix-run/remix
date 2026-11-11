@@ -26,12 +26,7 @@ export default function Example(handle: Handle) {
         }),
       ]}
     >
-      <select.Context
-        defaultLabel="Choose framework"
-        defaultValue="remix"
-        labelSwapDelayMs={100}
-        name="framework"
-      >
+      <select.Context defaultLabel="Remix" defaultValue="remix" name="framework">
         <button
           mix={[
             select.trigger(),

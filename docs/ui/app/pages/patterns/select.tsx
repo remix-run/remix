@@ -67,7 +67,6 @@ const anatomyCode = await highlightSource(`
                 '&[aria-selected="false"]': {},
                 '&[aria-disabled="true"]': {},
                 '&[aria-disabled="false"]': {},
-                '&[data-select-flash]': {},
               }),
             ]}
           >
@@ -116,7 +115,6 @@ const typeDefinitions = {
   defaultLabel: string
   defaultValue?: string | null
   disabled?: boolean
-  labelSwapDelayMs?: number
   name?: string
 }`,
   ),
@@ -131,10 +129,12 @@ export default function SelectPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="initial" title="Initial selection">
         <p>
-          <code>defaultValue</code> sets the initial selected option. <code>defaultLabel</code> sets
-          the initial trigger text independently. Read <code>displayedLabel</code> from{' '}
-          <code>Context</code> to follow committed labels. Select manages selection internally.
-          Later changes to <code>defaultValue</code> do not reset selection.
+          <code>defaultValue</code> sets the initial selected option. <code>defaultLabel</code> is
+          the initial trigger text, so when <code>defaultValue</code> is set, pass that option’s
+          label. The server cannot read option labels before they register, so the label is not
+          derived. Read <code>displayedLabel</code> from <code>Context</code> to follow the selected
+          label. Select manages selection internally. Later changes to <code>defaultValue</code> do
+          not reset selection.
         </p>
         <CodeBlock html={initialCode} />
       </Section>
@@ -170,23 +170,17 @@ export default function SelectPage(handle: Handle<PageProps>) {
       <Section id="events" title="Change events">
         <p>
           <code>onSelectChange()</code> listens on the trigger or an ancestor. It receives the
-          committed <code>value</code>, <code>label</code> and <code>optionId</code> after the popup
-          closes and its label settles. Closed-trigger typeahead dispatches after selection updates,
-          without the closing sequence. Selecting the same value again does not dispatch a change.
+          committed <code>value</code>, <code>label</code> and <code>optionId</code> as soon as the
+          selection updates, while the popup closes. Closed-trigger typeahead dispatches the same
+          way. Selecting the same value again does not dispatch a change.
         </p>
         <CodeBlock html={eventsCode} />
       </Section>
       <Section id="feedback" title="Selection and close feedback">
         <p>
-          <code>data-select-flash</code> marks a fixed 60 ms selection flash. Style it separately
-          from the surface’s closing transition.
-        </p>
-        <p>
-          The trigger keeps its previous label through the flash and close transition.{' '}
-          <code>labelSwapDelayMs</code> adds a delay after the surface’s close transition,
-          defaulting to 75 ms. Set it to zero to update the label as soon as that transition
-          finishes. The displayed label then changes and the change event fires. Selecting through
-          typeahead on a closed trigger skips this sequence.
+          Selection commits immediately. The trigger label, hidden input and change event update in
+          the same turn that the popup starts closing with its exit transition. Selecting through
+          typeahead on a closed trigger skips the close.
         </p>
       </Section>
       <Section id="disabled" title="Disabled state">
@@ -217,7 +211,8 @@ export default function SelectPage(handle: Handle<PageProps>) {
         <h3 id="context-reference">Context</h3>
         <ApiTable id="context-options" label="Option" defaults>
           <ApiEntry name="defaultLabel" type="string" required>
-            Initial trigger text and fallback label.
+            Initial trigger text and fallback label. Pass the label of <code>defaultValue</code>{' '}
+            when it is set.
           </ApiEntry>
           <ApiEntry name="defaultValue" type="string | null" defaultValue="null">
             Initial selected value.
@@ -227,9 +222,6 @@ export default function SelectPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry name="name" type="string">
             Form field name used by hiddenInput().
-          </ApiEntry>
-          <ApiEntry name="labelSwapDelayMs" type="number" defaultValue="75">
-            Additional label delay in milliseconds.
           </ApiEntry>
           <ApiEntry name="children" type="RemixNode">
             Trigger, popup and optional hidden input.
@@ -338,9 +330,6 @@ export default function SelectPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry name="data-highlighted" type="true | false">
             Highlighted state.
-          </ApiEntry>
-          <ApiEntry name="data-select-flash" type="true | absent">
-            Temporary selection feedback.
           </ApiEntry>
         </ApiTable>
         <h3 id="hidden-input-reference">hiddenInput()</h3>

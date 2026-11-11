@@ -124,9 +124,6 @@ export default function ExampleCombobox(handle: Handle) {
                           '&[aria-selected="true"]': {
                             background: 'light-dark(#e4e4eb, #3b3b44)',
                           },
-                          '&[data-combobox-flash]': {
-                            background: 'light-dark(#d6d6e0, #4b4b56)',
-                          },
                         }),
                       ]}
                     >
