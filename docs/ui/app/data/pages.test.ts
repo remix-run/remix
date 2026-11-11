@@ -21,6 +21,7 @@ describe('UI docs pages', () => {
         'patterns/select',
         'patterns/tabs',
         'patterns/toggle',
+        'patterns/tooltip',
         'animation/entrance-exit',
         'animation/layout',
         'animation/reduced-motion',

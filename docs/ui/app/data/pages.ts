@@ -25,6 +25,7 @@ import PopoverPage, { meta as popover } from '../pages/patterns/popover.tsx'
 import SelectPage, { meta as select } from '../pages/patterns/select.tsx'
 import TabsPage, { meta as tabs } from '../pages/patterns/tabs.tsx'
 import TogglePage, { meta as toggle } from '../pages/patterns/toggle.tsx'
+import TooltipPage, { meta as tooltip } from '../pages/patterns/tooltip.tsx'
 
 export interface PageMeta {
   title: string
@@ -61,6 +62,7 @@ export const pages: UiPage[] = [
   { ...select, Component: SelectPage },
   { ...tabs, Component: TabsPage },
   { ...toggle, Component: TogglePage },
+  { ...tooltip, Component: TooltipPage },
 ].sort(
   (a, b) =>
     categories.findIndex((category) => category.id === a.category) -

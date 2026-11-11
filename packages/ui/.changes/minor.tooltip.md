@@ -1,0 +1,1 @@
+Added `@remix-run/ui/tooltip` for accessible tooltips. Tooltips open after a hover delay or immediately on keyboard focus, close on blur, press, outside press, or Escape, stay open while the pointer moves onto them, and position with `anchor()`. `tooltip.GroupContext` shares delays so neighboring tooltips open instantly once one is showing.
