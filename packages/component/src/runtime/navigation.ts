@@ -1,13 +1,11 @@
 import {
-  getNamedFrame,
-  getTopFrame,
   isDocumentReload,
   reloadCurrentDocument,
   reloadFrameForNavigation,
   setTopFrameSource,
 } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, Handle } from './component.ts'
 import {
   getFrameCommitNavigation,
   setFrameCommitNavigation,
@@ -340,25 +338,14 @@ async function waitForUrlUpdate(updating: Promise<void>, signal?: AbortSignal): 
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
+ * @param options Frames of the running app, and an optional reload override for tests.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal) {
-  return startNavigationListenerImpl(signal, {
-    getTopFrame,
-    getNamedFrame,
-    reloadFrame: reloadFrameForNavigation,
-  })
-}
-
-// Internal version used by unit tests so we can inject stub frames
-export function startNavigationListenerImpl(
+export function startNavigationListener(
   signal: AbortSignal,
-  options: {
-    getTopFrame: typeof getTopFrame
-    getNamedFrame: typeof getNamedFrame
-    reloadFrame: typeof reloadFrameForNavigation
-  },
+  options: Handle['frames'] & { reloadFrame?: typeof reloadFrameForNavigation },
 ) {
+  let reloadFrame = options.reloadFrame ?? reloadFrameForNavigation
   let navigation = getInterceptableNavigation()
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
@@ -366,6 +353,11 @@ export function startNavigationListenerImpl(
   // work pending across aborts so the next navigation can finish loading the destination.
   let needsFrameReload = false
   let currentCommitNavigation: FrameCommitNavigationState | undefined
+  // The Navigation API commits a push's entry before its page loads. A push that starts before
+  // that page is on screen replaces the entry, as a document navigation that never committed
+  // leaves none, so Back returns to the page the visitor saw.
+  let unrenderedEntryKey: string | undefined
+  let uncommittedPushFromKey: string | undefined
 
   navigation.updateCurrentEntry({
     state: {
@@ -380,6 +372,13 @@ export function startNavigationListenerImpl(
   navigation.addEventListener(
     'navigate',
     (event) => {
+      // currententrychange can start this navigation before the previous push's handler runs.
+      if (uncommittedPushFromKey !== undefined) {
+        let currentEntryKey = navigation.currentEntry?.key
+        if (currentEntryKey !== uncommittedPushFromKey) unrenderedEntryKey = currentEntryKey
+        uncommittedPushFromKey = undefined
+      }
+
       let redirectCommit = isFrameRedirectNavigationInfo(event.info)
         ? frameRedirectCommitNavigations.get(event.info)
         : undefined
@@ -422,6 +421,11 @@ export function startNavigationListenerImpl(
         : getRuntimeNavigation(navigation, event, resolveFormNavigation)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
+      let replaceHistory =
+        runtimeNavigation.replaceHistory ||
+        (event.navigationType === 'push' &&
+          unrenderedEntryKey !== undefined &&
+          navigation.currentEntry?.key === unrenderedEntryKey)
       let isTraverse = event.navigationType === 'traverse'
       let scroll = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetScroll)
       let focusReset = isTraverse ? 'after-transition' : normalizeResetBehavior(state.resetFocus)
@@ -430,11 +434,11 @@ export function startNavigationListenerImpl(
         return
       }
 
-      let topFrame = options.getTopFrame()
+      let topFrame = options.top
       let frame = replayedSubmission?.frame
       if (!frame) {
         if (state.target) {
-          frame = options.getNamedFrame(state.target)
+          frame = options.get(state.target)
           if (!frame) {
             fallbackToDocumentNavigation(navigation, event)
             return
@@ -445,8 +449,15 @@ export function startNavigationListenerImpl(
       }
 
       needsFrameReload = true
+      if (event.navigationType === 'push' && !replaceHistory) {
+        uncommittedPushFromKey = navigation.currentEntry?.key
+      }
       let handler = async () => {
         if (event.signal.aborted) return
+        if (event.navigationType === 'push' && !replaceHistory) {
+          unrenderedEntryKey = navigation.currentEntry?.key
+          uncommittedPushFromKey = undefined
+        }
 
         let completed = Promise.withResolvers<void>()
         let controller = new AbortController()
@@ -493,13 +504,14 @@ export function startNavigationListenerImpl(
 
         topFrame.src = event.destination.url
         if (frame !== topFrame) frame.src = state.src
-        let reload = options.reloadFrame(frame, {
+        let reload = reloadFrame(frame, {
           ...submission,
           signal: event.signal,
           navigationType: event.navigationType,
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
+        if (navigation.currentEntry?.key === unrenderedEntryKey) unrenderedEntryKey = undefined
         if (scroll !== 'manual') {
           // WebKit restores a traversal's position against the layout from before the commit, so
           // it clamps the position to the old page's height. Reading the height lays out the new
@@ -545,20 +557,21 @@ export function startNavigationListenerImpl(
         focusReset,
       } satisfies NavigationInterceptOptions
 
+      // Modern browsers allow you to update the in-flight navigation entry before it's committed
+      let supportsPrecommit =
+        typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
+      let replaceInterceptOptions = {
+        ...interceptOptions,
+        precommitHandler(controller) {
+          controller.redirect(event.destination.url, { history: 'replace' })
+        },
+      } satisfies NavigationInterceptOptions
+
       if (runtimeNavigation.getSubmission) {
         // <form method="post"> navigations
-        if (runtimeNavigation.replaceHistory && replayedSubmission == null) {
-          let supportsPrecommit =
-            typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
-
-          // Modern browsers allow you to update the in-flight navigation entry before it's committed
+        if (replaceHistory && replayedSubmission == null) {
           if (supportsPrecommit) {
-            interceptNavigation(navigation, event, scroll !== 'manual', {
-              ...interceptOptions,
-              precommitHandler(controller) {
-                controller.redirect(event.destination.url, { history: 'replace' })
-              },
-            })
+            interceptNavigation(navigation, event, scroll !== 'manual', replaceInterceptOptions)
             return
           }
 
@@ -582,7 +595,11 @@ export function startNavigationListenerImpl(
         interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
-        if (runtimeNavigation.replaceHistory && event.cancelable) {
+        if (replaceHistory && supportsPrecommit) {
+          interceptNavigation(navigation, event, scroll !== 'manual', replaceInterceptOptions)
+        } else if (replaceHistory && event.cancelable) {
+          // Cancelling rejects the promise of a `navigate()` call that started this navigation,
+          // so a replacement navigation is only the fallback.
           event.preventDefault()
           navigation.navigate(event.destination.url, { history: 'replace', state })
         } else {

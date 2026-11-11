@@ -1,4 +1,3 @@
-import { createDocumentState } from './document-state.ts'
 import type { CommittedComponentNode, VNodeParent } from './reconcile.ts'
 import { createComponentErrorEvent } from './component.ts'
 import {
@@ -8,7 +7,7 @@ import {
   renderComponent,
   setActiveSchedulerUpdateParents,
 } from './reconcile.ts'
-import type { StyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 
 type EmptyFn = () => void
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'
@@ -68,13 +67,16 @@ export function createScheduler(
   let workTasks: EmptyFn[] = []
   let commitPhaseTasks: EmptyFn[] = []
   let postCommitTasks: EmptyFn[] = []
-  let flushScheduled = false
-  let flushing = false
-  let cascadingComponentUpdateCount = 0
-  let cascadingComponentUpdateCounts = new WeakMap<CommittedComponentNode, number>()
-  let cascadingComponentNameCounts = new Map<string, number>()
-  let warnedAboutCascadingUpdates = false
-  let resetScheduled = false
+  let flushState: 'idle' | 'scheduled' | 'flushing' = 'idle'
+  // Counts for the current event loop turn, or undefined when no component has updated in it yet.
+  let cascadingUpdates:
+    | {
+        total: number
+        byComponent: WeakMap<CommittedComponentNode, number>
+        byName: Map<string, number>
+        warned: boolean
+      }
+    | undefined
   let phaseEvents = new EventTarget()
   let phaseListenerCounts: Record<SchedulerPhaseType, number> = {
     beforeUpdate: 0,
@@ -87,46 +89,34 @@ export function createScheduler(
     rootTarget.dispatchEvent(createComponentErrorEvent(error))
   }
 
-  function scheduleCounterReset() {
-    if (resetScheduled) return
-    resetScheduled = true
-    // Reset when control returns to the event loop while still allowing
-    // microtask-driven flushes in the same turn to count as cascading.
-    setTimeout(() => {
-      cascadingComponentUpdateCount = 0
-      cascadingComponentUpdateCounts = new WeakMap()
-      cascadingComponentNameCounts = new Map()
-      warnedAboutCascadingUpdates = false
-      resetScheduled = false
-    }, 0)
-  }
-
   function trackCascadingUpdate(vnode: CommittedComponentNode): boolean {
-    cascadingComponentUpdateCount++
+    if (!cascadingUpdates) {
+      cascadingUpdates = { total: 0, byComponent: new WeakMap(), byName: new Map(), warned: false }
+      // Close the window when control returns to the event loop while still allowing
+      // microtask-driven flushes in the same turn to count as cascading.
+      setTimeout(() => {
+        cascadingUpdates = undefined
+      }, 0)
+    }
+    let updates = cascadingUpdates
+    updates.total++
 
     let componentName = getComponentName(vnode)
-    cascadingComponentNameCounts.set(
-      componentName,
-      (cascadingComponentNameCounts.get(componentName) ?? 0) + 1,
-    )
+    updates.byName.set(componentName, (updates.byName.get(componentName) ?? 0) + 1)
 
-    let componentUpdateCount = (cascadingComponentUpdateCounts.get(vnode) ?? 0) + 1
-    cascadingComponentUpdateCounts.set(vnode, componentUpdateCount)
-    scheduleCounterReset()
+    let componentUpdateCount = (updates.byComponent.get(vnode) ?? 0) + 1
+    updates.byComponent.set(vnode, componentUpdateCount)
 
-    if (
-      !warnedAboutCascadingUpdates &&
-      cascadingComponentUpdateCount >= CASCADING_UPDATE_WARN_THRESHOLD
-    ) {
-      warnedAboutCascadingUpdates = true
+    if (!updates.warned && updates.total >= CASCADING_UPDATE_WARN_THRESHOLD) {
+      updates.warned = true
       console.warn(
-        `${cascadingComponentUpdateCount} cascading component updates detected in one event loop turn. Consider reducing hydration regions. Components: ${formatComponentCounts(cascadingComponentNameCounts)}`,
+        `${updates.total} cascading component updates detected in one event loop turn. Consider reducing hydration regions. Components: ${formatComponentCounts(updates.byName)}`,
       )
     }
 
     if (componentUpdateCount > MAX_CASCADING_COMPONENT_UPDATES) {
       let error = new Error(
-        `handle.update() infinite loop detected in ${componentName} after ${componentUpdateCount} cascading updates. Components: ${formatComponentCounts(cascadingComponentNameCounts)}`,
+        `handle.update() infinite loop detected in ${componentName} after ${componentUpdateCount} cascading updates. Components: ${formatComponentCounts(updates.byName)}`,
       )
       dispatchError(error)
       return false
@@ -136,12 +126,10 @@ export function createScheduler(
   }
 
   function flush() {
-    if (flushing) return
-    flushing = true
+    if (flushState === 'flushing') return
+    flushState = 'flushing'
     try {
       while (true) {
-        flushScheduled = false
-
         let batch = new Map(scheduled)
         scheduled.clear()
 
@@ -192,7 +180,7 @@ export function createScheduler(
       }
     } finally {
       setActiveSchedulerUpdateParents(undefined)
-      flushing = false
+      flushState = 'idle'
     }
   }
 
@@ -215,8 +203,8 @@ export function createScheduler(
   }
 
   function scheduleFlush() {
-    if (flushScheduled || flushing) return
-    flushScheduled = true
+    if (flushState !== 'idle') return
+    flushState = 'scheduled'
     queueMicrotask(flush)
   }
 
@@ -286,4 +274,133 @@ export function createScheduler(
   }
 
   return scheduler
+}
+
+/**
+ * Adapted from https://github.com/facebook/react/blob/main/packages/react-dom-bindings/src/client/ReactInputSelection.js
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * MIT License
+ *
+ * Eventually should be able to use moveBefore and won't need this at all.
+ */
+
+type SelectionInformation = {
+  focusedElem: Element | null
+  selectionRange: { start: number; end: number } | null
+}
+
+function createDocumentState(doc: Document) {
+  function getActiveElement(): Element | null {
+    return doc.activeElement || doc.body
+  }
+
+  function hasSelectionCapabilities(elem: Element): boolean {
+    let nodeName = elem.nodeName.toLowerCase()
+    return (
+      (nodeName === 'input' &&
+        'type' in elem &&
+        (elem.type === 'text' ||
+          elem.type === 'search' ||
+          elem.type === 'tel' ||
+          elem.type === 'url' ||
+          elem.type === 'password')) ||
+      nodeName === 'textarea' ||
+      (elem instanceof HTMLElement && elem.contentEditable === 'true')
+    )
+  }
+
+  function getSelection(input: Element): { start: number; end: number } | null {
+    if (
+      'selectionStart' in input &&
+      typeof input.selectionStart === 'number' &&
+      'selectionEnd' in input
+    ) {
+      let htmlInput = input as HTMLInputElement | HTMLTextAreaElement
+      return {
+        start: htmlInput.selectionStart ?? 0,
+        end: htmlInput.selectionEnd ?? htmlInput.selectionStart ?? 0,
+      }
+    }
+    // For contentEditable, we'd need more complex logic, but for now return null
+    return null
+  }
+
+  function setSelection(input: Element, offsets: { start: number; end: number }): void {
+    if ('selectionStart' in input && 'selectionEnd' in input) {
+      try {
+        let htmlInput = input as HTMLInputElement | HTMLTextAreaElement
+        htmlInput.selectionStart = offsets.start
+        htmlInput.selectionEnd = Math.min(offsets.end, htmlInput.value?.length ?? 0)
+      } catch {
+        // Ignore errors setting selection
+      }
+    }
+  }
+
+  function isInDocument(node: Node): boolean {
+    return doc.documentElement.contains(node)
+  }
+
+  function getSelectionInformation(): SelectionInformation {
+    let focusedElem = getActiveElement()
+    return {
+      focusedElem,
+      selectionRange:
+        focusedElem && hasSelectionCapabilities(focusedElem) ? getSelection(focusedElem) : null,
+    }
+  }
+
+  function restoreSelection(priorSelectionInformation: SelectionInformation): void {
+    let curFocusedElem = getActiveElement()
+    let priorFocusedElem = priorSelectionInformation.focusedElem
+    let priorSelectionRange = priorSelectionInformation.selectionRange
+
+    if (curFocusedElem !== priorFocusedElem && priorFocusedElem && isInDocument(priorFocusedElem)) {
+      // Save scroll positions before focusing (focusing can change scroll)
+      let ancestors: Array<{ element: Element; left: number; top: number }> = []
+      let ancestor: Node | null = priorFocusedElem
+      while (ancestor) {
+        if (ancestor.nodeType === Node.ELEMENT_NODE) {
+          let el = ancestor as Element
+          ancestors.push({
+            element: el,
+            left: el.scrollLeft ?? 0,
+            top: el.scrollTop ?? 0,
+          })
+        }
+        ancestor = ancestor.parentNode
+      }
+
+      // Restore selection if applicable
+      if (priorSelectionRange !== null && hasSelectionCapabilities(priorFocusedElem)) {
+        setSelection(priorFocusedElem, priorSelectionRange)
+      }
+
+      // Restore focus
+      if (priorFocusedElem instanceof HTMLElement && typeof priorFocusedElem.focus === 'function') {
+        priorFocusedElem.focus()
+      }
+
+      // Restore scroll positions
+      for (let info of ancestors) {
+        info.element.scrollLeft = info.left
+        info.element.scrollTop = info.top
+      }
+    }
+  }
+
+  let selectionInfo: SelectionInformation | null = null
+
+  function capture() {
+    selectionInfo = getSelectionInformation()
+  }
+
+  function restore() {
+    if (selectionInfo !== null) {
+      restoreSelection(selectionInfo)
+    }
+    selectionInfo = null
+  }
+
+  return { capture, restore }
 }

@@ -11,6 +11,7 @@ export {
   beforeAll,
   afterAll,
 } from './lib/framework.ts'
+export type { TestFn, TestMeta } from './lib/framework.ts'
 export { mock } from './lib/mock.ts'
 export type { TestContext } from './lib/context.ts'
 export type { FakeTimers } from './lib/fake-timers.ts'
