@@ -1352,6 +1352,7 @@ describe('defaultPrefetch overrides', () => {
           '/resources/skip',
           '/resources/unmarked',
         ])
+        expect(frames.map((frame) => frame.fallback)).toEqual([false, true, false])
         fragment.querySelector('#rmx-data')?.remove()
         let image = fragment.querySelector('img[data-prefetch]')
         return prefetchReferences({
@@ -1359,7 +1360,9 @@ describe('defaultPrefetch overrides', () => {
             ...assets.filter((element) => element.getAttribute('src') === 'keep.js'),
             ...(image ? [image] : []),
           ],
-          frames: frames.filter((frame) => frame.target === 'details'),
+          frames: frames
+            .filter((frame) => !frame.fallback && frame.target === 'details')
+            .map(({ src, target }) => ({ src, target })),
         })
       },
     })
@@ -1401,9 +1404,9 @@ describe('defaultPrefetch overrides', () => {
       fetch: transport,
       async frame(prefetchReferences, { frames }) {
         expect(frames).toEqual([
-          { src: new URL('/eager', location.href).href, target: 'details' },
-          { src: new URL('/fallback', location.href).href, target: 'sidebar' },
-          { src: new URL('/nested', location.href).href, target: undefined },
+          { src: new URL('/eager', location.href).href, target: 'details', fallback: false },
+          { src: new URL('/fallback', location.href).href, target: 'sidebar', fallback: true },
+          { src: new URL('/nested', location.href).href, target: undefined, fallback: false },
         ])
         expect(Object.isFrozen(frames)).toBe(true)
         await prefetchReferences()

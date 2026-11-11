@@ -32,6 +32,8 @@ export interface PrefetchFrameReference {
   readonly src: string
   /** Destination frame name, when provided. */
   readonly target?: string
+  /** Whether the frame declares fallback content, even if its resolved HTML has already arrived. */
+  readonly fallback: boolean
 }
 
 /** References to delegate to Remix's native asset hints and nested frame fetching. */
@@ -39,7 +41,7 @@ export interface PrefetchReferences {
   /** Original asset elements to prefetch (defaults to discovered asset declarations). */
   assets?: readonly Element[]
   /** Nested frame requests to fetch using the same overrides (defaults to none). */
-  frames?: readonly PrefetchFrameReference[]
+  frames?: readonly Pick<PrefetchFrameReference, 'src' | 'target'>[]
 }
 
 /** The parsed, detached HTML and references available to a custom prefetch hook. */
@@ -838,7 +840,10 @@ function discoverFrames(elements: Element[], baseURL: string): PrefetchFrameRefe
         let url = new URL(frame.src, baseURL)
         if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
         let src = getSameOriginHref(url.href)
-        if (src) frames.push(Object.freeze({ src, target }))
+        if (src) {
+          let fallback = 'status' in frame && frame.status === 'pending'
+          frames.push(Object.freeze({ src, target, fallback }))
+        }
       } catch {
         // Malformed frame references do not prevent other prefetches.
       }

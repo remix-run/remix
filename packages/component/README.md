@@ -1395,14 +1395,14 @@ Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS 
 
 The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
 
-Prefetched HTML exposes all discovered same-origin nested frame sources to a custom `frame` hook as `context.frames`. Each reference contains an absolute `src` without a hash and an optional `target` from the frame's name. This includes frames with fallback content and references inside nested templates. No additional `<Frame>` prop is needed.
+Prefetched HTML exposes all discovered same-origin nested frame sources to a custom `frame` hook as `context.frames`. Each reference contains an absolute `src` without a hash, an optional `target` from the frame's name, and a boolean `fallback` indicating whether the frame declares fallback content. `fallback` remains true even if resolved HTML has already arrived in the containing response. This includes frames with fallback content and references inside nested templates. No additional `<Frame>` prop is needed.
 
 The default strategy discovers assets already embedded in nested frame HTML but does not fetch nested sources separately. Select those sources explicitly in a custom hook:
 
 ```ts
 frame(prefetchReferences, { frames }) {
   return prefetchReferences({
-    frames: frames.filter((frame) => frame.target === 'recommendations'),
+    frames: frames.filter((frame) => frame.fallback),
   })
 }
 ```
