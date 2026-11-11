@@ -42,6 +42,8 @@ export function Portal(handle: Handle<PortalProps>): () => RemixNode {
       if (!host) {
         host = container.ownerDocument.createElement('div')
         host.style.display = 'contents'
+        // Server HTML never contains the host, so frame reloads must keep it rather than remove it.
+        host.setAttribute('data-rmx-preserve-dom', '')
         container.append(host)
         root = createRoot(host, {
           frame: handle.frame,

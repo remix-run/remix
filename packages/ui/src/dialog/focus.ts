@@ -99,7 +99,13 @@ function createManager(doc: Document) {
         !containsScope(scope, scope.lastFocused) &&
         (!active || active === doc.body || containsScope(scope, active)),
     )
-    if (scope) focus(scope.node)
+    if (scope) {
+      focus(scope.node)
+      return
+    }
+    // A DOM diff can detach and reinsert the focused element, dropping focus to the body.
+    let modalScope = scopes.findLast((scope) => scope.options.modal)
+    if (modalScope && (!active || active === doc.body)) focusInside(modalScope)
   })
 
   function containsScope(scope: FocusScope, target: Node | null) {
@@ -127,7 +133,13 @@ function createManager(doc: Document) {
     observer.disconnect()
     if (scopes.length > 0) {
       for (let root of roots) {
-        observer.observe(root, { childList: true, subtree: true })
+        // Diffs can strip `inert` and `aria-hidden` from shielded elements without touching the tree.
+        observer.observe(root, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['inert', 'aria-hidden'],
+        })
         for (let node of root.querySelectorAll('*')) {
           if (node.shadowRoot) roots.push(node.shadowRoot)
         }
@@ -194,6 +206,8 @@ function createManager(doc: Document) {
       else restoreAttribute(node, 'inert', previous.inert)
       node.setAttribute('aria-hidden', 'true')
     }
+    // Discard the records for the attributes written above.
+    observer.takeRecords()
   }
 
   function onFocusIn(event: FocusEvent) {
@@ -251,9 +265,18 @@ function createManager(doc: Document) {
     }
   }
 
+  function keepFocusInModal() {
+    let focusScope = scopes.findLast((scope) => scope.options.modal)
+    if (focusScope && !containsScope(focusScope, activeElement(doc))) focusInside(focusScope)
+  }
+
+  // A same-document navigation resets focus to the body once it settles, unless focus moved
+  // while it ran. A modal that survives the navigation must take focus back.
+  let navigation = doc.defaultView?.navigation
   let stopObservingLayers = observeDismissableLayers(doc, updateBackground)
   doc.addEventListener('focusin', onFocusIn)
   doc.addEventListener('keydown', onKeyDown)
+  navigation?.addEventListener('navigatesuccess', keepFocusInModal)
 
   return {
     add(scope: FocusScope) {
@@ -264,8 +287,7 @@ function createManager(doc: Document) {
     update(scope: FocusScope, modal: FocusScopeOptions['modal']) {
       scope.options.modal = modal
       updateBackground()
-      let focusScope = scopes.findLast((scope) => scope.options.modal)
-      if (focusScope && !containsScope(focusScope, activeElement(doc))) focusInside(focusScope)
+      keepFocusInModal()
     },
     restoreFocus(target: Element | false | null) {
       if (target === false) return
@@ -281,6 +303,7 @@ function createManager(doc: Document) {
         stopObservingLayers()
         doc.removeEventListener('focusin', onFocusIn)
         doc.removeEventListener('keydown', onKeyDown)
+        navigation?.removeEventListener('navigatesuccess', keepFocusInModal)
         managers.delete(doc)
       }
       return wasCurrent

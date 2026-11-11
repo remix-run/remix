@@ -721,4 +721,30 @@ describe('dialog focus scope', () => {
     expect(document.activeElement).toBe(get('#input'))
     get('#popover').hidePopover()
   })
+
+  it('restores shielding that is removed from a background element', async () => {
+    document.body.innerHTML = '<main id="page">Page</main><div id="dialog" tabindex="-1"></div>'
+    activate(get('#dialog'))
+    expect(get('#page').hasAttribute('inert')).toBe(true)
+
+    get('#page').removeAttribute('inert')
+    get('#page').removeAttribute('aria-hidden')
+    await Promise.resolve()
+
+    expect(get('#page').hasAttribute('inert')).toBe(true)
+    expect(get('#page').getAttribute('aria-hidden')).toBe('true')
+  })
+
+  it('returns focus to the modal when an interior control is reinserted', async () => {
+    document.body.innerHTML =
+      '<main>Page</main><div id="dialog" tabindex="-1"><input id="field" /></div>'
+    activate(get('#dialog'))
+    get('#field').focus()
+
+    let field = get('#field')
+    field.replaceWith(field)
+    await Promise.resolve()
+
+    expect(document.activeElement).toBe(field)
+  })
 })
