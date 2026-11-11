@@ -151,7 +151,9 @@ function TooltipProvider(
   // Set when the user dismisses the tooltip while still on the trigger (press or Escape). Hover and
   // focus do not reopen it until the pointer leaves or focus moves away.
   let suppressed = false
-  let disabledCloseReported = false
+  let hovering = false
+  // Whether the owner last saw the tooltip open, so disabling reports a close only when one happens.
+  let reportedOpen = false
   let timer: ReturnType<typeof setTimeout> | undefined
   let stopAimTracking = () => {}
   let triggerNode: HTMLElement | null = null
@@ -163,7 +165,8 @@ function TooltipProvider(
   handle.signal.addEventListener('abort', () => {
     clearTimeout(timer)
     stopAimTracking()
-    group?.closed(member)
+    if (inGroup) group?.closed(member)
+    inGroup = false
   })
 
   function requestedOpen() {
@@ -197,6 +200,7 @@ function TooltipProvider(
     if (handle.props.open === undefined) {
       uncontrolledOpen = open
     }
+    reportedOpen = open
     void handle.update()
     syncGroup()
 
@@ -207,6 +211,8 @@ function TooltipProvider(
   // Group membership follows the rendered state, not open requests, so a controlled owner that
   // declines a request or changes `open` itself never leaves the group stuck warm.
   function syncGroup() {
+    // Renders queue this, so it can run after an unmount that would otherwise leave the group warm.
+    if (handle.signal.aborted) return
     let open = isOpen()
     if (!group || open === inGroup) return
     inGroup = open
@@ -253,7 +259,10 @@ function TooltipProvider(
       setOpen(false, reason)
     },
     dismiss(reason) {
-      suppressed = true
+      // Only suppress while the user is still on the trigger; otherwise nothing would clear it.
+      if (hovering || (triggerNode && triggerNode.contains(document.activeElement))) {
+        suppressed = true
+      }
       setOpen(false, reason)
     },
     focusStart() {
@@ -267,6 +276,7 @@ function TooltipProvider(
       setOpen(false, 'trigger-focus')
     },
     hoverStart() {
+      hovering = true
       if (suppressed || handle.props.disabled) return
       if (isOpen()) {
         cancelPending()
@@ -279,6 +289,7 @@ function TooltipProvider(
       schedule(true, 'trigger-hover', handle.props.delay ?? group?.delay ?? DEFAULT_DELAY)
     },
     hoverEnd(event) {
+      hovering = false
       suppressed = false
       if (!isOpen()) {
         cancelPending()
@@ -337,17 +348,15 @@ function TooltipProvider(
   // Disabling an open tooltip hides it on this render and reports the close once rendering is done.
   // The report happens once per disable, even if a controlled owner keeps `open` true.
   return () => {
-    if (handle.props.disabled) cancelPending()
-    if (handle.props.disabled && requestedOpen()) {
-      if (!disabledCloseReported) {
-        disabledCloseReported = true
+    if (handle.props.disabled) {
+      cancelPending()
+      if (reportedOpen && requestedOpen()) {
         queueMicrotask(() => {
           if (handle.props.disabled && requestedOpen()) commit(false, 'disabled')
         })
       }
-    } else {
-      disabledCloseReported = false
     }
+    reportedOpen = isOpen()
     if (group) queueMicrotask(syncGroup)
     return handle.props.children
   }

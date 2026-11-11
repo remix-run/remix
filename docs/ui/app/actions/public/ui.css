@@ -413,30 +413,30 @@
   }
 }
 
-/* Demo controls belong to the docs frame, not the demo: they sit on the preview's bottom edge in
-   the frame's own colors. They render inside the example's client entry, so they are positioned
-   against the preview instead of being placed after it. */
-.docs-demo-preview:has(> .ui-demo-controls) {
-  --ui-demo-controls-height: 41px;
-  position: relative;
-  padding-bottom: calc(48px + var(--ui-demo-controls-height));
-}
+/* Demo controls belong to the docs frame, not the demo: they span the preview's bottom edge in
+   the frame's own colors. They render inside the example's client entry as the preview's last
+   grid row, so negative margins cancel the preview padding (see demo.css) to reach the edges,
+   and the top margin matches that padding to keep the demo centered above them. */
 .ui-demo-controls {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
+  justify-self: stretch;
+  margin: 48px -20px -48px;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
   gap: var(--rmx-space-sm) var(--rmx-space-lg);
-  min-height: var(--ui-demo-controls-height);
+  min-height: 41px;
   padding: 6px 12px;
   border-top: 1px solid var(--rmx-color-border-subtle);
   background: var(--rmx-surface-lvl1);
   color: var(--rmx-color-text-secondary);
   font-family: var(--rmx-font-family-sans);
   font-size: var(--rmx-font-size-xs);
+}
+@media (width >= 640px) {
+  .ui-demo-controls {
+    margin: 64px -32px -64px;
+  }
 }
 .ui-demo-controls [role='radiogroup'] {
   display: flex;

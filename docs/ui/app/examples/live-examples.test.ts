@@ -18,4 +18,17 @@ describe('Live example coverage', () => {
     }
     assert.ok(count > 0)
   })
+
+  it('keeps every demo controls module beside the example it wraps', async () => {
+    let count = 0
+    for await (let controls of glob('**/*.controls.tsx', { cwd: directory })) {
+      count++
+      let example = controls.replace(/\.controls\.tsx$/, '.example.tsx')
+      await assert.doesNotReject(
+        () => access(new URL(example, import.meta.url)),
+        `Missing example for ${controls}`,
+      )
+    }
+    assert.ok(count > 0)
+  })
 })

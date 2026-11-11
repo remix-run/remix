@@ -254,6 +254,21 @@ describe('tooltip', () => {
     expect(isOpen(popup)).toBe(true)
   })
 
+  it('opens on keyboard focus after Escape closed a tooltip the user was not on', async () => {
+    let { container, root } = renderApp(<Tip label="bold" props={{ defaultOpen: true }} />)
+    let { trigger, popup } = get(container, 'bold')
+    await settle(root)
+    expect(isOpen(popup)).toBe(true)
+
+    key(document.body, 'Escape')
+    await settle(root)
+    expect(isOpen(popup)).toBe(false)
+
+    trigger.focus()
+    await settle(root)
+    expect(isOpen(popup)).toBe(true)
+  })
+
   it('closes on an outside press but not a press inside the popup', async () => {
     let reasons: TooltipOpenChangeReason[] = []
     let { container, root } = renderApp(
@@ -334,7 +349,13 @@ describe('tooltip', () => {
 
   it('stays open when the pointer returns to the trigger after aiming at the popup', async (t) => {
     let timers = t.useFakeTimers()
-    let { container, root } = renderApp(<Tip label="bold" props={{ delay: 0 }} />)
+    let reasons: string[] = []
+    let { container, root } = renderApp(
+      <Tip
+        label="bold"
+        props={{ delay: 0, onOpenChange: (open, reason) => void reasons.push(`${open}:${reason}`) }}
+      />,
+    )
     let { trigger, popup } = get(container, 'bold')
 
     pointer(trigger, 'pointerenter')
@@ -355,6 +376,8 @@ describe('tooltip', () => {
     timers.advance(1000)
     await settle(root)
     expect(isOpen(popup)).toBe(true)
+    // With no delays, a close and instant reopen would also end open, so check it never closed.
+    expect(reasons).toEqual(['true:trigger-hover'])
   })
 
   it('closes on press and does not reopen until the pointer re-enters', async (t) => {
@@ -468,6 +491,23 @@ describe('tooltip', () => {
     expect(isOpen(popup)).toBe(false)
   })
 
+  it('does not report a disabled close for a tooltip that was never shown', async () => {
+    let reasons: TooltipOpenChangeReason[] = []
+    let { container, root } = renderApp(
+      <Tip
+        label="bold"
+        props={{
+          defaultOpen: true,
+          disabled: true,
+          onOpenChange: (_open, reason) => void reasons.push(reason),
+        }}
+      />,
+    )
+    await settle(root)
+    expect(isOpen(get(container, 'bold').popup)).toBe(false)
+    expect(reasons).toEqual([])
+  })
+
   it('dispatches a bubbling open change event from the trigger', async () => {
     let events: TooltipOpenChangeEvent[] = []
     let { container, root } = renderApp(
@@ -542,6 +582,37 @@ describe('tooltip', () => {
     timers.advance(1000)
     await settle(root)
 
+    pointer(italic.trigger, 'pointerenter')
+    await settle(root)
+    expect(isOpen(italic.popup)).toBe(false)
+    timers.advance(500)
+    await settle(root)
+    expect(isOpen(italic.popup)).toBe(true)
+  })
+
+  it('does not stay warm when an open tooltip unmounts before its render settles', async (t) => {
+    let timers = t.useFakeTimers()
+    let showBold = true
+    let update = () => {}
+    function Toolbar(handle: Handle) {
+      update = () => void handle.update()
+      return () => (
+        <tooltip.GroupContext delay={500} timeout={300}>
+          {showBold ? <Tip label="bold" props={{ defaultOpen: true }} /> : null}
+          <Tip label="italic" />
+        </tooltip.GroupContext>
+      )
+    }
+    let { container, root } = renderApp(<Toolbar />)
+
+    // Unmount in the same task as the open render, before its queued group sync runs.
+    showBold = false
+    update()
+    root.flush()
+    await settle(root)
+    timers.advance(10_000)
+
+    let italic = get(container, 'italic')
     pointer(italic.trigger, 'pointerenter')
     await settle(root)
     expect(isOpen(italic.popup)).toBe(false)
