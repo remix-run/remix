@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
 import { format } from 'oxfmt'
 import { clientEntry } from 'remix/component'
 import type { Handle, RemixNode } from 'remix/component'
@@ -31,11 +31,31 @@ export async function loadExample(name: string): Promise<LoadedExample> {
   }
   let Example = mod.default
   let source = await readFile(module, 'utf8')
+  // A sibling `.controls.tsx` module wraps the example with docs-only controls, so the
+  // page runs the wrapper while the source panel shows only the example.
+  let controlsModule = new URL(`${name}.controls.tsx`, examplesUrl)
+  let Interactive = Example
+  let interactiveModule = module
+  if (await fileExists(controlsModule)) {
+    let controlsMod: unknown = await import(controlsModule.href)
+    let Controls =
+      controlsMod === null || typeof controlsMod !== 'object'
+        ? undefined
+        : Reflect.get(controlsMod, 'default')
+    if (!isDemoComponent(Controls)) {
+      throw new Error(`Example controls must default export a Remix component: ${controlsModule}`)
+    }
+    Interactive = Controls
+    interactiveModule = controlsModule
+  }
   return {
     Preview: Example,
-    Component: clientEntry(`${module.href}#default`, function InteractiveExample(handle) {
-      return Example(handle)
-    }),
+    Component: clientEntry(
+      `${interactiveModule.href}#default`,
+      function InteractiveExample(handle) {
+        return Interactive(handle)
+      },
+    ),
     sourceHtml: await highlightSource(source),
   }
 }
@@ -92,6 +112,15 @@ const snippetExtensions = new Map([
   ['css', 'css'],
   ['html', 'html'],
 ])
+
+async function fileExists(url: URL) {
+  try {
+    await access(url)
+    return true
+  } catch {
+    return false
+  }
+}
 
 function isDemoComponent(value: unknown): value is DemoComponent {
   return typeof value === 'function'

@@ -412,3 +412,70 @@
     --ui-anchor-offset: calc(var(--site-header-height) + 24px);
   }
 }
+
+/* Demo controls belong to the docs frame, not the demo: they sit on the preview's bottom edge in
+   the frame's own colors. They render inside the example's client entry, so they are positioned
+   against the preview instead of being placed after it. */
+.docs-demo-preview:has(> .ui-demo-controls) {
+  --ui-demo-controls-height: 41px;
+  position: relative;
+  padding-bottom: calc(48px + var(--ui-demo-controls-height));
+}
+.ui-demo-controls {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--rmx-space-sm) var(--rmx-space-lg);
+  min-height: var(--ui-demo-controls-height);
+  padding: 6px 12px;
+  border-top: 1px solid var(--rmx-color-border-subtle);
+  background: var(--rmx-surface-lvl1);
+  color: var(--rmx-color-text-secondary);
+  font-family: var(--rmx-font-family-sans);
+  font-size: var(--rmx-font-size-xs);
+}
+.ui-demo-controls [role='radiogroup'] {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ui-demo-controls [role='radiogroup'] > span {
+  margin-inline-end: 6px;
+  padding-inline-end: 10px;
+  border-inline-end: 1px solid var(--rmx-color-border-subtle);
+}
+.ui-demo-controls label {
+  position: relative;
+  cursor: pointer;
+}
+.ui-demo-controls input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.ui-demo-controls label span {
+  display: block;
+  padding: 3px 8px;
+  border-radius: var(--rmx-radius-sm);
+}
+.ui-demo-controls label:hover span {
+  color: var(--rmx-color-text-primary);
+}
+.ui-demo-controls input:checked + span {
+  background: var(--rmx-surface-lvl2);
+  box-shadow: inset 0 0 0 1px var(--rmx-color-border-subtle);
+  color: var(--rmx-color-text-primary);
+  font-weight: var(--rmx-font-weight-medium);
+}
+.ui-demo-controls input:focus-visible + span {
+  outline: 2px solid var(--rmx-color-focus-ring);
+  outline-offset: 1px;
+}

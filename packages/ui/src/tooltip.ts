@@ -484,7 +484,10 @@ const popupMixin: MixinFactory<HTMLElement, [options?: TooltipPopupOptions], Ele
           cleanupOpen = () => {}
           if (event.newState !== 'open' || !trigger) return
 
-          let cleanupAnchor = anchor(popup, trigger, { placement: 'top', ...anchorOptions })
+          let cleanupAnchor = anchor(popup, trigger, {
+            ...anchorOptions,
+            placement: anchorOptions.placement ?? 'top',
+          })
           // `beforetoggle` runs before the popup is displayed, so the arrow is measured once it shows
           // and again whenever anchoring or content changes the popup's geometry.
           syncArrow = () => {

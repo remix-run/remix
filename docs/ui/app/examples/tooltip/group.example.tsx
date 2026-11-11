@@ -25,7 +25,6 @@ export default function ExampleTooltipGroup() {
         colorScheme: 'light dark',
         display: 'flex',
         justifyContent: 'center',
-        padding: '48px 0 8px',
         color: 'light-dark(#202027, #eeeef2)',
         font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
       })}

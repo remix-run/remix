@@ -1,14 +1,16 @@
 import * as tooltip from '@remix-run/ui/tooltip'
 import { css } from 'remix/component'
+import type { Handle } from 'remix/component'
 
-export default function ExampleTooltip() {
+export default function ExampleTooltip(
+  handle: Handle<{ placement?: 'top' | 'right' | 'bottom' | 'left' }>,
+) {
   return () => (
     <div
       mix={css({
         colorScheme: 'light dark',
         display: 'flex',
         justifyContent: 'center',
-        padding: '48px 0 8px',
         color: 'light-dark(#202027, #eeeef2)',
         font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
       })}
@@ -55,7 +57,7 @@ export default function ExampleTooltip() {
         </button>
         <div
           mix={[
-            tooltip.popup({ placement: 'top', offset: 8 }),
+            tooltip.popup({ placement: handle.props.placement, offset: 8 }),
             css({
               '--tooltip-bg': 'light-dark(#202027, #eeeef2)',
               margin: 0,
@@ -72,6 +74,8 @@ export default function ExampleTooltip() {
                 'opacity 120ms ease, transform 120ms ease, display 120ms allow-discrete, overlay 120ms allow-discrete',
               '&[data-anchor-placement^="top"]': { transformOrigin: 'bottom center' },
               '&[data-anchor-placement^="bottom"]': { transformOrigin: 'top center' },
+              '&[data-anchor-placement^="left"]': { transformOrigin: 'center right' },
+              '&[data-anchor-placement^="right"]': { transformOrigin: 'center left' },
               '&:popover-open': {
                 opacity: 1,
                 transform: 'scale(1)',
@@ -90,9 +94,12 @@ export default function ExampleTooltip() {
                 height: '6px',
                 background: 'var(--tooltip-bg)',
                 clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-                // Overlap the popup by 1px so no subpixel seam shows between the two shapes.
+                // Overlap the popup by 1px so no subpixel seam shows between the two shapes. Side
+                // arrows rotate about their center, so their 12px by 6px box shifts 3px further.
                 '&[data-side="top"]': { top: 'calc(100% - 1px)' },
                 '&[data-side="bottom"]': { bottom: 'calc(100% - 1px)', rotate: '180deg' },
+                '&[data-side="left"]': { left: 'calc(100% - 4px)', rotate: '-90deg' },
+                '&[data-side="right"]': { right: 'calc(100% - 4px)', rotate: '90deg' },
               }),
             ]}
           />

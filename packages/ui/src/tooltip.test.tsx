@@ -592,6 +592,26 @@ describe('tooltip', () => {
     expect(arrow.style.top).toBe('')
   })
 
+  it('places the popup on top when placement is undefined', async () => {
+    let { container, root } = renderApp(
+      <tooltip.Context>
+        <button type="button" id="plain-trigger" mix={tooltip.trigger()} style="margin: 120px">
+          Plain
+        </button>
+        <div id="plain-popup" mix={tooltip.popup({ placement: undefined })}>
+          Tip
+        </div>
+      </tooltip.Context>,
+    )
+    let trigger = container.querySelector('#plain-trigger') as HTMLButtonElement
+    let popup = container.querySelector('#plain-popup') as HTMLElement
+
+    trigger.focus()
+    await settle(root)
+
+    expect(popup.getAttribute('data-anchor-placement')).toBe('top')
+  })
+
   it('keeps the arrow padded away from the popup edges', async () => {
     let { container, root } = renderApp(
       <tooltip.Context>
