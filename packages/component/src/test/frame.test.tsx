@@ -1016,22 +1016,38 @@ describe('run', () => {
     await expect(events[1]!.finished).rejects.toBe(null)
   })
 
-  it('reports a resolver AbortError as a failure when the reload was not aborted', async (t) => {
+  it('preserves a resolver AbortError when an error listener retries', async (t) => {
     document.body.innerHTML = '<main>Initial</main>'
     let failure = new DOMException('Resolver failed', 'AbortError')
-    let app = run({ loadModule: mock.fn(), resolveFrame: () => Promise.reject(failure) })
+    let fail = true
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame() {
+        if (fail) {
+          fail = false
+          throw failure
+        }
+        return '<!DOCTYPE html><html><head></head><body><main>Recovered</main></body></html>'
+      },
+    })
     t.after(() => app.dispose())
-    app.addEventListener('error', () => {})
+    let recovery: Promise<AbortSignal> | undefined
+    app.addEventListener('error', () => {
+      recovery = app.frames.top.reload()
+    })
     await app.ready()
     let events: FrameReloadStartEvent[] = []
     app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
 
     await expect(app.frames.top.reload()).rejects.toBe(failure)
 
+    invariant(recovery)
+    expect((await recovery).aborted).toBe(false)
     await expect(events[0]!.finished).rejects.toBe(failure)
+    expect(document.querySelector('main')?.textContent).toBe('Recovered')
   })
 
-  it('rejects a client child frame’s finished with its ancestor-driven request failure', async (t) => {
+  it('preserves a client child frame’s failure normally and when an error listener retries', async (t) => {
     document.body.innerHTML = '<main>Initial</main>'
     let failure = new Error('Child request failed')
     let failChild = false
@@ -1051,11 +1067,11 @@ describe('run', () => {
       },
     })
     t.after(() => app.dispose())
-    app.addEventListener('error', () => order.push('error'))
     await app.ready()
     await app.frames.top.reload()
     let child = app.frames.get('child')
     invariant(child)
+    app.addEventListener('error', () => order.push('error'))
     let events: FrameReloadStartEvent[] = []
     child.addEventListener('reloadStart', (event) => events.push(event))
     child.addEventListener('reloadComplete', () => order.push('complete'))
@@ -1066,6 +1082,23 @@ describe('run', () => {
     expect(events).toHaveLength(1)
     await expect(events[0]!.finished).rejects.toBe(failure)
     expect(order).toEqual(['error', 'complete'])
+    expect(document.querySelector('main')?.textContent).toBe('Initial child')
+
+    let recovery = Promise.withResolvers<AbortSignal>()
+    app.addEventListener(
+      'error',
+      () => {
+        failChild = false
+        void child.reload().then(recovery.resolve, recovery.reject)
+      },
+      { once: true },
+    )
+    await app.frames.top.reload()
+
+    expect(events).toHaveLength(3)
+    await expect(events[1]!.finished).rejects.toBe(failure)
+    expect((await recovery.promise).aborted).toBe(false)
+    expect(order).toEqual(['error', 'complete', 'error', 'complete'])
     expect(document.querySelector('main')?.textContent).toBe('Initial child')
   })
 
@@ -4866,24 +4899,30 @@ describe('run', () => {
   })
 
   it('rejects child frames’ finished with the failure when the reload of an ancestor fails', async (t) => {
+    function renderDocument() {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="child" src="/child" />
+          </body>
+        </html>,
+        { resolveFrame: () => '<p id="child-label">Initial child</p>' },
+      )
+    }
     let initialDocument = new DOMParser().parseFromString(
-      await drainWithProtocol(
-        renderToStream(
-          <html>
-            <head />
-            <body>
-              <Frame name="child" src="/child" />
-            </body>
-          </html>,
-          { resolveFrame: () => '<p id="child-label">Initial child</p>' },
-        ),
-      ),
+      await drainWithProtocol(renderDocument()),
       'text/html',
     )
     document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let failure = new Error('500 Internal Server Error')
+    let fail = true
     let app = run({
       loadModule: mock.fn(),
-      resolveFrame: () => Promise.reject(new Error('500 Internal Server Error')),
+      resolveFrame() {
+        if (fail) throw failure
+        return renderDocument()
+      },
     })
     t.after(() => app.dispose())
     app.addEventListener('error', () => {})
@@ -4895,12 +4934,28 @@ describe('run', () => {
     child.addEventListener('reloadStart', (event) => events.push(event))
     child.addEventListener('reloadComplete', () => completions++)
 
-    await expect(app.frames.top.reload()).rejects.toThrow('500 Internal Server Error')
+    await expect(app.frames.top.reload()).rejects.toBe(failure)
 
     expect(events).toHaveLength(1)
-    await expect(events[0]!.finished).rejects.toThrow('500 Internal Server Error')
+    await expect(events[0]!.finished).rejects.toBe(failure)
     expect(completions).toBe(1)
     expect(document.getElementById('child-label')?.textContent).toBe('Initial child')
+
+    let recovery = Promise.withResolvers<AbortSignal>()
+    app.addEventListener(
+      'error',
+      () => {
+        fail = false
+        void app.frames.top.reload().then(recovery.resolve, recovery.reject)
+      },
+      { once: true },
+    )
+    await expect(app.frames.top.reload()).rejects.toBe(failure)
+    expect((await recovery.promise).aborted).toBe(false)
+
+    expect(events).toHaveLength(3)
+    await expect(events[1]!.finished).rejects.toBe(failure)
+    expect((await events[2]!.finished).aborted).toBe(false)
   })
 
   it('reloads a frame region when the response uses css mixins', async () => {

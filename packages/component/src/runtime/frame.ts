@@ -282,10 +282,12 @@ export type FrameInstance = {
     origin?: ReloadOrigin,
   ) => {
     controller: AbortController
+    rejectFinished: (error: unknown) => void
     complete: (failure?: ReloadFailure) => void
   }
   cancelReload: () => void
   startInheritedReload: (signal?: AbortSignal, origin?: ReloadOrigin) => void
+  rejectInheritedReloadFinished: (error: unknown) => void
   completeInheritedReload: (failure?: ReloadFailure) => void
   updateMarker: (marker: FrameMarkerData, options?: RenderOptions) => Promise<void>
   renderMarkerContent: (
@@ -648,6 +650,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     beginClientFrameReloadForAncestorReload,
     cancelReload,
     startInheritedReload,
+    rejectInheritedReloadFinished,
     completeInheritedReload,
     updateMarker,
     renderMarkerContent,
@@ -799,11 +802,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     origin?: ReloadOrigin,
   ): {
     controller: AbortController
+    rejectFinished: (error: unknown) => void
     complete: (failure?: ReloadFailure) => void
   } {
     let { controller } = beginReload('ancestor', signal, origin)
     return {
       controller,
+      rejectFinished: (error) => rejectReloadFinished(controller, error),
       complete: (failure) => completeReload(controller, failure),
     }
   }
@@ -921,11 +926,26 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         return { signal: controller.signal }
       }
       failure = { error }
+      rejectReloadFinished(controller, error)
       init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       throw error
     } finally {
       completeReload(controller, failure)
     }
+  }
+
+  function rejectReloadFinished(controller: AbortController, error: unknown): void {
+    if (reloadState.status !== 'direct' && reloadState.status !== 'ancestor') return
+    if (reloadState.controller !== controller) return
+    // Error listeners can synchronously retry or dispose the failed reload.
+    reloadState.finished.reject(error)
+    rejectSubFrameInheritedReloadFinished(getContentNodes(), error)
+  }
+
+  function rejectInheritedReloadFinished(error: unknown): void {
+    if (reloadState.status !== 'inherited') return
+    reloadState.finished.reject(error)
+    rejectSubFrameInheritedReloadFinished(getContentNodes(), error)
   }
 
   function completeReload(controller: AbortController, failure?: ReloadFailure): void {
@@ -1005,6 +1025,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       },
       signal,
     )
+  }
+
+  function rejectSubFrameInheritedReloadFinished(nodes: Node[], error: unknown): void {
+    walkNodes(nodes, (node) => {
+      if (!isFrameStart(node)) return
+      let end = findFrameEndMarker(node)
+      context.frameInstances.get(node)?.rejectInheritedReloadFinished(error)
+      return end
+    })
   }
 
   function completeSubFrameInheritedReloads(nodes: Node[], failure: ReloadFailure): void {
@@ -1339,6 +1368,7 @@ function resolveClientFrame(
     .catch((error) => {
       if (reload && !signal.aborted) {
         failure = { error }
+        reload.rejectFinished(error)
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
     })
