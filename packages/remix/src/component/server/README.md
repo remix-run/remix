@@ -99,7 +99,7 @@ When the initial document was rendered with `nonce` and a response's CSP identif
 
 When the stream encounters a `<Frame>` component:
 
-- **With `loading="lazy"`**: Only the fallback and frame metadata are rendered. The server does not resolve the source or stream a content template. After `run()` starts in the browser, the frame loads through the browser resolver when it approaches the viewport.
+- **With `loading="lazy"`**: Only the fallback and frame metadata are rendered. The server does not resolve the source or stream a content template. To defer browser loading, provide a fallback that renders an element. After `run()` starts in the browser, the frame loads through the browser resolver when its fallback approaches the viewport. If the fallback renders no elements, the browser logs a warning and loads the frame immediately.
 - **Without `fallback`** (blocking): The frame content is awaited before the initial HTML chunk is sent. The resolved content appears inline.
 - **With `fallback`** (non-blocking): The fallback is rendered inline in the initial chunk. Once the frame resolves, a `<template>` element containing the real content is streamed at the end of the response. The client swaps it in automatically.
 

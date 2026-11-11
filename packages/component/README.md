@@ -1115,7 +1115,7 @@ function AlbumPage(handle: Handle<{ albumId: string }>) {
 | `src`      | Required. The URL whose HTML the frame renders and reloads.                       |
 | `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                |
 | `loading`  | `'eager'` (default) loads immediately. `'lazy'` waits until near the viewport.    |
-| `fallback` | Content to render while the frame is pending.                                     |
+| `fallback` | Content to render while pending. Lazy loading observes its rendered elements.     |
 | `on`       | Event handlers for events dispatched from the frame element, keyed by event type. |
 
 Frame content can contain other frames and client entries.
@@ -1139,7 +1139,9 @@ Use `loading="lazy"` for content farther down the page. The server renders only 
 
 The loading boundary extends one viewport height above and below the viewport and one viewport width to either side. It updates when the viewport resizes.
 
-Give the fallback enough space to represent the pending content and reduce layout shifts. The fallback is optional. Lazy loading requires `run()` in the browser, and deferred frames do not delay `app.ready()` or ancestor navigation completion. Browsers without `IntersectionObserver` load them immediately.
+To defer loading until near the viewport, provide a fallback that renders at least one DOM element for the browser to observe. Give it enough space to represent the pending content and reduce layout shifts. If the fallback renders only text or nothing, the browser logs a warning and loads the frame immediately. The runtime does not insert a placeholder element.
+
+Lazy loading requires `run()` in the browser, and deferred frames do not delay `app.ready()` or ancestor navigation completion. Browsers without `IntersectionObserver` load them immediately.
 
 Once loaded, the content stays mounted when it leaves the viewport. Changing `loading` to `'eager'` starts a deferred load immediately. Explicit `frame.reload()`, `frame.replace()`, and targeted navigations also take effect immediately.
 

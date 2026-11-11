@@ -341,7 +341,6 @@ export type FrameInstance = {
   isDisplayingResolvedContent: () => boolean
   hasOwnedReload: () => boolean
   deferLoad: (load?: () => void) => void
-  pauseDeferredLoad: () => void
   startDeferredLoad: () => void
   beginClientFrameReloadForAncestorReload: (signal: AbortSignal) => {
     controller: AbortController
@@ -710,7 +709,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     isDisplayingResolvedContent: () => displayedContentStatus === 'resolved',
     hasOwnedReload: () => reloadState.status === 'direct' || reloadState.status === 'ancestor',
     deferLoad,
-    pauseDeferredLoad,
     startDeferredLoad,
     beginClientFrameReloadForAncestorReload,
     cancelReload,
@@ -725,10 +723,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   function cancelDeferredLoad(): void {
     deferredLoad = undefined
-    pauseDeferredLoad()
-  }
-
-  function pauseDeferredLoad(): void {
     disconnectLoadObserver?.()
     disconnectLoadObserver = undefined
   }
@@ -759,21 +753,17 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (!load) return
     cancelDeferredLoad()
     if (isRenderAborted()) return
-    if (typeof IntersectionObserver === 'undefined') {
+    let targets = container.childNodes.filter((node) => node instanceof Element)
+    if (targets.length === 0) {
+      console.warn(
+        `Frame with loading="lazy" requires a fallback that renders an element. Loading "${frame.src}" immediately.`,
+      )
       load()
       return
     }
-
-    let targets = container.childNodes.filter((node) => node instanceof Element)
-    let marker: HTMLSpanElement | undefined
-    if (targets.length === 0) {
-      // Comment-bounded frames need a visibility target for empty or text-only fallbacks.
-      invariant(Array.isArray(root), 'Expected comment-bounded lazy frame')
-      marker = container.doc.createElement('span')
-      marker.setAttribute('aria-hidden', 'true')
-      marker.style.cssText = 'position:absolute;width:0;height:0;pointer-events:none'
-      root[0].after(marker)
-      targets.push(marker)
+    if (typeof IntersectionObserver === 'undefined') {
+      load()
+      return
     }
     deferredLoad = load
     let unobserve = observeFrameLoad(targets, startDeferredLoad)
@@ -790,7 +780,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     disconnectLoadObserver = () => {
       mutations.disconnect()
       unobserve()
-      marker?.remove()
     }
   }
 
@@ -1178,7 +1167,6 @@ function diffFrame(
 
   let { content } = committed._state
   if (content.status === 'fallback') {
-    frameInstance.pauseDeferredLoad()
     getNonceManager().inheritRootResourceNonces(content.fallbackRoot, vParent)
     content.fallbackRoot.render(committed.props.fallback ?? null)
     if (committed.props.loading === 'lazy') frameInstance.deferLoad()

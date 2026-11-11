@@ -1,1 +1,3 @@
-Defer below-the-fold frame requests with `<Frame loading="lazy">`. The server renders only the optional fallback, and the browser loads the frame when it approaches the viewport. Eager loading remains the default. Deferred frames do not delay hydration or ancestor navigation completion, and explicit reloads and targeted navigations load immediately.
+Defer below-the-fold frame requests with `<Frame loading="lazy" fallback={<p>Loading…</p>} />`. The server renders only the fallback, and the browser loads the frame when it approaches the viewport. Eager loading remains the default. Deferred frames do not delay hydration or ancestor navigation completion, and explicit reloads and targeted navigations load immediately.
+
+To defer loading until near the viewport, provide a fallback that renders an element to observe. If the fallback renders only text or nothing, the browser warns and loads the frame immediately without inserting a placeholder element.

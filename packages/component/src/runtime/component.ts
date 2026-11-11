@@ -336,7 +336,10 @@ export interface FrameProps {
    * Explicit reloads and navigations always load immediately.
    */
   loading?: 'eager' | 'lazy'
-  /** Fallback content to render while the frame is pending. */
+  /**
+   * Content to render while pending. Lazy loading observes elements rendered by the fallback.
+   * If none are rendered, the browser warns and loads the frame immediately.
+   */
   fallback?: Renderable
   /** Event handlers invoked for events dispatched from the frame element. */
   on?: Record<string, (event: Event, signal: AbortSignal) => void | Promise<void>>

@@ -5490,13 +5490,13 @@ describe('run', () => {
           id="vertical-host"
           mix={css({ position: 'fixed', top: window.innerHeight * 2 + 50, left: 0 })}
         >
-          <Frame src="/vertical-content" loading="lazy" />
+          <Frame src="/vertical-content" loading="lazy" fallback={<p>Waiting</p>} />
         </section>
         <section
           id="horizontal-host"
           mix={css({ position: 'fixed', top: 0, left: window.innerWidth * 2 + 50 })}
         >
-          <Frame src="/horizontal-content" loading="lazy" />
+          <Frame src="/horizontal-content" loading="lazy" fallback={<p>Waiting</p>} />
         </section>
       </>,
     )
@@ -5518,6 +5518,88 @@ describe('run', () => {
     expect(requests).toEqual(['/vertical-content', '/horizontal-content'])
   })
 
+  it('warns and loads a client-created lazy frame without a fallback immediately', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let warn = t.mock.method(console, 'warn', () => {})
+    let response = Promise.withResolvers<string>()
+    let resolveFrame = mock.fn(() => response.promise)
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    root.render(jsx(Frame, { src: '/empty', loading: 'lazy' }))
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.arguments).toEqual([
+      'Frame with loading="lazy" requires a fallback that renders an element. Loading "/empty" immediately.',
+    ])
+    expect(container.children.length).toBe(0)
+
+    let loaded = waitForElement('#empty-content')
+    response.resolve('<p id="empty-content">Loaded</p>')
+    await loaded
+    expect(container.children.length).toBe(1)
+  })
+
+  it('warns and loads a hydrated lazy frame with a text-only fallback immediately', async (t) => {
+    function Fallback() {
+      return () => 'Waiting'
+    }
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <section id="lazy-host">
+          <Frame src="/text" loading="lazy" fallback={<Fallback />} />
+        </section>,
+      ),
+    )
+    let host = document.getElementById('lazy-host')
+    invariant(host)
+    host.style.cssText = 'position:fixed;top:100000px;left:0'
+    let warn = t.mock.method(console, 'warn', () => {})
+    let response = Promise.withResolvers<string>()
+    let resolveFrame = mock.fn(() => response.promise)
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+    t.after(() => app.dispose())
+    await app.ready()
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.arguments).toEqual([
+      'Frame with loading="lazy" requires a fallback that renders an element. Loading "/text" immediately.',
+    ])
+    expect(host.textContent).toBe('Waiting')
+    expect(host.children.length).toBe(0)
+
+    let loaded = waitForElement('#text-content')
+    response.resolve('<p id="text-content">Loaded</p>')
+    await loaded
+    expect(host.textContent).toBe('Loaded')
+  })
+
+  it('warns and loads a lazy frame when its fallback stops rendering elements', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let warn = t.mock.method(console, 'warn', () => {})
+    let fallback: Handle | undefined
+    let visible = true
+    function Fallback(handle: Handle) {
+      fallback = handle
+      return () => (visible ? <p>Waiting</p> : null)
+    }
+    let resolveFrame = mock.fn(() => '<p id="removed-fallback-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/removed-fallback" loading="lazy" fallback={<Fallback />} />)
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).not.toHaveBeenCalled()
+    expect(warn.mock.calls.length).toBe(0)
+    invariant(fallback)
+    let loaded = waitForElement('#removed-fallback-content')
+    visible = false
+    await fallback.update()
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls.length).toBe(1)
+    await loaded
+  })
+
   it('debounces viewport changes before updating the lazy frame loading boundary', async (t) => {
     let originalHeight = Object.getOwnPropertyDescriptor(window, 'innerHeight')
     invariant(originalHeight)
@@ -5527,7 +5609,7 @@ describe('run', () => {
     let root = createRoot(container, { frameInit: { resolveFrame } })
     t.after(() => root.dispose())
     let observe = t.mock.method(IntersectionObserver.prototype, 'observe')
-    root.render(<Frame src="/resized-content" loading="lazy" />)
+    root.render(<Frame src="/resized-content" loading="lazy" fallback={<p>Waiting</p>} />)
     root.flush()
     await waitForIntersection(container)
     expect(resolveFrame).not.toHaveBeenCalled()
@@ -5585,7 +5667,7 @@ describe('run', () => {
     })
     first.render(<Frame src="/first" loading="lazy" fallback={<p>First</p>} />)
     second.render(<Frame src="/second" loading="lazy" fallback={<p>Second</p>} />)
-    removed.render(<Frame src="/removed" loading="lazy" fallback="Removed" />)
+    removed.render(<Frame src="/removed" loading="lazy" fallback={<p>Removed</p>} />)
     first.flush()
     second.flush()
     removed.flush()
@@ -5603,7 +5685,7 @@ describe('run', () => {
     removed.render(null)
     removed.flush()
     expect(removedHost.childNodes.length).toBe(0)
-    removed.render(<Frame src="/disposed" loading="lazy" fallback="Disposed" />)
+    removed.render(<Frame src="/disposed" loading="lazy" fallback={<p>Disposed</p>} />)
     removed.flush()
     removed.dispose()
     removedHost.style.top = '0'
@@ -5675,10 +5757,10 @@ describe('run', () => {
       },
     })
     t.after(() => root.dispose())
-    root.render(<Frame src="/old" loading="lazy" fallback="First" />)
+    root.render(<Frame src="/old" loading="lazy" fallback={<p>First</p>} />)
     root.flush()
     await waitForIntersection(container)
-    root.render(<Frame src="/new" loading="lazy" fallback="Second" />)
+    root.render(<Frame src="/new" loading="lazy" fallback={<p>Second</p>} />)
     root.flush()
     await waitForIntersection(container)
     expect(requests).toEqual([])
@@ -5695,7 +5777,7 @@ describe('run', () => {
     document.body.innerHTML = await drain(
       renderToStream(
         <section id="lazy-host">
-          <Frame name="lazy" src="/lazy" loading="lazy" fallback="Waiting" />
+          <Frame name="lazy" src="/lazy" loading="lazy" fallback={<p>Waiting</p>} />
         </section>,
       ),
     )
@@ -5849,14 +5931,14 @@ describe('run', () => {
     let root = createRoot(container, { frameInit: { resolveFrame } })
     t.after(() => root.dispose())
     let loaded = waitForElement('#unsupported-lazy-content')
-    root.render(<Frame src="/lazy" loading="lazy" />)
+    root.render(<Frame src="/lazy" loading="lazy" fallback={<p>Waiting</p>} />)
     root.flush()
     await loaded
     expect(resolveFrame).toHaveBeenCalledTimes(1)
   })
 
   it('keeps lazy frames deferred through ancestor reloads and preserves loaded content', async (t) => {
-    let fallback: RemixNode = 'Waiting'
+    let fallback = <p>Waiting</p>
     let renderPage = () =>
       renderDocumentContent(
         <section id="lazy-host" mix={css({ position: 'fixed', top: '100000px', left: 0 })}>
@@ -5901,7 +5983,7 @@ describe('run', () => {
 
   it('reports failed server-rendered lazy frame requests once', async (t) => {
     document.body.innerHTML = await drain(
-      renderToStream(<Frame src="/failure" loading="lazy" fallback="Waiting" />),
+      renderToStream(<Frame src="/failure" loading="lazy" fallback={<p>Waiting</p>} />),
     )
     let failure = new Error('Frame request failed')
     let errors: unknown[] = []
@@ -5932,7 +6014,7 @@ describe('run', () => {
       errors.push(event.error)
       reported.resolve()
     })
-    root.render(<Frame src="/failure" loading="lazy" fallback="Waiting" />)
+    root.render(<Frame src="/failure" loading="lazy" fallback={<p>Waiting</p>} />)
     root.flush()
     await reported.promise
     expect(errors).toEqual([failure])

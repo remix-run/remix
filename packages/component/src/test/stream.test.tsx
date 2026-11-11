@@ -4445,7 +4445,7 @@ describe('stream', () => {
         renderToStream(
           <>
             <Frame name="later" src="/lazy" loading="lazy" fallback={<p>Later</p>} />
-            <Frame src="/empty" loading="lazy" />
+            <Frame src="/empty" loading="lazy" fallback={<></>} />
             <Frame src="/eager" loading="eager" />
           </>,
           {

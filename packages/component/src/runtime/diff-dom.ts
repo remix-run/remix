@@ -140,9 +140,6 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
           if (frame.isDisplayingResolvedContent()) {
             return findFrameEndMarker(next)
           }
-
-          // Remove temporary visibility targets before they can be reused as fallback content.
-          frame.pauseDeferredLoad()
         }
       } else if (current.data !== newData) {
         disposeFrameStartMarker(current, context)
