@@ -1,1 +1,0 @@
-Keep a client-rendered `<Frame>` from `remix/component` showing its current content when its `src` changes while nested frames or client entries are still loading. Previously the frame could remount and flash its `fallback` before the new source resolved.

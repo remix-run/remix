@@ -1,1 +1,0 @@
-Safari now restores the saved scroll position on back and forward navigations in `remix/component` when the destination's frames render immediately, instead of keeping the position of the page being left.
