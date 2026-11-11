@@ -410,10 +410,11 @@ it('debounces a callback', (t) => {
 })
 ```
 
-| Method        | Description                                                                 |
-| ------------- | --------------------------------------------------------------------------- |
-| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
-| `restore()`   | Restore the original timer functions (called automatically after each test) |
+| Method             | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `advance(ms)`      | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `advanceAsync(ms)` | Like `advance`, but lets promise continuations settle between timer firings |
+| `restore()`        | Restore the original timer functions (called automatically after each test) |
 
 `Date.now()` and `new Date()` start at the Unix epoch (`0`), like Node's mock timers, and `performance.now()` starts at `0`. Vitest and Jest start at the real current time instead; a fixed start keeps tests from depending on when they run. Pass `now` to start the fake `Date` at a specific time. `new Date(value)`, `Date.parse()`, `Date.UTC()`, and `instanceof Date` keep working as usual.
 
