@@ -7,11 +7,32 @@ import {
   prefetch,
   startPrefetching,
   type PrefetchFrame,
+  type PrefetchOptions,
 } from '../runtime/prefetch.ts'
 import { run } from '../runtime/run.ts'
 import { renderToStream } from '../server/stream.ts'
 import { drain } from './utils.ts'
 import { defaultPrefetch, type DefaultPrefetchOverrides, type PrefetchContext } from '../index.ts'
+
+function expectPrefetchCall(
+  callback: { mock: { calls: { arguments: unknown[] }[] } },
+  src: string,
+  options?: PrefetchOptions,
+): void {
+  let call = callback.mock.calls.find(({ arguments: args }) => {
+    let value = args[1]
+    return (
+      args[0] === src &&
+      (options
+        ? typeof value === 'object' &&
+          value !== null &&
+          Reflect.get(value, 'element') === options.element &&
+          Reflect.get(value, 'target') === options.target
+        : value === undefined)
+    )
+  })
+  expect(call?.arguments).toMatchObject(options ? [src, options] : [src])
+}
 
 function startTestPrefetching(t: TestContext, prefetchFrame?: PrefetchFrame) {
   let controller = new AbortController()
@@ -192,10 +213,10 @@ describe('prefetch', () => {
       connection.effectiveType = effectiveType
       let pressed = createIntentLink(`/products/intent-${effectiveType}`)
       press(pressed)
-      expect(prefetchFrame).toHaveBeenCalledWith(pressed.href, { elements: [pressed] })
+      expectPrefetchCall(prefetchFrame, pressed.href, { element: pressed })
       let visible = createViewportLink(`/products/viewport-${effectiveType}`)
       expect(await readIntersection(visible)).toBe(true)
-      expect(prefetchFrame).toHaveBeenCalledWith(visible.href, { elements: [visible] })
+      expectPrefetchCall(prefetchFrame, visible.href, { element: visible })
     }
 
     expect(prefetchFrame).toHaveBeenCalledTimes(4)
@@ -212,8 +233,8 @@ describe('prefetch', () => {
     expect(await readIntersection(visible)).toBe(true)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
-    expect(prefetchFrame).toHaveBeenCalledWith(pressed.href, { elements: [pressed] })
-    expect(prefetchFrame).toHaveBeenCalledWith(visible.href, { elements: [visible] })
+    expectPrefetchCall(prefetchFrame, pressed.href, { element: pressed })
+    expectPrefetchCall(prefetchFrame, visible.href, { element: visible })
   })
 
   it('checks connection settings after the intent delay and allows a later press', async (t) => {
@@ -231,7 +252,7 @@ describe('prefetch', () => {
     connection.saveData = false
     press(anchor)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { elements: [anchor] })
+    expectPrefetchCall(prefetchFrame, anchor.href, { element: anchor })
   })
 
   it('allows a skipped viewport link to prefetch on reentry after the connection improves', async (t) => {
@@ -249,7 +270,7 @@ describe('prefetch', () => {
     anchor.style.top = '0px'
     expect(await readIntersection(anchor)).toBe(true)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { elements: [anchor] })
+    expectPrefetchCall(prefetchFrame, anchor.href, { element: anchor })
   })
 
   it('allows imperative prefetching with Save-Data enabled on a slow connection', (t) => {
@@ -260,7 +281,7 @@ describe('prefetch', () => {
     prefetch('/products/shirt')
 
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href)
+    expectPrefetchCall(prefetchFrame, new URL('/products/shirt', location.href).href)
   })
 
   it('prefetches intent links after mouse hover or keyboard focus rests on them', async (t) => {
@@ -272,11 +293,11 @@ describe('prefetch', () => {
     hovered.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }))
     expect(prefetchFrame).not.toHaveBeenCalled()
     await wait(150)
-    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href, { elements: [hovered] })
+    expectPrefetchCall(prefetchFrame, hovered.href, { element: hovered })
 
     focused.focus()
     await wait(150)
-    expect(prefetchFrame).toHaveBeenCalledWith(focused.href, { elements: [focused] })
+    expectPrefetchCall(prefetchFrame, focused.href, { element: focused })
   })
 
   it('cancels the prefetch when the pointer leaves before the intent delay', async (t) => {
@@ -300,8 +321,8 @@ describe('prefetch', () => {
 
     press(anchor)
 
-    expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href, {
-      elements: [anchor],
+    expectPrefetchCall(prefetchFrame, new URL('/products/shirt', location.href).href, {
+      element: anchor,
     })
   })
 
@@ -340,7 +361,7 @@ describe('prefetch', () => {
 
     expect(document.activeElement).toBe(focused)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    expect(prefetchFrame).toHaveBeenCalledWith(focused.href, { elements: [focused] })
+    expectPrefetchCall(prefetchFrame, focused.href, { element: focused })
   })
 
   it('prefetches separate hovered and focused links without replacing either intent', async (t) => {
@@ -354,8 +375,8 @@ describe('prefetch', () => {
     await wait(150)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
-    expect(prefetchFrame).toHaveBeenCalledWith(focused.href, { elements: [focused] })
-    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href, { elements: [hovered] })
+    expectPrefetchCall(prefetchFrame, focused.href, { element: focused })
+    expectPrefetchCall(prefetchFrame, hovered.href, { element: hovered })
   })
 
   it('keeps hover intent when another link loses focus', async (t) => {
@@ -370,7 +391,7 @@ describe('prefetch', () => {
     await wait(150)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href, { elements: [hovered] })
+    expectPrefetchCall(prefetchFrame, hovered.href, { element: hovered })
   })
 
   it('keeps focus intent when the pointer leaves the same link', async (t) => {
@@ -499,9 +520,9 @@ describe('prefetch', () => {
     let anchor = createIntentLink('/products/shirt')
     anchor.setAttribute('data-rmx-target', 'details')
     press(anchor)
-    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, {
+    expectPrefetchCall(prefetchFrame, anchor.href, {
       target: 'details',
-      elements: [anchor],
+      element: anchor,
     })
 
     let overridden = createIntentLink('/products/hat')
@@ -509,10 +530,10 @@ describe('prefetch', () => {
     overridden.setAttribute('data-rmx-src', './partials/hat?size=small#details')
     movePointer(document.body, overridden)
     await wait(150)
-    expect(prefetchFrame).toHaveBeenCalledWith(
-      new URL('./partials/hat?size=small', document.baseURI).href,
-      { target: 'details', elements: [overridden] },
-    )
+    expectPrefetchCall(prefetchFrame, new URL('./partials/hat?size=small', document.baseURI).href, {
+      target: 'details',
+      element: overridden,
+    })
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
   })
 
@@ -525,16 +546,16 @@ describe('prefetch', () => {
     press(named)
     let current = new URL(location.href)
     current.hash = ''
-    expect(prefetchFrame).toHaveBeenCalledWith(current.href, {
+    expectPrefetchCall(prefetchFrame, current.href, {
       target: 'details',
-      elements: [named],
+      element: named,
     })
 
     let top = createIntentLink('/products/top')
     top.setAttribute('data-rmx-target', '')
     top.setAttribute('data-rmx-src', '/ignored')
     press(top)
-    expect(prefetchFrame).toHaveBeenCalledWith(top.href, { elements: [top] })
+    expectPrefetchCall(prefetchFrame, top.href, { element: top })
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
   })
 
@@ -564,7 +585,7 @@ describe('prefetch', () => {
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     prefetch('/partial#details', { target: 'details' })
-    expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partial', location.href).href, {
+    expectPrefetchCall(prefetchFrame, new URL('/partial', location.href).href, {
       target: 'details',
     })
     prefetch('https://example.com/partial', { target: 'details' })
@@ -631,9 +652,9 @@ describe('prefetch', () => {
       await startNamedFramePrefetching(t, prefetchFrame, anchor)
 
       expect(await readIntersection(anchor)).toBe(true)
-      expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/shirt', location.href).href, {
+      expectPrefetchCall(prefetchFrame, new URL('/partials/shirt', location.href).href, {
         target: 'details',
-        elements: [anchor],
+        element: anchor,
       })
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
@@ -645,17 +666,17 @@ describe('prefetch', () => {
       anchor.setAttribute('data-rmx-src', '/partials/hat')
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
-      expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/hat', location.href).href, {
+      expectPrefetchCall(prefetchFrame, new URL('/partials/hat', location.href).href, {
         target: 'details',
-        elements: [anchor],
+        element: anchor,
       })
 
       anchor.setAttribute('data-rmx-target', 'sidebar')
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(3)
-      expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/hat', location.href).href, {
+      expectPrefetchCall(prefetchFrame, new URL('/partials/hat', location.href).href, {
         target: 'sidebar',
-        elements: [anchor],
+        element: anchor,
       })
 
       anchor.setAttribute('data-rmx-target', 'missing')
@@ -664,7 +685,7 @@ describe('prefetch', () => {
       anchor.removeAttribute('data-rmx-target')
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(4)
-      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { elements: [anchor] })
+      expectPrefetchCall(prefetchFrame, anchor.href, { element: anchor })
     })
 
     it('prefetches existing links only when they enter the viewport', async (t) => {
@@ -676,12 +697,12 @@ describe('prefetch', () => {
       expect(await readIntersection(visible)).toBe(true)
       expect(await readIntersection(offscreen)).toBe(false)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(visible.href, { elements: [visible] })
+      expectPrefetchCall(prefetchFrame, visible.href, { element: visible })
 
       offscreen.style.top = '0px'
       expect(await readIntersection(offscreen)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
-      expect(prefetchFrame).toHaveBeenCalledWith(offscreen.href, { elements: [offscreen] })
+      expectPrefetchCall(prefetchFrame, offscreen.href, { element: offscreen })
     })
 
     it('discovers links in newly inserted subtrees and links marked after insertion', async (t) => {
@@ -692,7 +713,7 @@ describe('prefetch', () => {
       subtree.append(added)
       document.body.append(subtree)
       expect(await readIntersection(added)).toBe(true)
-      expect(prefetchFrame).toHaveBeenCalledWith(added.href, { elements: [added] })
+      expectPrefetchCall(prefetchFrame, added.href, { element: added })
 
       let markedLater = createIntentLink('/products/marked-later')
       markedLater.style.cssText = added.style.cssText
@@ -702,7 +723,7 @@ describe('prefetch', () => {
       markedLater.setAttribute('data-rmx-prefetch', 'viewport')
       expect(await readIntersection(markedLater)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
-      expect(prefetchFrame).toHaveBeenCalledWith(markedLater.href, { elements: [markedLater] })
+      expectPrefetchCall(prefetchFrame, markedLater.href, { element: markedLater })
     })
 
     it('does not repeat on reentry or fragment changes but observes changed destinations', async (t) => {
@@ -711,8 +732,8 @@ describe('prefetch', () => {
       startTestPrefetching(t, prefetchFrame)
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href, {
-        elements: [anchor],
+      expectPrefetchCall(prefetchFrame, new URL('/products/shirt', location.href).href, {
+        element: anchor,
       })
 
       anchor.style.top = `${innerHeight + 100}px`
@@ -731,7 +752,7 @@ describe('prefetch', () => {
       anchor.href = '/products/hat'
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
-      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { elements: [anchor] })
+      expectPrefetchCall(prefetchFrame, anchor.href, { element: anchor })
     })
 
     it('skips ineligible links and observes links when they become eligible', async (t) => {
@@ -758,7 +779,7 @@ describe('prefetch', () => {
       download.removeAttribute('download')
       expect(await readIntersection(download)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(download.href, { elements: [download] })
+      expectPrefetchCall(prefetchFrame, download.href, { element: download })
     })
 
     it('does not prefetch a removed link and can prefetch it when mounted again', async (t) => {
@@ -837,8 +858,252 @@ describe('prefetch', () => {
       expect(prefetchFrame).not.toHaveBeenCalled()
       press(intent)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(intent.href, { elements: [intent] })
+      expectPrefetchCall(prefetchFrame, intent.href, { element: intent })
     })
+  })
+})
+
+describe('anchor prefetch ownership', () => {
+  it('prefetches unmarked anchors with frame metadata and explicit target overrides', async (t) => {
+    let callback = mock.fn()
+    let anchor = createIntentLink('/page#section')
+    anchor.removeAttribute('data-rmx-prefetch')
+    anchor.setAttribute('data-rmx-src', '/partial#section')
+    anchor.setAttribute('data-rmx-target', 'details')
+    await startNamedFramePrefetching(t, callback, anchor)
+    prefetch(anchor)
+    expectPrefetchCall(callback, new URL('/partial', location.href).href, {
+      target: 'details',
+      element: anchor,
+    })
+    prefetch(anchor, { target: 'sidebar' })
+    expectPrefetchCall(callback, new URL('/partial', location.href).href, {
+      target: 'sidebar',
+      element: anchor,
+    })
+    prefetch(anchor, { target: '' })
+    expectPrefetchCall(callback, new URL('/page', location.href).href, {
+      target: '',
+      element: anchor,
+    })
+  })
+
+  it('skips detached and ineligible anchors without requiring a declarative marker', (t) => {
+    let callback = mock.fn()
+    startTestPrefetching(t, callback)
+    let anchor = document.createElement('a')
+    anchor.href = '/page'
+    prefetch(anchor)
+    document.body.append(anchor)
+    anchor.download = 'page.html'
+    prefetch(anchor)
+    anchor.removeAttribute('download')
+    anchor.target = '_blank'
+    prefetch(anchor)
+    anchor.target = '_self'
+    anchor.setAttribute('data-rmx-document', '')
+    prefetch(anchor)
+    anchor.removeAttribute('data-rmx-document')
+    anchor.href = 'https://example.com/page'
+    prefetch(anchor)
+    expect(callback).not.toHaveBeenCalled()
+    anchor.href = '/page'
+    prefetch(anchor)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels queued intent and imperative callers without IntersectionObserver or callback promises', async (t) => {
+    let descriptor = Object.getOwnPropertyDescriptor(globalThis, 'IntersectionObserver')
+    Object.defineProperty(globalThis, 'IntersectionObserver', {
+      configurable: true,
+      value: undefined,
+    })
+    t.after(() => {
+      if (descriptor) Object.defineProperty(globalThis, 'IntersectionObserver', descriptor)
+    })
+    let signals: AbortSignal[] = []
+    let cancelled: Promise<void>[] = []
+    startTestPrefetching(t, (_src, options) => {
+      if (!options?.signal) throw new Error('Expected caller signal')
+      signals.push(options.signal)
+      cancelled.push(
+        new Promise((resolve) =>
+          options.signal?.addEventListener('abort', () => resolve(), { once: true }),
+        ),
+      )
+    })
+    let intent = createIntentLink('/intent')
+    let imperative = createIntentLink('/imperative')
+    press(intent)
+    prefetch(imperative)
+    expect(signals.length).toBe(2)
+    expect(signals.every((signal) => !signal.aborted)).toBe(true)
+    intent.remove()
+    imperative.remove()
+    await Promise.all(cancelled)
+    expect(signals.every((signal) => signal.aborted)).toBe(true)
+  })
+
+  it('retains shared fetching after the first anchor disconnects and aborts after the last', async (t) => {
+    let first = createIntentLink('/shared')
+    let second = createIntentLink('/shared')
+    let response = Promise.withResolvers<Response>()
+    t.after(() => response.resolve(htmlResponse('Finished')))
+    let context: PrefetchContext | undefined
+    let fetched = mock.fn((_url: string, _init: RequestInit, value: PrefetchContext) => {
+      context = value
+      return response.promise
+    })
+    let callers: AbortSignal[] = []
+    startTestPrefetching(t, (src, options) => {
+      if (!options?.signal) throw new Error('Expected caller signal')
+      callers.push(options.signal)
+      return defaultPrefetch(src, options, { fetch: fetched })
+    })
+    prefetch(first)
+    prefetch(second)
+    if (!context) throw new Error('Expected fetch context')
+    expect(fetched).toHaveBeenCalledTimes(1)
+    expect(context.element).toBe(first)
+    let firstCancelled = new Promise<void>((resolve) =>
+      callers[0].addEventListener('abort', () => resolve(), { once: true }),
+    )
+    first.remove()
+    await firstCancelled
+    expect(context.element?.isConnected).toBe(false)
+    expect(context.signal.aborted).toBe(false)
+    let finished = new Promise<void>((resolve) =>
+      context?.signal.addEventListener('abort', () => resolve(), { once: true }),
+    )
+    second.remove()
+    await finished
+    expect(callers.every((signal) => signal.aborted)).toBe(true)
+  })
+
+  it('retains string callers when an anchor sharing their request disconnects', async (t) => {
+    let anchor = createIntentLink('/shared')
+    let response = Promise.withResolvers<Response>()
+    let parsed = Promise.withResolvers<void>()
+    let context: PrefetchContext | undefined
+    let callerSignal: AbortSignal | undefined
+    startTestPrefetching(t, (src, options) => {
+      if (options?.element) callerSignal = options.signal
+      return defaultPrefetch(src, options, {
+        fetch(_url, _init, value) {
+          context = value
+          return response.promise
+        },
+        frame() {
+          parsed.resolve()
+        },
+      })
+    })
+    prefetch(anchor)
+    prefetch('/shared')
+    if (!callerSignal || !context) throw new Error('Expected signals')
+    let cancelled = new Promise<void>((resolve) =>
+      callerSignal?.addEventListener('abort', () => resolve(), { once: true }),
+    )
+    anchor.remove()
+    await cancelled
+    expect(context.signal.aborted).toBe(false)
+    response.resolve(htmlResponse('<main>Shared</main>'))
+    await parsed.promise
+  })
+
+  it('preserves document moves and gives reinserted anchors a fresh cancellation signal', async (t) => {
+    let signals: AbortSignal[] = []
+    startTestPrefetching(t, (_src, options) => {
+      if (!options?.signal) throw new Error('Expected caller signal')
+      signals.push(options.signal)
+    })
+    let anchor = createIntentLink('/page')
+    prefetch(anchor)
+    let container = document.createElement('main')
+    document.body.append(container)
+    container.append(anchor)
+    await new Promise<void>((resolve) => queueMicrotask(resolve))
+    expect(signals[0].aborted).toBe(false)
+    let cancelled = new Promise<void>((resolve) =>
+      signals[0].addEventListener('abort', () => resolve(), { once: true }),
+    )
+    container.remove()
+    await cancelled
+    document.body.append(anchor)
+    prefetch(anchor)
+    expect(signals.length).toBe(2)
+    expect(signals[1]).not.toBe(signals[0])
+    expect(signals[1].aborted).toBe(false)
+  })
+
+  it('combines explicit cancellation and runtime disposal with anchor lifetime', (t) => {
+    let caller = new AbortController()
+    let runtime = new AbortController()
+    let signals: AbortSignal[] = []
+    startPrefetching(runtime.signal, (_src, options) => {
+      if (!options?.signal) throw new Error('Expected caller signal')
+      signals.push(options.signal)
+    })
+    t.after(() => runtime.abort())
+    let anchor = createIntentLink('/page')
+    prefetch(anchor, { signal: caller.signal })
+    prefetch(anchor)
+    caller.abort()
+    expect(signals[0].aborted).toBe(true)
+    expect(signals[1].aborted).toBe(false)
+    runtime.abort()
+    expect(signals[1].aborted).toBe(true)
+  })
+
+  it('releases anchor lifetime tracking when promised work completes', async (t) => {
+    let finished = Promise.withResolvers<void>()
+    let signal: AbortSignal | undefined
+    startTestPrefetching(t, (_src, options) => {
+      signal = options?.signal
+      return finished.promise
+    })
+    let anchor = createIntentLink('/page')
+    prefetch(anchor)
+    if (!signal) throw new Error('Expected caller signal')
+    finished.resolve()
+    await finished.promise
+    anchor.remove()
+    await new Promise<void>((resolve) => queueMicrotask(resolve))
+    expect(signal.aborted).toBe(false)
+  })
+
+  it('keeps string calls with an explicit element independent of DOM lifetime', async (t) => {
+    let caller = new AbortController()
+    let anchor = createIntentLink('/page')
+    let callback = mock.fn()
+    startTestPrefetching(t, callback)
+    prefetch('/page', { element: anchor, signal: caller.signal })
+    expect(callback).toHaveBeenCalledWith(new URL('/page', location.href).href, {
+      element: anchor,
+      signal: caller.signal,
+    })
+    anchor.remove()
+    await new Promise<void>((resolve) => queueMicrotask(resolve))
+    expect(caller.signal.aborted).toBe(false)
+  })
+
+  it('cancels viewport callers when their containing subtree disconnects', async (t) => {
+    let signal = Promise.withResolvers<AbortSignal>()
+    startTestPrefetching(t, (_src, options) => {
+      if (!options?.signal) throw new Error('Expected caller signal')
+      signal.resolve(options.signal)
+    })
+    let anchor = createViewportLink('/viewport')
+    let container = document.createElement('div')
+    container.append(anchor)
+    document.body.append(container)
+    let caller = await signal.promise
+    let cancelled = new Promise<void>((resolve) =>
+      caller.addEventListener('abort', () => resolve(), { once: true }),
+    )
+    container.remove()
+    await cancelled
+    expect(caller.aborted).toBe(true)
   })
 })
 
@@ -851,18 +1116,18 @@ describe('defaultPrefetch overrides', () => {
     let app = run({
       loadModule: mock.fn(),
       prefetch(src, options) {
-        expect(options?.elements).toEqual([anchor])
-        expect(options?.elements?.[0]).not.toBe(child)
+        expect(options?.element).toBe(anchor)
+        expect(options?.element).not.toBe(child)
         return defaultPrefetch(src, options, {
           fetch(url, init, context) {
             expect(context.src).toBe(url)
             expect(context.signal).toBe(init.signal)
-            expect(context.elements).toEqual([anchor])
+            expect(context.element).toBe(anchor)
             return Promise.resolve(htmlResponse('<main>Page</main>'))
           },
           frame(_prefetchReferences, context) {
-            expect(context.elements).toEqual([anchor])
-            expect(context.elements[0].isConnected).toBe(true)
+            expect(context.element).toBe(anchor)
+            expect(context.element?.isConnected).toBe(true)
             parsed.resolve()
           },
         })
@@ -874,13 +1139,11 @@ describe('defaultPrefetch overrides', () => {
     await parsed.promise
   })
 
-  it('tracks shared callers joining and cancelling through live read-only origin getters', async (t) => {
+  it('retains the first triggering element when shared callers join and cancel', async (t) => {
     startTestPrefetching(t)
     let firstElement = document.createElement('button')
     let secondElement = document.createElement('button')
-    let thirdElement = document.createElement('button')
     let firstController = new AbortController()
-    let secondController = new AbortController()
     let response = Promise.withResolvers<Response>()
     let parsed = Promise.withResolvers<PrefetchContext>()
     let release = Promise.withResolvers<void>()
@@ -889,7 +1152,7 @@ describe('defaultPrefetch overrides', () => {
       '/page',
       {
         signal: firstController.signal,
-        elements: [firstElement],
+        element: firstElement,
       },
       {
         fetch(_url, _init, context) {
@@ -903,34 +1166,23 @@ describe('defaultPrefetch overrides', () => {
       },
     )
     if (!requestContext) throw new Error('Expected request context')
-    let snapshot = requestContext.elements
-    expect(snapshot).toEqual([firstElement])
-    expect(Object.isFrozen(snapshot)).toBe(true)
-    expect(Object.isFrozen(firstElement)).toBe(false)
-    let second = defaultPrefetch('/page', {
-      signal: secondController.signal,
-      elements: [secondElement, firstElement],
-    })
-    expect(requestContext.elements).toEqual([firstElement, secondElement])
-    let third = defaultPrefetch('/page', {
-      signal: firstController.signal,
-      elements: [thirdElement],
-    })
-    expect(requestContext.elements).toEqual([firstElement, secondElement, thirdElement])
-    expect(snapshot).toEqual([firstElement])
+    let duplicateFetch = mock.fn(() => Promise.resolve(htmlResponse('Duplicate')))
+    let second = defaultPrefetch('/page', { element: secondElement }, { fetch: duplicateFetch })
+    expect(requestContext.element).toBe(firstElement)
+    expect(duplicateFetch).not.toHaveBeenCalled()
     response.resolve(htmlResponse('<main>Page</main>'))
     let frameContext = await parsed.promise
-    expect(frameContext.elements).toEqual([firstElement, secondElement, thirdElement])
+    expect(frameContext.element).toBe(firstElement)
     firstController.abort()
-    await Promise.all([first, third])
-    expect(frameContext.elements).toEqual([secondElement, firstElement])
-    expect(requestContext.elements).toEqual([secondElement, firstElement])
+    await first
+    expect(frameContext.element).toBe(firstElement)
+    expect(requestContext.element).toBe(firstElement)
     expect(frameContext.signal.aborted).toBe(false)
     release.resolve()
     await second
   })
 
-  it('inherits changing parent origins through shared nested frame requests', async (t) => {
+  it('inherits the initiating element through shared nested frame requests', async (t) => {
     startTestPrefetching(t)
     let firstElement = createIntentLink('/page')
     let secondElement = createIntentLink('/page')
@@ -944,12 +1196,12 @@ describe('defaultPrefetch overrides', () => {
       '/page',
       {
         signal: firstController.signal,
-        elements: [firstElement],
+        element: firstElement,
       },
       {
         fetch(url, _init, context) {
           if (new URL(url).pathname === '/child') {
-            expect(context.elements).toEqual([firstElement])
+            expect(context.element).toBe(firstElement)
             nested.resolve(context)
           }
           return Promise.resolve(
@@ -973,61 +1225,47 @@ describe('defaultPrefetch overrides', () => {
     let frameContext = await parsed.promise
     let second = defaultPrefetch('/page', {
       signal: secondController.signal,
-      elements: [secondElement],
+      element: secondElement,
     })
-    expect(context.elements).toEqual([firstElement, secondElement])
-    expect(frameContext.elements).toEqual([firstElement, secondElement])
-    firstElement.remove()
-    expect(context.elements[0].isConnected).toBe(false)
-    expect(context.signal.aborted).toBe(false)
-    let direct = defaultPrefetch('/child', { elements: [directElement] })
-    expect(context.elements).toEqual([firstElement, secondElement, directElement])
+    let direct = defaultPrefetch('/child', { element: directElement })
     firstController.abort()
     await first
-    expect(context.elements).toEqual([secondElement, directElement])
     secondController.abort()
     await second
-    expect(context.elements).toEqual([directElement])
-    expect(frameContext.elements).toEqual([directElement])
+    expect(context.element).toBe(firstElement)
+    expect(frameContext.element).toBe(firstElement)
     expect(context.signal.aborted).toBe(false)
     release.resolve()
     await direct
   })
 
-  it('provides no implicit origins for imperative calls and snapshots explicitly supplied origins', async (t) => {
+  it('provides no implicit element for string calls and preserves explicitly supplied elements', async (t) => {
     startTestPrefetching(t)
-    let source = document.createElement('button')
-    let sources = [source]
-    let response = Promise.withResolvers<Response>()
-    let context: PrefetchContext | undefined
     await defaultPrefetch('/without-origin', undefined, {
       fetch(_url, _init, context) {
-        expect(context.elements).toEqual([])
+        expect(context.element).toBeUndefined()
         return Promise.resolve(htmlResponse('<main>Page</main>'))
       },
       frame(_prefetchReferences, context) {
-        expect(context.elements).toEqual([])
+        expect(context.element).toBeUndefined()
       },
     })
+    let source = document.createElement('button')
     let completed = Promise.withResolvers<void>()
     startTestPrefetching(t, (src, options) => {
-      expect(options?.elements).toBe(sources)
+      expect(options?.element).toBe(source)
       return defaultPrefetch(src, options, {
-        fetch(_url, _init, value) {
-          context = value
-          return response.promise
+        fetch(_url, _init, context) {
+          expect(context.element).toBe(source)
+          return Promise.resolve(htmlResponse('<main>Page</main>'))
         },
-        frame(_prefetchReferences, value) {
-          expect(value.elements).toEqual([source])
+        frame(_prefetchReferences, context) {
+          expect(context.element).toBe(source)
           completed.resolve()
         },
       })
     })
-    prefetch('/with-origin', { elements: sources })
-    sources.length = 0
-    if (!context) throw new Error('Expected request context')
-    expect(context.elements).toEqual([source])
-    response.resolve(htmlResponse('<main>Page</main>'))
+    prefetch('/with-origin', { element: source })
     await completed.promise
   })
 
@@ -1226,21 +1464,21 @@ describe('defaultPrefetch overrides', () => {
       )
     })
     let parsed: string[] = []
-    let origins = new Map<string, readonly Element[]>()
+    let origins = new Map<string, Element | undefined>()
     let overrides: DefaultPrefetchOverrides = {
       fetch: transport,
       async frame(prefetchReferences, context) {
         let pathname = new URL(context.src).pathname
         parsed.push(pathname)
         await prefetchReferences()
-        origins.set(pathname, context.elements)
+        origins.set(pathname, context.element)
       },
     }
-    let first = defaultPrefetch('/first', { elements: [firstElement] }, overrides)
-    let second = defaultPrefetch('/second', { elements: [secondElement] }, overrides)
+    let first = defaultPrefetch('/first', { element: firstElement }, overrides)
+    let second = defaultPrefetch('/second', { element: secondElement }, overrides)
     let duplicate = defaultPrefetch(
       '/first',
-      { elements: [firstElement] },
+      { element: firstElement },
       {
         fetch() {
           throw new Error('Duplicate must share first overrides')
@@ -1251,8 +1489,8 @@ describe('defaultPrefetch overrides', () => {
     await Promise.all([first, second, duplicate])
     expect(transport).toHaveBeenCalledTimes(2)
     expect(parsed.sort()).toEqual(['/first', '/second'])
-    expect(origins.get('/first')).toContain(firstElement)
-    expect(origins.get('/second')).toContain(secondElement)
+    expect(origins.get('/first')).toBe(firstElement)
+    expect(origins.get('/second')).toBe(secondElement)
   })
 
   it('cancels individual callers while retaining shared HTML and prevents late delegation', async (t) => {

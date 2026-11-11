@@ -7,25 +7,21 @@ export interface PrefetchOptions {
   target?: string
   /** Cancels this caller's prefetch, retaining work shared with other callers. */
   signal?: AbortSignal
-  /**
-   * Triggering elements to associate with this caller; automatic prefetches supply their link.
-   * The default strategy copies the array while retaining live element references.
-   */
-  elements?: readonly Element[]
+  /** Triggering element for this caller; automatic triggers and anchor calls supply their link. */
+  element?: Element
 }
 
-/** Shared frame request and triggering-element context for prefetch hooks. */
+/** Shared frame request and its initiating element for prefetch hooks. */
 export interface PrefetchContext {
   /** Requested absolute frame source URL. */
   src: string
   /** Destination frame name, when provided. */
   target: string | undefined
   /**
-   * Current uncancelled callers' triggering elements, deduplicated by identity. Read again to see
-   * callers joining or cancelling. Nested requests inherit these origins; DOM removal alone does
-   * not remove an element or cancel work.
+   * First caller's live triggering element. Nested requests inherit it, and later callers joining
+   * shared work do not replace it. It may be disconnected while another caller retains the work.
    */
-  readonly elements: readonly Element[]
+  readonly element: Element | undefined
   /** Aborts when all callers cancel or the runtime is disposed. */
   signal: AbortSignal
 }
@@ -64,11 +60,11 @@ export interface PrefetchFrameContext extends PrefetchContext {
 export interface DefaultPrefetchOverrides {
   /**
    * Fetches each prepared HTML request (defaults to `globalThis.fetch`). Two-argument Fetch
-   * implementations remain supported; the third argument provides shared request origins.
+   * implementations remain supported; the third argument provides the initiating element.
    *
    * @param url Prepared absolute frame source URL.
    * @param init Frame headers, GET method, priority, and cancellation signal.
-   * @param context Shared frame request and current triggering elements.
+   * @param context Shared frame request and initiating element.
    * @returns The unconsumed response for validation and parsing.
    */
   fetch?(url: string, init: RequestInit, context: PrefetchContext): Promise<Response>
@@ -91,7 +87,7 @@ export interface DefaultPrefetchOverrides {
  * Starts loading same-origin frame content so a later navigation can reuse the response.
  *
  * @param src Absolute URL of the page to prefetch, without a hash.
- * @param options Destination frame, cancellation signal, and triggering elements.
+ * @param options Destination frame, cancellation signal, and triggering element.
  */
 export type PrefetchFrame = (src: string, options?: PrefetchOptions) => void
 
@@ -101,7 +97,10 @@ const INTENT_DELAY_MS = 100
 
 const initialPrefetch = createDefaultPrefetch()
 let defaultPrefetchFrame = initialPrefetch
-let prefetchFrame: PrefetchFrame = defaultPrefetch
+let prefetchFrame: (src: string, options?: PrefetchOptions) => void | Promise<void> =
+  defaultPrefetch
+const initialAnchorPrefetch = createAnchorPrefetching()
+let prefetchAnchor = initialAnchorPrefetch
 
 /**
  * Fetches and parses frame HTML, then prefetches discovered assets and opted-in nested frames.
@@ -112,7 +111,7 @@ let prefetchFrame: PrefetchFrame = defaultPrefetch
  * finish without affecting navigation, and custom work must honor the provided signal.
  *
  * @param src Same-origin frame source, resolved against the document base URL.
- * @param options Destination frame, cancellation signal, and triggering elements.
+ * @param options Destination frame, cancellation signal, and triggering element.
  * @param overrides HTML fetch implementation and post-parse reference handling.
  * @returns Completes after the hook and delegated work finish, or when cancelled.
  */
@@ -134,18 +133,125 @@ export function defaultPrefetch(
  * Opted-in nested `<Frame prefetch>` sources use the same strategy. Cross-origin URLs, the current
  * untargeted page, and browsers where Remix doesn't handle navigations are skipped.
  *
- * @param href URL to prefetch, resolved against the document base URL.
- * @param options Destination frame, cancellation signal, and triggering elements.
+ * Anchor calls read link source and target metadata, supply the triggering element, and cancel
+ * this caller when the anchor disconnects. Explicit options override destination metadata. Anchors
+ * must be connected and eligible for frame navigation; no prefetch marker is required.
+ *
+ * @param href URL resolved against the document base URL, or the connected link to prefetch.
+ * @param options Destination frame, cancellation signal, and triggering element.
  */
-export function prefetch(href: string, options?: PrefetchOptions): void {
-  let request = getPrefetchRequest(href, options)
-  if (request) dispatchPrefetch(request)
+export function prefetch(href: string | HTMLAnchorElement, options?: PrefetchOptions): void {
+  let request =
+    typeof href === 'string'
+      ? getPrefetchRequest(href, options)
+      : getAnchorPrefetchRequest(href, options)
+  if (request && (typeof href === 'string' || hasPrefetchTarget(request))) {
+    dispatchPrefetch(request, typeof href === 'string' ? undefined : href)
+  }
 }
 
-function dispatchPrefetch([src, options]: PrefetchRequest, element?: Element): void {
-  if (element) options = { ...options, elements: Object.freeze([element]) }
+function dispatchPrefetch(
+  request: PrefetchRequest,
+  anchor?: HTMLAnchorElement,
+): void | Promise<void> {
+  if (anchor) return prefetchAnchor(request, anchor)
+  let [src, options] = request
   let result = options ? prefetchFrame(src, options) : prefetchFrame(src)
   void Promise.resolve(result).catch(() => {})
+  return result
+}
+
+function createAnchorPrefetching(
+  signal?: AbortSignal,
+  updateViewport?: (anchor: HTMLAnchorElement) => void,
+): (request: PrefetchRequest, anchor: HTMLAnchorElement) => void {
+  let pending = new WeakMap<HTMLAnchorElement, Set<AbortController>>()
+  let count = 0
+  let mutations: MutationObserver | undefined
+
+  function update(anchor: HTMLAnchorElement): void {
+    if (!anchor.isConnected) {
+      for (let controller of pending.get(anchor) ?? []) controller.abort()
+    }
+    updateViewport?.(anchor)
+  }
+
+  function scan(node: Node): void {
+    if (!(node instanceof Element)) return
+    if (node instanceof HTMLAnchorElement) update(node)
+    for (let anchor of node.querySelectorAll('a')) update(anchor)
+  }
+
+  function observe(): void {
+    if (mutations) return
+    mutations = new MutationObserver((records) => {
+      if (signal?.aborted) return
+      for (let record of records) {
+        if (record.type === 'attributes' && record.target instanceof HTMLAnchorElement) {
+          update(record.target)
+        }
+        for (let node of record.removedNodes) scan(node)
+        for (let node of record.addedNodes) scan(node)
+      }
+    })
+    mutations.observe(document, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: [
+        'href',
+        'data-rmx-prefetch',
+        'download',
+        'data-rmx-document',
+        'data-rmx-target',
+        'data-rmx-src',
+        'target',
+      ],
+    })
+  }
+
+  signal?.addEventListener('abort', () => mutations?.disconnect(), { once: true })
+  if (updateViewport) {
+    observe()
+    scan(document.documentElement)
+  }
+
+  return function prefetch([src, options], anchor) {
+    if (signal?.aborted || options?.signal?.aborted || !anchor.isConnected) return
+    observe()
+    let controller = new AbortController()
+    let signals = [controller.signal]
+    if (signal) signals.push(signal)
+    if (options?.signal) signals.push(options.signal)
+    let callerSignal = AbortSignal.any(signals)
+    let reference = new WeakRef(anchor)
+    let controllers = pending.get(anchor) ?? new Set<AbortController>()
+    controllers.add(controller)
+    pending.set(anchor, controllers)
+    count++
+
+    function finish(): void {
+      if (!controllers.delete(controller)) return
+      callerSignal.removeEventListener('abort', finish)
+      let element = reference.deref()
+      if (controllers.size === 0 && element) pending.delete(element)
+      if (--count === 0 && !updateViewport) {
+        mutations?.disconnect()
+        mutations = undefined
+      }
+    }
+
+    callerSignal.addEventListener('abort', finish, { once: true })
+    try {
+      let result = dispatchPrefetch([src, { ...options, element: anchor, signal: callerSignal }])
+      // Void callbacks can leave custom work queued; retain their weakly tracked caller until abort.
+      if (result && typeof result.then === 'function') {
+        void Promise.resolve(result).then(finish, finish)
+      }
+    } catch {
+      finish()
+    }
+  }
 }
 
 /**
@@ -157,6 +263,11 @@ function dispatchPrefetch([src, options]: PrefetchRequest, element?: Element): v
 export function startPrefetching(signal: AbortSignal, prefetchOverride?: PrefetchFrame): void {
   if (signal.aborted) return
   let strategy = createDefaultPrefetch(signal)
+  let anchorStrategy = createAnchorPrefetching(
+    signal,
+    getInterceptableNavigation() ? startViewportPrefetching(signal) : undefined,
+  )
+  prefetchAnchor = anchorStrategy
   defaultPrefetchFrame = strategy
   prefetchFrame = prefetchOverride ?? defaultPrefetch
   signal.addEventListener(
@@ -165,6 +276,7 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
       if (defaultPrefetchFrame === strategy) {
         defaultPrefetchFrame = initialPrefetch
         prefetchFrame = defaultPrefetch
+        prefetchAnchor = initialAnchorPrefetch
       }
     },
     { once: true },
@@ -279,10 +391,11 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     },
     { once: true },
   )
-  startViewportPrefetching(signal)
 }
 
-function startViewportPrefetching(signal: AbortSignal): void {
+function startViewportPrefetching(
+  signal: AbortSignal,
+): ((anchor: HTMLAnchorElement) => void) | undefined {
   if (typeof IntersectionObserver === 'undefined') return
 
   let completed = new WeakMap<HTMLAnchorElement, string>()
@@ -317,46 +430,8 @@ function startViewportPrefetching(signal: AbortSignal): void {
     if (request && completed.get(anchor) !== JSON.stringify(request)) viewport.observe(anchor)
   }
 
-  function scan(node: Node): void {
-    if (!(node instanceof Element)) return
-    if (node instanceof HTMLAnchorElement) update(node)
-    for (let anchor of node.querySelectorAll('a')) update(anchor)
-  }
-
-  let mutations = new MutationObserver((records) => {
-    if (signal.aborted) return
-    for (let record of records) {
-      if (record.type === 'attributes' && record.target instanceof HTMLAnchorElement) {
-        update(record.target)
-      }
-      for (let node of record.removedNodes) scan(node)
-      for (let node of record.addedNodes) scan(node)
-    }
-  })
-  mutations.observe(document, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: [
-      'href',
-      'data-rmx-prefetch',
-      'download',
-      'data-rmx-document',
-      'data-rmx-target',
-      'data-rmx-src',
-      'target',
-    ],
-  })
-  scan(document.documentElement)
-
-  signal.addEventListener(
-    'abort',
-    () => {
-      mutations.disconnect()
-      viewport.disconnect()
-    },
-    { once: true },
-  )
+  signal.addEventListener('abort', () => viewport.disconnect(), { once: true })
+  return update
 }
 
 function canPrefetchAutomatically(): boolean {
@@ -376,7 +451,10 @@ function getIntentAnchor(target: EventTarget | null): HTMLAnchorElement | null {
   return anchor instanceof HTMLAnchorElement ? anchor : null
 }
 
-function getAnchorPrefetchRequest(anchor: HTMLAnchorElement): PrefetchRequest | undefined {
+function getAnchorPrefetchRequest(
+  anchor: HTMLAnchorElement,
+  options?: PrefetchOptions,
+): PrefetchRequest | undefined {
   if (
     !anchor.isConnected ||
     !anchor.hasAttribute('href') ||
@@ -389,8 +467,8 @@ function getAnchorPrefetchRequest(anchor: HTMLAnchorElement): PrefetchRequest | 
   let href = getSameOriginHref(anchor.href)
   let src = getSameOriginHref(anchor.getAttribute('data-rmx-src') ?? anchor.href)
   if (!href || !src) return
-  let target = anchor.getAttribute('data-rmx-target')
-  return target ? getPrefetchRequest(src, { target }) : getPrefetchRequest(href)
+  let target = options?.target ?? anchor.getAttribute('data-rmx-target') ?? undefined
+  return getPrefetchRequest(target ? src : href, target ? { ...options, target } : options)
 }
 
 function hasPrefetchTarget(request: PrefetchRequest): boolean {
@@ -405,7 +483,10 @@ function getPrefetchRequest(href: string, options?: PrefetchOptions): PrefetchRe
   if (options?.target) return [src, options]
   let currentUrl = new URL(window.location.href)
   currentUrl.hash = ''
-  if (src !== currentUrl.href) return options?.signal || options?.elements ? [src, options] : [src]
+  if (src !== currentUrl.href)
+    return options?.signal || options?.element || options?.target !== undefined
+      ? [src, options]
+      : [src]
 }
 
 function getSameOriginHref(href: string): string | undefined {
@@ -431,6 +512,7 @@ export function fetchFrame(
 interface FramePrefetchEntry {
   controller: AbortController
   owners: Set<PrefetchOwner>
+  element: Element | undefined
   dependencies: Set<FramePrefetchEntry>
   ready: Promise<void>
   cancel(): void
@@ -438,16 +520,7 @@ interface FramePrefetchEntry {
 
 interface PrefetchOwner {
   signal: AbortSignal
-  readonly elements: readonly Element[]
-}
-
-function getPrefetchElements(entry: FramePrefetchEntry): readonly Element[] {
-  let elements = new Set<Element>()
-  for (let owner of entry.owners) {
-    if (owner.signal.aborted) continue
-    for (let element of owner.elements) elements.add(element)
-  }
-  return Object.freeze(Array.from(elements))
+  element: Element | undefined
 }
 
 export function createDefaultPrefetch(
@@ -506,15 +579,11 @@ export function createDefaultPrefetch(
       src,
       target,
       signal: jobSignal,
-      get elements() {
-        return getPrefetchElements(entry)
-      },
+      element: entry.element,
     }
     let nestedOwner: PrefetchOwner = {
       signal: jobSignal,
-      get elements() {
-        return context.elements
-      },
+      element: context.element,
     }
     try {
       let fetchOverride = overrides?.fetch
@@ -609,9 +678,7 @@ export function createDefaultPrefetch(
             frames,
             baseURL,
             signal: jobSignal,
-            get elements() {
-              return context.elements
-            },
+            element: context.element,
           })
         } else {
           void prefetchReferences()
@@ -653,6 +720,7 @@ export function createDefaultPrefetch(
     let entry: FramePrefetchEntry = {
       controller: new AbortController(),
       owners: new Set([owner]),
+      element: owner.element,
       dependencies: new Set(),
       ready,
       cancel() {
@@ -687,7 +755,7 @@ export function createDefaultPrefetch(
   ): Promise<void> {
     let owner: PrefetchOwner = {
       signal: options?.signal ?? new AbortController().signal,
-      elements: Object.freeze(Array.from(options?.elements ?? [])),
+      element: options?.element,
     }
     let ready = traverse(src, options?.target, owner, overrides, new Set())
     if (!options?.signal || owner.signal.aborted) return ready

@@ -1379,7 +1379,7 @@ This prevents Remix from intercepting Navigation API events. Explicit frame relo
 
 ### Prefetching
 
-Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. For other triggers, such as prefetching a search result as the visitor types, call `prefetch(src, { target })` from `remix/component`.
+Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. For other triggers, such as prefetching a search result as the visitor types, call `prefetch(src, { target })` or `prefetch(anchor)` from `remix/component`. Anchor calls read the same destination metadata as declarative links and do not require a prefetch marker. Explicit options override link metadata.
 
 - Intent prefetching starts after the pointer or keyboard focus rests on the link for 100ms, or immediately when the link is pressed. Viewport prefetching happens once while the link stays mounted with the same source and target.
 - Prefetching sends the same headers as a frame navigation, including `X-Remix-Target` for named frames, so it matches the request that follows.
@@ -1438,9 +1438,13 @@ run({
 
 The `fetch` override receives a prepared same-origin `GET` with frame headers, low priority, and an abort signal. Forward `init` to preserve those settings. It can wait for an application queue, retry, or return a cached response. Remix skips non-HTML and unsuccessful responses, including `503`; automatic retry and `Retry-After` handling belong to the override.
 
-Automatic triggers pass the marked link in `options.elements`, including when an event starts on a descendant. Imperative calls can supply `prefetch(src, { elements: [element] })`; otherwise they have no triggering elements. Both `fetch(url, init, context)` and the `frame` hook expose `context.elements`. Each read returns a frozen snapshot of the current uncancelled callers' elements, deduplicated by identity, and nested requests inherit those origins. Read `context.elements` again when queued work starts to see callers that joined or cancelled in the meantime. The elements themselves remain live, so apps can inspect their position or `isConnected`. Removing a link or changing its destination doesn't automatically cancel its prefetch.
+Automatic triggers and `prefetch(anchor)` pass the link in `options.element`, including when an event starts on a descendant. String calls can supply `prefetch(src, { element })`; otherwise they have no triggering element. Both `fetch(url, init, context)` and the `frame` hook expose the first caller's live `context.element`. Nested requests inherit it, and later callers joining shared work do not replace it. Applications that need to aggregate triggers can record each call's element in their `run({ prefetch })` callback, before Remix deduplicates requests.
 
-The `frame` override runs independently for each successfully parsed response, including selected nested requests. Its context contains `src`, `target`, `elements`, the consumed `response`, the inert `fragment`, `baseURL`, `signal`, and the original discovered `assets` and `frames`. Discovery includes nested templates and responsive image preload declarations, even when Remix's native executor cannot prefetch them. Reading URL attributes such as `src` and `href` and resolving them against `baseURL` avoids resolving them against the current document. Remix never mounts the fragment.
+Declarative triggers and imperative anchor calls also receive an `options.signal` that cancels their caller when the anchor disconnects, an explicit signal aborts, or the runtime is disposed. Moving an anchor within the document does not cancel it, and leaving the viewport alone does not cancel work. Removing and later reinserting an anchor allows a fresh prefetch. Merely supplying `options.element` to a string call does not attach a DOM lifetime. Destination changes while an anchor remains connected do not cancel existing work.
+
+Shared work continues while another caller needs it, so `context.element` can be disconnected while `context.signal` remains active. Use the signal to cancel queued or running work; the element remains useful for reading attributes or scoring link position. Forward `options` when delegating to `defaultPrefetch` to retain caller cancellation.
+
+The `frame` override runs independently for each successfully parsed response, including selected nested requests. Its context contains `src`, `target`, `element`, the consumed `response`, the inert `fragment`, `baseURL`, `signal`, and the original discovered `assets` and `frames`. Discovery includes nested templates and responsive image preload declarations, even when Remix's native executor cannot prefetch them. Reading URL attributes such as `src` and `href` and resolving them against `baseURL` avoids resolving them against the current document. Remix never mounts the fragment.
 
 `prefetchReferences()` delegates all discovered references. Pass `{ assets, frames }` to select either list; omitted lists keep their discovered defaults, while an empty list skips that kind of work. Assets can include supported elements from the original fragment or its templates, such as a selected nonresponsive `<img src>`. Unsupported and foreign elements are ignored. Native hints retain the existing behavior: they don't evaluate scripts or select responsive image candidates. Handle responsive images through the application helper. Nested requests use the same overrides.
 
@@ -1448,12 +1452,17 @@ When a `frame` override is present, returning or throwing without delegating ski
 
 Pending HTML is shared by source and target, with the first caller supplying the overrides. Pending native asset hints are shared across frames. `options.signal` cancels one caller; shared work continues while another caller needs it. Runtime disposal cancels work delegated through `defaultPrefetch`, including from a custom `run({ prefetch })`. Custom operations must honor the hook's signal, and applications own concurrency, prioritization, caching, and image retention. `defaultPrefetch` returns a completion promise; the existing `prefetch()` trigger continues to return `void`.
 
-To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next GET request with the same source and target. The app provides `loadModule` and a `fetchFrame(src, options)` helper that handles frame headers, submissions, cancellation, and response handling, and it owns the lifetime and invalidation of any responses it keeps:
+#### Scheduling and Retaining Frame HTML
+
+Viewport triggers dispatch individual prefetches synchronously within each intersection callback. An application queue can defer flushing with `queueMicrotask()` to collect that callback's candidates, sort them, and fill its available slots. Later candidates can reorder pending work; running requests continue. There is no built-in concurrency limit or batch API.
+
+This example assumes an application helper `frameQueue.run(task, { signal, score })` that removes aborted pending jobs, re-sorts them using the score callback before starting work, and runs at most three tasks concurrently. Native `fetch()` resolves at headers, so drain a response clone inside the task to keep a slot until the HTML body finishes downloading. The original response remains unconsumed for the cache, and Remix receives its own clone for parsing:
 
 ```ts
-import { run } from 'remix/component'
+import { defaultPrefetch, run } from 'remix/component'
+import { frameQueue, scoreLink, resolveFrame } from './frame-loading.ts'
 
-let prefetched = new Map<string, Promise<Response>>()
+let prefetched = new Map<string, Response>()
 
 function frameKey(src: string, target?: string) {
   let url = new URL(src, document.baseURI)
@@ -1464,15 +1473,49 @@ function frameKey(src: string, target?: string) {
 run({
   loadModule,
   prefetch(src, options) {
-    prefetched.set(frameKey(src, options?.target), fetchFrame(src, options))
+    return defaultPrefetch(src, options, {
+      fetch(url, init, context) {
+        return frameQueue.run(
+          async () => {
+            context.signal.throwIfAborted()
+            let response = await fetch(url, init)
+            if (
+              response.ok &&
+              response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
+            ) {
+              await response.clone().body?.pipeTo(new WritableStream())
+              context.signal.throwIfAborted()
+              prefetched.set(frameKey(url, context.target), response)
+              return response.clone()
+            }
+            return response
+          },
+          {
+            signal: context.signal,
+            score: () => (context.element ? scoreLink(context.element) : 0),
+          },
+        )
+      },
+    })
   },
   resolveFrame(src, options) {
     let isGet = !options?.method || options.method.toUpperCase() === 'GET'
-    let response = isGet ? prefetched.get(frameKey(src, options?.target)) : undefined
-    prefetched.clear()
-    return response ?? fetchFrame(src, options)
+    let cached = isGet ? prefetched.get(frameKey(src, options?.target)) : undefined
+    return cached ? cached.clone() : resolveFrame(src, options)
   },
 })
+```
+
+`frameQueue`, `scoreLink`, and the fallback `resolveFrame` are application helpers. The resolver must still handle submissions, frame headers, and normal response handling. The application also owns cache expiry, invalidation, and eviction. Cloning preserves response metadata but can buffer and copy body chunks; it has memory overhead. Draining avoids retaining an additional whole-body `ArrayBuffer`, and each consumer needs a separate unconsumed clone.
+
+The `frame` hook can use a separate queue for assets, with its own limit and scoring (for example, images before scripts), while forwarding `context.signal`. To submit imperative anchors, a loop is sufficient:
+
+```ts
+import { prefetch } from 'remix/component'
+
+for (let anchor of document.querySelectorAll('a[data-prefetch]')) {
+  prefetch(anchor)
+}
 ```
 
 ## Single-Page Applications
