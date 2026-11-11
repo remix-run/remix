@@ -1150,13 +1150,7 @@ function resolveClientFrame(
         signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
-        onCommit() {
-          // Mark resolved as soon as the content is visible so a src change that
-          // arrives while sub-frames are still settling reloads in place instead
-          // of remounting with the fallback.
-          if (!isStale()) state.resolved = true
-          frameCommitted.resolve()
-        },
+        onCommit: frameCommitted.resolve,
       })
       if (signal.aborted) return
       state.content = { status: 'resolved' }

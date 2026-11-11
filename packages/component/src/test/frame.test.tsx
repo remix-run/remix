@@ -5596,7 +5596,7 @@ describe('run', () => {
     root.flush()
     expect(rootContainer.querySelector('#fallback-a')?.textContent).toBe('Loading A…')
 
-    await waitForElement('#frame-a')
+    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(rootContainer.querySelector('#frame-a')?.textContent).toBe('A')
 
     let frameA = rootContainer.querySelector('#frame-a')
@@ -5612,7 +5612,7 @@ describe('run', () => {
 
     resolveNextFrame('<p id="frame-b">B</p>')
 
-    await waitForElement('#frame-b')
+    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(rootContainer.querySelector('#frame-b')?.textContent).toBe('B')
     root.dispose()
   })
@@ -8550,59 +8550,6 @@ describe('run', () => {
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Resolved content')
     expect(rootContainer.querySelector('#fallback')).toBe(null)
     root.dispose()
-  })
-
-  it('reloads a committed client frame in place when src changes while a sub-frame is loading', async (t) => {
-    let rootContainer = document.createElement('div')
-    document.body.appendChild(rootContainer)
-    t.after(() => rootContainer.remove())
-
-    let SlowEntry = clientEntry('/assets/slow-entry.js#SlowEntry', function SlowEntry() {
-      return () => <p id="slow">Slow</p>
-    })
-    let firstContent = await drain(
-      renderToStream(
-        <section id="first">
-          <Frame src="/sub" />
-        </section>,
-        { resolveFrame: () => renderFrameContent(<SlowEntry />) },
-      ),
-    )
-    // The parent commits before its sub-frame is ready, because the sub-frame's client entry
-    // module is still loading.
-    let [slowModule, resolveSlowModule] = withResolvers<Function>()
-    let [slowModuleRequested, markSlowModuleRequested] = withResolvers<void>()
-    let [secondContent, resolveSecondContent] = withResolvers<string>()
-    let root = createRoot(rootContainer, {
-      frameInit: {
-        resolveFrame(src) {
-          if (src === '/first') return firstContent
-          if (src === '/second') return secondContent
-          throw new Error(`Unexpected frame src: ${src}`)
-        },
-        loadModule() {
-          markSlowModuleRequested()
-          return slowModule
-        },
-      },
-    })
-    t.after(() => root.dispose())
-    let fallback = <p id="fallback">Loading...</p>
-
-    root.render(<Frame src="/first" fallback={fallback} />)
-    root.flush()
-    await slowModuleRequested
-    expect(rootContainer.querySelector('#first')).not.toBe(null)
-
-    let renderedText = recordRenderedText(rootContainer)
-    root.render(<Frame src="/second" fallback={fallback} />)
-    root.flush()
-    resolveSecondContent('<p id="second">Second</p>')
-    await waitForText('#second', 'Second', rootContainer)
-
-    expect(renderedText.stop().some((text) => text.includes('Loading...'))).toBe(false)
-    expect(rootContainer.querySelector('#first')).toBe(null)
-    resolveSlowModule(SlowEntry)
   })
 
   it('loads new client-created frame src values during server-driven entry rerenders', async () => {
