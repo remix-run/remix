@@ -6,8 +6,8 @@ import type { ReloadDetails } from './reload-details.ts'
 export type FrameReloadStartEvent = Event &
   ReloadDetails & {
     /**
-     * The initiating anchor, area, or owning form. `null` for programmatic reloads, programmatic
-     * navigations, and history traversal.
+     * The initiating HTML anchor, area, or owning form. `null` for SVG links, programmatic reloads,
+     * programmatic navigations, and history traversal.
      */
     readonly element: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement | null
   }

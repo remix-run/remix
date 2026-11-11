@@ -871,13 +871,16 @@ function getSourceElementNavigation(
   if (!(sourceElement instanceof Element)) return
 
   let linkElement = sourceElement.closest('a, area')
-  if (linkElement instanceof HTMLAnchorElement || linkElement instanceof HTMLAreaElement) {
+  if (linkElement instanceof Element) {
     if (linkElement.hasAttribute('data-rmx-document')) return
     if (linkElement.hasAttribute('download')) return
 
     return {
       ...getElementNavigation(linkElement, event, false),
-      source: { element: linkElement },
+      source:
+        linkElement instanceof HTMLAnchorElement || linkElement instanceof HTMLAreaElement
+          ? { element: linkElement }
+          : undefined,
     }
   }
 

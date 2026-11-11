@@ -1675,6 +1675,46 @@ describe('navigate', () => {
     controller.abort()
   })
 
+  it('intercepts SVG anchors without exposing them as HTML origin elements', async (t) => {
+    let reloadFrame = mock.fn((frame: FrameHandle, _options?: FrameNavigationOptions) =>
+      stubFrames.reloadFrame(frame),
+    )
+    let namedFrame = { ...stubFrames.top, src: '/initial-frame' }
+    let dispatchNavigation = startStubNavigationListener(t, {
+      ...stubFrames,
+      get: () => namedFrame,
+      reloadFrame,
+    })
+    let anchor = document.createElementNS('http://www.w3.org/2000/svg', 'a')
+    anchor.setAttribute('href', '/logo')
+    anchor.setAttribute('data-rmx-src', '/logo-frame')
+    anchor.setAttribute('data-rmx-target', 'details')
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'push',
+      signal: new AbortController().signal,
+      sourceElement: anchor,
+      destination: {
+        url: new URL('/logo', window.location.origin).href,
+        key: 'next',
+        getState: () => undefined,
+      },
+      intercept,
+      scroll() {},
+    })
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(reloadFrame).toHaveBeenCalledTimes(1)
+    expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
+    expect(new URL(namedFrame.src, document.baseURI).pathname).toBe('/logo-frame')
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(undefined)
+  })
+
   it('intercepts anchors when sourceElement is a nested svg node', (t) => {
     let navigateListener: EventListener | undefined
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))

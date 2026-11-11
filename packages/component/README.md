@@ -1226,15 +1226,15 @@ if (form.reportValidity()) {
 
 `reloadStart` is a `FrameReloadStartEvent`, which describes the effective request and how the reload ends. Its request fields correspond to `frame.reload()` options, with `body` exposed as `formData` and GET fields included in `src`:
 
-| Property    | Value                                                                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src`       | The initiating reload's source, including any GET submission query. Relative values use the document base URL, as with `frame.reload()`.                  |
-| `method`    | The effective request method in lowercase: `get` or `post`.                                                                                               |
-| `encType`   | The effective POST encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`, or `text/plain`. `null` for GET.                       |
-| `formData`  | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                               |
-| `element`   | The initiating `HTMLAnchorElement`, `HTMLAreaElement`, or `HTMLFormElement`. `null` for `frame.reload()`, programmatic navigation, and history traversal. |
-| `submitter` | The actual submit button, or `null` when there is no submitter.                                                                                           |
-| `finished`  | A `Promise<AbortSignal>` that follows this reload like `frame.reload()`. Rejects on failure.                                                              |
+| Property    | Value                                                                                                                                                                |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src`       | The initiating reload's source, including any GET submission query. Relative values use the document base URL, as with `frame.reload()`.                             |
+| `method`    | The effective request method in lowercase: `get` or `post`.                                                                                                          |
+| `encType`   | The effective POST encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`, or `text/plain`. `null` for GET.                                  |
+| `formData`  | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                                          |
+| `element`   | The initiating `HTMLAnchorElement`, `HTMLAreaElement`, or `HTMLFormElement`. `null` for SVG links, `frame.reload()`, programmatic navigation, and history traversal. |
+| `submitter` | The actual submit button, or `null` when there is no submitter.                                                                                                      |
+| `finished`  | A `Promise<AbortSignal>` that follows this reload like `frame.reload()`. Rejects on failure.                                                                         |
 
 `event.finished` follows the same contract as `frame.reload()`:
 
