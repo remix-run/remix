@@ -26,6 +26,9 @@ export type FrameReloadStartEventInit = {
   finished: ReloadDetails['finished']
 }
 
+// The initiating request, inherited by frames that reload while rendering its response.
+export type ReloadOrigin = Omit<FrameReloadStartEventInit, 'finished'>
+
 /**
  * Creates a `reloadStart` event.
  *

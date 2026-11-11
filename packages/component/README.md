@@ -1158,7 +1158,7 @@ Components reach frames through `handle.frame`, the frame that contains the comp
 | `frame.reload(options?)` | Fetches the frame's source through the resolver and reconciles the result. See [Reloading Frames](#reloading-frames).                     |
 | `frame.replace(content)` | Renders trusted HTML, a byte stream, or a Remix node directly, without calling the resolver or changing the source. HTML isn't sanitized. |
 | `reloadStart` event      | Dispatched when a direct or ancestor-driven reload starts, as a `FrameReloadStartEvent`. See [Following a Reload](#following-a-reload).   |
-| `reloadComplete` event   | Dispatched when reload processing ends, including after cancellation or failure.                                                          |
+| `reloadComplete` event   | Dispatched when the active reload ends, including cancellation or failure. Superseded requests don't emit it.                             |
 
 Use `handle.frames.top` when a nested component needs to reload the whole page instead of only its nearest frame:
 

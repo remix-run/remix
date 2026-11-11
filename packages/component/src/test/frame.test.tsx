@@ -490,7 +490,7 @@ describe('run', () => {
     document.body.append(anchor)
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
     app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
-    let submissions: FormSubmissionEvent[] = []
+    let submissions: Event[] = []
     window.addEventListener('rmx:submission', (event) => submissions.push(event), {
       signal: t.signal,
     })
@@ -553,8 +553,10 @@ describe('run', () => {
   it('dispatches rmx:submission on the submit button and its form after reloadStart', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     let form = document.createElement('form')
+    let input = document.createElement('input')
+    input.name = 'contains'
     let button = document.createElement('button')
-    form.append(button)
+    form.append(input, button)
     document.body.append(form)
     let order: string[] = []
     let events: FormSubmissionEvent[] = []
@@ -706,6 +708,9 @@ describe('run', () => {
     let form = document.createElement('form')
     form.id = 'external-submit-form'
     form.method = 'post'
+    let input = document.createElement('input')
+    input.name = 'dispatchEvent'
+    form.append(input)
     let otherForm = document.createElement('form')
     let button = document.createElement('button')
     button.setAttribute('form', form.id)
@@ -883,14 +888,14 @@ describe('run', () => {
     invariant(button)
     let form = button.form
     invariant(form)
-    function submit(value: string) {
+    let submit = (value: string) => {
       let formData = new FormData()
       formData.set('value', value)
       return reloadFrameForNavigation(app.frames.top, {
         formData,
         method: 'post',
         element: form,
-        submitter: button!,
+        submitter: button,
         form,
       })
     }
@@ -4219,7 +4224,9 @@ describe('run', () => {
   it('restores top and targeted frame sources during back and forward traversal', async (t) => {
     let fixture = await setupFrameNavigationTest(t)
     let events: FrameReloadStartEvent[] = []
-    fixture.frames().target.addEventListener('reloadStart', (event) => events.push(event))
+    let target = fixture.frames().target
+    invariant(target)
+    target.addEventListener('reloadStart', (event) => events.push(event))
     let firstDestinationUrl = new URL('/first', window.location.href).href
     let secondDestinationUrl = new URL('/second', window.location.href).href
     let firstTargetSrc = '/first-frame'
@@ -4710,6 +4717,152 @@ describe('run', () => {
     expect(document.getElementById('child-label')?.textContent).toBe('Saved child')
     app.dispose()
     expect(childSignal.aborted).toBe(true)
+  })
+
+  it('keeps the ancestor request when a child finishes its own reload before the ancestor renders', async (t) => {
+    let ancestorContent = Promise.withResolvers<RemixNode>()
+    let childContent = Promise.withResolvers<string>()
+    let parentRequests = 0
+    let childRequests = 0
+    let childNode = <Frame name="child" src="/child" />
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src) {
+        if (src === '/child') {
+          childRequests++
+          return childRequests === 2 ? childContent.promise : '<p>Child</p>'
+        }
+        parentRequests++
+        return parentRequests === 1 ? childNode : ancestorContent.promise
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    await app.frames.top.reload()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    let ownReload = child.reload()
+    let form = document.createElement('form')
+    let button = document.createElement('button')
+    form.append(button)
+    let formData = new FormData()
+    formData.set('title', 'Saved')
+    let ancestorReload = reloadFrameForNavigation(app.frames.top, {
+      method: 'post',
+      encType: 'text/plain',
+      formData,
+      element: form,
+      submitter: button,
+      form,
+    })
+
+    childContent.resolve('<p>Earlier child request</p>')
+    await ownReload
+    ancestorContent.resolve(childNode)
+    await ancestorReload.finished
+
+    expect(events).toHaveLength(2)
+    let event = events[1]!
+    expect(event.src).toBe(app.frames.top.src)
+    expect(event.method).toBe('post')
+    expect(event.encType).toBe('text/plain')
+    expect(event.formData).toBe(formData)
+    expect(event.element).toBe(form)
+    expect(event.submitter).toBe(button)
+    expect((await event.finished).aborted).toBe(false)
+    expect(document.querySelector('p')?.textContent).toBe('Child')
+  })
+
+  it('keeps the ancestor request through buffered and streamed pending frame templates', async (t) => {
+    function renderParent(label: string) {
+      return renderToStream(<Frame name="child" src="/child" />, {
+        resolveFrame: () => `<p id="child-content">${label}</p>`,
+      })
+    }
+    function renderDocument(
+      parentContent: ReadableStream<Uint8Array> | Promise<ReadableStream<Uint8Array>>,
+    ) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="parent" src="/parent" fallback={<p>Loading parent</p>} />
+          </body>
+        </html>,
+        {
+          resolveFrame: () => parentContent,
+        },
+      )
+    }
+
+    for (let delivery of ['buffered', 'streamed']) {
+      let initialDocument = new DOMParser().parseFromString(
+        await drainWithProtocol(renderDocument(renderParent('Initial child'))),
+        'text/html',
+      )
+      document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+      let parentContent = Promise.withResolvers<ReadableStream<Uint8Array>>()
+      let chunks = readChunks(renderDocument(parentContent.promise))
+      let shell = await chunks.next()
+      invariant(!shell.done, 'Expected the pending parent shell')
+      parentContent.resolve(renderParent('Saved child'))
+      let templates = ''
+      for await (let chunk of chunks) templates += chunk
+      let firstChunk = Promise.withResolvers<string>()
+      let lastChunk = Promise.withResolvers<string>()
+      let childContent = Promise.withResolvers<string>()
+      let app = run({
+        loadModule: mock.fn(),
+        resolveFrame(src) {
+          return src === '/child'
+            ? childContent.promise
+            : streamFromChunks([firstChunk.promise, lastChunk.promise])
+        },
+      })
+      t.after(() => app.dispose())
+      await app.ready()
+      await waitForElement('#child-content')
+      let child = app.frames.get('child')
+      invariant(child, 'Expected the nested child frame')
+      let events: FrameReloadStartEvent[] = []
+      child.addEventListener('reloadStart', (event) => events.push(event))
+      let ownReload = child.reload()
+      let form = document.createElement('form')
+      let formData = new FormData()
+      formData.set('title', 'Saved')
+      let ancestorReload = reloadFrameForNavigation(app.frames.top, {
+        method: 'post',
+        encType: 'text/plain',
+        formData,
+        element: form,
+        form,
+      })
+      childContent.resolve('<p>Earlier child request</p>')
+      await ownReload
+
+      if (delivery === 'buffered') {
+        firstChunk.resolve(shell.value + templates)
+        lastChunk.resolve('')
+      } else {
+        firstChunk.resolve(shell.value)
+        await ancestorReload.committed
+        lastChunk.resolve(templates)
+      }
+      await ancestorReload.finished
+
+      expect(events).toHaveLength(2)
+      let event = events[1]!
+      expect(event.src).toBe(app.frames.top.src)
+      expect(event.method).toBe('post')
+      expect(event.encType).toBe('text/plain')
+      expect(event.formData).toBe(formData)
+      expect(event.element).toBe(form)
+      expect((await event.finished).aborted).toBe(false)
+      expect(document.getElementById('child-content')?.textContent).toBe('Saved child')
+      app.dispose()
+    }
   })
 
   it('rejects child frames’ finished with the failure when the reload of an ancestor fails', async (t) => {

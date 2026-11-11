@@ -6,6 +6,7 @@ import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 import type { Scheduler } from './scheduler.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 import type { ResourceNonces } from './nonce.ts'
+import type { ReloadOrigin } from './reload-start-event.ts'
 import type { VirtualRoot } from './vdom.ts'
 
 /**
@@ -162,6 +163,7 @@ export type FrameRuntime = {
   serverFrameReload:
     | {
         signal: AbortSignal
+        origin?: ReloadOrigin
         reconciliationTracker?: ReconciliationTracker
         blockingFrameTracker?: ReconciliationTracker
       }

@@ -126,6 +126,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
               { ...nextMarkerData, id: getFrameId(next) },
               nextContent,
               {
+                reloadOrigin: context.reloadOrigin,
                 nonce: context.nonce,
                 data: context.data,
                 signal: context.signal,

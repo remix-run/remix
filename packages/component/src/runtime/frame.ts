@@ -11,10 +11,7 @@ import {
   type Handle,
   type RenderFn,
 } from './component.ts'
-import {
-  createFrameReloadStartEvent,
-  type FrameReloadStartEventInit,
-} from './reload-start-event.ts'
+import { createFrameReloadStartEvent, type ReloadOrigin } from './reload-start-event.ts'
 import { createFormSubmissionEvent } from './form-submission-event.ts'
 import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
@@ -131,9 +128,6 @@ export function getNamedFrame(name: string): FrameHandle | undefined {
 
 type InternalFrameContent = FrameContent | DocumentFragment
 
-// The navigation that started a reload, which frames it reloads inside this one inherit.
-type ReloadOrigin = Omit<FrameReloadStartEventInit, 'finished'>
-
 type ReloadFailure = { error: unknown; aborted?: false } | { aborted: true }
 
 type ReloadFinished = PromiseWithResolvers<AbortSignal> & { controller: AbortController }
@@ -203,6 +197,7 @@ export function reloadFrameForNavigation(
 }
 
 export type FrameContext = {
+  reloadOrigin?: ReloadOrigin
   nonce?: string
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
@@ -282,7 +277,10 @@ export type FrameInstance = {
   flush: () => void
   clearPendingTemplateWatch: () => void
   isDisplayingResolvedContent: () => boolean
-  beginClientFrameReloadForAncestorReload: (signal: AbortSignal) => {
+  beginClientFrameReloadForAncestorReload: (
+    signal: AbortSignal,
+    origin?: ReloadOrigin,
+  ) => {
     controller: AbortController
     complete: (failure?: ReloadFailure) => void
   }
@@ -301,6 +299,7 @@ export type FrameInstance = {
 }
 
 type RenderOptions = {
+  reloadOrigin?: ReloadOrigin
   nonce?: string
   documentHref?: string
   flushKind?: FlushKind
@@ -464,6 +463,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       if (options.signal) {
         runtime.serverFrameReload = {
           signal: options.signal,
+          origin: options.reloadOrigin,
           reconciliationTracker: options.reconciliationTracker,
           blockingFrameTracker: options.blockingFrameTracker,
         }
@@ -514,6 +514,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     mergeRmxDataFrom(options.data, source)
     let responseContext = {
       ...context,
+      reloadOrigin: options.reloadOrigin,
       nonce: options.nonce,
       data: options.data,
       reconciliationTracker: options.reconciliationTracker,
@@ -655,12 +656,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     handle: frame,
   }
 
-  function setCurrentMarker(marker: FrameMarkerData, signal?: AbortSignal): boolean {
+  function setCurrentMarker(
+    marker: FrameMarkerData,
+    signal?: AbortSignal,
+    origin?: ReloadOrigin,
+  ): boolean {
     let isInheritedReload = currentMarker !== undefined && currentMarker.id !== marker.id
     currentMarker = marker
 
     if (isInheritedReload) {
-      startInheritedReload(signal)
+      startInheritedReload(signal, origin)
     }
 
     return isInheritedReload
@@ -668,7 +673,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   async function updateMarker(marker: FrameMarkerData, options?: RenderOptions): Promise<void> {
     if (isRenderAborted(options?.signal)) return
-    let isInheritedReload = setCurrentMarker(marker, options?.signal)
+    let isInheritedReload = setCurrentMarker(marker, options?.signal, options?.reloadOrigin)
 
     if (marker.status === 'pending') {
       await watchPendingFrameTemplate(
@@ -694,7 +699,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options?: RenderOptions,
   ): Promise<void> {
     if (isRenderAborted(options?.signal)) return
-    let isInheritedReload = setCurrentMarker(marker, options?.signal)
+    let isInheritedReload = setCurrentMarker(marker, options?.signal, options?.reloadOrigin)
 
     clearPendingFrameTemplateWatch()
     await render(content, { ...options, contentStatus: 'resolved' })
@@ -772,21 +777,31 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let form = options?.form
     if (form && !controller.signal.aborted) {
       let target = origin.submitter ?? form
-      let bubbles = form.contains(target)
-      target.dispatchEvent(createFormSubmissionEvent({ ...origin, form, finished, bubbles }))
+      // Form controls can shadow methods on their owning form.
+      let bubbles = Node.prototype.contains.call(form, target)
+      EventTarget.prototype.dispatchEvent.call(
+        target,
+        createFormSubmissionEvent({ ...origin, form, finished, bubbles }),
+      )
       // External or detached submitters have no event path through their owning form.
       if (!bubbles && !controller.signal.aborted) {
-        form.dispatchEvent(createFormSubmissionEvent({ ...origin, form, finished }))
+        EventTarget.prototype.dispatchEvent.call(
+          form,
+          createFormSubmissionEvent({ ...origin, form, finished }),
+        )
       }
     }
     return controller
   }
 
-  function beginClientFrameReloadForAncestorReload(signal: AbortSignal): {
+  function beginClientFrameReloadForAncestorReload(
+    signal: AbortSignal,
+    origin?: ReloadOrigin,
+  ): {
     controller: AbortController
     complete: (failure?: ReloadFailure) => void
   } {
-    let { controller } = beginReload('ancestor', signal)
+    let { controller } = beginReload('ancestor', signal, origin)
     return {
       controller,
       complete: (failure) => completeReload(controller, failure),
@@ -861,6 +876,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     let isStale = () => reloadController !== controller || controller.signal.aborted
+    let origin =
+      (reloadState.status === 'direct' || reloadState.status === 'ancestor') &&
+      reloadState.controller === controller
+        ? reloadState.origin
+        : undefined
     let failure: ReloadFailure | undefined
     try {
       // The source is for the reload's events; resolvers get the options they document.
@@ -877,6 +897,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       let blockingFrameTracker = createReconciliationTracker()
       let commitStarted = false
       await render(content, {
+        reloadOrigin: origin,
         nonce,
         documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
         signal: controller.signal,
@@ -1006,7 +1027,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options: RenderOptions = {},
     onResolved?: () => void,
   ): Promise<void> {
-    let { reconciliationTracker, signal, nonce } = options
+    let { reconciliationTracker, signal, nonce, reloadOrigin } = options
     if (isRenderAborted(signal)) return
     if (pendingTemplateWatch?.markerId === marker.id) return
 
@@ -1026,7 +1047,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         if (isRenderAborted(signal)) return
         if (pendingTemplateWatch !== watch) return
         clearPendingFrameTemplateWatch()
-        await render(fragment, { nonce, signal, contentStatus: 'resolved' })
+        await render(fragment, { nonce, signal, reloadOrigin, contentStatus: 'resolved' })
         if (!isRenderAborted(signal)) onResolved?.()
       })
       let abort = () => {
@@ -1044,7 +1065,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     clearPendingFrameTemplateWatch()
-    await render(template, { nonce, reconciliationTracker, signal, contentStatus: 'resolved' })
+    await render(template, {
+      nonce,
+      reconciliationTracker,
+      signal,
+      reloadOrigin,
+      contentStatus: 'resolved',
+    })
     if (!isRenderAborted(signal)) onResolved?.()
   }
 }
@@ -1268,7 +1295,10 @@ function resolveClientFrame(
 
   state.resolveController?.abort()
   let reload = serverFrameReload
-    ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
+    ? instance.beginClientFrameReloadForAncestorReload(
+        serverFrameReload.signal,
+        serverFrameReload.origin,
+      )
     : undefined
   if (!reload) {
     instance.cancelReload()
@@ -1296,6 +1326,7 @@ function resolveClientFrame(
       }
       let nextContent = asAbortableFrameContent(content, signal)
       await instance.render(nextContent, {
+        reloadOrigin: serverFrameReload?.origin,
         nonce,
         signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
@@ -1821,6 +1852,7 @@ function hydrateRegion(
 
     frameRuntime.serverFrameReload = {
       signal,
+      origin: context.reloadOrigin,
       reconciliationTracker: context.reconciliationTracker,
       blockingFrameTracker: context.blockingFrameTracker,
     }
