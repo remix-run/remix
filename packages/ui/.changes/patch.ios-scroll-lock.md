@@ -1,0 +1,1 @@
+Modal dialogs and open popups now keep the page from scrolling behind them on iOS, where a touch drag could still move the page while scrolling was locked. Scrollable content inside the open surface, pinch-zoom, range inputs, and text selection keep working.
