@@ -320,7 +320,7 @@ export class CacheControl implements HeaderValue, CacheControlInit {
         let params = parseParams(value, ',')
         if (params.length > 0) {
           for (let [name, val] of params) {
-            switch (name) {
+            switch (name.toLowerCase()) {
               case 'max-age':
                 header.maxAge = Number(val)
                 break
