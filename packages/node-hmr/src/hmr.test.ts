@@ -205,15 +205,8 @@ describe('node-hmr', () => {
       'message.ts': getSelfAcceptingMessageSource('one', { requestRestart: true }),
     })
     await using gates = await createFixtureGateServer()
-    let supervisor = createHmrSupervisor({
-      browserHmrChannel: null,
-      cwd: fixture.path,
-      entry: 'server.ts',
-      entryArgs: [],
+    let supervisor = createFixtureSupervisor(fixture.path, {
       env: { ...process.env, GATE_URL: gates.url },
-      nodeArgs: ['--import', nodeTsxImportUrl],
-      registerPath: path.join(packageRoot, 'src/register.ts'),
-      watch: { poll: true, pollInterval: 10 },
     })
     let closed = supervisor.start()
 
@@ -243,16 +236,7 @@ describe('node-hmr', () => {
       'server.ts': [`import './message.ts'`, getIdleHmrServerSource()].join('\n'),
       'message.ts': `export const message = 'one'`,
     })
-    let supervisor = createHmrSupervisor({
-      browserHmrChannel: null,
-      cwd: fixture.path,
-      entry: 'server.ts',
-      entryArgs: [],
-      env: process.env,
-      nodeArgs: ['--import', nodeTsxImportUrl],
-      registerPath: path.join(packageRoot, 'src/register.ts'),
-      watch: { poll: true, pollInterval: 10 },
-    })
+    let supervisor = createFixtureSupervisor(fixture.path)
     let closed = supervisor.start()
 
     try {
@@ -276,15 +260,7 @@ describe('node-hmr', () => {
     await using fixture = await createFixture({
       'server.ts': getIdleHmrServerSource(),
     })
-    let supervisor = createHmrSupervisor({
-      browserHmrChannel: null,
-      cwd: fixture.path,
-      entry: 'server.ts',
-      entryArgs: [],
-      env: process.env,
-      nodeArgs: ['--import', nodeTsxImportUrl],
-      registerPath: path.join(packageRoot, 'src/register.ts'),
-    })
+    let supervisor = createFixtureSupervisor(fixture.path)
     let closed = supervisor.start()
 
     try {
@@ -374,11 +350,8 @@ describe('node-hmr', () => {
     let watchFileA = path.join(fixture.path, 'browser/a.css')
     let watchFileB = path.join(fixture.path, 'browser/b.css')
     let hmrUrlFile = path.join(fixture.path, 'signals/hmr-url')
-    let supervisor = createHmrSupervisor({
+    let supervisor = createFixtureSupervisor(fixture.path, {
       browserHmrChannel: { port: 0 },
-      cwd: fixture.path,
-      entry: 'server.ts',
-      entryArgs: [],
       env: {
         ...process.env,
         GATE_URL: gates.url,
@@ -386,9 +359,6 @@ describe('node-hmr', () => {
         WATCH_FILE_A: watchFileA,
         WATCH_FILE_B: watchFileB,
       },
-      nodeArgs: ['--import', nodeTsxImportUrl],
-      registerPath: path.join(packageRoot, 'src/register.ts'),
-      watch: { poll: true, pollInterval: 10 },
     })
     let closed = supervisor.start()
     let events: Awaited<ReturnType<typeof connectHmrEvents>> | undefined
@@ -438,20 +408,14 @@ describe('node-hmr', () => {
     let watchFile = path.join(fixture.path, 'browser/entry.ts')
     let otherWatchFile = path.join(fixture.path, 'browser/other.ts')
     let hmrUrlFile = path.join(fixture.path, 'signals/hmr-url')
-    let supervisor = createHmrSupervisor({
+    let supervisor = createFixtureSupervisor(fixture.path, {
       browserHmrChannel: { port: 0 },
-      cwd: fixture.path,
-      entry: 'server.ts',
-      entryArgs: [],
       env: {
         ...process.env,
         HMR_URL_FILE: hmrUrlFile,
         OTHER_WATCH_FILE: otherWatchFile,
         WATCH_FILE: watchFile,
       },
-      nodeArgs: ['--import', nodeTsxImportUrl],
-      registerPath: path.join(packageRoot, 'src/register.ts'),
-      watch: { poll: true, pollInterval: 10 },
     })
     let closed = supervisor.start()
     let events: Awaited<ReturnType<typeof connectHmrEvents>> | undefined
@@ -1539,16 +1503,8 @@ describe('node-hmr', () => {
           getIdleHmrServerSource(),
         ].join('\n'),
       })
-      let supervisor = createHmrSupervisor({
-        browserHmrChannel: null,
-        cwd: fixture.path,
-        entry: 'server.ts',
-        entryArgs: [],
-        env: process.env,
-        nodeArgs: ['--import', nodeTsxImportUrl],
-        registerPath: path.join(packageRoot, 'src/register.ts'),
+      let supervisor = createFixtureSupervisor(fixture.path, {
         shutdownTimeoutMs: 0,
-        watch: { poll: true, pollInterval: 10 },
       })
       let closed = supervisor.start()
       await supervisor.ready()
@@ -2034,6 +1990,23 @@ function getHmrProxyHotChildServerSource(message: string, options: { gate?: stri
     `  })`,
     `}`,
   ].join('\n')
+}
+
+function createFixtureSupervisor(
+  cwd: string,
+  options: Partial<Parameters<typeof createHmrSupervisor>[0]> = {},
+) {
+  return createHmrSupervisor({
+    browserHmrChannel: null,
+    cwd,
+    entry: 'server.ts',
+    entryArgs: [],
+    env: process.env,
+    nodeArgs: ['--import', nodeTsxImportUrl],
+    registerPath: path.join(packageRoot, 'src/register.ts'),
+    watch: { poll: true, pollInterval: 10 },
+    ...options,
+  })
 }
 
 async function createFixture(
