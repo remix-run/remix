@@ -18,6 +18,8 @@ export interface VaryInit {
  *
  * Header names are compared case-insensitively and keep the spelling they were first given.
  *
+ * A `*` member means the response varies on everything, so it replaces all other header names.
+ *
  * [MDN `Vary` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary)
  *
  * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.vary)
@@ -56,14 +58,15 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
   /**
    * Adds a header name to the Vary header (case-insensitive).
    * If the header name already exists, this is a no-op.
+   * Adding `*` replaces all other header names, and adding a name while `*` is present is a no-op.
    * @param headerName The header name to add.
    */
   add(headerName: string): void {
     let trimmed = headerName.trim()
-    if (trimmed) {
-      let key = trimmed.toLowerCase()
-      if (!this.#map.has(key)) this.#map.set(key, trimmed)
-    }
+    if (!trimmed || this.#map.has('*')) return
+    if (trimmed === '*') this.#map.clear()
+    let key = trimmed.toLowerCase()
+    if (!this.#map.has(key)) this.#map.set(key, trimmed)
   }
 
   /**

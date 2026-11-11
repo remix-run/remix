@@ -154,6 +154,23 @@ describe('compressResponse()', () => {
     assert.equal(compressed.headers.get('Vary'), 'Cookie, Accept-Encoding')
   })
 
+  it('keeps Vary: * when adding Accept-Encoding', async () => {
+    let request = new Request('https://remix.run', {
+      headers: { 'Accept-Encoding': 'gzip' },
+    })
+    let response = new Response('Hello, World!', {
+      headers: {
+        'Content-Type': 'text/html',
+        Vary: '*',
+      },
+    })
+
+    let compressed = await compressResponse(response, request, { threshold: 0 })
+
+    assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
+    assert.equal(compressed.headers.get('Vary'), '*')
+  })
+
   it('does not duplicate Accept-Encoding in Vary header', async () => {
     let request = new Request('https://remix.run', {
       headers: { 'Accept-Encoding': 'identity' },

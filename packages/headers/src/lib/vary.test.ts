@@ -123,6 +123,12 @@ describe('Vary', () => {
     assert.deepEqual(header.headerNames, [])
   })
 
+  it('replaces header names before and after * with *', () => {
+    let header = new Vary('Cookie, *, Accept-Encoding')
+    assert.deepEqual(header.headerNames, ['*'])
+    assert.equal(header.toString(), '*')
+  })
+
   it('converts to string', () => {
     let header = new Vary(['Accept-Encoding', 'Accept-Language', 'User-Agent'])
     assert.equal(header.toString(), 'Accept-Encoding, Accept-Language, User-Agent')
