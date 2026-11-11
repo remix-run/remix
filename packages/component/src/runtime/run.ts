@@ -136,7 +136,7 @@ export function run(init: RunInit): AppRuntime {
   getNonceManager()
   let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
-  let scheduler = createScheduler(document, errorTarget, styleManager)
+  let scheduler = createScheduler(document, errorTarget)
 
   let resolveFrame = init.resolveFrame ?? defaultResolveFrame
   let namedFrames = new NamedFrameRegistry()

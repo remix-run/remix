@@ -297,15 +297,6 @@ export type MixinRuntimeBinding<target = unknown> = {
   enqueueUpdate(done: (signal: AbortSignal) => void): void
 }
 
-type ResolveMixedPropsInput = {
-  hostType: string
-  frame: FrameHandle
-  scheduler: Scheduler
-  getContext?: MixinContext['get']
-  props: ElementProps
-  state?: MixinRuntimeState
-}
-
 type ResolveMixedPropsOutput = {
   props: ElementProps
   state: MixinRuntimeState
@@ -381,20 +372,20 @@ export function createMixin<
   })
 }
 
-export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPropsOutput {
-  let state = input.state ?? createMixinRuntimeState()
-  let hostType = input.hostType
-  state.handle ??= new MixinHandleImpl(
-    state,
-    hostType,
-    input.frame,
-    input.scheduler,
-    input.getContext ?? (() => undefined),
-  )
+export function resolveMixedProps(
+  hostType: string,
+  hostProps: ElementProps,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  getContext: MixinContext['get'],
+  existingState?: MixinRuntimeState,
+): ResolveMixedPropsOutput {
+  let state = existingState ?? createMixinRuntimeState()
+  state.handle ??= new MixinHandleImpl(state, hostType, frame, scheduler, getContext)
   let handle = state.handle as ScopedAnyMixinHandle
 
   let runnerCount = 0
-  let props = composeMixedProps(hostType, input.props, (descriptor, index, mixinProps) => {
+  let props = composeMixedProps(hostType, hostProps, (descriptor, index, mixinProps) => {
     runnerCount = index + 1
     let entry = state.runners[index]
     if (!entry || entry.type !== descriptor.type) {
@@ -520,15 +511,8 @@ function createMixinRuntimeState(): MixinRuntimeState {
 
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'
 
-type PhaseListener = EventListenerOrEventListenerObject
-
 type MixinScope = {
   target: TypedEventTarget<MixinHandleEventMap<Element>>
-  // EventTarget identifies a listener by its callback and capture flag.
-  phaseListeners: Record<
-    SchedulerPhaseType,
-    [bubble: Set<PhaseListener>, capture: Set<PhaseListener>]
-  >
   controller?: AbortController
 }
 
@@ -542,10 +526,9 @@ class MixinHandleImpl
   element: MixinElement<Element, ElementProps>
   #state: MixinRuntimeState
   #scheduler: Scheduler
-  #phaseListenerCounts: Record<SchedulerPhaseType, number> = {
-    beforeUpdate: 0,
-    commit: 0,
-  }
+  // Phase types received from the scheduler. Removing a listener keeps the subscription until
+  // every scope is released; dispatching to a scope without listeners has no effect.
+  #phaseTypes = new Set<SchedulerPhaseType>()
   #activeScope?: symbol
   #scopes = new Map<symbol, MixinScope>()
   #onSchedulerPhase = (event: Event) => {
@@ -598,17 +581,15 @@ class MixinHandleImpl
     listener: EventListenerOrEventListenerObject | null,
     options?: AddEventListenerOptions | boolean,
   ): void {
-    let scope = this.#getActiveScope()
-    scope.target.addEventListener(
+    this.#getActiveScope().target.addEventListener(
       type as keyof MixinHandleEventMap<Element>,
       listener as EventListener,
       options,
     )
-    if (!listener || !isSchedulerPhaseType(type)) return
-    let listeners = scope.phaseListeners[type][Number(isCapture(options))]
-    if (listeners.has(listener)) return
-    listeners.add(listener)
-    this.#updatePhaseListenerCount(type, 1)
+    if (!listener || (type !== 'beforeUpdate' && type !== 'commit')) return
+    if (this.#phaseTypes.has(type)) return
+    this.#phaseTypes.add(type)
+    this.#scheduler.addEventListener(type, this.#onSchedulerPhase)
   }
 
   removeEventListener(
@@ -616,15 +597,11 @@ class MixinHandleImpl
     listener: EventListenerOrEventListenerObject | null,
     options?: EventListenerOptions | boolean,
   ): void {
-    let scope = this.#getActiveScope()
-    scope.target.removeEventListener(
+    this.#getActiveScope().target.removeEventListener(
       type as keyof MixinHandleEventMap<Element>,
       listener as EventListener,
       typeof options === 'boolean' ? { capture: options } : options,
     )
-    if (!listener || !isSchedulerPhaseType(type)) return
-    if (!scope.phaseListeners[type][Number(isCapture(options))].delete(listener)) return
-    this.#updatePhaseListenerCount(type, -1)
   }
 
   update(): Promise<AbortSignal> {
@@ -658,17 +635,14 @@ class MixinHandleImpl
   }
 
   hasPhaseListeners(type: SchedulerPhaseType): boolean {
-    return this.#phaseListenerCounts[type] > 0
+    return this.#phaseTypes.has(type)
   }
 
   setActiveScope(scope?: symbol): void {
     this.#activeScope = scope
     if (!scope) return
     if (this.#scopes.has(scope)) return
-    this.#scopes.set(scope, {
-      target: new TypedEventTarget<MixinHandleEventMap<Element>>(),
-      phaseListeners: { beforeUpdate: [new Set(), new Set()], commit: [new Set(), new Set()] },
-    })
+    this.#scopes.set(scope, { target: new TypedEventTarget<MixinHandleEventMap<Element>>() })
   }
 
   dispatchScopedEvent(scope: symbol, event: Event): void {
@@ -683,16 +657,17 @@ class MixinHandleImpl
   releaseScope(scope: symbol): void {
     let record = this.#scopes.get(scope)
     if (record) {
-      for (let type of ['beforeUpdate', 'commit'] as const) {
-        let [bubble, capture] = record.phaseListeners[type]
-        this.#updatePhaseListenerCount(type, -(bubble.size + capture.size))
-      }
       record.controller?.abort()
       this.#scopes.delete(scope)
     }
     if (this.#activeScope === scope) {
       this.#activeScope = undefined
     }
+    if (this.#scopes.size > 0) return
+    for (let type of this.#phaseTypes) {
+      this.#scheduler.removeEventListener(type, this.#onSchedulerPhase)
+    }
+    this.#phaseTypes.clear()
   }
 
   #getActiveScope(): MixinScope {
@@ -701,19 +676,6 @@ class MixinHandleImpl
     let record = this.#scopes.get(scope)
     invariant(record)
     return record
-  }
-
-  // Subscribes to the scheduler phase when the first listener is added and
-  // unsubscribes whenever the count reaches zero on removal.
-  #updatePhaseListenerCount(type: SchedulerPhaseType, delta: number) {
-    if (delta === 0) return
-    let count = Math.max(0, this.#phaseListenerCounts[type] + delta)
-    this.#phaseListenerCounts[type] = count
-    if (delta > 0) {
-      if (count === 1) this.#scheduler.addEventListener(type, this.#onSchedulerPhase)
-    } else if (count === 0) {
-      this.#scheduler.removeEventListener(type, this.#onSchedulerPhase)
-    }
   }
 }
 
@@ -793,14 +755,6 @@ function dispatchMixinUpdateEvent(state: MixinRuntimeState | undefined, type: Sc
     event.node = node
     return event
   })
-}
-
-function isSchedulerPhaseType(type: string): type is SchedulerPhaseType {
-  return type === 'beforeUpdate' || type === 'commit'
-}
-
-function isCapture(options?: EventListenerOptions | boolean): boolean {
-  return typeof options === 'boolean' ? options : options?.capture === true
 }
 
 function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNode[]): boolean {

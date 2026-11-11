@@ -388,8 +388,11 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
-export const defaultStyleManager: StyleManager =
-  typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
+let defaultStyleManager: StyleManager | undefined
+
+export function getDefaultStyleManager(): StyleManager {
+  return (defaultStyleManager ??= createStyleManager())
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -619,20 +622,20 @@ function resolveNodeMixProps(
     return { props: getNonceManager().resolveResourceNonce(node.type, node.props, parent) }
   }
 
-  let resolved = resolveMixedProps({
-    hostType: node.type,
+  let resolved = resolveMixedProps(
+    node.type,
+    node.props,
     frame,
     scheduler,
-    getContext: (type: Component | string | symbol) => {
+    (type: Component | string | symbol) => {
       if (typeof type !== 'function') {
         return undefined
       }
 
       return findContextFromAncestry(parent, type)
     },
-    props: node.props,
     state,
-  })
+  )
   return {
     props: getNonceManager().resolveResourceNonce(node.type, resolved.props, parent),
     mixState: resolved.state,
