@@ -2064,12 +2064,12 @@ describe('stream', () => {
       expect(html).not.toContain('"preloads"')
     })
 
-    it('leaves authored module preloads outside framework deduplication', async () => {
+    it('omits client entry preloads the document head already authors', async () => {
       let html = await drain(
         renderToStream(
           <html>
             <head>
-              <link rel="modulepreload" href="/assets/island.js" />
+              <link rel="modulepreload" href="/assets/shared.js" />
             </head>
             <body>
               <ClientIsland />
@@ -2080,15 +2080,19 @@ describe('stream', () => {
               return {
                 href: '/assets/island.js',
                 exportName: 'Island',
-                preloads: ['/assets/island.js'],
+                preloads: ['/assets/island.js', '/assets/shared.js'],
               }
             },
           },
         ),
       )
 
-      expect(html.match(/href="\/assets\/island\.js"/g)).toHaveLength(2)
+      expect(html.match(/href="\/assets\/shared\.js"/g)).toHaveLength(1)
+      expect(html).toContain('<link rel="modulepreload" href="/assets/shared.js" />')
       expect(html.match(managedModulePreloadPattern)).toHaveLength(1)
+      expect(html).toContain(
+        '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />',
+      )
     })
 
     it('orders fragment import maps and preloads before styles', async () => {
