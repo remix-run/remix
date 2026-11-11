@@ -23,3 +23,5 @@ run({
 The `fetch` override can customize Fetch settings or construct a `Request` for application-managed caching, while the resolver validates its returned response. HTTP cache reuse still depends on the server's caching headers; `force-cache` can reuse stale responses.
 
 Use `commit` to wrap frame rendering in `document.startViewTransition()`. `commitFrame()` starts rendering once and waits for the completed update, including navigation URL synchronization, scroll, focus, and followed redirects. Its cancellation signal also covers animations after rendering. Remix lets navigation proceed while the callback waits for an animation, and falls back to the default commit if the callback returns or throws without committing. Return the original response to preserve the commit callback; cloning does not copy it.
+
+See the [bookstore view transitions demo](https://github.com/remix-run/remix/tree/main/demos/bookstore#view-transitions) for custom page animations alongside traversal caching, with reduced-motion support and immediate cart-frame updates.

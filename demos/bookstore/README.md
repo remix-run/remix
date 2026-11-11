@@ -28,6 +28,16 @@ The home, books, genre, search, about, contact, and registration pages use `Cach
 
 The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) supplies a custom `resolveFrame` that passes a `fetch` override to `defaultResolveFrame`, setting `cache: 'force-cache'` for `traverse` navigations. Back/Forward can reuse cached browsing HTML even after its 30-second freshness window. Other loads use the default Fetch cache mode. Traversal can therefore show older cart counts until a fresh fetch replaces the cached response; `no-store` responses still require a network request.
 
+## View Transitions
+
+Click a book cover on the homepage, then use Back and Forward. The cover and title move and resize into the product image and heading, and return to their card on Back. Other page content slides and fades while the header and footer stay steady. The same transition applies to push and replace navigations, including followed redirects.
+
+The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) supplies a `commit` override alongside `fetch`. It passes `commitFrame` to `document.startViewTransition()`, so the new snapshot includes the rendered page and its final URL, scroll, and focus. The callback waits for the animation to finish and skips it if a newer navigation cancels the update.
+
+The [stylesheet](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/app.css) styles the view-transition pseudo-elements, including keyframes and reduced-motion rules. The shared [book transition mixins](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/book-transitions.ts) return `css()` mixins: `bookCoverTransition(book.id)` gives each card cover and its product image a matching `viewTransitionName`, while `bookTitleTransition(book.id)` does the same for the title headings. Their `viewTransitionClass` values, `book-cover` and `book-title`, keep the movement in sync without giving different books the same name. The [layout](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/layout.tsx) also uses `css()` to name the `main` element `bookstore-page` for its slide-and-fade animation.
+
+Every subframe has a name, so the override can distinguish the top frame from cart fragments. Cart-button reloads and other independent frame updates render immediately. Browsers without view transitions and visitors who prefer reduced motion also use the default commit directly.
+
 ## Explore the Code
 
 - Start with [`app/routes.ts`](app/routes.ts) and [`app/router.ts`](app/router.ts) to see the typed route contract and the middleware stack, including the standard UI render middleware.

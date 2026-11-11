@@ -22,6 +22,31 @@ export const app = run({
           cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
         })
       },
+      async commit(commitFrame, { signal }) {
+        let navigationType = options?.navigationType
+        if (
+          options?.target ||
+          (navigationType !== 'push' &&
+            navigationType !== 'replace' &&
+            navigationType !== 'traverse') ||
+          !document.startViewTransition ||
+          matchMedia('(prefers-reduced-motion: reduce)').matches ||
+          signal.aborted
+        ) {
+          return commitFrame()
+        }
+
+        let transition = document.startViewTransition(commitFrame)
+        let skip = () => transition.skipTransition()
+        signal.addEventListener('abort', skip, { once: true })
+        void transition.ready.catch(() => {})
+
+        try {
+          await transition.finished
+        } finally {
+          signal.removeEventListener('abort', skip)
+        }
+      },
     })
   },
   async processClientEntryPreloads(preloads) {
