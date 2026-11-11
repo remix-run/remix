@@ -14,4 +14,4 @@ export {
 export type { TestFn, TestMeta } from './lib/framework.ts'
 export { mock } from './lib/mock.ts'
 export type { TestContext } from './lib/context.ts'
-export type { FakeTimers } from './lib/fake-timers.ts'
+export type { FakeTimers, FakeTimersOptions } from './lib/fake-timers.ts'
