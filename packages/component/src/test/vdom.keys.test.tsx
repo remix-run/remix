@@ -1,8 +1,10 @@
+import * as assert from '@remix-run/assert'
 import { expect } from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
+import { describe, it, type TestContext } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { Fragment, type Handle } from '../runtime/component.ts'
+import { createElement } from '../runtime/create-element.ts'
+import { Fragment, type Handle, type RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
@@ -518,4 +520,129 @@ describe('vnode rendering (keys)', () => {
       expect(buttons.length).toBe(2)
     })
   })
+
+  describe('focus and selection across keyed moves', () => {
+    it('keeps focus and selection on a text input that a keyed reorder moves', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      let item = (key: string) => <input key={key} id={key} type="text" />
+      render(['a', 'b', 'c'].map(item))
+      let input = getInput(container, 'a')
+      input.value = 'Hello World'
+      input.focus()
+      input.setSelectionRange(6, 11)
+
+      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(6)
+      expect(input.selectionEnd).toBe(11)
+    })
+
+    it('keeps focus and selection on a textarea that a keyed reorder moves', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      let item = (key: string) => <textarea key={key} id={key} />
+      render(['a', 'b', 'c'].map(item))
+      let textarea = container.querySelector('#a')
+      invariant(textarea instanceof HTMLTextAreaElement)
+      textarea.value = 'Hello\nWorld\nTest'
+      textarea.focus()
+      textarea.setSelectionRange(6, 11)
+
+      expectToMove(textarea, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(textarea)
+      expect(textarea.selectionStart).toBe(6)
+      expect(textarea.selectionEnd).toBe(11)
+    })
+
+    it('keeps the selection for every text-like input type', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      for (let type of ['search', 'tel', 'url', 'password']) {
+        let item = (key: string) => createElement('input', { key, id: key, type })
+        render(['a', 'b', 'c'].map(item))
+        let input = getInput(container, 'a')
+        input.value = 'test value'
+        input.focus()
+        input.setSelectionRange(0, 4)
+
+        expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+        expect(document.activeElement).toBe(input)
+        expect(input.selectionStart).toBe(0)
+        expect(input.selectionEnd).toBe(4)
+        render([])
+      }
+    })
+
+    it('keeps focus on inputs that do not support text selection', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      for (let type of ['email', 'number', 'checkbox', 'range']) {
+        let item = (key: string) => createElement('input', { key, id: key, type })
+        render(['a', 'b', 'c'].map(item))
+        let input = getInput(container, 'a')
+        input.focus()
+
+        expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+        expect(document.activeElement).toBe(input)
+        render([])
+      }
+    })
+
+    it('keeps focus on focusable and contentEditable elements that a keyed reorder moves', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      let item = (key: string) =>
+        key === 'editable' ? (
+          <div key={key} id={key} contentEditable="true">
+            Hello World
+          </div>
+        ) : (
+          <div key={key} id={key} tabIndex={-1} />
+        )
+      for (let focused of ['focusable', 'editable']) {
+        render([focused, 'b', 'c'].map(item))
+        let element = container.querySelector(`#${focused}`)
+        invariant(element instanceof HTMLElement)
+        element.focus()
+
+        expectToMove(element, () => render(['b', 'c', focused].map(item)))
+
+        expect(document.activeElement).toBe(element)
+        render([])
+      }
+    })
+  })
 })
+
+function createConnectedRoot(t: TestContext) {
+  let container = document.createElement('div')
+  document.body.append(container)
+  let root = createRoot(container)
+  t.after(() => {
+    root.dispose()
+    container.remove()
+  })
+  return { container, render: (node: RemixNode) => root.render(node) }
+}
+
+function getInput(container: HTMLElement, id: string): HTMLInputElement {
+  let input = container.querySelector(`#${id}`)
+  invariant(input instanceof HTMLInputElement)
+  return input
+}
+
+// Moving a focused element out of the DOM and back drops its focus and selection, which is what
+// the scheduler restores. Which element a keyed reorder moves is the reconciler's choice, so fail
+// loudly if it stops moving this one instead of letting the test pass without testing restoration.
+function expectToMove(element: Element, update: () => void): void {
+  let parent = element.parentNode
+  invariant(parent)
+  let observer = new MutationObserver(() => {})
+  observer.observe(parent, { childList: true })
+  update()
+  let records = observer.takeRecords()
+  observer.disconnect()
+  let moved = records.some((record) => Array.from(record.removedNodes).includes(element))
+  assert.ok(moved, 'Expected the update to move the focused element. Reorder the keys so it does.')
+  expect(element.isConnected).toBe(true)
+}
