@@ -11,6 +11,7 @@ import {
 import { run } from '../runtime/run.ts'
 import { renderToStream } from '../server/stream.ts'
 import { drain } from './utils.ts'
+import { defaultPrefetch, type DefaultPrefetchOverrides, type PrefetchContext } from '../index.ts'
 
 function startTestPrefetching(t: TestContext, prefetchFrame?: PrefetchFrame) {
   let controller = new AbortController()
@@ -191,10 +192,10 @@ describe('prefetch', () => {
       connection.effectiveType = effectiveType
       let pressed = createIntentLink(`/products/intent-${effectiveType}`)
       press(pressed)
-      expect(prefetchFrame).toHaveBeenCalledWith(pressed.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(pressed.href, { elements: [pressed] })
       let visible = createViewportLink(`/products/viewport-${effectiveType}`)
       expect(await readIntersection(visible)).toBe(true)
-      expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(visible.href, { elements: [visible] })
     }
 
     expect(prefetchFrame).toHaveBeenCalledTimes(4)
@@ -211,8 +212,8 @@ describe('prefetch', () => {
     expect(await readIntersection(visible)).toBe(true)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
-    expect(prefetchFrame).toHaveBeenCalledWith(pressed.href)
-    expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(pressed.href, { elements: [pressed] })
+    expect(prefetchFrame).toHaveBeenCalledWith(visible.href, { elements: [visible] })
   })
 
   it('checks connection settings after the intent delay and allows a later press', async (t) => {
@@ -230,7 +231,7 @@ describe('prefetch', () => {
     connection.saveData = false
     press(anchor)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { elements: [anchor] })
   })
 
   it('allows a skipped viewport link to prefetch on reentry after the connection improves', async (t) => {
@@ -248,7 +249,7 @@ describe('prefetch', () => {
     anchor.style.top = '0px'
     expect(await readIntersection(anchor)).toBe(true)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { elements: [anchor] })
   })
 
   it('allows imperative prefetching with Save-Data enabled on a slow connection', (t) => {
@@ -271,11 +272,11 @@ describe('prefetch', () => {
     hovered.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }))
     expect(prefetchFrame).not.toHaveBeenCalled()
     await wait(150)
-    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href, { elements: [hovered] })
 
     focused.focus()
     await wait(150)
-    expect(prefetchFrame).toHaveBeenCalledWith(focused.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(focused.href, { elements: [focused] })
   })
 
   it('cancels the prefetch when the pointer leaves before the intent delay', async (t) => {
@@ -299,7 +300,9 @@ describe('prefetch', () => {
 
     press(anchor)
 
-    expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href)
+    expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href, {
+      elements: [anchor],
+    })
   })
 
   it('prefetches once across descendants during a hover and again on a later hover', async (t) => {
@@ -337,7 +340,7 @@ describe('prefetch', () => {
 
     expect(document.activeElement).toBe(focused)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    expect(prefetchFrame).toHaveBeenCalledWith(focused.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(focused.href, { elements: [focused] })
   })
 
   it('prefetches separate hovered and focused links without replacing either intent', async (t) => {
@@ -351,8 +354,8 @@ describe('prefetch', () => {
     await wait(150)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
-    expect(prefetchFrame).toHaveBeenCalledWith(focused.href)
-    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(focused.href, { elements: [focused] })
+    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href, { elements: [hovered] })
   })
 
   it('keeps hover intent when another link loses focus', async (t) => {
@@ -367,7 +370,7 @@ describe('prefetch', () => {
     await wait(150)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(hovered.href, { elements: [hovered] })
   })
 
   it('keeps focus intent when the pointer leaves the same link', async (t) => {
@@ -496,7 +499,10 @@ describe('prefetch', () => {
     let anchor = createIntentLink('/products/shirt')
     anchor.setAttribute('data-rmx-target', 'details')
     press(anchor)
-    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { target: 'details' })
+    expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, {
+      target: 'details',
+      elements: [anchor],
+    })
 
     let overridden = createIntentLink('/products/hat')
     overridden.setAttribute('data-rmx-target', 'details')
@@ -505,7 +511,7 @@ describe('prefetch', () => {
     await wait(150)
     expect(prefetchFrame).toHaveBeenCalledWith(
       new URL('./partials/hat?size=small', document.baseURI).href,
-      { target: 'details' },
+      { target: 'details', elements: [overridden] },
     )
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
   })
@@ -519,13 +525,16 @@ describe('prefetch', () => {
     press(named)
     let current = new URL(location.href)
     current.hash = ''
-    expect(prefetchFrame).toHaveBeenCalledWith(current.href, { target: 'details' })
+    expect(prefetchFrame).toHaveBeenCalledWith(current.href, {
+      target: 'details',
+      elements: [named],
+    })
 
     let top = createIntentLink('/products/top')
     top.setAttribute('data-rmx-target', '')
     top.setAttribute('data-rmx-src', '/ignored')
     press(top)
-    expect(prefetchFrame).toHaveBeenCalledWith(top.href)
+    expect(prefetchFrame).toHaveBeenCalledWith(top.href, { elements: [top] })
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
   })
 
@@ -624,6 +633,7 @@ describe('prefetch', () => {
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/shirt', location.href).href, {
         target: 'details',
+        elements: [anchor],
       })
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
@@ -637,6 +647,7 @@ describe('prefetch', () => {
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
       expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/hat', location.href).href, {
         target: 'details',
+        elements: [anchor],
       })
 
       anchor.setAttribute('data-rmx-target', 'sidebar')
@@ -644,6 +655,7 @@ describe('prefetch', () => {
       expect(prefetchFrame).toHaveBeenCalledTimes(3)
       expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/hat', location.href).href, {
         target: 'sidebar',
+        elements: [anchor],
       })
 
       anchor.setAttribute('data-rmx-target', 'missing')
@@ -652,7 +664,7 @@ describe('prefetch', () => {
       anchor.removeAttribute('data-rmx-target')
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(4)
-      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { elements: [anchor] })
     })
 
     it('prefetches existing links only when they enter the viewport', async (t) => {
@@ -664,12 +676,12 @@ describe('prefetch', () => {
       expect(await readIntersection(visible)).toBe(true)
       expect(await readIntersection(offscreen)).toBe(false)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(visible.href, { elements: [visible] })
 
       offscreen.style.top = '0px'
       expect(await readIntersection(offscreen)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
-      expect(prefetchFrame).toHaveBeenCalledWith(offscreen.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(offscreen.href, { elements: [offscreen] })
     })
 
     it('discovers links in newly inserted subtrees and links marked after insertion', async (t) => {
@@ -680,7 +692,7 @@ describe('prefetch', () => {
       subtree.append(added)
       document.body.append(subtree)
       expect(await readIntersection(added)).toBe(true)
-      expect(prefetchFrame).toHaveBeenCalledWith(added.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(added.href, { elements: [added] })
 
       let markedLater = createIntentLink('/products/marked-later')
       markedLater.style.cssText = added.style.cssText
@@ -690,7 +702,7 @@ describe('prefetch', () => {
       markedLater.setAttribute('data-rmx-prefetch', 'viewport')
       expect(await readIntersection(markedLater)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
-      expect(prefetchFrame).toHaveBeenCalledWith(markedLater.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(markedLater.href, { elements: [markedLater] })
     })
 
     it('does not repeat on reentry or fragment changes but observes changed destinations', async (t) => {
@@ -699,7 +711,9 @@ describe('prefetch', () => {
       startTestPrefetching(t, prefetchFrame)
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href)
+      expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href, {
+        elements: [anchor],
+      })
 
       anchor.style.top = `${innerHeight + 100}px`
       expect(await readIntersection(anchor)).toBe(false)
@@ -717,7 +731,7 @@ describe('prefetch', () => {
       anchor.href = '/products/hat'
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
-      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href, { elements: [anchor] })
     })
 
     it('skips ineligible links and observes links when they become eligible', async (t) => {
@@ -744,7 +758,7 @@ describe('prefetch', () => {
       download.removeAttribute('download')
       expect(await readIntersection(download)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(download.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(download.href, { elements: [download] })
     })
 
     it('does not prefetch a removed link and can prefetch it when mounted again', async (t) => {
@@ -823,8 +837,638 @@ describe('prefetch', () => {
       expect(prefetchFrame).not.toHaveBeenCalled()
       press(intent)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(intent.href)
+      expect(prefetchFrame).toHaveBeenCalledWith(intent.href, { elements: [intent] })
     })
+  })
+})
+
+describe('defaultPrefetch overrides', () => {
+  it('passes the marked link through options and both hooks when a descendant is pressed', async (t) => {
+    let parsed = Promise.withResolvers<void>()
+    let anchor = createIntentLink('/page#details')
+    let child = document.createElement('span')
+    anchor.append(child)
+    let app = run({
+      loadModule: mock.fn(),
+      prefetch(src, options) {
+        expect(options?.elements).toEqual([anchor])
+        expect(options?.elements?.[0]).not.toBe(child)
+        return defaultPrefetch(src, options, {
+          fetch(url, init, context) {
+            expect(context.src).toBe(url)
+            expect(context.signal).toBe(init.signal)
+            expect(context.elements).toEqual([anchor])
+            return Promise.resolve(htmlResponse('<main>Page</main>'))
+          },
+          frame(_prefetchReferences, context) {
+            expect(context.elements).toEqual([anchor])
+            expect(context.elements[0].isConnected).toBe(true)
+            parsed.resolve()
+          },
+        })
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    press(child)
+    await parsed.promise
+  })
+
+  it('tracks shared callers joining and cancelling through live read-only origin getters', async (t) => {
+    startTestPrefetching(t)
+    let firstElement = document.createElement('button')
+    let secondElement = document.createElement('button')
+    let thirdElement = document.createElement('button')
+    let firstController = new AbortController()
+    let secondController = new AbortController()
+    let response = Promise.withResolvers<Response>()
+    let parsed = Promise.withResolvers<PrefetchContext>()
+    let release = Promise.withResolvers<void>()
+    let requestContext: PrefetchContext | undefined
+    let first = defaultPrefetch(
+      '/page',
+      {
+        signal: firstController.signal,
+        elements: [firstElement],
+      },
+      {
+        fetch(_url, _init, context) {
+          requestContext = context
+          return response.promise
+        },
+        async frame(_prefetchReferences, context) {
+          parsed.resolve(context)
+          await release.promise
+        },
+      },
+    )
+    if (!requestContext) throw new Error('Expected request context')
+    let snapshot = requestContext.elements
+    expect(snapshot).toEqual([firstElement])
+    expect(Object.isFrozen(snapshot)).toBe(true)
+    expect(Object.isFrozen(firstElement)).toBe(false)
+    let second = defaultPrefetch('/page', {
+      signal: secondController.signal,
+      elements: [secondElement, firstElement],
+    })
+    expect(requestContext.elements).toEqual([firstElement, secondElement])
+    let third = defaultPrefetch('/page', {
+      signal: firstController.signal,
+      elements: [thirdElement],
+    })
+    expect(requestContext.elements).toEqual([firstElement, secondElement, thirdElement])
+    expect(snapshot).toEqual([firstElement])
+    response.resolve(htmlResponse('<main>Page</main>'))
+    let frameContext = await parsed.promise
+    expect(frameContext.elements).toEqual([firstElement, secondElement, thirdElement])
+    firstController.abort()
+    await Promise.all([first, third])
+    expect(frameContext.elements).toEqual([secondElement, firstElement])
+    expect(requestContext.elements).toEqual([secondElement, firstElement])
+    expect(frameContext.signal.aborted).toBe(false)
+    release.resolve()
+    await second
+  })
+
+  it('inherits changing parent origins through shared nested frame requests', async (t) => {
+    startTestPrefetching(t)
+    let firstElement = createIntentLink('/page')
+    let secondElement = createIntentLink('/page')
+    let directElement = createIntentLink('/child')
+    let firstController = new AbortController()
+    let secondController = new AbortController()
+    let nested = Promise.withResolvers<PrefetchContext>()
+    let parsed = Promise.withResolvers<PrefetchContext>()
+    let release = Promise.withResolvers<void>()
+    let first = defaultPrefetch(
+      '/page',
+      {
+        signal: firstController.signal,
+        elements: [firstElement],
+      },
+      {
+        fetch(url, _init, context) {
+          if (new URL(url).pathname === '/child') {
+            expect(context.elements).toEqual([firstElement])
+            nested.resolve(context)
+          }
+          return Promise.resolve(
+            htmlResponse(
+              new URL(url).pathname === '/page'
+                ? '<script id="rmx-data" type="application/json">{"f":{"child":{"src":"/child","prefetch":true}}}</script>'
+                : '<main>Child</main>',
+            ),
+          )
+        },
+        async frame(prefetchReferences, context) {
+          if (new URL(context.src).pathname === '/child') {
+            parsed.resolve(context)
+            await release.promise
+          }
+          await prefetchReferences()
+        },
+      },
+    )
+    let context = await nested.promise
+    let frameContext = await parsed.promise
+    let second = defaultPrefetch('/page', {
+      signal: secondController.signal,
+      elements: [secondElement],
+    })
+    expect(context.elements).toEqual([firstElement, secondElement])
+    expect(frameContext.elements).toEqual([firstElement, secondElement])
+    firstElement.remove()
+    expect(context.elements[0].isConnected).toBe(false)
+    expect(context.signal.aborted).toBe(false)
+    let direct = defaultPrefetch('/child', { elements: [directElement] })
+    expect(context.elements).toEqual([firstElement, secondElement, directElement])
+    firstController.abort()
+    await first
+    expect(context.elements).toEqual([secondElement, directElement])
+    secondController.abort()
+    await second
+    expect(context.elements).toEqual([directElement])
+    expect(frameContext.elements).toEqual([directElement])
+    expect(context.signal.aborted).toBe(false)
+    release.resolve()
+    await direct
+  })
+
+  it('provides no implicit origins for imperative calls and snapshots explicitly supplied origins', async (t) => {
+    startTestPrefetching(t)
+    let source = document.createElement('button')
+    let sources = [source]
+    let response = Promise.withResolvers<Response>()
+    let context: PrefetchContext | undefined
+    await defaultPrefetch('/without-origin', undefined, {
+      fetch(_url, _init, context) {
+        expect(context.elements).toEqual([])
+        return Promise.resolve(htmlResponse('<main>Page</main>'))
+      },
+      frame(_prefetchReferences, context) {
+        expect(context.elements).toEqual([])
+      },
+    })
+    let completed = Promise.withResolvers<void>()
+    startTestPrefetching(t, (src, options) => {
+      expect(options?.elements).toBe(sources)
+      return defaultPrefetch(src, options, {
+        fetch(_url, _init, value) {
+          context = value
+          return response.promise
+        },
+        frame(_prefetchReferences, value) {
+          expect(value.elements).toEqual([source])
+          completed.resolve()
+        },
+      })
+    })
+    prefetch('/with-origin', { elements: sources })
+    sources.length = 0
+    if (!context) throw new Error('Expected request context')
+    expect(context.elements).toEqual([source])
+    response.resolve(htmlResponse('<main>Page</main>'))
+    await completed.promise
+  })
+
+  it('prepares custom fetches and exposes original inert elements with response context', async (t) => {
+    startTestPrefetching(t)
+    let response = htmlResponse(`<base href="../assets/">
+      <script src="entry.js"></script>
+      <script>document.documentElement.dataset.prefetchExecuted = 'yes'</script>
+      <template><link rel="preload" as="image" imagesrcset="small.jpg 1x, large.jpg 2x"
+        imagesizes="100vw" crossorigin referrerpolicy="no-referrer"></template>`)
+    Object.defineProperty(response, 'url', {
+      value: new URL('/redirected/page', location.href).href,
+    })
+    let transport = mock.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => response)
+    let frame = mock.fn<NonNullable<DefaultPrefetchOverrides['frame']>>(
+      (_prefetchReferences, context) => {
+        expect(context.response).toBe(response)
+        expect(context.response.bodyUsed).toBe(true)
+        expect(context.src).toBe(new URL('/page', location.href).href)
+        expect(context.target).toBe('details')
+        expect(context.baseURL).toBe(new URL('/assets/', location.href).href)
+        expect(context.fragment.isConnected).toBe(false)
+        expect(context.assets).toHaveLength(2)
+        expect(context.assets[0]).toBe(context.fragment.querySelector('script[src]'))
+        let template = context.fragment.querySelector('template')
+        expect(context.assets[1]).toBe(template?.content.firstElementChild)
+        expect(context.assets[1].getAttribute('imagesrcset')).toBe('small.jpg 1x, large.jpg 2x')
+        expect(context.signal.aborted).toBe(false)
+      },
+    )
+
+    await defaultPrefetch('/page#hash', { target: 'details' }, { fetch: transport, frame })
+
+    expect(transport).toHaveBeenCalledTimes(1)
+    let [url, init] = transport.mock.calls[0].arguments
+    expect(url).toBe(new URL('/page', location.href).href)
+    expect(init?.method).toBe('GET')
+    expect(init?.mode).toBe('same-origin')
+    expect(init?.priority).toBe('low')
+    expect(init?.signal).toBeInstanceOf(AbortSignal)
+    expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
+    expect(new Headers(init?.headers).get('X-Remix-Frame')).toBe('true')
+    expect(new Headers(init?.headers).get('X-Remix-Target')).toBe('details')
+    expect(frame).toHaveBeenCalledTimes(1)
+    expect(document.documentElement.dataset.prefetchExecuted).toBe(undefined)
+  })
+
+  it('selects original assets, adds marked images, and controls nested frame requests', async (t) => {
+    startTestPrefetching(t)
+    stubLinkPrefetchSupport(t, true)
+    let html = await drain(
+      renderToStream(
+        jsx('main', {
+          children: [
+            jsx(Frame, { src: './keep#hash', name: 'details', prefetch: true }),
+            jsx(Frame, { src: './skip', name: 'sidebar', prefetch: true }),
+            jsx(Frame, { src: './unmarked' }),
+          ],
+        }),
+        { resolveFrame: () => '' },
+      ),
+    )
+    let transport = mock.fn(async (url: RequestInfo | URL, _init?: RequestInit) =>
+      new URL(String(url)).pathname === '/page'
+        ? htmlResponse(`<base href="/resources/">${html}
+            <script src="keep.js"></script><script src="skip.js"></script>
+            <img src="extra.jpg" data-prefetch><img src="ignored.jpg">`)
+        : htmlResponse('<link rel="stylesheet" href="nested.css">'),
+    )
+    let hints = collectHints(t)
+    let contexts: string[] = []
+
+    await defaultPrefetch('/page', undefined, {
+      fetch: transport,
+      frame(prefetchReferences, { src, fragment, assets, frames }) {
+        contexts.push(new URL(src).pathname)
+        if (new URL(src).pathname !== '/page') return prefetchReferences()
+        expect(frames.map((frame) => new URL(frame.src).pathname)).toEqual([
+          '/resources/keep',
+          '/resources/skip',
+        ])
+        fragment.querySelector('#rmx-data')?.remove()
+        let image = fragment.querySelector('img[data-prefetch]')
+        return prefetchReferences({
+          assets: [
+            ...assets.filter((element) => element.getAttribute('src') === 'keep.js'),
+            ...(image ? [image] : []),
+          ],
+          frames: frames.filter((frame) => frame.target === 'details'),
+        })
+      },
+    })
+
+    expect(contexts).toEqual(['/page', '/resources/keep'])
+    expect(transport.mock.calls.map((call) => new URL(String(call.arguments[0])).pathname)).toEqual(
+      ['/page', '/resources/keep'],
+    )
+    expect(new Headers(transport.mock.calls[1].arguments[1]?.headers).get('X-Remix-Target')).toBe(
+      'details',
+    )
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual([
+      '/resources/keep.js',
+      '/resources/extra.jpg',
+      '/resources/nested.css',
+    ])
+  })
+
+  it('does not fall back when the frame hook skips or throws, and permits later attempts', async (t) => {
+    startTestPrefetching(t)
+    stubLinkPrefetchSupport(t, true)
+    let hints = collectHints(t)
+    let transport = mock.fn(async () => htmlResponse('<script src="/entry.js"></script>'))
+    await defaultPrefetch('/page', undefined, { fetch: transport, frame() {} })
+    await defaultPrefetch('/page', undefined, {
+      fetch: transport,
+      frame() {
+        throw new Error('Skip speculative work')
+      },
+    })
+    expect(hints).toEqual([])
+    await defaultPrefetch('/page', undefined, { fetch: transport })
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/entry.js'])
+    expect(transport).toHaveBeenCalledTimes(3)
+  })
+
+  it('defaults omitted reference lists and deduplicates repeated delegations', async (t) => {
+    startTestPrefetching(t)
+    stubLinkPrefetchSupport(t, true)
+    let transport = mock.fn(async (url: RequestInfo | URL) =>
+      new URL(String(url)).pathname === '/page'
+        ? htmlResponse(`<script src="/one.js"></script><script src="/two.js"></script>
+            <script id="rmx-data" type="application/json">{"f":{"child":{"src":"/child","prefetch":true}}}</script>`)
+        : htmlResponse('<main>Child</main>'),
+    )
+    let hints = collectHints(t)
+    await defaultPrefetch('/page', undefined, {
+      fetch: transport,
+      frame(prefetchReferences, { assets }) {
+        if (assets.length === 0) return
+        let foreign = document.createElement('script')
+        foreign.src = '/foreign.js'
+        void prefetchReferences({ assets: [assets[0], foreign], frames: [] })
+        void prefetchReferences({ frames: [] })
+        return prefetchReferences({ assets: [] })
+      },
+    })
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/one.js', '/two.js'])
+    expect(transport.mock.calls.map((call) => new URL(String(call.arguments[0])).pathname)).toEqual(
+      ['/page', '/child'],
+    )
+  })
+
+  it('starts each parsed frame independently and awaits custom and unreturned delegated work', async (t) => {
+    startTestPrefetching(t)
+    stubLinkPrefetchSupport(t, true)
+    let second = Promise.withResolvers<Response>()
+    let custom = Promise.withResolvers<void>()
+    let firstParsed = Promise.withResolvers<void>()
+    let hints = collectHints(t)
+    let completed = false
+    let first = defaultPrefetch('/first', undefined, {
+      fetch: async () => htmlResponse('<script src="/first.js"></script>'),
+      async frame(prefetchReferences) {
+        void prefetchReferences()
+        firstParsed.resolve()
+        await custom.promise
+      },
+    }).then(() => {
+      completed = true
+    })
+    let other = defaultPrefetch('/second', undefined, { fetch: () => second.promise })
+
+    await firstParsed.promise
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/first.js'])
+    expect(completed).toBe(false)
+    second.resolve(htmlResponse('<script src="/second.js"></script>'))
+    await other
+    expect(completed).toBe(false)
+    custom.resolve()
+    await first
+    expect(completed).toBe(true)
+  })
+
+  it('shares hooks across concurrent roots and terminates nested frame cycles', async (t) => {
+    startTestPrefetching(t)
+    let firstElement = createIntentLink('/first')
+    let secondElement = createIntentLink('/second')
+    let release = Promise.withResolvers<void>()
+    let transport = mock.fn(async (url: RequestInfo | URL) => {
+      await release.promise
+      let other = new URL(String(url)).pathname === '/first' ? '/second' : '/first'
+      return htmlResponse(
+        `<script id="rmx-data" type="application/json">${JSON.stringify({
+          f: { nested: { src: other, prefetch: true } },
+        })}</script>`,
+      )
+    })
+    let parsed: string[] = []
+    let origins = new Map<string, readonly Element[]>()
+    let overrides: DefaultPrefetchOverrides = {
+      fetch: transport,
+      async frame(prefetchReferences, context) {
+        let pathname = new URL(context.src).pathname
+        parsed.push(pathname)
+        await prefetchReferences()
+        origins.set(pathname, context.elements)
+      },
+    }
+    let first = defaultPrefetch('/first', { elements: [firstElement] }, overrides)
+    let second = defaultPrefetch('/second', { elements: [secondElement] }, overrides)
+    let duplicate = defaultPrefetch(
+      '/first',
+      { elements: [firstElement] },
+      {
+        fetch() {
+          throw new Error('Duplicate must share first overrides')
+        },
+      },
+    )
+    release.resolve()
+    await Promise.all([first, second, duplicate])
+    expect(transport).toHaveBeenCalledTimes(2)
+    expect(parsed.sort()).toEqual(['/first', '/second'])
+    expect(origins.get('/first')).toContain(firstElement)
+    expect(origins.get('/second')).toContain(secondElement)
+  })
+
+  it('cancels individual callers while retaining shared HTML and prevents late delegation', async (t) => {
+    startTestPrefetching(t)
+    stubLinkPrefetchSupport(t, true)
+    let response = Promise.withResolvers<Response>()
+    let release = Promise.withResolvers<void>()
+    let parsed = Promise.withResolvers<AbortSignal>()
+    let firstController = new AbortController()
+    let secondController = new AbortController()
+    let requestSignal: AbortSignal | null | undefined
+    let transport = mock.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+      requestSignal = init?.signal
+      return response.promise
+    })
+    let first = defaultPrefetch(
+      '/page',
+      { signal: firstController.signal },
+      {
+        fetch: transport,
+        async frame(prefetchReferences, { signal }) {
+          parsed.resolve(signal)
+          await release.promise
+          await prefetchReferences()
+        },
+      },
+    )
+    let second = defaultPrefetch('/page', { signal: secondController.signal })
+    firstController.abort()
+    await first
+    expect(requestSignal?.aborted).toBe(false)
+    response.resolve(htmlResponse('<script src="/entry.js"></script>'))
+    let hookSignal = await parsed.promise
+    secondController.abort()
+    await second
+    expect(hookSignal.aborted).toBe(true)
+    let hints = collectHints(t)
+    release.resolve()
+    await Promise.resolve()
+    expect(hints).toEqual([])
+    expect(transport).toHaveBeenCalledTimes(1)
+  })
+
+  it('lets a custom fetch handle failed responses before validation and skips failed discovery', async (t) => {
+    startTestPrefetching(t)
+    let frame = mock.fn()
+    let failed = new Response('<script src="/error.js"></script>', {
+      status: 503,
+      headers: { 'Content-Type': 'text/html', 'Retry-After': '5' },
+    })
+    expect(failed.body).not.toBe(null)
+    if (!failed.body) throw new Error('Expected a response body')
+    let cancel = t.mock.method(failed.body, 'cancel', async () => {})
+    await defaultPrefetch('/page', undefined, { fetch: async () => failed, frame })
+    expect(frame).not.toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledTimes(1)
+    await defaultPrefetch('/page', undefined, {
+      fetch: async () => htmlResponse('<main>Recovered</main>'),
+      frame,
+    })
+    expect(frame).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows applications to preload responsive Images and fetch their own assets', async (t) => {
+    startTestPrefetching(t)
+    let small =
+      'data:image/svg+xml,' +
+      encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="7" height="7"></svg>')
+    let large =
+      'data:image/svg+xml,' +
+      encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"></svg>')
+    let images: HTMLImageElement[] = []
+    let hints = collectHints(t)
+    let fetched = ''
+
+    await defaultPrefetch('/page', undefined, {
+      fetch: async () =>
+        htmlResponse(`<img data-prefetch src="${small}"
+        srcset="${small} 1x, ${large} 2x" sizes="100vw" referrerpolicy="no-referrer">`),
+      async frame(_prefetchReferences, { fragment, signal }) {
+        let source = fragment.querySelector('img')
+        if (!source) throw new Error('Expected an image')
+        let image = new Image()
+        image.fetchPriority = 'low'
+        image.referrerPolicy = source.referrerPolicy
+        image.sizes = source.sizes
+        image.srcset = source.srcset
+        image.src = source.getAttribute('src') ?? ''
+        images.push(image)
+        await Promise.all([
+          image.decode(),
+          fetch('data:text/plain,custom-asset', { signal }).then(async (response) => {
+            fetched = await response.text()
+          }),
+        ])
+      },
+    })
+
+    expect(images).toHaveLength(1)
+    expect(images[0].complete).toBe(true)
+    expect(images[0].naturalWidth).toBe(7)
+    expect(images[0].isConnected).toBe(false)
+    expect(images[0].referrerPolicy).toBe('no-referrer')
+    expect(fetched).toBe('custom-asset')
+    expect(hints).toEqual([])
+  })
+
+  it('retains shared asset hints until their last frame owner cancels', async (t) => {
+    startTestPrefetching(t)
+    stubLinkPrefetchSupport(t, true)
+    let linked = Promise.withResolvers<HTMLLinkElement>()
+    let secondParsed = Promise.withResolvers<void>()
+    let observer = new MutationObserver((records) => {
+      for (let record of records)
+        for (let node of record.addedNodes) {
+          if (node instanceof HTMLLinkElement && node.rel === 'prefetch') linked.resolve(node)
+        }
+    })
+    observer.observe(document.head, { childList: true })
+    t.after(() => observer.disconnect())
+    let firstController = new AbortController()
+    let secondController = new AbortController()
+    let first = defaultPrefetch(
+      '/first',
+      { signal: firstController.signal },
+      {
+        fetch: async () => htmlResponse('<script src="/shared.js"></script>'),
+      },
+    )
+    let link = await linked.promise
+    let second = defaultPrefetch(
+      '/second',
+      { signal: secondController.signal },
+      {
+        fetch: async () => htmlResponse('<script src="/shared.js"></script>'),
+        frame(prefetchReferences) {
+          let ready = prefetchReferences()
+          secondParsed.resolve()
+          return ready
+        },
+      },
+    )
+    await secondParsed.promise
+    firstController.abort()
+    await first
+    expect(link.isConnected).toBe(true)
+    secondController.abort()
+    await second
+    expect(link.isConnected).toBe(false)
+  })
+
+  it('awaits unreturned delegation and ties custom defaultPrefetch calls to runtime disposal', async (t) => {
+    stubLinkPrefetchSupport(t, true)
+    let linked = Promise.withResolvers<HTMLLinkElement>()
+    let observer = new MutationObserver((records) => {
+      for (let record of records)
+        for (let node of record.addedNodes) {
+          if (node instanceof HTMLLinkElement && node.rel === 'prefetch') linked.resolve(node)
+        }
+    })
+    observer.observe(document.head, { childList: true })
+    t.after(() => observer.disconnect())
+    let finished = Promise.withResolvers<void>()
+    let completed = false
+    let app = run({
+      loadModule: mock.fn(),
+      prefetch(src, options) {
+        return defaultPrefetch(src, options, {
+          fetch: async () => htmlResponse('<script src="/pending.js"></script>'),
+          frame(prefetchReferences) {
+            void prefetchReferences()
+          },
+        }).then(() => {
+          completed = true
+          finished.resolve()
+        })
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    prefetch('/page')
+    let link = await linked.promise
+    expect(completed).toBe(false)
+    app.dispose()
+    await finished.promise
+    expect(completed).toBe(true)
+    expect(link.isConnected).toBe(false)
+  })
+
+  it('awaits pending work when the same references are delegated again', async (t) => {
+    startTestPrefetching(t)
+    stubLinkPrefetchSupport(t, true)
+    let linked = Promise.withResolvers<HTMLLinkElement>()
+    let observer = new MutationObserver((records) => {
+      for (let record of records)
+        for (let node of record.addedNodes) {
+          if (node instanceof HTMLLinkElement && node.rel === 'prefetch') linked.resolve(node)
+        }
+    })
+    observer.observe(document.head, { childList: true })
+    t.after(() => observer.disconnect())
+    let delegated = false
+    let ready = defaultPrefetch('/page', undefined, {
+      fetch: async () => htmlResponse('<script src="/pending.js"></script>'),
+      async frame(prefetchReferences) {
+        void prefetchReferences()
+        await prefetchReferences()
+        delegated = true
+      },
+    })
+    let link = await linked.promise
+    await Promise.resolve()
+    expect(delegated).toBe(false)
+    link.dispatchEvent(new Event('load'))
+    await ready
+    expect(delegated).toBe(true)
   })
 })
 

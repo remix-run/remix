@@ -1110,12 +1110,13 @@ function AlbumPage(handle: Handle<{ albumId: string }>) {
 }
 ```
 
-| Prop       | Use                                                                               |
-| ---------- | --------------------------------------------------------------------------------- |
-| `src`      | Required. The URL whose HTML the frame renders and reloads.                       |
-| `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                |
-| `fallback` | Content to render while the frame is pending.                                     |
-| `on`       | Event handlers for events dispatched from the frame element, keyed by event type. |
+| Prop       | Use                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------- |
+| `src`      | Required. The URL whose HTML the frame renders and reloads.                             |
+| `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                      |
+| `fallback` | Content to render while the frame is pending.                                           |
+| `prefetch` | Fetch this frame's HTML and discover its assets when its containing page is prefetched. |
+| `on`       | Event handlers for events dispatched from the frame element, keyed by event type.       |
 
 Frame content can contain other frames and client entries.
 
@@ -1394,6 +1395,58 @@ Remix reads the prefetched HTML without running it and finds the page's JavaScri
 Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix doesn't scan `<img>` elements or CSS `@font-face` rules.
 
 The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
+
+Add `prefetch` to a nested frame to also fetch its HTML and discover its assets when its containing page is prefetched:
+
+```tsx
+<Frame name="recommendations" src="/recommendations" prefetch />
+```
+
+Nested requests send the frame's name as `X-Remix-Target`, resolve relative sources against the containing response's URL and `<base href>`, and follow further opted-in frames. Repeated references and cycles don't repeat requests within a prefetch. Frames without `prefetch` don't add requests; assets already embedded in their HTML are still discovered.
+
+#### Customizing Prefetching
+
+Call `defaultPrefetch(src, options, { fetch, frame })` from a custom `run({ prefetch })` implementation to retain Remix's HTML parsing and discovery while controlling how references are prefetched:
+
+```ts
+import { defaultPrefetch, run } from 'remix/component'
+import { prefetchImages } from './prefetch-images.ts'
+
+run({
+  loadModule,
+  prefetch(src, options) {
+    return defaultPrefetch(src, options, {
+      fetch(url, init) {
+        return fetch(url, init)
+      },
+      async frame(prefetchReferences, { fragment, assets, frames, baseURL, signal }) {
+        let images = fragment.querySelectorAll('img[data-prefetch]')
+        let selectedAssets = assets.filter(
+          (element) => !(element instanceof HTMLLinkElement && element.as === 'image'),
+        )
+        await Promise.all([
+          prefetchReferences({ assets: selectedAssets, frames }),
+          prefetchImages(images, { baseURL, signal }),
+        ])
+      },
+    })
+  },
+})
+```
+
+`prefetchImages` is an application helper that creates and retains its own `Image` instances. It can preserve `srcset`, `sizes`, CORS, and referrer settings, normalize relative URLs against `baseURL`, await `decode()`, and use the app's own queue and cancellation policy. The hook can also make its own `fetch()` calls.
+
+The `fetch` override receives a prepared same-origin `GET` with frame headers, low priority, and an abort signal. Forward `init` to preserve those settings. It can wait for an application queue, retry, or return a cached response. Remix skips non-HTML and unsuccessful responses, including `503`; automatic retry and `Retry-After` handling belong to the override.
+
+Automatic triggers pass the marked link in `options.elements`, including when an event starts on a descendant. Imperative calls can supply `prefetch(src, { elements: [element] })`; otherwise they have no triggering elements. Both `fetch(url, init, context)` and the `frame` hook expose `context.elements`. Each read returns a frozen snapshot of the current uncancelled callers' elements, deduplicated by identity, and nested requests inherit those origins. Read `context.elements` again when queued work starts to see callers that joined or cancelled in the meantime. The elements themselves remain live, so apps can inspect their position or `isConnected`. Removing a link or changing its destination doesn't automatically cancel its prefetch.
+
+The `frame` override runs independently for each successfully parsed response, including selected nested requests. Its context contains `src`, `target`, `elements`, the consumed `response`, the inert `fragment`, `baseURL`, `signal`, and the original discovered `assets` and `frames`. Discovery includes nested templates and responsive image preload declarations, even when Remix's native executor cannot prefetch them. Reading URL attributes such as `src` and `href` and resolving them against `baseURL` avoids resolving them against the current document. Remix never mounts the fragment.
+
+`prefetchReferences()` delegates all discovered references. Pass `{ assets, frames }` to select either list; omitted lists keep their discovered defaults, while an empty list skips that kind of work. Assets can include supported elements from the original fragment or its templates, such as a selected nonresponsive `<img src>`. Unsupported and foreign elements are ignored. Native hints retain the existing behavior: they don't evaluate scripts or select responsive image candidates. Handle responsive images through the application helper. Nested requests use the same overrides.
+
+When a `frame` override is present, returning or throwing without delegating skips Remix's asset and nested-frame work. The continuation accepts calls until the hook settles and becomes harmless after cancellation. Repeated delegations don't repeat the same references within that frame. `defaultPrefetch()` waits for the hook and delegated work, even if the hook doesn't return the continuation's promise. Failures finish without affecting navigation.
+
+Pending HTML is shared by source and target, with the first caller supplying the overrides. Pending native asset hints are shared across frames. `options.signal` cancels one caller; shared work continues while another caller needs it. Runtime disposal cancels work delegated through `defaultPrefetch`, including from a custom `run({ prefetch })`. Custom operations must honor the hook's signal, and applications own concurrency, prioritization, caching, and image retention. `defaultPrefetch` returns a completion promise; the existing `prefetch()` trigger continues to return `void`.
 
 To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next GET request with the same source and target. The app provides `loadModule` and a `fetchFrame(src, options)` helper that handles frame headers, submissions, cancellation, and response handling, and it owns the lifetime and invalidation of any responses it keeps:
 

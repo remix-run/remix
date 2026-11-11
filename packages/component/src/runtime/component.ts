@@ -332,6 +332,8 @@ export interface FrameProps {
   src: string
   /** Fallback content to render while the frame is pending. */
   fallback?: Renderable
+  /** Prefetches this frame's HTML and assets when its containing page is prefetched. */
+  prefetch?: boolean
   /** Event handlers invoked for events dispatched from the frame element. */
   on?: Record<string, (event: Event, signal: AbortSignal) => void | Promise<void>>
 }

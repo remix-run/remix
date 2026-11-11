@@ -76,5 +76,13 @@ export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 // -- Navigation --
 export { navigate, updateUrl } from './runtime/navigation.ts'
 export type { NavigationOptions, UpdateUrlOptions } from './runtime/navigation.ts'
-export { prefetch } from './runtime/prefetch.ts'
-export type { PrefetchFrame, PrefetchOptions } from './runtime/prefetch.ts'
+export { defaultPrefetch, prefetch } from './runtime/prefetch.ts'
+export type {
+  DefaultPrefetchOverrides,
+  PrefetchContext,
+  PrefetchFrame,
+  PrefetchFrameContext,
+  PrefetchFrameReference,
+  PrefetchOptions,
+  PrefetchReferences,
+} from './runtime/prefetch.ts'
